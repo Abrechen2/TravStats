@@ -91,7 +91,7 @@ export default function TrackMapView(): JSX.Element {
   const [generation, setGeneration] = useState(0);
   const data = useTrackMapData(span, generation);
   const { long, days, dayResults, source, loading } = data;
-  const [prefs, setPrefs] = useTrackMapPrefs();
+  const [prefs, setPrefs, prefsSaveFailed] = useTrackMapPrefs();
   const [dialog, setDialog] = useState<"export" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapPoint | null>(null);
@@ -245,7 +245,14 @@ export default function TrackMapView(): JSX.Element {
       {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
 
       <div className="flex flex-wrap gap-4">
-        {!phone && <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} />}
+        {!phone && (
+          <TrackLayersPanel
+            prefs={prefs}
+            onChange={setPrefs}
+            long={long}
+            saveFailed={prefsSaveFailed}
+          />
+        )}
 
         <section className="flex min-w-0 flex-col gap-3" style={{ flex: "999 1 480px" }}>
           {empty && (
@@ -367,7 +374,13 @@ export default function TrackMapView(): JSX.Element {
               </span>
             </summary>
             <div className="mt-3">
-              <TrackLayersPanel prefs={prefs} onChange={setPrefs} long={long} fill />
+              <TrackLayersPanel
+                prefs={prefs}
+                onChange={setPrefs}
+                long={long}
+                fill
+                saveFailed={prefsSaveFailed}
+              />
             </div>
           </details>
         )}

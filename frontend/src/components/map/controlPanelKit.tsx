@@ -8,7 +8,8 @@ import type { JSX } from "react";
 // and the flat-map panel render the very same `FlightAppearanceSection` /
 // `CruiseAppearanceSection`, so the two can never drift apart.
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { loadMapAppearance, saveMapAppearance } from "./mapAppearance";
 import { type Rgb } from "../../lib/cruiseColor";
 import { rgbCss } from "../../lib/flightColor";
@@ -207,54 +208,134 @@ export function SectionLabel({ children }: { children: React.ReactNode }): JSX.E
 }
 
 // ── Toggle switch ────────────────────────────────────────────────────
+/** `glass` is the map's dark panel; `surface` follows the page theme (Track). */
+export type PanelRowTone = "glass" | "surface";
+
+const TONES = {
+  glass: {
+    text: TEXT,
+    sub: MUTED_TEXT,
+    off: "rgba(255,255,255,0.14)",
+    on: `rgba(${ACCENT},0.9)`,
+    knob: "#fff",
+    hover: "rgba(255,255,255,0.05)",
+    focus: `rgb(${ACCENT})`,
+  },
+  surface: {
+    text: "var(--ts-text)",
+    sub: "var(--ts-muted)",
+    off: "var(--ts-surface2)",
+    on: "var(--ts-accent)",
+    knob: "#fff",
+    hover: "transparent",
+    focus: "var(--ts-accent)",
+  },
+} as const;
+
+/** The 44 px rule of the settings rows, on a finger-operated pointer only. */
+export const COARSE_ROW_MIN_HEIGHT = 44;
+
+/**
+ * The compact variant of the settings switch row (`ui/Field.tsx` `Switch`):
+ * a real `<input type="checkbox" role="switch">` laid over the whole row, so
+ * the row is the hit target, Space toggles it, and a screen reader hears
+ * "switch, on". The one implementation behind the map panels AND the Track
+ * panel; the track stays 30×17 so the panels stay compact, and only a coarse
+ * pointer grows the row to 44 px (the pointer decides, not the width).
+ */
 export function Toggle({
   checked,
   onChange,
   icon,
   label,
+  sub,
+  disabled = false,
+  tone = "glass",
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
-  icon: string;
+  icon?: string;
   label: string;
+  /** One line under the label (the Track layers' hints). */
+  sub?: string;
+  disabled?: boolean;
+  tone?: PanelRowTone;
 }): JSX.Element {
+  const coarse = useCoarsePointer();
+  const c = TONES[tone];
+  const uid = useId();
+  const labelId = `${uid}-label`;
+  const subId = `${uid}-sub`;
+  const [hover, setHover] = useState(false);
+  const [focusRing, setFocusRing] = useState(false);
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 transition-colors"
-      style={{ background: "transparent" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+    <label
+      className="relative flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 transition-colors"
+      style={{
+        background: hover && !disabled ? c.hover : "transparent",
+        minHeight: coarse ? COARSE_ROW_MIN_HEIGHT : undefined,
+        opacity: disabled ? 0.55 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
     >
-      <span className="flex items-center gap-2 text-xs font-medium" style={{ color: TEXT }}>
-        <span aria-hidden style={{ opacity: 0.9 }}>
-          {icon}
+      <span className="flex min-w-0 flex-col">
+        <span className="flex items-center gap-2 text-xs font-medium" style={{ color: c.text }}>
+          {icon && (
+            <span aria-hidden style={{ opacity: 0.9 }}>
+              {icon}
+            </span>
+          )}
+          <span id={labelId}>{label}</span>
         </span>
-        {label}
+        {sub && (
+          <span id={subId} className="text-[11px]" style={{ color: c.sub }}>
+            {sub}
+          </span>
+        )}
       </span>
-      {/* Switch track */}
       <span
         className="relative inline-block shrink-0 rounded-full transition-colors"
         style={{
           width: 30,
           height: 17,
-          background: checked ? `rgba(${ACCENT},0.9)` : "rgba(255,255,255,0.14)",
+          background: checked ? c.on : c.off,
+          outline: focusRing ? `2px solid ${c.focus}` : "none",
+          outlineOffset: 2,
         }}
       >
+        <input
+          type="checkbox"
+          role="switch"
+          aria-checked={checked}
+          aria-labelledby={labelId}
+          aria-describedby={sub ? subId : undefined}
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => {
+            if (!disabled) onChange(e.target.checked);
+          }}
+          onFocus={(e) => setFocusRing(e.currentTarget.matches(":focus-visible"))}
+          onBlur={() => setFocusRing(false)}
+          className="absolute m-0 cursor-[inherit] opacity-0"
+          style={{ inset: "-12px -8px", width: "calc(100% + 16px)", height: "calc(100% + 24px)" }}
+        />
         <span
-          className="absolute rounded-full bg-white transition-transform"
+          aria-hidden
+          className="absolute rounded-full transition-transform"
           style={{
             width: 13,
             height: 13,
             top: 2,
             left: 2,
+            background: c.knob,
             transform: checked ? "translateX(13px)" : "translateX(0)",
             boxShadow: "0 1px 2px rgba(0,0,0,0.4)",
           }}
         />
       </span>
-    </button>
+    </label>
   );
 }
 
@@ -378,6 +459,7 @@ export function Slider({
   step,
   onChange,
   format,
+  tone = "glass",
 }: {
   label: string;
   value: number;
@@ -386,18 +468,22 @@ export function Slider({
   step: number;
   onChange: (v: number) => void;
   format?: (v: number) => string;
+  tone?: PanelRowTone;
 }): JSX.Element {
+  const coarse = useCoarsePointer();
   const readout = (format ?? ((v: number) => `${v.toFixed(1)}×`))(value);
+  const accent = tone === "glass" ? `rgb(${ACCENT})` : "var(--ts-accent)";
   return (
-    <div className="mt-1.5">
+    <div
+      className="mt-1.5 flex flex-col justify-center"
+      style={{ minHeight: coarse ? COARSE_ROW_MIN_HEIGHT : undefined }}
+    >
       <div
         className="mb-1 flex items-center justify-between text-[11px]"
-        style={{ color: "rgba(241,245,249,0.7)" }}
+        style={{ color: tone === "glass" ? "rgba(241,245,249,0.7)" : "var(--ts-muted)" }}
       >
         <span>{label}</span>
-        <span style={{ color: `rgb(${ACCENT})`, fontVariantNumeric: "tabular-nums" }}>
-          {readout}
-        </span>
+        <span style={{ color: accent, fontVariantNumeric: "tabular-nums" }}>{readout}</span>
       </div>
       <input
         type="range"
@@ -408,7 +494,7 @@ export function Slider({
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full cursor-pointer"
-        style={{ accentColor: `rgb(${ACCENT})` }}
+        style={{ accentColor: accent, minHeight: coarse ? 28 : undefined }}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 import type { JSX } from "react";
+import { Slider, Toggle } from "../../../components/map/controlPanelKit";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { SPEED_STOPS } from "./trackGeometry";
-import { TRACK_COLOR } from "./trackMapLayers";
 import {
   SPLIT_OPTIONS,
   TRACK_LAYERS,
@@ -28,6 +29,7 @@ export default function TrackLayersPanel({
   onChange,
   long = false,
   fill = false,
+  saveFailed = false,
 }: {
   prefs: TrackMapPrefs;
   onChange: (patch: Partial<TrackMapPrefs>) => void;
@@ -35,8 +37,12 @@ export default function TrackLayersPanel({
   long?: boolean;
   /** Folded under the map on a phone: the full width, not a 300px column. */
   fill?: boolean;
+  /** The last choice did not reach storage: say so, without blocking anything. */
+  saveFailed?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
+  const coarse = useCoarsePointer();
+  const rowMin = coarse ? 44 : 40;
   return (
     <aside
       aria-label={t("track:map.panel")}
@@ -47,31 +53,20 @@ export default function TrackLayersPanel({
         <legend className="t-card-title" style={{ float: "left", marginBottom: 6 }}>
           {t("track:map.layers.title")}
         </legend>
-        {TRACK_LAYERS.map((id) => (
-          <label
-            key={id}
-            className="flex items-center gap-3"
-            style={{ minHeight: 40, opacity: long && DAY_ONLY.has(id) ? 0.55 : 1 }}
-          >
-            <input
-              type="checkbox"
-              disabled={long && DAY_ONLY.has(id)}
-              checked={prefs.layers[id] && !(long && DAY_ONLY.has(id))}
+        {TRACK_LAYERS.map((id) => {
+          const dayOnlyOff = long && DAY_ONLY.has(id);
+          return (
+            <Toggle
+              key={id}
+              tone="surface"
+              disabled={dayOnlyOff}
+              checked={prefs.layers[id] && !dayOnlyOff}
               onChange={() => onChange({ layers: { ...prefs.layers, [id]: !prefs.layers[id] } })}
-              style={{ width: 18, height: 18, accentColor: TRACK_COLOR }}
+              label={t(`track:map.layers.${id}`)}
+              sub={t(dayOnlyOff ? "track:map.layers.dayOnly" : `track:map.layers.${id}Hint`)}
             />
-            <span className="flex flex-col">
-              <span style={{ fontSize: 15 }}>{t(`track:map.layers.${id}`)}</span>
-              <span className="t-caption">
-                {t(
-                  long && DAY_ONLY.has(id)
-                    ? "track:map.layers.dayOnly"
-                    : `track:map.layers.${id}Hint`
-                )}
-              </span>
-            </span>
-          </label>
-        ))}
+          );
+        })}
       </fieldset>
 
       <div className="flex flex-col gap-3" style={panelStyle}>
@@ -84,7 +79,7 @@ export default function TrackLayersPanel({
               role="radio"
               aria-checked={prefs.color === mode}
               onClick={() => onChange({ color: mode })}
-              style={pillStyle(prefs.color === mode)}
+              style={pillStyle(prefs.color === mode, rowMin)}
             >
               {t(`track:map.route.${mode}`)}
             </button>
@@ -107,17 +102,16 @@ export default function TrackLayersPanel({
             </div>
           </div>
         )}
-        <label className="flex flex-col gap-1 t-caption">
-          {t("track:map.route.opacity")}
-          <input
-            type="range"
-            min={20}
-            max={100}
-            value={Math.round(prefs.opacity * 100)}
-            onChange={(e) => onChange({ opacity: Number(e.target.value) / 100 })}
-            style={{ accentColor: TRACK_COLOR }}
-          />
-        </label>
+        <Slider
+          tone="surface"
+          label={t("track:map.route.opacity")}
+          min={20}
+          max={100}
+          step={1}
+          value={Math.round(prefs.opacity * 100)}
+          onChange={(v) => onChange({ opacity: v / 100 })}
+          format={(v) => `${v} %`}
+        />
         <label className="flex flex-col gap-1 t-caption">
           {t("track:map.route.split")}
           <select
@@ -130,7 +124,7 @@ export default function TrackLayersPanel({
               })
             }
             style={{
-              minHeight: 40,
+              minHeight: rowMin,
               borderRadius: 8,
               padding: "0 8px",
               background: "var(--ts-surface2)",
@@ -150,6 +144,11 @@ export default function TrackLayersPanel({
           </select>
         </label>
         <span className="t-caption">{t("track:map.route.alwaysCut")}</span>
+        {saveFailed && (
+          <span role="status" className="t-caption" data-testid="track-prefs-not-remembered">
+            {t("track:map.route.notRemembered")}
+          </span>
+        )}
       </div>
     </aside>
   );

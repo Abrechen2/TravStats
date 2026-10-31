@@ -210,7 +210,7 @@ describe("TrackMapView — long spans", () => {
     await screen.findByTestId("map-stub");
     expect(screen.getByTestId("track-replay-limit")).toHaveTextContent('"days":7');
     expect(screen.queryByTestId("track-replay")).not.toBeInTheDocument();
-    const visits = screen.getByRole("checkbox", { name: /track:map.layers.visits\b/ });
+    const visits = screen.getByRole("switch", { name: /track:map.layers.visits\b/ });
     expect(visits).toBeDisabled();
     expect(visits).not.toBeChecked();
   });

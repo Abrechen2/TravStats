@@ -110,7 +110,7 @@ describe("OverlayAppearanceSections: the controls write what the layers read", (
   it("switches the rental link off, and hides the width of a line no longer drawn", () => {
     renderSections(["rental"]);
     expect(screen.getByLabelText("map:globe.panel.width")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /map:globe.panel.rentalShowLine/ }));
+    fireEvent.click(screen.getByRole("switch", { name: /map:globe.panel.rentalShowLine/ }));
     expect(useOverlayAppearanceStore.getState().appearance.rentalShowLine).toBe(false);
     expect(JSON.parse(window.localStorage.getItem(KEY) ?? "{}").rentalShowLine).toBe(false);
     expect(screen.queryByLabelText("map:globe.panel.width")).toBeNull();

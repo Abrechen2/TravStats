@@ -446,6 +446,7 @@
       "splitMinutes_other": "{{count}} minutes",
       "splitHours_one": "{{count}} hour",
       "splitHours_other": "{{count}} hours",
+      "notRemembered": "Couldn't remember this choice – it only holds until you leave the page.",
       "alwaysCut": "Private zones, deleted spans, pauses and flight-mode gaps always split, whatever is set here. This can only split further, never join."
     },
     "replay": {

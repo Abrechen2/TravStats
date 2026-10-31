@@ -20,6 +20,7 @@
  * | `theme`                  | `theme-storage`                             | The map theme. |
  * | `statsCompare`           | `stats-compare-storage`                     | The year-over-year comparison choice. |
  * | `statsHiddenSections`    | `stats.hiddenSections.<tab>`                | Hidden because the user records no prices or ratings — that is their data, the same everywhere. (It was per browser before, argued by screen size; the actual reason it was asked for is content.) |
+ * | `trackMap`              | `travstats.track.mapPrefs.v2`               | Which Track layers are drawn, the route's colour and opacity, the pause split: how the reader likes their own recorded days drawn. The panel's expansion and the viewport stay on the device. |
  * | `tablePrefs`             | `travstats:table-hidden-columns:*`, `travstats:table-sort:*` | Which columns matter and how a list is ordered is a reading habit. |
  *
  * STAY ON THIS DEVICE — they describe the screen, the session or one-time
@@ -89,6 +90,7 @@ import {
 } from "../../shared/dashboardDomainFilter";
 import type { MapTheme } from "../../types/mapTheme";
 import { useWebPrefsEpochStore } from "./prefEvents";
+import { DEFAULT_PREFS, PREFS_KEY, loadTrackPrefs, parsePrefs } from "./trackMap";
 import {
   isNonEmptyStringList,
   isPlainObject,
@@ -319,6 +321,22 @@ const tablePrefs: WebPrefSectionDef = {
   subscribe: onPrefixes(TABLE_HIDDEN_COLUMNS_PREFIX, TABLE_SORT_PREFIX),
 };
 
+const trackMap: WebPrefSectionDef = {
+  name: "trackMap",
+  defaultValue: DEFAULT_PREFS,
+  // The rc.5 per-browser document is carried over here too, so a device that
+  // syncs before the Track page was ever opened still seeds the account.
+  read: () => loadTrackPrefs(),
+  isDefault: (value) =>
+    stableStringify(parsePrefs(JSON.stringify(value))) === stableStringify(DEFAULT_PREFS),
+  apply: (value) => {
+    if (!isPlainObject(value)) return;
+    writeJson(PREFS_KEY, parsePrefs(JSON.stringify(value)));
+    bump("trackMap");
+  },
+  subscribe: onKey(PREFS_KEY),
+};
+
 /** Every synced section. The server knows the same names. */
 export const WEB_PREF_SECTIONS: readonly WebPrefSectionDef[] = [
   mapAppearance,
@@ -329,4 +347,5 @@ export const WEB_PREF_SECTIONS: readonly WebPrefSectionDef[] = [
   statsCompare,
   statsHiddenSections,
   tablePrefs,
+  trackMap,
 ];
