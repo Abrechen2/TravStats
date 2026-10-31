@@ -2,6 +2,15 @@
 
 Server part. Web page and Companion follow (order: server, web, Companion).
 
+## Phases
+
+| Phase | Side | State |
+|---|---|---|
+| Server: prefs, claims, push/mail dispatch, backfill | server | done — 2.8.0-rc.6 |
+| Web: Settings → Benachrichtigungen per domain | web | done — 2.8.0-rc.6 |
+| `lodgingId` in lodging push data (Companion request) | server | done — int/2.8.0-rc7 |
+| App: per-domain settings, push handling, local fallback | Companion | done — feat/reminders-per-domain, companion#111 (base rc/companion-2026-10-26); device-tested on CT107 rc.6 31.10. |
+
 ## Contract
 
 ### GET / PUT `/api/v1/settings/notifications`
@@ -86,7 +95,8 @@ the e-mail switches, else 24 and 2. Nothing is switched on that was off; idempot
 (`ON CONFLICT DO NOTHING`). Known deviation: one lead list serves both channels, so a
 flight account with mail on 24 h only and push (formerly 24 h and 2 h) now gets push at 24 h only.
 
-## Open for the Companion
+## Known differences (Companion, 31.10.)
 
-- Read `push` with the PAT; schedule local reminders only while `push.available` is false.
-- Handle `<domain>.reminder` payload types.
+- The local fallback covers flights only; other domains have no local scheduler, so they remind only through server push or mail.
+- The local "2 h" reminder is the app's existing leave-time reminder.
+- `token_rejected` is shown; the app cannot force a new token.
