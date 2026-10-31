@@ -25,11 +25,13 @@ vi.mock("../../Modal", () => ({
   default: ({
     children,
     footer,
+    dirty,
   }: {
+    dirty?: boolean;
     children: React.ReactNode;
     footer: (close: () => void) => React.ReactNode;
   }) => (
-    <div>
+    <div data-testid="modal" data-dirty={String(!!dirty)}>
       {children}
       {footer(() => {})}
     </div>
@@ -125,6 +127,13 @@ describe("Ferry editor", () => {
       companions: ["Alex, Jr.", "Sam"],
       tags: ["harbour", "night"],
     });
+  });
+  it("treats a changed companion list as an unsaved edit", () => {
+    render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.getByTestId("modal").dataset.dirty).toBe("false");
+    fireEvent.change(screen.getByLabelText("picker.label"), { target: { value: "Sam" } });
+    fireEvent.keyDown(screen.getByLabelText("picker.label"), { key: "Enter" });
+    expect(screen.getByTestId("modal").dataset.dirty).toBe("true");
   });
   // forgejo#393: fareClass was stored and sent by imports, but the form had no input for it.
   it("lets the fare class be typed, kept and cleared", async () => {

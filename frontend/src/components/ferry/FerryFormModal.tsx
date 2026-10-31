@@ -151,6 +151,8 @@ export function FerryFormModal({
     JSON.stringify(fields) !== JSON.stringify(opened) ||
     JSON.stringify(dep) !== JSON.stringify(port(journey, "dep")) ||
     JSON.stringify(arr) !== JSON.stringify(port(journey, "arr")) ||
+    JSON.stringify(companions) !== JSON.stringify(journey?.companions ?? []) ||
+    JSON.stringify(tags) !== JSON.stringify(journey?.tags ?? []) ||
     cancelled !== (journey?.status === "cancelled");
   const complete =
     !!dep.name.trim() &&
