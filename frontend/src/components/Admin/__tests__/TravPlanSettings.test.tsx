@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -10,6 +10,7 @@ vi.mock("../../../lib/api/travplan", async (original) => ({
 }));
 
 import TravPlanSettings from "../TravPlanSettings";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 
 /**
  * Admin → Instanz → TravPlan (owner, 2026-10-26): TravPlan's server switch in
@@ -27,7 +28,14 @@ const renderSettings = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The daily limits are expert rows (levels-discovery).
+  useSettingsLevelStore.setState({ level: "expert" });
   config.mockResolvedValue(LOADED);
+});
+
+afterEach(() => {
+  cleanup();
+  act(() => useSettingsLevelStore.setState({ level: null }));
 });
 
 describe("TravPlanSettings", () => {
