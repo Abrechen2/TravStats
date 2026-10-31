@@ -138,6 +138,7 @@ import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
 import placeCoverRouter from "./places/placeCover";
 import placeRelationsRouter from "./places/relations";
 import placeMergeRouter from "./places/merge";
+import placeCapturesRouter from "./places/captures";
 import documentExtractValueRoutes from "./documents/extractValues";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
@@ -496,6 +497,9 @@ export const apiMounts: ApiMount[] = [
   { id: "places.related", base: "/api/v1/places", router: placeRelationsRouter },
   // Folding a duplicate into a place (forgejo#232).
   { id: "places.merge", base: "/api/v1/places", router: placeMergeRouter },
+  // Unnamed positions from the Companion (companion#90) — before places.ts, whose
+  // `GET /:id` would swallow "captures".
+  { id: "places.captures", base: "/api/v1/places", router: placeCapturesRouter },
   { id: "places", base: "/api/v1/places", router: placesRouter },
   { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },
   // Curated checklists mount FIRST on the same path: '/curated' would

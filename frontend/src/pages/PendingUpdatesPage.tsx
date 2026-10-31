@@ -27,6 +27,7 @@ import { useSearchParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { useTranslation } from "../hooks/useTranslation";
+import PlaceCapturesSection from "../components/inbox/PlaceCapturesSection";
 import InboxWorkspace, { type InboxCount } from "../components/inbox/workspace/InboxWorkspace";
 import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
@@ -109,6 +110,7 @@ export default function PendingUpdatesPage(): JSX.Element {
         <div hidden={tab !== "inbox"}>
           <PasswordResetRequestsSection />
           <UnfiledDocumentsSection />
+          <PlaceCapturesSection />
           <InboxWorkspace
             photosVisible={photoJourneysVisible}
             active={tab === "inbox"}

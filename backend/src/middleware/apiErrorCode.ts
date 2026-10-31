@@ -527,6 +527,10 @@ export type ApiErrorCode =
    *  checklist's tick would be lost. */
   | "PLACE_MERGE_SAME"
   | "PLACE_MERGE_BOTH_CURATED"
+  /** A position captured before it had a name (companion#90, `routes/places/captures.ts`):
+   *  not the caller's or not there (404), or already named / dismissed (409). */
+  | "CAPTURE_NOT_FOUND"
+  | "CAPTURE_ALREADY_RESOLVED"
   /** A create's idempotency key (forgejo#283, `services/sync/clientRef.ts`)
    *  was already spent on a different body or another route (409).
    *  `extra.kind` and `extra.entityId` name the row it made. */

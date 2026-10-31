@@ -689,5 +689,26 @@
       "lodging_stay": "Aufenthalt bearbeiten",
       "profile": "Profil bearbeiten"
     }
+  },
+  "placeCaptures": {
+    "title": "Orte ohne Namen",
+    "description": "Diese Positionen hast du in der App mit „Ort jetzt“ festgehalten. Gib ihnen einen Namen, dann entstehen Ort und Besuch – oder verwirf sie.",
+    "unnamed": "Unbenannter Ort",
+    "accuracy": "± {{meters}} m",
+    "name": "Benennen",
+    "dismiss": "Verwerfen",
+    "nameLabel": "Name des Ortes",
+    "categoryLabel": "Kategorie",
+    "save": "Ort anlegen",
+    "existingPlace": "Vorhandenen Ort wählen",
+    "newPlace": "Neuen Ort anlegen",
+    "resolved": "Ort und Besuch wurden angelegt.",
+    "dismissed": "Position verworfen.",
+    "loadError": "Die unbenannten Orte konnten nicht geladen werden.",
+    "errors": {
+      "generic": "Das hat nicht geklappt. Bitte versuche es erneut.",
+      "alreadyResolved": "Diese Position wurde schon benannt oder verworfen. Die Liste wurde neu geladen.",
+      "notFound": "Diese Position gibt es nicht mehr. Die Liste wurde neu geladen."
+    }
   }
 }

@@ -130,6 +130,7 @@ model User {
   lodgingChains             LodgingChain[]
   places                    Place[]
   placeExternalRefs         PlaceExternalRef[]
+  placeCaptures             PlaceCapture[]
   placeVisits               PlaceVisit[]
   visitPhotoRefusals        VisitPhotoRefusal[]
   placeLists                PlaceList[]
@@ -3500,6 +3501,7 @@ model Place {
   /// References this place answers to besides `externalRef` — what a merge
   /// left of the place folded into it (forgejo#232).
   externalRefAliases PlaceExternalRef[]
+  captures           PlaceCapture[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -3507,6 +3509,41 @@ model Place {
   @@index([userId, category])
   @@index([userId, visited])
   @@map("places")
+}
+
+/// A position the Companion captured with "Ort jetzt" before the user named
+/// it (companion#90). The server is the record: until the user turns it into a
+/// place, the capture lives here instead of waiting on the phone.
+///
+/// `clientId` is minted on the device and unique per user, so an upload that is
+/// replayed answers the row the first one made. Resolving creates (or reuses) a
+/// Place and a PlaceVisit at `capturedAt` and keeps both ids here; dismissing
+/// keeps the row. SetNull on the links: deleting the place or visit later must
+/// not delete the record that a capture happened. Not shareable (no share_key).
+model PlaceCapture {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  clientId   String   @map("client_id")
+  lat        Float
+  lon        Float
+  /// Horizontal accuracy in metres; null when the device did not report one.
+  accuracyM  Float?   @map("accuracy_m")
+  capturedAt DateTime @map("captured_at")
+  note       String?
+  /// open | resolved | dismissed
+  status     String   @default("open")
+  placeId    String?  @map("place_id")
+  visitId    String?  @map("visit_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place?      @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  visit PlaceVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientId])
+  @@index([userId, status, capturedAt])
+  @@map("place_captures")
 }
 
 /// A second geocoder reference of a place — the identity of a duplicate that
@@ -3595,6 +3632,7 @@ model PlaceVisit {
   dawarichStays DawarichStay[]
   photos        PlaceVisitPhoto[]
   photoRefusals VisitPhotoRefusal[]
+  captures      PlaceCapture[]
 
   documents Document[]
 

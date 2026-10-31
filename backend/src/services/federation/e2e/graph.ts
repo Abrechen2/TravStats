@@ -181,6 +181,8 @@ export const NON_TRAVEL_RELATIONS = [
   "leaderboardBoards",
   "devicePushes",
   "clientWriteRefs",
+  // Unnamed positions awaiting a name (companion#90): a private inbox, never published.
+  "placeCaptures",
   // Per-day AI/weather limits are operational counters, not shared travel data.
   "travelPlanUsage",
   "twoFactorRecoveryCodes",

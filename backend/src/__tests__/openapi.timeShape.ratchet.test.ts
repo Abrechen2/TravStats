@@ -75,6 +75,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   // offer was sent — server bookkeeping, at no traveller's place.
   "stateSince",
   "offeredAt",
+  // A position the phone captured without a name (companion#90): the instant the
+  // Companion took it, before any place exists to own a zone.
+  "capturedAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };
