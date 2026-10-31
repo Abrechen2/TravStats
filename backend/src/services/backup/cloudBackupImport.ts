@@ -27,6 +27,12 @@ export const backupIdOfCloudName = (backupName: string): string =>
  * leave a file no row describes.
  */
 export async function assertCloudBackupNotPresent(backupName: string): Promise<void> {
+  // TravStats names its archives `backup-<timestamp>`. The prefix also keeps a
+  // share file from claiming an internal directory such as `restore-temp`,
+  // which every restore empties.
+  if (!/^backup-[a-zA-Z0-9._-]+\.tar\.gz$/.test(backupName)) {
+    throw new AppError("Invalid backupName", 400);
+  }
   const id = backupIdOfCloudName(backupName);
   const existing = await prisma.backup.findUnique({ where: { id }, select: { id: true } });
   if (existing || fs.existsSync(path.join(BACKUP_BASE_DIR, id))) {

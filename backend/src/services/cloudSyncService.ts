@@ -180,26 +180,40 @@ async function readRemoteChecksum(
   client: WebDAVClient,
   remotePath: string
 ): Promise<string | null> {
+  // A checksum file is ~100 bytes; a share that stalls on it must not hold the
+  // job lock forever, so the read has its own deadline.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), CHECKSUM_READ_TIMEOUT_MS);
   let raw: unknown;
   try {
-    raw = await client.getFileContents(checksumPathOf(remotePath), { format: "text" });
+    raw = await client.getFileContents(checksumPathOf(remotePath), {
+      format: "text",
+      signal: abort.signal,
+    });
   } catch (error) {
     if ((error as { status?: unknown }).status === 404) return null;
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
   const text = typeof raw === "string" ? raw : Buffer.isBuffer(raw) ? raw.toString("utf8") : "";
-  const match = text.trim().match(/^([0-9a-f]{64})(\s|$)/i);
+  const match = text.length <= MAX_CHECKSUM_FILE_BYTES ? text.trim().match(CHECKSUM_LINE) : null;
   if (!match) {
-    logger.warn({
-      operation: "webdav_checksum_unreadable",
-      message:
-        "Checksum file beside the backup is not a SHA-256; treating the backup as unverified",
-      remotePath,
-    });
-    return null;
+    // A checksum file that EXISTS but cannot be read is not "no checksum": the
+    // archive it guards may be the corrupt one, so it is refused, not waved
+    // through as unverified.
+    throw new AppError(
+      "The checksum file beside the backup on the WebDAV share is not a SHA-256",
+      502,
+      "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH"
+    );
   }
   return match[1].toLowerCase();
 }
+
+const CHECKSUM_READ_TIMEOUT_MS = 30_000;
+const MAX_CHECKSUM_FILE_BYTES = 1024;
+const CHECKSUM_LINE = /^([0-9a-f]{64})(\s|$)/i;
 
 /** Sync a completed backup to WebDAV. */
 export async function syncToCloud(backupId: string): Promise<void> {
@@ -235,6 +249,15 @@ export async function syncToCloud(backupId: string): Promise<void> {
 
     const filename = path.basename(backup.backupPath);
     const remotePath = path.join(backupPath, filename).replace(/\\/g, "/");
+
+    // Overwriting an archive must not leave the OLD checksum beside the new
+    // bytes: a later download would reject a good file as corrupt. Remove it
+    // first; if it cannot be removed the upload stops here, before any byte.
+    try {
+      await client.deleteFile(checksumPathOf(remotePath));
+    } catch (error) {
+      if ((error as { status?: unknown }).status !== 404) throw error;
+    }
 
     logger.info({
       operation: "webdav_upload_start",

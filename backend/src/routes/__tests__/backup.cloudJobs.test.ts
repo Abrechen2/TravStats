@@ -242,6 +242,12 @@ describe("WebDAV backup upload and download are jobs", () => {
       });
     });
 
+    it("a name that is not a backup-*.tar.gz archive is refused, so it cannot claim an internal directory", async () => {
+      const res = await download("restore-temp.tar.gz");
+      expect(res.status).toBe(400);
+      expect(fs.existsSync(path.join(BASE, "restore-temp"))).toBe(false);
+    });
+
     it("a name already in the backup list is refused with 409 before any byte moves", async () => {
       await localBackup("backup-cj-dup");
       share[REMOTE("backup-cj-dup.tar.gz")] = { body: ARCHIVE };

@@ -251,7 +251,10 @@ router.post("/cloud/download", async (req: AuthRequest, res: Response, next: Nex
         .string()
         .min(1)
         .max(255)
-        .regex(/^[a-zA-Z0-9._-]+\.tar\.gz$/, "backupName must be a .tar.gz filename"),
+        .regex(
+          /^backup-[a-zA-Z0-9._-]+\.tar\.gz$/,
+          "backupName must be a backup-*.tar.gz filename"
+        ),
     });
 
     const { backupName } = cloudDownloadSchema.parse(req.body);
