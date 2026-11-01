@@ -1,5 +1,5 @@
 import { useRoutesVisible } from "../../../store/mapRoutesStore";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
@@ -31,6 +31,7 @@ import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
 import { logger } from "../../../lib/logger";
+import { MapLoadFailedNotice } from "../../map/MapLoadFailedNotice";
 
 type Translate = (key: string) => string;
 
@@ -163,36 +164,51 @@ export function buildTerminalRideLegendRows(
 /**
  * Every ride the map draws, for one year or all. `enabled` gates the FETCH,
  * not just the drawing — a domain behind the beta switch or switched off by
- * the user never reaches the network. A failed load is logged and drawn as
- * nothing; the logbook page is where it is said out loud.
+ * the user never reaches the network. A failed load is logged AND reported as
+ * `failed` with a `reload`, so the map can say it instead of looking like a
+ * domain with no rides (forgejo#405: the dedicated tab would otherwise show
+ * "no rides" for a server error).
  */
 export function useDashboardRides<R extends TerminalRideLine>(
   enabled: boolean,
   year: number | null,
   load: (query: { year?: number }) => Promise<R[]>,
   what: string
-): R[] {
+): { rides: R[]; loading: boolean; failed: boolean; reload: () => void } {
   const [rides, setRides] = useState<R[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    setFailed(false);
     if (!enabled) {
       setRides([]);
+      setLoading(false);
       return;
     }
     let cancelled = false;
+    setLoading(true);
     void load(year === null ? {} : { year })
       .then((all) => {
         if (!cancelled) setRides(all);
       })
       .catch((err: unknown) => {
         logger.error(`useDashboardRides: failed to load ${what}`, err);
-        if (!cancelled) setRides([]);
+        if (!cancelled) {
+          setRides([]);
+          setFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-    // `load` is a module-level api method; the fetch follows the gate and the year.
-  }, [enabled, year]);
-  return rides;
+    // `load` is a module-level api method; the fetch follows the gate, the year and a retry.
+  }, [enabled, year, attempt]);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  return { rides, loading, failed, reload };
 }
 
 export interface TerminalRideOverlay {
@@ -200,6 +216,12 @@ export interface TerminalRideOverlay {
   legendRows: JSX.Element[];
   /** The drawn rides and their colour, for the map's ONE station-label pass. */
   stations: StationLabelGroup;
+  /** Still loading (the dedicated tab says so rather than "no rides"). */
+  loading: boolean;
+  /** How many rides are drawn, for the dedicated tab's empty state. */
+  count: number;
+  /** The notice over the map when the rides could not be loaded; null otherwise. */
+  status: JSX.Element | null;
 }
 
 export interface TerminalRideOverlaySpec<R extends TerminalRideLine & StationLabelSource> {
@@ -223,7 +245,7 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
 ): TerminalRideOverlay {
   const show = useDomainVisible(spec.domain) && wanted;
   const year = useDashboardFilterStore((s) => s.year);
-  const rides = useDashboardRides(show, year, spec.load, spec.domain);
+  const { rides, loading, failed, reload } = useDashboardRides(show, year, spec.load, spec.domain);
   const { colorOf } = useDomainColors();
   const color = colorOf(spec.domain);
   const linesShown = useRoutesVisible(spec.domain);
@@ -241,6 +263,16 @@ export function useTerminalRideOverlay<R extends TerminalRideLine & StationLabel
       ? buildTerminalRideLegendRows(drawn, color, t, legendRow, spec.legend)
       : [],
     stations,
+    loading: show && loading,
+    count: drawn.length,
+    status:
+      show && failed ? (
+        <MapLoadFailedNotice
+          key={`${spec.domain}-load-failed`}
+          messageKey={`map:loadFailed.${spec.domain === "bus" ? "buses" : "ferries"}`}
+          onRetry={reload}
+        />
+      ) : null,
   };
 }
 

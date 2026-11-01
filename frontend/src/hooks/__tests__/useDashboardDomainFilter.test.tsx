@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useDashboardDomainFilter } from "../useDashboardDomainFilter";
+import { useDashboardRoute } from "../useDashboardRoute";
 import { useDashboardDomainFilterStore } from "../../store/dashboardDomainFilterStore";
 import { useDashboardCountsStore } from "../../store/dashboardCountsStore";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -17,6 +18,7 @@ function wrapper(initialEntries: string[]): (props: { children: ReactNode }) => 
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/dashboard" element={children} />
+          <Route path="/dashboard/:tab" element={children} />
         </Routes>
       </MemoryRouter>
     );
@@ -182,17 +184,23 @@ describe("useDashboardDomainFilter", () => {
     }
   );
 
-  it("isolating bus keeps the reader on 'Alle' with only bus visible — it has no view of its own", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: true });
-    const { result } = renderHook(() => useDashboardDomainFilter(0), {
-      wrapper: wrapper(["/dashboard"]),
-    });
-    act(() => result.current.isolate("bus"));
-    expect(result.current.isVisible("bus")).toBe(true);
-    expect(result.current.isVisible("flight")).toBe(false);
-  });
+  it.each(["bus", "ferry", "rental"] as const)(
+    "isolating %s opens its own dashboard tab (forgejo#405: it used to stay on 'Alle')",
+    (domain) => {
+      useSettingsStore.setState({
+        enabledDomains: ["flight", "bus", "ferry", "rental"],
+        betaFeaturesEnabled: true,
+      });
+      const { result } = renderHook(
+        () => ({ filter: useDashboardDomainFilter(0), route: useDashboardRoute() }),
+        { wrapper: wrapper(["/dashboard"]) }
+      );
+      act(() => result.current.filter.isolate(domain));
+      expect(result.current.route.tab).toBe(domain);
+    }
+  );
   // Ferry crossings: the one transport line the "Alle" map did not draw had no
-  // row either. Beside bus, no view of its own.
+  // row either. Beside bus.
   it("ferry sits beside bus once the domain is on, with an unknown count, unlabelled", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "bus", "ferry"],
@@ -205,8 +213,5 @@ describe("useDashboardDomainFilter", () => {
     const ferry = result.current.rows.find((r) => r.key === "ferry");
     expect(ferry?.count).toBeNull();
     expect(ferry?.beta).toBe(false);
-    act(() => result.current.isolate("ferry"));
-    expect(result.current.isVisible("ferry")).toBe(true);
-    expect(result.current.isVisible("flight")).toBe(false);
   });
 });

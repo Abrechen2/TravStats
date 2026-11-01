@@ -21,6 +21,7 @@ import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
 import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 import { TourTab } from "../components/Dashboard/tabs/TourTab";
 import { RailTab } from "../components/Dashboard/tabs/RailTab";
+import { BusTab, FerryTab, RentalTab } from "../components/Dashboard/tabs/OverlayDomainTab";
 import { railApi } from "../lib/api/rail";
 import { busApi } from "../lib/api/bus";
 import { ferryApi } from "../lib/api/ferry";
@@ -204,6 +205,9 @@ export default function DashboardPage(): JSX.Element {
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
       {tab === "rail" && railVisible && <RailTab key={refreshToken} />}
+      {tab === "bus" && busVisible && <BusTab key={refreshToken} />}
+      {tab === "ferry" && ferryVisible && <FerryTab key={refreshToken} />}
+      {tab === "rental" && rentalVisible && <RentalTab key={refreshToken} />}
       {tab === "tour" && <TourTab key={refreshToken} />}
       {tab === "roadtrip" && <TourTab key={`roadtrip-${refreshToken}`} kind="roadtrip" />}
     </DashboardLayout>

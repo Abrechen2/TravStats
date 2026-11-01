@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { createElement, Fragment, useEffect, useMemo } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
@@ -83,6 +83,9 @@ export function useTransportOverlays(
   return {
     layers,
     legendRows: [...rail.legendRows, ...bus.legendRows, ...ferry.legendRows, ...rental.legendRows],
-    status: rental.status,
+    status:
+      rental.status || bus.status || ferry.status
+        ? createElement(Fragment, null, rental.status, bus.status, ferry.status)
+        : null,
   };
 }

@@ -92,6 +92,7 @@ export interface DashboardRentals {
   rentals: RentalBooking[];
   /** The load failed — said on the map, never drawn as "no rentals" (beta.22 UAT). */
   failed: boolean;
+  loading: boolean;
   reload: () => void;
 }
 
@@ -104,14 +105,17 @@ export interface DashboardRentals {
 export function useDashboardRentals(enabled: boolean, year: number | null): DashboardRentals {
   const [rentals, setRentals] = useState<RentalBooking[]>([]);
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(enabled);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     setFailed(false);
     if (!enabled) {
       setRentals([]);
+      setLoading(false);
       return;
     }
     let cancelled = false;
+    setLoading(true);
     void (async () => {
       try {
         const all: RentalBooking[] = [];
@@ -127,6 +131,8 @@ export function useDashboardRentals(enabled: boolean, year: number | null): Dash
           setRentals([]);
           setFailed(true);
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -134,7 +140,7 @@ export function useDashboardRentals(enabled: boolean, year: number | null): Dash
     };
   }, [enabled, year, attempt]);
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
-  return { rentals, failed, reload };
+  return { rentals, failed, loading, reload };
 }
 
 export interface RentalOverlay {
@@ -142,12 +148,15 @@ export interface RentalOverlay {
   legendRows: JSX.Element[];
   /** The notice over the map when the rentals could not be loaded; null otherwise. */
   status: JSX.Element | null;
+  loading: boolean;
+  /** How many rentals are drawn, for the dedicated tab's empty state. */
+  count: number;
 }
 
 /** The rental layer of the "Alle" map as one hook, so that tab gains a line, not a block. */
 export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate): RentalOverlay {
   const year = useDashboardFilterStore((s) => s.year);
-  const { rentals, failed, reload } = useDashboardRentals(show, year);
+  const { rentals, failed, loading, reload } = useDashboardRentals(show, year);
   const { colorOf } = useDomainColors();
   const color = colorOf("rental");
   const { rentalLineWidth, rentalMarkerSize, rentalShowLine } = useOverlayAppearance();
@@ -163,6 +172,8 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
   return {
     layers,
     legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style),
+    loading: show && loading,
+    count: drawn.length,
     status:
       show && failed ? (
         <MapLoadFailedNotice

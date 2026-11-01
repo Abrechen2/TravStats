@@ -1,4 +1,18 @@
 {
+  "overlayTab": {
+    "bus": {
+      "loading": "Loading bus rides …",
+      "empty": "No bus ride logged yet."
+    },
+    "ferry": {
+      "loading": "Loading crossings …",
+      "empty": "No crossing logged yet."
+    },
+    "rental": {
+      "loading": "Loading rental cars …",
+      "empty": "No rental car logged yet."
+    }
+  },
   "upcomingFailed": "“Up next” could not be loaded.",
   "title": "Dashboard",
   "addFlight": "Add Flight",
