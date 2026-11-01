@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
-import { travplanApi, type PlanState, type PlanSummary } from "../../lib/api/travplan";
-import PlanEditor from "./PlanEditor";
-import { settingFields } from "./editorModel";
+import { travplanApi, type PlanSummary } from "../../lib/api/travplan";
+import { PlanCreate } from "./PlanCreate";
+import { shortDay } from "./route/RouteTimeline";
 import {
   Button,
   Card,
@@ -23,8 +23,7 @@ export function PlanList() {
     [plans, setPlans] = useState<PlanSummary[]>([]),
     [enabled, setEnabled] = useState<boolean | null>(null),
     [error, setError] = useState(""),
-    [create, setCreate] = useState(false),
-    [busy, setBusy] = useState(false);
+    [create, setCreate] = useState(false);
   useEffect(() => {
     let live = true;
     Promise.all([travplanApi.list(), travplanApi.capabilities()])
@@ -69,7 +68,8 @@ export function PlanList() {
               </div>
               <h2 className="t-card-title">{p.name}</h2>
               <p className="t-body">
-                {p.destination} · {p.startDay} – {p.endDay}
+                {p.destination} ·{" "}
+                {[shortDay(p.startDay), shortDay(p.endDay)].filter(Boolean).join(" – ")}
               </p>
               <p className="t-caption">
                 {p.ideasCount} {t("sections.workspace")} · {p.bookingsCount} {t("sections.import")}
@@ -92,40 +92,9 @@ export function PlanList() {
         />
       )}
       {create && (
-        <PlanEditor
-          editor={{
-            title: t("newTrip"),
-            fields: settingFields,
-            value: {
-              name: "",
-              destination: "",
-              startDay: null,
-              endDay: null,
-              timezone: null,
-              travelers: 1,
-              pace: "balanced",
-              budget: null,
-              currency: "EUR",
-              latitude: null,
-              longitude: null,
-            },
-          }}
-          busy={busy}
+        <PlanCreate
           onClose={() => setCreate(false)}
-          onSave={async (value) => {
-            setBusy(true);
-            try {
-              const { name, ...settings } = value;
-              const next = await travplanApi.create(String(name), settings as Partial<PlanState>);
-              navigate("/plan/" + next.tripId + "/overview");
-              return true;
-            } catch {
-              setError(t("errors.unknown"));
-              return false;
-            } finally {
-              setBusy(false);
-            }
-          }}
+          onCreated={(plan) => navigate("/plan/" + plan.tripId + "/overview")}
         />
       )}
     </>

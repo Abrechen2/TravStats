@@ -28,7 +28,7 @@ import {
   SHARE_TX_TIMEOUT_MS,
 } from "../sharing/propagate";
 import { haversineKm } from "../../shared/geo/haversine";
-import { localDay, machineInstant } from "../../shared/time/instant";
+import { localDay } from "../../shared/time/instant";
 import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { createFerryJourneySchema } from "../../schemas/ferry";
 import { mergeFerryJourney } from "../ferry/ferryJourneyWrite";

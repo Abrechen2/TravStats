@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTravPlanVisible } from "../../hooks/useTravPlanVisible";
 import { travplanApi, type PlanView } from "../../lib/api/travplan";
 import { logger } from "../../lib/logger";
+import { apiErrorMachineCode } from "../../lib/apiError";
+import Button from "../ui/Button";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/Pill";
 
@@ -15,9 +17,16 @@ import { StatusPill } from "../ui/Pill";
 export function TravelPlanSummary({ tripId }: { tripId: string }) {
   const { t } = useTranslation("travplan"),
     offered = useTravPlanVisible(),
-    [plan, setPlan] = useState<PlanView | null>(null);
+    navigate = useNavigate(),
+    [plan, setPlan] = useState<PlanView | null>(null),
+    /** "none": the server says this trip has no plan. Anything else that failed is not "none". */
+    [absent, setAbsent] = useState<"unknown" | "none" | "failed">("unknown"),
+    [starting, setStarting] = useState(false),
+    [failure, setFailure] = useState<string | null>(null);
   useEffect(() => {
     setPlan(null);
+    setAbsent("unknown");
+    setFailure(null);
     if (!offered) return;
     let live = true;
     travplanApi
@@ -26,14 +35,51 @@ export function TravelPlanSummary({ tripId }: { tripId: string }) {
         if (live) setPlan(p);
       })
       .catch((cause: unknown) => {
-        // Most trips have no plan, which the server answers with an error;
-        // the summary then simply is not drawn.
+        // Most trips have no plan: PLAN_NOT_FOUND, and that earns the "plan this trip" offer.
+        // Any other answer (network, 5xx, switched off) is its own state and offers nothing.
         logger.debug("No travel plan for trip", tripId, cause);
+        if (live) setAbsent(apiErrorMachineCode(cause) === "PLAN_NOT_FOUND" ? "none" : "failed");
       });
     return () => {
       live = false;
     };
   }, [tripId, offered]);
+  if (offered && !plan && absent === "none")
+    return (
+      <Card style={{ margin: "var(--ts-space-xl) 0" }}>
+        <section className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+          <h2 className="t-card-title">{t("title")}</h2>
+          <p className="t-body">{t("planThis.body")}</p>
+          {failure && (
+            <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
+              {failure}
+            </p>
+          )}
+          <div>
+            <Button
+              variant="primary"
+              disabled={starting}
+              onClick={() => {
+                setStarting(true);
+                setFailure(null);
+                travplanApi
+                  .create(t("newTrip"), {}, tripId)
+                  .then((created) => navigate("/plan/" + created.tripId + "/overview"))
+                  .catch((cause: unknown) => {
+                    const code = apiErrorMachineCode(cause);
+                    setFailure(
+                      t("errors." + (code ?? "unknown"), { defaultValue: t("errors.unknown") })
+                    );
+                    setStarting(false);
+                  });
+              }}
+            >
+              {t("planThis.action")}
+            </Button>
+          </div>
+        </section>
+      </Card>
+    );
   if (!offered || !plan) return null;
   return (
     <Card style={{ margin: "var(--ts-space-xl) 0" }}>
