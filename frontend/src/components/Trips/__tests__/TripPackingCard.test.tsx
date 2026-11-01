@@ -19,6 +19,7 @@ vi.mock("../../../lib/api/companionData", async () => {
 });
 
 import TripPackingCard from "../TripPackingCard";
+import { isTripFinished } from "../tripFinished";
 
 const list = (rev: number, labels: Array<[string, boolean]>) => ({
   rev,
@@ -117,5 +118,45 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     expect(put.mock.calls[1][3]).toBe(put.mock.calls[0][3]);
     expect(put.mock.calls[1][2]).toBe(put.mock.calls[0][2]);
     expect(put.mock.calls[1][1]).toEqual(put.mock.calls[0][1]);
+  });
+
+  describe("on a finished trip (forgejo#398)", () => {
+    it("shows nothing at all when the list is empty", async () => {
+      get.mockResolvedValue(list(1, []));
+      const { container } = render(<TripPackingCard tripId="t1" finished />);
+      await waitFor(() => expect(get).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it("shows a collapsed, read-only summary when the list has items", async () => {
+      get.mockResolvedValue(
+        list(1, [
+          ["Passport", false],
+          ["Charger", true],
+        ])
+      );
+      render(<TripPackingCard tripId="t1" finished />);
+      const toggle = await screen.findByRole("button", { name: "trips:packing.summary" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByText("Passport")).toBeNull();
+      await userEvent.click(toggle);
+      expect(screen.getByText("Passport")).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(screen.queryByLabelText(/packing.remove/)).toBeNull();
+    });
+
+    it("leaves an upcoming or running trip fully editable", async () => {
+      render(<TripPackingCard tripId="t1" finished={false} />);
+      expect(await screen.findByRole("checkbox")).toBeInTheDocument();
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+  });
+
+  it("calls a trip finished only when its last day is before today in the profile zone", () => {
+    expect(isTripFinished("2026-10-31", "2026-11-01")).toBe(true);
+    expect(isTripFinished("2026-11-01T00:00:00.000Z", "2026-11-01")).toBe(false);
+    expect(isTripFinished(null, "2026-11-01")).toBe(false);
   });
 });

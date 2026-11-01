@@ -11,7 +11,8 @@ import {
   flightDeparture,
   tripStart,
 } from "../lib/entityTimes";
-import { clockOf, type TimeValue } from "../shared/time";
+import { clockOf, todayIn, type TimeValue } from "../shared/time";
+import { useTodayZone } from "../hooks/useTodayZone";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { formatAmount } from "../lib/units";
@@ -31,6 +32,7 @@ import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
 import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
 import TripPackingCard from "../components/Trips/TripPackingCard";
+import { isTripFinished } from "../components/Trips/tripFinished";
 import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
@@ -101,6 +103,7 @@ export default function TripDetailPage(): JSX.Element {
   };
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const todayZone = useTodayZone();
 
   const { displayTrip, hiddenCruiseCount, hiddenLodgingCount } = useVisibleTrip(trip);
 
@@ -148,6 +151,7 @@ export default function TripDetailPage(): JSX.Element {
   }
 
   const shownTrip = displayTrip ?? trip;
+  const tripFinished = isTripFinished(trip.endDate, todayIn(todayZone));
 
   return (
     <AppShell width="list">
@@ -160,7 +164,7 @@ export default function TripDetailPage(): JSX.Element {
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
       />
-      <TripPackingCard tripId={trip.id} />
+      <TripPackingCard tripId={trip.id} finished={tripFinished} />
       <TabBar tab={tab} onChange={setTab} t={t} />
 
       <div className="py-6">

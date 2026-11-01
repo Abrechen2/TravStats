@@ -920,6 +920,8 @@
   "loadMore": "Mehr laden",
   "listError": "Die Reisen konnten nicht geladen werden. Bitte versuche es erneut.",
   "packing": {
+    "summary_one": "Packliste · {{count}} Ding",
+    "summary_other": "Packliste · {{count}} Dinge",
     "title": "Packliste",
     "progress": "{{done}} von {{total}} eingepackt",
     "empty": "Noch nichts auf der Liste. Die Packliste teilst du dir mit der Companion-App.",
