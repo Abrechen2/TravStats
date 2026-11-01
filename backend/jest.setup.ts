@@ -39,3 +39,18 @@ const url = testDatabaseUrl();
 if (url) {
   process.env.DATABASE_URL = withConnectionLimit(url);
 }
+
+/**
+ * Area recognition runs on every stay scan since 2026-11-01, so a scan test that
+ * passes no `marketFetcher` would reach the public Overpass server. Refuse that
+ * here: the scan then records an unreachable provider, which is what such a test
+ * should see anyway, and the suite never depends on a third party.
+ */
+const realFetch = globalThis.fetch;
+globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (/^https?:\/\/([a-z0-9-]+\.)*overpass-api\.de\//i.test(url)) {
+    throw new TypeError("fetch failed: Overpass is not reachable from tests");
+  }
+  return realFetch(input, init);
+}) as typeof fetch;
