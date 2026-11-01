@@ -108,6 +108,12 @@ describe("computeTimeShift", () => {
     expect(summer?.hoursShifted).toBe(7);
   });
 
+  it("takes the short way round the date line: Tokyo to Honolulu is 5 h east, not 19 h west", () => {
+    const out = computeTimeShift([flight({ depZone: "Asia/Tokyo", arrZone: "Pacific/Honolulu" })]);
+    expect(out?.hoursShifted).toBe(5);
+    expect(out?.biggestJump?.hours).toBe(5);
+  });
+
   it("does not call a same-zone hop a jump", () => {
     const out = computeTimeShift([flight({ arrZone: "Europe/Paris" })]);
     expect(out?.hoursShifted).toBe(0);

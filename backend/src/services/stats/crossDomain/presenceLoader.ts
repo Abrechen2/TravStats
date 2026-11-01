@@ -24,6 +24,7 @@ import { countableRailWhere } from "../../../shared/railCounting";
 import { countableBusWhere } from "../../../shared/busCounting";
 import { countableFerryWhere } from "../../../shared/ferryCounting";
 import { localDay } from "../../../shared/time/instant";
+import { toCountryCode } from "../../../shared/countryEvidence";
 import type { DomainKey } from "../../../shared/domains";
 import type { Sighting } from "../../../utils/stats/crossDomain/lastVisit";
 import type { PresenceDay } from "../../../utils/stats/crossDomain/schengen";
@@ -38,11 +39,10 @@ export interface PresenceData {
   shiftFlights: TimeShiftFlight[];
 }
 
-const COUNTRY = /^[A-Za-z]{2}$/;
 const DAY_MS = 86_400_000;
 const iso = (d: Date): string => d.toISOString().slice(0, 10);
-const alpha2 = (raw: string | null | undefined): string | null =>
-  raw && COUNTRY.test(raw) ? raw.toUpperCase() : null;
+/** ISO alpha-2 from whatever the record stores — the airport catalogue holds names ("Germany"). */
+const alpha2 = (raw: string | null | undefined): string | null => toCountryCode(raw);
 
 /** Every day from `from` to `to` inclusive, on the UTC date the wall clock was pinned to. */
 function inclusiveDays(from: Date, to: Date): string[] {
@@ -189,13 +189,21 @@ export async function loadPresence(
       select: {
         visitedAt: true,
         visitedAtUtc: true,
+        visitedZone: true,
         place: { select: { id: true, name: true, isoCountryCode: true } },
       },
     });
     for (const v of visits) {
-      if (classifyVisit(v, now) !== "visited" || !v.visitedAt) continue;
-      // A visit is a wall clock pinned to UTC midnight: its UTC date is the local date.
-      const date = iso(v.visitedAt);
+      if (classifyVisit(v, now) !== "visited") continue;
+      // A real instant (Companion visits) is read on the place's own clock; a legacy
+      // visit is a wall clock pinned to UTC midnight, whose UTC date is the local date.
+      const date =
+        v.visitedAtUtc && v.visitedZone
+          ? localDay(v.visitedAtUtc, v.visitedZone)
+          : v.visitedAt
+            ? iso(v.visitedAt)
+            : null;
+      if (date === null || date > today) continue;
       sightings.push({ kind: "place", key: v.place.id, label: v.place.name, date });
       const country = alpha2(v.place.isoCountryCode);
       if (country) {

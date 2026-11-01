@@ -222,7 +222,7 @@ export default function CrossDomainSection(): JSX.Element | null {
                 : t("stats:crossDomain.pricePerKm.row", {
                     domain,
                     currency: b.currency,
-                    spend,
+                    spend: formatCurrency(b.spendWithKm, b.currency, { language: lang }),
                     perKm: formatCurrency(b.pricePerKm, b.currency, { language: lang }),
                     km: num(b.km),
                   })}

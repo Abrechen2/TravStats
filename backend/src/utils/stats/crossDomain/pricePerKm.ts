@@ -37,6 +37,8 @@ export interface PricePerKmBlock {
   currency: string;
   rides: number;
   spend: number;
+  /** The part of `spend` that belongs to rides with a distance — the rate's numerator. */
+  spendWithKm: number;
   /** Kilometres of the rides that had both a price and a distance. */
   km: number | null;
   pricePerKm: number | null;
@@ -76,6 +78,7 @@ export function computePricePerKm(rides: readonly PricedRide[]): PricePerKmStats
           currency,
           rides: 0,
           spend: 0,
+          spendWithKm: 0,
           km: null,
           pricePerKm: null,
           ridesWithoutKm: 0,
@@ -99,6 +102,7 @@ export function computePricePerKm(rides: readonly PricedRide[]): PricePerKmStats
     .map(({ block, kmSum, spendWithKm }) => ({
       ...block,
       spend: round(block.spend, 2),
+      spendWithKm: round(spendWithKm, 2),
       km: kmSum > 0 ? round(kmSum, 1) : null,
       pricePerKm: kmSum > 0 ? round(spendWithKm / kmSum, 4) : null,
     }))

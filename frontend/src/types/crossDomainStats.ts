@@ -76,6 +76,7 @@ export interface CrossDomainStats {
       currency: string;
       rides: number;
       spend: number;
+      spendWithKm: number;
       km: number | null;
       pricePerKm: number | null;
       ridesWithoutKm: number;

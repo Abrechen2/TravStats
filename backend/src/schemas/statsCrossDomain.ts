@@ -111,6 +111,10 @@ export const crossDomainStatsSchema = z
             currency: z.string(),
             rides: z.number().int(),
             spend: z.number(),
+            spendWithKm: z.number().openapi({
+              description:
+                "The part of `spend` on rides that have a distance; `pricePerKm` = this / `km`.",
+            }),
             km: z.number().nullable(),
             pricePerKm: z.number().nullable(),
             ridesWithoutKm: z.number().int(),

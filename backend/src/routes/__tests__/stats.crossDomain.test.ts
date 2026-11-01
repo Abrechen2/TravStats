@@ -161,6 +161,8 @@ describe("cross-domain statistics", () => {
     expect(body.nightsByCountry?.countries.some((c) => c.country === "DE")).toBe(false);
     expect(body.timeShift).toMatchObject({ flightsMeasured: 1, hoursShifted: 8 });
     expect(body.timeShift?.biggestJump).toMatchObject({ from: "FRA", to: "HND", hours: 8 });
+    // The airport catalogue stores country NAMES; Tokyo must still resolve to JP.
+    expect(body.unseen?.country?.map((c) => c.key)).toContain("JP");
     expect(body.unseen?.airport?.map((a) => a.key)).toEqual(["FRA", "HND"]);
     // The undated, coordinate-less photo counts as a photo and as nothing else.
     expect(body.photos).toMatchObject({ photos: 2, withoutDate: 1, withoutCountry: 1 });

@@ -62,7 +62,17 @@ export function shiftHours(flight: TimeShiftFlight): number | null {
   const dep = offsetMsAt(flight.departureTime.getTime(), flight.depZone);
   const arr = offsetMsAt(flight.arrivalTime.getTime(), flight.arrZone);
   if (dep === null || arr === null) return null;
-  return Math.round(((arr - dep) / 3_600_000) * 100) / 100;
+  return foldToHalfDay(Math.round(((arr - dep) / 3_600_000) * 100) / 100);
+}
+
+/**
+ * The body adjusts the SHORT way round: Tokyo to Honolulu is 5 hours east
+ * (the date line), not 19 hours west. Folds a raw offset difference into
+ * (-12, 12]; exactly 12 is read eastward.
+ */
+export function foldToHalfDay(hours: number): number {
+  const folded = ((((hours + 12) % 24) + 24) % 24) - 12;
+  return folded === -12 ? 12 : folded;
 }
 
 export function computeTimeShift(flights: readonly TimeShiftFlight[]): TimeShiftStats | null {
