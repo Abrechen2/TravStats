@@ -58,7 +58,8 @@
     "description": "Every programme in one place, with the chains and individual hotels it covers.",
     "coversNothing": "not linked to a chain yet",
     "editHotels": "Individual hotels",
-    "noIndependentHotels": "No independent, chain-less hotels available."
+    "noIndependentHotels": "No independent, chain-less hotels available.",
+    "hotelCoverageError": "I couldn't save the hotels of this card."
   },
   "about": {
     "buildLabel": "Build",

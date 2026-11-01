@@ -1,30 +1,29 @@
 {
   "title": "Bonusprogramme",
-  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich oben unter Module einschalten.",
   "sections": {
     "flight": {
-      "title": "Vielfliegerprogramme",
-      "description": "Meilenprogramme deiner Airlines — mit den Airlines, für die sie gelten."
+      "title": "Airlines",
+      "description": "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen."
     },
     "cruise": {
-      "title": "Reederei-Programme",
-      "description": "Clubs und Treueprogramme deiner Reedereien."
+      "title": "Reedereien",
+      "description": ""
     },
     "lodging": {
-      "title": "Hotelprogramme",
-      "description": "Mit den Ketten und einzelnen Hotels, für die sie gelten."
+      "title": "Hotels",
+      "description": "Ketten und einzelne Häuser"
     },
     "rail": {
-      "title": "Bahnprogramme",
-      "description": "Bonusprogramme deiner Bahnen, z. B. BahnBonus — mit den Bahnunternehmen, für die sie gelten."
+      "title": "Bahn",
+      "description": ""
     }
   },
-  "empty": "Noch keine Programme hinterlegt.",
-  "add": "Programm hinzufügen",
-  "loadError": "Bonusprogramme konnten nicht geladen werden.",
+  "empty": "Noch keine Karten.",
+  "add": "Karte hinzufügen",
+  "loadError": "Ich konnte deine Karten nicht laden.",
   "saveError": "Das Programm konnte nicht gespeichert werden.",
   "duplicateError": "Ein Programm mit diesem Namen ist in diesem Bereich bereits hinterlegt.",
-  "deleteError": "Das Programm konnte nicht gelöscht werden.",
+  "deleteError": "Ich konnte die Karte nicht löschen.",
   "confirmDelete": "„{{name}}“ löschen?",
   "field": {
     "programName": "Programmname",
@@ -91,5 +90,8 @@
     "oneworld": "oneworld",
     "loadError": "Die Allianzen konnten nicht geladen werden — Airline-Codes lassen sich weiterhin einzeln eintragen.",
     "tooMany": "Das wären mehr als {{max}} Airlines — ein Programm kann höchstens {{max}} abdecken."
-  }
+  },
+  "hotelCoverageError": "Ich konnte die Hotels dieser Karte nicht speichern.",
+  "domainOff": "„{{area}}“ ist aus. Schalte die Reiseart ein, um dafür Karten zu verwalten.",
+  "domainOffAction": "Zu Reisearten"
 }

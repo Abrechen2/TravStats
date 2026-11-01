@@ -156,10 +156,7 @@
     },
     "webdavtakt": {
       "t": "Wie oft",
-      "o": [
-        "täglich",
-        "wöchentlich"
-      ]
+      "o": ["täglich", "wöchentlich"]
     },
     "webdavvers": {
       "t": "Versionen behalten",
@@ -214,17 +211,11 @@
     "ubahn": {
       "t": "U-Bahn und Tram",
       "s": "Vorauswahl, im Import änderbar",
-      "o": [
-        "weglassen",
-        "als Bahnfahrt"
-      ]
+      "o": ["weglassen", "als Bahnfahrt"]
     },
     "busleg": {
       "t": "Busabschnitte",
-      "o": [
-        "weglassen",
-        "als Busfahrt"
-      ]
+      "o": ["weglassen", "als Busfahrt"]
     }
   },
   "dialogs": {
@@ -290,6 +281,13 @@
       "after": "Diese Blätter enthalten nur noch, was in der Datei steht. Vorher lege ich eine Sicherung des ganzen Servers an.",
       "confirm": "{{missing}} Einträge ersetzen",
       "word": "ERSETZEN"
+    },
+    "carddelete": {
+      "title": "„{{name}}“ löschen?",
+      "affects": "{{name}}",
+      "amount": "Eine Karte",
+      "after": "Die Karte und ihre Zuordnung zu Airlines, Ketten oder Hotels sind weg. Deine Flüge, Aufenthalte und Fahrten bleiben.",
+      "confirm": "Karte löschen"
     }
   }
 }

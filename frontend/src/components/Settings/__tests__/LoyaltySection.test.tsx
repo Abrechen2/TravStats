@@ -122,10 +122,14 @@ describe("Einstellungen → Bonusprogramme (LoyaltySection)", () => {
     expect(screen.queryByTestId("loyalty-cruise")).toBeNull();
   });
 
-  it("says so when no enabled domain has programmes", async () => {
+  it("keeps a switched-off travel type on the page as a locked row with the reason and the jump", async () => {
     enabled = ["poi"];
     renderPage();
-    expect(await screen.findByText("loyalty:noDomains")).toBeInTheDocument();
+    expect((await screen.findAllByText(/loyalty:domainOff$/)).length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByTestId("loyalty-flight")).toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: /loyalty:domainOffAction/ }).length
+    ).toBeGreaterThan(0);
   });
 
   it("lists a card with its number masked until revealed, and its logbook activity", async () => {

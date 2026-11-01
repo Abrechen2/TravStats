@@ -156,10 +156,7 @@
     },
     "webdavtakt": {
       "t": "How often",
-      "o": [
-        "daily",
-        "weekly"
-      ]
+      "o": ["daily", "weekly"]
     },
     "webdavvers": {
       "t": "Versions to keep",
@@ -214,17 +211,11 @@
     "ubahn": {
       "t": "Metro and tram",
       "s": "Preselection, changeable per import",
-      "o": [
-        "skip",
-        "as rail journey"
-      ]
+      "o": ["skip", "as rail journey"]
     },
     "busleg": {
       "t": "Bus legs",
-      "o": [
-        "skip",
-        "as bus ride"
-      ]
+      "o": ["skip", "as bus ride"]
     }
   },
   "dialogs": {
@@ -290,6 +281,13 @@
       "after": "These sheets will only hold what the file contains. I take a backup of the whole server first.",
       "confirm": "Replace {{missing}} entries",
       "word": "REPLACE"
+    },
+    "carddelete": {
+      "title": "Delete “{{name}}”?",
+      "affects": "{{name}}",
+      "amount": "One card",
+      "after": "The card and its links to airlines, chains or hotels are gone. Your flights, stays and journeys stay.",
+      "confirm": "Delete card"
     }
   }
 }

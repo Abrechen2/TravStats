@@ -58,7 +58,8 @@
     "description": "Alle deine Programme an einem Ort — mit den Ketten und einzelnen Hotels, für die sie gelten.",
     "coversNothing": "noch keiner Kette zugeordnet",
     "editHotels": "Einzelne Hotels",
-    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
+    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden.",
+    "hotelCoverageError": "Ich konnte die Hotels dieser Karte nicht speichern."
   },
   "about": {
     "buildLabel": "Build",
