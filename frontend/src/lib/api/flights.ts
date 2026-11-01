@@ -59,7 +59,43 @@ const FLIGHT_PAGE_SIZE = 500;
 const MAX_FLIGHT_PAGES = 40;
 
 // Flights API
+export interface EnrichmentCandidate {
+  flightId: string;
+  flightNumber: string;
+  missingFields: string[];
+  missingRoute: boolean;
+  ageYears: number;
+  confidence: number;
+  enrichmentMode: "full" | "slim";
+}
+
+export interface EnrichmentCandidates {
+  candidates: EnrichmentCandidate[];
+  /** Null when the user's switch is off. */
+  settings: { enabled: boolean; minConfidence: number; maxPerDay: number } | null;
+}
+
 export const flightsApi = {
+  /** Flights the historical enrichment could fill in; empty with `settings: null` while it is off. */
+  enrichmentCandidates: async (limit = 25): Promise<EnrichmentCandidates> => {
+    const { data } = await api.get<EnrichmentCandidates>("/flights/enrichment-candidates", {
+      params: { limit },
+    });
+    return data;
+  },
+
+  /** Propose an enrichment for one flight; the proposal lands in the inbox as a flight update. */
+  enrichHistorical: async (
+    flightId: string
+  ): Promise<{ pendingUpdateId: string; confidence: number; sourceFlightsCount: number }> => {
+    const { data } = await api.post<{
+      pendingUpdateId: string;
+      confidence: number;
+      sourceFlightsCount: number;
+    }>(`/flights/${flightId}/enrich-historical`);
+    return data;
+  },
+
   getEntrySuggestions: async (
     query: FlightEntrySuggestionQuery
   ): Promise<FlightEntrySuggestions> => {

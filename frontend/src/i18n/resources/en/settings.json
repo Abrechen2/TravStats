@@ -562,7 +562,25 @@
     "maxPerDayDescription": "Maximum number of new suggestions per night",
     "saved": "Enrichment settings saved successfully",
     "saveFailed": "Failed to save enrichment settings",
-    "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values."
+    "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values.",
+    "candidates": {
+      "title": "Enrichment candidates",
+      "hint": "“Enrich” creates a proposal in the inbox – the flight only changes once you apply it.",
+      "none": "No flights that could be enriched.",
+      "row": "Confidence {{confidence}}% · {{fields}} missing details",
+      "enrich": "Enrich",
+      "proposed": "Proposal created (confidence {{confidence}}%).",
+      "openInbox": "View in inbox",
+      "loadFailed": "The candidates could not be loaded.",
+      "retry": "Try again",
+      "errors": {
+        "ENRICH_DISABLED": "Enrichment is switched off in settings.",
+        "ENRICH_NO_FLIGHT_NUMBER": "The flight has no flight number.",
+        "ENRICH_NO_REFERENCE": "No sufficiently tracked reference flights with this flight number found.",
+        "ENRICH_CONFIDENCE_LOW": "Confidence is below your minimum.",
+        "unknown": "Enrichment failed."
+      }
+    }
   },
   "externalServices": {
     "title": "My external services"

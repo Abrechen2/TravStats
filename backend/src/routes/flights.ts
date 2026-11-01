@@ -892,11 +892,19 @@ router.post(
       // Get user settings
       const settings = await getUserEnrichmentSettings(userId);
       if (!settings || !settings.enabled) {
-        throw new AppError("Historical enrichment is disabled. Enable it in settings.", 400);
+        throw new AppError(
+          "Historical enrichment is disabled. Enable it in settings.",
+          400,
+          "ENRICH_DISABLED"
+        );
       }
 
       if (!flight.flightNumber) {
-        throw new AppError("Flight number is required for historical enrichment", 400);
+        throw new AppError(
+          "Flight number is required for historical enrichment",
+          400,
+          "ENRICH_NO_FLIGHT_NUMBER"
+        );
       }
 
       // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
@@ -910,6 +918,7 @@ router.post(
 
       if (!aggregatedData) {
         return res.status(404).json({
+          code: "ENRICH_NO_REFERENCE",
           error: "No reference flights found",
           message:
             "Could not find enough live-tracked flights with the same flight number to enrich this flight.",
@@ -919,6 +928,7 @@ router.post(
       // Check confidence threshold
       if (aggregatedData.confidence < settings.minConfidence) {
         return res.status(400).json({
+          code: "ENRICH_CONFIDENCE_LOW",
           error: "Confidence too low",
           message: `Confidence (${aggregatedData.confidence}%) is below your minimum threshold (${settings.minConfidence}%).`,
           confidence: aggregatedData.confidence,

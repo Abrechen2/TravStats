@@ -1,6 +1,7 @@
 import { SectionCard, SectionTitle, LoadGuardNotice } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Switch } from "../ui/Field";
+import EnrichmentCandidatesPanel from "./EnrichmentCandidatesPanel";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 
 interface HistoricalEnrichmentSettings {
@@ -101,6 +102,7 @@ export default function EnrichmentSection({
           )}
         </SettingRows>
       )}
+      {loadState === "loaded" && settings.enabled && <EnrichmentCandidatesPanel />}
     </SectionCard>
   );
 }

@@ -562,7 +562,25 @@
     "maxPerDayDescription": "Maximale Anzahl neuer Vorschläge pro Nacht",
     "saved": "Anreicherungs-Einstellungen gespeichert",
     "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen",
-    "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
+    "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden.",
+    "candidates": {
+      "title": "Kandidaten zum Anreichern",
+      "hint": "„Anreichern“ erzeugt einen Vorschlag im Posteingang – am Flug ändert sich erst etwas, wenn du ihn übernimmst.",
+      "none": "Keine Flüge, die sich anreichern ließen.",
+      "row": "Sicherheit {{confidence}} % · {{fields}} fehlende Angaben",
+      "enrich": "Anreichern",
+      "proposed": "Vorschlag erstellt (Sicherheit {{confidence}} %).",
+      "openInbox": "Im Posteingang ansehen",
+      "loadFailed": "Die Kandidaten konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "errors": {
+        "ENRICH_DISABLED": "Die Anreicherung ist in den Einstellungen ausgeschaltet.",
+        "ENRICH_NO_FLIGHT_NUMBER": "Der Flug hat keine Flugnummer.",
+        "ENRICH_NO_REFERENCE": "Keine ausreichend verfolgten Vergleichsflüge mit dieser Flugnummer gefunden.",
+        "ENRICH_CONFIDENCE_LOW": "Die Sicherheit liegt unter deinem Mindestwert.",
+        "unknown": "Anreichern fehlgeschlagen."
+      }
+    }
   },
   "externalServices": {
     "title": "Meine externen Dienste"
