@@ -12,6 +12,7 @@ import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
 import { PlaceDocumentImportTile } from "../import/PlaceDocumentImportTile";
+import { CheckinImportTile } from "../import/CheckinImportTile";
 import { RailBookmarkletTile } from "../import/RailBookmarkletTile";
 import { RailImportMemoryRows } from "./RailImportMemoryRows";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
@@ -79,7 +80,11 @@ export default function ImportSection(): JSX.Element {
       // templates from the parser workshop, into the same preview.
       // forgejo#204: a connection shared from bahn.de, read on bahn.de itself
       // by a bookmarklet — one connection, not a list, but set up once here.
-      rail: [<RailBookmarkletTile key="rail-db-bookmarklet" />],
+      // forgejo#401: a Träwelling / travelynx export, one file of many rides.
+      rail: [
+        <CheckinImportTile key="rail-checkin" onImported={handleImported} />,
+        <RailBookmarkletTile key="rail-db-bookmarklet" />,
+      ],
       poi: [
         <PlaceCsvImportTile key="poi-csv" onImported={handleImported} />,
         <PlaceDocumentImportTile key="poi-document" onImported={handleImported} />,

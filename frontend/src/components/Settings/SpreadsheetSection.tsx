@@ -52,7 +52,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * alone cannot say WHICH hotel is about to be created twice — this can, and
  * it is what a person checks before moving a file into another account.
  */
-function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Element | null {
+export function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Element | null {
   const rows = sheet.rows.filter((r) => r.action !== "error");
   if (rows.length === 0) return null;
   return (
