@@ -360,9 +360,20 @@ describe("ServicesPage", () => {
     expect(shown).toContain("airlabs");
     // Built-in "always on" services are not something the person set up.
     expect(shown).not.toContain("geocoder");
-    expect(shown).not.toContain("openai");
+    expect(shown).not.toContain("aviationstack");
     expect(shown.length).toBeLessThan(all);
     expect(screen.queryByTestId("services-empty")).toBeNull();
+  });
+
+  it("a card the address names stays visible under the filter (search must not land on nothing)", async () => {
+    plainRender(
+      <MemoryRouter initialEntries={["/settings/services?service=aviationstack"]}>
+        <ServicesPage isAdmin={true} />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(card("aviationstack")).toBeTruthy(), WAIT);
+    await userEvent.click(screen.getByLabelText("settingsRows:services.ui.onlyConfigured"));
+    expect(card("aviationstack").hidden).toBe(false);
   });
 
   it("says so when the filter leaves no service, instead of drawing an empty page", async () => {

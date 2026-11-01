@@ -9,6 +9,9 @@ const CONFIGURED: ReadonlySet<CardStatus> = new Set([
   "connected",
   "viaServer",
   "keyRejected",
+  // Switched off or waiting for consent is still something the person (or admin) set up; hiding it would also make a card vanish under the cursor when its switch is turned off.
+  "off",
+  "needsConsent",
 ]);
 
 export const isConfiguredStatus = (status: CardStatus): boolean => CONFIGURED.has(status);

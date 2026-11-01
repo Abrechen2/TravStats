@@ -48,7 +48,7 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
 
   const isHidden = (card: (typeof SERVICE_CARDS)[number]): boolean =>
     (group !== "all" && card.group !== group) ||
-    (onlyConfigured && !isConfiguredStatus(statusOf(card)));
+    (onlyConfigured && linked?.id !== card.id && !isConfiguredStatus(statusOf(card)));
   const anyShown = listed.some((c) => !isHidden(c));
 
   return (
