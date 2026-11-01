@@ -55,6 +55,22 @@
     },
     "applied": "The values from the receipt were applied."
   },
+  "stored": {
+    "action": "Stored values",
+    "title": "Values stored from the document",
+    "loading": "Loading the stored values …",
+    "retry": "Try again",
+    "parser": "Read with: {{parser}}",
+    "notFound": "This document no longer exists.",
+    "rateLimited": "Too many requests. Please try again in a few minutes.",
+    "network": "No connection to the server.",
+    "failed": "The stored values could not be loaded.",
+    "reason": {
+      "notParsed": "This document has never been read. “Use values” reads it now.",
+      "unreadable": "The stored reading has an unknown format. “Use values” reads the document again.",
+      "nothingFound": "Reading the document found no values."
+    }
+  },
   "rentalCategory": {
     "pickup": "Pickup",
     "return": "Return",

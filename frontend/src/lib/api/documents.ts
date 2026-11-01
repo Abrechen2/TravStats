@@ -278,7 +278,30 @@ export const documentsApi = {
     );
     return data.data;
   },
+
+  /**
+   * The values the document's ALREADY STORED reading holds
+   * (`GET /documents/:id/stored-values`): no parser runs, no budget is spent.
+   * `reason` says why `values` is null.
+   */
+  storedValues: async (
+    id: string,
+    hints: Pick<ExtractValuesRequest, "flightNumber" | "trainNumber" | "departureDate"> = {}
+  ): Promise<StoredValuesResult> => {
+    const { data } = await api.get<Envelope<StoredValuesResult>>(`/documents/${id}/stored-values`, {
+      params: hints,
+    });
+    return data.data;
+  },
 };
+
+/** Why a document has no stored values to show. */
+export interface StoredValuesResult {
+  domain: ExtractValuesResult["domain"] | null;
+  parserUsed: string | null;
+  values: ExtractValuesResult["values"];
+  reason: "notParsed" | "unreadable" | "nothingFound" | null;
+}
 
 /** Longer than any parser's own model timeout, so the server answers first. */
 const EXTRACT_VALUES_TIMEOUT_MS = 5 * 60 * 1000;
