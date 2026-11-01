@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import WorkshopJumpLink from "../Parser/WorkshopJumpLink";
 import type { JSX } from "react";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -131,7 +132,12 @@ export function BusTicketImport({
             {t("bus:import.error")}
           </p>
         )}
-        {preview && !row && <p role="status">{t(emptyKey(preview.reason))}</p>}
+        {preview && !row && (
+          <>
+            <p role="status">{t(emptyKey(preview.reason))}</p>
+            {preview.reason !== "noText" && <WorkshopJumpLink file={file} text={text} />}
+          </>
+        )}
         {preview && row && (
           <>
             <p className="t-caption">

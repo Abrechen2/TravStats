@@ -1,10 +1,10 @@
 {
   "title": "Parser",
-  "description": "E-Mail- und Boarding-Pass-Templates verwalten",
+  "description": "Wie TravStats eine Buchung liest – und wie du ihm eine neue beibringst",
   "tabs": {
-    "annotate": "Annotieren",
-    "myTemplates": "Meine Templates",
-    "communityTemplates": "Community Templates",
+    "annotate": "Vorlage anlegen",
+    "myTemplates": "Meine Vorlagen",
+    "communityTemplates": "Community-Vorlagen",
     "parseLogs": "Parse-Logs"
   },
   "annotate": {
@@ -302,14 +302,14 @@
     "failed": "Vorschau konnte nicht ausgeführt werden."
   },
   "communityExport": {
-    "action": "Für die Community exportieren",
-    "explain": "Lädt diese Vorlage als Datei für das öffentliche Vorlagen-Repository herunter, ohne dein Dokument und ohne die Werte, die du darin markiert hast; auf GitHub schlägst du sie vor, und der Owner des Repositorys prüft jeden Beitrag, bevor er bei anderen ankommt.",
-    "download": "Datei herunterladen",
+    "action": "Mit der Community teilen",
+    "explain": "Du siehst vorab genau, was veröffentlicht wird. Dein Dokument und deine markierten Werte bleiben hier.",
+    "download": "Als Datei speichern",
     "working": "Wird vorbereitet …",
     "downloaded": "{{filename}} wurde heruntergeladen. Öffne die Seite für eine neue Datei auf GitHub und füge den Inhalt dort ein oder lade die Datei hoch.",
     "removed_one": "{{count}} Zeile mit deinen eigenen Daten wurde entfernt.",
     "removed_other": "{{count}} Zeilen mit deinen eigenen Daten wurden entfernt.",
-    "testCases": "Die Datei enthält kein Testdokument — deines bleibt hier. Der Owner ergänzt bei der Prüfung ein erfundenes.",
+    "testCases": "Die Vorlage enthält kein Testdokument. Der Owner des Repositorys ergänzt beim Prüfen ein erfundenes.",
     "openGithub": "Auf GitHub öffnen",
     "failed": "Die Datei konnte nicht vorbereitet werden. Bitte erneut versuchen.",
     "found": "Gefunden: {{what}}.",
@@ -323,6 +323,66 @@
       "identity": "dein Name oder deine Adresse",
       "email": "eine E-Mail-Adresse",
       "number": "eine lange Nummer"
+    },
+    "review": "Prüfen, was veröffentlicht wird",
+    "reviewTitle": "Das wird veröffentlicht",
+    "provider": "Anbieter",
+    "markets": "Märkte",
+    "none": "–",
+    "jsonLabel": "Vorlage als JSON",
+    "openIssue": "Auf GitHub vorschlagen",
+    "copyAndOpen": "JSON kopieren und GitHub öffnen",
+    "tooLong": "Die Vorlage ist zu lang für einen Link: Das JSON wird kopiert, du fügst es auf GitHub in das Feld „Vorlage“ ein.",
+    "copied": "JSON kopiert. Füge es auf GitHub in das Feld „Vorlage“ ein.",
+    "copyFailed": "Das Kopieren hat nicht geklappt. Markiere das JSON oben, kopiere es von Hand und füge es auf GitHub ein.",
+    "looksPersonal": "Darin steckt vermutlich etwas Persönliches ({{what}}). Es wird nichts geöffnet. Leite die Vorlage aus einem anderen Dokument neu ab.",
+    "suspect": {
+      "email": "eine E-Mail-Adresse",
+      "phone": "eine Telefonnummer",
+      "bookingCode": "ein Buchungscode",
+      "longNumber": "eine lange Nummer"
     }
+  },
+  "overview": {
+    "title": "So liest TravStats eine Buchung",
+    "what": "Eine Vorlage sagt TravStats, woran es die Buchung eines Anbieters erkennt und wo darin Datum, Ort und Nummer stehen.",
+    "whatHelp": "Wenn du eine Buchung einspielst, probiert TravStats die Quellen unten der Reihe nach durch. Die erste Vorlage, die passt, liest das Dokument.",
+    "whatSubject": "Vorlagen",
+    "uploadHelp": "Eine Datei, die du hier hochlädst, bleibt als Beispiel bei dir. Die Datei dient nur dazu, die Vorlage abzuleiten und zu prüfen. Geteilt wird höchstens die Vorlage, nie dein Dokument.",
+    "uploadSubject": "hochgeladene Buchung",
+    "upload": "Eine hier hochgeladene Buchung bleibt bei dir.",
+    "order": "Gelesen wird in dieser Reihenfolge:",
+    "sources": {
+      "own": {
+        "name": "Eigene",
+        "line": "Von dir angelegt, gelten nur in deinem Konto.",
+        "help": "Hier landen Vorlagen aus der Werkstatt. Eigene Vorlagen sind zuerst dran."
+      },
+      "community": {
+        "name": "Community",
+        "line": "Aus dem öffentlichen Vorlagen-Repository.",
+        "help": "Von anderen Nutzern vorgeschlagen und vom Owner geprüft. Dein Server holt sie täglich neu."
+      },
+      "builtin": {
+        "name": "Eingebaut",
+        "line": "Fest im Server für gängige Belege.",
+        "help": "Allgemeine Leser für Flug-, Unterkunfts- und Fahrtbelege. Anbieterspezifisches gehört in eine Vorlage, nicht hierher."
+      }
+    },
+    "nothing": "Nichts erkannt? Lege in der Werkstatt eine Vorlage an: Buchung hochladen, Werte markieren, prüfen, aktivieren.",
+    "nothingAction": "Vorlage anlegen"
+  },
+  "tabHints": {
+    "annotate": "Lade eine Buchung hoch und zeig TravStats, was darin steht.",
+    "myTemplates": "Deine Vorlagen prüfen, aktivieren und mit der Community teilen.",
+    "community": "Fertige Vorlagen aus dem öffentlichen Repository, täglich aktualisiert.",
+    "parseLogs": "Welche Vorlage wie viele Dokumente gelesen hat. Nur für Admins."
+  },
+  "handoff": {
+    "link": "Nicht erkannt? Vorlage dafür anlegen",
+    "hint": "Öffnet die Werkstatt mit diesem Dokument.",
+    "textName": "eingefuegter-text.txt",
+    "failed": "„{{name}}“ konnte nicht hochgeladen werden.",
+    "retry": "Erneut versuchen"
   }
 }

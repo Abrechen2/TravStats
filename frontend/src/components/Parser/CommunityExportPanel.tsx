@@ -3,6 +3,11 @@ import type { JSX } from "react";
 import { parserTemplatesApi, type CommunityExportFile } from "../../lib/api";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { downloadBlob } from "../../lib/export";
+import {
+  buildTemplateIssue,
+  findPersonalText,
+  type PersonalTextKind,
+} from "../../lib/communityIssue";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -41,12 +46,16 @@ function foundKinds(error: unknown): string[] {
 
 const GENERIC_KINDS = new Set(["identity", "email", "number"]);
 
+/** How the "copy the JSON by hand" fallback ended. */
+type CopyState = "idle" | "copied" | "manual";
+
 /**
- * "Für die Community exportieren" for one of the user's templates
- * (forgejo#309). The server builds the repository file with the user's own
- * data taken out; this downloads it and offers GitHub's new-file page in the
- * domain's folder, where the user pastes or uploads it. Nothing is posted
- * from TravStats — the repository owner reviews every contribution.
+ * "Mit der Community teilen" for one of the user's templates (forgejo#309,
+ * forgejo#330). The server builds the repository file with the user's own
+ * data taken out; this shows exactly that file, and only then opens a
+ * prefilled "template request" in the public template repository under the
+ * user's own GitHub account. Nothing is posted from TravStats; the sample
+ * document never leaves, and the repository owner reviews every request.
  */
 export default function CommunityExportPanel({
   templateId,
@@ -60,6 +69,7 @@ export default function CommunityExportPanel({
   const [file, setFile] = useState<CommunityExportFile | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [found, setFound] = useState<string[]>([]);
+  const [copy, setCopy] = useState<CopyState>("idle");
   const kindLabel = (kind: string): string =>
     t(
       GENERIC_KINDS.has(kind)
@@ -67,20 +77,14 @@ export default function CommunityExportPanel({
         : `parser:labels.${domain}.${kind}`
     );
 
-  const run = async (): Promise<void> => {
+  const review = async (): Promise<void> => {
     setBusy(true);
     setRefusal(null);
     setFound([]);
     setFile(null);
+    setCopy("idle");
     try {
-      const exported = await parserTemplatesApi.communityExport(templateId);
-      downloadBlob(
-        new Blob([`${JSON.stringify(exported.template, null, 2)}\n`], {
-          type: "application/json",
-        }),
-        exported.filename
-      );
-      setFile(exported);
+      setFile(await parserTemplatesApi.communityExport(templateId));
     } catch (error) {
       logger.error({ error }, "CommunityExportPanel: export failed");
       setRefusal(refusalKey(error));
@@ -90,18 +94,56 @@ export default function CommunityExportPanel({
     }
   };
 
+  const issue = file ? buildTemplateIssue(file.template) : null;
+  // A second look at the very text that is about to leave: the server already
+  // took the account's own values out, this catches a shape that looks personal.
+  const suspicious: PersonalTextKind[] = file ? findPersonalText(file.template) : [];
+
+  const openIssue = async (): Promise<void> => {
+    if (!issue || suspicious.length > 0) return;
+    if (!issue.tooLong) {
+      window.open(issue.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // Too long for a link: the JSON goes to the clipboard, the form opens empty.
+    // The tab opens first, inside the click: after an await the browser may
+    // no longer count it as the user's own action and block the popup.
+    const clipboard = window.isSecureContext ? navigator.clipboard : undefined;
+    const writing = clipboard?.writeText
+      ? clipboard.writeText(issue.fields.template_json)
+      : Promise.reject(new Error("clipboard unavailable"));
+    window.open(issue.urlWithoutJson, "_blank", "noopener,noreferrer");
+    let copied = false;
+    try {
+      await writing;
+      copied = true;
+    } catch (error) {
+      logger.error({ error }, "CommunityExportPanel: clipboard unavailable");
+    }
+    setCopy(copied ? "copied" : "manual");
+  };
+
+  const saveFile = (): void => {
+    if (!file) return;
+    downloadBlob(
+      new Blob([`${JSON.stringify(file.template, null, 2)}\n`], { type: "application/json" }),
+      file.filename
+    );
+  };
+
   return (
     <div className="mt-3 space-y-2 text-sm" data-testid={`community-export-${templateId}`}>
       <p className="t-caption">{t("parser:communityExport.explain")}</p>
-      <button
-        type="button"
-        onClick={() => void run()}
-        disabled={busy}
-        className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        {t(busy ? "parser:communityExport.working" : "parser:communityExport.download")}
-      </button>
+      {!file && (
+        <button
+          type="button"
+          onClick={() => void review()}
+          disabled={busy}
+          className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-50"
+        >
+          {t(busy ? "parser:communityExport.working" : "parser:communityExport.review")}
+        </button>
+      )}
       {refusal && (
         <p role="alert" style={{ color: "var(--danger)" }}>
           {t(refusal)}
@@ -109,23 +151,62 @@ export default function CommunityExportPanel({
             ` ${t("parser:communityExport.found", { what: found.map(kindLabel).join(", ") })}`}
         </p>
       )}
-      {file && (
-        <div role="status" className="space-y-2">
-          <p>{t("parser:communityExport.downloaded", { filename: file.filename })}</p>
+      {file && issue && (
+        <div className="space-y-2" data-testid="community-export-review">
+          <h3 className="font-semibold" style={{ color: "var(--ts-text-bright)" }}>
+            {t("parser:communityExport.reviewTitle")}
+          </h3>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            <dt className="t-caption">{t("parser:communityExport.provider")}</dt>
+            <dd>{issue.fields.provider || t("parser:communityExport.none")}</dd>
+            <dt className="t-caption">{t("parser:communityExport.markets")}</dt>
+            <dd>{issue.fields.markets || t("parser:communityExport.none")}</dd>
+          </dl>
+          <pre
+            className="max-h-64 overflow-auto rounded-lg p-3 text-xs"
+            style={{ background: "var(--bg-base)", border: "1px solid var(--ts-border)" }}
+            tabIndex={0}
+            aria-label={t("parser:communityExport.jsonLabel")}
+          >
+            {issue.fields.template_json}
+          </pre>
           {file.removed.length > 0 && (
             <p className="t-caption">
               {t("parser:communityExport.removed", { count: file.removed.length })}
             </p>
           )}
           <p className="t-caption">{t("parser:communityExport.testCases")}</p>
-          <a
-            href={file.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary inline-block text-xs px-3 py-1.5"
-          >
-            {t("parser:communityExport.openGithub")}
-          </a>
+          {suspicious.length > 0 && (
+            <p role="alert" style={{ color: "var(--danger)" }}>
+              {t("parser:communityExport.looksPersonal", {
+                what: suspicious.map((k) => t(`parser:communityExport.suspect.${k}`)).join(", "),
+              })}
+            </p>
+          )}
+          {issue.tooLong && <p className="t-caption">{t("parser:communityExport.tooLong")}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void openIssue()}
+              disabled={suspicious.length > 0}
+              className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+            >
+              {t(
+                issue.tooLong
+                  ? "parser:communityExport.copyAndOpen"
+                  : "parser:communityExport.openIssue"
+              )}
+            </button>
+            <button type="button" onClick={saveFile} className="btn-secondary text-xs px-3 py-1.5">
+              {t("parser:communityExport.download")}
+            </button>
+          </div>
+          {copy === "copied" && <p role="status">{t("parser:communityExport.copied")}</p>}
+          {copy === "manual" && (
+            <p role="alert" style={{ color: "var(--warning)" }}>
+              {t("parser:communityExport.copyFailed")}
+            </p>
+          )}
         </div>
       )}
     </div>

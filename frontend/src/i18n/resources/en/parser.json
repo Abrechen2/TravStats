@@ -1,10 +1,10 @@
 {
   "title": "Parser",
-  "description": "Manage email and boarding pass templates",
+  "description": "How TravStats reads a booking, and how to teach it a new one",
   "tabs": {
-    "annotate": "Annotate",
-    "myTemplates": "My Templates",
-    "communityTemplates": "Community Templates",
+    "annotate": "Create a template",
+    "myTemplates": "My templates",
+    "communityTemplates": "Community templates",
     "parseLogs": "Parse Logs"
   },
   "annotate": {
@@ -302,14 +302,14 @@
     "failed": "Could not run the preview."
   },
   "communityExport": {
-    "action": "Export for the community",
-    "explain": "Downloads this template as a file for the public template repository, without your document and without the values you marked in it; on GitHub you propose it, and the repository owner reviews every contribution before it reaches anyone.",
-    "download": "Download file",
+    "action": "Share with the community",
+    "explain": "You see exactly what will be published first. Your document and the values you marked stay here.",
+    "download": "Save as file",
     "working": "Preparing …",
     "downloaded": "{{filename}} was downloaded. Open GitHub's new-file page and paste or upload its content there.",
     "removed_one": "{{count}} line that held your own data was taken out.",
     "removed_other": "{{count}} lines that held your own data were taken out.",
-    "testCases": "The file carries no test document — yours stays here. The owner adds an invented one when reviewing.",
+    "testCases": "The template carries no test document. The repository owner adds an invented one when reviewing.",
     "openGithub": "Open on GitHub",
     "failed": "The file could not be prepared. Please try again.",
     "found": "Found: {{what}}.",
@@ -323,6 +323,66 @@
       "identity": "your name or address",
       "email": "an e-mail address",
       "number": "a long number"
+    },
+    "review": "Review what will be published",
+    "reviewTitle": "This will be published",
+    "provider": "Provider",
+    "markets": "Markets",
+    "none": "–",
+    "jsonLabel": "Template as JSON",
+    "openIssue": "Propose on GitHub",
+    "copyAndOpen": "Copy JSON and open GitHub",
+    "tooLong": "The template is too long for a link: the JSON is copied and you paste it into the \"Template\" field on GitHub.",
+    "copied": "JSON copied. Paste it into the \"Template\" field on GitHub.",
+    "copyFailed": "Copying did not work. Select the JSON above, copy it by hand and paste it on GitHub.",
+    "looksPersonal": "This probably holds something personal ({{what}}). Nothing will be opened. Derive the template again from another document.",
+    "suspect": {
+      "email": "an e-mail address",
+      "phone": "a phone number",
+      "bookingCode": "a booking code",
+      "longNumber": "a long number"
     }
+  },
+  "overview": {
+    "title": "How TravStats reads a booking",
+    "what": "A template tells TravStats how to recognise the booking of one provider and where its date, place and number are.",
+    "whatHelp": "When you import a booking, TravStats tries the sources below in order. The first template that fits reads the document.",
+    "whatSubject": "templates",
+    "uploadHelp": "A file you upload here stays with you as a sample. It is only used to derive and check the template. At most the template is shared, never your document.",
+    "uploadSubject": "uploaded booking",
+    "upload": "A booking you upload here stays with you.",
+    "order": "Reading goes in this order:",
+    "sources": {
+      "own": {
+        "name": "Own",
+        "line": "Made by you, valid in your account only.",
+        "help": "Templates from the workshop land here. They are tried first."
+      },
+      "community": {
+        "name": "Community",
+        "line": "From the public template repository.",
+        "help": "Proposed by other users and checked by the owner. Your server fetches them daily."
+      },
+      "builtin": {
+        "name": "Built-in",
+        "line": "Fixed in the server for common documents.",
+        "help": "General readers for flight, stay and ride documents. Anything provider-specific belongs in a template, not here."
+      }
+    },
+    "nothing": "Nothing recognised? Create a template in the workshop: upload the booking, mark the values, check, activate.",
+    "nothingAction": "Create a template"
+  },
+  "tabHints": {
+    "annotate": "Upload a booking and show TravStats what is in it.",
+    "myTemplates": "Check your templates, activate them and share them with the community.",
+    "community": "Ready-made templates from the public repository, updated daily.",
+    "parseLogs": "Which template read how many documents. Admins only."
+  },
+  "handoff": {
+    "link": "Not recognised? Create a template for it",
+    "hint": "Opens the workshop with this document.",
+    "textName": "pasted-text.txt",
+    "failed": "\"{{name}}\" could not be uploaded.",
+    "retry": "Try again"
   }
 }
