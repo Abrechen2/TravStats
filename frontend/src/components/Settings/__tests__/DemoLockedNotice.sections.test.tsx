@@ -49,7 +49,7 @@ import UnitsSection from "../UnitsSection";
 // Each case's locked control: the button the section offers a normal
 // account, and which the demo account must never see.
 const CASES = [
-  ["ApiTokensSection", ApiTokensSection, "settings:apiTokens.create", "settings:demoLocked"],
+  ["ApiTokensSection", ApiTokensSection, "settings:apiTokens.create", "settings:blocks.lock.demo"],
   ["PasskeySection", PasskeySection, "settings:passkeys.add", "settings:blocks.lock.demo"],
 ] as const;
 

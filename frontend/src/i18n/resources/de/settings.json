@@ -987,7 +987,7 @@
   "devices": {
     "title": "Companion-App",
     "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
-    "connectButton": "Neues Gerät verbinden",
+    "connectButton": "Telefon koppeln",
     "qrTitle": "Mit der TravStats-App scannen",
     "qrHint": "App öffnen → Einstellungen → „Gerät verbinden\" und diesen Code scannen.",
     "qrAlt": "QR-Code für die Gerätekopplung",
@@ -1011,9 +1011,9 @@
     "revoked": "Abgemeldet",
     "unpairButton": "Abmelden",
     "errors": {
-      "load": "Geräte konnten nicht geladen werden",
-      "start": "Kopplung konnte nicht gestartet werden",
-      "unpair": "Gerät konnte nicht abgemeldet werden"
+      "load": "Ich konnte die Telefone nicht laden.",
+      "start": "Ich konnte die Kopplung nicht starten.",
+      "unpair": "Ich konnte das Telefon nicht abmelden."
     },
     "unpairDialog": {
       "title": "Telefon abmelden?",
@@ -1036,7 +1036,7 @@
       "write": "Write — lesen + schreiben",
       "admin": "Admin — voller Zugriff"
     },
-    "create": "Token erstellen",
+    "create": "Neuer Schlüssel",
     "empty": "Noch keine Tokens erstellt.",
     "lastUsed": "Zuletzt: {{when}}",
     "neverUsed": "Noch nie benutzt",
@@ -1048,10 +1048,10 @@
     "copied": "Kopiert!",
     "dismiss": "Verstanden",
     "errors": {
-      "load": "Die Tokens konnten nicht geladen werden. Lade die Seite neu oder versuche es später erneut.",
-      "create": "Der Token konnte nicht erstellt werden. Versuche es erneut.",
-      "revoke": "Der Token konnte nicht widerrufen werden. Versuche es erneut.",
-      "labelRequired": "Beschreibung ist erforderlich",
+      "load": "Ich konnte die Schlüssel nicht laden.",
+      "create": "Ich konnte den Schlüssel nicht anlegen.",
+      "revoke": "Ich konnte den Schlüssel nicht zurückziehen.",
+      "labelRequired": "Ich brauche einen Namen für den Schlüssel.",
       "technicalDetail": "Technische Details"
     },
     "scopesShort": {
@@ -1873,6 +1873,15 @@
       "name": "Passkeys",
       "sub": "Anmelden ohne Passwort",
       "help": "Ein Passkey ersetzt Passwort und zweiten Faktor. Er gilt nur unter der Adresse, unter der du ihn angelegt hast."
+    },
+    "phones": {
+      "name": "Gekoppelte Telefone",
+      "help": "Der Kopplungscode verfällt nach wenigen Minuten. Abmelden nimmt dem Telefon sofort den Zugang."
+    },
+    "apiKeys": {
+      "name": "API-Schlüssel",
+      "sub": "Für Skripte und Werkzeuge",
+      "help": "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
     }
   }
 }

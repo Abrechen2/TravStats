@@ -987,7 +987,7 @@
   "devices": {
     "title": "Companion app",
     "description": "Connect the TravStats app on your phone. Scan the QR code in the app to pair the device — a device-bound token is created automatically.",
-    "connectButton": "Connect new device",
+    "connectButton": "Pair a phone",
     "qrTitle": "Scan with the TravStats app",
     "qrHint": "Open the app → Settings → \"Connect device\" and scan this code.",
     "qrAlt": "Device pairing QR code",
@@ -1011,9 +1011,9 @@
     "revoked": "Signed out",
     "unpairButton": "Sign out",
     "errors": {
-      "load": "Failed to load devices",
-      "start": "Failed to start pairing",
-      "unpair": "Failed to sign out device"
+      "load": "I couldn't load the phones.",
+      "start": "I couldn't start the pairing.",
+      "unpair": "I couldn't sign the phone out."
     },
     "unpairDialog": {
       "title": "Sign out phone?",
@@ -1036,7 +1036,7 @@
       "write": "Write — read + write",
       "admin": "Admin — full access"
     },
-    "create": "Create token",
+    "create": "New key",
     "empty": "No tokens created yet.",
     "lastUsed": "Last used: {{when}}",
     "neverUsed": "Never used",
@@ -1048,10 +1048,10 @@
     "copied": "Copied!",
     "dismiss": "Got it",
     "errors": {
-      "load": "The tokens could not be loaded. Reload the page or try again later.",
-      "create": "The token could not be created. Please try again.",
-      "revoke": "The token could not be revoked. Please try again.",
-      "labelRequired": "Label is required",
+      "load": "I couldn't load the keys.",
+      "create": "I couldn't create the key.",
+      "revoke": "I couldn't revoke the key.",
+      "labelRequired": "I need a name for the key.",
       "technicalDetail": "Technical details"
     },
     "scopesShort": {
@@ -1873,6 +1873,15 @@
       "name": "Passkeys",
       "sub": "Sign in without a password",
       "help": "A passkey replaces password and second step. It only works at the address where you created it."
+    },
+    "phones": {
+      "name": "Paired phones",
+      "help": "The pairing code expires after a few minutes. Signing out removes the phone's access at once."
+    },
+    "apiKeys": {
+      "name": "API keys",
+      "sub": "For scripts and tools",
+      "help": "A key bypasses the second step. You see it only once. Revoking locks the tool out at once."
     }
   }
 }

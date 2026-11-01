@@ -13,12 +13,12 @@ import Modal from "../Modal";
 
 import { useCallback, useEffect, useState } from "react";
 
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import DemoLockedNotice from "./DemoLockedNotice";
+import { SectionCard } from "./SettingsShared";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { ActionControl, LinkButton, SettingItem } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useAuthStore } from "../../store/authStore";
@@ -65,6 +65,7 @@ export default function ApiTokensSection(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   // The raw reason, kept apart from the sentence so it can sit behind a disclosure.
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const fail = (message: string, err: unknown): void => {
     setError(message);
     setErrorDetail(err instanceof Error ? err.message : String(err));
@@ -80,8 +81,12 @@ export default function ApiTokensSection(): JSX.Element {
     setLoading(true);
     try {
       setTokens(await apiTokensApi.list());
+      setLoadFailed(false);
+      setError(null);
+      setErrorDetail(null);
     } catch (err) {
       logger.error("Failed to load API tokens", err);
+      setLoadFailed(true);
       fail(t("settings:apiTokens.errors.load"), err);
     } finally {
       setLoading(false);
@@ -151,118 +156,133 @@ export default function ApiTokensSection(): JSX.Element {
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:apiTokens.title")}
-        description={t("settings:apiTokens.description")}
-      />
-
       <SettingRows>
-        {loading ? (
-          <p className="t-caption">{t("common:loading.title")}</p>
-        ) : tokens.length === 0 ? (
-          <p className="t-caption">{t("settings:apiTokens.empty")}</p>
-        ) : (
-          tokens.map((tok) => (
-            <div key={tok.id} style={{ opacity: tok.revokedAt ? 0.55 : 1 }}>
-              <SettingRow
-                title={tok.label}
-                sub={
-                  <span style={{ fontFamily: "var(--ts-font-mono)" }}>
-                    {tok.prefix}…
-                    {tok.lastUsedAt
-                      ? ` · ${t("settings:apiTokens.lastUsed", {
-                          when: formatDateTime(tok.lastUsedAt),
-                        })}`
-                      : ` · ${t("settings:apiTokens.neverUsed")}`}
-                  </span>
-                }
-                control={
-                  tok.revokedAt ? (
-                    <Pill color={token("muted")} dashed>
-                      {t("settings:apiTokens.revoked")}
-                    </Pill>
-                  ) : (
-                    <>
-                      <Pill color={tok.scope === "read" ? token("good") : token("accent")}>
-                        {t(`settings:apiTokens.scopesShort.${tok.scope}`)}
-                      </Pill>
-                      {!isDemo && (
-                        <button
-                          type="button"
-                          onClick={() => handleRevoke(tok.id, tok.label)}
-                          className="btn-secondary"
-                          style={{ color: "var(--ts-bad)" }}
-                        >
-                          {t("settings:apiTokens.revokeButton")}
-                        </button>
-                      )}
-                    </>
-                  )
-                }
+        <SettingItem
+          title={t("settings:rows.apiKeys.name")}
+          sub={t("settings:rows.apiKeys.sub")}
+          help={t("settings:rows.apiKeys.help")}
+          expert
+          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+          error={error ?? undefined}
+          control={
+            !isDemo && !formOpen ? (
+              <ActionControl
+                label={t("settings:apiTokens.create")}
+                onClick={() => setFormOpen(true)}
               />
-            </div>
-          ))
-        )}
+            ) : undefined
+          }
+        >
+          {errorDetail && (
+            <details>
+              <summary className="t-caption">
+                {t("settings:apiTokens.errors.technicalDetail")}
+              </summary>
+              <code>{errorDetail}</code>
+            </details>
+          )}
+          {loadFailed && (
+            <LinkButton onClick={() => void reload()}>{t("settings:blocks.save.retry")}</LinkButton>
+          )}
+          {loadFailed ? null : loading ? (
+            <p className="t-caption">{t("common:loading.title")}</p>
+          ) : tokens.length === 0 ? (
+            <p className="t-caption">{t("settings:apiTokens.empty")}</p>
+          ) : (
+            tokens.map((tok) => (
+              <div key={tok.id} style={{ opacity: tok.revokedAt ? 0.55 : 1 }}>
+                <SettingRow
+                  title={tok.label}
+                  sub={
+                    <span style={{ fontFamily: "var(--ts-font-mono)" }}>
+                      {tok.prefix}…
+                      {tok.lastUsedAt
+                        ? ` · ${t("settings:apiTokens.lastUsed", {
+                            when: formatDateTime(tok.lastUsedAt),
+                          })}`
+                        : ` · ${t("settings:apiTokens.neverUsed")}`}
+                    </span>
+                  }
+                  control={
+                    tok.revokedAt ? (
+                      <Pill color={token("muted")} dashed>
+                        {t("settings:apiTokens.revoked")}
+                      </Pill>
+                    ) : (
+                      <>
+                        <Pill color={tok.scope === "read" ? token("good") : token("accent")}>
+                          {t(`settings:apiTokens.scopesShort.${tok.scope}`)}
+                        </Pill>
+                        {!isDemo && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevoke(tok.id, tok.label)}
+                            className="btn-secondary"
+                            style={{ color: "var(--ts-bad)" }}
+                          >
+                            {t("settings:apiTokens.revokeButton")}
+                          </button>
+                        )}
+                      </>
+                    )
+                  }
+                />
+              </div>
+            ))
+          )}
 
-        {isDemo ? (
-          <DemoLockedNotice />
-        ) : formOpen ? (
-          <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            <label className="label" htmlFor="api-token-label">
-              {t("settings:apiTokens.newLabel")}
-            </label>
-            <input
-              id="api-token-label"
-              type="text"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder={t("settings:apiTokens.newLabelPlaceholder")}
-              className="input"
-              disabled={creating}
-              maxLength={80}
-            />
-            <span className="label">{t("settings:apiTokens.scope")}</span>
-            <Segmented
-              label={t("settings:apiTokens.scope")}
-              value={newScope}
-              options={scopes.map((scope) => ({
-                value: scope,
-                label: t(`settings:apiTokens.scopesShort.${scope}`),
-                name: t(`settings:apiTokens.scopes.${scope}`),
-              }))}
-              onChange={setNewScope}
-              disabled={creating}
-            />
-            <p className="t-caption">{t(`settings:apiTokens.scopes.${newScope}`)}</p>
-            <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={creating || !newLabel.trim()}
-                className="btn-primary"
-              >
-                {creating ? t("common:loading.title") : t("settings:apiTokens.create")}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setFormOpen(false);
-                  setError(null);
-                  setErrorDetail(null);
-                }}
-              >
-                {t("common:buttons.cancel")}
-              </button>
+          {formOpen && !isDemo ? (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+              <label className="label" htmlFor="api-token-label">
+                {t("settings:apiTokens.newLabel")}
+              </label>
+              <input
+                id="api-token-label"
+                type="text"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder={t("settings:apiTokens.newLabelPlaceholder")}
+                className="input"
+                disabled={creating}
+                maxLength={80}
+              />
+              <span className="label">{t("settings:apiTokens.scope")}</span>
+              <Segmented
+                label={t("settings:apiTokens.scope")}
+                value={newScope}
+                options={scopes.map((scope) => ({
+                  value: scope,
+                  label: t(`settings:apiTokens.scopesShort.${scope}`),
+                  name: t(`settings:apiTokens.scopes.${scope}`),
+                }))}
+                onChange={setNewScope}
+                disabled={creating}
+              />
+              <p className="t-caption">{t(`settings:apiTokens.scopes.${newScope}`)}</p>
+              <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={creating || !newLabel.trim()}
+                  className="btn-primary"
+                >
+                  {creating ? t("common:loading.title") : t("settings:apiTokens.create")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setFormOpen(false);
+                    setError(null);
+                    setErrorDetail(null);
+                  }}
+                >
+                  {t("common:buttons.cancel")}
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div>
-            <button type="button" className="btn-primary" onClick={() => setFormOpen(true)}>
-              {t("settings:apiTokens.create")}
-            </button>
-          </div>
-        )}
+          ) : null}
+        </SettingItem>
 
         <SettingRow
           title={t("settings:apiTokens.docsTitle")}
@@ -279,18 +299,6 @@ export default function ApiTokensSection(): JSX.Element {
           }
         />
       </SettingRows>
-
-      {error && (
-        <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-          {error}
-          {errorDetail && (
-            <details>
-              <summary>{t("settings:apiTokens.errors.technicalDetail")}</summary>
-              <code>{errorDetail}</code>
-            </details>
-          )}
-        </p>
-      )}
 
       {/* Just-created dialog — plaintext shown ONCE */}
       <Modal

@@ -115,3 +115,28 @@ describe("DevicesSection pairing code", () => {
     expect(screen.getByTestId("qr")).toHaveTextContent("settings:devices.qrAlt");
   });
 });
+
+describe("DevicesSection failures", () => {
+  beforeEach(() => {
+    pairing.start.mockReset();
+    tokens.list.mockReset();
+  });
+
+  it("says the phones could not be loaded and retries, instead of claiming there are none", async () => {
+    tokens.list.mockRejectedValueOnce(new Error("Network Error"));
+    tokens.list.mockResolvedValueOnce([]);
+    render(<DevicesSection />);
+    expect(await screen.findByText("settings:devices.errors.load")).toBeInTheDocument();
+    expect(screen.queryByText("settings:devices.empty")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    expect(await screen.findByText("settings:devices.empty")).toBeInTheDocument();
+  });
+
+  it("says so when the pairing cannot be started", async () => {
+    tokens.list.mockResolvedValue([]);
+    pairing.start.mockRejectedValue(new Error("500"));
+    render(<DevicesSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "settings:devices.connectButton" }));
+    expect(await screen.findByText("settings:devices.errors.start")).toBeInTheDocument();
+  });
+});
