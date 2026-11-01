@@ -24,6 +24,9 @@ export function ServiceCardShell({
 }: ServiceCardShellProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [open, setOpen] = useState(defaultOpen);
+  // Once opened the body stays mounted (hidden when closed): its unsaved groups
+  // must not vanish, unasked, with a click on the chevron.
+  const [everOpened, setEverOpened] = useState(defaultOpen);
   const bodyId = useId();
   const head = (
     <>
@@ -54,7 +57,10 @@ export function ServiceCardShell({
           type="button"
           aria-expanded={open}
           aria-controls={bodyId}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            setEverOpened(true);
+            setOpen((v) => !v);
+          }}
           className="flex w-full flex-wrap items-center justify-between"
           style={{
             gap: "var(--ts-space-md)",
@@ -75,8 +81,12 @@ export function ServiceCardShell({
           </span>
         </button>
       )}
-      {!statusOnly && open ? (
-        <div id={bodyId} style={{ padding: "0 var(--ts-space-lg) var(--ts-space-lg)" }}>
+      {!statusOnly && (open || everOpened) ? (
+        <div
+          id={bodyId}
+          hidden={!open}
+          style={{ padding: "0 var(--ts-space-lg) var(--ts-space-lg)" }}
+        >
           {children}
         </div>
       ) : null}

@@ -33,8 +33,8 @@ import CruisePreferencesSection from "../../components/Settings/CruisePreference
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
-import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
 import StayScanSection from "../../components/Settings/location/StayScanSection";
+import ServicesPage from "../../components/Services/ServicesPage";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import LocationSourceSection from "../../components/Settings/location/LocationSourceSection";
 import TravTrackLocationSection from "../../components/Settings/location/TravTrackLocationSection";
@@ -141,7 +141,7 @@ export default function SettingsSectionSwitch({
     case "stayScan":
       return <StayScanSection />;
     case "externalServices":
-      return <AccountExternalServices />;
+      return <ServicesPage isAdmin={isAdmin} />;
     case "homeAirport":
       return <HomeAirportSection view="airports" />;
     case "defaults":

@@ -17,7 +17,6 @@ const CARDS = [
   "PhotoJourneyNightlyScanCard",
   "StravaConnectionCard",
   "RailProvidersCard",
-  "OpenDataCard",
 ];
 
 describe("external-service cards say what happens when the service is unreachable", () => {

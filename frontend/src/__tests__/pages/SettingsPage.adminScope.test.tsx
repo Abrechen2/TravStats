@@ -206,9 +206,13 @@ vi.mock("@/lib/api/externalServices", async (importOriginal) => {
     ...actual,
     externalServicesApi: {
       ...actual.externalServicesApi,
-      accountOverview: vi
-        .fn()
-        .mockResolvedValue({ connections: [], ownKeys: [], aiConsents: [], instanceProvided: [] }),
+      accountOverview: vi.fn().mockResolvedValue({
+        connections: [],
+        ownKeys: [],
+        aiConsents: [],
+        instanceProvided: [],
+        blocked: [],
+      }),
     },
   };
 });
@@ -229,7 +233,7 @@ vi.mock("../../components/Settings/LoyaltySection", () => ({
 let isAdmin = false;
 
 // The services catalogue loads from the server — not the subject here.
-vi.mock("../../components/ExternalServices/AccountExternalServices", () => ({
+vi.mock("../../components/Services/ServicesPage", () => ({
   default: () => <div data-testid="account-external-services" />,
 }));
 

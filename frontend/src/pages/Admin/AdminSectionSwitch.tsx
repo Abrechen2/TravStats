@@ -13,7 +13,7 @@ import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModa
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
 import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
-import AdminExternalServices from "../../components/ExternalServices/AdminExternalServices";
+import ServicesPage from "../../components/Services/ServicesPage";
 import AboutSection from "../../components/Settings/AboutSection";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
 import LoggingManager from "../../components/Admin/LoggingManager";
@@ -228,9 +228,8 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
       );
 
     case "externalServices":
-      // One list of every external service (forgejo#392); the specialised
-      // controls of the old accordion live inside the expanded rows.
-      return <AdminExternalServices />;
+      // The services page itself: an administrator's cards carry both sides.
+      return <ServicesPage isAdmin />;
 
     case "parsers":
       return props.parserSettings ? (

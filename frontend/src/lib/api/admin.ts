@@ -686,13 +686,11 @@ export const adminApi = {
     return data;
   },
 
+  /** `password` may be left out (the server uses the stored one); a failure carries a stable `code`. */
   testSmtpConnection: async (
-    config: SmtpConfigInput
-  ): Promise<{ success: boolean; error?: string }> => {
-    const { data } = await api.post<{ success: boolean; error?: string }>(
-      "/admin/smtp/test",
-      config
-    );
+    config: Omit<SmtpConfigInput, "password"> & { password?: string }
+  ): Promise<{ success: boolean }> => {
+    const { data } = await api.post<{ success: boolean }>("/admin/smtp/test", config);
     return data;
   },
 

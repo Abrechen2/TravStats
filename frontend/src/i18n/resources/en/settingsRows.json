@@ -290,5 +290,609 @@
       "after": "The card and its links to airlines, chains or hotels are gone. Your flights, stays and journeys stay.",
       "confirm": "Delete card"
     }
+  },
+  "services": {
+    "groups": {
+      "alle": "All",
+      "flug": "Flight data",
+      "karte": "Maps & routes",
+      "foto": "Photos & location",
+      "ki": "AI",
+      "open": "Open data",
+      "sync": "Sync & mail",
+      "inst": "Instance"
+    },
+    "tpl": {
+      "mine": {
+        "t": "Use for me",
+        "h": "If your admin switched the service off, it stays off."
+      },
+      "ownKey": {
+        "t": "Own key",
+        "s": "Instead of the server's key",
+        "h": "Your key wins over the server's. It's stored encrypted and never shown again."
+      },
+      "on": {
+        "t": "On for this server",
+        "s": "Off: no requests, not even a test",
+        "h": "Applies to every account, even with its own key.",
+        "us": "Switched off by your admin"
+      },
+      "instKey": {
+        "t": "Server key",
+        "s": "For every account without its own",
+        "h": "Leave empty to keep the stored key."
+      },
+      "allowKeys": {
+        "t": "Allow own keys",
+        "us": "Own keys aren't allowed here"
+      },
+      "allowConn": {
+        "t": "Accounts may connect",
+        "h": "Each account enters its own credentials.",
+        "us": "Your admin doesn't allow own connections"
+      },
+      "test": {
+        "t": "Check connection",
+        "h": "Checks the saved setup. The result stays with its time.",
+        "btn": "Test",
+        "res": "Reachable · just checked"
+      },
+      "quota": {
+        "t": "Quota",
+        "h": "As reported by the provider. TravStats stops before the limit."
+      },
+      "always": {
+        "t": "Always on",
+        "s": "TravStats can't work without it"
+      },
+      "aiAllow": {
+        "t": "Offer to accounts",
+        "s": "Each account then agrees on its own",
+        "h": "What goes there: the text of an e-mail or PDF, at most 12,000 characters, only when templates find nothing.",
+        "us": "Not enabled by your admin"
+      },
+      "aiConsent": {
+        "t": "My texts may go there",
+        "s": "Only when templates find nothing",
+        "h": "At most 12,000 characters per e-mail or PDF. If the provider's address changes, I'll ask again.",
+        "btn": "Agree",
+        "res": "Agreed · Withdraw"
+      },
+      "model": {
+        "t": "Model"
+      }
+    },
+    "cards": {
+      "airlabs": {
+        "n": "AirLabs",
+        "p": "Schedules and routes"
+      },
+      "aviationstack": {
+        "n": "Aviationstack",
+        "p": "Flight status"
+      },
+      "aerodatabox": {
+        "n": "AeroDataBox",
+        "p": "Flights and aircraft"
+      },
+      "aeroapi": {
+        "n": "FlightAware AeroAPI",
+        "p": "Flight status and real tracks"
+      },
+      "opensky": {
+        "n": "OpenSky",
+        "p": "Positions in the air"
+      },
+      "adsblol": {
+        "n": "ADS-B Lol",
+        "p": "Positions in the air, free"
+      },
+      "adsbx": {
+        "n": "ADS-B Exchange",
+        "p": "Positions in the air"
+      },
+      "aisstream": {
+        "n": "AISStream",
+        "p": "Ship positions"
+      },
+      "openrouteservice": {
+        "n": "OpenRouteService",
+        "p": "Routes for tours"
+      },
+      "graphhopper": {
+        "n": "GraphHopper",
+        "p": "Routes for tours"
+      },
+      "railTimetables": {
+        "n": "Transitous & db-rest",
+        "p": "Rail timetables"
+      },
+      "googlePlaces": {
+        "n": "Google Places",
+        "p": "Places and opening hours"
+      },
+      "geocoder": {
+        "n": "Photon & Nominatim",
+        "p": "Place search"
+      },
+      "selfHostedRouting": {
+        "n": "OSRM & OpenRailRouting",
+        "p": "Own routing"
+      },
+      "immich": {
+        "n": "Immich",
+        "p": "Photos"
+      },
+      "dawarich": {
+        "n": "Dawarich",
+        "p": "Location history"
+      },
+      "strava": {
+        "n": "Strava",
+        "p": "Activities"
+      },
+      "ollama": {
+        "n": "Ollama",
+        "p": "AI on your server"
+      },
+      "openai": {
+        "n": "OpenAI",
+        "p": "Cloud AI"
+      },
+      "anthropic": {
+        "n": "Anthropic",
+        "p": "Cloud AI"
+      },
+      "gemini": {
+        "n": "Google Gemini",
+        "p": "Cloud AI"
+      },
+      "customLlm": {
+        "n": "OpenAI-compatible",
+        "p": "Own AI provider"
+      },
+      "openData": {
+        "n": "OpenStreetMap · Overpass",
+        "p": "Markets and places from open data"
+      },
+      "logos": {
+        "n": "Logostream",
+        "p": "Airline and operator logos"
+      },
+      "fx": {
+        "n": "ECB rates",
+        "p": "Exchange rates"
+      },
+      "webdav": {
+        "n": "WebDAV",
+        "p": "Backup target"
+      },
+      "smtp": {
+        "n": "Mail (SMTP)",
+        "p": "Sending mail"
+      },
+      "push": {
+        "n": "Push",
+        "p": "Notifications to the Companion app"
+      },
+      "federation": {
+        "n": "Other servers",
+        "p": "Federation between TravStats servers"
+      },
+      "usageStats": {
+        "n": "Usage statistics",
+        "p": "Daily report without names"
+      },
+      "updatesTemplates": {
+        "n": "GitHub",
+        "p": "New versions and templates"
+      }
+    },
+    "rows": {
+      "avbudget": {
+        "t": "Requests per day",
+        "s": "0 turns it off"
+      },
+      "aerotarif": {
+        "t": "Plan"
+      },
+      "aerolimit": {
+        "t": "Monthly limit in USD",
+        "s": "Custom plan only"
+      },
+      "aerotracks": {
+        "t": "Real tracks after landing",
+        "s": "Costs extra requests"
+      },
+      "aerousage": {
+        "t": "Used this month",
+        "h": "TravStats stops before the limit."
+      },
+      "oskid": {
+        "t": "Your client ID",
+        "s": "Instead of the server's"
+      },
+      "osksec": {
+        "t": "Your client secret",
+        "h": "Stored encrypted and never shown again."
+      },
+      "oskuser": {
+        "t": "Your username",
+        "s": "Legacy sign-in"
+      },
+      "oskpw": {
+        "t": "Your password",
+        "s": "Legacy sign-in"
+      },
+      "oskidI": {
+        "t": "Server client ID",
+        "s": "For every account without its own"
+      },
+      "osksecI": {
+        "t": "Server client secret"
+      },
+      "oskuserI": {
+        "t": "Server username",
+        "s": "Legacy sign-in"
+      },
+      "oskpwI": {
+        "t": "Server password",
+        "s": "Legacy sign-in"
+      },
+      "transitous": {
+        "t": "Transitous",
+        "s": "Timetables from open data"
+      },
+      "dbrest": {
+        "t": "db-rest",
+        "s": "Deutsche Bahn timetables"
+      },
+      "bahnkontakt": {
+        "t": "Contact for requests",
+        "s": "Sent along to the operators"
+      },
+      "photon": {
+        "t": "Photon address"
+      },
+      "nominatim": {
+        "t": "Nominatim address"
+      },
+      "geoeigen": {
+        "t": "Own geo server"
+      },
+      "osrm": {
+        "t": "OSRM address",
+        "s": "Empty: off"
+      },
+      "orr": {
+        "t": "OpenRailRouting address",
+        "s": "Empty: off"
+      },
+      "immurl": {
+        "t": "Address",
+        "h": "May be on your local network."
+      },
+      "immkey": {
+        "t": "API key",
+        "s": "From Immich → Account → API keys"
+      },
+      "immnacht": {
+        "t": "Look through photos nightly",
+        "s": "Finds trips you haven't logged"
+      },
+      "immmode": {
+        "t": "Photos on trips",
+        "h": "Link shows photos from Immich and copies nothing. Copy downloads the originals to this server.",
+        "o": ["verknüpfen", "kopieren"]
+      },
+      "immvisit": {
+        "t": "Link visit photos",
+        "s": "Find photos for your places",
+        "btn": "Link",
+        "res": "Running · 37 places · done in about 1 minute"
+      },
+      "imminsturl": {
+        "t": "Server's Immich: address",
+        "s": "For accounts without their own"
+      },
+      "imminstkey": {
+        "t": "Server's Immich: API key"
+      },
+      "dawurl": {
+        "t": "Address"
+      },
+      "dawkey": {
+        "t": "API key",
+        "h": "Your connection is the only one used for location source, stay search and country days."
+      },
+      "dawinsturl": {
+        "t": "Server's Dawarich: address",
+        "s": "Only for tour and cruise tracks",
+        "h": "Location source, stays and country days need each account's own connection. Otherwise every account would see one person's movements."
+      },
+      "dawinstkey": {
+        "t": "Server's Dawarich: API key"
+      },
+      "dawsweep": {
+        "t": "Count country days now",
+        "s": "For every account with its own connection",
+        "h": "Otherwise runs nightly. May take a few minutes.",
+        "btn": "Start",
+        "res": "Running · done in about 4 minutes"
+      },
+      "stravaconn": {
+        "t": "Connect Strava",
+        "h": "Strava data never goes to an AI.",
+        "btn": "Connect",
+        "res": "Connected as Mara O."
+      },
+      "stravaid": {
+        "t": "Strava app client ID",
+        "s": "Registered once for the server"
+      },
+      "stravasec": {
+        "t": "Strava app client secret"
+      },
+      "ollurl": {
+        "t": "Address"
+      },
+      "ollmodel": {
+        "t": "Model"
+      },
+      "ollvision": {
+        "t": "Model for images"
+      },
+      "ollpull": {
+        "t": "Download model to server",
+        "btn": "Download",
+        "res": "Model downloaded"
+      },
+      "ollremote": {
+        "t": "Runs outside this network",
+        "s": "Then each account agrees on its own"
+      },
+      "custurl": {
+        "t": "Address with version path",
+        "s": "e.g. …/v1"
+      },
+      "overpass": {
+        "t": "Overpass address"
+      },
+      "oplogos": {
+        "t": "Look up operator logos"
+      },
+      "logorefresh": {
+        "t": "Reload logos",
+        "s": "Also happens every night",
+        "btn": "Reload",
+        "res": "84 new logos · 1,210 checked"
+      },
+      "fxcdn": {
+        "t": "Fallback source",
+        "s": "When the ECB doesn't answer"
+      },
+      "wdurl": {
+        "t": "Address",
+        "s": "Public https address"
+      },
+      "wduser": {
+        "t": "User"
+      },
+      "wdpw": {
+        "t": "Password"
+      },
+      "wdfolder": {
+        "t": "Folder"
+      },
+      "wdsrv": {
+        "t": "Upload server backups",
+        "s": "Every successful backup"
+      },
+      "wdsrvurl": {
+        "t": "Server: address"
+      },
+      "wdsrvuser": {
+        "t": "Server: user"
+      },
+      "wdsrvpw": {
+        "t": "Server: password",
+        "h": "Stored encrypted. Save first, then test."
+      },
+      "wdpath": {
+        "t": "Folder for server backups"
+      },
+      "smtpon": {
+        "t": "Send mail",
+        "s": "Invitations, reminders, new password"
+      },
+      "smtphost": {
+        "t": "Server"
+      },
+      "smtpuser": {
+        "t": "User"
+      },
+      "smtppw": {
+        "t": "Password",
+        "s": "Gmail and Outlook need an app password"
+      },
+      "smtpfrom": {
+        "t": "Sender",
+        "s": "Ideally from the same domain"
+      },
+      "smtpport": {
+        "t": "Port",
+        "s": "587 with STARTTLS, 465 with TLS"
+      },
+      "smtptls": {
+        "t": "Encrypted from the start (TLS)"
+      },
+      "smtpname": {
+        "t": "Sender name"
+      },
+      "smtptest": {
+        "t": "Check connection",
+        "btn": "Test",
+        "res": "Test mail sent to mara@example.org"
+      },
+      "smtpdel": {
+        "t": "Delete credentials",
+        "h": "After that the server sends no mail at all.",
+        "btn": "Delete credentials"
+      },
+      "pushon": {
+        "t": "Send notifications",
+        "s": "Through the TravStats push service",
+        "h": "Off: the server never contacts the push service."
+      },
+      "pushconsent": {
+        "t": "Agreed on",
+        "h": "The push service learns the phone's ID and the notification text, nothing else."
+      },
+      "pushrelay": {
+        "t": "Push service address",
+        "h": "A different address registers the server again."
+      },
+      "pushreset": {
+        "t": "Reset registration",
+        "btn": "Reset"
+      },
+      "fedon": {
+        "t": "Connect to other servers"
+      },
+      "fedtrips": {
+        "t": "Share trips with other servers"
+      },
+      "fedorigin": {
+        "t": "This server's address",
+        "s": "https, no port or path"
+      },
+      "fedkey": {
+        "t": "Server key",
+        "h": "A new key cuts all connections until the others confirm it again.",
+        "btn": "Generate",
+        "res": "Key generated · show fingerprint"
+      },
+      "fedpeers": {
+        "t": "Trusted servers",
+        "h": "An imported file trusts no one yet; only “Trust” does.",
+        "btn": "Import connection file"
+      },
+      "nutzstat": {
+        "t": "Send usage statistics",
+        "s": "Once a day, without names",
+        "h": "The install ID is shown in the help. If the receiver is disabled at start, nothing is sent.",
+        "o": ["nein", "ja"]
+      },
+      "updcheck": {
+        "t": "Check for new versions",
+        "s": "Asks GitHub"
+      },
+      "tplrepo": {
+        "t": "Booking template source",
+        "s": "Empty: official source"
+      }
+    },
+    "ui": {
+      "accountHead": "For your account",
+      "serverHead": "All accounts",
+      "serverHint": "Applies to every account on this server.",
+      "accountGroup": "Your credentials for {{name}}",
+      "serverGroup": "The server's credentials for {{name}}",
+      "removeSecret": "Remove",
+      "save": "Save",
+      "saveAndTest": "Save & test",
+      "discard": "Discard",
+      "loading": "Loading the services …",
+      "loadFailed": "I couldn't load the services.",
+      "serverLoadFailed": "I couldn't load the server's settings.",
+      "retry": "Try again",
+      "intro": "This is where TravStats gets data from and where something goes. The top of each card says what applies to your account; as an admin you see below it what applies to everyone.",
+      "groupsLabel": "Service groups",
+      "withdraw": "Withdraw",
+      "connectedAccounts_one": "{{count}} account is connected.",
+      "connectedAccounts_other": "{{count}} accounts are connected.",
+      "testing": "Checking …",
+      "testCouldNotRun": "I couldn't run the test.",
+      "neverTested": "Not checked yet",
+      "lastOk": "Connected · checked {{when}}",
+      "lastFailed": "{{reason}} · checked {{when}}",
+      "quotaUnknown": "The provider hasn't reported anything yet",
+      "smtpOk": "Connected · just checked",
+      "deleteFailed": "I couldn't delete the credentials.",
+      "resetFailed": "I couldn't reset the registration.",
+      "saveFailed": "I couldn't save this.",
+      "running": "Running …",
+      "sweepDone": "Done · {{users}} accounts, {{days}} days written.",
+      "sweepPartial": "Done, but something went wrong for {{failed}} accounts · {{users}} accounts, {{days}} days written.",
+      "sweepLost": "I don't know if it finished. The server restarted in between.",
+      "sweepRunning": "That is already running.",
+      "sweepFailed": "I couldn't count the country days.",
+      "pullDone": "{{model}} is loaded.",
+      "pullFailed": "I couldn't load the model.",
+      "ollamaModels": "Installed on the server",
+      "noModels": "No model installed yet",
+      "modelsUnknown": "I can't get the model list",
+      "fedNoOrigin": "Enter this server's address first."
+    },
+    "status": {
+      "needsConsent": "Waiting for your consent",
+      "always": "Always on",
+      "notAsked": "Not asked yet",
+      "viaServer": "Via the server",
+      "notSetUp": "Not set up",
+      "off": "Off",
+      "on": "On",
+      "notConnected": "Not connected",
+      "connected": "Connected",
+      "ready": "Ready",
+      "notEnabled": "Not enabled",
+      "keyRejected": "Key rejected",
+      "offByAdmin": "Switched off by your admin"
+    },
+    "reason": {
+      "auth": "I can't get in: the key was rejected.",
+      "unauthorized": "I can't get in: the key was rejected.",
+      "network": "I can't reach the service.",
+      "unreachable": "I can't reach the service.",
+      "http_error": "Something other than {{name}} answers at this address.",
+      "not_found": "I find nothing at this address.",
+      "rate_limited": "The provider is throttling. I'll try later.",
+      "quota": "Today's quota is used up.",
+      "quota_exhausted": "Today's quota is used up.",
+      "budget_exhausted": "The monthly budget is reached. I'll ask again next month.",
+      "timeout": "No answer after 10 seconds.",
+      "disabled": "Switched off by your admin. I won't ask, not even for a test.",
+      "not_configured": "Not set up",
+      "unknown": "I couldn't check this."
+    },
+    "smtp": {
+      "SMTP_CONNECTION": "I can't reach the mail server. Are address and port right?",
+      "SMTP_TLS": "The encrypted connection doesn't come up. Do the port and \"Directly encrypted\" fit together?",
+      "SMTP_AUTH": "I can't get in: user or password were rejected.",
+      "SMTP_TIMEOUT": "No answer from the mail server after 8 seconds.",
+      "SMTP_PASSWORD_MISSING": "I'm missing the password. Enter it and I'll check again.",
+      "SMTP_UNKNOWN": "The mail server didn't accept that."
+    },
+    "dialogs": {
+      "smtpdel": {
+        "title": "Delete the mail credentials?",
+        "affects": "Server, user and password for sending mail",
+        "amount": "One set of credentials",
+        "after": "Afterwards the server sends no mail at all: no invitations, no reminders, no new password.",
+        "confirm": "Delete credentials"
+      },
+      "pushreset": {
+        "title": "Reset the registration with the push service?",
+        "affects": "This server's registration with the push service",
+        "amount": "One registration",
+        "after": "The server registers again with the next notification. You don't have to pair the phones again.",
+        "confirm": "Reset registration"
+      },
+      "fedkey": {
+        "affects": "This server's key",
+        "amount": "One key"
+      }
+    }
   }
 }

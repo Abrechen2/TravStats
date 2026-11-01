@@ -24,7 +24,11 @@ interface Options<T> {
   label: string;
   /** What the server holds. */
   saved: T;
-  write: (draft: T) => Promise<void>;
+  /**
+   * Resolves with the draft as it stands once saved, when that differs from what
+   * was sent (a secret that was typed is write-only: it does not stay in the draft).
+   */
+  write: (draft: T) => Promise<void | T>;
 }
 
 /**
@@ -84,8 +88,19 @@ export function useGroupSave<T extends Record<string, unknown>>({
     setPhase("saving");
     setReason(null);
     try {
-      await writeRef.current(sent);
-      baseline.current = sent;
+      const settled = (await writeRef.current(sent)) ?? sent;
+      baseline.current = settled;
+      // Fields edited while the request was out keep the user's value (and stay
+      // changed); the rest take the settled one.
+      setDraft(
+        (current) =>
+          Object.fromEntries(
+            (Object.keys(settled) as (keyof T)[]).map((k) => [
+              k,
+              stableSnapshot(current[k]) === stableSnapshot(sent[k]) ? settled[k] : current[k],
+            ])
+          ) as T
+      );
       setPhase("saved");
       return true;
     } catch (error) {

@@ -305,6 +305,30 @@ describe("external services (forgejo#392)", () => {
       expect(view.body.connections.map((c: { id: string }) => c.id)).not.toContain("immich");
     });
 
+    it("names why a service is missing from the account's own lists: switched off, own keys forbidden, own connection forbidden", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: {
+          externalServicePolicy: {
+            disabled: ["aviationstack"],
+            accountKeysForbidden: ["airlabs"],
+            connectionsForbidden: ["immich"],
+          },
+        },
+      });
+      const view = await request(app)
+        .get("/api/v1/settings/external-services")
+        .set("Cookie", cookieA);
+      expect(view.body.blocked).toEqual(
+        expect.arrayContaining([
+          { id: "aviationstack", reason: "disabled" },
+          { id: "airlabs", reason: "keysForbidden" },
+          { id: "immich", reason: "connectionForbidden" },
+        ])
+      );
+      expect(view.body.blocked.map((b: { id: string }) => b.id)).not.toContain("aerodatabox");
+    });
+
     it("AeroAPI is instance-only: provided by the instance, never an own-key service (invariant 7)", async () => {
       await prisma.adminSettings.update({
         where: { id: rowId },
@@ -472,5 +496,74 @@ describe("external services (forgejo#392)", () => {
         { id: "openai", provider: "openai", destination: "api.openai.com", consentedAt: null },
       ]);
     });
+  });
+});
+
+describe("account service test (settings rebuild, package 6)", () => {
+  let userId: string;
+  let otherId: string;
+  let cookie: string;
+  let otherCookie: string;
+
+  beforeAll(async () => {
+    const mk = async (name: string) =>
+      (
+        await prisma.user.create({
+          data: {
+            username: `es-test-${name}-${Date.now()}`,
+            passwordHash: await hashPassword("pw-123456"),
+            isActive: true,
+          },
+        })
+      ).id;
+    userId = await mk("a");
+    otherId = await mk("b");
+    cookie = `auth_token=${generateToken(userId)}`;
+    otherCookie = `auth_token=${generateToken(otherId)}`;
+    await prisma.userSettings.upsert({
+      where: { userId },
+      create: { userId, data: {}, airlabsApiKey: encryptApiKey("account-airlabs-key-123456") },
+      update: { airlabsApiKey: encryptApiKey("account-airlabs-key-123456") },
+    });
+    await prisma.userSettings.upsert({
+      where: { userId: otherId },
+      create: { userId: otherId, data: {} },
+      update: {},
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherId] } } });
+  });
+
+  it("tests the account's own key and persists the verdict", async () => {
+    testAirlabsKey.mockResolvedValue({ success: true });
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", cookie)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(testAirlabsKey).toHaveBeenCalledWith("account-airlabs-key-123456");
+  });
+
+  it("does not test another account's key: an account without its own key gets a failed verdict, not the neighbour's result", async () => {
+    testAirlabsKey.mockClear();
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/airlabs/test")
+      .set("Cookie", otherCookie)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(false);
+    expect(testAirlabsKey).not.toHaveBeenCalledWith("account-airlabs-key-123456");
+  });
+
+  it("answers 404 SERVICE_NOT_FOUND for a service with no account side", async () => {
+    const res = await request(app)
+      .post("/api/v1/settings/external-services/aeroapi/test")
+      .set("Cookie", cookie)
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SERVICE_NOT_FOUND");
   });
 });

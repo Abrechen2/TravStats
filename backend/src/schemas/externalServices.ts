@@ -114,6 +114,19 @@ export const accountExternalServicesResponseSchema = z.object({
       recommended: z.enum(["free", "freeCredit"]).nullable(),
     })
   ),
+  blocked: z
+    .array(
+      z.object({
+        id: z.string(),
+        reason: z.enum(["disabled", "keysForbidden", "connectionForbidden"]),
+      })
+    )
+    .describe(
+      "Services this account cannot use its own credential for, and why: the admin switched the " +
+        "service off, or forbade own keys or own connections. Those services are left out of " +
+        "`connections` and `ownKeys`, so without this list the page could not tell them from " +
+        "a service the server simply does not offer."
+    ),
 });
 
 export const serviceTestResponseSchema = z.object({
