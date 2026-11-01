@@ -41,6 +41,7 @@ this file is the plan and the record of what was built.
 | 9 | Map panel controls on the shared row; iPad 1366/820 check | P2 |
 | 10 | Copy: parser literals, option labels, level/TravPlan upgrade notes | P3 |
 | 11 | Reminders per domain (Alex, Discord 2026-10-29) | P2 |
+| 12 | Standort page in the normal style: shared rows, clear grouping, long jobs folded (owner 2026-11-01) | P2 |
 
 ## Package 11 — reminders per domain (contract, agreed with the Companion)
 
@@ -67,7 +68,7 @@ this file is the plan and the record of what was built.
 | 1+2 | `fix/settings-save-correctness` | in 2.8.0-rc.8 (follow-up `bfd27b251`) |
 | 11 | reminders per domain (forgejo#410) | in 2.8.0-rc.8 |
 
-Owner, 2026-11-01: package 3b added — the canvas regrouping had no package of its own. Order: 3 → 3b → 4–7 → 8–9 (design) → 10. Everything ships in 2.8.
+Owner, 2026-11-01: package 3b added — the canvas regrouping had no package of its own. Correction the same day: packages 3–10 were already built in rc.6 (`fix/settings-levels-discovery`, `fix/settings-service-forms`, `fix/settings-map-panels`, `fix/settings-travplan-copy`). Open: 3b (menu order — owner: yes, canvas order; Mitreisende and Treueprogramme sit after Reisen) and 12 (owner: "Standort Verlauf ist noch sehr unübersichtlich und nicht im normalen Stil"). Everything ships in 2.8.
 
 ## Package 3 — what moves (canvas board 3)
 
