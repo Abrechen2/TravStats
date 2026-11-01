@@ -754,8 +754,11 @@ answer to each in `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md`
 hidden (2026-09-28) — "Nur" in the domain filter navigates to `/dashboard/:tab`,
 whose routes must stay because eight map modes exist only on a single-domain
 view (`TAB_MODE_REGISTRY` keys modes by tab). `DomainTabStrip.tsx` and
-`NextUpEntry.tsx` stay unused in the tree as the way back. Details:
-`docs/claude-md-history.md`.
+`NextUpEntry.tsx` stay unused in the tree as the way back. Bus, ferry and rental
+got tab routes of their own on 2026-11-01 (forgejo#405: `bus`/`ferry`/`rental` in
+`TAB_MODE_REGISTRY`, rendered by `Dashboard/tabs/OverlayDomainTab.tsx` from the "Alle"
+map's overlay hooks), so every filter row's "Nur" navigates; the retired strip does
+not list them. Details: `docs/claude-md-history.md`.
 
 Two standing rules came out of the same day, and they are about the browser
 build's target rather than any one screen:
