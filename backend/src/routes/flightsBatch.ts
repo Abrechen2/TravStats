@@ -388,8 +388,14 @@ router.post(
       }
 
       // Check achievements after batch creation (outside transaction — non-critical)
+      // `?deferAchievements=1` (forgejo#334, additive): a chunked import posts
+      // twenty rows at a time and each chunk re-read the whole account, 250
+      // full checks for 5,000 flights. A caller that sets it runs ONE
+      // `POST /achievements/check` after its last chunk instead; every caller
+      // that does not is unchanged.
+      const deferAchievements = req.query.deferAchievements === "1";
       let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-      if (createdFlights.length > 0) {
+      if (createdFlights.length > 0 && !deferAchievements) {
         try {
           newAchievements = await checkAndUpdateAchievements(userId);
         } catch (err: unknown) {

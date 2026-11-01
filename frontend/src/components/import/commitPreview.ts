@@ -51,7 +51,11 @@ export async function commitPreviewRows(
   } catch (err) {
     logger.error("import_batch_create_failed", { dataSource, err });
   }
-  const query = batchId ? `?batchId=${encodeURIComponent(batchId)}` : "";
+  // Badges are checked once after the last chunk, not after every one of them
+  // (forgejo#334): 250 chunks meant 250 full re-reads of the account.
+  const query = batchId
+    ? `?batchId=${encodeURIComponent(batchId)}&deferAchievements=1`
+    : "?deferAchievements=1";
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
@@ -95,6 +99,15 @@ export async function commitPreviewRows(
       const message = err instanceof Error ? err.message : String(err);
       logger.error("import_commit_chunk_failed", { chunkIndex, dataSource, message });
       failures.push({ chunkIndex, error: message });
+    }
+  }
+
+  if (committed > 0) {
+    try {
+      await api.post("/achievements/check");
+    } catch (err) {
+      // The flights are in; a late badge appears on the next write.
+      logger.warn("import_achievement_check_failed", { dataSource, err });
     }
   }
 

@@ -115,4 +115,18 @@ describe("commitPreviewRows — rows from a tracker export", () => {
     expect(payload[1]).not.toHaveProperty("departureFold");
     expect(payload[1]).not.toHaveProperty("arrivalFold");
   });
+
+  it("defers the per-chunk badge check and runs ONE at the end (forgejo#334)", async () => {
+    const rows = Array.from({ length: 45 }, (_, i) => ({ ...base, sourceRowIndex: i }));
+    post.mockImplementation(async (url: string) =>
+      url.startsWith("/flights/batch") ? { data: { count: 20, skipped: 0 } } : { data: {} }
+    );
+    await commitPreviewRows(rows, "imported_jetlog");
+    const chunkCalls = post.mock.calls.filter(([url]) => String(url).startsWith("/flights/batch"));
+    expect(chunkCalls).toHaveLength(3);
+    for (const [url] of chunkCalls) expect(url).toContain("deferAchievements=1");
+    const checks = post.mock.calls.filter(([url]) => url === "/achievements/check");
+    expect(checks).toHaveLength(1);
+    expect(post.mock.calls.at(-1)?.[0]).toBe("/achievements/check");
+  });
 });
