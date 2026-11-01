@@ -125,6 +125,23 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/settings/external-services/{id}/test",
+  summary: "Test the account's own key or connection",
+  description:
+    "Runs the tester against the credential THIS account stored (never the instance's) and persists " +
+    "`lastTest`. A service switched off for the account or by the admin answers 409 `SERVICE_DISABLED` " +
+    "without calling out; a service without account fields is 404 `SERVICE_NOT_FOUND`.",
+  tags: accountTags,
+  request: { params: id },
+  responses: {
+    200: { description: "The verdict", content: json(serviceTestResponseSchema) },
+    404: { description: "SERVICE_NOT_FOUND", content: errorContent },
+    409: { description: "SERVICE_DISABLED", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "put",
   path: "/settings/external-services/ai-consent/{provider}",
   summary: "Grant or withdraw this account's consent to a cloud AI provider",

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { testSmtpConnection } from "../../services/emailService";
-import { encryptApiKey } from "../../utils/encryption";
+import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
+import { smtpFailureCode } from "../../services/smtpFailure";
 import logger from "../../utils/logger";
 
 export const SMTP_CONFIG_ID = 1 as const;
@@ -22,6 +23,8 @@ export const smtpConfigSchema = z.object({
 export const smtpUpdateSchema = smtpConfigSchema.extend({
   password: z.string().min(1).optional(),
 });
+
+const smtpTestSchema = smtpConfigSchema.extend({ password: z.string().optional() });
 
 const smtpRouter = Router();
 
@@ -120,18 +123,40 @@ smtpRouter.delete(
   }
 );
 
+/**
+ * The test takes the form as it stands. A password left out means "the stored
+ * one" (the group's "Speichern & testen" never has the clear password again).
+ * Every failure answers 400 `{ success: false, code }` with a stable code; the
+ * transport's own text is logged, never sent (settings rebuild, package 6).
+ */
 smtpRouter.post(
   "/test",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = smtpConfigSchema.parse(req.body);
-      await testSmtpConnection(data);
-      res.json({ success: true });
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ success: false, error: error.message });
+      const data = smtpTestSchema.parse(req.body);
+      let password = data.password;
+      if (!password) {
+        const stored = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
+        password = stored?.password ? decryptApiKey(stored.password) : "";
+      }
+      if (!password) {
+        res.status(400).json({ success: false, code: "SMTP_PASSWORD_MISSING" });
         return;
       }
+      try {
+        await testSmtpConnection({ ...data, password });
+      } catch (error) {
+        const code = smtpFailureCode(error);
+        logger.warn({
+          operation: "smtp_test_failed",
+          code,
+          error: { message: error instanceof Error ? error.message : "unknown" },
+        });
+        res.status(400).json({ success: false, code });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
       next(error);
     }
   }

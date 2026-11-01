@@ -220,6 +220,10 @@ export async function testSmtpConnection(config: SmtpConfigInput): Promise<void>
       user: config.username,
       pass: config.password,
     },
+    // The page waits for this answer: stay below its 10 s request limit.
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
   });
 
   await transporter.verify();
