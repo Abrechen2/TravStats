@@ -91,7 +91,8 @@ export default function RouteMap({
         {stations.map((s, i) => (
           <Marker key={s.id} longitude={s.place.lon} latitude={s.place.lat} anchor="center">
             <div
-              title={s.title}
+              role="img"
+              aria-label={s.title}
               style={{
                 width: "1.75rem",
                 height: "1.75rem",

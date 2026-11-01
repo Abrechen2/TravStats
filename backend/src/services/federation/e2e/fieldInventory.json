@@ -106,7 +106,7 @@
   "TripRoute": {
     "details": "id tripId name mode orderIdx color startOdometerKm endOdometerKm kind activity vehicle vehicleName anchorStopId kindAssignedAutomatically tourDate tourStartMinute createdAt updatedAt",
     "costs": "",
-    "personal": "notes",
+    "personal": "notes tags",
     "photos": "",
     "documents": "",
     "excluded": "userId"
@@ -162,7 +162,7 @@
   "Lodging": {
     "details": "id type name chainId address city country isoCountryCode lat lon geocodeAttemptedAt stars website wikidataId amenities visited externalRef createdAt updatedAt countryVisitKind",
     "costs": "",
-    "personal": "notes",
+    "personal": "notes tags",
     "photos": "",
     "documents": "",
     "excluded": "userId dataSource batchId"
@@ -218,7 +218,7 @@
   "Place": {
     "details": "id name localName category lat lon address city country isoCountryCode externalRef curatedItemId wikidataId visited coverPhotoId createdAt updatedAt countryVisitKind",
     "costs": "",
-    "personal": "notes",
+    "personal": "notes tags",
     "photos": "",
     "documents": "",
     "excluded": "userId dataSource batchId"
