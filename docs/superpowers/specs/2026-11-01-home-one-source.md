@@ -34,3 +34,10 @@ second, separate value: **the home place is the residence of the current period*
 ## Answered
 
 - Companion 2026-11-01: PATCH /:index and PUT-all are unsafe from an offline outbox; chosen: append endpoint with clientRef (option a).
+
+## Phases
+
+| Phase | Side | State |
+|---|---|---|
+| S1 | Server | done — feat/home-one-source @ 830cf0415, integrated in int/2.8.0-rc10 |
+| C1 | Companion | done — companion#113 merged into rc/companion-2026-10-26 (2026-11-01); device check open |
