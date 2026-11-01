@@ -1,7 +1,15 @@
+import fs from "node:fs";
+
+import express from "express";
+import multer from "multer";
+import request from "supertest";
+
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { settleAllJobs } from "../../jobs/jobRegistry";
 import { runGpxImport, startGpxImport } from "../imports/fileImport";
+import { SPOOL_DIR, spoolStorage } from "../imports/spool";
+import { READER_QUEUE_MAX, readerQueueFull } from "../imports/trackFileChild";
 import {
   readTrackFile,
   sniffFormat,
@@ -439,6 +447,82 @@ describe("TravTrack — Google Timeline and other track files", () => {
         )
       ).toBe("TRACK_FILE_TOO_LARGE");
       expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(0);
+    });
+  });
+
+  describe("memory safety of the upload (security review, forgejo#394)", () => {
+    const spooled = () => (fs.existsSync(SPOOL_DIR) ? fs.readdirSync(SPOOL_DIR) : []);
+    const records = json({
+      locations: [
+        { latitudeE7: e7(37.5), longitudeE7: e7(127), timestamp: "2026-10-12T01:00:00Z" },
+      ],
+    });
+
+    it("an upload is judged while it streams: a non-JSON file past the XML cap is aborted with 413", async () => {
+      const app = express();
+      const up = multer({ storage: spoolStorage({ xmlCap: 1000 }) });
+      app.post("/up", up.single("file"), (req, res) => {
+        res.json({ size: req.file?.size });
+      });
+      app.use(
+        (
+          err: AppError,
+          _req: express.Request,
+          res: express.Response,
+          _next: express.NextFunction
+        ) => {
+          res.status(err.statusCode ?? 500).json({ code: err.code });
+        }
+      );
+      const before = spooled();
+      const xml = Buffer.from(`<gpx>${" ".repeat(5000)}</gpx>`);
+      const refused = await request(app).post("/up").attach("file", xml, "big.gpx");
+      expect(refused.status).toBe(413);
+      expect(refused.body.code).toBe("TRACK_FILE_TOO_LARGE");
+      // Nothing of the aborted file stays on disk.
+      expect(spooled()).toEqual(before);
+      // The same size as JSON is allowed: its cap is the larger one.
+      const bigJson = Buffer.from(JSON.stringify({ locations: [], pad: "x".repeat(5000) }));
+      const ok = await request(app).post("/up").attach("file", bigJson, "Records.json");
+      expect(ok.status).toBe(200);
+      expect(ok.body.size).toBe(bigJson.length);
+      for (const f of spooled()) if (!before.includes(f)) fs.rmSync(`${SPOOL_DIR}/${f}`);
+    });
+
+    it("the spooled file is removed when the job ends, and when the import is refused", async () => {
+      const before = spooled();
+      const started = await startGpxImport(userId, { buffer: records, originalName: "r.json" });
+      await settleAllJobs();
+      expect(started.jobId).toBeTruthy();
+      expect(spooled()).toEqual(before);
+      // Refused by size: no row, no file.
+      await expect(
+        startGpxImport(
+          userId,
+          { buffer: records, originalName: "r.json" },
+          { maxBytes: { json: 5 } }
+        )
+      ).rejects.toMatchObject({ code: "TRACK_FILE_TOO_LARGE" });
+      expect(spooled()).toEqual(before);
+    });
+
+    it("refuses when the reader's line is full, with a stable code, and leaves nothing behind", async () => {
+      const before = spooled();
+      const rowsBefore = await prisma.travTrackImport.count({ where: { userId } });
+      const inFlight = Array.from({ length: READER_QUEUE_MAX }, () => readTrackFile(records));
+      // Each read spools its bytes first; wait until all of them stand in the line.
+      for (let i = 0; i < 200 && !readerQueueFull(); i++)
+        await new Promise((r) => setTimeout(r, 5));
+      expect(readerQueueFull()).toBe(true);
+      expect(await codeOf(readTrackFile(records))).toBe("TRAVTRACK_IMPORT_BUSY");
+      expect(
+        await codeOf(startGpxImport(userId, { buffer: records, originalName: "r.json" }))
+      ).toBe("TRAVTRACK_IMPORT_BUSY");
+      expect(await prisma.travTrackImport.count({ where: { userId } })).toBe(rowsBefore);
+      await Promise.all(inFlight);
+      expect(spooled()).toEqual(before);
+      // The line drains: a read is accepted again.
+      expect((await readTrackFile(records)).track.count).toBe(1);
     });
   });
 });

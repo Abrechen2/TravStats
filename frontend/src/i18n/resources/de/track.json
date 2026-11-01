@@ -185,6 +185,7 @@
       "unreadable": "Die Datei ist keine lesbare Track-Datei (GPX, KML, TCX, Google-Standortverlauf, GeoJSON), sie ist unvollständig, oder sie ist zu umfangreich, um sie zu lesen.",
       "unsupportedFormat": "FIT-Dateien kann der Import noch nicht lesen. Exportiere die Aktivität als GPX oder TCX.",
       "running": "Es läuft schon ein Import. Warte, bis er fertig ist.",
+      "busy": "Der Server liest gerade andere Dateien. Versuche es in ein paar Minuten noch einmal.",
       "tooLarge": "Die Datei ist zu groß – höchstens 25 MB für GPX, KML und TCX, 200 MB für Google-Standortverlauf und GeoJSON.",
       "notFound": "Diesen Import gibt es nicht mehr.",
       "rateLimited": "Zu viele Importe in kurzer Zeit. Versuche es in einer Viertelstunde noch einmal.",

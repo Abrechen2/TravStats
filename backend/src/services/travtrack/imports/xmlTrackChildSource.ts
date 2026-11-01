@@ -56,7 +56,7 @@ function walk(node, visit, depth) {
 
 function main(job) {
   max = job.maxPoints;
-  let xml = Buffer.from(job.bytes.buffer, job.bytes.byteOffset, job.bytes.byteLength).toString("utf8");
+  let xml = require("fs").readFileSync(job.path, "utf8");
   if (xml.charCodeAt(0) === 0xfeff) xml = xml.slice(1);
   if (/<!\s*(doctype|entity)/i.test(xml)) return { type: "error", code: "UNREADABLE" };
   if (XMLValidator.validate(xml) !== true) return { type: "error", code: "UNREADABLE" };

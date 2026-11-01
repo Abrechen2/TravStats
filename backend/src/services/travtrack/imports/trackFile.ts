@@ -1,9 +1,22 @@
+import fs from "node:fs";
+
 import { AppError } from "../../../middleware/errorHandler";
 import { runInChild, unreadable } from "./trackFileChild";
 import { timelineSource } from "./timelineChildSource";
 import { xmlTrackSource } from "./xmlTrackChildSource";
 import type { GpxWorkerOptions } from "./gpxWorker";
-import { GPX_IMPORT_MAX_BYTES, mapGpx, readGpxFile } from "./mapGpx";
+import { mapGpx, readGpxFile } from "./mapGpx";
+import { discardSpool, readHead, spoolBuffer } from "./spool";
+import { sniffFormat, type TrackFormat } from "./trackFormat";
+
+export {
+  assertImportSize,
+  JSON_IMPORT_MAX_BYTES,
+  sniffFormat,
+  TRACK_IMPORT_MAX_BYTES,
+  XML_IMPORT_MAX_BYTES,
+  type TrackFormat,
+} from "./trackFormat";
 
 /**
  * Any track file TravTrack takes (TravTrack plan E8, forgejo#394): GPX, the
@@ -18,46 +31,12 @@ import { GPX_IMPORT_MAX_BYTES, mapGpx, readGpxFile } from "./mapGpx";
  * no dependency-free reader is part of this change.
  */
 
-/** XML formats: the GPX cap, since their tree is built in memory. */
-export const XML_IMPORT_MAX_BYTES = GPX_IMPORT_MAX_BYTES;
-/** JSON formats are scanned, not parsed whole: a Takeout `Records.json` runs to hundreds of MB. */
-export const JSON_IMPORT_MAX_BYTES = 200 * 1024 * 1024;
-/** What the upload may carry at all; `assertImportSize` narrows it by format. */
-export const TRACK_IMPORT_MAX_BYTES = JSON_IMPORT_MAX_BYTES;
 /** The most fixes a JSON file may hold. */
 export const TIMELINE_IMPORT_MAX_POINTS = 2_000_000;
 const TIMELINE_HEAP_MB = 512;
 const XML_HEAP_MB = 384;
 const TIMELINE_TIMEOUT_MS = 10 * 60_000;
 const XML_TIMEOUT_MS = 60_000;
-
-export type TrackFormat = "gpx" | "json" | "kml" | "tcx" | "fit";
-
-/** The format a file's first bytes announce, or null when none is recognised. */
-export function sniffFormat(buffer: Buffer): TrackFormat | null {
-  if (buffer.length >= 12 && buffer.toString("latin1", 8, 12) === ".FIT") return "fit";
-  const head = buffer
-    .toString("utf8", 0, Math.min(buffer.length, 4096))
-    .replace(/^\u{FEFF}/u, "")
-    .trimStart();
-  if (head.startsWith("{") || head.startsWith("[")) return "json";
-  const root = /<(?![?!])([A-Za-z_][\w.-]*:)?([A-Za-z_][\w.-]*)/.exec(head)?.[2];
-  if (root === "gpx") return "gpx";
-  if (root === "kml") return "kml";
-  if (root === "TrainingCenterDatabase") return "tcx";
-  return null;
-}
-
-/** Over the cap of its format: 413, before an import row exists. Unknown formats get the XML cap. */
-export function assertImportSize(
-  format: TrackFormat | null,
-  length: number,
-  caps: { json?: number; xml?: number } = {}
-): void {
-  const cap =
-    format === "json" ? (caps.json ?? JSON_IMPORT_MAX_BYTES) : (caps.xml ?? XML_IMPORT_MAX_BYTES);
-  if (length > cap) throw new AppError("The file is too large", 413, "TRACK_FILE_TOO_LARGE");
-}
 
 /** The points of a file, handed out a batch at a time. */
 export type MappedTrack = {
@@ -135,7 +114,7 @@ export type ReadOptions = GpxWorkerOptions & {
 
 const fixesOf = (
   source: string,
-  buffer: Buffer,
+  file: string,
   format: string,
   limits: { heapMb: number; timeoutMs: number },
   maxPoints: number,
@@ -143,20 +122,31 @@ const fixesOf = (
 ): Promise<Fixes> =>
   runInChild<Fixes>({
     source,
-    buffer,
-    job: {},
+    job: { path: file },
     limits,
     maxPoints,
     format,
     onProgress: opts.onProgress,
   });
 
+/** A file on disk, or bytes the caller already holds (they are spooled and removed again). */
+export type TrackInput = Buffer | { path: string };
+
 /** The file as mappable points, or a stable refusal. */
 export async function readTrackFile(
-  buffer: Buffer,
+  input: TrackInput,
   opts: ReadOptions = {}
 ): Promise<{ format: TrackFormat; track: MappedTrack }> {
-  const format = sniffFormat(buffer);
+  if (Buffer.isBuffer(input)) {
+    const file = await spoolBuffer(input);
+    try {
+      return await readTrackFile({ path: file }, opts);
+    } finally {
+      discardSpool(file);
+    }
+  }
+  const file = input.path;
+  const format = sniffFormat(await readHead(file));
   // Not a format we know is "unreadable", as GPX said before there were others; FIT is
   // known and named, so the person is told why and not that the file is broken.
   if (format === null) throw unreadable("a track file");
@@ -168,7 +158,8 @@ export async function readTrackFile(
     );
   }
   if (format === "gpx") {
-    const m = mapGpx(await readGpxFile(buffer, opts));
+    // At most the XML cap (checked as the upload streamed in), so a buffer is fine here.
+    const m = mapGpx(await readGpxFile(await fs.promises.readFile(file), opts));
     const track: MappedTrack = {
       count: m.points.length,
       batch: (at, size) => m.points.slice(at, at + size),
@@ -181,11 +172,11 @@ export async function readTrackFile(
     };
     return { format, track };
   }
+  const max = opts.maxPoints ?? TIMELINE_IMPORT_MAX_POINTS;
   if (format === "json") {
-    const max = opts.maxPoints ?? TIMELINE_IMPORT_MAX_POINTS;
     const fixes = await fixesOf(
       timelineSource(),
-      buffer,
+      file,
       "Google Timeline or GeoJSON",
       { heapMb: opts.heapMb ?? TIMELINE_HEAP_MB, timeoutMs: opts.timeoutMs ?? TIMELINE_TIMEOUT_MS },
       max,
@@ -193,10 +184,9 @@ export async function readTrackFile(
     );
     return { format, track: mapFixes(fixes) };
   }
-  const max = opts.maxPoints ?? TIMELINE_IMPORT_MAX_POINTS;
   const fixes = await fixesOf(
     xmlTrackSource(require.resolve("fast-xml-parser")),
-    buffer,
+    file,
     format.toUpperCase(),
     { heapMb: opts.heapMb ?? XML_HEAP_MB, timeoutMs: opts.timeoutMs ?? XML_TIMEOUT_MS },
     max,

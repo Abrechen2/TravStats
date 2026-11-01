@@ -309,14 +309,23 @@ function makeScanner(onElement) {
 
 async function main(job) {
   max = job.maxPoints;
-  const bytes = Buffer.from(job.bytes.buffer, job.bytes.byteOffset, job.bytes.byteLength);
+  const fs = require("fs");
+  const fd = fs.openSync(job.path, "r");
   const decoder = new TextDecoder("utf-8", { fatal: false });
   const scanner = makeScanner(dispatch);
-  for (let off = 0; off < bytes.length; off += SLICE_BYTES) {
-    const end = Math.min(off + SLICE_BYTES, bytes.length);
-    scanner.feed(decoder.decode(bytes.subarray(off, end), { stream: end < bytes.length }));
-    process.send({ type: "progress", done: end, total: bytes.length });
-    await new Promise((r) => setImmediate(r));
+  try {
+    const total = fs.fstatSync(fd).size;
+    const slice = Buffer.alloc(SLICE_BYTES);
+    for (let done = 0; done < total; ) {
+      const n = fs.readSync(fd, slice, 0, SLICE_BYTES, done);
+      if (n <= 0) break;
+      done += n;
+      scanner.feed(decoder.decode(slice.subarray(0, n), { stream: done < total }));
+      process.send({ type: "progress", done, total });
+      await new Promise((r) => setImmediate(r));
+    }
+  } finally {
+    fs.closeSync(fd);
   }
   if (!scanner.finish() || Object.keys(formats).length === 0) return { type: "error", code: "UNREADABLE" };
   return {

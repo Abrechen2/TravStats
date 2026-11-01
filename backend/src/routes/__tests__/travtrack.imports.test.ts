@@ -13,6 +13,9 @@ import {
   storePoint,
   wipeTravTrack,
 } from "../../services/travtrack/__tests__/fixtures";
+import { activeImports } from "../../services/travtrack/imports/fileImport";
+import { SPOOL_DIR } from "../../services/travtrack/imports/spool";
+import fs from "node:fs";
 import { gpxFile, minuteFixes } from "../../services/travtrack/__tests__/gpxFixtures";
 import { GPX_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/mapGpx";
 import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
@@ -157,6 +160,24 @@ describe("TravTrack — /travtrack/imports", () => {
       code: "TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT",
       status: 422,
     });
+  });
+
+  it("a second file is refused with 409 before its body is read while an import runs (forgejo#394)", async () => {
+    const row = await prisma.travTrackImport.create({
+      data: { userId, kind: "gpx", fileName: "first.json", status: "running" },
+    });
+    activeImports.set(row.id, row.id);
+    const spooled = () => (fs.existsSync(SPOOL_DIR) ? fs.readdirSync(SPOOL_DIR) : []);
+    const before = spooled();
+    try {
+      const res = await upload(Buffer.from(JSON.stringify({ locations: [] })), "second.json");
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("TRAVTRACK_IMPORT_RUNNING");
+      // The body was never taken: nothing reached the spool directory.
+      expect(spooled()).toEqual(before);
+    } finally {
+      activeImports.delete(row.id);
+    }
   });
 
   it("refuses a request without a file, and a file over the limit", async () => {

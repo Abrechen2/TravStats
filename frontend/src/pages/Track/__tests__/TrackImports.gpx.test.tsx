@@ -188,6 +188,15 @@ describe("Track › Importe — GPX import", () => {
     );
   });
 
+  it("a busy reader says so instead of a generic failure (forgejo#394)", async () => {
+    vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
+      new JobFailedError("TRAVTRACK_IMPORT_BUSY", 503)
+    );
+    show();
+    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.busy");
+  });
+
   it("a file without times says so", async () => {
     vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
       new JobFailedError("TRAVTRACK_IMPORT_NO_TIMES", 422)

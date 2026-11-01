@@ -8,11 +8,14 @@ import { AppError } from "../../middleware/errorHandler";
 import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
 import {
   deleteTravTrackImport,
+  hasLiveImport,
   importOrigin,
   listTravTrackImports,
   startGpxImport,
 } from "../../services/travtrack/imports/fileImport";
-import { TRACK_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/trackFile";
+import { spoolStorage } from "../../services/travtrack/imports/spool";
+import { TRACK_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/trackFormat";
+import { busy, readerQueueFull } from "../../services/travtrack/imports/trackFileChild";
 import {
   getDawarichCopy,
   resumeDawarichCopy,
@@ -27,8 +30,9 @@ import { travTrackTier } from "./gate";
  * File imports into TravTrack (TravTrack plan E8): a GPX file goes through the
  * same ingest as the Companion's points. Bare responses (ADR 0001).
  *
- * The file is held in memory only (`memoryStorage`) and never written to disk:
- * its name is a label, nothing on the server is named after it. One file per
+ * The file is spooled to a temp file while it streams in (`spool.ts`), judged on the way
+ * (a non-JSON file past 25 MB is aborted) and removed when the job ends: its name is a
+ * label, nothing on the server is named after it. One file per
  * request, at most `TRACK_IMPORT_MAX_BYTES` (200 MB, and 25 MB for the XML formats —
  * `assertImportSize`); the work runs as a job the client
  * polls (`GET /jobs/:id`), since a large file outlasts a request.
@@ -52,14 +56,35 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
 }
 
 const fileUpload = multer({
-  storage: multer.memoryStorage(),
+  storage: spoolStorage(),
   limits: { fileSize: TRACK_IMPORT_MAX_BYTES, files: 1, fields: 5, fieldSize: 1024, parts: 8 },
 });
+
+/**
+ * Refuses an upload before its body is read: an import of this account is
+ * already running (409), or the reader's line is full (503). The connection is
+ * closed with the answer, so the rest of a large body is not taken.
+ */
+function refuseEarly(req: AuthRequest, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (readerQueueFull()) throw busy();
+    if (await hasLiveImport(req.userId!)) {
+      throw new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+    }
+  })().then(
+    () => next(),
+    (err: unknown) => {
+      res.set("Connection", "close");
+      next(err);
+    }
+  );
+}
 
 /** One `file` part, or a refusal by code: an oversized file is 413, anything else malformed 400. */
 function oneFile(req: Request, res: Response, next: NextFunction): void {
   fileUpload.single("file")(req, res, (err: unknown) => {
     if (!err) return next();
+    if (err instanceof AppError) return next(err);
     if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
       return next(new AppError("The file is too large", 413, "TRACK_FILE_TOO_LARGE"));
     }
@@ -75,12 +100,14 @@ router.post(
   requireWriteScope,
   rejectDemo,
   travTrackImportLimiter,
+  refuseEarly,
   oneFile,
   route(async (req, res) => {
     const file = req.file;
     if (!file) throw new AppError("No file was uploaded", 400, "VALIDATION_FAILED");
     const started = await startGpxImport(req.userId!, {
-      buffer: file.buffer,
+      path: file.path,
+      size: file.size,
       originalName: file.originalname,
     });
     logger.info({ operation: "travtrack.import.start", importId: started.importId });

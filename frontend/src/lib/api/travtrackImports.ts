@@ -88,6 +88,8 @@ export function importErrorKey(err: unknown): string {
       return "track:imports.errors.tooManyPoints";
     case "TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT":
       return "track:imports.errors.unsupportedFormat";
+    case "TRAVTRACK_IMPORT_BUSY":
+      return "track:imports.errors.busy";
     case "TRAVTRACK_IMPORT_RUNNING":
       return "track:imports.errors.running";
     case "TRACK_FILE_TOO_LARGE":

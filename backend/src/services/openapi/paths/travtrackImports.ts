@@ -75,7 +75,7 @@ registry.registerPath({
     "half reads the file, the second stores its points). The job fails with " +
     "TRAVTRACK_IMPORT_NO_TIMES (no fix with a time), TRAVTRACK_IMPORT_UNREADABLE (not a track " +
     "file, an unfinished one, a document type declaration, or one too large to read in the " +
-    "reader's memory), TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT (FIT) or " +
+    "reader's memory), TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT (FIT), TRAVTRACK_IMPORT_BUSY (the reader has a full line) or " +
     "TRAVTRACK_IMPORT_TOO_MANY_POINTS (over 200,000 fixes in a GPX file, 2,000,000 in the " +
     "others). A time without an offset is not guessed (that fix is not stored), and an " +
     "accuracy, speed or heading the file lacks stays unknown. Fixes in a privacy zone or a " +
@@ -109,7 +109,14 @@ registry.registerPath({
     },
     403: disabled,
     409: {
-      description: "TRAVTRACK_IMPORT_RUNNING: an import of this account is running already",
+      description:
+        "TRAVTRACK_IMPORT_RUNNING: an import of this account is running already. Answered " +
+        "before the body is read, and the connection is closed.",
+      content: errorContent,
+    },
+    503: {
+      description:
+        "TRAVTRACK_IMPORT_BUSY: the server's file reader has a full line; try again later",
       content: errorContent,
     },
     413: {

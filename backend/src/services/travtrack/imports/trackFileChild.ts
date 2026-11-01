@@ -17,7 +17,8 @@ import logger from "../../../utils/logger";
  *   - the child's program is plain CommonJS (`node -e`), so it runs the same
  *     under tsx, ts-jest and the compiled `dist/`.
  *
- * Protocol: the parent sends one `{ bytes, ...job }`; the child answers with
+ * Protocol: the parent sends one `{ path, maxPoints }` — the child opens the
+ * spooled file itself, no copy of it crosses the pipe; the child answers with
  * any number of `{ type: "progress", done, total }` and one
  * `{ type: "result", ... }` or `{ type: "error", code }`.
  */
@@ -30,6 +31,20 @@ type ChildReply<R> =
   | { type: "progress"; done: number; total: number }
   | ({ type: "result" } & R)
   | { type: "error"; code: ChildErrorCode };
+
+/** How many reads may wait for the child at once, the running one included. */
+export const READER_QUEUE_MAX = 3;
+let pending = 0;
+
+/** True when another read would be refused: the worker already has a full line. */
+export const readerQueueFull = (): boolean => pending >= READER_QUEUE_MAX;
+
+export const busy = () =>
+  new AppError(
+    "The server is reading other files; try again in a few minutes",
+    503,
+    "TRAVTRACK_IMPORT_BUSY"
+  );
 
 export const unreadable = (format: string) =>
   new AppError(`The file could not be read as ${format}`, 422, "TRAVTRACK_IMPORT_UNREADABLE");
@@ -51,7 +66,6 @@ let queue: Promise<unknown> = Promise.resolve();
 
 function run<R>(
   source: string,
-  buffer: Buffer,
   job: Record<string, unknown>,
   limits: ChildLimits,
   maxPoints: number,
@@ -93,7 +107,7 @@ function run<R>(
       });
     child.on("error", (err) => failed(err.message));
     child.on("exit", (code, signal) => failed(`exit ${code ?? signal}`));
-    child.send({ ...job, bytes: new Uint8Array(buffer), maxPoints }, (err) => {
+    child.send({ ...job, maxPoints }, (err) => {
       if (err) failed(err.message);
     });
   });
@@ -102,7 +116,6 @@ function run<R>(
 /** Runs one reader in a child, one at a time on the instance. */
 export function runInChild<R>(args: {
   source: string;
-  buffer: Buffer;
   job: Record<string, unknown>;
   limits: ChildLimits;
   maxPoints: number;
@@ -110,17 +123,17 @@ export function runInChild<R>(args: {
   format: string;
   onProgress?: (done: number, total: number) => void;
 }): Promise<R> {
+  if (readerQueueFull()) return Promise.reject(busy());
+  pending += 1;
   const next = queue.then(() =>
-    run<R>(
-      args.source,
-      args.buffer,
-      args.job,
-      args.limits,
-      args.maxPoints,
-      args.format,
-      args.onProgress
-    )
+    run<R>(args.source, args.job, args.limits, args.maxPoints, args.format, args.onProgress)
   );
-  queue = next.catch(() => undefined);
+  queue = next.then(
+    () => undefined,
+    () => undefined
+  );
+  void queue.then(() => {
+    pending -= 1;
+  });
   return next;
 }

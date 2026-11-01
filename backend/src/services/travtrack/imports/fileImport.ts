@@ -12,7 +12,10 @@ import { ingestPoints, type IngestResult } from "../ingest";
 import { takeTravTrackLock } from "../lock";
 import type { GpxWorkerOptions } from "./gpxWorker";
 import { displayFileName } from "./mapGpx";
-import { assertImportSize, readTrackFile, sniffFormat } from "./trackFile";
+import { discardSpool, readHead, spoolBuffer } from "./spool";
+import { readTrackFile } from "./trackFile";
+import { assertImportSize, sniffFormat } from "./trackFormat";
+import { readerQueueFull, busy } from "./trackFileChild";
 
 /**
  * A file imported into TravTrack (TravTrack plan E8). The request stores the
@@ -125,7 +128,7 @@ export type RunOptions = {
 export async function runGpxImport(
   importId: string,
   userId: string,
-  file: { buffer: Buffer | null },
+  file: { buffer?: Buffer | null; path?: string },
   opts: RunOptions = {}
 ): Promise<ImportOutcome> {
   const report = emptyReport();
@@ -138,9 +141,9 @@ export async function runGpxImport(
     if (row?.status !== "running") throw new ImportCancelled();
   };
   try {
-    const buffer = file.buffer ?? Buffer.alloc(0);
+    const input = file.path ? { path: file.path } : (file.buffer ?? Buffer.alloc(0));
     file.buffer = null;
-    const { track: mapped } = await readTrackFile(buffer, {
+    const { track: mapped } = await readTrackFile(input, {
       ...opts.reader,
       onProgress: (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50)),
     });
@@ -236,15 +239,53 @@ export async function listTravTrackImports(userId: string) {
  */
 export async function startGpxImport(
   userId: string,
-  file: { buffer: Buffer; originalName: string | undefined },
+  file: ({ buffer: Buffer } | { path: string; size: number }) & {
+    originalName: string | undefined;
+  },
   opts: RunOptions & {
     beforeRun?: () => Promise<void>;
     /** Test seam: lowers the size caps. */
     maxBytes?: { json?: number; xml?: number };
   } = {}
 ): Promise<{ jobId: string; importId: string }> {
-  // Over the cap of its format: refused before an import row exists.
-  assertImportSize(sniffFormat(file.buffer), file.buffer.length, opts.maxBytes);
+  // The service owns the spooled file from here on: it is removed on every refusal
+  // and when the job ends, whatever the job's outcome.
+  let spooled: string | null = null;
+  try {
+    if ("buffer" in file) {
+      assertImportSize(sniffFormat(file.buffer), file.buffer.length, opts.maxBytes);
+      spooled = await spoolBuffer(file.buffer);
+    } else {
+      spooled = file.path;
+      assertImportSize(sniffFormat(await readHead(spooled)), file.size, opts.maxBytes);
+    }
+    if (readerQueueFull()) throw busy();
+    const importId = await createRunningImport(userId, file.originalName);
+    const path = spooled;
+    const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
+      try {
+        await opts.beforeRun?.();
+        return await runGpxImport(
+          importId,
+          userId,
+          { path },
+          { ...opts, onProgress: (percent) => reportProgress(percent, 100) }
+        );
+      } finally {
+        releaseActiveImport(importId, importId);
+        discardSpool(path);
+      }
+    });
+    spooled = null;
+    return { jobId: job.id, importId };
+  } catch (err) {
+    discardSpool(spooled);
+    throw err;
+  }
+}
+
+/** The import's row first, under the lock (one running import per account, else 409). */
+async function createRunningImport(userId: string, originalName: string | undefined) {
   const importId = randomUUID();
   await prisma
     .$transaction(async (tx) => {
@@ -260,7 +301,7 @@ export async function startGpxImport(
           id: importId,
           userId,
           kind: "gpx",
-          fileName: displayFileName(file.originalName),
+          fileName: displayFileName(originalName),
           status: "running",
         },
       });
@@ -269,19 +310,20 @@ export async function startGpxImport(
       releaseActiveImport(importId, importId);
       throw err;
     });
-  const holder: { buffer: Buffer | null } = { buffer: file.buffer };
-  const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
-    try {
-      await opts.beforeRun?.();
-      return await runGpxImport(importId, userId, holder, {
-        ...opts,
-        onProgress: (percent) => reportProgress(percent, 100),
-      });
-    } finally {
-      releaseActiveImport(importId, importId);
-    }
+  return importId;
+}
+
+/**
+ * Whether this account has an import a process is working on — asked BEFORE the
+ * upload is accepted, so a second file is refused (409) without its body being
+ * read. Advisory: `createRunningImport` stays the authority under the lock.
+ */
+export async function hasLiveImport(userId: string): Promise<boolean> {
+  const running = await prisma.travTrackImport.findMany({
+    where: { userId, status: "running" },
+    select: { id: true },
   });
-  return { jobId: job.id, importId };
+  return running.some((r) => active.has(r.id));
 }
 
 /** The origin an import's points are stored under: `gpx:<id>` or `dawarich:<id>`. */
