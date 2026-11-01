@@ -40,9 +40,8 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     return <p className="t-caption">{t("settingsRows:services.ui.loading")}</p>;
   }
 
-  const visible = SERVICE_CARDS.filter((c) => toursVisible || !TOURS_ONLY.has(c.id)).filter(
-    (c) => group === "all" || c.group === group
-  );
+  // Tours-only cards stay for an admin: the instance's routing and Strava keys are theirs.
+  const listed = SERVICE_CARDS.filter((c) => toursVisible || isAdmin || !TOURS_ONLY.has(c.id));
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
@@ -75,12 +74,15 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
         ))}
       </div>
       <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-        {visible.map((card) => (
+        {/* Filtered-out cards stay mounted, hidden: an unsaved key must not vanish with a click on a group. */}
+        {listed.map((card) => (
           <ServiceCard
             key={card.id}
             card={card}
             isAdmin={isAdmin}
             linked={linked?.id === card.id}
+            hidden={group !== "all" && card.group !== group}
+            accountGated={!toursVisible && TOURS_ONLY.has(card.id)}
           />
         ))}
       </div>

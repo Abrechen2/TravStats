@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -49,21 +49,33 @@ export default function FederationRows(): JSX.Element | null {
   const [rotated, setRotated] = useState(false);
   const [confirmKey, setConfirmKey] = useState(false);
 
-  const run = async (action: () => Promise<FederationState | void>): Promise<boolean> => {
-    setBusy(true);
-    setErrorKey(null);
-    try {
-      const next = await action();
-      if (next) setData(next);
-      else await reload();
-      return true;
-    } catch (error) {
-      logger.error("A federation settings action failed:", error);
-      setErrorKey(`${NS}.error.${federationErrorCode(error) ?? "generic"}`);
-      return false;
-    } finally {
-      setBusy(false);
-    }
+  // Every call answers with the whole state, so two at once would race: they run
+  // one after the other, each reading the origin and the switch as they are THEN.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const latest = useRef<{ state: FederationState | null; origin: string | null }>({
+    state: null,
+    origin: null,
+  });
+  latest.current = { state, origin };
+  const run = (action: () => Promise<FederationState | void>): Promise<boolean> => {
+    const job = queue.current.then(async (): Promise<boolean> => {
+      setBusy(true);
+      setErrorKey(null);
+      try {
+        const next = await action();
+        if (next) setData(next);
+        else await reload();
+        return true;
+      } catch (error) {
+        logger.error("A federation settings action failed:", error);
+        setErrorKey(`${NS}.error.${federationErrorCode(error) ?? "generic"}`);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    });
+    queue.current = job;
+    return job;
   };
 
   if (failed) return <ErrorLine>{t("admin:federation.error.generic")}</ErrorLine>;
@@ -111,7 +123,12 @@ export default function FederationRows(): JSX.Element | null {
           <SwitchControl
             checked={state.enabled}
             onChange={(on) =>
-              void run(() => federationAdminApi.update({ enabled: on, origin: shownOrigin }))
+              void run(() =>
+                federationAdminApi.update({
+                  enabled: on,
+                  origin: latest.current.origin ?? latest.current.state?.origin ?? "",
+                })
+              )
             }
           />
         }
@@ -129,7 +146,10 @@ export default function FederationRows(): JSX.Element | null {
               onBlur={() => {
                 if (origin && origin !== state.origin) {
                   void run(() =>
-                    federationAdminApi.update({ enabled: state.enabled, origin })
+                    federationAdminApi.update({
+                      enabled: latest.current.state?.enabled ?? state.enabled,
+                      origin,
+                    })
                   ).then((ok) => ok && setOrigin(null));
                 }
               }}

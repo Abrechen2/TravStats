@@ -77,7 +77,7 @@ export default function DawarichServerRows(): JSX.Element | null {
         serviceId="dawarich"
         fields={fields}
         secretTemplate="instKey"
-        tests
+        tests={false}
         lock={demo}
         errorText={saveError}
         write={async (changes) => {

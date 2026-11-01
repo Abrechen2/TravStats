@@ -18,7 +18,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: undefined,
   }),
 }));
-vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => true }));
+let tours = true;
+vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => tours }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
@@ -44,7 +45,7 @@ import ServicesPage from "../ServicesPage";
 import { SERVICE_CARDS } from "../serviceCards";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
-import { accountOverview, adminOverview } from "./servicesFixtures";
+import { accountOverview, admin, adminOverview } from "./servicesFixtures";
 
 const render = (ui: ReactElement) => plainRender(<MemoryRouter>{ui}</MemoryRouter>);
 const WAIT = { timeout: 3000 };
@@ -71,6 +72,7 @@ async function show(isAdmin: boolean): Promise<void> {
 describe("ServicesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tours = true;
     useSettingsLevelStore.setState({ level: "expert" });
     api.accountOverview.mockResolvedValue(accountOverview());
     api.adminOverview.mockResolvedValue(adminOverview());
@@ -323,6 +325,118 @@ describe("ServicesPage", () => {
     await show(false);
     await waitFor(() => expect(card("airlabs")).toBeTruthy(), WAIT);
     await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.groups.ki" }));
-    expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(5);
+    expect(document.querySelectorAll("[data-service-card-id]:not([hidden])")).toHaveLength(5);
+  });
+
+  it("switching group or closing a card does not throw away an unsaved key", async () => {
+    await show(false);
+    const el = await open("airlabs");
+    const input = within(el).getByPlaceholderText("settings:blocks.secret.empty");
+    await userEvent.type(input, "half-typed");
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.groups.ki" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "settingsRows:services.groups.alle" })
+    );
+    expect(
+      within(card("airlabs")).getByPlaceholderText("settings:blocks.secret.empty")
+    ).toHaveValue("half-typed");
+    await userEvent.click(within(card("airlabs")).getAllByRole("button")[0]);
+    await userEvent.click(within(card("airlabs")).getAllByRole("button")[0]);
+    expect(
+      within(card("airlabs")).getByPlaceholderText("settings:blocks.secret.empty")
+    ).toHaveValue("half-typed");
+  });
+
+  it("a secret that was sent is not sent again with the next save (a removed key does not come back)", async () => {
+    api.accountUpdate.mockResolvedValue({});
+    api.accountOverview.mockResolvedValue(
+      accountOverview({
+        connections: [
+          {
+            ...accountOverview().connections[0],
+            fields: [
+              { key: "baseUrl", kind: "url", value: "https://immich.lan", expert: false },
+              { key: "apiKey", kind: "secret", value: null, masked: true, expert: false },
+            ],
+          },
+        ],
+      })
+    );
+    await show(false);
+    const el = await open("immich");
+    await userEvent.type(
+      within(el).getByPlaceholderText("settings:blocks.secret.empty"),
+      "first-key"
+    );
+    await userEvent.click(
+      within(el).getByRole("button", { name: "settingsRows:services.ui.save" })
+    );
+    await waitFor(() => expect(api.accountUpdate).toHaveBeenCalledTimes(1), WAIT);
+    const url = within(el).getByDisplayValue("https://immich.lan");
+    await userEvent.type(url, "/api");
+    await userEvent.click(
+      within(el).getByRole("button", { name: "settingsRows:services.ui.save" })
+    );
+    await waitFor(() => expect(api.accountUpdate).toHaveBeenCalledTimes(2), WAIT);
+    expect(api.accountUpdate.mock.calls[1][1]).toEqual({
+      fields: { baseUrl: "https://immich.lan/api" },
+    });
+  });
+
+  it("an admin without the tours beta still reaches the instance's routing keys; an account does not see them", async () => {
+    tours = false;
+    await show(false);
+    await waitFor(() => expect(card("airlabs")).toBeTruthy(), WAIT);
+    expect(card("openrouteservice")).toBeNull();
+    cleanup();
+    await show(true);
+    await waitFor(() => expect(card("openrouteservice")).toBeTruthy(), WAIT);
+    const el = await open("openrouteservice");
+    expect(el.querySelector("[data-service-side='account']")).toBeNull();
+    expect(el.querySelector("[data-service-side='server']")).toBeTruthy();
+  });
+
+  it("turning on a remote Ollama asks for the data-sharing confirmation and sends it with the write", async () => {
+    api.adminOverview.mockResolvedValue(
+      adminOverview({
+        categories: [
+          {
+            id: "ai",
+            services: [
+              admin("ollama", {
+                level: "instance",
+                credential: "url",
+                allowAccountKeys: null,
+                consent: { allowedByAdmin: false, accountsConsented: 0 },
+                fields: [{ key: "remoteOptIn", kind: "switch", value: false, expert: false }],
+              }),
+            ],
+          },
+        ],
+      })
+    );
+    api.adminUpdate.mockResolvedValue({});
+    await show(true);
+    const el = await open("ollama");
+    const srv = side(el, "server");
+    const switches = within(srv).getAllByRole("switch");
+    const remote = switches[switches.length - 1];
+    await userEvent.click(remote);
+    await userEvent.click(
+      within(srv).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
+    );
+    expect(api.adminUpdate).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole("checkbox"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /externalServices:consent\.admin\.confirm/ })
+    );
+    await waitFor(
+      () =>
+        expect(api.adminUpdate).toHaveBeenCalledWith("ollama", {
+          fields: { remoteOptIn: true },
+          confirmDataSharing: true,
+        }),
+      WAIT
+    );
   });
 });

@@ -188,6 +188,8 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
   const { admin } = useServices();
   const demo = useDemoLock();
   const uses = (u: string): boolean => (card.use as readonly string[]).includes(u);
+  // A remote Ollama is "cloud" for the data it is sent: turning that on asks first.
+  const [ask, setAsk] = useState<((agreed: boolean) => void) | null>(null);
   const data = admin?.data;
   if (!admin || !data) return null;
   const service = data.categories.flatMap((c) => c.services).find((s) => s.id === card.id);
@@ -216,7 +218,11 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
           errorText={null}
           write={async (changes) => {
             // The refusal is worded on the card (`feedback`); the group keeps the draft.
-            if (!(await admin.write(card.id, changes))) throw new Error("save refused");
+            const remote = changes.remoteOptIn === true;
+            if (remote && !(await new Promise<boolean>((resolve) => setAsk(() => resolve)))) {
+              throw new Error("consent declined");
+            }
+            if (!(await admin.write(card.id, changes, remote))) throw new Error("save refused");
             if (uses("test")) await admin.test(card.id);
           }}
           onRemoveSecret={async (key) => {
@@ -239,6 +245,21 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
         />
       ) : null}
       {feedback?.kind === "error" ? <ErrorLine>{feedback.text}</ErrorLine> : null}
+      {ask ? (
+        <AdminConsentDialog
+          serviceId={card.id}
+          busy={false}
+          error={null}
+          onConfirm={() => {
+            ask(true);
+            setAsk(null);
+          }}
+          onClose={() => {
+            ask(false);
+            setAsk(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

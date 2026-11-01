@@ -50,9 +50,15 @@ export default function ServiceCard({
   card,
   isAdmin,
   linked,
+  hidden = false,
+  accountGated = false,
 }: {
   card: ServiceCardDef;
   isAdmin: boolean;
+  /** Filtered out by the group chips; stays mounted. */
+  hidden?: boolean;
+  /** The account's half sits behind a beta key that is closed (tours); an admin keeps the server's. */
+  accountGated?: boolean;
   /** The address named this card: open it and bring it into view. */
   linked: boolean;
 }): JSX.Element {
@@ -77,12 +83,12 @@ export default function ServiceCard({
     provided: data?.instanceProvided.find((s) => s.id === card.id),
     admin: admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id),
   });
-  const accountRows = hasAccountRows(card);
+  const accountRows = hasAccountRows(card) && !accountGated;
   // Dawarich has no admin row in the catalogue, but the server's connection is still the admin's.
   const serverRows = isAdmin && admin !== null;
 
   return (
-    <div ref={ref} id={`service-${card.id}`} data-service-card-id={card.id}>
+    <div ref={ref} id={`service-${card.id}`} data-service-card-id={card.id} hidden={hidden}>
       <ServiceCardShell
         title={
           <span className="flex flex-col">
@@ -104,12 +110,7 @@ export default function ServiceCard({
               })}
             </p>
           ) : null}
-          <AccountSide
-            card={card}
-            service={[...(data?.connections ?? []), ...(data?.ownKeys ?? [])].find(
-              (s) => s.id === card.id
-            )}
-          />
+          {accountGated ? null : <AccountSide card={card} service={acct} />}
           {serverRows ? <ServerSide card={card} /> : null}
         </div>
       </ServiceCardShell>

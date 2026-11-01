@@ -278,9 +278,7 @@ describe("DawarichServerRows", () => {
     const url = await screen.findByDisplayValue("https://dawarich.lan");
     await userEvent.clear(url);
     await userEvent.type(url, "https://dawarich.example");
-    await userEvent.click(
-      screen.getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
-    );
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.ui.save" }));
     await waitFor(() => expect(mocks.dawUpdate).toHaveBeenCalled(), WAIT);
     expect(mocks.dawUpdate.mock.calls[0][0]).toEqual({ baseUrl: "https://dawarich.example" });
   });

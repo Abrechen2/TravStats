@@ -91,6 +91,14 @@ export default function FieldsGroup({
       if (Object.keys(changes).length === 0) return;
       await write(changes);
       setRev((n) => n + 1);
+      // A secret is write-only: once sent it must not stay in the draft, or the
+      // next save would send it again (and bring back one the user removed).
+      return Object.fromEntries(
+        Object.entries(draft).map(([key, value]) => [
+          key,
+          fields.find((f) => f.key === key)?.kind === "secret" ? "" : value,
+        ])
+      );
     },
   });
   const shown = fields.filter((f) => expert || !f.expert);
@@ -151,7 +159,11 @@ export default function FieldsGroup({
                   {isSet && onRemoveSecret && !lock ? (
                     <ActionControl
                       label={t("settingsRows:services.ui.removeSecret")}
-                      onClick={() => void onRemoveSecret(f.key)}
+                      onClick={() => {
+                        group.edit({ [f.key]: "" });
+                        setRev((n) => n + 1);
+                        void onRemoveSecret(f.key);
+                      }}
                     />
                   ) : null}
                 </>
