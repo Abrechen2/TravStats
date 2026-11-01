@@ -203,15 +203,21 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
   },
 ];
 
-/** The menu, in the order the owner set: the account first, the domains, then data. */
+/**
+ * The menu, in the order the owner set (canvas board 1, approved 2026-11-01):
+ * Konto, Darstellung, the domains, then what a trip is made of (Reisen &
+ * Posteingang, Mitreisende, Treueprogramme, Standort), Ansichten, Daten,
+ * Privatsphäre & Teilen, Dienste. Page ids and routes did not move.
+ */
 export const SETTINGS_MENU: readonly MenuGroupDef<SettingsPageId>[] = [
-  {
-    id: "general",
-    labelKey: null,
-    pages: ["account", "display", "views", "trips", "companions", "location", "loyalty", "privacy"],
-  },
+  { id: "general", labelKey: null, pages: ["account", "display"] },
   { id: "domains", labelKey: "settings:menu.domains", pages: ["flight", "cruise"] },
-  { id: "data", labelKey: null, pages: ["data", "services"] },
+  {
+    id: "journeys",
+    labelKey: null,
+    pages: ["trips", "companions", "loyalty", "location", "views"],
+  },
+  { id: "data", labelKey: null, pages: ["data", "privacy", "services"] },
 ];
 
 export const DEFAULT_PAGE: SettingsPageId = "account";

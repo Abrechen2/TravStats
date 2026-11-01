@@ -91,7 +91,7 @@ describe("Einstellungen → Bonusprogramme", () => {
   it("is one general section, never gated, and the old per-domain ids lead to it", () => {
     const page = pageOfSection(SETTINGS_PAGES, "loyalty");
     expect(page?.id).toBe("loyalty");
-    expect(SETTINGS_MENU.find((g) => g.id === "general")?.pages).toContain("loyalty");
+    expect(SETTINGS_MENU.flatMap((g) => g.pages)).toContain("loyalty");
     expect(page?.sections.find((s) => s.id === "loyalty")?.gate).toBeUndefined();
     for (const old of ["lodgingMemberships", "flightMemberships", "cruiseMemberships"]) {
       expect(canonicalSection(old)).toBe("loyalty");

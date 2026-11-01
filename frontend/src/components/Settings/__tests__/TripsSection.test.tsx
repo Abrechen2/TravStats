@@ -35,7 +35,7 @@ describe("TripsSection", () => {
     const page = pageOfSection(SETTINGS_PAGES, "trips");
     expect(page?.id).toBe("trips");
     expect(page?.domain).toBeUndefined();
-    expect(SETTINGS_MENU.find((g) => g.id === "general")?.pages).toContain("trips");
+    expect(SETTINGS_MENU.flatMap((g) => g.pages)).toContain("trips");
   });
 
   it("renders the automatic-trip switch checked when the setting is on", () => {
