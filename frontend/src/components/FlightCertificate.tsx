@@ -84,9 +84,7 @@ export function FlightCertificate({
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
-      // Loaded on click: it is ~45 KB gz that /stats would otherwise ship to
-      // every visitor, and a declared dependency (jspdf lists it only as optional).
-      const { default: html2canvas } = await import("html2canvas");
+      const { default: html2canvas } = await import("html2canvas"); // lazy: ~45 KB gz off /stats
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: PARCHMENT,
         scale: 2,
