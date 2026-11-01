@@ -93,9 +93,7 @@ describe("CompanionsSection", () => {
         name: "settingsRows:dialogs.companiondel.confirm",
       })
     );
-    await waitFor(() =>
-      expect(addToast).toHaveBeenCalledWith("error", expect.any(String))
-    );
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", expect.any(String)));
     expect(screen.getByTestId("companion-row-c3")).toBeTruthy();
 
     api.deleteUnused.mockResolvedValue(1);

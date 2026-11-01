@@ -68,22 +68,27 @@ describe("settings prototype rows", () => {
 
   it("trip colour: offers Automatisch and the palette, and saves the pick", async () => {
     render(<TripsSection />);
-    const select = screen.getByLabelText("settings:trips.defaultColor.label") as HTMLSelectElement;
+    const select = screen.getByLabelText("settingsRows:trips.reisefarbe.t") as HTMLSelectElement;
     expect(select.value).toBe("auto");
     expect(select.options).toHaveLength(TRIP_COLORS.length + 1);
     await userEvent.selectOptions(select, TRIP_COLORS[3]);
-    expect(update).toHaveBeenCalledWith({ tripDefaults: { color: TRIP_COLORS[3] } });
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith({ tripDefaults: { color: TRIP_COLORS[3] } })
+    );
     await userEvent.selectOptions(select, "auto");
     await waitFor(() => expect(update).toHaveBeenLastCalledWith({ tripDefaults: { color: null } }));
   });
 
-  it("trip colour: a failed save goes back to what the server holds and says so", async () => {
+  it("trip colour: a failed save keeps the pick on screen, says so, and the store keeps what the server holds", async () => {
     update.mockRejectedValueOnce(new Error("500"));
     render(<TripsSection />);
-    const select = screen.getByLabelText("settings:trips.defaultColor.label") as HTMLSelectElement;
+    const select = screen.getByLabelText("settingsRows:trips.reisefarbe.t") as HTMLSelectElement;
     await userEvent.selectOptions(select, TRIP_COLORS[5]);
-    await waitFor(() => expect(select.value).toBe("auto"));
-    expect(toast).toHaveBeenCalledWith("error", expect.any(String));
+    expect(await screen.findByRole("alert", undefined, { timeout: 3000 })).toHaveTextContent(
+      "settings:blocks.save.failed"
+    );
+    expect(select.value).toBe(TRIP_COLORS[5]);
+    expect(useSuggestionSwitchesStore.getState().tripDefaultColor).toBeNull();
   });
 
   it("sea days: a switch, on by default, that saves its own key", async () => {

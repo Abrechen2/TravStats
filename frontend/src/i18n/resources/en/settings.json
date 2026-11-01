@@ -269,7 +269,6 @@
   },
   "notifications": {
     "title": "Notifications",
-    "description": "Applies to your account. For each area: whether, when and where.",
     "emailNotifications": "Enable email notifications",
     "flightReminder": "Flight Reminder",
     "checkInReminder": "Check-in Reminder",
@@ -308,15 +307,10 @@
       "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     },
-    "emailSub": "Where reminders go; empty = none",
     "saveFailed": "Notification preferences could not be saved",
-    "mailCard": "Mail to",
-    "appCard": "App",
     "carriedOver": "Your existing choices were carried over.",
     "domainOff": "“{{area}}” is switched off, so there are no reminders for it. Switch the area on to get them.",
     "domainOffAction": "Go to Domains & colours",
-    "rowFailed": "Not saved.",
-    "retry": "Try again",
     "rowSwitch": "Reminders for {{area}}",
     "whenGroup": "{{area}}: when",
     "whereGroup": "{{area}}: where",
@@ -331,15 +325,6 @@
     },
     "channelApp": "App",
     "channelMail": "Mail",
-    "table": {
-      "area": "Area",
-      "on": "On",
-      "when": "When",
-      "where": "Where"
-    },
-    "mailReason": {
-      "no_email": "No e-mail address saved – mail cannot be chosen."
-    },
     "pushStatus": {
       "ok": "Paired device: push is active.",
       "no_relay": "No push relay set up – the app then reminds on its own.",
@@ -395,25 +380,12 @@
   },
   "backup": {
     "title": "My data & sync",
-    "description": "A backup freezes the database and your uploaded files at one point in time. Running, downloading and restoring one happens in the admin area — this page only shows the status.",
-    "adminNote": "Backup settings are managed in the Admin panel.",
-    "userNote": "Backups are managed by the administrator.",
     "autoBackup": "Enable automatic backups",
     "backupInterval": "Backup Interval",
     "exportFormat": "Export Format",
     "cloudSync": "Enable cloud sync",
     "retentionDays": "Retention Period (Days)",
     "retentionDaysDescription": "Backups older than {{days}} days will be automatically deleted",
-    "status": {
-      "title": "Backup Status",
-      "running": "Backup running...",
-      "lastBackup": "Last backup: {{date}}",
-      "size": "Size: {{size}} MB",
-      "noBackup": "No backup created yet",
-      "path": "Backup path: {{path}}",
-      "runningShort": "Running",
-      "noneShort": "None"
-    },
     "intervals": {
       "daily": "Daily",
       "weekly": "Weekly",
@@ -424,7 +396,6 @@
       "csv": "CSV",
       "pdf": "PDF"
     },
-    "lastInstanceBackup": "Last instance backup",
     "instance": {
       "running": "running now",
       "none": "None yet",
@@ -433,8 +404,6 @@
     }
   },
   "meExport": {
-    "title": "Download my data",
-    "description": "Your travel data and entries as one JSON file — only your data, without passwords, tokens or stored keys. Photos, documents and receipts are listed, not included as files.",
     "button": "Download",
     "running": "Preparing …",
     "done": "The file was downloaded.",
@@ -916,31 +885,19 @@
     },
     "railMemory": {
       "localTransit": {
-        "title": "U-Bahn and tram in the rail import",
-        "sub": "What a bahn.de import preselects for these legs. You can always choose differently during the import.",
         "skip": "skip",
         "rail": "as rail journey"
       },
       "bus": {
-        "title": "Buses in the rail import",
-        "sub": "What a bahn.de import preselects for bus legs.",
         "skip": "skip",
         "bus": "as bus ride"
       },
-      "saved": "Saved.",
       "openImport": "Go to rail import"
     }
   },
   "trips": {
     "title": "Trips",
-    "description": "How TravStats forms trips from your entries.",
-    "autoCreateTrips": {
-      "label": "Create trips automatically",
-      "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
-    },
     "defaultColor": {
-      "label": "Colour for new trips",
-      "description": "The colour every new trip starts with — imports and suggestions included. “Automatic” rotates through the palette as before.",
       "automatic": "Automatic",
       "colors": {
         "818cf8": "Indigo",
@@ -959,17 +916,12 @@
   "calendarFeed": {
     "title": "Calendar subscription",
     "description": "A secret link any calendar app can subscribe to – Apple Calendar, Google Calendar, Outlook, Thunderbird. It holds your upcoming trips and entries plus those of the last 30 days, and updates itself.",
-    "stateNone": "No calendar link",
-    "stateActive": "Calendar link active",
-    "noneHint": "Create a link and add it to your calendar app as a subscription.",
     "createdAt": "Created on {{date}}",
     "lastUsed": "last read on {{date}}",
     "neverUsed": "never read yet",
     "create": "Create link",
     "regenerate": "Create a new link",
     "revoke": "Revoke",
-    "confirmRegenerate": "The current link stops working – every subscription to it stalls until you add the new one. Create a new link?",
-    "confirmRevoke": "The link stops working, and calendar apps can no longer read your trips. Revoke it?",
     "urlLabel": "Your calendar link",
     "keepSecret": "Anyone who has the link sees your trips – do not share it. If it gets into the wrong hands, create a new one.",
     "unreachable": "Google Calendar cannot reach this address — set a public address under Admin → Instance.",
@@ -988,24 +940,7 @@
     }
   },
   "inboxSuggestions": {
-    "title": "Inbox suggestions",
-    "description": "Which suggestions TravStats makes in your inbox. When off, nothing is computed or requested any more; your earlier decisions are kept and apply again once you switch it back on.",
-    "trips": {
-      "label": "Trip suggestions",
-      "description": "Proposes new trips and assigns entries to existing trips."
-    },
-    "stays": {
-      "label": "Stay suggestions from Dawarich",
-      "description": "Detects where you stayed from your Dawarich location history. When off, Dawarich is no longer queried."
-    },
-    "immichEvidence": {
-      "label": "Immich photos as a hint to the place",
-      "description": "Uses your Immich photos from the same time and area for stay suggestions: how many, and where Immich places them. Only with an Immich connection; when off, Immich is not queried for this."
-    },
-    "llmPlaceClassification": {
-      "label": "Determine the place type with AI",
-      "description": "Lets the AI estimate what kind of place it was (e.g. café, museum) from the names of the places nearby. Only those names are sent, no coordinates. A local AI (Ollama) first; a cloud provider only if the administrator has consented to it."
-    }
+    "title": "Inbox suggestions"
   },
   "homeCountry": {
     "label": "Home country",
@@ -1394,8 +1329,6 @@
     "action": "Go to Domains & colours"
   },
   "webdavSync": {
-    "title": "Sync with WebDAV",
-    "description": "Regularly uploads your complete data export to your own WebDAV storage, for example Nextcloud.",
     "whatIsUploaded": "What is uploaded is your account's complete export as a compressed JSON file — the same data as the admin export \"All data\", without credentials. Photos and documents themselves are not included.",
     "setup": "Set up",
     "hide": "Hide",

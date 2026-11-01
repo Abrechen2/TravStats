@@ -7,7 +7,7 @@
     },
     "cruise": {
       "title": "Cruise lines",
-      "description": ""
+      "description": "Your cruise lines' clubs and loyalty programmes."
     },
     "lodging": {
       "title": "Hotels",
@@ -15,7 +15,7 @@
     },
     "rail": {
       "title": "Rail",
-      "description": ""
+      "description": "Your rail operators' loyalty programmes, e.g. BahnBonus."
     }
   },
   "empty": "No cards yet.",

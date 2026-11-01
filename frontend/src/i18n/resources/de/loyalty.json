@@ -7,7 +7,7 @@
     },
     "cruise": {
       "title": "Reedereien",
-      "description": ""
+      "description": "Clubs und Treueprogramme deiner Reedereien."
     },
     "lodging": {
       "title": "Hotels",
@@ -15,7 +15,7 @@
     },
     "rail": {
       "title": "Bahn",
-      "description": ""
+      "description": "Bonusprogramme deiner Bahnen, z. B. BahnBonus."
     }
   },
   "empty": "Noch keine Karten.",

@@ -99,19 +99,15 @@ export default function WebdavSyncRow({
   };
 
   /** One write to the settings; the row's own failure text is kept for the line under it. */
-  const send = useCallback(
-    async (patch: WebdavSyncUpdate): Promise<void> => {
-      try {
-        setStatus(await webdavSyncApi.update(patch));
-        setRowError(null);
-      } catch (err) {
-        setRowError(errorText(err));
-        throw err;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
+  const send = useCallback(async (patch: WebdavSyncUpdate): Promise<void> => {
+    try {
+      setStatus(await webdavSyncApi.update(patch));
+      setRowError(null);
+    } catch (err) {
+      setRowError(errorText(err));
+      throw err;
+    }
+  }, []);
 
   const enabled = useSettingWrite<boolean>("data.webdav.enabled", status?.enabled ?? false, (v) =>
     send({ enabled: v })

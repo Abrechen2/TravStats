@@ -158,10 +158,7 @@
     },
     "webdavtakt": {
       "t": "Wie oft",
-      "o": [
-        "täglich",
-        "wöchentlich"
-      ]
+      "o": ["täglich", "wöchentlich"]
     },
     "webdavvers": {
       "t": "Versionen behalten",
@@ -216,17 +213,11 @@
     "ubahn": {
       "t": "U-Bahn und Tram",
       "s": "Vorauswahl, im Import änderbar",
-      "o": [
-        "weglassen",
-        "als Bahnfahrt"
-      ]
+      "o": ["weglassen", "als Bahnfahrt"]
     },
     "busleg": {
       "t": "Busabschnitte",
-      "o": [
-        "weglassen",
-        "als Busfahrt"
-      ]
+      "o": ["weglassen", "als Busfahrt"]
     }
   },
   "dialogs": {
@@ -247,7 +238,7 @@
     "shareend": {
       "title": "Teilen beenden?",
       "affects": "{{name}}",
-      "after": "Sie bleiben als deine Kopie; Änderungen kommen nicht mehr nach.",
+      "after": "Die Reisen bleiben als deine Kopie; Änderungen kommen nicht mehr nach.",
       "confirm": "Beenden",
       "amount": "Alle Reisen, die du mit dieser Person teilst"
     },
@@ -256,7 +247,7 @@
       "affects": "{{from}}",
       "amount_one": "{{count}} Eintrag",
       "amount_other": "{{count}} Einträge",
-      "after": "Sie nennen danach {{to}}. Das lässt sich nicht zurücknehmen.",
+      "after": "Die Einträge nennen danach {{to}}. Das lässt sich nicht zurücknehmen.",
       "confirm": "Zusammenführen"
     },
     "unused": {
@@ -264,7 +255,7 @@
       "affects": "Personen ohne Eintrag",
       "amount_one": "{{count}} Person",
       "amount_other": "{{count}} Personen",
-      "after": "Sie verschwinden aus allen Vorschlägen.",
+      "after": "Die Personen verschwinden aus allen Vorschlägen.",
       "confirm_one": "{{count}} löschen",
       "confirm_other": "{{count}} löschen"
     },

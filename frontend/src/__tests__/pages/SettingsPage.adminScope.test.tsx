@@ -158,6 +158,61 @@ vi.mock("../../components/Settings/RoutingProviderSection", () => ({
 vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
   default: () => <div data-testid="personal-routing-keys" />,
 }));
+vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
+  locationProviderApi: { get: vi.fn().mockResolvedValue({ kind: "travtrack" }), set: vi.fn() },
+}));
+vi.mock("@/lib/api/webdavSync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/webdavSync")>();
+  return {
+    ...actual,
+    // The WebDAV card on /settings/data fetches its status on mount; it is not
+    // the subject here, so it answers "not configured" without a request.
+    webdavSyncApi: {
+      ...actual.webdavSyncApi,
+      get: vi.fn().mockResolvedValue({
+        enabled: false,
+        url: null,
+        username: null,
+        hasPassword: false,
+        remotePath: "TravStats",
+        schedule: "daily",
+        keepVersions: 7,
+        ranAt: null,
+        completedAt: null,
+        lastStatus: null,
+        lastErrorCode: null,
+        lastFileName: null,
+        lastSizeBytes: null,
+        running: false,
+        allowPrivateTargets: false,
+      }),
+    },
+  };
+});
+// The rebuilt rows read these themselves; the page tests answer them instead of the network.
+vi.mock("@/lib/api/backup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/backup")>();
+  return {
+    ...actual,
+    backupApi: {
+      ...actual.backupApi,
+      getInstanceStatus: vi.fn().mockResolvedValue({ completedAt: null, running: false }),
+    },
+  };
+});
+vi.mock("@/lib/api/externalServices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/externalServices")>();
+  return {
+    ...actual,
+    externalServicesApi: {
+      ...actual.externalServicesApi,
+      accountOverview: vi
+        .fn()
+        .mockResolvedValue({ connections: [], ownKeys: [], aiConsents: [], instanceProvided: [] }),
+    },
+  };
+});
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));

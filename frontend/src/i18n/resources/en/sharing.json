@@ -84,7 +84,6 @@
       "sent": "Request sent to {{name}}."
     },
     "consents": {
-      "title": "Consents",
       "outgoing": "You to {{name}}",
       "incoming": "{{name}} to you",
       "withdraw": "Withdraw",
@@ -98,7 +97,6 @@
       }
     },
     "companions": {
-      "title": "Companions",
       "hint": "Link a companion to the account that agreed to your request. Then you can share trips with them.",
       "linkLabel": "Link to account",
       "notLinked": "Not linked",

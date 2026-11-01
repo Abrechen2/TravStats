@@ -141,17 +141,18 @@ describe("NotificationsSection on the demo account", () => {
     notificationsApiMock.updatePreferences.mockReset();
   });
 
-  it("explains instead of offering the address field", async () => {
+  it("shows the address field locked, with the reason, instead of offering a write that always fails", async () => {
     render(
       <MemoryRouter>
         <NotificationsSection />
       </MemoryRouter>
     );
-    expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:notifications.mailCard")).not.toBeInTheDocument();
-    // Not merely hidden: the section must not fetch the shared account's
-    // address either.
-    expect(notificationsApiMock.getPreferences).not.toHaveBeenCalled();
+    const field = await screen.findByLabelText("settingsRows:notifications.erimail.t");
+    expect(field).toBeDisabled();
+    expect(field).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThan(0);
+    // Read-only is fine for the shared account; a write never leaves the page.
+    expect(notificationsApiMock.updatePreferences).not.toHaveBeenCalled();
   });
 
   it("offers the field for a normal account — the case above is not vacuous", async () => {
@@ -161,8 +162,8 @@ describe("NotificationsSection on the demo account", () => {
         <NotificationsSection />
       </MemoryRouter>
     );
-    expect(await screen.findByLabelText("settings:notifications.mailCard")).toBeInTheDocument();
-    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("settingsRows:notifications.erimail.t")).toBeEnabled();
+    expect(screen.queryByText("settings:blocks.lock.demo")).not.toBeInTheDocument();
   });
 });
 

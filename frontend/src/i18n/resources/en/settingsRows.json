@@ -158,10 +158,7 @@
     },
     "webdavtakt": {
       "t": "How often",
-      "o": [
-        "daily",
-        "weekly"
-      ]
+      "o": ["daily", "weekly"]
     },
     "webdavvers": {
       "t": "Versions to keep",
@@ -216,17 +213,11 @@
     "ubahn": {
       "t": "Metro and tram",
       "s": "Preselection, changeable per import",
-      "o": [
-        "skip",
-        "as rail journey"
-      ]
+      "o": ["skip", "as rail journey"]
     },
     "busleg": {
       "t": "Bus legs",
-      "o": [
-        "skip",
-        "as bus ride"
-      ]
+      "o": ["skip", "as bus ride"]
     }
   },
   "dialogs": {

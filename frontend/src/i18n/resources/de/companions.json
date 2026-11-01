@@ -81,16 +81,11 @@
       "done": "{{source}} ist jetzt {{target}}."
     },
     "delete": {
-      "title": "{{name}} löschen?",
-      "body": "{{name}} steht in keinem Eintrag und wird endgültig aus deiner Liste entfernt.",
-      "submit": "Löschen",
       "done": "{{name}} gelöscht."
     },
     "deleteUnused": {
-      "title": "Ungenutzte Mitreisende löschen?",
       "body_one": "{{count}} Person steht in keinem Eintrag, hat nichts bezahlt und ist mit keinem Konto verknüpft. Löschen entfernt diesen Namen endgültig aus deiner Liste.",
       "body_other": "{{count}} Personen stehen in keinem Eintrag, haben nichts bezahlt und sind mit keinem Konto verknüpft. Löschen entfernt diese Namen endgültig aus deiner Liste.",
-      "submit": "Löschen",
       "done_one": "{{count}} Person gelöscht.",
       "done_other": "{{count}} Personen gelöscht."
     },
