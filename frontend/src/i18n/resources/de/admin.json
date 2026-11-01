@@ -152,10 +152,6 @@
             "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
             "what": "Der Abschnitt „Aufgezeichnete Spuren“ auf der Seite einer Kreuzfahrt: Eine GPS-Aufzeichnung (Datei oder Dawarich) ersetzt die berechnete Seeroute der Etappen, die sie abdeckt – auf der Karte und in den Statistiken."
           },
-          "flightTrackUpload": {
-            "name": "Aufgezeichnete Flugspuren",
-            "what": "Eine Flugaufzeichnung als Datei (GPX, KML, KMZ, TCX, FIT oder die CSV-Datei von Flightradar24) auf der Seite eines Flugs hochladen, ersetzen oder entfernen. Die Karte und der Globus zeichnen den Flug dann entlang der Aufzeichnung statt auf dem Großkreis; die Flugseite stellt die gemessene Strecke dem Großkreis gegenüber."
-          },
           "comparison": {
             "name": "Freundesvergleiche",
             "what": "Die Summen deiner Reisen mit Freunden vergleichen, die zugestimmt haben – als Rangliste, ohne einzelne Einträge."
@@ -163,10 +159,6 @@
           "encryptedShare": {
             "name": "Verschlüsselt teilen",
             "what": "Vollständige Reisedaten auf dem Gerät verschlüsselt an geprüfte Freunde übertragen – noch ohne unabhängige Sicherheitsprüfung."
-          },
-          "calendarFeed": {
-            "name": "Kalender-Abo",
-            "what": "Ein geheimer Link unter Einstellungen → Reisen, den jede Kalender-App abonnieren kann: kommende Flüge, Aufenthalte, Fahrten, Kreuzfahrten und Reisen des eigenen Kontos. Mit ausgeschaltetem Schalter wird kein Link ausgegeben und keiner beantwortet."
           },
           "federatedTripSharing": {
             "name": "Reisen über Server teilen",
