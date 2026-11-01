@@ -49,6 +49,7 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
           altitude: row?.altitudeM ?? null,
           speed: row?.speedMps ?? null,
           course: row?.course ?? null,
+          motion: row?.motion ?? null,
           deviceId: row?.deviceId ?? null,
           origin: row?.origin ?? null,
           purpose: row?.purpose ?? "everyday",
@@ -82,5 +83,7 @@ export function travTrackExportJson(window: Span, built: TravTrackExport) {
 export function travTrackExportGpx(name: string, built: TravTrackExport): Generator<string> {
   return recordingToGpxChunks(name, built.read.segments, {
     desc: `origin=travtrack; coverage=${built.coverage}`,
+    // The stored altitude, so a GPX opened elsewhere keeps its elevation profile.
+    ele: (p) => built.read.rowOf(p)?.altitudeM ?? null,
   });
 }

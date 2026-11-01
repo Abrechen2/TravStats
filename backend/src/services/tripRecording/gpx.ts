@@ -24,7 +24,11 @@ function escapeXml(value: string): string {
 export function* recordingToGpxChunks(
   name: string,
   segments: readonly StoredPoint[][],
-  opts: { desc?: string } = {}
+  opts: {
+    desc?: string;
+    /** Metres above sea level of a vertex, written as `<ele>` (GPX orders it before `<time>`); null or absent writes none. */
+    ele?: (point: StoredPoint) => number | null | undefined;
+  } = {}
 ): Generator<string> {
   const first = segments[0]?.[0];
   yield [
@@ -41,8 +45,11 @@ export function* recordingToGpxChunks(
   for (const segment of segments) {
     yield `\n    <trkseg>`;
     if (segment.length === 0) yield "\n"; // the old join left a blank line here
-    for (const [t, lat, lon] of segment) {
-      yield `\n      <trkpt lat="${lat}" lon="${lon}"><time>${new Date(t).toISOString()}</time></trkpt>`;
+    for (const point of segment) {
+      const [t, lat, lon] = point;
+      const ele = opts.ele?.(point);
+      const eleTag = typeof ele === "number" && Number.isFinite(ele) ? `<ele>${ele}</ele>` : "";
+      yield `\n      <trkpt lat="${lat}" lon="${lon}">${eleTag}<time>${new Date(t).toISOString()}</time></trkpt>`;
     }
     yield `\n    </trkseg>`;
   }
@@ -52,7 +59,7 @@ export function* recordingToGpxChunks(
 export function recordingToGpx(
   name: string,
   segments: readonly StoredPoint[][],
-  opts: { desc?: string } = {}
+  opts: { desc?: string; ele?: (point: StoredPoint) => number | null | undefined } = {}
 ): string {
   return Array.from(recordingToGpxChunks(name, segments, opts)).join("");
 }

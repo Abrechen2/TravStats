@@ -16,6 +16,11 @@ import {
   checkFerryAchievement,
 } from "./ferryAchievements";
 import {
+  calculateTravTrackAchievementStats,
+  checkTravTrackAchievement,
+  TRAVTRACK_REQUIREMENT_TYPES,
+} from "./travTrackAchievements";
+import {
   calculateCrossDomainAchievementStats,
   checkCrossDomainAchievement,
   CROSS_DOMAIN_REQUIREMENT_TYPES,
@@ -46,10 +51,11 @@ export async function loadDomainAchievementChecks(userId: string): Promise<{
   checks: DomainAchievementCheck[];
   crossDomain: CrossDomainAchievementStats | null;
 }> {
-  const [rental, bus, ferry, crossDomain] = await Promise.all([
+  const [rental, bus, ferry, travTrack, crossDomain] = await Promise.all([
     settleBadgeSource(userId, "rental", () => calculateRentalAchievementStats(userId)),
     settleBadgeSource(userId, "bus", () => calculateBusAchievementStats(userId)),
     settleBadgeSource(userId, "ferry", () => calculateFerryAchievementStats(userId)),
+    settleBadgeSource(userId, "travTrack", () => calculateTravTrackAchievementStats(userId)),
     settleBadgeSource(userId, "crossDomain", () => calculateCrossDomainAchievementStats(userId)),
   ]);
   const or = <S>(
@@ -65,6 +71,7 @@ export async function loadDomainAchievementChecks(userId: string): Promise<{
       or(rental, RENTAL_REQUIREMENT_TYPES, checkRentalAchievement),
       or(bus, BUS_REQUIREMENT_TYPES, checkBusAchievement),
       or(ferry, FERRY_REQUIREMENT_TYPES, checkFerryAchievement),
+      or(travTrack, TRAVTRACK_REQUIREMENT_TYPES, checkTravTrackAchievement),
       or(crossDomain, CROSS_DOMAIN_REQUIREMENT_TYPES, checkCrossDomainAchievement),
     ],
     crossDomain,

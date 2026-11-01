@@ -28,6 +28,7 @@ function oldJson(window: { fromMs: number; untilMs: number }, built: TravTrackEx
           altitude: row?.altitudeM ?? null,
           speed: row?.speedMps ?? null,
           course: row?.course ?? null,
+          motion: row?.motion ?? null,
           deviceId: row?.deviceId ?? null,
           origin: row?.origin ?? null,
           purpose: row?.purpose ?? "everyday",
@@ -49,13 +50,19 @@ function oldJson(window: { fromMs: number; untilMs: number }, built: TravTrackEx
 }
 
 /** The pre-forgejo#357 recordingToGpx, verbatim (array of lines joined by newline). */
-function oldGpx(name: string, segments: StoredPoint[][], desc: string): string {
+function oldGpx(
+  name: string,
+  segments: StoredPoint[][],
+  desc: string,
+  eleOf: (p: StoredPoint) => number | null = () => null
+): string {
   const first = segments[0]?.[0];
   const body = segments.map((segment) => {
-    const points = segment.map(
-      ([t, lat, lon]) =>
-        `      <trkpt lat="${lat}" lon="${lon}"><time>${new Date(t).toISOString()}</time></trkpt>`
-    );
+    const points = segment.map((p) => {
+      const [t, lat, lon] = p;
+      const ele = eleOf(p);
+      return `      <trkpt lat="${lat}" lon="${lon}">${ele === null ? "" : `<ele>${ele}</ele>`}<time>${new Date(t).toISOString()}</time></trkpt>`;
+    });
     return `    <trkseg>\n${points.join("\n")}\n    </trkseg>`;
   });
   return [
@@ -87,6 +94,7 @@ const rows = new Map<StoredPoint, Record<string, unknown>>([
       altitudeM: 12,
       speedMps: 1.5,
       course: 90,
+      motion: "automotive",
       deviceId: "p1",
       origin: "companion:p1",
       purpose: "trip",
@@ -126,10 +134,19 @@ describe("TravTrack export formats stream without changing (forgejo#357)", () =>
     const old = oldGpx(
       "TravTrack 2026-10-12",
       built.read.segments,
-      "origin=travtrack; coverage=complete"
+      "origin=travtrack; coverage=complete",
+      (p) => built.read.rowOf(p)?.altitudeM ?? null
     );
     expect(await text(travTrackExportGpx("TravTrack 2026-10-12", built))).toBe(old);
-    expect(old).toContain('<trkpt lat="37.5" lon="127">');
+    // The stored altitude is written as <ele>, before <time>; a point without one writes none.
+    expect(old).toContain('<trkpt lat="37.5" lon="127"><ele>12</ele><time>');
+    expect(old).toContain('<trkpt lat="37.51" lon="127.01"><time>');
+  });
+
+  it("JSON export carries each point's motion class (forgejo#400)", async () => {
+    const streamed = JSON.parse(await text(jsonChunks(travTrackExportJson(window, built))));
+    expect(streamed.points[0].motion).toBe("automotive");
+    expect(streamed.points[1].motion).toBeNull();
   });
 
   it("GPX: a failure mid-stream aborts the response instead of ending it cleanly", async () => {

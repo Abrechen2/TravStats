@@ -1113,6 +1113,24 @@
         "coverage": "Überfahrten ohne Strecke tragen keine Kilometer bei und werden genannt; hat keine eine Strecke, steht keine Kilometerzahl. Ein Tipp auf die Zahl zeigt die Einträge.",
         "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
       }
+    },
+    "travTrack": {
+      "days": "TravTrack-Tage",
+      "kmDesc": "{{km}} am Boden gemessen",
+      "kmNone": "Strecke nicht messbar",
+      "topSpeed": "Höchstes Tempo",
+      "topSpeedDesc": "am Boden, ohne Ausreißer",
+      "highest": "Höchster Punkt",
+      "highestDesc": "am Boden, nie im Flugzeug",
+      "byMotion": "Unterwegs, nach Art",
+      "motion": {
+        "walking": "Zu Fuß",
+        "running": "Laufen",
+        "cycling": "Rad",
+        "automotive": "Fahrzeug",
+        "stationary": "Ruhend",
+        "unknown": "Unbekannt"
+      }
     }
   },
   "period": {

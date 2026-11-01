@@ -33,6 +33,7 @@ export const TRAVTRACK_SAFE_SELECT = {
   altitudeM: true,
   speedMps: true,
   course: true,
+  motion: true,
   deviceId: true,
   origin: true,
   purpose: true,
@@ -49,6 +50,8 @@ export type SafePointRow = {
   altitudeM: number | null;
   speedMps: number | null;
   course: number | null;
+  /** What the phone said about movement (`stationary`, `walking`, …), as stored. */
+  motion: string | null;
   deviceId: string | null;
   /** Where the point came from: `companion:<deviceId>`, `gpx:<importId>`, … */
   origin: string;

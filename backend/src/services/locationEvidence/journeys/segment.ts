@@ -18,6 +18,7 @@
  * thinned to `LINE_MAX_VERTICES` and cut again on that final form.
  */
 import { distanceM, type ZoneCircle } from "../../travtrack/classify";
+import { plausibleSpeedMps } from "../../travtrack/everyday/plausible";
 import { privacyCutBy, type LonLat } from "../../travtrack/privacyCut";
 import { detectStays } from "../../dawarich/stays/detect";
 import type { DerivationPoint } from "../derivationRead";
@@ -128,6 +129,27 @@ function speeds(points: readonly DerivationPoint[]): number[] {
   return out.sort((a, b) => a - b);
 }
 
+/** The share of a run's fixes that must carry a believable reported speed for the hint to use them. */
+const REPORTED_SPEED_COVERAGE = 0.5;
+
+/**
+ * The speeds the mode hint reads (forgejo#400), km/h ascending: the phone's
+ * own reported speed when at least half the fixes carry a believable one
+ * (`plausibleSpeedMps` — spikes and a contradicting class are dropped), else
+ * the steps between fixes. A step is the average over a gap and understates a
+ * train's peak between sparse fixes; the instantaneous speed does not. The
+ * run's acceptance (its median step speed) is unchanged.
+ */
+function hintSpeeds(points: readonly DerivationPoint[], stepKmh: readonly number[]): number[] {
+  const reported = points.flatMap((p) => {
+    const s = plausibleSpeedMps({ speedMps: p.speedMps, accuracyM: p.accuracyM, motion: null });
+    return s === null ? [] : [s * 3.6];
+  });
+  return reported.length >= points.length * REPORTED_SPEED_COVERAGE
+    ? reported.sort((a, b) => a - b)
+    : [...stepKmh];
+}
+
 function modeHintOf(sortedKmh: readonly number[]): ModeHint {
   if (percentile(sortedKmh, 0.85) >= RAIL_P85_KMH) return "rail";
   if (percentile(sortedKmh, 0.5) <= ROAD_MEDIAN_KMH) return "road";
@@ -217,7 +239,7 @@ function judge(segment: Segment, circles: readonly ZoneCircle[]): MovementRun | 
     endRecorded: segment.endBound === "stay" && last === points[points.length - 1],
     line: storedLine(pieces, circles),
     medianKmh,
-    modeHint: modeHintOf(kmh),
+    modeHint: modeHintOf(hintSpeeds(points, kmh)),
   };
 }
 

@@ -267,6 +267,11 @@ export const BADGE_WITHOUT_EVIDENCE: Readonly<Record<string, string>> = {
   ferry_count: "The ferry domain serves no evidence measures yet.",
   ferry_night_crossings: "The ferry domain serves no evidence measures yet.",
   ferry_ports: "The ferry domain serves no evidence measures yet.",
+  // TravTrack badges stand on the monthly values of a position history, not on
+  // entries of the logbook: there is no list of rows to open (forgejo#400).
+  travtrack_days: "TravTrack's days are measured from recorded positions, not listed entries.",
+  travtrack_ground_km:
+    "TravTrack's ground kilometres are measured from recorded positions, not listed entries.",
 };
 
 /**
