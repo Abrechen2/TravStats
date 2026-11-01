@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+vi.mock("../../../lib/api/pendingUpdates", () => ({
+  pendingUpdatesApi: { getAll: vi.fn().mockResolvedValue({ updates: [], count: 0 }) },
+}));
 import AutoUpdateSection from "../AutoUpdateSection";
 import InboxSuggestionsSection from "../InboxSuggestionsSection";
 import BackupSection from "../BackupSection";
@@ -41,51 +44,52 @@ const lastHidden = (report: ReturnType<typeof vi.fn>): number =>
 describe("standard level inside a section", () => {
   beforeEach(() => useSettingsLevelStore.setState({ level: "standard" }));
 
-  it("keeps the live-update switch with approval, and hides the expiry", () => {
+  it("keeps the live-update switch with approval, and hides the expiry", async () => {
     const report = renderReporting(
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
-        loadingAutoUpdateSettings={false}
         loadState="loaded"
         onRetryLoad={vi.fn()}
-        onSetAutoUpdateSettings={vi.fn()}
-        onSave={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(undefined)}
       />
     );
-    expect(screen.getByLabelText("settings:autoUpdate.enabled")).toBeInTheDocument();
-    expect(screen.getByLabelText("settings:autoUpdate.requireApproval")).toBeInTheDocument();
+    await act(async () => {});
+    expect(
+      screen.getByRole("switch", { name: "settings:rows.liveUpdates.name" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: "settings:rows.approveUpdates.name" })
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("settings:autoUpdate.onlyDuringFlight")).toBeNull();
-    expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
+    expect(screen.queryByLabelText("settings:rows.updateExpiry.name")).toBeNull();
     expect(lastHidden(report)).toBe(1);
   });
 
-  it("counts no hidden tuning while live updates are off — there is none to show", () => {
+  it("counts no hidden tuning while live updates are off — there is none to show", async () => {
     const report = renderReporting(
       <AutoUpdateSection
         autoUpdateSettings={{ ...autoUpdate, enabled: false }}
-        loadingAutoUpdateSettings={false}
         loadState="loaded"
         onRetryLoad={vi.fn()}
-        onSetAutoUpdateSettings={vi.fn()}
-        onSave={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(undefined)}
       />
     );
+    await act(async () => {});
     expect(lastHidden(report)).toBe(0);
   });
 
-  it("draws the tuning rows at the expert level", () => {
+  it("draws the tuning rows at the expert level", async () => {
     useSettingsLevelStore.setState({ level: "expert" });
     const report = renderReporting(
       <AutoUpdateSection
         autoUpdateSettings={autoUpdate}
-        loadingAutoUpdateSettings={false}
         loadState="loaded"
         onRetryLoad={vi.fn()}
-        onSetAutoUpdateSettings={vi.fn()}
-        onSave={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(undefined)}
       />
     );
-    expect(screen.getByLabelText("settings:autoUpdate.expiryHours")).toBeInTheDocument();
+    await act(async () => {});
+    expect(screen.getByLabelText("settings:rows.updateExpiry.name")).toBeInTheDocument();
     expect(lastHidden(report)).toBe(0);
   });
 

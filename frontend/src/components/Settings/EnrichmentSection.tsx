@@ -1,10 +1,13 @@
-import { SectionCard, SectionTitle, LoadGuardNotice } from "./SettingsShared";
+import type { JSX } from "react";
+import { SectionCard, LoadGuardNotice } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import { Switch } from "../ui/Field";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import EnrichmentCandidatesPanel from "./EnrichmentCandidatesPanel";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { SettingRows } from "../ui/SettingRow";
+import { SettingItem, SwitchControl, useSettingWrite } from "../ui/settings";
+import { NumberSettingRow } from "./NumberSettingRow";
 
-interface HistoricalEnrichmentSettings {
+export interface HistoricalEnrichmentSettings {
   enabled: boolean;
   minConfidence: number;
   maxPerDay: number;
@@ -12,97 +15,93 @@ interface HistoricalEnrichmentSettings {
 
 interface EnrichmentSectionProps {
   historicalEnrichmentSettings: HistoricalEnrichmentSettings;
-  loadingHistoricalEnrichmentSettings: boolean;
   /** Whether the values come from the server; anything but "loaded" locks the section. */
   loadState: "loading" | "loaded" | "failed";
   onRetryLoad: () => void;
-  onSetHistoricalEnrichmentSettings: (settings: HistoricalEnrichmentSettings) => void;
-  /** Writes the given value. Switches call it at once, number fields on leaving. */
-  onSave: (settings: HistoricalEnrichmentSettings) => void;
+  /** Writes ONE field; rejects when the server refuses (the row keeps the choice). */
+  onSave: (patch: Partial<HistoricalEnrichmentSettings>) => Promise<void>;
 }
 
+/** Ältere Flüge ergänzen: only ever suggestions in the inbox, never a silent change. */
 export default function EnrichmentSection({
   historicalEnrichmentSettings: settings,
-  loadingHistoricalEnrichmentSettings,
   loadState,
   onRetryLoad,
-  onSetHistoricalEnrichmentSettings,
   onSave,
 }: EnrichmentSectionProps): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings"]);
+  const isDemo = useIsDemoAccount();
 
-  const numberField = (
-    id: string,
-    key: "minConfidence" | "maxPerDay",
-    min: number,
-    max: number
-  ): JSX.Element => (
-    <input
-      id={id}
-      type="number"
-      value={settings[key]}
-      onChange={(e) => {
-        const value = parseInt(e.target.value, 10);
-        if (value >= min && value <= max) {
-          onSetHistoricalEnrichmentSettings({ ...settings, [key]: value });
-        }
-      }}
-      onBlur={() => onSave(settings)}
-      min={min}
-      max={max}
-      className="input"
-      style={{ width: 120 }}
-    />
+  const enabled = useSettingWrite<boolean>("enrichment.enabled", settings.enabled, (enabled) =>
+    onSave({ enabled })
+  );
+  const confidence = useSettingWrite<number>(
+    "enrichment.minConfidence",
+    settings.minConfidence,
+    (minConfidence) => onSave({ minConfidence })
+  );
+  const perDay = useSettingWrite<number>("enrichment.maxPerDay", settings.maxPerDay, (maxPerDay) =>
+    onSave({ maxPerDay })
   );
 
-  return (
-    <SectionCard>
-      {/* No badge. This section wore a "Beta" pill that named no gate: the
-          registry in `config/betaFeatures.ts` has never carried a key for
-          historical enrichment, so nothing was ever hidden behind it and
-          nothing would have un-hidden it. Found in the beta audit of
-          2026-09-19; the owner ruled it off on 2026-09-20. A badge without a
-          gate behind it is exactly what design decision no. 10 of 2026-09-05
-          forbids — it tells the user a feature is provisional when the code
-          treats it as shipped. */}
-      <SectionTitle
-        title={t("settings:historicalEnrichment.title")}
-        description={t("settings:historicalEnrichment.description")}
-      />
-      {loadState !== "loaded" ? (
+  if (loadState !== "loaded") {
+    return (
+      <SectionCard>
         <LoadGuardNotice
           failed={loadState === "failed"}
           message={t("settings:historicalEnrichment.loadFailed")}
           onRetry={onRetryLoad}
         />
-      ) : (
-        <SettingRows>
-          <Switch
-            id="enrichment-enabled"
-            checked={settings.enabled}
-            disabled={loadingHistoricalEnrichmentSettings}
-            onChange={(on) => onSave({ ...settings, enabled: on })}
-            label={t("settings:historicalEnrichment.enabled")}
+      </SectionCard>
+    );
+  }
+
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+
+  return (
+    <SectionCard>
+      <SettingRows>
+        <SettingItem
+          title={t("settings:rows.enrichment.name")}
+          sub={t("settings:rows.enrichment.sub")}
+          help={t("settings:rows.enrichment.help")}
+          expert
+          save={enabled}
+          locked={locked}
+          control={
+            <SwitchControl
+              checked={enabled.value}
+              label={t("settings:rows.enrichment.name")}
+              onChange={enabled.choose}
+            />
+          }
+        />
+        {settings.enabled && (
+          <NumberSettingRow
+            expert
+            title={t("settings:rows.enrichmentConfidence.name")}
+            sub={t("settings:rows.enrichmentConfidence.sub")}
+            write={confidence}
+            min={0}
+            max={100}
+            locked={locked}
           />
-          {settings.enabled && (
-            <SettingRow
-              title={t("settings:historicalEnrichment.minConfidence")}
-              sub={t("settings:historicalEnrichment.minConfidenceDescription")}
-              htmlFor="enrichment-min-confidence"
-              control={numberField("enrichment-min-confidence", "minConfidence", 0, 100)}
-            />
-          )}
-          {settings.enabled && (
-            <SettingRow
-              title={t("settings:historicalEnrichment.maxPerDay")}
-              sub={t("settings:historicalEnrichment.maxPerDayDescription")}
-              htmlFor="enrichment-max-per-day"
-              control={numberField("enrichment-max-per-day", "maxPerDay", 1, 1000)}
-            />
-          )}
-        </SettingRows>
-      )}
-      {loadState === "loaded" && settings.enabled && <EnrichmentCandidatesPanel />}
+        )}
+        {settings.enabled && (
+          <NumberSettingRow
+            expert
+            title={t("settings:rows.enrichmentPerNight.name")}
+            sub={t("settings:rows.enrichmentPerNight.sub")}
+            write={perDay}
+            min={1}
+            max={1000}
+            locked={locked}
+          />
+        )}
+      </SettingRows>
+      {settings.enabled && <EnrichmentCandidatesPanel />}
     </SectionCard>
   );
 }

@@ -1,12 +1,21 @@
-import { Link } from "react-router-dom";
-import { SectionCard, SectionTitle, LoadGuardNotice } from "./SettingsShared";
+import { useEffect, useState, type JSX } from "react";
+import { SectionCard, LoadGuardNotice } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import { Switch } from "../ui/Field";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { pendingUpdatesApi } from "../../lib/api/pendingUpdates";
+import { logger } from "../../lib/logger";
+import { SettingRows } from "../ui/SettingRow";
+import {
+  JumpControl,
+  SettingItem,
+  SwitchControl,
+  useGuardedNavigate,
+  useSettingWrite,
+} from "../ui/settings";
 import { useExpertRows } from "./frame/useExpertRows";
-import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { NumberSettingRow } from "./NumberSettingRow";
 
-interface AutoUpdateSettings {
+export interface AutoUpdateSettings {
   enabled: boolean;
   requireApproval: boolean;
   checkInterval: number;
@@ -16,114 +25,143 @@ interface AutoUpdateSettings {
 
 interface AutoUpdateSectionProps {
   autoUpdateSettings: AutoUpdateSettings;
-  loadingAutoUpdateSettings: boolean;
   /** Whether the values come from the server; anything but "loaded" locks the section. */
   loadState: "loading" | "loaded" | "failed";
   onRetryLoad: () => void;
-  onSetAutoUpdateSettings: (settings: AutoUpdateSettings) => void;
-  /** Writes the given value. Switches call it at once, number fields on leaving. */
-  onSave: (settings: AutoUpdateSettings) => void;
+  /** Writes ONE field; rejects when the server refuses (the row keeps the choice). */
+  onSave: (patch: Partial<AutoUpdateSettings>) => Promise<void>;
+  /** False when no flight data service is usable for this account; null while unknown. */
+  flightDataAvailable?: boolean | null;
 }
 
+/** Live-Updates: whether they run, whether they wait for approval, how long they stay open. */
 export default function AutoUpdateSection({
   autoUpdateSettings: settings,
-  loadingAutoUpdateSettings,
   loadState,
   onRetryLoad,
-  onSetAutoUpdateSettings,
   onSave,
+  flightDataAvailable = null,
 }: AutoUpdateSectionProps): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
-  const coarse = useCoarsePointer();
-  // Whether live updates run and whether they wait for approval are decisions
-  // about what the app does for the person, so they are standard (settings
-  // redesign, package 3). The expiry is tuning, shown at the
-  // expert level. The rows exist only while the switch is on. "Check interval"
-  // and "Only during flight" are gone (forgejo#389): checks follow the fixed
-  // per-flight schedule in utils/smartCheckSchedule.ts, which no setting
-  // reads. The API still carries both fields, unchanged, for older clients.
+  const { t } = useTranslation(["settings"]);
+  const isDemo = useIsDemoAccount();
+  const navigate = useGuardedNavigate();
+  // Checks follow the fixed per-flight schedule (forgejo#389); the interval and
+  // "only during flight" are gone from the screen. The expiry is tuning.
   const expert = useExpertRows(settings.enabled ? 1 : 0);
-  const decisions = settings.enabled;
-  const tuning = settings.enabled && expert;
+  const [open, setOpen] = useState<number | null>(null);
 
-  const numberField = (id: string, key: "expiryHours", min: number, max: number): JSX.Element => (
-    <input
-      id={id}
-      type="number"
-      value={settings[key]}
-      onChange={(e) => {
-        const value = parseInt(e.target.value, 10);
-        if (value >= min && value <= max) {
-          onSetAutoUpdateSettings({ ...settings, [key]: value });
-        }
-      }}
-      onBlur={() => onSave(settings)}
-      min={min}
-      max={max}
-      className="input"
-      style={{ width: 120 }}
-    />
+  const loaded = loadState === "loaded";
+  useEffect(() => {
+    if (!loaded) return;
+    let alive = true;
+    pendingUpdatesApi
+      .getAll({ status: "pending" })
+      .then((r) => alive && setOpen(r.count))
+      .catch((error: unknown) => logger.warn("Failed to count open updates", error));
+    return () => {
+      alive = false;
+    };
+  }, [loaded]);
+
+  const enabled = useSettingWrite<boolean>("autoUpdate.enabled", settings.enabled, (enabled) =>
+    onSave({ enabled })
+  );
+  const approval = useSettingWrite<boolean>(
+    "autoUpdate.requireApproval",
+    settings.requireApproval,
+    (requireApproval) => onSave({ requireApproval })
+  );
+  const expiry = useSettingWrite<number>(
+    "autoUpdate.expiryHours",
+    settings.expiryHours,
+    (expiryHours) => onSave({ expiryHours })
   );
 
-  return (
-    <SectionCard>
-      <SectionTitle
-        title={t("settings:autoUpdate.title")}
-        description={t("settings:autoUpdate.description")}
-        aside={
-          <Link
-            to="/pending-updates"
-            className="font-medium"
-            style={{
-              color: "var(--accent)",
-              // Under a finger the text link becomes a 44 px target (forgejo#321).
-              ...(coarse
-                ? {
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minHeight: "var(--ts-size-touch-min)",
-                  }
-                : {}),
-            }}
-          >
-            {t("settings:autoUpdate.viewPending")} →
-          </Link>
-        }
-      />
-      {loadState !== "loaded" ? (
+  if (loadState !== "loaded") {
+    return (
+      <SectionCard>
         <LoadGuardNotice
           failed={loadState === "failed"}
           message={t("settings:autoUpdate.loadFailed")}
           onRetry={onRetryLoad}
         />
-      ) : (
-        <SettingRows>
-          <Switch
-            id="autoupdate-enabled"
-            checked={settings.enabled}
-            disabled={loadingAutoUpdateSettings}
-            onChange={(on) => onSave({ ...settings, enabled: on })}
-            label={t("settings:autoUpdate.enabled")}
+      </SectionCard>
+    );
+  }
+
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+
+  return (
+    <SectionCard>
+      <SettingRows>
+        <SettingItem
+          title={t("settings:rows.liveUpdates.name")}
+          sub={t("settings:rows.liveUpdates.sub")}
+          save={enabled}
+          locked={locked}
+          dependency={
+            flightDataAvailable === false
+              ? {
+                  reason: t("settings:rows.liveUpdates.noFlightData"),
+                  jump: {
+                    label: t("settings:rows.liveUpdates.toServices"),
+                    onJump: () => navigate("/settings/services"),
+                  },
+                }
+              : undefined
+          }
+          control={
+            <SwitchControl
+              checked={enabled.value}
+              label={t("settings:rows.liveUpdates.name")}
+              onChange={enabled.choose}
+            />
+          }
+        />
+        {settings.enabled && (
+          <SettingItem
+            title={t("settings:rows.approveUpdates.name")}
+            save={approval}
+            locked={locked}
+            control={
+              <SwitchControl
+                checked={approval.value}
+                label={t("settings:rows.approveUpdates.name")}
+                onChange={approval.choose}
+              />
+            }
           />
-          {decisions && (
-            <Switch
-              id="autoupdate-require-approval"
-              checked={settings.requireApproval}
-              onChange={(on) => onSave({ ...settings, requireApproval: on })}
-              label={t("settings:autoUpdate.requireApproval")}
-            />
-          )}
-          {tuning && (
-            <SettingRow
-              expert
-              title={t("settings:autoUpdate.expiryHours")}
-              sub={t("settings:autoUpdate.expiryHoursDescription")}
-              htmlFor="autoupdate-expiry-hours"
-              control={numberField("autoupdate-expiry-hours", "expiryHours", 1, 168)}
-            />
-          )}
-        </SettingRows>
-      )}
+        )}
+        {settings.enabled && expert && (
+          <NumberSettingRow
+            expert
+            title={t("settings:rows.updateExpiry.name")}
+            sub={t("settings:rows.updateExpiry.sub")}
+            write={expiry}
+            min={1}
+            max={168}
+            locked={locked}
+          />
+        )}
+        <SettingItem
+          title={t("settings:rows.openUpdates.name")}
+          control={
+            <>
+              {open !== null && (
+                <span className="t-caption">
+                  {t("settings:rows.openUpdates.count", { count: open })}
+                </span>
+              )}
+              <JumpControl
+                label={t("settings:autoUpdate.viewPending")}
+                onJump={() => navigate("/pending-updates")}
+              />
+            </>
+          }
+        />
+      </SettingRows>
     </SectionCard>
   );
 }

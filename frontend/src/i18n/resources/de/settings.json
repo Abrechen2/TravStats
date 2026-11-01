@@ -1720,6 +1720,9 @@
       "publicUrlMissing": {
         "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
       }
+    },
+    "number": {
+      "range": "Ich nehme Werte von {{min}} bis {{max}}."
     }
   },
   "home": {
@@ -1882,6 +1885,36 @@
       "name": "API-Schlüssel",
       "sub": "Für Skripte und Werkzeuge",
       "help": "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
+    },
+    "liveUpdates": {
+      "name": "Live-Updates abrufen",
+      "sub": "Während ein Flug unterwegs ist",
+      "noFlightData": "Braucht einen Flugdaten-Dienst.",
+      "toServices": "Zu Dienste"
+    },
+    "approveUpdates": {
+      "name": "Updates erst nach Freigabe"
+    },
+    "updateExpiry": {
+      "name": "Offene Updates verwerfen nach",
+      "sub": "1 bis 168 Stunden"
+    },
+    "openUpdates": {
+      "name": "Offene Updates",
+      "count": "{{count}} offen"
+    },
+    "enrichment": {
+      "name": "Ältere Flüge ergänzen",
+      "sub": "Aus Live-Flügen mit derselben Nummer",
+      "help": "Es entstehen nur Vorschläge im Eingang."
+    },
+    "enrichmentConfidence": {
+      "name": "Mindestens sicher",
+      "sub": "0–100 %"
+    },
+    "enrichmentPerNight": {
+      "name": "Vorschläge pro Nacht",
+      "sub": "1–1000"
     }
   }
 }

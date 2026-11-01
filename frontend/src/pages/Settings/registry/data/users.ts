@@ -3,17 +3,101 @@
 import type { RegistryPage } from "../types";
 
 export const USERS_PAGE: RegistryPage = {
-  ...{"id":"users","group":"server","de":"Nutzer","en":"Users","level":"standard","audience":"admin","demoLocked":false},
+  ...{
+    id: "users",
+    group: "server",
+    de: "Nutzer",
+    en: "Users",
+    level: "standard",
+    audience: "admin",
+    demoLocked: false,
+  },
   sections: [
-      {"id":"access","de":"Zugang","en":"Access","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"rows":[
-        {"id":"maxnutzer","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Höchstens Konten","en":"Maximum accounts","terms":{"de":"","en":""}},
-        {"id":"registr","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Anmelden ohne Einladung","en":"Sign up without invitation","terms":{"de":"Dann kann sich jeder ein Konto anlegen, bis die Höchstzahl erreicht ist.","en":"Anyone can then create an account until the maximum is reached."}},
-      ]},
-      {"id":"accounts","de":"Konten","en":"Accounts","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"rows":[
-        {"id":"nutzerliste","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Konten","en":"Accounts","terms":{"de":"Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen.","en":"Per account under ⋯: lock, set new password, reset second step, delete."}},
-      ]},
-      {"id":"invitations","de":"Einladungen","en":"Invitations","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"rows":[
-        {"id":"einlliste","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Einladungen","en":"Invitations","terms":{"de":"Ein Link gilt einmal und 7 Tage Per Mail geht nur, wenn der Server Mails verschickt.","en":"A link works once, for 7 days By e-mail only works if the server sends mail."}},
-      ]},
+    {
+      id: "access",
+      de: "Zugang",
+      en: "Access",
+      level: "standard",
+      scope: "instance",
+      audience: "admin",
+      demoLocked: false,
+      rows: [
+        {
+          id: "maxnutzer",
+          kind: "input",
+          level: "standard",
+          scope: "instance",
+          audience: "admin",
+          demoLocked: false,
+          de: "Höchstens Konten",
+          en: "Maximum accounts",
+          terms: { de: "", en: "" },
+        },
+        {
+          id: "registr",
+          kind: "toggle",
+          level: "standard",
+          scope: "instance",
+          audience: "admin",
+          demoLocked: false,
+          de: "Anmelden ohne Einladung",
+          en: "Sign up without invitation",
+          terms: {
+            de: "Dann kann sich jeder ein Konto anlegen, bis die Höchstzahl erreicht ist.",
+            en: "Anyone can then create an account until the maximum is reached.",
+          },
+        },
+      ],
+    },
+    {
+      id: "accounts",
+      de: "Konten",
+      en: "Accounts",
+      level: "standard",
+      scope: "instance",
+      audience: "admin",
+      demoLocked: false,
+      rows: [
+        {
+          id: "nutzerliste",
+          kind: "list",
+          level: "standard",
+          scope: "instance",
+          audience: "admin",
+          demoLocked: false,
+          de: "Konten",
+          en: "Accounts",
+          terms: {
+            de: "Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen.",
+            en: "Per account under ⋯: lock, set new password, reset second step, delete.",
+          },
+        },
+      ],
+    },
+    {
+      id: "invitations",
+      de: "Einladungen",
+      en: "Invitations",
+      level: "standard",
+      scope: "instance",
+      audience: "admin",
+      demoLocked: false,
+      rows: [
+        {
+          id: "einlliste",
+          kind: "list",
+          level: "standard",
+          scope: "instance",
+          audience: "admin",
+          demoLocked: false,
+          de: "Einladungen",
+          en: "Invitations",
+          terms: {
+            de: "Ein Link gilt einmal und 7 Tage Per Mail geht nur, wenn der Server Mails verschickt.",
+            en: "A link works once, for 7 days By e-mail only works if the server sends mail.",
+          },
+        },
+      ],
+    },
   ],
 };

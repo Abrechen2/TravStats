@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AutoUpdateSection from "../AutoUpdateSection";
 import { MemoryRouter } from "react-router-dom";
 
+vi.mock("../../../lib/api/pendingUpdates", () => ({
+  pendingUpdatesApi: { getAll: vi.fn().mockResolvedValue({ updates: [], count: 0 }) },
+}));
+
 const mocks = vi.hoisted(() => ({ update: vi.fn(), get: vi.fn() }));
 
 vi.mock("../../../lib/api", () => ({
@@ -51,14 +55,12 @@ describe("auto-update / enrichment after a failed settings load (forgejo#373)", 
     await waitFor(() => expect(result.current.serverSettingsLoad).toBe("failed"));
 
     await act(async () => {
-      await result.current.saveAutoUpdateSettings({
-        ...result.current.autoUpdateSettings,
-        enabled: true,
+      await expect(result.current.saveAutoUpdateSettings({ enabled: true })).rejects.toMatchObject({
+        reason: "notLoaded",
       });
-      await result.current.saveHistoricalEnrichmentSettings({
-        ...result.current.historicalEnrichmentSettings,
-        enabled: true,
-      });
+      await expect(
+        result.current.saveHistoricalEnrichmentSettings({ enabled: true })
+      ).rejects.toMatchObject({ reason: "notLoaded" });
     });
     expect(mocks.update).not.toHaveBeenCalled();
   });
@@ -72,14 +74,30 @@ describe("auto-update / enrichment after a failed settings load (forgejo#373)", 
     });
     expect(result.current.serverSettingsLoad).toBe("loaded");
     await act(async () => {
-      await result.current.saveAutoUpdateSettings({
-        ...result.current.autoUpdateSettings,
-        requireApproval: true,
-      });
+      await result.current.saveAutoUpdateSettings({ requireApproval: true });
     });
     expect(mocks.update).toHaveBeenCalledWith({
       autoUpdate: { ...REAL.autoUpdate, requireApproval: true },
     });
+  });
+
+  it("two saves in a row build on each other, and a refused one leaves the confirmed object alone", async () => {
+    mocks.get.mockResolvedValue(REAL);
+    const { result } = renderHook(() => useSettingsPage());
+    await waitFor(() => expect(result.current.serverSettingsLoad).toBe("loaded"));
+    mocks.update.mockRejectedValueOnce(new Error("503")).mockResolvedValue(undefined);
+    await act(async () => {
+      const first = result.current.saveAutoUpdateSettings({ requireApproval: true });
+      const second = result.current.saveAutoUpdateSettings({ expiryHours: 10 });
+      await expect(first).rejects.toThrow("503");
+      await second;
+    });
+    // The refused change is not part of what the second one sent, and the state
+    // is not rolled back or toasted — the row owns the retry.
+    expect(mocks.update).toHaveBeenLastCalledWith({
+      autoUpdate: { ...REAL.autoUpdate, expiryHours: 10 },
+    });
+    expect(result.current.autoUpdateSettings.requireApproval).toBe(false);
   });
 
   it("shows the failure and a retry instead of the switches", () => {
@@ -88,11 +106,9 @@ describe("auto-update / enrichment after a failed settings load (forgejo#373)", 
       <MemoryRouter>
         <AutoUpdateSection
           autoUpdateSettings={REAL.autoUpdate}
-          loadingAutoUpdateSettings={false}
           loadState="failed"
           onRetryLoad={retry}
-          onSetAutoUpdateSettings={vi.fn()}
-          onSave={vi.fn()}
+          onSave={vi.fn().mockResolvedValue(undefined)}
         />
       </MemoryRouter>
     );

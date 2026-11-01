@@ -1720,6 +1720,9 @@
       "publicUrlMissing": {
         "reason": "Still missing. Until then invitations, e-mails and calendars point to localhost."
       }
+    },
+    "number": {
+      "range": "I take values from {{min}} to {{max}}."
     }
   },
   "home": {
@@ -1882,6 +1885,36 @@
       "name": "API keys",
       "sub": "For scripts and tools",
       "help": "A key bypasses the second step. You see it only once. Revoking locks the tool out at once."
+    },
+    "liveUpdates": {
+      "name": "Fetch live updates",
+      "sub": "While a flight is under way",
+      "noFlightData": "Needs a flight data service.",
+      "toServices": "Go to services"
+    },
+    "approveUpdates": {
+      "name": "Approve updates first"
+    },
+    "updateExpiry": {
+      "name": "Drop open updates after",
+      "sub": "1 to 168 hours"
+    },
+    "openUpdates": {
+      "name": "Open updates",
+      "count": "{{count}} open"
+    },
+    "enrichment": {
+      "name": "Fill in older flights",
+      "sub": "From live flights with the same number",
+      "help": "Only creates suggestions in the inbox."
+    },
+    "enrichmentConfidence": {
+      "name": "Minimum confidence",
+      "sub": "0–100 %"
+    },
+    "enrichmentPerNight": {
+      "name": "Suggestions per night",
+      "sub": "1–1000"
     }
   }
 }

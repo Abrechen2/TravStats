@@ -3,11 +3,48 @@
 import type { RegistryPage } from "../types";
 
 export const ABOUT_PAGE: RegistryPage = {
-  ...{"id":"about","group":"about","de":"Über TravStats","en":"About TravStats","level":"standard","audience":"all","demoLocked":false},
+  ...{
+    id: "about",
+    group: "about",
+    de: "Über TravStats",
+    en: "About TravStats",
+    level: "standard",
+    audience: "all",
+    demoLocked: false,
+  },
   sections: [
-      {"id":"about","de":"Version","en":"Version","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"ver","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Version","en":"Version","terms":{"de":"","en":""}},
-        {"id":"build","kind":"status","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Build","en":"Build","terms":{"de":"","en":""}},
-      ]},
+    {
+      id: "about",
+      de: "Version",
+      en: "Version",
+      level: "standard",
+      scope: "account",
+      audience: "all",
+      demoLocked: false,
+      rows: [
+        {
+          id: "ver",
+          kind: "status",
+          level: "standard",
+          scope: "account",
+          audience: "all",
+          demoLocked: false,
+          de: "Version",
+          en: "Version",
+          terms: { de: "", en: "" },
+        },
+        {
+          id: "build",
+          kind: "status",
+          level: "expert",
+          scope: "account",
+          audience: "all",
+          demoLocked: false,
+          de: "Build",
+          en: "Build",
+          terms: { de: "", en: "" },
+        },
+      ],
+    },
   ],
 };

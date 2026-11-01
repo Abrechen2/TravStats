@@ -178,10 +178,8 @@ export default function SettingsSectionSwitch({
       return (
         <EnrichmentSection
           historicalEnrichmentSettings={page.historicalEnrichmentSettings}
-          loadingHistoricalEnrichmentSettings={page.loadingHistoricalEnrichmentSettings}
           loadState={page.serverSettingsLoad}
           onRetryLoad={page.reloadServerSettings}
-          onSetHistoricalEnrichmentSettings={page.setHistoricalEnrichmentSettings}
           onSave={page.saveHistoricalEnrichmentSettings}
         />
       );
@@ -189,11 +187,14 @@ export default function SettingsSectionSwitch({
       return (
         <AutoUpdateSection
           autoUpdateSettings={page.autoUpdateSettings}
-          loadingAutoUpdateSettings={page.loadingAutoUpdateSettings}
           loadState={page.serverSettingsLoad}
           onRetryLoad={page.reloadServerSettings}
-          onSetAutoUpdateSettings={page.setAutoUpdateSettings}
           onSave={page.saveAutoUpdateSettings}
+          flightDataAvailable={
+            page.apiKeysStatus
+              ? Object.values(page.apiKeysStatus).some((provider) => provider.hasAccess)
+              : null
+          }
         />
       );
     case "cruisePreferences":
