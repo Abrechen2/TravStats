@@ -10,12 +10,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    // Force Three.js to be pre-bundled together
-    include: ["three", "react-globe.gl"],
-    // Exclude from optimization to prevent splitting
-    exclude: [],
-  },
   server: {
     port: 3000,
     host: true,
@@ -64,8 +58,6 @@ export default defineConfig({
           if (id.includes("/preact/")) return "vendor-preact";
           if (id.includes("/maplibre-gl/")) return "vendor-maplibre";
           if (id.includes("/@deck.gl/") || id.includes("/deck.gl/")) return "vendor-deck";
-          if (id.includes("/react-globe.gl/")) return "vendor-globe";
-          if (id.includes("/three/")) return "vendor-three";
           if (id.includes("/jspdf/") || id.includes("/jspdf-")) return "vendor-jspdf";
           if (id.includes("/exceljs/")) return "vendor-exceljs";
           if (id.includes("/tesseract.js/")) return "vendor-tesseract";
@@ -110,8 +102,6 @@ export default defineConfig({
         return deps.filter(
           (d) =>
             !d.includes("vendor-deck") &&
-            !d.includes("vendor-three") &&
-            !d.includes("vendor-globe") &&
             !d.includes("vendor-maplibre") &&
             !d.includes("vendor-jspdf") &&
             !d.includes("vendor-exceljs") &&
