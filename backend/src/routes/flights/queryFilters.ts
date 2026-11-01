@@ -1,5 +1,5 @@
 import { Prisma } from "../../prisma";
-import { flightIdsInLocalPeriod } from "./departureLocalDay";
+import { flightIdsInLocalPeriod } from "../../services/stats/departureLocalDay";
 import { flightIdsCoveredBy } from "../../services/loyalty/listFilters";
 import {
   SPECIAL_TYPE_FILTER_ANY,

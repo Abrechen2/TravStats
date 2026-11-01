@@ -5,7 +5,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { flightQuerySchema } from "../../schemas/flight";
 import { groupAirlines } from "../../shared/airlineNormalize";
 import { airlineResolvers } from "../../utils/airlineNormalize";
-import { localDepartureYearCounts } from "./departureLocalDay";
+import { localDepartureYearCounts } from "../../services/stats/departureLocalDay";
 import {
   normalizeQueryParams,
   resolveFlightWhere,

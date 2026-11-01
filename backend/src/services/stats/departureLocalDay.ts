@@ -5,7 +5,7 @@ import {
   airportCalendarDay,
   buildTzMap,
   flightEndZone,
-} from "../../services/stats/departureClock";
+} from "./departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
