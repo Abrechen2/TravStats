@@ -22,7 +22,7 @@ import { FindingActionError } from "./findingErrors";
  * die with them moves onto it — kept originals (documents), the trip and
  * booking link when the kept copy has none, and per type: a flight's
  * companions, recording and public share links; a stay's roadtrip stations and
- * loyalty card. Then the other copies are deleted the way their own DELETE
+ * loyalty card; a cruise's companions and imported tracks. Then the other copies are deleted the way their own DELETE
  * deletes them (share snapshot, delete, notice to the members of a shared
  * trip), so sharing and achievements stay right.
  *
@@ -78,6 +78,7 @@ function assertOneLink<K extends string>(
 
 const TABLE: Partial<Record<RecordCheckDomain, string>> = {
   flight: "flights",
+  cruise: "cruises",
   lodging_stay: "lodging_stays",
 };
 
@@ -259,6 +260,83 @@ async function mergeStays(
 }
 
 /**
+ * A cruise's copies. What hangs off the removed ones moves onto the kept one:
+ * kept originals (documents), companions, imported GPS tracks, a timeline stop
+ * that wraps the cruise, and the trip/booking link when the kept copy has
+ * none. Stops, legs and sea-route geometry are the copy's own itinerary and go
+ * with it (the kept copy's stay as they are); which itinerary is right is the
+ * user's call on the cruise's page.
+ */
+async function mergeCruises(
+  tx: DbTransaction,
+  userId: string,
+  keptId: string,
+  removedIds: readonly string[]
+): Promise<(string | null)[]> {
+  const rows = await tx.cruise.findMany({
+    where: { userId, id: { in: [keptId, ...removedIds] } },
+    select: { id: true, tripId: true, bookingId: true },
+  });
+  const kept = rows.find((r) => r.id === keptId);
+  const removed = rows.filter((r) => r.id !== keptId);
+  if (!kept || removed.length !== removedIds.length) throw new FindingActionError("staleFinding");
+  assertOneLink(rows, ["tripId", "bookingId"]);
+
+  await tx.document.updateMany({
+    where: { userId, cruiseId: { in: [...removedIds] } },
+    data: { cruiseId: keptId },
+  });
+  const companions = await tx.cruiseCompanion.findMany({
+    where: { cruiseId: { in: [...removedIds] } },
+    select: { companionId: true, position: true },
+  });
+  if (companions.length > 0) {
+    await tx.cruiseCompanion.createMany({
+      data: companions.map((c) => ({
+        cruiseId: keptId,
+        companionId: c.companionId,
+        position: c.position,
+      })),
+      skipDuplicates: true,
+    });
+  }
+  // A track the kept cruise already holds (same import reference) is the same
+  // recording; it dies with the copy instead of colliding on the unique index.
+  const heldRefs = new Set(
+    (await tx.cruiseTrack.findMany({ where: { cruiseId: keptId }, select: { externalRef: true } }))
+      .map((t) => t.externalRef)
+      .filter((ref): ref is string => ref !== null)
+  );
+  const tracks = await tx.cruiseTrack.findMany({
+    where: { cruiseId: { in: [...removedIds] } },
+    select: { id: true, externalRef: true },
+  });
+  const movable = tracks.filter((t) => t.externalRef === null || !heldRefs.has(t.externalRef));
+  const seen = new Set<string>();
+  for (const track of movable) {
+    if (track.externalRef !== null) {
+      if (seen.has(track.externalRef)) continue;
+      seen.add(track.externalRef);
+    }
+    await tx.cruiseTrack.update({ where: { id: track.id }, data: { cruiseId: keptId } });
+  }
+
+  const tripId = kept.tripId ?? removed.find((r) => r.tripId)?.tripId ?? null;
+  const bookingId = kept.bookingId ?? removed.find((r) => r.bookingId)?.bookingId ?? null;
+  if (tripId !== kept.tripId || bookingId !== kept.bookingId) {
+    const before = await shareSnapshot(tx, "cruise", keptId);
+    await tx.cruise.update({ where: { id: keptId }, data: { tripId, bookingId } });
+    await propagateWrite(tx, userId, "cruise", keptId, before);
+  }
+  await repointStops(tx, userId, { sourceId: { in: [...removedIds] } }, { sourceId: keptId });
+
+  const gone = await shareSnapshots(tx, "cruise", [...removedIds]);
+  await tx.cruise.deleteMany({ where: { userId, id: { in: [...removedIds] } } });
+  await propagateDeletes(tx, userId, [...gone.values()]);
+  return rows.map((r) => r.tripId);
+}
+
+/**
  * Merge `removedIds` into `keptId`, then run `alsoInTx` — the flag answer — in
  * the same transaction, so the data and the answer change together or not at
  * all.
@@ -280,6 +358,7 @@ export async function mergeDuplicates(
       await assertStillDuplicates(tx, userId, entityType, ids);
       let trips: (string | null)[];
       if (entityType === "flight") trips = await mergeFlights(tx, userId, keptId, removedIds);
+      else if (entityType === "cruise") trips = await mergeCruises(tx, userId, keptId, removedIds);
       else if (entityType === "lodging_stay") {
         trips = await mergeStays(tx, userId, keptId, removedIds);
       } else throw new FindingActionError("invalidAction", "notOffered");

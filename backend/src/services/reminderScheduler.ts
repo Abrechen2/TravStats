@@ -6,6 +6,9 @@ import { checkFlightReminders } from "./reminders/flightReminders";
 import { checkCruiseReminders } from "./reminders/cruiseReminders";
 import { checkRailReminders } from "./reminders/railReminders";
 import { checkFerryReminders } from "./reminders/ferryReminders";
+import { checkRentalReminders } from "./reminders/rentalReminders";
+import { checkRoadtripReminders } from "./reminders/roadtripReminders";
+import { checkPlaceVisitReminders } from "./reminders/placeVisitReminders";
 import { checkBusReminders } from "./reminders/busReminders";
 import { checkLodgingCheckInReminders } from "./reminders/lodgingReminders";
 
@@ -34,6 +37,9 @@ async function checkAndSendReminders(): Promise<void> {
     checkCruiseReminders(now),
     checkRailReminders(now),
     checkFerryReminders(now),
+    checkRentalReminders(now),
+    checkRoadtripReminders(now),
+    checkPlaceVisitReminders(now),
     checkBusReminders(now),
     checkLodgingCheckInReminders(now),
   ]);
@@ -65,7 +71,7 @@ export function startReminderScheduler(): void {
   logger.info({
     operation: "reminder_scheduler_started",
     message:
-      "Departure reminder scheduler started (flight/cruise/rail/ferry/bus/lodging, every 15 min)",
+      "Departure reminder scheduler started (flight/cruise/rail/ferry/bus/lodging/rental/roadtrip/places, every 15 min)",
   });
 }
 

@@ -6,6 +6,7 @@ import { serverPushEnabled } from "../push/devices";
 import { sendToRelay, type RelayPush, type RelayOutcome } from "../push/relayClient";
 import { sealForDevice } from "../push/seal";
 import { claimReminder, markSent, releaseClaim } from "../reminders/claims";
+import { claimEntryId } from "../reminders/claimEntryId";
 import { stillEligible } from "../reminders/eligibility";
 import type { ReminderDomain } from "../reminders/prefs";
 import {
@@ -196,6 +197,10 @@ export interface EntryReminder {
   entryId: string;
   /** Lodging only: put into the push data as `lodgingId` when set. */
   lodgingId?: string;
+  /** Further ids put into the push data (`rentalId`, `stationId`, `placeId` …); additive for the Companion. */
+  extraIds?: Record<string, string>;
+  /** Which of the entry's anchors this is (rental: `pickup` | `return`); keeps the claims apart. */
+  part?: string;
   /** A phone that muted this trip is skipped (forgejo#286). */
   tripId: string | null;
   hours: number;
@@ -241,6 +246,7 @@ export async function notifyEntryReminder(
       hours: entry.hours,
       channel: "app",
       anchorKey: entry.anchorKey,
+      part: entry.part,
     });
     if (!eligible) return;
 
@@ -272,7 +278,7 @@ export async function notifyEntryReminder(
         {
           userId,
           domain: entry.domain,
-          entryId: entry.entryId,
+          entryId: claimEntryId(entry.entryId, entry.part),
           leadHours: entry.hours,
           channel: `push:${device.apiTokenId}`,
         },
@@ -291,6 +297,8 @@ export async function notifyEntryReminder(
         entryId: entry.entryId,
         ...(entry.domain === "flight" && { flightId: entry.entryId }),
         ...(entry.lodgingId !== undefined && { lodgingId: entry.lodgingId }),
+        ...(entry.extraIds && entry.extraIds),
+        ...(entry.part !== undefined && { part: entry.part }),
         sentAt: at.toISOString(),
       });
       let outcome: RelayOutcome;

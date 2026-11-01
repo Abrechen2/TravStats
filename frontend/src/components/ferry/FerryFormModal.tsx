@@ -15,6 +15,10 @@ import { railArrival, railDeparture } from "../../lib/entityTimes";
 import type { FerryJourney } from "../../types/ferry";
 import type { Trip } from "../../types";
 import { FerryStationField, EMPTY_TERMINAL, type FerryStationDraft } from "./FerryStationField";
+import SuggestionChips from "../common/SuggestionChips";
+import { BusTerminalChips as TerminalChips } from "../bus/BusTerminalChips";
+import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
+import { entrySuggestionsApi, NO_FERRY_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 
 const TEXT = [
   "operator",
@@ -111,7 +115,7 @@ export function FerryFormModal({
   onClose: () => void;
   onSaved: (ride: FerryJourney) => void;
 }) {
-  const { t } = useTranslation(["ferry"]);
+  const { t } = useTranslation(["ferry", "common"]);
   const formId = useId();
   const [opened] = useState(() => initial(journey));
   const [fields, setFields] = useState(opened);
@@ -120,6 +124,13 @@ export function FerryFormModal({
   const [tags, setTags] = useState<string[]>(() => journey?.tags ?? []);
   const [dep, setDep] = useState(() => port(journey, "dep"));
   const [arr, setArr] = useState(() => port(journey, "arr"));
+  // Chips from the user's own earlier crossings (forgejo#405): a port typed once
+  // arrives with its position and country, a vessel/class narrows to its operator.
+  const { suggestions, failed: suggestionsFailed } = useEntrySuggestions(
+    entrySuggestionsApi.ferry,
+    { depName: dep.name, arrName: arr.name, operator: fields.operator },
+    NO_FERRY_SUGGESTIONS
+  );
   const [ticketDocumentId, setTicketDocumentId] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
@@ -218,6 +229,26 @@ export function FerryFormModal({
       setSaving(false);
     }
   };
+  const chipLists: Record<string, readonly string[]> = {
+    operator: suggestions.operators,
+    vesselName: suggestions.vessels,
+    fareClass: suggestions.fareClasses,
+    cabinType: suggestions.cabinTypes,
+  };
+  const fieldWithChips = (key: string) =>
+    chipLists[key] ? (
+      <div key={key}>
+        {field(key)}
+        <SuggestionChips
+          value={fields[key]}
+          suggestions={chipLists[key]}
+          onPick={(value) => set(key, value)}
+          fieldLabel={t(`ferry:${key}`)}
+        />
+      </div>
+    ) : (
+      field(key)
+    );
   const field = (key: string) => (
     <label key={key} className="block text-sm">
       {t(`ferry:${key}`)}
@@ -321,25 +352,48 @@ export function FerryFormModal({
         )}
         <fieldset className="space-y-4">
           <legend className="t-label-mono mb-3">{t("ferry:sections.route")}</legend>
+          {suggestionsFailed && (
+            <p className="t-caption" data-testid="ferry-suggestions-failed">
+              {t("common:suggestionsFailed")}
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FerryStationField
-              label={t("ferry:departure")}
-              idPrefix="ferry-dep"
-              value={dep}
-              onChange={setDep}
-              onValidityChange={(ok) => setBadDep(!ok)}
-              required
-              inputClassName={INPUT}
-            />
-            <FerryStationField
-              label={t("ferry:arrival")}
-              idPrefix="ferry-arr"
-              value={arr}
-              onChange={setArr}
-              onValidityChange={(ok) => setBadArr(!ok)}
-              required
-              inputClassName={INPUT}
-            />
+            <div>
+              <FerryStationField
+                label={t("ferry:departure")}
+                idPrefix="ferry-dep"
+                value={dep}
+                onChange={setDep}
+                onValidityChange={(ok) => setBadDep(!ok)}
+                required
+                inputClassName={INPUT}
+              />
+              <TerminalChips
+                terminals={suggestions.terminals}
+                value={dep}
+                fieldLabel={t("ferry:departure")}
+                onPick={setDep}
+                testId="ferry-terminal-chips-dep"
+              />
+            </div>
+            <div>
+              <FerryStationField
+                label={t("ferry:arrival")}
+                idPrefix="ferry-arr"
+                value={arr}
+                onChange={setArr}
+                onValidityChange={(ok) => setBadArr(!ok)}
+                required
+                inputClassName={INPUT}
+              />
+              <TerminalChips
+                terminals={suggestions.terminals}
+                value={arr}
+                fieldLabel={t("ferry:arrival")}
+                onPick={setArr}
+                testId="ferry-terminal-chips-arr"
+              />
+            </div>
             {field("departureLocal")}
             {field("arrivalLocal")}
           </div>
@@ -381,7 +435,7 @@ export function FerryFormModal({
               "seat",
               "price",
               "currency",
-            ].map(field)}
+            ].map(fieldWithChips)}
           </div>
         </fieldset>
         <fieldset>

@@ -8,6 +8,9 @@ export const DASHBOARD_TABS = [
   "lodging",
   "roadtrip",
   "rail",
+  "bus",
+  "ferry",
+  "rental",
   "tour",
 ] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
@@ -48,8 +51,26 @@ export type TourMode = (typeof TOUR_MODES)[number];
 export const RAIL_MODES = ["routes", "globe"] as const;
 export type RailMode = (typeof RAIL_MODES)[number];
 
+// Bus, ferry and rental (forgejo#405) draw the same kinds of mark a rail line or
+// a rental link does, so they take rail's two views: the flat map and the sphere.
+export const BUS_MODES = ["routes", "globe"] as const;
+export const FERRY_MODES = ["routes", "globe"] as const;
+export const RENTAL_MODES = ["routes", "globe"] as const;
+export type BusMode = (typeof BUS_MODES)[number];
+export type FerryMode = (typeof FERRY_MODES)[number];
+export type RentalMode = (typeof RENTAL_MODES)[number];
+
 export type DashboardMode =
-  AllMode | FlightMode | CruiseMode | PoiMode | LodgingMode | RailMode | TourMode;
+  | AllMode
+  | FlightMode
+  | CruiseMode
+  | PoiMode
+  | LodgingMode
+  | RailMode
+  | BusMode
+  | FerryMode
+  | RentalMode
+  | TourMode;
 
 interface TabRegistryEntry<M extends DashboardMode> {
   readonly modes: readonly M[];
@@ -83,6 +104,9 @@ export const TAB_MODE_REGISTRY = {
   poi: { modes: POI_MODES, default: "globe", flatDefault: "markers" },
   lodging: { modes: LODGING_MODES, default: "globe", flatDefault: "map" },
   rail: { modes: RAIL_MODES, default: "globe", flatDefault: "routes" },
+  bus: { modes: BUS_MODES, default: "globe", flatDefault: "routes" },
+  ferry: { modes: FERRY_MODES, default: "globe", flatDefault: "routes" },
+  rental: { modes: RENTAL_MODES, default: "globe", flatDefault: "routes" },
   tour: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
   // Roadtrips (2.7) draw the same kind of line a tour does, so they take the
   // tour's two modes — the globe first, like every tab.

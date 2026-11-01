@@ -14,7 +14,16 @@
  * a tour already on a trip is never moved — the tour API refuses that too.
  */
 export type LinkableDomain =
-  "flight" | "rail" | "cruise" | "lodging" | "place" | "roadtrip" | "tour";
+  | "flight"
+  | "rail"
+  | "bus"
+  | "ferry"
+  | "rental"
+  | "cruise"
+  | "lodging"
+  | "place"
+  | "roadtrip"
+  | "tour";
 
 /**
  * Every domain that says where the user was. A multi-day tour and an accepted

@@ -10,7 +10,16 @@ import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
 
 /** A domain with a dashboard tab of its own. */
-type TabDomain = Extract<DashboardTab, DomainKey>;
+type TabDomain = Exclude<Extract<DashboardTab, DomainKey>, ViewOnlyTab>;
+
+/**
+ * Tabs reached only through the domain filter's "Nur" (forgejo#405), never
+ * through this strip: it is unused by the app since 2026-09-28, and these three
+ * were added after it was retired, so it carries no label, icon or count for
+ * them. Reviving the strip means adding them here.
+ */
+type ViewOnlyTab = "bus" | "ferry" | "rental";
+const VIEW_ONLY_TABS: ReadonlySet<DashboardTab> = new Set<ViewOnlyTab>(["bus", "ferry", "rental"]);
 
 interface DomainTabStripProps {
   active: DashboardTab;
@@ -65,7 +74,7 @@ const PLANNED_IS_INCLUDED: Partial<Record<DomainKey, boolean>> = {
 };
 
 /** Line icons, as the logbook tabs; "Alle" carries none, as in round 4. */
-const TAB_ICON: Record<DashboardTab, IconName | null> = {
+const TAB_ICON: Record<Exclude<DashboardTab, ViewOnlyTab>, IconName | null> = {
   all: null,
   flight: "plane",
   cruise: "ship",
@@ -99,6 +108,7 @@ export function DomainTabStrip({
   // off and can turn back on, and a closed instance gate is neither.
   const toursVisible = useToursVisible();
   const visibleTabs = DASHBOARD_TABS.filter((tab) => {
+    if (VIEW_ONLY_TABS.has(tab)) return false;
     if (tab === "tour" || tab === "roadtrip") return toursVisible;
     return true;
   });
@@ -149,7 +159,7 @@ export function DomainTabStrip({
         const count = domain === null ? null : counts[domain];
         const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);
         const label = t(`dashboard:tabStrip.tabs.${tab}`);
-        const icon = TAB_ICON[tab];
+        const icon = TAB_ICON[tab as keyof typeof TAB_ICON];
         // A dimmed tab used to be a dead end: `onSelect` navigated to
         // /dashboard/<domain>, and `useDashboardRoute` bounced straight back
         // to /dashboard, so the pointer cursor promised an action that never

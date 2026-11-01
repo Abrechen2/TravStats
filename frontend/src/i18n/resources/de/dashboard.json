@@ -1,4 +1,18 @@
 {
+  "overlayTab": {
+    "bus": {
+      "loading": "Busfahrten werden geladen …",
+      "empty": "Noch keine Busfahrt eingetragen."
+    },
+    "ferry": {
+      "loading": "Überfahrten werden geladen …",
+      "empty": "Noch keine Überfahrt eingetragen."
+    },
+    "rental": {
+      "loading": "Mietwagen werden geladen …",
+      "empty": "Noch kein Mietwagen eingetragen."
+    }
+  },
   "upcomingFailed": "„Als Nächstes“ konnte nicht geladen werden.",
   "title": "Dashboard",
   "addFlight": "Flug hinzufügen",

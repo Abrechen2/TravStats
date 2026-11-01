@@ -117,6 +117,12 @@ import railStatsRouter from "./rail/stats";
 import railConnectionsRouter from "./rail/connections";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import busRouter from "./bus";
+import {
+  cruiseEntrySuggestionsRouter,
+  ferryEntrySuggestionsRouter,
+  placeEntrySuggestionsRouter,
+  rentalEntrySuggestionsRouter,
+} from "./domainEntrySuggestions";
 import ferryRouter from "./ferry";
 import ferryStatsRouter from "./ferry/stats";
 import ferryRoadtripRouter from "./ferry/roadtrip";
@@ -432,6 +438,12 @@ export const apiMounts: ApiMount[] = [
   { id: "ships", base: "/api/v1/ships", router: shipsRoutes },
   { id: "airlines", base: "/api/v1/airlines", router: airlinesRoutes },
   { id: "aircraft", base: "/api/v1/aircraft", router: aircraftRoutes },
+  // The form's chips from the user's own cruises (forgejo#405); mounts FIRST: '/:id' would take it.
+  {
+    id: "cruises.entrySuggestions",
+    base: "/api/v1/cruises/entry-suggestions",
+    router: cruiseEntrySuggestionsRouter,
+  },
   { id: "cruises", base: "/api/v1/cruises", router: cruisesRouter },
   // Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
   // above — split out of cruises.ts once that file crossed the 800-line max.
@@ -470,11 +482,21 @@ export const apiMounts: ApiMount[] = [
   { id: "bus.stats", base: "/api/v1/bus/stats", router: busStatsRouter },
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   // Mounts before the ferry router: its '/:id' would answer "stats" as a 404.
+  {
+    id: "ferry.entrySuggestions",
+    base: "/api/v1/ferry/entry-suggestions",
+    router: ferryEntrySuggestionsRouter,
+  },
   { id: "ferry.stats", base: "/api/v1/ferry/stats", router: ferryStatsRouter },
   { id: "ferry.roadtrip", base: "/api/v1/ferry", router: ferryRoadtripRouter },
   { id: "ferry", base: "/api/v1/ferry", router: ferryRouter },
   // Car rentals (spec 2026-10-01-rental-domain-design). Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
+  {
+    id: "rental.entrySuggestions",
+    base: "/api/v1/rentals/entry-suggestions",
+    router: rentalEntrySuggestionsRouter,
+  },
   { id: "rental.providers", base: "/api/v1/rentals/providers", router: rentalProvidersRouter },
   { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
   { id: "rental.stats", base: "/api/v1/rentals/stats", router: rentalStatsRouter },
@@ -496,6 +518,11 @@ export const apiMounts: ApiMount[] = [
   // Photo proof for a visit — same prefix, own file, split out before places.ts
   // approaches the 800-line max. Mounted first so nothing depends on segment
   // counts to keep the two routers apart.
+  {
+    id: "places.entrySuggestions",
+    base: "/api/v1/places/entry-suggestions",
+    router: placeEntrySuggestionsRouter,
+  },
   { id: "places.visitPhotos", base: "/api/v1/places", router: placeVisitPhotoRouter },
   // Dates the add-visit form can offer — same prefix, own file, same reason.
   {

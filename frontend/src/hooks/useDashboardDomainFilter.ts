@@ -52,14 +52,6 @@ export interface DashboardDomainFilterResult {
 const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
 
 /**
- * Rows with no single-domain dashboard view (yet): selected alone, they stay
- * on "Alle" rather than navigating to a tab that does not exist.
- */
-const NO_OWN_VIEW = new Set<FilterDomainKey>(["bus", "ferry", "rental"]);
-type ViewKey = Exclude<FilterDomainKey, "bus" | "ferry" | "rental">;
-const hasOwnView = (key: FilterDomainKey): key is ViewKey => !NO_OWN_VIEW.has(key);
-
-/**
  * Drives the "Alle" tab's domain-filter button/panel: which of the six rows
  * this reader may even see, their live counts, and the hidden/visible state
  * — the reader's own persisted choice, or a shared link's choice while one is
@@ -168,8 +160,9 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
     // One domain: its own view. The stored set is deliberately NOT written —
     // it belongs to "Alle", and a reader who goes Back should find the
     // selection they left there, not one this navigation invented.
-    // Rental, bus and ferry have no dashboard view of their own (yet): alone, they stay on "Alle".
-    if (visible.length === 1 && hasOwnView(visible[0])) {
+    // Every filter row has a view of its own since bus, ferry and rental got
+    // theirs (forgejo#405), so a single selection always navigates.
+    if (visible.length === 1) {
       setTab(visible[0]);
       return;
     }
@@ -210,7 +203,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
     // Decision 4's one click, now also the door to that domain's own modes.
     // Leaves the stored "Alle" selection alone, for the same reason
     // `applyVisible` does.
-    isolate: (key) => (hasOwnView(key) ? setTab(key) : applyVisible(new Set([key]))),
+    isolate: (key) => setTab(key),
     adoptLink,
     viewOwnSelection: exitLink,
   };

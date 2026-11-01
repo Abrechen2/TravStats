@@ -8,7 +8,7 @@ import {
 } from "../dashboard";
 
 describe("dashboard tab + mode registry", () => {
-  it("exposes exactly the seven agreed tabs", () => {
+  it("exposes exactly the agreed tabs", () => {
     expect(DASHBOARD_TABS).toEqual([
       "all",
       "flight",
@@ -17,6 +17,9 @@ describe("dashboard tab + mode registry", () => {
       "lodging",
       "roadtrip",
       "rail",
+      "bus",
+      "ferry",
+      "rental",
       "tour",
     ]);
   });

@@ -3,7 +3,10 @@ import CurrencySelect from "../common/CurrencySelect";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import { DeadlineFields } from "../deadlines/DeadlineFields";
+import SuggestionChips from "../common/SuggestionChips";
+import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { entrySuggestionsApi, NO_RENTAL_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   RENTAL_INCLUSIONS,
@@ -89,9 +92,17 @@ function EndTime({
 /** Step 1 — what was booked: who, where, when, which car, at what price. */
 export function RentalBookingStep(props: RentalStepProps): JSX.Element {
   const { draft, update, errorOf } = props;
-  const { t } = useTranslation(["rental"]);
+  const { t } = useTranslation(["rental", "common"]);
   const recentCurrencies = useRecentCurrencies();
-  const providerSuggestions = useRentalProviderSuggestions();
+  const catalogue = useRentalProviderSuggestions();
+  // The user's own history (forgejo#405): companies they rented from, then the
+  // catalogue; the class and example narrow to the provider typed.
+  const { suggestions: own, failed: suggestionsFailed } = useEntrySuggestions(
+    entrySuggestionsApi.rental,
+    { provider: draft.provider },
+    NO_RENTAL_SUGGESTIONS
+  );
+  const providerSuggestions = [...new Set([...own.providers, ...catalogue])];
   const set = useSetter(update);
   const toggleInclusion = (code: (typeof RENTAL_INCLUSIONS)[number]): void =>
     set(
@@ -102,6 +113,11 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
     );
   return (
     <div className="space-y-4">
+      {suggestionsFailed && (
+        <p className="t-caption" data-testid="rental-suggestions-failed">
+          {t("common:suggestionsFailed")}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {/* Suggestions, not a choice (forgejo#196): any other name is saved as typed. */}
         <TextInput
@@ -119,12 +135,20 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
             <option key={name} value={name} />
           ))}
         </datalist>
-        <TextInput
-          id="rental-broker"
-          label={t("rental:form.broker")}
-          value={draft.broker}
-          onChange={(v): void => set("broker", v)}
-        />
+        <div>
+          <TextInput
+            id="rental-broker"
+            label={t("rental:form.broker")}
+            value={draft.broker}
+            onChange={(v): void => set("broker", v)}
+          />
+          <SuggestionChips
+            value={draft.broker}
+            suggestions={own.brokers}
+            onPick={(v): void => set("broker", v)}
+            fieldLabel={t("rental:form.broker")}
+          />
+        </div>
         <TextInput
           id="rental-confirmationNumber"
           label={t("rental:form.confirmationNumber")}
@@ -170,12 +194,20 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
       <p className="t-caption">{t("rental:form.stationClockHint")}</p>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput
-          id="rental-vehicleClass"
-          label={t("rental:form.vehicleClass")}
-          value={draft.vehicleClass}
-          onChange={(v): void => set("vehicleClass", v)}
-        />
+        <div>
+          <TextInput
+            id="rental-vehicleClass"
+            label={t("rental:form.vehicleClass")}
+            value={draft.vehicleClass}
+            onChange={(v): void => set("vehicleClass", v)}
+          />
+          <SuggestionChips
+            value={draft.vehicleClass}
+            suggestions={own.vehicleClasses}
+            onPick={(v): void => set("vehicleClass", v)}
+            fieldLabel={t("rental:form.vehicleClass")}
+          />
+        </div>
         <TextInput
           id={rentalFieldId("acrissCode")}
           label={t("rental:form.acrissCode")}
@@ -185,12 +217,20 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
           onChange={(v): void => set("acrissCode", v)}
           error={errorOf("acrissCode")}
         />
-        <TextInput
-          id="rental-vehicleExample"
-          label={t("rental:form.vehicleExample")}
-          value={draft.vehicleExample}
-          onChange={(v): void => set("vehicleExample", v)}
-        />
+        <div>
+          <TextInput
+            id="rental-vehicleExample"
+            label={t("rental:form.vehicleExample")}
+            value={draft.vehicleExample}
+            onChange={(v): void => set("vehicleExample", v)}
+          />
+          <SuggestionChips
+            value={draft.vehicleExample}
+            suggestions={own.vehicleExamples}
+            onPick={(v): void => set("vehicleExample", v)}
+            fieldLabel={t("rental:form.vehicleExample")}
+          />
+        </div>
         <TextInput
           id="rental-arrivalFlightNumber"
           label={t("rental:form.arrivalFlightNumber")}

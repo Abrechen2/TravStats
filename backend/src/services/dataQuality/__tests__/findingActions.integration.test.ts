@@ -319,6 +319,81 @@ describe("answering findings (spec C3)", () => {
     expect(await runDataQualityChecks(userId, NOW)).toMatchObject({ opened: 0, open: 0 });
   });
 
+  it("merge of a cruise pair is offered, moves document, companion and track, deletes the copy (forgejo#405)", async () => {
+    const trip = await prisma.trip.create({
+      data: {
+        userId,
+        name: "Med",
+        status: "completed",
+        startDay: day("2026-06-01"),
+        endDay: day("2026-06-15"),
+      },
+    });
+    const cruise = (createdAt: string, extra: object = {}) =>
+      prisma.cruise.create({
+        data: {
+          userId,
+          shipNameOverride: "AIDAblu",
+          startDay: day("2026-06-02"),
+          endDay: day("2026-06-09"),
+          startDate: day("2026-06-02"),
+          endDate: day("2026-06-09"),
+          status: "completed",
+          createdAt: new Date(createdAt),
+          ...extra,
+        },
+      });
+    const kept = await cruise("2026-05-01T00:00:00Z");
+    const copy = await cruise("2026-05-02T00:00:00Z", { tripId: trip.id });
+    const document = await prisma.document.create({
+      data: {
+        userId,
+        cruiseId: copy.id,
+        storedName: "c.pdf",
+        sizeBytes: 1,
+        mimetype: "application/pdf",
+        sha256: "0",
+        format: "pdf",
+      },
+    });
+    const companion = await prisma.companion.create({
+      data: { userId, canonicalName: "ben", displayName: "Ben", searchName: "ben" },
+    });
+    await prisma.cruiseCompanion.create({
+      data: { cruiseId: copy.id, companionId: companion.id, position: 0 },
+    });
+    await prisma.cruiseTrack.create({
+      data: {
+        cruiseId: copy.id,
+        source: "gpx",
+        startedAt: day("2026-06-02"),
+        endedAt: day("2026-06-09"),
+        geometry: [],
+        segmentStarts: [],
+        cumulativeKm: [],
+        pointCount: 0,
+        distanceKm: 0,
+      },
+    });
+    await runDataQualityChecks(userId, NOW);
+    const flag = await duplicateFlag(userId, "cruise");
+    expect(flag.actions).toEqual(["keep", "merge"]);
+
+    const res = await post(`/${flag.id}/resolve`, { action: "merge", keptId: kept.id });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: "resolved", entityId: kept.id });
+
+    expect(await prisma.cruise.findUnique({ where: { id: copy.id } })).toBeNull();
+    expect((await prisma.cruise.findUniqueOrThrow({ where: { id: kept.id } })).tripId).toBe(
+      trip.id
+    );
+    expect((await prisma.document.findUniqueOrThrow({ where: { id: document.id } })).cruiseId).toBe(
+      kept.id
+    );
+    expect(await prisma.cruiseCompanion.count({ where: { cruiseId: kept.id } })).toBe(1);
+    expect(await prisma.cruiseTrack.count({ where: { cruiseId: kept.id } })).toBe(1);
+  });
+
   it("merge of a stay pair keeps the named copy and moves its document", async () => {
     const { first, second } = await seedStays(userId);
     const document = await prisma.document.create({

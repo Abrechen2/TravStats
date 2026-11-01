@@ -18,7 +18,8 @@ async function currentKey(
   domain: ReminderDomain,
   entryId: string,
   userId: string,
-  accountZone: string
+  accountZone: string,
+  part?: string
 ) {
   switch (domain) {
     case "flight": {
@@ -55,6 +56,40 @@ async function currentKey(
         select: { departureTime: true },
       });
       return row ? isoOf(row.departureTime) : null;
+    }
+    case "rental": {
+      // A car already picked up is `in_progress` (the status sweep): its return is still ahead.
+      const row = await prisma.rentalBooking.findFirst({
+        where: {
+          id: entryId,
+          userId,
+          status: part === "return" ? { in: ["scheduled", "in_progress"] } : "scheduled",
+        },
+        select: {
+          pickupTime: true,
+          returnTime: true,
+          pickupPrecision: true,
+          returnPrecision: true,
+        },
+      });
+      if (!row) return null;
+      return part === "return"
+        ? `${isoOf(row.returnTime)}|${row.returnPrecision}`
+        : `${isoOf(row.pickupTime)}|${row.pickupPrecision}`;
+    }
+    case "roadtrip": {
+      const row = await prisma.tripStop.findFirst({
+        where: { id: entryId, route: { userId, kind: "roadtrip" } },
+        select: { startUtc: true, stopZone: true, viaPoint: true },
+      });
+      return row && !row.viaPoint ? `${isoOf(row.startUtc)}|${row.stopZone ?? ""}` : null;
+    }
+    case "poi": {
+      const row = await prisma.placeVisit.findFirst({
+        where: { id: entryId, userId },
+        select: { visitedAtUtc: true, visitedPrecision: true },
+      });
+      return row ? `${isoOf(row.visitedAtUtc)}|${row.visitedPrecision ?? ""}` : null;
     }
     case "lodging": {
       const row = await prisma.lodgingStay.findFirst({
@@ -100,6 +135,8 @@ export async function stillEligible(args: {
   hours: number;
   channel: Channel;
   anchorKey: string;
+  /** Which of an entry's anchors this reminder is for (rental: `pickup` | `return`). */
+  part?: string;
 }): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: args.userId },
@@ -116,7 +153,8 @@ export async function stillEligible(args: {
       args.domain,
       args.entryId,
       args.userId,
-      profileZoneFromSettings(user.settings?.data).zone
+      profileZoneFromSettings(user.settings?.data).zone,
+      args.part
     )) === args.anchorKey
   );
 }

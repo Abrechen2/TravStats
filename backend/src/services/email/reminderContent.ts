@@ -22,7 +22,8 @@ import {
  * place's own clock by the domain's times DTO; nothing here reads a zone.
  */
 
-export type ReminderDomain = "flight" | "cruise" | "rail" | "lodging" | "ferry" | "bus";
+export type ReminderDomain =
+  "flight" | "cruise" | "rail" | "lodging" | "ferry" | "bus" | "rental" | "roadtrip" | "poi";
 
 /**
  * Colours are the domain registry's (`shared/domains.ts`, which a test ties to
@@ -36,6 +37,9 @@ export const REMINDER_DOMAIN_COLORS: Record<ReminderDomain, string> = {
   lodging: DOMAINS.lodging.color,
   ferry: DOMAINS.ferry.color,
   bus: DOMAINS.bus.color,
+  rental: DOMAINS.rental.color,
+  roadtrip: DOMAINS.roadtrip.color,
+  poi: DOMAINS.poi.color,
 };
 
 const DOMAIN_NAME: Record<ReminderLang, Record<ReminderDomain, string>> = {
@@ -46,6 +50,9 @@ const DOMAIN_NAME: Record<ReminderLang, Record<ReminderDomain, string>> = {
     lodging: "Unterkunft",
     ferry: "Fähre",
     bus: "Bus",
+    rental: "Mietwagen",
+    roadtrip: "Roadtrip",
+    poi: "Ort",
   },
   en: {
     flight: "Flight",
@@ -54,6 +61,9 @@ const DOMAIN_NAME: Record<ReminderLang, Record<ReminderDomain, string>> = {
     lodging: "Stay",
     ferry: "Ferry",
     bus: "Bus",
+    rental: "Rental car",
+    roadtrip: "Roadtrip",
+    poi: "Place",
   },
 };
 

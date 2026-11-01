@@ -7,6 +7,9 @@ export const REMINDER_DOMAINS: readonly ReminderDomain[] = [
   "bus",
   "ferry",
   "lodging",
+  "rental",
+  "roadtrip",
+  "poi",
 ];
 export const PRESET_HOURS = [24, 2] as const;
 export const MIN_CUSTOM_HOURS = 1;

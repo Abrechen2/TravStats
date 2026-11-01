@@ -3,7 +3,17 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-let enabledDomains: string[] = ["flight", "cruise", "rail", "bus", "ferry", "lodging"];
+let enabledDomains: string[] = [
+  "flight",
+  "cruise",
+  "rail",
+  "bus",
+  "ferry",
+  "lodging",
+  "rental",
+  "roadtrip",
+  "poi",
+];
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({
     enabled: enabledDomains,
@@ -43,6 +53,9 @@ const fixture = (over: Record<string, unknown> = {}) => ({
     bus: row(),
     ferry: row(),
     lodging: row({ leadHours: [48, 24], channel: "app" }),
+    rental: row(),
+    roadtrip: row(),
+    poi: row(),
   },
   mail: { available: true, reason: null },
   push: { available: true, reason: null },
@@ -77,7 +90,17 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
   beforeEach(() => {
     getPreferences.mockReset().mockResolvedValue(STORED);
     updatePreferences.mockReset().mockImplementation(async (p) => echo(p));
-    enabledDomains = ["flight", "cruise", "rail", "bus", "ferry", "lodging"];
+    enabledDomains = [
+      "flight",
+      "cruise",
+      "rail",
+      "bus",
+      "ferry",
+      "lodging",
+      "rental",
+      "roadtrip",
+      "poi",
+    ];
     demo = false;
   });
   afterEach(() => {

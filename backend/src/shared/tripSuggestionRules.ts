@@ -17,6 +17,9 @@ import { isCountableCruise } from "./cruiseCounting";
 import { isCountableFlight } from "./flightCounting";
 import { classifyStay } from "./lodgingCounting";
 import { classifyVisit } from "./placeCounting";
+import { isCountableBus } from "./busCounting";
+import { isCountableFerry } from "./ferryCounting";
+import { isCountableRental } from "./rentalCounting";
 import { isCompletedRail } from "./railCounting";
 
 /**
@@ -138,6 +141,27 @@ export function railPresence(ride: { status: string }): PresenceState {
   // where they were, so only the status half of the rail rule is asked.
   if (isCompletedRail(ride)) return "happened";
   return ride.status === "cancelled" ? "excluded" : "planned";
+}
+
+/**
+ * A coach ride, a ferry crossing or a rental car (forgejo#405): completed
+ * happened, cancelled never, anything else (scheduled, a rental still in
+ * progress) is ahead. Each asks its own counting module for "happened", so the
+ * proposal and the statistics cannot disagree about a ride.
+ */
+export function busPresence(ride: { status: string }): PresenceState {
+  if (isCountableBus(ride)) return "happened";
+  return ride.status === "cancelled" ? "excluded" : "planned";
+}
+
+export function ferryPresence(ride: { status: string }): PresenceState {
+  if (isCountableFerry(ride)) return "happened";
+  return ride.status === "cancelled" ? "excluded" : "planned";
+}
+
+export function rentalPresence(rental: { status: string }): PresenceState {
+  if (isCountableRental(rental)) return "happened";
+  return rental.status === "cancelled" ? "excluded" : "planned";
 }
 
 /** A cruise: flown/historical happened, cancelled never, the rest is ahead. */

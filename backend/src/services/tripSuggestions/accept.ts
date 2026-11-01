@@ -74,6 +74,9 @@ async function linkMembers(
   const counts = await Promise.all([
     ids("flight").length ? tx.flight.updateMany({ where: where("flight"), data }) : null,
     ids("rail").length ? tx.railJourney.updateMany({ where: where("rail"), data }) : null,
+    ids("bus").length ? tx.busJourney.updateMany({ where: where("bus"), data }) : null,
+    ids("ferry").length ? tx.ferryJourney.updateMany({ where: where("ferry"), data }) : null,
+    ids("rental").length ? tx.rentalBooking.updateMany({ where: where("rental"), data }) : null,
     ids("cruise").length ? tx.cruise.updateMany({ where: where("cruise"), data }) : null,
     ids("lodging").length ? tx.lodgingStay.updateMany({ where: where("lodging"), data }) : null,
     ids("place").length ? tx.placeVisit.updateMany({ where: where("place"), data }) : null,
@@ -87,6 +90,9 @@ async function linkMembers(
   // Linked into a shared trip: copied to its other members.
   await propagateWrites(tx, userId, "flight", ids("flight"));
   await propagateWrites(tx, userId, "rail", ids("rail"));
+  await propagateWrites(tx, userId, "bus", ids("bus"));
+  await propagateWrites(tx, userId, "ferry", ids("ferry"));
+  await propagateWrites(tx, userId, "rental", ids("rental"));
   await propagateWrites(tx, userId, "cruise", ids("cruise"));
   await propagateWrites(tx, userId, "lodgingStay", ids("lodging"));
   return linked;

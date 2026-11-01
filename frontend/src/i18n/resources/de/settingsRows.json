@@ -115,6 +115,15 @@
     },
     "r_lodging": {
       "t": "Unterkunft"
+    },
+    "r_rental": {
+      "t": "Mietwagen"
+    },
+    "r_roadtrip": {
+      "t": "Roadtrip"
+    },
+    "r_poi": {
+      "t": "Orte"
     }
   },
   "loyalty": {

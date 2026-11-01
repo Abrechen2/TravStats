@@ -299,6 +299,18 @@
       "lodging": {
         "name": "Unterkunft",
         "what": "Check-in, Adresse, Nächte"
+      },
+      "rental": {
+        "name": "Mietwagen",
+        "what": "Abholung und Rückgabe"
+      },
+      "roadtrip": {
+        "name": "Roadtrip",
+        "what": "Ankunft an der nächsten Station"
+      },
+      "poi": {
+        "name": "Orte",
+        "what": "Geplante Besuche mit Uhrzeit"
       }
     }
   },

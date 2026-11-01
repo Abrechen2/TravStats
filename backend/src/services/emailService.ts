@@ -28,6 +28,14 @@ import {
   type FerryReminderData,
 } from "./email/ferryBusReminderContent";
 import {
+  placeVisitReminderContent,
+  rentalReminderContent,
+  roadtripStationReminderContent,
+  type PlaceVisitReminderData,
+  type RentalReminderData,
+  type RoadtripStationReminderData,
+} from "./email/entryReminderContent";
+import {
   adminPasswordResetContent,
   invitationContent,
   passwordResetContent,
@@ -199,6 +207,45 @@ export async function sendBusReminder(
 ): Promise<void> {
   await sendReminder("bus", user, { busJourneyId: ride.id, hoursUntilDeparture }, (lang, links) =>
     busReminderContent(ride, hoursUntilDeparture, lang, links)
+  );
+}
+
+export async function sendRentalReminder(
+  rental: RentalReminderData,
+  user: ReminderUser,
+  hoursUntil: number
+): Promise<void> {
+  await sendReminder(
+    "rental",
+    user,
+    { rentalId: rental.id, part: rental.part, hoursUntil },
+    (lang, links) => rentalReminderContent(rental, hoursUntil, lang, links)
+  );
+}
+
+export async function sendRoadtripStationReminder(
+  station: RoadtripStationReminderData,
+  user: ReminderUser,
+  hoursUntil: number
+): Promise<void> {
+  await sendReminder(
+    "roadtrip",
+    user,
+    { stationId: station.id, roadtripId: station.roadtripId, hoursUntil },
+    (lang, links) => roadtripStationReminderContent(station, hoursUntil, lang, links)
+  );
+}
+
+export async function sendPlaceVisitReminder(
+  visit: PlaceVisitReminderData,
+  user: ReminderUser,
+  hoursUntil: number
+): Promise<void> {
+  await sendReminder(
+    "poi",
+    user,
+    { visitId: visit.id, placeId: visit.placeId, hoursUntil },
+    (lang, links) => placeVisitReminderContent(visit, hoursUntil, lang, links)
   );
 }
 

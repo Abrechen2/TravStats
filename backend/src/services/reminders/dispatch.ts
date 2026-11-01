@@ -2,6 +2,7 @@ import logger from "../../utils/logger";
 import { notifyEntryReminder } from "../notifications/dispatcher";
 import type { Locale, Message } from "../notifications/messages";
 import { claimReminder, markSent, releaseClaim } from "./claims";
+import { claimEntryId } from "./claimEntryId";
 import { stillEligible } from "./eligibility";
 import { wantsApp, wantsMail, type PrefUser, type ReminderDomain } from "./prefs";
 
@@ -18,6 +19,10 @@ export interface DueReminder {
   entryId: string;
   /** Lodging only: the stay's lodging id, carried into the push data (companion request). */
   lodgingId?: string;
+  /** Further ids the push carries for the Companion (`rentalId`, `stationId`, `placeId` …). */
+  extraIds?: Record<string, string>;
+  /** Which of the entry's anchors this is, for an entry with two (rental). */
+  part?: string;
   tripId: string | null;
   hours: number;
   /** The entry's real instant (claims re-arm when it moves by more than 30 min). */
@@ -39,6 +44,8 @@ export async function sendDueReminder(due: DueReminder): Promise<void> {
         domain,
         entryId,
         ...(due.lodgingId !== undefined && { lodgingId: due.lodgingId }),
+        ...(due.extraIds && { extraIds: due.extraIds }),
+        ...(due.part !== undefined && { part: due.part }),
         tripId: due.tripId,
         hours,
         anchorAt: due.anchorAt,
@@ -60,7 +67,13 @@ export async function sendDueReminder(due: DueReminder): Promise<void> {
   let claim: Awaited<ReturnType<typeof claimReminder>> = null;
   try {
     claim = await claimReminder(
-      { userId: user.id, domain, entryId, leadHours: hours, channel: "mail" },
+      {
+        userId: user.id,
+        domain,
+        entryId: claimEntryId(entryId, due.part),
+        leadHours: hours,
+        channel: "mail",
+      },
       due.anchorAt,
       due.now
     );
@@ -72,6 +85,7 @@ export async function sendDueReminder(due: DueReminder): Promise<void> {
       hours,
       channel: "mail",
       anchorKey: due.anchorKey,
+      part: due.part,
     });
     if (!eligible) {
       await releaseClaim(claim);

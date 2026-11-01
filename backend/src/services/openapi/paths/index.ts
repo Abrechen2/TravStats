@@ -61,6 +61,7 @@ import "./bus";
 import "./ferry";
 import "./ferryStats";
 import "./busEntrySuggestions";
+import "./domainEntrySuggestions";
 import "./rental";
 import "./cruiseTracks";
 import "./flightDevice";

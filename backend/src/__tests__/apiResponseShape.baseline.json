@@ -194,6 +194,7 @@
     "dawarichStays.ts",
     "documents.ts",
     "documents/extractValues.ts",
+    "domainEntrySuggestions.ts",
     "encryptedShare.ts",
     "encryptedShareSealed.ts",
     "ferry.ts",

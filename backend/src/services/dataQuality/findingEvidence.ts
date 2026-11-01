@@ -10,11 +10,12 @@ import type { RecordCheckDomain } from "../../schemas/dataQualityRecordChecks";
 /**
  * The record types a duplicate can be MERGED for. Merging moves what hangs
  * off the dropped copies and deletes them through their own delete path; that
- * is written for flights and stays. A rail, bus or cruise copy is answered
+ * is written for flights, cruises and stays. A rail or bus copy is answered
  * with `keep`, or deleted on its own page — `merge` is not offered there.
  */
 export const MERGEABLE_DUPLICATE_TYPES: ReadonlySet<string> = new Set<RecordCheckDomain>([
   "flight",
+  "cruise",
   "lodging_stay",
 ]);
 
