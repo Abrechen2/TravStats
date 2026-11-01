@@ -85,6 +85,15 @@ describe("everyday figures", () => {
     expect(f.topSpeed).toBeNull();
   });
 
+  it("a bad-fix neighbour cannot vouch for a speed spike", () => {
+    const { points, rowOf } = stretch(3, 40, 60, (i) => ({ speed: i === 1 ? 60 : null }));
+    // The outer fixes are 10 km-accuracy garbage whose positions happen to jump fast.
+    const bad: StoredPoint[] = points.map((p, i) => (i === 1 ? p : [p[0], p[1], p[2], 20_000]));
+    const rows = new Map(points.map((p, i) => [bad[i], rowOf(p)!]));
+    const f = addStretches(emptyFigures(), [bad], (p) => rows.get(p), never);
+    expect(f.topSpeed).toBeNull();
+  });
+
   it("refuses an impossible speed, a contradicting class and a poor accuracy", () => {
     expect(plausibleSpeedMps({ speedMps: 400, accuracyM: 5, motion: null })).toBeNull();
     expect(plausibleSpeedMps({ speedMps: -1, accuracyM: 5, motion: null })).toBeNull();

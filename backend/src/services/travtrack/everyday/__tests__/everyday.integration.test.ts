@@ -138,6 +138,16 @@ describe("TravTrack badges", () => {
       checkTravTrackAchievement({ requirementType: "travtrack_days", requirement: 365 }, stats)
     ).toEqual({ isUnlocked: false, progress: 40 });
 
+    // A month owed to the projection reads as a dip, not a fall: SKIP, never a revocation.
+    await prisma.$executeRaw`INSERT INTO travtrack_dirty_days (user_id, day, version, done)
+      VALUES (${userId}, '2026-06-01'::date, 1, 0)`;
+    try {
+      const owed = await calculateTravTrackAchievementStats(userId);
+      expect(checkTravTrackAchievement(km1000, owed)).toBe(SKIP);
+    } finally {
+      await prisma.$executeRaw`DELETE FROM travtrack_dirty_days WHERE user_id = ${userId}`;
+    }
+
     const idle = await calculateTravTrackAchievementStats(otherId);
     expect(checkTravTrackAchievement(km1000, idle)).toBe(SKIP);
     expect(

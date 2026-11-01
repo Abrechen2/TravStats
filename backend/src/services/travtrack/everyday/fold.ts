@@ -16,7 +16,8 @@
  * (0–500 km/h, accuracy, the phone's own class), and — above `SPIKE_MIN_MPS`
  * (10 m/s) — it must be corroborated: a neighbouring fix of the same stretch
  * within `CORROBORATE_WITHIN_MS` (120 s) must show at least a fifth of it,
- * reported or as the speed of the step to it. A lone 60 m/s among fixes
+ * reported or as the speed of the step to it — a neighbour that is a bad fix or
+ * in the air, or a step faster than 500 km/h, vouches for nothing. A lone 60 m/s among fixes
  * crawling at 1 m/s is a GPS spike and is dropped; a fix with no neighbour
  * that close cannot be corroborated and is dropped too.
  *
@@ -37,6 +38,7 @@ import { distanceM } from "../classify";
 import type { SafePointRow } from "../readSafe";
 import { groundSteps, type InFlight } from "../months/values";
 import {
+  MAX_SPEED_MPS,
   motionClassOf,
   plausibleAltitudeM,
   plausibleSpeedMps,
@@ -86,15 +88,16 @@ function topSpeedOf(
   rowOf: RowOf,
   inFlight: InFlight
 ): { mps: number; atMs: number } | null {
-  const reported = stretch.map((p) => {
+  const ok = stretch.map((p) => usable(p, rowOf(p), inFlight));
+  const reported = stretch.map((p, i) => {
     const row = rowOf(p);
-    return usable(p, row, inFlight) ? plausibleSpeedMps(row) : null;
+    return ok[i] && row ? plausibleSpeedMps(row) : null;
   });
   let best: { mps: number; atMs: number } | null = null;
   for (let i = 0; i < stretch.length; i++) {
     const s = reported[i];
     if (s === null || (best !== null && s <= best.mps)) continue;
-    if (s > SPIKE_MIN_MPS && !corroborated(stretch, reported, i)) continue;
+    if (s > SPIKE_MIN_MPS && !corroborated(stretch, reported, ok, i)) continue;
     best = { mps: s, atMs: stretch[i][0] };
   }
   return best;
@@ -103,15 +106,18 @@ function topSpeedOf(
 function corroborated(
   stretch: readonly StoredPoint[],
   reported: readonly (number | null)[],
+  ok: readonly boolean[],
   i: number
 ): boolean {
   const need = reported[i]! * CORROBORATE_FRACTION;
   for (const j of [i - 1, i + 1]) {
     const other = stretch[j];
-    if (!other) continue;
+    // A neighbour that is itself a bad fix or in the air vouches for nothing.
+    if (!other || !ok[j]) continue;
     const dt = Math.abs(other[0] - stretch[i][0]);
     if (dt > CORROBORATE_WITHIN_MS) continue;
     const step = dt > 0 ? distanceM(fixOf(stretch[i]), fixOf(other)) / (dt / 1000) : 0;
+    if (step > MAX_SPEED_MPS) continue;
     if (Math.max(reported[j] ?? 0, step) >= need) return true;
   }
   return false;

@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import type { Achievement } from "../prisma";
+import { MONTHS_BIT } from "../services/travtrack/dirtyDays";
 import { providerIs } from "../services/locationProvider/provider";
 import { SKIP, type BadgeVerdict } from "./badgeSource";
 
@@ -16,6 +17,7 @@ import { SKIP, type BadgeVerdict } from "./badgeSource";
  */
 
 export interface TravTrackAchievementStats {
+  /** TravTrack is the working source AND no month is owed to the projection; else the badges `SKIP`. */
   active: boolean;
   groundKm: number;
   daysRecorded: number;
@@ -27,6 +29,13 @@ export async function calculateTravTrackAchievementStats(
   if (!(await providerIs(userId, "travtrack"))) {
     return { active: false, groundKm: 0, daysRecorded: 0 };
   }
+  // A history edit (a new privacy zone, a deleted span) deletes the affected
+  // monthly rows until the projection rebuilds them: summing then would read a
+  // dip and revoke a badge. While any month is owed the answer is `SKIP`.
+  const owed = await prisma.$queryRaw<{ hit: number }[]>`
+    SELECT 1 AS hit FROM travtrack_dirty_days
+     WHERE user_id = ${userId} AND (done & ${MONTHS_BIT}) = 0 LIMIT 1`;
+  if (owed.length > 0) return { active: false, groundKm: 0, daysRecorded: 0 };
   const sum = await prisma.travTrackMonthValue.aggregate({
     where: { userId },
     _sum: { kmGround: true, daysWithData: true },
