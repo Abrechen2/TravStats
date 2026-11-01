@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
+import { prisma } from "../../db";
 import {
   getInstanceSettings,
   updateInstanceSettings,
@@ -124,7 +125,17 @@ function passkeyStatusOf(settings: {
 router.get("/instance-settings", async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const settings = await getInstanceSettings();
-    res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });
+    // What switching public links off would delete: the confirmation names the
+    // amount ("9 Links von 3 Konten"), so the page needs it before the click.
+    const [links, owners] = await Promise.all([
+      prisma.publicShareLink.count(),
+      prisma.publicShareLink.groupBy({ by: ["userId"] }),
+    ]);
+    res.json({
+      settings,
+      passkeyStatus: passkeyStatusOf(settings),
+      shareLinkStats: { links, accounts: owners.length },
+    });
   } catch (error) {
     next(error);
   }

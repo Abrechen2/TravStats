@@ -286,6 +286,30 @@ describe("owner side", () => {
 });
 
 describe("the instance switch", () => {
+  it("tells an admin how many links and accounts switching off would delete (the confirmation names the amount)", async () => {
+    await prisma.user.update({ where: { id: eve.id }, data: { isAdmin: true } });
+    const get = () =>
+      request(settingsApp).get("/api/v1/admin/instance-settings").set("Cookie", eve.cookie);
+    expect((await get()).body.shareLinkStats).toEqual({ links: 0, accounts: 0 });
+    const a1 = await makeFlight(anna.id);
+    const a2 = await makeFlight(anna.id);
+    const e1 = await makeFlight(eve.id);
+    for (const [owner, flight] of [
+      [anna, a1],
+      [anna, a2],
+      [eve, e1],
+    ] as const) {
+      await tokenFor(owner, { kind: "flight", targetId: flight.id, fields: ["progress"] });
+    }
+    expect((await get()).body.shareLinkStats).toEqual({ links: 3, accounts: 2 });
+    await request(settingsApp)
+      .put("/api/v1/admin/instance-settings")
+      .set("Cookie", eve.cookie)
+      .send({ shareLinksEnabled: false })
+      .expect(200);
+    expect((await get()).body.shareLinkStats).toEqual({ links: 0, accounts: 0 });
+  });
+
   it("is read by every user from GET /settings and written by an admin only", async () => {
     await setSwitch(false);
     const read = await request(settingsApp).get("/api/v1/settings").set("Cookie", anna.cookie);
