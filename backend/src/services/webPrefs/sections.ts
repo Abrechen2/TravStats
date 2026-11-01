@@ -39,6 +39,12 @@ export const WEB_PREF_SECTIONS = {
   tablePrefs: "object",
   /** `travstats.track.mapPrefs.v2` — the Track map's layers, route colour, opacity, pause split. */
   trackMap: "object",
+  /**
+   * `travstats_historical_flight_times` — the flight form's time estimate learns
+   * from the times the user entered before; it followed one browser's
+   * localStorage until forgejo#407 (H15). Shape `{ entries: [...] }`.
+   */
+  flightTimeHistory: "object",
 } as const;
 
 export type WebPrefSection = keyof typeof WEB_PREF_SECTIONS;
