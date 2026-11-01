@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.10:** take a backup. Twelve new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, the per-area reminder preferences (filled once from each account's current reminder settings), and one that clears the favourite airline "Lufthansa" that earlier versions stored as a shipped default (any other airline you chose stays), and one that replaces seven single-column user indexes covered by wider ones and adds an index for TravTrack point sync, and one that adds search indexes for the airport search; no data is removed.
+**Before upgrading to 2.8.0-rc.11:** take a backup. Fourteen new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, the per-area reminder preferences (filled once from each account's current reminder settings), and one that clears the favourite airline "Lufthansa" that earlier versions stored as a shipped default (any other airline you chose stays), and one that replaces seven single-column user indexes covered by wider ones and adds an index for TravTrack point sync, and one that adds search indexes for the airport search, and two for this candidate: tags on lodging houses, places, roadtrips and tours, and a share-link kind for a single cruise, stay or place visit; no data is removed.
 
 **Upgrading to 2.8.0-rc.5 — external-service settings move out of the environment.** On its first start this version copies every external-service variable still set in the server environment (`AIRLABS_API_KEY`, `AVIATIONSTACK_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`, the Immich, Dawarich, Strava, WebDAV, federation and the other service variables) into the instance settings, encrypted, wherever the instance field is still empty, and then never reads them again. The log names the variables it copied, never their values. From then on these services are configured only under Administration → External services; database, secrets, ports, time zone, logging, backup paths and first-boot defaults stay environment variables. One new migration adds the columns the copy needs.
 
@@ -47,8 +47,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **TravTrack in the year review and badges:** days and kilometres recorded, top speed, highest point and time per way of moving (privacy zones and GPS spikes left out), four TravTrack badges, and the altitude in GPX exports.
 - **Import check-ins from Träwelling and travelynx,** and Google Timeline / Location History (old Records.json, semantic history and the new phone export), GeoJSON, KML and TCX into TravTrack. Files stay on your server; privacy zones and duplicates are handled like a GPX import.
 
+- **TravPlan route plans on the web:** create a route, compare variants, assign ideas to a day by drag or tap, see ten-year climate means per station, and hand a plan's stations over to the roadtrip, ferry and stays in one step. A handover keeps what the phone already wrote and only withdraws stops nobody touched.
+- **Tags on lodging houses, places, roadtrips and tours,** in the forms, the detail pages and the spreadsheet export.
+- **A public link for a single cruise, stay or place visit,** next to the existing trip link.
+- **Bus, ferry and rental join the rest:** a dashboard tab of their own, trip proposals, reminders (rental pick-up and return, roadtrip stations, planned place visits), badges with deeper levels (thresholds are a proposal) and forms that offer earlier entries as chips.
+- **Roadtrip and tour kilometres and roadtrip nights in the year review,** and a year recorded only by TravTrack now gets a year review of its own.
+- **Planned place visits in the calendar feed;** a rental shows the trip photos taken between pick-up and return; a house shows its stay documents; a visit's rating is editable on the web.
+- **Merge the copies of a duplicate cruise** from data quality, and assign existing flights to a booking from a trip's bookings panel.
+- **Maintenance can fetch a missing airport** and says whether the source was unreachable or does not know the code.
+- **The globe draws its dots, cruise paths, night shade and connecting lines as native map layers,** on the dashboard and on the trip map.
+
 ### Fixed
 
+- **A finished trip folds its packing list away,** and hides it when it is empty.
+- **The flight-time estimate history follows the account** instead of staying in one browser.
+- **Filling a flight only uses a hit on its own route,** and every airport source is asked before the page says it is unavailable.
+- **Bulk refresh counts AeroAPI as a historical provider,** and the OpenSky "nothing to test" answer says the service is not configured.
+- **Shutting down stops every scheduled job and closes the server cleanly.**
 - **Areas such as markets, parks and museums are always recognised during a stay scan.** The two separate switches are gone; recognition runs whenever the stay scan runs, and suggestions still need your confirmation.
 - **Large imports and busy editors no longer stall on badges.** An import checks achievements once at the end instead of after every 20 rows, and repeated edits queue at most one follow-up check.
 - **The airport search answers from an index** instead of scanning the whole catalogue on every keystroke.
