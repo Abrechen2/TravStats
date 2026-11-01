@@ -41,7 +41,6 @@ export default function FederationRows(): JSX.Element | null {
     data: state,
     setData,
     failed,
-    reload,
   } = useLoaded<FederationState>(() => federationAdminApi.get());
   const [origin, setOrigin] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,9 +61,10 @@ export default function FederationRows(): JSX.Element | null {
       setBusy(true);
       setErrorKey(null);
       try {
-        const next = await action();
-        if (next) setData(next);
-        else await reload();
+        const next = (await action()) ?? (await federationAdminApi.get());
+        // The next queued job reads this before React has rendered it.
+        latest.current = { ...latest.current, state: next };
+        setData(next);
         return true;
       } catch (error) {
         logger.error("A federation settings action failed:", error);

@@ -90,7 +90,17 @@ export function useGroupSave<T extends Record<string, unknown>>({
     try {
       const settled = (await writeRef.current(sent)) ?? sent;
       baseline.current = settled;
-      setDraft(settled);
+      // Fields edited while the request was out keep the user's value (and stay
+      // changed); the rest take the settled one.
+      setDraft(
+        (current) =>
+          Object.fromEntries(
+            (Object.keys(settled) as (keyof T)[]).map((k) => [
+              k,
+              stableSnapshot(current[k]) === stableSnapshot(sent[k]) ? settled[k] : current[k],
+            ])
+          ) as T
+      );
       setPhase("saved");
       return true;
     } catch (error) {
