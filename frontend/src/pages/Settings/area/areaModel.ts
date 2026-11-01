@@ -131,6 +131,15 @@ const SERVICE_ANCHORS = (registryPage("services")?.sections ?? [])
   .map((s) => s.id)
   .filter((id) => !OWN_SERVICE_MOUNTS.includes(id) && id !== "selfHostedRouting");
 
+/**
+ * The rows of the service cards that are the SERVER's side ("Alle Konten"):
+ * they are drawn by the admin services mount, so a link or search hit naming
+ * one scrolls there and reveals its expert rows, not the account's section.
+ */
+const INSTANCE_SERVICE_ROWS = (registryPage("services")?.sections ?? [])
+  .filter((s) => !OWN_SERVICE_MOUNTS.includes(s.id))
+  .flatMap((s) => s.rows.filter((r) => r.audience === "admin").map((r) => r.id));
+
 const page = (
   id: AreaPageId,
   icon: IconName,
@@ -197,7 +206,11 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   ]),
   page("services", "globe", [
     P("externalServices", { anchors: SERVICE_ANCHORS }),
-    A("externalServices", { as: "instanceServices", anchors: ["selfHostedRouting"] }),
+    A("externalServices", {
+      as: "instanceServices",
+      anchors: ["selfHostedRouting"],
+      matches: INSTANCE_SERVICE_ROWS,
+    }),
     A("smtp"),
     A("webdav"),
     A("push"),

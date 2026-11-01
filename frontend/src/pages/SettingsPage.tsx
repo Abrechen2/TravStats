@@ -111,7 +111,10 @@ export default function SettingsPage(): JSX.Element {
   const isCanonical = resolved.to === `${location.pathname}${location.search}${location.hash}`;
   const current = findAreaPage(params.page);
 
-  const anchor = isCanonical ? namedAnchor(location.search, location.hash) : null;
+  // `?service=` names a card of the catalogue: it stands in for the section when
+  // the address carries no hash, so an expert or server card opens by it alone.
+  const service = current?.id === "services" ? searchParams.get("service") : null;
+  const anchor = isCanonical ? (namedAnchor(location.search, location.hash) ?? service) : null;
   const match = isCanonical ? searchParams.get("match") : null;
   const namedMount = current ? mountFor(current.id, anchor, match) : undefined;
   const named = namedMount?.id ?? null;

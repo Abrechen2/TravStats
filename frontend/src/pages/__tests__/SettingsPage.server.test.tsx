@@ -244,6 +244,14 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
     await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
   });
 
+  // An old /admin link to an expert card of the services page carries the
+  // service in the query only; the card must still open at the standard level.
+  it("opens the expert federation card an old /admin link names, with its note", async () => {
+    renderAdmin("/admin?section=federation");
+    const card = await findNamed("region", "admin:federation.title");
+    expect(card).toHaveTextContent("settings:level.deepLinkedExpert");
+  });
+
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
     renderAdmin("/admin/logging");
     expect(await findNamed("region", "admin:pages.logging")).toBeInTheDocument();

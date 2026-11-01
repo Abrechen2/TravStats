@@ -79,3 +79,11 @@ describe("the settings search reads the registry", () => {
     expect(tt.highlight).toBe("features");
   });
 });
+
+describe("a row of the server's side of a service card", () => {
+  it("highlights and reveals the server's section, not the account's", () => {
+    const hit = find("Client-ID des Servers").find((h) => h.rowId === "oskidI")!;
+    expect(hit).toBeDefined();
+    expect(hit.highlight).toBe("instanceServices");
+  });
+});

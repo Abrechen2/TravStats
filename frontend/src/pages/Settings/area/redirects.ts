@@ -200,13 +200,23 @@ function settingsTarget(
   return { page: last ?? FIRST_VISIT_PAGE };
 }
 
+/** The hash as a section id; a malformed escape (`#%`) names nothing rather than throwing. */
+function decodedHash(hash: string): string | null {
+  if (!hash.startsWith("#")) return null;
+  try {
+    return decodeURIComponent(hash.slice(1)) || null;
+  } catch {
+    return null;
+  }
+}
+
 /** The canonical form of an address: `path?query#hash`, in a fixed order. */
 export function resolveAddress(input: AddressInput): ResolvedAddress {
   const segments = input.pathname.split("/").filter(Boolean);
   const fromAdmin = segments[0] === "admin";
   const pageSeg = segments[1];
   const params = new URLSearchParams(input.search);
-  const hashSection = input.hash.startsWith("#") ? decodeURIComponent(input.hash.slice(1)) : null;
+  const hashSection = decodedHash(input.hash);
   const section = first(params.get("section"), hashSection);
   const tab = params.get("tab");
 

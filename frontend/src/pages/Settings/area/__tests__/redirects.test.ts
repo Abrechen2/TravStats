@@ -160,6 +160,11 @@ describe("every address of design §6.2 lands where the table says", () => {
     expect(resolve("/settings/views#listAppearance", off).to).toBe("/settings/display#views");
   });
 
+  it("treats a malformed escape in the hash as no section, instead of throwing", () => {
+    expect(resolve("/settings/account#%").to).toBe("/settings/account");
+    expect(resolve("/admin/instance#%E0%A4%A").to).toBe("/settings/server#general");
+  });
+
   it("sends an unknown page to the account page rather than rendering an empty frame", () => {
     expect(resolve("/settings/nonsense").to).toBe("/settings/account");
   });
