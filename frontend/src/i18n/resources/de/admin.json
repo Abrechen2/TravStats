@@ -1425,5 +1425,33 @@
       "unknownOutcome": "Keine Antwort erhalten – der Server arbeitet womöglich noch. Prüfe den Katalog später.",
       "failed": "Das Einlesen ist fehlgeschlagen."
     }
+  },
+  "dawarichGlobal": {
+    "title": "Dawarich (instanzweit)",
+    "subtitle": "Eine Dawarich-Verbindung für alle Konten. Wer eine eigene hinterlegt, überschreibt sie.",
+    "baseUrl": "Basis-URL",
+    "apiKey": "API-Schlüssel",
+    "apiKeyHint": "Der gespeicherte Schlüssel wird nur maskiert angezeigt. Lässt du ihn unverändert, bleibt er erhalten.",
+    "test": "Verbindung testen",
+    "testing": "Teste …",
+    "save": "Speichern",
+    "saving": "Speichere …",
+    "saved": "Instanzweite Dawarich-Verbindung gespeichert.",
+    "cleared": "Instanzweite Dawarich-Verbindung entfernt.",
+    "saveFailed": "Speichern fehlgeschlagen.",
+    "loadFailed": "Die Dawarich-Einstellungen konnten nicht geladen werden. Sie lassen sich erst bearbeiten, wenn sie geladen sind.",
+    "retry": "Erneut versuchen",
+    "connected": "Verbunden · v{{version}}",
+    "sweep": {
+      "title": "Länder-Tage jetzt auswerten",
+      "description": "Liest für alle Konten mit Dawarich die Länder-Tage neu ein, statt bis 04:40 UTC zu warten. Kann mehrere Minuten dauern.",
+      "action": "Jetzt auswerten",
+      "running_": "Läuft … (kann dauern)",
+      "done": "Fertig: {{users}} Konten, {{days}} Tage geschrieben.",
+      "doneWithFailures": "Fertig, aber {{failed}} von {{users}} Konten sind fehlgeschlagen ({{days}} Tage geschrieben). Details im Server-Log.",
+      "failed": "Die Auswertung ist fehlgeschlagen.",
+      "lost": "Stand unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten.",
+      "running": "Es läuft bereits eine Auswertung."
+    }
   }
 }

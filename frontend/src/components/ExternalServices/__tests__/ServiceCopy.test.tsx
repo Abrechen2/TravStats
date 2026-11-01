@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { accountOverview, adminOverview, service, mockedApi, t } from "./fixtures";
 
+vi.mock("../../Admin/DawarichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),

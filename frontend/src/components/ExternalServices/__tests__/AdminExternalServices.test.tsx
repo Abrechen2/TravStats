@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { adminOverview, service, apiError, mockedApi, networkError, t } from "./fixtures";
 
+vi.mock("../../Admin/DawarichGlobalSettings", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),

@@ -8,6 +8,7 @@ import StatTile from "../ui/StatTile";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEffectiveSettingsLevel } from "../../store/settingsLevelStore";
 import type { AdminService } from "../../lib/api/externalServices";
+import DawarichGlobalSettings from "../Admin/DawarichGlobalSettings";
 import AccountConnectionsPolicy from "./AccountConnectionsPolicy";
 import AdminConsentDialog from "./AdminConsentDialog";
 import AdminServiceRow from "./AdminServiceRow";
@@ -27,7 +28,7 @@ const FILTERS: readonly StatusFilter[] = ["all", "recommended", "active", "atten
  * service and hides only addresses and endpoints.
  */
 export default function AdminExternalServices(): JSX.Element {
-  const { t } = useTranslation(["externalServices"]);
+  const { t } = useTranslation(["externalServices", "admin"]);
   const expert = useEffectiveSettingsLevel() === "expert";
   const services = useAdminServices();
   const [query, setQuery] = useState("");
@@ -262,6 +263,17 @@ export default function AdminExternalServices(): JSX.Element {
         feedback={services.feedback}
         onChange={(id, allowed) => void services.setConnection(id, allowed)}
       />
+
+      <section
+        className="flex flex-col"
+        style={{ gap: "var(--ts-space-md)" }}
+        data-testid="dawarich-global"
+      >
+        <h2 className="t-card-title">{t("admin:dawarichGlobal.title")}</h2>
+        <Card>
+          <DawarichGlobalSettings />
+        </Card>
+      </section>
 
       {infoService ? (
         <ServiceInfoDialog

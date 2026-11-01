@@ -1425,5 +1425,33 @@
       "unknownOutcome": "No answer received – the server may still be working. Check the catalogue later.",
       "failed": "The import failed."
     }
+  },
+  "dawarichGlobal": {
+    "title": "Dawarich (instance-wide)",
+    "subtitle": "One Dawarich connection for all accounts. Anyone with their own overrides it.",
+    "baseUrl": "Base URL",
+    "apiKey": "API key",
+    "apiKeyHint": "The stored key is only shown masked. Leave it unchanged to keep it.",
+    "test": "Test connection",
+    "testing": "Testing …",
+    "save": "Save",
+    "saving": "Saving …",
+    "saved": "Instance-wide Dawarich connection saved.",
+    "cleared": "Instance-wide Dawarich connection removed.",
+    "saveFailed": "Saving failed.",
+    "loadFailed": "The Dawarich settings could not be loaded. They can only be edited once loaded.",
+    "retry": "Try again",
+    "connected": "Connected · v{{version}}",
+    "sweep": {
+      "title": "Sweep country days now",
+      "description": "Re-reads country days for every account using Dawarich instead of waiting for 04:40 UTC. May take several minutes.",
+      "action": "Sweep now",
+      "running_": "Running … (may take a while)",
+      "done": "Done: {{users}} accounts, {{days}} days written.",
+      "doneWithFailures": "Finished, but {{failed}} of {{users}} accounts failed ({{days}} days written). See the server log.",
+      "failed": "The sweep failed.",
+      "lost": "Outcome unknown: the server lost track of the job (restart?). Please run it again.",
+      "running": "A sweep is already running."
+    }
   }
 }
