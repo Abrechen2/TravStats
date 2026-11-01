@@ -94,3 +94,12 @@ Defaults: the comparison consent starts empty with an explicit "Alles freigeben"
 (today every domain and year is ticked). Existing accounts stay on Expert, new
 ones start on Standard, a TravPlan user keeps TravPlan — each says so in one
 sentence in the UI.
+
+## Rebuild after the Claude Design round (2026-11-01)
+
+Design source: `ClaudeDesign/handoff/2026-11-01-einstellungen-neu/` (brief, round 2) and the
+design answer (round 2, kept with the owner). Owner decisions the same day:
+save keeps the user's choice on failure; all structural moves of the design
+accepted; English routes, today's page names kept; account deletion is built —
+**immediately, no grace period** (typed confirmation, then the account and its
+data are gone); no role change, no light/dark, no `timezoneFollowsDevice`.
