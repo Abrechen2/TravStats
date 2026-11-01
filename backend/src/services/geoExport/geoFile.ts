@@ -24,7 +24,7 @@ export interface GeoWaypoint {
   lat: number;
   lon: number;
   desc?: string | null;
-  /** A free label (a place category); GPX `<type>`, KML extended data. */
+  /** A free label (a place category); written as GPX `<type>` only, KML has no plain equivalent. */
   type?: string | null;
 }
 

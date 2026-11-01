@@ -51,7 +51,8 @@ type Handler = (req: AuthRequest, res: Response) => Promise<void>;
 const handle =
   (fn: Handler) =>
   (req: AuthRequest, res: Response, next: NextFunction): void => {
-    fn(req, res).catch(next);
+    // Once the first bytes are out, a JSON error body is impossible: cut the connection.
+    fn(req, res).catch((err) => (res.headersSent ? res.destroy() : next(err)));
   };
 
 const parseId = (req: AuthRequest): string => {
@@ -160,6 +161,22 @@ rideRoute("/ferry/:id/line/export", "Ferry journey", (id, userId) =>
 
 const PLACE_PAGE = 1000;
 
+/** Write one chunk and wait for the socket to drain; false once the client is gone. */
+async function writeChunk(res: Response, chunk: string): Promise<boolean> {
+  if (res.destroyed) return false;
+  if (res.write(chunk)) return true;
+  await new Promise<void>((resolve) => {
+    const done = () => {
+      res.off("drain", done);
+      res.off("close", done);
+      resolve();
+    };
+    res.once("drain", done);
+    res.once("close", done);
+  });
+  return !res.destroyed;
+}
+
 router.get(
   "/places/export",
   authenticate,
@@ -206,19 +223,18 @@ router.get(
           "Content-Disposition",
           `attachment; filename="${geoFileName(name, format, new Date())}"`
         );
-        res.write(geoHead(format, name));
+        if (!(await writeChunk(res, geoHead(format, name)))) return;
       }
       for (const p of page) {
         const location = [p.address, p.city, p.country].filter(Boolean).join(", ");
-        res.write(
-          geoWaypoint(format, {
-            name: p.localName ? `${p.name} (${p.localName})` : p.name,
-            lat: p.lat,
-            lon: p.lon,
-            desc: location || null,
-            type: p.category,
-          })
-        );
+        const wp = geoWaypoint(format, {
+          name: p.localName ? `${p.name} (${p.localName})` : p.name,
+          lat: p.lat,
+          lon: p.lon,
+          desc: location || null,
+          type: p.category,
+        });
+        if (!(await writeChunk(res, wp))) return;
       }
       written += page.length;
       cursor = page[page.length - 1]!.id;
