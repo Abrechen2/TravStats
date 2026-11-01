@@ -18,6 +18,7 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
     <div data-testid="documents" data-categories={String(Boolean(rentalCategories))} />
   ),
 }));
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({ default: () => null }));
 vi.mock("../../components/rental/RentalRouteMap", () => ({ RentalRouteMap: () => null }));
 vi.mock("../../components/rental/RentalSuggestionBanner", () => ({
   RentalSuggestionBanner: () => null,

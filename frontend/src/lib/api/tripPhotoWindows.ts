@@ -2,11 +2,11 @@ import { api } from "./client";
 
 /**
  * Trip photos an entry shows by when and where they were taken
- * (`GET /{lodging|flights|cruises|rail|bus|ferry}/:id/trip-photos`). Read-only: the photos
+ * (`GET /{lodging|flights|cruises|rail|bus|ferry|rentals}/:id/trip-photos`). Read-only: the photos
  * belong to their trip, and the entry only looks at them.
  */
 
-export type PhotoWindowEntry = "lodging" | "flights" | "cruises" | "rail" | "bus" | "ferry";
+export type PhotoWindowEntry = "lodging" | "flights" | "cruises" | "rail" | "bus" | "ferry" | "rentals";
 
 export interface WindowPhoto {
   id: string;

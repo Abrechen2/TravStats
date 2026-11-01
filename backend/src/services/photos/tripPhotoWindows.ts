@@ -13,7 +13,8 @@ import { timezoneOfLodging } from "../../utils/stayInstant";
  *  - a flight: its trip's photos taken between departure and arrival;
  *  - a cruise: its trip's photos taken from embarkation day to the last day;
  *  - a train or bus ride, or a ferry crossing: its trip's photos taken between
- *    departure and arrival.
+ *    departure and arrival;
+ *  - a rental: its trip's photos taken between hand-over and return (forgejo#405).
  *
  * Each abstains rather than guesses: a lodging without coordinates, a flight
  * whose times are not real instants, or an entry on no trip shows nothing.
@@ -324,4 +325,63 @@ export async function ferryTripPhotos(
     select: RIDE_WINDOW_SELECT,
   });
   return ride ? rideTripPhotos(userId, ride) : null;
+}
+
+/**
+ * A rental's window: from the hand-over to the return, its trip's photos. A
+ * rental stores real instants (the station's zone is required), so only the
+ * clock can be missing: a side known by its day only abstains (`noClock`), as
+ * a date-only train ride does. What happened at the counter wins over the
+ * booked time when it is known to the minute. Null when it is not the caller's.
+ */
+export async function rentalTripPhotos(
+  userId: string,
+  rentalId: string
+): Promise<WindowResult | null> {
+  const rental = await prisma.rentalBooking.findFirst({
+    where: { id: rentalId, userId },
+    select: {
+      tripId: true,
+      pickupTime: true,
+      returnTime: true,
+      pickupPrecision: true,
+      returnPrecision: true,
+      actualPickupTime: true,
+      actualReturnTime: true,
+      actualPickupPrecision: true,
+      actualReturnPrecision: true,
+    },
+  });
+  if (!rental) return null;
+  if (!rental.tripId) return abstain("notOnTrip");
+  const from = exactSide(
+    rental.actualPickupTime,
+    rental.actualPickupPrecision,
+    rental.pickupTime,
+    rental.pickupPrecision
+  );
+  const to = exactSide(
+    rental.actualReturnTime,
+    rental.actualReturnPrecision,
+    rental.returnTime,
+    rental.returnPrecision
+  );
+  if (!from || !to) return abstain("noClock");
+  if (to < from) return abstain("notRealInstants");
+  return photosWhere(
+    userId,
+    Prisma.sql`ph.trip_id = ${rental.tripId} AND ph.taken_at BETWEEN ${from} AND ${to}`,
+    instantWindow(from, to)
+  );
+}
+
+/** The side's instant when it is known to the minute: the counter's reading, else the booking's. */
+function exactSide(
+  actual: Date | null,
+  actualPrecision: string | null,
+  booked: Date,
+  bookedPrecision: string
+): Date | null {
+  if (actual && (actualPrecision ?? "minute") === "minute") return actual;
+  return bookedPrecision === "minute" ? booked : null;
 }

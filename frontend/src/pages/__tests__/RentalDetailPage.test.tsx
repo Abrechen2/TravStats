@@ -18,6 +18,11 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
     <div data-testid="documents" data-categories={String(Boolean(rentalCategories))} />
   ),
 }));
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
+  default: ({ entry, id }: { entry: string; id: string }) => (
+    <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
+  ),
+}));
 vi.mock("../../components/rental/RentalRouteMap", () => ({ RentalRouteMap: () => null }));
 vi.mock("../../components/rental/RentalSuggestionBanner", () => ({
   RentalSuggestionBanner: () => null,
@@ -59,6 +64,20 @@ describe("RentalDetailPage", () => {
     renderPage();
     expect(await screen.findByText("#work")).toBeInTheDocument();
     expect(screen.getByText("#oneway")).toBeInTheDocument();
+  });
+
+  // forgejo#405: the rental was the one booking page without the trip photo window.
+  it("shows the trip photo window only for a rental on a trip", async () => {
+    get.mockResolvedValue(makeRental({ id: "r1", tripId: "t1" }));
+    renderPage();
+    expect((await screen.findByTestId("photo-window-stub")).textContent).toBe("rentals:r1");
+  });
+
+  it("offers no photo window for a rental on no trip", async () => {
+    get.mockResolvedValue(makeRental({ id: "r1", tripId: null }));
+    renderPage();
+    await screen.findByTestId("documents");
+    expect(screen.queryByTestId("photo-window-stub")).toBeNull();
   });
 
   // forgejo#240

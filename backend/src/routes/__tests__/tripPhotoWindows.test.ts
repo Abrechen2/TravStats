@@ -264,6 +264,60 @@ describe("trip photos by when and where", () => {
     expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
   });
 
+  // forgejo#405: rental was the one booking page without the photo window.
+  it("shows a rental its trip's photos between pick-up and return", async () => {
+    const station = {
+      pickupStationName: "Rome Termini",
+      pickupLat: 41.9,
+      pickupLon: 12.5,
+      pickupTimezone: "Europe/Rome",
+      returnStationName: "Rome Termini",
+      returnLat: 41.9,
+      returnLon: 12.5,
+      returnTimezone: "Europe/Rome",
+    };
+    const rental = await prisma.rentalBooking.create({
+      data: {
+        userId,
+        tripId,
+        provider: "Testcar",
+        ...station,
+        pickupTime: new Date("2024-05-01T08:00:00Z"),
+        returnTime: new Date("2024-05-01T10:00:00Z"),
+        status: "completed",
+      },
+    });
+    const url = `/api/v1/rentals/${rental.id}/trip-photos`;
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([ids.inFlight]);
+
+    // Known by its day only: a whole day of photos is not "taken in the car".
+    await prisma.rentalBooking.update({
+      where: { id: rental.id },
+      data: { pickupPrecision: "day" },
+    });
+    const clockless = await request(app).get(url).set("Cookie", cookie);
+    expect(clockless.body.data).toMatchObject({ total: 0, reason: "noClock" });
+
+    // The counter's own reading beats the booking when it is exact.
+    await prisma.rentalBooking.update({
+      where: { id: rental.id },
+      data: {
+        actualPickupTime: new Date("2024-05-01T06:30:00Z"),
+        actualPickupPrecision: "minute",
+      },
+    });
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([
+      ids.beforeFlight,
+      ids.inFlight,
+    ]);
+
+    await prisma.rentalBooking.update({ where: { id: rental.id }, data: { tripId: null } });
+    const off = await request(app).get(url).set("Cookie", cookie);
+    expect(off.body.data).toMatchObject({ total: 0, reason: "notOnTrip" });
+
+    expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
+  });
+
   it("shows a cruise its trip's photos from its first to its last day", async () => {
     const cruise = await prisma.cruise.create({
       data: {
