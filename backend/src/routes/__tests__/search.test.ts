@@ -266,7 +266,11 @@ describe("GET /api/v1/search", () => {
     });
     try {
       const res = await search({ q: "dated roadtrip", domains: "roadtrip" });
-      expect(res.body.data.hits[0].date).toEqual({ date: "2026-07-04", zone: null, precision: "day" });
+      expect(res.body.data.hits[0].date).toEqual({
+        date: "2026-07-04",
+        zone: null,
+        precision: "day",
+      });
     } finally {
       spy.mockRestore();
       await prisma.userSettings.update({
