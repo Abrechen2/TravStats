@@ -27,9 +27,11 @@ import { PathLayer } from "@deck.gl/layers";
  * test below covers that half) -- this test fails either way.
  */
 
-const { capturedOverlayProps, mapGlOnLoadRef } = vi.hoisted(() => ({
+const { capturedOverlayProps, mapGlOnLoadRef, addedSources, addedLayers } = vi.hoisted(() => ({
   capturedOverlayProps: [] as Array<{ layers: Layer[] }>,
   mapGlOnLoadRef: { current: null as (() => void) | null },
+  addedSources: vi.fn(),
+  addedLayers: vi.fn(),
 }));
 
 // A fake MapLibre map instance -- just enough surface for the effects
@@ -44,9 +46,24 @@ function makeFakeMaplibreMap(): Record<string, unknown> {
     getZoom: vi.fn(() => 2),
     getBearing: vi.fn(() => 0),
     getPitch: vi.fn(() => 0),
-    getCanvas: vi.fn(() => ({ style: {} })),
+    getCanvas: vi.fn(() => ({
+      style: {},
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
     getContainer: vi.fn(() => document.createElement("div")),
     jumpTo: vi.fn(),
+    // The native-layer surface (forgejo#331): a style with nothing on it yet.
+    getStyle: vi.fn(() => ({ layers: [] })),
+    getLayer: vi.fn(() => undefined),
+    getSource: vi.fn(() => undefined),
+    addSource: addedSources,
+    addLayer: addedLayers,
+    removeLayer: vi.fn(),
+    removeSource: vi.fn(),
+    queryRenderedFeatures: vi.fn(() => []),
+    removeFeatureState: vi.fn(),
+    setFeatureState: vi.fn(),
   };
 }
 
@@ -149,6 +166,8 @@ const EXTRA_LAYER: Layer = new PathLayer({ id: "dashboard-tour-paths-test", data
 
 beforeEach(() => {
   capturedOverlayProps.length = 0;
+  addedSources.mockClear();
+  addedLayers.mockClear();
   mapGlOnLoadRef.current = null;
   window.localStorage.clear();
 });
@@ -172,6 +191,33 @@ describe("GlobeView: extraLayers reach the deck.gl overlay", () => {
     await waitFor(() => expect(capturedOverlayProps.length).toBeGreaterThan(0));
     const lastLayers = capturedOverlayProps[capturedOverlayProps.length - 1].layers;
     expect(lastLayers.map((l) => l.id)).not.toContain(EXTRA_LAYER.id);
+  });
+});
+
+describe("GlobeView: native ground layers (forgejo#331)", () => {
+  it("draws a pixel-width caller line as a native layer, not on deck.gl", async () => {
+    const line = new PathLayer({
+      id: "dashboard-rail-paths",
+      data: [
+        {
+          path: [
+            [10, 50],
+            [11, 51],
+          ],
+        },
+      ],
+      getPath: (d: { path: [number, number][] }) => d.path,
+      getColor: [10, 20, 30, 255],
+      getWidth: 3,
+      widthUnits: "pixels",
+    });
+    render(<GlobeView flights={[]} cruises={[]} extraLayers={[line]} />);
+
+    await waitFor(() => expect(addedLayers).toHaveBeenCalled());
+    const ids = addedLayers.mock.calls.map(([spec]) => (spec as { id: string }).id);
+    expect(ids).toContain("dashboard-rail-paths");
+    const lastLayers = capturedOverlayProps[capturedOverlayProps.length - 1].layers;
+    expect(lastLayers.map((l) => l.id)).not.toContain("dashboard-rail-paths");
   });
 });
 

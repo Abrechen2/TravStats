@@ -20,15 +20,33 @@ export const EARTH_RADIUS_M = 6_371_000;
 // km for long-haul, which towered above the globe and created the
 // "Saturn ring" look the user reported.
 //
-// Formula: 12 % of great-circle distance, capped at 15 % of earth
-// radius. Yields:
+// Formula: 4 % of great-circle distance (was 12 % until forgejo#331, owner
+// 2026-10-27), capped at 15 % of earth radius. Arcs are the only thing still
+// drawn above the ground now that dots and routes are native layers, and a
+// lower bow keeps them reading as routes rather than rings. Yields:
 //
-//   500 km   →   60 km peak
-//   2 500 km →  300 km
-//   8 000 km →  960 km
-//  15 000 km → 1 800 km
+//   500 km   →   20 km peak
+//   2 500 km →  100 km
+//   8 000 km →  320 km
+//  15 000 km →  600 km
 //  ≥19 800 km caller skips (antipodal — degenerate great-circle)
-export const ARC_ALTITUDE_FRACTION = 0.12;
+export const ARC_ALTITUDE_FRACTION = 0.04;
+// An arc's ends sit this far above the ground rather than on it: at altitude
+// exactly 0 they share depth values with the globe mesh and z-fight (a few km
+// is invisible at any zoom a person looks at an airport).
+export const ARC_BASE_OFFSET_M = 3_000;
+const ARC_BASE_OFFSET_MIN_M = 100;
+
+/**
+ * The base offset for a camera zoom. 3 km clears the depth noise of a
+ * whole-globe view, but at city zoom it is hundreds of pixels — an arc's end
+ * would hang visibly above its airport, the very float the native dots remove.
+ * Depth precision improves as the camera comes in, so the offset halves per
+ * zoom level past 4, down to a 100 m floor. Whole zoom levels only, so the
+ * waypoints are not re-tessellated on every scroll tick.
+ */
+export const arcBaseOffsetM = (zoom: number): number =>
+  Math.max(ARC_BASE_OFFSET_MIN_M, ARC_BASE_OFFSET_M / 2 ** Math.max(0, Math.round(zoom) - 4));
 export const ARC_ALTITUDE_CAP_M = EARTH_RADIUS_M * 0.15;
 
 // Distance threshold above which a city pair is "near-antipodal" and
@@ -92,7 +110,7 @@ export const calculateDistance = (
  * Great-circle slerp between two [lng, lat] points with a parabolic
  * z-altitude profile, returning N+1 [lng, lat, altitudeMeters]
  * waypoints along the geodesic. Altitude peaks at the midpoint and
- * tapers to zero at the endpoints — gives the classic Flightradar /
+ * tapers to `baseOffsetM` (default 0: on the surface) at the endpoints — gives the classic Flightradar /
  * three.js-GlobeView arc bow.
  *
  * Why we need this: deck.gl ArcLayer with `greatCircle: true` computes
@@ -111,7 +129,8 @@ export const greatCircleWaypoints = (
   from: [number, number],
   to: [number, number],
   peakAltitudeM: number,
-  steps = 48
+  steps = 48,
+  baseOffsetM = 0
 ): [number, number, number][] => {
   const toRad = (x: number): number => (x * Math.PI) / 180;
   const toDeg = (x: number): number => (x * 180) / Math.PI;
@@ -131,8 +150,8 @@ export const greatCircleWaypoints = (
   const c = 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(Math.max(0, 1 - aH)));
   if (c < 1e-9)
     return [
-      [lng1, lat1, 0],
-      [lng2, lat2, 0],
+      [lng1, lat1, baseOffsetM],
+      [lng2, lat2, baseOffsetM],
     ];
 
   const sinC = Math.sin(c);
@@ -160,7 +179,7 @@ export const greatCircleWaypoints = (
     while (lng - prevLng > 180) lng -= 360;
     while (lng - prevLng < -180) lng += 360;
     prevLng = lng;
-    const altitude = peakAltitudeM * Math.sin(Math.PI * t);
+    const altitude = baseOffsetM + peakAltitudeM * Math.sin(Math.PI * t);
     out.push([lng, lat, altitude]);
   }
   return out;

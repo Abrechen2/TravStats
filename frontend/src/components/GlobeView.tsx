@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL, { type MapRef } from "react-map-gl/maplibre";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
 } from "./Globe/EarthOcclusionExtension";
+import { createCursorMux, useNativeGlobe } from "./Globe/native/useNativeGlobe";
+import { DeckGLOverlay } from "./Globe/DeckGLOverlay";
 import {
   LITE_AUTO_ARC_THRESHOLD,
   LITE_AUTO_CRUISE_THRESHOLD,
   calculateDistance,
+  arcBaseOffsetM,
   getArcPeakAltitudeMeters,
   getArcSteps,
   greatCircleWaypoints,
@@ -181,6 +183,11 @@ const AUTO_ROTATE_DEG_PER_SEC = 4;
 const AUTO_ROTATE_PAUSE_MS = 3500;
 const AUTO_ROTATE_RAMP_MS = 800;
 
+// Stable empty defaults: a fresh `[]` per render would rebuild every native source.
+const NO_LAYERS: Layer[] = [];
+const NO_LODGINGS: readonly Lodging[] = [];
+const NO_PLACES: readonly Place[] = [];
+
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 25,
@@ -188,45 +195,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-interface DeckOverlayProps {
-  layers: Layer[];
-  onHover: (info: PickingInfo) => void;
-}
-
-function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
-  // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses MapLibre's globe
-  // projection matrices directly — without it, the overlay falls back to mercator and the
-  // layers detach into a flat strip floating beside the globe whenever the camera is rotated.
-  //
-  // No `position` here: MapboxOverlay isn't a corner control, it's a
-  // render-pipeline integration, so naming a corner for it reads as a
-  // category error. It is NOT a lifecycle fix, which this comment used to
-  // imply — measured in @deck.gl/mapbox: `getDefaultPosition()` returns
-  // "top-left" and MapLibre's `addControl` falls back to it, so omitting the
-  // option and passing `{position: "top-left"}` are the same call. The flat
-  // map, the cruise map and the lodging mini-map all pass it and are fine.
-  //
-  // No `getTooltip` either: GlobeView renders its own rich React-state
-  // tooltip via `onAirportHover` / `onPortHover` / `onArcHover` /
-  // `onCruisePathHover`. Wiring `buildMarkerTooltip` here in addition
-  // would stack two bubbles on the same hover (a deck.gl-rendered name
-  // tooltip behind, and the React rich tooltip on top).
-  //
-  // Caller must gate this component until MapLibre is confirmed in
-  // globe projection — see `mapReady` in GlobeView.
-  const overlay = useControl<MapboxOverlay>(
-    () =>
-      new MapboxOverlay({
-        layers,
-        pickingRadius: 5,
-        interleaved: true,
-        onHover,
-      })
-  );
-  overlay.setProps({ layers, onHover });
-  return null;
-}
 
 export default function GlobeView({
   flights = [],
@@ -237,10 +205,10 @@ export default function GlobeView({
   onEdit,
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
-  extraLayers = [],
-  lodgings = [],
+  extraLayers = NO_LAYERS,
+  lodgings = NO_LODGINGS,
   onLodgingOpen,
-  places = [],
+  places = NO_PLACES,
   onPlaceOpen,
   placeListColors,
   placeListLabels,
@@ -389,20 +357,23 @@ export default function GlobeView({
   // Tooltip lives in a leaf component (HoverTooltip) so onHover updates at
   // 60–120 Hz don't re-render the whole GlobeView tree. Imperative API only.
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
+  const hideTooltip = useCallback((): void => tooltipRef.current?.hide(), []);
 
   // Hand cursor over a pickable object (#247). Written straight onto MapLibre's
   // canvas rather than through React state, for the same reason the tooltip
   // above is imperative: this fires on every mouse move across the globe, and
   // a state flip here would re-render the whole tree. Guarded by a ref so the
   // DOM write only happens when the pointer actually crosses an edge.
-  const overCursorRef = useRef(false);
-  const handleDeckHover = useCallback((info: PickingInfo): void => {
-    const over = Boolean(info?.object);
-    if (over === overCursorRef.current) return;
-    overCursorRef.current = over;
-    const canvas = mapRef.current?.getMap().getCanvas();
-    if (canvas) canvas.style.cursor = over ? "pointer" : "";
-  }, []);
+  const cursorMux = useMemo(() => createCursorMux(() => mapRef.current?.getMap().getCanvas()), []);
+  const getDeckCursor = useCallback(
+    ({ isDragging, isHovering }: { isDragging: boolean; isHovering: boolean }): string =>
+      isDragging ? "grabbing" : isHovering || cursorMux.isOver() ? "pointer" : "grab",
+    [cursorMux]
+  );
+  const handleDeckHover = useCallback(
+    (info: PickingInfo): void => cursorMux.set("deck", Boolean(info?.object)),
+    [cursorMux]
+  );
   // Map zoom — used as a level-of-detail signal for arc altitude. At
   // low zoom the standard altitude-based arcs look great; at high zoom
   // they become horizontal streaks across the screen because the
@@ -420,6 +391,8 @@ export default function GlobeView({
   // the screen at street level.
   const altitudeFactor =
     Math.round(Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20) / 20;
+  // Per whole zoom level, not per scroll tick (`mapZoom` moves on every tick).
+  const arcBaseOffset = arcBaseOffsetM(mapZoom);
 
   // EarthOcclusionExtension props are static — the extension reads the
   // live camera (lng / lat / zoom) from `viewport` inside its draw()
@@ -699,8 +672,8 @@ export default function GlobeView({
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
   const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(
-    () => buildGlobeArcData(filteredFlights, minRouteCount, lite, altitudeFactor),
-    [filteredFlights, minRouteCount, lite, altitudeFactor]
+    () => buildGlobeArcData(filteredFlights, minRouteCount, lite, altitudeFactor, arcBaseOffset),
+    [filteredFlights, minRouteCount, lite, altitudeFactor, arcBaseOffset]
   );
 
   const airportPoints = useMemo<PointDatum[]>(
@@ -825,7 +798,8 @@ export default function GlobeView({
         [start[0], start[1]],
         [end[0], end[1]],
         peakAltitudeM,
-        getArcSteps(distanceKm, lite)
+        getArcSteps(distanceKm, lite),
+        arcBaseOffset
       ),
       count: 1,
       flightIds: [latest.properties.id],
@@ -838,7 +812,7 @@ export default function GlobeView({
       flownCount: isFlown ? 1 : 0,
       scheduledCount: isScheduled ? 1 : 0,
     };
-  }, [sliderMode, filteredFlights, lite, altitudeFactor]);
+  }, [sliderMode, filteredFlights, lite, altitudeFactor, arcBaseOffset]);
 
   // Live stats overlay: derived from the same slider-filtered data as
   // the layers, so the numbers move in lockstep with the time slider.
@@ -907,23 +881,6 @@ export default function GlobeView({
       focus: focusOnGlobe,
       setPinned,
     });
-
-  // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
-  // and pick a zoom level that keeps both endpoints visible without
-  // teleporting too close on short hops.
-  const flyToArc = useCallback((d: ArcDatum): void => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const lngDiff = d.to[0] - d.from[0];
-    const wrappedTo = lngDiff > 180 ? d.to[0] - 360 : lngDiff < -180 ? d.to[0] + 360 : d.to[0];
-    const midLng = (d.from[0] + wrappedTo) / 2;
-    const midLat = (d.from[1] + d.to[1]) / 2;
-    const distanceKm = calculateDistance(d.from[1], d.from[0], d.to[1], d.to[0]);
-    // Short hops get more zoom; long-haul stays zoomed-out so both
-    // endpoints fit. Tuned visually to feel like the old fly-to-arc.
-    const zoom = Math.max(1.4, Math.min(4, 5.5 - Math.log2(distanceKm / 100)));
-    map.flyTo({ center: [midLng, midLat], zoom, duration: 1500 });
-  }, []);
 
   // Hover content lives in `map/cards/hoverCardHtml.ts` — the flat map draws
   // the same four tooltips, and it had its own near-twin of each until the
@@ -1053,87 +1010,86 @@ export default function GlobeView({
     ]
   );
 
+  // The lines of every domain the user switched off go; markers and labels stay.
+  const routesVisible = useMapRoutesStore(effectiveRoutes);
+
+  // Everything that lies on the ground is a native MapLibre layer on the globe
+  // projection, so it sits on the surface (forgejo#331). deck.gl keeps the
+  // flight arcs and whichever caller layers cannot be drawn natively.
+  const native = useNativeGlobe({
+    mapRef,
+    mapReady,
+    input: {
+      nightCells: nightCellsData,
+      showNight,
+      cruisePaths,
+      cruiseWidthScale: cruiseRouteWidth,
+      airportPoints,
+      airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
+      airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
+      portPoints,
+      portColor: portColor ?? DEFAULT_PORT_COLOR,
+      portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
+      lodgings,
+      lodgingColors: lodgingColorConfig,
+      lodgingRadius: GLOBE_MARKER_BASE_PX * lodgingMarkerSize,
+      places,
+      placeColors: placeColorConfig,
+      placeListColors,
+      placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
+      extraLayers,
+      routesVisible,
+      lite,
+    },
+    hover: {
+      airport: onAirportHover,
+      port: onPortHover,
+      cruise: onCruisePathHover,
+      pin: onPinHover,
+    },
+    hideTooltip: hideTooltip,
+    setPinned,
+    onOverChange: (over) => cursorMux.set("native", over),
+  });
+
   const drawnLayers = useMemo<Layer[]>(
     () => [
       ...buildGlobeLayers({
         arcsData,
         antipodalArcs,
-        cruisePaths,
-        airportPoints,
-        portPoints,
         headFlightArc,
         activeQuartile,
         lite,
         occlusionExt,
         occlusionProps,
         onArcHover,
-        onAirportHover,
-        onPortHover,
-        onCruisePathHover,
-        flyToArc,
+        isOverNative: native.isOverNative,
         setPinned,
         flightColorConfig,
         arcWidthScale: flightRouteWidth,
-        cruiseArcWidthScale: cruiseRouteWidth,
-        airportColor: airportColor ?? DEFAULT_AIRPORT_COLOR,
-        portColor: portColor ?? DEFAULT_PORT_COLOR,
-        airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
-        portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
-        lodgings,
-        lodgingColors: lodgingColorConfig,
-        lodgingRadius: GLOBE_MARKER_BASE_PX * lodgingMarkerSize,
-        places,
-        placeColors: placeColorConfig,
-        placeListColors,
-        placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
-        onPinHover,
-        nightCells: nightCellsData,
-        showNight,
       }),
-      // Appended, never merged into buildGlobeLayers itself -- these are the
-      // caller's own layers (e.g. dashboard-wide tour paths). They DO get the
-      // occlusion extension every globe-built layer carries, or a tour on the
-      // far side of the sphere draws through it — and the shared tooltip.
-      ...occludeExtraLayers(extraLayers, occlusionExt, occlusionProps, onPinHover),
+      // The caller's layers that could not go native (heatmaps, polygons, icon
+      // and station-label layers). They DO get the occlusion extension every
+      // globe-built layer carries, or one on the far side of the sphere draws
+      // through it — and the shared tooltip.
+      ...occludeExtraLayers(native.remainingExtras, occlusionExt, occlusionProps, onPinHover),
     ],
     [
       arcsData,
       antipodalArcs,
-      cruisePaths,
-      airportPoints,
-      portPoints,
       activeQuartile,
       lite,
       headFlightArc,
-      flyToArc,
       onArcHover,
-      onAirportHover,
-      onCruisePathHover,
-      onPortHover,
+      native.isOverNative,
+      native.remainingExtras,
       occlusionExt,
       occlusionProps,
-      extraLayers,
       flightColorConfig,
       flightRouteWidth,
-      cruiseRouteWidth,
-      airportColor,
-      portColor,
-      flightMarkerSize,
-      cruiseMarkerSize,
-      lodgings,
-      lodgingColorConfig,
-      lodgingMarkerSize,
-      places,
-      placeColorConfig,
-      placeListColors,
-      placeMarkerSize,
       onPinHover,
-      nightCellsData,
-      showNight,
     ]
   );
-  // The lines of every domain the user switched off go; markers and labels stay.
-  const routesVisible = useMapRoutesStore(effectiveRoutes);
   const layers = useMemo(
     () => withoutHiddenRoutes(drawnLayers, routesVisible),
     [drawnLayers, routesVisible]
@@ -1171,7 +1127,9 @@ export default function GlobeView({
         touchPitch={false}
         style={{ width: "100%", height: "100%" }}
       >
-        {mapReady && <DeckGLOverlay layers={layers} onHover={handleDeckHover} />}
+        {mapReady && (
+          <DeckGLOverlay layers={layers} onHover={handleDeckHover} getCursor={getDeckCursor} />
+        )}
       </MapGL>
 
       <GlobeStatsCard stats={liveStats} t={t} />
