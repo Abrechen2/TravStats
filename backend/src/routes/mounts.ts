@@ -169,6 +169,7 @@ import geoRoutes from "./geo";
 import geoServerRoutes from "./geoServer";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
+import geoExportRoutes from "./geoExport";
 import syncRoutes from "./sync";
 import syncPreconditionRoutes from "./syncPreconditions";
 import dataQualityAfterCreateRoutes from "./dataQualityAfterCreate";
@@ -249,6 +250,10 @@ export const apiMounts: ApiMount[] = [
   // Trip photos on a stay, a flight and a cruise — read-only, on /api/v1 with
   // per-route middleware; the extra path segment keeps it off the `/:id` routes.
   { id: "tripPhotoWindows", base: "/api/v1", router: tripPhotoWindowRoutes },
+  // GPX/KML downloads (forgejo#402): a flight or cruise track, a ride's line,
+  // places as waypoints. Before `places`, whose '/:id' would answer
+  // `/places/export` as a place; per-route middleware, like the entry above.
+  { id: "geoExport", base: "/api/v1", router: geoExportRoutes },
   // Before `flights`, whose `GET /:id` would otherwise take the word
   // "entry-suggestions" for a flight id.
   {
