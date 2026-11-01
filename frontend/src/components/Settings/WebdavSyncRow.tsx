@@ -5,7 +5,6 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { logger } from "../../lib/logger";
 import { profileWallClock } from "../../lib/profileInstant";
 import { token } from "../ui/tokens";
-import Button from "../ui/Button";
 import {
   ActionControl,
   ChoiceControl,
@@ -26,7 +25,6 @@ import {
   type WebdavSyncUpdate,
 } from "../../lib/api/webdavSync";
 import { useDependency, useRowCopy } from "./rowCopy";
-import WebdavConnectionForm from "./WebdavConnectionForm";
 
 /** ISO date and minute on the profile clock, as the backup row writes it. */
 function isoMinute(iso: string): string {
@@ -51,16 +49,9 @@ const KEEP_MAX = 30;
  */
 export default function WebdavSyncRow({
   alwaysExpert = false,
-  withConnection = false,
 }: {
   /** Draw the expert row ("Versionen behalten") whatever the level is. */
   alwaysExpert?: boolean;
-  /**
-   * Draw the connection form here. The design keeps it on Services → Backup
-   * target (the Services page mounts `WebdavSyncPanel`); the Data page names the
-   * missing connection and jumps there.
-   */
-  withConnection?: boolean;
 }): JSX.Element | null {
   const { t } = useTranslation(["settings", "settingsRows"]);
   const row = useRowCopy("data");
@@ -71,9 +62,7 @@ export default function WebdavSyncRow({
   const go = useGuardedNavigate();
   const [status, setStatus] = useState<WebdavSyncStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState<"save" | "run" | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"run" | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
   const [runMessage, setRunMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [keepDraft, setKeepDraft] = useState<string | null>(null);
@@ -120,20 +109,6 @@ export default function WebdavSyncRow({
   const keep = useSettingWrite<number>("data.webdav.keep", status?.keepVersions ?? 5, (v) =>
     send({ keepVersions: v })
   );
-
-  const saveConnection = async (patch: WebdavSyncUpdate): Promise<boolean> => {
-    setBusy("save");
-    setFormError(null);
-    try {
-      setStatus(await webdavSyncApi.update(patch));
-      return true;
-    } catch (err) {
-      setFormError(errorText(err));
-      return false;
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const runNow = async (): Promise<void> => {
     setBusy("run");
@@ -199,24 +174,10 @@ export default function WebdavSyncRow({
         dependency={
           configured || status.enabled
             ? undefined
-            : dependency("noWebdav", () =>
-                withConnection ? setOpen(true) : go("/settings/services#webdav")
-              )
+            : dependency("noWebdav", () => go("/settings/services#webdav"))
         }
         control={<SwitchControl checked={enabled.value} onChange={enabled.choose} />}
-      >
-        {withConnection && (
-          <div>
-            <Button onClick={() => setOpen((o) => !o)} aria-expanded={open} disabled={isDemo}>
-              {open ? t("settings:webdavSync.hide") : t("settings:webdavSync.setup")}
-            </Button>
-          </div>
-        )}
-        {withConnection && open && !isDemo && (
-          <WebdavConnectionForm status={status} busy={busy === "save"} onSave={saveConnection} />
-        )}
-        {formError && <ErrorLine>{formError}</ErrorLine>}
-      </SettingItem>
+      />
       <SettingItem
         title={takt.title}
         save={schedule}
@@ -328,9 +289,4 @@ function LastResult({
       })}
     </span>
   );
-}
-
-/** The Services page's WebDAV card: the rows and the connection form together. */
-export function WebdavSyncPanel(): JSX.Element {
-  return <WebdavSyncRow withConnection alwaysExpert />;
 }

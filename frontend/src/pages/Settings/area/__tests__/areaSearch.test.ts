@@ -82,19 +82,19 @@ describe("the settings search reads the registry", () => {
 });
 
 describe("a row of the server's side of a service card", () => {
-  it("highlights and reveals the server's section, not the account's", () => {
+  it("lands on the services page's one section, whichever side of the card the row is", () => {
     const hit = find("Client-ID des Servers").find((h) => h.rowId === "oskidI")!;
     expect(hit).toBeDefined();
-    expect(hit.highlight).toBe("instanceServices");
+    expect(hit.highlight).toBe("externalServices");
   });
 });
 
 describe("which mount answers for a service card", () => {
-  it("gives a server-only card (geocoder) to the server's section for an admin", () => {
-    expect(mountFor("services", "geocoder", null, true)?.id).toBe("instanceServices");
+  it("gives a server-only card (geocoder) to the services section for an admin", () => {
+    expect(mountFor("services", "geocoder", null, true)?.id).toBe("externalServices");
   });
 
-  it("gives the same card to the account's catalogue when the account is no admin", () => {
+  it("gives the same card to the same section when the account is no admin", () => {
     expect(mountFor("services", "geocoder", null, false)?.id).toBe("externalServices");
   });
 });

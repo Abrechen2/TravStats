@@ -1,0 +1,251 @@
+import { useRef, useState, type JSX } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
+import {
+  ActionControl,
+  Dependency,
+  ErrorLine,
+  SettingItem,
+  SwitchControl,
+  useSettingWrite,
+  SettingWriteError,
+} from "../ui/settings";
+import { externalServicesApi, type AccountService } from "../../lib/api/externalServices";
+import AccountConsentDialog from "../ExternalServices/AccountConsentDialog";
+import { serviceName } from "../ExternalServices/serviceText";
+import StravaConnectionCard from "../Settings/StravaConnectionCard";
+import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
+import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
+import DawarichProviderHint from "../Settings/DawarichProviderHint";
+import FieldsGroup from "./FieldsGroup";
+import TestRow from "./TestRow";
+import WebdavAccountRows from "./WebdavAccountRows";
+import { useServices } from "./servicesContext";
+import type { ServiceCardDef } from "./serviceCards";
+import { useDemoLock } from "./useLockFor";
+
+function Strava({ onDisconnected }: { onDisconnected: () => void }): JSX.Element {
+  const wasConnected = useRef(false);
+  return (
+    <StravaConnectionCard
+      isAdmin={false}
+      onStatus={(status) => {
+        if (wasConnected.current && !status.connected) onDisconnected();
+        wasConnected.current = status.connected;
+      }}
+    />
+  );
+}
+
+function MineRow({
+  service,
+  adminOff,
+}: {
+  service: AccountService;
+  adminOff: boolean;
+}): JSX.Element {
+  const { t } = useTranslation(["settingsRows"]);
+  const { account } = useServices();
+  const demo = useDemoLock();
+  const write = useSettingWrite<boolean>(
+    `services.${service.id}.mine`,
+    !service.accountDisabled,
+    async (on) => {
+      try {
+        await externalServicesApi.accountUpdate(service.id, { accountDisabled: !on });
+      } catch {
+        throw new SettingWriteError("rejected");
+      }
+      await account.reload();
+    }
+  );
+  return (
+    <SettingItem
+      title={t("settingsRows:services.tpl.mine.t")}
+      help={t("settingsRows:services.tpl.mine.h")}
+      save={write}
+      locked={
+        demo ??
+        (adminOff
+          ? { why: "adminForbade", reason: t("settingsRows:services.tpl.on.us") }
+          : undefined)
+      }
+      control={<SwitchControl checked={write.value} onChange={write.choose} />}
+    />
+  );
+}
+
+/**
+ * The account's half of a card ("Für dein Konto"): use it, bring your own key
+ * or connection, agree to cloud AI. Credentials written here go to
+ * `PUT /settings/external-services/:id` — never to the server's group.
+ */
+export default function AccountSide({
+  card,
+  service,
+}: {
+  card: ServiceCardDef;
+  service: AccountService | undefined;
+}): JSX.Element | null {
+  const { t } = useTranslation(["settingsRows", "externalServices", "settings"]);
+  const { account } = useServices();
+  const demo = useDemoLock();
+  const data = account.data;
+  const uses = (u: string): boolean => (card.use as readonly string[]).includes(u);
+  const consent = data?.aiConsents.find((c) => c.id === card.id);
+  const blocked = data?.blocked.find((b) => b.id === card.id);
+  const feedback = account.feedback[card.id];
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [dawarichSaved, setDawarichSaved] = useState(0);
+  const name = serviceName(t, card.id);
+
+  const hasRows = uses("mine") || uses("ownKey") || uses("aiConsent") || uses("allowConn");
+  if (!hasRows) return null;
+
+  const blockedLine = blocked
+    ? t(
+        blocked.reason === "disabled"
+          ? "settingsRows:services.tpl.on.us"
+          : blocked.reason === "keysForbidden"
+            ? "settingsRows:services.tpl.allowKeys.us"
+            : "settingsRows:services.tpl.allowConn.us"
+      )
+    : null;
+
+  const body: JSX.Element[] = [];
+  if (uses("aiConsent")) {
+    const consented = consent?.consentedAt != null;
+    body.push(
+      <SettingItem
+        key="consent"
+        title={t("settingsRows:services.tpl.aiConsent.t")}
+        sub={t("settingsRows:services.tpl.aiConsent.s")}
+        help={t("settingsRows:services.tpl.aiConsent.h")}
+        locked={demo}
+        dependency={consent ? undefined : { reason: t("settings:blocks.dep.aiNotAllowed.reason") }}
+        control={
+          <ActionControl
+            label={
+              consented
+                ? t("settingsRows:services.ui.withdraw")
+                : t("settingsRows:services.tpl.aiConsent.btn")
+            }
+            busy={account.isBusy(card.id)}
+            onClick={() => {
+              if (!consent) return;
+              if (consented) void account.setConsent(consent, false);
+              else setConsentOpen(true);
+            }}
+          />
+        }
+      >
+        {consented ? (
+          <p role="status" className="t-caption" style={{ margin: 0 }}>
+            {t("settingsRows:services.tpl.aiConsent.res")}
+          </p>
+        ) : null}
+      </SettingItem>
+    );
+  } else if (service) {
+    if (uses("mine")) {
+      body.push(
+        <MineRow
+          key="mine"
+          service={service}
+          adminOff={service.effectiveSource === "off" && !service.accountDisabled}
+        />
+      );
+    }
+    if (card.id === "strava") {
+      body.push(<Strava key="strava" onDisconnected={() => void account.reload()} />);
+    } else if (card.id === "webdav") {
+      body.push(<WebdavAccountRows key="webdav" />);
+    } else if (service.fields.length > 0) {
+      body.push(
+        <FieldsGroup
+          key="fields"
+          id={`services.${card.id}.account`}
+          label={t("settingsRows:services.ui.accountGroup", { name })}
+          serviceId={card.id}
+          fields={service.fields}
+          secretTemplate="ownKey"
+          tests={uses("test")}
+          lock={demo}
+          errorText={null}
+          write={async (changes) => {
+            // The refusal is worded on the card (`feedback`); the group keeps the draft.
+            const ok = await account.save(card.id, { fields: changes }, uses("test"));
+            if (!ok) throw new Error("save refused");
+            if (card.id === "dawarich") setDawarichSaved((n) => n + 1);
+          }}
+          onRemoveSecret={async (key) => {
+            await account.save(card.id, { fields: { [key]: "" } }, false);
+          }}
+        />
+      );
+    }
+    if (uses("test") && service.configured && service.effectiveSource === "account") {
+      body.push(
+        <TestRow
+          key="test"
+          lastTest={service.lastTest}
+          lock={demo}
+          name={name}
+          run={() => externalServicesApi.accountTest(card.id)}
+          onDone={() => account.reload()}
+        />
+      );
+    }
+    if (card.id === "dawarich")
+      body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
+    if (card.id === "immich") {
+      body.push(<PhotoJourneyNightlyScanCard key="nightly" />);
+      body.push(<VisitPhotoImmichLink key="visit" connected />);
+    }
+  } else if (blockedLine) {
+    body.push(<Dependency key="blocked" reason={blockedLine} />);
+  }
+
+  const confirmConsent = async (): Promise<void> => {
+    if (!consent) return;
+    const failure = await account.setConsent(consent, true);
+    if (failure) {
+      setConsentError(failure);
+      return;
+    }
+    setConsentOpen(false);
+    setConsentError(null);
+  };
+
+  return (
+    <div
+      className="flex flex-col"
+      style={{ gap: "var(--ts-space-md)" }}
+      data-service-side="account"
+    >
+      <h3 className="t-card-title">{t("settingsRows:services.ui.accountHead")}</h3>
+      {body}
+      {feedback ? (
+        feedback.kind === "error" ? (
+          <ErrorLine>{feedback.text}</ErrorLine>
+        ) : (
+          <p role="status" className="t-caption" style={{ margin: 0 }}>
+            {feedback.text}
+          </p>
+        )
+      ) : null}
+      {consentOpen ? (
+        <AccountConsentDialog
+          name={name}
+          busy={account.isBusy(card.id)}
+          error={consentError}
+          onConfirm={() => void confirmConsent()}
+          onClose={() => {
+            setConsentOpen(false);
+            setConsentError(null);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}

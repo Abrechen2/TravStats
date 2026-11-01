@@ -38,6 +38,11 @@ interface SettingItemProps {
    * focusable, and the reason is written under the row.
    */
   locked?: { why: LockReason; reason: ReactNode };
+  /**
+   * The DOM id of the control, when something outside the row has to find it
+   * (a setup checklist that focuses the field a step leads to).
+   */
+  controlId?: string;
   /** Group rows: this value differs from the saved one. */
   changed?: boolean;
   /** Search hit or deep link (`proBg`). */
@@ -68,13 +73,14 @@ export function SettingItem({
   dependency,
   job,
   locked,
+  controlId: controlIdOverride,
   changed = false,
   highlighted = false,
   children,
 }: SettingItemProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const uid = useId();
-  const controlId = `${uid}-control`;
+  const controlId = controlIdOverride ?? `${uid}-control`;
   const errorId = `${uid}-error`;
   const requiredId = `${uid}-required`;
   const dependencyId = `${uid}-dependency`;

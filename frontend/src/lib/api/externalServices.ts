@@ -106,6 +106,7 @@ export interface AccountService {
   accountDisabled: boolean;
   configured: boolean;
   lastTest: ServiceLastTest | null;
+  quota?: ServiceQuota | null;
   fields: ServiceField[];
 }
 
@@ -122,11 +123,20 @@ export interface InstanceProvidedService {
   recommended: ServiceRecommended;
 }
 
+/** Why a service is missing from the account's own lists. */
+export type BlockedReason = "disabled" | "keysForbidden" | "connectionForbidden";
+
+export interface BlockedService {
+  id: string;
+  reason: BlockedReason;
+}
+
 export interface AccountExternalServices {
   connections: AccountService[];
   ownKeys: AccountService[];
   aiConsents: AccountAiConsent[];
   instanceProvided: InstanceProvidedService[];
+  blocked: BlockedService[];
 }
 
 export interface AccountServiceUpdate {
@@ -144,6 +154,10 @@ export const EXTERNAL_SERVICE_ERROR_CODES = [
   "SERVICE_NOT_FOUND",
   "NOT_CONFIGURED",
   "DESTINATION_CHANGED",
+  "RATE_LIMITED",
+  "LLM_BASE_URL_INVALID",
+  "TEMPLATE_REPO_URL_INVALID",
+  "AEROAPI_BUDGET_REQUIRED",
 ] as const;
 export type ExternalServiceErrorCode = (typeof EXTERNAL_SERVICE_ERROR_CODES)[number];
 
@@ -174,6 +188,16 @@ export const externalServicesApi = {
   },
   async accountOverview(): Promise<AccountExternalServices> {
     return (await api.get<AccountExternalServices>(account)).data;
+  },
+  /** Tests the account's OWN credential; a switched-off service answers 409 `SERVICE_DISABLED`. */
+  async accountTest(id: string): Promise<ServiceTestResult> {
+    return (
+      await api.post<ServiceTestResult>(
+        `${account}/${encodeURIComponent(id)}/test`,
+        {},
+        { timeout: TEST_TIMEOUT_MS }
+      )
+    ).data;
   },
   async accountUpdate(id: string, body: AccountServiceUpdate): Promise<void> {
     await api.put(`${account}/${encodeURIComponent(id)}`, body);

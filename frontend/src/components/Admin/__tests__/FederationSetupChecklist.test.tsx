@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import FederationSettings from "../FederationSettings";
+import FederationRows from "../../Services/FederationRows";
 import { federationAdminApi, type FederationState } from "../../../lib/api/federationAdmin";
 
 /**
@@ -54,12 +54,12 @@ const done: FederationState = {
 
 async function checklist(state: FederationState): Promise<HTMLElement> {
   vi.mocked(federationAdminApi.get).mockResolvedValue(state);
-  render(<FederationSettings />);
+  render(<FederationRows />);
   return screen.findByTestId("federation-checklist");
 }
 const step = (n: number) => screen.getByTestId(`federation-step-${n}`);
 
-describe("FederationSettings — setup checklist", () => {
+describe("FederationRows — setup checklist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     betaOpen = true;
@@ -68,7 +68,7 @@ describe("FederationSettings — setup checklist", () => {
   it("is absent while the beta key is closed", async () => {
     betaOpen = false;
     vi.mocked(federationAdminApi.get).mockResolvedValue(done);
-    render(<FederationSettings />);
+    render(<FederationRows />);
     expect(await screen.findByText(FP)).toBeInTheDocument();
     expect(screen.queryByTestId("federation-checklist")).toBeNull();
   });

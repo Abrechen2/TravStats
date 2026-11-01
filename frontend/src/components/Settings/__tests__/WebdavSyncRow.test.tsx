@@ -15,7 +15,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 let demo = false;
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo }));
 
-import WebdavSyncRow, { WebdavSyncPanel } from "../WebdavSyncRow";
+import WebdavSyncRow from "../WebdavSyncRow";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 
@@ -105,26 +105,6 @@ describe("WebdavSyncRow", () => {
     expect(await screen.findByText(/settings:webdavSync.last.partial/)).toHaveTextContent(
       "settings:webdavSync.errors.cleanupIncomplete"
     );
-  });
-
-  it("never puts the stored password into the connection form", async () => {
-    await renderRow(<WebdavSyncPanel />);
-    await userEvent.click(await screen.findByRole("button", { name: "settings:webdavSync.setup" }));
-    expect(screen.getByLabelText("settings:webdavSync.password")).toHaveValue("");
-    expect(screen.getByText("settings:webdavSync.passwordStored")).toBeInTheDocument();
-  });
-
-  it("says why a connection save was refused — a LAN share for an ordinary account", async () => {
-    put.mockRejectedValue({ response: { status: 400, data: { error: "blockedTarget" } } });
-    await renderRow(<WebdavSyncPanel />);
-    await userEvent.click(await screen.findByRole("button", { name: "settings:webdavSync.setup" }));
-    const url = screen.getByLabelText("settings:webdavSync.url");
-    await userEvent.clear(url);
-    await userEvent.type(url, "http://192.168.1.5/dav");
-    await userEvent.click(screen.getByRole("button", { name: "settings:webdavSync.save" }));
-    expect(await screen.findByText("settings:webdavSync.errors.blockedTarget")).toBeInTheDocument();
-    // An untouched password field sends no password: the stored one stays.
-    expect(put.mock.calls[0][1]).not.toHaveProperty("password");
   });
 
   it.each([

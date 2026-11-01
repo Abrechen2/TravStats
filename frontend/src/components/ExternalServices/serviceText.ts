@@ -45,6 +45,16 @@ export function testReasonText(t: TFn, reason: string | null): string {
   return t(`${NS}:test.reasons.${reason}`, { defaultValue: reason });
 }
 
+/**
+ * A failed test in the design's own voice (§5.8): one sentence, first person,
+ * no "Fehler". A reason the copy does not know reads as the unknown one.
+ */
+export function reasonSentence(t: TFn, reason: string | null, name: string): string {
+  const key = `settingsRows:services.reason.${reason ?? "unknown"}`;
+  const text = t(key, { name, defaultValue: MISSING });
+  return text === MISSING ? t("settingsRows:services.reason.unknown", { name }) : text;
+}
+
 export function lastTestLine(t: TFn, lastTest: ServiceLastTest | null): string {
   if (!lastTest) return t(`${NS}:test.never`);
   const when = formatDateTime(lastTest.at);

@@ -6,7 +6,7 @@ import {
   type AccountService,
   type AccountServiceUpdate,
 } from "../../lib/api/externalServices";
-import type { RowFeedback } from "./AdminServiceRow";
+import type { RowFeedback } from "./rowFeedback";
 import { failureText, testReasonText } from "./serviceText";
 
 export interface AccountServices {

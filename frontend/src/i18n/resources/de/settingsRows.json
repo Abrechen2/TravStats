@@ -290,5 +290,609 @@
       "after": "Die Karte und ihre Zuordnung zu Airlines, Ketten oder Hotels sind weg. Deine Flüge, Aufenthalte und Fahrten bleiben.",
       "confirm": "Karte löschen"
     }
+  },
+  "services": {
+    "groups": {
+      "alle": "Alle",
+      "flug": "Flugdaten",
+      "karte": "Karten & Routen",
+      "foto": "Fotos & Standort",
+      "ki": "KI",
+      "open": "Offene Daten",
+      "sync": "Sync & Mail",
+      "inst": "Instanz"
+    },
+    "tpl": {
+      "mine": {
+        "t": "Für mich nutzen",
+        "h": "Hat der Admin den Dienst abgeschaltet, bleibt er aus."
+      },
+      "ownKey": {
+        "t": "Eigener Schlüssel",
+        "s": "Statt des Server-Schlüssels",
+        "h": "Dein Schlüssel geht vor dem des Servers. Er wird verschlüsselt gespeichert und nie wieder angezeigt."
+      },
+      "on": {
+        "t": "Auf dem Server an",
+        "s": "Aus: keine Anfrage, auch kein Test",
+        "h": "Gilt für alle Konten, auch mit eigenem Schlüssel.",
+        "us": "Vom Admin abgeschaltet"
+      },
+      "instKey": {
+        "t": "Schlüssel des Servers",
+        "s": "Für alle Konten ohne eigenen",
+        "h": "Leer lassen behält den gespeicherten Schlüssel."
+      },
+      "allowKeys": {
+        "t": "Eigene Schlüssel erlauben",
+        "us": "Eigene Schlüssel sind hier nicht erlaubt"
+      },
+      "allowConn": {
+        "t": "Konten dürfen sich verbinden",
+        "h": "Jedes Konto trägt seine Zugangsdaten selbst ein.",
+        "us": "Der Admin erlaubt keine eigene Verbindung"
+      },
+      "test": {
+        "t": "Verbindung prüfen",
+        "h": "Prüft die gespeicherte Einstellung. Das Ergebnis bleibt mit Uhrzeit stehen.",
+        "btn": "Testen",
+        "res": "Erreichbar · gerade geprüft"
+      },
+      "quota": {
+        "t": "Kontingent",
+        "h": "Wie der Anbieter es meldet. TravStats hört vor der Grenze auf."
+      },
+      "always": {
+        "t": "Immer an",
+        "s": "Ohne diesen Dienst arbeitet TravStats nicht"
+      },
+      "aiAllow": {
+        "t": "Für Konten freigeben",
+        "s": "Danach stimmt jedes Konto selbst zu",
+        "h": "Was hingeht: der Text einer Mail oder PDF, höchstens 12.000 Zeichen, nur wenn die Vorlagen nichts finden.",
+        "us": "Vom Admin nicht freigegeben"
+      },
+      "aiConsent": {
+        "t": "Meine Texte dürfen hin",
+        "s": "Nur wenn die Vorlagen nichts finden",
+        "h": "Höchstens 12.000 Zeichen pro Mail oder PDF. Ändert sich die Adresse des Anbieters, frage ich neu.",
+        "btn": "Zustimmen",
+        "res": "Zugestimmt · Zurückziehen"
+      },
+      "model": {
+        "t": "Modell"
+      }
+    },
+    "cards": {
+      "airlabs": {
+        "n": "AirLabs",
+        "p": "Flugpläne und Strecken"
+      },
+      "aviationstack": {
+        "n": "Aviationstack",
+        "p": "Flugstatus"
+      },
+      "aerodatabox": {
+        "n": "AeroDataBox",
+        "p": "Flüge und Maschinen"
+      },
+      "aeroapi": {
+        "n": "FlightAware AeroAPI",
+        "p": "Flugstatus und echte Flugwege"
+      },
+      "opensky": {
+        "n": "OpenSky",
+        "p": "Positionen in der Luft"
+      },
+      "adsblol": {
+        "n": "ADS-B Lol",
+        "p": "Positionen in der Luft, frei"
+      },
+      "adsbx": {
+        "n": "ADS-B Exchange",
+        "p": "Positionen in der Luft"
+      },
+      "aisstream": {
+        "n": "AISStream",
+        "p": "Schiffspositionen"
+      },
+      "openrouteservice": {
+        "n": "OpenRouteService",
+        "p": "Routen für Touren"
+      },
+      "graphhopper": {
+        "n": "GraphHopper",
+        "p": "Routen für Touren"
+      },
+      "railTimetables": {
+        "n": "Transitous & db-rest",
+        "p": "Bahn-Fahrpläne"
+      },
+      "googlePlaces": {
+        "n": "Google Places",
+        "p": "Orte und Öffnungszeiten"
+      },
+      "geocoder": {
+        "n": "Photon & Nominatim",
+        "p": "Ortssuche"
+      },
+      "selfHostedRouting": {
+        "n": "OSRM & OpenRailRouting",
+        "p": "Eigenes Routing"
+      },
+      "immich": {
+        "n": "Immich",
+        "p": "Fotos"
+      },
+      "dawarich": {
+        "n": "Dawarich",
+        "p": "Standortverlauf"
+      },
+      "strava": {
+        "n": "Strava",
+        "p": "Aktivitäten"
+      },
+      "ollama": {
+        "n": "Ollama",
+        "p": "KI auf deinem Server"
+      },
+      "openai": {
+        "n": "OpenAI",
+        "p": "KI in der Cloud"
+      },
+      "anthropic": {
+        "n": "Anthropic",
+        "p": "KI in der Cloud"
+      },
+      "gemini": {
+        "n": "Google Gemini",
+        "p": "KI in der Cloud"
+      },
+      "customLlm": {
+        "n": "OpenAI-kompatibel",
+        "p": "Eigener KI-Anbieter"
+      },
+      "openData": {
+        "n": "OpenStreetMap · Overpass",
+        "p": "Märkte und Orte aus offenen Daten"
+      },
+      "logos": {
+        "n": "Logostream",
+        "p": "Logos von Airlines und Betreibern"
+      },
+      "fx": {
+        "n": "EZB-Kurse",
+        "p": "Wechselkurse"
+      },
+      "webdav": {
+        "n": "WebDAV",
+        "p": "Backup-Ziel"
+      },
+      "smtp": {
+        "n": "Mail (SMTP)",
+        "p": "Mail-Versand"
+      },
+      "push": {
+        "n": "Push",
+        "p": "Mitteilungen an die Companion-App"
+      },
+      "federation": {
+        "n": "Andere Server",
+        "p": "Föderation zwischen TravStats-Servern"
+      },
+      "usageStats": {
+        "n": "Nutzungsstatistik",
+        "p": "Täglicher Bericht ohne Namen"
+      },
+      "updatesTemplates": {
+        "n": "GitHub",
+        "p": "Neue Versionen und Vorlagen"
+      }
+    },
+    "rows": {
+      "avbudget": {
+        "t": "Anfragen pro Tag",
+        "s": "0 schaltet ab"
+      },
+      "aerotarif": {
+        "t": "Tarif"
+      },
+      "aerolimit": {
+        "t": "Monatsgrenze in USD",
+        "s": "Nur beim eigenen Tarif"
+      },
+      "aerotracks": {
+        "t": "Echte Flugwege nach der Landung",
+        "s": "Kostet zusätzliche Anfragen"
+      },
+      "aerousage": {
+        "t": "Verbraucht diesen Monat",
+        "h": "TravStats hört vor der Grenze auf."
+      },
+      "oskid": {
+        "t": "Deine Client-ID",
+        "s": "Statt der des Servers"
+      },
+      "osksec": {
+        "t": "Dein Client-Secret",
+        "h": "Wird verschlüsselt gespeichert und nie wieder angezeigt."
+      },
+      "oskuser": {
+        "t": "Dein Benutzername",
+        "s": "Altes Anmeldeverfahren"
+      },
+      "oskpw": {
+        "t": "Dein Passwort",
+        "s": "Altes Anmeldeverfahren"
+      },
+      "oskidI": {
+        "t": "Client-ID des Servers",
+        "s": "Für alle Konten ohne eigene"
+      },
+      "osksecI": {
+        "t": "Client-Secret des Servers"
+      },
+      "oskuserI": {
+        "t": "Benutzername des Servers",
+        "s": "Altes Anmeldeverfahren"
+      },
+      "oskpwI": {
+        "t": "Passwort des Servers",
+        "s": "Altes Anmeldeverfahren"
+      },
+      "transitous": {
+        "t": "Transitous",
+        "s": "Fahrpläne aus offenen Daten"
+      },
+      "dbrest": {
+        "t": "db-rest",
+        "s": "Fahrpläne der Deutschen Bahn"
+      },
+      "bahnkontakt": {
+        "t": "Kontakt für Anfragen",
+        "s": "Wird den Betreibern mitgeschickt"
+      },
+      "photon": {
+        "t": "Photon-Adresse"
+      },
+      "nominatim": {
+        "t": "Nominatim-Adresse"
+      },
+      "geoeigen": {
+        "t": "Eigener Geo-Server"
+      },
+      "osrm": {
+        "t": "OSRM-Adresse",
+        "s": "Leer: aus"
+      },
+      "orr": {
+        "t": "OpenRailRouting-Adresse",
+        "s": "Leer: aus"
+      },
+      "immurl": {
+        "t": "Adresse",
+        "h": "Darf im eigenen Netz liegen."
+      },
+      "immkey": {
+        "t": "API-Schlüssel",
+        "s": "Aus Immich → Konto → API-Schlüssel"
+      },
+      "immnacht": {
+        "t": "Fotos jede Nacht durchsehen",
+        "s": "Findet Reisen, die noch fehlen"
+      },
+      "immmode": {
+        "t": "Fotos an Reisen",
+        "h": "Verknüpfen zeigt die Fotos aus Immich und kopiert nichts. Kopieren lädt die Originale auf diesen Server.",
+        "o": ["verknüpfen", "kopieren"]
+      },
+      "immvisit": {
+        "t": "Besuchsfotos verknüpfen",
+        "s": "Fotos zu deinen Orten suchen",
+        "btn": "Verknüpfen",
+        "res": "Läuft · 37 Orte · fertig in etwa 1 Minute"
+      },
+      "imminsturl": {
+        "t": "Immich des Servers: Adresse",
+        "s": "Für Konten ohne eigene Verbindung"
+      },
+      "imminstkey": {
+        "t": "Immich des Servers: API-Schlüssel"
+      },
+      "dawurl": {
+        "t": "Adresse"
+      },
+      "dawkey": {
+        "t": "API-Schlüssel",
+        "h": "Deine Verbindung ist die einzige, die Standortquelle, Aufenthaltssuche und Ländertage nutzen."
+      },
+      "dawinsturl": {
+        "t": "Dawarich des Servers: Adresse",
+        "s": "Nur für Tracks von Touren und Kreuzfahrten",
+        "h": "Standortquelle, Aufenthalte und Ländertage brauchen die eigene Verbindung jedes Kontos. Sonst sähen alle Konten die Bewegungen eines Menschen."
+      },
+      "dawinstkey": {
+        "t": "Dawarich des Servers: API-Schlüssel"
+      },
+      "dawsweep": {
+        "t": "Ländertage jetzt zählen",
+        "s": "Für jedes Konto mit eigener Verbindung",
+        "h": "Läuft sonst jede Nacht. Kann einige Minuten dauern.",
+        "btn": "Starten",
+        "res": "Läuft · fertig in etwa 4 Minuten"
+      },
+      "stravaconn": {
+        "t": "Mit Strava verbinden",
+        "h": "Strava-Daten gehen nie an eine KI.",
+        "btn": "Verbinden",
+        "res": "Verbunden als Mara O."
+      },
+      "stravaid": {
+        "t": "Client-ID der Strava-App",
+        "s": "Einmal für den Server registriert"
+      },
+      "stravasec": {
+        "t": "Client-Secret der Strava-App"
+      },
+      "ollurl": {
+        "t": "Adresse"
+      },
+      "ollmodel": {
+        "t": "Modell"
+      },
+      "ollvision": {
+        "t": "Modell für Bilder"
+      },
+      "ollpull": {
+        "t": "Modell auf den Server laden",
+        "btn": "Laden",
+        "res": "Modell geladen"
+      },
+      "ollremote": {
+        "t": "Liegt außerhalb dieses Netzes",
+        "s": "Dann stimmt jedes Konto selbst zu"
+      },
+      "custurl": {
+        "t": "Adresse mit Versionspfad",
+        "s": "z. B. …/v1"
+      },
+      "overpass": {
+        "t": "Overpass-Adresse"
+      },
+      "oplogos": {
+        "t": "Logos von Betreibern suchen"
+      },
+      "logorefresh": {
+        "t": "Logos neu laden",
+        "s": "Passiert auch jede Nacht",
+        "btn": "Neu laden",
+        "res": "84 Logos neu · 1.210 geprüft"
+      },
+      "fxcdn": {
+        "t": "Ersatzquelle",
+        "s": "Wenn die EZB nicht antwortet"
+      },
+      "wdurl": {
+        "t": "Adresse",
+        "s": "Öffentliche https-Adresse"
+      },
+      "wduser": {
+        "t": "Benutzer"
+      },
+      "wdpw": {
+        "t": "Passwort"
+      },
+      "wdfolder": {
+        "t": "Ordner"
+      },
+      "wdsrv": {
+        "t": "Server-Sicherungen hochladen",
+        "s": "Jede gelungene Sicherung"
+      },
+      "wdsrvurl": {
+        "t": "Server: Adresse"
+      },
+      "wdsrvuser": {
+        "t": "Server: Benutzer"
+      },
+      "wdsrvpw": {
+        "t": "Server: Passwort",
+        "h": "Wird verschlüsselt gespeichert. Erst speichern, dann testen."
+      },
+      "wdpath": {
+        "t": "Ordner für Server-Sicherungen"
+      },
+      "smtpon": {
+        "t": "Mails verschicken",
+        "s": "Einladungen, Erinnerungen, neues Passwort"
+      },
+      "smtphost": {
+        "t": "Server"
+      },
+      "smtpuser": {
+        "t": "Benutzer"
+      },
+      "smtppw": {
+        "t": "Passwort",
+        "s": "Gmail und Outlook brauchen ein App-Passwort"
+      },
+      "smtpfrom": {
+        "t": "Absender",
+        "s": "Am besten aus derselben Domain"
+      },
+      "smtpport": {
+        "t": "Port",
+        "s": "587 mit STARTTLS, 465 mit TLS"
+      },
+      "smtptls": {
+        "t": "Direkt verschlüsselt (TLS)"
+      },
+      "smtpname": {
+        "t": "Absendername"
+      },
+      "smtptest": {
+        "t": "Verbindung prüfen",
+        "btn": "Testen",
+        "res": "Testmail an mara@example.org verschickt"
+      },
+      "smtpdel": {
+        "t": "Zugangsdaten löschen",
+        "h": "Danach verschickt der Server gar keine Mails mehr.",
+        "btn": "Zugangsdaten löschen"
+      },
+      "pushon": {
+        "t": "Mitteilungen senden",
+        "s": "Über den Push-Dienst von TravStats",
+        "h": "Aus: Der Server meldet sich nie beim Push-Dienst."
+      },
+      "pushconsent": {
+        "t": "Zugestimmt am",
+        "h": "Der Push-Dienst erfährt die Kennung des Telefons und den Text der Mitteilung, sonst nichts."
+      },
+      "pushrelay": {
+        "t": "Adresse des Push-Dienstes",
+        "h": "Eine andere Adresse meldet den Server neu an."
+      },
+      "pushreset": {
+        "t": "Anmeldung zurücksetzen",
+        "btn": "Zurücksetzen"
+      },
+      "fedon": {
+        "t": "Mit anderen Servern verbinden"
+      },
+      "fedtrips": {
+        "t": "Reisen mit anderen Servern teilen"
+      },
+      "fedorigin": {
+        "t": "Adresse dieses Servers",
+        "s": "https, ohne Port und Pfad"
+      },
+      "fedkey": {
+        "t": "Server-Schlüssel",
+        "h": "Ein neuer Schlüssel trennt alle Verbindungen, bis die anderen ihn neu bestätigen.",
+        "btn": "Erzeugen",
+        "res": "Schlüssel erzeugt · Fingerabdruck zeigen"
+      },
+      "fedpeers": {
+        "t": "Vertraute Server",
+        "h": "Eine eingelesene Datei vertraut noch niemandem, erst „Vertrauen“ tut es.",
+        "btn": "Verbindungsdatei einlesen"
+      },
+      "nutzstat": {
+        "t": "Nutzungsstatistik senden",
+        "s": "Einmal am Tag, ohne Namen",
+        "h": "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus.",
+        "o": ["nein", "ja"]
+      },
+      "updcheck": {
+        "t": "Nach neuen Versionen suchen",
+        "s": "Fragt GitHub"
+      },
+      "tplrepo": {
+        "t": "Quelle der Buchungsvorlagen",
+        "s": "Leer: offizielle Quelle"
+      }
+    },
+    "ui": {
+      "accountHead": "Für dein Konto",
+      "serverHead": "Alle Konten",
+      "serverHint": "Gilt für jedes Konto auf diesem Server.",
+      "accountGroup": "Deine Zugangsdaten für {{name}}",
+      "serverGroup": "Zugangsdaten des Servers für {{name}}",
+      "removeSecret": "Entfernen",
+      "save": "Speichern",
+      "saveAndTest": "Speichern & testen",
+      "discard": "Verwerfen",
+      "loading": "Ich lade die Dienste …",
+      "loadFailed": "Ich konnte die Dienste nicht laden.",
+      "serverLoadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
+      "retry": "Erneut versuchen",
+      "intro": "Hier steht, wo TravStats Daten herholt und wohin etwas geht. Oben auf jeder Karte steht, was für dein Konto gilt; als Admin siehst du darunter, was für alle gilt.",
+      "groupsLabel": "Dienstgruppen",
+      "withdraw": "Zurückziehen",
+      "connectedAccounts_one": "{{count}} Konto ist verbunden.",
+      "connectedAccounts_other": "{{count}} Konten sind verbunden.",
+      "testing": "Ich prüfe …",
+      "testCouldNotRun": "Ich konnte den Test nicht ausführen.",
+      "neverTested": "Noch nicht geprüft",
+      "lastOk": "Verbunden · geprüft {{when}}",
+      "lastFailed": "{{reason}} · geprüft {{when}}",
+      "quotaUnknown": "Der Anbieter hat noch nichts gemeldet",
+      "smtpOk": "Verbunden · gerade geprüft",
+      "deleteFailed": "Ich konnte die Zugangsdaten nicht löschen.",
+      "resetFailed": "Ich konnte die Anmeldung nicht zurücksetzen.",
+      "saveFailed": "Ich konnte das nicht speichern.",
+      "running": "Läuft …",
+      "sweepDone": "Fertig · {{users}} Konten, {{days}} Tage geschrieben.",
+      "sweepPartial": "Fertig, aber bei {{failed}} Konten ging etwas schief · {{users}} Konten, {{days}} Tage geschrieben.",
+      "sweepLost": "Ich weiß nicht, ob es fertig wurde. Der Server wurde zwischendurch neu gestartet.",
+      "sweepRunning": "Das läuft schon.",
+      "sweepFailed": "Ich konnte die Ländertage nicht zählen.",
+      "pullDone": "{{model}} ist geladen.",
+      "pullFailed": "Ich konnte das Modell nicht laden.",
+      "ollamaModels": "Auf dem Server installiert",
+      "noModels": "Noch kein Modell installiert",
+      "modelsUnknown": "Ich komme nicht an die Modellliste",
+      "fedNoOrigin": "Erst die Adresse dieses Servers eintragen."
+    },
+    "status": {
+      "needsConsent": "Wartet auf deine Zustimmung",
+      "always": "Immer an",
+      "notAsked": "Noch nicht gefragt",
+      "viaServer": "Über den Server",
+      "notSetUp": "Nicht eingerichtet",
+      "off": "Aus",
+      "on": "An",
+      "notConnected": "Nicht verbunden",
+      "connected": "Verbunden",
+      "ready": "Bereit",
+      "notEnabled": "Nicht freigegeben",
+      "keyRejected": "Schlüssel abgelehnt",
+      "offByAdmin": "Vom Admin abgeschaltet"
+    },
+    "reason": {
+      "auth": "Ich komme nicht hinein: Der Schlüssel wurde abgelehnt.",
+      "unauthorized": "Ich komme nicht hinein: Der Schlüssel wurde abgelehnt.",
+      "network": "Ich erreiche den Dienst nicht.",
+      "unreachable": "Ich erreiche den Dienst nicht.",
+      "http_error": "Unter dieser Adresse antwortet etwas anderes als {{name}}.",
+      "not_found": "Unter dieser Adresse finde ich nichts.",
+      "rate_limited": "Der Anbieter bremst gerade. Ich versuche es später.",
+      "quota": "Das Kontingent ist für heute aufgebraucht.",
+      "quota_exhausted": "Das Kontingent ist für heute aufgebraucht.",
+      "budget_exhausted": "Das Monatsbudget ist erreicht. Ich frage erst nächsten Monat wieder.",
+      "timeout": "Nach 10 Sekunden kam keine Antwort.",
+      "disabled": "Vom Admin abgeschaltet. Ich frage nicht an, auch nicht zum Test.",
+      "not_configured": "Nicht eingerichtet",
+      "unknown": "Das konnte ich nicht prüfen."
+    },
+    "smtp": {
+      "SMTP_CONNECTION": "Ich erreiche den Mail-Server nicht. Stimmen Adresse und Port?",
+      "SMTP_TLS": "Die verschlüsselte Verbindung kommt nicht zustande. Passen Port und „Direkt verschlüsselt“ zusammen?",
+      "SMTP_AUTH": "Ich komme nicht hinein: Benutzer oder Passwort wurden abgelehnt.",
+      "SMTP_TIMEOUT": "Nach 8 Sekunden kam keine Antwort vom Mail-Server.",
+      "SMTP_PASSWORD_MISSING": "Mir fehlt das Passwort. Trag es ein, dann prüfe ich noch einmal.",
+      "SMTP_UNKNOWN": "Das hat der Mail-Server nicht angenommen."
+    },
+    "dialogs": {
+      "smtpdel": {
+        "title": "Mail-Zugangsdaten löschen?",
+        "affects": "Server, Benutzer und Passwort für den Mail-Versand",
+        "amount": "Ein Satz Zugangsdaten",
+        "after": "Danach verschickt der Server gar keine Mails mehr: keine Einladungen, keine Erinnerungen, kein neues Passwort.",
+        "confirm": "Zugangsdaten löschen"
+      },
+      "pushreset": {
+        "title": "Anmeldung beim Push-Dienst zurücksetzen?",
+        "affects": "Die Anmeldung dieses Servers beim Push-Dienst",
+        "amount": "Eine Anmeldung",
+        "after": "Der Server meldet sich bei der nächsten Mitteilung neu an. Die Telefone musst du nicht neu koppeln.",
+        "confirm": "Anmeldung zurücksetzen"
+      },
+      "fedkey": {
+        "affects": "Den Server-Schlüssel dieses Servers",
+        "amount": "Ein Schlüssel"
+      }
+    }
   }
 }

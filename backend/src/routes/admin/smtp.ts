@@ -137,7 +137,7 @@ smtpRouter.post(
       let password = data.password;
       if (!password) {
         const stored = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
-        password = stored?.password ? decryptApiKey(stored.password) : "";
+        password = stored?.password ? (decryptApiKey(stored.password) ?? "") : "";
       }
       if (!password) {
         res.status(400).json({ success: false, code: "SMTP_PASSWORD_MISSING" });

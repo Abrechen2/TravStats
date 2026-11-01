@@ -305,6 +305,30 @@ describe("external services (forgejo#392)", () => {
       expect(view.body.connections.map((c: { id: string }) => c.id)).not.toContain("immich");
     });
 
+    it("names why a service is missing from the account's own lists: switched off, own keys forbidden, own connection forbidden", async () => {
+      await prisma.adminSettings.update({
+        where: { id: rowId },
+        data: {
+          externalServicePolicy: {
+            disabled: ["aviationstack"],
+            accountKeysForbidden: ["airlabs"],
+            connectionsForbidden: ["immich"],
+          },
+        },
+      });
+      const view = await request(app)
+        .get("/api/v1/settings/external-services")
+        .set("Cookie", cookieA);
+      expect(view.body.blocked).toEqual(
+        expect.arrayContaining([
+          { id: "aviationstack", reason: "disabled" },
+          { id: "airlabs", reason: "keysForbidden" },
+          { id: "immich", reason: "connectionForbidden" },
+        ])
+      );
+      expect(view.body.blocked.map((b: { id: string }) => b.id)).not.toContain("aerodatabox");
+    });
+
     it("AeroAPI is instance-only: provided by the instance, never an own-key service (invariant 7)", async () => {
       await prisma.adminSettings.update({
         where: { id: rowId },
