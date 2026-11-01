@@ -32,6 +32,8 @@ const stale = () =>
     response: { status: 409, data: { code: "PACKING_LIST_STALE", rev: 5 } },
   });
 
+vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
+
 describe("TripPackingCard (TripPackingList on the trip page)", () => {
   beforeEach(() => {
     get.mockReset().mockResolvedValue(list(3, [["Passport", false]]));
@@ -123,7 +125,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
   describe("on a finished trip (forgejo#398)", () => {
     it("shows nothing at all when the list is empty", async () => {
       get.mockResolvedValue(list(1, []));
-      const { container } = render(<TripPackingCard tripId="t1" finished />);
+      const { container } = render(<TripPackingCard tripId="t1" endDate="2026-10-31" />);
       await waitFor(() => expect(get).toHaveBeenCalled());
       await new Promise((r) => setTimeout(r, 0));
       expect(container).toBeEmptyDOMElement();
@@ -136,7 +138,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
           ["Charger", true],
         ])
       );
-      render(<TripPackingCard tripId="t1" finished />);
+      render(<TripPackingCard tripId="t1" endDate="2026-10-31" />);
       const toggle = await screen.findByRole("button", { name: "trips:packing.summary" });
       expect(toggle).toHaveAttribute("aria-expanded", "false");
       expect(screen.queryByText("Passport")).toBeNull();
@@ -148,7 +150,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     });
 
     it("leaves an upcoming or running trip fully editable", async () => {
-      render(<TripPackingCard tripId="t1" finished={false} />);
+      render(<TripPackingCard tripId="t1" endDate="2999-01-01" />);
       expect(await screen.findByRole("checkbox")).toBeInTheDocument();
       expect(screen.getByRole("textbox")).toBeInTheDocument();
     });

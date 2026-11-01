@@ -12,6 +12,9 @@ import {
 import { logger } from "../../lib/logger";
 import axios from "axios";
 import { Card } from "../ui/Card";
+import { todayIn } from "../../shared/time";
+import { useTodayZone } from "../../hooks/useTodayZone";
+import { isTripFinished } from "./tripFinished";
 
 type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
 
@@ -27,11 +30,11 @@ type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
  */
 export default function TripPackingCard({
   tripId,
-  finished = false,
+  endDate = null,
 }: {
   tripId: string;
-  /** The trip's last day is past: nothing left to pack, so the card is a read-only record. */
-  finished?: boolean;
+  /** The trip's last day: once it is past (profile zone) nothing is left to pack, so the card is a read-only record. */
+  endDate?: string | null;
 }): JSX.Element | null {
   const { t } = useTranslation(["trips"]);
   const [list, setList] = useState<PackingList | null>(null);
@@ -40,6 +43,7 @@ export default function TripPackingCard({
   const [notice, setNotice] = useState<Notice>(null);
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState(false);
+  const finished = isTripFinished(endDate, todayIn(useTodayZone()));
   // A write whose answer never arrived may have been applied. Its retry reuses
   // the mutation id, so the server answers "already applied" instead of 409.
   const unanswered = useRef<{
