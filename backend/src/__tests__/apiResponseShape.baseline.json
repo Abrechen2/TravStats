@@ -98,6 +98,7 @@
     "settings/externalServices.ts",
     "settings/general.ts",
     "settings/homeAirports.ts",
+    "settings/instanceBackup.ts",
     "settings/immich.ts",
     "settings/index.ts",
     "settings/instanceServices.ts",
