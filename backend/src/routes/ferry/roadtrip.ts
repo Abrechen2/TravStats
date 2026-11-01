@@ -57,7 +57,7 @@ const legRouting = z.object({
 });
 type LegRouting = z.infer<typeof legRouting>;
 
-function snapshotOf(leg: LegRouting): Prisma.InputJsonValue {
+export function snapshotOf(leg: LegRouting): Prisma.InputJsonValue {
   return {
     mode: leg.mode,
     source: leg.source,
@@ -74,7 +74,7 @@ function snapshotOf(leg: LegRouting): Prisma.InputJsonValue {
  * user's newer word and is kept. A link made before the snapshot existed has
  * nothing to restore and leaves the leg as it is.
  */
-async function restoreLeg(tx: Tx, legId: string, stored: unknown): Promise<void> {
+export async function restoreLeg(tx: Tx, legId: string, stored: unknown): Promise<void> {
   const parsed = legRouting.safeParse(stored);
   if (!parsed.success) {
     if (stored !== null && stored !== undefined)

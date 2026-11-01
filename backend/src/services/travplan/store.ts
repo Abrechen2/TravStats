@@ -15,6 +15,14 @@ import { scheduleRoute } from "./routeSchedule";
 import { compareVariants } from "./variants";
 import { todayIn } from "../../shared/time/clock";
 import { isValidZone } from "../../shared/time/zonedParts";
+import {
+  applyHandover,
+  applyWithdraw,
+  handoverStation,
+  withdrawStation,
+  type HandoverOutcome,
+  type WithdrawOutcome,
+} from "./routeHandover";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
 import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
@@ -274,6 +282,19 @@ export async function writePlan(
       body.operation.id,
       await prepareExecution(userId, tripId, initial, body.operation.id)
     );
+  // Records the station writer creates live outside this plan's transaction; they are written
+  // first and the plan then records them. A lost revision race leaves records the retry adopts.
+  let handover: HandoverOutcome | undefined, withdrawal: WithdrawOutcome | undefined;
+  if (body.operation.type === "station_handover")
+    handover = await handoverStation(
+      userId,
+      tripId,
+      initial,
+      body.operation.stationId,
+      owned.trip.name
+    );
+  if (body.operation.type === "station_withdraw")
+    withdrawal = await withdrawStation(userId, tripId, initial, body.operation.stationId);
   if (body.operation.type === "undo") {
     const target = await prisma.travelPlanMutation.findFirst({
       where: { id: body.operation.mutationId, planId: owned.id, revision: owned.revision },
@@ -319,6 +340,13 @@ export async function writePlan(
         const saved = change.before as unknown as { state: PlanState; name: string };
         next = parseState(saved.state);
         name = saved.name;
+        // Records in the logbook are not part of the plan's undo: withdraw the station instead.
+        if (canonical(next.stationLinks) !== canonical(before.stationLinks))
+          throw new AppError(
+            "A handover is withdrawn from the station, not undone",
+            409,
+            "PLAN_UNDO_STALE"
+          );
       } else if (body.operation.type === "proposal") {
         await assertAnchorsCurrent(tx, userId, tripId, before);
         const proposal = await tx.travelPlanProposal.findFirst({
@@ -356,6 +384,10 @@ export async function writePlan(
           where: { id: proposal.id },
           data: { status: "accepted" },
         });
+      } else if (body.operation.type === "station_handover") {
+        next = applyHandover(before, handover!);
+      } else if (body.operation.type === "station_withdraw") {
+        next = applyWithdraw(before, body.operation.stationId, withdrawal!);
       } else if (body.operation.type === "refresh_existing") {
         next = await adoptExisting(tx, userId, tripId, before);
       } else if (body.operation.type === "link_actual") {

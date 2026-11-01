@@ -294,6 +294,30 @@ export const settingsSchema = z
     }),
   })
   .strict();
+/**
+ * A station handed over to the logbook (spec §5.9, C1). `created` lists only what the PLAN made,
+ * each with the fingerprint it had when written: withdrawal deletes a record only while it still
+ * has that fingerprint, so anything the user touched since stays. A stop the phone appended
+ * ("Tonight here") is linked with no `created` entry and is never deleted by the plan.
+ */
+export const stationLinkSchema = z
+  .object({
+    stationId: id,
+    tripStopId: id,
+    created: z
+      .array(
+        z
+          .object({
+            kind: z.enum(["stop", "stay", "lodging", "ferry"]),
+            id,
+            version: text(400),
+          })
+          .strict()
+      )
+      .max(8)
+      .default([]),
+  })
+  .strict();
 export const stateSchema = settingsSchema
   .extend({
     version: z.literal(2),
@@ -322,7 +346,7 @@ export const stateSchema = settingsSchema
     vehicle: vehicleSchema.nullable(),
     roadtripId: id.nullable(),
     // Kept for the stations of every route (active + up to 3 variants, 60 each).
-    stationLinks: z.array(z.object({ stationId: id, tripStopId: id }).strict()).max(240),
+    stationLinks: z.array(stationLinkSchema).max(240),
     stationWeather: z.array(stationWeatherSchema).max(240),
   })
   .refine((v) => !v.startDay || !v.endDay || v.startDay <= v.endDay, {
@@ -490,6 +514,8 @@ const operationSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z.object({ type: z.literal("handover") }).strict(),
+  z.object({ type: z.literal("station_handover"), stationId: id }).strict(),
+  z.object({ type: z.literal("station_withdraw"), stationId: id }).strict(),
   z.object({ type: z.literal("execution"), id, execution: itemSchema.shape.execution }).strict(),
   z.object({ type: z.literal("undo"), mutationId: id }).strict(),
   z.object({ type: z.literal("proposal"), proposalId: id }).strict(),
