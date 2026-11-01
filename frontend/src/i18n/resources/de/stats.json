@@ -1112,6 +1112,34 @@
         "source": "Deine abgeschlossenen Fährüberfahrten.",
         "coverage": "Überfahrten ohne Strecke tragen keine Kilometer bei und werden genannt; hat keine eine Strecke, steht keine Kilometerzahl. Ein Tipp auf die Zahl zeigt die Einträge.",
         "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "travTrackDays": {
+        "unit": "Ein Kalendertag mit mindestens einer aufgezeichneten Position; die Kilometer sind die Bodenstrecke zwischen diesen Positionen.",
+        "time": "Der Tag nach deiner Profil-Zeitzone, im gewählten Jahr.",
+        "source": "Die Positionen deines TravTrack-Verlaufs.",
+        "coverage": "Positionen in Schutzzonen, gelöschte Zeiträume und Pausen zählen nicht; Strecken in der Luft und über 500 km/h werden nicht mitgemessen. Ein Tipp öffnet die Tage mit Einträgen – die Zahl stammt aus Positionen, nicht aus Einträgen.",
+        "exclusions": "Die Zahl ist gemessen, nicht aus Einträgen."
+      },
+      "travTrackTopSpeed": {
+        "unit": "Das höchste glaubwürdige Tempo am Boden in km/h.",
+        "time": "Im gewählten Jahr.",
+        "source": "Das vom Telefon gemeldete Tempo.",
+        "coverage": "Ausreißer fallen weg: Werte über 500 km/h, ein Tempo, das der Bewegungsart widerspricht, und ein Wert über 10 m/s ohne Bestätigung durch eine Nachbarposition. Ohne glaubwürdigen Wert erscheint keine Karte.",
+        "exclusions": "Flüge und Schutzzonen zählen nicht. Die Zahl ist gemessen, nicht aus Einträgen – der Tipp öffnet nur die Tage."
+      },
+      "travTrackHighest": {
+        "unit": "Der höchste Punkt in Metern über dem Meer.",
+        "time": "Im gewählten Jahr.",
+        "source": "Die vom Telefon gemeldete Höhe.",
+        "coverage": "Geglättet über je fünf Positionen, damit ein einzelner Höhenausreißer nicht das Maximum ist; mindestens drei glaubwürdige Höhen nötig.",
+        "exclusions": "Flüge und Schutzzonen zählen nicht. Die Zahl ist gemessen, nicht aus Einträgen."
+      },
+      "travTrackByMotion": {
+        "unit": "Stunden und Kilometer je Bewegungsart, die das Telefon gemeldet hat; Ruhen ist nicht mitgezählt.",
+        "time": "Im gewählten Jahr.",
+        "source": "Die Bewegungsart und die Positionen deines TravTrack-Verlaufs.",
+        "coverage": "Nur Schritte bis 15 Minuten zählen; eine Lücke ist keine Zeit zu Fuß. Die Kilometer sind damit nie mehr als die Bodenstrecke.",
+        "exclusions": "Flüge und Schutzzonen zählen nicht. Die Zahl ist gemessen, nicht aus Einträgen."
       }
     },
     "travTrack": {
