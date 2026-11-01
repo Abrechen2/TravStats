@@ -1129,11 +1129,19 @@
   },
   "countryCounting": {
     "title": "Länder",
-    "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
-    "label": "Ein Land zählt ab …",
-    "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
-    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})",
-    "instanceShort": "Instanz ({{tier}})"
+    "loadFailed": "Ich konnte die Zahlen nicht lesen. Das heißt nicht, dass es null Länder sind.",
+    "visited": {
+      "name": "Als besucht gezählt",
+      "sub": "Länder mit bestätigtem Aufenthalt"
+    },
+    "ground": {
+      "name": "Mit Bodenkontakt",
+      "sub": "Alle Länder, in denen etwas belegt ist"
+    },
+    "passport": {
+      "name": "Länderpass",
+      "open": "Öffnen"
+    }
   },
   "groups": {
     "account": "Konto",

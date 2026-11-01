@@ -1129,11 +1129,19 @@
   },
   "countryCounting": {
     "title": "Countries",
-    "description": "Which kind of evidence makes a country count towards your total.",
-    "label": "A country counts from …",
-    "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
-    "useInstanceDefault": "Use this instance's default ({{tier}})",
-    "instanceShort": "Instance ({{tier}})"
+    "loadFailed": "I couldn't read the numbers. That doesn't mean zero countries.",
+    "visited": {
+      "name": "Counted as visited",
+      "sub": "Countries with a confirmed stay"
+    },
+    "ground": {
+      "name": "With ground contact",
+      "sub": "Every country where something is recorded"
+    },
+    "passport": {
+      "name": "Country passport",
+      "open": "Open"
+    }
   },
   "groups": {
     "account": "Account",
