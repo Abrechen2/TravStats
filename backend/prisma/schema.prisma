@@ -593,6 +593,13 @@ model Airport {
   @@index([icao])
   @@index([name])
   @@index([city])
+  // Trigram indexes serve the '%q%' ILIKE of /airports/search (forgejo#344);
+  // the btree indexes above cannot. All four columns, because the search ORs
+  // them and one unindexed arm forces a sequential scan for the whole OR.
+  @@index([iata(ops: raw("gin_trgm_ops"))], type: Gin, map: "airports_iata_trgm_idx")
+  @@index([icao(ops: raw("gin_trgm_ops"))], type: Gin, map: "airports_icao_trgm_idx")
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "airports_name_trgm_idx")
+  @@index([city(ops: raw("gin_trgm_ops"))], type: Gin, map: "airports_city_trgm_idx")
   @@map("airports")
 }
 
