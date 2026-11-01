@@ -306,6 +306,7 @@
     "close": "Schließen",
     "willFill": "Ergänzt: {{fields}}",
     "nothingNew": "Der Anbieter hat nichts, was hier noch fehlt.",
+    "mismatch": "Der Anbieter nennt für diese Nummer eine andere Strecke – nichts wird ergänzt.",
     "ambiguous": "Der Anbieter nennt mehrere Flüge für diesen Tag – nichts wird automatisch ergänzt.",
     "applied": "ergänzt",
     "applyFailed": "Konnte nicht gespeichert werden.",

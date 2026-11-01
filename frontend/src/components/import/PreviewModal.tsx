@@ -247,7 +247,10 @@ export function PreviewModal({
                 style={{ background: "var(--bg-elevated)" }}
               >
                 {lookup.running && lookup.progress
-                  ? t("settings:import.preview.lookup.running", lookup.progress)
+                  ? t("settings:import.preview.lookup.running", {
+                      done: lookup.progress.done,
+                      total: lookup.progress.total,
+                    })
                   : t("settings:import.preview.lookup.action", { count: lookupRows.length })}
               </button>
             )}

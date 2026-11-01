@@ -47,6 +47,15 @@ describe("POST /airports/enrich names why a code found nothing", () => {
     expect(lookupMock).toHaveBeenCalledWith("ZZZ");
   });
 
+  it("still answers from the ICAO code when the IATA lookup could not be asked", async () => {
+    lookupMock
+      .mockResolvedValueOnce({ status: "unavailable", reason: "timeout" })
+      .mockResolvedValueOnce({ status: "found", airport: { iata: "FRA" } });
+    const res = await post({ iata: "FRA", icao: "EDDF" });
+    expect(res.status).toBe(200);
+    expect(lookupMock).toHaveBeenCalledTimes(2);
+  });
+
   it("answers 404 when the sources were asked and know no such code", async () => {
     lookupMock.mockResolvedValue({ status: "not_found" });
     expect((await post({ iata: "ZZZ" })).status).toBe(404);

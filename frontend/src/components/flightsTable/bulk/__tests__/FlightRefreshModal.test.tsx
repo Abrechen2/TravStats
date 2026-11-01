@@ -47,6 +47,21 @@ describe("planRefresh (forgejo#407)", () => {
     });
   });
 
+  it("fills nothing from a hit that flies another route than the flight", () => {
+    expect(
+      planRefresh(
+        { depIata: "FRA", arrIata: "JFK" },
+        found([{ aircraft: "A321", departure: { iata: "MUC" }, arrival: { iata: "JFK" } }])
+      )
+    ).toEqual({ kind: "mismatch" });
+    expect(
+      planRefresh(
+        { depIata: "FRA", arrIata: "JFK" },
+        found([{ aircraft: "A321", departure: { iata: "fra" }, arrival: { iata: "JFK" } }])
+      )
+    ).toMatchObject({ kind: "fill" });
+  });
+
   it("guesses nothing from two hits and adds nothing the flight already has", () => {
     expect(planRefresh({}, found([{ aircraft: "A1" }, { aircraft: "A2" }]))).toEqual({
       kind: "ambiguous",

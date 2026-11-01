@@ -104,7 +104,10 @@ export default function FlightRefreshModal({
               onClick={() => void lookup.run(rows)}
             >
               {lookup.running && lookup.progress
-                ? t("flights:refresh.running", lookup.progress)
+                ? t("flights:refresh.running", {
+                    done: lookup.progress.done,
+                    total: lookup.progress.total,
+                  })
                 : t("flights:refresh.start")}
             </button>
           )}
@@ -120,7 +123,12 @@ export default function FlightRefreshModal({
                 : t("flights:refresh.apply", { count: fillable.length })}
             </button>
           )}
-          <button type="button" className="btn-secondary px-3 py-1.5 text-sm" onClick={onClose}>
+          <button
+            type="button"
+            className="btn-secondary px-3 py-1.5 text-sm"
+            disabled={lookup.running || applying}
+            onClick={onClose}
+          >
             {t("flights:refresh.close")}
           </button>
         </>
@@ -153,6 +161,11 @@ export default function FlightRefreshModal({
                 {plan?.kind === "nothingNew" && (
                   <span className="block text-xs" style={muted}>
                     {t("flights:refresh.nothingNew")}
+                  </span>
+                )}
+                {plan?.kind === "mismatch" && (
+                  <span className="block text-xs" style={muted}>
+                    {t("flights:refresh.mismatch")}
                   </span>
                 )}
                 {plan?.kind === "ambiguous" && (

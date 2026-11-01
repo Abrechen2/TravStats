@@ -306,6 +306,7 @@
     "close": "Close",
     "willFill": "Fills in: {{fields}}",
     "nothingNew": "The provider has nothing that is still missing here.",
+    "mismatch": "The provider lists a different route for this number – nothing is filled in.",
     "ambiguous": "The provider names several flights for this day – nothing is filled in automatically.",
     "applied": "filled in",
     "applyFailed": "Could not be saved.",
