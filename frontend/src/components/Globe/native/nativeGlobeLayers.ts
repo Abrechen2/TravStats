@@ -196,12 +196,9 @@ function pointCollection(points: readonly PointDatum[]): FeatureCollection {
   return collection(points.map((d, i) => pointFeature(d.position, { i, k: pointKey(d) }, i + 1)));
 }
 
-/** A grouped leg's identity: its first member, plus where it runs. */
-const cruiseKey = (d: CruisePathDatum): string => {
-  const a = d.path[0];
-  const b = d.path[d.path.length - 1];
-  return `${d.memberIds?.[0] ?? d.cruiseId}|${d.path.length}|${a}|${b}`;
-};
+/** A grouped leg's identity: the same discriminators the grouping used — hue, planned or sailed, and the full geometry. */
+const cruiseKey = (d: CruisePathDatum): string =>
+  `${d.memberIds?.[0] ?? d.cruiseId}|${d.status === "scheduled"}|${d.color.join(",")}|${pathIdentity(d.path)}`;
 
 function cruiseCollection(paths: readonly CruisePathDatum[]): {
   fc: FeatureCollection;

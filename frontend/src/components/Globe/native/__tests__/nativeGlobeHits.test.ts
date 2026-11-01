@@ -102,6 +102,19 @@ describe("native hit mapping (forgejo#331)", () => {
     expect(resolveNativeHit(gone.targets, NATIVE_IDS.airports, staleKey)).toBeNull();
   });
 
+  it("keeps two legs of one cruise apart even when their endpoints and point counts match", () => {
+    const leg = (mid: [number, number]): CruisePathDatum => ({
+      ...CRUISE,
+      path: [[8, 50], mid, [9, 51]],
+    });
+    const s = spec({ cruisePaths: [leg([8.2, 50.9]), leg([8.9, 50.1])] });
+    const data = s.targets.get(NATIVE_IDS.cruise)!.data;
+    expect(data).toHaveLength(2);
+    const a = hitOf(s, NATIVE_IDS.cruise, 0)!.object;
+    const b = hitOf(s, NATIVE_IDS.cruise, 1)!.object;
+    expect(a).not.toBe(b);
+  });
+
   it("gives a caller's own line a hover but no card", () => {
     const line = new PathLayer({
       id: "dashboard-bus-paths",
