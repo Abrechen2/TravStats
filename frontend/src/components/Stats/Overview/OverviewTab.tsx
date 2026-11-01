@@ -23,6 +23,7 @@ import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
 import DomainRecordsSection from "./DomainRecordsSection";
+import CrossDomainSection from "./CrossDomainSection";
 import CompanionsTogetherSection from "./CompanionsTogetherSection";
 import TourStatsSection from "../roadtrip/TourStatsSection";
 import { useToursVisible } from "../../../hooks/useToursVisible";
@@ -205,6 +206,9 @@ export default function OverviewTab({
 
       {/* Records beyond flights (forgejo#265), one per visible domain. */}
       {show("domainRecords") && <DomainRecordsSection />}
+
+      {/* Streaks, time shift, Schengen days and more from data already held (forgejo#399). */}
+      {show("crossDomain") && <CrossDomainSection />}
 
       {/* Who the reader travels with, across every visible domain (all time). */}
       {show("companions") && <CompanionsTogetherSection />}

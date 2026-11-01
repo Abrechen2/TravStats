@@ -1468,5 +1468,120 @@
       "entries": "Shared entries",
       "countries": "Countries together"
     }
+  },
+  "crossDomain": {
+    "title": "Figures across all kinds of travel",
+    "loadFailed": "The cross-domain figures could not be loaded.",
+    "unavailable": "Some figures could not be calculated: {{blocks}}.",
+    "blocks": {
+      "streaks": "streaks",
+      "rhythm": "rhythm",
+      "timeShift": "time zones",
+      "unseen": "last visits",
+      "pricePerKm": "price per km",
+      "nightsByCountry": "nights per country",
+      "schengen": "Schengen",
+      "photos": "photos"
+    },
+    "domains": {
+      "flight": "Flights",
+      "cruise": "Cruises",
+      "lodging": "Stays",
+      "poi": "Places",
+      "roadtrip": "Roadtrips",
+      "rail": "Train",
+      "rental": "Rentals",
+      "bus": "Bus",
+      "ferry": "Ferry"
+    },
+    "streak": {
+      "title": "Longest run on the road",
+      "value_one": "{{count}} day",
+      "value_other": "{{count}} days",
+      "range": "{{from}} to {{to}} — a day counts when any record puts you away from home.",
+      "current": "Running now: {{count}} days (since {{from}}).",
+      "none": "No run is going right now."
+    },
+    "months": {
+      "title": "Months in a row",
+      "value_one": "{{count}} month",
+      "value_other": "{{count}} months",
+      "range": "{{from}} to {{to}}, each with at least one day on the road.",
+      "current": "Running now: {{count}} months."
+    },
+    "timeShift": {
+      "title": "Hours shifted across time zones",
+      "value": "{{hours}} h",
+      "biggest": "Biggest jump: {{hours}} h {{direction}}{{route}}.",
+      "east": "east",
+      "west": "west",
+      "jetLag": "About {{days}} days of jet lag (estimate: a day per hour eastward, half a day per hour westward, from {{min}} h).",
+      "unmeasured": "{{count}} flights without a clock time or zone are left out."
+    },
+    "schengen": {
+      "title": "Schengen days (90 in 180)",
+      "value": "{{used}} / {{allowed}}",
+      "left": "{{remaining}} days left in the {{window}} days since {{from}}.",
+      "note": "Counted from your logbook, not legal advice. A day without a record is not counted as a day outside the area."
+    },
+    "rhythm": {
+      "title": "When you travel",
+      "seasons": {
+        "winter": "Winter",
+        "spring": "Spring",
+        "summer": "Summer",
+        "autumn": "Autumn"
+      },
+      "weekdays": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "days": "{{count}} days",
+      "note": "Days on the road, all kinds of travel counted once. Seasons as in the northern hemisphere."
+    },
+    "unseen": {
+      "title": "Not seen for a while",
+      "country": "Countries",
+      "airport": "Airports",
+      "place": "Places",
+      "item": "{{label}} — {{years}} years ago ({{date}})",
+      "none": "Nothing has been out of sight for a year or more.",
+      "unknown": "No dated visits yet."
+    },
+    "pricePerKm": {
+      "title": "Price per kilometre",
+      "row": "{{domain}} ({{currency}}): {{perKm}} per km — {{spend}} over {{km}} km",
+      "noKm": "{{domain}} ({{currency}}): {{spend}} spent, no distance recorded",
+      "booked": "{{count}} rides on a shared booking are left out.",
+      "note": "Per currency, never added across currencies. Straight-line distances make the rate an upper bound."
+    },
+    "nights": {
+      "title": "Nights per country, all modes",
+      "row": "{{country}}: {{total}} nights (stays {{hotel}}, train {{rail}}, bus {{bus}})",
+      "unattributed": "{{count}} nights could not be placed in a country (at sea, border-crossing sleepers, in the air).",
+      "note": "One night is counted once, whichever record claims it."
+    },
+    "photos": {
+      "title": "Photos",
+      "value_one": "{{count}} photo",
+      "value_other": "{{count}} photos",
+      "busiest": "Busiest day: {{day}} ({{count}} photos).",
+      "trips": "Most photographed trips",
+      "countries": "Most photographed countries",
+      "places": "Most photographed places",
+      "left": "{{noDate}} without a date, {{noCountry}} without coordinates."
+    },
+    "help": {
+      "unit": "Days and months with at least one record in any kind of travel (one day with a flight and a hotel night counts once); hours as the change in UTC offset between departure and arrival zone; Schengen days as distinct days with a record in a member country; price per kilometre per kind and currency; nights as the travel account counts them, one per night.",
+      "time": "Days are the calendar days of each record on its own clock (airport, station, hotel). Streaks run to today; one that ended yesterday still counts as running. Schengen looks at the 180 days ending today.",
+      "source": "Flights, stays, train, bus and ferry rides, place visits and trip photos, each by its own kind's rule: only flights flown, stays that are over, rides completed, visits that took place.",
+      "coverage": "A flight needs real clock times and zones for the time-zone figures, a ride its own price (not a shared booking's) and a distance for the price per kilometre, a night a known country. What cannot be derived is left out and named, never counted as zero.",
+      "exclusions": "A day without a record is not a day at home or outside the Schengen area. Cruises and roadtrips do not place you in a country. The jet-lag figure is an estimate. This is a logbook count, not legal advice."
+    }
   }
 }
