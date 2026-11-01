@@ -42,7 +42,8 @@ export type JobKind =
   | "webdavSync.run"
   | "travtrack.fileImport"
   | "travtrack.dawarichImport"
-  | "placeVisitPhotos.immichLink";
+  | "placeVisitPhotos.immichLink"
+  | "dawarich.countryDaySweep";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

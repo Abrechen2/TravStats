@@ -1392,5 +1392,38 @@
     "loadFailed": "Die AeroAPI-Einstellungen konnten nicht geladen werden.",
     "saveFailed": "Die AeroAPI-Einstellungen konnten nicht gespeichert werden.",
     "budgetRequired": "Für ein eigenes Budget ist ein Betrag über 0 nötig."
+  },
+  "catalogues": {
+    "run": "Neu einlesen",
+    "running": "Läuft …",
+    "airports": {
+      "title": "Flughäfen",
+      "description": "Liest den Flughafenkatalog (OurAirports) neu ein. Läuft im Hintergrund, bestehende Einträge bleiben.",
+      "done": "Flughafenkatalog eingelesen.",
+      "seedingFailed": "Das Einlesen der Flughäfen ist fehlgeschlagen.",
+      "statusFailed": "Der Stand des Flughafen-Imports konnte nicht gelesen werden.",
+      "status": {
+        "pending": "Import steht an.",
+        "running": "Import läuft: {{processed}} von {{total}} Flughäfen.",
+        "completed": "Katalog vollständig ({{total}} Flughäfen im letzten Import).",
+        "failed": "Der letzte Import ist fehlgeschlagen."
+      }
+    },
+    "airlines": {
+      "title": "Airlines",
+      "description": "Liest den Airline-Katalog (OpenFlights) neu ein. Eigene Einträge bleiben unberührt.",
+      "done": "{{count}} neue Airlines eingelesen."
+    },
+    "aircraft": {
+      "title": "Flugzeugtypen",
+      "description": "Liest den Flugzeugkatalog (OpenFlights) neu ein. Eigene Einträge bleiben unberührt.",
+      "done": "{{count}} neue Flugzeugtypen eingelesen."
+    },
+    "errors": {
+      "rateLimited": "Zu viele Neu-Einlesungen – höchstens 3 pro Stunde. Bitte später erneut versuchen.",
+      "forbidden": "Dafür fehlt die Administrator-Berechtigung.",
+      "unknownOutcome": "Keine Antwort erhalten – der Server arbeitet womöglich noch. Prüfe den Katalog später.",
+      "failed": "Das Einlesen ist fehlgeschlagen."
+    }
   }
 }

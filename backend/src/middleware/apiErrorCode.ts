@@ -544,4 +544,6 @@ export type ApiErrorCode =
   | "ENRICH_DISABLED"
   | "ENRICH_NO_FLIGHT_NUMBER"
   | "ENRICH_NO_REFERENCE"
-  | "ENRICH_CONFIDENCE_LOW";
+  | "ENRICH_CONFIDENCE_LOW"
+  /** The admin country-day sweep is already running (forgejo#397, 409). */
+  | "SWEEP_RUNNING";

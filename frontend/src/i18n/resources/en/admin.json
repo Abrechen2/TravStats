@@ -1392,5 +1392,38 @@
     "loadFailed": "The AeroAPI settings could not be loaded.",
     "saveFailed": "The AeroAPI settings could not be saved.",
     "budgetRequired": "A custom budget needs an amount above 0."
+  },
+  "catalogues": {
+    "run": "Re-seed",
+    "running": "Running …",
+    "airports": {
+      "title": "Airports",
+      "description": "Re-imports the airport catalogue (OurAirports). Runs in the background; existing entries stay.",
+      "done": "Airport catalogue imported.",
+      "seedingFailed": "Importing the airports failed.",
+      "statusFailed": "The airport import status could not be read.",
+      "status": {
+        "pending": "Import is queued.",
+        "running": "Import running: {{processed}} of {{total}} airports.",
+        "completed": "Catalogue complete ({{total}} airports in the last import).",
+        "failed": "The last import failed."
+      }
+    },
+    "airlines": {
+      "title": "Airlines",
+      "description": "Re-imports the airline catalogue (OpenFlights). Your own entries are left alone.",
+      "done": "{{count}} new airlines imported."
+    },
+    "aircraft": {
+      "title": "Aircraft types",
+      "description": "Re-imports the aircraft catalogue (OpenFlights). Your own entries are left alone.",
+      "done": "{{count}} new aircraft types imported."
+    },
+    "errors": {
+      "rateLimited": "Too many re-seeds – at most 3 per hour. Please try again later.",
+      "forbidden": "Administrator permission is required.",
+      "unknownOutcome": "No answer received – the server may still be working. Check the catalogue later.",
+      "failed": "The import failed."
+    }
   }
 }
