@@ -173,7 +173,8 @@
     "ratingOverallDerived": "Average of room, breakfast and service",
     "website": "Website",
     "amenitySuggestions": "Your amenities",
-    "removeAmenity": "Remove {{name}}"
+    "removeAmenity": "Remove {{name}}",
+    "tags": "Tags"
   },
   "type": {
     "hotel": "Hotel",

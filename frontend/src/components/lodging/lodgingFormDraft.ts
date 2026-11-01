@@ -18,6 +18,7 @@ export interface LodgingFormFields {
   osmRef: string | null;
   stars: string;
   amenities: string[];
+  tags: string[];
   notes: string;
   website: string;
   /**
@@ -42,6 +43,7 @@ export function lodgingFormFields(lodging: Lodging | null | undefined): LodgingF
     osmRef: null,
     stars: lodging?.stars?.toString() ?? "",
     amenities: lodging?.amenities ?? [],
+    tags: lodging?.tags ?? [],
     notes: lodging?.notes ?? "",
     website: lodging?.website ?? "",
   };

@@ -100,7 +100,8 @@
     "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
     "countryTransit": "Nur Transit / Flughafen / Raststätte",
     "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht.",
-    "countryTransitByCategory": "Eine Raststätte oder Tankstelle zählt immer als Bodenkontakt, nie als Besuch des Landes. Wer dort wirklich etwas besucht hat, ändert die Kategorie."
+    "countryTransitByCategory": "Eine Raststätte oder Tankstelle zählt immer als Bodenkontakt, nie als Besuch des Landes. Wer dort wirklich etwas besucht hat, ändert die Kategorie.",
+    "tags": "Tags"
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",

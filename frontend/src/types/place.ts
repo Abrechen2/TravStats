@@ -61,6 +61,8 @@ export interface Place {
   /** The lead photograph the user chose; null means "the first one". */
   coverPhotoId?: string | null;
   notes: string | null;
+  /** Free-form labels (forgejo#405). Absent on older backends. */
+  tags?: string[];
   dataSource: string | null;
   createdAt: string;
   updatedAt: string;
@@ -96,6 +98,7 @@ export interface PlaceInput {
   country?: string | null;
   externalRef?: string | null;
   notes?: string | null;
+  tags?: string[];
   visited?: boolean;
 }
 

@@ -173,7 +173,8 @@
     "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
     "website": "Webseite",
     "amenitySuggestions": "Deine Ausstattung",
-    "removeAmenity": "{{name}} entfernen"
+    "removeAmenity": "{{name}} entfernen",
+    "tags": "Tags"
   },
   "type": {
     "hotel": "Hotel",

@@ -16,6 +16,7 @@ vi.mock("../../lib/api/places", () => ({
     lon: 126.9958,
     visited: true,
     visits: [],
+    tags: ["Brücke", "Nacht"],
   })),
   createVisit: vi.fn(),
   deleteVisit: vi.fn(),
@@ -54,5 +55,18 @@ describe("PlaceDetailPage — the second name", () => {
       await screen.findByRole("heading", { name: "Banpo Bridge Moonlight Rainbow Fountain" })
     ).toBeInTheDocument();
     expect(screen.getByTestId("place-local-name")).toHaveTextContent("반포대교 달빛무지개분수");
+  });
+
+  // forgejo#405: a place's tags are shown on its page.
+  it("shows the place's tags as chips", async () => {
+    render(
+      <MemoryRouter initialEntries={["/places/p1"]}>
+        <Routes>
+          <Route path="/places/:id" element={<PlaceDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("#Brücke")).toBeInTheDocument();
+    expect(screen.getByText("#Nacht")).toBeInTheDocument();
   });
 });

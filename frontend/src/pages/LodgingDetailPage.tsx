@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import LodgingEnrichButton from "../components/lodging/LodgingEnrichButton";
 import type { JSX, ReactNode } from "react";
@@ -573,6 +574,12 @@ export default function LodgingDetailPage(): JSX.Element {
               ))}
             </dl>
           </DetailSection>
+
+          {(lodging.tags ?? []).length > 0 && (
+            <DetailSection title={t("lodging:field.tags")}>
+              <TagChips tags={lodging.tags ?? []} />
+            </DetailSection>
+          )}
 
           {lodging.amenities.length > 0 && (
             <DetailSection title={t("lodging:field.amenities")}>

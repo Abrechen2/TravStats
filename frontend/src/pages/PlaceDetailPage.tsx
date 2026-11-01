@@ -1,3 +1,4 @@
+import TagChips from "../components/common/TagChips";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX } from "react";
@@ -334,6 +335,12 @@ export default function PlaceDetailPage(): JSX.Element {
             onDelete={setConfirmVisitDelete}
             onVisitChanged={() => void refreshQuietly()}
           />
+
+          {(place.tags ?? []).length > 0 && (
+            <DetailSection title={t("places:form.tags")}>
+              <TagChips tags={place.tags ?? []} />
+            </DetailSection>
+          )}
 
           {place.notes && (
             <DetailSection title={t("places:detail.notes")}>
