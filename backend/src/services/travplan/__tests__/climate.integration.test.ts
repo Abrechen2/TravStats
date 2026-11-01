@@ -203,6 +203,66 @@ describe("climate means per station (spec 5.7)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects an answer that misses days of the window instead of overwriting the stored climate with gaps", async () => {
+    const plan = await routePlan();
+    const full = archive();
+    fetchMock.mockResolvedValueOnce(full);
+    const stored = await refreshStationClimate(
+      userId,
+      plan.tripId,
+      plan.stationId,
+      {
+        clientRef: randomUUID(),
+        baseRevision: plan.revision,
+      },
+      NOW
+    );
+    clearClimateCache();
+    // Only 1 July is measured; the 2nd and 3rd are gone.
+    const keep = full.body.daily.time.map((d) => d.endsWith("07-01"));
+    const thin = {
+      ok: true as const,
+      body: {
+        daily: Object.fromEntries(
+          Object.entries(full.body.daily).map(([k, v]) => [
+            k,
+            (v as unknown[]).filter((_, i) => keep[i]),
+          ])
+        ),
+      },
+    };
+    fetchMock.mockResolvedValueOnce(thin as never);
+    await expect(
+      refreshStationClimate(
+        userId,
+        plan.tripId,
+        plan.stationId,
+        {
+          clientRef: randomUUID(),
+          baseRevision: stored.revision,
+        },
+        NOW
+      )
+    ).rejects.toMatchObject({ code: "PLAN_WEATHER_NO_DATA" });
+    const row = await prisma.travelPlan.findFirstOrThrow({ where: { tripId: plan.tripId } });
+    expect(row.revision).toBe(stored.revision);
+  });
+
+  it("does not report a rain probability from fewer than five measured years of precipitation", () => {
+    const years = ["2019", "2020", "2021", "2022", "2023"];
+    const table = climateByCalendarDay({
+      time: years.map((y) => `${y}-07-01`),
+      temperature_2m_max: [20, 21, 22, 23, 24],
+      temperature_2m_min: [10, 10, 10, 10, 10],
+      precipitation_sum: [5, null, null, null, null],
+    });
+    expect(table.get("07-01")).toMatchObject({
+      max: 22,
+      rainProbability: null,
+      precipitationMm: null,
+    });
+  });
+
   it("withholds a day-of-year mean measured in fewer than five years", () => {
     const table = climateByCalendarDay({
       time: ["2024-07-01", "2025-07-01"],

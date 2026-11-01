@@ -49,41 +49,41 @@ const mean = (values: number[]) =>
 
 /** Per calendar day (`MM-DD`) means over the measured years; a thin sample stays null. */
 export function climateByCalendarDay(daily: Archive): Map<string, DayMean> {
-  const buckets = new Map<
-    string,
-    { min: number[]; max: number[]; rain: number[]; years: Set<string> }
-  >();
+  type Metric = "min" | "max" | "rain";
+  const buckets = new Map<string, Record<Metric, Map<string, number>>>();
   daily.time.forEach((day, i) => {
-    const key = day.slice(5);
-    const b = buckets.get(key) ?? { min: [], max: [], rain: [], years: new Set<string>() };
+    const key = day.slice(5),
+      year = day.slice(0, 4);
+    const b = buckets.get(key) ?? { min: new Map(), max: new Map(), rain: new Map() };
     const lo = daily.temperature_2m_min[i],
       hi = daily.temperature_2m_max[i],
       rain = daily.precipitation_sum[i];
-    if (lo != null) b.min.push(lo);
-    if (hi != null) b.max.push(hi);
-    if (rain != null) b.rain.push(rain);
-    if (lo != null || hi != null || rain != null) b.years.add(day.slice(0, 4));
+    if (lo != null) b.min.set(year, lo);
+    if (hi != null) b.max.set(year, hi);
+    if (rain != null) b.rain.set(year, rain);
     buckets.set(key, b);
   });
+  // Each figure needs its own sample: five years of temperature say nothing about rain.
+  const enough = (m: Map<string, number>) => m.size >= MIN_YEARS;
   const out = new Map<string, DayMean>();
   for (const [key, b] of buckets) {
-    const enough = b.years.size >= MIN_YEARS;
+    const rain = [...b.rain.values()];
     out.set(key, {
-      min: enough ? mean(b.min) : null,
-      max: enough ? mean(b.max) : null,
-      precipitationMm: enough ? mean(b.rain) : null,
-      rainProbability:
-        enough && b.rain.length
-          ? Math.round((100 * b.rain.filter((mm) => mm >= RAIN_DAY_MM).length) / b.rain.length)
-          : null,
-      years: b.years.size,
+      min: enough(b.min) ? mean([...b.min.values()]) : null,
+      max: enough(b.max) ? mean([...b.max.values()]) : null,
+      precipitationMm: enough(b.rain) ? mean(rain) : null,
+      rainProbability: enough(b.rain)
+        ? Math.round((100 * rain.filter((mm) => mm >= RAIN_DAY_MM).length) / rain.length)
+        : null,
+      years: Math.max(b.min.size, b.max.size, b.rain.size),
     });
   }
   return out;
 }
 
 const cache = new Map<string, { at: number; table: Map<string, DayMean> }>();
-const cacheKey = (lat: number, lon: number) => `${lat.toFixed(1)},${lon.toFixed(1)}`;
+const cacheKey = (lat: number, lon: number, lastYear: number) =>
+  `${lat.toFixed(1)},${lon.toFixed(1)},${lastYear}`;
 
 /** Test hook: the cache is process-wide. */
 export const clearClimateCache = () => cache.clear();
@@ -99,7 +99,7 @@ async function climateTable(
 > {
   const last = now.getUTCFullYear() - 1,
     first = last - YEARS + 1;
-  const key = cacheKey(lat, lon);
+  const key = cacheKey(lat, lon, last);
   const hit = cache.get(key);
   if (hit && now.getTime() - hit.at < CACHE_TTL_MS)
     return { table: hit.table, years: [first, last] };
@@ -178,7 +178,8 @@ export async function refreshStationClimate(
       { reason: got.failure }
     );
   const rows = days.map((day) => ({ day, mean: got.table.get(day.slice(5)) }));
-  if (!rows.some((r) => r.mean && r.mean.max !== null))
+  // A partial answer must not replace a complete stored one: every day needs a temperature range.
+  if (rows.some((r) => !r.mean || r.mean.max === null || r.mean.min === null))
     throw new AppError("No measurements for this place and season", 404, "PLAN_WEATHER_NO_DATA");
   const entry: PlanStationWeather = stationWeatherSchema.parse({
     stationId,
