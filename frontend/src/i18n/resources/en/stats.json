@@ -1112,6 +1112,34 @@
         "source": "Your completed ferry crossings.",
         "coverage": "Crossings without a distance add no kilometres and are named; if none has a distance, no kilometre figure is shown. Tap the number to see the entries.",
         "exclusions": "Planned, ongoing and cancelled crossings do not count. A hidden domain has no chapter. The chapter is never added to any other."
+      },
+      "travTrackDays": {
+        "unit": "A calendar day with at least one recorded position; the kilometres are the ground distance between those positions.",
+        "time": "The day on your profile time zone, in the chosen year.",
+        "source": "The positions of your TravTrack history.",
+        "coverage": "Positions in privacy zones, deleted spans and pauses do not count; stretches in the air and above 500 km/h are not measured. A tap opens the days with entries – the figure comes from positions, not from entries.",
+        "exclusions": "The figure is measured, not from entries."
+      },
+      "travTrackTopSpeed": {
+        "unit": "The highest believable ground speed in km/h.",
+        "time": "In the chosen year.",
+        "source": "The speed the phone reported.",
+        "coverage": "Outliers are dropped: values above 500 km/h, a speed that contradicts the kind of movement, and a value above 10 m/s that no neighbouring position confirms. Without a believable value no card is shown.",
+        "exclusions": "Flights and privacy zones do not count. The figure is measured, not from entries – the tap only opens the days."
+      },
+      "travTrackHighest": {
+        "unit": "The highest point in metres above sea level.",
+        "time": "In the chosen year.",
+        "source": "The altitude the phone reported.",
+        "coverage": "Smoothed over five positions each, so a single altitude spike cannot be the maximum; at least three believable altitudes are needed.",
+        "exclusions": "Flights and privacy zones do not count. The figure is measured, not from entries."
+      },
+      "travTrackByMotion": {
+        "unit": "Hours and kilometres per kind of movement the phone reported; standing still is not counted.",
+        "time": "In the chosen year.",
+        "source": "The kind of movement and the positions of your TravTrack history.",
+        "coverage": "Only steps of up to 15 minutes count; a gap is not time on foot. The kilometres are therefore never more than the ground distance.",
+        "exclusions": "Flights and privacy zones do not count. The figure is measured, not from entries."
       }
     },
     "travTrack": {

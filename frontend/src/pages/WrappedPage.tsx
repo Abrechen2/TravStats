@@ -291,7 +291,7 @@ export default function WrappedPage(): JSX.Element {
                 />
               )}
               {wrapped.travTrack && (
-                <WrappedTravTrackCards data={wrapped.travTrack} count={count} />
+                <WrappedTravTrackCards data={wrapped.travTrack} count={count} year={wrapped.year} />
               )}
               {flightsOn && wrapped.topAirline !== null && (
                 <StatCard
