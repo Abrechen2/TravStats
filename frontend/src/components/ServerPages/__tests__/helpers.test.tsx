@@ -124,3 +124,28 @@ describe("Wartung › Zeitzonen", () => {
     expect(await screen.findByText("settingsRows:maintenance.usersLoadFailed")).toBeInTheDocument();
   });
 });
+
+describe("the instance settings copy", () => {
+  it("is read again once it is older than a minute, and keeps the old copy when that fails", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { useInstanceStore } = await import("../instanceStore");
+      api.getInstanceSettings.mockResolvedValue({
+        settings: instance({ instanceName: "One" }),
+        passkeyStatus: null,
+      });
+      await useInstanceStore.getState().ensureLoaded();
+      await useInstanceStore.getState().ensureLoaded();
+      expect(api.getInstanceSettings).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(Date.now() + 61_000);
+      api.getInstanceSettings.mockRejectedValueOnce(httpError());
+      await useInstanceStore.getState().ensureLoaded();
+      expect(api.getInstanceSettings).toHaveBeenCalledTimes(2);
+      expect(useInstanceStore.getState().settings?.instanceName).toBe("One");
+      expect(useInstanceStore.getState().load).toBe("ok");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

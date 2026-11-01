@@ -285,7 +285,7 @@ function ImportModeRow(): JSX.Element {
     return failure === "load" ? <ErrorLine>{t("admin:importMode.loadFailed")}</ErrorLine> : <></>;
   }
   const active = mode.until !== null;
-  const value: ImportChoice = active ? (mode.userId ? "one" : "all") : picking ? "one" : "off";
+  const value: ImportChoice = picking ? "one" : active ? (mode.userId ? "one" : "all") : "off";
   const covered = mode.userId ? accounts.find((a) => a.id === mode.userId)?.username : null;
   return (
     <SettingItem
@@ -308,9 +308,10 @@ function ImportModeRow(): JSX.Element {
             if (next === "off") {
               setPicking(false);
               if (active) void run({ enabled: false });
-            } else if (next === "all") void run({ enabled: true, userId: null });
-            else if (active && mode.userId) return;
-            else setPicking(true);
+            } else if (next === "all") {
+              setPicking(false);
+              void run({ enabled: true, userId: null });
+            } else if (!(active && mode.userId)) setPicking(true);
           }}
         />
       }
@@ -325,7 +326,7 @@ function ImportModeRow(): JSX.Element {
             : t("admin:importMode.activeAll", { until: formatDateTime(mode.until) })}
         </p>
       ) : null}
-      {picking && !active ? (
+      {picking ? (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
           <Select
             aria-label={t("admin:importMode.account")}

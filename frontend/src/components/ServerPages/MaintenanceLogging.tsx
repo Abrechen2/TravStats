@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { formatBytes } from "../../lib/fileSize";
 import { useDisplayFormat } from "../../lib/displayFormat";
@@ -117,22 +117,27 @@ function Rows({
     ? { reason: t("settingsRows:maintenance.deps.envPinned", { level: config.effectiveLogLevel }) }
     : undefined;
 
+  // Only what the user edited is sent: the verbose switch above writes the level on
+  // its own, and a draft that still holds the old level must not write it back.
+  const editedRef = useRef<readonly (keyof Draft)[]>([]);
   const group = useGroupSave<Draft>({
     id: "maintenance-logging",
     label: t("settingsRows:maintenance.groups.logging"),
     saved: draftOf(config),
     write: async (draft) => {
+      const edited = new Set<keyof Draft>(editedRef.current);
       const { config: next } = await adminApi.updateLoggingConfig({
-        logLevel: draft.level,
-        logRetentionDays: Number(draft.retentionDays),
-        logHttpRequests: draft.http,
-        logDatabaseQueries: draft.database,
-        logParserOperations: draft.parser,
+        ...(edited.has("level") ? { logLevel: draft.level } : {}),
+        ...(edited.has("retentionDays") ? { logRetentionDays: Number(draft.retentionDays) } : {}),
+        ...(edited.has("http") ? { logHttpRequests: draft.http } : {}),
+        ...(edited.has("database") ? { logDatabaseQueries: draft.database } : {}),
+        ...(edited.has("parser") ? { logParserOperations: draft.parser } : {}),
       });
       await reload();
       return draftOf(next);
     },
   });
+  editedRef.current = group.changed;
   const verbose = useSettingWrite<boolean>(
     "maintenance:debug",
     config.logLevel === "debug",

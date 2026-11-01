@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import MaintenanceLogging from "../MaintenanceLogging";
 import MaintenanceSystem from "../MaintenanceSystem";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
@@ -55,6 +56,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  resetWriteQueue();
   useSettingsLevelStore.setState({ level: null });
 });
 
@@ -81,6 +83,31 @@ describe("Wartung › Protokoll", () => {
       }
     );
     expect(verbose).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("sends only what was edited, so a verbose switch flipped meanwhile is not written back", async () => {
+    admin.toggleDebugLogging.mockResolvedValue({
+      message: "ok",
+      config: config({ logLevel: "debug" }),
+    });
+    admin.updateLoggingConfig.mockResolvedValue({
+      message: "ok",
+      config: config({ logLevel: "debug", logRetentionDays: 14 }),
+    });
+    render(<MaintenanceLogging />);
+    const days = await screen.findByLabelText("settingsRows:maintenance.logtage.t");
+    await userEvent.clear(days);
+    await userEvent.type(days, "14");
+    // The server now runs at debug (the switch), while the group still holds the old level "info".
+    admin.getLoggingConfig.mockResolvedValue(config({ logLevel: "debug" }));
+    await userEvent.click(screen.getByRole("switch", { name: "settingsRows:maintenance.debug.t" }));
+    await waitFor(() => expect(admin.toggleDebugLogging).toHaveBeenCalledWith(true), {
+      timeout: 3000,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
+    await waitFor(() =>
+      expect(admin.updateLoggingConfig).toHaveBeenCalledWith({ logRetentionDays: 14 })
+    );
   });
 
   it("deletes old logs only after the confirmation, and a refusal is named", async () => {
@@ -151,6 +178,32 @@ describe("Wartung › System", () => {
     await waitFor(() => expect(client.post).toHaveBeenCalledWith("/admin/airports/reseed"));
     // Each of the three catalogues ends in its own state; none stays "running".
     await waitFor(() => expect(screen.getAllByText("settings:blocks.job.failed")).toHaveLength(3));
+  });
+
+  it("repeats only the catalogue whose outcome is unknown, not all three", async () => {
+    const timeout = Object.assign(new Error("timeout"), {
+      isAxiosError: true,
+      code: "ECONNABORTED",
+    });
+    client.post.mockImplementation(async (url: string) => {
+      if (url === "/admin/airlines/reseed") throw timeout;
+      return { data: { inserted: 5 } };
+    });
+    client.get.mockResolvedValue({ data: { status: "completed", totalAirports: 10 } });
+    render(<MaintenanceSystem />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "settingsRows:maintenance.reseed.action" })
+    );
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "settingsRows:dialogs.reseed.confirm",
+      })
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "settings:blocks.job.check" }));
+    const urls = client.post.mock.calls.map((c) => c[0]);
+    expect(urls.filter((u) => u === "/admin/airports/reseed")).toHaveLength(1);
+    expect(urls.filter((u) => u === "/admin/airlines/reseed")).toHaveLength(2);
+    expect(urls.filter((u) => u === "/admin/aircraft/reseed")).toHaveLength(1);
   });
 
   it("shows the demo account's removal only while a demo account exists, behind the confirmation", async () => {

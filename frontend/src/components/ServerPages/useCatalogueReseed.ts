@@ -103,6 +103,38 @@ export function useCatalogueReseed(labels: {
     [set]
   );
 
+  /**
+   * Airlines and aircraft types answer when finished. A timeout leaves the outcome
+   * unknown; "Nachsehen" repeats only THAT catalogue (the re-read skips or updates
+   * what is there, so a second pass is safe) and a 429 says so in its own sentence.
+   */
+  const runSync = useCallback(
+    async (kind: "airlines" | "aircraft"): Promise<void> => {
+      const again = (): void => void runSync(kind);
+      set(kind, { kind: "running", what: labelsRef.current.running(kind) });
+      try {
+        const { data } = await api.post<{ inserted: number }>(
+          `/admin/${kind}/reseed`,
+          {},
+          { timeout: API_TIMEOUTS.PARSER }
+        );
+        set(kind, { kind: "done", result: labelsRef.current.done(kind, data.inserted) });
+      } catch (error) {
+        logger.error(`Catalogue reseed: ${kind} failed`, error);
+        if (isAxiosError(error) && (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT")) {
+          set(kind, { kind: "unknown", onCheck: again });
+        } else {
+          set(kind, {
+            kind: "failed",
+            reason: labelsRef.current.failure(failureOf(error)),
+            onRetry: again,
+          });
+        }
+      }
+    },
+    [set]
+  );
+
   const run = useCallback(async (): Promise<void> => {
     const retry = (): void => void run();
     for (const kind of CATALOGUE_KINDS) set(kind, { kind: "waiting" });
@@ -118,29 +150,8 @@ export function useCatalogueReseed(labels: {
         onRetry: retry,
       });
     }
-    for (const kind of ["airlines", "aircraft"] as const) {
-      set(kind, { kind: "running", what: labelsRef.current.running(kind) });
-      try {
-        const { data } = await api.post<{ inserted: number }>(
-          `/admin/${kind}/reseed`,
-          {},
-          { timeout: API_TIMEOUTS.PARSER }
-        );
-        set(kind, { kind: "done", result: labelsRef.current.done(kind, data.inserted) });
-      } catch (error) {
-        logger.error(`Catalogue reseed: ${kind} failed`, error);
-        if (isAxiosError(error) && (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT")) {
-          set(kind, { kind: "unknown", onCheck: retry });
-        } else {
-          set(kind, {
-            kind: "failed",
-            reason: labelsRef.current.failure(failureOf(error)),
-            onRetry: retry,
-          });
-        }
-      }
-    }
-  }, [pollAirports, set]);
+    for (const kind of ["airlines", "aircraft"] as const) await runSync(kind);
+  }, [pollAirports, runSync, set]);
 
   const busy = Object.values(jobs).some((j) => j?.kind === "running" || j?.kind === "waiting");
   return { jobs, busy, run };

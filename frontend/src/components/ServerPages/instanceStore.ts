@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { adminApi } from "../../lib/api";
 import type { InstanceSettings, InstanceSettingsPatch, PasskeyStatus } from "../../lib/api/admin";
 import { logger } from "../../lib/logger";
+import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 
 type Load = "idle" | "loading" | "ok" | "failed";
@@ -12,7 +13,13 @@ interface InstanceState {
   /** What switching public links off would delete (present on a GET). */
   shareLinkStats: { links: number; accounts: number } | null;
   load: Load;
-  /** Reads the settings once; a second caller waits for the first. */
+  /** When the copy was read, for the staleness check. */
+  loadedAt: number;
+  /**
+   * Reads the settings when there is no copy or the copy is older than a minute;
+   * a second caller waits for the first. A copy being edited is not disturbed:
+   * a group follows the server's value only while the user has not touched it.
+   */
   ensureLoaded: () => Promise<void>;
   reload: () => Promise<void>;
   /**
@@ -24,6 +31,7 @@ interface InstanceState {
 }
 
 let inFlight: Promise<void> | null = null;
+const STALE_AFTER_MS = 60_000;
 
 /**
  * The instance settings of the Server and Nutzer pages, loaded once. Several
@@ -36,8 +44,9 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
   passkeyStatus: null,
   shareLinkStats: null,
   load: "idle",
+  loadedAt: 0,
   ensureLoaded: async () => {
-    if (get().load === "ok") return;
+    if (get().load === "ok" && Date.now() - get().loadedAt < STALE_AFTER_MS) return;
     if (inFlight) return inFlight;
     inFlight = get()
       .reload()
@@ -47,7 +56,8 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
     return inFlight;
   },
   reload: async () => {
-    set({ load: "loading" });
+    // A reload keeps the copy on screen; only a first read has nothing to show.
+    if (get().settings === null) set({ load: "loading" });
     try {
       const response = await adminApi.getInstanceSettings();
       set({
@@ -55,10 +65,12 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
         passkeyStatus: response.passkeyStatus,
         shareLinkStats: response.shareLinkStats ?? null,
         load: "ok",
+        loadedAt: Date.now(),
       });
     } catch (error) {
       logger.error("Failed to load instance settings", error);
-      set({ load: "failed" });
+      // A refresh that fails leaves the copy we have; only a first read is "failed".
+      if (get().settings === null) set({ load: "failed" });
     }
   },
   patch: async (patch) => {
@@ -80,5 +92,13 @@ export function resetInstanceStore(): void {
     passkeyStatus: null,
     shareLinkStats: null,
     load: "idle",
+    loadedAt: 0,
+  });
+}
+
+// Another account on the same tab must not see the previous one's server settings.
+if (typeof useAuthStore.subscribe === "function") {
+  useAuthStore.subscribe((state, previous) => {
+    if (state.user?.id !== previous.user?.id) resetInstanceStore();
   });
 }

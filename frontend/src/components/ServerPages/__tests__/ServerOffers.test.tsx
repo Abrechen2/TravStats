@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import ServerOffers from "../ServerOffers";
 import { resetInstanceStore } from "../instanceStore";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
@@ -38,6 +39,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  resetWriteQueue();
   useSettingsLevelStore.setState({ level: null });
 });
 
@@ -97,6 +99,23 @@ describe("Server › Was der Server anbietet", () => {
     track.config.mockRejectedValue(httpError());
     render(<ServerOffers />);
     expect(await screen.findByText("settingsRows:server.offersLoadFailed")).toBeInTheDocument();
+  });
+
+  it("lets an admin narrow an import mode that runs for everyone to one account", async () => {
+    api.getImportMode.mockResolvedValue({ until: "2999-01-01T00:00:00Z", userId: null, hours: 24 });
+    api.setImportMode.mockResolvedValue({ until: "2999-01-01T00:00:00Z", userId: "u1", hours: 24 });
+    render(<ServerOffers />);
+    await userEvent.click(
+      await screen.findByRole("radio", { name: "settingsRows:server.importMode.one" })
+    );
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "admin:importMode.account" }),
+      "u1"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "admin:importMode.start" }));
+    await waitFor(() =>
+      expect(api.setImportMode).toHaveBeenCalledWith({ enabled: true, userId: "u1" })
+    );
   });
 
   it("reports a refused import mode and leaves it off", async () => {
