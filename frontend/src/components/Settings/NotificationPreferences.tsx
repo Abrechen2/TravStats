@@ -65,7 +65,19 @@ export default function NotificationPreferencesCards(): JSX.Element {
 
   const writeDomain = useCallback(
     async (domain: ReminderDomain, value: ReminderDomainPrefs): Promise<void> => {
-      setPrefs(await notificationsApi.updatePreferences({ domains: { [domain]: value } }));
+      const updated = await notificationsApi.updatePreferences({ domains: { [domain]: value } });
+      // Only this area's row (and the channel availability): rows are written
+      // independently, so an answer to one must not undo another's confirmed state.
+      setPrefs((current) =>
+        current
+          ? {
+              ...current,
+              domains: { ...current.domains, [domain]: updated.domains[domain] },
+              mail: updated.mail,
+              push: updated.push,
+            }
+          : updated
+      );
     },
     []
   );

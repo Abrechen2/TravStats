@@ -47,6 +47,8 @@ export default function ShareLinksSettings(): JSX.Element {
   }, []);
 
   const write = async (on: boolean): Promise<void> => {
+    // One request at a time: a second click on a slow save must not queue a delete behind it.
+    if (busy) return;
     setAsking(false);
     setBusy(true);
     setSaveFailed(false);
@@ -78,7 +80,11 @@ export default function ShareLinksSettings(): JSX.Element {
             control={
               <SwitchControl
                 checked={enabled}
-                onChange={(on) => (on ? void write(true) : setAsking(true))}
+                onChange={(on) => {
+                  if (busy) return;
+                  if (on) void write(true);
+                  else setAsking(true);
+                }}
               />
             }
           />

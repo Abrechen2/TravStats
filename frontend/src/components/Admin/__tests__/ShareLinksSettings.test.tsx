@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ShareLinksSettings from "../ShareLinksSettings";
 import { adminApi } from "../../../lib/api";
@@ -64,6 +64,25 @@ describe("public links in instance administration", () => {
     await userEvent.click(await screen.findByRole("switch"));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(api.updateInstanceSettings).toHaveBeenCalledWith({ shareLinksEnabled: true });
+  });
+
+  it("sends one request at a time: a second click while a write is open sends nothing", async () => {
+    let release!: (v: ReturnType<typeof response>) => void;
+    api.getInstanceSettings.mockResolvedValue(response(false, { links: 0, accounts: 0 }));
+    api.updateInstanceSettings.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    render(<ShareLinksSettings />);
+    const toggle = await screen.findByRole("switch");
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+    expect(api.updateInstanceSettings).toHaveBeenCalledTimes(1);
+    await act(async () => release(response(true)));
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
   });
 
   it("keeps the last confirmed value and reports a failed write", async () => {

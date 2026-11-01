@@ -175,6 +175,27 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
     );
   });
 
+  it("an answer to one area does not undo another's confirmed state (out-of-order responses)", async () => {
+    const pending: Array<(v: unknown) => void> = [];
+    updatePreferences.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+    await renderPage();
+    await userEvent.click(within(domainRow("flight")).getByRole("switch"));
+    await waitFor(() => expect(pending).toHaveLength(1), WAIT);
+    await userEvent.click(within(domainRow("bus")).getByRole("switch"));
+    await waitFor(() => expect(pending).toHaveLength(2), WAIT);
+    // The bus answer lands first; the flight answer, computed before it, lands last
+    // and still carries the bus row as it was.
+    await act(async () => pending[1](echo({ domains: { bus: { enabled: false } } })));
+    await act(async () => pending[0](echo({ domains: { flight: { enabled: false } } })));
+    await waitFor(() => expect(within(domainRow("bus")).getByRole("switch")).not.toBeChecked());
+    // After the "Gespeichert" mark has faded the rows show what the page holds.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 2700));
+    });
+    expect(within(domainRow("bus")).getByRole("switch")).not.toBeChecked();
+    expect(within(domainRow("flight")).getByRole("switch")).not.toBeChecked();
+  }, 15000);
+
   it("an area that is off greys its chips", async () => {
     await renderPage();
     const chips = within(domainRow("rail"))

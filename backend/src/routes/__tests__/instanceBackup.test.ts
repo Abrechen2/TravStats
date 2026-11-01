@@ -17,7 +17,12 @@ describe("settings — instance backup status", () => {
   let cookie: string;
   let userId: string;
 
-  const backup = (data: { status: string; completedAt?: Date; errorMessage?: string }) =>
+  const backup = (data: {
+    status: string;
+    completedAt?: Date;
+    errorMessage?: string;
+    metadata?: object;
+  }) =>
     prisma.backup.create({
       data: { backupPath: "/secret/backup.tar.gz", size: BigInt(123), ...data },
     });
@@ -65,6 +70,17 @@ describe("settings — instance backup status", () => {
     await backup({ status: "completed", completedAt: new Date() });
     const res = await request(app).get(PATH).set("Cookie", cookie).expect(200);
     expect(Object.keys(res.body).sort()).toEqual(["completedAt", "running"]);
+  });
+
+  it("does not count a backup imported from the WebDAV share as a run of this server", async () => {
+    await backup({ status: "completed", completedAt: new Date("2030-01-01T10:00:00Z") });
+    await backup({
+      status: "completed",
+      completedAt: new Date("2030-04-01T10:00:00Z"),
+      metadata: { source: "webdav" },
+    });
+    const res = await request(app).get(PATH).set("Cookie", cookie).expect(200);
+    expect(res.body.completedAt).toBe("2030-01-01T10:00:00.000Z");
   });
 
   it("needs a session", async () => {
