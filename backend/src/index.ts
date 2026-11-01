@@ -261,31 +261,36 @@ process.on("uncaughtException", (error: Error) => {
 
 // Graceful shutdown — one path for both signals, so a scheduler added to one
 // list cannot be forgotten in the other.
+// Set once the server listens; `shutdown` closes it before the database goes.
+let httpServer: import("http").Server | undefined;
+
+const SHUTDOWN_CLOSE_TIMEOUT_MS = 10_000;
+
+/** Stop accepting connections and wait for in-flight requests, but never hang on a keep-alive. */
+async function closeHttpServer(): Promise<void> {
+  const server = httpServer;
+  if (!server) return;
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
+      logger.warn({ operation: "shutdown_server_close_timeout" });
+      resolve();
+    }, SHUTDOWN_CLOSE_TIMEOUT_MS);
+    server.close(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+    server.closeIdleConnections();
+  });
+}
+
 const shutdown = (signal: string) => async (): Promise<void> => {
   logger.info(`Received ${signal}, shutting down gracefully...`);
+  // The cron jobs come from the one list in `jobs/cronJobs.ts`; the two below
+  // are started outside it.
+  await (await import("./jobs/cronJobs")).stopCronJobs();
   (await import("./services/backupScheduler")).stopScheduler();
-  (await import("./jobs/historicalEnrichmentScheduler")).stopHistoricalEnrichmentScheduler();
-  (await import("./services/reminderScheduler")).stopReminderScheduler();
   (await import("./jobs/usageStatsScheduler")).stopUsageStatsScheduler();
-  (await import("./jobs/airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler();
-  (await import("./jobs/aeroapiTrackScheduler")).stopAeroapiTrackScheduler();
-  (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
-  (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
-  (await import("./jobs/trackJitterRemeasureScheduler")).stopTrackJitterRemeasureScheduler();
-  (await import("./jobs/ferryRouteBackfillScheduler")).stopFerryRouteBackfillScheduler();
-  (await import("./jobs/stayFxBackfillScheduler")).stopStayFxBackfillScheduler();
-  (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
-  (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
-  (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
-  (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
-  (await import("./jobs/dawarichStayScheduler")).stopDawarichStayScheduler();
-  (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
-  (await import("./jobs/syncRetentionScheduler")).stopSyncRetentionScheduler();
-  (
-    await import("./jobs/travTrackDiagnosticsRetentionScheduler")
-  ).stopTravTrackDiagnosticsRetentionScheduler();
-  (await import("./jobs/webdavSyncScheduler")).stopWebdavSyncScheduler();
-  (await import("./jobs/tripShareDeliveryScheduler")).stopTripShareDeliveryScheduler();
+  await closeHttpServer();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -295,7 +300,7 @@ process.on("SIGTERM", shutdown("SIGTERM"));
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== "test") {
   const HOST = process.env.HOST || "0.0.0.0"; // Bind to all interfaces for network access
-  app.listen(PORT, HOST, async () => {
+  httpServer = app.listen(PORT, HOST, async () => {
     logger.info({
       message: "TravStats backend started",
       host: HOST,
