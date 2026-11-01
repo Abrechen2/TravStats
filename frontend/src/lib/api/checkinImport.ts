@@ -45,7 +45,8 @@ function classify(err: unknown, dryRun: boolean): CheckinImportError {
     return new CheckinImportError(err.code === TOO_MANY ? "tooMany" : "failed", err);
   }
   if (isAxiosError(err)) {
-    if (!err.response) return new CheckinImportError("network", err);
+    // No answer to an apply may mean the server got the request and is writing.
+    if (!err.response) return new CheckinImportError(dryRun ? "network" : "outcomeUnknown", err);
     const code = (err.response.data as { code?: string } | undefined)?.code;
     if (code === TOO_MANY) return new CheckinImportError("tooMany", err);
     if (err.response.status === 429) return new CheckinImportError("rateLimited", err);

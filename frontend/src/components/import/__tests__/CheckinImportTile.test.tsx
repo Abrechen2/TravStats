@@ -78,9 +78,7 @@ describe("CheckinImportTile — preview, then commit", () => {
       screen.getByText(/xlsx:import.counts.*"created":1.*"skipped":1.*"errors":2/)
     ).toBeInTheDocument();
     expect(screen.getByText(/xlsx:import.errors.not_a_journey/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/unsupported_mode.*ferry/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/unsupported_mode.*ferry/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("xlsx:import.apply"));
     await waitFor(() => expect(send).toHaveBeenCalledTimes(2));
@@ -118,7 +116,7 @@ describe("CheckinImportTile — failures reach the user as themselves", () => {
     expect(screen.queryByTestId("checkin-outcome")).toBeNull();
   });
 
-  it("an apply whose outcome is unknown says so and keeps the preview for a retry", async () => {
+  it("an apply whose outcome is unknown says so and offers no retry", async () => {
     send
       .mockResolvedValueOnce(OUTCOME)
       .mockRejectedValueOnce(new CheckinImportError("outcomeUnknown"));
@@ -127,6 +125,7 @@ describe("CheckinImportTile — failures reach the user as themselves", () => {
     await waitFor(() => expect(screen.getByTestId("checkin-outcome")).toBeInTheDocument());
     fireEvent.click(screen.getByText("xlsx:import.apply"));
     await waitFor(() => expect(screen.getByText("xlsx:import.outcomeUnknown")).toBeInTheDocument());
-    expect(screen.getByText("xlsx:import.apply")).toBeEnabled();
+    // No second job alongside one that may still be writing.
+    expect(screen.queryByText("xlsx:import.apply")).toBeNull();
   });
 });

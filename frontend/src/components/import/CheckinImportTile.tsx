@@ -13,7 +13,7 @@ import { logger } from "../../lib/logger";
 import { SheetRows } from "../Settings/SpreadsheetSection";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
-type Phase = "idle" | "reading" | "previewed" | "applying" | "applied";
+type Phase = "idle" | "reading" | "previewed" | "applying" | "applied" | "unknown";
 const BYTES_PER_MB = 1_000_000;
 const SOURCES: readonly CheckinSource[] = ["travelling", "travelynx"];
 
@@ -120,9 +120,13 @@ export function CheckinImportTile({ onImported }: { onImported?: () => void }): 
     } catch (err: unknown) {
       logger.error("CheckinImportTile: apply failed", err);
       setError(failureCopy(err instanceof CheckinImportError ? err.kind : "failed", true));
-      // The held text stays: a retry re-sends exactly what was previewed, and
-      // the server recognises what a first, half-finished run already wrote.
-      setPhase("previewed");
+      // Unknown outcome: the first job may still be writing, and a second one
+      // alongside it could enter the same rides twice — so no retry from here,
+      // the user starts over once the import log shows the result.
+      // Any other failure is final, and a retry re-sends exactly what was
+      // previewed (the server recognises what a half-finished run wrote).
+      const unknown = err instanceof CheckinImportError && err.kind === "outcomeUnknown";
+      setPhase(unknown ? "unknown" : "previewed");
     }
   }, [held, onImported, failureCopy]);
 
@@ -171,79 +175,83 @@ export function CheckinImportTile({ onImported }: { onImported?: () => void }): 
         ) : undefined
       }
     >
-      {outcome && (phase === "previewed" || phase === "applying" || phase === "applied") && (
-        <div className="space-y-2 text-xs" data-testid="checkin-outcome">
-          {total === 0 ? (
-            <p>{t("settings:import.tile.checkin.nothing")}</p>
-          ) : (
-            <>
-              <p style={{ color: "var(--text-muted)" }}>
-                {phase === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
-              </p>
-              {sheets.map((s) => (
-                <div key={s.key}>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
-                    <span style={{ color: "var(--text-muted)" }}>
-                      {t("xlsx:import.counts", {
-                        created: s.created,
-                        updated: s.updated,
-                        skipped: s.skipped,
-                        errors: s.errors,
-                      })}
-                    </span>
+      {outcome &&
+        (phase === "previewed" ||
+          phase === "applying" ||
+          phase === "applied" ||
+          phase === "unknown") && (
+          <div className="space-y-2 text-xs" data-testid="checkin-outcome">
+            {total === 0 ? (
+              <p>{t("settings:import.tile.checkin.nothing")}</p>
+            ) : (
+              <>
+                <p style={{ color: "var(--text-muted)" }}>
+                  {phase === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
+                </p>
+                {sheets.map((s) => (
+                  <div key={s.key}>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
+                      <span style={{ color: "var(--text-muted)" }}>
+                        {t("xlsx:import.counts", {
+                          created: s.created,
+                          updated: s.updated,
+                          skipped: s.skipped,
+                          errors: s.errors,
+                        })}
+                      </span>
+                    </div>
+                    <SheetRows sheet={s} t={t} />
                   </div>
-                  <SheetRows sheet={s} t={t} />
-                </div>
-              ))}
-              {errorRows.length > 0 && (
-                <div className="mt-2 space-y-1" style={{ color: "var(--ts-bad)" }}>
-                  <p>
-                    {t("settings:import.tile.checkin.someSkipped", { count: errorRows.length })}
-                  </p>
-                  {errorRows.map((r) => (
-                    <p key={`${r.sheet}-${r.row}`}>
-                      {t("xlsx:import.rowError", {
-                        row: r.row,
-                        label: r.label,
-                        message: reasonCopy(t, r.message),
-                      })}
+                ))}
+                {errorRows.length > 0 && (
+                  <div className="mt-2 space-y-1" style={{ color: "var(--ts-bad)" }}>
+                    <p>
+                      {t("settings:import.tile.checkin.someSkipped", { count: errorRows.length })}
                     </p>
-                  ))}
-                </div>
-              )}
-              {phase !== "applied" && creatable === 0 && (
-                <p>{t("settings:import.tile.checkin.nothingImportable")}</p>
-              )}
-            </>
-          )}
-          {phase !== "applied" && (
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => void handleApply()}
-                disabled={creatable === 0 || phase === "applying"}
-                className="btn-secondary"
-              >
-                {phase === "applying" ? t("xlsx:import.applying") : t("xlsx:import.apply")}
+                    {errorRows.map((r) => (
+                      <p key={`${r.sheet}-${r.row}`}>
+                        {t("xlsx:import.rowError", {
+                          row: r.row,
+                          label: r.label,
+                          message: reasonCopy(t, r.message),
+                        })}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {(phase === "previewed" || phase === "applying") && creatable === 0 && (
+                  <p>{t("settings:import.tile.checkin.nothingImportable")}</p>
+                )}
+              </>
+            )}
+            {(phase === "previewed" || phase === "applying") && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleApply()}
+                  disabled={creatable === 0 || phase === "applying"}
+                  className="btn-secondary"
+                >
+                  {phase === "applying" ? t("xlsx:import.applying") : t("xlsx:import.apply")}
+                </button>
+                <button
+                  type="button"
+                  onClick={reset}
+                  disabled={phase === "applying"}
+                  className="btn-secondary"
+                >
+                  {t("xlsx:import.cancel")}
+                </button>
+              </div>
+            )}
+            {(phase === "applied" || phase === "unknown") && (
+              <button type="button" onClick={reset} className="btn-secondary">
+                {t("xlsx:import.choose")}
               </button>
-              <button
-                type="button"
-                onClick={reset}
-                disabled={phase === "applying"}
-                className="btn-secondary"
-              >
-                {t("xlsx:import.cancel")}
-              </button>
-            </div>
-          )}
-          {phase === "applied" && (
-            <button type="button" onClick={reset} className="btn-secondary">
-              {t("xlsx:import.choose")}
-            </button>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
     </ImportTileShell>
   );
 }

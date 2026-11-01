@@ -50,6 +50,9 @@ describe("sendCheckinImport — every failure gets its own kind", () => {
   it("maps no response to network, 429 to rateLimited, another 400 to invalid", async () => {
     post.mockRejectedValueOnce(axiosFail(undefined));
     expect(await kindOf(true)).toBe("network");
+    // After an apply the request may have arrived: unknown, not "nothing changed".
+    post.mockRejectedValueOnce(axiosFail(undefined));
+    expect(await kindOf(false)).toBe("outcomeUnknown");
     post.mockRejectedValueOnce(axiosFail(429));
     expect(await kindOf(true)).toBe("rateLimited");
     post.mockRejectedValueOnce(axiosFail(400, "VALIDATION_ERROR"));
