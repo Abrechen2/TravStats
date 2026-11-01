@@ -197,6 +197,11 @@ registry.registerPath({
   method: "post",
   path: "/flight-lookup/bulk",
   summary: "Look up several flights",
+  description:
+    "Up to 10 per call. Send `flightNumbers` (+ one shared `date`) or `items` " +
+    "(`{flightNumber, date?}` each, for rows on different days). Every result carries its " +
+    "`index`, and a failed row names its reason: `LOOKUP_PROVIDER_FAILED` with " +
+    "`providerFailures`, or `INVALID_DATE`.",
   tags: parseTag,
   responses: {
     200: { description: "Results" },

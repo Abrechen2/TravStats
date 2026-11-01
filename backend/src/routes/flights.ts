@@ -35,7 +35,6 @@ import {
   runBulkRefresh,
 } from "../services/bulkFlightRefresh";
 import { getProviderQuota } from "../services/apiQuota";
-import { estimateRoute } from "../services/routeEstimationService";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
 import { compareAirportAuthority } from "../services/airportCache";
 import {
@@ -940,52 +939,9 @@ router.post(
   }
 );
 
-// Get route estimation for a flight
-router.get("/:id/route-estimation", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const { id } = req.params;
-
-    // Check if flight exists and belongs to user
-    const flight = await prisma.flight.findFirst({
-      where: { id, userId },
-    });
-
-    if (!flight) {
-      throw new AppError("Flight not found", 404);
-    }
-
-    // If flight already has a route, return it
-    if (flight.actualRoute && Array.isArray(flight.actualRoute) && flight.actualRoute.length > 0) {
-      return res.json({
-        flightId: flight.id,
-        hasRoute: true,
-        routeSource: flight.routeSource,
-        route: flight.actualRoute,
-        overflownCountries: flight.overflownCountries || [],
-        routeDistance: flight.routeDistance,
-      });
-    }
-
-    // Estimate route (use current time as fallback for historical flights with null departureTime)
-    const estimatedRoute = estimateRoute(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon,
-      flight.flightNumber || "",
-      flight.departureTime ?? new Date()
-    );
-
-    res.json({
-      flightId: flight.id,
-      hasRoute: false,
-      routeSource: null,
-      estimatedRoute,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+// `GET /:id/route-estimation` was retired (forgejo#407, owner decision 2026-10-29):
+// no client called it, and the flight itself already carries what it served —
+// `actualRoute`, `routeSource`, `routeDistance` and `overflownCountries` ride on
+// `GET /flights/:id`, and the map reads its arcs from `/flights/geojson`.
 
 export default router;

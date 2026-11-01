@@ -238,6 +238,10 @@ registry.registerPath({
  */
 const statsTag = ["Stats"];
 
+/** Said on the four stats routes the web does not call itself (forgejo#407, owner decision 2026-10-29). */
+const NO_OWN_CLIENT_NOTE =
+  "No own client: the web app reads these same figures through `/stats/page`; this route is kept as public API for other clients.";
+
 // `readOnlyStat` used to live here: a helper that registered a 200 carrying a
 // description and nothing else. Every /stats endpoint now publishes a schema
 // (forgejo#52), so it has no callers — and leaving it would be leaving the
@@ -572,7 +576,8 @@ registry.registerPath({
   summary: "The playful figures",
   description:
     "Time-of-day buckets, weekend warrior, fastest day and the rest. All read " +
-    "the clock at the airport, never UTC.",
+    "the clock at the airport, never UTC. " +
+    NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {
@@ -633,6 +638,7 @@ registry.registerPath({
   method: "get",
   path: "/stats/business",
   summary: "Business travel",
+  description: NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {
@@ -646,6 +652,7 @@ registry.registerPath({
   method: "get",
   path: "/stats/unique",
   summary: "Firsts and unique counts",
+  description: NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {
@@ -704,6 +711,7 @@ registry.registerPath({
   method: "get",
   path: "/stats/seats",
   summary: "Seats and cabin classes",
+  description: NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {

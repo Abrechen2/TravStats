@@ -508,15 +508,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/flights/{id}/route-estimation",
-  summary: "An estimated route for a flight with no recorded track",
-  tags: flightsTag,
-  request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Estimated route" }, 404: notFound },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/flights/enrichment-candidates",
   summary: "Flights that could still gain data from a lookup",
   tags: flightsTag,

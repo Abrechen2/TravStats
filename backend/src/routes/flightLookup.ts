@@ -16,10 +16,30 @@ import { authenticate, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
 import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
 
-const bulkLookupSchema = z.object({
-  flightNumbers: z.array(z.string().trim().min(1).max(20)).min(1).max(10),
-  date: z.string().max(40).optional(),
-});
+const BULK_MAX = 10;
+const bulkLookupSchema = z
+  .object({
+    /** One date for every number (the original shape). */
+    flightNumbers: z.array(z.string().trim().min(1).max(20)).min(1).max(BULK_MAX).optional(),
+    date: z.string().max(40).optional(),
+    /**
+     * Additive (forgejo#407): one date per flight, which an import file or a
+     * logbook selection needs — its rows fall on different days.
+     */
+    items: z
+      .array(
+        z.object({
+          flightNumber: z.string().trim().min(1).max(20),
+          date: z.string().max(40).optional(),
+        })
+      )
+      .min(1)
+      .max(BULK_MAX)
+      .optional(),
+  })
+  .refine((v) => (v.flightNumbers === undefined) !== (v.items === undefined), {
+    message: "Send either flightNumbers or items",
+  });
 
 const router = Router();
 
@@ -173,24 +193,39 @@ router.post(
             : "flightNumbers array is required",
         });
       }
-      const { flightNumbers, date } = parsed.data;
+      const { flightNumbers, date, items } = parsed.data;
+      const rows: Array<{ flightNumber: string; date?: string }> =
+        items ?? (flightNumbers ?? []).map((flightNumber) => ({ flightNumber, date }));
 
-      // Parse optional date
-      let searchDate: Date | undefined;
-      if (date) {
-        searchDate = new Date(date);
-        if (isNaN(searchDate.getTime())) {
-          return res.status(400).json({
-            success: false,
-            error: "Invalid date format. Use YYYY-MM-DD",
-          });
-        }
+      // An unreadable date is the row's own failure when the rows carry their
+      // own dates; with one shared date it stays a 400 for the whole request.
+      const parseDate = (raw?: string): Date | undefined | "invalid" => {
+        if (!raw) return undefined;
+        const d = new Date(raw);
+        return isNaN(d.getTime()) ? "invalid" : d;
+      };
+      if (!items && parseDate(date) === "invalid") {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid date format. Use YYYY-MM-DD",
+        });
       }
 
       // Lookup all flights. The asker's id selects THEIR provider keys, and an
       // outcome log tells "no such flight" from "a provider could not answer".
       const results = await Promise.all(
-        flightNumbers.map(async (flightNumber) => {
+        rows.map(async ({ flightNumber, date: rowDate }, index) => {
+          const searchDate = parseDate(rowDate);
+          if (searchDate === "invalid") {
+            return {
+              index,
+              flightNumber,
+              date: rowDate,
+              success: false,
+              error: "INVALID_DATE",
+              providerFailures: [],
+            };
+          }
           const outcomes = new LookupOutcomeLog();
           try {
             const flights = await lookupFlightByNumber(
@@ -202,21 +237,27 @@ router.post(
             const providerFailures = outcomes.failures();
             if (flights.length === 0 && providerFailures.length > 0) {
               return {
+                index,
                 flightNumber,
+                date: rowDate,
                 success: false,
                 error: "LOOKUP_PROVIDER_FAILED",
                 providerFailures,
               };
             }
             return {
+              index,
               flightNumber,
+              date: rowDate,
               success: true,
               flights,
               providerFailures,
             };
           } catch (error: unknown) {
             return {
+              index,
               flightNumber,
+              date: rowDate,
               success: false,
               error: error instanceof Error ? error.message : "Unknown error",
               providerFailures: outcomes.failures(),
