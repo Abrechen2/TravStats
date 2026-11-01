@@ -52,8 +52,23 @@ vi.mock("react-map-gl/maplibre", () => {
     jumpTo: vi.fn(),
     setProjection: vi.fn(),
     setSky: vi.fn(),
-    getCanvas: vi.fn(() => ({ style: {} })),
+    getCanvas: vi.fn(() => ({
+      style: {},
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
     getContainer: vi.fn(() => document.createElement("div")),
+    // The native ground layers (forgejo#331) mount on a style with nothing on it.
+    getStyle: vi.fn(() => ({ layers: [] })),
+    getLayer: vi.fn(() => undefined),
+    getSource: vi.fn(() => undefined),
+    addSource: vi.fn(),
+    addLayer: vi.fn(),
+    removeLayer: vi.fn(),
+    removeSource: vi.fn(),
+    queryRenderedFeatures: vi.fn(() => []),
+    setFeatureState: vi.fn(),
+    removeFeatureState: vi.fn(),
   };
   const MockMapGL = React.forwardRef(function MockMapGL(
     props: { onLoad?: () => void; children?: React.ReactNode },

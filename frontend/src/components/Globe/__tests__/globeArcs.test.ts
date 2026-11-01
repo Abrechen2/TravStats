@@ -24,10 +24,15 @@ describe("flight arc height", () => {
   });
 
   it("starts and ends a base offset above the ground and peaks in the middle", () => {
-    const path = greatCircleWaypoints([8, 50], [-74, 40], 300_000, 20);
+    const path = greatCircleWaypoints([8, 50], [-74, 40], 300_000, 20, ARC_BASE_OFFSET_M);
     expect(path[0][2]).toBe(ARC_BASE_OFFSET_M);
     expect(path[path.length - 1][2]).toBeCloseTo(ARC_BASE_OFFSET_M, 6);
     expect(Math.max(...path.map((p) => p[2]))).toBeCloseTo(ARC_BASE_OFFSET_M + 300_000, -2);
+  });
+
+  it("keeps the journey and trip maps' arcs on the surface unless a caller asks for an offset", () => {
+    const path = greatCircleWaypoints([8, 50], [-74, 40], 300_000, 20);
+    expect(path[0][2]).toBe(0);
   });
 
   it("takes the base offset as a parameter, for city zoom", () => {

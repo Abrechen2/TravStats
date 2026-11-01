@@ -75,7 +75,7 @@ const airportFeature = {
   id: 1,
   source: NATIVE_IDS.airports,
   layer: { id: NATIVE_IDS.airports },
-  properties: { i: 0 },
+  properties: { i: 0, k: "MUC|11.78,48.35" },
 };
 
 describe("useNativeGlobe pointer events", () => {
@@ -163,5 +163,18 @@ describe("createCursorMux", () => {
     expect(canvas.style.cursor).toBe("pointer");
     mux.set("native", false);
     expect(canvas.style.cursor).toBe("");
+  });
+});
+
+describe("useNativeGlobe tooltip lifetime", () => {
+  it("hides a tooltip whose features are replaced under the pointer", () => {
+    const { handlers, opts, hook } = setup([airportFeature]);
+    act(() => handlers.get("mousemove")!({ point: { x: 10, y: 20 } }));
+    expect(opts.hideTooltip).not.toHaveBeenCalled();
+    hook.rerender();
+    // The effect is torn down when the spec changes; unmount stands in for it.
+    hook.unmount();
+    expect(opts.hideTooltip).toHaveBeenCalledTimes(1);
+    expect(opts.onOverChange).toHaveBeenLastCalledWith(false);
   });
 });

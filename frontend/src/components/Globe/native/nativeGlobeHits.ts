@@ -1,8 +1,10 @@
 // What a pointer landing on a native globe feature means (forgejo#331).
 //
 // deck.gl used to hand every handler a `PickingInfo` carrying the datum; a
-// native feature carries only its index `i`, so the datum is looked up in the
-// data the layer was built from. Pure, so the mapping from "feature N of layer
+// native feature carries only its key `k`, so the datum is looked up in the
+// data the layer was built from. By key, not position: MapLibre swaps a
+// source's data asynchronously, so a feature from the old data can still be
+// under the pointer after the new data is the one we hold. Pure, so the mapping from "feature N of layer
 // X" to "the card this opens" is testable without a map.
 
 import type { PickingInfo } from "@deck.gl/core";
@@ -22,11 +24,11 @@ export interface NativeHit {
 export function resolveNativeHit(
   targets: ReadonlyMap<string, NativeHitTarget>,
   mapLayerId: string,
-  index: unknown
+  key: unknown
 ): NativeHit | null {
   const target = targets.get(mapLayerId);
-  if (!target || typeof index !== "number") return null;
-  const object = target.data[index];
+  if (!target || typeof key !== "string") return null;
+  const object = target.byKey.get(key);
   if (object === undefined) return null;
   return { kind: target.kind, deckId: target.deckId, object, target };
 }

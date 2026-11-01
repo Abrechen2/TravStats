@@ -52,6 +52,13 @@ export interface NativeHitTarget {
   /** The id deck.gl called this layer — the tooltip renderer keys on it. */
   deckId: string;
   data: readonly unknown[];
+  /**
+   * Feature key (`k`) → datum. A feature names its datum by a stable key, not
+   * by its position: MapLibre swaps a source's data asynchronously, so for a
+   * moment a feature from the OLD data is still under the pointer, and an index
+   * into the NEW array would open a different record's card.
+   */
+  byKey: ReadonlyMap<string, unknown>;
   extra?: BridgedExtra;
 }
 
@@ -180,9 +187,21 @@ const collection = (features: NativeFeature[]): FeatureCollection => ({
   features,
 });
 
-function pointCollection(points: readonly { position: [number, number] }[]): FeatureCollection {
-  return collection(points.map((d, i) => pointFeature(d.position, { i }, i + 1)));
+const keyMap = <T>(data: readonly T[], keyOf: (d: T) => string): Map<string, unknown> =>
+  new Map(data.map((d) => [keyOf(d), d]));
+
+const pointKey = (d: PointDatum): string => `${d.iata}|${d.position[0]},${d.position[1]}`;
+
+function pointCollection(points: readonly PointDatum[]): FeatureCollection {
+  return collection(points.map((d, i) => pointFeature(d.position, { i, k: pointKey(d) }, i + 1)));
 }
+
+/** A grouped leg's identity: its first member, plus where it runs. */
+const cruiseKey = (d: CruisePathDatum): string => {
+  const a = d.path[0];
+  const b = d.path[d.path.length - 1];
+  return `${d.memberIds?.[0] ?? d.cruiseId}|${d.path.length}|${a}|${b}`;
+};
 
 function cruiseCollection(paths: readonly CruisePathDatum[]): {
   fc: FeatureCollection;
@@ -197,7 +216,11 @@ function cruiseCollection(paths: readonly CruisePathDatum[]): {
   const features: NativeFeature[] = [];
   let nextId = 1;
   data.forEach((d, i) => {
-    const made = lineFeatures(d.path, { i, c: cssRgba(resolveCruisePathColor(d)) }, nextId);
+    const made = lineFeatures(
+      d.path,
+      { i, k: cruiseKey(d), c: cssRgba(resolveCruisePathColor(d)) },
+      nextId
+    );
     nextId = made.nextId;
     features.push(...made.features);
   });
@@ -277,7 +300,13 @@ export function buildNativeGlobe(
     );
     if (extra.pickable) {
       for (const id of [extra.id, `${extra.id}-dashed`]) {
-        targets.set(id, { kind: "extra", deckId: extra.id, data: extra.data, extra });
+        targets.set(id, {
+          kind: "extra",
+          deckId: extra.id,
+          data: extra.data,
+          byKey: extra.byKey,
+          extra,
+        });
         lineIds.push(id);
       }
     }
@@ -291,7 +320,12 @@ export function buildNativeGlobe(
     // 2 px base (heavier than a single flight, as on the flat map) times the user's width multiplier.
     const width = 2 * input.cruiseWidthScale;
     layers.push(lineLayer(NATIVE_IDS.cruise, NATIVE_IDS.cruise, width, CRUISE_DASH, null, lite));
-    targets.set(NATIVE_IDS.cruise, { kind: "cruise", deckId: NATIVE_IDS.cruise, data });
+    targets.set(NATIVE_IDS.cruise, {
+      kind: "cruise",
+      deckId: NATIVE_IDS.cruise,
+      data,
+      byKey: keyMap(data, cruiseKey),
+    });
     lineIds.push(NATIVE_IDS.cruise);
   }
 
@@ -311,7 +345,13 @@ export function buildNativeGlobe(
       )
     );
     if (extra.pickable) {
-      targets.set(extra.id, { kind: "extra", deckId: extra.id, data: extra.data, extra });
+      targets.set(extra.id, {
+        kind: "extra",
+        deckId: extra.id,
+        data: extra.data,
+        byKey: extra.byKey,
+        extra,
+      });
       dotIds.push(extra.id);
     }
   }
@@ -320,6 +360,7 @@ export function buildNativeGlobe(
     id: string;
     kind: NativeHitKind;
     data: readonly unknown[];
+    byKey: ReadonlyMap<string, unknown>;
     fc: FeatureCollection;
     paint: Parameters<typeof circleLayer>[1];
   }[] = [];
@@ -328,6 +369,7 @@ export function buildNativeGlobe(
       id: NATIVE_IDS.airports,
       kind: "airport",
       data: input.airportPoints,
+      byKey: keyMap(input.airportPoints, pointKey),
       fc: cache.get("airports", [input.airportPoints], () => pointCollection(input.airportPoints)),
       paint: {
         color: cssRgba(input.airportColor, 230),
@@ -341,6 +383,7 @@ export function buildNativeGlobe(
       id: NATIVE_IDS.ports,
       kind: "port",
       data: input.portPoints,
+      byKey: keyMap(input.portPoints, pointKey),
       fc: cache.get("ports", [input.portPoints], () => pointCollection(input.portPoints)),
       paint: {
         color: cssRgba(input.portColor, 230),
@@ -357,6 +400,7 @@ export function buildNativeGlobe(
       id: NATIVE_IDS.lodgings,
       kind: "lodging",
       data: lodgingPins,
+      byKey: keyMap(lodgingPins, (d) => d.id),
       fc: cache.get(
         "lodgings",
         [lodgingPins, input.lodgingColors.mode, input.lodgingColors.colors],
@@ -365,7 +409,7 @@ export function buildNativeGlobe(
             lodgingPins.map((d, i) =>
               pointFeature(
                 [d.lon as number, d.lat as number],
-                { i, f: cssRgba([...resolveLodgingColor(d, input.lodgingColors), 230]) },
+                { i, k: d.id, f: cssRgba([...resolveLodgingColor(d, input.lodgingColors), 230]) },
                 i + 1
               )
             )
@@ -386,6 +430,7 @@ export function buildNativeGlobe(
       id: NATIVE_IDS.places,
       kind: "place",
       data: placePins,
+      byKey: keyMap(placePins, (d) => d.id),
       // A wishlist place is hollow: transparent fill, coloured ring (placePinsLayer.ts has the why).
       fc: cache.get(
         "places",
@@ -401,6 +446,7 @@ export function buildNativeGlobe(
                 [d.lon, d.lat],
                 {
                   i,
+                  k: d.id,
                   f: d.visited ? cssRgba([...rgb, 230]) : "rgba(0,0,0,0)",
                   s: d.visited ? DOT_OUTLINE : cssRgba([...rgb, 235]),
                   sw: d.visited ? 1 : 2,
@@ -420,7 +466,7 @@ export function buildNativeGlobe(
   for (const dot of dots) {
     sources[dot.id] = dot.fc;
     layers.push(circleLayer(dot.id, dot.paint, lite));
-    targets.set(dot.id, { kind: dot.kind, deckId: dot.id, data: dot.data });
+    targets.set(dot.id, { kind: dot.kind, deckId: dot.id, data: dot.data, byKey: dot.byKey });
     dotIds.push(dot.id);
   }
 

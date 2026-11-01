@@ -88,7 +88,7 @@ export function useNativeGlobe(opts: Options): NativeGlobeApi {
         }
       }
       if (!best) return null;
-      const hit = resolveNativeHit(targets, best.layer.id, best.properties?.i);
+      const hit = resolveNativeHit(targets, best.layer.id, best.properties?.k);
       return hit ? { hit, id: best.id, source: best.source } : null;
     },
     []
@@ -194,7 +194,11 @@ export function useNativeGlobe(opts: Options): NativeGlobeApi {
       map.off("mousemove", onMove);
       map.off("click", onClick);
       canvas.removeEventListener("mouseleave", onLeave);
-      clearHighlight();
+      // The features under the pointer are about to be replaced (a filter, the
+      // time slider, a switch): a tooltip for one of them must not outlive it,
+      // and nothing is left to dismiss it — an empty-space move shows nothing
+      // native to hide.
+      onLeave();
     };
   }, [mapReady, getMap, hitAt, spec]);
 

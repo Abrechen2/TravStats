@@ -110,7 +110,7 @@ export const calculateDistance = (
  * Great-circle slerp between two [lng, lat] points with a parabolic
  * z-altitude profile, returning N+1 [lng, lat, altitudeMeters]
  * waypoints along the geodesic. Altitude peaks at the midpoint and
- * tapers to `ARC_BASE_OFFSET_M` at the endpoints — gives the classic Flightradar /
+ * tapers to `baseOffsetM` (default 0: on the surface) at the endpoints — gives the classic Flightradar /
  * three.js-GlobeView arc bow.
  *
  * Why we need this: deck.gl ArcLayer with `greatCircle: true` computes
@@ -130,7 +130,7 @@ export const greatCircleWaypoints = (
   to: [number, number],
   peakAltitudeM: number,
   steps = 48,
-  baseOffsetM = ARC_BASE_OFFSET_M
+  baseOffsetM = 0
 ): [number, number, number][] => {
   const toRad = (x: number): number => (x * Math.PI) / 180;
   const toDeg = (x: number): number => (x * 180) / Math.PI;

@@ -97,7 +97,8 @@ function nativeSpec(over: Partial<NativeGlobeInput>): NativeGlobeSpec {
 
 /** What a click on feature `index` of the layer pins — the path a map click takes. */
 function clickPins(spec: NativeGlobeSpec, layerId: string, index: number) {
-  const hit = resolveNativeHit(spec.targets, layerId, index);
+  const key = (spec.sources[layerId].features[index]?.properties as { k?: string } | undefined)?.k;
+  const hit = resolveNativeHit(spec.targets, layerId, key);
   return hit ? pinnedFromHit(hit, [0, 0]) : null;
 }
 

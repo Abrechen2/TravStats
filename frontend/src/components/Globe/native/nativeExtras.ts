@@ -30,7 +30,11 @@ export interface BridgedExtra {
   pickable: boolean;
   /** Layer-wide opacity (deck's `opacity` prop). */
   opacity: number;
+  /** feature key (`k`) → the caller's datum. A key names its bridge, so a feature still on screen from the previous data cannot resolve to another datum. */
+  byKey: ReadonlyMap<string, unknown>;
 }
+
+let bridgeCounter = 0;
 
 type Accessor = unknown;
 const NO_TARGET: number[] = [];
@@ -53,6 +57,7 @@ function dataArray(layer: Layer): readonly unknown[] | null {
 }
 
 function bridgePath(layer: Layer, data: readonly unknown[]): BridgedExtra | null {
+  const token = ++bridgeCounter;
   const p = layer.props as unknown as Record<string, Accessor>;
   if (p.widthUnits !== "pixels") return null;
   const dashed = (layer.props.extensions as unknown[] | undefined)?.some(
@@ -72,6 +77,7 @@ function bridgePath(layer: Layer, data: readonly unknown[]): BridgedExtra | null
       path.filter(isLngLat) as LngLat[],
       {
         i,
+        k: `${token}:${i}`,
         c: cssRgba(isColor(color) ? color : [0, 0, 0, 255]),
         w: Math.min(maxPx, Math.max(minPx, isNumber(width) ? width : 1)),
         d: Array.isArray(dash) && dash[0] > 0 && dash[1] > 0 ? 1 : 0,
@@ -81,10 +87,11 @@ function bridgePath(layer: Layer, data: readonly unknown[]): BridgedExtra | null
     nextId = made.nextId;
     features.push(...made.features);
   });
-  return finish(layer, "line", data, features);
+  return finish(layer, "line", data, features, token);
 }
 
 function bridgePoints(layer: Layer, data: readonly unknown[]): BridgedExtra | null {
+  const token = ++bridgeCounter;
   const p = layer.props as unknown as Record<string, Accessor>;
   if (p.radiusUnits !== "pixels") return null;
   const features: NativeFeature[] = [];
@@ -100,6 +107,7 @@ function bridgePoints(layer: Layer, data: readonly unknown[]): BridgedExtra | nu
         position,
         {
           i,
+          k: `${token}:${i}`,
           f: p.filled === false ? "rgba(0,0,0,0)" : cssRgba(isColor(fill) ? fill : [0, 0, 0, 255]),
           s: cssRgba(isColor(stroke) ? stroke : [0, 0, 0, 255]),
           sw: p.stroked && isNumber(strokeWidth) ? strokeWidth : 0,
@@ -109,16 +117,20 @@ function bridgePoints(layer: Layer, data: readonly unknown[]): BridgedExtra | nu
       )
     );
   });
-  return finish(layer, "point", data, features);
+  return finish(layer, "point", data, features, token);
 }
 
 function finish(
   layer: Layer,
   kind: BridgedExtra["kind"],
   data: readonly unknown[],
-  features: NativeFeature[]
+  features: NativeFeature[],
+  token: number
 ): BridgedExtra {
+  const byKey = new Map<string, unknown>();
+  data.forEach((d, i) => byKey.set(`${token}:${i}`, d));
   return {
+    byKey,
     id: layer.id,
     kind,
     fc: { type: "FeatureCollection", features },
