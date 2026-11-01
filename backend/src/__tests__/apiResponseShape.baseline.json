@@ -250,6 +250,7 @@
     "rental/reminders.ts",
     "rental/stations.ts",
     "rental/stats.ts",
+    "search.ts",
     "settings/profilePicture.ts",
     "shareLinks.ts",
     "sharing.ts",

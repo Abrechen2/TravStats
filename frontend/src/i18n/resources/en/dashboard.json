@@ -412,5 +412,40 @@
       "title": "Domains",
       "done": "Done"
     }
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search …",
+    "shortcutHint": "Press / to jump to search",
+    "ariaLabel": "Search everything",
+    "results": "Search results",
+    "tooMuchTooLittle": "Type at least {{min}} characters.",
+    "loading": "Searching …",
+    "empty": "No matches for “{{q}}”.",
+    "emptyHint": "Searches numbers, names, places and routes in the areas you have switched on.",
+    "more": "More matches exist – narrow the search.",
+    "capped": "At most {{max}} matches are shown – narrow the search.",
+    "partial": "Could not be searched: {{domains}}. The list is incomplete, not “no matches”.",
+    "error": {
+      "network": "The search did not reach the server. Check your connection.",
+      "rateLimit": "Too many searches – wait a moment and try again.",
+      "auth": "Your session has expired. Please sign in again.",
+      "server": "The server could not run the search. This is not “no matches” – please try again.",
+      "bad": "This input cannot be searched.",
+      "retry": "Try again"
+    },
+    "group": {
+      "flight": "Flights",
+      "cruise": "Cruises",
+      "lodging": "Stays",
+      "poi": "Places",
+      "rail": "Rail",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "rental": "Car rental",
+      "roadtrip": "Roadtrips",
+      "tour": "Tours",
+      "trip": "Trips"
+    }
   }
 }

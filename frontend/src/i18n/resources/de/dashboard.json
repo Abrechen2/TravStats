@@ -412,5 +412,40 @@
       "title": "Domänen",
       "done": "Fertig"
     }
+  },
+  "search": {
+    "label": "Suche",
+    "placeholder": "Suchen …",
+    "shortcutHint": "Mit / zur Suche springen",
+    "ariaLabel": "Alles durchsuchen",
+    "results": "Suchergebnisse",
+    "tooMuchTooLittle": "Mindestens {{min}} Zeichen eingeben.",
+    "loading": "Suche läuft …",
+    "empty": "Keine Treffer für „{{q}}“.",
+    "emptyHint": "Gesucht wird in Nummern, Namen, Orten und Routen deiner eingeschalteten Bereiche.",
+    "more": "Weitere Treffer – Suchbegriff genauer fassen.",
+    "capped": "Es werden höchstens {{max}} Treffer gezeigt – Suchbegriff genauer fassen.",
+    "partial": "Nicht durchsucht werden konnten: {{domains}}. Die Liste ist unvollständig, kein „Keine Treffer“.",
+    "error": {
+      "network": "Die Suche hat den Server nicht erreicht. Prüfe die Verbindung.",
+      "rateLimit": "Zu viele Suchanfragen – kurz warten und erneut versuchen.",
+      "auth": "Die Anmeldung ist abgelaufen. Bitte neu anmelden.",
+      "server": "Der Server konnte die Suche nicht ausführen. Das ist kein „Keine Treffer“ – bitte erneut versuchen.",
+      "bad": "Diese Eingabe kann nicht gesucht werden.",
+      "retry": "Erneut versuchen"
+    },
+    "group": {
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "lodging": "Unterkünfte",
+      "poi": "Orte",
+      "rail": "Bahn",
+      "bus": "Bus",
+      "ferry": "Fähre",
+      "rental": "Mietwagen",
+      "roadtrip": "Roadtrips",
+      "tour": "Touren",
+      "trip": "Reisen"
+    }
   }
 }

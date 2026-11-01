@@ -14,6 +14,7 @@ import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
 import { evidenceResponseSchema } from "../../../schemas/evidence";
 import { busTimesSchema } from "../../../schemas/times";
+import { localDateValueSchema } from "../../../shared/time/wire";
 import { EVIDENCE_PAGE_SIZE } from "../../../shared/evidence";
 
 const achievement = registry.register(
@@ -226,6 +227,96 @@ registry.registerPath({
         },
       },
     },
+  },
+});
+
+const searchDomainEnum = z.enum([
+  "flight",
+  "cruise",
+  "lodging",
+  "poi",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+  "roadtrip",
+  "tour",
+  "trip",
+]);
+
+registry.registerPath({
+  method: "get",
+  path: "/search",
+  summary: "Search every domain at once",
+  description:
+    "One query across flights (number, airline, airports, `MUC-VIE`), cruises (ship, line, ports), " +
+    "stays (name, town, chain), places and place lists, rail/bus/ferry rides, rentals, roadtrips, " +
+    "tours and trips. Only the caller's own entries, and only domains the account may see " +
+    "(enabled, and not hidden by the instance's beta switch — tours share the roadtrip key); " +
+    "`domains` can narrow that further but never widen it. Case-insensitive substring match. " +
+    "Bounded: `limit` hits per domain (default 5, max 20), 60 in total, each domain newest " +
+    "first with its id as tie-breaker, domains in the order of the enum. `more` names domains " +
+    "holding further matches. `failed` names domains whose search errored: for those the answer " +
+    "is incomplete, not empty. Needs server 2.8.0-rc.10 or newer.",
+  tags: ["Dashboard"],
+  request: {
+    query: z.object({
+      q: z.string().min(2).max(100).describe("Search text, at least 2 characters"),
+      limit: z.coerce.number().int().min(1).max(20).optional().describe("Per domain; default 5"),
+      domains: z
+        .string()
+        .optional()
+        .describe("Comma list of domain names to search; unknown names are a 400"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Hits grouped by domain order",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              query: z.string(),
+              hits: z.array(
+                z.object({
+                  domain: searchDomainEnum,
+                  kind: z.enum([
+                    "flight",
+                    "cruise",
+                    "lodging",
+                    "place",
+                    "placeList",
+                    "rail",
+                    "bus",
+                    "ferry",
+                    "rental",
+                    "roadtrip",
+                    "tour",
+                    "trip",
+                  ]),
+                  id: z.string(),
+                  title: z.string(),
+                  subtitle: z.string().nullable(),
+                  date: localDateValueSchema
+                    .nullable()
+                    .describe(
+                      "The local day the entry starts on, in its own place's zone; null for a place or list"
+                    ),
+                  path: z.string().describe("Web route that opens the entry"),
+                })
+              ),
+              more: z.array(searchDomainEnum),
+              failed: z.array(searchDomainEnum),
+              capped: z.boolean().describe("The 60-hit total cap cut hits off"),
+            }),
+          }),
+        },
+      },
+    },
+    400: { description: "Query too short or malformed", content: errorContent },
+    401: { description: "Missing or invalid token", content: errorContent },
+    429: { description: "Rate limit exceeded", content: errorContent },
   },
 });
 

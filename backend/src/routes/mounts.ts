@@ -32,6 +32,7 @@ import flightObservedTimesRoutes from "./flights/observedTimes";
 import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import upcomingRoutes from "./upcoming";
+import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
 import locationSuggestionRoutes from "./locationSuggestions";
 import locationCapabilitiesRoutes from "./locationCapabilities";
@@ -277,6 +278,8 @@ export const apiMounts: ApiMount[] = [
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
+  // One query across every domain (forgejo#403); web header + Companion.
+  { id: "search", base: "/api/v1/search", router: searchRoutes },
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
   // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
   { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },

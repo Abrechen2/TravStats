@@ -43,6 +43,7 @@ export default function ToursPage(): JSX.Element {
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
@@ -136,6 +137,16 @@ export default function ToursPage(): JSX.Element {
   const isLoading = tours === null && !loadError;
   const isEmpty = !isLoading && !loadError && tours !== null && tours.length === 0;
   const hasTours = !isLoading && !loadError && tours !== null && tours.length > 0;
+  // Name or trip name, case-insensitive — the same free-text filter every other
+  // domain's list has (forgejo#403). A filter that empties the list says so
+  // instead of reading as "no tours yet".
+  const needle = search.trim().toLowerCase();
+  const visibleTours = (tours ?? []).filter(
+    (tour) =>
+      needle === "" ||
+      tour.name.toLowerCase().includes(needle) ||
+      (tour.tripName ?? "").toLowerCase().includes(needle)
+  );
 
   return (
     <AppShell width="list">
@@ -266,8 +277,26 @@ export default function ToursPage(): JSX.Element {
       )}
 
       {hasTours && (
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("trips:tours.searchPlaceholder")}
+          aria-label={t("trips:tours.searchPlaceholder")}
+          maxLength={100}
+          className="mb-3 w-full rounded-md border border-(--color-border) bg-transparent px-3 py-2 text-sm sm:w-72"
+        />
+      )}
+
+      {hasTours && visibleTours.length === 0 && (
+        <div role="status" className="py-10 text-center text-sm text-(--text-muted)">
+          {t("trips:tours.searchEmpty", { q: search.trim() })}
+        </div>
+      )}
+
+      {hasTours && visibleTours.length > 0 && (
         <ul className="space-y-2">
-          {(tours ?? []).map((tour) => (
+          {visibleTours.map((tour) => (
             <li
               key={tour.id}
               className="flex items-center gap-2 rounded-lg border border-(--color-border) pr-3 text-sm hover:bg-(--bg-surface)"

@@ -621,7 +621,9 @@
       "noCoordinate": "A chosen stop has no place. Give it a place on the timeline first; then it can be assigned.",
       "inOtherSection": "A chosen stop already belongs to another route section. Take it out there first.",
       "claimedMeanwhile": "Another change just assigned a stop to a section. Nothing was saved — try again."
-    }
+    },
+    "searchPlaceholder": "Search tours …",
+    "searchEmpty": "No tour matches “{{q}}”."
   },
   "head": {
     "days_one": "{{count}} day",

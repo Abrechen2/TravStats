@@ -328,7 +328,7 @@ export const LODGING_SORT_KEYS = [
   "checkIn",
 ] as const;
 
-export const lodgingQuerySchema = z.object({
+const lodgingQueryShape = z.object({
   type: z.enum(LODGING_TYPES).optional(),
   chainId: z.coerce.number().int().positive().optional(),
   tripId: z.string().uuid().optional(),
@@ -336,6 +336,8 @@ export const lodgingQuerySchema = z.object({
   country: z.string().optional(),
   /** Free text over the house, its chain and its town — what the list's search box sends. */
   search: z.string().trim().min(1).max(200).optional(),
+  /** Alias of `search`: every other domain's list calls its text filter `q` (forgejo#403). `search` wins when both are sent. */
+  q: z.string().trim().min(1).max(200).optional(),
   /** The lifecycle pill's value, per shared/lodgingLifecycle.ts. */
   status: z.enum(STAY_STATUSES).optional(),
   /**
@@ -351,6 +353,11 @@ export const lodgingQuerySchema = z.object({
   /** Omitted means the direction that key reads first in the table. */
   order: z.enum(["asc", "desc"]).optional(),
 });
+
+export const lodgingQuerySchema = lodgingQueryShape.transform(({ q, search, ...rest }) => ({
+  ...rest,
+  search: search ?? q,
+}));
 
 /**
  * `GET /lodging/stays` - the chronological view across houses (forgejo#226),

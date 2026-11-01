@@ -13,6 +13,7 @@ import UpdateBadge from "./UpdateBadge";
 import NavDropdown from "./Nav/NavDropdown";
 import MoreMenu from "./Nav/MoreMenu";
 import UserMenu from "./Nav/UserMenu";
+import GlobalSearch from "./Nav/GlobalSearch";
 import { Icon } from "./ui/Icon";
 import { useSettingsStore } from "../store/settingsStore";
 import {
@@ -197,6 +198,7 @@ export default function NavigationBar(): JSX.Element {
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
+            <GlobalSearch />
             <div className={wide ? "lg:hidden" : "md:hidden"} data-testid="nav-fold">
               {areaItems ? (
                 <MoreMenu
