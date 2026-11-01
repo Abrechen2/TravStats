@@ -299,6 +299,18 @@
       "lodging": {
         "name": "Lodging",
         "what": "Check-in, address, nights"
+      },
+      "rental": {
+        "name": "Rental car",
+        "what": "Pick-up and return"
+      },
+      "roadtrip": {
+        "name": "Roadtrip",
+        "what": "Arrival at the next stop"
+      },
+      "poi": {
+        "name": "Places",
+        "what": "Planned visits with a time"
       }
     }
   },

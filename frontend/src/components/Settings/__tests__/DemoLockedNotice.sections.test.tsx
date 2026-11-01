@@ -72,10 +72,9 @@ describe("settings sections on the demo account", () => {
       notifyBefore24h: false,
       notifyBefore2h: false,
       domains: Object.fromEntries(
-        ["flight", "cruise", "rail", "bus", "ferry", "lodging"].map((d) => [
-          d,
-          { enabled: false, leadHours: [], channel: "both" },
-        ])
+        ["flight", "cruise", "rail", "bus", "ferry", "lodging", "rental", "roadtrip", "poi"].map(
+          (d) => [d, { enabled: false, leadHours: [], channel: "both" }]
+        )
       ),
       mail: { available: true, reason: null },
       push: { available: true, reason: null },
@@ -130,10 +129,9 @@ describe("NotificationsSection on the demo account", () => {
       notifyBefore24h: false,
       notifyBefore2h: false,
       domains: Object.fromEntries(
-        ["flight", "cruise", "rail", "bus", "ferry", "lodging"].map((d) => [
-          d,
-          { enabled: false, leadHours: [], channel: "both" },
-        ])
+        ["flight", "cruise", "rail", "bus", "ferry", "lodging", "rental", "roadtrip", "poi"].map(
+          (d) => [d, { enabled: false, leadHours: [], channel: "both" }]
+        )
       ),
       mail: { available: true, reason: null },
       push: { available: true, reason: null },

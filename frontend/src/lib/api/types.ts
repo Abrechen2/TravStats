@@ -413,7 +413,8 @@ export interface SmtpConfigResponse {
   enabled?: boolean;
 }
 
-export type ReminderDomain = "flight" | "cruise" | "rail" | "bus" | "ferry" | "lodging";
+export type ReminderDomain =
+  "flight" | "cruise" | "rail" | "bus" | "ferry" | "lodging" | "rental" | "roadtrip" | "poi";
 export type ReminderChannel = "app" | "mail" | "both";
 
 export interface ReminderDomainPrefs {
