@@ -273,7 +273,14 @@
         "trip": "Photo from your trip",
         "library": "Photo from the photo library"
       },
-      "distanceShort": "{{metres}} m"
+      "distanceShort": "{{metres}} m",
+      "refuse": "Not these",
+      "refused_one": "{{count}} photo will no longer be suggested.",
+      "refused_other": "{{count}} photos will no longer be suggested.",
+      "refuseFailed": "The photos could not be hidden.",
+      "undo": "Offer refused photos again",
+      "undone": "Refused photos are suggested again.",
+      "undoFailed": "The refused photos could not be restored."
     }
   },
   "stats": {

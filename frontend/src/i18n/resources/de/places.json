@@ -273,7 +273,14 @@
         "trip": "Foto aus deiner Reise",
         "library": "Foto aus der Fotobibliothek"
       },
-      "distanceShort": "{{metres}} m"
+      "distanceShort": "{{metres}} m",
+      "refuse": "Nicht diese",
+      "refused_one": "{{count}} Foto wird nicht mehr vorgeschlagen.",
+      "refused_other": "{{count}} Fotos werden nicht mehr vorgeschlagen.",
+      "refuseFailed": "Die Fotos konnten nicht ausgeblendet werden.",
+      "undo": "Abgelehnte wieder anbieten",
+      "undone": "Die abgelehnten Fotos werden wieder vorgeschlagen.",
+      "undoFailed": "Die abgelehnten Fotos konnten nicht zurückgeholt werden."
     }
   },
   "stats": {

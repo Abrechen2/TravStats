@@ -4,7 +4,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import {
+  clearVisitPhotoRefusals,
   getVisitPhotoSuggestions,
+  refuseVisitPhotoSuggestions,
   linkVisitPhotoSuggestions,
   listVisitPhotos,
   type VisitPhotoSuggestions as Suggestions,
@@ -56,6 +58,52 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
       else next.add(key);
       return next;
     });
+  };
+
+  const picks = (): { tripPhotoIds: string[]; assetIds: string[] } | null => {
+    if (!result) return null;
+    const chosen = result.suggestions.filter((s) => picked.has(keyOf(s)));
+    return {
+      tripPhotoIds: chosen.filter((s) => s.kind === "trip").map((s) => s.id),
+      assetIds: chosen.filter((s) => s.kind === "library").map((s) => s.id),
+    };
+  };
+
+  // "Nicht diese": the server remembers the refusal per visit; the tiles leave
+  // the list only after it said so, so a failed call never looks like a refusal.
+  const refuse = async (): Promise<void> => {
+    const chosen = picks();
+    if (!result || !chosen) return;
+    setBusy(true);
+    try {
+      const outcome = await refuseVisitPhotoSuggestions(visitId, chosen);
+      addToast("success", t("places:photos.suggest.refused", { count: outcome.refused }));
+      setResult({
+        ...result,
+        suggestions: result.suggestions.filter((s) => !picked.has(keyOf(s))),
+      });
+      setPicked(new Set());
+    } catch (err: unknown) {
+      logger.error("VisitPhotoSuggestions: refuse failed", err);
+      addToast("error", t("places:photos.suggest.refuseFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const undoRefusals = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      await clearVisitPhotoRefusals(visitId);
+      addToast("success", t("places:photos.suggest.undone"));
+      setResult(await getVisitPhotoSuggestions(visitId));
+      setPicked(new Set());
+    } catch (err: unknown) {
+      logger.error("VisitPhotoSuggestions: undo refusals failed", err);
+      addToast("error", t("places:photos.suggest.undoFailed"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const link = async (): Promise<void> => {
@@ -121,15 +169,37 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
               />
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => void link()}
-            disabled={busy || picked.size === 0}
-            className="self-start rounded-md px-3 py-1 text-xs font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
-          >
-            {t("places:photos.suggest.link", { count: picked.size })}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void link()}
+              disabled={busy || picked.size === 0}
+              className="self-start rounded-md px-3 py-1 text-xs font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
+            >
+              {t("places:photos.suggest.link", { count: picked.size })}
+            </button>
+            <button
+              type="button"
+              onClick={() => void refuse()}
+              disabled={busy || picked.size === 0}
+              className="self-start rounded-md px-3 py-1 text-xs disabled:opacity-50"
+              style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
+            >
+              {t("places:photos.suggest.refuse")}
+            </button>
+          </div>
         </>
+      )}
+      {result.day !== null && (
+        <button
+          type="button"
+          onClick={() => void undoRefusals()}
+          disabled={busy}
+          className="self-start text-xs underline-offset-2 hover:underline disabled:opacity-50"
+          style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}
+        >
+          {t("places:photos.suggest.undo")}
+        </button>
       )}
       {libraryDown && <p className="t-caption">{t("places:photos.suggest.libraryDown")}</p>}
     </div>

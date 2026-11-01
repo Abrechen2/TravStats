@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { waitForJob } from "./jobs";
 import type {
   Place,
   PlaceInput,
@@ -190,6 +191,34 @@ export async function linkVisitPhotoSuggestions(
     picks
   );
   return res.data.data;
+}
+
+/** "Nicht diese": keep the picked suggestions from coming back for this visit. */
+export async function refuseVisitPhotoSuggestions(
+  visitId: string,
+  picks: { tripPhotoIds: string[]; assetIds: string[] }
+): Promise<{ refused: number; skipped: number }> {
+  const res = await api.post<Envelope<{ refused: number; skipped: number }>>(
+    `/places/visits/${visitId}/photo-suggestions/refusals`,
+    picks
+  );
+  return res.data.data;
+}
+
+/** Undo every refusal of the visit, so the refused photographs are offered again. */
+export async function clearVisitPhotoRefusals(visitId: string): Promise<void> {
+  await api.delete(`/places/visits/${visitId}/photo-suggestions/refusals`);
+}
+
+/**
+ * Turn the caller's visit-photo copies into Immich links. The server starts a
+ * job (one Immich search per photo outlasts the request timeout); this waits
+ * for its outcome and throws `JobFailedError` (code = Immich failure kind) or
+ * `JobLostError`. A 409 `notConfigured` surfaces as the usual axios error.
+ */
+export async function linkVisitPhotosToImmich(): Promise<{ checked: number; linked: number }> {
+  const res = await api.post<Envelope<{ jobId: string }>>("/places/visits/photos/immich-link");
+  return waitForJob<{ checked: number; linked: number }>(res.data.data.jobId);
 }
 
 /** Choose the place page's lead photograph; null returns it to the first one. */
