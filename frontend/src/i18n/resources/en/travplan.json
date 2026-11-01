@@ -588,5 +588,6 @@
       "changed": "Changed",
       "new": "New"
     }
-  }
+  },
+  "assignToDay": "Put on {{day}}"
 }
