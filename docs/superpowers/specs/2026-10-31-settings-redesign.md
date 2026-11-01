@@ -68,3 +68,28 @@ this file is the plan and the record of what was built.
 | 11 | reminders per domain (forgejo#410) | in 2.8.0-rc.8 |
 
 Owner, 2026-11-01: package 3b added — the canvas regrouping had no package of its own. Order: 3 → 3b → 4–7 → 8–9 (design) → 10. Everything ships in 2.8.
+
+## Package 3 — what moves (canvas board 3)
+
+To Standard (hidden today): country counting (Darstellung); flight form defaults,
+"allow live updates, only during the flight", seat statistics (Bereiche › Flug);
+Immich photos as evidence and AI sorting in the inbox (Reisen & Posteingang);
+markets and places for the stay search (Standort); Aviationstack daily budget,
+AeroAPI monthly budget, adsb.lol key, logo key, "allow Ollama off-site",
+FX fallback source (Externe Dienste); beta features switch (Administration ›
+Instanz); TravPlan on/off (TravTrack & TravPlan).
+
+To Expert (in Standard today): Ollama address, own AI endpoint address (Externe
+Dienste). A Standard user who still needs an address gets an "Einrichten" button
+that leads through it instead of an open field. (SMTP port/TLS, WebDAV path, push
+relay, federation origin, template repo are package 4.)
+
+Level behaviour: a search hit on an Expert row opens it in place and does NOT
+change the account's saved level; while the level is loading the page waits
+instead of flashing the Expert view. Search reads the level from the same row
+definitions the page renders.
+
+Defaults: the comparison consent starts empty with an explicit "Alles freigeben"
+(today every domain and year is ticked). Existing accounts stay on Expert, new
+ones start on Standard, a TravPlan user keeps TravPlan — each says so in one
+sentence in the UI.
