@@ -30,6 +30,7 @@ import TripRecordingSection from "../../components/Settings/TripRecordingSection
 import SharingSection from "../../components/Settings/SharingSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
+import CompareHandoverRow from "../../components/Settings/CompareHandoverRow";
 import CompanionsSection from "../../components/Settings/companions/CompanionsSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -223,19 +224,9 @@ export default function SettingsSectionSwitch({
         />
       );
     case "comparisonConsent":
-      return (
-        <ContextLinksCard
-          scope="privacy.comparisonConsent"
-          links={[{ id: "consent", to: "/compare" }]}
-        />
-      );
+      return <CompareHandoverRow row="rangliste" withTitle />;
     case "encryptedGrants":
-      return (
-        <ContextLinksCard
-          scope="privacy.encryptedGrants"
-          links={[{ id: "grants", to: "/encrypted-share" }]}
-        />
-      );
+      return <CompareHandoverRow row="verschl" withTitle={!isFeatureVisible("comparison")} />;
     default:
       return null;
   }

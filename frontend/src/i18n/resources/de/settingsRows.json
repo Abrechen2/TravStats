@@ -75,11 +75,13 @@
     },
     "rangliste": {
       "t": "Rangliste",
-      "s": "Wer deine Summen sieht"
+      "s": "Wer deine Summen sieht",
+      "btn": "Öffnen"
     },
     "verschl": {
       "t": "Verschlüsselt übergeben",
-      "s": "Ganze Einträge an ein anderes Konto"
+      "s": "Ganze Einträge an ein anderes Konto",
+      "btn": "Öffnen"
     }
   },
   "notifications": {
@@ -156,7 +158,10 @@
     },
     "webdavtakt": {
       "t": "Wie oft",
-      "o": ["täglich", "wöchentlich"]
+      "o": [
+        "täglich",
+        "wöchentlich"
+      ]
     },
     "webdavvers": {
       "t": "Versionen behalten",
@@ -211,11 +216,17 @@
     "ubahn": {
       "t": "U-Bahn und Tram",
       "s": "Vorauswahl, im Import änderbar",
-      "o": ["weglassen", "als Bahnfahrt"]
+      "o": [
+        "weglassen",
+        "als Bahnfahrt"
+      ]
     },
     "busleg": {
       "t": "Busabschnitte",
-      "o": ["weglassen", "als Busfahrt"]
+      "o": [
+        "weglassen",
+        "als Busfahrt"
+      ]
     }
   },
   "dialogs": {
