@@ -567,5 +567,26 @@
       "placeholders_one": "{{count}} Platzhalter bleibt im Plan und wird nicht übernommen.",
       "placeholders_other": "{{count}} Platzhalter bleiben im Plan und werden nicht übernommen."
     }
+  },
+  "match": {
+    "title": "Passt zu einem Platzhalter",
+    "intro": "„{{booking}}“ sieht aus wie die echte Buchung zu „{{placeholder}}“.",
+    "inactiveVariant": "Der Platzhalter gehört zur Alternativroute.",
+    "table": "Unterschiede",
+    "identical": "Keine abweichenden Angaben.",
+    "replace": "Platzhalter ersetzen",
+    "addAdditional": "Als zusätzliche Buchung",
+    "another": "Anderen Platzhalter wählen ({{n}}/{{total}})",
+    "field": {
+      "provider": "Anbieter",
+      "reference": "Referenz",
+      "day": "Tag",
+      "time": "Uhrzeit",
+      "amount": "Betrag"
+    },
+    "change": {
+      "changed": "Geändert",
+      "new": "Neu"
+    }
   }
 }

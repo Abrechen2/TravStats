@@ -567,5 +567,26 @@
       "placeholders_one": "{{count}} placeholder stays in the plan and is not taken over.",
       "placeholders_other": "{{count}} placeholders stay in the plan and are not taken over."
     }
+  },
+  "match": {
+    "title": "Matches a placeholder",
+    "intro": "\"{{booking}}\" looks like the real booking for \"{{placeholder}}\".",
+    "inactiveVariant": "The placeholder belongs to the alternative route.",
+    "table": "Differences",
+    "identical": "No differing details.",
+    "replace": "Replace placeholder",
+    "addAdditional": "Add as additional booking",
+    "another": "Choose another placeholder ({{n}}/{{total}})",
+    "field": {
+      "provider": "Provider",
+      "reference": "Reference",
+      "day": "Day",
+      "time": "Time",
+      "amount": "Amount"
+    },
+    "change": {
+      "changed": "Changed",
+      "new": "New"
+    }
   }
 }
