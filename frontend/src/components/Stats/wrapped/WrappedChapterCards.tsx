@@ -38,6 +38,22 @@ export default function WrappedChapterCards({
     scope: { period: "year" as const, year },
     renderedValue,
   });
+  /** "N km" and the count of entries without one; nothing for a server that sends neither. */
+  const kmParts = (
+    km: number | null | undefined,
+    unmeasured: number | undefined,
+    kmKey: string,
+    noKmKey: string
+  ): string[] => {
+    if (km === undefined) return [];
+    if (km === null) return [t(`stats:wrapped.chapters.${noKmKey}`)];
+    return [
+      t(`stats:wrapped.chapters.${kmKey}`, { km: count(km) }),
+      ...((unmeasured ?? 0) > 0
+        ? [t(`stats:wrapped.chapters.${kmKey}Unmeasured`, { count: unmeasured })]
+        : []),
+    ];
+  };
   const help: CountingEntry[] = [
     lodging !== null && {
       term: t("stats:wrapped.chapters.stays"),
@@ -95,7 +111,21 @@ export default function WrappedChapterCards({
           title={t("stats:wrapped.chapters.roadtrips")}
           value={count(roadtrips.roadtrips)}
           evidence={evidence("wrappedRoadtripCount", roadtrips.roadtrips)}
-          description={t("stats:wrapped.chapters.roadtripsDesc")}
+          description={[
+            t("stats:wrapped.chapters.roadtripsDesc"),
+            // Unknown stays unknown: no "0 km" for a year of roadtrips without a leg.
+            ...kmParts(roadtrips.km, roadtrips.unmeasured, "roadtripsKm", "roadtripsNoKm"),
+            (roadtrips.nights ?? 0) > 0
+              ? t("stats:wrapped.chapters.roadtripsNights", { count: roadtrips.nights })
+              : null,
+            (roadtrips.nightsUnknown ?? 0) > 0 && roadtrips.nights !== undefined
+              ? t("stats:wrapped.chapters.roadtripsNightsUnknown", {
+                  count: roadtrips.nightsUnknown,
+                })
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
       )}
       {tours !== null && (
@@ -103,7 +133,12 @@ export default function WrappedChapterCards({
           title={t("stats:wrapped.chapters.tours")}
           value={count(tours.tours)}
           evidence={evidence("wrappedTourCount", tours.tours)}
-          description={t("stats:wrapped.chapters.toursDesc")}
+          description={[
+            t("stats:wrapped.chapters.toursDesc"),
+            ...kmParts(tours.km, tours.unmeasured, "toursKm", "toursNoKm"),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
       )}
       {rentals !== null && (

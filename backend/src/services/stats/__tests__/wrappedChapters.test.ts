@@ -63,8 +63,8 @@ describe("buildWrapped — chapters beyond flights", () => {
     expect(wrapped?.chapters).toEqual({
       lodging: { stays: 0, nights: 0, nightsUnknown: 0 },
       places: { visits: 3, places: 2 },
-      roadtrips: { roadtrips: 1 },
-      tours: { tours: 2 },
+      roadtrips: { roadtrips: 1, km: null, unmeasured: 1, nights: 0, nightsUnknown: 1 },
+      tours: { tours: 2, km: null, unmeasured: 2 },
       rentals: { rentals: 0, days: 0 },
       bus: { rides: 2, km: 255, unmeasured: 1, nights: 1 },
       ferry: null,
@@ -104,6 +104,43 @@ describe("buildWrapped — chapters beyond flights", () => {
     expect(
       buildWrapped([flight], [], [], null, [], { ...NO_CHAPTERS, flightsVisible: false })
     ).toBeNull();
+  });
+
+  // forgejo#405: roadtrips and tours had a count and no kilometres or nights.
+  it("sums roadtrip kilometres and known nights, and keeps unknowns unknown", () => {
+    const wrapped = buildWrapped([], [], [], 2024, [], {
+      ...NO_CHAPTERS,
+      roadtrips: [
+        { year: 2024, km: 1200.4, nights: 6 },
+        { year: 2024, km: 300, nights: null },
+        { year: 2024, km: null, nights: 2 },
+        { year: 2023, km: 99, nights: 9 },
+      ],
+      tours: [
+        { year: 2024, km: 12.6 },
+        { year: 2024, km: null },
+      ],
+    });
+    expect(wrapped?.chapters?.roadtrips).toEqual({
+      roadtrips: 3,
+      km: 1500,
+      unmeasured: 1,
+      nights: 8,
+      nightsUnknown: 1,
+    });
+    expect(wrapped?.chapters?.tours).toEqual({ tours: 2, km: 13, unmeasured: 1 });
+    const parsed = wrappedSchema.safeParse(wrapped);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
+  });
+
+  it("states no roadtrip kilometres when no roadtrip of the year has a leg — never 0", () => {
+    const wrapped = buildWrapped([], [], [], 2024, [], {
+      ...NO_CHAPTERS,
+      roadtrips: [{ year: 2024, km: null, nights: null }],
+      tours: [{ year: 2024, km: null }],
+    });
+    expect(wrapped?.chapters?.roadtrips).toMatchObject({ km: null, nights: 0, nightsUnknown: 1 });
+    expect(wrapped?.chapters?.tours?.km).toBeNull();
   });
 
   // Review I4: a year of bus rides without any distance has unknown km, not 0.

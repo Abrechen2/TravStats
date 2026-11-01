@@ -29,10 +29,32 @@ const wrappedChaptersSchema = z
       })
       .nullable(),
     roadtrips: z
-      .object({ roadtrips: z.number().int().describe("Roadtrips that started in the year") })
+      .object({
+        roadtrips: z.number().int().describe("Roadtrips that started in the year"),
+        km: z
+          .number()
+          .nullable()
+          .describe("Their legs together; null when no roadtrip of the year has a leg — never 0"),
+        unmeasured: z.number().int().describe("Roadtrips without a leg, outside `km`"),
+        nights: z
+          .number()
+          .int()
+          .describe("Nights of the roadtrips whose nights are fully known (stays and free pitches)"),
+        nightsUnknown: z
+          .number()
+          .int()
+          .describe("Roadtrips whose nights the record does not fully say, outside `nights`"),
+      })
       .nullable(),
     tours: z
-      .object({ tours: z.number().int().describe("Day tours dated in the year and past") })
+      .object({
+        tours: z.number().int().describe("Day tours dated in the year and past"),
+        km: z
+          .number()
+          .nullable()
+          .describe("Recorded distance, else legs; null when no tour of the year has one"),
+        unmeasured: z.number().int().describe("Tours without a distance, outside `km`"),
+      })
       .nullable(),
     rentals: z
       .object({
