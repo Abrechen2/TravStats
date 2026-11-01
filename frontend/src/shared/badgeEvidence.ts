@@ -151,9 +151,12 @@ export const BADGE_PROOF_TYPES: readonly string[] = [
   "duplicated_count",
   "early_morning_flights",
   "equator_crossing",
+  "ferry_count",
   "ferry_countries",
   "ferry_km",
+  "ferry_night_crossings",
   "ferry_operators",
+  "ferry_ports",
   "ferry_vehicle",
   "first_class_flights",
   "flight_airport_all_quarters",
@@ -275,11 +278,6 @@ export const BADGE_PROOF_TYPES: readonly string[] = [
 
 /** Rules with no list of entries, each with the reason. */
 export const BADGE_WITHOUT_EVIDENCE: Readonly<Record<string, string>> = {
-  // The ferry domain serves no statistics measure that lists its crossings
-  // yet; its badges open no list until it does.
-  ferry_count: "The ferry domain serves no evidence measures yet.",
-  ferry_night_crossings: "The ferry domain serves no evidence measures yet.",
-  ferry_ports: "The ferry domain serves no evidence measures yet.",
   // TravTrack badges stand on the monthly values of a position history, not on
   // entries of the logbook: there is no list of rows to open (forgejo#400).
   travtrack_days: "TravTrack's days are measured from recorded positions, not listed entries.",
