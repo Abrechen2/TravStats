@@ -158,7 +158,11 @@ export async function scanStays(
     const suppression = await loadSuppression(userId);
     const coverage = await loadCoverage(userId, start, now);
     let markets: Awaited<ReturnType<typeof collectMarketFindings>> | null = null;
-    if (state.marketEnabled || state.venueEnabled) {
+    // Area recognition (markets and venues) runs whenever the stay scan runs:
+    // it is not a setting any more (owner, 2026-11-01). The per-user
+    // `marketEnabled`/`venueEnabled` columns and their endpoints stay for
+    // installed Companion versions but no longer gate anything.
+    {
       const visits = await prisma.placeVisit.findMany({
         where: { userId },
         select: {
@@ -188,8 +192,8 @@ export async function scanStays(
           })),
         },
         {
-          includeVenues: state.venueEnabled,
-          includeMarkets: state.marketEnabled,
+          includeVenues: true,
+          includeMarkets: true,
           store: options.marketStore,
           fetcher: options.marketFetcher,
           endpoint: options.marketEndpoint,
@@ -199,8 +203,6 @@ export async function scanStays(
                 userId,
                 ...reservation!,
                 enabled: true,
-                ...(state.marketEnabled ? { marketEnabled: true } : {}),
-                ...(state.venueEnabled ? { venueEnabled: true } : {}),
                 ...stayScanAllowedWhere,
               },
               select: { userId: true },

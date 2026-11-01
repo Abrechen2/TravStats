@@ -102,7 +102,9 @@ registry.registerPath({
     "Switching `enabled` on also switches `marketEnabled` and `venueEnabled` on, unless the " +
     "request names them (forgejo#318: places are detected as whole areas by default). " +
     "Switching `enabled` off switches both off. While the scan stays on, either area switch " +
-    "keeps whatever was last set.",
+    "keeps whatever was last set. Since 2.8 `marketEnabled` and `venueEnabled` no longer gate " +
+    "anything: area recognition (markets and venues) runs whenever the stay scan runs. The " +
+    "fields and the `enableMarkets`/`enableVenues` calls stay for installed app versions.",
   request: {
     body: {
       content: {

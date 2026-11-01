@@ -20,7 +20,7 @@
       "points": 27,
       "truncated": false,
       "markets": {
-        "scope": "markets",
+        "scope": "venues",
         "status": "complete",
         "tiles": 2,
         "totalTiles": 2,
@@ -41,7 +41,7 @@
     "createdCount": 1,
     "dataThrough": "2026-10-10T20:40:00.000Z",
     "marketResult": {
-      "scope": "markets",
+      "scope": "venues",
       "tiles": 2,
       "status": "complete",
       "limited": false,

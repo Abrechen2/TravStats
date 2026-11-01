@@ -30,6 +30,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await wipeTravTrack([userId]);
+  await prisma.marketCatalogTile.deleteMany({});
+  await prisma.marketCatalogState.deleteMany({});
   await prisma.dawarichStay.deleteMany({ where: { userId } });
   await prisma.dawarichStayScan.update({
     where: { userId },
@@ -46,7 +48,12 @@ afterAll(async () => {
 
 async function scan(options: Parameters<typeof scanStays>[1] = {}) {
   await reserveScan(userId, NOW);
-  await scanStays(userId, { now: NOW, ...options });
+  // Area recognition is always on: a scan without a stub would reach the network.
+  await scanStays(userId, {
+    now: NOW,
+    marketFetcher: async () => Response.json({ elements: [] }),
+    ...options,
+  });
   return prisma.dawarichStay.findFirstOrThrow({ where: { userId, status: "pending" } });
 }
 

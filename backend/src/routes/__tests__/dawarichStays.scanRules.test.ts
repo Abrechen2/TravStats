@@ -51,7 +51,12 @@ let userId: string;
 
 async function scan(points: DawarichPoint[]) {
   await reserveScan(userId);
-  return scanStays(userId, { now, client: clientOf(points) });
+  // Area recognition is always on: an unstubbed scan would reach the network.
+  return scanStays(userId, {
+    now,
+    client: clientOf(points),
+    marketFetcher: async () => Response.json({ elements: [] }),
+  });
 }
 
 beforeAll(async () => {
