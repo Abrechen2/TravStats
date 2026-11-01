@@ -1,3 +1,4 @@
+import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TRACK_ERROR_KEYS } from "../lib/trackErrorKeys";
@@ -619,6 +620,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             {route.kind === "tour" && (
               <TourDayEditor route={route} tripId={id} onSaved={setRoute} />
             )}
+            <RouteTagsEditor route={route} tripId={id} onSaved={setRoute} />
             <span>
               {t(`trips:tours.mode.${route.mode}`)} ·{" "}
               {/* A day tour is measured by its recording once it has one. */}

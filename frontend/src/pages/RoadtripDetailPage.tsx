@@ -1,3 +1,4 @@
+import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -396,6 +397,14 @@ export default function RoadtripDetailPage(): JSX.Element {
       />
 
       <RoadtripFigures detail={detail} today={today} />
+
+      <div style={{ marginTop: "var(--ts-space-md)" }}>
+        <RouteTagsEditor
+          route={r}
+          tripId={undefined}
+          onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
+        />
+      </div>
 
       {/* A roadtrip stored by rail, from before rail was a domain (rail beta). */}
       <RoadtripRailConversion routeId={id} vehicle={r.vehicle} onConverted={() => void load()} />

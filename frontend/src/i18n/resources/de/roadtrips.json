@@ -998,5 +998,11 @@
     "save": "Speichern",
     "error": "Der Kilometerstand konnte nicht gespeichert werden.",
     "open": "Kilometerstand"
+  },
+  "tags": {
+    "label": "Tags",
+    "add": "Tags hinzufügen",
+    "edit": "Tags bearbeiten",
+    "saveFailed": "Die Tags konnten nicht gespeichert werden."
   }
 }

@@ -998,5 +998,11 @@
     "save": "Save",
     "error": "The odometer readings could not be saved.",
     "open": "Odometer"
+  },
+  "tags": {
+    "label": "Tags",
+    "add": "Add tags",
+    "edit": "Edit tags",
+    "saveFailed": "The tags could not be saved."
   }
 }
