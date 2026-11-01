@@ -16,6 +16,8 @@ export interface TravTrackImportReport {
   duplicate: number;
   dropped: { privacy_zone: number; deleted_range: number; invalid: number; null_island: number };
   withoutTime: number;
+  /** What the file was read as (`gpx`, `google-records`, `geojson` …); absent on older imports. */
+  format?: string;
   /** The failure's code, for a failed import. */
   error?: string;
 }
@@ -44,7 +46,10 @@ export const travTrackImportsApi = {
   list: async (): Promise<TravTrackImport[]> =>
     (await api.get<{ imports: TravTrackImport[] }>("/travtrack/imports")).data.imports,
   /** Uploads the file and waits for the import's outcome. */
-  importGpx: async (file: File): Promise<TravTrackImportOutcome> => {
+  importGpx: async (
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<TravTrackImportOutcome> => {
     const form = new FormData();
     form.append("file", file);
     // The shared client sends JSON by default; naming multipart lets axios add the boundary.
@@ -53,7 +58,11 @@ export const travTrackImportsApi = {
       form,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
-    return waitForJob<TravTrackImportOutcome>(data.jobId);
+    return waitForJob<TravTrackImportOutcome>(data.jobId, {
+      onPoll: (job) => {
+        if (job.progress && job.progress.total > 0) onProgress?.(job.progress.done);
+      },
+    });
   },
   remove: async (id: string): Promise<number> =>
     (await api.delete<{ deleted: number }>(`/travtrack/imports/${encodeURIComponent(id)}`)).data
@@ -77,6 +86,10 @@ export function importErrorKey(err: unknown): string {
       return "track:imports.errors.unreadable";
     case "TRAVTRACK_IMPORT_TOO_MANY_POINTS":
       return "track:imports.errors.tooManyPoints";
+    case "TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT":
+      return "track:imports.errors.unsupportedFormat";
+    case "TRAVTRACK_IMPORT_BUSY":
+      return "track:imports.errors.busy";
     case "TRAVTRACK_IMPORT_RUNNING":
       return "track:imports.errors.running";
     case "TRACK_FILE_TOO_LARGE":
@@ -101,6 +114,8 @@ export function storedImportErrorKey(code: string | undefined): string {
       return "track:imports.errors.unreadable";
     case "TRAVTRACK_IMPORT_TOO_MANY_POINTS":
       return "track:imports.errors.tooManyPoints";
+    case "TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT":
+      return "track:imports.errors.unsupportedFormat";
     default:
       return "track:errors.generic";
   }

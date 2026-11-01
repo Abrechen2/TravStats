@@ -13,6 +13,9 @@ import {
   storePoint,
   wipeTravTrack,
 } from "../../services/travtrack/__tests__/fixtures";
+import { activeImports } from "../../services/travtrack/imports/fileImport";
+import { SPOOL_DIR } from "../../services/travtrack/imports/spool";
+import fs from "node:fs";
 import { gpxFile, minuteFixes } from "../../services/travtrack/__tests__/gpxFixtures";
 import { GPX_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/mapGpx";
 import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
@@ -95,6 +98,7 @@ describe("TravTrack — /travtrack/imports", () => {
           duplicate: 0,
           dropped: { privacy_zone: 0, deleted_range: 0, invalid: 0, null_island: 0 },
           withoutTime: 0,
+          format: "gpx",
         },
         pointCount: 4,
         fromAt: "2026-10-12T01:00:00.000Z",
@@ -127,6 +131,53 @@ describe("TravTrack — /travtrack/imports", () => {
     const { jobId } = await importDone(Buffer.from("<html>nope</html>"), "x.gpx");
     const job = await request(app).get(`/api/v1/jobs/${jobId}`).set("Cookie", cookie);
     expect(job.body.data.error).toEqual({ code: "TRAVTRACK_IMPORT_UNREADABLE", status: 422 });
+  });
+
+  it("takes a Google Timeline Records.json and says which format it read (forgejo#394)", async () => {
+    const records = {
+      locations: [
+        { latitudeE7: 375000000, longitudeE7: 1270000000, timestamp: "2026-10-12T01:00:00Z" },
+        { latitudeE7: 375100000, longitudeE7: 1270100000, timestamp: "2026-10-12T01:01:00Z" },
+      ],
+    };
+    const { jobId } = await importDone(Buffer.from(JSON.stringify(records)), "Records.json");
+    const job = await request(app).get(`/api/v1/jobs/${jobId}`).set("Cookie", cookie);
+    expect(job.body.data.status).toBe("succeeded");
+    const res = await list();
+    expect(res.body.imports[0]).toMatchObject({
+      fileName: "Records.json",
+      pointCount: 2,
+      report: { stored: 2, format: "google-records" },
+    });
+  });
+
+  it("a FIT file fails the job with its own code, not as unreadable (forgejo#394)", async () => {
+    const fit = Buffer.alloc(32);
+    fit.write(".FIT", 8, "latin1");
+    const { jobId } = await importDone(fit, "ride.fit");
+    const job = await request(app).get(`/api/v1/jobs/${jobId}`).set("Cookie", cookie);
+    expect(job.body.data.error).toEqual({
+      code: "TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT",
+      status: 422,
+    });
+  });
+
+  it("a second file is refused with 409 before its body is read while an import runs (forgejo#394)", async () => {
+    const row = await prisma.travTrackImport.create({
+      data: { userId, kind: "gpx", fileName: "first.json", status: "running" },
+    });
+    activeImports.set(row.id, row.id);
+    const spooled = () => (fs.existsSync(SPOOL_DIR) ? fs.readdirSync(SPOOL_DIR) : []);
+    const before = spooled();
+    try {
+      const res = await upload(Buffer.from(JSON.stringify({ locations: [] })), "second.json");
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("TRAVTRACK_IMPORT_RUNNING");
+      // The body was never taken: nothing reached the spool directory.
+      expect(spooled()).toEqual(before);
+    } finally {
+      activeImports.delete(row.id);
+    }
   });
 
   it("refuses a request without a file, and a file over the limit", async () => {

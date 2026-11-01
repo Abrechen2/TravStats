@@ -153,6 +153,50 @@ describe("Track › Importe — GPX import", () => {
     expect(status.textContent).toContain('track:imports.report.withoutTime {"count":3}');
   });
 
+  it("a Google Timeline file shows the job's progress while it runs (forgejo#394)", async () => {
+    let finish: (v: Awaited<ReturnType<typeof travTrackImportsApi.importGpx>>) => void = () => {};
+    vi.spyOn(travTrackImportsApi, "importGpx").mockImplementation(
+      (_file, onProgress) =>
+        new Promise((resolve) => {
+          onProgress?.(37);
+          finish = resolve;
+        })
+    );
+    show();
+    const input = await screen.findByLabelText("track:imports.choose");
+    // The picker offers the Timeline and GeoJSON formats, not only GPX.
+    expect(input.getAttribute("accept")).toContain(".json");
+    expect(input.getAttribute("accept")).toContain(".kml");
+    const records = new File(["{}"], "Records.json", { type: "application/json" });
+    await userEvent.upload(input, records);
+    expect(await screen.findByText(/track:imports.runningPercent .*"percent":37/)).toBeTruthy();
+    finish({ importId: "imp-1", status: "succeeded", report: REPORT });
+    await screen.findByText(/track:imports.report.stored/);
+  });
+
+  it("a FIT file is told apart from a broken one, live and in the list (forgejo#394)", async () => {
+    vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
+      new JobFailedError("TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT", 422)
+    );
+    show();
+    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "track:imports.errors.unsupportedFormat"
+    );
+    expect(storedImportErrorKey("TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT")).toBe(
+      "track:imports.errors.unsupportedFormat"
+    );
+  });
+
+  it("a busy reader says so instead of a generic failure (forgejo#394)", async () => {
+    vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
+      new JobFailedError("TRAVTRACK_IMPORT_BUSY", 503)
+    );
+    show();
+    await userEvent.upload(await screen.findByLabelText("track:imports.choose"), gpx());
+    expect(await screen.findByRole("alert")).toHaveTextContent("track:imports.errors.busy");
+  });
+
   it("a file without times says so", async () => {
     vi.spyOn(travTrackImportsApi, "importGpx").mockRejectedValue(
       new JobFailedError("TRAVTRACK_IMPORT_NO_TIMES", 422)
