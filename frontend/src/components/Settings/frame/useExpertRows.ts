@@ -23,6 +23,13 @@ export const HiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
  */
 export const PageHiddenRowsContext = createContext<HiddenRowsReporter | null>(null);
 
+/**
+ * True while the page draws its own "N weitere Einstellungen" note at the top:
+ * the sections then leave their dashed footers out, so the hint is said once
+ * (the location page said it twice, banner and footer).
+ */
+export const PageExpertNoteShownContext = createContext(false);
+
 /** A reporter and the sum of what was reported to it. */
 export function useHiddenRowsCollector(): [number, HiddenRowsReporter] {
   const [byKey, setByKey] = useState<Record<string, number>>({});

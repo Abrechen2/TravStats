@@ -16,6 +16,9 @@ export const NOTIFICATIONS_PAGE: RegistryPage = {
         {"id":"r_bus","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"bus","demoLocked":true,"de":"Bus","en":"Bus","terms":{"de":"","en":""}},
         {"id":"r_ferry","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"ferry","demoLocked":true,"de":"Fähre","en":"Ferry","terms":{"de":"","en":""}},
         {"id":"r_lodging","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"lodging","demoLocked":true,"de":"Unterkunft","en":"Stay","terms":{"de":"","en":""}},
+        {"id":"r_rental","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"rental","demoLocked":true,"de":"Mietwagen","en":"Rental car","terms":{"de":"","en":""}},
+        {"id":"r_roadtrip","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"roadtrip","demoLocked":true,"de":"Roadtrip","en":"Roadtrip","terms":{"de":"","en":""}},
+        {"id":"r_poi","kind":"remind","level":"standard","scope":"account","audience":"all","domain":"poi","demoLocked":true,"de":"Orte","en":"Places","terms":{"de":"","en":""}},
       ]},
   ],
 };

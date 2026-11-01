@@ -3,9 +3,23 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 import { localWallClockOf } from "../../utils/timezone";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
-import { travTrackYearStats } from "../travtrack/everyday/view";
+import { travTrackYears, travTrackYearStats } from "../travtrack/everyday/view";
 import { buildWrapped, type Wrapped } from "./wrapped";
+import { chapterYears } from "./wrappedChapters";
 import { loadWrappedDomains, loadWrappedPassport } from "./wrappedDomains";
+
+/** Years the logbook already names, so TravTrack's scan skips them (a miss only costs a scan). */
+function logbookYears(
+  flightYears: ReadonlyArray<number | null>,
+  domains: Awaited<ReturnType<typeof loadWrappedDomains>>
+): ReadonlySet<number> {
+  const years = new Set<number>();
+  for (const y of flightYears) if (y !== null) years.add(y);
+  for (const c of domains.cruises ?? []) if (c.startDate) years.add(c.startDate.getUTCFullYear());
+  for (const r of domains.rail ?? []) years.add(r.year);
+  for (const y of chapterYears(domains.chapters)) years.add(y);
+  return years;
+}
 
 /**
  * The year in review for one user, loaded and built — the one home of
@@ -59,22 +73,32 @@ export async function loadWrapped(
   // answer rather than resolving timezones itself (AUD-077).
   const flightsWithClock = await withDepartureClock(flights);
 
-  const wrapped = buildWrapped(
+  const rows = flightsWithClock.map((f) => ({
+    ...f,
+    departureYear:
+      f.departureTime === null
+        ? null
+        : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
     // Great-circle from the coordinates, the measure `/stats/timeseries`
     // buckets — so the year's distance agrees with its bar on the chart.
-    flightsWithClock.map((f) => ({
-      ...f,
-      departureYear:
-        f.departureTime === null
-          ? null
-          : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
-      distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
-    })),
+    distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
+  }));
+  const wrapped = buildWrapped(
+    rows,
     domains.cruises,
     passport.countries,
     year,
     domains.rail,
-    domains.chapters
+    domains.chapters,
+    opts.withTravTrack
+      ? await travTrackYears(
+          userId,
+          logbookYears(
+            rows.map((r) => r.departureYear),
+            domains
+          )
+        )
+      : []
   );
   if (!wrapped || !opts.withTravTrack) return wrapped;
   return { ...wrapped, travTrack: await travTrackYearStats(userId, wrapped.year) };

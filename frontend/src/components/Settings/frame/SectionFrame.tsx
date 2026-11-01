@@ -8,6 +8,7 @@ import {
 import { DeepLinkedExpertNote, ExpertNote, RevealedRowsNote } from "./ExpertNote";
 import {
   HiddenRowsContext,
+  PageExpertNoteShownContext,
   PageHiddenRowsContext,
   RevealExpertRowsContext,
   useHiddenRowsCollector,
@@ -66,6 +67,7 @@ export function SectionFrame({
   const [hidden, report] = useHiddenRowsCollector();
   // Passed up to the page, whose top note counts every hidden setting on it.
   const reportToPage = useContext(PageHiddenRowsContext);
+  const pageSaysIt = useContext(PageExpertNoteShownContext);
   useEffect(() => {
     if (!reportToPage) return;
     reportToPage(anchorId, hidden);
@@ -106,7 +108,7 @@ export function SectionFrame({
           </HeadingAboveContext.Provider>
         </HiddenRowsContext.Provider>
       </RevealExpertRowsContext.Provider>
-      <ExpertNote count={hidden} />
+      {!pageSaysIt && <ExpertNote count={hidden} />}
     </section>
   );
 }

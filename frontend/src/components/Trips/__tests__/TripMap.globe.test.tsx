@@ -44,6 +44,8 @@ const { captured, mapCalls, labelOverlays } = vi.hoisted(() => ({
     fitBounds: [] as Array<{ maxZoom?: number }>,
     flyTo: [] as Array<{ zoom?: number }>,
     skyThrows: false,
+    nativeLayers: [] as string[],
+    nativeSources: new Set<string>(),
     styleListeners: new Set<() => void>(),
   },
 }));
@@ -66,7 +68,23 @@ vi.mock("react-map-gl/maplibre", async () => {
     getZoom: () => 2,
     getStyle: () => ({ version: 8, layers: [] }),
     getCenter: () => ({ lng: 0, lat: 0 }),
-    getCanvas: () => ({ style: {} }),
+    getCanvas: () => ({
+      style: {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }),
+    // The native layers (forgejo#331): a minimal in-memory style.
+    getLayer: (id: string) => (mapCalls.nativeLayers.includes(id) ? { id } : undefined),
+    getSource: (id: string) => (mapCalls.nativeSources.has(id) ? { setData: () => {} } : undefined),
+    addSource: (id: string) => mapCalls.nativeSources.add(id),
+    addLayer: (layer: { id: string }) => mapCalls.nativeLayers.push(layer.id),
+    removeLayer: () => {},
+    removeSource: () => {},
+    setPaintProperty: () => {},
+    setLayoutProperty: () => {},
+    setFilter: () => {},
+    removeFeatureState: () => {},
+    queryRenderedFeatures: () => [],
     getContainer: () => document.createElement("div"),
     fitBounds: (_bounds: unknown, opts?: { maxZoom?: number }) => {
       mapCalls.fitBounds.push(opts ?? {});
@@ -400,6 +418,19 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     const arcs = layers.find((l) => l.id === "trip-flight-arcs");
     expect(arcs).toBeDefined();
     expect(arcs?.constructor.name).toBe("PathLayer");
+  });
+
+  it("puts the dots on the surface as native layers instead of floating deck.gl ones (forgejo#331)", async () => {
+    mapCalls.nativeLayers.length = 0;
+    render(<TripMap trip={trip} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    expect(mapCalls.nativeLayers).toEqual([]); // flat map: deck.gl draws everything
+    await toggleToGlobe();
+    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
+    const ids = captured[captured.length - 1].props.layers.map((l) => l.id);
+    expect(ids).not.toContain("trip-airports");
+    expect(ids).not.toContain("trip-cruise-paths");
+    await waitFor(() => expect(mapCalls.nativeLayers).toContain("trip-airports"));
   });
 });
 

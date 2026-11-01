@@ -145,6 +145,7 @@ export async function importTours(sheet: IncomingSheet, ctx: Ctx): Promise<Sheet
       activity: enumCell(raw.activity, TOUR_ACTIVITIES, "activity", dropped),
       mode: enumCell(raw.mode, LEG_MODES, "mode", dropped),
       notes: cell.text(raw.notes),
+      tags: cell.list(raw.tags),
       anchorStopId: await resolveAnchor(raw.anchorStopId, ctx),
     });
     const extra = { dropped: droppedOrNone(dropped) };
@@ -195,7 +196,14 @@ export async function importTours(sheet: IncomingSheet, ctx: Ctx): Promise<Sheet
 /** A standalone tour, placed last among the caller's trip-less ones as `POST /tours` does. */
 async function createTour(
   userId: string,
-  fields: { name: string; activity?: string; mode?: string; notes?: string; anchorStopId?: string }
+  fields: {
+    name: string;
+    activity?: string;
+    mode?: string;
+    notes?: string;
+    tags?: string[];
+    anchorStopId?: string;
+  }
 ): Promise<string> {
   const last = await prisma.tripRoute.findFirst({
     where: { userId, tripId: null },
@@ -211,6 +219,7 @@ async function createTour(
       mode: fields.mode ?? modeFor(fields.activity),
       activity: fields.activity ?? null,
       notes: fields.notes ?? null,
+      tags: fields.tags ?? [],
       anchorStopId: fields.anchorStopId ?? null,
       orderIdx: last ? last.orderIdx + 1 : 0,
     },

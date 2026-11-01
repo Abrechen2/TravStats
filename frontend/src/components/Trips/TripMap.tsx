@@ -29,8 +29,11 @@ import {
   type TripCruisePath,
   type TripFlightArc,
   type TripPointDatum,
+  type TripMapGlobeStack,
   type TripProjection,
 } from "./TripMapGlobeLayers";
+import { useTripMapNative } from "./useTripMapNative";
+import { HoverTooltip } from "../map/cards/HoverTooltip";
 import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
 import { useTripLayers } from "./tripMapExtraLayers";
 import {
@@ -333,7 +336,7 @@ export default function TripMap({
 
   const tourPathData = useMemo(() => buildTourPaths(tourGeometries), [tourGeometries]);
 
-  const globeLayers = useMemo<Layer[]>(
+  const globeStack = useMemo<TripMapGlobeStack>(
     () =>
       buildTripMapGlobeLayers({
         flightArcs,
@@ -525,9 +528,24 @@ export default function TripMap({
   );
   const baseLayers = useMemo(
     () =>
-      decorateTripMapLayers(projection === "globe" ? globeLayers : mercatorLayers, flightJourneys),
-    [projection, globeLayers, mercatorLayers, flightJourneys]
+      decorateTripMapLayers(
+        projection === "globe" ? globeStack.deck : mercatorLayers,
+        flightJourneys
+      ),
+    [projection, globeStack, mercatorLayers, flightJourneys]
   );
+  // The ground data on the globe is native MapLibre layers (forgejo#331).
+  const nativeLayers = useMemo(
+    () => (projection === "globe" ? decorateTripMapLayers(globeStack.native, flightJourneys) : []),
+    [projection, globeStack, flightJourneys]
+  );
+  const { isOverNative, tooltipRef } = useTripMapNative({
+    mapRef,
+    mapReady: mapLoaded,
+    layers: nativeLayers,
+    markerTooltip: getTooltip,
+    onClick: handleClick,
+  });
   // Station labels, and the caller's layers occluded on the globe (tripMapExtraLayers.ts).
   const layers = useTripLayers(baseLayers, extraLayers, projection, occlusionExt, occlusionProps);
   const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
@@ -703,11 +721,13 @@ export default function TripMap({
             layers={layers}
             onClick={handleClick}
             getTooltip={getTooltip}
+            isOverNative={isOverNative}
             interleaved={projection === "globe"}
           />
         )}
         <SharedMapOverlays />
       </MapGL>
+      <HoverTooltip ref={tooltipRef} />
       <TripMapCardHost mapRef={mapRef} mapLoaded={mapLoaded} />
       {cruiseGeometryFailed && (
         <MapLoadFailedNotice

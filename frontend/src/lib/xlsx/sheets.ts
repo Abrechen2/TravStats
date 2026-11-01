@@ -485,6 +485,13 @@ export function lodgingSheet(t: T): SheetSpec<Lodging> {
         value: (l) => l.amenities.join(", "),
       },
       {
+        key: "tags",
+        header: t("xlsx:columns.tags"),
+        kind: "text",
+        width: 20,
+        value: (l) => (l.tags ?? []).join(", "),
+      },
+      {
         key: "notes",
         header: t("xlsx:columns.notes"),
         kind: "text",
@@ -652,6 +659,13 @@ export function placeSheet(t: T, locale = "de"): SheetSpec<Place> {
         kind: "boolean",
         width: 10,
         value: (p) => p.visited,
+      },
+      {
+        key: "tags",
+        header: t("xlsx:columns.tags"),
+        kind: "text",
+        width: 20,
+        value: (p) => (p.tags ?? []).join(", "),
       },
       {
         key: "notes",

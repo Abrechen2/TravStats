@@ -14,6 +14,9 @@ vi.mock("../../../lib/api/roadtrips", () => ({
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn(async () => [{ id: "t1", name: "Herbst in Norwegen" }]) },
 }));
+vi.mock("../../../hooks/useTagSuggestions", () => ({
+  useTagSuggestions: () => [],
+}));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
@@ -72,6 +75,23 @@ describe("NewRoadtripDialog", () => {
       tripId: "t1",
       startOdometerKm: 84210,
     });
+  });
+
+  it("sends the tags typed into the dialog with the new roadtrip (forgejo#405)", async () => {
+    vi.mocked(roadtripsApi.create).mockResolvedValue({ id: "new" } as never);
+    const onCreated = renderDialog();
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
+      target: { value: "Fjorde 2026" },
+    });
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "roadtrips:tags.label" }),
+      "Familie{Enter}"
+    );
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(roadtripsApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Fjorde 2026", tags: ["Familie"] })
+    );
   });
 
   // forgejo#245: the one required field is marked, the optional ones are not

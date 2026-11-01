@@ -302,6 +302,18 @@ describe("expert notes and pills (forgejo#321 prototype)", () => {
     expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "3");
   });
 
+  it("says the expert hint once: a section leaves its footer out while the page note is shown", async () => {
+    const { PageExpertNoteShownContext } = await import("../useExpertRows");
+    render(
+      <PageExpertNoteShownContext.Provider value>
+        <SectionFrame anchorId="settings-a" label="A">
+          <TwoExpertRows />
+        </SectionFrame>
+      </PageExpertNoteShownContext.Provider>
+    );
+    expect(document.querySelector('[data-expert-note="settings"]')).toBeNull();
+  });
+
   it("marks an expert section's heading and an expert row with the blue pill", async () => {
     const { SectionCard, SectionTitle } = await import("../../SettingsShared");
     const { Switch } = await import("../../../ui/Field");

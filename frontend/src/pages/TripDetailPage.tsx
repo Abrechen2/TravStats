@@ -160,7 +160,7 @@ export default function TripDetailPage(): JSX.Element {
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
       />
-      <TripPackingCard tripId={trip.id} />
+      <TripPackingCard tripId={trip.id} endDate={trip.endDate} />
       <TabBar tab={tab} onChange={setTab} t={t} />
 
       <div className="py-6">

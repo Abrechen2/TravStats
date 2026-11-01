@@ -99,6 +99,7 @@ export async function importRoadtrips(sheet: IncomingSheet, ctx: Ctx): Promise<S
       startOdometerKm: start,
       endOdometerKm: end,
       notes: cell.text(raw.notes),
+      tags: cell.list(raw.tags),
     });
     const extra = { dropped: droppedOrNone(dropped) };
     const labels = labelForms(fields.name);

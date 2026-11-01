@@ -138,10 +138,8 @@ export function buildTourLegendRows(
  * because `buildTourDeckLayers` had only ever been fed into the flat map
  * before `extraLayers` was wired into GlobeView (fix round 1's H1).
  *
- * Matches `CRUISE_PATH_ALTITUDE_M` in `Globe/buildGlobeLayers.ts` exactly
- * — same mechanism, same safe-and-invisible altitude, kept as an
- * independent constant rather than importing that one because it is a
- * module-private detail of a file with no other reason to export it.
+ * Same mechanism the cruise paths used (5 km, safe and invisible) before
+ * they moved onto native MapLibre layers (forgejo#331).
  */
 export const TOUR_PATH_GLOBE_ALTITUDE_M = 5_000;
 

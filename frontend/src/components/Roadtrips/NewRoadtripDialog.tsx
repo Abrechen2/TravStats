@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { Field, Input, Select } from "../ui/Field";
+import TagInput from "../TagInput";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -39,11 +40,12 @@ interface Draft {
   vehicleName: string;
   odometer: string;
   tripId: string;
+  tags: string[];
 }
 
 /** The empty draft of one opening — the state's start AND the dirty baseline. */
 function emptyDraft(): Draft {
-  return { name: "", vehicle: null, vehicleName: "", odometer: "", tripId: "" };
+  return { name: "", vehicle: null, vehicleName: "", odometer: "", tripId: "", tags: [] };
 }
 
 /** The odometer as a number (null when empty); `invalid` when the text cannot be a reading. */
@@ -152,6 +154,7 @@ export default function NewRoadtripDialog({
           vehicleName: draft.vehicleName.trim() || null,
           tripId: draft.tripId || null,
           ...(odometer.value !== null ? { startOdometerKm: odometer.value } : {}),
+          ...(draft.tags.length > 0 ? { tags: draft.tags } : {}),
         }),
       async (created) => {
         markSaved();
@@ -323,6 +326,16 @@ export default function NewRoadtripDialog({
                 </option>
               ))}
             </Select>
+          </Field>
+
+          <Field label={t("roadtrips:tags.label")} htmlFor="roadtrip-new-tags">
+            <TagInput
+              id="roadtrip-new-tags"
+              ariaLabel={t("roadtrips:tags.label")}
+              className="w-full rounded-md border border-(--color-border) bg-transparent px-3 py-2 text-sm"
+              value={draft.tags}
+              onChange={(tags) => set("tags", tags)}
+            />
           </Field>
 
           <RequiredLegend />

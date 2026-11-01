@@ -49,12 +49,37 @@ describe("the settings registry follows the designer's data", () => {
     }
   });
 
-  it("counts 18 pages, 84 sections (31 of them service cards) and 242 rows", () => {
+  it("counts 18 pages, 84 sections (31 of them service cards) and 246 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(18);
     expect(sections).toHaveLength(84);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(242);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(246);
+  });
+
+  it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
+    const ids = new Set(
+      SETTINGS_REGISTRY.flatMap((p) => p.sections.flatMap((s) => s.rows.map((r) => r.id)))
+    );
+    for (const id of ["r_rental", "r_roadtrip", "r_poi", "enrich"])
+      expect(ids.has(id), id).toBe(true);
+    // Every reminder area the app offers has its row.
+    const reminders = SETTINGS_REGISTRY.flatMap((p) => p.sections.flatMap((s) => s.rows)).filter(
+      (r) => r.kind === "remind"
+    );
+    expect(reminders.map((r) => r.id).sort()).toEqual(
+      [
+        "r_bus",
+        "r_cruise",
+        "r_ferry",
+        "r_flight",
+        "r_lodging",
+        "r_poi",
+        "r_rail",
+        "r_rental",
+        "r_roadtrip",
+      ].sort()
+    );
   });
 
   it("gives every row a stable id, unique within its page", () => {

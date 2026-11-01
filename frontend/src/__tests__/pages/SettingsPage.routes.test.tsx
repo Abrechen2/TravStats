@@ -458,6 +458,8 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     const note = document.querySelector('[data-expert-note="page"]');
     expect(note).toHaveTextContent("settings:level.pageMore");
     expect(note).toHaveAttribute("data-count", "1");
+    // Said once: the section's own footer would repeat the banner.
+    expect(document.querySelector('[data-expert-note="settings"]')).toBeNull();
   });
 
   it("counts the flight page's hidden expert settings, not its sections, at the top", async () => {

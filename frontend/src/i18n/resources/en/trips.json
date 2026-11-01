@@ -920,6 +920,8 @@
   "loadMore": "Load more",
   "listError": "Trips could not be loaded. Please try again.",
   "packing": {
+    "summary_one": "Packing list · {{count}} item",
+    "summary_other": "Packing list · {{count}} items",
     "title": "Packing list",
     "progress": "{{done}} of {{total}} packed",
     "empty": "Nothing on the list yet. You share this packing list with the Companion app.",

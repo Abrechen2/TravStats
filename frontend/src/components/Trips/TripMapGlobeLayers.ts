@@ -21,10 +21,15 @@ import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 //      tangle.
 //
 // So this module builds the trip map's globe stack out of the globe modules
-// rather than beside them: the geometry comes from `Globe/arcUtils`, the
-// horizon clipping from `Globe/EarthOcclusionExtension`, and the two
-// altitudes from `Globe/buildGlobeLayers`. Nothing here is a second copy of
-// a number that file already owns. What is NOT shared is `buildGlobeLayers`
+// rather than beside them: the geometry comes from `Globe/arcUtils` and the
+// horizon clipping from `Globe/EarthOcclusionExtension`.
+//
+// Two stacks leave here (forgejo#331). The flight arcs bow off the sphere and
+// stay on deck.gl, clipped at the horizon. Everything that lies ON the ground —
+// the dots, the cruise legs, the tour sections — is built as plain pixel-unit
+// layers with no altitude and no extension, because `useTripMapNative` hands
+// them to MapLibre as native layers: a deck.gl layer lifted 5-8 km off the
+// surface floats visibly at close zoom, a native one sits on it. What is NOT shared is `buildGlobeLayers`
 // itself — it wants aggregated routes with frequency quartiles, a time-slider
 // head flight and four hover handlers, none of which a single trip has.
 //
@@ -45,7 +50,6 @@ import {
   getArcSteps,
   greatCircleWaypoints,
 } from "../Globe/arcUtils";
-import { CRUISE_PATH_ALTITUDE_M, MARKER_ALTITUDE_M } from "../Globe/buildGlobeLayers";
 import type { PointDatum as GlobePointDatum } from "../Globe/globeLayerTypes";
 import type { TourPathDatum } from "../layers/tourPathsLayer";
 import type { Lodging } from "../../types/lodging";
@@ -211,16 +215,18 @@ export interface TripMapGlobeLayersOptions {
   occlusionProps: EarthOcclusionExtensionProps;
 }
 
-function markerLayer(
-  id: string,
-  data: readonly TripPointDatum[],
-  radiusPx: number,
-  opts: TripMapGlobeLayersOptions
-): Layer {
+export interface TripMapGlobeStack {
+  /** Stays on deck.gl: the flight arcs, which need an altitude. */
+  deck: Layer[];
+  /** Ground data, drawn as native MapLibre layers (see `useTripMapNative`). */
+  native: Layer[];
+}
+
+function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: number): Layer {
   return new ScatterplotLayer<TripPointDatum>({
     id,
     data: data as TripPointDatum[],
-    getPosition: (d) => [d.position[0], d.position[1], MARKER_ALTITUDE_M],
+    getPosition: (d) => d.position,
     getFillColor: (d) => [...d.color, MARKER_ALPHA] as [number, number, number, number],
     getRadius: radiusPx,
     radiusUnits: "pixels",
@@ -229,22 +235,10 @@ function markerLayer(
     lineWidthUnits: "pixels",
     getLineWidth: 1,
     pickable: true,
-    autoHighlight: true,
-    highlightColor: [255, 255, 255, 200],
-    extensions: [opts.occlusionExt],
-    ...opts.occlusionProps,
-  } as ConstructorParameters<typeof ScatterplotLayer<TripPointDatum>>[0] &
-    EarthOcclusionExtensionProps);
+  });
 }
 
-/** Lift a surface polyline off the sphere so it does not share depth-buffer
- *  values with the globe mesh — without this a cruise leg or a tour section
- *  flickers in and out of the planet. */
-function lift(path: ReadonlyArray<readonly [number, number]>): [number, number, number][] {
-  return path.map((p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M]);
-}
-
-export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[] {
+export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMapGlobeStack {
   const { flightArcs, cruisePaths, tourPaths, airportPoints, stopPoints, lodgingPoints } = opts;
 
   const arcs = new PathLayer<TripFlightArc>({
@@ -276,7 +270,7 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[
       (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
       (p) => p.cruiseId
     ),
-    getPath: (d) => lift(d.path),
+    getPath: (d) => d.path,
     getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
     getWidth: 3,
     widthUnits: "pixels",
@@ -286,11 +280,7 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[
     jointRounded: true,
     wrapLongitude: false,
     pickable: true,
-    autoHighlight: true,
-    highlightColor: HIGHLIGHT,
-    extensions: [opts.occlusionExt],
-    ...opts.occlusionProps,
-  } as ConstructorParameters<typeof PathLayer<TripCruisePath>>[0] & EarthOcclusionExtensionProps);
+  });
 
   // A `straight` (unrouted) leg stays thinner and dimmer here exactly as it
   // does on the flat map — that is a claim about the DATA, and it must not
@@ -298,7 +288,7 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[
   const tours = new PathLayer<TourPathDatum>({
     id: "trip-tour-paths",
     data: tourPaths as TourPathDatum[],
-    getPath: (d) => lift(d.path),
+    getPath: (d) => d.path,
     getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
     getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
     widthUnits: "pixels",
@@ -307,18 +297,16 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[
     jointRounded: true,
     wrapLongitude: false,
     pickable: true,
-    autoHighlight: true,
-    highlightColor: HIGHLIGHT,
-    extensions: [opts.occlusionExt],
-    ...opts.occlusionProps,
-  } as ConstructorParameters<typeof PathLayer<TourPathDatum>>[0] & EarthOcclusionExtensionProps);
+  });
 
-  return [
-    cruises,
-    arcs,
-    tours,
-    markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX, opts),
-    markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX, opts),
-    markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX, opts),
-  ];
+  return {
+    deck: [arcs],
+    native: [
+      cruises,
+      tours,
+      markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX),
+      markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX),
+      markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX),
+    ],
+  };
 }
