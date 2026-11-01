@@ -33,7 +33,7 @@ const settle = async (ms: number): Promise<void> => {
 beforeEach(() => {
   vi.useFakeTimers();
   Object.assign(useSettingsStore.getState(), { setUnits, saveRemoteSettings: save });
-  render(<UnitsSection units={units} baseCurrency="EUR" onSetBaseCurrency={() => undefined} />);
+  render(<UnitsSection units={units} baseCurrency="EUR" />);
 });
 afterEach(() => {
   cleanup();

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -21,8 +21,14 @@ import CruisePreferencesSection from "../CruisePreferencesSection";
 import FeaturesSection from "../FeaturesSection";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import { TRIP_COLORS } from "../../../lib/tripColors";
 
+const settle = async (): Promise<void> => {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 450));
+  });
+};
 const CRUISE = { defaultLine: "", defaultCabinType: null, showCruiseArcs: true };
 
 /**
@@ -43,6 +49,7 @@ describe("settings prototype rows", () => {
   });
   afterEach(() => {
     cleanup();
+    act(() => resetWriteQueue());
     useSettingsLevelStore.setState({ level: null });
   });
 
@@ -88,19 +95,38 @@ describe("settings prototype rows", () => {
     const sw = screen.getByRole("switch", { name: /settings:rows\.seaDays\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
+    await settle();
     expect(update).toHaveBeenCalledWith({ cruiseSeaDays: { counted: false } });
     expect(useSuggestionSwitchesStore.getState().cruiseSeaDaysCounted).toBe(false);
   });
 
-  it("live tracking: on by default, off is saved, a failure rolls back", async () => {
+  it("live tracking: on by default; a refused save keeps the choice on the row and retries there (no toast, no rollback)", async () => {
     update.mockRejectedValueOnce(new Error("offline"));
     render(<FeaturesSection />);
     const sw = screen.getByRole("switch", { name: /settings:rows\.liveTracking\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
+    await settle();
     expect(update).toHaveBeenCalledWith({ liveTracking: { enabled: false } });
-    await waitFor(() => expect(sw).toBeChecked());
-    expect(toast).toHaveBeenCalledWith("error", expect.any(String));
+    expect(sw).not.toBeChecked();
+    expect(useSuggestionSwitchesStore.getState().liveTracking).toBe(true);
+    expect(screen.getByText(/settings:blocks\.save\.failed/)).toBeInTheDocument();
+    expect(toast).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    await waitFor(() => expect(useSuggestionSwitchesStore.getState().liveTracking).toBe(false));
+    expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  it("sea days: a refused save keeps the choice, and Verwerfen puts the saved value back", async () => {
+    update.mockRejectedValueOnce(new Error("offline"));
+    render(<CruisePreferencesSection cruise={{ ...CRUISE }} />);
+    const sw = screen.getByRole("switch", { name: /settings:rows\.seaDays\.name$/ });
+    await userEvent.click(sw);
+    await settle();
+    expect(sw).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
+    expect(sw).toBeChecked();
+    expect(useSuggestionSwitchesStore.getState().cruiseSeaDaysCounted).toBe(true);
   });
 
   it("seat statistics: no longer a switch here (design 2026-11-01)", () => {

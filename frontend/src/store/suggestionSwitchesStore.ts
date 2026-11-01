@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { serializedSetting } from "./serializedSetting";
 import { useCapabilitiesEpochStore } from "./capabilitiesEpochStore";
+import { SWITCH_PAYLOADS } from "./suggestionSwitchPayloads";
 
 /**
  * The account's inbox suggestion switches (forgejo#306): whether the
@@ -143,55 +144,55 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
     });
   },
   setTrips: serializedSetting({
-    payload: (enabled: boolean) => ({ tripSuggestions: { enabled } }),
+    payload: SWITCH_PAYLOADS.trips,
     current: () => get().trips,
     apply: (trips) => set({ trips }),
     what: "trip suggestions switch",
   }),
   setStays: serializedSetting({
-    payload: (enabled: boolean) => ({ staySuggestions: { enabled } }),
+    payload: SWITCH_PAYLOADS.stays,
     current: () => get().stays,
     apply: (stays) => set({ stays }),
     what: "stay suggestions switch",
   }),
   setStayImmichEvidence: serializedSetting({
-    payload: (immichEvidence: boolean) => ({ staySuggestions: { immichEvidence } }),
+    payload: SWITCH_PAYLOADS.stayImmichEvidence,
     current: () => get().stayImmichEvidence,
     apply: (stayImmichEvidence) => set({ stayImmichEvidence }),
     what: "stay Immich evidence switch",
   }),
   setStayLlmPlaceClassification: serializedSetting({
-    payload: (llmPlaceClassification: boolean) => ({ staySuggestions: { llmPlaceClassification } }),
+    payload: SWITCH_PAYLOADS.stayLlmPlaceClassification,
     current: () => get().stayLlmPlaceClassification,
     apply: (stayLlmPlaceClassification) => set({ stayLlmPlaceClassification }),
     what: "stay place classification switch",
   }),
   setTripRecording: serializedSetting({
-    payload: (enabled: boolean) => ({ tripRecording: { enabled } }),
+    payload: SWITCH_PAYLOADS.tripRecording,
     current: () => get().tripRecording,
     apply: (tripRecording) => set({ tripRecording }),
     what: "trip recording switch",
   }),
   setTripDefaultColor: serializedSetting({
-    payload: (color: string | null) => ({ tripDefaults: { color } }),
+    payload: SWITCH_PAYLOADS.tripDefaultColor,
     current: () => get().tripDefaultColor,
     apply: (tripDefaultColor) => set({ tripDefaultColor }),
     what: "new trip colour",
   }),
   setCruiseSeaDaysCounted: serializedSetting({
-    payload: (counted: boolean) => ({ cruiseSeaDays: { counted } }),
+    payload: SWITCH_PAYLOADS.cruiseSeaDaysCounted,
     current: () => get().cruiseSeaDaysCounted,
     apply: (cruiseSeaDaysCounted) => set({ cruiseSeaDaysCounted }),
     what: "sea days switch",
   }),
   setLiveTracking: serializedSetting({
-    payload: (enabled: boolean) => ({ liveTracking: { enabled } }),
+    payload: SWITCH_PAYLOADS.liveTracking,
     current: () => get().liveTracking,
     apply: (liveTracking) => set({ liveTracking }),
     what: "live tracking switch",
   }),
   setRailImportLocalTransit: serializedSetting({
-    payload: (localTransit: RailImportLocalTransit) => ({ railImport: { localTransit } }),
+    payload: SWITCH_PAYLOADS.railImportLocalTransit,
     current: () => get().railImportLocalTransit,
     apply: (railImportLocalTransit) => set({ railImportLocalTransit }),
     what: "rail import U-Bahn/tram default",
@@ -204,7 +205,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       }),
   }),
   setRailImportBus: serializedSetting({
-    payload: (bus: RailImportBus) => ({ railImport: { bus } }),
+    payload: SWITCH_PAYLOADS.railImportBus,
     current: () => get().railImportBus,
     apply: (railImportBus) => set({ railImportBus }),
     what: "rail import bus default",
@@ -212,7 +213,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       set({ railImportSaves: { ...get().railImportSaves, bus: get().railImportSaves.bus + 1 } }),
   }),
   setTravPlan: serializedSetting({
-    payload: (enabled: boolean) => ({ travPlan: { enabled } }),
+    payload: SWITCH_PAYLOADS.travPlan,
     current: () => get().travPlan,
     apply: (travPlan) => set({ travPlan }),
     what: "TravPlan switch",

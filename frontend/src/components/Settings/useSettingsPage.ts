@@ -56,7 +56,6 @@ export function useSettingsPage() {
   const setUnits = useSettingsStore((s) => s.setUnits);
   const setDefaults = useSettingsStore((s) => s.setDefaults);
   const setCruise = useSettingsStore((s) => s.setCruise);
-  const setBaseCurrency = useSettingsStore((s) => s.setBaseCurrency);
   const saveRemoteSettings = useSettingsStore((s) => s.saveRemoteSettings);
   const hasPendingChanges = useSettingsStore((s) => s.hasPendingChanges);
 
@@ -443,7 +442,6 @@ export function useSettingsPage() {
     setUnits,
     setDefaults,
     setCruise,
-    setBaseCurrency,
     // Derived
     hasParserAccess,
     // Profile

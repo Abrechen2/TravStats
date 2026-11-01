@@ -4,7 +4,8 @@ import { useTravPlanInstanceOn } from "../../hooks/useTravPlanVisible";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { SectionCard } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
-import { SettingItem, SwitchControl } from "../ui/settings";
+import { SettingItem, SwitchControl, useSettingWrite } from "../ui/settings";
+import { saveSwitch } from "../../store/confirmedSettings";
 
 /**
  * "Planen": TravPlan, switched on and off for this account. Drawn only while the
@@ -17,7 +18,9 @@ export default function PlanningSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const instanceOn = useTravPlanInstanceOn();
   const on = useSuggestionSwitchesStore((s) => s.travPlan);
-  const setOn = useSuggestionSwitchesStore((s) => s.setTravPlan);
+  const write = useSettingWrite<boolean>("planning.travPlan", on, (next) =>
+    saveSwitch("travPlan", next)
+  );
   return (
     <SectionCard>
       <SettingRows>
@@ -25,6 +28,7 @@ export default function PlanningSection(): JSX.Element {
           title={t("settings:rows.travPlan.name")}
           sub={t("settings:rows.travPlan.sub")}
           help={t("settings:rows.travPlan.help")}
+          save={write}
           locked={
             instanceOn
               ? undefined
@@ -32,8 +36,8 @@ export default function PlanningSection(): JSX.Element {
           }
           control={
             <SwitchControl
-              checked={on && instanceOn}
-              onChange={setOn}
+              checked={write.value && instanceOn}
+              onChange={write.choose}
               label={t("settings:rows.travPlan.name")}
             />
           }

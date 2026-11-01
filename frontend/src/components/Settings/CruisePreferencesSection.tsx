@@ -5,7 +5,14 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useSettingsStore, type CruiseSettings } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { SettingRows } from "../ui/SettingRow";
-import { ChoiceControl, InputControl, SettingItem, SwitchControl } from "../ui/settings";
+import {
+  ChoiceControl,
+  InputControl,
+  SettingItem,
+  SwitchControl,
+  useSettingWrite,
+} from "../ui/settings";
+import { saveSwitch } from "../../store/confirmedSettings";
 import { useDocumentSetting } from "./useDocumentSetting";
 
 const NO_CABIN = "none";
@@ -33,7 +40,9 @@ export default function CruisePreferencesSection({
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
   const seaDaysCounted = useSuggestionSwitchesStore((s) => s.cruiseSeaDaysCounted);
-  const setSeaDaysCounted = useSuggestionSwitchesStore((s) => s.setCruiseSeaDaysCounted);
+  const seaDays = useSettingWrite<boolean>("cruise.seaDaysCounted", seaDaysCounted, (on) =>
+    saveSwitch("cruiseSeaDaysCounted", on)
+  );
 
   const line = useDocumentSetting<string>("cruise.defaultLine", cruise.defaultLine, (defaultLine) =>
     setCruise({ defaultLine })
@@ -79,11 +88,12 @@ export default function CruisePreferencesSection({
         <SettingItem
           title={t("settings:rows.seaDays.name")}
           help={t("settings:rows.seaDays.help")}
+          save={seaDays}
           locked={locked}
           control={
             <SwitchControl
-              checked={seaDaysCounted}
-              onChange={setSeaDaysCounted}
+              checked={seaDays.value}
+              onChange={seaDays.choose}
               label={t("settings:rows.seaDays.name")}
             />
           }

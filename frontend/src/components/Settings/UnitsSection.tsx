@@ -2,9 +2,11 @@ import { SectionCard } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
 import CurrencySelect from "../common/CurrencySelect";
-import HelpIcon from "../Help/HelpIcon";
 import { ECB_CURRENCIES } from "../../shared/currencies";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { SettingRows } from "../ui/SettingRow";
+import { SettingItem, useSettingWrite } from "../ui/settings";
+import { useSettingItem } from "../ui/settings/itemContext";
+import { saveBaseCurrency } from "../../store/confirmedSettings";
 import { UnitRow } from "./UnitRow";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
@@ -25,20 +27,35 @@ interface UnitsSectionProps {
    * them up, which is a symptom rather than a fix.
    */
   baseCurrency: string;
-  onSetBaseCurrency: (currency: string) => void;
+}
+
+function CurrencyField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}): JSX.Element {
+  const { id, locked } = useSettingItem();
+  return (
+    <CurrencySelect
+      id={id}
+      value={value}
+      onChange={onChange}
+      restrictTo={ECB_CURRENCIES}
+      disabled={locked}
+    />
+  );
 }
 
 const DISTANCE_UNITS = ["kilometers", "miles", "nautical_miles"] as const;
 
-export default function UnitsSection({
-  units,
-  baseCurrency,
-  onSetBaseCurrency,
-}: UnitsSectionProps): JSX.Element {
+export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "lodging"]);
   // Same 403 as the display card, and the same silent local write before the
   // beta audit of 2026-09-19.
   const isDemo = useIsDemoAccount();
+  const currency = useSettingWrite<string>("units.baseCurrency", baseCurrency, saveBaseCurrency);
 
   return (
     <SectionCard>
@@ -66,30 +83,15 @@ export default function UnitsSection({
           name={(value) => t(`settings:units.weightOptions.${value}`)}
           locked={isDemo}
         />
-        <SettingRow
+        <SettingItem
           title={t("settings:rows.currency.name")}
-          htmlFor="units-base-currency"
-          sub={
-            <span className="inline-flex items-center gap-1.5">
-              {t("settings:rows.currency.sub")}
-              {/* Why the choice is narrower than what you may RECORD in — the
-                  one question this field reliably raises. */}
-              <HelpIcon
-                content={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
-                position="top"
-                subject={t("settings:rows.currency.name")}
-              />
-            </span>
-          }
-          control={
-            <CurrencySelect
-              id="units-base-currency"
-              value={baseCurrency}
-              onChange={onSetBaseCurrency}
-              restrictTo={ECB_CURRENCIES}
-              disabled={isDemo}
-            />
-          }
+          sub={t("settings:rows.currency.sub")}
+          // Why the choice is narrower than what you may RECORD in — the one
+          // question this field reliably raises.
+          help={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
+          save={currency}
+          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+          control={<CurrencyField value={currency.value} onChange={currency.choose} />}
         />
       </SettingRows>
     </SectionCard>

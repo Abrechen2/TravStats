@@ -233,7 +233,7 @@ describe("the display and units cards on the demo account", () => {
     render(<DisplaySection display={display} />);
   };
   const renderUnits = (): void => {
-    render(<UnitsSection units={units} baseCurrency="EUR" onSetBaseCurrency={() => {}} />);
+    render(<UnitsSection units={units} baseCurrency="EUR" />);
   };
 
   it("says the display settings are locked, and disables them", () => {
@@ -269,7 +269,7 @@ describe("the display and units cards on the demo account", () => {
 describe("the weight unit on the units card", () => {
   const renderWith = (units: Record<string, unknown>): void => {
     isDemoMock.current = false;
-    render(<UnitsSection units={units as never} baseCurrency="EUR" onSetBaseCurrency={() => {}} />);
+    render(<UnitsSection units={units as never} baseCurrency="EUR" />);
   };
 
   it("offers kilograms and pounds and saves the chosen one", async () => {

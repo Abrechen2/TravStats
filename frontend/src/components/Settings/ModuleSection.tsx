@@ -12,7 +12,14 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { SectionCard } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
-import { ActionControl, JumpControl, SettingItem, SwitchControl } from "../ui/settings";
+import {
+  ActionControl,
+  JumpControl,
+  SettingItem,
+  SwitchControl,
+  useSettingWrite,
+} from "../ui/settings";
+import { saveDomainEnabled } from "../../store/confirmedSettings";
 import { useGuardedNavigate } from "../ui/settings";
 import FirstVisitCard from "./FirstVisitCard";
 
@@ -34,6 +41,89 @@ function DomainJump({ page }: { page: "flight" | "cruise" }): JSX.Element {
   );
 }
 
+/** One travel type: its own write, so a refusal is shown and retried on this row. */
+function DomainRow({ domain }: { domain: DomainKey }): JSX.Element {
+  const { t } = useTranslation(["settings", "common"]);
+  const { colors } = useDomainColors();
+  const setColor = useDomainColorStore((s) => s.setColor);
+  const coarse = useCoarsePointer();
+  const isDemo = useIsDemoAccount();
+  const inRouter = useInRouterContext();
+  const isOn = useSettingsStore((s) => s.enabledDomains.includes(domain));
+  const key = domain;
+  const d = DOMAINS[key];
+  const enabled = useSettingWrite<boolean>(`domains.${key}`, isOn, (on) =>
+    saveDomainEnabled(key, on)
+  );
+  const name = t(d.i18nKey, { ns: "common" });
+  const on = enabled.value;
+  const page = DOMAIN_PAGE[key];
+  return (
+    <div
+      data-domain-row={key}
+      data-domain-on={on ? "true" : "false"}
+      style={{ opacity: on ? 1 : 0.5 }}
+    >
+      <SettingItem
+        save={enabled}
+        title={
+          <span className="inline-flex items-center" style={{ gap: 8 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: colors[key],
+                flexShrink: 0,
+              }}
+            />
+            {name}
+          </span>
+        }
+        name={name}
+        sub={
+          d.available
+            ? t(`settings.modules.sub.${key}`, { ns: "common" })
+            : t("settings.modules.comingSoon", { ns: "common" })
+        }
+        locked={
+          !d.available
+            ? {
+                why: "dependency",
+                reason: t("settings.modules.comingSoon", { ns: "common" }),
+              }
+            : isDemo
+              ? { why: "demo", reason: t("settings:blocks.lock.demo") }
+              : undefined
+        }
+        control={
+          <>
+            <SwitchControl checked={enabled.value} onChange={enabled.choose} label={name} />
+            <input
+              id={`domain-color-${key}`}
+              type="color"
+              aria-label={`${name} – ${t("settings:domains.color")}`}
+              value={colors[key]}
+              disabled={!d.available}
+              onChange={(e) => setColor(key, e.target.value)}
+              className="cursor-pointer rounded p-0"
+              style={{
+                flexShrink: 0,
+                width: coarse ? 52 : 44,
+                height: coarse ? "var(--ts-size-touch-min)" : 32,
+                border: "1px solid var(--ts-border-button)",
+                background: "transparent",
+              }}
+            />
+            {page && on && inRouter && <DomainJump page={page} />}
+          </>
+        }
+      />
+    </div>
+  );
+}
+
 /**
  * "Was du festhältst": one row per travel type — its colour dot, the switch,
  * the colour, and a jump to its own settings where it has any. A switched-off
@@ -44,100 +134,19 @@ function DomainJump({ page }: { page: "flight" | "cruise" }): JSX.Element {
 export default function ModuleSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const { colors } = useDomainColors();
-  const setColor = useDomainColorStore((s) => s.setColor);
   const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
-  const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
-  const coarse = useCoarsePointer();
-  const isDemo = useIsDemoAccount();
-  const inRouter = useInRouterContext();
-
   const { isFeatureVisible } = useBetaFeatures();
   const visibleKeys = switchableDomains(DOMAIN_KEYS, enabledDomains, isFeatureVisible);
-
-  const toggle = (key: DomainKey): void => {
-    if (!DOMAINS[key].available) return;
-    const next = enabledDomains.includes(key)
-      ? enabledDomains.filter((k) => k !== key)
-      : [...enabledDomains, key];
-    setEnabledDomains(next);
-  };
 
   return (
     <div className="space-y-4">
       <FirstVisitCard />
       <SectionCard>
         <SettingRows>
-          {visibleKeys.map((key) => {
-            const d = DOMAINS[key];
-            const name = t(d.i18nKey, { ns: "common" });
-            const on = enabledDomains.includes(key);
-            const page = DOMAIN_PAGE[key];
-            return (
-              <div
-                key={key}
-                data-domain-row={key}
-                data-domain-on={on ? "true" : "false"}
-                style={{ opacity: on ? 1 : 0.5 }}
-              >
-                <SettingItem
-                  title={
-                    <span className="inline-flex items-center" style={{ gap: 8 }}>
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          background: colors[key],
-                          flexShrink: 0,
-                        }}
-                      />
-                      {name}
-                    </span>
-                  }
-                  name={name}
-                  sub={
-                    d.available
-                      ? t(`settings.modules.sub.${key}`, { ns: "common" })
-                      : t("settings.modules.comingSoon", { ns: "common" })
-                  }
-                  locked={
-                    !d.available
-                      ? {
-                          why: "dependency",
-                          reason: t("settings.modules.comingSoon", { ns: "common" }),
-                        }
-                      : isDemo
-                        ? { why: "demo", reason: t("settings:blocks.lock.demo") }
-                        : undefined
-                  }
-                  control={
-                    <>
-                      <SwitchControl checked={on} onChange={() => toggle(key)} label={name} />
-                      <input
-                        id={`domain-color-${key}`}
-                        type="color"
-                        aria-label={`${name} – ${t("settings:domains.color")}`}
-                        value={colors[key]}
-                        disabled={!d.available}
-                        onChange={(e) => setColor(key, e.target.value)}
-                        className="cursor-pointer rounded p-0"
-                        style={{
-                          flexShrink: 0,
-                          width: coarse ? 52 : 44,
-                          height: coarse ? "var(--ts-size-touch-min)" : 32,
-                          border: "1px solid var(--ts-border-button)",
-                          background: "transparent",
-                        }}
-                      />
-                      {page && on && inRouter && <DomainJump page={page} />}
-                    </>
-                  }
-                />
-              </div>
-            );
-          })}
+          {visibleKeys.map((key) => (
+            <DomainRow key={key} domain={key} />
+          ))}
         </SettingRows>
 
         {/* A colour close to the app's own ground is a legitimate choice, and it

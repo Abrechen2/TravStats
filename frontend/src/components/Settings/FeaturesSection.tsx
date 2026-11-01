@@ -5,7 +5,8 @@ import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore"
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { SettingRows } from "../ui/SettingRow";
-import { SettingItem, SwitchControl } from "../ui/settings";
+import { SettingItem, SwitchControl, useSettingWrite } from "../ui/settings";
+import { saveSwitch } from "../../store/confirmedSettings";
 import { useDocumentSetting } from "./useDocumentSetting";
 
 const setFeatures = (partial: Partial<FeaturesSettings>): void =>
@@ -15,7 +16,7 @@ const setFeatures = (partial: Partial<FeaturesSettings>): void =>
  * "Was festgehalten wird": three switches. The seat statistics switch is gone
  * (design 2026-11-01); its section stays reachable from the flight statistics
  * themselves. Live tracking has its own store that puts the switch back and
- * says so when the server refuses it.
+ * keeps the choice and offers a retry on its row when the server refuses it.
  */
 export default function FeaturesSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
@@ -25,7 +26,9 @@ export default function FeaturesSection(): JSX.Element {
     : undefined;
   const features = useSettingsStore((s) => s.features);
   const liveTracking = useSuggestionSwitchesStore((s) => s.liveTracking);
-  const setLiveTracking = useSuggestionSwitchesStore((s) => s.setLiveTracking);
+  const liveTrackingWrite = useSettingWrite<boolean>("features.liveTracking", liveTracking, (on) =>
+    saveSwitch("liveTracking", on)
+  );
 
   const cost = useDocumentSetting<boolean>(
     "features.costTracking",
@@ -72,11 +75,12 @@ export default function FeaturesSection(): JSX.Element {
           title={t("settings:rows.liveTracking.name")}
           sub={t("settings:rows.liveTracking.sub")}
           help={t("settings:rows.liveTracking.help")}
+          save={liveTrackingWrite}
           locked={locked}
           control={
             <SwitchControl
-              checked={liveTracking}
-              onChange={setLiveTracking}
+              checked={liveTrackingWrite.value}
+              onChange={liveTrackingWrite.choose}
               label={t("settings:rows.liveTracking.name")}
             />
           }

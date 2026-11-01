@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserSettings } from "../../../lib/api/types";
 import { settingsApi } from "../../../lib/api";
@@ -43,6 +43,9 @@ describe("PlanningSection", () => {
     const before = useCapabilitiesEpochStore.getState().epoch.travPlan;
     render(<PlanningSection />);
     await userEvent.click(screen.getByRole("switch", { name: /settings:rows\.travPlan\.name/ }));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 450));
+    });
     expect(useSuggestionSwitchesStore.getState().travPlan).toBe(true);
     expect(update).toHaveBeenCalledWith({ travPlan: { enabled: true } });
     await waitFor(() =>

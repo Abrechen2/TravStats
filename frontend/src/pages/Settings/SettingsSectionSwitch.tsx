@@ -92,13 +92,7 @@ export default function SettingsSectionSwitch({
     case "display":
       return <DisplaySection display={page.display} />;
     case "units":
-      return (
-        <UnitsSection
-          units={page.units}
-          baseCurrency={page.baseCurrency}
-          onSetBaseCurrency={page.setBaseCurrency}
-        />
-      );
+      return <UnitsSection units={page.units} baseCurrency={page.baseCurrency} />;
     case "domains":
       // The module switch and the domain colour, one row per domain
       // (forgejo#321): they were two sections that listed the same domains
