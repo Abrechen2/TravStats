@@ -32,7 +32,7 @@ describe("BulkUpdatesBar (forgejo#397)", () => {
     render(<BulkUpdatesBar ids={["a", "b"]} reload={reload} />);
     await userEvent.click(screen.getByRole("button", { name: /bulk\.apply/ }));
     expect(applyMany).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "bulk.yes" }));
+    await userEvent.click(screen.getByRole("button", { name: "pendingUpdates:bulk.yes" }));
     await waitFor(() => expect(applyMany).toHaveBeenCalledWith(["a", "b"]));
     expect(await screen.findByRole("status")).toHaveTextContent("bulk.applyDone");
     expect(reload).toHaveBeenCalled();
@@ -42,7 +42,7 @@ describe("BulkUpdatesBar (forgejo#397)", () => {
     rejectMany.mockResolvedValue({ requested: 2, rejected: 1, failed: 1, results: [] });
     render(<BulkUpdatesBar ids={["a", "b"]} reload={vi.fn().mockResolvedValue(undefined)} />);
     await userEvent.click(screen.getByRole("button", { name: /bulk\.reject/ }));
-    await userEvent.click(screen.getByRole("button", { name: "bulk.yes" }));
+    await userEvent.click(screen.getByRole("button", { name: "pendingUpdates:bulk.yes" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("bulk.partial");
   });
 
@@ -51,7 +51,7 @@ describe("BulkUpdatesBar (forgejo#397)", () => {
     const reload = vi.fn().mockResolvedValue(undefined);
     render(<BulkUpdatesBar ids={["a"]} reload={reload} />);
     await userEvent.click(screen.getByRole("button", { name: /bulk\.apply/ }));
-    await userEvent.click(screen.getByRole("button", { name: "bulk.yes" }));
+    await userEvent.click(screen.getByRole("button", { name: "pendingUpdates:bulk.yes" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("bulk.failed");
     expect(reload).toHaveBeenCalled();
   });
