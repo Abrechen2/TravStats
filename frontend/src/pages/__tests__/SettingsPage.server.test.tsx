@@ -244,7 +244,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     expect(pages).toContain("/settings/users");
     expect(pages).toContain("/settings/maintenance");
     expect(within(menu).queryAllByRole("button")).toHaveLength(0);
-  });
+  }, 20_000); // renders the whole server area; over 5 s under a full parallel run
 
   it("scrolls a ?section= deep link into view once the page has rendered", async () => {
     const scrollSpy = vi.fn();
