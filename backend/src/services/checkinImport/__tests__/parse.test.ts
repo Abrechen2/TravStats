@@ -54,10 +54,10 @@ describe("Träwelling JSON", () => {
     expect(ice.dep).toMatchObject({
       name: "Alpha Hbf",
       code: "8999001",
-      time: { wall: "2026-03-01T08:00" },
+      time: { instant: new Date("2026-03-01T07:00:00Z") },
     });
     expect(u.mode).toBe("metro");
-    expect("instant" in (u.dep.time ?? {})).toBe(true);
+    expect(u.dep.time).toEqual({ instant: new Date("2026-03-02T09:00:00Z") });
   });
 
   it("shows every record it cannot read with a reason instead of dropping it", () => {
@@ -89,6 +89,30 @@ describe("Träwelling CSV", () => {
     expect(out.rejects).toEqual([
       expect.objectContaining({ row: 3, reason: "missing_arrival_station" }),
     ]);
+  });
+});
+
+describe("Träwelling CSV, hardening", () => {
+  it("answers invalid_file for text whose header names no station column", () => {
+    expect(parseTraewellingCsv("not json").rejects).toEqual([
+      expect.objectContaining({ reason: "invalid_file" }),
+    ]);
+  });
+
+  it("splits on the file's one delimiter, so a semicolon in a comma file stays in its cell", () => {
+    const out = parseTraewellingCsv(
+      'journey_type,origin,departure,destination,body\nregional,Alpha Hbf,2026-03-01 08:00:00,Beta Hbf,"a;b"\nregional,Alpha; Hbf,2026-03-01 09:00:00,Beta Hbf,x'
+    );
+    expect(out.rides.map((r) => r.dep.name)).toEqual(["Alpha Hbf", "Alpha; Hbf"]);
+  });
+
+  it("rejects an offset-less impossible date and an absurd epoch instead of aborting", () => {
+    const out = parseTravelynxJson(
+      JSON.stringify([
+        { fromStation: { name: "A", scheduledTime: 1e20 }, toStation: { name: "B" } },
+      ])
+    );
+    expect(out.rejects[0].reason).toBe("invalid_date");
   });
 });
 

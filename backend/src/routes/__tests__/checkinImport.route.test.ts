@@ -53,4 +53,45 @@ describe("POST /checkin-import", () => {
       message: "invalid_file",
     });
   });
+
+  it("refuses a file over the record cap with IMPORT_TOO_MANY_ROWS before any station lookup", async () => {
+    const ride = {
+      train: {
+        category: "regional",
+        origin: {
+          name: "Alpha Hbf",
+          evaIdentifier: "8999001",
+          departurePlanned: "2026-03-01T08:00:00+01:00",
+        },
+        destination: {
+          name: "Beta Hbf",
+          evaIdentifier: "8999002",
+          arrivalPlanned: "2026-03-01T10:00:00+01:00",
+        },
+      },
+    };
+    const findMany = jest.spyOn(prisma.railStation, "findMany");
+    const raw = jest.spyOn(prisma, "$queryRaw");
+    const res = await request(app)
+      .post("/api/v1/checkin-import")
+      .set("Cookie", cookie)
+      .send({ source: "travelling", content: JSON.stringify(Array(5001).fill(ride)) });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("IMPORT_TOO_MANY_ROWS");
+    expect(findMany).not.toHaveBeenCalled();
+    expect(raw).not.toHaveBeenCalled();
+    findMany.mockRestore();
+    raw.mockRestore();
+  });
+
+  it("refuses a CSV over the cap the same way", async () => {
+    const lines = ["journey_type,origin,departure,destination"];
+    for (let i = 0; i < 5001; i++) lines.push("regional,Alpha Hbf,2026-03-01 08:00:00,Beta Hbf");
+    const res = await request(app)
+      .post("/api/v1/checkin-import")
+      .set("Cookie", cookie)
+      .send({ source: "travelling", content: lines.join("\n") });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("IMPORT_TOO_MANY_ROWS");
+  });
 });

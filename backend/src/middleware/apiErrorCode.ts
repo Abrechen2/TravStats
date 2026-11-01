@@ -386,6 +386,8 @@ export type ApiErrorCode =
   /** A backup failed for a cause not recognised above; detail in the log. */
   | "BACKUP_FAILED"
   | "BACKUP_RUNNING"
+  /** An import file holds more records than one request may resolve (`xlsx:errors.importTooManyRows`). */
+  | "IMPORT_TOO_MANY_ROWS"
   /** A backup the server was stopped or restored in the middle of (stored on the row). */
   | "BACKUP_INTERRUPTED"
   /** A restore failed for a cause not recognised above; detail in the log. */

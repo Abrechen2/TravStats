@@ -2,20 +2,25 @@
 
 import type { CheckinTime } from "./types";
 
+const OFFSET = /(?:[+-]\d{2}:?\d{2})$/;
 const ZULU = /Z$/i;
 const LOCAL = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/;
 
 /**
- * - an offset (`+02:00`): the station's own clock, read as written;
- * - no offset: also read as written (the exports print local time);
- * - `Z`: an absolute instant, resolved against the station's zone later.
+ * - an offset (`+02:00`) or `Z`: an absolute instant, resolved against the
+ *   station's zone once the station is matched;
+ * - no offset: the station's wall clock, read as written (the exports print
+ *   local time).
  * Returns undefined for an empty cell and null for one that is not a time.
  */
 export function timeFromText(raw: unknown): CheckinTime | null | undefined {
   if (raw === undefined || raw === null) return undefined;
   const text = String(raw).trim();
   if (text === "") return undefined;
-  if (ZULU.test(text)) {
+  // Offset or Z: an absolute moment. Its wall clock is the matched station's,
+  // and only the station knows its zone — the printed offset can be the
+  // user's, not the station's.
+  if (ZULU.test(text) || OFFSET.test(text)) {
     const d = new Date(text.replace(" ", "T"));
     return Number.isNaN(d.getTime()) ? null : { instant: d };
   }
@@ -32,5 +37,6 @@ export function timeFromEpoch(raw: unknown): CheckinTime | null | undefined {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return null;
   // Seconds, unless the value is already milliseconds.
-  return { instant: new Date(n > 1e11 ? n : n * 1000) };
+  const d = new Date(n > 1e11 ? n : n * 1000);
+  return Number.isNaN(d.getTime()) ? null : { instant: d };
 }

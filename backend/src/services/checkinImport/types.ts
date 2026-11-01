@@ -57,3 +57,13 @@ export interface CheckinParse {
   rides: CheckinRide[];
   rejects: CheckinReject[];
 }
+
+/** Records one check-in file may hold — the spreadsheet importer's per-sheet cap. */
+export const MAX_CHECKIN_RECORDS = 5000;
+
+/** Thrown while parsing, before any station lookup, when a file holds too many records. */
+export class TooManyRecordsError extends Error {
+  constructor(public readonly max: number = MAX_CHECKIN_RECORDS) {
+    super("too_many_records");
+  }
+}

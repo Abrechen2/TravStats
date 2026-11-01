@@ -36,10 +36,31 @@ interface Resolved {
   zone: string | null;
 }
 
-async function resolveStop(
+type CountryAt = Awaited<ReturnType<typeof getCountryResolver>>;
+
+/** One lookup per distinct stop (code, name, position) within a request. */
+type StopCache = Map<string, Promise<Resolved | null>>;
+
+function resolveStop(
   stop: CheckinStop,
-  countryAt: Awaited<ReturnType<typeof getCountryResolver>>
+  countryAt: CountryAt,
+  cache: StopCache
 ): Promise<Resolved | null> {
+  const key = [
+    stop.code ?? "",
+    (stop.name ?? "").toLowerCase(),
+    stop.lat ?? "",
+    stop.lon ?? "",
+  ].join("|");
+  let hit = cache.get(key);
+  if (!hit) {
+    hit = lookupStop(stop, countryAt);
+    cache.set(key, hit);
+  }
+  return hit;
+}
+
+async function lookupStop(stop: CheckinStop, countryAt: CountryAt): Promise<Resolved | null> {
   const cells: StationCells = { name: stop.name, code: stop.code, lat: stop.lat, lon: stop.lon };
   const hit = await resolveStation(cells, countryAt);
   if (!hit) return null;
@@ -78,6 +99,7 @@ export async function buildSheets(rides: CheckinRide[]): Promise<BuiltSheets> {
     duplicates: [],
   };
   const seen = new Set<string>();
+  const cache: StopCache = new Map();
 
   for (const ride of rides) {
     const sheet = ride.mode === "bus" ? "bus" : "rail";
@@ -88,8 +110,8 @@ export async function buildSheets(rides: CheckinRide[]): Promise<BuiltSheets> {
       continue;
     }
     const [dep, arr] = [
-      await resolveStop(ride.dep, countryAt),
-      await resolveStop(ride.arr, countryAt),
+      await resolveStop(ride.dep, countryAt, cache),
+      await resolveStop(ride.arr, countryAt, cache),
     ];
     if (!dep || !arr) {
       reject("unknown_station");
@@ -101,6 +123,10 @@ export async function buildSheets(rides: CheckinRide[]): Promise<BuiltSheets> {
     const departure = wallClock(ride.dep, dep.zone);
     const arrival = wallClock(ride.arr, arr.zone);
     if (departure === null || arrival === null || !departure) {
+      reject("invalid_date");
+      continue;
+    }
+    if (arrival && arrival < departure) {
       reject("invalid_date");
       continue;
     }

@@ -12,7 +12,13 @@
 import { parse } from "csv-parse/sync";
 import { modeFromTraewellingCategory } from "./modes";
 import { timeFromText } from "./time";
-import type { CheckinParse, CheckinRide, CheckinStop } from "./types";
+import {
+  MAX_CHECKIN_RECORDS,
+  TooManyRecordsError,
+  type CheckinParse,
+  type CheckinRide,
+  type CheckinStop,
+} from "./types";
 
 type Rec = Record<string, unknown>;
 
@@ -120,6 +126,7 @@ export function parseTraewellingJson(text: string): CheckinParse {
     out.rejects.push({ row: 1, label: "#1", reason: "invalid_file" });
     return out;
   }
+  if (list.length > MAX_CHECKIN_RECORDS) throw new TooManyRecordsError();
   list.forEach((item, index) => {
     const row = index + 1;
     const status = isRec(item) ? item : {};
@@ -185,14 +192,30 @@ const COLUMNS = {
 export function parseTraewellingCsv(text: string): CheckinParse {
   const out: CheckinParse = { rides: [], rejects: [] };
   let records: Record<string, string>[];
+  let headerCols: string[] = [];
   try {
     records = parse(text.replace(/^\uFEFF/, ""), {
-      columns: (header: string[]) => header.map((h) => h.trim().toLowerCase()),
+      columns: (header: string[]) => {
+        headerCols = header.map((h) => h.trim().toLowerCase());
+        return headerCols;
+      },
       skip_empty_lines: true,
+      // One more than the cap: enough to know the file is too big, without
+      // reading the rest of it.
+      to: MAX_CHECKIN_RECORDS + 1,
       relax_column_count: true,
-      delimiter: [",", ";"],
+      delimiter:
+        text.split(/\r?\n/, 1)[0].split(";").length > text.split(/\r?\n/, 1)[0].split(",").length
+          ? ";"
+          : ",",
     });
   } catch {
+    out.rejects.push({ row: 1, label: "#1", reason: "invalid_file" });
+    return out;
+  }
+  if (records.length > MAX_CHECKIN_RECORDS) throw new TooManyRecordsError();
+  const known: readonly string[] = [...COLUMNS.depName, ...COLUMNS.depCode, ...COLUMNS.arrName];
+  if (!headerCols.some((h) => known.includes(h))) {
     out.rejects.push({ row: 1, label: "#1", reason: "invalid_file" });
     return out;
   }

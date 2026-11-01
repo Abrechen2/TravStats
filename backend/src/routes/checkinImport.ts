@@ -18,6 +18,7 @@ import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { startJob } from "../services/jobs/jobRegistry";
 import { runCheckinImport } from "../services/checkinImport";
+import { TooManyRecordsError } from "../services/checkinImport/types";
 
 const router = Router();
 
@@ -46,7 +47,17 @@ router.post(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const { source, format, content, dryRun, background } = parsed.data;
       const run = async () => {
-        const outcome = await runCheckinImport(userId, { source, text: content, format, dryRun });
+        const outcome = await runCheckinImport(userId, {
+          source,
+          text: content,
+          format,
+          dryRun,
+        }).catch((err) => {
+          if (err instanceof TooManyRecordsError) {
+            throw new AppError("Too many records in one file", 400, "IMPORT_TOO_MANY_ROWS");
+          }
+          throw err;
+        });
         logger.info(
           {
             operation: "checkin_import",

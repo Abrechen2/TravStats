@@ -88,7 +88,11 @@ registry.registerPath({
       description: "Started as a background job",
       content: { "application/json": { schema: jobStartedSchema } },
     },
-    400: { description: "Malformed request body" },
+    400: {
+      description:
+        "Malformed request body, or a file with more than 5000 records (`code: IMPORT_TOO_MANY_ROWS`; " +
+        "refused while parsing, before any station is looked up)",
+    },
     401: { description: "Not authenticated" },
   },
 });

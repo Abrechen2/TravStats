@@ -10,7 +10,13 @@
 
 import { modeFromTrainType } from "./modes";
 import { timeFromEpoch } from "./time";
-import type { CheckinParse, CheckinRide, CheckinStop } from "./types";
+import {
+  MAX_CHECKIN_RECORDS,
+  TooManyRecordsError,
+  type CheckinParse,
+  type CheckinRide,
+  type CheckinStop,
+} from "./types";
 
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -47,6 +53,7 @@ export function parseTravelynxJson(text: string): CheckinParse {
     out.rejects.push({ row: 1, label: "#1", reason: "invalid_file" });
     return out;
   }
+  if (list.length > MAX_CHECKIN_RECORDS) throw new TooManyRecordsError();
   list.forEach((item, index) => {
     const row = index + 1;
     const r = isRec(item) ? item : {};
