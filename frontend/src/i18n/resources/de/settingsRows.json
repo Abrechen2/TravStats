@@ -150,6 +150,7 @@
     }
   },
   "data": {
+    "jump": { "label": "Teile der Seite „Daten“" },
     "sections": {
       "backup": "Sicherung",
       "export": "Mitnehmen",
@@ -907,6 +908,8 @@
       "loadFailed": "Ich konnte die Dienste nicht laden.",
       "serverLoadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
       "retry": "Erneut versuchen",
+      "onlyConfigured": "Nur aktive oder eingerichtete Dienste",
+      "noneConfigured": "Kein Dienst ist eingerichtet oder aktiv. Schalte den Filter aus, um alle zu sehen.",
       "intro": "Hier steht, wo TravStats Daten herholt und wohin etwas geht. Oben auf jeder Karte steht, was für dein Konto gilt; als Admin siehst du darunter, was für alle gilt.",
       "groupsLabel": "Dienstgruppen",
       "withdraw": "Zurückziehen",

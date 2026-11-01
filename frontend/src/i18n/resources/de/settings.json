@@ -254,7 +254,7 @@
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden",
     "carriedOver": "Deine bisherigen Einstellungen wurden übernommen.",
     "domainOff": "„{{area}}“ ist ausgeschaltet, deshalb gibt es dazu keine Erinnerungen. Schalte den Bereich ein, um sie zu bekommen.",
-    "domainOffAction": "Zu Bereiche & Farben",
+    "domainOffAction": "Zu Reisearten",
     "rowSwitch": "Erinnerungen für {{area}}",
     "whenGroup": "{{area}}: wann",
     "whereGroup": "{{area}}: wohin",
@@ -410,6 +410,7 @@
   },
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
+    "idleWithButtons": "Schalter und Auswahl speichern sich selbst, Gruppen mit Knopf erst mit dem Knopf",
     "saving": "Wird gespeichert …",
     "saved": "Gespeichert",
     "pending": "Änderungen vorhanden",
@@ -1031,6 +1032,7 @@
     "count_one": "{{count}} Treffer",
     "count_other": "{{count}} Treffer",
     "countMore": "{{shown}} von {{count}} Treffern · weiter tippen",
+    "showAll": "Alle {{count}} anzeigen",
     "noResultsFor": "Nichts gefunden für „{{query}}“.",
     "expertNote": "Experten-Treffer öffnen sich, ohne deine Stufe zu ändern."
   },
@@ -1191,7 +1193,7 @@
   },
   "domainOff": {
     "message": "Dieser Bereich ist ausgeschaltet: {{domain}}. Seine Einstellungen erscheinen hier, sobald du ihn einschaltest.",
-    "action": "Zu Bereiche & Farben"
+    "action": "Zu Reisearten"
   },
   "webdavSync": {
     "whatIsUploaded": "Hochgeladen wird der vollständige Export deines Kontos als gepackte JSON-Datei — dieselben Daten wie der Admin-Export „Alle Daten“, ohne Zugangsdaten. Fotos und Dokumente selbst sind nicht enthalten.",

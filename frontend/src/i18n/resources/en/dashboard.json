@@ -229,7 +229,7 @@
       "bus": "Bus",
       "ferry": "Ferries"
     },
-    "disabledHint": "Area disabled — Settings → Areas"
+    "disabledHint": "Area disabled — Settings → Travel types"
   },
   "addPicker": {
     "button": "Add",
@@ -302,7 +302,7 @@
       "wishlist": "Wishlist",
       "unlisted": "In no list"
     },
-    "disabled": "The Places area is not enabled yet. Turn it on under Settings → Areas.",
+    "disabled": "The Places area is not enabled yet. Turn it on under Settings → Travel types.",
     "goToSettings": "Open settings",
     "listFilter": "Filter by list",
     "allLists": "All places",
@@ -312,7 +312,7 @@
   },
   "tabDisabled": {
     "title": "Area disabled",
-    "body": "The “{{domain}}” area is disabled. Turn it on under Settings → Areas to see its content.",
+    "body": "The “{{domain}}” area is disabled. Turn it on under Settings → Travel types to see its content.",
     "goToSettings": "Open settings"
   },
   "sidebar": {

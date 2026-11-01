@@ -348,6 +348,34 @@ describe("ServicesPage", () => {
     expect(document.querySelectorAll("[data-service-card-id]:not([hidden])")).toHaveLength(5);
   });
 
+  it("'only active or set-up services' hides the cards nothing is set up for, and is off by default", async () => {
+    await show(true);
+    await waitFor(() => expect(card("airlabs")).toBeTruthy(), WAIT);
+    const all = document.querySelectorAll("[data-service-card-id]:not([hidden])").length;
+    expect(all).toBe(SERVICE_CARDS.length);
+    await userEvent.click(screen.getByLabelText("settingsRows:services.ui.onlyConfigured"));
+    const shown = [...document.querySelectorAll("[data-service-card-id]:not([hidden])")].map((e) =>
+      e.getAttribute("data-service-card-id")
+    );
+    expect(shown).toContain("airlabs");
+    // Built-in "always on" services are not something the person set up.
+    expect(shown).not.toContain("geocoder");
+    expect(shown).not.toContain("openai");
+    expect(shown.length).toBeLessThan(all);
+    expect(screen.queryByTestId("services-empty")).toBeNull();
+  });
+
+  it("says so when the filter leaves no service, instead of drawing an empty page", async () => {
+    api.accountOverview.mockResolvedValue(accountOverview({ connections: [], ownKeys: [] }));
+    api.adminOverview.mockResolvedValue(adminOverview({ categories: [] }));
+    await show(false);
+    await waitFor(() => expect(card("airlabs")).toBeTruthy(), WAIT);
+    expect(screen.queryByTestId("services-empty")).toBeNull();
+    await userEvent.click(screen.getByLabelText("settingsRows:services.ui.onlyConfigured"));
+    expect(document.querySelectorAll("[data-service-card-id]:not([hidden])")).toHaveLength(0);
+    expect(screen.getByTestId("services-empty")).toBeInTheDocument();
+  });
+
   it("switching group or closing a card does not throw away an unsaved key", async () => {
     await show(false);
     const el = await open("airlabs");
@@ -446,7 +474,7 @@ describe("ServicesPage", () => {
       within(srv).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
     );
     expect(api.adminUpdate).not.toHaveBeenCalled();
-    await userEvent.click(await screen.findByRole("checkbox"));
+    await userEvent.click(await within(screen.getByRole("dialog")).findByRole("checkbox"));
     await userEvent.click(
       await screen.findByRole("button", { name: /externalServices:consent\.admin\.confirm/ })
     );

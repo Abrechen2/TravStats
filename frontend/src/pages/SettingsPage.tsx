@@ -53,6 +53,19 @@ import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
  */
 const AUTO_SAVED_PAGES = new Set(["account", "display", "domains", "flight", "cruise"]);
 
+/**
+ * Auto-saved pages that ALSO carry a group with its own save button (the
+ * profile). Their idle hint names the exception instead of promising that
+ * everything saves itself.
+ */
+const AUTO_SAVED_PAGES_WITH_BUTTONS = new Set(["account"]);
+
+/** Locale key of the status line; only the idle hint differs per page. */
+export function autoSaveKey(pageId: string, state: AutoSaveState): string {
+  if (state === "idle" && AUTO_SAVED_PAGES_WITH_BUTTONS.has(pageId)) return "idleWithButtons";
+  return state;
+}
+
 /** A landed write reads good, a failed one bad; waiting and writing stay quiet. */
 const AUTO_SAVE_COLOR: Record<AutoSaveState, string> = {
   idle: "var(--ts-muted)",
@@ -292,7 +305,7 @@ export default function SettingsPage(): JSX.Element {
                   color: AUTO_SAVE_COLOR[page.autoSaveState],
                 }}
               >
-                {t(`settings:autoSave.${page.autoSaveState}`)}
+                {t(`settings:autoSave.${autoSaveKey(current.id, page.autoSaveState)}`)}
                 {page.autoSaveState === "failed" && page.autoSaveReason
                   ? `: ${page.autoSaveReason}`
                   : ""}

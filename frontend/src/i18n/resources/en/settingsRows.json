@@ -150,6 +150,7 @@
     }
   },
   "data": {
+    "jump": { "label": "Parts of the Data page" },
     "sections": {
       "backup": "Backup",
       "export": "Take out",
@@ -907,6 +908,8 @@
       "loadFailed": "I couldn't load the services.",
       "serverLoadFailed": "I couldn't load the server's settings.",
       "retry": "Try again",
+      "onlyConfigured": "Only active or set-up services",
+      "noneConfigured": "No service is set up or active. Turn the filter off to see them all.",
       "intro": "This is where TravStats gets data from and where something goes. The top of each card says what applies to your account; as an admin you see below it what applies to everyone.",
       "groupsLabel": "Service groups",
       "withdraw": "Withdraw",

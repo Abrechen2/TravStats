@@ -7,6 +7,7 @@ import { ErrorLine } from "../ui/settings";
 import ServiceCard from "./ServiceCard";
 import { SERVICE_CARDS, SERVICE_GROUPS, type ServiceGroup } from "./serviceCards";
 import { ServicesProvider, useServices } from "./servicesContext";
+import { isConfiguredStatus, useCardStatusOf } from "./useCardStatusOf";
 
 /** Tours (and so their routing keys and the Strava import) sit behind the `roadtrips` beta key. */
 const TOURS_ONLY: ReadonlySet<string> = new Set(["openrouteservice", "graphhopper", "strava"]);
@@ -19,6 +20,8 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const location = useLocation();
   const named = params.get("service") ?? decodeURIComponent(location.hash.replace(/^#/, ""));
   const linked = SERVICE_CARDS.find((c) => c.id === named);
+  const statusOf = useCardStatusOf(isAdmin);
+  const [onlyConfigured, setOnlyConfigured] = useState(false);
   const [group, setGroup] = useState<ServiceGroup | "all">(linked?.group ?? "all");
   useEffect(() => {
     if (linked) setGroup(linked.group);
@@ -42,6 +45,11 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
 
   // Tours-only cards stay for an admin: the instance's routing and Strava keys are theirs.
   const listed = SERVICE_CARDS.filter((c) => toursVisible || isAdmin || !TOURS_ONLY.has(c.id));
+
+  const isHidden = (card: (typeof SERVICE_CARDS)[number]): boolean =>
+    (group !== "all" && card.group !== group) ||
+    (onlyConfigured && !isConfiguredStatus(statusOf(card)));
+  const anyShown = listed.some((c) => !isHidden(c));
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
@@ -73,6 +81,19 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
           </Button>
         ))}
       </div>
+      <label className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
+        <input
+          type="checkbox"
+          checked={onlyConfigured}
+          onChange={(event) => setOnlyConfigured(event.target.checked)}
+        />
+        <span className="t-body">{t("settingsRows:services.ui.onlyConfigured")}</span>
+      </label>
+      {!anyShown && (
+        <p role="status" data-testid="services-empty" className="t-caption">
+          {t("settingsRows:services.ui.noneConfigured")}
+        </p>
+      )}
       <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
         {/* Filtered-out cards stay mounted, hidden: an unsaved key must not vanish with a click on a group. */}
         {listed.map((card) => (
@@ -81,7 +102,7 @@ function Cards({ isAdmin }: { isAdmin: boolean }): JSX.Element {
             card={card}
             isAdmin={isAdmin}
             linked={linked?.id === card.id}
-            hidden={group !== "all" && card.group !== group}
+            hidden={isHidden(card)}
             accountGated={!toursVisible && TOURS_ONLY.has(card.id)}
           />
         ))}
