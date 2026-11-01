@@ -195,7 +195,7 @@ export const BETA_FEATURES = Object.freeze({
   /**
    * TravTrack, the own location history (TravTrack plan 2026-10-24, phase 2):
    * an optional area in which the Companion records positions into this
-   * server. Gated at the TravTrack card of `LocationProviderSection` (beside
+   * server. Gated at the TravTrack card of `LocationSourceSection` (beside
    * the server's `choices.travtrack`; a stored choice still shows its card
    * with the warning) and at TravTrack's switch in Admin → Instanz. Like
    * `travPlan`, the SERVER asks too: every `/travtrack/*` path but the

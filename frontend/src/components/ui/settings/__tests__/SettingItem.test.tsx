@@ -308,4 +308,36 @@ describe("the frame blocks", () => {
     expect(always).toHaveBeenCalled();
     expect(screen.getByText("settings:area.scope.mixed")).toBeInTheDocument();
   });
+
+  it("one option can be unavailable while the others stay choosable, in pills and in the list", async () => {
+    const onChange = vi.fn();
+    const pills = [
+      { value: "a", label: "A" },
+      { value: "b", label: "B", disabled: true },
+    ];
+    const { rerender } = render(
+      <ChoiceControl label="Wahl" value="a" options={pills} onChange={onChange} />
+    );
+    expect(screen.getByRole("radio", { name: "B" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "A" })).toBeEnabled();
+    rerender(
+      <ChoiceControl
+        label="Wahl"
+        value="a"
+        options={[...pills, { value: "c", label: "C" }, { value: "d", label: "D" }]}
+        onChange={onChange}
+      />
+    );
+    expect(screen.getByRole("option", { name: "B" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "C" })).toBeEnabled();
+  });
+
+  it("an action that is not usable yet is disabled without claiming to be busy", () => {
+    render(
+      <SettingItem title="Los" control={<ActionControl label="Los" onClick={vi.fn()} disabled />} />
+    );
+    const button = screen.getByRole("button", { name: "Los" });
+    expect(button).toBeDisabled();
+    expect(button).not.toHaveAttribute("aria-busy");
+  });
 });

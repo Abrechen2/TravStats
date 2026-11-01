@@ -31,7 +31,7 @@ export const ACCOUNT_PAGE: RegistryPage = {
         {"id":"tokens","kind":"list","level":"expert","scope":"account","audience":"all","demoLocked":true,"de":"API-Schlüssel","en":"API keys","terms":{"de":"Für Skripte und Werkzeuge Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus.","en":"For scripts and tools A key bypasses the second step. You see it only once. Revoking locks the tool out at once."}},
       ]},
       {"id":"deletion","de":"Konto löschen","en":"Delete account","level":"standard","scope":"account","audience":"all","demoLocked":true,"rows":[
-        {"id":"deleteacct","kind":"danger","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Konto löschen","en":"Delete account","terms":{"de":"Mit allen Einträgen, Fotos und Dateien Nach der Bestätigung läuft eine Frist. Bis dahin kannst du dich anmelden und abbrechen. Danach ist alles weg, auch für den Admin.","en":"With all entries, photos and files After you confirm, a grace period runs. Until then you can sign in and cancel. After that everything is gone, for your admin too."}},
+        {"id":"deleteacct","kind":"danger","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Konto löschen","en":"Delete account","terms":{"de":"Mit allen Einträgen, Fotos und Dateien Nach der Bestätigung ist alles sofort weg, auch für den Admin. Vorher kannst du deine Daten herunterladen.","en":"With all entries, photos and files After you confirm, everything is gone at once, for your admin too. You can download your data first."}},
       ]},
   ],
 };

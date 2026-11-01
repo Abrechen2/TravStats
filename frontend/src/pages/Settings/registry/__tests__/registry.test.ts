@@ -184,3 +184,15 @@ describe("the expert count", () => {
     ).toBeLessThan(findableRows({ ...everything, isAdmin: true }).length);
   });
 });
+
+describe("account deletion is immediate (owner, 2026-11-01)", () => {
+  it("the search terms of the delete-account row promise no grace period and no cancelling", () => {
+    const row = registryPage("account")!
+      .sections.flatMap((s) => s.rows)
+      .find((r) => r.id === "deleteacct")!;
+    const terms = `${row.terms.de} ${row.terms.en}`.toLowerCase();
+    expect(terms).not.toMatch(/frist|grace|abbrechen|cancel/);
+    expect(row.terms.de).toContain("sofort");
+    expect(row.terms.en).toContain("at once");
+  });
+});

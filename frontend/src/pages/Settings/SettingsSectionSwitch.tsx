@@ -38,10 +38,10 @@ import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
 import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
-import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
+import StayScanSection from "../../components/Settings/location/StayScanSection";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
-import LocationProviderSection from "../../components/Settings/LocationProviderSection";
-import TravTrackSection from "../../components/Settings/TravTrackSection";
+import LocationSourceSection from "../../components/Settings/location/LocationSourceSection";
+import TravTrackLocationSection from "../../components/Settings/location/TravTrackLocationSection";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -149,15 +149,15 @@ export default function SettingsSectionSwitch({
       return <LegacyServiceSummary serviceId="dawarich" scope="account" />;
     case "locationProvider":
       // Where recordings go and positions are read from (TravTrack plan S5).
-      return <LocationProviderSection />;
+      return <LocationSourceSection />;
     case "travTrack":
       // TravTrack's own history: summary, export, zones, delete (plan T6).
-      return <TravTrackSection />;
+      return <TravTrackLocationSection />;
     case "tripRecording":
       // Whether the app's trip positions are stored here (forgejo#316).
       return <TripRecordingSection />;
     case "stayScan":
-      return <DawarichStayScanCard />;
+      return <StayScanSection />;
     case "externalServices":
       return <AccountExternalServices />;
     case "homeAirport":

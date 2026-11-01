@@ -1,7 +1,7 @@
 import type { TimeValue } from "../../shared/time/wire";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
-import { waitForJob } from "./jobs";
+import { waitForJob, type JobView } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
   connected: boolean;
@@ -195,9 +195,12 @@ export const dawarichStaysApi = {
   enableVenues: async (venueEnabled: boolean): Promise<void> => {
     await api.patch(`${base}/settings`, { venueEnabled });
   },
-  scan: async (lookbackDays = 7): Promise<void> => {
+  scan: async (
+    lookbackDays = 7,
+    options: { onPoll?: (job: JobView) => void } = {}
+  ): Promise<void> => {
     const { data } = await api.post(`${base}/scan`, { lookbackDays });
-    await waitForJob(data.data.jobId);
+    await waitForJob(data.data.jobId, options);
   },
   list: async (status: string): Promise<DawarichStay[]> =>
     (await api.get(base, { params: { status } })).data.data,

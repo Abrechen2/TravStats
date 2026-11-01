@@ -1429,46 +1429,6 @@
   },
   "locationProvider": {
     "title": "Location source",
-    "description": "Where TravStats reads positions from to suggest country days, stays and routes, and what the Companion records for.",
-    "legend": "Choose a location source",
-    "loadError": "The location source could not be loaded.",
-    "meaning": "What this means",
-    "nothingMoves": "Switching only changes what is recorded and read from now on. Nothing is moved, copied or deleted.",
-    "connectDawarich": "Connect Dawarich first",
-    "status": {
-      "notConfigured": "Dawarich is your chosen location source, but your own Dawarich connection is missing or no longer works. Until you enter it again, TravStats reads nothing from Dawarich.",
-      "unavailable": "TravTrack is your chosen location source but is not available on this server right now. Until it is, nothing is recorded or read through it."
-    },
-    "options": {
-      "none": {
-        "label": "None",
-        "sub": "TravStats reads no positions.",
-        "points": {
-          "manual": "No automatic suggestions from positions: you enter country days and stays yourself.",
-          "noHistory": "The Companion offers no location history.",
-          "ownRecording": "The Companion records flights and trips itself. The track belongs to the entry and is stored here on the server."
-        }
-      },
-      "travtrack": {
-        "label": "TravTrack",
-        "sub": "The location history here on your server.",
-        "points": {
-          "records": "The Companion records through TravTrack, everyday, flight and trip; the points are stored on this server and are part of the backup.",
-          "segment": "The track of a flight or trip is a segment in TravTrack, linked to the entry.",
-          "inbox": "TravTrack sends suggestions to the inbox: country days, stays, missing journeys.",
-          "zones": "You manage privacy zones and deletion in TravTrack."
-        }
-      },
-      "dawarich": {
-        "label": "Dawarich",
-        "sub": "Your own Dawarich, read only.",
-        "points": {
-          "readOnly": "TravStats reads from your Dawarich, as before. It writes nothing there and deletes nothing there.",
-          "suggestions": "TravStats counts country days from it and suggests stays in the inbox.",
-          "recording": "For now the Companion keeps recording flights and trips itself."
-        }
-      }
-    },
     "errors": {
       "dawarichNotConfigured": "Dawarich can be your location source once you have entered your own connection under “Dawarich connection”.",
       "travtrackUnavailable": "TravTrack is not available on this server.",
@@ -1884,6 +1844,217 @@
     "enrichmentPerNight": {
       "name": "Suggestions per night",
       "sub": "1–1000"
+    }
+  },
+  "location": {
+    "source": {
+      "name": "Location comes from",
+      "sub": "For country days, stays, routes",
+      "help": "Switching moves and deletes nothing. TravTrack stores on this server. Dawarich only works with your own Dawarich connection.",
+      "options": {
+        "none": "None",
+        "travtrack": "TravTrack",
+        "dawarich": "Dawarich"
+      },
+      "loadError": "I couldn't load the location source.",
+      "status": {
+        "notConfigured": "Dawarich is chosen as the source, but your own connection is missing or no longer works. Until you enter it again, I read nothing from Dawarich.",
+        "unavailable": "TravTrack is chosen as the source, but it isn't available on this server right now. Until it is, I record and read nothing through it."
+      },
+      "errors": {
+        "dawarichNotConfigured": "I can only choose Dawarich once your own Dawarich connection is entered.",
+        "travtrackUnavailable": "TravTrack isn't available on this server right now."
+      }
+    },
+    "dawlink": {
+      "name": "Your Dawarich connection",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "jump": "Open"
+    },
+    "stay": {
+      "scan": {
+        "name": "Search automatically",
+        "sub": "Every 6 hours, also markets, parks, museums",
+        "help": "Finds arrive as inbox suggestions. Paused while Places or stay suggestions are off."
+      },
+      "period": {
+        "name": "Period for “Search now”",
+        "days_one": "Last day",
+        "days_other": "Last {{count}} days"
+      },
+      "now": {
+        "name": "Search now",
+        "label": "Search now",
+        "busy": "Searching …",
+        "inbox": "View suggestions"
+      },
+      "loadError": "I couldn't load the state of the search.",
+      "next": "Next automatic search: {{at}}",
+      "pause": {
+        "disabled": "Automatic search is off. You can still review existing suggestions.",
+        "suggestionsDisabled": "Paused: stay suggestions are off. Your consent and earlier decisions stay.",
+        "placesDisabled": "Paused: Places is off. Your consent and earlier suggestions stay.",
+        "connectionMissing": "Paused: I can't find an own Dawarich connection of yours. The server's isn't enough for this.",
+        "travTrackDisabled": "Paused: TravTrack is off on this server right now. I find no new stays until it is back on."
+      },
+      "result": {
+        "done": "{{created}} new suggestions from {{points}} points, {{at}}",
+        "partial": "Searched only in part: {{created}} new suggestions from {{points}} points. Data is missing, {{at}}",
+        "interrupted": "The search was interrupted. Start it again.",
+        "stale": "I stopped the search because your location history was deleted meanwhile. The next one reads it afresh.",
+        "running": "I'm searching your location history",
+        "failed": "The last search didn't work."
+      },
+      "window": "Checked: {{from}} to {{to}}",
+      "dataThrough": "Newest point: {{at}}",
+      "noPoints": "No points came in for this period. I can't derive stays from that.",
+      "stale": "The newest points are over 24 hours old. Check whether your phone still records and uploads, or Dawarich still syncs.",
+      "errors": {
+        "placesOff": "Places is off. Switch it on and I can search.",
+        "travTrackOff": "TravTrack is off on this server. I can't read anything from it.",
+        "ownConnection": "I need your own Dawarich connection for this. The server's isn't enough.",
+        "unavailable": "I can't search right now: automatic search is off, or one is already running.",
+        "rateLimited": "You searched too often in a short time. Try again in a few minutes.",
+        "offline": "The server isn't answering right now.",
+        "generic": "The server didn't accept the search.",
+        "jobFailed": "The search stopped on the way."
+      }
+    },
+    "tt": {
+      "sum": {
+        "name": "Stored",
+        "empty": "No positions stored yet.",
+        "value": "{{count}} positions, {{from}} to {{to}}, {{devices}} device(s)",
+        "open": "Open Track",
+        "off": "TravTrack is off on this server: nothing is recorded. What's stored you can still export and delete.",
+        "loadError": "I couldn't load TravTrack."
+      },
+      "zones": {
+        "name": "Privacy zones",
+        "sub": "Nothing is stored here",
+        "help": "A new zone deletes points already inside; you see how many first. Removing brings nothing back.",
+        "none": "No privacy zone yet.",
+        "radius": "Radius {{metres}} m",
+        "remove": "Remove",
+        "add": "Add zone",
+        "fields": {
+          "name": "Name",
+          "centre": "Centre",
+          "radius": "Radius"
+        },
+        "namePlaceholder": "e.g. Home",
+        "centreHint": "Coordinates or a Google Maps link, e.g. 52.5200, 13.4050",
+        "centreInvalid": "I can't read these coordinates.",
+        "confirmAffects": "Points already inside the zone “{{name}}”",
+        "confirmAmount_one": "{{count}} stored position",
+        "confirmAmount_other": "{{count}} stored positions",
+        "confirmAfter": "The zone is added, the points are deleted. This can't be undone.",
+        "confirmDo_one": "Delete {{count}} position and add zone",
+        "confirmDo_other": "Delete {{count}} positions and add zone",
+        "removeTitle": "Remove privacy zone “{{name}}”?",
+        "removeAffects": "The zone “{{name}}”",
+        "removeAmount": "One zone, {{metres}} m radius",
+        "removeAfter": "Recording resumes there. What the zone deleted stays deleted.",
+        "removeDo": "Remove zone",
+        "addTitle": "Delete the points in the zone?",
+        "notAdded": "I didn't add the privacy zone.",
+        "notRemoved": "I didn't remove the privacy zone.",
+        "added": "Privacy zone added.",
+        "addedDeleted_one": "Privacy zone added, {{count}} position inside deleted.",
+        "addedDeleted_other": "Privacy zone added, {{count}} positions inside deleted.",
+        "loadError": "I couldn't load the privacy zones."
+      },
+      "cities": {
+        "name": "Name cities",
+        "sub": "Places from 30 minutes",
+        "help": "Sends positions rounded to 1 km to the server's place search. Off removes the cities again. I never look up inside privacy zones.",
+        "loadError": "I couldn't load the setting.",
+        "notSource": "Only takes effect once TravTrack is your location source."
+      },
+      "apps": {
+        "name": "Other apps",
+        "sub": "OwnTracks and Overland",
+        "help": "These apps don't know your privacy zones; the server drops points inside. You see the key only once.",
+        "kind": "App",
+        "label": "Device name",
+        "labelPlaceholder": "e.g. My phone",
+        "create": "Create key",
+        "revoke": "Revoke",
+        "none": "No app connected yet.",
+        "lastUsed": "last used {{at}}",
+        "neverUsed": "never used",
+        "shownOnce": "You see this key only now. Copy it before you close.",
+        "done": "Done, copied",
+        "revokeTitle": "Revoke key “{{name}}”?",
+        "revokeAffects": "The app “{{name}}” ({{kind}})",
+        "revokeAmount": "One key",
+        "revokeAfter": "The app can't send anything any more. Points already stored stay.",
+        "revokeDo": "Revoke key",
+        "notCreated": "I didn't create the key.",
+        "notRevoked": "I didn't revoke the key.",
+        "loadError": "I couldn't load the keys."
+      }
+    },
+    "history": {
+      "copy": {
+        "name": "Copy from Dawarich",
+        "sub": "All or a period",
+        "help": "Needs your own Dawarich connection. Can be paused and resumed.",
+        "whole": "Copy everything",
+        "span": "Only a period",
+        "from": "From",
+        "until": "Until",
+        "start": "Copy",
+        "stop": "Pause",
+        "loadError": "I couldn't load the state of the copy.",
+        "running": "I'm copying your Dawarich",
+        "result": "{{stored}} positions copied",
+        "resultIncomplete": "{{stored}} positions copied, but not everything arrived",
+        "gaps": "What's missing",
+        "noConnection": "Your own Dawarich connection is missing."
+      },
+      "gpx": {
+        "name": "GPX files",
+        "jump": "To the imports"
+      },
+      "export": {
+        "name": "Export history",
+        "sub": "GPX or JSON",
+        "label": "Export"
+      },
+      "delete": {
+        "name": "Delete days",
+        "help": "Deleted days stay deleted, even if a phone sends them later.",
+        "from": "From",
+        "to": "To",
+        "do": "Delete days",
+        "count": "Counting …",
+        "title": "Delete positions?",
+        "affects": "All stored positions from {{from}} to {{to}}, both days included",
+        "amount_one": "{{count}} position",
+        "amount_other": "{{count}} positions",
+        "after": "The days stay deleted: even a phone that was offline won't bring them back.",
+        "confirm_one": "Delete {{count}} position",
+        "confirm_other": "Delete {{count}} positions",
+        "done_one": "{{count}} position deleted.",
+        "done_other": "{{count}} positions deleted.",
+        "notCounted": "I couldn't count what lies in the period. I deleted nothing.",
+        "notDone": "I deleted nothing.",
+        "invalidRange": "The from date is after the to date."
+      },
+      "diag": {
+        "name": "Diagnostics",
+        "sub": "Why points are missing",
+        "help": "Needs the diagnostics log in the Companion app.",
+        "open": "Open",
+        "close": "Close",
+        "deleteAffects": "The diagnostics log of all devices",
+        "deleteAmount": "All days of the last 14",
+        "deleteAfter": "Stored positions stay.",
+        "deleteDo": "Delete log"
+      },
+      "title": "History"
     }
   }
 }

@@ -1,4 +1,4 @@
-vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
+vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.

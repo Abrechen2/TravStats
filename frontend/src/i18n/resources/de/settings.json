@@ -1429,46 +1429,6 @@
   },
   "locationProvider": {
     "title": "Standortquelle",
-    "description": "Woher TravStats Positionen liest, um dir Ländertage, Aufenthalte und Strecken vorzuschlagen, und wofür die Companion aufzeichnet.",
-    "legend": "Standortquelle wählen",
-    "loadError": "Die Standortquelle konnte nicht geladen werden.",
-    "meaning": "Was das bedeutet",
-    "nothingMoves": "Ein Wechsel ändert nur, was ab jetzt aufgezeichnet und gelesen wird. Es wird nichts verschoben, kopiert oder gelöscht.",
-    "connectDawarich": "Erst Dawarich verbinden",
-    "status": {
-      "notConfigured": "Dawarich ist als Standortquelle gewählt, aber deine eigene Dawarich-Verbindung fehlt oder funktioniert nicht mehr. Bis du sie wieder einträgst, liest TravStats nichts aus Dawarich.",
-      "unavailable": "TravTrack ist als Standortquelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin wird darüber nichts aufgezeichnet oder gelesen."
-    },
-    "options": {
-      "none": {
-        "label": "Keine",
-        "sub": "TravStats liest keine Positionen.",
-        "points": {
-          "manual": "Keine automatischen Vorschläge aus Positionen: Ländertage und Aufenthalte trägst du selbst ein.",
-          "noHistory": "Die Companion bietet keinen Standortverlauf an.",
-          "ownRecording": "Flüge und Reisen zeichnet die Companion selbst auf. Die Strecke gehört zum Eintrag und liegt hier auf dem Server."
-        }
-      },
-      "travtrack": {
-        "label": "TravTrack",
-        "sub": "Der Standortverlauf hier auf deinem Server.",
-        "points": {
-          "records": "Die Companion zeichnet über TravTrack auf, Alltag, Flug und Reise; die Punkte liegen auf diesem Server und sind Teil der Sicherung.",
-          "segment": "Die Strecke eines Flugs oder einer Reise ist ein Abschnitt in TravTrack, verknüpft mit dem Eintrag.",
-          "inbox": "TravTrack schickt Vorschläge in den Posteingang: Ländertage, Aufenthalte, fehlende Fahrten.",
-          "zones": "Privatzonen und Löschen verwaltest du in TravTrack."
-        }
-      },
-      "dawarich": {
-        "label": "Dawarich",
-        "sub": "Dein eigenes Dawarich, nur gelesen.",
-        "points": {
-          "readOnly": "TravStats liest aus deinem Dawarich, wie bisher. Es schreibt dort nichts und löscht dort nichts.",
-          "suggestions": "TravStats zählt daraus Ländertage und schlägt Aufenthalte im Posteingang vor.",
-          "recording": "Flüge und Reisen zeichnet die Companion vorerst weiter selbst auf."
-        }
-      }
-    },
     "errors": {
       "dawarichNotConfigured": "Dawarich lässt sich erst als Standortquelle wählen, wenn du unter „Dawarich-Verbindung“ deine eigene Verbindung eingetragen hast.",
       "travtrackUnavailable": "TravTrack ist auf diesem Server nicht verfügbar.",
@@ -1884,6 +1844,217 @@
     "enrichmentPerNight": {
       "name": "Vorschläge pro Nacht",
       "sub": "1–1000"
+    }
+  },
+  "location": {
+    "source": {
+      "name": "Standort kommt von",
+      "sub": "Für Ländertage, Aufenthalte, Routen",
+      "help": "Umschalten verschiebt und löscht nichts. TravTrack speichert auf diesem Server. Dawarich geht nur mit deiner eigenen Dawarich-Verbindung.",
+      "options": {
+        "none": "Keine",
+        "travtrack": "TravTrack",
+        "dawarich": "Dawarich"
+      },
+      "loadError": "Ich konnte die Standortquelle nicht laden.",
+      "status": {
+        "notConfigured": "Dawarich ist als Quelle gewählt, aber deine eigene Verbindung fehlt oder geht nicht mehr. Bis du sie wieder einträgst, lese ich nichts aus Dawarich.",
+        "unavailable": "TravTrack ist als Quelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin zeichne und lese ich darüber nichts."
+      },
+      "errors": {
+        "dawarichNotConfigured": "Ich kann Dawarich erst wählen, wenn deine eigene Dawarich-Verbindung eingetragen ist.",
+        "travtrackUnavailable": "TravTrack gibt es auf diesem Server gerade nicht."
+      }
+    },
+    "dawlink": {
+      "name": "Deine Dawarich-Verbindung",
+      "connected": "Verbunden",
+      "notConnected": "Nicht verbunden",
+      "jump": "Öffnen"
+    },
+    "stay": {
+      "scan": {
+        "name": "Automatisch suchen",
+        "sub": "Alle 6 Stunden, auch Märkte, Parks, Museen",
+        "help": "Funde landen als Vorschlag im Eingang. Pausiert, solange Orte oder Aufenthaltsvorschläge aus sind."
+      },
+      "period": {
+        "name": "Zeitraum für „Jetzt suchen“",
+        "days_one": "Letzter Tag",
+        "days_other": "Letzte {{count}} Tage"
+      },
+      "now": {
+        "name": "Jetzt suchen",
+        "label": "Jetzt suchen",
+        "busy": "Ich suche …",
+        "inbox": "Vorschläge ansehen"
+      },
+      "loadError": "Ich konnte den Stand der Suche nicht laden.",
+      "next": "Nächste automatische Suche: {{at}}",
+      "pause": {
+        "disabled": "Die automatische Suche ist aus. Vorhandene Vorschläge kannst du weiter prüfen.",
+        "suggestionsDisabled": "Pausiert: Aufenthaltsvorschläge sind aus. Deine Einwilligung und bisherige Entscheidungen bleiben.",
+        "placesDisabled": "Pausiert: Orte ist aus. Deine Einwilligung und bisherige Vorschläge bleiben.",
+        "connectionMissing": "Pausiert: Ich finde keine eigene Dawarich-Verbindung von dir. Die des Servers reicht dafür nicht.",
+        "travTrackDisabled": "Pausiert: TravTrack ist auf diesem Server gerade aus. Ich erkenne keine neuen Aufenthalte, bis es wieder an ist."
+      },
+      "result": {
+        "done": "{{created}} neue Vorschläge aus {{points}} Punkten, {{at}}",
+        "partial": "Nur teilweise gesucht: {{created}} neue Vorschläge aus {{points}} Punkten. Es fehlen Daten, {{at}}",
+        "interrupted": "Die Suche wurde unterbrochen. Starte sie noch einmal.",
+        "stale": "Ich habe die Suche abgebrochen, weil dein Standortverlauf währenddessen gelöscht wurde. Die nächste liest ihn neu.",
+        "running": "Ich suche in deinem Standortverlauf",
+        "failed": "Das letzte Suchen hat nicht geklappt."
+      },
+      "window": "Geprüft: {{from}} bis {{to}}",
+      "dataThrough": "Neuester Punkt: {{at}}",
+      "noPoints": "Für diesen Zeitraum kamen keine Punkte. Daraus kann ich keine Aufenthalte ableiten.",
+      "stale": "Die neuesten Punkte sind über 24 Stunden alt. Sieh nach, ob dein Telefon noch aufzeichnet und hochlädt oder Dawarich noch synchronisiert.",
+      "errors": {
+        "placesOff": "Orte ist aus. Schalte es ein, dann kann ich suchen.",
+        "travTrackOff": "TravTrack ist auf diesem Server aus. Ich kann daraus nichts lesen.",
+        "ownConnection": "Dafür brauche ich deine eigene Dawarich-Verbindung. Die des Servers reicht nicht.",
+        "unavailable": "Ich kann gerade nicht suchen: Die automatische Suche ist aus, oder es läuft schon eine.",
+        "rateLimited": "Du hast in kurzer Zeit zu oft gesucht. Versuche es in ein paar Minuten noch einmal.",
+        "offline": "Der Server antwortet gerade nicht.",
+        "generic": "Der Server hat die Suche nicht angenommen.",
+        "jobFailed": "Die Suche ist unterwegs abgebrochen."
+      }
+    },
+    "tt": {
+      "sum": {
+        "name": "Gespeichert",
+        "empty": "Noch keine Positionen gespeichert.",
+        "value": "{{count}} Positionen, {{from}} bis {{to}}, {{devices}} Gerät(e)",
+        "open": "Track öffnen",
+        "off": "TravTrack ist auf diesem Server aus: Es wird nichts aufgezeichnet. Was gespeichert ist, kannst du weiter exportieren und löschen.",
+        "loadError": "Ich konnte TravTrack nicht laden."
+      },
+      "zones": {
+        "name": "Schutzzonen",
+        "sub": "Hier wird nichts gespeichert",
+        "help": "Eine neue Zone löscht Punkte, die schon darin liegen; vorher siehst du, wie viele. Entfernen holt nichts zurück.",
+        "none": "Noch keine Schutzzone.",
+        "radius": "Umkreis {{metres}} m",
+        "remove": "Entfernen",
+        "add": "Zone anlegen",
+        "fields": {
+          "name": "Name",
+          "centre": "Mittelpunkt",
+          "radius": "Umkreis"
+        },
+        "namePlaceholder": "z. B. Zuhause",
+        "centreHint": "Koordinaten oder ein Google-Maps-Link, z. B. 52.5200, 13.4050",
+        "centreInvalid": "Diese Koordinaten kann ich nicht lesen.",
+        "confirmAffects": "Punkte, die schon in der Zone „{{name}}“ liegen",
+        "confirmAmount_one": "{{count}} gespeicherte Position",
+        "confirmAmount_other": "{{count}} gespeicherte Positionen",
+        "confirmAfter": "Die Zone ist angelegt, die Punkte sind gelöscht. Das lässt sich nicht zurückholen.",
+        "confirmDo_one": "{{count}} Position löschen und Zone anlegen",
+        "confirmDo_other": "{{count}} Positionen löschen und Zone anlegen",
+        "removeTitle": "Schutzzone „{{name}}“ entfernen?",
+        "removeAffects": "Die Zone „{{name}}“",
+        "removeAmount": "Eine Zone, {{metres}} m Umkreis",
+        "removeAfter": "Dort wird wieder aufgezeichnet. Was die Zone gelöscht hat, bleibt gelöscht.",
+        "removeDo": "Zone entfernen",
+        "addTitle": "Punkte in der Zone löschen?",
+        "notAdded": "Ich habe die Schutzzone nicht angelegt.",
+        "notRemoved": "Ich habe die Schutzzone nicht entfernt.",
+        "added": "Schutzzone angelegt.",
+        "addedDeleted_one": "Schutzzone angelegt, {{count}} Position darin gelöscht.",
+        "addedDeleted_other": "Schutzzone angelegt, {{count}} Positionen darin gelöscht.",
+        "loadError": "Ich konnte die Schutzzonen nicht laden."
+      },
+      "cities": {
+        "name": "Städte benennen",
+        "sub": "Orte ab 30 Minuten",
+        "help": "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder. In Schutzzonen suche ich nie.",
+        "loadError": "Ich konnte die Einstellung nicht laden.",
+        "notSource": "Wirkt erst, wenn TravTrack deine Standortquelle ist."
+      },
+      "apps": {
+        "name": "Weitere Apps",
+        "sub": "OwnTracks und Overland",
+        "help": "Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal.",
+        "kind": "App",
+        "label": "Name des Geräts",
+        "labelPlaceholder": "z. B. Mein Telefon",
+        "create": "Schlüssel anlegen",
+        "revoke": "Widerrufen",
+        "none": "Noch keine App verbunden.",
+        "lastUsed": "zuletzt {{at}}",
+        "neverUsed": "noch nie benutzt",
+        "shownOnce": "Diesen Schlüssel siehst du nur jetzt. Kopiere ihn, bevor du schließt.",
+        "done": "Fertig, kopiert",
+        "revokeTitle": "Schlüssel „{{name}}“ widerrufen?",
+        "revokeAffects": "Die App „{{name}}“ ({{kind}})",
+        "revokeAmount": "Ein Schlüssel",
+        "revokeAfter": "Die App kann nichts mehr senden. Bereits gespeicherte Punkte bleiben.",
+        "revokeDo": "Schlüssel widerrufen",
+        "notCreated": "Ich habe den Schlüssel nicht angelegt.",
+        "notRevoked": "Ich habe den Schlüssel nicht widerrufen.",
+        "loadError": "Ich konnte die Schlüssel nicht laden."
+      }
+    },
+    "history": {
+      "copy": {
+        "name": "Aus Dawarich übernehmen",
+        "sub": "Ganz oder ein Zeitraum",
+        "help": "Braucht deine eigene Dawarich-Verbindung. Lässt sich anhalten und fortsetzen.",
+        "whole": "Alles übernehmen",
+        "span": "Nur einen Zeitraum",
+        "from": "Vom",
+        "until": "Bis",
+        "start": "Übernehmen",
+        "stop": "Anhalten",
+        "loadError": "Ich konnte den Stand der Kopie nicht laden.",
+        "running": "Ich kopiere dein Dawarich",
+        "result": "{{stored}} Positionen übernommen",
+        "resultIncomplete": "{{stored}} Positionen übernommen, aber nicht alles kam an",
+        "gaps": "Was fehlt",
+        "noConnection": "Deine eigene Dawarich-Verbindung fehlt."
+      },
+      "gpx": {
+        "name": "GPX-Dateien",
+        "jump": "Zu den Importen"
+      },
+      "export": {
+        "name": "Verlauf exportieren",
+        "sub": "GPX oder JSON",
+        "label": "Exportieren"
+      },
+      "delete": {
+        "name": "Tage löschen",
+        "help": "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht.",
+        "from": "Vom",
+        "to": "Bis",
+        "do": "Tage löschen",
+        "count": "Zähle …",
+        "title": "Positionen löschen?",
+        "affects": "Alle gespeicherten Positionen vom {{from}} bis {{to}}, beide Tage eingeschlossen",
+        "amount_one": "{{count}} Position",
+        "amount_other": "{{count}} Positionen",
+        "after": "Die Tage bleiben gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück.",
+        "confirm_one": "{{count}} Position löschen",
+        "confirm_other": "{{count}} Positionen löschen",
+        "done_one": "{{count}} Position gelöscht.",
+        "done_other": "{{count}} Positionen gelöscht.",
+        "notCounted": "Ich konnte nicht zählen, was im Zeitraum liegt. Gelöscht habe ich nichts.",
+        "notDone": "Ich habe nichts gelöscht.",
+        "invalidRange": "Das Von-Datum liegt nach dem Bis-Datum."
+      },
+      "diag": {
+        "name": "Diagnose",
+        "sub": "Warum Punkte fehlen",
+        "help": "Braucht das Diagnose-Protokoll in der Companion-App.",
+        "open": "Öffnen",
+        "close": "Schließen",
+        "deleteAffects": "Das Diagnoseprotokoll aller Geräte",
+        "deleteAmount": "Alle Tage der letzten 14",
+        "deleteAfter": "Gespeicherte Positionen bleiben.",
+        "deleteDo": "Protokoll löschen"
+      },
+      "title": "Verlauf"
     }
   }
 }

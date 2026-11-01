@@ -4,7 +4,7 @@ import Button from "../ui/Button";
 import { Field, Input, Select } from "../ui/Field";
 import { alpha, token } from "../ui/tokens";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { useBlockConfirm } from "./useBlockConfirm";
 import { formatTime } from "../../lib/displayFormat";
 import { downloadBlob } from "../../lib/export";
 import { logger } from "../../lib/logger";
@@ -55,8 +55,8 @@ export default function TravTrackDiagnostics({
   today: string;
   canDelete: boolean;
 }): JSX.Element {
-  const { t } = useTranslation(["track"]);
-  const { confirmDelete, confirmDialog } = useConfirmDialog();
+  const { t } = useTranslation(["track", "settings"]);
+  const { confirm, dialog: confirmDialog } = useBlockConfirm();
   const [date, setDate] = useState(today);
   const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
   const [day, setDay] = useState<DiagnosticsDay | null>(null);
@@ -108,7 +108,14 @@ export default function TravTrackDiagnostics({
   };
 
   const remove = async () => {
-    if (!(await confirmDelete(t(`${NS}.deleteConfirm`)))) return;
+    const agreed = await confirm({
+      title: t(`${NS}.deleteConfirm`),
+      affects: t("settings:location.history.diag.deleteAffects"),
+      amount: t("settings:location.history.diag.deleteAmount"),
+      after: t("settings:location.history.diag.deleteAfter"),
+      confirmLabel: t("settings:location.history.diag.deleteDo"),
+    });
+    if (!agreed) return;
     setBusy(true);
     try {
       await travTrackDiagnosticsApi.deleteAll();
@@ -156,11 +163,6 @@ export default function TravTrackDiagnostics({
       style={{ gap: "var(--ts-space-sm)" }}
       data-testid="travtrack-diagnostics"
     >
-      <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
-        {t(`${NS}.title`)}
-      </h3>
-      <p className="t-caption">{t(`${NS}.intro`)}</p>
-
       <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
         <Field label={t(`${NS}.day`)} htmlFor="travtrack-diag-day">
           <Input

@@ -74,6 +74,8 @@ export interface ChoiceOption<T extends string> {
   value: T;
   label: string;
   name?: string;
+  /** This option cannot be chosen right now; the others still can. */
+  disabled?: boolean;
 }
 
 /**
@@ -98,6 +100,7 @@ export function ChoiceControl<T extends string>({
       value: o.value,
       label: o.label,
       name: o.name,
+      disabled: o.disabled,
     }));
     return (
       <Segmented
@@ -121,7 +124,7 @@ export function ChoiceControl<T extends string>({
       style={{ minWidth: 200, opacity: locked ? 0.5 : 1 }}
     >
       {options.map((o) => (
-        <option key={o.value} value={o.value}>
+        <option key={o.value} value={o.value} disabled={o.disabled}>
           {o.label}
         </option>
       ))}
@@ -209,11 +212,14 @@ export function ActionControl({
   onClick,
   danger = false,
   busy = false,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   danger?: boolean;
   busy?: boolean;
+  /** Not usable yet (a form that is not complete); unlike `busy`, nothing is running. */
+  disabled?: boolean;
 }): JSX.Element {
   // No id: the row title is a <label for> the control, and on a button it would
   // REPLACE the button's own name ("Jetzt sichern" would read as the row's title).
@@ -222,7 +228,7 @@ export function ActionControl({
     <Button
       variant={danger ? "danger" : "secondary"}
       onClick={onClick}
-      disabled={locked || busy}
+      disabled={locked || busy || disabled}
       aria-disabled={locked || undefined}
       aria-describedby={describedBy}
       aria-busy={busy || undefined}
