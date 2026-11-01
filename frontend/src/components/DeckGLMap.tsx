@@ -13,10 +13,9 @@ import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
 import { useMapStyleOverlays } from "./map/useMapStyleOverlays";
+import { useFlatMapAppearance } from "./map/useFlatMapAppearance";
+import { useFlatMapMoveTracking } from "./map/useFlatMapMoveTracking";
 import { FlatMapControlPanel } from "./map/FlatMapControlPanel";
-import { type AppearanceDomain } from "./map/controlPanelKit";
-import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
-import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
 import { resolveFlightTipColor } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
@@ -27,14 +26,10 @@ import { appendWithLabelObstacles } from "./map/labelObstacles";
 import { FLAT_BASEMAPS, type FlatStyleId } from "./map/basemapStyles";
 import { useResilientStyle } from "./map/basemapFallback";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
-import type { Cruise, GeoJSONFeature, Flight } from "../types";
-import type { Lodging } from "../types/lodging";
-import type { Place } from "../types/place";
-import type { MapMode } from "./MapContainer3D";
+import type { Cruise } from "../types";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { buildPlacePins } from "./layers/placePinsLayer";
-import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { withTripsLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
@@ -59,6 +54,7 @@ import {
   NATIVE_ROUTE_LINE_ID,
   NATIVE_AIRPORT_CIRCLE_ID,
 } from "./NativeRoutesLayer";
+import type { DeckGLMapProps } from "./map/deckGLMapProps";
 
 // Small delay before the click tooltip appears — just enough for the flyTo
 // to start so the card doesn't flash at the old anchor, then it rides the
@@ -72,93 +68,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-interface DeckGLMapProps {
-  flights: GeoJSONFeature[];
-  visMode: MapMode;
-  minRouteCount?: number;
-  onFlightClick?: (flightId: string) => void;
-  onRouteClick?: (flightIds: string[]) => void;
-  onEdit?: (flight: Flight) => void;
-  /**
-   * Fires when the card's "Open (last) flight" action is used. Used to be
-   * globe-only; since the two maps share one card (owner ruling 2026-09-20)
-   * the flat map needs it too — `onFlightClick` only moves the selection,
-   * which is where the reader already is.
-   */
-  onFlightOpen?: (flightId: string) => void;
-  /** Fires when the card's "Open cruise" action is used. The cruise card used
-   *  to navigate by itself; the shared card asks its host instead. */
-  onCruiseOpen?: (cruiseId: string) => void;
-  /** Fires when the lodging card's open action is used. */
-  onLodgingOpen?: (lodgingId: string) => void;
-  /** Fires when the place card's open action is used. */
-  onPlaceOpen?: (placeId: string) => void;
-  flightList?: Flight[];
-  onResetTrip?: () => void;
-  cruises?: Cruise[];
-  /** Extra deck.gl layers appended after all internally-built layers. */
-  extraLayers?: Layer[];
-  /** Which domain appearance sections the control panel exposes. */
-  appearanceDomains?: readonly AppearanceDomain[];
-  /**
-   * Lodging marker-size slider value + setter. Controlled from the PARENT
-   * (`MapContainer3D`), unlike the flight/cruise marker sizes which
-   * DeckGLMap owns as local state — MapContainer3D is what builds the
-   * lodging pin layer (via `buildLodgingPins`) and passes it in as part of
-   * `extraLayers`, so it needs to own the value to re-memo on it. DeckGLMap
-   * only needs it to render the slider in the flat-map control panel.
-   * Both default to a no-op 1× so callers that don't use the lodging
-   * domain (every tab except LodgingTab) are unaffected.
-   */
-  lodgingMarkerSize?: number;
-  onLodgingMarkerSizeChange?: (s: number) => void;
-  /**
-   * Lodging places (hotels/campsites) to render as pins + name labels.
-   * Built into a ScatterplotLayer + TextLayer HERE (not by the caller, via
-   * `buildLodgingPins`) — unlike the marker-size value above, the pin layer
-   * itself needs `zoom`, which is private state that only exists inside
-   * this component (mirrors exactly how
-   * `createCruisePortsLayer` is built here rather than by MapContainer3D).
-   * Undefined/empty means "no lodging layer at all".
-   */
-  lodgingsOverride?: readonly Lodging[];
-  /**
-   * Fired when a lodging pin is clicked — receives the lodging id. Wrapped
-   * internally so the click also sets `deckClickedRef` (see
-   * `handleLodgingClick`), the same guard `handleAirportClick`/
-   * `handleFlightClick` use to stop the native background-click handler
-   * from immediately clearing whatever the click just did.
-   */
-  onLodgingClick?: (lodgingId: string) => void;
-  /**
-   * Places to render as pins + name labels. Built HERE rather than by the
-   * caller for the same reason `lodgingsOverride` is: the layer needs `zoom`,
-   * which is private to this component.
-   *
-   * Until 2026-08-28 both PoiTab and AllTab called `buildPlacePins` themselves
-   * and passed it into `extraLayers`, which is why places were the one domain
-   * whose labels never opened up on zoom — the tab had no zoom to give and
-   * passed a literal `4` — and the one domain with no size slider, for the same
-   * reason. Undefined/empty means no place layer at all.
-   */
-  placesOverride?: readonly Place[];
-  /** Fired when a place pin is clicked. Wrapped internally with the
-   *  `deckClickedRef` guard, exactly as the lodging and airport clicks are. */
-  onPlaceClick?: (placeId: string) => void;
-  /** Place-id → its list's colour, resolved by the caller (`list` colour mode
-   *  only). Passed through untouched: a layer resolving list membership itself
-   *  would be a second place deciding what a pin means. */
-  placeListColors?: ReadonlyMap<string, [number, number, number]>;
-  /** Place-id → the label default of the SAME list that gave it its colour,
-   *  resolved by the caller through `resolvePlaceListColors`. Passed through
-   *  untouched, for the reason `placeListColors` is. */
-  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
-  /** Marker-size slider value + setter for places, owned by `MapContainer3D`
-   *  exactly as the lodging pair is. */
-  placeMarkerSize?: number;
-  onPlaceMarkerSizeChange?: (s: number) => void;
-}
 
 // A `[]` default would be a new array every render (a layer-memo dependency).
 const NO_CRUISES: Cruise[] = [];
@@ -231,83 +140,36 @@ export function DeckGLMap({
   const { isHovering, onHover: onDeckHover } = useDeckHoverCursor();
 
   const [mapLoaded, setMapLoaded] = useState(false);
-  // Flat-map appearance (mirrors the globe's "Anpassung" panel) + style-level overlays,
-  // persisted so the look survives reloads. `markerColor === null` keeps the theme dot colour.
-  const [styleId, setStyleId] = useState<FlatStyleId>(() => loadMapAppearance().styleId ?? "dark");
-  const flatStyle = useResilientStyle(styleId);
-  // Flight-domain appearance. The route COLOUR lives in the flight-colour
-  // store above (mode + colours); only shape / width / marker settings are local.
-  //
-  // The SHAPE (#183) is flat-map-only, which is why it lives here as plain
-  // component state next to the width slider rather than in a shared store like
-  // the colour config: the globe never reads it, and the flat map is the only
-  // renderer that has to know.
-  const [flightRouteShape, setFlightRouteShape] = useState<FlightRouteShape>(() =>
-    loadFlightRouteShape()
-  );
-  const [flightRouteWidth, setFlightRouteWidth] = useState<number>(
-    () => loadMapAppearance().flightRouteWidth ?? 1
-  );
-  const [markerColor, setMarkerColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().airportColor ?? null
-  );
-  const [flightMarkerSize, setFlightMarkerSize] = useState<number>(
-    () => loadMapAppearance().flightMarkerSize ?? 1
-  );
-  // Cruise appearance: colour is in the store; the settings flag hides route lines (forgejo#389).
-  const showCruiseArcs = useSettingsStore((s) => s.cruise.showCruiseArcs);
-  const [cruiseRouteWidth, setCruiseRouteWidth] = useState<number>(
-    () => loadMapAppearance().cruiseRouteWidth ?? 1
-  );
-  const [portColor, setPortColor] = useState<[number, number, number] | null>(
-    () => loadMapAppearance().portColor ?? null
-  );
-  const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
-    () => loadMapAppearance().cruiseMarkerSize ?? 1
-  );
-  const [cruiseArrowScale, setCruiseArrowScale] = useState<number>(
-    () => loadMapAppearance().cruiseArrowScale ?? 1
-  );
-  const [showTerrain, setShowTerrain] = useState<boolean>(
-    () => loadMapAppearance().showTerrain ?? false
-  );
-  const [showPlaceLabels, setShowPlaceLabels] = useState<boolean>(
-    () => loadMapAppearance().showPlaceLabels ?? true
-  );
-  const { mode: labelsMode, setMode: setLabelsMode } = useMapLabelsModeStore();
-  // Absent means "as each list says" — see the field's note in mapAppearance.
-  const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
-    () => loadMapAppearance().placeLabelSource ?? "list"
-  );
-  useEffect(() => {
-    saveMapAppearance({
-      styleId,
-      flightRouteShape,
-      flightRouteWidth,
-      airportColor: markerColor,
-      flightMarkerSize,
-      cruiseRouteWidth,
-      portColor,
-      cruiseMarkerSize,
-      cruiseArrowScale,
-      showTerrain,
-      showPlaceLabels,
-      placeLabelSource,
-    });
-  }, [
+  // Flat-map appearance (mirrors the globe's "Anpassung" panel), persisted across reloads.
+  const {
     styleId,
+    setStyleId,
     flightRouteShape,
+    setFlightRouteShape,
     flightRouteWidth,
+    setFlightRouteWidth,
     markerColor,
+    setMarkerColor,
     flightMarkerSize,
+    setFlightMarkerSize,
     cruiseRouteWidth,
+    setCruiseRouteWidth,
     portColor,
+    setPortColor,
     cruiseMarkerSize,
+    setCruiseMarkerSize,
     cruiseArrowScale,
+    setCruiseArrowScale,
     showTerrain,
+    setShowTerrain,
     showPlaceLabels,
+    setShowPlaceLabels,
     placeLabelSource,
-  ]);
+    setPlaceLabelSource,
+  } = useFlatMapAppearance();
+  const flatStyle = useResilientStyle(styleId);
+  const showCruiseArcs = useSettingsStore((s) => s.cruise.showCruiseArcs);
+  const { mode: labelsMode, setMode: setLabelsMode } = useMapLabelsModeStore();
   useMapStyleOverlays(mapRef, mapLoaded, showTerrain, showPlaceLabels);
   // Zoom from the move handler, so layers can hide labels at low zoom.
   const [zoom, setZoom] = useState<number>(initialViewState.zoom ?? 2);
@@ -409,54 +271,7 @@ export function DeckGLMap({
   // onHover never re-renders this component (see HoverTooltip.tsx).
   const hoverRef = useRef<HoverTooltipApi | null>(null);
 
-  // Reproject the card's anchor — called on every map move/zoom via onMove.
-  const recomputeAllPositions = useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const anchor = pinnedRef.current?.anchorLngLat;
-    if (!anchor) return;
-    const pt = map.project(anchor);
-    setPinnedPos({ x: pt.x, y: pt.y });
-  }, []);
-
-  // `recomputeAllPositions` is wired into a rAF on every move, so it must stay
-  // referentially stable; reading the anchor through a ref is what keeps it so
-  // without going stale.
-  const pinnedRef = useRef<MapPinned | null>(null);
-  useEffect(() => {
-    pinnedRef.current = pinned;
-    if (pinned === null) {
-      setPinnedPos(null);
-      return;
-    }
-    recomputeAllPositions();
-  }, [pinned, recomputeAllPositions]);
-
-  const moveRafRef = useRef<number | null>(null);
-
-  const handleMapMove = useCallback(() => {
-    if (moveRafRef.current !== null) return; // already scheduled
-    moveRafRef.current = requestAnimationFrame(() => {
-      moveRafRef.current = null;
-      recomputeAllPositions();
-      const map = mapRef.current?.getMap();
-      if (map) {
-        const z = map.getZoom();
-        // Snap to integer to avoid re-rendering layers on every fractional
-        // zoom tick — only the threshold crossing matters for label visibility.
-        const snapped = Math.round(z);
-        setZoom((prev) => (prev === snapped ? prev : snapped));
-      }
-    });
-  }, [recomputeAllPositions]);
-
-  useEffect(() => {
-    return () => {
-      if (moveRafRef.current !== null) {
-        cancelAnimationFrame(moveRafRef.current);
-      }
-    };
-  }, []);
+  const handleMapMove = useFlatMapMoveTracking({ mapRef, pinned, setPinnedPos, setZoom });
 
   // The card's hero colour follows the flight colour store, like every arc on
   // the map — never a literal, per the 2.4.0 colour-mode rule.

@@ -5,7 +5,6 @@
     "frontend/src/components/GlobeView.tsx": 1275,
     "frontend/src/pages/TripDetailPage.tsx": 1037,
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 990,
-    "frontend/src/components/Training/BoardingPassAnnotation.tsx": 963,
-    "frontend/src/components/DeckGLMap.tsx": 956
+    "frontend/src/components/Training/BoardingPassAnnotation.tsx": 963
   }
 }
