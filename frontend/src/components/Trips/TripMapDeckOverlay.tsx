@@ -40,14 +40,17 @@ export function DeckGLOverlay({
   getTooltip: ReturnType<typeof createMarkerTooltip>;
   interleaved: boolean;
   /** The globe's native layers also want the hand; deck.gl's "nothing here" must not take it back. */
-  isOverNative?: () => boolean;
+  isOverNative?: (x: number, y: number) => boolean;
 }): null {
   const { current: map } = useMap();
   // Issue #247. See map/mapCursor.ts for why this cannot be deck.gl's
   // `getCursor`: the deck canvas has no pointer events, MapLibre owns the
   // cursor.
   const handleHover = (info: PickingInfo): void => {
-    applyHoverCursor(map, Boolean(info.object) || Boolean(isOverNative?.()));
+    applyHoverCursor(
+      map,
+      Boolean(info.object) || Boolean(info.x != null && isOverNative?.(info.x, info.y))
+    );
   };
   const overlay = useControl<MapboxOverlay>(
     () =>
@@ -59,6 +62,18 @@ export function DeckGLOverlay({
         onHover: handleHover,
       })
   );
-  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip, onHover: handleHover });
+  // A native feature under the pointer wins over a deck.gl arc beneath it: both
+  // clicks would otherwise fire and fight over the card and the camera.
+  const handleClick = (info: PickingInfo): void => {
+    if (info.x != null && isOverNative?.(info.x, info.y)) return;
+    onClick(info);
+  };
+  overlay.setProps({
+    layers,
+    pickingRadius: 8,
+    onClick: handleClick,
+    getTooltip,
+    onHover: handleHover,
+  });
   return null;
 }

@@ -3,6 +3,7 @@ import { midnightOf } from "../range";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { providerIs } from "../../locationProvider/provider";
 import { loadEverydaySummary, type EverydaySummary } from "./load";
+import { readSafeTravTrack, type SafeCursor } from "../readSafe";
 import type { MotionClass } from "./plausible";
 
 /**
@@ -54,13 +55,34 @@ export async function travTrackYearStats(
   return summary ? everydayView(summary) : null;
 }
 
+const EXISTENCE_PAGE = 500;
+const EXISTENCE_PAGES = 8;
+
+/** Whether the window holds any privacy-safe fix; reads at most a few small pages. */
+async function hasSafeFix(
+  userId: string,
+  window: { fromMs: number; untilMs: number }
+): Promise<boolean> {
+  let cursor: SafeCursor | null = null;
+  for (let page = 0; page < EXISTENCE_PAGES; page++) {
+    const read = await readSafeTravTrack(userId, window, EXISTENCE_PAGE, cursor);
+    if (read.segments.some((stretch) => stretch.length > 0)) return true;
+    if (!read.next || !read.cursor) return false;
+    cursor = read.cursor;
+  }
+  // Many pages of points, all inside privacy zones: not worth a year in the picker.
+  return false;
+}
+
 /**
  * The calendar years (profile zone) in which this account has privacy-safe
  * TravTrack figures, ascending — so an account that only records, with no
  * logbook entry in a year, still gets that year in its review (forgejo#400).
- * Candidates come from the stored points' years; each is then confirmed by
- * `travTrackYearStats`, because a year whose every fix lies in a privacy zone
- * has nothing to show. `skip` are years the caller already has.
+ * Candidates come from the stored points' years; each is then confirmed by a
+ * bounded existence check over the privacy-safe read (`hasSafeFix`), because a
+ * year whose every fix lies in a privacy zone has nothing to show — and the
+ * full figures are not worth computing for every year on every request.
+ * `skip` are years the caller already has.
  */
 export async function travTrackYears(
   userId: string,
@@ -74,7 +96,7 @@ export async function travTrackYears(
   const out: number[] = [];
   for (const { y } of rows.sort((a, b) => a.y - b.y)) {
     if (skip.has(y)) continue;
-    if (await travTrackYearStats(userId, y)) out.push(y);
+    if (await hasSafeFix(userId, await yearWindow(userId, y))) out.push(y);
   }
   return out;
 }

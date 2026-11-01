@@ -33,10 +33,12 @@ export function useTripMapNative(opts: {
   layers: readonly Layer[];
   markerTooltip: ReturnType<typeof createMarkerTooltip>;
   onClick: (info: PickingInfo) => void;
-}): { isOverNative: () => boolean; tooltipRef: RefObject<HoverTooltipApi | null> } {
+}): {
+  isOverNative: (x: number, y: number) => boolean;
+  tooltipRef: RefObject<HoverTooltipApi | null>;
+} {
   const { mapRef, mapReady, layers, markerTooltip, onClick } = opts;
   const tooltipRef = useRef<HoverTooltipApi | null>(null);
-  const over = useRef(false);
 
   const clickable = useMemo(
     () =>
@@ -95,13 +97,12 @@ export function useTripMapNative(opts: {
   );
   const onOverChange = useCallback(
     (now: boolean): void => {
-      over.current = now;
       applyHoverCursor(mapRef.current?.getMap(), now);
     },
     [mapRef]
   );
 
-  useNativeGlobe({
+  const native = useNativeGlobe({
     mapRef,
     mapReady,
     input,
@@ -110,5 +111,5 @@ export function useTripMapNative(opts: {
     setPinned: noop,
     onOverChange,
   });
-  return { isOverNative: () => over.current, tooltipRef };
+  return { isOverNative: native.isOverNative, tooltipRef };
 }
