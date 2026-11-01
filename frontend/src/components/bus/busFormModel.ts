@@ -5,6 +5,7 @@ import type { BusJourney, BusJourneyInput, BusRideKind } from "../../types/bus";
 import { toStationWallClock } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { classifyWallClock, storedFold, type TimeValue } from "../../shared/time";
+import { dayPart } from "../legs/legTimes";
 import { EMPTY_TERMINAL, type BusStationDraft } from "./BusStationField";
 
 /**
@@ -228,15 +229,7 @@ function terminalInput(station: BusStationDraft): BusJourneyInput["departureStat
   };
 }
 
-/**
- * `YYYY-MM-DD` of a typed time, the part a "date only" end keeps. Named
- * `dayPart` because `lib/tripForDate.ts` already has a `dayOf` that means
- * something else.
- */
-export const dayPart = (local: string): string => local.slice(0, 10);
-/** A day carries no clock; a `datetime-local` input needs one, so it gets midnight to show. */
-export const withClock = (local: string): string =>
-  local.length === 10 ? `${local}T00:00` : local;
+export { dayPart, withClock } from "../legs/legTimes";
 
 /**
  * True when the ride, as drafted, has an end without a clock — a delay is then

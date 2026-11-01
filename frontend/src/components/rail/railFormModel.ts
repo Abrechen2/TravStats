@@ -1,4 +1,5 @@
 import { parseDecimalInput } from "../../lib/decimalInput";
+import { dayPart } from "../legs/legTimes";
 import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type {
   RailGeometryReport,
@@ -65,12 +66,7 @@ export interface RailFormDraft {
   lookup: RailJourneyInput["lookup"];
 }
 
-/** `YYYY-MM-DD` of a typed time, the part a "date only" ride keeps. */
-export const dayPart = (local: string): string => local.slice(0, 10);
-
-/** A day given a clock, so a `datetime-local` input can show it; a clock stays as it is. */
-export const withClock = (local: string): string =>
-  local.length === 10 ? `${local}T00:00` : local;
+export { dayPart, withClock } from "../legs/legTimes";
 
 /** The station's own wall clock, or only its day for a ride stored without a time. */
 function wallClockFor(value: TimeValue | null, dayOnly: boolean): string {
