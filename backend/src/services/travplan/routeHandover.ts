@@ -55,6 +55,10 @@ export const stopFingerprint = (s: {
   endDate: Date | null;
   lodgingStayId: string | null;
   overnight: boolean;
+  notes?: string | null;
+  viaPoint?: boolean;
+  placeId?: string | null;
+  countryVisitKind?: string | null;
 }) =>
   [
     s.title,
@@ -64,6 +68,10 @@ export const stopFingerprint = (s: {
     dayOf(s.endDate),
     s.lodgingStayId ?? "",
     s.overnight,
+    s.notes ?? "",
+    s.viaPoint ?? false,
+    s.placeId ?? "",
+    s.countryVisitKind ?? "",
   ].join("|");
 
 export interface HandoverOutcome {
@@ -309,8 +317,9 @@ export async function handoverStation(
         dayOf(r.startDate) === arrive &&
         haversineKm({ lat: r.lat, lon: r.lon }, station.place) <= SAME_STOP_KM)
   );
-  const ours: Station = {
-    ...(adopted ? { id: adopted.id } : {}),
+  // A stop the phone recorded is the user's own word: the plan fills what it lacks and never
+  // overwrites a name, position, date, note or night the phone wrote.
+  const base: Station = {
     title: station.title,
     lat: station.place.lat,
     lon: station.place.lon,
@@ -319,6 +328,20 @@ export async function handoverStation(
     notes: station.note || null,
     night,
   };
+  const phone = adopted ? asStation(adopted) : null;
+  const ours: Station = phone
+    ? {
+        ...base,
+        id: phone.id,
+        title: phone.title || base.title,
+        lat: phone.lat,
+        lon: phone.lon,
+        startDate: phone.startDate ?? base.startDate,
+        endDate: phone.endDate ?? base.endDate,
+        notes: phone.notes ?? base.notes,
+        night: stay ? night : phone.night,
+      }
+    : base;
   const list = rows.map(asStation);
   const at = adopted ? rows.findIndex((r) => r.id === adopted.id) : -1;
   if (at >= 0) list[at] = ours;
@@ -342,6 +365,10 @@ export async function handoverStation(
         endDate: stop.endDate,
         lodgingStayId: stop.lodgingStayId,
         overnight: stop.overnight,
+        notes: ours.notes ?? null,
+        viaPoint: false,
+        placeId: null,
+        countryVisitKind: "visit",
       }),
     });
   if (stay) created.push(stay.stay, ...(stay.lodging ? [stay.lodging] : []));
@@ -360,14 +387,17 @@ async function writeFerry(
   tripId: string,
   state: PlanState,
   station: PlanStation,
-  legs: { id: string; toStopId: string }[],
+  legs: { id: string; toStopId: string; fromStopId: string }[],
   stopId: string
 ): Promise<Created | null> {
   const stage = state.stages.find((g) => g.toStationId === station.id && g.mode === "ferry");
   const booking = stage && state.bookings.find((b) => b.id === stage.bookingId);
   const from = stage && state.stations.find((s) => s.id === stage.fromStationId);
   if (!stage || !booking || booking.placeholder || !from) return null;
-  const leg = legs.find((l) => l.toStopId === stopId);
+  // Only the leg that really joins the stage's two stations is the crossing; handing stations
+  // over out of order must not turn some other drive into a ferry.
+  const fromStop = state.stationLinks.find((l) => l.stationId === stage.fromStationId)?.tripStopId;
+  const leg = legs.find((l) => l.toStopId === stopId && l.fromStopId === fromStop);
   const prior = await prisma.ferryJourney.findFirst({
     where: { userId, externalRef: "travplan:" + stage.id },
     select: { id: true, updatedAt: true },

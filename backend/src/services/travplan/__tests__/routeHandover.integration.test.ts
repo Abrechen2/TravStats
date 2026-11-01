@@ -296,7 +296,7 @@ describe("route plan handover (spec 5.9, C1)", () => {
       where: { routeId },
       orderBy: { routeOrderIdx: "asc" },
     });
-    expect(stops.map((s) => s.title)).toEqual(["Kiel", "Gothenburg", "Phone only"]);
+    expect(stops.map((s) => s.title)).toEqual(["Kiel", "Tonight here", "Phone only"]);
     expect(stops[1].id).toBe(phoneHere.id);
     expect(stops[2].id).toBe(phoneLater.id);
   });
@@ -333,5 +333,44 @@ describe("route plan handover (spec 5.9, C1)", () => {
     const undo = await plan.undo(a.body.lastMutationId);
     expect(undo.status).toBe(409);
     expect(await prisma.tripStop.count({ where: { route: { tripId: plan.tripId } } })).toBe(1);
+  });
+
+  it("keeps the notes and name the phone wrote on a stop the plan adopts", async () => {
+    const plan = await routePlan();
+    const first = await plan.handover(plan.ids.a);
+    const routeId = first.body.state.roadtripId as string;
+    const phone = await prisma.tripStop.create({
+      data: {
+        routeId,
+        routeOrderIdx: 1,
+        title: "Parkplatz am Hafen",
+        notes: "Strom am Pfosten 4",
+        lat: 57.7001,
+        lon: 11.9701,
+        startDate: new Date(dayPlus(-3) + "T00:00:00Z"),
+        overnight: true,
+        domain: "roadtrip",
+      },
+    });
+    const b = await plan.handover(plan.ids.b);
+    expect(b.status).toBe(200);
+    const stop = await prisma.tripStop.findUniqueOrThrow({ where: { id: phone.id } });
+    expect(stop).toMatchObject({ title: "Parkplatz am Hafen", notes: "Strom am Pfosten 4" });
+  });
+
+  it("does not withdraw a stop whose note the user wrote after the handover", async () => {
+    const plan = await routePlan();
+    const a = await plan.handover(plan.ids.a);
+    const link = a.body.state.stationLinks[0];
+    await prisma.tripStop.update({
+      where: { id: link.tripStopId },
+      data: { notes: "Mein Eintrag" },
+    });
+    const out = await plan.withdraw(plan.ids.a);
+    expect(out.status).toBe(200);
+    expect(await prisma.tripStop.count({ where: { id: link.tripStopId } })).toBe(1);
+    expect(out.body.state.stationLinks[0].created.map((c: { kind: string }) => c.kind)).toContain(
+      "stop"
+    );
   });
 });
