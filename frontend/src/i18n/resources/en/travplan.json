@@ -148,7 +148,9 @@
     "PLAN_STATION_FUTURE": "This station has not been reached yet. It can be taken over once the day has come.",
     "PLAN_STATION_HANDED_OVER": "This station is already in the logbook.",
     "PLAN_STATION_UNDATED": "No day is known for this station yet. Enter the duration or departure of the stage before it.",
-    "PLACE_SOURCE_FAILED": "This source did not answer."
+    "PLACE_SOURCE_FAILED": "This source did not answer.",
+    "PLAN_WEATHER_DISABLED": "Open data services are switched off on this server. Climate averages need the admin to allow them.",
+    "PLAN_WEATHER_NO_DATA": "There are no measurements for this place and season."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",

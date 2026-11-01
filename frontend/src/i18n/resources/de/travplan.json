@@ -148,7 +148,9 @@
     "PLAN_STATION_FUTURE": "Diese Station ist noch nicht erreicht. Übernehmen kannst du sie erst, wenn der Tag da ist.",
     "PLAN_STATION_HANDED_OVER": "Diese Station ist schon im Logbuch.",
     "PLAN_STATION_UNDATED": "Für diese Station ist noch kein Tag bekannt. Trage Dauer oder Abfahrt der Etappe davor ein.",
-    "PLACE_SOURCE_FAILED": "Diese Quelle hat nicht geantwortet."
+    "PLACE_SOURCE_FAILED": "Diese Quelle hat nicht geantwortet.",
+    "PLAN_WEATHER_DISABLED": "Offene Datendienste sind auf diesem Server ausgeschaltet. Klimamittel gibt es erst, wenn der Admin sie freigibt.",
+    "PLAN_WEATHER_NO_DATA": "Für diesen Ort und diese Jahreszeit liegen keine Messwerte vor."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",

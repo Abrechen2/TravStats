@@ -230,6 +230,15 @@ register(
   z.object({ clientRef: uuid, baseRevision: z.number().int() })
 );
 register(
+  "post",
+  "/trips/{tripId}/plan/stations/{stationId}/climate",
+  "Average the last ten years of measured weather for one route station's own days. Needs the " +
+    "open-data switch; a provider failure (error `extra.reason`: timeout, rateLimited, " +
+    "unavailable) or a missing measurement leaves the stored values unchanged.",
+  result,
+  z.object({ clientRef: uuid, baseRevision: z.number().int() })
+);
+register(
   "get",
   "/trips/{tripId}/plan/packing-suggestions",
   "Optional evidence-based packing hints; no list is changed.",
