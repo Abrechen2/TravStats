@@ -2,7 +2,7 @@
 // `flightEnrichmentService.ts` (forgejo#386, REF-16) so the service stays under
 // the 800-line limit; the logic is unchanged.
 
-import { Flight, Prisma } from "../prisma";
+import type { Flight, Prisma } from "../prisma";
 import { calculateDistance } from "../utils/geo";
 import type { AggregatedFlightData, RouteAnomaly, RouteWaypoint } from "./flightEnrichmentService";
 

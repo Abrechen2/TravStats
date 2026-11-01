@@ -5,7 +5,7 @@
  * live-tracked flights with the same flight number.
  */
 
-import { PrismaClient, Flight, Prisma } from "../prisma";
+import { PrismaClient, Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import * as candidateQuery from "./flightEnrichmentCandidateQuery";
