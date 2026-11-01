@@ -86,7 +86,6 @@ export default function CatalogueReseed(): JSX.Element {
       if (timer.current) clearTimeout(timer.current);
     };
     // Mount-only: `t` has a fresh identity per render in tests and would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reseedAirports = async (): Promise<void> => {
