@@ -13,8 +13,7 @@ import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { calculateDistance } from "../../utils/geo";
-import { getCachedAirports } from "../airportCache";
-import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
+import { type FlightTimeSemantics } from "../../utils/timezone";
 import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import {
   addFlightDuration,
@@ -22,7 +21,8 @@ import {
   emptyDurationTotals,
   resolveFlightDuration,
 } from "../../shared/flightDuration";
-import { FLIGHT_CLOCK_SELECT, flightEndZone, withDepartureClock } from "./departureClock";
+import { FLIGHT_CLOCK_SELECT, buildTzMap, flightEndZone } from "./departureClock";
+import { flightIdsInLocalPeriod } from "./departureLocalDay";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mergeAirlineCounts } from "../../utils/airlineNormalize";
 import { computeDedupedTotalCost } from "../../utils/stats/dedupedCost";
@@ -107,8 +107,6 @@ export interface SummaryComputation {
   rows: SummaryFlightRow[];
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /**
  * The ids of the flights that DEPARTED in `year`, read on the departure
  * airport's clock.
@@ -134,32 +132,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * post-filtered in JS without giving up the aggregation.
  */
 async function flightIdsDepartingInLocalYear(userId: string, year: number): Promise<string[]> {
-  const from = new Date(Date.UTC(year, 0, 1));
-  const to = new Date(Date.UTC(year + 1, 0, 1));
-
-  const rows = await prisma.flight.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(from.getTime() - DAY_MS),
-        lt: new Date(to.getTime() + DAY_MS),
-      },
-    },
-    select: {
-      id: true,
-      ...FLIGHT_CLOCK_SELECT,
-      departureTime: true,
-    },
-  });
-
-  const withClock = await withDepartureClock(rows);
-  return withClock
-    .filter(
-      (f) =>
-        f.departureTime !== null &&
-        localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year === year
-    )
-    .map((f) => f.id);
+  return flightIdsInLocalPeriod({ userId }, { year });
 }
 
 export async function buildWhere(
@@ -220,7 +193,7 @@ export async function computeSummary(
   // booked is reported as `plannedFlights` instead of being folded in.
   const geoWhere: Prisma.FlightWhereInput = { ...where, ...countableFlightWhere() };
 
-  const [identityRows, totalFlights, plannedFlights, statusCounts, airlineCounts, categoryCounts] =
+  const [identityRows, plannedFlights, statusCounts, airlineCounts, categoryCounts] =
     await Promise.all([
       // ONE query for the countable population, carrying `id` plus every
       // column both the geo/duration fold AND the cost fold need. This used
@@ -256,7 +229,6 @@ export async function computeSummary(
           },
         },
       }),
-      prisma.flight.count({ where: geoWhere }),
       prisma.flight.count({ where: { ...where, status: "scheduled" } }),
       prisma.flight.groupBy({
         by: ["status"],
@@ -286,23 +258,7 @@ export async function computeSummary(
   const distanceByFlightId = new Map<string, number>();
   const durationByFlightId = new Map<string, number | null>();
 
-  // Build timezone map for all airports referenced in flown flights
-  const allCodes = new Set<string>();
-  for (const f of identityRows) {
-    if (f.depIata) allCodes.add(f.depIata);
-    if (f.depIcao) allCodes.add(f.depIcao);
-    if (f.arrIata) allCodes.add(f.arrIata);
-    if (f.arrIcao) allCodes.add(f.arrIcao);
-  }
-  let tzMap = new Map<string, string>();
-  try {
-    const airports = await getCachedAirports(Array.from(allCodes));
-    for (const [code, data] of airports.entries()) {
-      if (data?.timezone) tzMap.set(code, data.timezone);
-    }
-  } catch {
-    // timezone lookup failed — durations will use naïve diff
-  }
+  const tzMap = await buildTzMap(identityRows);
 
   identityRows.forEach((flight) => {
     const distance = calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
@@ -388,7 +344,7 @@ export async function computeSummary(
   const cost = computeDedupedTotalCost(identityRows, baseCurrency);
 
   const stats: SummaryStats = {
-    totalFlights,
+    totalFlights: identityRows.length,
     plannedFlights,
     totalDistance: Math.round(totalDistance),
     totalFlightTime: Math.round(durationTotals.totalMinutes),

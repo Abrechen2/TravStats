@@ -52,7 +52,6 @@
     "flights/bulkEdit.ts",
     "flights/create.ts",
     "flights/createLinks.ts",
-    "flights/departureLocalDay.ts",
     "flights/entrySuggestions.ts",
     "flights/facets.ts",
     "flights/list.ts",

@@ -32,7 +32,7 @@ import { StayEditor } from "../components/lodging/StayEditor";
 import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
 import { LodgingStaysView } from "../components/lodging/LodgingStaysView";
 import { LodgingViewToggle, type LodgingView } from "../components/lodging/LodgingViewToggle";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";

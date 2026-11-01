@@ -14,7 +14,7 @@ import { useToastStore } from "../../../store/toastStore";
 import type { Flight, FlightInput, GeoJSONFeature } from "../../../types";
 import type { FlightMode } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
-import ConfirmModal from "../../Training/ConfirmModal";
+import ConfirmModal from "../../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
 import { flightDeleteMessage } from "../../../lib/flights/flightDeleteMessage";
 import { useDocumentCount } from "../../../hooks/useDocumentCount";

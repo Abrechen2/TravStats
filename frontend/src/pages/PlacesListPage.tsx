@@ -21,7 +21,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { placeDeleteMessage } from "../lib/placeDeleteMessage";
 import { usePlaceRelations } from "../hooks/usePlaceRelations";

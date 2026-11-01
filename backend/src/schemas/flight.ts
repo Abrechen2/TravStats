@@ -588,7 +588,7 @@ export const flightQuerySchema = z.object({
    * axis, not a question about a calendar. These two are the question the
    * filter bar asks, so they are answered on the calendar the reader sees.
    *
-   * Not a `where` clause — `routes/flights/departureLocalDay.ts` says why.
+   * Not a `where` clause — `services/stats/departureLocalDay.ts` says why.
    */
   year: z.coerce.number().int().min(1900).max(2999).optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),

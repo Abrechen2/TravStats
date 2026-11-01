@@ -8,7 +8,7 @@ import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
 import { statusPillStyle } from "../components/table/statusPillStyle";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { PlaceVisitList } from "../components/places/PlaceVisitList";

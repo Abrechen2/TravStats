@@ -17,7 +17,7 @@ import { useServerPagination } from "../components/table/useServerPagination";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { railSummaryFigures } from "../lib/rail/railSummaryFigures";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import {
   RailTableRow,

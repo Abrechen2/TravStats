@@ -26,7 +26,7 @@ import FlightEditModal from "../components/FlightEditModal";
 import FlightRowActions from "../components/FlightRowActions";
 import { buildDuplicateInput } from "../lib/flightDuplicate";
 import type { SpecialTypeFilter } from "../components/specialFlights/specialTypeMeta";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
 import { getFlightDuration } from "../lib/flightDuration";
 import { formatDurationWithEstimate } from "../lib/formatters";

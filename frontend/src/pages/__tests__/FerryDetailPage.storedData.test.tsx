@@ -16,7 +16,7 @@ vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => n
 vi.mock("../../components/ferry/FerryLivePosition", () => ({ FerryLivePosition: () => null }));
 vi.mock("../../components/ferry/FerryRoadtripLink", () => ({ FerryRoadtripLink: () => null }));
 vi.mock("../../components/ferry/FerryFormModal", () => ({ FerryFormModal: () => null }));
-vi.mock("../../components/Training/ConfirmModal", () => ({ default: () => null }));
+vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));
 vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => null }));
 vi.mock("../../hooks/useToursVisible", () => ({ useToursVisible: () => false }));
 vi.mock("../../components/ferry/FerryRouteMap", () => ({

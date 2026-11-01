@@ -9,7 +9,7 @@ import DetailHeader from "../components/ui/DetailHeader";
 import EmptyState from "../components/ui/EmptyState";
 import { statusPillProps } from "../components/table/statusPillStyle";
 import { Icon } from "../components/ui/Icon";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import html2canvas from "html2canvas";
 import { PAPER } from "../lib/paperPalette";
 import { formatInProfileZone } from "../lib/profileInstant";
 import { useTranslation } from "../hooks/useTranslation";
@@ -85,6 +84,7 @@ export function FlightCertificate({
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
+      const { default: html2canvas } = await import("html2canvas"); // lazy: ~45 KB gz off /stats
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: PARCHMENT,
         scale: 2,

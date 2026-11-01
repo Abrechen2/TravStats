@@ -1,4 +1,4 @@
-import { TripsLayer } from "deck.gl";
+import { TripsLayer } from "@deck.gl/geo-layers";
 import { IconLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../../types";

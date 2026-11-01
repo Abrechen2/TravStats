@@ -60,7 +60,7 @@ vi.mock("../../components/import/DomainImportPanel", () => ({
 vi.mock("../../components/import/adapters/cruiseAdapter", () => ({
   useCruiseImportAdapter: () => ({}),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({ default: () => null }));
+vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));
 vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
 
 const listPage = vi.fn();

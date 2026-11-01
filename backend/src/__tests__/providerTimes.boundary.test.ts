@@ -22,8 +22,6 @@ const tz = require("./src/utils/timezone");
     aviationstack: await tz.convertAviationstackTimeToUtc("2026-04-14 14:35", "FRA"),
     airlabsLocal: await tz.convertAirlabsTimeToUtc("2026-11-01 01:30", "JFK"),
     airlabsOffset: await tz.convertAirlabsTimeToUtc("2026-04-14T14:35:00+02:00", null),
-    localToUtc: await tz.convertLocalTimeToUtc("2026-04-14T14:35:00", "FRA"),
-    utcToLocal: await tz.convertUtcToLocalTime("2026-04-14T12:35:00Z", "FRA"),
     airlabsNoPlace: await tz.convertAirlabsTimeToUtc("2026-04-14 14:35", null).catch((e) => e.code),
   };
   process.stdout.write(JSON.stringify(out) + "\\n");
@@ -52,7 +50,6 @@ describe.each(["Pacific/Kiritimati", "America/St_Johns"])(
     it("reads an Aviationstack wall clock in the airport's zone", () => {
       // 14:35 in Frankfurt in April is CEST, +02:00.
       expect(out.aviationstack).toBe("2026-04-14T12:35:00.000Z");
-      expect(out.localToUtc).toBe("2026-04-14T12:35:00.000Z");
     });
 
     it("takes the earlier occurrence of a repeated hour (Q5)", () => {
@@ -62,10 +59,6 @@ describe.each(["Pacific/Kiritimati", "America/St_Johns"])(
 
     it("keeps an offset the provider sent", () => {
       expect(out.airlabsOffset).toBe("2026-04-14T12:35:00.000Z");
-    });
-
-    it("writes the airport's wall clock, not the host's", () => {
-      expect(out.utcToLocal).toBe("2026-04-14T14:35:00.000Z");
     });
 
     it("refuses an offset-less time with no airport instead of reading it on the host clock", () => {

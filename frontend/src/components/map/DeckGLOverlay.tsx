@@ -11,7 +11,7 @@
 // deck.gl 9.4's own `@deck.gl/maplibre` yet, and when to delete it.
 
 import { useControl, useMap } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import { MapboxOverlay, type MapboxOverlayProps } from "@deck.gl/mapbox";
 import type { Layer, LightingEffect, PickingInfo } from "@deck.gl/core";
 import { applyHoverCursor } from "./mapCursor";
 import type { createMarkerTooltip } from "./markerTooltip";
@@ -23,7 +23,8 @@ export { webgl2Available } from "../../lib/webgl2";
 
 interface DeckOverlayProps {
   layers: Layer[];
-  effects: LightingEffect[];
+  /** Left out, deck.gl keeps its defaults (the route maps pass none). */
+  effects?: LightingEffect[];
   /**
    * deck.gl's built-in tooltip. Optional since the owner's 2026-09-20 ruling:
    * the flat map draws the shared `HoverTooltip` from its own `onHover`
@@ -31,8 +32,9 @@ interface DeckOverlayProps {
    * and never matched the card beside it. The surfaces that still pass one
    * (`CruiseRouteMap`, `TripMap`) keep working unchanged.
    */
-  getTooltip?: ReturnType<typeof createMarkerTooltip>;
-  onHover: (info: PickingInfo) => void;
+  getTooltip?: ReturnType<typeof createMarkerTooltip> | MapboxOverlayProps["getTooltip"];
+  /** Also drives the pointer cursor; the layers-only route maps pass none. */
+  onHover?: (info: PickingInfo) => void;
   /**
    * Any click deck.gl picked an object for, after the layer's own `onClick`.
    * The flat map uses it to tell its background-click handler that a layer
@@ -54,32 +56,28 @@ export function DeckGLOverlay({
   // `getCursor` cannot do it here — MapboxOverlay mounts the deck canvas with
   // `pointerEvents: 'none'` and never reads that prop, so the visible cursor
   // belongs to the MapLibre canvas underneath.
-  const hoverWithCursor = (info: PickingInfo): void => {
-    applyHoverCursor(map, Boolean(info.object));
-    onHover(info);
+  const hoverWithCursor = onHover
+    ? (info: PickingInfo): void => {
+        applyHoverCursor(map, Boolean(info.object));
+        onHover(info);
+      }
+    : undefined;
+  // Only the props the caller gave: an explicit `undefined` would overwrite a
+  // deck.gl default that a layers-only overlay never touched.
+  const overlayProps = {
+    layers,
+    pickingRadius: 5,
+    ...(effects ? { effects } : {}),
+    ...(getTooltip ? { getTooltip } : {}),
+    ...(hoverWithCursor ? { onHover: hoverWithCursor } : {}),
+    ...(onClick ? { onClick } : {}),
   };
-  const overlay = useControl<MapboxOverlay>(
-    () =>
-      new MapboxOverlay({
-        layers,
-        effects,
-        pickingRadius: 5,
-        getTooltip,
-        onHover: hoverWithCursor,
-        onClick,
-      }),
-    { position: "top-left" }
-  );
-  // Push getTooltip on every render too so language switches propagate
+  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay(overlayProps), {
+    position: "top-left",
+  });
+  // Push the props on every render too so language switches propagate
   // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
   // rides along for the same reason.
-  overlay.setProps({
-    layers,
-    effects,
-    pickingRadius: 5,
-    getTooltip,
-    onHover: hoverWithCursor,
-    onClick,
-  });
+  overlay.setProps(overlayProps);
   return null;
 }

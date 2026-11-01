@@ -4,17 +4,12 @@ import { guardServiceTest } from "../../services/externalServices/guards";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
+import { testOpenSkyCredentials } from "../../services/apiKeyTester";
 import {
-  testAirlabsKey,
-  testAviationstackKey,
-  testAerodataboxKey,
-  testOpenSkyCredentials,
-  testOpenRouteServiceKey,
-  testGraphHopperKey,
-} from "../../services/apiKeyTester";
-import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
-import { testAdsbLolKey, testAdsbxKey } from "../../services/apiKeyTesterAdsbx";
-import { getApiKey, getOpenSkyCredentials } from "../../services/apiKeyResolver";
+  FLIGHT_AND_ROUTING_KEY_PROVIDERS,
+  mountKeyTestRoutes,
+} from "../../services/apiKeyTestRoutes";
+import { getApiKey, getOpenSkyCredentials, type ApiProvider } from "../../services/apiKeyResolver";
 import { getAllProviderQuotas } from "../../services/apiQuota";
 import logger from "../../utils/logger";
 import {
@@ -45,10 +40,6 @@ const apiKeysSchema = z
     graphhopperApiKey: z.string().optional().nullable(),
   })
   .partial();
-
-const testApiKeySchema = z.object({
-  apiKey: z.string().optional(),
-});
 
 const testOpenSkySchema = z.object({
   clientId: z.string().optional(),
@@ -381,196 +372,13 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
   }
 });
 
-// POST /test/airlabs
-router.post(
-  "/test/airlabs",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("airlabs", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res
-          .status(400)
-          .json({ success: false, message: "No AirLabs key configured to test. Save one first." });
-        return;
-      }
-      const result = await testAirlabsKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/aviationstack
-router.post(
-  "/test/aviationstack",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("aviationstack", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No Aviationstack key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testAviationstackKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/aerodatabox
-router.post(
-  "/test/aerodatabox",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("aerodatabox", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No AeroDataBox key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testAerodataboxKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/aeroapi
-router.post(
-  "/test/aeroapi",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("aeroapi", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No AeroAPI key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testAeroapiKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/adsbx
-router.post(
-  "/test/adsbx",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("adsbx", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No ADS-B Exchange key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testAdsbxKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/adsblol
-router.post(
-  "/test/adsblol",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("adsblol", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No adsb.lol key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testAdsbLolKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/openrouteservice
-router.post(
-  "/test/openrouteservice",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("openrouteservice", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No OpenRouteService key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testOpenRouteServiceKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// POST /test/graphhopper
-router.post(
-  "/test/graphhopper",
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await getApiKey("graphhopper", req.userId!)) ?? "")
-        : apiKey!;
-      if (!effective) {
-        res.status(400).json({
-          success: false,
-          message: "No GraphHopper key configured to test. Save one first.",
-        });
-        return;
-      }
-      const result = await testGraphHopperKey(effective, req.userId!);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+// POST /test/<provider> — one handler per entry of the provider table.
+mountKeyTestRoutes(router, {
+  basePath: "",
+  providers: FLIGHT_AND_ROUTING_KEY_PROVIDERS,
+  resolveStored: (providerId, req) => getApiKey(providerId as ApiProvider, req.userId!),
+  passUserId: true,
+});
 
 // POST /test/opensky
 router.post(
@@ -589,6 +397,7 @@ router.post(
         res.status(400).json({
           success: false,
           message: "No OpenSky credentials configured to test. Save them first.",
+          messageKey: "notConfigured",
         });
         return;
       }

@@ -1,5 +1,5 @@
 import { useState, type JSX } from "react";
-import ConfirmModal from "../../Training/ConfirmModal";
+import ConfirmModal from "../../ui/ConfirmModal";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { JitterNote } from "../../tracks/JitterNote";

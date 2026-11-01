@@ -6,18 +6,12 @@ import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import logger from "../../utils/logger";
 import { encryptUnlessMasked, looksMasked, maskKey } from "../../utils/maskedKey";
+import { testOpenSkyCredentials } from "../../services/apiKeyTester";
 import {
-  testAirlabsKey,
-  testAviationstackKey,
-  testAerodataboxKey,
-  testLogostreamKey,
-  testGooglePlacesKey,
-  testOpenSkyCredentials,
-  testOpenRouteServiceKey,
-  testGraphHopperKey,
-} from "../../services/apiKeyTester";
-import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
-import { testAdsbLolKey, testAdsbxKey } from "../../services/apiKeyTesterAdsbx";
+  ADMIN_ONLY_KEY_PROVIDERS,
+  FLIGHT_AND_ROUTING_KEY_PROVIDERS,
+  mountKeyTestRoutes,
+} from "../../services/apiKeyTestRoutes";
 import { routingSettingsSchema } from "../../schemas/tour";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
@@ -88,10 +82,6 @@ const globalApiKeysSchema = z
   // deliberate no-egress-restriction note on the custom URL.
   .merge(routingSettingsSchema);
 
-const testApiKeySchema = z.object({
-  apiKey: z.string().optional(),
-});
-
 const testOpenSkySchema = z.object({
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
@@ -99,21 +89,21 @@ const testOpenSkySchema = z.object({
   password: z.string().optional(),
 });
 
-async function resolveAdminGlobalKey(
-  column:
-    | "globalAirlabsApiKey"
-    | "globalAviationstackApiKey"
-    | "globalAerodataboxApiKey"
-    | "globalAeroapiApiKey"
-    | "globalAdsbxApiKey"
-    | "globalAdsblolApiKey"
-    | "globalLogostreamApiKey"
-    | "globalGooglePlacesApiKey"
-    | "globalOpenskyClientId"
-    | "globalOpenskyClientSecret"
-    | "globalOpenrouteserviceApiKey"
-    | "globalGraphhopperApiKey"
-): Promise<string | null> {
+type AdminKeyColumn =
+  | "globalAirlabsApiKey"
+  | "globalAviationstackApiKey"
+  | "globalAerodataboxApiKey"
+  | "globalAeroapiApiKey"
+  | "globalAdsbxApiKey"
+  | "globalAdsblolApiKey"
+  | "globalLogostreamApiKey"
+  | "globalGooglePlacesApiKey"
+  | "globalOpenskyClientId"
+  | "globalOpenskyClientSecret"
+  | "globalOpenrouteserviceApiKey"
+  | "globalGraphhopperApiKey";
+
+async function resolveAdminGlobalKey(column: AdminKeyColumn): Promise<string | null> {
   const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return decryptApiKey((settings?.[column] as string | null) ?? null);
 }
@@ -357,233 +347,25 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
   }
 });
 
-// Test API key endpoints (admin)
-router.post(
-  "/api-keys/test/airlabs",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalAirlabsApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No AirLabs key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testAirlabsKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/aviationstack",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalAviationstackApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No Aviationstack key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testAviationstackKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/aerodatabox",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalAerodataboxApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No AeroDataBox key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testAerodataboxKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/aeroapi",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalAeroapiApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No AeroAPI key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testAeroapiKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post("/api-keys/test/adsbx", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const effective = looksMasked(apiKey)
-      ? ((await resolveAdminGlobalKey("globalAdsbxApiKey")) ?? "")
-      : apiKey!;
-    if (!effective) {
-      return res.status(400).json({
-        success: false,
-        message: "No ADS-B Exchange key configured to test. Save one first.",
-        messageKey: "notConfigured",
-      });
-    }
-    const result = await testAdsbxKey(effective);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
+// Test API key endpoints (admin): `POST /api-keys/test/<provider>`.
+const ADMIN_KEY_COLUMNS: Record<string, AdminKeyColumn> = {
+  airlabs: "globalAirlabsApiKey",
+  aviationstack: "globalAviationstackApiKey",
+  aerodatabox: "globalAerodataboxApiKey",
+  aeroapi: "globalAeroapiApiKey",
+  adsbx: "globalAdsbxApiKey",
+  adsblol: "globalAdsblolApiKey",
+  openrouteservice: "globalOpenrouteserviceApiKey",
+  graphhopper: "globalGraphhopperApiKey",
+  logostream: "globalLogostreamApiKey",
+  googlePlaces: "globalGooglePlacesApiKey",
+};
+mountKeyTestRoutes(router, {
+  basePath: "/api-keys",
+  providers: [...FLIGHT_AND_ROUTING_KEY_PROVIDERS, ...ADMIN_ONLY_KEY_PROVIDERS],
+  resolveStored: (providerId) => resolveAdminGlobalKey(ADMIN_KEY_COLUMNS[providerId]),
+  passUserId: false,
 });
-
-router.post(
-  "/api-keys/test/adsblol",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalAdsblolApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No adsb.lol key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testAdsbLolKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/logostream",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalLogostreamApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No logostream key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testLogostreamKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/googlePlaces",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalGooglePlacesApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No Google Places key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testGooglePlacesKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/openrouteservice",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalOpenrouteserviceApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No OpenRouteService key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testOpenRouteServiceKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-router.post(
-  "/api-keys/test/graphhopper",
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const { apiKey } = testApiKeySchema.parse(req.body);
-      const effective = looksMasked(apiKey)
-        ? ((await resolveAdminGlobalKey("globalGraphhopperApiKey")) ?? "")
-        : apiKey!;
-      if (!effective) {
-        return res.status(400).json({
-          success: false,
-          message: "No GraphHopper key configured to test. Save one first.",
-          messageKey: "notConfigured",
-        });
-      }
-      const result = await testGraphHopperKey(effective);
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 
 router.post(
   "/api-keys/test/opensky",

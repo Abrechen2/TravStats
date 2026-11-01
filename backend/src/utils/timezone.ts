@@ -12,7 +12,7 @@
 
 import { getCachedAirport } from "../services/airportCache";
 import { TzUnresolvedError } from "../shared/time/errors";
-import { localDay, toInstant, toLocal } from "../shared/time/instant";
+import { localDay, toInstant } from "../shared/time/instant";
 import { isValidZone, wallClockParts } from "../shared/time/zonedParts";
 import { isPlaceholderPrecision, placeholderDayOf } from "../shared/time/legacyValues";
 import logger from "./logger";
@@ -253,121 +253,6 @@ export async function getAirportTimezone(
       operation: "get_airport_timezone_error",
       message: "Failed to get airport timezone",
       context: { airportCode },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-    });
-    return null;
-  }
-}
-
-/** `YYYY-MM-DD[T ]HH:mm[:ss][.sss]` → `YYYY-MM-DDTHH:mm:ss`, or null when it is not one. */
-function parseProviderWallClock(value: string): string | null {
-  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?$/.exec(value.trim());
-  return match ? `${match[1]}T${match[2]}:${match[3] ?? "00"}` : null;
-}
-
-/**
- * Convert a local time string to UTC based on airport timezone
- * @param timeString Time string (ISO format or any format that Date can parse)
- * @param airportCode IATA or ICAO code of the airport
- * @returns UTC ISO string or null if conversion fails
- */
-export async function convertLocalTimeToUtc(
-  timeString: string | null | undefined,
-  airportCode: string | null | undefined
-): Promise<string | null> {
-  if (!timeString || !airportCode) {
-    return null;
-  }
-
-  try {
-    const timezone = await getAirportTimezone(airportCode);
-    if (!isValidZone(timezone)) {
-      // Refused, not read as UTC: an airport's local time read as UTC is off
-      // by its whole offset, and nothing downstream could tell.
-      throw new TzUnresolvedError(`airport ${airportCode} has no time zone`);
-    }
-
-    // Parse the time string as a local time in the airport's timezone
-    // If the time string already has timezone info, Date will use that
-    // Otherwise, we need to treat it as local time in the airport's timezone
-    let localDate: Date;
-
-    // Check if timeString already has timezone information
-    if (
-      timeString.includes("Z") ||
-      timeString.includes("+") ||
-      timeString.match(/[+-]\d{2}:\d{2}$/)
-    ) {
-      // Already has timezone info, parse directly
-      localDate = new Date(timeString);
-    } else {
-      // No offset: the reading is the airport's wall clock. Converted through
-      // shared/time — `new Date(dateStr)` read it in the HOST's zone first.
-      const wall = parseProviderWallClock(timeString);
-      if (!wall) {
-        logger.warn({
-          operation: "convert_local_time_parse_error",
-          message: "Failed to parse time string",
-          context: { timeString, airportCode, timezone },
-        });
-        return null;
-      }
-      localDate = toInstant(wall, timezone, { origin: "machine" }).utc;
-    }
-
-    return localDate.toISOString();
-  } catch (error) {
-    if (error instanceof TzUnresolvedError) throw error;
-    logger.error({
-      operation: "convert_local_time_to_utc_error",
-      message: "Failed to convert local time to UTC",
-      context: { timeString, airportCode },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    return null;
-  }
-}
-
-/**
- * Convert UTC time to local airport time
- * @param utcTimeString UTC time string (ISO format)
- * @param airportCode IATA or ICAO code of the airport
- * @returns Local time ISO string or null if conversion fails
- */
-export async function convertUtcToLocalTime(
-  utcTimeString: string | null | undefined,
-  airportCode: string | null | undefined
-): Promise<string | null> {
-  if (!utcTimeString || !airportCode) {
-    return null;
-  }
-
-  try {
-    const timezone = await getAirportTimezone(airportCode);
-    if (!timezone) {
-      return utcTimeString; // Return as-is if no timezone found
-    }
-
-    const utcDate = new Date(utcTimeString);
-    if (isNaN(utcDate.getTime())) {
-      return null;
-    }
-
-    // The airport's wall clock, written in the fake-UTC form this function
-    // always returned on a UTC host. `toZonedTime(...).toISOString()` shifted
-    // it by the HOST's offset on any other host.
-    if (!isValidZone(timezone)) return utcTimeString;
-    return `${toLocal(utcDate, timezone).local}.000Z`;
-  } catch (error) {
-    logger.error({
-      operation: "convert_utc_to_local_time_error",
-      message: "Failed to convert UTC to local time",
-      context: { utcTimeString, airportCode },
       error: {
         message: error instanceof Error ? error.message : "Unknown error",
       },

@@ -5,7 +5,7 @@ import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { Field, Input, Select, TextArea } from "../ui/Field";
 import CurrencySelect from "../common/CurrencySelect";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import DocumentsSection from "../documents/DocumentsSection";
 import {
   FormErrorBanner,

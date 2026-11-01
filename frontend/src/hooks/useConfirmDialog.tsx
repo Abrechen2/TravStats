@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { useTranslation } from "./useTranslation";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 

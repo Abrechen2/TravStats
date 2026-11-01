@@ -43,7 +43,7 @@ vi.mock("../../components/ferry/FerryFormModal", () => ({
     <div data-testid="ferry-form">{journey ? journey.id : "new"}</div>
   ),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: ({
     isOpen,
     message,

@@ -2,11 +2,11 @@ import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import { PathLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer } from "@deck.gl/core";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { allTrackLines, flightTrackBounds, flightTrackPieces } from "./flightTrackPaths";
@@ -14,14 +14,6 @@ import { flightTrackGreatCircle } from "./flightTrackGreatCircle";
 import type { AirportPosition } from "./flownVsGreatCircle";
 
 type Line = Array<[number, number]>;
-
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
-}
 
 /** A dashed line in `color` — the connectors across holes and the great circle. */
 function dashedLayer(

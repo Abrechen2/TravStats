@@ -9,7 +9,7 @@ import PeopleList from "../components/ui/PeopleList";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";

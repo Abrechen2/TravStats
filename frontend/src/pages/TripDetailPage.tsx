@@ -61,8 +61,8 @@ const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "
  *
  * - **Overview**: hero context (notes preview, latest items, side panels for
  *   companions / tags / countries).
- * - **Timeline**: chronological mix of flights and cruises rendered through
- *   `TripTimeline` (the multi-domain event list that was sitting unused).
+ * - **Timeline**: chronological mix of flights and cruises rendered as one
+ *   multi-domain event list.
  * - **Map**: placeholder. A trip-specific map comes once `TripStop`
  *   waypoints exist.
  * - **Gallery**: placeholder. Photos come once upload + storage are wired.

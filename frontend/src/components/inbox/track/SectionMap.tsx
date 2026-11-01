@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
+import { DeckGLOverlay } from "../../map/DeckGLOverlay";
 import { GeoJsonLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Feature, Geometry } from "geojson";
 import { useBasemapStyle } from "../../map/useBasemapStyle";
@@ -27,14 +27,6 @@ export interface SectionMapProps {
   label: string;
   ring?: { lat: number; lon: number; radiusM: number } | null;
   country?: Feature<Geometry> | null;
-}
-
-function Overlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
 }
 
 /** The section's layers: country under the line, ring under the markers, one path per stretch. */
@@ -137,7 +129,7 @@ export default function SectionMap(props: SectionMapProps): JSX.Element | null {
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setLoaded(true)}
       >
-        {loaded && <Overlay layers={layers} />}
+        {loaded && <DeckGLOverlay layers={layers} />}
       </MapGL>
     </div>
   );
