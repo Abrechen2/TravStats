@@ -621,7 +621,9 @@
       "noCoordinate": "Ein gewählter Halt hat keinen Ort. Gib ihm im Reiseverlauf erst einen Ort, dann lässt er sich zuordnen.",
       "inOtherSection": "Ein gewählter Halt gehört schon zu einem anderen Streckenabschnitt. Nimm ihn dort zuerst heraus.",
       "claimedMeanwhile": "Ein Halt wurde gerade von einer anderen Änderung einem Abschnitt zugeordnet. Nichts wurde gespeichert – versuche es noch einmal."
-    }
+    },
+    "searchPlaceholder": "Touren suchen …",
+    "searchEmpty": "Keine Tour passt zu „{{q}}“."
   },
   "head": {
     "days_one": "{{count}} Tag",

@@ -78,6 +78,29 @@ describe("the tours page", () => {
     expect(screen.getByText("Norwegen")).toBeInTheDocument();
   });
 
+  it("filters tours by name or trip, and says so when the filter empties the list (forgejo#403)", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([
+      tour(),
+      tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
+    ]);
+
+    renderPage();
+    const box = await screen.findByLabelText("trips:tours.searchPlaceholder");
+
+    fireEvent.change(box, { target: { value: "bessegg" } });
+    expect(screen.getByText("Besseggen")).toBeInTheDocument();
+    expect(screen.queryByText("Süd-Norwegen")).not.toBeInTheDocument();
+
+    // The trip's name matches too.
+    fireEvent.change(box, { target: { value: "norweg" } });
+    expect(screen.getByText("Süd-Norwegen")).toBeInTheDocument();
+
+    // An emptied list is "no match", never the "no tours yet" onboarding text.
+    fireEvent.change(box, { target: { value: "zzz" } });
+    expect(screen.getByText("trips:tours.searchEmpty")).toBeInTheDocument();
+    expect(screen.queryByText("trips:tours.pageEmpty")).not.toBeInTheDocument();
+  });
+
   it("links a standalone tour to the trip-less editor path", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([
       tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
