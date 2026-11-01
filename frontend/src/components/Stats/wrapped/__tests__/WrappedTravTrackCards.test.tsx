@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import type { WrappedTravTrack } from "../../../../types/wrapped";
 import WrappedTravTrackCards from "../WrappedTravTrackCards";
@@ -22,7 +23,11 @@ const base: WrappedTravTrack = {
 };
 
 const renderCards = (data: WrappedTravTrack): void => {
-  render(<WrappedTravTrackCards data={data} count={(n) => String(n)} />);
+  render(
+    <MemoryRouter>
+      <WrappedTravTrackCards data={data} count={(n) => String(n)} year={2026} />
+    </MemoryRouter>
+  );
 };
 
 describe("WrappedTravTrackCards", () => {
