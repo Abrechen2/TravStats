@@ -103,6 +103,12 @@ export default function CrossDomainSection(): JSX.Element | null {
     cards.push(
       <StatCard
         key="streak"
+        evidence={{
+          kind: "metric",
+          key: "crossDomainActiveDayCount",
+          scope: { period: "allTime" },
+          renderedValue: null,
+        }}
         title={t("stats:crossDomain.streak.title")}
         value={t("stats:crossDomain.streak.value", { count: run.days })}
         description={t("stats:crossDomain.streak.range", { from: run.from, to: run.to })}
@@ -120,6 +126,12 @@ export default function CrossDomainSection(): JSX.Element | null {
     cards.push(
       <StatCard
         key="months"
+        evidence={{
+          kind: "metric",
+          key: "crossDomainActiveDayCount",
+          scope: { period: "allTime" },
+          renderedValue: null,
+        }}
         title={t("stats:crossDomain.months.title")}
         value={t("stats:crossDomain.months.value", { count: run.months })}
         description={t("stats:crossDomain.months.range", { from: run.from, to: run.to })}
@@ -133,6 +145,12 @@ export default function CrossDomainSection(): JSX.Element | null {
     cards.push(
       <StatCard
         key="timeShift"
+        evidence={{
+          kind: "metric",
+          key: "flightCount",
+          scope: { period: "allTime" },
+          renderedValue: null,
+        }}
         title={t("stats:crossDomain.timeShift.title")}
         value={t("stats:crossDomain.timeShift.value", { hours: num(timeShift.hoursShifted, 1) })}
         description={
@@ -162,6 +180,12 @@ export default function CrossDomainSection(): JSX.Element | null {
     cards.push(
       <StatCard
         key="schengen"
+        evidence={{
+          kind: "metric",
+          key: "crossDomainActiveDayCount",
+          scope: { period: "allTime" },
+          renderedValue: null,
+        }}
         title={t("stats:crossDomain.schengen.title")}
         value={t("stats:crossDomain.schengen.value", {
           used: schengen.daysUsed,

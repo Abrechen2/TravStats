@@ -6,6 +6,7 @@ import type { CrossDomainStats } from "../../../../types/crossDomainStats";
 const { getCrossDomainStats } = vi.hoisted(() => ({ getCrossDomainStats: vi.fn() }));
 vi.mock("../../../../lib/api/stats", () => ({ statsApi: { getCrossDomainStats } }));
 
+import { MemoryRouter } from "react-router-dom";
 import CrossDomainSection from "../CrossDomainSection";
 
 const empty: CrossDomainStats = {
@@ -28,7 +29,11 @@ const empty: CrossDomainStats = {
 describe("CrossDomainSection", () => {
   it("draws nothing when every block abstains, instead of a wall of zeros", async () => {
     getCrossDomainStats.mockResolvedValueOnce(empty);
-    const { container } = render(<CrossDomainSection />);
+    const { container } = render(
+      <MemoryRouter>
+        <CrossDomainSection />
+      </MemoryRouter>
+    );
     await waitFor(() => expect(getCrossDomainStats).toHaveBeenCalled());
     await act(async () => {});
     expect(container.textContent).toBe("");
@@ -36,14 +41,22 @@ describe("CrossDomainSection", () => {
 
   it("names a block whose load failed rather than hiding it as empty", async () => {
     getCrossDomainStats.mockResolvedValueOnce({ ...empty, unavailable: ["schengen"] });
-    render(<CrossDomainSection />);
+    render(
+      <MemoryRouter>
+        <CrossDomainSection />
+      </MemoryRouter>
+    );
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.queryByText(/schengen\.value/)).toBeNull();
   });
 
   it("says so when the request itself fails", async () => {
     getCrossDomainStats.mockRejectedValueOnce(new Error("boom"));
-    render(<CrossDomainSection />);
+    render(
+      <MemoryRouter>
+        <CrossDomainSection />
+      </MemoryRouter>
+    );
     expect(await screen.findByRole("alert")).toBeTruthy();
   });
 
@@ -85,7 +98,11 @@ describe("CrossDomainSection", () => {
         ],
       },
     });
-    render(<CrossDomainSection />);
+    render(
+      <MemoryRouter>
+        <CrossDomainSection />
+      </MemoryRouter>
+    );
     expect(await screen.findByText(/schengen\.value/)).toBeTruthy();
     const card = screen.getByTestId("cross-domain-price-per-km");
     // One line per (domain, currency); the bus ride has a price and no distance,
