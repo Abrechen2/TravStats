@@ -45,6 +45,12 @@ export async function issueReauthOptions(userId: string) {
   return options;
 }
 
+/**
+ * A passkey must be this old before it may confirm a deletion: a thief with only
+ * a session cookie could otherwise register one and use it a minute later.
+ */
+export const MIN_PASSKEY_AGE_MS = 24 * 60 * 60 * 1000;
+
 /** Resolves when the assertion proves a passkey of `userId`; throws 403 otherwise. */
 export async function verifyReauthAssertion(
   userId: string,
@@ -64,6 +70,13 @@ export async function verifyReauthAssertion(
   if (!credentialId) return refuse();
   const stored = await prisma.webAuthnCredential.findUnique({ where: { credentialId } });
   if (!stored || stored.userId !== userId) return refuse();
+  if (Date.now() - stored.createdAt.getTime() < MIN_PASSKEY_AGE_MS) {
+    throw new AppError(
+      "This passkey is too new to confirm a deletion",
+      403,
+      "REAUTH_PASSKEY_TOO_NEW"
+    );
+  }
 
   let verification;
   try {

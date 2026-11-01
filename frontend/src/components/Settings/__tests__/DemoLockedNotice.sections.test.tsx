@@ -49,8 +49,8 @@ import UnitsSection from "../UnitsSection";
 // Each case's locked control: the button the section offers a normal
 // account, and which the demo account must never see.
 const CASES = [
-  ["ApiTokensSection", ApiTokensSection, "settings:apiTokens.create"],
-  ["PasskeySection", PasskeySection, "settings:passkeys.add"],
+  ["ApiTokensSection", ApiTokensSection, "settings:apiTokens.create", "settings:demoLocked"],
+  ["PasskeySection", PasskeySection, "settings:passkeys.add", "settings:blocks.lock.demo"],
 ] as const;
 
 // The server refuses these for the shared demo account (403
@@ -85,13 +85,13 @@ describe("settings sections on the demo account", () => {
 
   it.each(CASES)(
     "%s explains instead of offering the action",
-    async (_name, Section, controlName) => {
+    async (_name, Section, controlName, notice) => {
       render(
         <MemoryRouter>
           <Section />
         </MemoryRouter>
       );
-      expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
+      expect(await screen.findByText(notice)).toBeInTheDocument();
       // The notice and the control are mutually exclusive branches — a
       // regression rendering both would still pass on the assertion above
       // alone, so the control's absence is checked explicitly too.

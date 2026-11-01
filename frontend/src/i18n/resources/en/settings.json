@@ -1074,12 +1074,12 @@
     "manualHint": "If you cannot scan, enter this key by hand:",
     "codeLabel": "Code from the app",
     "activate": "Activate",
-    "wrongCode": "That code is not right.",
-    "setupFailed": "Setup could not be started.",
+    "wrongCode": "I expect a different code. Use the current one from the app.",
+    "setupFailed": "I couldn't start the setup.",
     "saveCodes": "Keep these recovery codes somewhere safe. They are shown this one time only and each works once.",
     "enabled": "Two-factor is on. {{count}} recovery codes left.",
     "tokenWarning": "Note: API tokens bypass the second factor. Anyone holding a token gets in without a code — revoke tokens you no longer need under \"API Tokens\".",
-    "regenerate": "New recovery codes",
+    "regenerate": "Regenerate",
     "confirmRegenerate": "Regenerate codes",
     "disable": "Disable two-factor",
     "confirmDisable": "Disable",
@@ -1090,14 +1090,23 @@
     "passwordSub": "For signing in with your username",
     "passwordChange": "Change",
     "twoFactorTitle": "Two-factor authentication",
-    "active": "Active"
+    "active": "Active",
+    "statusFailed": "I couldn't check whether the second step is on.",
+    "needsTwoFactor": "Needs two-step sign-in first.",
+    "regenerateDialog": {
+      "title": "New backup codes?",
+      "affects": "Your current backup codes",
+      "amount": "{{count}} unused codes",
+      "after": "They stop working. I'll show the new ones only once.",
+      "confirm": "Regenerate"
+    }
   },
   "scopeHint": "Applies to your account only.",
   "passkeys": {
     "title": "Passkeys",
     "description": "Sign in with a fingerprint, face, PIN or your password manager instead of a password. A passkey replaces both the password and the verification code, because the device already asks you to approve it.",
     "none": "No passkey registered yet.",
-    "add": "Add a passkey",
+    "add": "Add",
     "nameLabel": "Name for this passkey",
     "namePlaceholder": "e.g. Phone, Laptop, Bitwarden",
     "confirmAdd": "Create",
@@ -1105,10 +1114,18 @@
     "rpIdLabel": "Valid for",
     "lastUsed": "last used",
     "neverUsed": "never used",
-    "addFailed": "The passkey could not be created.",
-    "removeFailed": "The passkey could not be removed.",
-    "insecureOrigin": "Passkeys need HTTPS. Browsers refuse them on a plain LAN address — reached through the tunnel they work.",
-    "notConfigured": "An administrator has to set this instance's public address before passkeys can be used."
+    "addFailed": "I couldn't create the passkey.",
+    "removeFailed": "I couldn't remove the passkey.",
+    "insecureOrigin": "I only create passkeys over https.",
+    "notConfigured": "I need a passkey domain from your admin first.",
+    "passwordLabel": "Your password, to confirm",
+    "codeLabel": "Code from the authenticator app or a backup code",
+    "listFailed": "I couldn't load the passkeys.",
+    "reauth": {
+      "REAUTH_PASSWORD_INCORRECT": "The password is wrong. I haven't created a passkey.",
+      "REAUTH_SECOND_FACTOR_REQUIRED": "Your account has a second step. I need the code before I create a passkey.",
+      "REAUTH_SECOND_FACTOR_INVALID": "The code is wrong. I haven't created a passkey."
+    }
   },
   "countryCounting": {
     "title": "Countries",
@@ -1739,7 +1756,8 @@
       "DELETE_PASSKEY_INVALID": "The passkey wasn't confirmed. I haven't deleted anything.",
       "NO_PASSKEY": "This account has no passkey. Confirm with your password.",
       "PASSKEY_UNAVAILABLE": "Passkeys don't work here right now. Confirm with your password.",
-      "passkeyCancelled": "You didn't confirm the passkey. I haven't deleted anything."
+      "passkeyCancelled": "You didn't confirm the passkey. I haven't deleted anything.",
+      "REAUTH_PASSKEY_TOO_NEW": "This passkey is less than 24 hours old. Confirm with your password or wait until tomorrow."
     },
     "dialog": {
       "title": "Delete account?",
@@ -1837,6 +1855,24 @@
     "seaDays": {
       "name": "Sea days count as travel days",
       "help": "The number of sea days stays visible."
+    },
+    "password": {
+      "name": "Password"
+    },
+    "twoFactor": {
+      "name": "Two-step sign-in",
+      "sub": "Code from an authenticator app",
+      "help": "API keys bypass the second step. A passkey replaces both password and second step."
+    },
+    "backupCodes": {
+      "name": "Backup codes",
+      "sub": "In case your phone is missing",
+      "help": "New codes void the old ones. You see them only once."
+    },
+    "passkeys": {
+      "name": "Passkeys",
+      "sub": "Sign in without a password",
+      "help": "A passkey replaces password and second step. It only works at the address where you created it."
     }
   }
 }

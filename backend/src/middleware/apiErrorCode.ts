@@ -117,6 +117,12 @@ export type ApiErrorCode =
   | "DELETE_SECOND_FACTOR_INVALID"
   /** The passkey assertion for a re-authentication was not accepted. */
   | "DELETE_PASSKEY_INVALID"
+  /** A passkey younger than 24 h cannot confirm a deletion (a stolen session could have added it). */
+  | "REAUTH_PASSKEY_TOO_NEW"
+  /** Fresh re-authentication (passkey registration): password wrong, code missing or wrong. */
+  | "REAUTH_PASSWORD_INCORRECT"
+  | "REAUTH_SECOND_FACTOR_REQUIRED"
+  | "REAUTH_SECOND_FACTOR_INVALID"
   /** A passkey re-authentication was asked of an account without a passkey. */
   | "NO_PASSKEY"
   /** Passkeys cannot be used here (no secure origin configured). */

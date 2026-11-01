@@ -27,6 +27,7 @@ async function makeUser(username: string, credentialId?: string): Promise<string
         counter: 0n,
         transports: [],
         name: "Key",
+        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
         rpId: "trav.example.com",
       },
     });
@@ -128,6 +129,20 @@ describe("deleting one's own account with a passkey instead of the password", ()
       confirmation: "DELETE",
     });
     expect(both.status).toBe(400);
+  });
+
+  it("refuses an assertion from a passkey created in the last 24 h (REAUTH_PASSKEY_TOO_NEW), even if it verifies", async () => {
+    const id = await makeUser("delPk", "cred-own");
+    await prisma.webAuthnCredential.updateMany({
+      where: { userId: id },
+      data: { createdAt: new Date() },
+    });
+    await options(id);
+    verify.mockResolvedValue({ verified: true, authenticationInfo: { newCounter: 1 } });
+    const res = await del(id, { passkeyResponse: { id: "cred-own" }, confirmation: "DELETE" });
+    expect(res.status).toBe(403);
+    expect(res.body.code ?? res.body.errorCode).toBe("REAUTH_PASSKEY_TOO_NEW");
+    expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
   });
 
   it("still demands the typed word with a valid assertion", async () => {

@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { encryptSecret } from "../../services/twoFactor/totpService";
 
 /** Point the instance at an origin, or clear it. */
 async function setOrigin(origin: string | null, rpId?: string | null): Promise<void> {
@@ -61,7 +62,8 @@ describe("passkey endpoints", () => {
   it("refuses to hand out registration options when passkeys are unavailable", async () => {
     const res = await request(app)
       .post("/api/v1/auth/passkeys/register/options")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ password: "password123" });
     expect(res.status).toBe(409);
   });
 
@@ -69,7 +71,8 @@ describe("passkey endpoints", () => {
     await setOrigin("https://trav.example.com", "trav.example.com");
     const res = await request(app)
       .post("/api/v1/auth/passkeys/register/options")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ password: "password123" });
 
     expect(res.status).toBe(200);
     expect(res.body.rp.id).toBe("trav.example.com");
@@ -85,7 +88,8 @@ describe("passkey endpoints", () => {
     await setOrigin("https://trav.example.com", "trav.example.com");
     const reg = await request(app)
       .post("/api/v1/auth/passkeys/register/options")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ password: "password123" });
     expect(reg.body.authenticatorSelection.userVerification).toBe("required");
 
     const login = await request(app).post("/api/v1/auth/passkeys/login/options");
@@ -100,6 +104,40 @@ describe("passkey endpoints", () => {
     expect(res.status).toBe(200);
     expect(res.body.allowCredentials ?? []).toEqual([]);
     expect([res.headers["set-cookie"]].flat().join(";")).toContain("passkey_handle=");
+  });
+
+  it("refuses registration options without a fresh password, and with a wrong one (stolen session)", async () => {
+    await setOrigin("https://trav.example.com", "trav.example.com");
+    const none = await request(app)
+      .post("/api/v1/auth/passkeys/register/options")
+      .set("Cookie", cookie);
+    expect(none.status).toBe(403);
+    expect(none.body.code ?? none.body.errorCode).toBe("REAUTH_PASSWORD_INCORRECT");
+    const wrong = await request(app)
+      .post("/api/v1/auth/passkeys/register/options")
+      .set("Cookie", cookie)
+      .send({ password: "nope" });
+    expect(wrong.status).toBe(403);
+  });
+
+  it("also demands the second-factor code at registration when the account has one", async () => {
+    await setOrigin("https://trav.example.com", "trav.example.com");
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorSecret: encryptSecret("JBSWY3DPEHPK3PXP"), twoFactorEnabledAt: new Date() },
+    });
+    const res = await request(app)
+      .post("/api/v1/auth/passkeys/register/options")
+      .set("Cookie", cookie)
+      .send({ password: "password123" });
+    expect(res.status).toBe(403);
+    expect(res.body.code ?? res.body.errorCode).toBe("REAUTH_SECOND_FACTOR_REQUIRED");
+    const bad = await request(app)
+      .post("/api/v1/auth/passkeys/register/options")
+      .set("Cookie", cookie)
+      .send({ password: "password123", code: "000000" });
+    expect(bad.status).toBe(403);
+    expect(bad.body.code ?? bad.body.errorCode).toBe("REAUTH_SECOND_FACTOR_INVALID");
   });
 
   it("requires a session to register", async () => {
@@ -197,7 +235,8 @@ describe("passkey endpoints", () => {
     await setOrigin("https://192.168.1.10:3010", "192.168.1.10");
     const res = await request(app)
       .post("/api/v1/auth/passkeys/register/options")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ password: "password123" });
     expect(res.status).toBe(409);
   });
 });

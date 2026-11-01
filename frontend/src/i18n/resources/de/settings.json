@@ -1074,12 +1074,12 @@
     "manualHint": "Falls du nicht scannen kannst, gib diesen Schlüssel von Hand ein:",
     "codeLabel": "Code aus der App",
     "activate": "Aktivieren",
-    "wrongCode": "Der Code stimmt nicht.",
-    "setupFailed": "Die Einrichtung konnte nicht gestartet werden.",
+    "wrongCode": "Ich erwarte einen anderen Code. Nimm den aktuellen aus der App.",
+    "setupFailed": "Ich konnte die Einrichtung nicht starten.",
     "saveCodes": "Bewahre diese Wiederherstellungscodes sicher auf. Die Anzeige erfolgt nur dieses eine Mal, und jeder Code funktioniert genau einmal.",
     "enabled": "Zwei-Faktor ist aktiv. Noch {{count}} Wiederherstellungscodes übrig.",
     "tokenWarning": "Hinweis: API-Tokens umgehen den zweiten Faktor. Wer ein Token besitzt, kommt ohne Code hinein — widerrufe nicht mehr benötigte Tokens unter „API-Tokens\".",
-    "regenerate": "Neue Wiederherstellungscodes",
+    "regenerate": "Neu erzeugen",
     "confirmRegenerate": "Codes neu erzeugen",
     "disable": "Zwei-Faktor deaktivieren",
     "confirmDisable": "Deaktivieren",
@@ -1090,14 +1090,23 @@
     "passwordSub": "Für die Anmeldung mit deinem Benutzernamen",
     "passwordChange": "Ändern",
     "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
-    "active": "Aktiv"
+    "active": "Aktiv",
+    "statusFailed": "Ich konnte nicht nachsehen, ob der zweite Faktor an ist.",
+    "needsTwoFactor": "Erst mit zweitem Faktor.",
+    "regenerateDialog": {
+      "title": "Neue Ersatzcodes?",
+      "affects": "Deine bisherigen Ersatzcodes",
+      "amount": "{{count}} unbenutzte Codes",
+      "after": "Sie gelten nicht mehr. Die neuen zeige ich dir nur einmal.",
+      "confirm": "Neu erzeugen"
+    }
   },
   "scopeHint": "Gilt nur für dein Konto.",
   "passkeys": {
     "title": "Passkeys",
     "description": "Melde dich mit Fingerabdruck, Gesichtserkennung, PIN oder deinem Passwortmanager an — statt mit dem Passwort. Ein Passkey ersetzt beides: Passwort und Bestätigungscode, weil das Gerät die Freigabe schon selbst abfragt.",
     "none": "Noch kein Passkey hinterlegt.",
-    "add": "Passkey hinzufügen",
+    "add": "Hinzufügen",
     "nameLabel": "Name für diesen Passkey",
     "namePlaceholder": "z. B. Handy, Notebook, Bitwarden",
     "confirmAdd": "Anlegen",
@@ -1105,10 +1114,18 @@
     "rpIdLabel": "Gültig für",
     "lastUsed": "zuletzt benutzt",
     "neverUsed": "noch nie benutzt",
-    "addFailed": "Der Passkey konnte nicht angelegt werden.",
-    "removeFailed": "Der Passkey konnte nicht entfernt werden.",
-    "insecureOrigin": "Passkeys brauchen HTTPS. Über eine reine LAN-Adresse ohne HTTPS verweigert der Browser sie — erreichbar über den Tunnel funktionieren sie.",
-    "notConfigured": "Für Passkeys muss ein Administrator zuerst die öffentliche Adresse dieser Instanz hinterlegen."
+    "addFailed": "Ich konnte den Passkey nicht anlegen.",
+    "removeFailed": "Ich konnte den Passkey nicht entfernen.",
+    "insecureOrigin": "Ich lege Passkeys nur über https an.",
+    "notConfigured": "Ich brauche dafür erst eine Passkey-Domain vom Admin.",
+    "passwordLabel": "Dein Passwort, zur Bestätigung",
+    "codeLabel": "Code aus der Authenticator-App oder ein Ersatzcode",
+    "listFailed": "Ich konnte die Passkeys nicht laden.",
+    "reauth": {
+      "REAUTH_PASSWORD_INCORRECT": "Das Passwort stimmt nicht. Ich habe keinen Passkey angelegt.",
+      "REAUTH_SECOND_FACTOR_REQUIRED": "Dein Konto hat einen zweiten Faktor. Ich brauche den Code, bevor ich einen Passkey anlege.",
+      "REAUTH_SECOND_FACTOR_INVALID": "Der Code stimmt nicht. Ich habe keinen Passkey angelegt."
+    }
   },
   "countryCounting": {
     "title": "Länder",
@@ -1739,7 +1756,8 @@
       "DELETE_PASSKEY_INVALID": "Der Passkey wurde nicht bestätigt. Ich habe nichts gelöscht.",
       "NO_PASSKEY": "Zu diesem Konto gibt es keinen Passkey. Bestätige mit dem Passwort.",
       "PASSKEY_UNAVAILABLE": "Passkeys gehen hier gerade nicht. Bestätige mit dem Passwort.",
-      "passkeyCancelled": "Du hast den Passkey nicht bestätigt. Ich habe nichts gelöscht."
+      "passkeyCancelled": "Du hast den Passkey nicht bestätigt. Ich habe nichts gelöscht.",
+      "REAUTH_PASSKEY_TOO_NEW": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort oder warte bis morgen."
     },
     "dialog": {
       "title": "Konto löschen?",
@@ -1837,6 +1855,24 @@
     "seaDays": {
       "name": "Seetage als Reisetage",
       "help": "Die Zahl der Seetage bleibt sichtbar."
+    },
+    "password": {
+      "name": "Passwort"
+    },
+    "twoFactor": {
+      "name": "Zweiter Faktor",
+      "sub": "Code aus einer Authenticator-App",
+      "help": "API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."
+    },
+    "backupCodes": {
+      "name": "Ersatzcodes",
+      "sub": "Falls das Telefon fehlt",
+      "help": "Neue Codes machen die alten wertlos. Du siehst sie nur einmal."
+    },
+    "passkeys": {
+      "name": "Passkeys",
+      "sub": "Anmelden ohne Passwort",
+      "help": "Ein Passkey ersetzt Passwort und zweiten Faktor. Er gilt nur unter der Adresse, unter der du ihn angelegt hast."
     }
   }
 }

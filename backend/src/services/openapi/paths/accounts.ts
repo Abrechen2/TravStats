@@ -171,6 +171,11 @@ registry.registerPath({
   method: "post",
   path: "/auth/passkeys/register/options",
   summary: "Options for registering a passkey",
+  description:
+    "Needs a fresh re-authentication in the body: `password`, plus `code` or `recoveryCode` " +
+    "where the account has two-factor (403 REAUTH_PASSWORD_INCORRECT / REAUTH_SECOND_FACTOR_REQUIRED / " +
+    "REAUTH_SECOND_FACTOR_INVALID). A passkey younger than 24 h cannot confirm an account deletion " +
+    "(403 REAUTH_PASSKEY_TOO_NEW).",
   tags: authTag,
   responses: {
     200: { description: "Options" },

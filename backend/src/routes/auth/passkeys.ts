@@ -19,7 +19,9 @@ import {
   registerVerifySchema,
   loginVerifySchema,
   renamePasskeySchema,
+  registerOptionsSchema,
 } from "../../schemas/webauthn";
+import { requirePasswordReauth } from "../../services/account/reauthPassword";
 import { issueReauthOptions } from "../../services/webauthn/reauth";
 import logger from "../../utils/logger";
 
@@ -75,8 +77,11 @@ router.post(
   authLimiter,
   async (req: AuthRequest, res, next) => {
     try {
-      const rp = await requireRp();
       const userId = req.userId!;
+      // Before anything else: a session cookie alone must not be able to add a
+      // credential that later confirms an account deletion.
+      await requirePasswordReauth(userId, registerOptionsSchema.parse(req.body ?? {}));
+      const rp = await requireRp();
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { username: true },

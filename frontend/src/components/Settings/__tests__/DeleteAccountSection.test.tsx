@@ -213,19 +213,21 @@ describe("deleting with a passkey (an account that may not know its password)", 
     expect(logout).not.toHaveBeenCalled();
   });
 
-  it.each(["DELETE_PASSKEY_INVALID", "NO_PASSKEY", "PASSKEY_UNAVAILABLE"])(
-    "a %s refusal has its own line and keeps the account signed in",
-    async (code) => {
-      passkeyList.mockResolvedValue([{ id: "k" }]);
-      deleteAccount.mockRejectedValue(refusedWith(code, 403));
-      await open();
-      usePasskey();
-      goOn();
-      await confirm();
-      expect(await screen.findByText(`settings:deleteAccount.refused.${code}`)).toBeInTheDocument();
-      expect(logout).not.toHaveBeenCalled();
-    }
-  );
+  it.each([
+    "DELETE_PASSKEY_INVALID",
+    "REAUTH_PASSKEY_TOO_NEW",
+    "NO_PASSKEY",
+    "PASSKEY_UNAVAILABLE",
+  ])("a %s refusal has its own line and keeps the account signed in", async (code) => {
+    passkeyList.mockResolvedValue([{ id: "k" }]);
+    deleteAccount.mockRejectedValue(refusedWith(code, 403));
+    await open();
+    usePasskey();
+    goOn();
+    await confirm();
+    expect(await screen.findByText(`settings:deleteAccount.refused.${code}`)).toBeInTheDocument();
+    expect(logout).not.toHaveBeenCalled();
+  });
 
   it("an unreachable challenge endpoint is reported as the server not answering", async () => {
     passkeyList.mockResolvedValue([{ id: "k" }]);

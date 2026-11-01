@@ -36,9 +36,14 @@ export const passkeyApi = {
     return data.passkeys;
   },
 
-  registerOptions: async (): Promise<PublicKeyCredentialCreationOptionsJSON> => {
+  /** Needs a fresh password (and a code where the account has two-factor). */
+  registerOptions: async (reauth: {
+    password: string;
+    code?: string;
+  }): Promise<PublicKeyCredentialCreationOptionsJSON> => {
     const { data } = await api.post<PublicKeyCredentialCreationOptionsJSON>(
-      "/auth/passkeys/register/options"
+      "/auth/passkeys/register/options",
+      reauth
     );
     return data;
   },
