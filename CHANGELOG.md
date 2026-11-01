@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-**Before upgrading to 2.8.0-rc.11:** take a backup. Fourteen new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, the per-area reminder preferences (filled once from each account's current reminder settings), and one that clears the favourite airline "Lufthansa" that earlier versions stored as a shipped default (any other airline you chose stays), and one that replaces seven single-column user indexes covered by wider ones and adds an index for TravTrack point sync, and one that adds search indexes for the airport search, and two for this candidate: tags on lodging houses, places, roadtrips and tours, and a share-link kind for a single cruise, stay or place visit; no data is removed.
+**Before upgrading to 2.8.0-rc.12:** take a backup. Fourteen new migrations since 2.7.0: two tables for the TravTrack diagnostics log, new columns on the admin and user settings for the ADS-B providers and the AeroAPI plan, two tables that count AeroAPI calls and track fetches, and the external-services policy (a policy column on the admin and user settings, a table for stored test results, a switch for a local custom AI endpoint), and the columns that receive the one-time copy of the service environment variables, a table for place captures from the Companion, the per-area reminder preferences (filled once from each account's current reminder settings), and one that clears the favourite airline "Lufthansa" that earlier versions stored as a shipped default (any other airline you chose stays), and one that replaces seven single-column user indexes covered by wider ones and adds an index for TravTrack point sync, and one that adds search indexes for the airport search, and two for this candidate: tags on lodging houses, places, roadtrips and tours, and a share-link kind for a single cruise, stay or place visit; no data is removed.
 
 **Upgrading to 2.8.0-rc.5 — external-service settings move out of the environment.** On its first start this version copies every external-service variable still set in the server environment (`AIRLABS_API_KEY`, `AVIATIONSTACK_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`, the Immich, Dawarich, Strava, WebDAV, federation and the other service variables) into the instance settings, encrypted, wherever the instance field is still empty, and then never reads them again. The log names the variables it copied, never their values. From then on these services are configured only under Administration → External services; database, secrets, ports, time zone, logging, backup paths and first-boot defaults stay environment variables. One new migration adds the columns the copy needs.
 
@@ -56,9 +56,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Merge the copies of a duplicate cruise** from data quality, and assign existing flights to a booking from a trip's bookings panel.
 - **Maintenance can fetch a missing airport** and says whether the source was unreachable or does not know the code.
 - **The globe draws its dots, cruise paths, night shade and connecting lines as native map layers,** on the dashboard and on the trip map.
+- **Flight-track upload and the calendar subscription are out of beta** and available on every instance without the beta switch.
+- **The parser page explains itself:** what it reads, where an unrecognised booking goes (a link to the template workshop) and how to share a new template as a request.
+- **Settings search can show every hit,** not only the first eight; the data page opens with a jump list to Sicherung, Mitnehmen and Einlesen; the services page can show only the services that are active or set up.
 
 ### Fixed
 
+- **The save hint no longer promises that everything saves itself** on a page that has a save button.
+- **One name for the travel types page:** every hint that pointed to "Bereiche & Farben" now says "Reisearten".
+- **The reminder settings no longer crash** when the server sends no row for one of the newer areas.
 - **A finished trip folds its packing list away,** and hides it when it is empty.
 - **The flight-time estimate history follows the account** instead of staying in one browser.
 - **Filling a flight only uses a hit on its own route,** and every airport source is asked before the page says it is unavailable.
