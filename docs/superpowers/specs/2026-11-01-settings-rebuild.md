@@ -61,3 +61,15 @@ Claude Design, round 2.
 
 Each package: tests for every failure path it draws (CLAUDE.md four defect
 classes), DE/EN parity, no new raw palette classes, the file-size ratchet.
+
+## Known gaps the packages close (from R2 answers)
+
+- Error codes without design copy (WebDAV account copy and backup codes, restore
+  codes, stay-scan pause reasons, `RATE_LIMITED`, "forbidden by admin", comparison
+  codes, test reason `http_error`): the package that draws the row writes DE/EN
+  copy in the design's voice (first person, no "Fehler"/"fehlgeschlagen").
+- SMTP test returns raw nodemailer text: package 6 maps it to stable codes.
+- Empty public URL warns nowhere: package 7 adds the warning (B15).
+- Leave warning for save groups does not exist yet: package 2 builds it.
+- Self-deletion has no backend: package 3 builds `DELETE /auth/me` (password or
+  passkey re-auth + typed word), removing the account and all its data immediately.
