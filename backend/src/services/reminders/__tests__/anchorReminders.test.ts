@@ -69,6 +69,7 @@ function user(enabled: string[]) {
 function rental(overrides: Record<string, unknown> = {}, now = new Date()) {
   return {
     id: "rent-1",
+    status: "scheduled",
     tripId: null,
     provider: "Sixt",
     confirmationNumber: "ABC123",
@@ -130,6 +131,19 @@ describe("checkRentalReminders", () => {
     expect(pushes.map((p) => p.part).sort()).toEqual(["pickup", "return"]);
   });
 
+  it("still announces the return of a car that is already picked up (in_progress)", async () => {
+    const now = new Date();
+    mockRentalFindMany.mockResolvedValueOnce([rental({ status: "in_progress" }, now)]);
+    const { checkRentalReminders } = await import("../rentalReminders");
+    await checkRentalReminders(now);
+
+    expect(mockSendRental).toHaveBeenCalledTimes(1);
+    expect(mockSendRental.mock.calls[0][0].part).toBe("return");
+    // ... and the query asks for it: an in_progress rental is read for its return only.
+    const where = (mockRentalFindMany.mock.calls[0][0] as { where: { OR: unknown[] } }).where;
+    expect(JSON.stringify(where.OR)).toContain('"status":{"in":["scheduled","in_progress"]}');
+  });
+
   it("abstains for a hand-over known only to the day, announcing the other one", async () => {
     const now = new Date();
     mockRentalFindMany.mockResolvedValueOnce([rental({ pickupPrecision: "day" }, now)]);
@@ -140,11 +154,12 @@ describe("checkRentalReminders", () => {
     expect(mockSendRental.mock.calls[0][0].part).toBe("return");
   });
 
-  it("asks only for scheduled rentals with a clock on the anchor it reads", async () => {
+  it("asks only for rentals whose anchor still lies ahead and carries a clock", async () => {
     const { checkRentalReminders } = await import("../rentalReminders");
     await checkRentalReminders(new Date());
     const where = (mockRentalFindMany.mock.calls[0][0] as { where: Record<string, unknown> }).where;
-    expect(where.status).toBe("scheduled");
+    // Pick-up needs a scheduled rental; the return also reads one already picked up.
+    expect(JSON.stringify(where.OR)).toContain('"status":"scheduled","pickupTime"');
     expect(JSON.stringify(where.OR)).toContain('"pickupPrecision":"minute"');
     expect(JSON.stringify(where.OR)).toContain('"returnPrecision":"minute"');
   });

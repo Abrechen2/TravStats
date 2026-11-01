@@ -58,12 +58,24 @@ async function currentKey(
       return row ? isoOf(row.departureTime) : null;
     }
     case "rental": {
+      // A car already picked up is `in_progress` (the status sweep): its return is still ahead.
       const row = await prisma.rentalBooking.findFirst({
-        where: { id: entryId, userId, status: "scheduled" },
-        select: { pickupTime: true, returnTime: true },
+        where: {
+          id: entryId,
+          userId,
+          status: part === "return" ? { in: ["scheduled", "in_progress"] } : "scheduled",
+        },
+        select: {
+          pickupTime: true,
+          returnTime: true,
+          pickupPrecision: true,
+          returnPrecision: true,
+        },
       });
       if (!row) return null;
-      return isoOf(part === "return" ? row.returnTime : row.pickupTime);
+      return part === "return"
+        ? `${isoOf(row.returnTime)}|${row.returnPrecision}`
+        : `${isoOf(row.pickupTime)}|${row.pickupPrecision}`;
     }
     case "roadtrip": {
       const row = await prisma.tripStop.findFirst({

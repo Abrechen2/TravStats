@@ -12,11 +12,13 @@ import { runAnchorReminders, type Anchor } from "./anchorReminders";
  * booking's real instants on their station's clock; a hand-over logged to the
  * day only (precision `day`/`unknown`) has no clock, so "in 2 hours" would be
  * a time nobody printed and that anchor abstains. A cancelled or finished
- * rental (status other than `scheduled`) is not announced.
+ * rental is not announced; a car already picked up (`in_progress`) still has
+ * its return ahead, so only the pick-up needs `scheduled`.
  */
 
 const RENTAL_SELECT = {
   id: true,
+  status: true,
   tripId: true,
   provider: true,
   confirmationNumber: true,
@@ -43,11 +45,19 @@ const precisionOf = (value: string): TimePrecision =>
 
 export function rentalAnchors(row: RentalRow): Anchor[] {
   const anchors: Anchor[] = [];
-  if (row.pickupPrecision === "minute") {
-    anchors.push({ part: "pickup", at: row.pickupTime, key: row.pickupTime.toISOString() });
+  if (row.status === "scheduled" && row.pickupPrecision === "minute") {
+    anchors.push({
+      part: "pickup",
+      at: row.pickupTime,
+      key: `${row.pickupTime.toISOString()}|${row.pickupPrecision}`,
+    });
   }
   if (row.returnPrecision === "minute") {
-    anchors.push({ part: "return", at: row.returnTime, key: row.returnTime.toISOString() });
+    anchors.push({
+      part: "return",
+      at: row.returnTime,
+      key: `${row.returnTime.toISOString()}|${row.returnPrecision}`,
+    });
   }
   return anchors;
 }
@@ -59,10 +69,18 @@ export async function checkRentalReminders(now: Date): Promise<void> {
       due: (start, end) =>
         prisma.rentalBooking.findMany({
           where: {
-            status: "scheduled",
             OR: [
-              { pickupTime: { gte: start, lte: end }, pickupPrecision: "minute" },
-              { returnTime: { gte: start, lte: end }, returnPrecision: "minute" },
+              {
+                status: "scheduled",
+                pickupTime: { gte: start, lte: end },
+                pickupPrecision: "minute",
+              },
+              // A rental already picked up is `in_progress`; its return is still ahead.
+              {
+                status: { in: ["scheduled", "in_progress"] },
+                returnTime: { gte: start, lte: end },
+                returnPrecision: "minute",
+              },
             ],
           },
           select: RENTAL_SELECT,
