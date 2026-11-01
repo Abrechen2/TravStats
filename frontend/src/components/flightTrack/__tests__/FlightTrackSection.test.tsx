@@ -32,14 +32,6 @@ vi.mock("../../../lib/api", () => ({
     deleteTrack: (...args: unknown[]) => deleteMock(...args),
   },
 }));
-// The upload is behind the `flightTrackUpload` beta key (forgejo#312).
-let betaOn = false;
-vi.mock("../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({
-    betaFeaturesEnabled: betaOn,
-    isFeatureVisible: (key: string) => betaOn && key === "flightTrackUpload",
-  }),
-}));
 // The global mock returns bare keys; this one shows what was interpolated, so
 // the numbers the caption is built from can be asserted.
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -102,14 +94,13 @@ describe("FlightTrackSection", () => {
     getTrackMock.mockReset();
     uploadMock.mockReset();
     deleteMock.mockReset();
-    betaOn = false;
   });
 
-  it("draws nothing for a flight without a recording", async () => {
+  it("offers the upload on a flight without a recording (released from beta, forgejo#390)", async () => {
     getTrackMock.mockResolvedValue(null);
-    const { container } = render(<FlightTrackSection flightId="f1" />);
+    render(<FlightTrackSection flightId="f1" />);
     await waitFor(() => expect(getTrackMock).toHaveBeenCalledWith("f1"));
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByTestId("flight-track-file")).toBeInTheDocument();
   });
 
   it("shows the map and what the phone measured", async () => {
@@ -140,19 +131,7 @@ describe("FlightTrackSection", () => {
     expect(screen.queryByTestId("flight-track-map-stub")).not.toBeInTheDocument();
   });
 
-  it("draws no upload and no comparison while the beta key is closed", async () => {
-    getTrackMock.mockResolvedValue(makeTrack());
-    render(<FlightTrackSection flightId="f1" departure={MUC} arrival={ICN} />);
-    await screen.findByTestId("flight-track-map-stub");
-    expect(screen.queryByTestId("flight-track-file")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("flight-track-comparison")).not.toBeInTheDocument();
-  });
-
-  describe("with the flightTrackUpload beta key (forgejo#312)", () => {
-    beforeEach(() => {
-      betaOn = true;
-    });
-
+  describe("uploading a recording (forgejo#312)", () => {
     const pick = (name: string) => {
       const file = new File(["<kml/>"], name, { type: "application/xml" });
       fireEvent.change(screen.getByTestId("flight-track-file"), { target: { files: [file] } });
@@ -261,7 +240,6 @@ describe("FlightTrackSection", () => {
     const view = (track: FlightTrack | null, info: object) => ({ track, info });
 
     it("labels a TravTrack line and offers no upload controls for it", async () => {
-      betaOn = true;
       getTrackMock.mockResolvedValue(
         view(
           { ...makeTrack(), source: "travtrack" },

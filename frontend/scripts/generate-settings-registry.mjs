@@ -28,6 +28,11 @@ const GROUP = { du: "account", instanz: "server", fuss: "about" };
 const level = (x) => (x ? "expert" : "standard");
 const q = (v) => JSON.stringify(v);
 
+// Beta keys released from the registry (forgejo#390). The designer's data still
+// names them; a gate on a key that no longer exists would not typecheck.
+const RELEASED_BETA = new Set(["calendarFeed"]);
+const betaKey = (key) => (key && !RELEASED_BETA.has(key) ? key : undefined);
+
 function rowOf(page, section, r) {
   const expert = r.x === 0 ? false : Boolean(r.x ?? section.x ?? page.x);
   const dom = r.dom ?? page.dom;
@@ -39,7 +44,7 @@ function rowOf(page, section, r) {
     scope: r.sc === "i" || section.sc === "i" || page.sc === "i" ? "instance" : "account",
     audience: r.ad || section.ad || page.ad ? "admin" : "all",
     ...(dom ? { domain: DOMAIN[dom] ?? dom } : {}),
-    ...((r.beta ?? section.beta) ? { beta: r.beta ?? section.beta } : {}),
+    ...(betaKey(r.beta ?? section.beta) ? { beta: betaKey(r.beta ?? section.beta) } : {}),
     demoLocked: Boolean(r.d ?? section.d ?? page.d),
     de: r.de[0],
     en: r.en[0],
@@ -62,7 +67,7 @@ function sectionSource(page, s) {
     level: level(Boolean(s.x ?? page.x)),
     scope: s.sc === "i" || page.sc === "i" ? "instance" : "account",
     audience: s.ad || page.ad ? "admin" : "all",
-    ...(s.beta ? { beta: s.beta } : {}),
+    ...(betaKey(s.beta) ? { beta: betaKey(s.beta) } : {}),
     demoLocked: Boolean(s.d ?? page.d),
     ...(s.cat ? { serviceCategory: s.cat } : {}),
   };

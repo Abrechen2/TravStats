@@ -30,7 +30,7 @@
  * remain reachable for any authenticated user whatever the flag says. That is
  * deliberate: hiding the Devices UI must not lock the owner out of pairing.
  * The exceptions are features a client keeps calling after nobody looks at the
- * page — the calendar feed, trip sharing across servers and TravPlan — whose
+ * page — trip sharing across servers and TravPlan — whose
  * server refuses while the flag is off; each entry says so.
  *
  * To un-gate a feature: delete its entry here and the `isFeatureVisible` call
@@ -145,42 +145,10 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * A recorded flight track uploaded as a file (forgejo#312): GPX, KML, TCX or
-   * FIT on the flight page, and the map drawing a recorded flight along its
-   * recording instead of the great circle. Gated at two places: the upload,
-   * replace and delete controls (and the flown-vs-great-circle line) of
-   * `FlightTrackSection`, and the fetch of the recorded lines in
-   * `useRecordedFlightPaths` — closed, the map draws every flight as before.
-   * A recording the Companion sent stays visible on the flight page either way.
-   */
-  flightTrackUpload: Object.freeze({
-    why: "Built on 2026-10-17 without a browser acceptance. The KML reader was written against the documented FlightAware and Flightradar24 export shapes, not against files exported from either service, and the map rule — a route keeps its arc while any flight on it has no recording — has not been looked at on a real logbook.",
-    returnsWhen:
-      "The owner has uploaded at least one real FlightAware or Flightradar24 export and one GPX logger file, checked the line on the flight page and on the globe and flat map, and accepts the feature for release.",
-    reason: "beta",
-  }),
-
-  /**
-   * The calendar subscription (forgejo#310): a secret `.ics` URL per user that
-   * calendar apps poll. Gated in the "Reisen" settings section
-   * (`SettingsSectionSwitch`), and on the SERVER as well — unlike most entries
-   * here, `/api/v1/calendar/<token>.ics` answers 404 and no URL is issued while
-   * the switch is off, because a subscription keeps polling long after anybody
-   * looks at the page that hid it.
-   */
-  calendarFeed: Object.freeze({
-    why: "Built on 2026-10-17 and tested against generated calendars only. Nobody has subscribed to a feed from Apple Calendar, Google Calendar or Outlook yet, and those clients differ in how they read all-day events, folding and refresh intervals; Google in particular polls on its own schedule from many addresses, which the per-feed rate limit has not met.",
-    returnsWhen:
-      "The owner has subscribed to the feed on the RC from at least Apple Calendar and Google Calendar, checked that flights, stays and rides land on the right days and hours, and accepts it for release.",
-    reason: "beta",
-  }),
-
-  /**
    * Trip sharing across servers (forgejo#301, spec
    * docs/superpowers/specs/2026-10-20-federated-trip-sharing-design.md). Gated in two places:
    * the admin's switch in Admin → Instanz (`FederationSettings`) and the "people on other
-   * servers" part of Settings → Reisen teilen (`RemoteSharingSection`). Like `calendarFeed` the
-   * SERVER asks too: `/trip-share-peer` answers 404 and `/sharing/remote/*` refuses with
+   * servers" part of Settings → Reisen teilen (`RemoteSharingSection`). The SERVER asks too: `/trip-share-peer` answers 404 and `/sharing/remote/*` refuses with
    * `SHARE_REMOTE_DISABLED` while the beta switch is off, because a peer would keep sending
    * long after anybody looks at the page that hid it.
    */
@@ -203,7 +171,7 @@ export const BETA_FEATURES = Object.freeze({
    * off, because a phone keeps sending long after anybody looks at the page.
    */
   travTrack: Object.freeze({
-    why: "TravTrack, the own location history, is new and only the Companion records into it; everyday recording has not passed the field test (plan C8).",
+    why: "TravTrack, the own location history, is new and has not passed the field test (plan C8). Positions reach it from the Companion, from GPX, KML, GeoJSON and TCX files, from a Google Timeline export, from OwnTracks and Overland (ingest tokens) and from a copy of a Dawarich history, so a fault in any of them lands in the same history.",
     returnsWhen:
       "The C8 field test on Android and iPhone passed and the owner accepts /track in a browser review.",
     reason: "beta",

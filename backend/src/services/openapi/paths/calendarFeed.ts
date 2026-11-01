@@ -39,8 +39,8 @@ registry.registerPath({
   description:
     "`url`/`webcalUrl` list the current URL again: the token is kept AES-GCM encrypted beside " +
     "its lookup hash. They are null without a URL, and for a URL issued before tokens were " +
-    "kept — that one still answers, it just cannot be shown. `enabled` is the instance's beta switch: no URL is issued, and none answers, while " +
-    "it is off.",
+    "kept — that one still answers, it just cannot be shown. `enabled` says whether this server issues subscription URLs (always true since the " +
+    "feature left beta, forgejo#390); the same flag rides on `GET /settings` as `calendarFeedEnabled`.",
   tags,
   responses: {
     200: ok(
@@ -116,7 +116,7 @@ registry.registerPath({
     403: sessionOrCompanion,
     400: err("`VALIDATION_FAILED`: `rotate` is not a boolean"),
     409: err(
-      "`CALENDAR_FEED_DISABLED`: the instance's beta switch is off; or `CALENDAR_FEED_EXISTS`: " +
+      "`CALENDAR_FEED_DISABLED`: the feed is switched off on this server; or `CALENDAR_FEED_EXISTS`: " +
         "a paired device asked while a URL is live, without `rotate: true`"
     ),
     429: err("Too many new URLs this hour"),

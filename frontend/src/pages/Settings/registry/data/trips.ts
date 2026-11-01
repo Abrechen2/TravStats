@@ -15,8 +15,8 @@ export const TRIPS_PAGE: RegistryPage = {
         {"id":"immichbeleg","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Immich-Fotos als Beleg","en":"Immich photos as evidence","terms":{"de":"","en":""}},
         {"id":"kiort","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
       ]},
-      {"id":"calendarFeed","de":"Kalender","en":"Calendar","level":"standard","scope":"account","audience":"all","beta":"calendarFeed","demoLocked":false,"rows":[
-        {"id":"ics","kind":"action","level":"standard","scope":"account","audience":"all","beta":"calendarFeed","demoLocked":false,"de":"Kalender-Abo","en":"Calendar feed","terms":{"de":"Deine Reisen in jeder Kalender-App Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers.","en":"Your trips in any calendar app You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address."}},
+      {"id":"calendarFeed","de":"Kalender","en":"Calendar","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"ics","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Kalender-Abo","en":"Calendar feed","terms":{"de":"Deine Reisen in jeder Kalender-App Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers.","en":"Your trips in any calendar app You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address."}},
       ]},
   ],
 };

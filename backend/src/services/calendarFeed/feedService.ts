@@ -5,7 +5,6 @@ import type { DomainKey } from "../../shared/domains";
 import { now } from "../../shared/time/clock";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import { loadVisibleDomains } from "../domainVisibility";
-import { getInstanceSettings } from "../instanceSettingsService";
 import type { FeedContext } from "./feedEvent";
 import { writeCalendar, type IcsEvent } from "./ics";
 import { busEvents, ferryEvents, flightEvents, railEvents, rentalEvents } from "./journeyEvents";
@@ -18,11 +17,11 @@ import { calendarTokenHash, generateCalendarToken, looksLikeCalendarToken } from
  * The calendar feed (forgejo#310): a secret URL per user that any calendar app
  * subscribes to, answering the upcoming entries plus a look-back.
  *
- * The feed is a beta feature (`calendarFeed` in
- * `frontend/src/config/betaFeatures.ts`), and the gate holds on the server too:
- * with the instance's beta switch off no URL is issued and every URL answers
- * 404, the way the comparison and the encrypted share refuse — a subscription
- * keeps polling long after anybody looks at the settings page that hid it.
+ * Released from beta on 2026-11-01 (forgejo#390). `calendarFeedEnabled` is the one
+ * place a server-side switch would live; clients read it from `GET /settings`
+ * (`calendarFeedEnabled`) and `GET /calendar-feed` (`enabled`). While it is false no
+ * URL is issued and every URL answers 404 — a subscription keeps polling long
+ * after anybody looks at the settings page that hid it.
  */
 
 /** Entries that ended up to this many days ago stay in the feed. */
@@ -60,7 +59,7 @@ export const feedDisabled = () =>
   );
 
 export async function calendarFeedEnabled(): Promise<boolean> {
-  return (await getInstanceSettings()).betaFeaturesEnabled;
+  return true;
 }
 
 const feedExists = () =>
@@ -226,7 +225,7 @@ export async function revokeFeed(userId: string): Promise<boolean> {
 
 /**
  * The owner of a live token, or null for anything else — malformed, unknown,
- * revoked, or the instance's beta switch off. One answer, so the public
+ * revoked, or the feed switched off. One answer, so the public
  * endpoint is no oracle. A hit records when the feed was last read.
  */
 export async function resolveFeedOwner(token: string): Promise<string | null> {

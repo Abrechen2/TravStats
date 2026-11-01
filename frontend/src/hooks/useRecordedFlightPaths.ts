@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { useBetaFeatures } from "./useBetaFeatures";
 import { useTranslation } from "./useTranslation";
 import { flightsApi } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -14,8 +13,8 @@ import type { FlightTrackLine } from "../types/flightTrack";
  * The map's flights with each recorded flight's track attached (forgejo#312),
  * so both map engines draw it beside the route arcs. Only while the map
  * option „Aufgezeichnete Flugwege zeigen" is on (`recordedFlightPathsStore`,
- * default off — the dashboard shows routes, a recording is one flight), and
- * behind the `flightTrackUpload` beta key. Otherwise nothing is fetched and
+ * default off — the dashboard shows routes, a recording is one flight).
+ * Otherwise nothing is fetched and
  * the flights come back as they went in — the same array, so no memo
  * downstream re-runs.
  *
@@ -24,10 +23,9 @@ import type { FlightTrackLine } from "../types/flightTrack";
  */
 export function useRecordedFlightPaths(flights: GeoJSONFeature[]): GeoJSONFeature[] {
   const { t } = useTranslation("flights");
-  const { isFeatureVisible } = useBetaFeatures();
   const addToast = useToastStore((s) => s.addToast);
   const optedIn = useRecordedFlightPathsStore((s) => s.show);
-  const enabled = optedIn && isFeatureVisible("flightTrackUpload") && flights.length > 0;
+  const enabled = optedIn && flights.length > 0;
   const [lines, setLines] = useState<FlightTrackLine[]>([]);
 
   useEffect(() => {
