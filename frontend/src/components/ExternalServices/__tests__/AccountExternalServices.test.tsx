@@ -8,6 +8,10 @@ vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),
   externalServicesApi: mockedApi,
 }));
+const domains = vi.hoisted(() => ({ on: true }));
+vi.mock("../../../hooks/useEnabledDomains", () => ({
+  useEnabledDomains: () => ({ isEnabled: () => domains.on }),
+}));
 const beta = vi.hoisted(() => ({ tours: true }));
 vi.mock("../../../hooks/useToursVisible", () => ({ useToursVisible: () => beta.tours }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({
@@ -359,6 +363,53 @@ describe("Einstellungen › Dienste", () => {
       within(row("immich")).getByRole("button", { name: "externalServices:account.action.change" })
     );
     expect(screen.getByTestId("nightly-scan")).toBeInTheDocument();
+  });
+
+  it("offers 'link visit photos with Immich' under the Immich row, only with the places domain", async () => {
+    const data = accountOverview();
+    data.connections.push({
+      id: "immich",
+      recommended: "free",
+      effectiveSource: "account",
+      accountDisabled: false,
+      configured: true,
+      lastTest: null,
+      fields: [{ key: "baseUrl", kind: "url", value: "https://i.example", expert: false }],
+    });
+    mockedApi.accountOverview.mockResolvedValue(data);
+    const open = async (): Promise<void> => {
+      render(<AccountExternalServices />, { wrapper: MemoryRouter });
+      await screen.findByText("externalServices:account.sections.connections");
+      fireEvent.click(
+        within(row("immich")).getByRole("button", {
+          name: "externalServices:account.action.change",
+        })
+      );
+    };
+    domains.on = true;
+    await open();
+    expect(screen.getByRole("button", { name: "visitPhotos.run" })).toBeInTheDocument();
+  });
+
+  it("hides the visit-photo link action when the places domain is off", async () => {
+    const data = accountOverview();
+    data.connections.push({
+      id: "immich",
+      recommended: "free",
+      effectiveSource: "account",
+      accountDisabled: false,
+      configured: true,
+      lastTest: null,
+      fields: [{ key: "baseUrl", kind: "url", value: "https://i.example", expert: false }],
+    });
+    mockedApi.accountOverview.mockResolvedValue(data);
+    domains.on = false;
+    render(<AccountExternalServices />, { wrapper: MemoryRouter });
+    await screen.findByText("externalServices:account.sections.connections");
+    fireEvent.click(
+      within(row("immich")).getByRole("button", { name: "externalServices:account.action.change" })
+    );
+    expect(screen.queryByRole("button", { name: "visitPhotos.run" })).toBeNull();
   });
 
   it("does not unlock a row that is still saving when another row finishes", async () => {
