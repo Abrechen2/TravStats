@@ -23,15 +23,7 @@ import {
  */
 
 export type ReminderDomain =
-  | "flight"
-  | "cruise"
-  | "rail"
-  | "lodging"
-  | "ferry"
-  | "bus"
-  | "rental"
-  | "roadtrip"
-  | "poi";
+  "flight" | "cruise" | "rail" | "lodging" | "ferry" | "bus" | "rental" | "roadtrip" | "poi";
 
 /**
  * Colours are the domain registry's (`shared/domains.ts`, which a test ties to
