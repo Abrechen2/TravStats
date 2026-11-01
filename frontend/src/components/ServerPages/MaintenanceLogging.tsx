@@ -119,7 +119,9 @@ function Rows({
 
   // Only what the user edited is sent: the verbose switch above writes the level on
   // its own, and a draft that still holds the old level must not write it back.
-  const editedRef = useRef<readonly (keyof Draft)[]>([]);
+  // "Changed" cannot say that (it is measured against a baseline that follows the
+  // server), so the edits are recorded as they are made.
+  const editedRef = useRef<Set<keyof Draft>>(new Set());
   const group = useGroupSave<Draft>({
     id: "maintenance-logging",
     label: t("settingsRows:maintenance.groups.logging"),
@@ -133,11 +135,23 @@ function Rows({
         ...(edited.has("database") ? { logDatabaseQueries: draft.database } : {}),
         ...(edited.has("parser") ? { logParserOperations: draft.parser } : {}),
       });
+      // What was sent is saved; an edit made while the request was out stays recorded.
+      for (const field of edited) if (field in draft) editedRef.current.delete(field);
       await reload();
       return draftOf(next);
     },
   });
-  editedRef.current = group.changed;
+  const edit = (patch: Partial<Draft>): void => {
+    for (const field of Object.keys(patch) as (keyof Draft)[]) editedRef.current.add(field);
+    group.edit(patch);
+  };
+  const footer = {
+    ...group,
+    discard: (): void => {
+      editedRef.current.clear();
+      group.discard();
+    },
+  };
   const verbose = useSettingWrite<boolean>(
     "maintenance:debug",
     config.logLevel === "debug",
@@ -230,10 +244,7 @@ function Rows({
       expert
       changed={group.isChanged(field)}
       control={
-        <SwitchControl
-          checked={group.draft[field]}
-          onChange={(next) => group.edit({ [field]: next })}
-        />
+        <SwitchControl checked={group.draft[field]} onChange={(next) => edit({ [field]: next })} />
       }
     />
   );
@@ -260,7 +271,7 @@ function Rows({
             label={level.title}
             value={group.draft.level}
             options={LOG_LEVELS.map((l) => ({ value: l, label: t(`admin:logging.level.${l}`) }))}
-            onChange={(next) => group.edit({ level: next })}
+            onChange={(next) => edit({ level: next })}
           />
         }
       />
@@ -278,14 +289,14 @@ function Rows({
             type="number"
             inputMode="numeric"
             value={group.draft.retentionDays}
-            onChange={(next) => group.edit({ retentionDays: next })}
+            onChange={(next) => edit({ retentionDays: next })}
           />
         }
       />
       {sw("http", http.title)}
       {sw("database", db.title)}
       {sw("parser", parser.title)}
-      <GroupFooter group={group} disabled={daysInvalid} />
+      <GroupFooter group={footer} disabled={daysInvalid} />
       <SettingItem title={filesRow.title} sub={filesRow.sub} scope="allAccounts" expert>
         {fileError ? <ErrorLine>{fileError}</ErrorLine> : null}
         {files.length === 0 ? (

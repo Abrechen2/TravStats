@@ -31,6 +31,8 @@ interface InstanceState {
 }
 
 let inFlight: Promise<void> | null = null;
+/** Bumped when the session changes: an answer to an older generation is dropped. */
+let generation = 0;
 const STALE_AFTER_MS = 60_000;
 
 /**
@@ -58,8 +60,10 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
   reload: async () => {
     // A reload keeps the copy on screen; only a first read has nothing to show.
     if (get().settings === null) set({ load: "loading" });
+    const mine = generation;
     try {
       const response = await adminApi.getInstanceSettings();
+      if (mine !== generation) return;
       set({
         settings: response.settings,
         passkeyStatus: response.passkeyStatus,
@@ -69,12 +73,15 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
       });
     } catch (error) {
       logger.error("Failed to load instance settings", error);
+      if (mine !== generation) return;
       // A refresh that fails leaves the copy we have; only a first read is "failed".
       if (get().settings === null) set({ load: "failed" });
     }
   },
   patch: async (patch) => {
+    const mine = generation;
     const response = await adminApi.updateInstanceSettings(patch);
+    if (mine !== generation) return response.settings;
     set({ settings: response.settings, passkeyStatus: response.passkeyStatus });
     // Gated UI (Devices entry, TravTrack, trip AI card) reacts at once instead of after a reload.
     if (patch.betaFeaturesEnabled !== undefined) {
@@ -87,6 +94,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
 /** Test seam: forget what was loaded. */
 export function resetInstanceStore(): void {
   inFlight = null;
+  generation += 1;
   useInstanceStore.setState({
     settings: null,
     passkeyStatus: null,
