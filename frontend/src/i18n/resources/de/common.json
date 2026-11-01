@@ -432,7 +432,7 @@
     "labelLowerBound": "CO₂ (Schätzung, Untergrenze)",
     "labelVehicle": "CO₂ je Fahrzeug (Schätzung)",
     "savedVsFlight": "CO₂ gespart gegenüber dem Flug (Schätzung)",
-    "tripTotal": "CO₂ dieser Reise: ≈ {{total}} (Schätzung)",
+    "tripTotal": "CO₂ dieser Reise: {{total}} (Schätzung)",
     "unmeasured_one": "{{count}} Eintrag ohne bekannte Distanz nicht eingerechnet",
     "unmeasured_other": "{{count}} Einträge ohne bekannte Distanz nicht eingerechnet",
     "modes": {

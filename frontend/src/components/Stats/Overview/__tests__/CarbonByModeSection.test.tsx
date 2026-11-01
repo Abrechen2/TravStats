@@ -7,7 +7,10 @@ import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
 const getCo2 = vi.fn();
 vi.mock("../../../../lib/api/stats", () => ({ statsApi: { getCo2: () => getCo2() } }));
 
-vi.mock("../../../../hooks/useDomainVisible", () => ({ useDomainVisible: (): boolean => true }));
+const hidden = vi.hoisted(() => ({ keys: new Set<string>() }));
+vi.mock("../../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean => !hidden.keys.has(key),
+}));
 
 import CarbonByModeSection from "../CarbonByModeSection";
 
@@ -56,6 +59,7 @@ function Probe({ onChange }: { onChange: (search: string) => void }): null {
 describe("CarbonByModeSection", () => {
   beforeEach(() => {
     getCo2.mockReset();
+    hidden.keys.clear();
     cleanup();
   });
 
@@ -96,6 +100,22 @@ describe("CarbonByModeSection", () => {
       ["co2CruiseKg", "co2FootprintKg", "co2RailKg", "co2SavedVsFlightKg"].sort()
     );
     for (const key of keys) expect(EVIDENCE_MEASURES[key]?.scopes).toContain("allTime");
+  });
+
+  it("builds its total from the modes on screen, not from a hidden domain's records", async () => {
+    hidden.keys.add("rail");
+    getCo2.mockResolvedValue(response());
+    render(
+      <MemoryRouter>
+        <CarbonByModeSection />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getByTestId("carbon-by-mode")).toBeTruthy());
+    const text = screen.getByTestId("carbon-by-mode").textContent ?? "";
+    // The sentence lists only what is on screen; the server's total also holds the hidden rail.
+    expect(text).toContain("common:co2.modes.flight 300 kg + common:co2.modes.cruise 113 kg");
+    expect(text).not.toContain("common:co2.modes.rail");
+    expect(text).not.toContain("stats:carbon.savedDescription");
   });
 
   it("renders nothing when the request fails, rather than a card of zeros", async () => {

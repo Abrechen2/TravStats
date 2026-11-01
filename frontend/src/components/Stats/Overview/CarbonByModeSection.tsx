@@ -77,15 +77,21 @@ export default function CarbonByModeSection(): JSX.Element | null {
   const kg = (n: number): string => `${Math.round(n).toLocaleString(locale)} kg`;
   const coverage = (m: { measured: number; records: number }): string =>
     t("stats:carbon.coverage", { measured: m.measured, records: m.records });
+  // Totals are built from the parts on screen: a hidden domain's records are in
+  // the server's totals, so they are not used here.
   const parts = [
     ...(showFlights && data.flights.kg !== null
-      ? [`${t("common:co2.modes.flight")} ${kg(data.flights.kg)}`]
+      ? [{ key: "flight", kg: data.flights.kg, lowerBound: false }]
       : []),
     ...modes.flatMap((m) =>
-      m.kg === null ? [] : [`${t(`common:co2.modes.${m.mode}`)} ${kg(m.kg)}`]
+      m.kg === null ? [] : [{ key: m.mode, kg: m.kg, lowerBound: m.lowerBound }]
     ),
   ];
-  const saved = data.savedVsFlightKg;
+  const total = parts.reduce((sum, p) => sum + p.kg, 0);
+  const totalSign = parts.some((p) => p.lowerBound) ? "≥" : "≈";
+  // The saving's records are the rail and bus rides together: shown only when
+  // both are, so the tile never counts a ride the page hides.
+  const saved = railOn && busOn ? data.savedVsFlightKg : null;
 
   return (
     <section className="mt-8" data-testid="carbon-by-mode">
@@ -95,9 +101,10 @@ export default function CarbonByModeSection(): JSX.Element | null {
       <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
         {t("stats:carbon.subtitle")}
       </p>
-      {data.totalKg !== null && parts.length > 1 && (
+      {parts.length > 1 && (
         <p className="mb-4 text-sm" style={{ color: "var(--text-primary)" }}>
-          {t("stats:carbon.total", { total: kg(data.totalKg) })} {parts.join(" + ")}
+          {t("stats:carbon.total", { total: `${totalSign} ${kg(total)}` })}{" "}
+          {parts.map((p) => `${t(`common:co2.modes.${p.key}`)} ${kg(p.kg)}`).join(" + ")}
         </p>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -1472,7 +1472,7 @@
   "carbon": {
     "title": "CO₂ nach Verkehrsmittel",
     "subtitle": "Geschätzt aus veröffentlichten Emissionsfaktoren und der Strecke. Jedes Verkehrsmittel steht für sich, die Summe nennt ihre Teile.",
-    "total": "Zusammen ≈ {{total}}:",
+    "total": "Zusammen {{total}}:",
     "coverage": "{{measured}} von {{records}} Einträgen mit bekannter Distanz",
     "cruiseNote": "Untergrenze: Es gibt keinen veröffentlichten Faktor für Kreuzfahrtschiffe, gerechnet wird mit dem Fährdurchschnitt über die Strecke, ohne Hotelbetrieb.",
     "saved": "Gespart gegenüber dem Flug",

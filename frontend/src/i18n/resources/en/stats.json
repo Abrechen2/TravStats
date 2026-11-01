@@ -1472,7 +1472,7 @@
   "carbon": {
     "title": "CO₂ by mode of travel",
     "subtitle": "Estimated from published emission factors and the distance. Each mode stands on its own; the total names its parts.",
-    "total": "Together ≈ {{total}}:",
+    "total": "Together {{total}}:",
     "coverage": "{{measured}} of {{records}} entries with a known distance",
     "cruiseNote": "Lower bound: there is no published factor for cruise ships, so the ferry average is applied over the voyage distance, without hotel operations.",
     "saved": "Saved versus flying",
