@@ -239,6 +239,8 @@
   "noAutoCount": "Die Freigabe bestätigt keine Besuche. Auch vergangene Plantermine zählen nicht automatisch als erlebt.",
   "confirmVisit": "Als tatsächlich erlebt bestätigen",
   "unconfirmVisit": "Bestätigung zurücknehmen",
+  "listCountsRoute": "{{stations}} Stationen · {{stages}} Etappen",
+  "listCountsStay": "{{ideas}} Ideen · {{bookings}} Buchungen",
   "readyStatus": "Reisebereit",
   "planningStatus": "In Planung",
   "noPush": "Hinweise bleiben in der Oberfläche. Bewusst offene Punkte bleiben ruhig.",

@@ -9,6 +9,7 @@ import { isoCountryCode } from "../../utils/continents";
 import { findLocations } from "./locations";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import { zoneOfCoordinates } from "../../shared/time/resolveInput";
 import type { PlanPlace } from "./types";
 
 export type PlaceSource = "own" | "port" | "geocoder";
@@ -25,6 +26,16 @@ export interface PlaceSearchResult {
 }
 
 const like = (q: string) => ({ contains: q, mode: "insensitive" as const });
+
+/** The coordinate's zone; a failing lookup leaves it unset (the plan then falls back to its own). */
+function zoneOf(lat: number, lon: number): string | null {
+  try {
+    return zoneOfCoordinates(lat, lon);
+  } catch (error) {
+    logger.warn({ operation: "travplan.places.zone", error: String(error) }, "zone lookup failed");
+    return null;
+  }
+}
 
 async function ownPlaces(userId: string, q: string): Promise<PlaceHit[]> {
   const rows = await prisma.place.findMany({
@@ -49,7 +60,8 @@ async function ownPlaces(userId: string, q: string): Promise<PlaceHit[]> {
       lat: r.lat,
       lon: r.lon,
       country: r.isoCountryCode ?? isoCountryCode(r.country) ?? r.country,
-      zone: null,
+      // A saved place has no zone column: derive it from where it is, so the pick carries one.
+      zone: zoneOf(r.lat, r.lon),
       ref: { kind: "place", id: r.id },
     },
   }));

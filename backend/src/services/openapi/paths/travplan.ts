@@ -145,6 +145,9 @@ register(
         status: z.enum(["planning", "ready", "archived"]),
         ideasCount: z.number(),
         bookingsCount: z.number(),
+        shape: z.enum(["stay", "route"]),
+        stationsCount: z.number(),
+        stagesCount: z.number(),
       })
     ),
   })

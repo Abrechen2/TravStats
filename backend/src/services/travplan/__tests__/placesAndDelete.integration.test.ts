@@ -92,6 +92,8 @@ describe("GET /travplan/places", () => {
       lat: 50,
       lon: 8,
       country: "DE",
+      // A saved place has no zone of its own: the pick derives it from the coordinates.
+      zone: "Europe/Berlin",
       ref: { kind: "place" },
     });
     expect(by("port").place).toMatchObject({

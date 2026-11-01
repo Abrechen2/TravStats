@@ -239,6 +239,8 @@
   "noAutoCount": "Releasing a plan confirms no visits. Past plan dates do not automatically count as experiences.",
   "confirmVisit": "Confirm as actually experienced",
   "unconfirmVisit": "Withdraw confirmation",
+  "listCountsRoute": "{{stations}} stations · {{stages}} stages",
+  "listCountsStay": "{{ideas}} ideas · {{bookings}} bookings",
   "readyStatus": "Ready to travel",
   "planningStatus": "Planning",
   "noPush": "Hints stay in the app. Intentionally open points stay quiet.",

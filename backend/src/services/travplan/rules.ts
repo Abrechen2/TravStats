@@ -99,7 +99,13 @@ export function checkPlan(state: PlanState, today: string): PlanFinding[] {
   const active = state.items.filter(
     (i) => i.execution !== "cancelled" && i.execution !== "skipped"
   );
-  for (const flight of active.filter((i) => ["flight", "rail", "bus", "ferry"].includes(i.kind))) {
+  // A route plan's stations are linked by stages (and handed over to the logbook); an airport
+  // style "how do you get from the arrival to the hotel" question does not exist there.
+  const transferLegs =
+    state.shape === "route"
+      ? []
+      : active.filter((i) => ["flight", "rail", "bus", "ferry"].includes(i.kind));
+  for (const flight of transferLegs) {
     const arrival = state.bookings.find((b) => b.id === flight.bookingId)?.arrivalDay ?? flight.day;
     const hotel = active
       .filter(

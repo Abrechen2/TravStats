@@ -420,4 +420,8 @@ export interface PlanSummary {
   status: PlanState["status"];
   ideasCount: number;
   bookingsCount: number;
+  shape: PlanState["shape"];
+  /** Route plans only; 0 on a stay plan. */
+  stationsCount: number;
+  stagesCount: number;
 }

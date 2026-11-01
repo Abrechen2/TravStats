@@ -105,7 +105,10 @@ export async function listPlans(userId: string): Promise<PlanSummary[]> {
       p.state->>'startDay' AS "startDay",p.state->>'endDay' AS "endDay",
       p.state->>'status' AS status,
       jsonb_array_length(p.state->'ideas')::int AS "ideasCount",
-      jsonb_array_length(p.state->'bookings')::int AS "bookingsCount"
+      jsonb_array_length(p.state->'bookings')::int AS "bookingsCount",
+      COALESCE(p.state->>'shape','stay') AS shape,
+      COALESCE(jsonb_array_length(p.state->'stations'),0)::int AS "stationsCount",
+      COALESCE(jsonb_array_length(p.state->'stages'),0)::int AS "stagesCount"
     FROM travel_plans p JOIN trips t ON t.id=p.trip_id
     WHERE t.user_id=${userId}
     ORDER BY p.updated_at DESC LIMIT 500

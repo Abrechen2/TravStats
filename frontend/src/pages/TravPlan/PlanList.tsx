@@ -72,7 +72,9 @@ export function PlanList() {
                 {[shortDay(p.startDay), shortDay(p.endDay)].filter(Boolean).join(" – ")}
               </p>
               <p className="t-caption">
-                {p.ideasCount} {t("sections.workspace")} · {p.bookingsCount} {t("sections.import")}
+                {p.shape === "route"
+                  ? t("listCountsRoute", { stations: p.stationsCount, stages: p.stagesCount })
+                  : t("listCountsStay", { ideas: p.ideasCount, bookings: p.bookingsCount })}
               </p>
               <div>
                 <PlanLink to={"/plan/" + p.tripId + "/overview"}>{t("continue")}</PlanLink>

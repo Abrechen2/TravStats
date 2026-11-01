@@ -90,6 +90,12 @@ describe("Travel planning invariants", () => {
     expect(checkPlan(s, "2026-11-01").some((f) => f.code === "transferReview")).toBe(true);
     expect(s.transfers[0].note).toBe("Arrival hall");
   });
+  it("does not raise transferOpen on a route plan, where a ferry and a hotel are stations of one route", () => {
+    const stay = booking(booking(emptyState(), "ferry", "A"), "hotel", "B");
+    expect(checkPlan(stay, "2026-11-01").some((f) => f.code === "transferOpen")).toBe(true);
+    const route = { ...stay, shape: "route" as const };
+    expect(checkPlan(route, "2026-11-01").some((f) => f.code === "transferOpen")).toBe(false);
+  });
   it("does not reopen an intentionally open transfer", () => {
     let s = booking(booking(emptyState(), "flight", "A"), "hotel", "B");
     s.transfers = [
