@@ -257,381 +257,128 @@ export async function createDatabaseDump(
       // Continue with local pg_dump - this is expected if Docker is not available
     }
 
-    return new Promise<void>((resolve, reject) => {
-      // Ensure output directory exists
-      const outputDir = path.dirname(outputPath);
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      const outputFile = fs.createWriteStream(outputPath);
-      const pgDump = spawn(
-        "pg_dump",
-        [
-          "-h",
-          dbInfo.host,
-          "-p",
-          dbInfo.port.toString(),
-          "-U",
-          dbInfo.user,
-          "-F",
-          "p",
-          // See the note above spawnRestore in backupRestore.ts: without --clean a
-          // dump only ever ADDS, so restoring over a live database left it as it
-          // was and reported success (audit finding AUD-007).
-          "--clean",
-          "--if-exists",
-          dbInfo.database,
-        ],
-        {
-          env: {
-            ...process.env,
-            PGPASSWORD: dbInfo.password,
-          },
-        }
-      );
-
-      pgDump.stdout.pipe(outputFile);
-
-      let stderrData = "";
-      pgDump.stderr.on("data", (data) => {
-        stderrData += data.toString();
-        logger.warn({
-          operation: "backup_db_stderr",
-          message: "pg_dump stderr output",
-          data: data.toString(),
-        });
-      });
-
-      pgDump.on("error", (error) => {
-        outputFile.close();
-        try {
-          if (fs.existsSync(outputPath)) {
-            fs.unlinkSync(outputPath);
-          }
-        } catch (_unlinkError) {
-          // Ignore unlink errors
-        }
-        reject(
-          new Error(
-            `Failed to start pg_dump: ${error.message}. ` +
-              `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
-          )
-        );
-      });
-
-      outputFile.on("error", (error) => {
-        pgDump.kill();
-        reject(new Error(`Failed to write backup file: ${error.message}`));
-      });
-
-      pgDump.on("close", (code) => {
-        outputFile.end(() => {
-          if (code === 0) {
-            // Verify file was created and has content
-            if (fs.existsSync(outputPath)) {
-              const stats = fs.statSync(outputPath);
-              if (stats.size === 0) {
-                reject(new Error("Backup file is empty"));
-              } else {
-                resolve();
-              }
-            } else {
-              reject(new Error("Backup file was not created"));
-            }
-          } else {
-            try {
-              if (fs.existsSync(outputPath)) {
-                fs.unlinkSync(outputPath);
-              }
-            } catch (_unlinkError) {
-              // Ignore unlink errors
-            }
-            reject(
-              new Error(`pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`)
-            );
-          }
-        });
-      });
-    });
+    return runDumpTo("pg_dump", localPgDumpArgs(dbInfo), dbInfo.password, outputPath, "pg_dump");
   }
 
-  // Docker: use spawn with file output (safe from command injection)
   if (dockerAvailable) {
-    // Use docker exec - this works on both Windows and Unix when database is in Docker
-    // On Windows, we need to handle the output redirection differently
-    if (isWindows) {
-      // On Windows with Docker, use spawn with docker exec
-      return new Promise<void>((resolve, reject) => {
-        // Ensure output directory exists
-        const outputDir = path.dirname(outputPath);
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
-
-        const outputFile = fs.createWriteStream(outputPath);
-        const dockerExec = spawn(
-          "docker",
-          [
-            "exec",
-            "-i",
-            actualContainerName,
-            "pg_dump",
-            "-U",
-            dbInfo.user,
-            "-F",
-            "p",
-            "--clean",
-            "--if-exists",
-            // See the note above spawnRestore in backupRestore.ts: without --clean a
-            // dump only ever ADDS, so restoring over a live database left it as it
-            // was and reported success (audit finding AUD-007).
-            "--clean",
-            "--if-exists",
-            dbInfo.database,
-          ],
-          {
-            env: {
-              ...process.env,
-              PGPASSWORD: dbInfo.password,
-            },
-          }
-        );
-
-        dockerExec.stdout.pipe(outputFile);
-
-        let stderrData = "";
-        dockerExec.stderr.on("data", (data) => {
-          stderrData += data.toString();
-          logger.warn({
-            operation: "backup_db_docker_stderr",
-            message: "docker exec pg_dump stderr output",
-            data: data.toString(),
-          });
-        });
-
-        dockerExec.on("error", (error) => {
-          outputFile.close();
-          try {
-            if (fs.existsSync(outputPath)) {
-              fs.unlinkSync(outputPath);
-            }
-          } catch (_unlinkError) {
-            // Ignore unlink errors
-          }
-          reject(new Error(`Failed to start docker exec: ${error.message}`));
-        });
-
-        outputFile.on("error", (error) => {
-          dockerExec.kill();
-          reject(new Error(`Failed to write backup file: ${error.message}`));
-        });
-
-        dockerExec.on("close", (code) => {
-          outputFile.end(() => {
-            if (code === 0) {
-              // Verify file was created and has content
-              if (fs.existsSync(outputPath)) {
-                const stats = fs.statSync(outputPath);
-                if (stats.size === 0) {
-                  reject(new Error("Backup file is empty"));
-                } else {
-                  resolve();
-                }
-              } else {
-                reject(new Error("Backup file was not created"));
-              }
-            } else {
-              try {
-                if (fs.existsSync(outputPath)) {
-                  fs.unlinkSync(outputPath);
-                }
-              } catch (_unlinkError) {
-                // Ignore unlink errors
-              }
-              reject(
-                new Error(
-                  `docker exec pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`
-                )
-              );
-            }
-          });
-        });
-      });
-    } else {
-      // Unix/Linux with Docker: use spawn (no shell) to prevent command injection
-      return new Promise<void>((resolve, reject) => {
-        const outputDir = path.dirname(outputPath);
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
-
-        const outputFile = fs.createWriteStream(outputPath);
-        const dockerExec = spawn(
-          "docker",
-          [
-            "exec",
-            "-i",
-            actualContainerName,
-            "pg_dump",
-            "-U",
-            dbInfo.user,
-            "-F",
-            "p",
-            "--clean",
-            "--if-exists",
-            dbInfo.database,
-          ],
-          {
-            env: { ...process.env, PGPASSWORD: dbInfo.password },
-          }
-        );
-
-        dockerExec.stdout.pipe(outputFile);
-
-        let stderrData = "";
-        dockerExec.stderr.on("data", (data) => {
-          stderrData += data.toString();
-          logger.warn({
-            operation: "backup_db_docker_stderr",
-            message: "docker exec pg_dump stderr output",
-            data: data.toString(),
-          });
-        });
-
-        dockerExec.on("error", (error) => {
-          outputFile.close();
-          try {
-            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-          } catch {
-            /* ignore */
-          }
-          reject(new Error(`Failed to start docker exec: ${error.message}`));
-        });
-
-        outputFile.on("error", (error) => {
-          dockerExec.kill();
-          reject(new Error(`Failed to write backup file: ${error.message}`));
-        });
-
-        dockerExec.on("close", (code) => {
-          outputFile.end(() => {
-            if (code === 0) {
-              if (fs.existsSync(outputPath)) {
-                const stats = fs.statSync(outputPath);
-                if (stats.size === 0) {
-                  reject(new Error("Backup file is empty"));
-                } else {
-                  resolve();
-                }
-              } else {
-                reject(new Error("Backup file was not created"));
-              }
-            } else {
-              try {
-                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-              } catch {
-                /* ignore */
-              }
-              reject(
-                new Error(
-                  `docker exec pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`
-                )
-              );
-            }
-          });
-        });
-      });
-    }
-  } else {
-    // Direct connection (no Docker), Unix: use spawn (no shell) to prevent command injection
-    return new Promise<void>((resolve, reject) => {
-      const outputDir = path.dirname(outputPath);
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      const outputFile = fs.createWriteStream(outputPath);
-      const pgDump = spawn(
+    return runDumpTo(
+      "docker",
+      [
+        "exec",
+        "-i",
+        actualContainerName,
         "pg_dump",
-        [
-          "-h",
-          dbInfo.host,
-          "-p",
-          dbInfo.port.toString(),
-          "-U",
-          dbInfo.user,
-          "-F",
-          "p",
-          // See the note above spawnRestore in backupRestore.ts: without --clean a
-          // dump only ever ADDS, so restoring over a live database left it as it
-          // was and reported success (audit finding AUD-007).
-          "--clean",
-          "--if-exists",
-          dbInfo.database,
-        ],
-        {
-          env: { ...process.env, PGPASSWORD: dbInfo.password },
-        }
-      );
+        "-U",
+        dbInfo.user,
+        "-F",
+        "p",
+        ...DUMP_CLEAN_ARGS,
+        dbInfo.database,
+      ],
+      dbInfo.password,
+      outputPath,
+      "docker exec pg_dump"
+    );
+  }
 
-      pgDump.stdout.pipe(outputFile);
+  // Direct connection (no Docker): spawn without a shell to prevent command injection
+  return runDumpTo("pg_dump", localPgDumpArgs(dbInfo), dbInfo.password, outputPath, "pg_dump");
+}
 
-      let stderrData = "";
-      pgDump.stderr.on("data", (data) => {
-        stderrData += data.toString();
-        logger.warn({
-          operation: "backup_db_stderr",
-          message: "pg_dump stderr output",
-          data: data.toString(),
-        });
-      });
+// See the note above spawnRestore in backupRestore.ts: without --clean a dump only
+// ever ADDS, so restoring over a live database left it as it was and reported
+// success (audit finding AUD-007).
+const DUMP_CLEAN_ARGS = ["--clean", "--if-exists"];
 
-      pgDump.on("error", (error) => {
-        outputFile.close();
-        try {
-          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-        } catch {
-          /* ignore */
-        }
-        reject(
-          new Error(
-            `Failed to start pg_dump: ${error.message}. ` +
-              `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
-          )
-        );
-      });
+function localPgDumpArgs(dbInfo: ReturnType<typeof parseDatabaseUrl>): string[] {
+  return [
+    "-h",
+    dbInfo.host,
+    "-p",
+    dbInfo.port.toString(),
+    "-U",
+    dbInfo.user,
+    "-F",
+    "p",
+    ...DUMP_CLEAN_ARGS,
+    dbInfo.database,
+  ];
+}
 
-      outputFile.on("error", (error) => {
-        pgDump.kill();
-        reject(new Error(`Failed to write backup file: ${error.message}`));
-      });
+/**
+ * Spawn a dump command (no shell), stream its stdout into `outputPath` and
+ * settle when it exits. A failed or empty dump never leaves a file behind.
+ */
+function runDumpTo(
+  cmd: string,
+  args: string[],
+  password: string,
+  outputPath: string,
+  label: string
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
 
-      pgDump.on("close", (code) => {
-        outputFile.end(() => {
-          if (code === 0) {
-            if (fs.existsSync(outputPath)) {
-              const stats = fs.statSync(outputPath);
-              if (stats.size === 0) {
-                reject(new Error("Backup file is empty"));
-              } else {
-                resolve();
-              }
-            } else {
-              reject(new Error("Backup file was not created"));
-            }
-          } else {
-            try {
-              if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-            } catch {
-              /* ignore */
-            }
-            reject(
-              new Error(`pg_dump exited with code ${code}${stderrData ? ": " + stderrData : ""}`)
-            );
-          }
-        });
+    const removePartial = () => {
+      try {
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const outputFile = fs.createWriteStream(outputPath);
+    const child = spawn(cmd, args, { env: { ...process.env, PGPASSWORD: password } });
+    child.stdout.pipe(outputFile);
+
+    let stderrData = "";
+    child.stderr.on("data", (data) => {
+      stderrData += data.toString();
+      logger.warn({
+        operation: cmd === "docker" ? "backup_db_docker_stderr" : "backup_db_stderr",
+        message: `${label} stderr output`,
+        data: data.toString(),
       });
     });
-  }
+
+    child.on("error", (error) => {
+      outputFile.close();
+      removePartial();
+      reject(
+        new Error(
+          cmd === "docker"
+            ? `Failed to start docker exec: ${error.message}`
+            : `Failed to start pg_dump: ${error.message}. ` +
+                `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
+        )
+      );
+    });
+
+    outputFile.on("error", (error) => {
+      child.kill();
+      reject(new Error(`Failed to write backup file: ${error.message}`));
+    });
+
+    child.on("close", (code) => {
+      outputFile.end(() => {
+        if (code === 0) {
+          if (!fs.existsSync(outputPath)) {
+            reject(new Error("Backup file was not created"));
+          } else if (fs.statSync(outputPath).size === 0) {
+            reject(new Error("Backup file is empty"));
+          } else {
+            resolve();
+          }
+          return;
+        }
+        removePartial();
+        reject(
+          new Error(`${label} exited with code ${code}${stderrData ? ": " + stderrData : ""}`)
+        );
+      });
+    });
+  });
 }
