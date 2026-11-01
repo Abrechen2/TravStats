@@ -1,10 +1,22 @@
 /**
  * Träwelling export (CSV and JSON) -> rides.
  *
- * JSON: the status objects of Träwelling's export / API (`{data: [...]}` or a
- * bare array), each with a `train` (newer: `transport`) holding `origin` and
- * `destination` stops. CSV: one status per line; column names are matched
- * through alias lists because the CSV header has changed between versions.
+ * Shapes taken from the upstream source (github.com/Traewelling/traewelling,
+ * branch develop, commit 6051078ef102, checked 2026-11-01):
+ *  - JSON: `app/Http/Controllers/Backend/Export/Format/JsonExportController.php`
+ *    -> `{meta, data: ExportStatusResource[]}`; per status
+ *    `app/Http/Resources/Export/ExportStatusResource.php` (`body`, `checkin`) and
+ *    `ExportCheckinResource.php` (`category`, `lineName`, `journeyNumber`,
+ *    `origin`/`destination` = `ExportStopoverResource` with `id`, `name`,
+ *    `departurePlanned|Real`, `arrivalPlanned|Real`; `tripOrigin`/`tripDestination`
+ *    = `StationResource` with `latitude`/`longitude`/`identifiers`). A stopover's
+ *    `id` is Träwelling's internal station id, NOT an EVA number: the EVA comes
+ *    from the matching trip station's `de_db_ibnr` identifier, if loaded.
+ *  - CSV: `app/Http/Controllers/Backend/Export/ExportController.php`
+ *    (`exportCsv`) with `app/Enum/ExportableColumn.php`: machine headings are the
+ *    enum values (`journey_type`, `line_name`, `origin_name`, `origin_coordinates`
+ *    = "lat,lon", `departure_planned` ISO 8601 ...); the "human" CSV prints the
+ *    translated titles (`lang/{en,de}.json`, `export.title.*`) instead.
  * A record that carries no two stations or no departure is a reject with a
  * code, not a silently shorter list.
  */
@@ -92,19 +104,42 @@ function build(
   out.rides.push(ride);
 }
 
-function stopFromJson(stop: unknown, kind: "dep" | "arr"): { stop: CheckinStop; raw: unknown } {
+/** The trip station the stopover points at (same internal id), for position and EVA. */
+function tripStation(stopover: Rec, candidates: unknown[]): Rec | null {
+  const id = str(stopover.id);
+  if (id === undefined) return null;
+  for (const c of candidates) if (isRec(c) && str(c.id) === id) return c;
+  return null;
+}
+
+function ibnrOf(station: Rec | null): string | undefined {
+  if (!station || !Array.isArray(station.identifiers)) return undefined;
+  for (const i of station.identifiers) {
+    if (isRec(i) && i.type === "de_db_ibnr") return digits(i.identifier);
+  }
+  return undefined;
+}
+
+function stopFromJson(
+  stop: unknown,
+  kind: "dep" | "arr",
+  tripStations: unknown[],
+  manual: unknown
+): { stop: CheckinStop; raw: unknown } {
   const s = isRec(stop) ? stop : {};
+  const station = tripStation(s, tripStations);
   const planned = kind === "dep" ? s.departurePlanned : s.arrivalPlanned;
-  const real = kind === "dep" ? s.departure : s.arrival;
+  const real = kind === "dep" ? s.departureReal : s.arrivalReal;
   return {
     stop: {
       name: str(s.name),
-      code: digits(s.evaIdentifier ?? s.eva ?? s.id),
-      lat: num(s.latitude ?? s.lat),
-      lon: num(s.longitude ?? s.lon),
+      code: ibnrOf(station),
+      lat: num(station?.latitude),
+      lon: num(station?.longitude),
     },
-    // The planned time is the ticket's; the real one only where nothing else is.
-    raw: planned ?? real,
+    // The planned time is the ticket's; the real one, then a manual entry,
+    // only where nothing else is.
+    raw: planned ?? real ?? manual,
   };
 }
 
@@ -130,24 +165,20 @@ export function parseTraewellingJson(text: string): CheckinParse {
   list.forEach((item, index) => {
     const row = index + 1;
     const status = isRec(item) ? item : {};
-    const train = isRec(status.train)
-      ? status.train
-      : isRec(status.transport)
-        ? status.transport
-        : null;
-    if (!train) {
+    const checkin = isRec(status.checkin) ? status.checkin : null;
+    if (!checkin) {
       out.rejects.push({ row, label: `#${row}`, reason: "not_a_journey" });
       return;
     }
-    const dep = stopFromJson(train.origin, "dep");
-    const arr = stopFromJson(train.destination, "arr");
-    const trip = isRec(train.trip) ? train.trip : {};
+    const tripStations = [checkin.tripOrigin, checkin.tripDestination];
+    const dep = stopFromJson(checkin.origin, "dep", tripStations, checkin.manualDeparture);
+    const arr = stopFromJson(checkin.destination, "arr", tripStations, checkin.manualArrival);
     build(
       row,
       {
-        category: str(train.category ?? trip.category),
-        lineName: str(train.lineName ?? trip.lineName),
-        journeyNumber: str(train.journeyNumber ?? train.number ?? trip.number),
+        category: str(checkin.category),
+        lineName: str(checkin.lineName),
+        journeyNumber: str(checkin.manualJourneyNumber ?? checkin.journeyNumber ?? checkin.number),
         body: str(status.body),
         dep: dep.stop,
         arr: arr.stop,
@@ -160,34 +191,35 @@ export function parseTraewellingJson(text: string): CheckinParse {
   return out;
 }
 
+/**
+ * Machine headings first (`ExportableColumn` values), then the translated
+ * titles of the "human" CSV (`export.title.*` in lang/en.json and lang/de.json),
+ * all lower-cased.
+ */
 const COLUMNS = {
-  category: ["category", "journey_type", "type", "train_category"],
-  line: ["line", "line_name", "linename", "name"],
-  number: ["journey_number", "journeynumber", "number", "train_number"],
-  depName: ["origin", "origin_name", "from", "departure_station"],
-  depCode: ["origin_eva", "origin_evaidentifier", "origin_id", "from_eva"],
-  depLat: ["origin_lat", "origin_latitude"],
-  depLon: ["origin_lon", "origin_longitude"],
-  depTime: [
-    "departure_planned",
-    "departureplanned",
-    "planned_departure",
-    "departure",
-    "origin_departure",
+  category: ["journey_type", "category", "kategorie"],
+  line: ["line_name", "line", "linie"],
+  number: ["journey_number", "journey number", "fahrtnummer"],
+  depName: ["origin_name", "departure station name", "abfahrtsstation name"],
+  depCoords: ["origin_coordinates", "departure station coordinates", "abfahrtsstation koordinaten"],
+  depTime: ["departure_planned", "departure planned", "abfahrt geplant"],
+  depReal: ["departure_real", "departure real-time", "abfahrt real"],
+  arrName: ["destination_name", "destination station name", "zielstation name"],
+  arrCoords: [
+    "destination_coordinates",
+    "destination station coordinates",
+    "zielstation koordinaten",
   ],
-  arrName: ["destination", "destination_name", "to", "arrival_station"],
-  arrCode: ["destination_eva", "destination_evaidentifier", "destination_id", "to_eva"],
-  arrLat: ["destination_lat", "destination_latitude"],
-  arrLon: ["destination_lon", "destination_longitude"],
-  arrTime: [
-    "arrival_planned",
-    "arrivalplanned",
-    "planned_arrival",
-    "arrival",
-    "destination_arrival",
-  ],
-  body: ["body", "message", "comment", "note"],
+  arrTime: ["arrival_planned", "arrival planned", "ankunft geplant"],
+  arrReal: ["arrival_real", "arrival real-time", "ankunft real"],
+  body: ["body", "status text", "status-nachricht"],
 } as const;
+
+/** "lat,lon" (the export prints both in one cell). */
+function coordsOf(cell: string | undefined): { lat?: number; lon?: number } {
+  const m = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(cell ?? "");
+  return m ? { lat: Number(m[1]), lon: Number(m[2]) } : {};
+}
 
 export function parseTraewellingCsv(text: string): CheckinParse {
   const out: CheckinParse = { rides: [], rejects: [] };
@@ -214,7 +246,7 @@ export function parseTraewellingCsv(text: string): CheckinParse {
     return out;
   }
   if (records.length > MAX_CHECKIN_RECORDS) throw new TooManyRecordsError();
-  const known: readonly string[] = [...COLUMNS.depName, ...COLUMNS.depCode, ...COLUMNS.arrName];
+  const known: readonly string[] = [...COLUMNS.depName, ...COLUMNS.arrName];
   if (!headerCols.some((h) => known.includes(h))) {
     out.rejects.push({ row: 1, label: "#1", reason: "invalid_file" });
     return out;
@@ -225,9 +257,7 @@ export function parseTraewellingCsv(text: string): CheckinParse {
   };
   records.forEach((r, index) => {
     const row = index + 2; // header is line 1
-    const hasStations =
-      pick(r, COLUMNS.depName) !== undefined || pick(r, COLUMNS.depCode) !== undefined;
-    if (!hasStations && Object.keys(r).length > 0 && pick(r, COLUMNS.arrName) === undefined) {
+    if (pick(r, COLUMNS.depName) === undefined && pick(r, COLUMNS.arrName) === undefined) {
       out.rejects.push({ row, label: `#${row}`, reason: "not_a_journey" });
       return;
     }
@@ -240,18 +270,14 @@ export function parseTraewellingCsv(text: string): CheckinParse {
         body: str(pick(r, COLUMNS.body)),
         dep: {
           name: str(pick(r, COLUMNS.depName)),
-          code: digits(pick(r, COLUMNS.depCode)),
-          lat: num(pick(r, COLUMNS.depLat)),
-          lon: num(pick(r, COLUMNS.depLon)),
+          ...coordsOf(pick(r, COLUMNS.depCoords)),
         },
         arr: {
           name: str(pick(r, COLUMNS.arrName)),
-          code: digits(pick(r, COLUMNS.arrCode)),
-          lat: num(pick(r, COLUMNS.arrLat)),
-          lon: num(pick(r, COLUMNS.arrLon)),
+          ...coordsOf(pick(r, COLUMNS.arrCoords)),
         },
-        depRaw: pick(r, COLUMNS.depTime),
-        arrRaw: pick(r, COLUMNS.arrTime),
+        depRaw: pick(r, COLUMNS.depTime) ?? pick(r, COLUMNS.depReal),
+        arrRaw: pick(r, COLUMNS.arrTime) ?? pick(r, COLUMNS.arrReal),
       },
       out
     );

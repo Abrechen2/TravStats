@@ -1,0 +1,4 @@
+status_id,journey_type,line_name,journey_number,origin_name,origin_coordinates,departure_planned,departure_real,destination_name,destination_coordinates,arrival_planned,arrival_real,duration,distance,points,body,travel_type,operator
+201,regional,RE 5,5,Alpha Hbf,"52.5,13.4",2026-03-01T07:00:00+00:00,2026-03-01T07:02:00+00:00,Beta Hbf,"53.5,10",2026-03-01T08:00:00+00:00,2026-03-01T08:01:00+00:00,60,250000,30,"mit, Komma",Privat,Test Bahn
+202,tram,Tram 1,,Alpha Hbf,"52.5,13.4",2026-03-01T17:00:00+00:00,,,,,,10,3000,2,,Privat,
+203,bus,Bus 200,,Alpha Hbf,"52.5,13.4",,2026-03-02T08:00:00+00:00,Gamma Platz,"52.6,13.5",,2026-03-02T08:20:00+00:00,20,5000,3,,Privat,

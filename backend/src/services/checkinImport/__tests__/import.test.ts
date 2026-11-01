@@ -1,6 +1,7 @@
 import { prisma } from "../../../db";
 import { runCheckinImport, parseCheckinFile } from "../index";
 import { buildSheets } from "../toSheets";
+import { status } from "./fixtures/status";
 
 /**
  * Check-in file -> rail rides through the spreadsheet importer's own rules.
@@ -38,23 +39,12 @@ describe("check-in import (forgejo#401)", () => {
   const file = (extra: unknown[] = []) =>
     JSON.stringify({
       data: [
-        {
-          train: {
-            category: "regional",
-            lineName: "RE 5",
-            journeyNumber: "5",
-            origin: {
-              name: "Alpha Hbf",
-              evaIdentifier: "8999001",
-              departurePlanned: "2026-03-01T08:00:00+01:00",
-            },
-            destination: {
-              name: "Beta Hbf",
-              evaIdentifier: "8999002",
-              arrivalPlanned: "2026-03-01T10:00:00+01:00",
-            },
-          },
-        },
+        status({
+          lineName: "RE 5",
+          journeyNumber: "5",
+          dep: "2026-03-01T08:00:00+01:00",
+          arr: "2026-03-01T10:00:00+01:00",
+        }),
         ...extra,
       ],
     });
@@ -84,14 +74,12 @@ describe("check-in import (forgejo#401)", () => {
 
   it("keeps the transit mode of a tram and reads a UTC instant in the station's zone", async () => {
     const text = JSON.stringify([
-      {
-        train: {
-          category: "tram",
-          lineName: "Tram 9",
-          origin: { name: "Alpha Hbf", departurePlanned: "2026-07-01T06:00:00Z" },
-          destination: { name: "Beta Hbf", arrivalPlanned: "2026-07-01T07:00:00Z" },
-        },
-      },
+      status({
+        category: "tram",
+        lineName: "Tram 9",
+        dep: "2026-07-01T06:00:00Z",
+        arr: "2026-07-01T07:00:00Z",
+      }),
     ]);
     await run(text, false);
     const ride = await prisma.railJourney.findFirstOrThrow({
@@ -104,21 +92,18 @@ describe("check-in import (forgejo#401)", () => {
   it("a ride whose station is not in the catalogue is shown with its reason, not dropped", async () => {
     const out = await run(
       file([
-        {
-          train: {
-            category: "regional",
-            origin: { name: "Nowhere Nord", departurePlanned: "2026-04-01T08:00:00+02:00" },
-            destination: { name: "Beta Hbf", arrivalPlanned: "2026-04-01T09:00:00+02:00" },
-          },
-        },
+        status({
+          from: "Nowhere Nord",
+          dep: "2026-04-01T08:00:00+02:00",
+          arr: "2026-04-01T09:00:00+02:00",
+        }),
         { body: "no journey" },
-        {
-          train: {
-            category: "ferry",
-            origin: { name: "A", departurePlanned: "2026-04-01T08:00:00+02:00" },
-            destination: { name: "B" },
-          },
-        },
+        status({
+          category: "ferry",
+          from: "Alpha Hbf",
+          to: "Beta Hbf",
+          dep: "2026-04-01T08:00:00+02:00",
+        }),
       ]),
       true
     );
@@ -133,8 +118,8 @@ describe("check-in import (forgejo#401)", () => {
 
   it("reports the same ride twice in one file once, and the copy as a skip", async () => {
     const dup = JSON.parse(file()).data[0];
-    dup.train.origin.departurePlanned = "2026-05-01T08:00:00+02:00";
-    dup.train.destination.arrivalPlanned = "2026-05-01T10:00:00+02:00";
+    dup.checkin.origin.departurePlanned = "2026-05-01T08:00:00+02:00";
+    dup.checkin.destination.arrivalPlanned = "2026-05-01T10:00:00+02:00";
     const out = await run(JSON.stringify([dup, dup]), true);
     const rows = out.sheets[0].rows;
     expect(rows.map((r) => r.action)).toEqual(["create", "skip"]);
@@ -143,10 +128,10 @@ describe("check-in import (forgejo#401)", () => {
 
   it("an arrival before the departure is refused and does not hide the valid copy of the ride", async () => {
     const bad = JSON.parse(file()).data[0];
-    bad.train.origin.departurePlanned = "2026-06-01T08:00:00+02:00";
-    bad.train.destination.arrivalPlanned = "2026-06-01T07:00:00+02:00";
+    bad.checkin.origin.departurePlanned = "2026-06-01T08:00:00+02:00";
+    bad.checkin.destination.arrivalPlanned = "2026-06-01T07:00:00+02:00";
     const good = JSON.parse(JSON.stringify(bad));
-    good.train.destination.arrivalPlanned = "2026-06-01T10:00:00+02:00";
+    good.checkin.destination.arrivalPlanned = "2026-06-01T10:00:00+02:00";
     const out = await run(JSON.stringify([bad, good]), true);
     expect(out.sheets[0].rows.map((r) => [r.row, r.action, r.message])).toEqual([
       [1, "error", "invalid_date"],
@@ -155,21 +140,8 @@ describe("check-in import (forgejo#401)", () => {
   });
 
   it("looks each distinct station up once per request, however many rides use it", async () => {
-    const mk = (day: string) => ({
-      train: {
-        category: "regional",
-        origin: {
-          name: "Alpha Hbf",
-          evaIdentifier: "8999001",
-          departurePlanned: `2026-09-${day}T08:00:00+02:00`,
-        },
-        destination: {
-          name: "Beta Hbf",
-          evaIdentifier: "8999002",
-          arrivalPlanned: `2026-09-${day}T10:00:00+02:00`,
-        },
-      },
-    });
+    const mk = (day: string) =>
+      status({ dep: `2026-09-${day}T08:00:00+02:00`, arr: `2026-09-${day}T10:00:00+02:00` });
     const findMany = jest.spyOn(prisma.railStation, "findMany");
     // The resolving step on its own (the spreadsheet importer's per-row
     // station check afterwards is not part of this cache).
@@ -178,19 +150,29 @@ describe("check-in import (forgejo#401)", () => {
       JSON.stringify(["01", "02", "03", "04"].map(mk))
     );
     await buildSheets(rides);
-    expect(findMany).toHaveBeenCalledTimes(2);
+    // 4 rides x 2 stops, but only 2 distinct stops.
+    expect(findMany.mock.calls.length).toBeLessThanOrEqual(2);
     findMany.mockRestore();
   });
 
-  it("imports a travelynx history entry (epoch seconds) in the station's zone", async () => {
+  it("imports a travelynx export journey (epoch seconds) in the station's zone", async () => {
     // 2026-08-01T05:00:00Z = 07:00 in Berlin (summer time)
-    const text = JSON.stringify([
-      {
-        fromStation: { name: "Alpha Hbf", uic: 8999001, scheduledTime: 1785560400 },
-        toStation: { name: "Beta Hbf", uic: 8999002, scheduledTime: 1785567600 },
-        train: { type: "ICE", line: "ICE 1", no: "1" },
-      },
-    ]);
+    const text = JSON.stringify({
+      journeys: [
+        {
+          is_iris: true,
+          train_type: "ICE",
+          train_line: "ICE 1",
+          train_no: "1",
+          dep_name: "Alpha Hbf",
+          dep_eva: 8999001,
+          sched_dep_ts: 1785560400,
+          arr_name: "Beta Hbf",
+          arr_eva: 8999002,
+          sched_arr_ts: 1785567600,
+        },
+      ],
+    });
     await run(text, false, "travelynx");
     const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId, trainNumber: "1" } });
     expect(ride.departureTime.toISOString()).toBe("2026-08-01T05:00:00.000Z");

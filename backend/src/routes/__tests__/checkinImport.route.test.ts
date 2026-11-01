@@ -4,6 +4,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
+import { status } from "../../services/checkinImport/__tests__/fixtures/status";
 
 /** POST /checkin-import — request validation and the dry-run default (forgejo#401). */
 describe("POST /checkin-import", () => {
@@ -55,21 +56,10 @@ describe("POST /checkin-import", () => {
   });
 
   it("refuses a file over the record cap with IMPORT_TOO_MANY_ROWS before any station lookup", async () => {
-    const ride = {
-      train: {
-        category: "regional",
-        origin: {
-          name: "Alpha Hbf",
-          evaIdentifier: "8999001",
-          departurePlanned: "2026-03-01T08:00:00+01:00",
-        },
-        destination: {
-          name: "Beta Hbf",
-          evaIdentifier: "8999002",
-          arrivalPlanned: "2026-03-01T10:00:00+01:00",
-        },
-      },
-    };
+    const ride = status({
+      dep: "2026-03-01T08:00:00+01:00",
+      arr: "2026-03-01T10:00:00+01:00",
+    });
     const findMany = jest.spyOn(prisma.railStation, "findMany");
     const raw = jest.spyOn(prisma, "$queryRaw");
     const res = await request(app)
@@ -85,8 +75,9 @@ describe("POST /checkin-import", () => {
   });
 
   it("refuses a CSV over the cap the same way", async () => {
-    const lines = ["journey_type,origin,departure,destination"];
-    for (let i = 0; i < 5001; i++) lines.push("regional,Alpha Hbf,2026-03-01 08:00:00,Beta Hbf");
+    const lines = ["journey_type,origin_name,departure_planned,destination_name"];
+    for (let i = 0; i < 5001; i++)
+      lines.push("regional,Alpha Hbf,2026-03-01T08:00:00+01:00,Beta Hbf");
     const res = await request(app)
       .post("/api/v1/checkin-import")
       .set("Cookie", cookie)
