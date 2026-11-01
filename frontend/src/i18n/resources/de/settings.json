@@ -424,7 +424,13 @@
       "csv": "CSV",
       "pdf": "PDF"
     },
-    "lastInstanceBackup": "Letztes Instanz-Backup"
+    "lastInstanceBackup": "Letztes Instanz-Backup",
+    "instance": {
+      "running": "läuft gerade",
+      "none": "Noch keine",
+      "loadFailed": "Ich konnte den Stand der Sicherung nicht lesen.",
+      "retry": "Erneut versuchen"
+    }
   },
   "meExport": {
     "title": "Meine Daten herunterladen",
@@ -912,14 +918,14 @@
       "localTransit": {
         "title": "U-Bahn und Tram beim Bahn-Import",
         "sub": "Womit ein bahn.de-Import diese Abschnitte vorbelegt. Beim Import kannst du jederzeit anders wählen.",
-        "skip": "Überspringen",
-        "rail": "Als Bahnfahrt"
+        "skip": "weglassen",
+        "rail": "als Bahnfahrt"
       },
       "bus": {
         "title": "Busse beim Bahn-Import",
         "sub": "Womit ein bahn.de-Import Busabschnitte vorbelegt.",
-        "skip": "Überspringen",
-        "bus": "Als Busfahrt"
+        "skip": "weglassen",
+        "bus": "als Busfahrt"
       },
       "saved": "Gespeichert.",
       "openImport": "Zum Bahn-Import"
@@ -1440,8 +1446,12 @@
       "cleanupIncomplete": "Mehr alte Versionen als ein Durchlauf aufräumt; der Rest folgt bei den nächsten Durchläufen.",
       "alreadyRunning": "Ein Abgleich läuft bereits.",
       "invalidInput": "Eine Eingabe ist ungültig.",
-      "unknown": "Der Abgleich ist fehlgeschlagen."
-    }
+      "unknown": "Der Abgleich ist fehlgeschlagen.",
+      "rateLimited": "Du hast zu oft hintereinander abgeglichen. Versuch es in ein paar Minuten wieder."
+    },
+    "versionsInvalid": "Ganze Zahl von 1 bis 30.",
+    "connection": "Verbindung",
+    "connectionHint": "Die Verbindung gehört später zu Dienste → Backup-Ziel; bis dahin richtest du sie hier ein."
   },
   "locationProvider": {
     "title": "Standortquelle",

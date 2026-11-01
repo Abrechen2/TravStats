@@ -14,10 +14,6 @@ import CountryCountingCard from "../../components/Settings/CountryCountingCard";
 import DefaultsSection from "../../components/Settings/DefaultsSection";
 import NotificationsSection from "../../components/Settings/NotificationsSection";
 import BackupSection from "../../components/Settings/BackupSection";
-import MeExportRow from "../../components/Settings/MeExportRow";
-import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
-import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
-import WebdavSyncRow from "../../components/Settings/WebdavSyncRow";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
 import ApiTokensSection from "../../components/Settings/ApiTokensSection";
@@ -107,23 +103,9 @@ export default function SettingsSectionSwitch({
     case "countryCounting":
       return <CountryCountingCard />;
     case "backup":
-      return (
-        <BackupSection
-          lastBackup={page.lastBackup}
-          backupStatus={page.backupStatus}
-          isAdmin={isAdmin}
-        >
-          {/* In the same card as the backup, because both answer "get my data
-              out" — but they are not the same thing: a backup restores an
-              instance, the spreadsheet is for reading and editing. */}
-          <MeExportRow />
-          <SpreadsheetSection />
-          {/* The recordings the spreadsheet cannot carry. */}
-          <TrackArchiveSection />
-          {/* The same export, on a schedule, to the user's own share (expert). */}
-          <WebdavSyncRow />
-        </BackupSection>
-      );
+      // Sicherung and Mitnehmen: the server's last backup for everyone, the
+      // account's own copy on WebDAV, and what the account downloads.
+      return <BackupSection />;
     case "import":
       return <ImportSection />;
     case "trips":

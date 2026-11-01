@@ -64,7 +64,7 @@ describe("the spreadsheet export", () => {
     exportMock.mockResolvedValue(null);
     render(<SpreadsheetSection />);
 
-    fireEvent.click(screen.getByRole("button", { name: /xlsx:export\.button/ }));
+    fireEvent.click(screen.getByRole("button", { name: /settingsRows:data.excelexp.btn/ }));
 
     await waitFor(() => expect(exportMock).toHaveBeenCalledTimes(1));
     const data = exportMock.mock.calls[0][1] as { flights: { id: string }[] };

@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useExpertRows } from "./frame/useExpertRows";
-import { Field, Input, Select, Switch } from "../ui/Field";
-import Button from "../ui/Button";
-import { token } from "../ui/tokens";
-import { profileWallClock } from "../../lib/profileInstant";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { logger } from "../../lib/logger";
-import DemoLockedNotice from "./DemoLockedNotice";
+import { profileWallClock } from "../../lib/profileInstant";
+import { token } from "../ui/tokens";
+import Button from "../ui/Button";
+import {
+  ActionControl,
+  ChoiceControl,
+  ErrorLine,
+  InputControl,
+  SettingItem,
+  SwitchControl,
+  useGuardedNavigate,
+  useSettingWrite,
+} from "../ui/settings";
 import {
   JobLostError,
   webdavErrorKey,
@@ -17,6 +25,8 @@ import {
   type WebdavSyncStatus,
   type WebdavSyncUpdate,
 } from "../../lib/api/webdavSync";
+import { useDependency, useRowCopy } from "./rowCopy";
+import WebdavConnectionForm from "./WebdavConnectionForm";
 
 /** ISO date and minute on the profile clock, as the backup row writes it. */
 function isoMinute(iso: string): string {
@@ -28,109 +38,115 @@ function megabytes(bytes: number | null): string {
   return bytes === null ? "—" : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
-interface Message {
-  ok: boolean;
-  text: string;
-}
+const KEEP_MIN = 1;
+const KEEP_MAX = 30;
 
 /**
- * Daten › Meine Daten & Sync › „Mit WebDAV abgleichen“ (forgejo#321): the
- * account's full export, uploaded on a schedule to a share the user names.
- * An expert row — it is plumbing, not something TravStats needs to work.
+ * "Eigene Kopie auf WebDAV" (design §4 A11, forgejo#321): the account's full
+ * export, uploaded on a schedule to a share the user names. Four rows — on/off,
+ * how often, versions to keep (Expert) and "Jetzt hochladen" — each writing at
+ * once to `PUT /settings/webdav-sync` and keeping the user's pick when the
+ * server refuses. Every refusal has its own sentence (`webdavSync.errors`); a
+ * refusal of the share is never worded as our own.
  */
-export default function WebdavSyncRow(): JSX.Element | null {
-  const expert = useExpertRows(1);
-  return expert ? <WebdavSyncPanel /> : null;
-}
-
-export function WebdavSyncPanel(): JSX.Element {
-  const { t } = useTranslation(["settings"]);
+export default function WebdavSyncRow({
+  alwaysExpert = false,
+  withConnection = false,
+}: {
+  /** Draw the expert row ("Versionen behalten") whatever the level is. */
+  alwaysExpert?: boolean;
+  /**
+   * Draw the connection form here. The design keeps it on Services → Backup
+   * target (the Services page mounts `WebdavSyncPanel`); the Data page names the
+   * missing connection and jumps there.
+   */
+  withConnection?: boolean;
+}): JSX.Element | null {
+  const { t } = useTranslation(["settings", "settingsRows"]);
+  const row = useRowCopy("data");
+  const dependency = useDependency();
   const isDemo = useIsDemoAccount();
-
+  const levelExpert = useExpertRows(1);
+  const expert = alwaysExpert || levelExpert;
+  const go = useGuardedNavigate();
   const [status, setStatus] = useState<WebdavSyncStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [open, setOpen] = useState(false);
-  const [url, setUrl] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [remotePath, setRemotePath] = useState("/TravStats/");
-  const [schedule, setSchedule] = useState<WebdavSchedule>("daily");
-  const [keepVersions, setKeepVersions] = useState("5");
   const [busy, setBusy] = useState<"save" | "run" | null>(null);
-  const [message, setMessage] = useState<Message | null>(null);
-
-  const apply = useCallback((next: WebdavSyncStatus) => {
-    setStatus(next);
-    setUrl(next.url ?? "");
-    setUsername(next.username ?? "");
-    setRemotePath(next.remotePath);
-    setSchedule(next.schedule);
-    setKeepVersions(String(next.keepVersions));
-  }, []);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [runMessage, setRunMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [keepDraft, setKeepDraft] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      apply(await webdavSyncApi.get());
+      setStatus(await webdavSyncApi.get());
       setLoadFailed(false);
     } catch (err) {
-      // Our own API failed, not the share: no form, so nothing can be saved
+      // Our own API failed, not the share: no rows, so nothing can be saved
       // over a stored configuration we could not read.
       logger.error("Failed to load WebDAV sync settings", err);
       setLoadFailed(true);
     }
-  }, [apply]);
-
+  }, []);
   useEffect(() => {
     void load();
   }, [load]);
 
-  const failure = (err: unknown, fallbackKey: string): Message => {
+  const errorText = (err: unknown): string => {
     const code = webdavRequestErrorCode(err);
-    return { ok: false, text: t(code ? webdavErrorKey(code) : fallbackKey) };
+    return t(code ? webdavErrorKey(code) : "settings:webdavSync.saveError");
   };
 
-  const save = async (patch: WebdavSyncUpdate): Promise<boolean> => {
+  /** One write to the settings; the row's own failure text is kept for the line under it. */
+  const send = useCallback(
+    async (patch: WebdavSyncUpdate): Promise<void> => {
+      try {
+        setStatus(await webdavSyncApi.update(patch));
+        setRowError(null);
+      } catch (err) {
+        setRowError(errorText(err));
+        throw err;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const enabled = useSettingWrite<boolean>("data.webdav.enabled", status?.enabled ?? false, (v) =>
+    send({ enabled: v })
+  );
+  const schedule = useSettingWrite<WebdavSchedule>(
+    "data.webdav.schedule",
+    status?.schedule ?? "daily",
+    (v) => send({ schedule: v })
+  );
+  const keep = useSettingWrite<number>("data.webdav.keep", status?.keepVersions ?? 5, (v) =>
+    send({ keepVersions: v })
+  );
+
+  const saveConnection = async (patch: WebdavSyncUpdate): Promise<boolean> => {
     setBusy("save");
-    setMessage(null);
+    setFormError(null);
     try {
-      apply(await webdavSyncApi.update(patch));
-      setPassword("");
+      setStatus(await webdavSyncApi.update(patch));
       return true;
     } catch (err) {
-      setMessage(failure(err, "settings:webdavSync.saveError"));
+      setFormError(errorText(err));
       return false;
     } finally {
       setBusy(null);
     }
   };
 
-  const formPatch = (): WebdavSyncUpdate => {
-    const patch: WebdavSyncUpdate = {
-      url: url.trim() || null,
-      username: username.trim() || null,
-      remotePath: remotePath.trim() || "/TravStats/",
-      schedule,
-      keepVersions: Number.parseInt(keepVersions, 10) || 5,
-    };
-    // An empty password field keeps the stored one.
-    if (password !== "") patch.password = password;
-    return patch;
-  };
-
-  const toggle = async (next: boolean): Promise<void> => {
-    // Switching on sends the form too, so a first setup is one click.
-    const ok = await save(next ? { ...formPatch(), enabled: true } : { enabled: false });
-    if (!ok && next) setOpen(true);
-  };
-
   const runNow = async (): Promise<void> => {
     setBusy("run");
-    setMessage(null);
+    setRunMessage(null);
     try {
       const result = await webdavSyncApi.runNow();
-      setMessage(
+      setRunMessage(
         result.status === "ok"
-          ? { ok: true, text: t("settings:webdavSync.runOk") }
+          ? { ok: true, text: row("webdavjetzt").res ?? t("settings:webdavSync.runOk") }
           : {
               ok: false,
               text: t("settings:webdavSync.runPartial", {
@@ -139,11 +155,10 @@ export function WebdavSyncPanel(): JSX.Element {
             }
       );
     } catch (err) {
-      setMessage(
-        err instanceof JobLostError
-          ? { ok: false, text: t("settings:webdavSync.runLost") }
-          : failure(err, "settings:webdavSync.errors.unknown")
-      );
+      setRunMessage({
+        ok: false,
+        text: err instanceof JobLostError ? t("settings:webdavSync.runLost") : errorText(err),
+      });
     } finally {
       setBusy(null);
       // The recorded result is the truth either way; read it back.
@@ -151,27 +166,26 @@ export function WebdavSyncPanel(): JSX.Element {
     }
   };
 
-  if (loadFailed) {
-    return (
-      <p role="alert" className="t-caption" style={{ color: token("bad") }}>
-        {t("settings:webdavSync.loadError")}
-      </p>
-    );
-  }
-  if (isDemo) {
-    return (
-      <div>
-        <Switch
-          checked={false}
-          onChange={() => undefined}
-          label={t("settings:webdavSync.title")}
-          disabled
-          expert
-        />
-        <DemoLockedNotice />
-      </div>
-    );
-  }
+  if (loadFailed) return <ErrorLine>{t("settings:webdavSync.loadError")}</ErrorLine>;
+  if (!status) return null;
+
+  const configured = Boolean(status.url && status.username && status.hasPassword);
+  const lock = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+  const offDep = status.enabled ? undefined : dependency("webdavOff");
+  const keepText = keepDraft ?? String(keep.value);
+  const keepCheck = /^\d+$/.test(keepText) && +keepText >= KEEP_MIN && +keepText <= KEEP_MAX;
+  const commitKeep = (): void => {
+    if (keepDraft === null) return;
+    if (keepCheck) keep.choose(Number(keepDraft));
+    else return;
+    setKeepDraft(null);
+  };
+  const eigen = row("webdaveigen");
+  const takt = row("webdavtakt");
+  const vers = row("webdavvers");
+  const jetzt = row("webdavjetzt");
 
   return (
     <div
@@ -179,138 +193,114 @@ export function WebdavSyncPanel(): JSX.Element {
       className="flex flex-col"
       style={{ gap: "var(--ts-space-md)" }}
     >
-      <Switch
-        id="webdav-sync-enabled"
-        checked={status?.enabled ?? false}
-        disabled={status === null || busy !== null}
-        onChange={(next) => void toggle(next)}
-        label={t("settings:webdavSync.title")}
-        sub={status ? <LastResult status={status} /> : t("settings:webdavSync.description")}
-        expert
-      />
-      <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-        <Button onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          {open ? t("settings:webdavSync.hide") : t("settings:webdavSync.setup")}
-        </Button>
-        {status?.enabled && (
-          <Button onClick={() => void runNow()} disabled={busy !== null || status.running}>
-            {busy === "run" || status.running
-              ? t("settings:webdavSync.running")
-              : t("settings:webdavSync.runNow")}
-          </Button>
-        )}
-      </div>
-      {open && status && (
-        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-          <p className="t-caption">{t("settings:webdavSync.whatIsUploaded")}</p>
-          <Field
-            label={t("settings:webdavSync.url")}
-            htmlFor="webdav-sync-url"
-            hint={t(
-              status.allowPrivateTargets
-                ? "settings:webdavSync.urlHintAdmin"
-                : "settings:webdavSync.urlHint"
-            )}
-          >
-            <Input
-              id="webdav-sync-url"
-              inputMode="url"
-              autoComplete="off"
-              placeholder="https://cloud.example.com/remote.php/dav/files/name/"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-          </Field>
-          <Field label={t("settings:webdavSync.username")} htmlFor="webdav-sync-user">
-            <Input
-              id="webdav-sync-user"
-              autoComplete="off"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </Field>
-          <Field
-            label={t("settings:webdavSync.password")}
-            htmlFor="webdav-sync-password"
-            hint={status.hasPassword ? t("settings:webdavSync.passwordStored") : undefined}
-          >
-            <Input
-              id="webdav-sync-password"
-              type="password"
-              autoComplete="new-password"
-              placeholder={
-                status.hasPassword ? t("settings:webdavSync.passwordKeepPlaceholder") : undefined
-              }
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </Field>
-          <Field label={t("settings:webdavSync.remotePath")} htmlFor="webdav-sync-path">
-            <Input
-              id="webdav-sync-path"
-              value={remotePath}
-              onChange={(e) => setRemotePath(e.target.value)}
-            />
-          </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-md)" }}>
-            <Field label={t("settings:webdavSync.schedule")} htmlFor="webdav-sync-schedule">
-              <Select
-                id="webdav-sync-schedule"
-                value={schedule}
-                onChange={(e) => setSchedule(e.target.value as WebdavSchedule)}
-              >
-                <option value="daily">{t("settings:webdavSync.schedules.daily")}</option>
-                <option value="weekly">{t("settings:webdavSync.schedules.weekly")}</option>
-              </Select>
-            </Field>
-            <Field label={t("settings:webdavSync.keepVersions")} htmlFor="webdav-sync-keep">
-              <Input
-                id="webdav-sync-keep"
-                type="number"
-                min={1}
-                max={30}
-                value={keepVersions}
-                onChange={(e) => setKeepVersions(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-            <Button
-              variant="primary"
-              onClick={() => void save(formPatch())}
-              disabled={busy !== null}
-            >
-              {busy === "save" ? t("settings:webdavSync.saving") : t("settings:webdavSync.save")}
+      <SettingItem
+        title={eigen.title}
+        sub={<LastResult status={status} fallback={eigen.sub} />}
+        help={eigen.help}
+        save={enabled}
+        locked={lock}
+        error={rowError ?? undefined}
+        dependency={
+          configured || status.enabled
+            ? undefined
+            : dependency("noWebdav", () =>
+                withConnection ? setOpen(true) : go("/settings/services#webdav")
+              )
+        }
+        control={<SwitchControl checked={enabled.value} onChange={enabled.choose} />}
+      >
+        {withConnection && (
+          <div>
+            <Button onClick={() => setOpen((o) => !o)} aria-expanded={open} disabled={isDemo}>
+              {open ? t("settings:webdavSync.hide") : t("settings:webdavSync.setup")}
             </Button>
-            {status.hasPassword && (
-              <Button
-                onClick={() => void save({ password: null, enabled: false })}
-                disabled={busy !== null}
-              >
-                {t("settings:webdavSync.clearPassword")}
-              </Button>
-            )}
           </div>
-        </div>
+        )}
+        {withConnection && open && !isDemo && (
+          <WebdavConnectionForm status={status} busy={busy === "save"} onSave={saveConnection} />
+        )}
+        {formError && <ErrorLine>{formError}</ErrorLine>}
+      </SettingItem>
+      <SettingItem
+        title={takt.title}
+        save={schedule}
+        locked={lock}
+        dependency={offDep}
+        control={
+          <ChoiceControl<WebdavSchedule>
+            label={takt.title}
+            value={schedule.value}
+            onChange={schedule.choose}
+            options={[
+              { value: "daily", label: t("settings:webdavSync.schedules.daily") },
+              { value: "weekly", label: t("settings:webdavSync.schedules.weekly") },
+            ]}
+          />
+        }
+      />
+      {expert && (
+        <SettingItem
+          title={vers.title}
+          sub={vers.sub}
+          expert
+          save={keep}
+          locked={lock}
+          dependency={offDep}
+          error={
+            keepDraft !== null && !keepCheck ? t("settings:webdavSync.versionsInvalid") : undefined
+          }
+          control={
+            <span onBlur={commitKeep} onKeyDown={(e) => e.key === "Enter" && commitKeep()}>
+              <InputControl
+                type="number"
+                inputMode="numeric"
+                value={keepText}
+                onChange={setKeepDraft}
+              />
+            </span>
+          }
+        />
       )}
-      {message && (
-        <p
-          role={message.ok ? "status" : "alert"}
-          className="text-sm"
-          style={{ color: token(message.ok ? "good" : "bad") }}
-        >
-          {message.text}
-        </p>
-      )}
+      <SettingItem
+        title={jetzt.title}
+        locked={lock}
+        dependency={offDep}
+        control={
+          <ActionControl
+            label={
+              busy === "run" || status.running
+                ? t("settings:webdavSync.running")
+                : (jetzt.btn ?? t("settings:webdavSync.runNow"))
+            }
+            busy={busy !== null || status.running}
+            onClick={() => void runNow()}
+          />
+        }
+      >
+        {runMessage &&
+          (runMessage.ok ? (
+            <p role="status" className="t-caption" style={{ color: token("good") }}>
+              {runMessage.text}
+            </p>
+          ) : (
+            <ErrorLine>{runMessage.text}</ErrorLine>
+          ))}
+      </SettingItem>
     </div>
   );
 }
 
 /** The last run, with its reason when it failed. */
-function LastResult({ status }: { status: WebdavSyncStatus }): JSX.Element {
+function LastResult({
+  status,
+  fallback,
+}: {
+  status: WebdavSyncStatus;
+  fallback?: string;
+}): JSX.Element {
   const { t } = useTranslation(["settings"]);
   if (!status.ranAt || !status.lastStatus) {
-    return <>{t("settings:webdavSync.last.never")}</>;
+    return <>{[fallback, t("settings:webdavSync.last.never")].filter(Boolean).join(" · ")}</>;
   }
   const when = isoMinute(status.ranAt);
   if (status.lastStatus === "failed") {
@@ -342,4 +332,9 @@ function LastResult({ status }: { status: WebdavSyncStatus }): JSX.Element {
       })}
     </span>
   );
+}
+
+/** The Services page's WebDAV card: the rows and the connection form together. */
+export function WebdavSyncPanel(): JSX.Element {
+  return <WebdavSyncRow withConnection alwaysExpert />;
 }

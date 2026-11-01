@@ -24,6 +24,8 @@ export const WEBDAV_SYNC_ERROR_CODES = [
   "cleanupIncomplete",
   "alreadyRunning",
   "invalidInput",
+  /** Not the share's: our own limiter (10 runs per 15 minutes), answered 429. */
+  "rateLimited",
 ] as const;
 
 export type WebdavSyncErrorCode = (typeof WEBDAV_SYNC_ERROR_CODES)[number];
@@ -80,6 +82,9 @@ export function webdavErrorKey(code: string | null | undefined): string {
 /** The code a refused request carries in `error`, or null for anything else. */
 export function webdavRequestErrorCode(err: unknown): string | null {
   if (err instanceof JobFailedError) return err.code;
+  if ((err as { response?: { status?: number } } | undefined)?.response?.status === 429) {
+    return "rateLimited";
+  }
   const data = (err as { response?: { data?: { error?: unknown } } } | undefined)?.response?.data;
   const code = data?.error;
   return typeof code === "string" && (WEBDAV_SYNC_ERROR_CODES as readonly string[]).includes(code)

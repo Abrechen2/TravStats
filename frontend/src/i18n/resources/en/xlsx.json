@@ -309,7 +309,7 @@
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
       "add": {
-        "label": "Add only",
+        "label": "Add",
         "hint": "Creates new entries. Anything already there is left as it is, even where the file says otherwise."
       },
       "merge": {
@@ -317,7 +317,7 @@
         "hint": "Rows with an ID change the existing entry. Rows without one are created where the sheet allows it (flights, places, visits, roadtrips, stations, tours, tour points). Nothing is deleted."
       },
       "replace": {
-        "label": "Replace contents",
+        "label": "Replace",
         "hint": "Like merge — and additionally deletes everything the file leaves out."
       }
     },

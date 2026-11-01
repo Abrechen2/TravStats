@@ -22,7 +22,8 @@ import {
 import { downloadBlob } from "../../lib/export";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { Icon } from "../ui/Icon";
-import { SettingRow } from "../ui/SettingRow";
+import { ErrorLine, SettingItem, useGuardedNavigate } from "../ui/settings";
+import { useDependency, useRowCopy } from "./rowCopy";
 
 type ExportStatus = "idle" | "running" | "failed";
 type ImportStatus =
@@ -31,8 +32,16 @@ type ImportStatus =
 /** How many file lines the preview lists before it only counts. */
 const LISTED_FILES = 20;
 
-export default function TrackArchiveSection(): JSX.Element | null {
-  const { t } = useTranslation(["roadtrips", "common"]);
+export default function TrackArchiveSection({
+  part = "both",
+}: {
+  /** The page draws the export under "Mitnehmen" and the import under "Einlesen". */
+  part?: "export" | "import" | "both";
+}): JSX.Element | null {
+  const { t } = useTranslation(["roadtrips", "common", "settingsRows"]);
+  const row = useRowCopy("data");
+  const dependency = useDependency();
+  const go = useGuardedNavigate();
   // Tours and roadtrips sit behind the beta switch; so do their files.
   const toursVisible = useToursVisible();
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
@@ -85,132 +94,127 @@ export default function TrackArchiveSection(): JSX.Element | null {
   const writable = count("attach") + count("createTour");
   const busy = importStatus === "checking" || importStatus === "applying";
 
-  if (!toursVisible) return null;
+  const exportCopy = row("gpxzip");
+  const importCopy = row("gpxin");
+  // Tours off: the rows stay, with the reason and the jump that turns them on.
+  const off = toursVisible ? undefined : dependency("toursOff", () => go("/settings/domains"));
 
   return (
     <>
-      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-        <SettingRow
-          title={t("roadtrips:trackArchive.exportTitle")}
-          sub={t("roadtrips:trackArchive.exportDescription")}
+      {part !== "import" && (
+        <SettingItem
+          title={exportCopy.title}
+          sub={exportCopy.sub}
+          dependency={off}
+          error={exportStatus === "failed" ? t("roadtrips:trackArchive.exportFailed") : undefined}
           control={
             <button
               type="button"
               onClick={handleExport}
-              disabled={exportStatus === "running"}
+              disabled={exportStatus === "running" || Boolean(off)}
               className="btn-secondary inline-flex items-center gap-2"
             >
               <Icon name="download" size={14} />
               {exportStatus === "running"
                 ? t("roadtrips:trackArchive.exportRunning")
-                : t("roadtrips:trackArchive.exportButton")}
+                : (exportCopy.btn ?? t("roadtrips:trackArchive.exportButton"))}
             </button>
           }
         />
-        {exportStatus === "failed" && (
-          <p className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {t("roadtrips:trackArchive.exportFailed")}
-          </p>
-        )}
-      </div>
+      )}
 
-      <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-        <SettingRow
-          title={t("roadtrips:trackArchive.importTitle")}
-          sub={t("roadtrips:trackArchive.importDescription")}
+      {part !== "export" && (
+        <SettingItem
+          title={importCopy.title}
+          sub={importCopy.sub}
+          help={importCopy.help}
+          dependency={off}
           control={
             <label className="btn-secondary inline-flex cursor-pointer items-center gap-2">
               <Icon name="upload" size={14} />
               {importStatus === "checking"
                 ? t("roadtrips:trackArchive.checking")
-                : t("roadtrips:trackArchive.choose")}
+                : (importCopy.btn ?? t("roadtrips:trackArchive.choose"))}
               <input
                 type="file"
                 multiple
                 accept=".gpx,.tcx,.fit,.zip"
                 className="sr-only"
                 aria-label={t("roadtrips:trackArchive.choose")}
-                disabled={busy}
+                disabled={busy || Boolean(off)}
                 onChange={(e) => {
                   handleFiles(e.target.files);
-                  // Clear it, so choosing the SAME file again still fires.
                   e.target.value = "";
                 }}
               />
             </label>
           }
-        />
-
-        {result && (
-          <div className="space-y-2 text-xs">
-            <p style={{ color: "var(--text-muted)" }}>
-              {importStatus === "applied"
-                ? t("roadtrips:trackArchive.applied")
-                : t("roadtrips:trackArchive.preview")}
-            </p>
-            <p>
-              {t("roadtrips:trackArchive.counts", {
-                attach: count("attach"),
-                createTour: count("createTour"),
-                duplicate: count("duplicate"),
-                error: count("error"),
-              })}
-            </p>
-            <ul className="space-y-1">
-              {files.slice(0, LISTED_FILES).map((f, i) => (
-                <li
-                  key={`${f.file}-${i}`}
-                  style={f.action === "error" ? { color: "var(--ts-bad)" } : undefined}
-                >
-                  <span className="font-medium">{f.file}</span>
-                  {" — "}
-                  {f.action === "error"
-                    ? t(`roadtrips:trackArchive.errors.${f.message ?? "unreadable"}`, {
-                        name: f.tourName ?? "",
-                      })
-                    : t(`roadtrips:trackArchive.actions.${f.action}`, { name: f.tourName ?? "" })}
-                </li>
-              ))}
-            </ul>
-            {files.length > LISTED_FILES && (
+        >
+          {result && (
+            <div className="space-y-2 text-xs">
               <p style={{ color: "var(--text-muted)" }}>
-                {t("roadtrips:trackArchive.more", { count: files.length - LISTED_FILES })}
+                {importStatus === "applied"
+                  ? t("roadtrips:trackArchive.applied")
+                  : t("roadtrips:trackArchive.preview")}
               </p>
-            )}
+              <p>
+                {t("roadtrips:trackArchive.counts", {
+                  attach: count("attach"),
+                  createTour: count("createTour"),
+                  duplicate: count("duplicate"),
+                  error: count("error"),
+                })}
+              </p>
+              <ul className="space-y-1">
+                {files.slice(0, LISTED_FILES).map((f, i) => (
+                  <li
+                    key={`${f.file}-${i}`}
+                    style={f.action === "error" ? { color: "var(--ts-bad)" } : undefined}
+                  >
+                    <span className="font-medium">{f.file}</span>
+                    {" — "}
+                    {f.action === "error"
+                      ? t(`roadtrips:trackArchive.errors.${f.message ?? "unreadable"}`, {
+                          name: f.tourName ?? "",
+                        })
+                      : t(`roadtrips:trackArchive.actions.${f.action}`, { name: f.tourName ?? "" })}
+                  </li>
+                ))}
+              </ul>
+              {files.length > LISTED_FILES && (
+                <p style={{ color: "var(--text-muted)" }}>
+                  {t("roadtrips:trackArchive.more", { count: files.length - LISTED_FILES })}
+                </p>
+              )}
 
-            {importStatus === "previewed" && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void run(pending, false)}
-                  disabled={writable === 0}
-                  className="btn-primary text-sm disabled:opacity-50"
-                >
-                  {t("roadtrips:trackArchive.apply", { count: writable })}
-                </button>
-                <button
-                  type="button"
-                  onClick={reset}
-                  className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
-                >
-                  {t("common:buttons.cancel")}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {importStatus === "previewed" && (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void run(pending, false)}
+                    disabled={writable === 0}
+                    className="btn-primary text-sm disabled:opacity-50"
+                  >
+                    {t("roadtrips:trackArchive.apply", { count: writable })}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={reset}
+                    className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
+                  >
+                    {t("common:buttons.cancel")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-        {importStatus === "failed" && (
-          <p className="text-xs" style={{ color: "var(--ts-bad)" }}>
-            {t("roadtrips:trackArchive.failed")}
-          </p>
-        )}
-        {importStatus === "tooLarge" && (
-          <p className="text-xs" style={{ color: "var(--ts-bad)" }}>
-            {t("roadtrips:trackArchive.tooLarge")}
-          </p>
-        )}
-      </div>
+          {importStatus === "failed" && <ErrorLine>{t("roadtrips:trackArchive.failed")}</ErrorLine>}
+          {importStatus === "tooLarge" && (
+            <ErrorLine>{t("roadtrips:trackArchive.tooLarge")}</ErrorLine>
+          )}
+        </SettingItem>
+      )}
     </>
   );
 }

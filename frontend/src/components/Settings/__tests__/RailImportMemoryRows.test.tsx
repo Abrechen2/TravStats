@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -19,6 +19,7 @@ vi.mock("../../../store/toastStore", () => ({
   useToastStore: { getState: () => ({ addToast: vi.fn() }) },
 }));
 
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import { RailImportMemoryRows } from "../RailImportMemoryRows";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 
@@ -33,9 +34,16 @@ describe("RailImportMemoryRows — the remembered rail-import choices in Setting
   beforeEach(() => {
     updateSettings.mockReset().mockResolvedValue({});
     enabled.domains = ["flight", "rail"];
-    useSuggestionSwitchesStore.setState({ railImportLocalTransit: "skip", railImportBus: "skip" });
+    useSuggestionSwitchesStore.setState({
+      railImportLocalTransit: "skip",
+      railImportBus: "skip",
+      railImportSaves: { localTransit: 0, bus: 0 },
+    });
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    act(() => resetWriteQueue());
+  });
 
   it("shows the stored choice and a link back to the import", () => {
     useSuggestionSwitchesStore.setState({ railImportLocalTransit: "rail" });
@@ -51,39 +59,48 @@ describe("RailImportMemoryRows — the remembered rail-import choices in Setting
 
   it("offers the bus choice only with the bus domain on", () => {
     view();
-    expect(screen.queryByText("settings:import.railMemory.bus.title")).toBeNull();
+    expect(screen.queryByText("settingsRows:data.busleg.t")).toBeNull();
     cleanup();
     enabled.domains = ["flight", "rail", "bus"];
     view();
-    expect(screen.getByText("settings:import.railMemory.bus.title")).toBeInTheDocument();
+    expect(screen.getByText("settingsRows:data.busleg.t")).toBeInTheDocument();
   });
 
-  it("says 'saved' only after the server confirmed", async () => {
+  it("says 'Gespeichert' only after the server confirmed, and the stores take the value then", async () => {
     view();
     fireEvent.click(
       screen.getByRole("radio", { name: "settings:import.railMemory.localTransit.rail" })
     );
-    expect(screen.queryByRole("status")).toBeNull();
-    await waitFor(() =>
-      expect(updateSettings).toHaveBeenCalledWith({ railImport: { localTransit: "rail" } })
+    expect(screen.queryByText("settings:blocks.save.saved")).toBeNull();
+    expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("skip");
+    await waitFor(
+      () => expect(updateSettings).toHaveBeenCalledWith({ railImport: { localTransit: "rail" } }),
+      { timeout: 3000 }
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("settings:import.railMemory.saved");
+    expect(await screen.findByText("settings:blocks.save.saved")).toBeInTheDocument();
+    expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("rail");
+    // The import dialog's "remembered" line waits for this count to advance.
+    expect(useSuggestionSwitchesStore.getState().railImportSaves.localTransit).toBe(1);
   });
 
-  it("never says 'saved' when the write fails, and rolls the choice back", async () => {
+  it("a failed write keeps the pick on screen, never says 'Gespeichert', and leaves the store on the saved value", async () => {
     updateSettings.mockReset().mockRejectedValue(new Error("down"));
     view();
     fireEvent.click(
       screen.getByRole("radio", { name: "settings:import.railMemory.localTransit.rail" })
     );
-    await waitFor(() => expect(updateSettings).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("skip")
+    expect(await screen.findByRole("alert", undefined, { timeout: 3000 })).toHaveTextContent(
+      "settings:blocks.save.failed"
     );
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(
+      screen.getByRole("radio", { name: "settings:import.railMemory.localTransit.rail" })
+    ).toBeChecked();
+    expect(useSuggestionSwitchesStore.getState().railImportLocalTransit).toBe("skip");
+    expect(screen.queryByText("settings:blocks.save.saved")).toBeNull();
+    expect(useSuggestionSwitchesStore.getState().railImportSaves.localTransit).toBe(0);
   });
 
-  it("keeps one default's 'saved' from standing in for the other's failed save", async () => {
+  it("keeps one default's 'Gespeichert' from standing in for the other's failed save", async () => {
     enabled.domains = ["flight", "rail", "bus"];
     updateSettings
       .mockReset()
@@ -95,10 +112,17 @@ describe("RailImportMemoryRows — the remembered rail-import choices in Setting
     fireEvent.click(
       screen.getByRole("radio", { name: "settings:import.railMemory.localTransit.rail" })
     );
-    expect(await screen.findAllByRole("status")).toHaveLength(1);
+    expect(
+      await screen.findAllByText("settings:blocks.save.saved", undefined, { timeout: 3000 })
+    ).toHaveLength(1);
     fireEvent.click(screen.getByRole("radio", { name: "settings:import.railMemory.bus.bus" }));
-    await waitFor(() => expect(useSuggestionSwitchesStore.getState().railImportBus).toBe("skip"));
-    // Only the U-Bahn/tram row, which was saved, says so.
-    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(await screen.findByRole("alert", undefined, { timeout: 3000 })).toHaveTextContent(
+      "settings:blocks.save.failed"
+    );
+    expect(useSuggestionSwitchesStore.getState().railImportBus).toBe("skip");
+    expect(useSuggestionSwitchesStore.getState().railImportSaves).toEqual({
+      localTransit: 1,
+      bus: 0,
+    });
   });
 });

@@ -28,17 +28,17 @@ describe("MeExportRow", () => {
     const blob = new Blob(["{}"]);
     download.mockResolvedValue({ blob, filename: "travstats-my-data-2026-10-31.json" });
     render(<MeExportRow />);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "settingsRows:data.meine.btn" }));
     await waitFor(() =>
       expect(downloadBlob).toHaveBeenCalledWith(blob, "travstats-my-data-2026-10-31.json")
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("settings:meExport.done");
+    expect(await screen.findByRole("status")).toHaveTextContent("settingsRows:data.meine.res");
   });
 
   it("names the reason when the download fails, instead of staying silent (rate limit)", async () => {
     download.mockRejectedValue(new MeExportError("rateLimited"));
     render(<MeExportRow />);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "settingsRows:data.meine.btn" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "settings:meExport.failed.rateLimited"
     );
@@ -48,7 +48,7 @@ describe("MeExportRow", () => {
   it("falls back to the server-error text for an unknown failure", async () => {
     download.mockRejectedValue(new Error("boom"));
     render(<MeExportRow />);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "settingsRows:data.meine.btn" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("settings:meExport.failed.server");
   });
 });

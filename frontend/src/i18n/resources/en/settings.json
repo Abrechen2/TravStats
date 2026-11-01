@@ -424,7 +424,13 @@
       "csv": "CSV",
       "pdf": "PDF"
     },
-    "lastInstanceBackup": "Last instance backup"
+    "lastInstanceBackup": "Last instance backup",
+    "instance": {
+      "running": "running now",
+      "none": "None yet",
+      "loadFailed": "I couldn't read the backup status.",
+      "retry": "Try again"
+    }
   },
   "meExport": {
     "title": "Download my data",
@@ -912,14 +918,14 @@
       "localTransit": {
         "title": "U-Bahn and tram in the rail import",
         "sub": "What a bahn.de import preselects for these legs. You can always choose differently during the import.",
-        "skip": "Skip",
-        "rail": "As rail journey"
+        "skip": "skip",
+        "rail": "as rail journey"
       },
       "bus": {
         "title": "Buses in the rail import",
         "sub": "What a bahn.de import preselects for bus legs.",
-        "skip": "Skip",
-        "bus": "As bus ride"
+        "skip": "skip",
+        "bus": "as bus ride"
       },
       "saved": "Saved.",
       "openImport": "Go to rail import"
@@ -1440,8 +1446,12 @@
       "cleanupIncomplete": "More old versions than one run clears; the rest follow on the next runs.",
       "alreadyRunning": "A sync is already running.",
       "invalidInput": "An input is invalid.",
-      "unknown": "The sync failed."
-    }
+      "unknown": "The sync failed.",
+      "rateLimited": "You synced too often in a row. Try again in a few minutes."
+    },
+    "versionsInvalid": "A whole number from 1 to 30.",
+    "connection": "Connection",
+    "connectionHint": "The connection will move to Services → Backup target; until then you set it up here."
   },
   "locationProvider": {
     "title": "Location source",

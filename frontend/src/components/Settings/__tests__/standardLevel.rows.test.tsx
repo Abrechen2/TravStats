@@ -1,9 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({
+    t: (k: string) => k,
+    i18n: { language: "de", getFixedT: () => (k: string) => k },
+  }),
+}));
+
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+vi.mock("../../../lib/api/externalServices", () => ({
+  externalServicesApi: { accountOverview: vi.fn().mockResolvedValue({ connections: [] }) },
+}));
+vi.mock("../../../lib/api/locationProvider", () => ({
+  locationProviderApi: { get: vi.fn().mockResolvedValue({ kind: "travtrack" }) },
+}));
+vi.mock("../../../lib/api/backup", () => ({
+  backupApi: {
+    getInstanceStatus: vi.fn().mockResolvedValue({ completedAt: null, running: false }),
+  },
+}));
+vi.mock("../../../lib/api/webdavSync", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api/webdavSync")>()),
+  webdavSyncApi: { get: vi.fn().mockReturnValue(new Promise(() => undefined)) },
 }));
 
 import AutoUpdateSection from "../AutoUpdateSection";
@@ -89,28 +109,22 @@ describe("standard level inside a section", () => {
     expect(lastHidden(report)).toBe(0);
   });
 
-  it("keeps the trip and stay switches and the two stay refinements — they are consent decisions", () => {
+  it("keeps the trip and stay switches and the two stay refinements — they are consent decisions", async () => {
     const report = renderReporting(<InboxSuggestionsSection />);
-    expect(screen.getByLabelText("settings:inboxSuggestions.trips.label")).toBeInTheDocument();
-    expect(screen.getByLabelText("settings:inboxSuggestions.stays.label")).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("settings:inboxSuggestions.immichEvidence.label")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("settings:inboxSuggestions.llmPlaceClassification.label")
-    ).toBeInTheDocument();
+    await act(async () => {});
+    for (const row of ["rvor", "avor", "immichbeleg", "kiort"]) {
+      expect(
+        screen.getByRole("switch", { name: new RegExp(`settingsRows:trips\\.${row}\\.t`) })
+      ).toBeInTheDocument();
+    }
     // Nothing in this section is left to the expert level: it reports none.
     expect(lastHidden(report)).toBe(-1);
   });
 
-  it("keeps the export and hides the instance backup's last run", () => {
-    const report = renderReporting(
-      <BackupSection lastBackup={null} backupStatus={null} isAdmin={false}>
-        <p>export-rows</p>
-      </BackupSection>
-    );
-    expect(screen.getByText("export-rows")).toBeInTheDocument();
-    expect(screen.queryByText("settings:backup.lastInstanceBackup")).toBeNull();
+  it("shows every account the server's last backup and keeps the download rows; only the WebDAV tuning is expert", async () => {
+    const report = renderReporting(<BackupSection />);
+    expect(await screen.findByText("settingsRows:data.srvbackup.t")).toBeInTheDocument();
+    expect(screen.getByText("settingsRows:data.meine.t")).toBeInTheDocument();
     expect(lastHidden(report)).toBe(1);
   });
 });

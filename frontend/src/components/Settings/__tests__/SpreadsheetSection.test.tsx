@@ -143,9 +143,9 @@ describe("SpreadsheetSection — import preview", () => {
     expect(row.textContent).not.toContain("xlsx:import.droppedValue|");
   });
 
-  it("explains what the table moves and what only the backup moves", () => {
+  it("explains what the table moves in the design's own help, and what only the backup moves", () => {
     render(<SpreadsheetSection />);
-    expect(screen.getByText(/xlsx:import\.transferNote/)).toBeTruthy();
+    expect(screen.getByText("settingsRows:data.excelimp.s")).toBeTruthy();
     expect(screen.queryByText(/xlsx:import\.readOnlySheets/)).toBeNull();
   });
 });
