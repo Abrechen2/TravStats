@@ -669,6 +669,8 @@ registry.registerPath({
   summary: "Delete the caller's own account, at once",
   description:
     "Removes the account with every row and file. Needs the password, the second factor " +
+    "where the account has one (or, instead of both, a passkey assertion from " +
+    "POST /auth/passkeys/reauth/options in `passkeyResponse`: 403 DELETE_PASSKEY_INVALID), " +
     "where the account has one, and the typed word (DELETE or LÖSCHEN). Refused for the " +
     "shared demo (403 DEMO_ACCOUNT_FORBIDDEN) and the last admin (409 DELETE_LAST_ADMIN). " +
     "A wrong password is 403 DELETE_PASSWORD_INCORRECT (not 401: the client signs out on 401); a missing or wrong code is 403 " +

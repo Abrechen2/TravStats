@@ -1735,7 +1735,11 @@
       "DELETE_LAST_ADMIN": "You are the last admin. Give the role to another account first, then I can delete this one.",
       "DEMO_ACCOUNT_FORBIDDEN": "I don't delete the demo account.",
       "offline": "The server isn't answering. I deleted nothing.",
-      "other": "I couldn't delete the account. It is still there."
+      "other": "I couldn't delete the account. It is still there.",
+      "DELETE_PASSKEY_INVALID": "The passkey wasn't confirmed. I haven't deleted anything.",
+      "NO_PASSKEY": "This account has no passkey. Confirm with your password.",
+      "PASSKEY_UNAVAILABLE": "Passkeys don't work here right now. Confirm with your password.",
+      "passkeyCancelled": "You didn't confirm the passkey. I haven't deleted anything."
     },
     "dialog": {
       "title": "Delete account?",
@@ -1743,7 +1747,10 @@
       "amount": "Everything you have here",
       "after": "It is gone at once, for your admin too. It can't be brought back.",
       "confirm": "Delete account"
-    }
+    },
+    "passkeyHint": "I'll ask for your passkey before I may delete. That happens in the next step.",
+    "usePasskey": "Confirm with a passkey instead",
+    "usePassword": "Confirm with your password instead"
   },
   "planning": {
     "title": "Plan"

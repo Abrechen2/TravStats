@@ -14,6 +14,7 @@ import {
 } from "../schemas/auth";
 import { AppError } from "../middleware/errorHandler";
 import { authLimiter } from "../middleware/rateLimit";
+import { verifyReauthAssertion } from "../services/webauthn/reauth";
 import { removeAccount } from "../services/account/removeAccount";
 import { decryptSecret, verifyCode } from "../services/twoFactor/totpService";
 import { consumeRecoveryCode } from "../services/twoFactor/recoveryCodeService";
@@ -500,11 +501,15 @@ router.delete(
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new AppError("User not found", 404);
-      if (!(await comparePassword(body.password, user.passwordHash))) {
+      if (body.passkeyResponse) {
+        // The assertion proves possession AND a local gesture, so it also
+        // satisfies the second factor (same reasoning as the passkey login).
+        await verifyReauthAssertion(userId, body.passkeyResponse);
+      } else if (!(await comparePassword(body.password!, user.passwordHash))) {
         throw new AppError("Password is incorrect", 403, "DELETE_PASSWORD_INCORRECT");
       }
 
-      if (user.twoFactorEnabledAt && user.twoFactorSecret) {
+      if (!body.passkeyResponse && user.twoFactorEnabledAt && user.twoFactorSecret) {
         if (!body.code && !body.recoveryCode) {
           throw new AppError(
             "A second-factor code is required",

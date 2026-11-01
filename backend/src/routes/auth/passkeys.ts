@@ -20,6 +20,7 @@ import {
   loginVerifySchema,
   renamePasskeySchema,
 } from "../../schemas/webauthn";
+import { issueReauthOptions } from "../../services/webauthn/reauth";
 import logger from "../../utils/logger";
 
 const router = Router();
@@ -157,6 +158,22 @@ router.post(
 
       logger.info({ operation: "passkey_registered", userId });
       res.json({ id: row.id, name: row.name });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** Challenge for re-authenticating the signed-in caller (e.g. deleting the account). */
+router.post(
+  "/reauth/options",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      res.json(await issueReauthOptions(req.userId!));
     } catch (error) {
       next(error);
     }

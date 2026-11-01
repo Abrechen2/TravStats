@@ -17,6 +17,15 @@ const status = vi.fn();
 vi.mock("../../../lib/api/twoFactor", () => ({
   twoFactorApi: { getTwoFactorStatus: () => status() },
 }));
+const passkeyList = vi.fn();
+const reauthOptions = vi.fn();
+vi.mock("../../../lib/api/passkeys", () => ({
+  passkeyApi: { list: () => passkeyList(), reauthOptions: () => reauthOptions() },
+}));
+const startAuthentication = vi.fn();
+vi.mock("@simplewebauthn/browser", () => ({
+  startAuthentication: (o: unknown) => startAuthentication(o),
+}));
 const navigate = vi.fn();
 vi.mock("react-router-dom", async (orig) => ({
   ...(await orig<typeof import("react-router-dom")>()),
@@ -56,6 +65,9 @@ beforeEach(() => {
   demo.value = false;
   status.mockResolvedValue({ enabled: false, recoveryCodesLeft: 0 });
   deleteAccount.mockReset();
+  passkeyList.mockReset().mockResolvedValue([]);
+  reauthOptions.mockReset().mockResolvedValue({ challenge: "c" });
+  startAuthentication.mockReset().mockResolvedValue({ id: "cred" });
   navigate.mockReset();
   logout.mockReset().mockResolvedValue(undefined);
   useAuthStore.setState({ user: { id: "u", username: "mara" } as never, logout } as never);
@@ -154,5 +166,75 @@ describe("deleting one's own account", () => {
     );
     expect(screen.getByRole("button", { name: "settings:deleteAccount.open" })).toBeDisabled();
     expect(screen.getByText("settings:blocks.lock.demo")).toBeInTheDocument();
+  });
+});
+
+describe("deleting with a passkey (an account that may not know its password)", () => {
+  const usePasskey = (): void => {
+    fireEvent.click(screen.getByRole("button", { name: "settings:deleteAccount.usePasskey" }));
+  };
+
+  it("offers the passkey only to an account that has one", async () => {
+    await open();
+    expect(
+      screen.queryByRole("button", { name: "settings:deleteAccount.usePasskey" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks for the passkey at confirmation time and sends the assertion instead of a password", async () => {
+    passkeyList.mockResolvedValue([{ id: "k" }]);
+    deleteAccount.mockResolvedValue(undefined);
+    await open();
+    usePasskey();
+    expect(screen.queryByLabelText("settings:deleteAccount.password")).not.toBeInTheDocument();
+    goOn();
+    expect(startAuthentication).not.toHaveBeenCalled();
+    await confirm();
+    expect(deleteAccount).toHaveBeenCalledWith({
+      passkeyResponse: { id: "cred" },
+      confirmation: "LÖSCHEN",
+    });
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+  });
+
+  it("closing the passkey dialog deletes nothing and says so", async () => {
+    passkeyList.mockResolvedValue([{ id: "k" }]);
+    startAuthentication.mockRejectedValue(
+      Object.assign(new Error("cancelled"), { name: "NotAllowedError" })
+    );
+    await open();
+    usePasskey();
+    goOn();
+    await confirm();
+    expect(
+      await screen.findByText("settings:deleteAccount.refused.passkeyCancelled")
+    ).toBeInTheDocument();
+    expect(deleteAccount).not.toHaveBeenCalled();
+    expect(logout).not.toHaveBeenCalled();
+  });
+
+  it.each(["DELETE_PASSKEY_INVALID", "NO_PASSKEY", "PASSKEY_UNAVAILABLE"])(
+    "a %s refusal has its own line and keeps the account signed in",
+    async (code) => {
+      passkeyList.mockResolvedValue([{ id: "k" }]);
+      deleteAccount.mockRejectedValue(refusedWith(code, 403));
+      await open();
+      usePasskey();
+      goOn();
+      await confirm();
+      expect(await screen.findByText(`settings:deleteAccount.refused.${code}`)).toBeInTheDocument();
+      expect(logout).not.toHaveBeenCalled();
+    }
+  );
+
+  it("an unreachable challenge endpoint is reported as the server not answering", async () => {
+    passkeyList.mockResolvedValue([{ id: "k" }]);
+    reauthOptions.mockRejectedValue(new Error("Network Error"));
+    await open();
+    usePasskey();
+    goOn();
+    await confirm();
+    expect(await screen.findByText("settings:deleteAccount.refused.offline")).toBeInTheDocument();
+    expect(deleteAccount).not.toHaveBeenCalled();
   });
 });

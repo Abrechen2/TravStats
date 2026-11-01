@@ -115,6 +115,12 @@ export type ApiErrorCode =
   | "DELETE_SECOND_FACTOR_REQUIRED"
   /** The code or recovery code was not accepted. */
   | "DELETE_SECOND_FACTOR_INVALID"
+  /** The passkey assertion for a re-authentication was not accepted. */
+  | "DELETE_PASSKEY_INVALID"
+  /** A passkey re-authentication was asked of an account without a passkey. */
+  | "NO_PASSKEY"
+  /** Passkeys cannot be used here (no secure origin configured). */
+  | "PASSKEY_UNAVAILABLE"
   /** The only remaining admin cannot delete itself; hand the role over first. */
   | "DELETE_LAST_ADMIN"
   /** A restore was asked for a part the archive does not carry — a file

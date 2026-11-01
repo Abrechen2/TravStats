@@ -1735,7 +1735,11 @@
       "DELETE_LAST_ADMIN": "Du bist der letzte Admin. Gib die Rolle erst einem anderen Konto, dann kann ich dieses löschen.",
       "DEMO_ACCOUNT_FORBIDDEN": "Das Demo-Konto lösche ich nicht.",
       "offline": "Der Server antwortet gerade nicht. Ich habe nichts gelöscht.",
-      "other": "Ich konnte das Konto nicht löschen. Es ist noch da."
+      "other": "Ich konnte das Konto nicht löschen. Es ist noch da.",
+      "DELETE_PASSKEY_INVALID": "Der Passkey wurde nicht bestätigt. Ich habe nichts gelöscht.",
+      "NO_PASSKEY": "Zu diesem Konto gibt es keinen Passkey. Bestätige mit dem Passwort.",
+      "PASSKEY_UNAVAILABLE": "Passkeys gehen hier gerade nicht. Bestätige mit dem Passwort.",
+      "passkeyCancelled": "Du hast den Passkey nicht bestätigt. Ich habe nichts gelöscht."
     },
     "dialog": {
       "title": "Konto löschen?",
@@ -1743,7 +1747,10 @@
       "amount": "Alles, was du hier hast",
       "after": "Es ist sofort weg, auch für den Admin. Das lässt sich nicht zurückholen.",
       "confirm": "Konto löschen"
-    }
+    },
+    "passkeyHint": "Ich frage deinen Passkey, bevor ich löschen darf. Das geschieht erst im nächsten Schritt.",
+    "usePasskey": "Stattdessen mit Passkey bestätigen",
+    "usePassword": "Stattdessen mit Passwort bestätigen"
   },
   "planning": {
     "title": "Planen"

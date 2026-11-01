@@ -59,7 +59,10 @@ export const changePasswordSchema = z.object({
  */
 export const DELETE_ACCOUNT_WORDS = ["DELETE", "LÖSCHEN"] as const;
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1).max(200),
+  /** The password, or `passkeyResponse` for an account that signs in with a passkey. */
+  password: z.string().min(1).max(200).optional(),
+  /** WebAuthn assertion from `POST /auth/passkeys/reauth/options`; replaces password and second factor. */
+  passkeyResponse: z.record(z.string(), z.unknown()).optional(),
   /** Six digits from the authenticator app, when the account has two-factor. */
   code: z.string().max(16).optional(),
   recoveryCode: z.string().max(64).optional(),
@@ -67,6 +70,8 @@ export const deleteAccountSchema = z.object({
     .string()
     .transform((v) => v.trim().toLocaleUpperCase("de-DE"))
     .refine((v) => (DELETE_ACCOUNT_WORDS as readonly string[]).includes(v), "Typed word is wrong"),
+}).refine((b) => (b.password === undefined) !== (b.passkeyResponse === undefined), {
+  message: "Send either the password or a passkey assertion",
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

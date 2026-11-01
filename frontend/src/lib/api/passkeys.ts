@@ -66,6 +66,14 @@ export const passkeyApi = {
     return data;
   },
 
+  /** Challenge for proving a passkey of the signed-in account (deleting the account). */
+  reauthOptions: async (): Promise<PublicKeyCredentialRequestOptionsJSON> => {
+    const { data } = await api.post<PublicKeyCredentialRequestOptionsJSON>(
+      "/auth/passkeys/reauth/options"
+    );
+    return data;
+  },
+
   rename: async (id: string, name: string): Promise<void> => {
     await api.patch(`/auth/passkeys/${id}`, { name });
   },

@@ -188,6 +188,26 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/auth/passkeys/reauth/options",
+  summary: "Challenge for re-authenticating the caller with one of their passkeys",
+  description:
+    "Lists only the caller's own credentials, user verification required. 409 NO_PASSKEY " +
+    "without a passkey, 409 PASSKEY_UNAVAILABLE without a secure origin.",
+  tags: authTag,
+  responses: {
+    200: {
+      description: "WebAuthn authentication options (challenge, allowCredentials)",
+      content: {
+        "application/json": { schema: z.object({ challenge: z.string() }).passthrough() },
+      },
+    },
+    401: { description: "Not signed in", content: errorContent },
+    409: { description: "No passkey or passkeys unavailable", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/auth/passkeys/login/options",
   summary: "Options for signing in with a passkey",
   description: "No credential list: sign-in is username-less by design.",

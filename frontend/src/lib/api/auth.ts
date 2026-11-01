@@ -62,7 +62,9 @@ export const authApi = {
    * DELETE_LAST_ADMIN, or 403 DEMO_ACCOUNT_FORBIDDEN.
    */
   deleteAccount: async (body: {
-    password: string;
+    /** Either the password or, for a passkey account, the WebAuthn assertion. */
+    password?: string;
+    passkeyResponse?: unknown;
     confirmation: string;
     code?: string;
     recoveryCode?: string;
