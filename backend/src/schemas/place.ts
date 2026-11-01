@@ -47,6 +47,8 @@ const basePlaceSchema = z.object({
   country: clearableText(120),
   externalRef: clearableText(200),
   notes: notesField,
+  /** Free-form labels like every other domain's (forgejo#405). */
+  tags: z.array(z.string().trim().max(40)).max(30).optional(),
   /**
    * Defaults to FALSE — the opposite of Lodging.visited, on purpose. The
    * dominant creation path here is "add a target to a list", and a wishlist

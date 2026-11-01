@@ -2312,6 +2312,8 @@ model TripRoute {
   orderIdx Int     @default(0) @map("order_idx")
   color    String?
   notes    String?
+  /// Free-form labels for a roadtrip or a tour (forgejo#405).
+  tags     String[] @default([])
 
   /// Odometer at section start and end. Deliberately NOT reconciled with
   /// the sum of the legs: the difference is the finding.
@@ -3166,6 +3168,8 @@ model Lodging {
   /// Wikidata item of the house itself, from its OpenStreetMap tags.
   wikidataId         String?   @map("wikidata_id")
   amenities          String[]  @default([])
+  /// Free-form labels like every other domain's (forgejo#405).
+  tags               String[]  @default([])
   notes              String?
   /// Has the user actually been here, or is it only noted down? A saved-places
   /// export mixes both, and only the user knows which is which — so the import
@@ -3535,6 +3539,8 @@ model Place {
   coverPhotoId String? @map("cover_photo_id")
 
   notes      String?
+  /// Free-form labels like every other domain's (forgejo#405).
+  tags       String[] @default([])
   dataSource String? @map("data_source") // manual | import | curated
   batchId    String? @map("batch_id")
 

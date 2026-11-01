@@ -89,6 +89,8 @@ const baseLodgingSchema = z.object({
       .optional()
   ),
   amenities: z.array(z.string().max(60)).max(50).optional(),
+  /** Free-form labels like every other domain's (forgejo#405). */
+  tags: z.array(z.string().trim().max(40)).max(30).optional(),
   /** The OpenStreetMap element the form's "lodgings nearby" pick named
    *  ("osm:node/240109189"). Stored as `externalRef` only while the row has
    *  none — see `services/lodging/osmRef.ts`. */

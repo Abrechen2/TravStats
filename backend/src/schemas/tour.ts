@@ -144,6 +144,7 @@ export const createRouteSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
   notes: z.string().max(20000).optional(),
+  tags: z.array(z.string().trim().max(40)).max(30).optional(),
   startOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
   endOdometerKm: z.number().int().min(0).max(10_000_000).optional(),
 });
@@ -157,6 +158,7 @@ export const updateRouteSchema = z.object({
     .nullable()
     .optional(),
   notes: z.string().max(20000).nullable().optional(),
+  tags: z.array(z.string().trim().max(40)).max(30).optional(),
   orderIdx: z.number().int().min(0).max(10000).optional(),
   startOdometerKm: z.number().int().min(0).max(10_000_000).nullable().optional(),
   endOdometerKm: z.number().int().min(0).max(10_000_000).nullable().optional(),

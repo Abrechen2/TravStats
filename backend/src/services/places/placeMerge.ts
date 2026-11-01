@@ -182,6 +182,9 @@ function mergedData(
     // The code was derived from that country text; the pair moves together.
     isoCountryCode: address.isoCountryCode,
     notes: mergedNotes(target.notes, source.notes, fields.notes),
+    // The duplicate is deleted: its labels survive on the place that stays
+    // (case-insensitive union, the target's spelling first).
+    tags: unionTags(target.tags, source.tags),
     visited: target.visited || source.visited,
     // One-directional like `visited`: a duplicate that counted as a country
     // visit keeps counting once merged. Taking the target's value dropped it
@@ -215,4 +218,17 @@ function mergedNotes(
 function coverFor(target: PlaceRow, source: PlaceRow): Prisma.PlaceUpdateInput["coverPhoto"] {
   const id = target.coverPhotoId ?? source.coverPhotoId;
   return id ? { connect: { id } } : { disconnect: true };
+}
+
+/** Both lists' tags once each, compared without regard to case; order: first list first. */
+function unionTags(first: readonly string[], second: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const tag of [...first, ...second]) {
+    const key = tag.trim().toLowerCase();
+    if (key === "" || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out;
 }
