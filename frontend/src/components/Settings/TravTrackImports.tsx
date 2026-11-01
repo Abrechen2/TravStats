@@ -81,7 +81,9 @@ export default function TravTrackImports({
     setBusy(true);
     setStatus({ tone: "ok", text: t(`${NS}.running`, { name: file.name }) });
     try {
-      const outcome = await travTrackImportsApi.importGpx(file);
+      const outcome = await travTrackImportsApi.importGpx(file, (percent) =>
+        setStatus({ tone: "ok", text: t(`${NS}.runningPercent`, { name: file.name, percent }) })
+      );
       setStatus({
         tone: "ok",
         text: outcome.status === "cancelled" ? t(`${NS}.cancelled`) : describe(outcome.report),
@@ -124,8 +126,12 @@ export default function TravTrackImports({
     }
     if (row.status === "cancelled") return t(`${NS}.status.cancelled`);
     const points = t(`${NS}.points`, { count: row.pointCount });
+    const format = row.report?.format;
     // The stored report, so what the import did is still readable after a reload.
-    return row.report ? `${points} · ${describe(row.report)}` : points;
+    const kind = format
+      ? `${t(`${NS}.formats.${format.split("+")[0]}`, { defaultValue: "" })}`
+      : "";
+    return row.report ? [kind, points, describe(row.report)].filter(Boolean).join(" · ") : points;
   };
 
   return (
@@ -143,7 +149,7 @@ export default function TravTrackImports({
             ref={input}
             id="travtrack-gpx-file"
             type="file"
-            accept=".gpx,application/gpx+xml"
+            accept=".gpx,.json,.geojson,.kml,.tcx,application/gpx+xml,application/json,application/geo+json,application/vnd.google-earth.kml+xml"
             className="sr-only"
             disabled={busy}
             onChange={(e) => void onFile(e)}

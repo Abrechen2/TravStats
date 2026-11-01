@@ -23,6 +23,14 @@ const report = z
     duplicate: z.number().int().describe("Already held — from this or another source"),
     dropped,
     withoutTime: z.number().int().describe("Fixes without a time: not stored"),
+    format: z
+      .string()
+      .optional()
+      .describe(
+        "What the file was read as: gpx, google-records, google-semantic, google-timeline, " +
+          "geojson, kml or tcx (joined with + when a file held several). Absent on imports made " +
+          "before forgejo#394."
+      ),
     error: z
       .string()
       .optional()
@@ -56,13 +64,22 @@ const disabled = {
 registry.registerPath({
   method: "post",
   path: "/travtrack/imports",
-  summary: "Import a GPX file into TravTrack",
+  summary: "Import a track file into TravTrack",
   description:
-    "multipart/form-data with one `file` (GPX, at most 25 MB). Answers at once with a job " +
-    "(`GET /jobs/{id}`); the job fails with TRAVTRACK_IMPORT_NO_TIMES (no fix with a time) or " +
-    "TRAVTRACK_IMPORT_UNREADABLE (not GPX, a file with a document type declaration, or one " +
-    "too large to read in the reader's memory) or TRAVTRACK_IMPORT_TOO_MANY_POINTS (over " +
-    "200,000 fixes). " +
+    "multipart/form-data with one `file`. The format is read from the content, not the name: " +
+    "GPX, KML and TCX (XML, at most 25 MB); Google Takeout `Records.json`, Semantic Location " +
+    "History month files, the on-device Timeline export and GeoJSON (JSON, at most 200 MB, " +
+    "scanned in a child process and never held as a tree). The file is read on this server " +
+    "only. FIT is recognised and refused. " +
+    "Answers at once with a job (`GET /jobs/{id}`, `progress.done` is a percentage: the first " +
+    "half reads the file, the second stores its points). The job fails with " +
+    "TRAVTRACK_IMPORT_NO_TIMES (no fix with a time), TRAVTRACK_IMPORT_UNREADABLE (not a track " +
+    "file, an unfinished one, a document type declaration, or one too large to read in the " +
+    "reader's memory), TRAVTRACK_IMPORT_UNSUPPORTED_FORMAT (FIT) or " +
+    "TRAVTRACK_IMPORT_TOO_MANY_POINTS (over 200,000 fixes in a GPX file, 2,000,000 in the " +
+    "others). A time without an offset is not guessed (that fix is not stored), and an " +
+    "accuracy, speed or heading the file lacks stays unknown. Fixes in a privacy zone or a " +
+    "deleted span are dropped and counted; positions already held are duplicates. " +
     "An import never starts a stay, country or journey scan.",
   tags: ["TravTrack"],
   request: {
@@ -70,7 +87,7 @@ registry.registerPath({
       content: {
         "multipart/form-data": {
           schema: z.object({
-            file: z.string().openapi({ format: "binary" }).describe("The GPX file"),
+            file: z.string().openapi({ format: "binary" }).describe("The track file"),
           }),
         },
       },
@@ -95,7 +112,10 @@ registry.registerPath({
       description: "TRAVTRACK_IMPORT_RUNNING: an import of this account is running already",
       content: errorContent,
     },
-    413: { description: "TRACK_FILE_TOO_LARGE: over 25 MB", content: errorContent },
+    413: {
+      description: "TRACK_FILE_TOO_LARGE: over 25 MB (XML formats) or 200 MB (JSON formats)",
+      content: errorContent,
+    },
     429: {
       description: "RATE_LIMITED: at most 30 imports per account in 15 minutes, whatever the token",
       content: errorContent,

@@ -12,7 +12,7 @@ import {
   listTravTrackImports,
   startGpxImport,
 } from "../../services/travtrack/imports/fileImport";
-import { GPX_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/mapGpx";
+import { TRACK_IMPORT_MAX_BYTES } from "../../services/travtrack/imports/trackFile";
 import {
   getDawarichCopy,
   resumeDawarichCopy,
@@ -29,7 +29,8 @@ import { travTrackTier } from "./gate";
  *
  * The file is held in memory only (`memoryStorage`) and never written to disk:
  * its name is a label, nothing on the server is named after it. One file per
- * request, at most `GPX_IMPORT_MAX_BYTES`; the work runs as a job the client
+ * request, at most `TRACK_IMPORT_MAX_BYTES` (200 MB, and 25 MB for the XML formats —
+ * `assertImportSize`); the work runs as a job the client
  * polls (`GET /jobs/:id`), since a large file outlasts a request.
  *
  * Tiers: starting an import is `on` (new capture); the list and a delete are
@@ -52,7 +53,7 @@ function route(fn: (req: AuthRequest, res: Response) => Promise<void>) {
 
 const fileUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: GPX_IMPORT_MAX_BYTES, files: 1, fields: 5, fieldSize: 1024, parts: 8 },
+  limits: { fileSize: TRACK_IMPORT_MAX_BYTES, files: 1, fields: 5, fieldSize: 1024, parts: 8 },
 });
 
 /** One `file` part, or a refusal by code: an oversized file is 413, anything else malformed 400. */
@@ -66,7 +67,7 @@ function oneFile(req: Request, res: Response, next: NextFunction): void {
   });
 }
 
-/** POST /travtrack/imports — multipart `file` (GPX) → 202 `{ jobId, importId }`. */
+/** POST /travtrack/imports — multipart `file` (GPX, Google Timeline JSON, GeoJSON, KML, TCX) → 202 `{ jobId, importId }`. */
 router.post(
   "/travtrack/imports",
   authenticate,

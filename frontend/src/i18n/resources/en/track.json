@@ -137,9 +137,19 @@
     }
   },
   "imports": {
-    "title": "GPX files",
-    "intro": "A GPX file, say from a sports app or an older tracker, goes into your TravTrack history. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
-    "choose": "Import GPX",
+    "title": "Track files",
+    "intro": "A track file goes into your TravTrack history: GPX, KML or TCX from a sports app or a tracker, GeoJSON with times, and the Google location history (Takeout “Records.json”, “Semantic Location History” or the on-device Timeline export). The file is read on this server only. Times without a time zone are not guessed, and a missing accuracy stays unknown. Positions inside a privacy zone or a deleted span are discarded, and what is stored already is not added twice. An import starts no suggestions.",
+    "choose": "Import track file",
+    "runningPercent": "Importing {{name}} … {{percent}} %",
+    "formats": {
+      "gpx": "GPX",
+      "google-records": "Google Records.json",
+      "google-semantic": "Google Semantic Location History",
+      "google-timeline": "Google Timeline",
+      "geojson": "GeoJSON",
+      "kml": "KML",
+      "tcx": "TCX"
+    },
     "running": "Importing {{name}} …",
     "cancelled": "The import was deleted before it finished.",
     "report": {
@@ -172,13 +182,14 @@
     "deleted_other": "{{count}} positions deleted.",
     "errors": {
       "noTimes": "The file holds no times – without a time a position is no history. Export it as a recording (track), not as a route.",
-      "unreadable": "The file is not a readable GPX file, or too large to read.",
+      "unreadable": "The file is not a readable track file (GPX, KML, TCX, Google location history, GeoJSON), it is unfinished, or too large to read.",
+      "unsupportedFormat": "The import cannot read FIT files yet. Export the activity as GPX or TCX.",
       "running": "An import is running already. Wait until it has finished.",
-      "tooLarge": "The file is too large – 25 MB at most.",
+      "tooLarge": "The file is too large – 25 MB at most for GPX, KML and TCX, 200 MB for Google location history and GeoJSON.",
       "notFound": "This import no longer exists.",
       "rateLimited": "Too many imports in a short time. Try again in a quarter of an hour.",
       "lost": "Whether the import finished is not known – the server restarted. Check the list.",
-      "tooManyPoints": "The file holds more than 200,000 positions – more than one import takes. Split it, say by month."
+      "tooManyPoints": "The file holds too many positions – one import takes at most 200,000 from GPX and 2 million from the other formats. Split it, say by month."
     }
   },
   "dawarichCopy": {
@@ -528,7 +539,7 @@
   },
   "importsTab": {
     "title": "Imports",
-    "intro": "Everything that brings positions into your history: GPX files, the copy from Dawarich and OwnTracks/Overland.",
+    "intro": "Everything that brings positions into your history: track files (GPX, KML, TCX, GeoJSON, Google location history), the copy from Dawarich and OwnTracks/Overland.",
     "loading": "Loading …"
   },
   "calendar": {

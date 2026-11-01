@@ -11,7 +11,8 @@ import { utcDaysOf } from "../dirtyDays";
 import { ingestPoints, type IngestResult } from "../ingest";
 import { takeTravTrackLock } from "../lock";
 import type { GpxWorkerOptions } from "./gpxWorker";
-import { mapGpx, readGpxFile, displayFileName } from "./mapGpx";
+import { displayFileName } from "./mapGpx";
+import { assertImportSize, readTrackFile, sniffFormat } from "./trackFile";
 
 /**
  * A file imported into TravTrack (TravTrack plan E8). The request stores the
@@ -41,6 +42,8 @@ export type ImportReport = {
   duplicate: number;
   dropped: Record<DropReason, number>;
   withoutTime: number;
+  /** What the file was read as, e.g. `gpx`, `google-records` (absent on imports before forgejo#394). */
+  format?: string;
   /** The failure's code, when the import failed. */
   error?: string;
 };
@@ -109,6 +112,8 @@ export type RunOptions = {
   batchSize?: number;
   /** The reader's limits (tests lower them). */
   reader?: GpxWorkerOptions;
+  /** Percent done, 0-100: reading the file is the first half, storing its points the second. */
+  onProgress?: (percent: number) => void;
   /** Test seam: after each committed batch, with the number of batches done. */
   afterBatch?: (done: number) => Promise<void>;
 };
@@ -135,25 +140,30 @@ export async function runGpxImport(
   try {
     const buffer = file.buffer ?? Buffer.alloc(0);
     file.buffer = null;
-    const mapped = mapGpx(await readGpxFile(buffer, opts.reader));
+    const { track: mapped } = await readTrackFile(buffer, {
+      ...opts.reader,
+      onProgress: (done, total) => opts.onProgress?.(Math.floor((done / Math.max(total, 1)) * 50)),
+    });
+    report.format = mapped.formats.join("+");
     report.read = mapped.read;
     report.dropped.invalid = mapped.invalid;
     report.withoutTime = mapped.withoutTime;
-    if (mapped.points.length === 0) {
+    if (mapped.count === 0) {
       throw new AppError("The file holds no point with a time", 422, "TRAVTRACK_IMPORT_NO_TIMES");
     }
     const size = opts.batchSize ?? IMPORT_BATCH_SIZE;
-    for (let at = 0, done = 0; at < mapped.points.length; at += size) {
+    for (let at = 0, done = 0; at < mapped.count; at += size) {
       const { result } = await ingestPoints({
         userId,
         origin,
         deviceId: `file:${importId}`,
         uploadId: null,
-        points: mapped.points.slice(at, at + size),
+        points: mapped.batch(at, size),
         fence,
       });
       addBatch(report, result);
       done += 1;
+      opts.onProgress?.(50 + Math.floor((Math.min(at + size, mapped.count) / mapped.count) * 50));
       await opts.afterBatch?.(done);
     }
     const finished = await finish(importId, {
@@ -220,14 +230,21 @@ export async function listTravTrackImports(userId: string) {
 }
 
 /**
- * Starts a GPX import: the row first, under the lock (one running import per
+ * Starts a file import (GPX, Google Timeline, GeoJSON, KML, TCX; kind `gpx` for all, the
+ * report's `format` says which): the row first, under the lock (one running import per
  * account, else 409 `TRAVTRACK_IMPORT_RUNNING`), then the job.
  */
 export async function startGpxImport(
   userId: string,
   file: { buffer: Buffer; originalName: string | undefined },
-  opts: RunOptions & { beforeRun?: () => Promise<void> } = {}
+  opts: RunOptions & {
+    beforeRun?: () => Promise<void>;
+    /** Test seam: lowers the size caps. */
+    maxBytes?: { json?: number; xml?: number };
+  } = {}
 ): Promise<{ jobId: string; importId: string }> {
+  // Over the cap of its format: refused before an import row exists.
+  assertImportSize(sniffFormat(file.buffer), file.buffer.length, opts.maxBytes);
   const importId = randomUUID();
   await prisma
     .$transaction(async (tx) => {
@@ -253,10 +270,13 @@ export async function startGpxImport(
       throw err;
     });
   const holder: { buffer: Buffer | null } = { buffer: file.buffer };
-  const job = startJob("travtrack.fileImport", userId, async () => {
+  const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
     try {
       await opts.beforeRun?.();
-      return await runGpxImport(importId, userId, holder, opts);
+      return await runGpxImport(importId, userId, holder, {
+        ...opts,
+        onProgress: (percent) => reportProgress(percent, 100),
+      });
     } finally {
       releaseActiveImport(importId, importId);
     }

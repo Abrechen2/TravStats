@@ -223,6 +223,7 @@ describe("TravTrack — GPX import", () => {
         duplicate: 0,
         dropped: { privacy_zone: 0, deleted_range: 0, invalid: 0, null_island: 0 },
         withoutTime: 0,
+        format: "gpx",
       });
       expect(row.fromAt?.toISOString()).toBe("2026-10-12T01:00:00.000Z");
       expect(row.toAt?.toISOString()).toBe("2026-10-12T01:02:00.000Z");
