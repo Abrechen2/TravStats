@@ -8,9 +8,9 @@ vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
 }));
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
+import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
 import { SETTINGS_PAGES } from "../../pages/Settings/settingsModel";
@@ -252,8 +252,8 @@ const renderAt = (entry: string): void => {
   render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsLegacyRedirect />} />
-        <Route path="/settings/:group" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/:page" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -268,7 +268,7 @@ const sectionShown = (id: keyof typeof SECTION_LABEL_KEY): boolean =>
  * 2026-09-05). Before that, `/settings` carried `?tab=` and `?section=` and
  * four effects raced to keep them agreeing; the group is a destination now.
  *
- * Every case here fails against the pre-2.7 page, which had no `/settings/:group`
+ * Every case here fails against the pre-2.7 page, which had no `/settings/:page`
  * route at all.
  */
 describe("SettingsPage — one page per menu entry", () => {
@@ -286,8 +286,8 @@ describe("SettingsPage — one page per menu entry", () => {
     await findNamed("region", SECTION_LABEL_KEY.profile);
 
     expect(sectionShown("profile")).toBe(true);
-    expect(sectionShown("notifications")).toBe(true);
-    // Darstellung, Daten and Dienste are pages of their own now.
+    expect(sectionShown("notifications")).toBe(false);
+    // Darstellung, Daten, Dienste and Erinnerungen are pages of their own.
     expect(sectionShown("units")).toBe(false);
     expect(sectionShown("backup")).toBe(false);
     expect(sectionShown("externalServices")).toBe(false);
@@ -306,9 +306,9 @@ describe("SettingsPage — one page per menu entry", () => {
     await findNamed("region", SECTION_LABEL_KEY.units);
     // By selector, not by role: the page holds hundreds of currency options,
     // and a role query weighs every one (see SettingsPage.adminScope.test).
-    expect(document.querySelector("h1")).toHaveTextContent("settings:groups.display");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.display");
     const active = document.querySelector('[data-settings-menu] a[aria-current="page"]');
-    expect(active).toHaveTextContent("settings:groups.display");
+    expect(active).toHaveTextContent("settings:area.pages.display");
   });
 
   it("lands a round-4 anchor on the account page on the page that holds it now", async () => {
@@ -323,9 +323,20 @@ describe("SettingsPage — one page per menu entry", () => {
     expect(sectionShown("profile")).toBe(false);
   });
 
-  it("sends a bare /settings to the account group", async () => {
+  // Design §6.2: a bare /settings is the last page visited, and on a first
+  // visit Reisearten.
+  it("sends a bare /settings to Reisearten on a first visit", async () => {
+    window.localStorage.removeItem("travstats.settings.lastPage");
     renderAt("/settings");
-    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.domains)).toBeTruthy();
+    expect(sectionShown("profile")).toBe(false);
+  });
+
+  it("sends a bare /settings to the page last visited", async () => {
+    window.localStorage.setItem("travstats.settings.lastPage", "cruise");
+    renderAt("/settings");
+    expect(await findNamed("region", SECTION_LABEL_KEY.cruisePreferences)).toBeTruthy();
+    window.localStorage.removeItem("travstats.settings.lastPage");
   });
 
   it("lands a pre-2.7 ?section= link on the group that holds it", async () => {
@@ -373,11 +384,11 @@ describe("SettingsPage — one page per menu entry", () => {
     expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
     expect(screen.getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
       "href",
-      "/settings/display?section=domains"
+      "/settings/domains#domains"
     );
     expect(sectionShown("cruisePreferences")).toBe(false);
     expect(sectionShown("profile")).toBe(false);
-    expect(document.querySelector("h1")).toHaveTextContent("settings:tabs.cruise");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.cruise");
     // Off the menu, as the prototype draws it.
     expect(document.querySelector('[data-settings-menu] a[href="/settings/cruise"]')).toBeNull();
   });
@@ -444,7 +455,7 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     const { unmount } = render(
       <MemoryRouter initialEntries={["/settings/data?section=backup&expert=1"]}>
         <Routes>
-          <Route path="/settings/:group" element={<SettingsPage />} />
+          <Route path="/settings/:page" element={<SettingsPage />} />
         </Routes>
       </MemoryRouter>
     );
@@ -458,10 +469,15 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     expect(screen.queryByText("settings:backup.lastInstanceBackup")).toBeNull();
   });
 
-  it("puts the level switch at the top of the page", async () => {
+  it("puts the level switch in the sidebar, with the count of what Experte adds", async () => {
     renderAt("/settings/account");
     await findNamed("region", SECTION_LABEL_KEY.profile);
-    expect(screen.getByRole("radiogroup", { name: "settings:level.label" })).toBeTruthy();
+    const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
+    expect(within(menu).getByRole("radiogroup", { name: "settings:level.label" })).toBeTruthy();
+    // The key echoes in tests; the count is the registry's, never zero for an account.
+    expect(within(menu).getByTestId("settings-level-more")).toHaveTextContent(
+      "settings:level.moreInExpert"
+    );
   });
 
   it("keeps the version in view for every account, under the menu", async () => {
@@ -506,15 +522,28 @@ describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
     });
   });
 
-  it("names the surface in a tab and a breadcrumb, with no Administration tab for a non-admin", async () => {
+  it("names the place in a breadcrumb; there is one area, so no Administration tab", async () => {
     renderAt("/settings/display");
     await findNamed("region", SECTION_LABEL_KEY.units);
     expect(screen.getByRole("navigation", { name: "settings:frame.breadcrumb" })).toHaveTextContent(
-      "settings:frame.surface.settings›settings:groups.display"
+      "settings:title›settings:area.pages.display"
     );
-    const tabs = screen.getByRole("navigation", { name: "settings:frame.surfaces" });
-    expect(tabs).toHaveTextContent("settings:frame.surface.settings");
-    expect(tabs).not.toHaveTextContent("settings:frame.surface.admin");
+    expect(screen.queryByRole("navigation", { name: "settings:frame.surfaces" })).toBeNull();
+  });
+
+  it("groups the menu as Dein Konto and the About entry, with Flüge and Kreuzfahrten indented", async () => {
+    renderAt("/settings/account");
+    await findNamed("region", SECTION_LABEL_KEY.profile);
+    const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
+    expect(menu).toHaveTextContent("settings:area.menu.account");
+    // No server group for an account without the permission.
+    expect(menu).not.toHaveTextContent("settings:area.menu.server");
+    const links = [...menu.querySelectorAll<HTMLAnchorElement>("nav a")];
+    expect(links[links.length - 1]).toHaveAttribute("href", "/settings/about");
+    const flight = menu.querySelector('a[href="/settings/flight"]') as HTMLElement;
+    const account = menu.querySelector('a[href="/settings/account"]') as HTMLElement;
+    expect(flight.style.paddingLeft).not.toBe("");
+    expect(account.style.paddingLeft).toBe("");
   });
 
   it("dots each domain page in the menu with the colour the account chose", async () => {
@@ -551,8 +580,8 @@ describe("SettingsPage — landing from a search hit (forgejo#321 prototype)", (
         ]}
       >
         <Routes>
-          <Route path="/settings" element={<SettingsLegacyRedirect />} />
-          <Route path="/settings/:group" element={<SettingsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/:page" element={<SettingsPage />} />
         </Routes>
       </MemoryRouter>
     );

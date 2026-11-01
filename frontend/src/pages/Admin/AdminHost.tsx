@@ -1,56 +1,32 @@
-import { parserOwnFields } from "../components/Admin/parserOwnFields";
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
-import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { useToastStore } from "../store/toastStore";
-import { adminApi } from "../lib/api";
-import { logger } from "../lib/logger";
-import { apiErrorMachineCode } from "../lib/apiError";
-import AppShell from "../components/ui/AppShell";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { useSectionInView } from "../hooks/useSectionInView";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useBetaFeatures } from "../hooks/useBetaFeatures";
-import { useDomainColors } from "../hooks/useDomainColors";
-import { resetHasLlmCache } from "../hooks/useHasLlm";
-import { useTranslation } from "../hooks/useTranslation";
-import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
-import { copyToClipboard } from "../lib/clipboard";
-import { useLoggingAdmin } from "./Admin/useLoggingAdmin";
-import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { parserOwnFields } from "../../components/Admin/parserOwnFields";
 import {
-  ADMIN_MENU,
-  ADMIN_PAGES,
-  LAZY_ADMIN_SECTIONS,
-  findAdminPage,
-  type ActiveSection,
-  type AdminPageDef,
-} from "./Admin/adminSections";
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type JSX,
+  type ReactNode,
+} from "react";
+import { useToastStore } from "../../store/toastStore";
+import { adminApi } from "../../lib/api";
+import { logger } from "../../lib/logger";
+import { apiErrorMachineCode } from "../../lib/apiError";
+import { resetHasLlmCache } from "../../hooks/useHasLlm";
+import { useTranslation } from "../../hooks/useTranslation";
+import { copyToClipboard } from "../../lib/clipboard";
+import { useLoggingAdmin } from "./useLoggingAdmin";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { LAZY_ADMIN_SECTIONS, type ActiveSection } from "./adminSections";
 import AdminSectionSwitch, {
-  ADMIN_SECTION_FRAME,
   type AdminSectionSwitchProps,
   type InviteSuccessState,
-} from "./Admin/AdminSectionSwitch";
-import { LazyBody } from "./Admin/LazySection";
-import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
-import { resolveAdminLink } from "./Settings/settingsLinks";
-import { pageLevel, sectionsOf } from "./Settings/surface";
-import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
-import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
-import { VersionLine } from "../components/Settings/frame/VersionLine";
-import {
-  PageHiddenRowsContext,
-  useHiddenRowsCollector,
-} from "../components/Settings/frame/useExpertRows";
-import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
-import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
-import { SettingsSearch } from "./Settings/SettingsSearch";
-import { useSearchScopes } from "./Settings/useSearchScopes";
-import { useSearchHighlight } from "./Settings/useSearchHighlight";
+} from "./AdminSectionSwitch";
+import { LazyBody } from "./LazySection";
 
-import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
-import type { Invitation } from "../components/Admin/InvitationManagement";
-import type { ParserSettingsData } from "../components/Admin/ParserSettings";
+import type { SystemInfoData, AdminUser } from "../../components/Admin/SystemInfo";
+import type { Invitation } from "../../components/Admin/InvitationManagement";
+import type { ParserSettingsData } from "../../components/Admin/ParserSettings";
 
 // ==================== Helpers ====================
 
@@ -67,16 +43,38 @@ function getErrorMessage(_error: unknown, fallback: string): string {
 
 // ==================== Admin Page Component ====================
 
-export default function AdminPage(): JSX.Element {
+// ==================== Admin host ====================
+
+type SwitchProps = Omit<AdminSectionSwitchProps, "section">;
+
+interface AdminHostValue {
+  loading: boolean;
+  switchProps: SwitchProps;
+  onVisible: Partial<Record<ActiveSection, () => void>>;
+}
+
+const AdminHostContext = createContext<AdminHostValue | null>(null);
+
+/**
+ * The server's section components need what the old Administration page
+ * loaded in one go — system info, accounts, invitations, parser settings —
+ * and the handlers that change it. In the one settings area they sit on
+ * several pages (Server, Nutzer, Dienste, ...), so that state lives here, once,
+ * above whichever of them an admin has open (settings rebuild, package 1).
+ * Mounted only for an admin and only on a page that has such a section, so a
+ * person without the permission never asks the server for any of it.
+ */
+export function AdminHost({
+  highlightUserId,
+  children,
+}: {
+  /** `?user=` — a link that meant one account, not the table; a pointer, never state. */
+  highlightUserId: string | null;
+  children: ReactNode;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["admin", "common"]);
   const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
-  const [searchParams, setSearchParams] = useSearchParams();
-  // The sections column the deep-link aligner's ResizeObserver watches (see
-  // the effect below) — any lazy section growing past its placeholder height
-  // changes this element's size.
-  const mainRef = useRef<HTMLDivElement>(null);
-
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -85,43 +83,6 @@ export default function AdminPage(): JSX.Element {
   // What the server last told this page; the Parser save diffs against it.
   const [parserLoaded, setParserLoaded] = useState<ParserSettingsData | null>(null);
   const [loading, setLoading] = useState(true);
-  // One page per menu entry (forgejo#321). Every address goes through
-  // `resolveAdminLink` first — `/admin?tab=general&section=logging` and the
-  // other pre-page links redirect to the canonical `/admin/<page>`.
-  const params = useParams<{ page?: string }>();
-  const location = useLocation();
-  const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
-  const { colorOf } = useDomainColors();
-  const level = useEffectiveSettingsLevel();
-  const searchScopes = useSearchScopes(true);
-  const isReachable = useCallback(
-    (p: AdminPageDef) => !p.domain || isEnabled(p.domain),
-    [isEnabled]
-  );
-  const namedSection = searchParams.get("section");
-  const canonical = resolveAdminLink({
-    page: params.page,
-    section: namedSection,
-    tab: searchParams.get("tab"),
-    user: searchParams.get("user"),
-    expert: searchParams.get("expert") === "1",
-    match: searchParams.get("match"),
-    isReachable,
-  });
-  const target = new URL(canonical, "http://x");
-  const isCanonical =
-    target.pathname === location.pathname &&
-    target.searchParams.get("section") === namedSection &&
-    !searchParams.get("tab");
-  const current = findAdminPage(params.page);
-  const pageTitle = current ? t(current.labelKey) : "";
-  useDocumentTitle(
-    current ? `TravStats – ${t("admin:title", { defaultValue: "Admin" })} – ${pageTitle}` : null
-  );
-  const deepLinkedSection: ActiveSection | null =
-    isCanonical && namedSection ? (namedSection as ActiveSection) : null;
-
   const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
   const [inviteEmailModalOpen, setInviteEmailModalOpen] = useState(false);
   const [inviteCreating, setInviteCreating] = useState(false);
@@ -357,84 +318,14 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  // ==================== Sections + Navigation ====================
-
-  // Master data of a switched-off domain: the page says so, the catalogue is not drawn.
-  const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
-  const visible = useMemo(
-    () =>
-      current && !domainOff
-        ? sectionsOf(current, {
-            // An expert page opened at the standard level — by a link, the
-            // search or a bookmark — shows its sections, with a note above,
-            // rather than an empty page.
-            level: pageLevel(current) === "expert" ? "expert" : level,
-            isGateOpen: isFeatureVisible,
-            isAdmin: true,
-            deepLinked: namedSection,
-          })
-        : {
-            shown: [] as ActiveSection[],
-            hiddenExpert: 0,
-            hiddenExpertSettings: 0,
-            deepLinkedExpert: null,
-          },
-    [current, domainOff, level, isFeatureVisible, namedSection]
-  );
-
-  // Which section is on screen, for the chips to mark — the scroll-spy
-  // Settings uses (see useSectionInView), reused rather than duplicated.
-  const inView = useSectionInView(visible.shown, "admin");
-  // Every setting the standard level keeps off this page, for the note at its top.
-  const [hiddenRows, reportHiddenRows] = useHiddenRowsCollector();
-  const highlighted = useSearchHighlight("admin");
-  const hiddenSettings = visible.hiddenExpertSettings + hiddenRows;
-
-  // Scrolls a `?section=` deep link into view and keeps correcting that
-  // position while the page's lazy sections are still settling — see
-  // `useDeepLinkScroll`'s own doc comment for the two-round Wave C finding
-  // C1 story (independent review, 2026-09-17, and its 2026-09-18 follow-up).
-  useDeepLinkScroll(mainRef, loading, deepLinkedSection);
-
-  const jump = useCallback(
-    (id: string): void => {
-      setSearchParams({ section: id }, { replace: true });
-      const el = document.getElementById(`admin-${id}`);
-      if (el && typeof el.scrollIntoView === "function") {
-        el.scrollIntoView({ block: "start", behavior: "smooth" });
-      }
-    },
-    [setSearchParams]
-  );
-
-  // ==================== Render ====================
-
-  // The state carries a search hit's highlight across the redirect.
-  if (!isCanonical || !current) {
-    return <Navigate to={canonical} replace state={location.state} />;
-  }
-
-  if (loading) {
-    return (
-      <AppShell width="list">
-        <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-          Admin Panel
-        </div>
-      </AppShell>
-    );
-  }
-
-  const switchProps: Omit<AdminSectionSwitchProps, "section"> = {
+  const switchProps: SwitchProps = {
     systemInfo,
     users,
     onExportData: handleExportData,
     onDeleteUser: handleDeleteUser,
     onToggleUserActive: handleToggleUserActive,
     onResetTwoFactor: handleResetTwoFactor,
-    // `?user=` — a link that meant one account, not the table. Read here
-    // beside `?tab=`/`?section=`, which is where this page already keeps its
-    // URL reading, and never written back: it is a pointer, not state.
-    highlightUserId: searchParams.get("user"),
+    highlightUserId,
     invitations,
     invitationStatusFilter,
     onInvitationStatusFilterChange: setInvitationStatusFilter,
@@ -470,101 +361,37 @@ export default function AdminPage(): JSX.Element {
     onLoggingConfigChange: setLoggingConfig,
   };
 
-  // The two sections whose fetch used to be triggered by `activeSection`
-  // becoming active now fire once, from LazySection's onVisible, instead —
-  // everything else that needs deferred loading owns its own on-mount
-  // fetch (see LAZY_ADMIN_SECTIONS).
-  const sectionOnVisible: Partial<Record<ActiveSection, () => void>> = {
-    logging: loadLoggingData,
-  };
-
-  const inMenu = (p: AdminPageDef): boolean =>
-    level === "expert" || pageLevel(p) === "standard" || p.id === current.id;
-  const reachable = ADMIN_PAGES.filter(isReachable);
-  const groups: SettingsMenuGroup[] = ADMIN_MENU.map((g) => ({
-    id: g.id,
-    label: g.labelKey ? t(g.labelKey) : null,
-    entries: reachable
-      .filter((p) => g.pages.includes(p.id) && inMenu(p))
-      .map((p) => ({
-        id: p.id,
-        label: t(p.labelKey),
-        to: `/admin/${p.id}`,
-        icon: p.icon,
-        badge: p.id === "users" ? users.length : undefined,
-        color: p.domain ? colorOf(p.domain) : undefined,
-      })),
-  })).filter((g) => g.entries.length > 0);
-  const hiddenPages = reachable.filter((p) => !inMenu(p)).length;
-  const labelOf = (id: ActiveSection): string =>
-    t(current.sections.find((s) => s.id === id)?.labelKey ?? id);
-  const isExpertPage = pageLevel(current) === "expert" && level === "standard";
+  // The one section whose fetch used to be triggered by `activeSection`
+  // becoming active fires once, from LazySection's onVisible, instead —
+  // everything else that needs deferred loading owns its own on-mount fetch
+  // (see LAZY_ADMIN_SECTIONS).
+  const value = useMemo<AdminHostValue>(
+    () => ({ loading, switchProps, onVisible: { logging: loadLoggingData } }),
+    // switchProps is rebuilt every render on purpose: it carries handlers.
+    [loading, switchProps]
+  );
 
   return (
-    <>
-      <SettingsLayout
-        surface="admin"
-        isAdmin
-        navLabel={t("admin:title", { defaultValue: "Administration" })}
-        groups={groups}
-        activePage={current.id}
-        hiddenPages={hiddenPages}
-        search={<SettingsSearch scopes={searchScopes} />}
-        menuFooter={<VersionLine />}
-        title={pageTitle}
-        // The scope line is the counterpart of the one in user settings:
-        // everything here is instance-wide.
-        meta={t("admin:scopeHint")}
-        chips={visible.shown.map((id) => ({ id, label: labelOf(id) }))}
-        anchorPrefix="admin"
-        activeSection={inView}
-        onJump={jump}
-        notice={
-          domainOff ? (
-            <DomainOffNotice domain={domainOff} />
-          ) : isExpertPage ? (
-            <ExpertPageNotice />
-          ) : (
-            <PageExpertNote count={hiddenSettings} />
-          )
-        }
-      >
-        <PageHiddenRowsContext.Provider value={reportHiddenRows}>
-          <div
-            ref={mainRef}
-            className="flex min-w-0 flex-col"
-            style={{ gap: "var(--ts-space-xl)" }}
-          >
-            {visible.shown.map((id, index) => {
-              const body = <AdminSectionSwitch section={id} {...switchProps} />;
-              return (
-                <SectionFrame
-                  key={id}
-                  anchorId={`admin-${id}`}
-                  headingAbove={index === 0 ? pageTitle : null}
-                  label={labelOf(id)}
-                  expert={current.sections.find((s) => s.id === id)?.level === "expert"}
-                  frame={ADMIN_SECTION_FRAME[id]}
-                  deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
-                  revealExpertRows={namedSection === id && searchParams.get("expert") === "1"}
-                  highlighted={highlighted === id}
-                >
-                  {/* A lazily-fetching section (see LAZY_ADMIN_SECTIONS) mounts its
-                    body only once it has been near the viewport. */}
-                  {LAZY_ADMIN_SECTIONS.has(id) ? (
-                    <LazyBody id={`admin-${id}-body`} onVisible={sectionOnVisible[id]}>
-                      {body}
-                    </LazyBody>
-                  ) : (
-                    body
-                  )}
-                </SectionFrame>
-              );
-            })}
-          </div>
-        </PageHiddenRowsContext.Provider>
-      </SettingsLayout>
+    <AdminHostContext.Provider value={value}>
+      {children}
       {confirmDialog}
-    </>
+    </AdminHostContext.Provider>
+  );
+}
+
+/** One server section, wired to the host above it. */
+export function AdminSectionBody({ section }: { section: ActiveSection }): JSX.Element | null {
+  const host = useContext(AdminHostContext);
+  if (!host) return null;
+  // The old page held back until the first load answered; each section does
+  // now, so the page around it can draw at once.
+  if (host.loading) return <div style={{ minHeight: 120 }} aria-busy="true" />;
+  const body = <AdminSectionSwitch section={section} {...host.switchProps} />;
+  return LAZY_ADMIN_SECTIONS.has(section) ? (
+    <LazyBody id={`settings-${section}-body`} onVisible={host.onVisible[section]}>
+      {body}
+    </LazyBody>
+  ) : (
+    body
   );
 }

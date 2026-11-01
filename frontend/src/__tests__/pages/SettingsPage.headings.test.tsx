@@ -13,7 +13,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
-import { SETTINGS_PAGES } from "../../pages/Settings/settingsModel";
+import { AREA_PAGES } from "../../pages/Settings/area/areaModel";
+
+// The pages an account without the admin permission opens.
+const OWN_PAGES = AREA_PAGES.filter((p) => !p.adminOnly);
 import { repeatedHeadings } from "../helpers/repeatedHeadings";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -314,20 +317,18 @@ describe("SettingsPage — no heading repeats the one above it (forgejo#321)", (
     useSettingsLevelStore.setState({ level: "expert" });
   });
 
-  it.each(SETTINGS_PAGES.map((p) => [p.id]))("holds on /settings/%s", async (page) => {
+  it.each(OWN_PAGES.map((p) => [p.id]))("holds on /settings/%s", async (page) => {
     const { unmount } = render(
       <MemoryRouter initialEntries={[`/settings/${page}`]}>
         <Routes>
-          <Route path="/settings/:group" element={<SettingsPage />} />
+          <Route path="/settings/:page" element={<SettingsPage />} />
         </Routes>
       </MemoryRouter>
     );
     // Real copy: wait for the page's first section by its landmark id.
     await waitFor(() =>
       expect(
-        document.getElementById(
-          `settings-${SETTINGS_PAGES.find((p) => p.id === page)!.sections[0].id}`
-        )
+        document.getElementById(`settings-${OWN_PAGES.find((p) => p.id === page)!.sections[0].id}`)
       ).not.toBeNull()
     );
     expect(repeatedHeadings(document.body)).toEqual([]);

@@ -10,7 +10,7 @@ vi.mock("@/lib/api/version", () => ({
 
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
+import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 
 // A settings route renders its whole group at once on this branch (one route
@@ -268,8 +268,8 @@ const renderSettings = (initialEntry: string): ReturnType<typeof render> =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsLegacyRedirect />} />
-        <Route path="/settings/:group" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/:page" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -289,14 +289,14 @@ describe("SettingsPage — beta gate: devicePairing", () => {
 
   it("does not put Devices on the account page when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings");
+    renderSettings("/settings/account");
     await screen.findByRole("region", { name: "settings:profile.title" });
     expect(devicesShown()).toBe(false);
   });
 
   it("puts Devices on the account page when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
-    renderSettings("/settings");
+    renderSettings("/settings/account");
     expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
@@ -324,7 +324,7 @@ describe("SettingsPage — beta gate: devicePairing", () => {
 
   it("leaves Devices off the account page when nothing names it", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings");
+    renderSettings("/settings/account");
     await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("devices-section")).toBeNull();
   });
@@ -359,9 +359,11 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
     ["ON", true],
   ])("renders the Dawarich card when the flag is %s", async (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
-    // Under Standortverlauf since forgejo#321, where it is used.
+    // A service card of Dienste since the settings rebuild: the old section
+    // address redirects there, and the catalogue (a card per service, the
+    // Dawarich one among them) is drawn whatever the flag says.
     const { unmount } = renderSettings("/settings?section=dawarich");
-    expect(await screen.findByTestId("dawarich-connection-card")).toBeTruthy();
+    expect(await screen.findByTestId("account-external-services")).toBeTruthy();
     unmount();
   });
 });

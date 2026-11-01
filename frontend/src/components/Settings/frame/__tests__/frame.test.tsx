@@ -56,7 +56,7 @@ describe("SectionFrame and expert rows (forgejo#321)", () => {
 
   it("disables the level switch while the level is unknown, so a guess is never saved", () => {
     useSettingsLevelStore.setState({ level: null });
-    render(<SettingsLevelSwitch />);
+    render(<SettingsLevelSwitch moreCount={3} />);
     for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
   });
 
@@ -141,20 +141,28 @@ describe("the level switch", () => {
 
   it("shows the account's level and stores a change with the account", () => {
     useSettingsLevelStore.setState({ level: "standard" });
-    render(<SettingsLevelSwitch />);
+    render(<SettingsLevelSwitch moreCount={3} />);
     expect(screen.getByRole("radio", { name: "settings:level.standard" })).toBeChecked();
     fireEvent.click(screen.getByRole("radio", { name: "settings:level.expert" }));
     expect(useSettingsLevelStore.getState().level).toBe("expert");
     expect(persisted).toHaveBeenCalledWith({ settingsLevel: "expert" });
   });
 
-  // forgejo#318: one sentence beside the switch says what "Experte" adds.
-  it("says in one sentence what the expert view shows", () => {
+  // Design §0.2: one line under the switch says what the other level adds.
+  it("says under the switch how many more settings the expert view shows", () => {
     useSettingsLevelStore.setState({ level: "standard" });
-    render(<SettingsLevelSwitch />);
-    expect(screen.getByText("settings:level.hint")).toBeInTheDocument();
-    // Which level new and existing accounts start on lives with the toggle, not in TravPlan.
-    expect(screen.getByText("settings:level.defaultsNote")).toBeInTheDocument();
+    render(<SettingsLevelSwitch moreCount={3} />);
+    expect(screen.getByTestId("settings-level-more")).toHaveTextContent(
+      "settings:level.moreInExpert"
+    );
+  });
+
+  it("says at the expert level that everything is visible and fine-tuning is marked", () => {
+    useSettingsLevelStore.setState({ level: "expert" });
+    render(<SettingsLevelSwitch moreCount={3} />);
+    expect(screen.getByTestId("settings-level-more")).toHaveTextContent(
+      "settings:level.allVisible"
+    );
   });
 });
 
@@ -193,47 +201,20 @@ describe("ExpertNote — touch size follows the pointer (forgejo#321, iPad look)
   });
 });
 
-describe("the surface tabs and breadcrumb (forgejo#321 prototype)", () => {
-  it("offers the Administration tab to an admin, marking the open surface", async () => {
-    const { SurfaceTabs } = await import("../SurfaceTabs");
+describe("the breadcrumb (forgejo#321 prototype)", () => {
+  it("names the area and the page above the title", async () => {
+    const { SettingsBreadcrumb } = await import("../SettingsBreadcrumb");
     render(
       <MemoryRouter>
-        <SurfaceTabs surface="admin" isAdmin />
-      </MemoryRouter>
-    );
-    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
-      "href",
-      "/settings"
-    );
-    expect(screen.getByRole("link", { name: "settings:frame.surface.admin" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
-  });
-
-  it("gives an account without the permission no Administration tab", async () => {
-    const { SurfaceTabs } = await import("../SurfaceTabs");
-    render(
-      <MemoryRouter>
-        <SurfaceTabs surface="settings" isAdmin={false} />
-      </MemoryRouter>
-    );
-    expect(screen.queryByRole("link", { name: "settings:frame.surface.admin" })).toBeNull();
-    expect(screen.getByRole("link", { name: "settings:frame.surface.settings" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
-  });
-
-  it("names the surface and the page above the title", async () => {
-    const { SettingsBreadcrumb } = await import("../SurfaceTabs");
-    render(
-      <MemoryRouter>
-        <SettingsBreadcrumb surface="admin" page="Instanz" />
+        <SettingsBreadcrumb page="Instanz" />
       </MemoryRouter>
     );
     const crumb = screen.getByRole("navigation", { name: "settings:frame.breadcrumb" });
-    expect(crumb).toHaveTextContent("settings:frame.surface.admin›Instanz");
+    expect(crumb).toHaveTextContent("settings:title›Instanz");
+    expect(screen.getByRole("link", { name: "settings:title" })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
   });
 
   it("draws a domain page's colour as a dot in the menu", () => {

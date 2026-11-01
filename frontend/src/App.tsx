@@ -53,8 +53,6 @@ const PlacesNearbyPage = lazy(() => import("./pages/PlacesNearbyPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
-import NavigationBar from "./components/NavigationBar";
-import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
 import { trackRoutes } from "./pages/Track/trackRoutes";
@@ -72,11 +70,7 @@ const NotesPage = lazy(() => import("./pages/NotesPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
-const SettingsLegacyRedirect = lazy(() =>
-  import("./pages/SettingsPage").then((m) => ({ default: m.SettingsLegacyRedirect }))
-);
 const SetupPage = lazy(() => import("./pages/SetupPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 const AircraftPage = lazy(() => import("./pages/AircraftPage"));
@@ -188,20 +182,6 @@ function AppContent() {
       </div>
     );
   }
-
-  // A non-admin used to be bounced to the dashboard without a word, so an admin
-  // link looked like a broken address (forgejo#88 finding 7); the UI now says
-  // what the API's 403 says.
-  const adminRoute = !isAuthenticated ? (
-    <Navigate to="/login" />
-  ) : user?.isAdmin ? (
-    <AdminPage />
-  ) : (
-    <>
-      <NavigationBar />
-      <AdminOnlyNotice />
-    </>
-  );
 
   return (
     <MotionConfig reducedMotion="user">
@@ -687,12 +667,14 @@ function AppContent() {
                 path="/stats"
                 element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
               />
-              {/* One route per settings page (forgejo#321). `/settings` itself
-                  is the legacy entry: every `?section=` and `?tab=` link ever
-                  written still resolves through it. */}
+              {/* One settings area (settings rebuild): `/settings/<page>` holds the
+                  account's pages and, for an admin, the server's. `/settings`
+                  itself and every `/admin/...` address are the legacy entries —
+                  `SettingsPage` redirects each to its canonical place, and an
+                  account without the permission lands on its own pages. */}
               <Route
                 path="/settings"
-                element={isAuthenticated ? <SettingsLegacyRedirect /> : <Navigate to="/login" />}
+                element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="/settings/:page"
@@ -704,9 +686,14 @@ function AppContent() {
                   page whose copy is untranslated on purpose has no business
                   being reachable on someone's instance. */}
               {import.meta.env.DEV && <Route path="/design" element={<DesignPage />} />}
-              {/* `/admin` is the legacy entry old links resolve through (forgejo#321). */}
-              <Route path="/admin" element={adminRoute} />
-              <Route path="/admin/:page" element={adminRoute} />
+              <Route
+                path="/admin"
+                element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin/:page"
+                element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
+              />
               <Route
                 path="/parser"
                 element={

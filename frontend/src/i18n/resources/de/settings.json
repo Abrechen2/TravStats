@@ -1192,7 +1192,12 @@
       "autoupdate": "Abfrageintervall, Intervall, Ablauf",
       "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
       "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
-    }
+    },
+    "count_one": "{{count}} Treffer",
+    "count_other": "{{count}} Treffer",
+    "countMore": "{{shown}} von {{count}} Treffern · weiter tippen",
+    "noResultsFor": "Nichts gefunden für „{{query}}“.",
+    "expertNote": "Experten-Treffer öffnen sich, ohne deine Stufe zu ändern."
   },
   "railProviders": {
     "title": "Zugsuche",
@@ -1300,7 +1305,10 @@
     "showInExpert": "In Experte zeigen",
     "pageMore_one": "1 weitere Einstellung auf dieser Seite ist nur in der Ansicht „Experte“ zu sehen.",
     "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen.",
-    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen."
+    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen.",
+    "moreInExpert_one": "Experte zeigt {{count}} weitere Einstellung",
+    "moreInExpert_other": "Experte zeigt {{count}} weitere Einstellungen",
+    "allVisible": "Alles sichtbar · Feinarbeit ist markiert"
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",
@@ -1544,5 +1552,37 @@
       "label": "Reisepass gültig bis",
       "description": "Die Companion-App warnt sechs Monate vorher."
     }
+  },
+  "area": {
+    "pages": {
+      "account": "Profil & Anmeldung",
+      "display": "Sprache & Einheiten",
+      "domains": "Reisearten",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "trips": "Reisen & Eingang",
+      "sharing": "Teilen",
+      "notifications": "Erinnerungen",
+      "location": "Standort",
+      "loyalty": "Treueprogramme",
+      "data": "Daten",
+      "services": "Dienste",
+      "server": "Server",
+      "users": "Nutzer",
+      "backups": "Sicherungen",
+      "maintenance": "Wartung",
+      "masterdata": "Stammdaten",
+      "about": "Über TravStats"
+    },
+    "menu": {
+      "account": "Dein Konto",
+      "server": "Server · nur Admin"
+    },
+    "scope": {
+      "account": "Gilt für dein Konto",
+      "mixed": "Gilt für dein Konto · Zeilen mit „Alle Konten“ gelten für den Server",
+      "instance": "Gilt für alle Konten · nur Admin"
+    },
+    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin."
   }
 }

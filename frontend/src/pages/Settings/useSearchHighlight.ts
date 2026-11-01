@@ -17,7 +17,7 @@ const POLL_MS = 100;
  * changes: Administration shows a loading state first, and a timer started
  * on arrival ran out before the section existed (Codex review).
  */
-export function useSearchHighlight(anchorPrefix: "settings" | "admin"): string | null {
+export function useSearchHighlight(anchorPrefix: string): string | null {
   const location = useLocation();
   const raw = (location.state as { highlight?: unknown } | null)?.highlight;
   const requested = typeof raw === "string" ? raw : null;

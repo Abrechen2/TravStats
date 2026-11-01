@@ -10,7 +10,7 @@ vi.mock("@/lib/api/version", () => ({
 
 import { render, within, waitFor, act, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import AdminPage from "../AdminPage";
+import SettingsPage from "../SettingsPage";
 import { DEEP_LINK_ALIGN_BUDGET_MS } from "../Admin/useDeepLinkScroll";
 import {
   installFakeIntersectionObserver,
@@ -23,7 +23,7 @@ import {
 import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
 import { repeatedHeadings } from "../../__tests__/helpers/repeatedHeadings";
-import { ADMIN_PAGES } from "../Admin/adminSections";
+import { AREA_PAGES } from "../Settings/area/areaModel";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback): the admin page used to
@@ -96,20 +96,31 @@ vi.mock("@/lib/api", async (importOriginal) => {
   };
 });
 
-const renderAdmin = (entry = "/admin/instance") =>
+// The personal state is not the subject: the account is an admin.
+vi.mock("../../components/Settings/useSettingsPage", () => ({
+  useSettingsPage: () => ({
+    user: { username: "owner", isAdmin: true },
+    showPasswordModal: false,
+    autoSaveState: "idle",
+  }),
+}));
+
+const renderAdmin = (entry = "/settings/server") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/:page" element={<AdminPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/:page" element={<SettingsPage />} />
+        <Route path="/admin" element={<SettingsPage />} />
+        <Route path="/admin/:page" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
 
-/** The instance page's first section; awaiting it means the page has rendered. */
+/** The Server page's first section; awaiting it means the page has rendered. */
 const INSTANCE = "admin:instance.title";
 
-describe("AdminPage — one page per menu entry, its sections as anchors", () => {
+describe("SettingsPage, the server's pages — one page per menu entry, its sections as anchors", () => {
   beforeEach(() => {
     // jsdom has no scrollIntoView at all; SettingsPage guards for its
     // absence at runtime, but pinning the deep-link behaviour needs a spy.
@@ -125,12 +136,12 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
   it("renders every section of the page at once, not only one picked section", async () => {
     renderAdmin();
 
-    // Four distinct sections of Instanz at once: a page that mounted one
-    // picked section cannot pass this whichever one it picked.
+    // Three distinct sections of the Server page at once: a page that mounted
+    // one picked section cannot pass this whichever one it picked.
     expect(await findNamed("region", INSTANCE)).toBeInTheDocument();
-    expect(getNamed("region", "sharing:links.section.title")).toBeInTheDocument();
+    expect(getNamed("region", "admin:travTrack.title")).toBeInTheDocument();
     expect(getNamed("region", "admin:importMode.title")).toBeInTheDocument();
-    expect(getNamed("region", "settings:about.title")).toBeInTheDocument();
+    expect(getNamed("region", "admin:parserSettings.title")).toBeInTheDocument();
   });
 
   // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
@@ -141,20 +152,12 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
     expect(container.querySelectorAll("main")).toHaveLength(1);
   });
 
-  it("gives every section landmark its admin-<id> anchor id, lazy sections included", async () => {
+  it("gives every section landmark its settings-<id> anchor id, lazy sections included", async () => {
     renderAdmin();
     await findNamed("region", INSTANCE);
 
-    for (const id of [
-      "instance",
-      "shareLinks",
-      "importMode",
-      "usageStats",
-      "about",
-      "federation",
-      "push",
-    ]) {
-      expect(document.getElementById(`admin-${id}`)).not.toBeNull();
+    for (const id of ["general", "features", "importMode", "parsers"]) {
+      expect(document.getElementById(`settings-${id}`)).not.toBeNull();
     }
   });
 
@@ -164,8 +167,8 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
 
     const chips = getNamed("navigation", "settings:sectionChips");
     const anchors = within(chips).getAllByRole("link");
-    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#admin-push");
-    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#admin-instance");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-importMode");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-general");
     // The old column picked a section with a button; none should remain here.
     expect(within(chips).queryAllByRole("button")).toHaveLength(0);
 
@@ -173,8 +176,8 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
     const pages = within(menu)
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"));
-    expect(pages).toContain("/admin/users");
-    expect(pages).toContain("/admin/logging");
+    expect(pages).toContain("/settings/users");
+    expect(pages).toContain("/settings/maintenance");
     expect(within(menu).queryAllByRole("button")).toHaveLength(0);
   });
 
@@ -182,31 +185,31 @@ describe("AdminPage — one page per menu entry, its sections as anchors", () =>
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/admin/instance?section=push");
+    renderAdmin("/settings/server?match=importmodus#features");
     await findNamed("region", INSTANCE);
 
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
-    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("admin-push"));
+    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("settings-importMode"));
   });
 
-  it("does not scroll anywhere without a ?section= param", async () => {
+  it("does not scroll anywhere without a section in the address", async () => {
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/admin/instance");
+    renderAdmin("/settings/server");
     await findNamed("region", INSTANCE);
 
     expect(scrollSpy).not.toHaveBeenCalled();
   });
 
-  it("lands a pre-page ?section= link on the page of that name", async () => {
+  it("lands a pre-page /admin ?section= link on the page that holds it now", async () => {
     renderAdmin("/admin?tab=general&section=users");
     expect(await findNamed("region", "admin:pages.users")).toBeInTheDocument();
-    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.users");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.users");
   });
 });
 
-describe("AdminPage — the standard level (forgejo#321)", () => {
+describe("SettingsPage, the server's pages — the standard level (forgejo#321)", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
     useSettingsLevelStore.setState({ level: "standard" });
@@ -218,25 +221,24 @@ describe("AdminPage — the standard level (forgejo#321)", () => {
   });
 
   it("keeps the expert pages out of the menu and says how many there are", async () => {
-    renderAdmin("/admin/instance");
+    renderAdmin("/settings/server");
     await findNamed("region", INSTANCE);
     const menu = document.querySelector("[data-settings-menu] nav") as HTMLElement;
     const pages = within(menu)
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"));
-    expect(pages).toContain("/admin/externalServices");
-    expect(pages).not.toContain("/admin/logging");
-    expect(pages).not.toContain("/admin/system");
+    expect(pages).toContain("/settings/users");
+    expect(pages).not.toContain("/settings/maintenance");
+    expect(pages).not.toContain("/settings/masterdata");
     expect(document.querySelector('[data-expert-note="pages"]')).toHaveTextContent(
       "settings:level.morePages"
     );
   });
 
   it("shows the expert rows a search hit on a page's first section named (codex final review)", async () => {
-    // The search links an expert row of the instance section as
-    // `/admin/instance?section=instance&expert=1`. The section is the page's
-    // first, which the canonical address leaves out — that must not drop the
-    // request to show the rows with it.
+    // The search links an expert row of the general section as
+    // `/settings/server?match=<row>&expert=1#general`; the request to show the
+    // rows must survive the canonical redirect of an older address, too.
     renderAdmin("/admin/instance?section=instance&expert=1");
     const instance = await findNamed("region", INSTANCE);
     await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
@@ -245,23 +247,23 @@ describe("AdminPage — the standard level (forgejo#321)", () => {
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
     renderAdmin("/admin/logging");
     expect(await findNamed("region", "admin:pages.logging")).toBeInTheDocument();
-    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.logging");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.maintenance");
     expect(document.querySelector('[role="status"]')).toHaveTextContent(
       "settings:level.expertPage"
     );
   });
 });
 
-describe("AdminPage — no heading repeats the one above it (forgejo#321)", () => {
+describe("SettingsPage, the server's pages — no heading repeats the one above it (forgejo#321)", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
   });
 
   // "Benutzer" under "Benutzer": a page with one section of its own name.
-  it.each(ADMIN_PAGES.filter((p) => !p.domain).map((p) => [p.id]))(
-    "holds on /admin/%s",
+  it.each(AREA_PAGES.filter((p) => p.adminOnly).map((p) => [p.id]))(
+    "holds on /settings/%s",
     async (page) => {
-      const { unmount } = renderAdmin(`/admin/${page}`);
+      const { unmount } = renderAdmin(`/settings/${page}`);
       await waitFor(() => expect(document.querySelector("h1")).not.toBeNull());
       expect(repeatedHeadings(document.body)).toEqual([]);
       unmount();
@@ -282,7 +284,7 @@ describe("AdminPage — no heading repeats the one above it (forgejo#321)", () =
  * `onVisible` — the same wiring finding C1 fixed the placeholder height and
  * deep-link re-scroll around.
  */
-describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
+describe("SettingsPage, the server's pages — lazy section reveal (Wave C finding C3)", () => {
   let io: FakeIntersectionObserverHandle;
 
   beforeEach(() => {
@@ -295,17 +297,17 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
   });
 
   it("mounts the logging section's body and fetches its data on first intersection, but not again on a second", async () => {
-    renderAdmin("/admin/logging");
+    renderAdmin("/settings/maintenance#logging");
     await findNamed("region", "admin:pages.logging");
 
-    const bodyEl = document.getElementById("admin-logging-body");
+    const bodyEl = document.getElementById("settings-logging-body");
     expect(bodyEl?.childElementCount).toBe(0);
 
     // LazyBody creates its IntersectionObserver from a passive effect, which
     // commits asynchronously relative to the DOM. Waiting for the observer
     // itself, rather than a proxy for it, is what closes that race.
-    await waitFor(() => expect(io.observerFor("admin-logging-body")).toBeDefined());
-    const observer = io.observerFor("admin-logging-body");
+    await waitFor(() => expect(io.observerFor("settings-logging-body")).toBeDefined());
+    const observer = io.observerFor("settings-logging-body");
 
     act(() => {
       observer?.trigger(true);
@@ -341,10 +343,10 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
  * doing so within the time budget, a real scroll (wheel/touch/key) input
  * cancels it, and the time budget itself is a hard stop.
  */
-describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)", () => {
+describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C finding C1, follow-up)", () => {
   let resizeIO: FakeResizeObserverHandle;
   let scrollSpy: ReturnType<typeof vi.fn>;
-  const DEEP_LINK = "/admin/instance?section=push";
+  const DEEP_LINK = "/settings/server?match=importmodus#features";
 
   beforeEach(() => {
     scrollSpy = vi.fn();
@@ -370,7 +372,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
       resizeIO.observers[0]?.trigger();
     });
     expect(scrollSpy).toHaveBeenCalledTimes(2);
-    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("admin-push"));
+    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("settings-importMode"));
 
     // A second layout change within the budget realigns again.
     act(() => {
@@ -430,7 +432,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
   });
 });
 
-describe("AdminPage — master data of a switched-off domain (forgejo#321 prototype)", () => {
+describe("SettingsPage, the server's pages — master data of a switched-off domain (forgejo#321 prototype)", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
   });
@@ -438,12 +440,16 @@ describe("AdminPage — master data of a switched-off domain (forgejo#321 protot
   // The suite's settings store enables no domain, so cruise is off here.
   it("says the domain is off and points to Bereiche & Farben, instead of leaving the page", async () => {
     renderAdmin("/admin/shipsMasterData");
-    const notice = await within(document.body).findByText("settings:domainOff.message");
-    expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
-    expect(document.querySelector("h1")).toHaveTextContent("admin:pages.shipsMasterData");
-    expect(
-      within(document.body).getByRole("link", { name: "settings:domainOff.action" })
-    ).toHaveAttribute("href", "/settings/display?section=domains");
-    expect(document.querySelector("#admin-shipsMasterData")).toBeNull();
+    await findNamed("region", "admin:pages.shipsMasterData");
+    const ships = document.getElementById("settings-shipsMasterData") as HTMLElement;
+    const notice = ships.querySelector("[data-domain-off]") as HTMLElement;
+    expect(notice).toHaveAttribute("data-domain-off", "cruise");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.masterdata");
+    expect(within(notice).getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
+      "href",
+      "/settings/domains#domains"
+    );
+    // The catalogue itself is not drawn while its domain is off.
+    expect(document.querySelector("#settings-shipsMasterData-body")).toBeNull();
   });
 });

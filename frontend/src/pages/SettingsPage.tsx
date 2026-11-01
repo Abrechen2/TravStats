@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, type JSX } from "react";
 import { Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsPage, type AutoSaveState } from "../components/Settings/useSettingsPage";
@@ -9,9 +9,10 @@ import { useDomainColors } from "../hooks/useDomainColors";
 import { useSectionInView } from "../hooks/useSectionInView";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import PasswordModal from "../components/Settings/PasswordModal";
+import AboutSection from "../components/Settings/AboutSection";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
-import { PageExpertNote } from "../components/Settings/frame/ExpertNote";
+import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
 import {
   PageHiddenRowsContext,
@@ -21,25 +22,33 @@ import { DomainOffNotice } from "../components/Settings/frame/DomainOffNotice";
 import type { SettingsMenuGroup } from "../components/Settings/frame/SettingsMenu";
 import SettingsSectionSwitch from "./Settings/SettingsSectionSwitch";
 import { useSectionConditions } from "./Settings/useSectionConditions";
-import { SettingsSearch } from "./Settings/SettingsSearch";
-import { useSearchScopes } from "./Settings/useSearchScopes";
 import { useSearchHighlight } from "./Settings/useSearchHighlight";
-import { resolveSettingsLink } from "./Settings/settingsLinks";
-import { pageLevel, sectionsOf } from "./Settings/surface";
+import { AreaSearch } from "./Settings/area/AreaSearch";
 import {
-  MOVED_TO_ADMIN,
-  SETTINGS_MENU,
-  SETTINGS_PAGES,
-  findPage,
-  type SettingsPageDef,
-} from "./Settings/settingsModel";
+  AREA_MENU,
+  AREA_PAGES,
+  INDENTED_PAGES,
+  findAreaPage,
+  mountFor,
+  type AreaPageDef,
+  type AreaSectionDef,
+} from "./Settings/area/areaModel";
+import { resolveAddress } from "./Settings/area/redirects";
+import { readLastPage, writeLastPage } from "./Settings/area/lastPage";
+import { expertRowCount } from "./Settings/registry";
+import { pageLevel, sectionsOf } from "./Settings/surface";
+import type { SettingsSectionId } from "./Settings/settingsModel";
+import type { AdminSectionId } from "./Admin/adminSections";
+import { ADMIN_SECTION_FRAME } from "./Admin/AdminSectionSwitch";
+import { AdminHost, AdminSectionBody } from "./Admin/AdminHost";
+import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
 
 /**
  * Pages whose sections write through the settings store's auto-save, and
  * therefore drive `autoSaveState`. Elsewhere the sections save explicitly or
  * not at all, and the strip would promise something that never happens (UAT B8).
  */
-const AUTO_SAVED_PAGES = new Set(["account", "display", "flight", "cruise"]);
+const AUTO_SAVED_PAGES = new Set(["account", "display", "domains", "flight", "cruise"]);
 
 /** A landed write reads good, a failed one bad; waiting and writing stay quiet. */
 const AUTO_SAVE_COLOR: Record<AutoSaveState, string> = {
@@ -50,56 +59,64 @@ const AUTO_SAVE_COLOR: Record<AutoSaveState, string> = {
   failed: "var(--ts-bad)",
 };
 
-/** The section an address names: `?section=` or, in pre-2.7 links, the hash. */
-function useNamedSection(): string | null {
-  const [searchParams] = useSearchParams();
-  const { hash } = useLocation();
-  return searchParams.get("section") || hash.slice(1) || null;
+/** The section an address names: `#section`, or the pre-2.7 `?section=`. */
+function namedAnchor(search: string, hash: string): string | null {
+  const fromQuery = new URLSearchParams(search).get("section");
+  if (fromQuery) return fromQuery;
+  if (!hash.startsWith("#")) return null;
+  try {
+    return decodeURIComponent(hash.slice(1)) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Which of the two scope lines a page carries (design §5.7). */
+function scopeLineKey(page: AreaPageDef): string {
+  if (page.adminOnly) return "settings:area.scope.instance";
+  return page.id === "services" ? "settings:area.scope.mixed" : "settings:area.scope.account";
 }
 
 /**
- * Einstellungen — one page per menu entry (forgejo#321).
+ * Einstellungen — the one settings area (settings rebuild, package 1).
  *
- * Every address first goes through `resolveSettingsLink`; anything that is not
- * already the canonical address of a page and section is redirected to it, so
- * the page itself only ever renders a page it knows.
+ * Account settings and the server's live here together: `/settings/<page>`,
+ * with `/admin/...` and every older `/settings/...` form redirecting through
+ * `resolveAddress`. Anything that is not already the canonical address is
+ * redirected, so the page itself only ever renders a page it knows. The
+ * server's pages are drawn for an admin only; anyone else who follows such an
+ * address lands on their own pages with a line that says why.
  */
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  // `:group` is the route's name before pages (2.7.x); both name the page.
-  const params = useParams<{ page?: string; group?: string }>();
-  const pageParam = params.page ?? params.group;
-  const [searchParams, setSearchParams] = useSearchParams();
+  const params = useParams<{ page?: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const page = useSettingsPage();
   const { isFeatureVisible } = useBetaFeatures();
   const { isEnabled } = useEnabledDomains();
   const { colorOf } = useDomainColors();
   const level = useEffectiveSettingsLevel();
-  const named = useNamedSection();
   const isAdmin = page.user?.isAdmin ?? false;
-  const searchScopes = useSearchScopes(isAdmin);
+  const mainRef = useRef<HTMLDivElement>(null);
 
-  const isReachable = useCallback(
-    (p: SettingsPageDef) => !p.domain || isEnabled(p.domain),
-    [isEnabled]
-  );
-  const canonical = resolveSettingsLink({
-    page: pageParam,
-    section: named,
-    tab: searchParams.get("tab"),
+  const resolved = resolveAddress({
+    pathname: location.pathname,
+    search: location.search,
+    hash: location.hash,
     isAdmin,
-    isReachable,
+    isDomainOn: isEnabled,
+    lastPage: readLastPage(),
   });
-  const current = findPage(pageParam);
-  const target = new URL(canonical, "http://x");
-  const isCanonical =
-    target.pathname === location.pathname &&
-    (target.searchParams.get("section") ?? null) === searchParams.get("section") &&
-    !location.hash &&
-    !searchParams.get("tab");
+  const isCanonical = resolved.to === `${location.pathname}${location.search}${location.hash}`;
+  const current = findAreaPage(params.page);
 
-  // The page of a switched-off domain says so instead of drawing its settings.
+  const anchor = isCanonical ? namedAnchor(location.search, location.hash) : null;
+  const match = isCanonical ? searchParams.get("match") : null;
+  const namedMount = current ? mountFor(current.id, anchor, match) : undefined;
+  const named = namedMount?.id ?? null;
+
+  // A page of a switched-off domain says so instead of drawing its settings.
   const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
   const conditions = useSectionConditions();
   const travTrackHeld = conditions.travTrackHeld === true;
@@ -107,7 +124,10 @@ export default function SettingsPage(): JSX.Element {
     () =>
       current && !domainOff
         ? sectionsOf(current, {
-            level,
+            // An expert page (Wartung, Stammdaten) opened at the standard
+            // level — by a link, the search or a bookmark — shows its
+            // sections, with a note above, rather than an empty page.
+            level: pageLevel(current) === "expert" ? "expert" : level,
             isGateOpen: isFeatureVisible,
             conditions: { travTrackHeld },
             isAdmin,
@@ -129,37 +149,42 @@ export default function SettingsPage(): JSX.Element {
       : null
   );
 
-  // Scroll a named section into view once the page has rendered: a bookmark
-  // lands on the card, not merely on the page.
   useEffect(() => {
-    if (!isCanonical || !named) return;
-    const el = document.getElementById(`settings-${named}`);
+    if (isCanonical && current) writeLastPage(current.id);
+  }, [isCanonical, current]);
+
+  // Scroll a named section into view and keep it there while the page's lazy
+  // sections settle: a bookmark lands on the card, not merely on the page.
+  useDeepLinkScroll(mainRef, false, named, "settings");
+
+  const jump = useCallback((section: string): void => {
+    const el = document.getElementById(`settings-${section}`);
     // Feature-checked: jsdom has no layout, so the method is absent there.
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ block: "start", behavior: "smooth" });
     }
-  }, [isCanonical, named]);
+  }, []);
 
-  const jump = useCallback(
-    (section: string): void => {
-      setSearchParams({ section }, { replace: true });
-      const el = document.getElementById(`settings-${section}`);
-      if (el && typeof el.scrollIntoView === "function") {
-        el.scrollIntoView({ block: "start", behavior: "smooth" });
-      }
-    },
-    [setSearchParams]
-  );
-
-  // The state carries a search hit's highlight across the redirect.
+  // The state carries a search hit's highlight across the redirect, and a
+  // permission note to the page the account lands on.
   if (!isCanonical || !current) {
-    return <Navigate to={canonical} replace state={location.state} />;
+    const carried = (location.state as Record<string, unknown> | null) ?? {};
+    return (
+      <Navigate
+        to={resolved.to}
+        replace
+        state={resolved.adminOnly ? { ...carried, adminOnly: true } : location.state}
+      />
+    );
   }
 
-  const reachablePages = SETTINGS_PAGES.filter(isReachable);
-  const inMenu = (p: SettingsPageDef): boolean =>
+  const adminOnlyNotice = (location.state as { adminOnly?: unknown } | null)?.adminOnly === true;
+  const reachablePages = AREA_PAGES.filter(
+    (p) => (!p.domain || isEnabled(p.domain)) && (!p.adminOnly || isAdmin)
+  );
+  const inMenu = (p: AreaPageDef): boolean =>
     level === "expert" || pageLevel(p) === "standard" || p.id === current.id;
-  const groups: SettingsMenuGroup[] = SETTINGS_MENU.map((g) => ({
+  const groups: SettingsMenuGroup[] = AREA_MENU.map((g) => ({
     id: g.id,
     label: g.labelKey ? t(g.labelKey) : null,
     entries: reachablePages
@@ -170,31 +195,73 @@ export default function SettingsPage(): JSX.Element {
         to: `/settings/${p.id}`,
         icon: p.icon,
         color: p.domain ? colorOf(p.domain) : undefined,
+        indent: INDENTED_PAGES.has(p.id),
       })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachablePages.filter((p) => !inMenu(p)).length;
+  const moreExpert = expertRowCount({
+    isAdmin,
+    isDomainOn: isEnabled,
+    isGateOpen: isFeatureVisible,
+  });
 
-  // A link named a section that moved to administration, opened by an account
-  // without it: say so instead of leaving the address and the screen to disagree.
-  const adminOnlyNotice =
-    named !== null && !isAdmin && Object.prototype.hasOwnProperty.call(MOVED_TO_ADMIN, named);
-  const labelOf = (id: string): string =>
-    t(current.sections.find((s) => s.id === id)?.labelKey ?? id);
+  const mounts = new Map<string, AreaSectionDef>(current.sections.map((s) => [s.id, s]));
+  const labelOf = (id: string): string => t(mounts.get(id)?.labelKey ?? id);
+  const isExpertPage = pageLevel(current) === "expert" && level === "standard";
+  const hasServerSections = visible.shown.some((id) => mounts.get(id)?.source === "admin");
+
+  const body = (mount: AreaSectionDef): JSX.Element => {
+    if (mount.domain && !isEnabled(mount.domain)) return <DomainOffNotice domain={mount.domain} />;
+    if (mount.source === "admin")
+      return <AdminSectionBody section={mount.component as AdminSectionId} />;
+    if (mount.source === "about") return <AboutSection />;
+    return <SettingsSectionSwitch section={mount.component as SettingsSectionId} page={page} />;
+  };
+  const frameOf = (mount: AreaSectionDef): "own" | "card" => {
+    if (mount.domain && !isEnabled(mount.domain)) return "card";
+    return mount.source === "admin"
+      ? ADMIN_SECTION_FRAME[mount.component as AdminSectionId]
+      : "own";
+  };
+
+  const sections = (
+    <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+      <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+        {visible.shown.map((id, index) => {
+          const mount = mounts.get(id)!;
+          return (
+            <SectionFrame
+              key={id}
+              headingAbove={index === 0 ? title : null}
+              anchorId={`settings-${id}`}
+              label={labelOf(id)}
+              expert={mount.level === "expert"}
+              frame={frameOf(mount)}
+              deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+              revealExpertRows={named === id && searchParams.get("expert") === "1"}
+              highlighted={highlighted === id}
+            >
+              {body(mount)}
+            </SectionFrame>
+          );
+        })}
+      </div>
+    </PageHiddenRowsContext.Provider>
+  );
 
   return (
     <SettingsLayout
-      surface="settings"
-      isAdmin={isAdmin}
       navLabel={t("settings:title", { defaultValue: "Einstellungen" })}
       groups={groups}
       activePage={current.id}
       hiddenPages={hiddenPages}
-      search={<SettingsSearch scopes={searchScopes} />}
+      search={<AreaSearch isAdmin={isAdmin} />}
+      moreExpert={moreExpert}
       menuFooter={<VersionLine />}
       title={title}
       meta={
         <span>
-          <span>{t("settings:scopeHint")}</span>
+          <span>{t(scopeLineKey(current))}</span>
           {AUTO_SAVED_PAGES.has(current.id) && (
             <>
               {" · "}
@@ -231,43 +298,37 @@ export default function SettingsPage(): JSX.Element {
       activeSection={inView}
       onJump={jump}
       notice={
-        domainOff ? (
-          <DomainOffNotice domain={domainOff} />
-        ) : adminOnlyNotice ? (
-          <p
-            role="status"
-            className="t-caption"
-            style={{
-              padding: "12px 16px",
-              borderRadius: "var(--ts-radius-card)",
-              background: "var(--ts-surface2)",
-              border: "1px solid var(--ts-border)",
-              color: "var(--ts-text)",
-            }}
-          >
-            {t("settings:deepLink.adminOnlySection")}
-          </p>
-        ) : (
-          <PageExpertNote count={hiddenSettings} />
-        )
+        <>
+          {adminOnlyNotice && (
+            <p
+              role="status"
+              className="t-caption"
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--ts-radius-card)",
+                background: "var(--ts-surface2)",
+                border: "1px solid var(--ts-border)",
+                color: "var(--ts-text)",
+              }}
+            >
+              {t("settings:area.adminOnlyNotice")}
+            </p>
+          )}
+          {domainOff ? (
+            <DomainOffNotice domain={domainOff} />
+          ) : isExpertPage ? (
+            <ExpertPageNotice />
+          ) : (
+            <PageExpertNote count={hiddenSettings} />
+          )}
+        </>
       }
     >
-      <PageHiddenRowsContext.Provider value={reportHiddenRows}>
-        {visible.shown.map((id, index) => (
-          <SectionFrame
-            key={id}
-            headingAbove={index === 0 ? title : null}
-            anchorId={`settings-${id}`}
-            label={labelOf(id)}
-            expert={current.sections.find((s) => s.id === id)?.level === "expert"}
-            deepLinkedExpert={visible.deepLinkedExpert === id}
-            revealExpertRows={named === id && searchParams.get("expert") === "1"}
-            highlighted={highlighted === id}
-          >
-            <SettingsSectionSwitch section={id} page={page} />
-          </SectionFrame>
-        ))}
-      </PageHiddenRowsContext.Provider>
+      {isAdmin && hasServerSections ? (
+        <AdminHost highlightUserId={searchParams.get("user")}>{sections}</AdminHost>
+      ) : (
+        sections
+      )}
 
       {page.showPasswordModal && (
         <PasswordModal
@@ -281,12 +342,4 @@ export default function SettingsPage(): JSX.Element {
       )}
     </SettingsLayout>
   );
-}
-
-/**
- * `/settings` itself — every link written before settings had pages. The
- * resolution is the page's own, so the two can never disagree.
- */
-export function SettingsLegacyRedirect(): JSX.Element {
-  return <SettingsPage />;
 }

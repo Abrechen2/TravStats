@@ -1192,7 +1192,12 @@
       "autoupdate": "Check interval, interval, expiry",
       "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
       "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key"
-    }
+    },
+    "count_one": "{{count}} result",
+    "count_other": "{{count}} results",
+    "countMore": "{{shown}} of {{count}} results · keep typing",
+    "noResultsFor": "Nothing found for “{{query}}”.",
+    "expertNote": "Expert results open without changing your level."
   },
   "railProviders": {
     "title": "Train lookup",
@@ -1300,7 +1305,10 @@
     "showInExpert": "Show in Expert",
     "pageMore_one": "1 more setting on this page is only shown in the Expert view.",
     "pageMore_other": "{{count}} more settings on this page are only shown in the Expert view.",
-    "hint": "Expert also shows fine-tuning, your own API keys and technical options."
+    "hint": "Expert also shows fine-tuning, your own API keys and technical options.",
+    "moreInExpert_one": "Expert shows {{count}} more setting",
+    "moreInExpert_other": "Expert shows {{count}} more settings",
+    "allVisible": "Everything visible · fine-tuning is marked"
   },
   "sectionChips": "Sections on this page",
   "pagePicker": "Page",
@@ -1544,5 +1552,37 @@
       "label": "Passport valid until",
       "description": "The Companion app warns six months ahead."
     }
+  },
+  "area": {
+    "pages": {
+      "account": "Profile & sign-in",
+      "display": "Language & units",
+      "domains": "Travel types",
+      "flight": "Flights",
+      "cruise": "Cruises",
+      "trips": "Trips & inbox",
+      "sharing": "Sharing",
+      "notifications": "Reminders",
+      "location": "Location",
+      "loyalty": "Loyalty",
+      "data": "Data",
+      "services": "Services",
+      "server": "Server",
+      "users": "Users",
+      "backups": "Backups",
+      "maintenance": "Maintenance",
+      "masterdata": "Reference data",
+      "about": "About TravStats"
+    },
+    "menu": {
+      "account": "Your account",
+      "server": "Server · admin only"
+    },
+    "scope": {
+      "account": "Applies to your account",
+      "mixed": "Applies to your account · rows marked “All accounts” apply to the server",
+      "instance": "Applies to all accounts · admin only"
+    },
+    "adminOnlyNotice": "This applies to all accounts. Only an admin can change it."
   }
 }
