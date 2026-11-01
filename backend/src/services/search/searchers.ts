@@ -204,10 +204,12 @@ export const searchPlaces: DomainSearcher = async (userId, q, limit) => {
       select: { id: true, name: true },
     }),
   ]);
-  const p = page(places, limit);
-  const l = page(lists, limit);
+  // Lists get a reserved share of the slots: a place also matches through its
+  // list's name, so places alone could crowd a matching list out for good.
+  const listShown = lists.slice(0, Math.min(lists.length, Math.ceil(limit / 2)));
+  const placeShown = places.slice(0, limit - listShown.length);
   const hits: SearchHit[] = [
-    ...p.rows.map((r): SearchHit => ({
+    ...placeShown.map((r): SearchHit => ({
       domain: "poi",
       kind: "place",
       id: r.id,
@@ -216,7 +218,7 @@ export const searchPlaces: DomainSearcher = async (userId, q, limit) => {
       date: null,
       path: `/places/${r.id}`,
     })),
-    ...l.rows.map((r): SearchHit => ({
+    ...listShown.map((r): SearchHit => ({
       domain: "poi",
       kind: "placeList",
       id: r.id,
@@ -226,7 +228,7 @@ export const searchPlaces: DomainSearcher = async (userId, q, limit) => {
       path: `/places/lists/${r.id}`,
     })),
   ];
-  return { hits: hits.slice(0, limit), more: p.more || l.more || hits.length > limit };
+  return { hits, more: places.length > placeShown.length || lists.length > listShown.length };
 };
 
 type RideRow = {
@@ -391,9 +393,20 @@ function routeSearcher(kind: "tour" | "roadtrip"): DomainSearcher {
         kind,
         OR: [{ name: ci(q) }, ...(kind === "roadtrip" ? [{ vehicleName: ci(q) }] : [])],
       },
-      orderBy: NEWEST("tourDate") as Prisma.TripRouteOrderByWithRelationInput[],
+      // A roadtrip has no date of its own (`tourDate` is the day tour's): its
+      // first station dates it, and the row order falls back to last edited.
+      orderBy:
+        kind === "tour"
+          ? (NEWEST("tourDate") as Prisma.TripRouteOrderByWithRelationInput[])
+          : [{ updatedAt: "desc" }, { id: "desc" }],
       take: limit + 1,
-      select: { id: true, name: true, vehicleName: true, tourDate: true },
+      select: {
+        id: true,
+        name: true,
+        vehicleName: true,
+        tourDate: true,
+        stops: { select: { startDate: true }, orderBy: { startDate: "asc" }, take: 1 },
+      },
     });
     const { rows: shown, more } = page(rows, limit);
     return {
@@ -404,7 +417,7 @@ function routeSearcher(kind: "tour" | "roadtrip"): DomainSearcher {
         id: r.id,
         title: r.name,
         subtitle: kind === "roadtrip" ? r.vehicleName : null,
-        date: iso(r.tourDate),
+        date: iso(kind === "tour" ? r.tourDate : r.stops[0]?.startDate),
         path: kind === "tour" ? `/tours/${r.id}` : `/roadtrips/${r.id}`,
       })),
     };

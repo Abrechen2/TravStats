@@ -80,6 +80,13 @@ export default function GlobalSearch(): JSX.Element {
 
   useEffect(() => setActive(0), [flat]);
 
+  // Keep the keyboard's choice on screen inside the scrolling panel.
+  useEffect(() => {
+    if (open && flat.length > 0) {
+      document.getElementById(`${listId}-opt-${active}`)?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [active, open, flat, listId]);
+
   const colorFor = (domain: SearchDomain): string =>
     domain === "tour"
       ? TOUR_COLOR

@@ -218,6 +218,95 @@ describe("GET /api/v1/search", () => {
     expect(res.body.data.hits.length).toBeLessThanOrEqual(TOTAL_CAP);
   });
 
+  it("keeps a matching place list visible even when places fill the page", async () => {
+    await prisma.placeList.create({ data: { userId: user.id, name: "Quokka list" } });
+    await prisma.place.createMany({
+      data: Array.from({ length: 5 }, (_, i) => ({
+        userId: user.id,
+        name: `Quokka spot ${i}`,
+        category: "other",
+        lat: 1,
+        lon: 1,
+      })),
+    });
+    const res = await search({ q: "quokka", domains: "poi", limit: "2" });
+    const kinds = res.body.data.hits.map((h: { kind: string }) => h.kind).sort();
+    expect(kinds).toEqual(["place", "placeList"]);
+    expect(res.body.data.more).toEqual(["poi"]);
+  });
+
+  it("dates a roadtrip by its first station, not by the day-tour column", async () => {
+    const real = await instanceSettings.getInstanceSettings();
+    const spy = jest
+      .spyOn(instanceSettings, "getInstanceSettings")
+      .mockResolvedValue({ ...real, betaFeaturesEnabled: true });
+    const trip = await prisma.trip.create({ data: { userId: user.id, name: "Rt host" } });
+    const route = await prisma.tripRoute.create({
+      data: {
+        userId: user.id,
+        tripId: trip.id,
+        name: "Dated roadtrip",
+        kind: "roadtrip",
+        mode: "car",
+      },
+    });
+    await prisma.tripStop.create({
+      data: {
+        tripId: trip.id,
+        routeId: route.id,
+        title: "Stop",
+        startDate: new Date("2026-07-04T00:00:00Z"),
+      },
+    });
+    await prisma.userSettings.update({
+      where: { userId: user.id },
+      data: { enabledDomains: ["flight", "roadtrip"] },
+    });
+    try {
+      const res = await search({ q: "dated roadtrip", domains: "roadtrip" });
+      expect(res.body.data.hits[0].date).toBe("2026-07-04T00:00:00.000Z");
+    } finally {
+      spy.mockRestore();
+      await prisma.userSettings.update({
+        where: { userId: user.id },
+        data: {
+          enabledDomains: ["flight", "cruise", "lodging", "poi", "rail", "bus", "ferry", "rental"],
+        },
+      });
+    }
+  });
+
+  it("lists a domain in `more` when only the total cap cut its hits off", async () => {
+    const n = 21;
+    await prisma.flight.createMany({
+      data: Array.from({ length: n }, () => flight(user.id, { flightNumber: "CAPQ1" })),
+    });
+    await prisma.lodging.createMany({
+      data: Array.from({ length: n }, (_, i) => ({
+        userId: user.id,
+        name: `Capq stay ${i}`,
+        type: "hotel",
+      })),
+    });
+    await prisma.place.createMany({
+      data: Array.from({ length: n }, (_, i) => ({
+        userId: user.id,
+        name: `Capq place ${i}`,
+        category: "other",
+        lat: 1,
+        lon: 1,
+      })),
+    });
+    await prisma.trip.createMany({
+      data: Array.from({ length: n }, (_, i) => ({ userId: user.id, name: `Capq trip ${i}` })),
+    });
+    const res = await search({ q: "capq", limit: "20" });
+    expect(res.body.data.hits).toHaveLength(TOTAL_CAP);
+    expect(res.body.data.capped).toBe(true);
+    // Trips come last in domain order, so the cap removed them; the answer must say they exist.
+    expect(res.body.data.more).toContain("trip");
+  });
+
   it("reports a failing domain in `failed` instead of presenting it as no match", async () => {
     const spy = jest.spyOn(prisma.trip, "findMany").mockRejectedValue(new Error("boom"));
     try {

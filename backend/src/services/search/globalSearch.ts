@@ -98,9 +98,15 @@ export async function globalSearch(
     throw new Error("global search: every domain failed");
   }
 
+  // Hits the total cap cuts off are "more" for their domains too.
+  const kept = hits.slice(0, TOTAL_CAP);
+  for (const cut of hits.slice(TOTAL_CAP)) {
+    if (!more.includes(cut.domain)) more.push(cut.domain);
+  }
+
   return {
     query: q,
-    hits: hits.slice(0, TOTAL_CAP),
+    hits: kept,
     more,
     failed,
     capped: hits.length > TOTAL_CAP,
