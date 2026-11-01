@@ -87,7 +87,9 @@ describe("CalendarFeedSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.copy" }));
     expect(writeText).toHaveBeenCalledWith(URL_HTTPS);
     expect(await screen.findByText("settings:calendarFeed.copied")).toBeTruthy();
-    expect(await screen.findByRole("button", { name: "settings:calendarFeed.revoke" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "settings:calendarFeed.revoke" })
+    ).toBeTruthy();
   });
 
   it("warns under the link when Google Calendar cannot reach its address, and only then", async () => {
@@ -162,7 +164,9 @@ describe("CalendarFeedSection", () => {
     );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("settingsRows:dialogs.icsnew.title")).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: "settings:blocks.confirm.cancel" }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settings:blocks.confirm.cancel" })
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(api.issue).not.toHaveBeenCalled();
 
