@@ -67,6 +67,15 @@ describe("key-test routes answer 'no key saved' with a stable code", () => {
     }
   );
 
+  it("account route /test/opensky carries messageKey notConfigured", async () => {
+    const res = await request(app)
+      .post("/api/v1/settings/api-keys/test/opensky")
+      .set("Cookie", cookie)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.messageKey).toBe("notConfigured");
+  });
+
   it.each([...PROVIDERS, "logostream", "googlePlaces"])(
     "admin route /api-keys/test/%s keeps its notConfigured answer",
     async (provider) => {

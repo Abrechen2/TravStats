@@ -397,6 +397,7 @@ router.post(
         res.status(400).json({
           success: false,
           message: "No OpenSky credentials configured to test. Save them first.",
+          messageKey: "notConfigured",
         });
         return;
       }
