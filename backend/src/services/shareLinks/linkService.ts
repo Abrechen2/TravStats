@@ -13,6 +13,7 @@ import {
 import { now } from "../../shared/time/clock";
 import { getInstanceSettings } from "../instanceSettingsService";
 import logger from "../../utils/logger";
+import { buildCruiseView, buildStayView, buildVisitView } from "./entryViews";
 import { buildFlightView, flightAutoExpiry, loadOwnedFlightTimes } from "./flightView";
 import { photoSnapshot, sharedPhotoBytes, type PhotoOmissions } from "./photoProxy";
 import {
@@ -52,14 +53,22 @@ interface Target {
   flightId: string | null;
   tripId: string | null;
   year: number | null;
+  cruiseId: string | null;
+  lodgingStayId: string | null;
+  placeVisitId: string | null;
 }
 
 function targetOf(selection: Pick<ShareLinkSelection, "kind" | "targetId">): Target {
+  const when = (kind: ShareLinkKind): string | null =>
+    selection.kind === kind ? selection.targetId : null;
   return {
     kind: selection.kind,
-    flightId: selection.kind === "flight" ? selection.targetId : null,
-    tripId: selection.kind === "trip" ? selection.targetId : null,
+    flightId: when("flight"),
+    tripId: when("trip"),
     year: selection.kind === "wrapped" ? Number(selection.targetId) : null,
+    cruiseId: when("cruise"),
+    lodgingStayId: when("stay"),
+    placeVisitId: when("visit"),
   };
 }
 
@@ -98,6 +107,21 @@ async function buildView(
     const wrapped = await buildWrappedView(userId, target.year, set, owner);
     if (!wrapped) return null;
     built = { view: { kind: "wrapped", wrapped }, autoExpiry: null };
+  } else if (target.kind === "cruise" && target.cruiseId) {
+    const set = new Set(fields) as Set<ShareLinkField<"cruise">>;
+    const cruise = await buildCruiseView(userId, target.cruiseId, set, owner);
+    if (!cruise) return null;
+    built = { view: { kind: "cruise", cruise }, autoExpiry: null };
+  } else if (target.kind === "stay" && target.lodgingStayId) {
+    const set = new Set(fields) as Set<ShareLinkField<"stay">>;
+    const stay = await buildStayView(userId, target.lodgingStayId, set, owner);
+    if (!stay) return null;
+    built = { view: { kind: "stay", stay }, autoExpiry: null };
+  } else if (target.kind === "visit" && target.placeVisitId) {
+    const set = new Set(fields) as Set<ShareLinkField<"visit">>;
+    const visit = await buildVisitView(userId, target.placeVisitId, set, owner);
+    if (!visit) return null;
+    built = { view: { kind: "visit", visit }, autoExpiry: null };
   }
   if (!built) return null;
   return { view: publicViewSchema.parse(built.view), autoExpiry: built.autoExpiry };
@@ -222,8 +246,15 @@ export async function createShareLink(
 
 type LinkRow = Awaited<ReturnType<typeof prisma.publicShareLink.findMany>>[number];
 
-const targetIdOf = (row: Pick<LinkRow, "flightId" | "tripId" | "year">): string =>
-  row.flightId ?? row.tripId ?? String(row.year);
+const targetIdOf = (
+  row: Pick<LinkRow, "flightId" | "tripId" | "year" | "cruiseId" | "lodgingStayId" | "placeVisitId">
+): string =>
+  row.flightId ??
+  row.tripId ??
+  row.cruiseId ??
+  row.lodgingStayId ??
+  row.placeVisitId ??
+  String(row.year);
 
 /** The end a link's target sets by itself today: a flight's landing, an itinerary's trip end. */
 async function targetAutoExpiry(row: LinkRow): Promise<Date | null> {
@@ -338,6 +369,9 @@ const targetOfRow = (row: LinkRow): Target => ({
   flightId: row.flightId,
   tripId: row.tripId,
   year: row.year,
+  cruiseId: row.cruiseId,
+  lodgingStayId: row.lodgingStayId,
+  placeVisitId: row.placeVisitId,
 });
 
 export async function resolvePublicView(
