@@ -14,6 +14,9 @@ import {
 } from "../../lib/saveErrorMessage";
 import type { PlaceList } from "../../types/placeList";
 import { useToastStore } from "../../store/toastStore";
+import SuggestionChips from "../common/SuggestionChips";
+import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
+import { entrySuggestionsApi, NO_PLACE_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 import {
   PLACE_CATEGORIES,
   PLACE_CATEGORY_ICONS,
@@ -103,6 +106,18 @@ export function PlaceFormModal({
   const [address, setAddress] = useState(initial.address);
   const [city, setCity] = useState(initial.city);
   const [country, setCountry] = useState(initial.country);
+  // Cities and countries of the user's own places (forgejo#405): a city picked from the
+  // chips brings its country along, a choice that carries its data.
+  const { suggestions: own, failed: suggestionsFailed } = useEntrySuggestions(
+    entrySuggestionsApi.place,
+    { city, country },
+    NO_PLACE_SUGGESTIONS
+  );
+  const pickCity = (name: string): void => {
+    setCity(name);
+    const known = own.cities.find((c) => c.city === name);
+    if (known?.country) setCountry((prev) => (prev.trim() === "" ? (known.country ?? prev) : prev));
+  };
   const [notes, setNotes] = useState(initial.notes);
   const [visited, setVisited] = useState(initial.visited);
   const [countryVisitKind, setCountryVisitKind] = useState<"visit" | "transit">(
@@ -439,6 +454,12 @@ export function PlaceFormModal({
                 maxLength={PLACE_FIELD_MAX.city}
                 onChange={(e) => setCity(e.target.value)}
               />
+              <SuggestionChips
+                value={city}
+                suggestions={own.cities.map((c) => c.city)}
+                onPick={pickCity}
+                fieldLabel={t("places:form.city")}
+              />
             </Field>
             <Field id="place-form-country" label={t("places:form.country")}>
               <input
@@ -448,8 +469,19 @@ export function PlaceFormModal({
                 maxLength={PLACE_FIELD_MAX.country}
                 onChange={(e) => setCountry(e.target.value)}
               />
+              <SuggestionChips
+                value={country}
+                suggestions={own.countries.map((c) => c.country)}
+                onPick={setCountry}
+                fieldLabel={t("places:form.country")}
+              />
             </Field>
           </div>
+          {suggestionsFailed && (
+            <p className="t-caption" data-testid="place-suggestions-failed">
+              {t("common:suggestionsFailed")}
+            </p>
+          )}
 
           {!isEdit && lists.length > 0 && (
             <ChipGroup label={t("places:form.addToLists")}>

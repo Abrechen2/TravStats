@@ -132,14 +132,14 @@ export const cruiseEntrySuggestionsQuerySchema = z.object({ cruiseLine: typed(12
 
 export interface CruiseEntrySuggestions {
   cruiseLines: string[];
-  shipNames: string[];
-  cabinTypes: string[];
+  routeNames: string[];
 }
 
 /**
- * Cruise lines, the ships typed by hand (a ship the catalogue does not know
- * is stored as an override) and the cabin types used — the last two narrowed to
- * the line typed, since a cabin vocabulary belongs to its line.
+ * The cruise lines the user has sailed with and the route names they gave their
+ * cruises — the second narrowed to the line typed, since "Mittelmeer 7 Nächte"
+ * of one line is not what the next line's form should offer first. (The ship is
+ * a catalogue pick and the cabin type a fixed list, so neither is suggested.)
  */
 export async function loadCruiseEntrySuggestions(
   userId: string,
@@ -147,12 +147,11 @@ export async function loadCruiseEntrySuggestions(
 ): Promise<CruiseEntrySuggestions> {
   const forLine = { userId, ...same("cruiseLine", query.cruiseLine) };
   const d = prisma.cruise;
-  const [cruiseLines, shipNames, cabinTypes] = await Promise.all([
+  const [cruiseLines, routeNames] = await Promise.all([
     rankedColumn(d, "cruiseLine", { userId }, 5),
-    rankedColumn(d, "shipNameOverride", forLine, 5),
-    rankedColumn(d, "cabinType", forLine, 5),
+    rankedColumn(d, "routeName", forLine, 5),
   ]);
-  return { cruiseLines, shipNames, cabinTypes };
+  return { cruiseLines, routeNames };
 }
 
 export const cruiseEntrySuggestionsRouter = suggestionsRouter(

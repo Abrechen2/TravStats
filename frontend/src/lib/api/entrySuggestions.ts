@@ -32,8 +32,7 @@ export interface RentalEntrySuggestions {
 }
 export interface CruiseEntrySuggestions {
   cruiseLines: string[];
-  shipNames: string[];
-  cabinTypes: string[];
+  routeNames: string[];
 }
 export interface PlaceEntrySuggestions {
   cities: Array<{ city: string; country: string | null; isoCountryCode: string | null }>;
@@ -53,11 +52,7 @@ export const NO_RENTAL_SUGGESTIONS: RentalEntrySuggestions = {
   vehicleClasses: [],
   vehicleExamples: [],
 };
-export const NO_CRUISE_SUGGESTIONS: CruiseEntrySuggestions = {
-  cruiseLines: [],
-  shipNames: [],
-  cabinTypes: [],
-};
+export const NO_CRUISE_SUGGESTIONS: CruiseEntrySuggestions = { cruiseLines: [], routeNames: [] };
 export const NO_PLACE_SUGGESTIONS: PlaceEntrySuggestions = { cities: [], countries: [] };
 
 async function read<T>(path: string, params: Record<string, string>): Promise<T> {

@@ -86,15 +86,10 @@ describe("entry-suggestions of ferry, rental, cruise and places (forgejo#405)", 
     });
     await prisma.cruise.createMany({
       data: [
-        { userId, cruiseLine: "AIDA", shipNameOverride: "AIDAblu", cabinType: "Balkon" },
-        { userId, cruiseLine: "AIDA", shipNameOverride: "AIDAblu", cabinType: "Balkon" },
-        {
-          userId,
-          cruiseLine: "TUI Cruises",
-          shipNameOverride: "Mein Schiff 1",
-          cabinType: "Suite",
-        },
-        { userId: otherId, cruiseLine: "Stranger Line", cabinType: "Penthouse" },
+        { userId, cruiseLine: "AIDA", routeName: "Mittelmeer" },
+        { userId, cruiseLine: "AIDA", routeName: "Mittelmeer" },
+        { userId, cruiseLine: "TUI Cruises", routeName: "Norwegen" },
+        { userId: otherId, cruiseLine: "Stranger Line", routeName: "Hidden" },
       ],
     });
     await prisma.place.createMany({
@@ -170,15 +165,14 @@ describe("entry-suggestions of ferry, rental, cruise and places (forgejo#405)", 
     expect(sixt.body.data.vehicleExamples).toEqual(["VW Golf or similar"]);
   });
 
-  it("cruise: lines, hand-typed ships and cabin types of the typed line", async () => {
+  it("cruise: lines by count and the route names of the typed line", async () => {
     const all = await get("cruises");
     expect(all.status).toBe(200);
     expect(all.body.data.cruiseLines).toEqual(["AIDA", "TUI Cruises"]);
     expect(JSON.stringify(all.body)).not.toContain("Stranger");
 
     const aida = await get("cruises", { cruiseLine: "aida" });
-    expect(aida.body.data.shipNames).toEqual(["AIDAblu"]);
-    expect(aida.body.data.cabinTypes).toEqual(["Balkon"]);
+    expect(aida.body.data.routeNames).toEqual(["Mittelmeer"]);
   });
 
   it("places: cities that start with what is typed, with country and ISO code together", async () => {

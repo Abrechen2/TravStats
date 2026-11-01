@@ -18,6 +18,9 @@ import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
 import { searchCruiseLineOptions } from "./cruiseLineOptions";
+import SuggestionChips from "../common/SuggestionChips";
+import { useEntrySuggestions } from "../../hooks/useEntrySuggestions";
+import { entrySuggestionsApi, NO_CRUISE_SUGGESTIONS } from "../../lib/api/entrySuggestions";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
 import { suggestCruiseRouteName } from "./cruiseRouteName";
@@ -214,6 +217,12 @@ export function CruiseEditModal({
     ),
   ];
 
+  // The user's own lines and route names (forgejo#405); chips fill a field only on a click.
+  const { suggestions: own, failed: suggestionsFailed } = useEntrySuggestions(
+    entrySuggestionsApi.cruise,
+    { cruiseLine: draft.cruiseLine },
+    NO_CRUISE_SUGGESTIONS
+  );
   const routeNameSuggestion = draft.routeName
     ? ""
     : suggestCruiseRouteName(draft.departurePort, draft.stops, draft.arrivalPort);
@@ -353,6 +362,20 @@ export function CruiseEditModal({
               inputClassName={CRUISE_INPUT_CLASS}
               browseOnFocus
             />
+            <SuggestionChips
+              value={draft.cruiseLine}
+              suggestions={own.cruiseLines}
+              onPick={(v): void => set("cruiseLine", v)}
+              fieldLabel={t("field.line")}
+            />
+            {suggestionsFailed && (
+              <p
+                className="mt-1 text-xs text-(--text-muted)"
+                data-testid="cruise-suggestions-failed"
+              >
+                {t("common:suggestionsFailed")}
+              </p>
+            )}
           </div>
           <label className={`mt-3 ${CRUISE_LABEL_CLASS}`}>
             {t("field.routeName")}
@@ -363,6 +386,12 @@ export function CruiseEditModal({
               onChange={(e): void => set("routeName", e.target.value)}
             />
           </label>
+          <SuggestionChips
+            value={draft.routeName}
+            suggestions={own.routeNames}
+            onPick={(v): void => set("routeName", v)}
+            fieldLabel={t("field.routeName")}
+          />
           {/* Offered, never written on its own: a route name is the user's
               wording, and the ports only say what it could be. */}
           {routeNameSuggestion && (

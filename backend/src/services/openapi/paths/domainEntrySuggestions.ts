@@ -52,8 +52,7 @@ const cruiseSuggestions = registry.register(
   z
     .object({
       cruiseLines: z.array(z.string()),
-      shipNames: z.array(z.string()).describe("Ships typed by hand on the typed line's cruises"),
-      cabinTypes: z.array(z.string()).describe("Cabin types used on the typed line"),
+      routeNames: z.array(z.string()).describe("Route names given to the typed line's cruises"),
     })
     .openapi("CruiseEntrySuggestions")
 );
