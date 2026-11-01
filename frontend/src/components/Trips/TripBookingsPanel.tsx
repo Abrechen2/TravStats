@@ -8,6 +8,7 @@ import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import { formatLocalDate } from "../../lib/displayFormat";
 import { deadlineFacts } from "../../lib/deadlines";
 import type { Booking, Trip } from "../../types";
+import AssignFlightsToBookingModal from "./AssignFlightsToBookingModal";
 import BookingEditModal from "./BookingEditModal";
 import type { BookingEntryKind, BookingEntryOption } from "./BookingEntriesPicker";
 import { PanelHeader } from "./TripDetailPanels";
@@ -73,6 +74,7 @@ export function TripBookingsPanel({
   const { confirm, confirmDialog } = useConfirmDialog();
   const bookings = trip.bookings ?? [];
   const [editing, setEditing] = useState<Booking | "new" | null>(null);
+  const [assigning, setAssigning] = useState<Booking | null>(null);
   const headingId = useId();
 
   const remove = async (b: Booking): Promise<void> => {
@@ -141,6 +143,14 @@ export function TripBookingsPanel({
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="mr-2 text-xs"
+                      style={{ color: "var(--accent)" }}
+                      onClick={() => setAssigning(b)}
+                    >
+                      {t("trips:bookingAssign.action")}
+                    </button>
                     <RowActionButton
                       icon="edit"
                       label={t("trips:bookingEdit.title")}
@@ -179,6 +189,15 @@ export function TripBookingsPanel({
           onSaved={() => {
             setEditing(null);
             onChanged();
+          }}
+        />
+      )}
+      {assigning && (
+        <AssignFlightsToBookingModal
+          booking={assigning}
+          onClose={(changed) => {
+            setAssigning(null);
+            if (changed) onChanged();
           }}
         />
       )}

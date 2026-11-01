@@ -229,6 +229,21 @@ export const tripsApi = {
     await api.put(`/trips/bookings/${id}/entries`, input);
   },
 
+  /**
+   * File existing flights on a booking (`POST /trips/bookings/:id/flights`): all
+   * or nothing, and a flight the booking's trip lacks joins it (forgejo#407).
+   */
+  fileFlightsOnBooking: async (
+    id: string,
+    flightIds: readonly string[]
+  ): Promise<{ bookingId: string; count: number }> => {
+    const { data } = await api.post<{ bookingId: string; count: number }>(
+      `/trips/bookings/${id}/flights`,
+      { flightIds }
+    );
+    return data;
+  },
+
   deleteBooking: async (id: string): Promise<void> => {
     await api.delete(`/trips/bookings/${id}`);
   },

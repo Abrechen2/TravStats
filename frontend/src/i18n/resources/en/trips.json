@@ -277,6 +277,28 @@
     "endTimeLabel": "End time",
     "timeHint": "Time is optional — it orders several entries on the same day. Diary entries always come last in a day."
   },
+  "bookingAssign": {
+    "action": "Assign flights to this booking",
+    "title": "Assign flights to this booking",
+    "close": "Close",
+    "cancel": "Cancel",
+    "file": "Assign",
+    "filing": "Assigning …",
+    "selected_one": "{{count}} flight selected",
+    "selected_other": "{{count}} flights selected",
+    "searchLabel": "Search flights",
+    "searchPlaceholder": "Date, airport, flight number …",
+    "loading": "Loading flights …",
+    "loadFailed": "The flights could not be loaded.",
+    "empty": "There are no flights that do not already belong to this booking.",
+    "noMatches": "No flight matches the search.",
+    "onOtherBooking": "belongs to another booking",
+    "truncated_one": "… and {{count}} more flight – search for it.",
+    "truncated_other": "… and {{count}} more flights – search for them.",
+    "alreadyHere_one": "{{count}} flight already belongs to this booking.",
+    "alreadyHere_other": "{{count}} flights already belong to this booking.",
+    "timeout": "The answer did not arrive in time. I do not know whether the flights were assigned – the trip is reloaded, check there."
+  },
   "bookingEdit": {
     "title": "Edit booking",
     "pnr": "PNR",
