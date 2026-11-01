@@ -79,6 +79,8 @@ export async function precomputeLegDistances(input: {
   arrivalPortId: number | null | undefined;
   /** Port calls in itinerary order; sea days and unresolved stops left out. */
   stopPortIds: number[];
+  /** Which legs of the sequence a drawn line or a recording already decides. */
+  coveredLegs?: (sequence: PortPoint[]) => boolean[];
 }): Promise<LegDistanceCache> {
   const ids = [
     ...new Set(
@@ -101,7 +103,11 @@ export async function precomputeLegDistances(input: {
     input.stopPortIds.flatMap((id) => point(id) ?? []),
     point(input.arrivalPortId)
   );
+  const covered = input.coveredLegs?.(sequence) ?? [];
   for (let i = 1; i < sequence.length; i++) {
+    // A leg a recording or a manual line decides is never routed (see
+    // `recomputeLegsForCruise`), so measuring it here would be wasted work.
+    if (covered[i - 1]) continue;
     const key = legCacheKey(sequence[i - 1].id, sequence[i].id, input.kind);
     if (cache.has(key)) continue;
     cache.set(
@@ -114,7 +120,7 @@ export async function precomputeLegDistances(input: {
 
 /** Same, for a cruise's itinerary as it is stored now (writes that leave stops alone). */
 export async function precomputeLegDistancesForCruise(cruiseId: string): Promise<LegDistanceCache> {
-  const [cruise, stops] = await Promise.all([
+  const [cruise, stops, overrides, tracks] = await Promise.all([
     prisma.cruise.findUnique({
       where: { id: cruiseId },
       select: { kind: true, departurePortId: true, arrivalPortId: true },
@@ -124,13 +130,26 @@ export async function precomputeLegDistancesForCruise(cruiseId: string): Promise
       orderBy: { dayNumber: "asc" },
       select: { portId: true },
     }),
+    prisma.cruiseLegRoute.findMany({
+      where: { cruiseId },
+      select: { fromKind: true, fromRef: true, toKind: true, toRef: true, waypoints: true },
+    }),
+    prisma.cruiseTrack.findMany({ where: { cruiseId }, select: CRUISE_TRACK_COVERAGE_SELECT }),
   ]);
   if (!cruise) return new Map();
+  const overrideByLeg = buildLegRouteOverrideMap(overrides);
   return precomputeLegDistances({
     kind: cruise.kind,
     departurePortId: cruise.departurePortId,
     arrivalPortId: cruise.arrivalPortId,
     stopPortIds: stops.flatMap((s) => (s.portId === null ? [] : [s.portId])),
+    coveredLegs: (sequence) => {
+      const { recorded } = resolveRecordedLegs(sequence, tracks);
+      return sequence.slice(1).map((to, i) => {
+        const manual = overrideByLeg.get(portLegRouteKey(sequence[i].id, to.id));
+        return recorded[i] !== null || (manual !== undefined && manual.length >= 2);
+      });
+    },
   });
 }
 

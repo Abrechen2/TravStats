@@ -5,6 +5,7 @@ import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { generateToken } from "../../../utils/jwt";
 import * as distance from "../../cruiseDistance";
+import { precomputeLegDistancesForCruise } from "../../cruiseDistance/cruiseLegService";
 
 /**
  * forgejo#346. Sea routing ran once per leg INSIDE the interactive transaction
@@ -88,5 +89,37 @@ describe("cruise writes measure their legs before the transaction (forgejo#346)"
     expect(measuredInsideTx.length).toBeGreaterThanOrEqual(3);
     expect(measuredInsideTx.every((inside) => !inside)).toBe(true);
     expect(await prisma.cruiseLeg.count({ where: { cruiseId: id } })).toBe(3);
+  });
+
+  it("does not route a leg a hand-drawn line already decides", async () => {
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        notes: "Covered leg",
+        startDate: new Date("2026-02-01"),
+        endDate: new Date("2026-02-10"),
+        status: "scheduled",
+        departurePortId: portIds[0],
+        arrivalPortId: portIds[2],
+        stops: { create: [{ portId: portIds[1], dayNumber: 2, isAtSea: false }] },
+      },
+    });
+    await prisma.cruiseLegRoute.create({
+      data: {
+        cruiseId: cruise.id,
+        fromKind: "port",
+        fromRef: String(portIds[0]),
+        toKind: "port",
+        toRef: String(portIds[1]),
+        waypoints: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
+    });
+    measuredInsideTx.length = 0;
+    const cache = await precomputeLegDistancesForCruise(cruise.id);
+    expect(cache.size).toBe(1);
+    expect(measuredInsideTx).toHaveLength(1);
   });
 });
