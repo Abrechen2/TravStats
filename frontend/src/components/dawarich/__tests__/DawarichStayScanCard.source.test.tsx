@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
@@ -41,11 +41,14 @@ describe("the scan card by source", () => {
     mount();
     expect(await screen.findByText("trips:dawarichStays.travtrack.source")).toBeInTheDocument();
     expect(screen.getByText("trips:dawarichStays.travtrack.title")).toBeInTheDocument();
+    // The long explanation sits behind the row's info button, the row keeps one line.
+    expect(screen.getByText("trips:dawarichStays.summary")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "help.about" }));
     expect(screen.getByText("trips:dawarichStays.travtrack.description")).toBeInTheDocument();
     expect(screen.queryByText("trips:dawarichStays.title")).not.toBeInTheDocument();
     expect(screen.queryByText("trips:dawarichStays.description")).not.toBeInTheDocument();
     expect(screen.queryByText("trips:dawarichStays.ownConnection")).not.toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeEnabled();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeEnabled();
   });
 
   it("with TravTrack off it says so instead of asking for a Dawarich connection", async () => {
@@ -61,7 +64,7 @@ describe("the scan card by source", () => {
     expect(screen.queryByText("trips:dawarichStays.ownConnection")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "trips:dawarichStays.scan" })).toBeDisabled();
     // Revoking stays possible.
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeEnabled();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeEnabled();
   });
 
   it("a Dawarich account keeps the Dawarich copy", async () => {

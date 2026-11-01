@@ -244,7 +244,13 @@ describe("Dawarich: today's code path", () => {
       data: { userId, name: "Busan Station", lat: BUSAN.lat, lon: BUSAN.lon },
     });
     const client = fakeClient(dawarichFixture());
-    const first = await scanOnce(userId, { client });
+    // Area recognition is always on: the first scan gets an empty map, and its
+    // (empty) area result stays out of the fixture, which predates it.
+    const { markets: _firstMarkets, ...first } = await scanOnce(userId, {
+      client,
+      marketStore: memoryStore(),
+      marketFetcher: jest.fn(async () => Response.json({ elements: [] })),
+    });
     await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
     const second = await scanOnce(userId, {
       client,

@@ -10,7 +10,10 @@ import {
 import { useLocationProviderStore } from "../../store/locationProviderStore";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import DemoLockedNotice from "./DemoLockedNotice";
-import { alpha, token } from "../ui/tokens";
+import { token } from "../ui/tokens";
+import { Segmented } from "../ui/Segmented";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * Settings → Standortverlauf → Standortquelle (TravTrack plan, task S5): where
@@ -100,55 +103,47 @@ export default function LocationProviderSection(): JSX.Element {
 
       {!isDemo && state && (
         <>
-          <fieldset className="border-0 p-0">
-            <legend className="label">{t(`${NS}.legend`)}</legend>
-            <div
-              className="grid gap-3"
-              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))" }}
-            >
-              {kinds.map((kind) => {
-                const checked = state.kind === kind;
-                const disabled = saving || !selectable(kind);
-                return (
-                  <div key={kind} className="flex flex-col gap-1">
-                    <label
-                      className="flex items-start gap-2 rounded-lg p-3 text-sm"
-                      style={{
-                        cursor: disabled ? "default" : "pointer",
-                        opacity: !selectable(kind) && !checked ? 0.6 : 1,
-                        border: `${checked ? 2 : 1}px solid ${
-                          checked ? token("accent") : token("border")
-                        }`,
-                        background: checked ? alpha(token("accent"), 8) : undefined,
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="location-provider"
-                        value={kind}
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => void pick(kind)}
-                        className="mt-1"
-                      />
-                      <span className="flex flex-col gap-0.5">
-                        <span className="font-semibold">{t(`${NS}.options.${kind}.label`)}</span>
-                        <span className="t-caption">{t(`${NS}.options.${kind}.sub`)}</span>
-                      </span>
-                    </label>
-                    {kind === "dawarich" && !state.choices.dawarich && (
-                      <Link
-                        to="/settings/location?section=dawarich"
-                        className="t-caption underline"
-                      >
-                        {t(`${NS}.connectDawarich`)}
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </fieldset>
+          <SettingRows>
+            <SettingRow
+              title={
+                <>
+                  {t(`${NS}.legend`)}{" "}
+                  <Toggletip
+                    subject={t(`${NS}.legend`)}
+                    content={
+                      <>
+                        <ul className="flex list-disc flex-col gap-1 pl-5">
+                          {POINTS[state.kind].map((point) => (
+                            <li key={point}>{t(`${NS}.options.${state.kind}.points.${point}`)}</li>
+                          ))}
+                        </ul>
+                        <span className="t-caption">{t(`${NS}.nothingMoves`)}</span>
+                      </>
+                    }
+                  />
+                </>
+              }
+              sub={t(`${NS}.options.${state.kind}.sub`)}
+              control={
+                <Segmented
+                  label={t(`${NS}.legend`)}
+                  value={state.kind}
+                  disabled={saving}
+                  onChange={(kind) => void pick(kind)}
+                  options={kinds.map((kind) => ({
+                    value: kind,
+                    label: t(`${NS}.options.${kind}.label`),
+                    disabled: !selectable(kind),
+                  }))}
+                />
+              }
+            />
+          </SettingRows>
+          {kinds.includes("dawarich") && !state.choices.dawarich && (
+            <Link to="/settings/location?section=dawarich" className="t-caption underline">
+              {t(`${NS}.connectDawarich`)}
+            </Link>
+          )}
 
           {state.status !== "ok" && (
             <p role="alert" className="text-sm" style={{ color: token("warn") }}>
@@ -160,16 +155,6 @@ export default function LocationProviderSection(): JSX.Element {
               {error}
             </p>
           )}
-
-          <div className="flex flex-col gap-2">
-            <h3 className="t-label-mono">{t(`${NS}.meaning`)}</h3>
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-              {POINTS[state.kind].map((point) => (
-                <li key={point}>{t(`${NS}.options.${state.kind}.points.${point}`)}</li>
-              ))}
-            </ul>
-            <p className="t-caption">{t(`${NS}.nothingMoves`)}</p>
-          </div>
         </>
       )}
     </SectionCard>

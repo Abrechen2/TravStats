@@ -1267,7 +1267,8 @@
   "tripRecording": {
     "title": "Trip recording",
     "label": "Store positions from the app",
-    "description": "The positions the TravStats app records during a trip are stored on this server and shown on the trip map. Switched off, the server accepts no new ones; what is stored stays until you delete it."
+    "description": "Trip positions from the app are stored on this server and shown on the trip map.",
+    "more": "Switched off, the server accepts no new ones; what is stored stays until you delete it."
   },
   "travPlan": {
     "label": "Plan – plan trips",

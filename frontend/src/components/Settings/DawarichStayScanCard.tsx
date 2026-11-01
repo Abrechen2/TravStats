@@ -5,6 +5,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { profileDateTime } from "../../lib/profileInstant";
 import { SectionCard } from "./SettingsShared";
+import Button from "../ui/Button";
+import { Select, Switch } from "../ui/Field";
+import { SettingRow, SettingRows } from "../ui/SettingRow";
+import Toggletip from "../ui/Toggletip";
 
 export default function DawarichStayScanCard({
   onScanned,
@@ -68,55 +72,76 @@ export default function DawarichStayScanCard({
     ["auth", "unreachable", "protocol", "notFound", "invalidUrl"].includes(state.error)
       ? `trips:tours.tracks.dawarich.errors.${state.error}`
       : null;
+  const switchDisabled =
+    demo || busy || !state || ((!state.connected || placesPaused) && !state.enabled);
+  const canScan =
+    !demo &&
+    !busy &&
+    !placesPaused &&
+    !suggestionsPaused &&
+    !!state?.enabled &&
+    !!state.connected &&
+    state.result !== "running";
   return (
     <SectionCard>
       <h3 className="t-heading-sm">{sourceText("title")}</h3>
-      <p className="t-body mt-2">{sourceText("description")}</p>
       {travtrack && <p className="t-caption mt-1">{text("travtrack.source")}</p>}
-      <label className="flex items-center gap-3 my-4">
-        <input
-          type="checkbox"
+      <SettingRows>
+        <Switch
+          id="stay-scan-enabled"
           checked={state?.enabled ?? false}
-          disabled={
-            demo || busy || !state || ((!state.connected || placesPaused) && !state.enabled)
+          disabled={switchDisabled}
+          onChange={(next) => void action(() => dawarichStaysApi.enable(next))}
+          label={text("enable")}
+          sub={
+            <>
+              {text("summary")}{" "}
+              <Toggletip
+                subject={text("enable")}
+                content={sourceText("description")}
+                expandedContent={text("areas.description")}
+              />
+            </>
           }
-          onChange={(e) => void action(() => dawarichStaysApi.enable(e.target.checked))}
         />
-        {text("enable")}
-      </label>
-      <h4 className="t-body font-semibold mt-4">{text("areas.title")}</h4>
-      <p className="t-caption mb-4">{text("areas.description")}</p>
-      <>
-        <label className="flex items-center gap-3 my-4">
-          <input
-            type="checkbox"
-            checked={state?.marketEnabled ?? false}
-            disabled={
-              demo ||
-              busy ||
-              !state ||
-              (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
-            }
-            onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
-          />
-          {text("markets.enable")}
-        </label>
-        <label className="flex items-center gap-3 my-4">
-          <input
-            type="checkbox"
-            checked={state?.venueEnabled ?? false}
-            disabled={
-              demo ||
-              busy ||
-              !state ||
-              (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
-            }
-            onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
-          />
-          {text("venues.enable")}
-        </label>
-        <p className="t-caption mb-4">{text("venues.description")}</p>
-      </>
+        <SettingRow
+          title={text("lookback")}
+          htmlFor="stay-scan-lookback"
+          control={
+            <Select
+              id="stay-scan-lookback"
+              value={String(lookbackDays)}
+              disabled={busy || state?.result === "running"}
+              onChange={(e) => setLookbackDays(Number(e.target.value))}
+            >
+              {[7, 14, 30].map((days) => (
+                <option key={days} value={days}>
+                  {t("trips:dawarichStays.days", { count: days })}
+                </option>
+              ))}
+            </Select>
+          }
+        />
+        <SettingRow
+          title={text("scan")}
+          sub={
+            state?.nextScanAt ? `${text("nextScan")}: ${profileDateTime(state.nextScanAt)}` : null
+          }
+          control={
+            <>
+              <Button
+                disabled={!canScan}
+                onClick={() => void action(() => dawarichStaysApi.scan(lookbackDays))}
+              >
+                {text(busy || state?.result === "running" ? "running" : "scan")}
+              </Button>
+              <Link className="btn-secondary" to="/pending-updates?tab=dawarich">
+                {text("inbox")}
+              </Link>
+            </>
+          }
+        />
+      </SettingRows>
       {state?.marketResult && (
         <div className="my-3" role="status">
           <p>{text(`${coverageScope}.status.${state.marketResult.status}`)}</p>
@@ -146,46 +171,6 @@ export default function DawarichStayScanCard({
       {suggestionsPaused && <p className="my-3">{text("suggestionsPaused")}</p>}
       {placesPaused && <p className="my-3">{text("placesPaused")}</p>}
       {state && !state.enabled && <p className="my-3">{text("disabled")}</p>}
-      {state?.nextScanAt && (
-        <p className="t-caption my-3">
-          {text("nextScan")}: {profileDateTime(state.nextScanAt)}
-        </p>
-      )}
-      <label className="block my-3">
-        {text("lookback")}
-        <select
-          className="input"
-          value={lookbackDays}
-          disabled={busy || state?.result === "running"}
-          onChange={(e) => setLookbackDays(Number(e.target.value))}
-        >
-          {[7, 14, 30].map((days) => (
-            <option key={days} value={days}>
-              {t("trips:dawarichStays.days", { count: days })}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex flex-wrap gap-3">
-        <button
-          className="btn-secondary"
-          disabled={
-            demo ||
-            busy ||
-            placesPaused ||
-            suggestionsPaused ||
-            !state?.enabled ||
-            !state.connected ||
-            state.result === "running"
-          }
-          onClick={() => void action(() => dawarichStaysApi.scan(lookbackDays))}
-        >
-          {text(busy || state?.result === "running" ? "running" : "scan")}
-        </button>
-        <Link className="btn-secondary" to="/pending-updates?tab=dawarich">
-          {text("inbox")}
-        </Link>
-      </div>
       {state?.result && (
         <p role="status" className="mt-3">
           {text(`result.${state.result}`)} ·{" "}

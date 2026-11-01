@@ -123,12 +123,22 @@ describe("Automatic market suggestions", () => {
   }
   async function run(options: Partial<Parameters<typeof scanStays>[1]> = {}) {
     await reserveScan(userId);
-    return scanStays(userId, { now, client: marketClient, ...options });
+    // Area recognition is always on: by default the map answers with nothing.
+    return scanStays(userId, {
+      now,
+      client: marketClient,
+      marketStore: memoryStore(),
+      marketFetcher: async () => Response.json({ elements: [] }),
+      ...options,
+    });
   }
-  it("does not query maps without the separate opt-in", async () => {
-    const fetcher = jest.fn();
-    await run({ marketFetcher: fetcher });
-    expect(fetcher).not.toHaveBeenCalled();
+  it("still gives area suggestions when marketEnabled and venueEnabled are false (area recognition is always on)", async () => {
+    const fetcher = jest.fn(async () => Response.json(raw));
+    const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
+    expect([state.enabled, state.marketEnabled, state.venueEnabled]).toEqual([true, false, false]);
+    const result = await run({ marketStore: memoryStore(), marketFetcher: fetcher });
+    expect(fetcher).toHaveBeenCalled();
+    expect(result.markets?.createdCount).toBe(1);
   });
   it("requires scan consent and an own connection before market consent", async () => {
     await prisma.dawarichStayScan.update({ where: { userId }, data: { enabled: false } });
@@ -474,24 +484,6 @@ describe("Automatic market suggestions", () => {
       .set("Cookie", cookie)
       .send({ enabled: true, venueEnabled: false });
     expect(explicit.body.data).toMatchObject({ marketEnabled: true, venueEnabled: false });
-  });
-  it("does not broaden market consent into other venue types", async () => {
-    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
-    await run({
-      marketStore: memoryStore(),
-      marketFetcher: async () =>
-        Response.json({ elements: [{ ...raw.elements[0], tags: { shop: "mall", name: "Mall" } }] }),
-    });
-    expect(await prisma.dawarichStay.count({ where: { userId, name: "Mall" } })).toBe(0);
-  });
-  it("keeps market findings off when only other venues are enabled", async () => {
-    await prisma.dawarichStayScan.update({ where: { userId }, data: { venueEnabled: true } });
-    const result = await run({
-      marketStore: memoryStore(),
-      marketFetcher: async () => Response.json(raw),
-    });
-    expect(result.markets?.createdCount).toBe(0);
-    expect(await prisma.dawarichStay.count({ where: { userId, name: "Test Market" } })).toBe(0);
   });
   it("requires an own connection for venue consent and permits revocation with hidden Places", async () => {
     const url = "/api/v1/dawarich-stays/settings";

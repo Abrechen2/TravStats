@@ -13,14 +13,10 @@ import { findPage } from "../../pages/Settings/settingsModel";
  * malls, parks, zoos and museums as whole areas.
  */
 describe("detecting places automatically — the wording", () => {
-  it("is called „Orte automatisch erkennen“ / “Detect places automatically”", () => {
-    expect(deTrips.dawarichStays.areas.title).toBe("Orte automatisch erkennen");
-    expect(enTrips.dawarichStays.areas.title).toBe("Detect places automatically");
-  });
-
-  it("no longer offers „Marktbesuche“ as the switch's name", () => {
-    expect(deTrips.dawarichStays.markets.enable).not.toMatch(/Marktbesuch/);
-    expect(enTrips.dawarichStays.markets.enable).not.toMatch(/market visits/i);
+  it("has no switch of its own any more: markets and venues are recognised with every scan", () => {
+    expect(deTrips.dawarichStays.areas).not.toHaveProperty("title");
+    expect(enTrips.dawarichStays.markets).not.toHaveProperty("enable");
+    expect(deTrips.dawarichStays.venues).not.toHaveProperty("enable");
   });
 
   it("says where positions go in both languages", () => {
@@ -30,9 +26,9 @@ describe("detecting places automatically — the wording", () => {
 });
 
 /**
- * The market and venue switches are standard rows of the stay scan since the
- * settings redesign (package 3): they choose which content is examined. Their
- * words are ordinary keywords, and the section no longer claims expert rows.
+ * The market and venue switches are gone (area recognition is always on,
+ * owner 2026-11-01), but their words stay search keywords: they find the stay
+ * scan, which does the detecting. The section claims no expert rows.
  */
 describe("searching for the detection's switches", () => {
   const candidate = (s: typeof deSettings) => ({

@@ -220,34 +220,6 @@ export default function TravTrackSection(): JSX.Element | null {
 
       {caps.enabled && <TravTrackTripNote />}
 
-      {/* Imports and push sources live on the Track area's Importe tab (phase 5);
-          while that area is not open (TravTrack off with data held, or nothing
-          recorded yet) they stay here, so a first file and every delete remain
-          reachable. */}
-      {trackOpen ? (
-        <p className="t-body" data-testid="travtrack-imports-link">
-          <Link to="/track/imports">{t(`${NS}.importsMoved`)}</Link>
-        </p>
-      ) : (
-        <>
-          <TravTrackImports
-            canImport={caps.enabled && !isDemo}
-            canDelete={!isDemo}
-            version={importsVersion}
-            onChanged={() => void load()}
-          />
-
-          <TravTrackDawarichCopy canStart={caps.enabled && !isDemo} onChanged={onCopyChanged} />
-
-          {hasPushSources(caps.sources) && (
-            <TravTrackSources
-              canCreate={caps.enabled && caps.active && !isDemo}
-              canRevoke={!isDemo}
-            />
-          )}
-        </>
-      )}
-
       {/* The monthly values' city lookup (plan L3): a setting of a view, so only while on. */}
       {caps.enabled && <TravTrackCityLookup canChange={caps.active && !isDemo} />}
 
@@ -329,39 +301,81 @@ export default function TravTrackSection(): JSX.Element | null {
               </Button>
             </div>
           )}
-
-          <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
-            {t(`${NS}.delete.title`)}
-          </h3>
-          <p className="t-caption">{t(`${NS}.delete.intro`)}</p>
-          <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
-            <Field label={t(`${NS}.delete.from`)} htmlFor="travtrack-from-day">
-              <Input
-                id="travtrack-from-day"
-                type="date"
-                value={fromDay}
-                onChange={(e) => setFromDay(e.target.value)}
-              />
-            </Field>
-            <Field label={t(`${NS}.delete.to`)} htmlFor="travtrack-to-day">
-              <Input
-                id="travtrack-to-day"
-                type="date"
-                value={toDay}
-                onChange={(e) => setToDay(e.target.value)}
-              />
-            </Field>
-            <Button
-              disabled={busy || fromDay === "" || toDay === "" || fromDay > toDay}
-              onClick={() => void deleteDays()}
-            >
-              {t(`${NS}.delete.do`)}
-            </Button>
-          </div>
         </>
       )}
 
-      <TravTrackDiagnostics today={today} canDelete={!isDemo} />
+      {/* One-off jobs and deletion, folded: they are not settings. */}
+      <details data-testid="travtrack-manage">
+        <summary
+          className="t-label-mono cursor-pointer"
+          style={{ minHeight: "var(--ts-size-touch-min)" }}
+        >
+          {t(`${NS}.manage`)}
+        </summary>
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+          {/* Imports and push sources live on the Track area's Importe tab (phase 5);
+          while that area is not open (TravTrack off with data held, or nothing
+          recorded yet) they stay here, so a first file and every delete remain
+          reachable. */}
+          {trackOpen ? (
+            <p className="t-body" data-testid="travtrack-imports-link">
+              <Link to="/track/imports">{t(`${NS}.importsMoved`)}</Link>
+            </p>
+          ) : (
+            <>
+              <TravTrackImports
+                canImport={caps.enabled && !isDemo}
+                canDelete={!isDemo}
+                version={importsVersion}
+                onChanged={() => void load()}
+              />
+
+              <TravTrackDawarichCopy canStart={caps.enabled && !isDemo} onChanged={onCopyChanged} />
+
+              {hasPushSources(caps.sources) && (
+                <TravTrackSources
+                  canCreate={caps.enabled && caps.active && !isDemo}
+                  canRevoke={!isDemo}
+                />
+              )}
+            </>
+          )}
+
+          {!isDemo && (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              <h3 className="t-card-title" style={{ marginTop: "var(--ts-space-lg)" }}>
+                {t(`${NS}.delete.title`)}
+              </h3>
+              <p className="t-caption">{t(`${NS}.delete.intro`)}</p>
+              <div className="flex flex-wrap items-end" style={{ gap: "var(--ts-space-sm)" }}>
+                <Field label={t(`${NS}.delete.from`)} htmlFor="travtrack-from-day">
+                  <Input
+                    id="travtrack-from-day"
+                    type="date"
+                    value={fromDay}
+                    onChange={(e) => setFromDay(e.target.value)}
+                  />
+                </Field>
+                <Field label={t(`${NS}.delete.to`)} htmlFor="travtrack-to-day">
+                  <Input
+                    id="travtrack-to-day"
+                    type="date"
+                    value={toDay}
+                    onChange={(e) => setToDay(e.target.value)}
+                  />
+                </Field>
+                <Button
+                  disabled={busy || fromDay === "" || toDay === "" || fromDay > toDay}
+                  onClick={() => void deleteDays()}
+                >
+                  {t(`${NS}.delete.do`)}
+                </Button>
+              </div>
+            </div>
+          )}
+          <TravTrackDiagnostics today={today} canDelete={!isDemo} />
+        </div>
+      </details>
 
       {status && (
         <p

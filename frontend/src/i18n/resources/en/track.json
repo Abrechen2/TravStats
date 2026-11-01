@@ -87,7 +87,8 @@
     "pointGone": "This position no longer exists – it has already been deleted."
   },
   "settings": {
-    "intro": "The positions your Companion records for TravTrack live here on your server – for you only, never shared or federated. They stay until you delete them.",
+    "manage": "Imports, copy and delete",
+    "intro": "Positions your Companion records live on your server – for you only.",
     "off": "TravTrack is switched off on this server: nothing more is recorded. What is stored you can still export and delete here.",
     "loadFailed": "TravTrack could not be loaded. Reload the page.",
     "empty": "No positions stored yet.",

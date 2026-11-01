@@ -60,12 +60,12 @@ describe("Dawarich settings failure recovery", () => {
     vi.mocked(dawarichStaysApi.enable).mockRejectedValue(new Error("save failed"));
     mount();
     await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeEnabled()
+      expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeEnabled()
     );
-    fireEvent.click(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" }));
+    fireEvent.click(screen.getByRole("switch", { name: "trips:dawarichStays.enable" }));
     await waitFor(() => expect(vi.mocked(dawarichStaysApi.state)).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeChecked();
   });
 });
 
@@ -80,7 +80,7 @@ describe("Dawarich optional modules and data freshness", () => {
     mount();
     expect(await screen.findByText("trips:dawarichStays.placesPaused")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "trips:dawarichStays.scan" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeEnabled();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "trips:dawarichStays.inbox" })).toHaveAttribute(
       "href",
       "/pending-updates?tab=dawarich"
@@ -96,7 +96,7 @@ describe("Dawarich optional modules and data freshness", () => {
     } as never);
     mount();
     await screen.findByText("trips:dawarichStays.placesPaused");
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeDisabled();
   });
   it("retains history access without a connection and explains the missing connection", async () => {
     vi.mocked(dawarichStaysApi.state).mockResolvedValue({
@@ -108,7 +108,7 @@ describe("Dawarich optional modules and data freshness", () => {
     mount();
     expect(await screen.findByText("trips:dawarichStays.ownConnection")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "trips:dawarichStays.scan" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "trips:dawarichStays.enable" })).toBeEnabled();
+    expect(screen.getByRole("switch", { name: "trips:dawarichStays.enable" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "trips:dawarichStays.inbox" })).toBeInTheDocument();
   });
   it("distinguishes a successful request from fresh location data", async () => {
@@ -150,38 +150,24 @@ describe("Dawarich optional modules and data freshness", () => {
 });
 
 describe("Market discovery consent", () => {
-  it("requires separate consent and passes the selected history window", async () => {
+  it("offers no market or venue switch (area recognition is always on) and passes the selected history window", async () => {
     vi.mocked(dawarichStaysApi.state).mockResolvedValue({
       ...state,
       result: "succeeded",
       marketEnabled: false,
+      venueEnabled: false,
     } as never);
-    vi.mocked(dawarichStaysApi.enableMarkets).mockResolvedValue(undefined);
     vi.mocked(dawarichStaysApi.scan).mockResolvedValue(undefined);
     mount();
-    const consent = await screen.findByRole("checkbox", {
-      name: "trips:dawarichStays.markets.enable",
-    });
-    expect(consent).not.toBeChecked();
-    expect(screen.getByText("trips:dawarichStays.areas.description")).toBeInTheDocument();
-    fireEvent.click(consent);
-    await waitFor(() => expect(dawarichStaysApi.enableMarkets).toHaveBeenCalledWith(true));
+    await screen.findByRole("switch", { name: "trips:dawarichStays.enable" });
+    expect(screen.getAllByRole("switch")).toHaveLength(1);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("combobox")).toBeEnabled());
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "14" } });
     fireEvent.click(screen.getByRole("button", { name: "trips:dawarichStays.scan" }));
     await waitFor(() => expect(dawarichStaysApi.scan).toHaveBeenCalledWith(14));
-  });
-  it("cannot enable markets without the general scan opt-in", async () => {
-    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
-      ...state,
-      enabled: false,
-      result: null,
-    } as never);
-    mount();
-    expect(
-      await screen.findByRole("checkbox", { name: "trips:dawarichStays.markets.enable" })
-    ).toBeDisabled();
     expect(dawarichStaysApi.enableMarkets).not.toHaveBeenCalled();
+    expect(dawarichStaysApi.enableVenues).not.toHaveBeenCalled();
   });
   it("shows incomplete map coverage and missing boundaries", async () => {
     vi.mocked(dawarichStaysApi.state).mockResolvedValue({
@@ -207,53 +193,6 @@ describe("Market discovery consent", () => {
 });
 
 describe("additional whole venues", () => {
-  it("requires a separate opt-in even when markets are already enabled", async () => {
-    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
-      ...state,
-      result: "succeeded",
-      marketEnabled: true,
-      venueEnabled: false,
-    } as never);
-    mount();
-    const checkbox = await screen.findByRole("checkbox", {
-      name: "trips:dawarichStays.venues.enable",
-    });
-    expect(checkbox).not.toBeChecked();
-    fireEvent.click(checkbox);
-    await waitFor(() => expect(dawarichStaysApi.enableVenues).toHaveBeenCalledWith(true));
-    expect(dawarichStaysApi.enableMarkets).not.toHaveBeenCalled();
-  });
-  it("permits revoking venue consent when Places is hidden", async () => {
-    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
-      ...state,
-      result: "succeeded",
-      placesEnabled: false,
-      venueEnabled: true,
-    } as never);
-    mount();
-    const checkbox = await screen.findByRole("checkbox", {
-      name: "trips:dawarichStays.venues.enable",
-    });
-    expect(checkbox).toBeEnabled();
-    fireEvent.click(checkbox);
-    await waitFor(() => expect(dawarichStaysApi.enableVenues).toHaveBeenCalledWith(false));
-  });
-  it("keeps a failed consent change visible", async () => {
-    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
-      ...state,
-      result: "succeeded",
-      venueEnabled: false,
-    } as never);
-    vi.mocked(dawarichStaysApi.enableVenues).mockRejectedValue(new Error("offline"));
-    mount();
-    fireEvent.click(
-      await screen.findByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
-    );
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(
-      screen.getByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
-    ).not.toBeChecked();
-  });
   it("keeps the last broad result labeled correctly after broader consent is disabled", async () => {
     vi.mocked(dawarichStaysApi.state).mockResolvedValue({
       ...state,
@@ -303,20 +242,15 @@ describe("detecting places automatically at each settings level", () => {
   const areaState = { ...state, result: "succeeded", marketEnabled: true, venueEnabled: true };
 
   it.each(["standard", "expert"] as const)(
-    "names the detection and shows both switches at the %s level",
+    "explains the area detection behind the info button, with no switch, at the %s level",
     async (level) => {
       useSettingsLevelStore.setState({ level });
       vi.mocked(dawarichStaysApi.state).mockResolvedValue(areaState as never);
       const report = mountReporting();
-      await waitFor(() =>
-        expect(
-          screen.getByRole("checkbox", { name: "trips:dawarichStays.markets.enable" })
-        ).toBeChecked()
-      );
-      expect(
-        screen.getByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
-      ).toBeChecked();
-      expect(screen.getByText("trips:dawarichStays.areas.title")).toBeInTheDocument();
+      await screen.findByRole("switch", { name: "trips:dawarichStays.enable" });
+      // Area recognition has no switch; its explanation sits behind the row's info button.
+      expect(screen.getAllByRole("switch")).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button", { name: "help.about" }));
       expect(screen.getByText("trips:dawarichStays.areas.description")).toBeInTheDocument();
       // No Expert-only tuning is left in this card, so nothing is reported hidden.
       expect(report).not.toHaveBeenCalled();

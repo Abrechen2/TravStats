@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { Switch } from "../ui/Field";
+import Toggletip from "../ui/Toggletip";
 import { SettingRows } from "../ui/SettingRow";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 
@@ -24,7 +25,15 @@ export default function TripRecordingSection(): JSX.Element {
           checked={enabled}
           onChange={setEnabled}
           label={t("settings:tripRecording.label")}
-          sub={t("settings:tripRecording.description")}
+          sub={
+            <>
+              {t("settings:tripRecording.description")}{" "}
+              <Toggletip
+                subject={t("settings:tripRecording.label")}
+                content={t("settings:tripRecording.more")}
+              />
+            </>
+          }
         />
       </SettingRows>
     </SectionCard>

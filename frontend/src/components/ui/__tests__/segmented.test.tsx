@@ -9,6 +9,16 @@ const OPTIONS = [
 ] as const;
 
 describe("Segmented", () => {
+  it("keeps one tab stop when the chosen option is disabled (a stored source that stopped working)", () => {
+    const options = [
+      { value: "de", label: "Deutsch", disabled: true },
+      { value: "en", label: "English" },
+    ];
+    render(<Segmented label="Quelle" value="de" options={options} onChange={() => {}} />);
+    const stops = screen.getAllByRole("radio").filter((r) => r.getAttribute("tabindex") === "0");
+    expect(stops.map((r) => r.textContent)).toEqual(["English"]);
+  });
+
   it("is a named radio group with exactly one checked radio and one tab stop", () => {
     render(<Segmented label="Sprache" value="en" options={OPTIONS} onChange={() => {}} />);
     expect(screen.getByRole("radiogroup", { name: "Sprache" })).toBeTruthy();
