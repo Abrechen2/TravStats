@@ -46,8 +46,3 @@ export function getFlightDuration(flight: Flight): FlightDuration | null {
     arrLon: flight.arrLon ?? null,
   });
 }
-
-/** Convenience for sort comparators / aggregates that need a single number. */
-export function getFlightDurationMinutes(flight: Flight): number {
-  return getFlightDuration(flight)?.minutes ?? 0;
-}

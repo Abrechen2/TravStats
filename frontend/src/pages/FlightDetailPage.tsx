@@ -18,7 +18,7 @@ import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
 import SpecialFlightModal from "../components/SpecialFlightModal";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useDocumentCount } from "../hooks/useDocumentCount";

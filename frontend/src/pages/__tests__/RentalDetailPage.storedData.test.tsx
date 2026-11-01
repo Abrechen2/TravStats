@@ -28,7 +28,7 @@ vi.mock("../../components/rental/RentalFormModal", () => ({
     <div data-testid="rental-form">{initialStep ?? "default"}</div>
   ),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: ({ isOpen, message }: { isOpen: boolean; message: string }) =>
     isOpen ? <p data-testid="confirm-message">{message}</p> : null,
 }));

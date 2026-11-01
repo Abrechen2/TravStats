@@ -11,7 +11,7 @@ import {
 import { Table, type TableColumn } from "../components/ui/Table";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";

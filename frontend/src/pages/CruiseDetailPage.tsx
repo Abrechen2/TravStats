@@ -35,7 +35,7 @@ import type { LocalDateValue } from "../shared/time";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";

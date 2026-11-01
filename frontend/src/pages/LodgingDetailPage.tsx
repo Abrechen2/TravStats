@@ -38,7 +38,7 @@ import {
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { lodgingDeleteMessage } from "../lib/lodgingDeleteMessage";
 import { deriveStayMembership } from "../shared/membershipDerivation";

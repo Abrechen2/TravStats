@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { useToastStore } from "../../store/toastStore";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
 

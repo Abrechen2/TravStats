@@ -73,15 +73,6 @@ export const EXPORT_FORMATS = {
 } as const;
 
 /**
- * Flight Status Values
- */
-export const FLIGHT_STATUS = {
-  SCHEDULED: "scheduled",
-  FLOWN: "flown",
-  CANCELLED: "cancelled",
-} as const;
-
-/**
  * Storage Keys for localStorage
  */
 export const STORAGE_KEYS = {

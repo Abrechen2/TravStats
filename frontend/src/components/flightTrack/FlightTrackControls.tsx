@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { JSX } from "react";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { flightsApi } from "../../lib/api";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";

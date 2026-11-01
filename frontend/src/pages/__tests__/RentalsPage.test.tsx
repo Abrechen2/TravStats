@@ -31,7 +31,7 @@ vi.mock("../../components/import/DomainImportPanel", () => ({
 vi.mock("../../components/import/adapters/rentalAdapter", () => ({
   useRentalImportAdapter: () => ({ domain: "rental" }),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: ({
     isOpen,
     onConfirm,

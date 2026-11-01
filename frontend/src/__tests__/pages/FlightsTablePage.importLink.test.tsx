@@ -46,7 +46,7 @@ vi.mock("../../components/FlightEditModal", () => ({
   default: () => <div data-testid="flight-edit-modal-stub" />,
 }));
 
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: () => <div data-testid="confirm-modal-stub" />,
 }));
 

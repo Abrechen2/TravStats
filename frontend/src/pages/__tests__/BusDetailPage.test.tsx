@@ -51,7 +51,7 @@ vi.mock("../../components/bus/BusFormModal", () => ({
     </div>
   ),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: ({
     isOpen,
     message,

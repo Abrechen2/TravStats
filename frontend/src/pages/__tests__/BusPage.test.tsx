@@ -26,7 +26,7 @@ vi.mock("../../components/bus/BusFormModal", () => ({
     <div data-testid="bus-form">{journey ? journey.id : "new"}</div>
   ),
 }));
-vi.mock("../../components/Training/ConfirmModal", () => ({
+vi.mock("../../components/ui/ConfirmModal", () => ({
   default: ({
     isOpen,
     message,

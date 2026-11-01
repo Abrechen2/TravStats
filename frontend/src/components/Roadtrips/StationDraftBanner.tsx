@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 
 import Button from "../ui/Button";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useDisplayFormat } from "../../lib/displayFormat";

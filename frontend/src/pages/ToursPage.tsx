@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { useTranslation } from "../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../lib/api/tourIndex";
 import { toursApi } from "../lib/api/tours";

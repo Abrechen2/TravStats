@@ -17,7 +17,7 @@ import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import { useServerPagination } from "../components/table/useServerPagination";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusRouteAllPanel } from "../components/bus/BusRouteAllPanel";
 import { BusTableRow, BUS_COLUMN_LAYOUT, type BusColumnId } from "../components/bus/BusTableRow";

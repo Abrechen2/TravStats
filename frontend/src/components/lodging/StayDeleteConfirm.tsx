@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { useDocumentCount } from "../../hooks/useDocumentCount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";

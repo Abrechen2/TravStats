@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import DetailSection from "../ui/DetailSection";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useCruiseTracks } from "../../hooks/useCruiseTracks";
 import { dawarichFailureKey, dawarichFailureKind } from "../../lib/api/dawarich";

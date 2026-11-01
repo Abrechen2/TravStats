@@ -18,9 +18,7 @@ export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
 import WebGLGuard from "./map/WebGLGuard";
 import { useThemeStore } from "../store/themeStore";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useRecordedFlightPaths } from "../hooks/useRecordedFlightPaths";
-import { cruiseApi } from "../lib/api";
 import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
 import { MAP_CHROME } from "./map/mapChrome";
@@ -78,17 +76,15 @@ interface MapContainer3DProps {
    */
   hideInfoPill?: boolean;
   /**
-   * Pre-filtered cruise list. When provided, the internal cruiseApi
-   * fetch is bypassed and these cruises are rendered instead. Lets
-   * tabs pre-filter cruises by year / domain visibility upstream
-   * before the data reaches the map. `showInternalCruises` is the
+   * The cruises to render, already filtered by the tab (year, domain
+   * visibility). Omitted means none. `showInternalCruises` is the
    * binary on/off; `cruisesOverride` is the "yes but with this list"
    * variant.
    */
   cruisesOverride?: readonly Cruise[];
   /**
    * Lodging places (hotels/campsites) to render as pins on the flat map.
-   * Unlike `cruisesOverride`, there is no internal fetch fallback —
+   * There is no internal fetch fallback —
    * MapContainer3D has no lodging-domain equivalent of `showInternalCruises`
    * yet, so the pin layer only ever renders what the caller passes here.
    * Undefined (the default) means "no lodging layer at all", so tabs that
@@ -161,49 +157,16 @@ export default function MapContainer3D({
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
-  const { isEnabled } = useEnabledDomains();
-  // Cruise-specific overlay gate. Deliberately a single-domain check (this
-  // overlay renders cruise data via cruiseApi + the cruise arc layer), not
-  // generic domain iteration — a future hotel/POI overlay would add its own
-  // parallel gate rather than reuse this one. Routed through the memoized
-  // isEnabled() helper (the sanctioned gating API) so the boolean still stays
-  // stable in the effect dep array below (see the beta.28 ref-stability fix).
-  const cruiseEnabled = isEnabled("cruise");
   // Recorded flights drawn along their recording (forgejo#312), in both engines.
   const drawnFlights = useRecordedFlightPaths(flights);
-  const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
-
-  // Fetch cruises as supplemental map overlay. User hides by disabling
-  // the cruise domain in settings — no per-layer toggle in V1. Depends
-  // on the stable boolean (not the `isEnabled` closure) to avoid an
-  // effect loop when Zustand returns a fresh selector object.
-  // Suppressed when showInternalCruises=false (tab owns rendering) or
-  // when cruisesOverride is provided (tab passed a pre-filtered list).
-  useEffect(() => {
-    if (!showInternalCruises || !cruiseEnabled || cruisesOverride !== undefined) {
-      setInternalCruises((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await cruiseApi.list();
-        if (!cancelled) setInternalCruises(data);
-      } catch {
-        if (!cancelled) setInternalCruises((prev) => (prev.length === 0 ? prev : []));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [cruiseEnabled, showInternalCruises, cruisesOverride]);
-
-  // Materialise the cruise array: override > internal fetch. When
-  // override is set we trust the caller's list verbatim (already
-  // filtered upstream).
+  // The cruise list is always the caller's: every tab either passes a
+  // pre-filtered `cruisesOverride` or draws its own cruises with
+  // `showInternalCruises={false}`. The internal `cruiseApi.list()` fetch that
+  // used to back the default was unreachable (and would have swallowed its
+  // errors), so it is gone.
   const cruises = useMemo<Cruise[]>(
-    () => (cruisesOverride !== undefined ? [...cruisesOverride] : internalCruises),
-    [cruisesOverride, internalCruises]
+    () => (cruisesOverride !== undefined ? [...cruisesOverride] : []),
+    [cruisesOverride]
   );
 
   // Lodging marker-size slider (Task 8). Lives HERE rather than in

@@ -65,7 +65,7 @@ vi.mock("../../components/SimplifiedFlightFormV2", () => ({
 vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightRowActions", () => ({ default: () => null }));
-vi.mock("../../components/Training/ConfirmModal", () => ({ default: () => null }));
+vi.mock("../../components/ui/ConfirmModal", () => ({ default: () => null }));
 vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
 
 const getAll = vi.fn();

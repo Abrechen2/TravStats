@@ -17,7 +17,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import Button from "../components/ui/Button";
 import DocumentsSection from "../components/documents/DocumentsSection";
-import ConfirmModal from "../components/Training/ConfirmModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
 import { FerryRouteMap } from "../components/ferry/FerryRouteMap";

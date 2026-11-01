@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 
 import DemoLockedNotice from "../Settings/DemoLockedNotice";
-import ConfirmModal from "../Training/ConfirmModal";
+import ConfirmModal from "../ui/ConfirmModal";
 import DetailSection from "../ui/DetailSection";
 import { Icon } from "../ui/Icon";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";

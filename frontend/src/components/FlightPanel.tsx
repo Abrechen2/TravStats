@@ -1,4 +1,4 @@
-import ConfirmModal from "./Training/ConfirmModal";
+import ConfirmModal from "./ui/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useMemo, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
