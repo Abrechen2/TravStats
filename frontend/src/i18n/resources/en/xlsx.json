@@ -304,7 +304,14 @@
       "bus_needs_route": "A new bus ride needs From, To (with latitude and longitude) and the departure.",
       "bus_needs_coordinates": "A stop needs its name, latitude and longitude — there is no stop catalogue to find it in.",
       "ferry_needs_route": "A new ferry crossing needs From, To (with latitude and longitude) and the departure.",
-      "ferry_needs_coordinates": "A port needs its name, latitude and longitude — there is no port catalogue to find it in."
+      "ferry_needs_coordinates": "A port needs its name, latitude and longitude — there is no port catalogue to find it in.",
+      "invalid_file": "The file does not have the format expected for the selected source.",
+      "not_a_journey": "The entry holds no ride.",
+      "missing_departure_station": "The departure station is missing.",
+      "missing_arrival_station": "The arrival station is missing.",
+      "missing_departure_time": "The departure time is missing.",
+      "cancelled": "The ride was cancelled and is not imported.",
+      "unsupported_mode": "The mode “{{mode}}” is not imported."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
@@ -343,7 +350,8 @@
     },
     "resolution": {
       "matched_existing": "matched an existing entry",
-      "exists": "already there"
+      "exists": "already there",
+      "duplicate_in_file": "appears in the file more than once"
     },
     "droppedValue": "{{field}} “{{value}}” unknown — left empty",
     "droppedValueKept": "{{field}} “{{value}}” unknown — existing value kept",

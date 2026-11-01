@@ -1,0 +1,2 @@
+Status-ID,Kategorie,Linie,Fahrtnummer,Abfahrtsstation Name,Abfahrtsstation Koordinaten,Abfahrt geplant,Abfahrt real,Zielstation Name,Zielstation Koordinaten,Ankunft geplant,Ankunft real,Reisezeit,Distanz,Punkte,Status-Nachricht,Fahrtzweck,Betreiber
+301,regional,RE 5,5,Alpha Hbf,"52.5,13.4",2026-03-05T07:00:00+00:00,,Beta Hbf,"53.5,10",2026-03-05T08:00:00+00:00,,60,250000,30,Hallo,Privat,

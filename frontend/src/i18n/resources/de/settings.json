@@ -754,6 +754,25 @@
           "app_in_the_air": "App in the Air (TXT)",
           "fr24": "Flightradar24 (CSV)"
         }
+      },
+      "checkin": {
+        "title": "Aus Träwelling oder travelynx",
+        "description": "Lade deinen Export hoch (Träwelling: JSON oder CSV, travelynx: JSON-Export des Kontos). Bahn-, U-Bahn-, Straßenbahn- und Busfahrten werden als Fahrten angelegt; schon vorhandene bleiben unverändert und werden nicht doppelt eingetragen.",
+        "uploadLabel": "Export-Datei wählen",
+        "sourceLabel": "Quelle",
+        "sources": {
+          "travelling": "Träwelling",
+          "travelynx": "travelynx"
+        },
+        "previewing": "Die Datei wird gelesen …",
+        "nothing": "In der Datei wurde keine Fahrt gefunden. Es wurde nichts geändert.",
+        "someSkipped_one": "{{count}} Eintrag wird nicht importiert (siehe unten). Die übrigen kannst du übernehmen.",
+        "someSkipped_other": "{{count}} Einträge werden nicht importiert (siehe unten). Die übrigen kannst du übernehmen.",
+        "nothingImportable": "Keine Fahrt aus dieser Datei kann importiert werden.",
+        "failed": "Die Datei konnte nicht gelesen werden. Ist es der Export der gewählten Quelle? Es wurde nichts geändert.",
+        "network": "Der Server ist nicht erreichbar. Es wurde nichts geändert – bitte versuche es erneut.",
+        "applyFailed": "Das Übernehmen ist fehlgeschlagen. Importiere die Datei noch einmal – bereits Übernommenes wird erkannt.",
+        "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut."
       }
     },
     "preview": {

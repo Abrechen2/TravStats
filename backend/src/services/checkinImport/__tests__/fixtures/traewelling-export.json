@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "user": { "id": 1, "displayName": "Test Person", "username": "testperson" },
+    "from": "2026-03-01T00:00:00+00:00",
+    "to": "2026-03-31T23:59:59+00:00",
+    "exportedAt": "2026-04-01T10:00:00+00:00"
+  },
+  "data": [
+    {
+      "id": 101,
+      "body": "Vollgepackt",
+      "bodyMentions": [],
+      "business": 0,
+      "visibility": 0,
+      "checkin": {
+        "trip_id": 5001,
+        "external_trip_id": "1|1|1|80|1032026",
+        "category": "nationalExpress",
+        "mode": null,
+        "number": "901",
+        "lineName": "ICE 901",
+        "routeColor": null,
+        "routeTextColor": null,
+        "journeyNumber": 901,
+        "manualJourneyNumber": null,
+        "distance": 280000,
+        "points": 40,
+        "duration": 150,
+        "manualDeparture": null,
+        "manualArrival": null,
+        "origin": {
+          "id": 11,
+          "name": "Alpha Hbf",
+          "arrivalPlanned": null,
+          "arrivalReal": null,
+          "departurePlanned": "2026-03-01T07:00:00+00:00",
+          "departureReal": "2026-03-01T07:04:00+00:00",
+          "isArrivalDelayed": false,
+          "isDepartureDelayed": true,
+          "cancelled": false
+        },
+        "destination": {
+          "id": 12,
+          "name": "Beta Hbf",
+          "arrivalPlanned": "2026-03-01T09:30:00+00:00",
+          "arrivalReal": "2026-03-01T09:41:00+00:00",
+          "departurePlanned": null,
+          "departureReal": null,
+          "isArrivalDelayed": true,
+          "isDepartureDelayed": false,
+          "cancelled": false
+        },
+        "tripOrigin": {
+          "id": 11,
+          "uuid": null,
+          "name": "Alpha Hbf",
+          "latitude": 52.5,
+          "longitude": 13.4,
+          "time_offset": 60,
+          "identifiers": [
+            {
+              "id": "a",
+              "type": "de_db_ril100",
+              "identifier": "AA",
+              "name": "Alpha Hbf",
+              "origin": "db",
+              "latitude": 52.5,
+              "longitude": 13.4
+            },
+            {
+              "id": "b",
+              "type": "de_db_ibnr",
+              "identifier": "8999001",
+              "name": "Alpha Hbf",
+              "origin": "db",
+              "latitude": 52.5,
+              "longitude": 13.4
+            }
+          ]
+        },
+        "tripDestination": {
+          "id": 12,
+          "uuid": null,
+          "name": "Beta Hbf",
+          "latitude": 53.5,
+          "longitude": 10.0,
+          "time_offset": 60,
+          "identifiers": [
+            {
+              "id": "c",
+              "type": "de_db_ibnr",
+              "identifier": "8999002",
+              "name": "Beta Hbf",
+              "origin": "db",
+              "latitude": 53.5,
+              "longitude": 10.0
+            }
+          ]
+        },
+        "stopovers": [],
+        "operator": null,
+        "dataSource": null
+      }
+    },
+    {
+      "id": 102,
+      "body": "",
+      "business": 0,
+      "visibility": 0,
+      "checkin": {
+        "category": "subway",
+        "number": "7",
+        "lineName": "U7",
+        "journeyNumber": null,
+        "manualJourneyNumber": null,
+        "origin": {
+          "id": 11,
+          "name": "Alpha Hbf",
+          "departurePlanned": "2026-03-02T09:00:00+00:00",
+          "departureReal": null
+        },
+        "destination": {
+          "id": 13,
+          "name": "Gamma Platz",
+          "arrivalPlanned": "2026-03-02T09:20:00+00:00",
+          "arrivalReal": null
+        },
+        "tripOrigin": { "id": 11, "name": "Alpha Hbf", "latitude": 52.5, "longitude": 13.4 },
+        "tripDestination": { "id": 13, "name": "Gamma Platz", "latitude": 52.6, "longitude": 13.5 },
+        "stopovers": []
+      }
+    },
+    { "id": 103, "body": "a status without a check-in" },
+    {
+      "id": 104,
+      "body": "",
+      "checkin": {
+        "category": "ferry",
+        "lineName": "F1",
+        "origin": { "id": 21, "name": "Hafen Eins", "departurePlanned": "bad" },
+        "destination": {
+          "id": 22,
+          "name": "Hafen Zwei",
+          "arrivalPlanned": "2026-03-03T10:00:00+00:00"
+        }
+      }
+    },
+    {
+      "id": 105,
+      "body": "manual times only",
+      "checkin": {
+        "category": "regional",
+        "lineName": "RE 5",
+        "manualJourneyNumber": "12345",
+        "journeyNumber": 5,
+        "manualDeparture": "2026-03-04T08:00:00+00:00",
+        "manualArrival": "2026-03-04T09:00:00+00:00",
+        "origin": {
+          "id": 11,
+          "name": "Alpha Hbf",
+          "departurePlanned": null,
+          "departureReal": null
+        },
+        "destination": {
+          "id": 12,
+          "name": "Beta Hbf",
+          "arrivalPlanned": null,
+          "arrivalReal": null
+        },
+        "tripOrigin": { "id": 11, "name": "Alpha Hbf", "latitude": 52.5, "longitude": 13.4 },
+        "tripDestination": { "id": 12, "name": "Beta Hbf", "latitude": 53.5, "longitude": 10.0 }
+      }
+    }
+  ]
+}

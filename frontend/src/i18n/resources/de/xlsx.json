@@ -304,7 +304,14 @@
       "bus_needs_route": "Eine neue Busfahrt braucht Von, Nach (mit Breite und Länge) und die Abfahrt.",
       "bus_needs_coordinates": "Eine Haltestelle braucht Name, Breite und Länge — es gibt keinen Haltestellenkatalog, in dem sie sich finden ließe.",
       "ferry_needs_route": "Eine neue Fährüberfahrt braucht Von, Nach (mit Breite und Länge) und die Abfahrt.",
-      "ferry_needs_coordinates": "Ein Hafen braucht Name, Breite und Länge — es gibt keinen Hafenkatalog, in dem er sich finden ließe."
+      "ferry_needs_coordinates": "Ein Hafen braucht Name, Breite und Länge — es gibt keinen Hafenkatalog, in dem er sich finden ließe.",
+      "invalid_file": "Die Datei hat nicht das erwartete Format der gewählten Quelle.",
+      "not_a_journey": "Der Eintrag enthält keine Fahrt.",
+      "missing_departure_station": "Der Abfahrtsbahnhof fehlt.",
+      "missing_arrival_station": "Der Ankunftsbahnhof fehlt.",
+      "missing_departure_time": "Die Abfahrtszeit fehlt.",
+      "cancelled": "Die Fahrt war storniert und wird nicht importiert.",
+      "unsupported_mode": "Die Verkehrsart „{{mode}}“ wird nicht importiert."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {
@@ -343,7 +350,8 @@
     },
     "resolution": {
       "matched_existing": "vorhandenen Eintrag wiedererkannt",
-      "exists": "schon vorhanden"
+      "exists": "schon vorhanden",
+      "duplicate_in_file": "steht in der Datei mehrfach"
     },
     "droppedValue": "{{field}} „{{value}}“ unbekannt – leer gelassen",
     "droppedValueKept": "{{field}} „{{value}}“ unbekannt – bisheriger Wert bleibt",

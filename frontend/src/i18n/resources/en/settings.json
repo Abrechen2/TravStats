@@ -754,6 +754,25 @@
           "app_in_the_air": "App in the Air (TXT)",
           "fr24": "Flightradar24 (CSV)"
         }
+      },
+      "checkin": {
+        "title": "From Träwelling or travelynx",
+        "description": "Upload your export (Träwelling: JSON or CSV, travelynx: the account’s JSON export). Train, metro, tram and bus rides are created as rides; ones you already have stay unchanged and are not entered twice.",
+        "uploadLabel": "Choose export file",
+        "sourceLabel": "Source",
+        "sources": {
+          "travelling": "Träwelling",
+          "travelynx": "travelynx"
+        },
+        "previewing": "Reading the file …",
+        "nothing": "No ride was found in the file. Nothing was changed.",
+        "someSkipped_one": "{{count}} entry will not be imported (see below). You can accept the rest.",
+        "someSkipped_other": "{{count}} entries will not be imported (see below). You can accept the rest.",
+        "nothingImportable": "No ride from this file can be imported.",
+        "failed": "The file could not be read. Is it the export of the selected source? Nothing was changed.",
+        "network": "The server cannot be reached. Nothing was changed – please try again.",
+        "applyFailed": "Applying failed. Import the file again – what was already applied is recognised.",
+        "rateLimited": "Too many imports in a short time. Please wait a moment and try again."
       }
     },
     "preview": {
