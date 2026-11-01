@@ -64,6 +64,7 @@
     "flights/track.ts",
     "flights/trackLines.ts",
     "flights/trackSource.ts",
+    "flights/update.ts",
     "flightsBatch.ts",
     "geoExport.ts",
     "geoServer.ts",
