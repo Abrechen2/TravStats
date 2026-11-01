@@ -4,15 +4,14 @@ import type { UnitsSettings } from "../../store/settingsStore";
 import CurrencySelect from "../common/CurrencySelect";
 import HelpIcon from "../Help/HelpIcon";
 import { ECB_CURRENCIES } from "../../shared/currencies";
-import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { UnitRow } from "./UnitRow";
 import DemoLockedNotice from "./DemoLockedNotice";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
 interface UnitsSectionProps {
   units: UnitsSettings;
-  onSetUnits: (partial: Partial<UnitsSettings>) => void;
   /**
    * The one currency the app has. It is `UserSettings.baseCurrency` — a real
    * column, the currency every lodging FX snapshot is taken in and the one
@@ -34,7 +33,6 @@ const DISTANCE_UNITS = ["kilometers", "miles", "nautical_miles"] as const;
 
 export default function UnitsSection({
   units,
-  onSetUnits,
   baseCurrency,
   onSetBaseCurrency,
 }: UnitsSectionProps): JSX.Element {
@@ -51,41 +49,27 @@ export default function UnitsSection({
       />
       {isDemo && <DemoLockedNotice />}
       <SettingRows>
-        <SettingRow
+        <UnitRow
+          field="distanceUnit"
           title={t("settings:units.distance")}
           sub={t("settings:units.distanceSub")}
-          control={
-            <Segmented
-              label={t("settings:units.distance")}
-              value={units.distanceUnit}
-              options={DISTANCE_UNITS.map((value) => ({
-                value,
-                label: t(`settings:units.short.${value}`),
-                name: t(`settings:units.options.${value}`),
-              }))}
-              onChange={(distanceUnit) => onSetUnits({ distanceUnit })}
-              disabled={isDemo}
-            />
-          }
+          saved={units.distanceUnit}
+          values={DISTANCE_UNITS}
+          shortLabel={(value) => t(`settings:units.short.${value}`)}
+          name={(value) => t(`settings:units.options.${value}`)}
+          locked={isDemo}
         />
-        <SettingRow
+        <UnitRow
+          field="weightUnit"
           title={t("settings:units.weight")}
           sub={t("settings:units.weightSub")}
-          control={
-            <Segmented
-              label={t("settings:units.weight")}
-              // Persisted state from before the preference existed has none.
-              value={resolveWeightUnit(units.weightUnit)}
-              options={WEIGHT_UNITS.map((value) => ({
-                value,
-                // "kg" and "lb" are symbols, the same in both languages.
-                label: value,
-                name: t(`settings:units.weightOptions.${value}`),
-              }))}
-              onChange={(weightUnit) => onSetUnits({ weightUnit })}
-              disabled={isDemo}
-            />
-          }
+          // Persisted state from before the preference existed has none.
+          saved={resolveWeightUnit(units.weightUnit)}
+          values={WEIGHT_UNITS}
+          // "kg" and "lb" are symbols, the same in both languages.
+          shortLabel={(value) => value}
+          name={(value) => t(`settings:units.weightOptions.${value}`)}
+          locked={isDemo}
         />
         <SettingRow
           title={t("settings:units.currency")}

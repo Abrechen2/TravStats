@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Both sections fetch on mount through real API modules; the frontend test
@@ -37,6 +37,8 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({
   useIsDemoAccount: () => isDemoMock.current,
 }));
 
+import { useSettingsStore } from "../../../store/settingsStore";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import ApiTokensSection from "../ApiTokensSection";
 import PasskeySection from "../PasskeySection";
 import NotificationsSection from "../NotificationsSection";
@@ -233,14 +235,7 @@ describe("the display and units cards on the demo account", () => {
     render(<DisplaySection display={display} onSetDisplay={() => {}} />);
   };
   const renderUnits = (): void => {
-    render(
-      <UnitsSection
-        units={units}
-        onSetUnits={() => {}}
-        baseCurrency="EUR"
-        onSetBaseCurrency={() => {}}
-      />
-    );
+    render(<UnitsSection units={units} baseCurrency="EUR" onSetBaseCurrency={() => {}} />);
   };
 
   it("says the display settings are locked, and disables them", () => {
@@ -275,28 +270,31 @@ describe("the display and units cards on the demo account", () => {
 
 /** forgejo#186: the unit a bare baggage-allowance number is read in. */
 describe("the weight unit on the units card", () => {
-  const renderWith = (units: Record<string, unknown>, onSetUnits = vi.fn()): typeof onSetUnits => {
+  const renderWith = (units: Record<string, unknown>): void => {
     isDemoMock.current = false;
-    render(
-      <UnitsSection
-        units={units as never}
-        onSetUnits={onSetUnits}
-        baseCurrency="EUR"
-        onSetBaseCurrency={() => {}}
-      />
-    );
-    return onSetUnits;
+    render(<UnitsSection units={units as never} baseCurrency="EUR" onSetBaseCurrency={() => {}} />);
   };
 
-  it("offers kilograms and pounds and saves the chosen one", () => {
-    const onSetUnits = renderWith({ distanceUnit: "kilometers", weightUnit: "kg" });
+  it("offers kilograms and pounds and saves the chosen one", async () => {
+    vi.useFakeTimers();
+    const save = vi.fn().mockResolvedValue(undefined);
+    // The suite's global store mock is a plain object: give it the two actions.
+    const setUnits = vi.fn();
+    Object.assign(useSettingsStore.getState(), { setUnits, saveRemoteSettings: save });
+    renderWith({ distanceUnit: "kilometers", weightUnit: "kg" });
     const group = screen.getByRole("radiogroup", { name: "settings:units.weight" });
     const radios = Array.from(group.querySelectorAll('[role="radio"]'));
     expect(radios.map((radio) => radio.textContent)).toEqual(["kg", "lb"]);
     expect(radios[0]).toHaveAttribute("aria-checked", "true");
 
     fireEvent.click(radios[1]);
-    expect(onSetUnits).toHaveBeenCalledWith({ weightUnit: "lb" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(setUnits).toHaveBeenCalledWith({ weightUnit: "lb" });
+    expect(save).toHaveBeenCalledTimes(1);
+    act(() => resetWriteQueue());
+    vi.useRealTimers();
   });
 
   it("shows kilograms for settings saved before the preference existed", () => {

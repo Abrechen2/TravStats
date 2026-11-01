@@ -41,6 +41,7 @@ import type { SettingsSectionId } from "./Settings/settingsModel";
 import type { AdminSectionId } from "./Admin/adminSections";
 import { ADMIN_SECTION_FRAME } from "./Admin/AdminSectionSwitch";
 import { AdminHost, AdminSectionBody } from "./Admin/AdminHost";
+import LeaveGuardHost from "../components/ui/settings/LeaveGuardHost";
 import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
 
 /**
@@ -229,6 +230,8 @@ export default function SettingsPage(): JSX.Element {
 
   const sections = (
     <PageHiddenRowsContext.Provider value={reportHiddenRows}>
+      {/* Asks before a page with unsaved groups is left, and sends waiting writes. */}
+      <LeaveGuardHost />
       <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
         {visible.shown.map((id, index) => {
           const mount = mounts.get(id)!;

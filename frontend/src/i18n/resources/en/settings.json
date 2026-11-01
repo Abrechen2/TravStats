@@ -1584,5 +1584,159 @@
       "instance": "Applies to all accounts · admin only"
     },
     "adminOnlyNotice": "This applies to all accounts. Only an admin can change it."
+  },
+  "blocks": {
+    "scope": {
+      "allAccounts": "All accounts",
+      "device": "This device only"
+    },
+    "save": {
+      "waiting": "Saving in a moment",
+      "saved": "Saved",
+      "failed": "I couldn't save this. {{reason}} Your choice stays.",
+      "reason": {
+        "offline": "The server isn't answering right now.",
+        "rejected": "The server didn't accept the value.",
+        "timezone": "I don't know this time zone.",
+        "demo": "I don't save this in the demo account."
+      },
+      "retry": "Try again",
+      "discard": "Discard",
+      "unsaved": "Not saved",
+      "groupSaving": "Saving …",
+      "saveGroup": "Save",
+      "saveAndTest": "Save & test",
+      "discardGroup": "Discard"
+    },
+    "lock": {
+      "demo": "Locked in the demo account"
+    },
+    "secret": {
+      "set": "Saved · not shown again",
+      "empty": "Nothing saved yet",
+      "keepHint": "Leave empty to keep the saved value."
+    },
+    "job": {
+      "waiting": "Starting shortly",
+      "progress": "{{done}} of {{total}}",
+      "eta": "done in about {{eta}}",
+      "mayLeave": "you can leave this page",
+      "done": "done · {{result}}",
+      "paused": "Paused at day {{at}} of {{total}}",
+      "resume": "Resume",
+      "failed": "I couldn't continue: {{reason}}",
+      "retry": "Try again",
+      "unknown": "I don't know whether it finished: the server restarted meanwhile.",
+      "check": "Check"
+    },
+    "confirm": {
+      "affects": "Affects",
+      "amount": "How much",
+      "after": "Afterwards",
+      "typeWord": "Type {{word}} to confirm",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "leave": {
+      "title": "Discard changes?",
+      "amount_one": "{{count}} changed value",
+      "amount_other": "{{count}} changed values",
+      "after": "The values go back to what was last saved.",
+      "discard": "Discard",
+      "stay": "Stay"
+    },
+    "card": {
+      "open": "Open",
+      "close": "Close"
+    },
+    "oneShot": "Expert setting · visible for this visit only. Your level stays Standard.",
+    "oneShotAlways": "Always show",
+    "dep": {
+      "noImmich": {
+        "reason": "Immich isn't connected.",
+        "jump": "Connect"
+      },
+      "noFlightData": {
+        "reason": "Needs a flight data service.",
+        "jump": "Go to services"
+      },
+      "autoOff": {
+        "reason": "Only works with live updates."
+      },
+      "stayOff": {
+        "reason": "Only works with stay suggestions.",
+        "jump": "Turn on"
+      },
+      "placesOff": {
+        "reason": "Places is off.",
+        "jump": "Turn on"
+      },
+      "cruiseOff": {
+        "reason": "Cruises is off.",
+        "jump": "Turn on"
+      },
+      "toursOff": {
+        "reason": "Tours is off.",
+        "jump": "Turn on"
+      },
+      "noLocSource": {
+        "reason": "Needs a location source.",
+        "jump": "Choose source"
+      },
+      "aiNotAllowed": {
+        "reason": "Your admin hasn't enabled AI."
+      },
+      "noFederation": {
+        "reason": "Your admin hasn't allowed other servers."
+      },
+      "noPublicUrl": {
+        "reason": "The server has no public address.",
+        "jump": "Set address"
+      },
+      "no2fa": {
+        "reason": "Needs two-step sign-in first."
+      },
+      "noSmtp": {
+        "reason": "The server doesn't send mail.",
+        "jump": "Set up mail"
+      },
+      "noWebdav": {
+        "reason": "No WebDAV storage connected yet.",
+        "jump": "Connect"
+      },
+      "noTravTrack": {
+        "reason": "This server doesn't offer TravTrack."
+      },
+      "noTravPlan": {
+        "reason": "This server doesn't offer planning.",
+        "jump": "Offer it"
+      },
+      "webdavOff": {
+        "reason": "Only works with the WebDAV copy."
+      },
+      "noMailAddr": {
+        "reason": "Mail needs an address above."
+      },
+      "envPinned": {
+        "reason": "Pinned at server start ({{name}}). In effect: {{value}}."
+      },
+      "noOllama": {
+        "reason": "Needs Ollama."
+      },
+      "noOwnDawarich": {
+        "reason": "Needs your own Dawarich connection. The server's isn't enough.",
+        "jump": "Connect"
+      },
+      "dawSrcMissing": {
+        "reason": "Dawarich isn't connected for you yet. Until then TravStats reads no positions.",
+        "jump": "Connect"
+      },
+      "noPush": {
+        "reason": "The server isn't sending notifications to the app right now."
+      },
+      "publicUrlMissing": {
+        "reason": "Still missing. Until then invitations, e-mails and calendars point to localhost."
+      }
+    }
   }
 }

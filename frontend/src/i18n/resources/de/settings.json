@@ -1584,5 +1584,159 @@
       "instance": "Gilt für alle Konten · nur Admin"
     },
     "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin."
+  },
+  "blocks": {
+    "scope": {
+      "allAccounts": "Alle Konten",
+      "device": "Nur dieses Gerät"
+    },
+    "save": {
+      "waiting": "Gleich gespeichert",
+      "saved": "Gespeichert",
+      "failed": "Ich konnte das nicht speichern. {{reason}} Deine Auswahl bleibt stehen.",
+      "reason": {
+        "offline": "Der Server antwortet gerade nicht.",
+        "rejected": "Der Server hat den Wert nicht angenommen.",
+        "timezone": "Diese Zeitzone kenne ich nicht.",
+        "demo": "Im Demo-Konto speichere ich das nicht."
+      },
+      "retry": "Erneut versuchen",
+      "discard": "Verwerfen",
+      "unsaved": "Nicht gespeichert",
+      "groupSaving": "Ich speichere …",
+      "saveGroup": "Speichern",
+      "saveAndTest": "Speichern & testen",
+      "discardGroup": "Verwerfen"
+    },
+    "lock": {
+      "demo": "Im Demo-Konto gesperrt"
+    },
+    "secret": {
+      "set": "Gespeichert · wird nicht mehr angezeigt",
+      "empty": "Noch nichts gespeichert",
+      "keepHint": "Leer lassen behält den gespeicherten Wert."
+    },
+    "job": {
+      "waiting": "Startet gleich",
+      "progress": "{{done}} von {{total}}",
+      "eta": "fertig in etwa {{eta}}",
+      "mayLeave": "du kannst die Seite verlassen",
+      "done": "fertig · {{result}}",
+      "paused": "Angehalten bei Tag {{at}} von {{total}}",
+      "resume": "Fortsetzen",
+      "failed": "Ich konnte nicht weitermachen: {{reason}}",
+      "retry": "Erneut versuchen",
+      "unknown": "Ich weiß nicht, ob es fertig wurde: Der Server hat zwischendurch neu gestartet.",
+      "check": "Nachsehen"
+    },
+    "confirm": {
+      "affects": "Betrifft",
+      "amount": "Wie viel",
+      "after": "Danach",
+      "typeWord": "Zum Bestätigen {{word}} tippen",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "leave": {
+      "title": "Änderungen verwerfen?",
+      "amount_one": "{{count}} geänderte Angabe",
+      "amount_other": "{{count}} geänderte Angaben",
+      "after": "Die Angaben stehen wieder wie zuletzt gespeichert.",
+      "discard": "Verwerfen",
+      "stay": "Bleiben"
+    },
+    "card": {
+      "open": "Öffnen",
+      "close": "Schließen"
+    },
+    "oneShot": "Experten-Einstellung · nur für diesen Besuch sichtbar. Deine Stufe bleibt Standard.",
+    "oneShotAlways": "Immer zeigen",
+    "dep": {
+      "noImmich": {
+        "reason": "Immich ist nicht verbunden.",
+        "jump": "Verbinden"
+      },
+      "noFlightData": {
+        "reason": "Braucht einen Flugdaten-Dienst.",
+        "jump": "Zu Dienste"
+      },
+      "autoOff": {
+        "reason": "Wirkt erst mit Live-Updates."
+      },
+      "stayOff": {
+        "reason": "Wirkt erst mit Aufenthaltsvorschlägen.",
+        "jump": "Einschalten"
+      },
+      "placesOff": {
+        "reason": "Orte ist aus.",
+        "jump": "Einschalten"
+      },
+      "cruiseOff": {
+        "reason": "Kreuzfahrten ist aus.",
+        "jump": "Einschalten"
+      },
+      "toursOff": {
+        "reason": "Touren ist aus.",
+        "jump": "Einschalten"
+      },
+      "noLocSource": {
+        "reason": "Wirkt erst mit einer Standortquelle.",
+        "jump": "Quelle wählen"
+      },
+      "aiNotAllowed": {
+        "reason": "Der Admin hat keine KI freigegeben."
+      },
+      "noFederation": {
+        "reason": "Der Admin hat andere Server nicht freigegeben."
+      },
+      "noPublicUrl": {
+        "reason": "Dem Server fehlt eine öffentliche Adresse.",
+        "jump": "Adresse setzen"
+      },
+      "no2fa": {
+        "reason": "Erst mit zweitem Faktor."
+      },
+      "noSmtp": {
+        "reason": "Der Server verschickt keine Mails.",
+        "jump": "Mail einrichten"
+      },
+      "noWebdav": {
+        "reason": "Noch kein WebDAV-Speicher verbunden.",
+        "jump": "Verbinden"
+      },
+      "noTravTrack": {
+        "reason": "Der Server bietet TravTrack nicht an."
+      },
+      "noTravPlan": {
+        "reason": "Der Server bietet Planen nicht an.",
+        "jump": "Anbieten"
+      },
+      "webdavOff": {
+        "reason": "Wirkt erst mit WebDAV-Kopie."
+      },
+      "noMailAddr": {
+        "reason": "Mail geht erst mit einer Adresse oben."
+      },
+      "envPinned": {
+        "reason": "Vom Server-Start festgelegt ({{name}}). Wirksam: {{value}}."
+      },
+      "noOllama": {
+        "reason": "Braucht Ollama."
+      },
+      "noOwnDawarich": {
+        "reason": "Braucht deine eigene Dawarich-Verbindung. Die des Servers reicht dafür nicht.",
+        "jump": "Verbinden"
+      },
+      "dawSrcMissing": {
+        "reason": "Dawarich ist für dich noch nicht verbunden. Bis dahin liest TravStats keine Positionen.",
+        "jump": "Verbinden"
+      },
+      "noPush": {
+        "reason": "Der Server sendet gerade keine Mitteilungen an die App."
+      },
+      "publicUrlMissing": {
+        "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
+      }
+    }
   }
 }

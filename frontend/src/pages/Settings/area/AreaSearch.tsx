@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type JSX, type KeyboardEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useGuardedNavigate } from "../../../components/ui/settings/leaveGuard";
 
 import { Input } from "../../../components/ui/Field";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -22,7 +23,7 @@ export const MAX_HITS = 8;
  */
 export function AreaSearch({ isAdmin }: { isAdmin: boolean }): JSX.Element {
   const { t, i18n } = useTranslation(["settings"]);
-  const navigate = useNavigate();
+  const navigate = useGuardedNavigate();
   const coarse = useCoarsePointer();
   const { isEnabled } = useEnabledDomains();
   const { isFeatureVisible } = useBetaFeatures();

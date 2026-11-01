@@ -94,7 +94,6 @@ export default function SettingsSectionSwitch({
       return (
         <UnitsSection
           units={page.units}
-          onSetUnits={page.setUnits}
           baseCurrency={page.baseCurrency}
           onSetBaseCurrency={page.setBaseCurrency}
         />

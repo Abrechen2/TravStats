@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useGuardedNavigate } from "../../ui/settings/leaveGuard";
 import { Icon, type IconName } from "../../ui/Icon";
 import { Select } from "../../ui/Field";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -155,7 +156,7 @@ export function SettingsMenuCompact({
   levelSwitch,
 }: Props): JSX.Element {
   const { t } = useTranslation(["settings"]);
-  const navigate = useNavigate();
+  const navigate = useGuardedNavigate();
   const entries = groups.flatMap((g) => g.entries);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
