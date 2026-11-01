@@ -35,7 +35,7 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
 import type { ProviderFailure } from "./flightLookup/providerOutcome";
-import { getApiKey } from "./apiKeyResolver";
+import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 
 /** Max flights touched per single endpoint call. Keeps the request under the
  *  default Express 60 s timeout (≈13 s at 500 ms pacing) and gives the user
@@ -196,11 +196,7 @@ export async function findBulkRefreshCandidates(
  * Refresh button.
  */
 export async function hasHistoricalProvider(userId: string): Promise<boolean> {
-  const [aviationstack, aerodatabox] = await Promise.all([
-    getApiKey("aviationstack", userId),
-    getApiKey("aerodatabox", userId),
-  ]);
-  return Boolean(aviationstack || aerodatabox);
+  return (await flightProviderAvailability(userId)).byDate;
 }
 
 /**

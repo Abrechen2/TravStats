@@ -19,8 +19,10 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (_provider: string, _userId?: string) => null as string | null),
+  getOpenSkyCredentials: jest.fn(async (_userId?: string) => null),
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
+jest.mock("../services/flightLookup/adsbV2", () => ({ resolveAdsbEndpoints: async () => [] }));
 
 type LookupResult = import("../services/flightLookup").LookupWithHistoricalResult;
 type LookupFlight = LookupResult["flights"][number];
@@ -98,6 +100,22 @@ describe("hasHistoricalProvider", () => {
       provider === "aerodatabox" ? "adb-key" : null
     );
     expect(await hasHistoricalProvider(USER_ID)).toBe(true);
+  });
+});
+
+describe("hasHistoricalProvider (AeroAPI)", () => {
+  it("returns true when only FlightAware AeroAPI is configured (it was left out of the check)", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async (provider) =>
+      provider === "aeroapi" ? "aero-key" : null
+    );
+    expect(await hasHistoricalProvider(USER_ID)).toBe(true);
+  });
+
+  it("returns false when only a today-only provider (AirLabs) is configured", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async (provider) =>
+      provider === "airlabs" ? "al-key" : null
+    );
+    expect(await hasHistoricalProvider(USER_ID)).toBe(false);
   });
 });
 
