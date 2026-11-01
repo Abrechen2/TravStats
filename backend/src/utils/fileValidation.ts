@@ -139,23 +139,6 @@ export function validateFileType(filePath: string, expectedMimeType: string): bo
 }
 
 /**
- * Validate file type from buffer using magic numbers
- * @param buffer File buffer
- * @param expectedMimeType Expected MIME type
- * @returns true if file signature matches expected type
- */
-export function validateFileTypeFromBuffer(buffer: Buffer, expectedMimeType: string): boolean {
-  const signatures = FILE_SIGNATURES[expectedMimeType];
-  if (!signatures) {
-    // No magic number validation available for this type
-    return true; // Allow if no signature defined
-  }
-
-  const signature = readFileSignatureFromBuffer(buffer, 32);
-  return matchesSignature(signature, signatures);
-}
-
-/**
  * Get file type from magic numbers
  * @param filePath Path to file
  * @returns Detected MIME type or null
@@ -314,31 +297,6 @@ export function validateProfilePictureFile(
 
   // Then validate with magic numbers — this is what actually stops a
   // renamed .exe or malicious payload claiming to be image/png.
-  if (!validateFileType(filePath, declaredMimeType)) {
-    const detectedType = detectFileType(filePath);
-    return {
-      valid: false,
-      reason: `File signature does not match declared type. Declared: ${declaredMimeType}, Detected: ${detectedType || "unknown"}`,
-    };
-  }
-
-  return { valid: true };
-}
-
-/**
- * Validate image file for boarding pass parsing
- */
-export function validateBoardingPassImage(
-  filePath: string,
-  declaredMimeType: string
-): { valid: boolean; reason?: string } {
-  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
-  if (!allowedMimeTypes.includes(declaredMimeType)) {
-    return { valid: false, reason: `Invalid MIME type for image: ${declaredMimeType}` };
-  }
-
-  // Validate with magic numbers
   if (!validateFileType(filePath, declaredMimeType)) {
     const detectedType = detectFileType(filePath);
     return {
