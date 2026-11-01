@@ -1,3 +1,4 @@
+import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -145,6 +146,7 @@ export function LodgingStayCard({
         <span className="ml-auto text-sm font-semibold" style={{ color: "var(--star)" }}>
           {formatRatingText(stay.ratingOverall)}
         </span>
+        {onEdit && <ShareLinkButton kind="stay" targetId={stay.id} variant="link" />}
         {onEdit && (
           <button
             type="button"

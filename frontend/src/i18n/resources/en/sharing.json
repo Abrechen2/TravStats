@@ -467,6 +467,24 @@
         "totals": "The year's totals",
         "topAirline": "Most-flown airline",
         "topRoute": "Most-flown route"
+      },
+      "cruise": {
+        "owner": "Your first name",
+        "ship": "Ship and cruise line",
+        "dates": "Dates",
+        "ports": "Ports and sea days"
+      },
+      "stay": {
+        "owner": "Your first name",
+        "name": "Name of the lodging",
+        "location": "Address, city and country",
+        "dates": "Check-in and check-out"
+      },
+      "visit": {
+        "owner": "Your first name",
+        "place": "Place (name, city, country)",
+        "date": "Date of the visit",
+        "rating": "Your rating (stars)"
       }
     },
     "view": {
@@ -513,6 +531,19 @@
           "visit": "Visit",
           "stop": "Stop"
         }
+      },
+      "entry": {
+        "ship": "Ship",
+        "cruiseLine": "Cruise line",
+        "ports": "Ports",
+        "seaDay": "At sea",
+        "dayWord": "Day",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "address": "Address",
+        "when": "When",
+        "rating": "Rating",
+        "ofFive": "of 5"
       }
     },
     "section": {
@@ -522,7 +553,10 @@
       "kind": {
         "flight": "Flight",
         "trip": "Trip",
-        "wrapped": "Year in review {{year}}"
+        "wrapped": "Year in review {{year}}",
+        "cruise": "Cruise",
+        "stay": "Stay",
+        "visit": "Visit"
       },
       "endsAt": "ends {{date}}",
       "views_one": "{{count}} view",

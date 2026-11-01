@@ -19,7 +19,7 @@ vi.mock("../../../lib/api/shareLinks", () => ({
 
 const api = vi.mocked(shareLinksApi);
 
-function renderDialog(kind: "flight" | "trip" = "flight") {
+function renderDialog(kind: "flight" | "trip" | "cruise" | "stay" | "visit" = "flight") {
   render(
     <MemoryRouter>
       <ShareLinkDialog open onClose={vi.fn()} kind={kind} targetId="f1" />
@@ -267,5 +267,49 @@ describe("ShareLinkDialog", () => {
     await screen.findByTestId("share-preview");
     await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
     expect(await screen.findByText("sharing:links.errors.tripEnded")).toBeTruthy();
+  });
+
+  // forgejo#405: a cruise, a stay and a visit get a link of their own. What is private by
+  // nature (a stay's address, a visit's rating) is an opt-in, never a default.
+  it.each([
+    ["cruise", ["ship", "dates"], 4],
+    ["stay", ["name", "dates"], 4],
+    ["visit", ["place", "date"], 4],
+  ] as const)(
+    "offers a %s link with only the harmless fields ticked",
+    async (kind, ticked, all) => {
+      api.preview.mockResolvedValue({
+        view: { kind: "visit", visit: { place: { name: "Wartburg", city: null, country: null } } },
+        photosOmitted: null,
+      });
+      renderDialog(kind);
+      await screen.findByText("Wartburg", { exact: false });
+      expect(api.preview).toHaveBeenLastCalledWith({ kind, targetId: "f1", fields: ticked });
+      expect(screen.getAllByRole("checkbox")).toHaveLength(all);
+      // The day-based expiry list, without the flight-only "until landing".
+      expect(screen.queryByText("sharing:links.dialog.expiryOptions.untilLanding")).toBeNull();
+    }
+  );
+
+  it("previews a stay's address only once `location` is ticked", async () => {
+    api.preview.mockImplementation(async ({ fields }) => ({
+      view: {
+        kind: "stay",
+        stay: {
+          name: "Hotel Hudson View",
+          ...(fields.includes("location")
+            ? { location: { address: "356 W 58th St", city: "New York", country: "US" } }
+            : {}),
+        },
+      },
+      photosOmitted: null,
+    }));
+    renderDialog("stay");
+    await screen.findByText("Hotel Hudson View", { exact: false });
+    expect(screen.queryByText("356 W 58th St", { exact: false })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "sharing:links.fields.stay.location" })
+    );
+    expect(await screen.findByText("356 W 58th St", { exact: false })).toBeTruthy();
   });
 });

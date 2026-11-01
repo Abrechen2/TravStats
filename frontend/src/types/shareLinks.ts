@@ -6,7 +6,7 @@ import type { LocalDateValue, TimeValue } from "../shared/time";
  * when the owner did not choose that field.
  */
 
-export type ShareLinkKind = "flight" | "trip" | "wrapped";
+export type ShareLinkKind = "flight" | "trip" | "wrapped" | "cruise" | "stay" | "visit";
 
 /** The allow-list per kind — the only things an owner can choose to show. */
 export const SHARE_LINK_FIELDS = {
@@ -25,6 +25,10 @@ export const SHARE_LINK_FIELDS = {
     "itinerary",
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
+  // Single entries (forgejo#405).
+  cruise: ["owner", "ship", "dates", "ports"],
+  stay: ["owner", "name", "location", "dates"],
+  visit: ["owner", "place", "date", "rating"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
 
 export type ShareLinkField = (typeof SHARE_LINK_FIELDS)[ShareLinkKind][number];
@@ -34,6 +38,10 @@ export const SHARE_LINK_DEFAULT_FIELDS: Record<ShareLinkKind, readonly ShareLink
   flight: ["flightNumber", "route", "progress"],
   trip: ["name", "dates", "totals"],
   wrapped: ["totals"],
+  // Nothing private by default: a stay's address and a visit's rating are opt-in.
+  cruise: ["ship", "dates"],
+  stay: ["name", "dates"],
+  visit: ["place", "date"],
 };
 
 export interface ShareLink {
@@ -200,10 +208,39 @@ export interface WrappedShareView {
   topRoute?: { from: string; to: string; flights: number } | null;
 }
 
+export interface CruiseShareView {
+  owner?: string | null;
+  ship?: { name: string | null; line: string | null };
+  dates?: { start: LocalDateValue | null; end: LocalDateValue | null };
+  ports?: Array<{
+    dayNumber: number;
+    name: string | null;
+    atSea: boolean;
+    day: LocalDateValue | null;
+  }>;
+}
+
+export interface StayShareView {
+  owner?: string | null;
+  name?: string;
+  location?: { address: string | null; city: string | null; country: string | null };
+  dates?: { checkIn: LocalDateValue | null; checkOut: LocalDateValue | null };
+}
+
+export interface VisitShareView {
+  owner?: string | null;
+  place?: { name: string; city: string | null; country: string | null };
+  date?: TimeValue | null;
+  rating?: number | null;
+}
+
 export type ShareView =
   | { kind: "flight"; flight: FlightShareView }
   | { kind: "trip"; trip: TripShareView }
-  | { kind: "wrapped"; wrapped: WrappedShareView };
+  | { kind: "wrapped"; wrapped: WrappedShareView }
+  | { kind: "cruise"; cruise: CruiseShareView }
+  | { kind: "stay"; stay: StayShareView }
+  | { kind: "visit"; visit: VisitShareView };
 
 /** Owner-only: which photos a trip link leaves out, and why (preview answer). */
 export interface PhotoOmissions {
