@@ -95,7 +95,7 @@ function Form({
   const days = Number(group.draft.retentionDays);
   const daysInvalid = !Number.isInteger(days) || days < 1 || days > 365;
   const zones = useMemo(() => groupTimeZones(group.draft.zone || null), [group.draft.zone]);
-  const webdav = useWebdavEnabled();
+  const { enabled: webdav, failed: webdavFailed } = useWebdavEnabled();
   const off = !group.draft.enabled;
   const offDep = { reason: t("settingsRows:backups.deps.autoOff") };
 
@@ -191,7 +191,11 @@ function Form({
         scope="allAccounts"
         changed={group.isChanged("cloudRetention")}
         dependency={
-          webdav === false ? { reason: t("settingsRows:backups.deps.webdavOff") } : undefined
+          webdav === false
+            ? { reason: t("settingsRows:backups.deps.webdavOff") }
+            : webdavFailed && webdav === null
+              ? { reason: t("settingsRows:backups.deps.webdavUnknown") }
+              : undefined
         }
         control={
           <SwitchControl

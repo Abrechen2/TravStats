@@ -1,34 +1,17 @@
 import { SECTION_LABEL_KEY } from "./sectionLabels";
-import { lookup, type MenuGroupDef, type PageDef, type SectionDef } from "./surface";
+import { type SectionDef } from "./surface";
 import type { SettingsLevel } from "../../store/settingsLevelStore";
 
 /**
- * Personal settings, as pages (forgejo#321).
+ * The personal sections the settings area mounts (see `area/areaModel.ts`, which
+ * places them on pages). Each carries its level, beta gate and search flags;
+ * the page structure of the old `/settings/<page>` surface is gone — the
+ * registry and the area's page table are the only ones now.
  *
- * One route per menu entry, `/settings/<page>`, and the page's sections as
- * anchors on it (`?section=<id>`). Until 2.7.x the general groups were anchors
- * on ONE long "Allgemein" page, so a menu entry was a scroll position and the
- * menu highlight followed the scroll; testers lost their place on it, and found
- * headings there that the menu never named. A page per entry ends both.
- *
- * Each section carries its level. Standard is what a person needs to set
- * TravStats up and use it; expert is tuning, plumbing and operations — the
- * classification the owner decided on 2026-10-20 (forgejo#321, first comment).
+ * Standard is what a person needs to set TravStats up and use it; expert is
+ * tuning, plumbing and operations — the classification the owner decided on
+ * 2026-10-20 (forgejo#321, first comment).
  */
-export type SettingsPageId =
-  | "account"
-  | "display"
-  | "views"
-  | "trips"
-  | "companions"
-  | "location"
-  | "loyalty"
-  | "privacy"
-  | "flight"
-  | "cruise"
-  | "data"
-  | "services";
-
 /** Every section that can render. Ids are stable — links carry them. */
 export type SettingsSectionId =
   | "profile"
@@ -69,7 +52,6 @@ export type SettingsSectionId =
   | "encryptedGrants";
 
 export type SettingsSectionDef = SectionDef<SettingsSectionId>;
-export type SettingsPageDef = PageDef<SettingsPageId, SettingsSectionId>;
 
 const section = (
   id: SettingsSectionId,
@@ -77,158 +59,51 @@ const section = (
   extra: Partial<SettingsSectionDef> = {}
 ): SettingsSectionDef => ({ id, labelKey: SECTION_LABEL_KEY[id], level, ...extra });
 
-export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
-  {
-    id: "account",
-    labelKey: "settings:groups.account",
-    icon: "user",
-    sections: [
-      section("profile"),
-      section("home"),
-      section("security"),
-      // Behind its beta key; `?section=devices` still shows it, because a
-      // pairing code has no other place to be minted while the key is closed.
-      section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
-      section("notifications"),
-      section("apitokens", "expert", { settings: 1 }),
-      section("deletion"),
-    ],
-  },
-  {
-    id: "display",
-    labelKey: "settings:groups.display",
-    icon: "languages",
-    sections: [
-      section("display"),
-      section("units"),
-      section("domains"),
-      section("planning"),
-      section("countryCounting"),
-    ],
-  },
-  {
-    // Where the map, the dashboard and the lists are set is on the map, the
-    // dashboard and the lists (rule 1 of the settings redesign); this page
-    // makes them findable and jumps there.
-    id: "views",
-    labelKey: "settings:groups.views",
-    icon: "layers",
-    sections: [section("mapAppearance")],
-  },
-  {
-    // Trips are no domain, so this page never hides (owner, 2026-08-23).
-    id: "trips",
-    labelKey: "settings:groups.trips",
-    icon: "route",
-    sections: [
-      section("trips"),
-      section("suggestions"),
-      section("sharing"),
-      section("calendarFeed", "standard", { gate: "calendarFeed" }),
-    ],
-  },
-  {
-    // Everyone typed into an entry, tidied by hand: rename, merge, delete
-    // (owner, 2026-10-22). Not a domain, so it never hides; linking a
-    // companion to an account stays in "Reisen teilen" above.
-    id: "companions",
-    labelKey: "settings:groups.companions",
-    icon: "users",
-    sections: [section("companions")],
-  },
-  {
-    // The location source (TravTrack plan S5) first — it decides what the
-    // rest of the page does — then TravTrack's own history (plan T6, shown
-    // while the account holds data or the instance shows TravTrack), the
-    // Dawarich connection, the app's trip recording and the stay scan. The
-    // stay scan is standard; only its two area switches are expert rows
-    // (forgejo#318).
-    id: "location",
-    labelKey: "settings:groups.location",
-    icon: "map-pin",
-    sections: [
-      section("locationProvider"),
-      section("travTrack", "standard", { when: "travTrackHeld" }),
-      section("dawarich"),
-      section("tripRecording"),
-      section("stayScan"),
-    ],
-  },
-  {
-    // Every domain's programmes in one place (owner, 2026-09-26).
-    id: "loyalty",
-    labelKey: "settings:groups.loyalty",
-    icon: "credit-card",
-    sections: [section("loyalty")],
-  },
-  {
-    // Who can see what: public links, the comparison's consents and the
-    // encrypted grants — three audiences, three editors, one place to find them.
-    id: "privacy",
-    labelKey: "settings:groups.privacy",
-    icon: "shield",
-    sections: [
-      section("shareLinks"),
-      section("comparisonConsent", "standard", { gate: "comparison" }),
-      section("encryptedGrants", "standard", { gate: "encryptedShare" }),
-    ],
-  },
-  {
-    id: "flight",
-    labelKey: "settings:tabs.flight",
-    icon: "plane",
-    domain: "flight",
-    sections: [
-      section("homeAirport"),
-      section("autoupdate", "standard", { expertRows: true }),
-      section("features"),
-      section("defaults"),
-      section("enrichment", "expert", { settings: 3 }),
-    ],
-  },
-  {
-    id: "cruise",
-    labelKey: "settings:tabs.cruise",
-    icon: "ship",
-    domain: "cruise",
-    sections: [section("cruisePreferences")],
-  },
-  {
-    id: "data",
-    labelKey: "settings:groups.data",
-    icon: "database",
-    sections: [section("backup", "standard", { expertRows: true }), section("import")],
-  },
-  {
-    id: "services",
-    labelKey: "settings:groups.services",
-    icon: "globe",
-    sections: [section("externalServices", "standard", { expertRows: true, foldsRows: true })],
-  },
+export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
+  section("profile"),
+  section("home"),
+  section("security"),
+  // Behind its beta key; `?section=devices` still shows it, because a pairing
+  // code has no other place to be minted while the key is closed.
+  section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
+  section("notifications"),
+  section("apitokens", "expert", { settings: 1 }),
+  section("deletion"),
+  section("display"),
+  section("units"),
+  section("domains"),
+  section("planning"),
+  section("countryCounting"),
+  // Where the map, the dashboard and the lists are set is on the map, the
+  // dashboard and the lists (rule 1 of the settings redesign).
+  section("mapAppearance"),
+  section("trips"),
+  section("suggestions"),
+  section("sharing"),
+  section("calendarFeed", "standard", { gate: "calendarFeed" }),
+  section("companions"),
+  // TravTrack's history shows while the account holds data or the instance
+  // shows TravTrack (plan T6); the stay scan is standard, only its two area
+  // switches are expert rows (forgejo#318).
+  section("locationProvider"),
+  section("travTrack", "standard", { when: "travTrackHeld" }),
+  section("dawarich"),
+  section("tripRecording"),
+  section("stayScan"),
+  section("loyalty"),
+  section("shareLinks"),
+  section("comparisonConsent", "standard", { gate: "comparison" }),
+  section("encryptedGrants", "standard", { gate: "encryptedShare" }),
+  section("homeAirport"),
+  section("autoupdate", "standard", { expertRows: true }),
+  section("features"),
+  section("defaults"),
+  section("enrichment", "expert", { settings: 3 }),
+  section("cruisePreferences"),
+  section("backup", "standard", { expertRows: true }),
+  section("import"),
+  section("externalServices", "standard", { expertRows: true, foldsRows: true }),
 ];
-
-/**
- * The menu, in the order the owner set (canvas board 1, approved 2026-11-01):
- * Konto, Darstellung, the domains, then what a trip is made of (Reisen &
- * Posteingang, Mitreisende, Treueprogramme, Standort), Ansichten, Daten,
- * Privatsphäre & Teilen, Dienste. Page ids and routes did not move.
- */
-export const SETTINGS_MENU: readonly MenuGroupDef<SettingsPageId>[] = [
-  { id: "general", labelKey: null, pages: ["account", "display"] },
-  { id: "domains", labelKey: "settings:menu.domains", pages: ["flight", "cruise"] },
-  {
-    id: "journeys",
-    labelKey: null,
-    pages: ["trips", "companions", "loyalty", "location", "views"],
-  },
-  { id: "data", labelKey: null, pages: ["data", "privacy", "services"] },
-];
-
-export const DEFAULT_PAGE: SettingsPageId = "account";
-
-export function findPage(id: string | undefined): SettingsPageDef | undefined {
-  return SETTINGS_PAGES.find((p) => p.id === id);
-}
 
 /**
  * Section ids that were renamed or folded into another section. Links carry
@@ -247,17 +122,6 @@ export const SECTION_ALIASES: Readonly<Record<string, SettingsSectionId>> = {
 };
 
 /**
- * Sections that left personal settings for Administration › Instanz: "Über
- * TravStats" (tester, 2026-10-20) and the geocoder, which configures the
- * instance and was never an account's to change — since forgejo#321 in
- * Externe Dienste › Karten & Ortssuche; the admin side resolves `geocoder`.
- */
-export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: string }>> = {
-  about: { page: "instance", section: "about" },
-  lodgingPreferences: { page: "externalServices", section: "geocoder" },
-};
-
-/**
  * Pages that no longer exist, and the section that took their content: a
  * bookmark of the page alone still lands on what it showed. "Unterkünfte"
  * held only the geocoder, which moved to Administration › Instanz.
@@ -265,11 +129,6 @@ export const MOVED_TO_ADMIN: Readonly<Record<string, { page: string; section: st
 export const REMOVED_PAGES: Readonly<Record<string, string>> = {
   lodging: "lodgingPreferences",
 };
-
-/** The section an old id now answers to, or the id itself. */
-export function canonicalSection(raw: string): string {
-  return lookup(SECTION_ALIASES, raw) ?? raw;
-}
 
 /** Where Einstellungen → Bonusprogramme lives — the target of every loyalty link. */
 export const LOYALTY_SETTINGS_PATH = "/settings/loyalty";

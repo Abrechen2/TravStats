@@ -255,8 +255,3 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
     adminOnly,
   };
 }
-
-/** Whether `/settings/<page>` is a page of the area (for the route and tests). */
-export function isAreaPage(id: string | undefined): boolean {
-  return Boolean(id && registryPage(id));
-}

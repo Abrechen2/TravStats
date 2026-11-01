@@ -23,13 +23,7 @@ const FORBIDDEN_HOST = "nominatim.openstreetmap.org";
  * forbidden geocoder hosts. Each entry must include a comment explaining
  * why the exemption is safe (i.e., why the file is not a transport violation).
  */
-const EXEMPTED_FILES = new Set([
-  // GeocoderSettingsCard.tsx: references default URLs only as input placeholder
-  // text for an admin settings form. All actual network calls (GET/PUT
-  // instance settings, test via searchPlaces) go through lib/api/geo.ts
-  // and adminApi, not direct browser fetches.
-  "components/Settings/GeocoderSettingsCard.tsx",
-]);
+const EXEMPTED_FILES = new Set<string>([]);
 
 function collectSourceFiles(dir: string): string[] {
   const files: string[] = [];

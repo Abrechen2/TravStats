@@ -9,6 +9,8 @@ import {
   listInvitationsQuerySchema,
 } from "../../schemas/invitation";
 import { sendInvitationEmail } from "../../services/emailService";
+import { smtpFailureCode } from "../../services/smtpFailure";
+import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { AppError } from "../../middleware/errorHandler";
 
@@ -111,7 +113,10 @@ router.post("/email", async (req: AuthRequest, res: Response, next: NextFunction
         data: { emailStatus: "sent", emailSentAt: new Date(), emailError: null },
       });
     } catch (err) {
-      emailError = err instanceof Error ? err.message : "Unknown send error";
+      // A stable code, never the transport's text (it names server, address and
+      // sometimes the user); the detail goes to the log.
+      emailError = smtpFailureCode(err);
+      logger.warn({ err, invitationId: invitation.id }, "Invitation email could not be sent");
       await prisma.invitation.update({
         where: { id: invitation.id },
         data: { emailStatus: "failed", emailError },
@@ -175,7 +180,10 @@ router.post("/:id/resend", async (req: AuthRequest, res: Response, next: NextFun
         data: { emailStatus: "sent", emailSentAt: new Date(), emailError: null },
       });
     } catch (err) {
-      emailError = err instanceof Error ? err.message : "Unknown send error";
+      // A stable code, never the transport's text (it names server, address and
+      // sometimes the user); the detail goes to the log.
+      emailError = smtpFailureCode(err);
+      logger.warn({ err, invitationId: invitation.id }, "Invitation email could not be sent");
       await prisma.invitation.update({
         where: { id: invitation.id },
         data: { emailStatus: "failed", emailError },

@@ -1,15 +1,13 @@
 import { normalizeSectionId } from "../../lib/sectionAliases";
-import { lookup, type MenuGroupDef, type PageDef, type SectionDef } from "../Settings/surface";
+import { lookup, type PageDef, type SectionDef } from "../Settings/surface";
 import type { SettingsLevel } from "../../store/settingsLevelStore";
 
 /**
- * Administration, as pages (forgejo#321) — the same shape as personal settings
- * (`pages/Settings/settingsModel.ts`), one route per menu entry:
- * `/admin/<page>?section=<id>`.
- *
- * Page ids are the section ids the admin page used before, so a link that
- * named `?section=logging` names the page now; a page with several sections
- * keeps its old id on the first of them.
+ * Administration's sections, and the pages of the OLD `/admin/<page>` surface.
+ * The page table is kept for one reason: every old address
+ * (`/admin/<page>?section=<id>`) must still land in the settings area, and
+ * `area/redirects.ts` reads it to find which old page held a section. The menu
+ * and the routes of that surface are gone.
  */
 export type AdminPageId =
   | "instance"
@@ -171,37 +169,6 @@ export const ADMIN_PAGES: readonly AdminPageDef[] = [
   single("lodgingChainsMasterData", "bed", "expert", { domain: "lodging" }),
 ];
 
-/**
- * The menu (owner, 2026-10-20): administration, services and operation, then
- * master data per domain — the hotel chains since forgejo#321 gave the chain
- * catalogue an admin surface (Unterkünfte › Hotelketten).
- */
-export const ADMIN_MENU: readonly MenuGroupDef<AdminPageId>[] = [
-  { id: "manage", labelKey: "admin:menu.manage", pages: ["instance", "users", "invitations"] },
-  {
-    id: "operations",
-    labelKey: "admin:menu.operations",
-    pages: ["externalServices", "parsers", "smtp", "backups", "timeModel", "logging", "system"],
-  },
-  {
-    id: "masterFlight",
-    labelKey: "admin:menu.masterFlight",
-    pages: ["airlinesMasterData", "aircraftMasterData", "airportsMasterData"],
-  },
-  {
-    id: "masterCruise",
-    labelKey: "admin:menu.masterCruise",
-    pages: ["shipsMasterData", "portsMasterData"],
-  },
-  {
-    id: "masterLodging",
-    labelKey: "admin:menu.masterLodging",
-    pages: ["lodgingChainsMasterData"],
-  },
-];
-
-export const DEFAULT_ADMIN_PAGE: AdminPageId = "instance";
-
 export function findAdminPage(id: string | undefined): AdminPageDef | undefined {
   return ADMIN_PAGES.find((p) => p.id === id);
 }
@@ -215,18 +182,6 @@ const OLD_TABS: Readonly<Record<string, AdminPageId>> = {
   general: "instance",
   flight: "airlinesMasterData",
   cruise: "shipsMasterData",
-};
-
-/**
- * Sections that became rows of another section, and how a link to the old one
- * still lands on its content: the geocoder moved from Instanz into Externe
- * Dienste › Karten & Ortssuche (forgejo#321 prototype), where its addresses
- * are expert rows of the group.
- */
-export const ADMIN_SECTION_REDIRECTS: Readonly<
-  Record<string, { section: AdminSectionId; match: string; expert: boolean }>
-> = {
-  geocoder: { section: "externalServices", match: "Photon", expert: true },
 };
 
 /** An admin section id as links write it, aliases and all, made canonical. */

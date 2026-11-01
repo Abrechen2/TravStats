@@ -1,6 +1,5 @@
 {
   "title": "Admin",
-  "sectionPicker": "Bereich",
   "description": "Verwalte deine selbst gehostete TravStats-Instanz",
   "loading": "Lade...",
   "tabs": {
@@ -16,13 +15,7 @@
     "smtp": "E-Mail / SMTP",
     "timeModel": "Zeitmodell"
   },
-  "tabs2": {
-    "general": "Allgemein",
-    "flight": "Flug",
-    "cruise": "Kreuzfahrt"
-  },
   "cruiseMasterData": {
-    "menuLabel": "Schiffe & Häfen",
     "userAdded": "Benutzerdefiniert",
     "ship": {
       "title": "Schiffe",
@@ -57,7 +50,6 @@
     }
   },
   "airlineAircraftMasterData": {
-    "menuLabel": "Airlines, Flugzeuge & Flughäfen",
     "userAdded": "Benutzerdefiniert",
     "airline": {
       "title": "Airlines",
@@ -219,8 +211,6 @@
     "testing": "Teste...",
     "testOk": "WebDAV-Verbindung erfolgreich",
     "testFailed": "WebDAV-Verbindung fehlgeschlagen",
-    "testNeedsSave": "Der Test prüft die gespeicherte Konfiguration — erst speichern, dann testen.",
-    "testNeedsEnabled": "Der Test prüft die gespeicherte Konfiguration, und dort ist WebDAV-Sync ausgeschaltet.",
     "fields": {
       "enabled": {
         "label": "WebDAV-Sync aktivieren",
@@ -235,9 +225,7 @@
       },
       "password": {
         "label": "Passwort",
-        "help": "Verschlüsselt gespeichert (AES-GCM). Bei Nextcloud ein App-Passwort verwenden.",
-        "placeholderKeep": "Bestehendes Passwort beibehalten",
-        "placeholderSet": "Passwort eingeben"
+        "help": "Verschlüsselt gespeichert (AES-GCM). Bei Nextcloud ein App-Passwort verwenden."
       },
       "backupPath": {
         "label": "Remote-Backup-Pfad",
@@ -365,15 +353,6 @@
       "emailFailed": "Mail fehlgeschlagen"
     },
     "description": "Einladungslinks für neue Benutzer. Jeder Link lässt sich genau einmal verwenden und läuft nach sieben Tagen ab."
-  },
-  "userLimitWarning": {
-    "title": "⚠️ Benutzerlimit-Warnung"
-  },
-  "demoWarning": {
-    "title": "🔓 Demo-Konto aktiv"
-  },
-  "systemInfo": {
-    "title": "Systeminformationen"
   },
   "airlineLogos": {
     "title": "Airline-Logos",
@@ -642,32 +621,15 @@
   "feedback": {
     "title": "Parser Feedback-Statistiken",
     "timePeriod": "Zeitraum:",
-    "days7": "Letzte 7 Tage",
-    "days30": "Letzte 30 Tage",
-    "days90": "Letzte 90 Tage",
     "year": "Letztes Jahr",
-    "totalEntries": "Gesamt Feedback-Einträge",
-    "avgQuality": "Durchschnittliche Qualitätsbewertung",
-    "commonIssues": "Häufige Probleme",
-    "byProvider": "Verteilung nach Parser-Provider",
-    "bySourceType": "Verteilung nach Quelltyp",
     "noData": "Keine Daten verfügbar",
     "email": "E-Mail",
     "boardingPass": "Bordkarte",
-    "ofTotal": "{{pct}}% der Gesamtmenge",
-    "mostCommonIssues": "Häufigste Probleme",
-    "noIssues": "Keine Probleme gemeldet",
-    "recentEntries": "Neueste Feedback-Einträge ({{count}})",
     "quality": "{{score}}% Qualität",
     "loading": "Lade Feedback-Statistiken...",
     "details": "Feedback-Details",
     "notFound": "Feedback nicht gefunden",
-    "provider": "Provider",
-    "qualityScore": "Qualitätsbewertung",
-    "issues": "Probleme",
-    "parsedResult": "Gepartes Ergebnis",
-    "correctedResult": "Korrigiertes Ergebnis",
-    "userCorrections": "Benutzerkorrekturen"
+    "provider": "Provider"
   },
   "masterData": {
     "showingOf": "{{shown}} von {{total}} Einträgen angezeigt — Suche verfeinern, um weitere zu sehen.",
@@ -870,12 +832,9 @@
     "enabledSub": "Ohne diese Einstellung bleibt der Vergleich auf diesen Server beschränkt.",
     "origin": "Öffentliche Adresse dieses Servers",
     "originHint": "https, ohne Port und Pfad – so, wie andere Server ihn erreichen.",
-    "generateKey": "Schlüssel erzeugen",
-    "rotateWarning": "Ein neuer Schlüssel trennt die bisherigen Verbindungen, bis die Admins der anderen Server ihn neu hinterlegt haben.",
     "tripSharing": "Reisen mit anderen Servern teilen",
     "tripSharingSub": "Leute auf vertrauten Servern können Reisen mit Konten auf diesem Server teilen. Die Fakten einer geteilten Reise gehen signiert über TLS zum Server des Mitreisenden; private Angaben nie. Wirkt nur mit einem Schlüssel und eingeschalteten Beta-Funktionen.",
     "fingerprint": "Fingerabdruck – gib ihn dem Admin des anderen Servers auf einem zweiten Weg (z. B. am Telefon):",
-    "peers": "Vertraute Server",
     "verifiedAt": "geprüft am {{date}}",
     "unverified": "noch nicht geprüft",
     "outdated": "muss aktualisiert werden",
@@ -971,7 +930,6 @@
     "title": "Vorlagen-Repository",
     "description": "Von wo die Parser-Vorlagen synchronisiert werden. Trage deine eigene Kopie des Vorlagen-Repositorys ein — einen Fork oder einen selbst gehosteten Spiegel —, um Vorlagen zu nutzen, die das offizielle nicht hat. Die Synchronisierung liest dann jede Vorlage von dieser URL; Vorlagen, die nur das alte Repository nannte, werden zurückgezogen.",
     "url": "Repository-URL (Rohdateien)",
-    "urlHint": "Das Verzeichnis der Rohdateien, in dem index.json liegt. https, oder unverschlüsseltes http nur zu einem Rechner in deinem eigenen Netz. Leer = die Einstellung des Servers oder das offizielle Repository ({{defaultUrl}}).",
     "readsFrom": {
       "admin": "Die Synchronisierung liest von {{url}} (hier eingestellt).",
       "env": "Die Synchronisierung liest von {{url}} (TEMPLATE_REPO_BASE_URL des Servers).",
@@ -1017,53 +975,10 @@
     "portsMasterData": "Häfen",
     "lodgingChainsMasterData": "Hotelketten"
   },
-  "menu": {
-    "manage": "Verwaltung",
-    "operations": "Dienste & Betrieb",
-    "masterFlight": "Stammdaten · Flug",
-    "masterCruise": "Stammdaten · Kreuzfahrt",
-    "masterLodging": "Stammdaten · Unterkünfte"
-  },
-  "search": {
-    "keywords": {
-      "instance": "Instanzname, Name, Adresse, öffentliche Adresse, URL, Heimnetz, Registrierung, Höchstzahl Konten, Beta, Beta-Funktionen, Anmeldehintergrund",
-      "shareLinks": "Öffentliche Links, Freigabe, teilen",
-      "importMode": "Import-Modus, Import",
-      "usageStats": "Nutzungsstatistik, Statistik, Telemetrie, anonym",
-      "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum, Dokumentation",
-      "federation": "Serververbindungen, Föderation, andere Instanz, Server",
-      "push": "Push, Benachrichtigungen, Relay, Push-Relay",
-      "users": "Benutzer, Konten, Konto sperren, Zwei-Faktor zurücksetzen, Passwort",
-      "invitations": "Einladung, einladen, Einladungslink, Registrierung",
-      "externalServices": "API-Schlüssel, globale Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, Routing, OpenRouteService, Bahn, Offene Daten, Betreiber-Logos, Wikidata, Wikimedia, Geocoder, Adresse, Koordinaten, Nominatim, Photon, Ortssuche, KI-Parser, Transitous, db-rest, OpenRailRouting",
-      "parsers": "Parser, KI, LLM, Ollama, OpenAI, Claude, Buchungen lesen",
-      "templateRepo": "Vorlagen, Vorlagen-Repository, Templates, Repository",
-      "smtp": "E-Mail, SMTP, Mailserver, Versand",
-      "backups": "Backup, Sicherung, Wiederherstellen, Zeitplan",
-      "webdav": "WebDAV, Abgleich, Sync, Nextcloud",
-      "timeModel": "Zeitmodell, Zeitzone, Ortszeit",
-      "logging": "Protokoll, Log, Logging, Debug, Diagnose",
-      "system": "System, Systeminformationen, Version, Export, Statistik",
-      "airlinesMasterData": "Fluggesellschaften, Airlines, Stammdaten, Logo",
-      "aircraftMasterData": "Flugzeuge, Flugzeugtypen, Stammdaten",
-      "airportsMasterData": "Flughäfen, Airports, Stammdaten, IATA",
-      "shipsMasterData": "Schiffe, Stammdaten, IMO",
-      "portsMasterData": "Häfen, Stammdaten, UN/LOCODE",
-      "lodgingChainsMasterData": "Hotelketten, Ketten, Stammdaten, Hotels, Unterkünfte, zusammenführen",
-      "travTrack": "TravTrack, Standortverlauf, Standort, Aufzeichnung, Companion",
-      "travPlan": "TravPlan, Planung, Reiseplanung, Planungsmodus, Plan"
-    },
-    "expertKeywords": {
-      "instance": "Heimnetz-Adresse, LAN, Passkey, rpId, Origins",
-      "parsers": "Ollama-URL, Modell laden, Modell, Kontingent, Wechselkurs-Quelle",
-      "externalServices": "eigene Schlüssel erlauben, Berechtigungen, Photon-Adresse, Nominatim-Adresse, OpenRailRouting-Adresse"
-    }
-  },
   "operatorLogos": {
     "title": "Offene Daten für Logos und Bilder",
     "description": "Logos von Bahnbetreibern, Busunternehmen, Reedereien und Vermietern sowie Bilder von Schiffen, Automodellen und Zuggattungen auf den Kartenkarten kommen aus Wikidata und Wikimedia Commons – nur frei lizenzierte Dateien, mit Nennung der Urheber. Der Server fragt dort nach, nie der Browser, und schickt nur den Namen des Unternehmens, des Schiffs, des Automodells oder der Zuggattung. Ausgeschaltet zeigen die Karten Monogramme und keine Bilder.",
     "switch": "Logos und Bilder aus offenen Daten laden",
-    "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
   },
@@ -1145,13 +1060,8 @@
       "personal_feeder": "Personal mit Feeder (10 $ Guthaben)",
       "custom": "Eigenes Budget"
     },
-    "customBudget": "Monatsbudget in US-Dollar",
-    "spent": "Diesen Monat ({{month}}): {{spent}} von {{budget}} verbraucht, {{calls}} Aufrufe",
-    "exhausted": "Das Budget ist erreicht. AeroAPI wird bis zum nächsten Monat nicht mehr gefragt; die übrigen Anbieter übernehmen.",
     "cost": "Angenommene Kosten je Aufruf: Flugstatus {{flights}}, Flugspur {{track}} (ungeprüft).",
     "rateLimit": "Höchstens 10 Ergebnissätze pro Minute; darüber wartet TravStats oder weicht auf andere Anbieter aus.",
-    "tracksTitle": "Echte Flugspuren abrufen",
-    "tracksSub": "Holt nach der Landung einmal die von FlightAware aufgezeichnete Spur und speichert sie, wenn der Flug keine eigene Aufzeichnung hat. Jeder Abruf kostet Budget. Aus, bis du es einschaltest.",
     "sweep": {
       "label": "Letzter Lauf ({{at}})",
       "status": {
@@ -1170,8 +1080,7 @@
     "saving": "Speichere …",
     "saved": "Gespeichert.",
     "loadFailed": "Die AeroAPI-Einstellungen konnten nicht geladen werden.",
-    "saveFailed": "Die AeroAPI-Einstellungen konnten nicht gespeichert werden.",
-    "budgetRequired": "Für ein eigenes Budget ist ein Betrag über 0 nötig."
+    "saveFailed": "Die AeroAPI-Einstellungen konnten nicht gespeichert werden."
   },
   "catalogues": {
     "running": "Läuft …",
@@ -1196,34 +1105,6 @@
     },
     "errors": {
       "failed": "Das Einlesen ist fehlgeschlagen."
-    }
-  },
-  "dawarichGlobal": {
-    "title": "Dawarich (instanzweit)",
-    "subtitle": "Eine Dawarich-Verbindung für alle Konten. Wer eine eigene hinterlegt, überschreibt sie.",
-    "baseUrl": "Basis-URL",
-    "apiKey": "API-Schlüssel",
-    "apiKeyHint": "Der gespeicherte Schlüssel wird nur maskiert angezeigt. Lässt du ihn unverändert, bleibt er erhalten.",
-    "test": "Verbindung testen",
-    "testing": "Teste …",
-    "save": "Speichern",
-    "saving": "Speichere …",
-    "saved": "Instanzweite Dawarich-Verbindung gespeichert.",
-    "cleared": "Instanzweite Dawarich-Verbindung entfernt.",
-    "saveFailed": "Speichern fehlgeschlagen.",
-    "loadFailed": "Die Dawarich-Einstellungen konnten nicht geladen werden. Bearbeiten ist erst möglich, wenn sie geladen sind.",
-    "retry": "Erneut versuchen",
-    "connected": "Verbunden · v{{version}}",
-    "sweep": {
-      "title": "Länder-Tage jetzt auswerten",
-      "description": "Liest für alle Konten mit Dawarich die Länder-Tage neu ein, statt bis 04:40 UTC zu warten. Kann mehrere Minuten dauern.",
-      "action": "Jetzt auswerten",
-      "running_": "Läuft … (kann dauern)",
-      "done": "Fertig: {{users}} Konten, {{days}} Tage geschrieben.",
-      "doneWithFailures": "Fertig, aber bei {{failed}} von {{users}} Konten ging es schief oder Dawarich war nicht erreichbar ({{days}} Tage geschrieben). Details im Server-Log.",
-      "failed": "Die Auswertung ist fehlgeschlagen.",
-      "lost": "Stand unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten.",
-      "running": "Es läuft bereits eine Auswertung."
     }
   }
 }

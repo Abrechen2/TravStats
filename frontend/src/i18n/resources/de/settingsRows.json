@@ -1227,13 +1227,15 @@
     "loadFailed": "Ich konnte die Einstellungen der Sicherung nicht laden.",
     "deps": {
       "autoOff": "Wirkt erst mit „Automatisch sichern“.",
-      "webdavOff": "Wirkt erst mit WebDAV-Kopie."
+      "webdavOff": "Wirkt erst mit WebDAV-Kopie.",
+      "webdavUnknown": "Wirkt nur mit WebDAV-Kopie. Ich kann ihren Stand gerade nicht lesen."
     },
     "errors": {
       "range": "Ich nehme Werte von {{min}} bis {{max}}.",
       "download": "Ich konnte die Sicherung nicht herunterladen.",
       "delete": "Ich konnte die Sicherung nicht löschen.",
-      "list": "Ich konnte die Sicherungen nicht laden."
+      "list": "Ich konnte die Sicherungen nicht laden.",
+      "webdavStatus": "Ich kann nicht lesen, ob die WebDAV-Kopie an ist. Darum fehlen Hochladen und die Liste der Cloud-Sicherungen."
     },
     "zoneHost": "Zeitzone des Servers ({{zone}})",
     "zoneEffective": "Der Server sichert gerade nach {{zone}}.",
@@ -1269,7 +1271,8 @@
       "busy": "Gerade läuft eine Sicherung oder ein Zurückspielen. Versuch es danach noch einmal.",
       "rateLimited": "Ich spiele nur wenige Sicherungen pro Stunde zurück. Versuch es später noch einmal.",
       "failed": "Ich konnte die Sicherung nicht zurückspielen."
-    }
+    },
+    "retry": "Erneut versuchen"
   },
   "maintenance": {
     "debug": {

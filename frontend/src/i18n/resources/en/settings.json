@@ -2,8 +2,6 @@
   "title": "Settings",
   "subtitle": "Profile, preferences and security in one place.",
   "demoLocked": "Locked in the demo account — every visitor shares it.",
-  "roadmap": "Roadmap · Point 9",
-  "backToDashboard": "← Back to Dashboard",
   "tabs": {
     "general": "General",
     "flight": "Flight",
@@ -26,23 +24,13 @@
     "title": "Lodging preferences",
     "description": "Base currency for lodging stats and spend totals.",
     "baseCurrency": "Base currency",
-    "baseCurrencyHint": "Every stay is converted into this currency at the ECB rate for its check-in day. Already-saved stays keep their original conversion rate — a change only affects future calculations.",
     "geocoder": {
       "title": "Geocoder",
       "description": "Admins only: configure this instance's address search and coordinate resolution.",
-      "photonUrlLabel": "Photon URL (address search)",
-      "photonUrlHint": "Used for live search-as-you-type (e.g. the lodging or trip location picker). Leave empty to use the public default, photon.komoot.io.",
-      "nominatimUrlLabel": "Nominatim URL (coordinate resolution)",
-      "nominatimUrlHint": "Used for one-shot geocoding requests. Leave empty to use the public default, nominatim.openstreetmap.org.",
-      "saveSuccess": "Geocoder settings saved.",
       "saveError": "Failed to save the geocoder settings.",
       "loadError": "Failed to load the geocoder settings.",
       "retry": "Retry",
-      "testButton": "Test connection",
-      "testing": "Testing connection …",
-      "testSuccess": "Connection successful — {{count}} hits for \"Berlin\".",
-      "testEmpty": "Connection successful, but no hits for \"Berlin\".",
-      "testError": "Connection failed. Please check the URL and reachability."
+      "testing": "Testing connection …"
     }
   },
   "memberships": {
@@ -202,7 +190,6 @@
     "description": "Define the standard units for statistics.",
     "distance": "Distance",
     "currency": "Currency",
-    "temperature": "Temperature",
     "options": {
       "kilometers": "Kilometers",
       "miles": "Miles",
@@ -214,11 +201,7 @@
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
     },
-    "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were.",
-    "distanceSub": "For distances and statistics",
-    "currencySub": "For spending totals; exchange rates from the ECB",
     "weight": "Weight",
-    "weightSub": "For a baggage allowance entered without a unit; nothing is converted",
     "weightOptions": {
       "kg": "Kilograms",
       "lb": "Pounds"
@@ -250,10 +233,6 @@
   },
   "notifications": {
     "title": "Notifications",
-    "emailNotifications": "Enable email notifications",
-    "flightReminder": "Flight Reminder",
-    "checkInReminder": "Check-in Reminder",
-    "featureUpdates": "New Feature Updates",
     "options": {
       "off": "Off",
       "24h": "24h before",
@@ -262,21 +241,7 @@
     "email": "Notification email",
     "save": "Save",
     "saved": "Saved!",
-    "smtpTitle": "SMTP Configuration",
-    "smtpHost": "Host",
-    "smtpPort": "Port",
-    "smtpSecure": "Secure (TLS)",
-    "smtpUsername": "Username",
-    "smtpPassword": "Password",
-    "smtpFromEmail": "From email",
-    "smtpFromName": "From name",
-    "smtpEnabled": "Enable email notifications",
-    "testConnection": "Test connection",
-    "testSuccess": "Connection successful!",
     "testFailed": "Connection failed: {{error}}",
-    "smtpDelete": "Delete credentials",
-    "smtpDeleted": "SMTP credentials deleted",
-    "smtpDeleteFailed": "Could not delete the credentials",
     "smtpDeleteConfirm": {
       "title": "Delete the SMTP credentials?",
       "message": "Host, username and password are removed from this instance. TravStats will then send no e-mail at all — no reminders, no invitations, no password resets. You can enter them again at any time.",
@@ -284,9 +249,7 @@
     },
     "loadError": "Notification settings could not be loaded",
     "smtpHelp": {
-      "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
-      "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
-      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
+      "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays."
     },
     "saveFailed": "Notification preferences could not be saved",
     "carriedOver": "Your existing choices were carried over.",
@@ -337,9 +300,7 @@
         "name": "Lodging",
         "what": "Check-in, address, nights"
       }
-    },
-    "smtpSaveFailed": "The SMTP settings could not be saved. Check host, port and credentials and try again.",
-    "unknownError": "Unknown error"
+    }
   },
   "privacy": {
     "comparisonConsent": {
@@ -361,12 +322,9 @@
   },
   "backup": {
     "title": "My data & sync",
-    "autoBackup": "Enable automatic backups",
     "backupInterval": "Backup Interval",
-    "exportFormat": "Export Format",
     "cloudSync": "Enable cloud sync",
     "retentionDays": "Retention Period (Days)",
-    "retentionDaysDescription": "Backups older than {{days}} days will be automatically deleted",
     "intervals": {
       "daily": "Daily",
       "weekly": "Weekly",
@@ -412,18 +370,7 @@
   "training": {
     "title": "Training Settings",
     "description": "Configure the use of trained LLM models for better parsing accuracy",
-    "useTrainedModels": "Use Trained Models",
-    "useTrainedModelsDescription": "Automatically use trained models when available",
-    "preferredEmailModel": "Email Model Preference",
-    "preferredEmailModelDescription": "Determines which model is used for email parsing",
-    "preferredVisionModel": "Vision Model Preference",
-    "preferredVisionModelDescription": "Determines which model is used for boarding pass parsing",
-    "trainingSeparateModels": "Separate Models for Email/Vision",
-    "trainingSeparateModelsDescription": "Uses separate models for better specialization (recommended)",
-    "saveSettings": "Save Settings",
-    "savingSettings": "Saving...",
     "updated": "Training settings updated successfully",
-    "updateFailed": "Error updating training settings",
     "modelOptions": {
       "auto": "Auto (trained if available, else base)",
       "trained": "Trained model only",
@@ -433,19 +380,11 @@
   "developer": {
     "title": "Developer Options",
     "description": "Advanced features for parser development and debugging",
-    "modeTitle": "Parser Developer Mode",
-    "modeDescription": "Enables access to the parser page with template management and parse logs",
     "confirmTitle": "Activate Developer Mode?",
     "confirmMessage": "This unlocks advanced parser features that require technical understanding.",
     "updateError": "Error updating Developer Mode",
     "risks": {
-      "title": "Notes:",
-      "items": {
-        "resourceUsage": "LLM parsing (Ollama) requires a configured Ollama server",
-        "technicalKnowledge": "Requires technical understanding",
-        "unexpectedResults": "A template you derive yourself is only as good as the sample mail it came from",
-        "longTraining": "Custom templates require knowledge of the airline's email format"
-      }
+      "title": "Notes:"
     },
     "cancel": "Cancel",
     "activate": "Activate"
@@ -453,14 +392,9 @@
   "features": {
     "title": "What is recorded",
     "costTracking": "Cost Tracking",
-    "costTrackingDesc": "Show tax and fee fields on flight forms and enable business cost statistics. Price and currency are always available.",
     "trackAircraft": "Track tail numbers",
-    "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
     "description": "Show or hide features to fit the interface to how you work. A feature you switch off can be switched back on at any time — no data is lost.",
-    "liveTracking": "Live tracking",
-    "liveTrackingDesc": "The TravStats app records your position during the flight and sends the flight path here. Off: the server no longer accepts a recording; stored flight paths stay.",
-    "seatStatistics": "Seat statistics",
-    "seatStatisticsDesc": "The seats section of the flight statistics. Off hides it; your seats stay stored."
+    "liveTracking": "Live tracking"
   },
   "autoSave": {
     "idle": "Changes are saved automatically",
@@ -470,18 +404,13 @@
     "failed": "Saving failed",
     "retry": "Try again"
   },
-  "scrollToTop": "Scroll to top",
-  "sectionPicker": "Section",
   "parser": {
     "title": "Parser Configuration",
     "description": "Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.",
-    "saveSettings": "Save Settings",
     "saved": "Parser settings saved successfully!",
     "saveFailed": "Failed to save settings",
     "available": "Available",
     "unavailable": "Unavailable",
-    "preferred": "Preferred Parser",
-    "providerStatus": "Provider Status:",
     "vision": {
       "title": "Vision Parser (Boarding Pass)",
       "description": "Parse uploaded boarding pass images"
@@ -548,17 +477,10 @@
   "apiKeys": {
     "title": "API Keys",
     "description": "Optional keys for live flight data and extra airport information. If an administrator has stored one, it is used automatically; your own takes precedence. Keys are stored encrypted and never shown again.",
-    "parserApis": "Parser APIs",
-    "flightApis": "Flight Lookup APIs",
     "shared": "Shared",
-    "sharedTooltip": "Shared by administrator - automatically used",
     "own": "Own Key",
-    "ownTooltip": "Own API key entered - takes precedence over shared keys",
     "notConfigured": "Not Configured",
-    "notConfiguredTooltip": "No API key configured - using shared key or ENV variable if available",
     "getKey": "Get API Key",
-    "enterKey": "Enter API key",
-    "sharedPlaceholder": "Shared by administrator",
     "show": "Show",
     "hide": "Hide",
     "clear": "Clear",
@@ -579,7 +501,6 @@
       "remainingOnly": "{{remaining}} lookups left (as of the last lookup).",
       "requestsLine": "Plus {{remaining}} of {{limit}} requests at the broker, RapidAPI."
     },
-    "sharedNote": "This key is shared by the administrator and cannot be edited",
     "save": "Save API Keys",
     "saving": "Saving...",
     "saved": "API keys saved successfully",
@@ -647,19 +568,14 @@
   "routing": {
     "title": "Routing provider",
     "description": "Determines which provider routes a leg or a bus ride along the road. Without a provider, every leg and every bus ride stays a straight line. A selected provider receives the start and end coordinates to compute the route — they leave this instance to do so.",
-    "providerLabel": "Provider",
     "provider": {
       "none": "No provider",
       "openrouteservice": "OpenRouteService",
       "graphhopper": "GraphHopper",
       "custom": "Self-hosted OSRM server"
     },
-    "noneHint": "Without a provider, \"Routed\" stays disabled in the tours view — every leg and every bus ride stays a straight line until one is set up here.",
-    "customUrlLabel": "Base URL",
-    "customUrlHint": "Address of a self-hosted OSRM server, e.g. https://osrm.example.com.",
     "loadError": "Routing settings could not be loaded",
     "retry": "Retry",
-    "saveSuccess": "Routing settings saved",
     "saveError": "Routing settings could not be saved",
     "openrouteservice": {
       "label": "OpenRouteService API key",
@@ -679,14 +595,12 @@
     "openrouteservice": {
       "label": "Your own OpenRouteService key",
       "description": "Your account only. Free: 2000 routing requests/day.",
-      "remove": "Remove your own OpenRouteService key",
-      "removePending": "Your OpenRouteService key is removed when you save."
+      "remove": "Remove your own OpenRouteService key"
     },
     "graphhopper": {
       "label": "Your own GraphHopper key",
       "description": "Your account only. Free: 500 routing requests/day.",
-      "remove": "Remove your own GraphHopper key",
-      "removePending": "Your GraphHopper key is removed when you save."
+      "remove": "Remove your own GraphHopper key"
     }
   },
   "import": {
@@ -1093,56 +1007,11 @@
     "views": "Views",
     "privacy": "Privacy & sharing"
   },
-  "deepLink": {
-    "adminOnlySection": "The section named in the address is reserved for whoever administers this instance, so it is not shown to you. The rest of the settings on this page are yours."
-  },
   "search": {
     "label": "Search settings",
     "placeholder": "Search settings …",
     "results": "Results",
     "noResults": "Nothing found.",
-    "keywords": {
-      "profile": "Username, name, email, profile picture, avatar, account",
-      "security": "Password, passkey, two-factor, 2FA, TOTP, authenticator, sign-in, login",
-      "apitokens": "Token, API token, access key, interface, automation, script",
-      "devices": "Phone, smartphone, app, companion, pair, pairing code, QR code, device",
-      "display": "Language, German, English, design, dark, light, theme, appearance",
-      "units": "Kilometres, kilometers, miles, unit, currency, base currency, date format, time, 24 hours, time zone",
-      "countryCounting": "Countries, count a country, layover, transit, country counting",
-      "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips, trip colour, colour",
-      "loyalty": "Loyalty programme, membership, membership number, status, tier, hotel programme, frequent flyer, miles, cruise line, points, rewards",
-      "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
-      "import": "Import, CSV, Flightradar24, logbook, upload, remember rail import, skip U-Bahn, tram, bus, bahn.de, remember default",
-      "notifications": "Notification, email, SMTP, mail server, reminder",
-      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava, AI parser, rail, Transitous, db-rest, OpenRailRouting, maps, place search, Photon, Nominatim",
-      "homeAirport": "home, residence, home airport, airport, move",
-      "defaults": "Default, preset, booking class, seat, airline, carrier",
-      "features": "Features, parser, boarding pass, email parser, boarding pass scan, live tracking, position, flight path, seat statistics, seats, window seat, aisle seat",
-      "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
-      "autoupdate": "Automatic updates, flight status, refresh, gate, departure time, approval, only during flight",
-      "cruisePreferences": "Cruise, cruise line, ship, cabin, sea days, travel days",
-      "domains": "Domains, modules, flights, cruises, lodging, places, roadtrips, rail, bus, ferry, rental car, plan, plan trips, TravPlan, switch on and off, colour, colours, map colour, line colour",
-      "suggestions": "Suggestions, inbox, trip suggestions, suggest stays, Immich evidence, photos as evidence, place type, AI classification",
-      "sharing": "Sharing, companions, consent, shared trip, travel companion",
-      "shareLinks": "Public link, share, link",
-      "calendarFeed": "Calendar, iCal, ICS, subscription, calendar feed",
-      "dawarich": "Dawarich, location history, location source, positions, connection",
-      "locationProvider": "Location source, location, positions, TravTrack, Dawarich, none, switch source, recording",
-      "tripRecording": "Recording, positions, app, track, record trip",
-      "stayScan": "Stays, detect stays, radius, minimum duration, detect places automatically, detect places, places as areas, venues, re-evaluate, markets, market grounds, shopping malls, parks, zoos, theme parks, museums",
-      "companions": "Companions, travel companions, people, rename, merge, duplicate, delete, names",
-      "travTrack": "TravTrack, location history, history, positions, privacy zones, zone, delete span, export, GPX",
-      "mapAppearance": "map, map appearance, colours, route colour, palette, lines, layers, labels, map mode, flight colour, cruise colour, hide routes, show routes, hide lines, airports only, ports only, markers only, without flight routes, flight routes, cruise routes, rail lines",
-      "dashboardAppearance": "dashboard, areas, map mode, view, start page",
-      "listAppearance": "list, lists, columns, sorting, page size, rows",
-      "comparisonConsent": "comparison, friends, leaderboard, consent, totals, ranking",
-      "encryptedGrants": "encrypted grant, end-to-end, device, transfer, recipient, categories"
-    },
-    "expertKeywords": {
-      "autoupdate": "Check interval, interval, expiry",
-      "backup": "Instance backup, last backup, WebDAV, Nextcloud, sync",
-      "externalServices": "own key, own API key, API key, quota, AirLabs key, Aviationstack key, AeroDataBox key, AeroAPI key, OpenSky credentials, GraphHopper key, OpenRouteService key"
-    },
     "count_one": "{{count}} result",
     "count_other": "{{count}} results",
     "countMore": "{{shown}} of {{count}} results · keep typing",
@@ -1153,9 +1022,6 @@
     "title": "Train lookup",
     "description": "Which timetable services the rail logbook's train lookup may ask. Every lookup sends the train number, station and day to the service — they leave this instance. Both services are free and run by volunteers for non-commercial use.",
     "transitous": "Transitous",
-    "transitousHint": "Europe-wide, and traces the line too. Set RAIL_LOOKUP_CONTACT so the service can reach you as the operator.",
-    "dbRest": "db-rest",
-    "dbRestHint": "Germany only, unofficial, about 100 requests a minute for all its users together.",
     "loadError": "The setting could not be loaded.",
     "saveError": "The setting could not be saved."
   },
@@ -1167,10 +1033,8 @@
     "switchedOff": "Saved. The rail router is off.",
     "saveError": "The address could not be saved.",
     "invalidUrl": "That is not a valid address: http(s), no credentials, no ? part.",
-    "testButton": "Test connection",
     "test": {
       "ok": "Connected. Profile {{profile}}, map data of {{date}}.",
-      "dateUnknown": "unknown",
       "notConfigured": "No address has been entered.",
       "unreachable": "No service answers at this address.",
       "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",
@@ -1180,7 +1044,6 @@
         "both": "Profiles \"tram\" and \"subway\" present: tram and U-Bahn rides are routed over their own track network only.",
         "missing": "No dedicated profile for {{modes}}. Such rides are then routed only if this instance accepts requests with their own model (ch.disable) – otherwise they stay a straight line, never on the railway network. The \"rail-routing\" guide explains how to add the profiles.",
         "tram": "tram (\"tram\")",
-        "subway": "U-Bahn (\"subway\")",
         "and": " and "
       }
     },
@@ -1235,7 +1098,6 @@
     "color": "Colour"
   },
   "level": {
-    "defaultsNote": "Existing accounts start on the Expert level, new accounts on Standard.",
     "label": "View",
     "standard": "Standard",
     "expert": "Expert",
@@ -1267,13 +1129,11 @@
       "none": "Not set up",
       "setUp": "Set up"
     },
-    "ownOverrides": "Your own key is used instead of the instance's.",
     "groups": {
       "cross": "All domains",
       "routing": "Road routing",
       "maps": "Maps & place search"
     },
-    "dawarichPointer": "Set up under Location history →",
     "what": {
       "immich": "Photos for trips and places",
       "dawarich": "Location history, countries and stays",
@@ -1290,38 +1150,23 @@
       "graphhopper": "Road routes instead of straight lines",
       "logostream": "High-resolution airline logos",
       "googlePlaces": "Place search and place details",
-      "operatorLogos": "Logos for rail, bus, ferry and rental operators",
-      "llmParser": "Read bookings from emails and PDFs, with OpenAI, Claude or your own Ollama",
       "transitous": "Find trains by number and station",
-      "dbRest": "Look up Deutsche Bahn trains",
-      "openRailRouting": "Rail lines instead of straight lines (self-hosted)",
       "photon": "Place search while typing",
       "nominatim": "Turn addresses into coordinates"
     },
     "count_one": "1 service",
     "count_other": "{{count}} services",
-    "summaryAdmin": "{{shared}} set up",
     "legend": {
       "admin": "runs for every account, nothing for you to do",
       "own": "your own key is used instead of the instance's",
-      "adminSurface": "applies to every account on this instance",
       "none": "no account can use the service"
     },
     "action": {
-      "useOwn": "Use my own key",
       "edit": "Edit",
       "setUp": "Set up"
-    },
-    "names": {
-      "llmParser": "AI parser"
-    },
-    "adminPointer": "Set up in Administration →",
-    "instanceOnly": "Provided by the instance for everyone; only the admin can set it up.",
-    "parserPointer": "Set up under Import & parser →",
-    "instanceStatusFailed": "Whether the instance runs these services could not be checked just now."
+    }
   },
   "frame": {
-    "surfaces": "Settings areas",
     "breadcrumb": "Breadcrumb",
     "surface": {
       "settings": "Settings",
@@ -1337,20 +1182,14 @@
     "setup": "Set up",
     "hide": "Hide",
     "url": "WebDAV address",
-    "urlHint": "Public https addresses only. Storage on the home network is allowed for administrators only.",
-    "urlHintAdmin": "As an administrator you may also name storage on the home network; over the internet only with https.",
     "username": "User name",
     "password": "Password",
-    "passwordStored": "A password is stored. It is never shown.",
-    "passwordKeepPlaceholder": "Leave empty to keep the stored one",
-    "clearPassword": "Remove password",
     "remotePath": "Folder on the storage",
     "schedule": "Schedule",
     "schedules": {
       "daily": "Daily",
       "weekly": "Weekly"
     },
-    "keepVersions": "Versions to keep",
     "save": "Save",
     "saving": "Saving …",
     "runNow": "Sync now",
@@ -1405,9 +1244,6 @@
   },
   "travTrack": {
     "title": "TravTrack"
-  },
-  "contextLinks": {
-    "open": "Open"
   },
   "views": {
     "title": "Map, home & lists",

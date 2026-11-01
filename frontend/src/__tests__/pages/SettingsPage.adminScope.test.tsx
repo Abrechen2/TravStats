@@ -141,21 +141,12 @@ vi.mock("../../components/ExternalServices/LegacyServiceSummary", () => ({
 vi.mock("../../components/Settings/StravaConnectionCard", () => ({
   default: () => <div data-testid="strava-connection-card" />,
 }));
-vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
-  default: () => <div data-testid="immich-connection-card" />,
-}));
 vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="photo-journey-nightly-scan-card" />,
 }));
 // Public share links (forgejo#281) load their list on mount — not the subject here.
 vi.mock("../../components/Settings/ShareLinksSection", () => ({
   default: () => <div data-testid="share-links-section" />,
-}));
-vi.mock("../../components/Settings/RoutingProviderSection", () => ({
-  default: () => <div data-testid="routing-provider-section" />,
-}));
-vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
-  default: () => <div data-testid="personal-routing-keys" />,
 }));
 vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
@@ -235,10 +226,6 @@ vi.mock("../../components/NavigationBar", () => ({
 }));
 // The two lodging sections each load their own data on mount. These cases are
 // about which sections the PAGE decides to draw, not about what the cards show.
-vi.mock("../../components/Settings/GeocoderSettingsCard", () => ({
-  default: ({ isAdmin: cardIsAdmin }: { isAdmin: boolean }) =>
-    cardIsAdmin ? <div data-testid="geocoder-card" /> : null,
-}));
 vi.mock("../../components/Settings/LoyaltySection", () => ({
   default: () => <div data-testid="loyalty-section-stub" />,
 }));

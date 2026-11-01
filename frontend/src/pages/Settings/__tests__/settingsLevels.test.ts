@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { SETTINGS_PAGES, findPage } from "../settingsModel";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "../settingsModel";
+import { AREA_PAGES } from "../area/areaModel";
 import { ADMIN_PAGES, findAdminPage } from "../../Admin/adminSections";
 import { pageLevel, sectionsOf, type PageDef } from "../surface";
 
@@ -35,17 +36,51 @@ const EXPERT_SECTIONS = {
 const expertOf = (pages: readonly PageDef[]): string[] =>
   pages.flatMap((p) => p.sections.filter((s) => s.level === "expert").map((s) => s.id));
 
+/** Sections as a page draws them: the area's pages regroup the same definitions. */
+const personal = (...ids: SettingsSectionId[]): PageDef => ({
+  id: "test",
+  labelKey: "",
+  icon: "user",
+  sections: ids.map((id) => SETTINGS_SECTIONS.find((s) => s.id === id)!),
+});
+const PAGES = {
+  account: personal(
+    "profile",
+    "home",
+    "security",
+    "devices",
+    "notifications",
+    "apitokens",
+    "deletion"
+  ),
+  display: personal("display", "units", "domains", "planning", "countryCounting"),
+  trips: personal("trips", "suggestions", "sharing", "calendarFeed"),
+  views: personal("mapAppearance"),
+  privacy: personal("shareLinks", "comparisonConsent", "encryptedGrants"),
+  location: personal("locationProvider", "travTrack", "dawarich", "tripRecording", "stayScan"),
+  loyalty: personal("loyalty"),
+  flight: personal("homeAirport", "autoupdate", "features", "defaults", "enrichment"),
+  cruise: personal("cruisePreferences"),
+  data: personal("backup", "import"),
+  services: personal("externalServices"),
+} as const;
+const findPage = (id: string): PageDef => PAGES[id as keyof typeof PAGES];
+
 const shownAt = (page: PageDef, level: "standard" | "expert", deepLinked: string | null = null) =>
   sectionsOf(page, { level, isGateOpen: () => true, isAdmin: true, deepLinked });
 
 describe("the standard/expert classification", () => {
   it("marks exactly the decided sections as expert", () => {
-    expect(expertOf(SETTINGS_PAGES).sort()).toEqual([...EXPERT_SECTIONS.settings].sort());
+    expect(expertOf([personal(...SETTINGS_SECTIONS.map((s) => s.id))]).sort()).toEqual(
+      [...EXPERT_SECTIONS.settings].sort()
+    );
     expect(expertOf(ADMIN_PAGES).sort()).toEqual([...EXPERT_SECTIONS.admin].sort());
   });
 
-  it("leaves every personal page something at the standard level", () => {
-    for (const page of SETTINGS_PAGES) expect(pageLevel(page), page.id).toBe("standard");
+  it("leaves every page of the account something at the standard level", () => {
+    for (const page of AREA_PAGES.filter((p) => !p.adminOnly)) {
+      expect(pageLevel(page), page.id).toBe("standard");
+    }
   });
 
   it("makes the operations and master-data pages expert as a whole", () => {

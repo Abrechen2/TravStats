@@ -7,9 +7,9 @@ import {
   type RailImportBus,
   type RailImportLocalTransit,
 } from "../../store/suggestionSwitchesStore";
-import { ChoiceControl, SettingItem } from "../ui/settings";
+import { ChoiceControl, SettingItem, useSettingWrite } from "../ui/settings";
 import { SettingRows } from "../ui/SettingRow";
-import { useDocWrite } from "./useDocWrite";
+import { saveSwitch } from "../../store/confirmedSettings";
 import { useRowCopy } from "./rowCopy";
 
 /**
@@ -29,27 +29,13 @@ export function RailImportMemoryRows(): JSX.Element {
   const bus = useSuggestionSwitchesStore((s) => s.railImportBus);
   const key = "settings:import.railMemory";
 
-  const confirmed = (group: "localTransit" | "bus"): void =>
-    useSuggestionSwitchesStore.setState((s) => ({
-      railImportSaves: { ...s.railImportSaves, [group]: s.railImportSaves[group] + 1 },
-    }));
-  const local = useDocWrite<RailImportLocalTransit>(
+  const local = useSettingWrite<RailImportLocalTransit>(
     "data.railImport.localTransit",
     localTransit,
-    (value) => ({ railImport: { localTransit: value } }),
-    (value) => {
-      useSuggestionSwitchesStore.setState({ railImportLocalTransit: value });
-      confirmed("localTransit");
-    }
+    (v, o) => saveSwitch("railImportLocalTransit", v, o)
   );
-  const buses = useDocWrite<RailImportBus>(
-    "data.railImport.bus",
-    bus,
-    (value) => ({ railImport: { bus: value } }),
-    (value) => {
-      useSuggestionSwitchesStore.setState({ railImportBus: value });
-      confirmed("bus");
-    }
+  const buses = useSettingWrite<RailImportBus>("data.railImport.bus", bus, (v, o) =>
+    saveSwitch("railImportBus", v, o)
   );
   const ubahn = row("ubahn");
   const busleg = row("busleg");

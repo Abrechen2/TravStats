@@ -2,12 +2,12 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
-import { ChoiceControl, SettingItem, SwitchControl } from "../ui/settings";
+import { ChoiceControl, SettingItem, SwitchControl, useSettingWrite } from "../ui/settings";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { TRIP_COLORS } from "../../lib/tripColors";
-import { useDocWrite } from "./useDocWrite";
+import { saveAutoCreateTrips, saveSwitch } from "../../store/confirmedSettings";
 import { useRowCopy } from "./rowCopy";
 
 /** A select value cannot be null; this stands for "automatic". */
@@ -30,20 +30,13 @@ export default function TripsSection(): JSX.Element {
   const savedAuto = useSettingsStore((s) => s.autoCreateTrips);
   const savedColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
 
-  const auto = useDocWrite<boolean>(
-    "trips.autoCreateTrips",
-    savedAuto,
-    (autoCreateTrips) => ({ autoCreateTrips }),
-    (autoCreateTrips) => useSettingsStore.setState({ autoCreateTrips })
+  const auto = useSettingWrite<boolean>("trips.autoCreateTrips", savedAuto, (on, o) =>
+    saveAutoCreateTrips(on, o)
   );
   // The server's preference (forgejo#321): every new trip that names no colour
   // — an import, a suggestion, the "new trip" form — starts with it.
-  const color = useDocWrite<string>(
-    "trips.defaultColor",
-    savedColor ?? AUTOMATIC,
-    (value) => ({ tripDefaults: { color: value === AUTOMATIC ? null : value } }),
-    (value) =>
-      useSuggestionSwitchesStore.setState({ tripDefaultColor: value === AUTOMATIC ? null : value })
+  const color = useSettingWrite<string>("trips.defaultColor", savedColor ?? AUTOMATIC, (v, o) =>
+    saveSwitch("tripDefaultColor", v === AUTOMATIC ? null : v, o)
   );
   const locked = isDemo
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }

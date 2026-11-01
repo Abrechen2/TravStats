@@ -3,6 +3,13 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { copyToClipboard } from "../../lib/clipboard";
 
+const KNOWN = ["SMTP_CONNECTION", "SMTP_TLS", "SMTP_AUTH", "SMTP_TIMEOUT", "SMTP_UNKNOWN"];
+
+/** The stable code of a failed mail; older invitations stored the transport's text, which is no code. */
+export function inviteMailCode(emailError: string): string {
+  return KNOWN.includes(emailError) ? emailError : "SMTP_UNKNOWN";
+}
+
 interface InviteSuccessModalProps {
   inviteUrl: string;
   emailSent: boolean | undefined;
@@ -18,7 +25,7 @@ export default function InviteSuccessModal({
   recipientEmail,
   onClose,
 }: InviteSuccessModalProps): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t } = useTranslation(["admin", "common", "settingsRows"]);
   const addToast = useToastStore((state) => state.addToast);
 
   const copyLink = async (): Promise<void> => {
@@ -62,7 +69,11 @@ export default function InviteSuccessModal({
             <p>
               <strong>{t("admin:invitations.success.emailFailed")}</strong>
             </p>
-            {emailError && <p className="mt-1 font-mono text-xs">{emailError}</p>}
+            {emailError && (
+              <p className="mt-1 text-xs">
+                {t(`settingsRows:services.smtp.${inviteMailCode(emailError)}`)}
+              </p>
+            )}
             <p className="mt-2 text-xs">{t("admin:invitations.success.linkStillValid")}</p>
           </div>
         )}

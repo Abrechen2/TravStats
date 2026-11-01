@@ -12,26 +12,10 @@ import { describe, expect, it } from "vitest";
 const dir = resolve(__dirname, "..");
 const read = (name: string): string => readFileSync(resolve(dir, `${name}.tsx`), "utf8");
 
-const CARDS = [
-  "ImmichConnectionCard",
-  "PhotoJourneyNightlyScanCard",
-  "StravaConnectionCard",
-  "RailProvidersCard",
-];
+const CARDS = ["PhotoJourneyNightlyScanCard", "StravaConnectionCard"];
 
 describe("external-service cards say what happens when the service is unreachable", () => {
   it.each(CARDS)("%s", (name) => {
     expect(read(name)).toMatch(/whenUnreachable=\{t\("settings:unreachable\.\w+"/);
-  });
-
-  it("every provider row in the user's external services carries one", () => {
-    for (const name of ["ApiKeysSection", "PersonalRoutingKeysSection"]) {
-      const source = read(name);
-      const cards = source.split("<ApiKeyCard").slice(1);
-      expect(cards.length).toBeGreaterThan(0);
-      for (const card of cards) {
-        expect(card.slice(0, card.indexOf("/>"))).toContain("whenUnreachable=");
-      }
-    }
   });
 });

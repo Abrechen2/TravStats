@@ -2,10 +2,9 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
-import { SettingItem, SwitchControl, useGuardedNavigate } from "../ui/settings";
+import { SettingItem, SwitchControl, useGuardedNavigate, useSettingWrite } from "../ui/settings";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
-import type { UserSettings } from "../../lib/api/types";
-import { useDocWrite } from "./useDocWrite";
+import { saveSwitch } from "../../store/confirmedSettings";
 import { useDependency, useRowCopy } from "./rowCopy";
 import { useServiceReadiness } from "./useServiceReadiness";
 
@@ -29,22 +28,15 @@ export default function InboxSuggestionsSection(): JSX.Element {
   const ready = useServiceReadiness();
   const store = useSuggestionSwitchesStore();
 
-  const useSwitch = (
-    key: Field,
-    payload: (on: boolean) => Partial<UserSettings>
-  ): ReturnType<typeof useDocWrite<boolean>> =>
-    useDocWrite<boolean>(`trips.suggestions.${key}`, store[key], payload, (on) =>
-      useSuggestionSwitchesStore.setState({ [key]: on } as Pick<typeof store, Field>)
+  const useSwitch = (key: Field): ReturnType<typeof useSettingWrite<boolean>> =>
+    useSettingWrite<boolean>(`trips.suggestions.${key}`, store[key], (on, o) =>
+      saveSwitch(key, on, o)
     );
 
-  const trips = useSwitch("trips", (enabled) => ({ tripSuggestions: { enabled } }));
-  const stays = useSwitch("stays", (enabled) => ({ staySuggestions: { enabled } }));
-  const immich = useSwitch("stayImmichEvidence", (immichEvidence) => ({
-    staySuggestions: { immichEvidence },
-  }));
-  const ai = useSwitch("stayLlmPlaceClassification", (llmPlaceClassification) => ({
-    staySuggestions: { llmPlaceClassification },
-  }));
+  const trips = useSwitch("trips");
+  const stays = useSwitch("stays");
+  const immich = useSwitch("stayImmichEvidence");
+  const ai = useSwitch("stayLlmPlaceClassification");
 
   const stayOff = (): ReturnType<typeof dependency> | undefined =>
     stays.value ? undefined : dependency("stayOff", () => stays.choose(true));

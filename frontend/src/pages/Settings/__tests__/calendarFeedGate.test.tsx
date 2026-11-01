@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findPage } from "../settingsModel";
+import { findAreaPage } from "../area/areaModel";
 import { sectionsOf } from "../surface";
 import type { BetaFeatureKey } from "../../../config/betaFeatures";
 
@@ -9,7 +9,7 @@ import type { BetaFeatureKey } from "../../../config/betaFeatures";
  * switch is off, there when it is on. Since forgejo#321 it is a section of
  * its own, so the gate lives in the page table rather than inside a section.
  */
-const trips = findPage("trips")!;
+const trips = findAreaPage("trips")!;
 const shown = (open: boolean, deepLinked: string | null = null): string[] =>
   sectionsOf(trips, {
     level: "expert",
@@ -20,7 +20,7 @@ const shown = (open: boolean, deepLinked: string | null = null): string[] =>
 
 describe("calendar feed card gate", () => {
   it("is absent from the trips page while the beta switch is off", () => {
-    expect(shown(false)).toContain("sharing");
+    expect(shown(false)).toContain("suggestions");
     expect(shown(false)).not.toContain("calendarFeed");
   });
 
