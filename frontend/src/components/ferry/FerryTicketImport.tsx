@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import WorkshopJumpLink from "../Parser/WorkshopJumpLink";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { api } from "../../lib/api/client";
@@ -139,11 +140,16 @@ export function FerryTicketImport({
               </p>
             )}
             {preview.crossings.length === 0 ? (
-              <p role="status">
-                {t(
-                  preview.reason === "noText" ? "ferry:import.noText" : "ferry:import.nothingFound"
-                )}
-              </p>
+              <>
+                <p role="status">
+                  {t(
+                    preview.reason === "noText"
+                      ? "ferry:import.noText"
+                      : "ferry:import.nothingFound"
+                  )}
+                </p>
+                {preview.reason !== "noText" && <WorkshopJumpLink file={file} text={text} />}
+              </>
             ) : (
               <>
                 {preview.crossings.length > 1 && (

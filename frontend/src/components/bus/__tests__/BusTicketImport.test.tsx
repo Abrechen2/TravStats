@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusTicketImport } from "../BusTicketImport";
 
@@ -34,7 +35,9 @@ describe("BusTicketImport", () => {
     });
     const apply = vi.fn();
     render(
-      <BusTicketImport current={{ operator: "Typed" }} onApply={apply} onBusyChange={vi.fn()} />
+      <MemoryRouter>
+        <BusTicketImport current={{ operator: "Typed" }} onApply={apply} onBusyChange={vi.fn()} />
+      </MemoryRouter>
     );
     open();
     await screen.findByText("bus:import.readByWorkshop");
@@ -55,7 +58,11 @@ describe("BusTicketImport", () => {
     ["noText", "bus:import.noText"],
   ])("says why nothing was read (%s), never an empty review", async (reason, copy) => {
     mocks.preview.mockResolvedValue({ rides: [], parser: null, reason, template: null });
-    render(<BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
     open();
     expect(await screen.findByRole("status")).toHaveTextContent(copy);
     expect(screen.queryByRole("button", { name: "bus:import.apply" })).toBeNull();
@@ -63,8 +70,43 @@ describe("BusTicketImport", () => {
 
   it("reports a failed request as a failure", async () => {
     mocks.preview.mockRejectedValue(new Error("offline"));
-    render(<BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("bus:import.error");
+  });
+});
+
+/** forgejo#330: "this ticket was not recognised" is one click from the workshop, document in hand. */
+describe("BusTicketImport: the way to the workshop", () => {
+  it("offers a workshop link when no template read the ticket", async () => {
+    mocks.preview.mockResolvedValue({
+      rides: [],
+      parser: null,
+      reason: "noTemplate",
+      template: null,
+    });
+    render(
+      <MemoryRouter>
+        <BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
+    open();
+    expect(await screen.findByRole("button", { name: "parser:handoff.link" })).toBeInTheDocument();
+  });
+
+  it("offers none when the ticket had no text at all - a workshop cannot learn from nothing", async () => {
+    mocks.preview.mockResolvedValue({ rides: [], parser: null, reason: "noText", template: null });
+    render(
+      <MemoryRouter>
+        <BusTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
+    open();
+    await screen.findByRole("status");
+    expect(screen.queryByRole("button", { name: "parser:handoff.link" })).toBeNull();
   });
 });

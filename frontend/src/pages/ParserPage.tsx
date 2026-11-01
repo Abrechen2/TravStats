@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { trainingApi } from "../lib/api";
 import type { TrainingUploadType } from "../lib/api/training";
 import { apiErrorMachineCode } from "../lib/apiError";
@@ -17,6 +18,8 @@ import type { WorkshopDomain } from "../shared/annotationLabels";
 import type { TemplateDerivation } from "../lib/api/types";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
+import Toggletip from "../components/ui/Toggletip";
+import { workshopDocumentOf } from "../components/Parser/WorkshopJumpLink";
 
 /** The codes a refused screenshot answers with (forgejo#309), each worded in DE/EN. */
 const SCREENSHOT_UPLOAD_ERRORS: ReadonlySet<string> = new Set([
@@ -25,6 +28,21 @@ const SCREENSHOT_UPLOAD_ERRORS: ReadonlySet<string> = new Set([
 ]);
 
 type Tab = "annotate" | "my-templates" | "community" | "parse-logs";
+
+/** Which tab's one-line purpose sits under the tab strip. */
+const TAB_HINT_KEY: Record<Tab, string> = {
+  annotate: "annotate",
+  "my-templates": "myTemplates",
+  community: "community",
+  "parse-logs": "parseLogs",
+};
+
+const SOURCES = ["own", "community", "builtin"] as const;
+
+/** An image goes through OCR; everything else is read as a mail or text file. */
+function uploadTypeOf(file: File): TrainingUploadType {
+  return file.type.startsWith("image/") ? "screenshot" : "email";
+}
 
 export default function ParserPage(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
@@ -62,6 +80,21 @@ export default function ParserPage(): JSX.Element {
     }
   };
 
+  // "Not recognised? Create a template for it" lands here with the document
+  // already in hand (forgejo#330): upload it once, then drop the router state
+  // so a reload does not upload it a second time.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const handedOver = useRef<File | null>(null);
+  useEffect(() => {
+    const document_ = workshopDocumentOf(location.state);
+    if (!document_ || handedOver.current === document_) return;
+    handedOver.current = document_;
+    setActiveTab("annotate");
+    navigate(location.pathname, { replace: true, state: null });
+    void handleFileUpload(document_, uploadTypeOf(document_));
+  }, [location.state]);
+
   /**
    * What the workshop made of the annotation, kept HERE.
    *
@@ -93,11 +126,12 @@ export default function ParserPage(): JSX.Element {
   return (
     <AppShell width="list">
       <PageHeader title={t("parser:title")} meta={t("parser:description")} />
+      <ParserOverview onCreate={() => setActiveTab("annotate")} />
       <div>
         {/* Tabs */}
         <div
           role="tablist"
-          className="mb-6 flex overflow-x-auto scrollbar-none"
+          className="mb-3 flex overflow-x-auto scrollbar-none"
           style={{ borderBottom: "1px solid var(--ts-border)" }}
         >
           {tabs.map((tab) => {
@@ -121,6 +155,9 @@ export default function ParserPage(): JSX.Element {
             );
           })}
         </div>
+        <p className="t-caption mb-6" data-testid="parser-tab-hint">
+          {t(`parser:tabHints.${TAB_HINT_KEY[activeTab]}`)}
+        </p>
 
         {/* What the workshop made of the last annotation. It outlives the
             annotation view on purpose — see `derivation` above. */}
@@ -256,5 +293,82 @@ export default function ParserPage(): JSX.Element {
         )}
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * What a template is, what happens to an uploaded booking, and who reads it:
+ * the three sources in the order they are tried (forgejo#330). A name says
+ * what it is in one line; the rest sits behind its "?".
+ */
+function ParserOverview({ onCreate }: { onCreate: () => void }): JSX.Element {
+  const { t } = useTranslation(["parser"]);
+  return (
+    <section
+      aria-labelledby="parser-overview-title"
+      className="mb-6 space-y-4 p-5"
+      style={{
+        background: "var(--ts-surface)",
+        border: "1px solid var(--ts-border)",
+        borderRadius: "var(--ts-radius-card)",
+      }}
+    >
+      <div>
+        <h2
+          id="parser-overview-title"
+          style={{ fontSize: 17, fontWeight: 700, color: "var(--ts-text-bright)" }}
+        >
+          {t("parser:overview.title")}
+        </h2>
+        <p className="t-caption mt-1">
+          {t("parser:overview.what")}{" "}
+          <Toggletip
+            subject={t("parser:overview.whatSubject")}
+            content={t("parser:overview.whatHelp")}
+          />
+        </p>
+      </div>
+      <div>
+        <p className="t-caption mb-2">{t("parser:overview.order")}</p>
+        <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {SOURCES.map((source, i) => (
+            <li
+              key={source}
+              data-testid={`parser-source-${source}`}
+              className="p-3"
+              style={{
+                border: "1px solid var(--ts-border)",
+                borderRadius: "var(--ts-radius-card)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="t-caption">{i + 1}</span>
+                <span className="text-sm font-semibold" style={{ color: "var(--ts-text-bright)" }}>
+                  {t(`parser:overview.sources.${source}.name`)}
+                </span>
+                <Toggletip
+                  subject={t(`parser:overview.sources.${source}.name`)}
+                  content={t(`parser:overview.sources.${source}.help`)}
+                />
+              </div>
+              <p className="t-caption mt-1">{t(`parser:overview.sources.${source}.line`)}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <p className="t-caption">
+        {t("parser:overview.upload")}{" "}
+        <Toggletip
+          subject={t("parser:overview.uploadSubject")}
+          content={t("parser:overview.uploadHelp")}
+        />
+      </p>
+      <p className="text-sm">
+        {t("parser:overview.nothing")}{" "}
+        <button type="button" className="btn-secondary text-xs px-3 py-1.5" onClick={onCreate}>
+          {t("parser:overview.nothingAction")}
+        </button>
+      </p>
+    </section>
   );
 }

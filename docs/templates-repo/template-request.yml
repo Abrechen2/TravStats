@@ -1,0 +1,43 @@
+# Issue form for Abrechen2/travstats-templates: place it at
+# .github/ISSUE_TEMPLATE/template-request.yml in that repository.
+# TravStats (Parser page, "Share with the community", forgejo#330) opens
+# /issues/new?template=template-request.yml with these field ids prefilled:
+# provider, markets, template_json.
+name: Template request
+description: Propose a booking template made in the TravStats workshop
+title: "Template request: "
+labels: ["template-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing. Please check that nothing below comes from your own
+        booking: no names, booking codes, e-mail addresses or phone numbers
+        (see CONTRIBUTING.md). A maintainer reviews every request.
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      description: Who issues these bookings (airline, ferry line, bus company, hotel chain).
+    validations:
+      required: true
+  - type: input
+    id: markets
+    attributes:
+      label: Markets
+      description: Country codes where this layout is used, comma separated.
+  - type: textarea
+    id: template_json
+    attributes:
+      label: Template
+      description: The template JSON exported by TravStats.
+      render: json
+    validations:
+      required: true
+  - type: checkboxes
+    id: no_personal_data
+    attributes:
+      label: Check
+      options:
+        - label: The template contains no personal data from my own bookings.
+          required: true

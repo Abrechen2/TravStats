@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FerryTicketImport } from "../FerryTicketImport";
 const mocks = vi.hoisted(() => ({ preview: vi.fn(), upload: vi.fn(), t: (s: string) => s }));
@@ -24,11 +25,13 @@ describe("Ferry ticket review", () => {
     });
     const apply = vi.fn();
     render(
-      <FerryTicketImport
-        current={{ operator: "Existing", price: "", currency: "EUR" }}
-        onApply={apply}
-        onBusyChange={vi.fn()}
-      />
+      <MemoryRouter>
+        <FerryTicketImport
+          current={{ operator: "Existing", price: "", currency: "EUR" }}
+          onApply={apply}
+          onBusyChange={vi.fn()}
+        />
+      </MemoryRouter>
     );
     fireEvent.click(screen.getByText("ferry:import.title"));
     fireEvent.change(screen.getByLabelText("ferry:import.text"), {
@@ -48,7 +51,11 @@ describe("Ferry ticket review", () => {
     mocks.preview
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce({ crossings: [], parser: null, reason: "noText", provider: null });
-    render(<FerryTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <FerryTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
     fireEvent.click(screen.getByText("ferry:import.title"));
     fireEvent.change(screen.getByLabelText("ferry:import.file"), {
       target: { files: [new File(["%PDF-test"], "ticket.pdf", { type: "application/pdf" })] },
@@ -61,8 +68,32 @@ describe("Ferry ticket review", () => {
     expect(mocks.preview).toHaveBeenLastCalledWith({ documentId: "owned-doc" });
   });
   it("requires an explicit action before any parse or upload", () => {
-    render(<FerryTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />);
+    render(
+      <MemoryRouter>
+        <FerryTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.upload).not.toHaveBeenCalled();
+  });
+});
+
+describe("Ferry ticket: the way to the workshop (forgejo#330)", () => {
+  it("offers the workshop when a text was read but nothing was found in it", async () => {
+    mocks.preview.mockResolvedValue({
+      crossings: [],
+      parser: null,
+      reason: "nothingFound",
+      provider: null,
+    });
+    render(
+      <MemoryRouter>
+        <FerryTicketImport current={{}} onApply={vi.fn()} onBusyChange={vi.fn()} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByText("ferry:import.title"));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Synthetic ticket text" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:import.read" }));
+    expect(await screen.findByRole("button", { name: "parser:handoff.link" })).toBeInTheDocument();
   });
 });
