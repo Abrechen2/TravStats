@@ -13,6 +13,7 @@ import {
 } from "../../schemas/externalServices";
 import { buildAccountView } from "../../services/externalServices/accountView";
 import { applyAccountUpdate, setAiConsent } from "../../services/externalServices/accountWrite";
+import { testAccountService } from "../../services/externalServices/testRunner";
 
 const router = Router();
 
@@ -31,6 +32,21 @@ router.put(
       const { provider } = aiConsentParamsSchema.parse(req.params);
       const { consent, destination } = aiConsentBodySchema.parse(req.body);
       res.json(await setAiConsent(req.userId!, provider, consent, destination));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * Tests the account's OWN credential and persists the verdict (`lastTest`).
+ * Registered before `/:id` writes only by method; the path is distinct.
+ */
+router.post(
+  "/:id/test",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json(await testAccountService(String(req.params.id), req.userId!));
     } catch (error) {
       next(error);
     }

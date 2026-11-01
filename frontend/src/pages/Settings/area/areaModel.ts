@@ -125,34 +125,13 @@ const P = (id: SettingsSectionId, options?: MountOptions & { as?: string }): Are
 const A = (id: AdminSectionId, options?: MountOptions & { as?: string }): AreaSectionDef =>
   mount(options?.as ?? id, "admin", id, options);
 
-/** Service cards with a mount of their own (the server's own services). */
-const OWN_SERVICE_MOUNTS = [
-  "smtp",
-  "webdav",
-  "push",
-  "federation",
-  "usageStats",
-  "updatesTemplates",
-];
-const SERVICE_CARDS = (registryPage("services")?.sections ?? []).filter(
-  (s) => !OWN_SERVICE_MOUNTS.includes(s.id)
-);
-/** Cards that exist only on the server's side (every row admin-only): the instance mount's. */
-const INSTANCE_ONLY_CARDS = SERVICE_CARDS.filter(
-  (s) => s.rows.length > 0 && s.rows.every((r) => r.audience === "admin")
-).map((s) => s.id);
-const SERVICE_ANCHORS = SERVICE_CARDS.map((s) => s.id).filter(
-  (id) => !INSTANCE_ONLY_CARDS.includes(id)
-);
-
 /**
- * The rows of the service cards that are the SERVER's side ("Alle Konten"):
- * they are drawn by the admin services mount, so a link or search hit naming
- * one scrolls there and reveals its expert rows, not the account's section.
+ * The Dienste page is ONE mount: the 31 catalogue cards, each the target of its
+ * own anchor (`#airlabs`), and every row of every card answers `?match=`.
  */
-const INSTANCE_SERVICE_ROWS = (registryPage("services")?.sections ?? [])
-  .filter((s) => !OWN_SERVICE_MOUNTS.includes(s.id))
-  .flatMap((s) => s.rows.filter((r) => r.audience === "admin").map((r) => r.id));
+const SERVICE_SECTIONS = registryPage("services")?.sections ?? [];
+const SERVICE_ANCHORS = SERVICE_SECTIONS.map((s) => s.id);
+const SERVICE_ROWS = SERVICE_SECTIONS.flatMap((s) => s.rows.map((r) => r.id));
 
 const page = (
   id: AreaPageId,
@@ -219,18 +198,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("import", { anchors: ["railImport"] }),
   ]),
   page("services", "globe", [
-    P("externalServices", { anchors: SERVICE_ANCHORS, fallbackAnchors: INSTANCE_ONLY_CARDS }),
-    A("externalServices", {
-      as: "instanceServices",
-      anchors: INSTANCE_ONLY_CARDS,
-      matches: INSTANCE_SERVICE_ROWS,
-    }),
-    A("smtp"),
-    A("webdav"),
-    A("push"),
-    A("federation"),
-    A("usageStats"),
-    A("templateRepo", { as: "updatesTemplates" }),
+    P("externalServices", { anchors: SERVICE_ANCHORS, matches: SERVICE_ROWS }),
   ]),
   page("server", "settings", [
     A("instance", { as: "general", anchors: ["addresses", "passkeys"] }),

@@ -173,6 +173,7 @@ export function accountOverview(): AccountExternalServices {
         consentedAt: "2026-10-29T08:00:00Z",
       },
     ],
+    blocked: [],
     instanceProvided: [
       { id: "aeroapi", enabled: true, recommended: "freeCredit" },
       { id: "openData", enabled: false, recommended: "free" },

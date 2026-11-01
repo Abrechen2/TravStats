@@ -102,6 +102,7 @@ export async function buildAccountView(userId: string): Promise<{
     consentedAt: string | null;
   }>;
   instanceProvided: Array<{ id: string; enabled: boolean; recommended: Recommended }>;
+  blocked: Array<{ id: string; reason: "disabled" | "keysForbidden" | "connectionForbidden" }>;
 }> {
   const state = await loadAdminState();
   const userRow = (await prisma.userSettings.findUnique({ where: { userId } })) as Record<
@@ -170,7 +171,19 @@ export async function buildAccountView(userId: string): Promise<{
       (s.keyless || instanceHas(s, { admin: state.admin, smtp: state.smtp }))
   ).map((s) => ({ id: s.id, enabled: isEnabled(s, state), recommended: s.recommended }));
 
-  return { connections, ownKeys, aiConsents, instanceProvided };
+  const blocked = SERVICES.flatMap((s): Awaited<ReturnType<typeof buildAccountView>>["blocked"] => {
+    if (state.policy.disabled.includes(s.id)) return [{ id: s.id, reason: "disabled" as const }];
+    if (s.level !== "instanceAndAccount") return [];
+    if (s.connection && state.policy.connectionsForbidden.includes(s.id)) {
+      return [{ id: s.id, reason: "connectionForbidden" as const }];
+    }
+    if (!s.connection && state.policy.accountKeysForbidden.includes(s.id)) {
+      return [{ id: s.id, reason: "keysForbidden" as const }];
+    }
+    return [];
+  });
+
+  return { connections, ownKeys, aiConsents, instanceProvided, blocked };
 }
 
 /** A cloud provider the admin has allowed (opt-in) — or a remote Ollama with its opt-in. */

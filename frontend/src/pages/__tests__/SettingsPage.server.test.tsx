@@ -54,8 +54,31 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("@/lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/externalServices")>()),
   externalServicesApi: {
-    adminOverview: vi.fn().mockResolvedValue({ categories: [], connections: [] }),
-    accountOverview: vi.fn(),
+    adminOverview: vi.fn().mockResolvedValue({ categories: [], accountConnections: [] }),
+    accountOverview: vi.fn().mockResolvedValue({
+      connections: [],
+      ownKeys: [],
+      aiConsents: [],
+      instanceProvided: [],
+      blocked: [],
+    }),
+  },
+}));
+
+// The open federation card reads this server's identity.
+vi.mock("@/lib/api/federationAdmin", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/federationAdmin")>()),
+  federationAdminApi: {
+    get: vi.fn().mockResolvedValue({
+      source: "settings",
+      enabled: false,
+      origin: null,
+      publicKey: null,
+      fingerprint: null,
+      hasKey: false,
+      tripSharingEnabled: false,
+      peers: [],
+    }),
   },
 }));
 
@@ -244,12 +267,15 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
     await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
   });
 
-  // An old /admin link to an expert card of the services page carries the
-  // service in the query only; the card must still open at the standard level.
-  it("opens the expert federation card an old /admin link names, with its note", async () => {
+  // An old /admin link to a service card lands on that card of the services
+  // page, opened — the expert fields it holds are part of the card now.
+  it("opens the federation card an old /admin link names, on the services page", async () => {
     renderAdmin("/admin?section=federation");
-    const card = await findNamed("region", "admin:federation.title");
-    expect(card).toHaveTextContent("settings:level.deepLinkedExpert");
+    await waitFor(() =>
+      expect(document.querySelector('[data-service-card-id="federation"]')).toBeInTheDocument()
+    );
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.services");
+    expect(document.querySelector('[data-service-card="open"]')).toBeInTheDocument();
   });
 
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {

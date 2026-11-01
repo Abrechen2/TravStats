@@ -6,7 +6,7 @@ import {
   type AdminServiceUpdate,
   type ConnectionId,
 } from "../../lib/api/externalServices";
-import type { RowFeedback } from "./AdminServiceRow";
+import type { RowFeedback } from "./rowFeedback";
 import { failureText, isServiceDisabledError, testReasonText } from "./serviceText";
 
 export interface AdminServices {
@@ -16,6 +16,12 @@ export interface AdminServices {
   feedback: Record<string, RowFeedback>;
   reload: () => Promise<void>;
   test: (id: string) => Promise<void>;
+  /** Writes fields only (no test afterwards); false when the server refused, said on the row. */
+  write: (
+    id: string,
+    changes: Record<string, unknown>,
+    confirmDataSharing?: boolean
+  ) => Promise<boolean>;
   save: (
     id: string,
     changes: Record<string, unknown>,
@@ -140,6 +146,28 @@ export function useAdminServices(): AdminServices {
       await reload();
     });
 
+  const write = async (
+    id: string,
+    changes: Record<string, unknown>,
+    confirmDataSharing = false
+  ): Promise<boolean> => {
+    begin(id);
+    note(id, null);
+    try {
+      await externalServicesApi.adminUpdate(
+        id,
+        confirmDataSharing ? { fields: changes, confirmDataSharing } : { fields: changes }
+      );
+      await reload();
+      return true;
+    } catch (err) {
+      note(id, { kind: "error", text: failureText(t, err, "errors.saveFailed") });
+      return false;
+    } finally {
+      end(id);
+    }
+  };
+
   const setEnabled = async (
     id: string,
     enabled: boolean,
@@ -192,6 +220,7 @@ export function useAdminServices(): AdminServices {
     feedback,
     reload,
     test,
+    write,
     save,
     setEnabled,
     setAllowAccountKeys,

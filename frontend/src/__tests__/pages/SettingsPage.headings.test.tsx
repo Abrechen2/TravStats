@@ -203,7 +203,7 @@ vi.mock("../../components/Settings/StravaConnectionCard", () => ({
   default: () => <div data-testid="strava-connection-card" />,
 }));
 // The account services page (forgejo#392) loads its catalogue from the server — not the subject here.
-vi.mock("../../components/ExternalServices/AccountExternalServices", () => ({
+vi.mock("../../components/Services/ServicesPage", () => ({
   default: () => <div data-testid="account-external-services" />,
 }));
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
@@ -248,9 +248,13 @@ vi.mock("@/lib/api/externalServices", async (importOriginal) => {
     ...actual,
     externalServicesApi: {
       ...actual.externalServicesApi,
-      accountOverview: vi
-        .fn()
-        .mockResolvedValue({ connections: [], ownKeys: [], aiConsents: [], instanceProvided: [] }),
+      accountOverview: vi.fn().mockResolvedValue({
+        connections: [],
+        ownKeys: [],
+        aiConsents: [],
+        instanceProvided: [],
+        blocked: [],
+      }),
     },
   };
 });
