@@ -129,7 +129,7 @@ export default function DawarichGlobalSettings(): JSX.Element {
   if (loadError) {
     return (
       <div className="flex flex-col gap-3">
-        <p role="alert" className="text-sm text-rose-400">
+        <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
           {t("admin:dawarichGlobal.loadFailed")}
         </p>
         <button
@@ -192,7 +192,8 @@ export default function DawarichGlobalSettings(): JSX.Element {
       {testResult && (
         <p
           role="status"
-          className={`text-sm ${testResult.success ? "text-emerald-400" : "text-rose-400"}`}
+          className="text-sm"
+          style={{ color: testResult.success ? "var(--ts-good)" : "var(--ts-bad)" }}
         >
           {testResult.success
             ? t("admin:dawarichGlobal.connected", { version: testResult.details?.version ?? "?" })
@@ -219,7 +220,8 @@ export default function DawarichGlobalSettings(): JSX.Element {
         {sweepMsg && (
           <p
             role={sweepMsg.ok ? "status" : "alert"}
-            className={`text-sm ${sweepMsg.ok ? "text-emerald-400" : "text-rose-400"}`}
+            className="text-sm"
+            style={{ color: sweepMsg.ok ? "var(--ts-good)" : "var(--ts-bad)" }}
           >
             {sweepMsg.text}
           </p>
