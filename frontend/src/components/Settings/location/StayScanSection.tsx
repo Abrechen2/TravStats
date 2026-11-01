@@ -66,14 +66,17 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
   const [refusal, setRefusal] = useState<string | null>(null);
   const stateRef = useRef<StayScanState | null>(null);
 
-  const load = useCallback(async (): Promise<void> => {
+  /** Resolves true when the server answered. */
+  const load = useCallback(async (): Promise<boolean> => {
     try {
       const next = await dawarichStaysApi.state();
       stateRef.current = next;
       setState(next);
       setLoadError(false);
+      return true;
     } catch {
       setLoadError(true);
+      return false;
     }
   }, []);
   useEffect(() => {
@@ -161,7 +164,14 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
       total: phase.total,
     };
   } else if (phase.kind === "lost") {
-    job = { kind: "unknown", onCheck: () => void load().then(() => setPhase({ kind: "idle" })) };
+    job = {
+      kind: "unknown",
+      onCheck: () =>
+        void load().then((answered) => {
+          // Only a read that got through says how it ended.
+          if (answered) setPhase({ kind: "idle" });
+        }),
+    };
   } else if (phase.kind === "failed") {
     job = { kind: "failed", reason: phase.reason, onRetry: () => void startScan() };
   } else if (serverRunning) {
@@ -227,11 +237,15 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
               : undefined
           }
           control={
-            <SwitchControl
-              checked={enabled.value}
-              label={t("settings:location.stay.scan.name")}
-              onChange={enabled.choose}
-            />
+            // No switch before the server said what it is: a guessed "off" would
+            // let the user consent while only trying to look.
+            state ? (
+              <SwitchControl
+                checked={enabled.value}
+                label={t("settings:location.stay.scan.name")}
+                onChange={enabled.choose}
+              />
+            ) : undefined
           }
         >
           {state?.enabled && pausedReason && pausedReason !== "disabled" ? (

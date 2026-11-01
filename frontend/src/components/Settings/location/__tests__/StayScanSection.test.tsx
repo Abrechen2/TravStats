@@ -221,6 +221,19 @@ describe("Standort → Aufenthalte finden", () => {
     await waitFor(() => expect(screen.queryByText("settings:blocks.job.unknown")).toBeNull());
   });
 
+  it("'Nachsehen' keeps saying it does not know while the server still does not answer", async () => {
+    api.scan.mockRejectedValueOnce(new JobLostError());
+    show();
+    fireEvent.click(await scanButton());
+    expect(await screen.findByText("settings:blocks.job.unknown")).toBeInTheDocument();
+    api.state.mockRejectedValue(new Error("offline"));
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.job.check" }));
+    await waitFor(() =>
+      expect(screen.getByText(/settings:location\.stay\.loadError/)).toBeVisible()
+    );
+    expect(screen.getByText("settings:blocks.job.unknown")).toBeInTheDocument();
+  });
+
   it("an interrupted or failed earlier scan is a failure with a retry, not a quiet blank", async () => {
     api.state.mockResolvedValue({ ...base, result: "interrupted" });
     show();
@@ -266,6 +279,8 @@ describe("Standort → Aufenthalte finden", () => {
     api.state.mockRejectedValueOnce(new Error("offline"));
     show();
     expect(await screen.findByText(/settings:location\.stay\.loadError/)).toBeInTheDocument();
+    // No switch showing a guessed "off": consent is never given while only looking.
+    expect(screen.queryByRole("switch")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
     await waitFor(() =>
       expect(screen.queryByText(/settings:location\.stay\.loadError/)).toBeNull()

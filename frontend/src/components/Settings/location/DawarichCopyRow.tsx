@@ -81,12 +81,12 @@ export default function DawarichCopyRow({
 
   const copy = state?.copy ?? null;
   const running = copy?.status === "running";
-  // A running copy is read again; so is one whose last read failed meanwhile.
+  // A running copy is read again; so is one whose last read failed, until it answers.
   useEffect(() => {
     if (!running && !lost) return;
-    const timer = setTimeout(() => void load(), DAWARICH_COPY_POLL_MS);
-    return () => clearTimeout(timer);
-  }, [running, lost, state, load]);
+    const timer = setInterval(() => void load(), DAWARICH_COPY_POLL_MS);
+    return () => clearInterval(timer);
+  }, [running, lost, load]);
 
   const resumable = copy !== null && RESUMABLE.has(copy.status);
   const own = state?.connection === "own";
@@ -106,7 +106,10 @@ export default function DawarichCopyRow({
       .filter(Boolean)
       .join(" · ");
 
-  const resume = (): void => void action.run(async () => (await dawarichCopyApi.resume(), load()));
+  const mayAct = canStart && own && !action.busy;
+  const resume = (): void => {
+    if (mayAct) void action.run(async () => (await dawarichCopyApi.resume(), load()));
+  };
   const jobOf = (c: DawarichCopy): JobView => {
     switch (c.status) {
       case "running":
@@ -118,15 +121,19 @@ export default function DawarichCopyRow({
         };
       case "paused":
       case "interrupted":
-        return { kind: "paused", at: c.daysDone, total: c.daysTotal, onResume: resume };
-      case "failed":
-        return {
-          kind: "failed",
-          reason: c.lastErrorKind
-            ? t(`${COPY}.reason.${c.lastErrorKind}`)
-            : t(`${COPY}.status.failed`, { day: c.nextDay }),
-          onRetry: resume,
-        };
+        // Without the right to resume (demo, TravTrack off, no own connection) the
+        // state is told, not offered: a link here would ignore the row's lock.
+        return mayAct
+          ? { kind: "paused", at: c.daysDone, total: c.daysTotal, onResume: resume }
+          : { kind: "done", result: t(`${COPY}.status.${c.status}`, { day: c.nextDay }) };
+      case "failed": {
+        const reason = c.lastErrorKind
+          ? t(`${COPY}.reason.${c.lastErrorKind}`)
+          : t(`${COPY}.status.failed`, { day: c.nextDay });
+        return mayAct
+          ? { kind: "failed", reason, onRetry: resume }
+          : { kind: "done", result: reason };
+      }
       case "complete":
         return { kind: "done", result: t(`${NS}.result`, { stored: c.totals.stored }) };
       case "incomplete":

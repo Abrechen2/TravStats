@@ -199,6 +199,44 @@ describe("Verlauf → Aus Dawarich übernehmen", () => {
     }
   });
 
+  it("keeps asking after repeated failed reads, and recovers when the server answers again", async () => {
+    const get = vi
+      .spyOn(dawarichCopyApi, "get")
+      .mockResolvedValueOnce(own(copy({ status: "running" })))
+      .mockRejectedValueOnce(failure())
+      .mockRejectedValueOnce(failure())
+      .mockRejectedValueOnce(failure())
+      .mockResolvedValue(own(copy({ status: "complete" })));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      show();
+      await screen.findByRole("progressbar");
+      for (let i = 0; i < 5; i += 1) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3100);
+        });
+      }
+      expect(get.mock.calls.length).toBeGreaterThanOrEqual(5);
+      expect(await screen.findByText(/settings:blocks\.job\.done/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("offers no resume or retry where the row is locked (demo, TravTrack off)", async () => {
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue(own(copy({ status: "paused" })));
+    show(false);
+    await screen.findByText("settings:blocks.lock.demo");
+    expect(screen.queryByRole("button", { name: "settings:blocks.job.resume" })).toBeNull();
+    cleanup();
+    vi.spyOn(dawarichCopyApi, "get").mockResolvedValue(
+      own(copy({ status: "failed", lastErrorKind: "auth" }))
+    );
+    show(false);
+    await screen.findByText(/track:dawarichCopy\.reason\.auth/);
+    expect(screen.queryByRole("button", { name: "settings:blocks.job.retry" })).toBeNull();
+  });
+
   it("reports a copy that ended, so the stored positions are read again", async () => {
     const onChanged = vi.fn();
     const get = vi
