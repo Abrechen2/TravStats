@@ -9,11 +9,15 @@ import {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  deleteAccountSchema,
   isReservedUsername,
 } from "../schemas/auth";
 import { AppError } from "../middleware/errorHandler";
 import { authLimiter } from "../middleware/rateLimit";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { removeAccount } from "../services/account/removeAccount";
+import { decryptSecret, verifyCode } from "../services/twoFactor/totpService";
+import { consumeRecoveryCode } from "../services/twoFactor/recoveryCodeService";
+import { authenticate, requireBrowserSession, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 import { getInstanceSettings } from "../services/instanceSettingsService";
@@ -466,6 +470,62 @@ router.post(
       });
 
       res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * Delete the caller's own account, at once and for good (settings rebuild).
+ *
+ * Re-authenticated with the password, plus the second factor where the account
+ * has one — a stolen session cookie must not be enough to erase an account. The
+ * typed word is checked by the schema. The shared demo is refused, and so is
+ * the last admin (an instance with no admin cannot be repaired from the UI).
+ * Rows and files go through the same step the admin delete uses.
+ */
+router.delete(
+  "/me",
+  authenticate,
+  rejectDemo,
+  requireBrowserSession,
+  authLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId!;
+      const body = deleteAccountSchema.parse(req.body);
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new AppError("User not found", 404);
+      if (!(await comparePassword(body.password, user.passwordHash))) {
+        throw new AppError("Password is incorrect", 401, "DELETE_PASSWORD_INCORRECT");
+      }
+
+      if (user.twoFactorEnabledAt && user.twoFactorSecret) {
+        if (!body.code && !body.recoveryCode) {
+          throw new AppError(
+            "A second-factor code is required",
+            401,
+            "DELETE_SECOND_FACTOR_REQUIRED"
+          );
+        }
+        const accepted = body.code
+          ? verifyCode(decryptSecret(user.twoFactorSecret), body.code.replace(/\s+/g, ""))
+          : await consumeRecoveryCode(userId, body.recoveryCode!);
+        if (!accepted) {
+          throw new AppError("That code is not right", 401, "DELETE_SECOND_FACTOR_INVALID");
+        }
+      }
+
+      if (user.isAdmin && (await prisma.user.count({ where: { isAdmin: true } })) <= 1) {
+        throw new AppError("Cannot delete the last remaining admin", 409, "DELETE_LAST_ADMIN");
+      }
+
+      await removeAccount(userId);
+      res.clearCookie("auth_token", getAuthCookieOptions(req));
+      logger.info({ operation: "self_delete_account", targetUserId: userId });
+      res.json({ deleted: true });
     } catch (error) {
       next(error);
     }

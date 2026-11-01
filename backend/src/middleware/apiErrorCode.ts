@@ -109,6 +109,14 @@ export type ApiErrorCode =
    *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
    *  into its own sentence, in the reader's language. */
   | "USERNAME_RESERVED"
+  /** Deleting one's own account: the password is wrong. */
+  | "DELETE_PASSWORD_INCORRECT"
+  /** The account has two-factor and the request carried no code. */
+  | "DELETE_SECOND_FACTOR_REQUIRED"
+  /** The code or recovery code was not accepted. */
+  | "DELETE_SECOND_FACTOR_INVALID"
+  /** The only remaining admin cannot delete itself; hand the role over first. */
+  | "DELETE_LAST_ADMIN"
   /** A restore was asked for a part the archive does not carry — a file
    *  restore from an archive with no `uploads.tar.gz`, say. */
   | "RESTORE_ARCHIVE_INCOMPLETE"

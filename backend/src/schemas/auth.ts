@@ -51,6 +51,24 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "New password must be at least 8 characters").max(100),
 });
 
+/**
+ * Deleting one's own account (settings rebuild). The typed word is checked here
+ * so the server, not only the dialog, refuses a request that skipped it; both
+ * spellings the dialog offers are accepted because the UI language is the
+ * client's choice.
+ */
+export const DELETE_ACCOUNT_WORDS = ["DELETE", "LÖSCHEN"] as const;
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1).max(200),
+  /** Six digits from the authenticator app, when the account has two-factor. */
+  code: z.string().max(16).optional(),
+  recoveryCode: z.string().max(64).optional(),
+  confirmation: z
+    .string()
+    .transform((v) => v.trim().toLocaleUpperCase("de-DE"))
+    .refine((v) => (DELETE_ACCOUNT_WORDS as readonly string[]).includes(v), "Typed word is wrong"),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

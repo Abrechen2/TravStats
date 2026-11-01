@@ -12,7 +12,7 @@ import {
   isReservedUsername,
 } from "../../schemas/auth";
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
-import { deleteAccountWithFiles } from "../../services/files/accountFiles";
+import { removeAccount } from "../../services/account/removeAccount";
 import { SMTP_CONFIG_ID } from "./smtp";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
@@ -181,17 +181,7 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
-    // Rows by cascade, then the account's uploaded files — every upload
-    // directory, through the one step every account deletion uses (forgejo#287).
-    // The sync change log has no foreign key (its own cascade writes
-    // tombstones into it), so it goes in the same transaction: a deleted
-    // account's log must not outlive it until the nightly prune (beta.23 UAT).
-    await deleteAccountWithFiles(id, () =>
-      prisma.$transaction([
-        prisma.user.delete({ where: { id } }),
-        prisma.syncChange.deleteMany({ where: { userId: id } }),
-      ])
-    );
+    await removeAccount(id);
 
     logger.info({
       operation: "admin_delete_user",
