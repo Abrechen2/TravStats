@@ -5,6 +5,7 @@ import { Icon } from "../ui/Icon";
 import { SettingRows } from "../ui/SettingRow";
 import {
   ActionControl,
+  SettingWriteError,
   GroupStateMark,
   InputControl,
   SettingItem,
@@ -15,7 +16,12 @@ import { useSettingItem } from "../ui/settings/itemContext";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { canonicalPrivateFileUrl } from "../../lib/privateFileUrl";
-import { generalSettingsWereSaved, useSettingsStore } from "../../store/settingsStore";
+import {
+  birthdateWasSaved,
+  generalSettingsWereSaved,
+  useSettingsStore,
+} from "../../store/settingsStore";
+import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
 
 interface ProfileSectionProps {
   profile: {
@@ -95,6 +101,9 @@ export default function ProfileSection({
     label: t("settings:profile.group.label"),
     saved,
     write: async (draft) => {
+      // Settings that never loaded must not be written over the account's own
+      // (forgejo#372): the document would carry defaults.
+      if (useRemoteSettingsStatus.getState().failed) throw new SettingWriteError("notLoaded");
       const store = useSettingsStore.getState();
       const previous = { ...store.profile };
       store.setProfile({
@@ -109,6 +118,7 @@ export default function ProfileSection({
         // Only the birthdate write was refused: the rest is saved, take back
         // the birthdate alone. Otherwise the whole document was refused.
         const partial = generalSettingsWereSaved(error);
+        const keepBirthdate = birthdateWasSaved(error);
         useSettingsStore.getState().setProfile(
           partial
             ? { birthdate: previous.birthdate }
@@ -116,7 +126,7 @@ export default function ProfileSection({
                 firstName: previous.firstName,
                 lastName: previous.lastName,
                 email: previous.email,
-                birthdate: previous.birthdate,
+                birthdate: keepBirthdate ? draft.birthdate || null : previous.birthdate,
               }
         );
         throw error;

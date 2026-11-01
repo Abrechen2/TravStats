@@ -21,8 +21,18 @@ jest.mock("../db", () => ({
     syncChange: {
       deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args),
     },
-    // The array form: the operations were already started, so await them.
-    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
+    // The interactive form (removeAccount takes the user-count lock first); the
+    // transaction client is the same mocked tables plus the raw lock query.
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        $executeRaw: jest.fn().mockResolvedValue(0),
+        user: {
+          findUnique: (...args: unknown[]) => mockUserFindUnique(...args),
+          count: (...args: unknown[]) => mockUserCount(...args),
+          delete: (...args: unknown[]) => mockUserDelete(...args),
+        },
+        syncChange: { deleteMany: (...args: unknown[]) => mockSyncChangeDeleteMany(...args) },
+      }),
   },
 }));
 

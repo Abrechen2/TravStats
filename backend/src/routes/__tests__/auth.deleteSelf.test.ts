@@ -64,10 +64,10 @@ describe("deleting one's own account (DELETE /auth/me)", () => {
     expect(res.status).toBe(200);
   });
 
-  it("refuses a wrong password and keeps the account", async () => {
+  it("refuses a wrong password with 403, never 401 (the client signs out on 401), and keeps the account", async () => {
     const id = await makeUser("delSelfPlain");
     const res = await del(id, { password: "nope", confirmation: "DELETE" });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
     expect(res.body.code).toBe("DELETE_PASSWORD_INCORRECT");
     expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
   });
@@ -84,10 +84,10 @@ describe("deleting one's own account (DELETE /auth/me)", () => {
   it("asks for the second factor when the account has one, and refuses a wrong code", async () => {
     const id = await makeUser("delSelfTfa", { tfa: true });
     const none = await del(id, { password: "password123", confirmation: "DELETE" });
-    expect(none.status).toBe(401);
+    expect(none.status).toBe(403);
     expect(none.body.code).toBe("DELETE_SECOND_FACTOR_REQUIRED");
     const bad = await del(id, { password: "password123", confirmation: "DELETE", code: "000000" });
-    expect(bad.status).toBe(401);
+    expect(bad.status).toBe(403);
     expect(bad.body.code).toBe("DELETE_SECOND_FACTOR_INVALID");
     expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
   });
@@ -136,5 +136,17 @@ describe("deleting one's own account (DELETE /auth/me)", () => {
     expect(res.status).toBe(403);
     expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
     expect(await prisma.user.findUnique({ where: { id } })).not.toBeNull();
+  });
+
+  it("two admins deleting themselves at the same moment cannot leave the instance without one", async () => {
+    await prisma.user.updateMany({ where: { isAdmin: true }, data: { isAdmin: false } });
+    const a = await makeUser("delSelfAdmin", { admin: true });
+    const b = await makeUser("delSelfAdmin2", { admin: true });
+    const [ra, rb] = await Promise.all([
+      del(a, { password: "password123", confirmation: "DELETE" }),
+      del(b, { password: "password123", confirmation: "DELETE" }),
+    ]);
+    expect([ra.status, rb.status].sort()).toEqual([200, 409]);
+    expect(await prisma.user.count({ where: { isAdmin: true } })).toBe(1);
   });
 });

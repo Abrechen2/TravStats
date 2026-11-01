@@ -10,6 +10,7 @@ const demo = vi.hoisted(() => ({ value: false }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.value }));
 
 import { generalSettingsWereSaved, useSettingsStore } from "../../../store/settingsStore";
+import { useRemoteSettingsStatus } from "../../../store/remoteSettingsStatus";
 import ProfileSection from "../ProfileSection";
 
 /**
@@ -141,5 +142,44 @@ describe("ProfileSection", () => {
     renderSection();
     expect(screen.getByLabelText("settings:profile.firstName")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "settings:profile.save" })).not.toBeInTheDocument();
+  });
+
+  it("writes nothing while the settings never loaded, and says why", async () => {
+    useRemoteSettingsStatus.setState({ failed: true });
+    try {
+      renderSection();
+      fireEvent.change(screen.getByLabelText("settings:profile.firstName"), {
+        target: { value: "Denis" },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+      });
+      expect(setProfile).not.toHaveBeenCalled();
+      expect(save).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
+    } finally {
+      useRemoteSettingsStatus.setState({ failed: false });
+    }
+  });
+
+  it("when the general save was refused but the birthday write went through, the birthday stays", async () => {
+    const refused = new Error("general refused");
+    const store = await import("../../../store/settingsStore");
+    const spy = vi.spyOn(store, "birthdateWasSaved").mockImplementation((e) => e === refused);
+    save.mockRejectedValue(refused);
+    try {
+      renderSection();
+      fireEvent.change(screen.getByLabelText("settings:profile.birthdate"), {
+        target: { value: "1981-02-03" },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+      });
+      expect(setProfile).toHaveBeenLastCalledWith(
+        expect.objectContaining({ birthdate: "1981-02-03", firstName: "Dennis" })
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
