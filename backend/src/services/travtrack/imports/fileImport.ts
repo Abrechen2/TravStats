@@ -251,6 +251,7 @@ export async function startGpxImport(
   // The service owns the spooled file from here on: it is removed on every refusal
   // and when the job ends, whatever the job's outcome.
   let spooled: string | null = null;
+  let slotHeld = false;
   try {
     if ("buffer" in file) {
       assertImportSize(sniffFormat(file.buffer), file.buffer.length, opts.maxBytes);
@@ -260,9 +261,12 @@ export async function startGpxImport(
       assertImportSize(sniffFormat(await readHead(spooled)), file.size, opts.maxBytes);
     }
     if (readerQueueFull() || fileImportsFull()) throw busy();
+    // Reserve the slot in the same tick as the check: two requests awaiting
+    // createRunningImport would otherwise both pass a full-minus-one check.
+    fileImportsRunning += 1;
+    slotHeld = true;
     const importId = await createRunningImport(userId, file.originalName);
     const path = spooled;
-    fileImportsRunning += 1;
     const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
       try {
         await opts.beforeRun?.();
@@ -274,13 +278,22 @@ export async function startGpxImport(
         );
       } finally {
         releaseActiveImport(importId, importId);
-        fileImportsRunning -= 1;
+        if (slotHeld) {
+          slotHeld = false;
+          fileImportsRunning -= 1;
+        }
         discardSpool(path);
       }
     });
     spooled = null;
     return { jobId: job.id, importId };
   } catch (err) {
+    // A refusal before the job took over (409 from createRunningImport, a throw
+    // from startJob) gives the slot back here; afterwards the job's finally does.
+    if (slotHeld && spooled !== null) {
+      slotHeld = false;
+      fileImportsRunning -= 1;
+    }
     discardSpool(spooled);
     throw err;
   }

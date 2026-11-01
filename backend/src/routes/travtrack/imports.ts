@@ -64,6 +64,7 @@ const fileUpload = multer({
 /** Accounts whose upload body is being taken right now. */
 const uploading = new Set<string>();
 const MAX_CONCURRENT_UPLOADS = 3;
+const UPLOAD_IDLE_MS = 60_000;
 
 /**
  * Refuses an upload before its body is read: an import of this account is
@@ -84,6 +85,9 @@ function refuseEarly(req: AuthRequest, res: Response, next: NextFunction): void 
     // Reserved synchronously, before the await below, so two requests cannot both pass.
     uploading.add(userId);
     res.once("close", () => uploading.delete(userId));
+    // A slot is instance-wide, so a body that stalls must not hold it: an upload
+    // idle for a minute is cut, which closes the response and frees the slot.
+    req.setTimeout(UPLOAD_IDLE_MS, () => req.destroy());
     if (await hasLiveImport(userId)) throw running();
   })().then(
     () => next(),

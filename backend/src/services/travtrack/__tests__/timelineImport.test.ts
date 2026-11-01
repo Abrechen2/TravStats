@@ -7,7 +7,12 @@ import request from "supertest";
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { settleAllJobs } from "../../jobs/jobRegistry";
-import { runGpxImport, startGpxImport } from "../imports/fileImport";
+import {
+  MAX_FILE_IMPORTS,
+  fileImportsFull,
+  runGpxImport,
+  startGpxImport,
+} from "../imports/fileImport";
 import { SPOOL_DIR, spoolStorage } from "../imports/spool";
 import { READER_QUEUE_MAX, readerQueueFull } from "../imports/trackFileChild";
 import {
@@ -534,6 +539,28 @@ describe("TravTrack — Google Timeline and other track files", () => {
       expect(spooled()).toEqual(before);
       // The line drains: a read is accepted again.
       expect((await readTrackFile(records)).track.count).toBe(1);
+    });
+
+    it("reserves an import slot before it awaits, so concurrent starts cannot pass a full instance", async () => {
+      const others = await Promise.all(
+        Array.from({ length: MAX_FILE_IMPORTS }, (_, i) => makeUser(`${PREFIX}slot${i}`))
+      );
+      let open!: () => void;
+      const gate = new Promise<void>((r) => (open = r));
+      const starts = [userId, ...others].map((uid) =>
+        startGpxImport(uid, { buffer: records, originalName: "r.json" }, { beforeRun: () => gate })
+      );
+      const outcomes = await Promise.allSettled(starts);
+      const busy = outcomes.filter(
+        (o) => o.status === "rejected" && (o.reason as AppError).code === "TRAVTRACK_IMPORT_BUSY"
+      );
+      expect(busy).toHaveLength(1);
+      expect(outcomes.filter((o) => o.status === "fulfilled")).toHaveLength(MAX_FILE_IMPORTS);
+      open();
+      await settleAllJobs();
+      expect(fileImportsFull()).toBe(false);
+      await wipeTravTrack(others);
+      await prisma.travTrackImport.deleteMany({ where: { userId: { in: others } } });
     });
   });
 });
