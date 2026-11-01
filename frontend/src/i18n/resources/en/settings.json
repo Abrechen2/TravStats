@@ -1598,7 +1598,8 @@
         "offline": "The server isn't answering right now.",
         "rejected": "The server didn't accept the value.",
         "timezone": "I don't know this time zone.",
-        "demo": "I don't save this in the demo account."
+        "demo": "I don't save this in the demo account.",
+        "notLoaded": "Settings haven't loaded. I save nothing, so yours aren't overwritten."
       },
       "retry": "Try again",
       "discard": "Discard",

@@ -1,7 +1,8 @@
-import type { JSX } from "react";
+import { useEffect, useRef, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
 import { useSettingsStore, type UnitsSettings } from "../../store/settingsStore";
-import { ChoiceControl, SettingItem, useSettingWrite } from "../ui/settings";
+import { ChoiceControl, SettingItem, SettingWriteError, useSettingWrite } from "../ui/settings";
 
 type UnitField = "distanceUnit" | "weightUnit";
 
@@ -33,10 +34,25 @@ export function UnitRow<V extends string>({
   locked,
 }: UnitRowProps<V>): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  const savedRef = useRef(saved);
+  useEffect(() => {
+    savedRef.current = saved;
+  });
   const write = useSettingWrite<V>(`units.${field}`, saved, async (value, { keepalive }) => {
+    // Settings that never loaded must not be written over the server's (the
+    // same guard the document autosave holds, forgejo#372).
+    if (useRemoteSettingsStatus.getState().failed) throw new SettingWriteError("notLoaded");
     const store = useSettingsStore.getState();
+    const previous = savedRef.current;
     store.setUnits({ [field]: value } as Partial<UnitsSettings>);
-    await store.saveRemoteSettings({ keepalive });
+    try {
+      await store.saveRemoteSettings({ keepalive });
+    } catch (error) {
+      // The row keeps the CHOICE; the store goes back to what the server holds,
+      // so no later save of the document carries the refused value.
+      useSettingsStore.getState().setUnits({ [field]: previous } as Partial<UnitsSettings>);
+      throw error;
+    }
   });
   return (
     <SettingItem

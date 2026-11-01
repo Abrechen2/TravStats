@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "../../../../store/authStore";
 import { SaveStateMark } from "../SaveStateMark";
 import { useSettingWrite } from "../useSettingWrite";
 import { flushWrites, resetWriteQueue, SettingWriteError, type WriteFn } from "../writeQueue";
@@ -168,6 +169,43 @@ describe("leaving the page flushes immediate writes", () => {
     await act(async () => flushWrites(false));
     expect(a).toHaveBeenCalledTimes(1);
     expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it("pagehide also sends a newer choice while an older write is still in flight", async () => {
+    const calls: Array<[string, boolean]> = [];
+    const write = vi.fn((value: string, o: { keepalive: boolean }) => {
+      calls.push([value, o.keepalive]);
+      return new Promise<void>(() => undefined);
+    });
+    render(<Row saved="kg" write={write} />);
+    click("pick lb");
+    await tick(400);
+    click("pick kg");
+    click("pick lb");
+    click("pick kg");
+    await act(async () => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(calls).toEqual([
+      ["lb", false],
+      ["kg", true],
+    ]);
+  });
+
+  it("drops a choice (and its retry) when another account signs in", async () => {
+    const write = vi.fn().mockRejectedValue(refused());
+    useAuthStore.setState({ user: { id: "a" } as never });
+    render(<Row saved="kg" write={write} />);
+    click("pick lb");
+    await tick(400);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    await act(async () => {
+      useAuthStore.setState({ user: { id: "b" } as never });
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await act(async () => flushWrites(false));
+    expect(write).toHaveBeenCalledTimes(1);
+    act(() => useAuthStore.setState({ user: null }));
   });
 
   it("does not write at all when the choice went back to the saved value", async () => {

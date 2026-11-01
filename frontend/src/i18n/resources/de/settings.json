@@ -1598,7 +1598,8 @@
         "offline": "Der Server antwortet gerade nicht.",
         "rejected": "Der Server hat den Wert nicht angenommen.",
         "timezone": "Diese Zeitzone kenne ich nicht.",
-        "demo": "Im Demo-Konto speichere ich das nicht."
+        "demo": "Im Demo-Konto speichere ich das nicht.",
+        "notLoaded": "Die Einstellungen sind nicht geladen. Ich speichere nichts, um deine nicht zu überschreiben."
       },
       "retry": "Erneut versuchen",
       "discard": "Verwerfen",

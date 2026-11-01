@@ -1,3 +1,5 @@
+import { useAuthStore } from "../../../store/authStore";
+
 /**
  * The write queue of the settings area's immediate rows (settings rebuild, B6).
  *
@@ -18,7 +20,7 @@
 export type WriteState = "idle" | "waiting" | "saving" | "saved" | "failed";
 
 /** Why a write failed. Each has its own DE/EN line under `settings:blocks.save.reason`. */
-export type WriteReason = "offline" | "rejected" | "timezone" | "demo";
+export type WriteReason = "offline" | "rejected" | "timezone" | "demo" | "notLoaded";
 
 export interface WriteOptions {
   /** The page is going away: the request must survive it. */
@@ -94,8 +96,9 @@ async function run(entry: WriteEntry, keepalive: boolean): Promise<void> {
   if (entry.savedTimer) clearTimeout(entry.savedTimer);
   entry.savedTimer = null;
   // One request per setting at a time: a newer choice made meanwhile is sent
-  // when this one returns, in order, so the older can never land last.
-  if (entry.inFlight) return;
+  // when this one returns, in order, so the older can never land last. Only a
+  // page that is going away (keepalive) cannot wait for that.
+  if (entry.inFlight && !keepalive) return;
   const sent = entry.value;
   entry.inFlight = true;
   entry.state = "saving";
@@ -211,6 +214,13 @@ export function resetWriteQueue(): void {
   }
   entries.clear();
   publish();
+}
+
+if (typeof useAuthStore?.subscribe === "function") {
+  // Another account must never inherit a choice (or a retry) of the previous one.
+  useAuthStore.subscribe((state, previous) => {
+    if (state.user?.id !== previous.user?.id) resetWriteQueue();
+  });
 }
 
 if (typeof window !== "undefined") {

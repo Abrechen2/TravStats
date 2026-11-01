@@ -9,6 +9,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 
+import { useRemoteSettingsStatus } from "../../../store/remoteSettingsStatus";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import UnitsSection from "../UnitsSection";
@@ -70,6 +71,27 @@ describe("the distance unit when the server refuses the save", () => {
     fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
     expect(radio("settings:units.weight", 0)).toHaveAttribute("aria-checked", "true");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("puts the refused unit back in the store, so no later save of the document carries it", async () => {
+    save.mockRejectedValue(new Error("Network Error"));
+    fireEvent.click(radio("settings:units.distance", 1));
+    await settle(400);
+    expect(setUnits).toHaveBeenNthCalledWith(1, { distanceUnit: "miles" });
+    expect(setUnits).toHaveBeenNthCalledWith(2, { distanceUnit: "kilometers" });
+  });
+
+  it("writes nothing while the settings never loaded, and says why", async () => {
+    useRemoteSettingsStatus.setState({ failed: true });
+    try {
+      fireEvent.click(radio("settings:units.distance", 1));
+      await settle(400);
+      expect(save).not.toHaveBeenCalled();
+      expect(setUnits).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
+    } finally {
+      useRemoteSettingsStatus.setState({ failed: false });
+    }
   });
 
   it("leaving the page sends a pick that is still waiting for its debounce", () => {
