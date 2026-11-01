@@ -14,6 +14,7 @@ import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
+import { LodgingStayDocuments } from "../components/lodging/LodgingStayDocuments";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { StayDeleteConfirm } from "../components/lodging/StayDeleteConfirm";
@@ -590,6 +591,8 @@ export default function LodgingDetailPage(): JSX.Element {
           )}
 
           {id && <LodgingPhotoSection lodgingId={id} />}
+
+          <LodgingStayDocuments stays={lodging.stays} />
 
           {/* The notes, under the same name the form gives them. They were
               stored and never shown, so anything typed there disappeared on
