@@ -29,6 +29,7 @@ import "./tripRecording";
 import "./geoExport";
 import "./companionData";
 import "./locationProvider";
+import "./instanceBackup";
 import "./strava";
 import "./openData";
 import "./operators";

@@ -17,6 +17,7 @@ import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
 import locationProviderRouter from "./locationProvider";
 import externalServicesRouter from "./externalServices";
+import instanceBackupRouter from "./instanceBackup";
 import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
 
 const router = Router();
@@ -92,5 +93,6 @@ router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
 router.use("/external-services", externalServicesRouter);
+router.use("/instance-backup", instanceBackupRouter);
 
 export default router;
