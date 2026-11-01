@@ -35,11 +35,11 @@ export function inFlightBy(
 
 const fix = (p: StoredPoint) => ({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] });
 
-/** Each ground step of these stretches: its end's instant and its kilometres. */
-function* groundSteps(
+/** Each ground step of these stretches: its end's instant, its kilometres and the two fixes it joins. */
+export function* groundSteps(
   stretches: readonly StoredPoint[][],
   inFlight: InFlight
-): Generator<{ atMs: number; km: number }> {
+): Generator<{ atMs: number; km: number; from: StoredPoint; to: StoredPoint }> {
   for (const stretch of stretches) {
     for (let i = 1; i < stretch.length; i++) {
       const a = stretch[i - 1];
@@ -49,7 +49,7 @@ function* groundSteps(
       if (inFlight(a) || inFlight(b) || isBadFix(fix(a)) || isBadFix(fix(b))) continue;
       const step = haversineKm(fix(a), fix(b));
       if (step / hours > MAX_GROUND_KMH) continue;
-      yield { atMs: b[0], km: step };
+      yield { atMs: b[0], km: step, from: a, to: b };
     }
   }
 }

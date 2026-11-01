@@ -71,6 +71,60 @@ const wrappedChaptersSchema = z
       "and never summed across domains. Null for a hidden domain.",
   });
 
+/**
+ * forgejo#400 — what the account's own TravTrack recorded in the year. Its
+ * figures are measured by the phone, not entries of the logbook: nothing here
+ * is added to any domain's total (days travelling are the one cross-domain
+ * sum, and they are not this).
+ */
+const wrappedTravTrackSchema = z
+  .object({
+    kmGround: z
+      .number()
+      .nullable()
+      .describe(
+        "Ground kilometres between privacy-safe fixes (the monthly values' own counting: " +
+          "not in the air, nothing faster than 500 km/h). Null when no step was measurable."
+      ),
+    daysRecorded: z
+      .number()
+      .int()
+      .describe("Calendar days (the account's profile zone) on which a privacy-safe fix exists"),
+    topSpeedKmh: z
+      .number()
+      .int()
+      .nullable()
+      .describe(
+        "Highest believable ground speed the phone reported, km/h. Spikes are dropped " +
+          "(see services/travtrack/everyday/fold.ts); null when none is believable — never 0"
+      ),
+    highestPointM: z
+      .number()
+      .int()
+      .nullable()
+      .describe(
+        "Highest median-smoothed altitude in metres, ground only (never an aircraft's). " +
+          "Null when no stretch holds three believable altitudes — never 0"
+      ),
+    byMotion: z
+      .array(
+        z.object({
+          motion: z.enum(["walking", "running", "cycling", "automotive", "stationary", "unknown"]),
+          hours: z.number().describe("Time in steps of at most 15 minutes, one decimal"),
+          km: z.number().describe("Ground kilometres of those steps, one decimal"),
+        })
+      )
+      .describe("The movement classes the phone reported, those with time only"),
+  })
+  .nullable()
+  .optional()
+  .openapi({
+    description:
+      "Null when TravTrack is not this account's location source, is switched off, or holds " +
+      "no privacy-safe fix in the year. Absent in a public share. Privacy-zone fixes are " +
+      "never included.",
+  });
+
 export const wrappedRankSchema = z.enum(["top", "second", "other"]);
 
 export const wrappedSchema = z.object({
@@ -168,6 +222,7 @@ export const wrappedSchema = z.object({
       description: "The year's most-flown pair, codes sorted. Null when none is derivable.",
     }),
   chapters: wrappedChaptersSchema,
+  travTrack: wrappedTravTrackSchema,
 });
 
 export type WrappedRank = z.infer<typeof wrappedRankSchema>;

@@ -1421,6 +1421,22 @@
     "TRIP_ARRIVE_DISCOVER": {
       "name": "Arrive and discover",
       "description": "Arrived by train or bus, stayed the night and visited a place – on the same trip"
+    },
+    "TRAVTRACK_DAYS_30": {
+      "name": "On the trail",
+      "description": "Recorded on 30 days with TravTrack"
+    },
+    "TRAVTRACK_DAYS_365": {
+      "name": "A year on the trail",
+      "description": "Recorded on 365 days with TravTrack"
+    },
+    "TRAVTRACK_KM_1000": {
+      "name": "A thousand kilometres on the ground",
+      "description": "1,000 kilometres on the ground measured by TravTrack"
+    },
+    "TRAVTRACK_KM_10000": {
+      "name": "Ten thousand kilometres on the ground",
+      "description": "10,000 kilometres on the ground measured by TravTrack"
     }
   },
   "header": {

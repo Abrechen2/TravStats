@@ -671,7 +671,7 @@ router.get(
         return;
       }
 
-      const wrapped = await loadWrapped(userId, parsed.data.year ?? null);
+      const wrapped = await loadWrapped(userId, parsed.data.year ?? null, { withTravTrack: true });
 
       if (!wrapped) {
         // No countable activity in any year. There is no story, and a grid of

@@ -1113,6 +1113,24 @@
         "coverage": "Crossings without a distance add no kilometres and are named; if none has a distance, no kilometre figure is shown. Tap the number to see the entries.",
         "exclusions": "Planned, ongoing and cancelled crossings do not count. A hidden domain has no chapter. The chapter is never added to any other."
       }
+    },
+    "travTrack": {
+      "days": "TravTrack days",
+      "kmDesc": "{{km}} measured on the ground",
+      "kmNone": "distance not measurable",
+      "topSpeed": "Top speed",
+      "topSpeedDesc": "on the ground, without outliers",
+      "highest": "Highest point",
+      "highestDesc": "on the ground, never in a plane",
+      "byMotion": "On the move, by kind",
+      "motion": {
+        "walking": "On foot",
+        "running": "Running",
+        "cycling": "Cycling",
+        "automotive": "Vehicle",
+        "stationary": "Still",
+        "unknown": "Unknown"
+      }
     }
   },
   "period": {

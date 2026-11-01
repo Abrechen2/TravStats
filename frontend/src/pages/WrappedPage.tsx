@@ -15,6 +15,7 @@ import { formatDistance, localeForLanguage } from "../lib/units";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import type { Wrapped } from "../types/wrapped";
+import WrappedTravTrackCards from "../components/Stats/wrapped/WrappedTravTrackCards";
 import WrappedChapterCards, {
   chaptersHoldAnything,
 } from "../components/Stats/wrapped/WrappedChapterCards";
@@ -213,7 +214,8 @@ export default function WrappedPage(): JSX.Element {
           {(!flightsOn || (wrapped.flights ?? 0) === 0) &&
           (wrapped.cruises ?? 0) === 0 &&
           (wrapped.railRides ?? 0) === 0 &&
-          !chaptersHoldAnything(wrapped.chapters) ? (
+          !chaptersHoldAnything(wrapped.chapters) &&
+          !wrapped.travTrack ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:wrapped.emptyYear", { year: wrapped.year })}
             </p>
@@ -287,6 +289,9 @@ export default function WrappedPage(): JSX.Element {
                   count={count}
                   year={wrapped.year}
                 />
+              )}
+              {wrapped.travTrack && (
+                <WrappedTravTrackCards data={wrapped.travTrack} count={count} />
               )}
               {flightsOn && wrapped.topAirline !== null && (
                 <StatCard

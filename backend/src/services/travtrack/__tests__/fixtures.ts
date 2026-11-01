@@ -80,6 +80,10 @@ export async function storePoint(
     device?: string;
     accuracyM?: number | null;
     links?: Array<{ kind: "flight" | "trip"; id: string }>;
+    speedMps?: number | null;
+    altitudeM?: number | null;
+    motion?: string | null;
+    purpose?: "everyday" | "flight" | "trip";
   }
 ): Promise<string> {
   refCounter += 1;
@@ -95,6 +99,10 @@ export async function storePoint(
       origin: `companion:${device}`,
       originRef: `fx-${refCounter}`,
       deviceId: device,
+      speedMps: p.speedMps ?? null,
+      altitudeM: p.altitudeM ?? null,
+      motion: p.motion ?? null,
+      purpose: p.purpose ?? "everyday",
     },
   });
   for (const link of p.links ?? []) {

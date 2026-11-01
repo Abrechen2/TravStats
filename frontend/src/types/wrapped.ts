@@ -67,6 +67,27 @@ export interface Wrapped {
    * without it; the page then draws no chapter.
    */
   chapters?: WrappedChapters;
+  /**
+   * forgejo#400 — what the account's own TravTrack recorded in the year. Null
+   * (or absent) when TravTrack is not this account's location source or holds
+   * nothing for the year; no figure is ever a zero standing in for "unknown".
+   */
+  travTrack?: WrappedTravTrack | null;
+}
+
+export type TravTrackMotion =
+  "walking" | "running" | "cycling" | "automotive" | "stationary" | "unknown";
+
+export interface WrappedTravTrack {
+  /** Ground kilometres between privacy-safe fixes; null when none was measurable. */
+  kmGround: number | null;
+  daysRecorded: number;
+  /** Highest believable ground speed, km/h; null when none is believable. */
+  topSpeedKmh: number | null;
+  /** Highest median-smoothed altitude in metres; null when none is believable. */
+  highestPointM: number | null;
+  /** The movement classes the phone reported, those with time only. */
+  byMotion: { motion: TravTrackMotion; hours: number; km: number }[];
 }
 
 /** Each chapter is its own figure — never summed across domains. */

@@ -3,6 +3,7 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 import { localWallClockOf } from "../../utils/timezone";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
+import { travTrackYearStats } from "../travtrack/everyday/view";
 import { buildWrapped, type Wrapped } from "./wrapped";
 import { loadWrappedDomains, loadWrappedPassport } from "./wrappedDomains";
 
@@ -14,7 +15,16 @@ import { loadWrappedDomains, loadWrappedPassport } from "./wrappedDomains";
  * `year` null: the latest year with anything in it. Null result: no countable
  * activity in any year (or none in the asked year) — there is no story.
  */
-export async function loadWrapped(userId: string, year: number | null): Promise<Wrapped | null> {
+export async function loadWrapped(
+  userId: string,
+  year: number | null,
+  /**
+   * The owner's own page asks for the account's TravTrack figures (forgejo#400);
+   * a public share link never does — it is built by the default `false`, so the
+   * recorded movement of a person cannot leave through a link.
+   */
+  opts: { withTravTrack?: boolean } = {}
+): Promise<Wrapped | null> {
   // One scan, not two: `loadPassport` reads the same countable flights of
   // the same user and is handed these rows (forgejo#49). `arrivalTime` and
   // `arrTimeSemantics` are here only because it needs them.
@@ -49,7 +59,7 @@ export async function loadWrapped(userId: string, year: number | null): Promise<
   // answer rather than resolving timezones itself (AUD-077).
   const flightsWithClock = await withDepartureClock(flights);
 
-  return buildWrapped(
+  const wrapped = buildWrapped(
     // Great-circle from the coordinates, the measure `/stats/timeseries`
     // buckets — so the year's distance agrees with its bar on the chart.
     flightsWithClock.map((f) => ({
@@ -66,4 +76,6 @@ export async function loadWrapped(userId: string, year: number | null): Promise<
     domains.rail,
     domains.chapters
   );
+  if (!wrapped || !opts.withTravTrack) return wrapped;
+  return { ...wrapped, travTrack: await travTrackYearStats(userId, wrapped.year) };
 }
