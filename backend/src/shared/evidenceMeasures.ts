@@ -46,6 +46,7 @@ import { DOMAIN_MEASURES } from "./evidenceMeasuresDomains";
 import { ACHIEVEMENT_MEASURES } from "./evidenceMeasuresAchievements";
 import { RAIL_MEASURES } from "./evidenceMeasuresRail";
 import { RENTAL_BUS_MEASURES } from "./evidenceMeasuresRentalBus";
+import { CO2_MEASURES } from "./evidenceMeasuresCo2";
 import { PASSPORT_MEASURES } from "./evidenceMeasuresPassport";
 import { FLIGHT_INSIGHT_MEASURES } from "./evidenceMeasuresFlightInsights";
 import { FLIGHT_WITNESS_MEASURES } from "./evidenceMeasuresFlightWitnesses";
@@ -98,6 +99,7 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...DOMAIN_MEASURES,
   ...RAIL_MEASURES,
   ...RENTAL_BUS_MEASURES,
+  ...CO2_MEASURES,
   ...PASSPORT_MEASURES,
   ...FLIGHT_INSIGHT_MEASURES,
   ...FLIGHT_WITNESS_MEASURES,

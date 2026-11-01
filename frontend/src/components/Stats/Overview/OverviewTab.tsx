@@ -22,6 +22,7 @@ import CrossDomainHeatmap from "./CrossDomainHeatmap";
 import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
+import CarbonByModeSection from "./CarbonByModeSection";
 import DomainRecordsSection from "./DomainRecordsSection";
 import CrossDomainSection from "./CrossDomainSection";
 import CompanionsTogetherSection from "./CompanionsTogetherSection";
@@ -203,6 +204,9 @@ export default function OverviewTab({
           of the per-domain adapters can, and a failure in it must not take
           the rest of the overview down. */}
       {show("travelAccount") && <TravelAccountSection />}
+
+      {/* Carbon per mode of travel (forgejo#395); lifetime, each mode its own figure. */}
+      {show("carbon") && <CarbonByModeSection />}
 
       {/* Records beyond flights (forgejo#265), one per visible domain. */}
       {show("domainRecords") && <DomainRecordsSection />}

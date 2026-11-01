@@ -1583,5 +1583,38 @@
       "coverage": "Für die Zeitzonen-Zahlen braucht ein Flug echte Uhrzeiten und Zonen, für den Preis pro Kilometer eine Fahrt einen eigenen Preis (nicht den einer gemeinsamen Buchung) und eine Strecke, eine Nacht ein bekanntes Land. Was sich nicht ableiten lässt, bleibt draußen und wird genannt, nie als Null gezählt.",
       "exclusions": "Ein Tag ohne Eintrag ist kein Tag zu Hause und keiner außerhalb des Schengen-Raums. Kreuzfahrten und Roadtrips ordnen dich keinem Land zu. Die Jetlag-Zahl ist eine Schätzung. Das ist eine Logbuch-Zählung, keine Rechtsberatung."
     }
+  },
+  "carbon": {
+    "title": "CO₂ nach Verkehrsmittel",
+    "subtitle": "Geschätzt aus veröffentlichten Emissionsfaktoren und der Strecke. Jedes Verkehrsmittel steht für sich, die Summe nennt ihre Teile.",
+    "total": "Zusammen {{total}}:",
+    "coverage": "{{measured}} von {{records}} Einträgen mit bekannter Distanz",
+    "cruiseNote": "Untergrenze: Es gibt keinen veröffentlichten Faktor für Kreuzfahrtschiffe, gerechnet wird mit dem Fährdurchschnitt über die Strecke, ohne Hotelbetrieb.",
+    "saved": "Gespart gegenüber dem Flug",
+    "savedDescription_one": "Schätzung aus {{count}} Fahrt, die auch ein Flug hätte sein können",
+    "savedDescription_other": "Schätzung aus {{count}} Fahrten, die auch ein Flug hätten sein können",
+    "source": "Faktoren: {{publisher}}, Conversion Factors {{year}} (direkte Emissionen je Personenkilometer, beim Mietwagen je Fahrzeugkilometer).",
+    "helpTerms": {
+      "perMode": "CO₂ je Verkehrsmittel"
+    },
+    "help": {
+      "perMode": {
+        "unit": "Kilogramm CO₂-Äquivalent, geschätzt: Strecke mal veröffentlichter Faktor. Bahn, Bus, Fähre und Kreuzfahrt je Personenkilometer, der Mietwagen je Fahrzeugkilometer.",
+        "time": "Ohne Zeitraum: alles, was gezählt wird, über die gesamte Zeit.",
+        "source": "Die gespeicherte Strecke jedes Eintrags und die Faktoren des britischen DESNZ; der Flug rechnet wie bisher mit dem Flugrechner. Bahn zählt auch Tram und Metro (mit eigenem Faktor), der Mietwagen nach ACRISS-Klasse und Kraftstoff, die Fähre mit Fahrzeug als Autopassagier.",
+        "coverage": "Die Kachel nennt, bei wie vielen Einträgen die Distanz bekannt ist. Die anderen fehlen in der Summe und gelten nicht als null.",
+        "exclusions": "Elektrische Mietwagen (der Faktor zählt nur den Auspuff), Einträge ohne Distanz und alles, was nicht abgeschlossen ist. Die Kreuzfahrt ist eine Untergrenze."
+      },
+      "saved": {
+        "unit": "Kilogramm CO₂, die ein Flug über dieselbe Luftlinie mehr ausgestoßen hätte (Economy, Flugrechner).",
+        "time": "Ohne Zeitraum: alle abgeschlossenen Fahrten.",
+        "source": "Bahn- und Busfahrten mit bekannter Distanz; verglichen wird mit der Luftlinie zwischen Start und Ziel.",
+        "coverage": "Die Kachel nennt, wie viele Fahrten verglichen wurden.",
+        "exclusions": "Tram, Metro und Shuttle-Busse, Fahrten unter 100 km Luftlinie und Fahrten ohne Distanz. Es ist eine Schätzung, keine Messung."
+      }
+    },
+    "loadError": "CO₂-Werte konnten nicht geladen werden.",
+    "reasonNetwork": "Der Server hat nicht geantwortet (Netzwerk).",
+    "reasonStatus": "Der Server antwortete mit Fehler {{status}}."
   }
 }

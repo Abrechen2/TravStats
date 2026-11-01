@@ -114,6 +114,7 @@
     "sharePage.ts",
     "stats.ts",
     "stats/aircraft.ts",
+    "stats/co2.ts",
     "stats/cruiseInsights.ts",
     "stats/crossDomain.ts",
     "stats/domainRecords.ts",

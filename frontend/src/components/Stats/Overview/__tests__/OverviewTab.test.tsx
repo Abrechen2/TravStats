@@ -18,6 +18,7 @@ vi.mock("@/lib/api/stats", async (importOriginal) => {
     statsApi: {
       ...actual.statsApi,
       getTravelAccount: vi.fn().mockResolvedValue(null),
+      getCo2: vi.fn().mockResolvedValue(null),
       getDomainRecords: vi.fn().mockResolvedValue([]),
       getCrossDomainStats: vi.fn().mockResolvedValue({ unavailable: [] }),
       getPassport: vi.fn().mockResolvedValue({ countries: [] }),

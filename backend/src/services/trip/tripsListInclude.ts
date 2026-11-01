@@ -138,6 +138,8 @@ export const TRIP_RENTAL_SELECT = {
   returnAirport: { select: { iata: true } },
   vehicleClass: true,
   vehicleExample: true,
+  // The vehicle band the trip page's CO2 estimate reads (forgejo#395).
+  acrissCode: true,
   odometerOutKm: true,
   odometerInKm: true,
   distanceKm: true,

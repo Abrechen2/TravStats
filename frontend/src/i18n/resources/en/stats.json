@@ -1583,5 +1583,38 @@
       "coverage": "A flight needs real clock times and zones for the time-zone figures, a ride its own price (not a shared booking's) and a distance for the price per kilometre, a night a known country. What cannot be derived is left out and named, never counted as zero.",
       "exclusions": "A day without a record is not a day at home or outside the Schengen area. Cruises and roadtrips do not place you in a country. The jet-lag figure is an estimate. This is a logbook count, not legal advice."
     }
+  },
+  "carbon": {
+    "title": "CO₂ by mode of travel",
+    "subtitle": "Estimated from published emission factors and the distance. Each mode stands on its own; the total names its parts.",
+    "total": "Together {{total}}:",
+    "coverage": "{{measured}} of {{records}} entries with a known distance",
+    "cruiseNote": "Lower bound: there is no published factor for cruise ships, so the ferry average is applied over the voyage distance, without hotel operations.",
+    "saved": "Saved versus flying",
+    "savedDescription_one": "Estimate from {{count}} trip that could have been a flight",
+    "savedDescription_other": "Estimate from {{count}} trips that could have been flights",
+    "source": "Factors: {{publisher}}, conversion factors {{year}} (direct emissions per passenger-km; per vehicle-km for the rental car).",
+    "helpTerms": {
+      "perMode": "CO₂ per mode"
+    },
+    "help": {
+      "perMode": {
+        "unit": "Kilograms of CO₂ equivalent, estimated: distance times a published factor. Rail, bus, ferry and cruise per passenger-km, the rental car per vehicle-km.",
+        "time": "No period: everything that counts, over all time.",
+        "source": "Each entry's stored distance and the UK DESNZ factors; flights still use the flight calculator. Rail includes tram and metro (own factor), the rental car goes by ACRISS class and fuel, a ferry with a vehicle counts as a car passenger.",
+        "coverage": "The tile says for how many entries the distance is known. The others are missing from the sum and are not treated as zero.",
+        "exclusions": "Electric rental cars (the factor covers the tailpipe only), entries without a distance, and anything not completed. The cruise is a lower bound."
+      },
+      "saved": {
+        "unit": "Kilograms of CO₂ a flight over the same straight line would have emitted in addition (economy, flight calculator).",
+        "time": "No period: all completed trips.",
+        "source": "Rail and bus rides with a known distance, compared with the straight line between start and destination.",
+        "coverage": "The tile says how many trips were compared.",
+        "exclusions": "Tram, metro and shuttle buses, trips under 100 km straight-line and trips without a distance. It is an estimate, not a measurement."
+      }
+    },
+    "loadError": "The CO₂ figures could not be loaded.",
+    "reasonNetwork": "The server did not respond (network).",
+    "reasonStatus": "The server answered with error {{status}}."
   }
 }

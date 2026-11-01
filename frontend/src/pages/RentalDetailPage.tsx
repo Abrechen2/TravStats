@@ -18,6 +18,7 @@ import { RentalRouteMap } from "../components/rental/RentalRouteMap";
 import { RentalPriceComparison } from "../components/rental/RentalPriceComparison";
 import { RentalReturnCard } from "../components/rental/RentalReturnCard";
 import { showsReturnCard } from "../lib/rental/rentalReturnCard";
+import { co2Kpis } from "../lib/co2Kpis";
 import type { RentalFormStep } from "../components/rental/rentalFormSteps";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
@@ -171,6 +172,8 @@ export default function RentalDetailPage(): JSX.Element {
           ? t("rental:detail.kpiCostUnknown")
           : t(`rental:detail.kpiPerDay.${rental.cost.source}`),
     },
+    // Estimated CO2, and the saving against flying where there was a flight to compare (forgejo#395).
+    ...co2Kpis(rental.co2, t, locale),
   ];
 
   const station = (value: TimeValue | null): string | null => {

@@ -64,6 +64,8 @@ export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 export interface Cruise {
   id: string;
   userId: string;
+  /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
+  co2?: import("./co2").Co2Estimate | null;
   shipId: number | null;
   ship: Ship | null;
   shipNameOverride: string | null;

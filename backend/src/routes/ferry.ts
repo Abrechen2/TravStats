@@ -25,6 +25,7 @@ import {
   syncFerryLeg,
   type CrossingRouteOutcome,
 } from "../services/ferry/ferryRouting";
+import { withFerryCo2 } from "../services/co2/rideDto";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import {
@@ -205,7 +206,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
     res.json({
       success: true,
-      data: data.map(withFerryTimes),
+      data: data.map((r) => withFerryCo2(withFerryTimes(r))),
       // `railListSummary` reads operator and the two station names — the columns a ferry row shares.
       meta: {
         total,
@@ -229,7 +230,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: FERRY_INCLUDE,
     });
     if (!ride) throw new AppError("Ferry ride not found", 404);
-    res.json({ success: true, data: withFerryTimes(ride) });
+    res.json({ success: true, data: withFerryCo2(withFerryTimes(ride)) });
   } catch (err) {
     next(err);
   }
@@ -254,7 +255,9 @@ router.post(
             include: FERRY_INCLUDE,
           });
           // A replay routes nothing: the first request already did.
-          return ride ? { ride: withFerryTimes(ride), seaRoute: "unchanged" as const } : null;
+          return ride
+            ? { ride: withFerryCo2(withFerryTimes(ride)), seaRoute: "unchanged" as const }
+            : null;
         },
       });
       await restatusTrips([result.ride.tripId]);
@@ -328,7 +331,7 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
   // `seaRoute` tells the client what that did — a failure is said, not hidden.
   const seaRoute = await routeCrossingIfStraight(userId, ride.id, "ferry_journey_create.route");
   return {
-    ride: withFerryTimes(seaRoute === "routed" ? await readRide(ride.id) : ride),
+    ride: withFerryCo2(withFerryTimes(seaRoute === "routed" ? await readRide(ride.id) : ride)),
     seaRoute,
   };
 }
@@ -438,7 +441,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       : "unchanged";
     if (seaRoute === "routed") ride = await readRide(existing.id);
     await restatusTrips([existing.tripId, ride.tripId]);
-    res.json({ success: true, data: withFerryTimes(ride), meta: { seaRoute } });
+    res.json({ success: true, data: withFerryCo2(withFerryTimes(ride)), meta: { seaRoute } });
   } catch (err) {
     next(err);
   }

@@ -42,6 +42,7 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
+import { withRailCo2 } from "../services/co2/rideDto";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
 import { railListSummaryFromGroups } from "../shared/listSummary";
@@ -261,7 +262,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
     res.json({
       success: true,
-      data: data.map((j) => withRailSource(withStationShortCodes(withRailTimes(j)))),
+      data: data.map((j) => withRailSource(withStationShortCodes(withRailCo2(withRailTimes(j))))),
       meta: {
         total,
         limit,
@@ -286,7 +287,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!journey) throw new AppError("Rail journey not found", 404);
     res.json({
       success: true,
-      data: withRailSource(withStationShortCodes(withRailDetailTimes(journey))),
+      data: withRailSource(withStationShortCodes(withRailCo2(withRailDetailTimes(journey)))),
     });
   } catch (err) {
     next(err);
@@ -445,7 +446,7 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
 
   logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
   return {
-    data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+    data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
     meta: { geometry: reportOf(geo) },
   };
 }
@@ -462,7 +463,7 @@ async function replayRailRide(userId: string, id: string) {
   });
   if (!journey) return null;
   return {
-    data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+    data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
     meta: { geometry: editReport({ kind: "unchanged" }, journey.geometrySource) },
   };
 }
@@ -483,7 +484,7 @@ router.post(
       });
       res.json({
         success: true,
-        data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+        data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
         meta: { geometry: routed.report },
       });
     } catch (err) {
@@ -597,7 +598,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await restatusTrips([existing.tripId, journey.tripId]);
     res.json({
       success: true,
-      data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+      data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
       meta: { geometry: editReport(edit, existing.geometrySource) },
     });
   } catch (err) {

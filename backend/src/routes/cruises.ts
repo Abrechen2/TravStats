@@ -33,6 +33,7 @@ import logger from "../utils/logger";
 import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/cruiseColumns";
 import { keepStoredDay } from "../services/timeModel/dayColumns";
 import { dayAnchorNowFor } from "../shared/time/profileZone";
+import { withCruiseCo2 } from "../services/co2/rideDto";
 import { withCruiseTimes } from "../services/cruise/timesDto";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { carryOverAllAboard } from "../services/cruise/stopCarryOver";
@@ -64,7 +65,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: CRUISE_INCLUDE,
     });
     if (!cruise) throw new AppError("Cruise not found", 404);
-    res.json({ success: true, data: withCruiseTimes(cruise) });
+    res.json({ success: true, data: withCruiseCo2(withCruiseTimes(cruise)) });
   } catch (err) {
     next(err);
   }
@@ -249,7 +250,9 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       }
       logger.info({ operation: "cruise_create", cruiseId: result.cruise.id, userId });
     }
-    res.status(created ? 201 : 200).json({ success: true, data: withCruiseTimes(result.cruise) });
+    res
+      .status(created ? 201 : 200)
+      .json({ success: true, data: withCruiseCo2(withCruiseTimes(result.cruise)) });
   } catch (err) {
     next(err);
   }
@@ -598,7 +601,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     }
 
     // "keptStoredRate" / "lookupFailed": the rate could not be refreshed.
-    res.json({ success: true, data: withCruiseTimes(updated), fxSnapshot: fx.outcome });
+    res.json({
+      success: true,
+      data: withCruiseCo2(withCruiseTimes(updated)),
+      fxSnapshot: fx.outcome,
+    });
   } catch (err) {
     next(err);
   }

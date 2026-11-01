@@ -1,3 +1,4 @@
+import type { Co2Stats } from "../../types/co2";
 import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
@@ -135,6 +136,12 @@ export const statsApi = {
   /** Cheap cross-domain statistics (forgejo#399). */
   getCrossDomainStats: async (): Promise<CrossDomainStats> => {
     const { data } = await api.get<CrossDomainStats>("/stats/cross-domain");
+    return data;
+  },
+
+  /** Carbon per mode of travel, lifetime (forgejo#395). */
+  getCo2: async (): Promise<Co2Stats> => {
+    const { data } = await api.get<Co2Stats>("/stats/co2");
     return data;
   },
 

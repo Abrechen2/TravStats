@@ -458,5 +458,11 @@
   "evidence.ranking.companion.bus": "Bus rides with {{name}}",
   "evidence.ranking.companion.ferry": "Ferry crossings with {{name}}",
   "evidence.ranking.companion.rental": "Rental cars with {{name}}",
-  "evidence.ranking.companion.lodging": "Stays with {{name}}"
+  "evidence.ranking.companion.lodging": "Stays with {{name}}",
+  "evidence.metric.co2RailKg": "CO₂ rail, tram and metro (estimate)",
+  "evidence.metric.co2BusKg": "CO₂ bus (estimate)",
+  "evidence.metric.co2FerryKg": "CO₂ ferry (estimate)",
+  "evidence.metric.co2CruiseKg": "CO₂ cruise (estimate, lower bound)",
+  "evidence.metric.co2RentalKg": "CO₂ rental car (estimate)",
+  "evidence.metric.co2SavedVsFlightKg": "CO₂ saved versus flying (estimate)"
 }

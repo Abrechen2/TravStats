@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
+import { co2Kpis } from "../lib/co2Kpis";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
@@ -242,6 +243,8 @@ export default function CruiseDetailPage(): JSX.Element {
       ? [{ key: "countries", value: countries, label: t("detail.countries", { count: countries }) }]
       : []),
     ...(price ? [{ key: "price", value: price, label: t("detail.priceKpi") }] : []),
+    // Estimated CO2, and the saving against flying where there was a flight to compare (forgejo#395).
+    ...co2Kpis(cruise.co2, t, i18n.language),
   ];
 
   return (

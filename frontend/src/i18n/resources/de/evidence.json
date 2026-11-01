@@ -458,5 +458,11 @@
   "evidence.ranking.companion.bus": "Busfahrten mit {{name}}",
   "evidence.ranking.companion.ferry": "Fährüberfahrten mit {{name}}",
   "evidence.ranking.companion.rental": "Mietwagen mit {{name}}",
-  "evidence.ranking.companion.lodging": "Aufenthalte mit {{name}}"
+  "evidence.ranking.companion.lodging": "Aufenthalte mit {{name}}",
+  "evidence.metric.co2RailKg": "CO₂ Bahn, Tram und Metro (Schätzung)",
+  "evidence.metric.co2BusKg": "CO₂ Bus (Schätzung)",
+  "evidence.metric.co2FerryKg": "CO₂ Fähre (Schätzung)",
+  "evidence.metric.co2CruiseKg": "CO₂ Kreuzfahrt (Schätzung, Untergrenze)",
+  "evidence.metric.co2RentalKg": "CO₂ Mietwagen (Schätzung)",
+  "evidence.metric.co2SavedVsFlightKg": "CO₂ gespart gegenüber dem Flug (Schätzung)"
 }
