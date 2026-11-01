@@ -5,7 +5,15 @@ import { detectTrips } from "../tripDetectionService";
 import { composeSuggestions, type FlightCluster } from "./compose";
 import { loadTrips, readUserScope, resolveHome } from "./context";
 import { loadAcceptedPhotoJourneys, loadPlaceVisits, loadRoutes, loadStays } from "./loadGround";
-import { loadCruises, loadFlights, loadRail, type Loaded } from "./loadTransport";
+import {
+  loadBus,
+  loadCruises,
+  loadFerry,
+  loadFlights,
+  loadRail,
+  loadRentals,
+  type Loaded,
+} from "./loadTransport";
 import type { AnsweredProposal } from "./proposals";
 import { todayIn } from "./time";
 import type { HomeSource, PlaceContext, SuggestionKind, TripSuggestion } from "./types";
@@ -53,6 +61,9 @@ async function dataStamp(
   const rows = await prisma.$queryRaw<StampRow[]>(Prisma.sql`
     SELECT 'flights' AS part, count(*) AS n, max(updated_at) AS latest FROM flights WHERE user_id = ${userId}
     UNION ALL SELECT 'rail_journeys', count(*), max(updated_at) FROM rail_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'bus_journeys', count(*), max(updated_at) FROM bus_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'ferry_journeys', count(*), max(updated_at) FROM ferry_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'rental_bookings', count(*), max(updated_at) FROM rental_bookings WHERE user_id = ${userId}
     UNION ALL SELECT 'cruises', count(*), max(updated_at) FROM cruises WHERE user_id = ${userId}
     UNION ALL SELECT 'cruise_stops', count(*), max(s.updated_at) FROM cruise_stops s JOIN cruises c ON c.id = s.cruise_id WHERE c.user_id = ${userId}
     UNION ALL SELECT 'lodgings', count(*), max(updated_at) FROM lodgings WHERE user_id = ${userId}
@@ -97,21 +108,38 @@ async function compute(
   today: string
 ): Promise<EngineResult> {
   const has = (key: DomainKey): boolean => domains.includes(key);
-  const [flights, rail, cruises, stays, visits, routes, photos, trips, answered, clusters, home] =
-    await Promise.all([
-      has("flight") ? loadFlights(userId) : EMPTY,
-      has("rail") ? loadRail(userId) : EMPTY,
-      has("cruise") ? loadCruises(userId) : EMPTY,
-      has("lodging") ? loadStays(userId) : EMPTY,
-      has("poi") ? loadPlaceVisits(userId) : { ...EMPTY, places: [] as PlaceContext[] },
-      has("roadtrip") ? loadRoutes(userId, today) : EMPTY,
-      loadAcceptedPhotoJourneys(userId),
-      loadTrips(userId),
-      loadAnswered(userId),
-      has("flight") ? flightClusters(userId) : Promise.resolve([]),
-      resolveHome(userId),
-    ]);
-  const loaded = [flights, rail, cruises, stays, visits, routes, photos];
+  const [
+    flights,
+    rail,
+    bus,
+    ferry,
+    rentals,
+    cruises,
+    stays,
+    visits,
+    routes,
+    photos,
+    trips,
+    answered,
+    clusters,
+    home,
+  ] = await Promise.all([
+    has("flight") ? loadFlights(userId) : EMPTY,
+    has("rail") ? loadRail(userId) : EMPTY,
+    has("bus") ? loadBus(userId) : EMPTY,
+    has("ferry") ? loadFerry(userId) : EMPTY,
+    has("rental") ? loadRentals(userId) : EMPTY,
+    has("cruise") ? loadCruises(userId) : EMPTY,
+    has("lodging") ? loadStays(userId) : EMPTY,
+    has("poi") ? loadPlaceVisits(userId) : { ...EMPTY, places: [] as PlaceContext[] },
+    has("roadtrip") ? loadRoutes(userId, today) : EMPTY,
+    loadAcceptedPhotoJourneys(userId),
+    loadTrips(userId),
+    loadAnswered(userId),
+    has("flight") ? flightClusters(userId) : Promise.resolve([]),
+    resolveHome(userId),
+  ]);
+  const loaded = [flights, rail, bus, ferry, rentals, cruises, stays, visits, routes, photos];
   const suggestions = composeSuggestions({
     entries: loaded.flatMap((l) => l.entries),
     trips,
