@@ -6,7 +6,6 @@ import { logger } from "../../lib/logger";
 import { cloudBackupFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
-import { AdminSubBlock } from "./AdminSubBlock";
 
 interface Props {
   /** Ids already in the backup list; their share copy cannot be fetched again. */
@@ -80,11 +79,7 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
   };
 
   return (
-    <AdminSubBlock>
-      <h3 className="text-base font-semibold text-(--text-primary)">
-        {t("admin:backup.cloudList.title")}
-      </h3>
-      <p className="mt-1 text-sm text-(--text-muted)">{t("admin:backup.cloudList.description")}</p>
+    <div>
       <button
         onClick={() => void load()}
         disabled={loading || downloading !== null}
@@ -130,6 +125,6 @@ export default function CloudBackupList({ presentIds, onDownloaded }: Props): JS
           })}
         </ul>
       )}
-    </AdminSubBlock>
+    </div>
   );
 }

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
-vi.mock("../../components/Admin/CatalogueReseed", () => ({ default: () => null }));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
@@ -12,6 +11,7 @@ import { render, within, waitFor, act, cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage from "../SettingsPage";
 import { DEEP_LINK_ALIGN_BUDGET_MS } from "../Admin/useDeepLinkScroll";
+import { LazyBody } from "../Admin/LazySection";
 import {
   installFakeIntersectionObserver,
   type FakeIntersectionObserverHandle,
@@ -24,6 +24,7 @@ import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
 import { repeatedHeadings } from "../../__tests__/helpers/repeatedHeadings";
 import { AREA_PAGES } from "../Settings/area/areaModel";
+import { resetInstanceStore } from "../../components/ServerPages/instanceStore";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback): the admin page used to
@@ -65,6 +66,20 @@ vi.mock("@/lib/api/externalServices", async (importOriginal) => ({
   },
 }));
 
+// Sign-in page pictures are listed on the Server page.
+vi.mock("@/lib/api/loginBackgrounds", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/loginBackgrounds")>()),
+  getLoginBackgrounds: vi.fn().mockResolvedValue([]),
+}));
+
+// The time-model report asks the server what the migration did.
+vi.mock("@/lib/api/timeMigration", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/timeMigration")>()),
+  timeMigrationApi: {
+    getReport: vi.fn().mockRejectedValue(new Error("not under test")),
+  },
+}));
+
 // The open federation card reads this server's identity.
 vi.mock("@/lib/api/federationAdmin", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/federationAdmin")>()),
@@ -86,6 +101,16 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...actual,
+    backupApi: {
+      ...actual.backupApi,
+      list: vi.fn().mockResolvedValue({ backups: [] }),
+      getStatus: vi.fn().mockResolvedValue({ running: false, currentBackup: null }),
+      getBackupSettings: vi.fn().mockResolvedValue({
+        backupEnabled: false,
+        backupInterval: "weekly",
+        backupRetentionDays: 30,
+      }),
+    },
     adminApi: {
       ...actual.adminApi,
       getSystemInfo: vi.fn().mockResolvedValue({
@@ -100,6 +125,24 @@ vi.mock("@/lib/api", async (importOriginal) => {
         buildVersion: "0.0.0-test",
       }),
       getUsers: vi.fn().mockResolvedValue({ users: [] }),
+      getInstanceSettings: vi.fn().mockResolvedValue({
+        settings: {
+          instanceName: "TravStats",
+          maxUsers: 10,
+          allowRegistration: false,
+          betaFeaturesEnabled: false,
+          frontendUrl: "https://trav.example",
+          publicUrl: null,
+          lanUrl: null,
+          webauthnRpId: null,
+          webauthnOrigins: [],
+          countryThreshold: "transited",
+        },
+        passkeyStatus: { usable: false, reason: "notConfigured" },
+      }),
+      getImportMode: vi.fn().mockResolvedValue({ until: null, userId: null, hours: 24 }),
+      getSmtpConfig: vi.fn().mockResolvedValue({ configured: false }),
+      getWebDAVSettings: vi.fn().mockResolvedValue({ settings: { enabled: false } }),
       getInvitations: vi.fn().mockResolvedValue({ invitations: [] }),
       getAdminParserSettings: vi.fn().mockResolvedValue({
         allowUserApiKeys: false,
@@ -141,7 +184,7 @@ const renderAdmin = (entry = "/settings/server") =>
   );
 
 /** The Server page's first section; awaiting it means the page has rendered. */
-const INSTANCE = "admin:instance.title";
+const INSTANCE = "settingsRows:server.sections.general";
 
 describe("SettingsPage, the server's pages — one page per menu entry, its sections as anchors", () => {
   beforeEach(() => {
@@ -162,9 +205,8 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     // Three distinct sections of the Server page at once: a page that mounted
     // one picked section cannot pass this whichever one it picked.
     expect(await findNamed("region", INSTANCE)).toBeInTheDocument();
-    expect(getNamed("region", "admin:travTrack.title")).toBeInTheDocument();
-    expect(getNamed("region", "admin:importMode.title")).toBeInTheDocument();
-    expect(getNamed("region", "admin:parserSettings.title")).toBeInTheDocument();
+    expect(getNamed("region", "settingsRows:server.sections.features")).toBeInTheDocument();
+    expect(getNamed("region", "settingsRows:server.sections.parsers")).toBeInTheDocument();
   });
 
   // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
@@ -179,7 +221,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     renderAdmin();
     await findNamed("region", INSTANCE);
 
-    for (const id of ["general", "features", "importMode", "parsers"]) {
+    for (const id of ["general", "features", "parsers"]) {
       expect(document.getElementById(`settings-${id}`)).not.toBeNull();
     }
   });
@@ -190,7 +232,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
 
     const chips = getNamed("navigation", "settings:sectionChips");
     const anchors = within(chips).getAllByRole("link");
-    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-importMode");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-features");
     expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-general");
     // The old column picked a section with a button; none should remain here.
     expect(within(chips).queryAllByRole("button")).toHaveLength(0);
@@ -212,7 +254,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     await findNamed("region", INSTANCE);
 
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
-    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("settings-importMode"));
+    expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("settings-features"));
   });
 
   it("does not scroll anywhere without a section in the address", async () => {
@@ -227,8 +269,51 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
 
   it("lands a pre-page /admin ?section= link on the page that holds it now", async () => {
     renderAdmin("/admin?tab=general&section=users");
-    expect(await findNamed("region", "admin:pages.users")).toBeInTheDocument();
+    expect(await findNamed("region", "settingsRows:users.sections.accounts")).toBeInTheDocument();
     expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.users");
+  });
+});
+
+describe("SettingsPage, the server's pages — the missing public address (B15)", () => {
+  beforeEach(async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    resetInstanceStore();
+  });
+  afterEach(() => cleanup());
+
+  it("warns on the Server page and at its menu entry while the public address is empty", async () => {
+    const { adminApi } = await import("@/lib/api");
+    vi.mocked(adminApi.getInstanceSettings).mockResolvedValueOnce({
+      settings: {
+        instanceName: "TravStats",
+        maxUsers: 10,
+        allowRegistration: false,
+        betaFeaturesEnabled: false,
+        frontendUrl: null,
+        publicUrl: null,
+        lanUrl: null,
+        webauthnRpId: null,
+        webauthnOrigins: [],
+        countryThreshold: "transited",
+      },
+      passkeyStatus: null,
+    } as unknown as Awaited<ReturnType<typeof adminApi.getInstanceSettings>>);
+    renderAdmin("/settings/users");
+    await findNamed("region", "settingsRows:users.sections.accounts");
+    // The menu entry carries the warn dot on every settings page, not only on its own.
+    await waitFor(() => expect(document.querySelector("[data-warn-dot]")).not.toBeNull());
+    cleanup();
+
+    renderAdmin("/settings/server");
+    await findNamed("region", INSTANCE);
+    await waitFor(() => expect(document.querySelector("[data-public-url-warning]")).not.toBeNull());
+  });
+
+  it("stays quiet when the address is set", async () => {
+    renderAdmin("/settings/server");
+    await findNamed("region", INSTANCE);
+    await waitFor(() => expect(document.querySelector("[data-warn-dot]")).toBeNull());
+    expect(document.querySelector("[data-public-url-warning]")).toBeNull();
   });
 });
 
@@ -280,7 +365,9 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
 
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
     renderAdmin("/admin/logging");
-    expect(await findNamed("region", "admin:pages.logging")).toBeInTheDocument();
+    expect(
+      await findNamed("region", "settingsRows:maintenance.sections.logging")
+    ).toBeInTheDocument();
     expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.maintenance");
     expect(document.querySelector('[role="status"]')).toHaveTextContent(
       "settings:level.expertPage"
@@ -307,57 +394,46 @@ describe("SettingsPage, the server's pages — no heading repeats the one above 
 
 /**
  * Wave C finding C3 (independent review, 2026-09-17): jsdom has no
- * IntersectionObserver at all, so every describe block above this one
- * relies on a lazy section's body deliberately never mounting — which also
- * means none of them could ever have caught a broken reveal. This block
- * installs the controllable stub from `intersectionObserverStub.ts` to drive
- * an actual intersection and observe what happens on the other side of it,
- * for exactly the "logging" section (`LAZY_ADMIN_SECTIONS`): its body renders
- * nothing until `loggingConfig` arrives from `adminApi.getLoggingConfig()`,
- * which `AdminPage`'s `sectionOnVisible.logging` fires from `LazyBody`'s
- * `onVisible` — the same wiring finding C1 fixed the placeholder height and
- * deep-link re-scroll around.
+ * IntersectionObserver, so the page tests never mount a lazy section's body —
+ * and none of them could have caught a broken reveal. The reveal is tested on
+ * its own here with the controllable stub: nothing renders before the first
+ * intersection, the body renders on it, and `onVisible` fires once however
+ * often the observer reports. (The server pages of the settings area load
+ * their own few requests at once; the master data editors, which fetch whole
+ * catalogues, are the sections that still wait for the viewport.)
  */
-describe("SettingsPage, the server's pages — lazy section reveal (Wave C finding C3)", () => {
+describe("LazyBody, the lazy section reveal (Wave C finding C3)", () => {
   let io: FakeIntersectionObserverHandle;
 
   beforeEach(() => {
-    Element.prototype.scrollIntoView = vi.fn();
     io = installFakeIntersectionObserver();
   });
-
   afterEach(() => {
+    cleanup();
     io.restore();
   });
 
-  it("mounts the logging section's body and fetches its data on first intersection, but not again on a second", async () => {
-    renderAdmin("/settings/maintenance#logging");
-    await findNamed("region", "admin:pages.logging");
-
-    const bodyEl = document.getElementById("settings-logging-body");
-    expect(bodyEl?.childElementCount).toBe(0);
-
-    // LazyBody creates its IntersectionObserver from a passive effect, which
-    // commits asynchronously relative to the DOM. Waiting for the observer
-    // itself, rather than a proxy for it, is what closes that race.
-    await waitFor(() => expect(io.observerFor("settings-logging-body")).toBeDefined());
-    const observer = io.observerFor("settings-logging-body");
+  it("mounts the body on first intersection and notifies once, not again on a second", async () => {
+    const onVisible = vi.fn();
+    render(
+      <LazyBody id="probe-body" onVisible={onVisible}>
+        <span data-testid="probe">content</span>
+      </LazyBody>
+    );
+    expect(document.getElementById("probe-body")?.childElementCount).toBe(0);
+    await waitFor(() => expect(io.observerFor("probe-body")).toBeDefined());
+    const observer = io.observerFor("probe-body");
 
     act(() => {
       observer?.trigger(true);
     });
-    await waitFor(() => expect(bodyEl?.childElementCount).toBeGreaterThan(0));
+    await waitFor(() => expect(document.getElementById("probe-body")?.childElementCount).toBe(1));
+    expect(onVisible).toHaveBeenCalledTimes(1);
 
-    const { adminApi } = await import("@/lib/api");
-    expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
-
-    // A second intersection report for the same body (a real browser would
-    // not deliver one post-disconnect, but the point here is the reveal's OWN
-    // `notifiedRef` guard, not that detail — see the stub).
     act(() => {
       observer?.trigger(true);
     });
-    expect(adminApi.getLoggingConfig).toHaveBeenCalledTimes(1);
+    expect(onVisible).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -406,7 +482,7 @@ describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C 
       resizeIO.observers[0]?.trigger();
     });
     expect(scrollSpy).toHaveBeenCalledTimes(2);
-    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("settings-importMode"));
+    expect(scrollSpy.mock.instances[1]).toBe(document.getElementById("settings-features"));
 
     // A second layout change within the budget realigns again.
     act(() => {

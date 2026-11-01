@@ -103,10 +103,8 @@
       "menuLabel": "Flughäfen"
     }
   },
-  "instanceLabel": "Instanz",
   "instance": {
     "title": "Instanz-Einstellungen",
-    "subtitle": "Name, Registrierung und Basis-URL dieser TravStats-Instanz.",
     "loadFailed": "Instanz-Einstellungen konnten nicht geladen werden",
     "saved": "Instanz-Einstellungen gespeichert",
     "saveFailed": "Speichern der Instanz-Einstellungen fehlgeschlagen",
@@ -195,7 +193,6 @@
     },
     "passkeys": {
       "title": "Passkeys (WebAuthn)",
-      "subtitle": "Damit sich Nutzer per Fingerabdruck, Gesicht, PIN oder Passwortmanager anmelden können. Passkeys brauchen HTTPS — über eine reine LAN-Adresse verweigert der Browser sie.",
       "statusUsable": "Passkeys sind auf dieser Instanz nutzbar.",
       "status": {
         "notConfigured": "Noch nicht eingerichtet — trag unten mindestens eine Origin ein.",
@@ -248,23 +245,13 @@
       }
     }
   },
-  "totalUsers": "Gesamt Benutzer",
-  "activeUsers": "Aktive Benutzer",
   "totalFlights": "Gesamt Flüge",
-  "saveConfiguration": "Konfiguration speichern",
-  "saveSettings": "Einstellungen speichern",
-  "saveConfig": "Konfiguration speichern",
   "refresh": "🔄 Aktualisieren",
   "refreshing": "⏳ Lade...",
   "users": {
     "title": "Benutzerverwaltung",
     "table": {
-      "username": "Benutzername",
-      "flights": "Flüge",
-      "achievements": "Achievements",
-      "role": "Rolle",
-      "status": "Status",
-      "actions": "Aktionen"
+      "username": "Benutzername"
     },
     "role": {
       "admin": "Admin",
@@ -283,7 +270,6 @@
     },
     "deleteConfirm": {
       "title": "Benutzer löschen?",
-      "message": "Benutzer \"{{username}}\" und alle zugehörigen Daten (Flüge, Reisen, Achievements, Einstellungen) unwiderruflich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Ja, endgültig löschen"
     },
     "resetPasswordModal": {
@@ -296,7 +282,6 @@
         "description": "Generiert ein zufälliges temporäres Passwort (12 Zeichen).",
         "button": "Temporäres Passwort generieren",
         "mustChange": "Muss Passwort beim nächsten Login ändern",
-        "tempPasswordLabel": "Temporäres Passwort (einmalig anzeigen):",
         "copy": "Kopieren",
         "copied": "Kopiert!",
         "regenerate": "Neues Passwort generieren",
@@ -314,7 +299,6 @@
     },
     "resetTwoFactorConfirm": {
       "title": "Zwei-Faktor zurücksetzen",
-      "message": "Zwei-Faktor-Anmeldung für „{{username}}“ ausschalten? Die nächste Anmeldung braucht dann nur noch das Passwort. Das ist der Weg zurück ins Konto, wenn Telefon UND Wiederherstellungscodes weg sind.",
       "confirm": "Zurücksetzen"
     },
     "description": "Alle Benutzer dieser Instanz — Rollen ändern und Konten deaktivieren. Ein deaktiviertes Konto kann sich nicht mehr anmelden, seine Daten bleiben erhalten.",
@@ -325,9 +309,6 @@
   },
   "invitations": {
     "title": "Einladungen verwalten",
-    "invitationLinks": "Einladungslinks",
-    "createButton": "+ Einladung erstellen",
-    "copiedToClipboard": "Einladungslink in die Zwischenablage kopiert!",
     "actions": {
       "createLink": "+ Link erstellen",
       "createEmail": "✉ Einladung per E-Mail",
@@ -336,7 +317,6 @@
       "resendEmail": "✉ Nochmal senden",
       "revoke": "🗑 Widerrufen"
     },
-    "confirmRevoke": "Diese Einladung wirklich widerrufen? Der Link wird sofort ungültig.",
     "expiresLegend": "Gültig für",
     "expires": {
       "24h": "24 Stunden",
@@ -379,47 +359,21 @@
     },
     "toasts": {
       "resent": "Einladung erneut versendet",
-      "resendFailed": "Erneuter Versand fehlgeschlagen",
-      "revoked": "Einladung widerrufen",
-      "revokeFailed": "Widerrufen fehlgeschlagen"
-    },
-    "table": {
-      "email": "E-Mail",
-      "createdBy": "Erstellt von",
-      "expires": "Läuft ab",
-      "usedBy": "Verwendet von",
-      "status": "Status",
-      "actions": "Aktionen"
+      "revoked": "Einladung widerrufen"
     },
     "status": {
-      "usedOn": "Verwendet am {{date}}",
-      "expired": "Abgelaufen",
-      "active": "Aktiv",
       "emailFailed": "Mail fehlgeschlagen"
     },
     "description": "Einladungslinks für neue Benutzer. Jeder Link lässt sich genau einmal verwenden und läuft nach sieben Tagen ab."
   },
   "userLimitWarning": {
-    "title": "⚠️ Benutzerlimit-Warnung",
-    "message": "Du hast die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
+    "title": "⚠️ Benutzerlimit-Warnung"
   },
   "demoWarning": {
-    "title": "🔓 Demo-Konto aktiv",
-    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv. Es wird beim ersten Start automatisch mit Beispieldaten angelegt. Wenn du es nicht mehr brauchst, kannst du es hier löschen — alle Demo-Daten (Flüge, Kreuzfahrten, Trips) werden mitgelöscht.",
-    "button": "Demo-Benutzer löschen"
+    "title": "🔓 Demo-Konto aktiv"
   },
   "systemInfo": {
-    "title": "Systeminformationen",
-    "configuration": "Konfiguration",
-    "dataManagement": "Datenverwaltung",
-    "registration": "Registrierung",
-    "enabled": "✅ Aktiviert",
-    "disabled": "❌ Deaktiviert",
-    "version": "Version",
-    "buildLabel": "Build",
-    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC ausgeliefert wird — das Image ist dann byte-identisch zur getesteten RC-Version, der Registry-Tag ist aber bereits die finale Version.",
-    "exportButton": "Vollständiges Backup herunterladen (JSON)",
-    "exportDescription": "Exportiert alle Benutzerdaten als JSON — für Sicherungen und zur Auswertung."
+    "title": "Systeminformationen"
   },
   "airlineLogos": {
     "title": "Airline-Logos",
@@ -437,59 +391,21 @@
     "confirmMessage": "Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter."
   },
   "toasts": {
-    "userUpdated": "Benutzer erfolgreich aktualisiert",
-    "userUpdateFailed": "Fehler beim Aktualisieren des Benutzers",
-    "userDeleted": "Benutzer gelöscht",
-    "userDeleteFailed": "Fehler beim Löschen des Benutzers",
-    "invitationCopied": "Einladungslink in die Zwischenablage kopiert!\n\n{{inviteUrl}}",
-    "invitationFailed": "Fehler beim Erstellen der Einladung",
-    "exportFailed": "Fehler beim Exportieren der Daten",
-    "parserSettingsSaved": "Parser-Einstellungen erfolgreich gespeichert!",
-    "parserSettingsFailed": "Fehler beim Speichern der Parser-Einstellungen",
-    "debugLoggingToggled": "Debug-Logging {{state}} erfolgreich!",
-    "debugLoggingFailed": "Fehler beim Umschalten des Debug-Loggings",
-    "loggingConfigSaved": "Logging-Konfiguration erfolgreich gespeichert!",
-    "loggingConfigFailed": "Fehler beim Speichern der Logging-Konfiguration",
     "logFileDownloadFailed": "Fehler beim Herunterladen der Log-Datei",
-    "logFileDeleted": "Log-Datei erfolgreich gelöscht!",
     "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
     "cleanupComplete": "Aufräumen abgeschlossen: {{deletedCount}} Dateien gelöscht, {{freed}} freigegeben",
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
-    "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
-    "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
-    "enabled": "aktiviert",
-    "disabled": "deaktiviert",
-    "twoFactorReset": "Zwei-Faktor wurde zurückgesetzt",
-    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden",
     "cleanupPartial": "{{failedCount}} Dateien konnten nicht gelöscht werden."
-  },
-  "prompts": {
-    "enterEmail": "E-Mail eingeben (optional):",
-    "confirmExport": "Alle Daten exportieren? Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter.",
-    "confirmDeleteLog": "Log-Datei \"{{filename}}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "confirmCleanupLogs": "Alte Log-Dateien basierend auf der Aufbewahrungsrichtlinie löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "confirmDeleteDemo": "Demo-Benutzerkonto löschen? Alle Demo-Daten (Flüge, Kreuzfahrten, Trips, Errungenschaften) werden mitgelöscht. Kann nicht rückgängig gemacht werden."
   },
   "logging": {
     "title": "Debug-Logging & Diagnostik",
     "description": "Steuert das Logging-Verhalten des Systems. Debug-Modus aktiviert detaillierte Ausgaben für die Fehlersuche.",
-    "debugMode": "Debug-Modus aktivieren",
-    "debugModeDisable": "Debug-Modus deaktivieren",
     "help": {
-      "levels": "error → warn → info → debug → trace (von wenig zu sehr detailliert)",
-      "warning": "Debug-Modus kann die Leistung beeinträchtigen und erzeugt große Log-Dateien. Nur kurzzeitig für Diagnosen aktivieren."
+      "levels": "error → warn → info → debug → trace (von wenig zu sehr detailliert)"
     },
     "debugActive": {
-      "title": "Debug-Modus aktiv",
-      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Schalte das nach der Fehlersuche wieder aus."
+      "title": "Debug-Modus aktiv"
     },
-    "stats": {
-      "totalFiles": "Gesamt Log-Dateien",
-      "totalSize": "Gesamtgröße",
-      "oldestLog": "Ältestes Log",
-      "newestLog": "Neuestes Log"
-    },
-    "configSection": "Logging-Konfiguration",
     "level": {
       "label": "Log-Level",
       "hint": "Höhere Level beinhalten alle niedrigeren Level (z. B. Debug beinhaltet Info, Warn, Error)",
@@ -517,18 +433,11 @@
       "parser": {
         "label": "Parser-Operationen protokollieren",
         "hint": "LLM-Operationen mit Provider-Details protokollieren (Kategorie: parser)"
-      },
-      "verboseOnly": "Diese Protokolle werden nur geschrieben, solange das Log-Level Debug oder Trace ist."
+      }
     },
     "files": {
       "title": "Log-Dateien",
-      "cleanup": "Alte Logs bereinigen",
       "empty": "Keine Log-Dateien gefunden",
-      "colFilename": "Dateiname",
-      "colCategory": "Kategorie",
-      "colSize": "Größe",
-      "colModified": "Geändert",
-      "colActions": "Aktionen",
       "download": "Herunterladen",
       "delete": "Löschen",
       "view": "Anzeigen"
@@ -563,18 +472,8 @@
     }
   },
   "parserSettings": {
-    "builtin": {
-      "ocrHint": "Liest Bordkarten aus Bildern",
-      "templatesName": "Vorlagen (Regex)",
-      "templatesHint": "Liest Buchungs-E-Mails bekannter Anbieter"
-    },
     "title": "Globale Parser-Konfiguration",
     "description": "Standard-Parser für alle Benutzer. Lokale Verfahren sind kostenlos, Cloud-KI kostet je Anfrage und braucht einen Schlüssel.",
-    "defaultSettings": "Standard-Einstellungen",
-    "defaultSettingsDescription": "Diese Standardwerte gelten für neue Benutzerkonten. Benutzer können diese in ihren eigenen Einstellungen ändern.",
-    "visionParser": "Standard Vision-Parser (Bordkarte)",
-    "textParser": "Standard Text-Parser (E-Mail)",
-    "autoHelp": "Auto-Modus wählt automatisch den besten verfügbaren Parser",
     "llmSwitch": {
       "title": "KI-Modell",
       "label": "KI-Modell verwenden (Buchungen lesen und Reise-Zusammenfassungen)",
@@ -584,81 +483,36 @@
       "title": "Ollama LLM Parser",
       "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails. Wird immer zuerst versucht, wenn eine URL eingetragen ist — innerhalb deines Netzwerks ohne Zustimmung.",
       "urlLabel": "Ollama URL",
-      "urlPlaceholder": "http://localhost:11434",
       "remoteOptIn": {
         "label": "Ich stimme zu, dass Buchungsdaten an diese Adresse gesendet werden, falls sie außerhalb meines Netzwerks liegt."
       },
-      "modelLabel": "Modell",
-      "modelPlaceholder": "gemma3:12b",
-      "testButton": "Verbindung testen",
-      "testing": "Wird getestet…",
-      "statusConnected": "Verbunden",
-      "statusDisconnected": "Nicht erreichbar",
-      "modelNotFound": "Modell nicht gefunden",
-      "modelsAvailable": "Verfügbare Modelle",
-      "connectionSuccess": "Ollama erreichbar",
-      "connectionFailed": "Verbindung fehlgeschlagen",
-      "addressMoved": "Adresse und Zustimmung für einen entfernten Ollama stellst du unter Externe Dienste ein; Modell und Test bleiben hier.",
       "pull": {
         "title": "Modell herunterladen",
-        "placeholder": "z. B. gemma3:12b, llama3.1:8b",
         "action": "Herunterladen",
         "running": "Lädt herunter …",
         "done": "{{model}} wurde heruntergeladen.",
-        "failed": "Das Modell konnte nicht heruntergeladen werden. Prüfe den Namen und ob Ollama erreichbar ist.",
-        "connectionFailed": "Keine Verbindung zu Ollama. Prüfe die Adresse und ob der Dienst läuft."
-      },
-      "modelsLoadingPlaceholder": "Modelle werden geladen …",
-      "noModelsPlaceholder": "Keine Modelle gefunden — Namen eintragen oder unten herunterladen",
-      "modelsLoading": "Verfügbare Modelle werden geladen …",
-      "selectModel": "-- Modell wählen --"
+        "failed": "Das Modell konnte nicht heruntergeladen werden. Prüfe den Namen und ob Ollama erreichbar ist."
+      }
     },
     "order": {
       "label": "Wer liest zuerst?",
-      "templateFirst": "Vorlagen zuerst, KI als Rückfall (empfohlen)",
-      "llmFirst": "KI zuerst, Vorlagen als Rückfall",
       "hint": "Gilt für Flüge, Unterkünfte, Kreuzfahrten und Orte gleichermaßen. Gemessen am 17.09.2026 an 31 Flug-Mails: die Vorlagen lasen alle in unter einer Sekunde, das Sprachmodell brauchte 19 Minuten und übersah drei. „KI zuerst\" lohnt sich, wenn deine Absender von keiner Vorlage abgedeckt sind."
     },
     "userPermissions": {
-      "title": "Benutzerrechte",
-      "allowUserApiKeys": "Benutzer dürfen eigene API-Schlüssel für Flugdaten hinterlegen (Airlabs, Aviationstack, OpenSky)"
+      "title": "Benutzerrechte"
     },
     "provider": {
       "title": "KI-Anbieter",
       "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist. Antwortet es nicht, fragt TravStats der Reihe nach die eingeschalteten Cloud-Anbieter unten. Einschalten, Schlüssel, Modell und Zustimmung stellst du unter Externe Dienste ein; hier legst du nur die Reihenfolge fest.",
       "chain": {
         "title": "Rangfolge der Cloud-Anbieter",
-        "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort.",
-        "moveUp": "Nach oben",
-        "moveDown": "Nach unten"
+        "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort."
       },
-      "baseUrlLabel": "Basis-URL (mit Versionspfad)",
-      "baseUrlPlaceholder": "https://api.openai.com/v1",
-      "baseUrlHint": "Außerhalb deines Netzwerks nur mit https://. Beispiele: https://openrouter.ai/api/v1, https://ollama.com/v1",
-      "modelLabel": "Modell",
-      "keyLabel": "API-Schlüssel",
-      "keyPlaceholder": "sk-…",
-      "keyHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt — nur die ersten und letzten vier Zeichen.",
-      "testButton": "Verbindung testen",
-      "testing": "Wird getestet …",
       "test": {
-        "ok": "Verbindung steht — der Anbieter bietet {{count}} Modelle an.",
-        "okModelMissing": "Verbindung steht, aber das Modell „{{model}}“ bietet dieser Anbieter nicht an.",
-        "okNoList": "Verbindung steht. Der Anbieter nennt keine Modellliste — prüf den Modellnamen selbst.",
-        "cloud": "Dieser Anbieter liegt außerhalb deines Netzwerks.",
         "errors": {
-          "invalid_url": "Das ist keine gültige URL.",
-          "unsupported_protocol": "Nur http:// oder https:// ist möglich.",
-          "credentials_in_url": "Zugangsdaten gehören nicht in die URL — trag den Schlüssel im Feld „API-Schlüssel“ ein.",
-          "https_required": "Ein Anbieter außerhalb deines Netzwerks braucht https://.",
-          "auth": "Der Anbieter hat den API-Schlüssel abgelehnt.",
           "unreachable": "Der Anbieter ist nicht erreichbar. Prüf URL und Netzwerk.",
           "failed": "Der Verbindungstest ist fehlgeschlagen."
         }
-      },
-      "saveErrors": {
-        "LLM_BASE_URL_HTTPS_REQUIRED": "Ein KI-Anbieter außerhalb deines Netzwerks braucht https://. Nichts wurde gespeichert.",
-        "LLM_BASE_URL_INVALID": "Die Basis-URL des KI-Anbieters ist ungültig. Nichts wurde gespeichert."
       },
       "slots": {
         "openai": {
@@ -703,105 +557,46 @@
         }
       },
       "loading": "Status der Anbieter wird geladen …",
-      "loadFailed": "Der Status der Anbieter konnte nicht geladen werden.",
-      "noneEnabled": "Kein Cloud-Anbieter ist eingeschaltet.",
-      "enableInServices": "In Externe Dienste einschalten",
-      "openInServices": "In Externe Dienste öffnen",
-      "status": {
-        "active": "Bereit",
-        "missing": "Schlüssel fehlt"
-      }
-    },
-    "accountKeysFxMoved": "Schlüssel-Erlaubnis für Konten und der Wechselkurs-Ausweichdienst gehören zu den Diensten und stehen unter Externe Dienste."
+      "loadFailed": "Der Status der Anbieter konnte nicht geladen werden."
+    }
   },
   "backup": {
     "title": "Backup-Verwaltung",
     "description": "Backups sichern alle Daten dieser Instanz und lassen sich bei Datenverlust oder Umzug wiederherstellen. Eine Wiederherstellung überschreibt den aktuellen Bestand vollständig — lege vorher ein zusätzliches Backup an.",
     "loading": "Lade Backups...",
-    "creating": "Erstelle Backup...",
     "running": "Backup läuft",
-    "createNow": "Backup jetzt erstellen",
     "startedAt": "Gestartet um {{date}}",
-    "noBackups": "Keine Backups vorhanden",
     "deleteConfirm": "Möchtest du das Backup vom {{date}} wirklich löschen?",
-    "type": {
-      "full": "Vollständig",
-      "partial": "Teilweise"
-    },
     "status": {
       "completed": "Abgeschlossen",
       "running": "Läuft...",
       "failed": "Fehlgeschlagen",
       "pending": "Ausstehend"
     },
-    "table": {
-      "date": "Datum",
-      "status": "Status",
-      "size": "Größe",
-      "type": "Typ",
-      "cloud": "Cloud"
-    },
     "actions": {
       "download": "Download",
-      "restore": "Wiederherstellen",
       "upload": "Hochladen",
       "uploading": "Lädt hoch..."
     },
     "cloud": {
-      "syncedAt": "Hochgeladen am {{date}}",
       "failed": "Fehlgeschlagen"
     },
     "restore": {
-      "title": "Backup wiederherstellen",
-      "warning": "Warnung: Diese Aktion wird alle aktuellen Daten ersetzen!",
-      "backupFrom": "Backup vom: {{date}}",
-      "scope": "Wiederherstellungs-Umfang",
-      "scopeFull": "Vollständig (Datenbank + Dateien)",
-      "scopeDatabase": "Nur Datenbank",
-      "scopeFiles": "Nur Dateien",
-      "createBackupBefore": "Backup vor Wiederherstellung erstellen (empfohlen)",
-      "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
-      "confirmText": "Wiederherstellen",
-      "confirmButton": "Wiederherstellen",
-      "keyMismatchTitle": "Dieses Archiv wurde mit einem anderen Verschlüsselungsschlüssel geschrieben",
-      "keyMismatchBody": "Die gespeicherten API-Schlüssel, das SMTP-Passwort und die Immich-/Dawarich-Zugänge lassen sich auf dieser Instanz nicht entschlüsseln. Lege den ursprünglichen Schlüssel zurück (ENCRYPTION_KEY bzw. encryption.key im Secrets-Verzeichnis) und versuche es erneut — oder bestätige hier und trage die Zugänge danach neu ein.",
-      "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
-      "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
-      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt.",
-      "migrationFailed": "Das Archiv stammt aus einer älteren Version und ließ sich nicht auf den Datenbankstand dieser Version bringen. Es wurde nichts verändert. Welche Migration gescheitert ist, steht im Server-Log.",
-      "schemaIncomplete": "Das Archiv wurde eingespielt, aber der Datenbank fehlt etwas, das diese Version erwartet (eine Migration oder die Synchronisations-Trigger). Details stehen im Server-Log.",
-      "archiveNewer": "Dieses Archiv stammt aus einer neueren TravStats-Version und lässt sich hier nicht einspielen. Aktualisiere diese Instanz mindestens auf die Version des Archivs. Es wurde nichts verändert.",
-      "archiveUnversioned": "Der Datenbankstand dieses Archivs lässt sich keiner Version zuordnen (Migrationsverlauf fehlt oder eine Migration war gescheitert). Es wurde nichts verändert.",
-      "inProgress": "Wird wiederhergestellt …"
+      "title": "Backup wiederherstellen"
     },
-    "settingsSaved": "Backup-Einstellungen gespeichert",
-    "settingsFailed": "Fehler beim Speichern der Einstellungen",
     "schedule": {
       "title": "Automatisches Backup",
       "description": "Geplante Backups laufen um 2:00 Uhr in der unten gewählten Zeitzone – je nach Intervall täglich, sonntags oder am 1. des Monats.",
-      "enableAutoBackup": "Automatisches Backup aktivieren",
-      "interval": "Intervall",
-      "retentionDays": "Aufbewahrung (Tage)",
-      "zone": "Zeitzone der Backup-Uhrzeit",
-      "zoneHost": "Zeitzone des Servers ({{zone}})",
-      "zoneEffective": "Backups laufen um 2:00 Uhr in {{zone}}.",
       "loadFailed": "Die Backup-Einstellungen konnten nicht geladen werden. Speichern ist gesperrt, damit nichts überschrieben wird."
     },
     "toasts": {
       "loadFailed": "Fehler beim Laden der Backups",
-      "started": "Backup gestartet",
       "createFailed": "Fehler beim Erstellen des Backups",
-      "downloading": "Backup wird heruntergeladen",
       "downloadFailed": "Fehler beim Herunterladen des Backups",
       "downloadTruncated": "Der Download vom WebDAV-Server wurde vorzeitig beendet, das Backup ist unvollständig und wurde nicht übernommen. Bitte erneut versuchen.",
-      "restoring": "Backup wird wiederhergestellt",
-      "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
-      "deleteFailed": "Fehler beim Löschen des Backups",
       "synced": "Backup hochgeladen",
       "syncFailed": "Hochladen des Backups fehlgeschlagen",
-      "created": "Backup erstellt",
-      "restored": "Backup wiederhergestellt",
       "outcomeUnknown": "Der Server meldet den Ausgang nicht mehr — bitte die Backup-Liste prüfen, bevor du es erneut versuchst."
     },
     "failure": {
@@ -814,12 +609,6 @@
       "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log.",
       "BACKUP_INTERRUPTED": "Das Backup wurde abgebrochen, weil der Server neu gestartet oder eine Wiederherstellung eingespielt wurde. Einfach neu starten."
     },
-    "cloudRetention": "Abgelaufene Sicherungen auch auf WebDAV löschen.",
-    "retentionProtection": "Die Bereinigung läuft nach einer erfolgreichen automatischen Sicherung. Die letzte vorhandene vollständige Sicherung bleibt erhalten.",
-    "deleteRemote": "Auch die WebDAV-Kopie löschen",
-    "deleteLocalOnly": "Die lokale Sicherung wird gelöscht. Eine vorhandene WebDAV-Kopie bleibt erhalten, sofern du sie nicht ausdrücklich auswählst.",
-    "remoteDeleteFailed": "WebDAV-Löschung fehlgeschlagen. Die lokale Sicherung bleibt erhalten. Verbindung prüfen und erneut versuchen.",
-    "remoteTargetUnknown": "Das ursprüngliche WebDAV-Ziel ist unbekannt oder wurde geändert. Die Sicherung erneut hochladen, bevor du beide Kopien löschst, oder nur lokal löschen.",
     "cloudFailure": {
       "WEBDAV_BACKUP_AUTH": "Der WebDAV-Server hat die Zugangsdaten abgelehnt. Benutzername und Passwort in den WebDAV-Einstellungen prüfen.",
       "WEBDAV_BACKUP_QUOTA": "Auf dem WebDAV-Server ist nicht genug Speicherplatz frei oder die Datei ist zu groß (507/413). Platz schaffen und erneut versuchen.",
@@ -835,7 +624,6 @@
       "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH": "Die heruntergeladene Datei stimmt nicht mit ihrer Prüfsumme überein und wurde verworfen. Bitte erneut versuchen."
     },
     "unverified": "Nicht per Prüfsumme geprüft",
-    "unverifiedHint": "Dieses Backup wurde vor Einführung der Prüfsummen hochgeladen und nur an seiner Größe geprüft.",
     "cloudList": {
       "title": "Backups auf dem WebDAV-Server",
       "description": "Hol ein Backup vom WebDAV-Server zurück in die Backup-Liste, z. B. nach einem Serverumzug. Danach lässt es sich wie jedes andere wiederherstellen.",
@@ -1174,7 +962,6 @@
     "activeFor": "Aktiv für {{account}} bis {{until}}.",
     "unknownAccount": "ein gelöschtes Konto",
     "account": "Für welches Konto?",
-    "allAccounts": "Alle Konten",
     "start": "Für {{hours}} Stunden einschalten",
     "stop": "Jetzt beenden",
     "loadFailed": "Der Import-Modus konnte nicht geladen werden.",
@@ -1326,9 +1113,7 @@
   "travTrack": {
     "title": "TravTrack",
     "description": "Der eigene Standortverlauf: Positionen kommen von der Companion-App, aus GPX-Dateien, von OwnTracks und Overland sowie aus einem Dawarich-Import auf diesen Server. Ausschalten löscht nichts — Konten mit Daten behalten Übersicht, Export und Löschen.",
-    "needsBeta": "TravTrack ist eine Beta-Funktion. Schalte zuerst die Beta-Funktionen dieser Instanz ein.",
     "switch": "TravTrack auf diesem Server anbieten",
-    "switchSub": "Konten können TravTrack dann als Standortquelle wählen.",
     "errors": {
       "loadFailed": "Der TravTrack-Schalter konnte nicht geladen werden.",
       "saveFailed": "Der TravTrack-Schalter konnte nicht gespeichert werden.",
@@ -1339,19 +1124,14 @@
     "title": "TravPlan",
     "description": "Der Planungsmodus: Reisen vorab planen, unterwegs abgleichen. Ausschalten löscht keine Pläne — sie bleiben gespeichert und erscheinen wieder, sobald TravPlan eingeschaltet ist.",
     "switch": "TravPlan auf diesem Server anbieten",
-    "switchSub": "Alle Konten sehen den Planungsmodus dann in der Navigation.",
     "errors": {
       "loadFailed": "Der TravPlan-Schalter konnte nicht geladen werden.",
       "saveFailed": "Der TravPlan-Schalter konnte nicht gespeichert werden.",
       "disabled": "TravPlan ist auf diesem Server ausgeschaltet. Schalte zuerst die Beta-Funktionen ein."
     },
-    "defaultsNote": "TravPlan bleibt für Konten eingeschaltet, die bereits Pläne hatten; für alle anderen ist es zunächst aus.",
     "limits": {
       "title": "Tageslimits je Konto",
       "help": "Anfragen, nicht Kosten: so viele KI- und Wetterabrufe darf ein Konto pro UTC-Tag auslösen.",
-      "aiDailyLimit": "KI-Anfragen je Konto und UTC-Tag",
-      "weatherDailyLimit": "Wetterabrufe je Konto und UTC-Tag",
-      "tooHigh": "Höchstens {{max}}.",
       "save": "Limits speichern",
       "retry": "Erneut versuchen"
     }
@@ -1394,18 +1174,13 @@
     "budgetRequired": "Für ein eigenes Budget ist ein Betrag über 0 nötig."
   },
   "catalogues": {
-    "run": "Neu einlesen",
     "running": "Läuft …",
     "airports": {
       "title": "Flughäfen",
       "description": "Liest den Flughafenkatalog (OurAirports) neu ein. Läuft im Hintergrund, bestehende Einträge bleiben.",
       "done": "Flughafenkatalog eingelesen.",
-      "seedingFailed": "Das Einlesen der Flughäfen ist fehlgeschlagen.",
-      "statusFailed": "Der Stand des Flughafen-Imports konnte nicht gelesen werden.",
       "status": {
-        "pending": "Import steht an.",
         "running": "Import läuft: {{processed}} von {{total}} Flughäfen.",
-        "completed": "Katalog vollständig ({{total}} Flughäfen im letzten Import).",
         "failed": "Der letzte Import ist fehlgeschlagen."
       }
     },
@@ -1420,9 +1195,6 @@
       "done": "{{count}} neue Flugzeugtypen eingelesen."
     },
     "errors": {
-      "rateLimited": "Zu viele Neu-Einlesungen – höchstens 3 pro Stunde. Bitte später erneut versuchen.",
-      "forbidden": "Dafür fehlt die Administrator-Berechtigung.",
-      "unknownOutcome": "Keine Antwort erhalten – der Server arbeitet womöglich noch. Prüfe den Katalog später.",
       "failed": "Das Einlesen ist fehlgeschlagen."
     }
   },

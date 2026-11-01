@@ -1,9 +1,4 @@
-import type {
-  AccountService,
-  AdminService,
-  ServiceField,
-  ServiceQuota,
-} from "../../lib/api/externalServices";
+import type { AccountService, AdminService, ServiceQuota } from "../../lib/api/externalServices";
 
 /**
  * Status has dimensions, never one word (spec invariant 3): "Aktiv" is
@@ -20,43 +15,6 @@ export function adminStatus(service: AdminService): AdminStatus {
   return "active";
 }
 
-export type StatusFilter = "all" | "recommended" | "active" | "attention" | "off";
-
-export function matchesFilter(
-  filter: StatusFilter,
-  status: AdminStatus,
-  recommended: AdminService["recommended"]
-): boolean {
-  switch (filter) {
-    case "all":
-      return true;
-    case "recommended":
-      return recommended !== null;
-    case "active":
-      return status === "active";
-    case "off":
-      return status === "off";
-    case "attention":
-      return status === "missing" || status === "error";
-  }
-}
-
-export interface StatusCounts {
-  active: number;
-  attention: number;
-  off: number;
-}
-
-export function countStatuses(statuses: readonly AdminStatus[]): StatusCounts {
-  const counts: StatusCounts = { active: 0, attention: 0, off: 0 };
-  for (const status of statuses) {
-    if (status === "active") counts.active += 1;
-    else if (status === "off") counts.off += 1;
-    else counts.attention += 1;
-  }
-  return counts;
-}
-
 /** The share of a budget already spent, clamped to 0..100; null when it cannot be told. */
 export function budgetPercent(quota: ServiceQuota | null): number | null {
   if (!quota || quota.kind !== "budget") return null;
@@ -64,23 +22,6 @@ export function budgetPercent(quota: ServiceQuota | null): number | null {
     return null;
   }
   return Math.max(0, Math.min(100, (quota.used / quota.limit) * 100));
-}
-
-/** Two letters for the row's monogram: the capitals of the name, else its first letters. */
-export function initialsOf(name: string): string {
-  const words = name.split(/[\s&()+·.-]+/).filter(Boolean);
-  const caps = words.map((word) => word[0]?.toUpperCase() ?? "").join("");
-  const pick = words.length >= 2 ? caps : (words[0] ?? "").slice(0, 2).toUpperCase();
-  return pick.slice(0, 2);
-}
-
-/** Fields the standard view shows: everything that is not expert plumbing. */
-export function visibleFields(fields: readonly ServiceField[], expert: boolean): ServiceField[] {
-  return expert ? [...fields] : fields.filter((field) => !field.expert);
-}
-
-export function hasHiddenExpertFields(fields: readonly ServiceField[], expert: boolean): boolean {
-  return !expert && fields.some((field) => field.expert);
 }
 
 export type AccountStatus =

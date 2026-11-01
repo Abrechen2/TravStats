@@ -82,6 +82,8 @@ const adminPageDomain = new Map<string, DomainKey | undefined>(
 );
 
 interface MountOptions {
+  /** The heading, when the component's own does not name the registry section it stands for. */
+  labelKey?: string;
   anchors?: readonly string[];
   fallbackAnchors?: readonly string[];
   matches?: readonly string[];
@@ -108,6 +110,7 @@ function mount(
   if (!base) throw new Error(`settings area: no ${source} section "${component}"`);
   return {
     ...base,
+    ...(options.labelKey ? { labelKey: options.labelKey } : {}),
     id,
     source,
     component,
@@ -132,6 +135,19 @@ const A = (id: AdminSectionId, options?: MountOptions & { as?: string }): AreaSe
 const SERVICE_SECTIONS = registryPage("services")?.sections ?? [];
 const SERVICE_ANCHORS = SERVICE_SECTIONS.map((s) => s.id);
 const SERVICE_ROWS = SERVICE_SECTIONS.flatMap((s) => s.rows.map((r) => r.id));
+
+/** The design's section headings of the server pages: `settingsRows:<page>.sections.<section>`. */
+const SECTION_LABEL = Object.fromEntries(
+  ["server", "users", "backups", "maintenance"].map((pageId) => [
+    pageId,
+    Object.fromEntries(
+      (registryPage(pageId)?.sections ?? []).map((sec) => [
+        sec.id,
+        `settingsRows:${pageId}.sections.${sec.id}`,
+      ])
+    ),
+  ])
+) as Record<"server" | "users" | "backups" | "maintenance", Record<string, string>>;
 
 const page = (
   id: AreaPageId,
@@ -200,16 +216,31 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("services", "globe", [
     P("externalServices", { anchors: SERVICE_ANCHORS, matches: SERVICE_ROWS }),
   ]),
+  // The server pages are built on the settings blocks (package 7): one mount per
+  // registry section, the heading from the design's copy.
   page("server", "settings", [
-    A("instance", { as: "general", anchors: ["addresses", "passkeys"] }),
-    A("travTrack", { as: "features", matches: ["ttoffer"] }),
-    A("travPlan", { matches: ["tpoffer"] }),
-    A("importMode", { matches: ["importmodus"] }),
-    A("parsers"),
+    A("instance", {
+      as: "general",
+      labelKey: SECTION_LABEL.server.general,
+      anchors: ["addresses", "passkeys"],
+    }),
+    A("travTrack", { as: "features", labelKey: SECTION_LABEL.server.features }),
+    A("parsers", { labelKey: SECTION_LABEL.server.parsers }),
   ]),
-  page("users", "user", [A("users", { as: "accounts" }), A("invitations")]),
-  page("backups", "database", [A("backups", { anchors: ["automatic"] })]),
-  page("maintenance", "clock", [A("logging"), A("system"), A("timeModel")]),
+  page("users", "user", [
+    A("users", { as: "access", labelKey: SECTION_LABEL.users.access }),
+    A("users", { as: "accounts", labelKey: SECTION_LABEL.users.accounts }),
+    A("invitations", { labelKey: SECTION_LABEL.users.invitations }),
+  ]),
+  page("backups", "database", [
+    A("backups", { as: "automatic", labelKey: SECTION_LABEL.backups.automatic }),
+    A("backups", { labelKey: SECTION_LABEL.backups.backups }),
+  ]),
+  page("maintenance", "clock", [
+    A("logging", { labelKey: SECTION_LABEL.maintenance.logging }),
+    A("system", { labelKey: SECTION_LABEL.maintenance.system }),
+    A("timeModel", { labelKey: SECTION_LABEL.maintenance.timeModel }),
+  ]),
   page("masterdata", "table-2", [
     A("airlinesMasterData", { anchors: ["catalogues"], matches: ["md_airlines"] }),
     A("aircraftMasterData", { matches: ["md_aircraft"] }),

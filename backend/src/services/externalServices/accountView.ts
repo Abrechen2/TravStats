@@ -19,6 +19,8 @@ export type EffectiveSource = "account" | "instance" | "none" | "off";
 export interface AccountServiceView {
   id: string;
   recommended: Recommended;
+  /** Where to get a key; null when there is nothing to get. Same value the admin view carries. */
+  getKeyUrl: string | null;
   effectiveSource: EffectiveSource;
   accountDisabled: boolean;
   configured: boolean;
@@ -117,6 +119,7 @@ export async function buildAccountView(userId: string): Promise<{
     return {
       id: service.id,
       recommended: service.recommended,
+      getKeyUrl: service.getKeyUrl,
       effectiveSource: effectiveSourceFor(service, state, prefs, has),
       accountDisabled: prefs.disabled.includes(service.id),
       configured: has,

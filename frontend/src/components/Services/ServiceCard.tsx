@@ -83,6 +83,11 @@ export default function ServiceCard({
     provided: data?.instanceProvided.find((s) => s.id === card.id),
     admin: admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id),
   });
+  // Where to get a key: the account's own view carries it for every account, the admin's for the server.
+  const keyUrl =
+    acct?.getKeyUrl ??
+    admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id)?.getKeyUrl ??
+    null;
   const accountRows = hasAccountRows(card) && !accountGated;
   // Dawarich has no admin row in the catalogue, but the server's connection is still the admin's.
   const serverRows = isAdmin && admin !== null;
@@ -108,6 +113,20 @@ export default function ServiceCard({
               {t(`settings:unreachable.${UNREACHABLE_NOTE[card.id]}`, {
                 name: t(`settingsRows:services.cards.${card.id}.n`),
               })}
+            </p>
+          ) : null}
+          {keyUrl ? (
+            <p className="t-caption" data-key-link={card.id} style={{ margin: 0 }}>
+              <a
+                href={keyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--ts-accent)" }}
+              >
+                {t("settingsRows:services.ui.getKey", {
+                  name: t(`settingsRows:services.cards.${card.id}.n`),
+                })}
+              </a>
             </p>
           ) : null}
           {accountGated ? null : <AccountSide card={card} service={acct} />}

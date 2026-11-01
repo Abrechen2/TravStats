@@ -40,7 +40,8 @@ import { pageLevel, sectionsOf } from "./Settings/surface";
 import type { SettingsSectionId } from "./Settings/settingsModel";
 import type { AdminSectionId } from "./Admin/adminSections";
 import { ADMIN_SECTION_FRAME } from "./Admin/AdminSectionSwitch";
-import { AdminHost, AdminSectionBody } from "./Admin/AdminHost";
+import { AdminSectionBody } from "./Admin/AdminSectionBody";
+import { usePublicUrlMissing } from "../components/ServerPages/usePublicUrlMissing";
 import LeaveGuardHost from "../components/ui/settings/LeaveGuardHost";
 import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
 
@@ -89,7 +90,7 @@ function scopeLineKey(page: AreaPageDef): string {
  * address lands on their own pages with a line that says why.
  */
 export default function SettingsPage(): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings", "common", "settingsRows"]);
   const params = useParams<{ page?: string }>();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -160,6 +161,8 @@ export default function SettingsPage(): JSX.Element {
   // Scroll a named section into view and keep it there while the page's lazy
   // sections settle: a bookmark lands on the card, not merely on the page.
   useDeepLinkScroll(mainRef, false, named, "settings");
+  // B15: the server's public address is required; the menu and the Server page say when it is not there.
+  const publicUrlMissing = usePublicUrlMissing(isAdmin);
 
   const jump = useCallback((section: string): void => {
     const el = document.getElementById(`settings-${section}`);
@@ -200,6 +203,9 @@ export default function SettingsPage(): JSX.Element {
         icon: p.icon,
         color: p.domain ? colorOf(p.domain) : undefined,
         indent: INDENTED_PAGES.has(p.id),
+        ...(p.id === "server" && publicUrlMissing
+          ? { warn: { label: t("settingsRows:server.publicUrlMissing") } }
+          : {}),
       })),
   })).filter((g) => g.entries.length > 0);
   const hiddenPages = reachablePages.filter((p) => !inMenu(p)).length;
@@ -212,12 +218,11 @@ export default function SettingsPage(): JSX.Element {
   const mounts = new Map<string, AreaSectionDef>(current.sections.map((s) => [s.id, s]));
   const labelOf = (id: string): string => t(mounts.get(id)?.labelKey ?? id);
   const isExpertPage = pageLevel(current) === "expert" && level === "standard";
-  const hasServerSections = visible.shown.some((id) => mounts.get(id)?.source === "admin");
 
   const body = (mount: AreaSectionDef): JSX.Element => {
     if (mount.domain && !isEnabled(mount.domain)) return <DomainOffNotice domain={mount.domain} />;
     if (mount.source === "admin")
-      return <AdminSectionBody section={mount.component as AdminSectionId} />;
+      return <AdminSectionBody section={mount.component as AdminSectionId} mountId={mount.id} />;
     if (mount.source === "about") return <AboutSection />;
     return <SettingsSectionSwitch section={mount.component as SettingsSectionId} page={page} />;
   };
@@ -320,6 +325,26 @@ export default function SettingsPage(): JSX.Element {
               {t("settings:area.adminOnlyNotice")}
             </p>
           )}
+          {current.id === "server" && publicUrlMissing && (
+            <p
+              role="status"
+              data-public-url-warning=""
+              className="t-caption flex flex-wrap items-center"
+              style={{
+                gap: "var(--ts-space-md)",
+                padding: "12px 16px",
+                borderRadius: "var(--ts-radius-card)",
+                background: "var(--ts-surface2)",
+                border: "1px solid var(--ts-warn)",
+                color: "var(--ts-text)",
+              }}
+            >
+              <span>{t("settingsRows:server.publicUrlBanner")}</span>
+              <button type="button" className="btn-secondary" onClick={() => jump("addresses")}>
+                {t("settingsRows:server.publicUrlBannerJump")}
+              </button>
+            </p>
+          )}
           {domainOff ? (
             <DomainOffNotice domain={domainOff} />
           ) : isExpertPage ? (
@@ -330,11 +355,7 @@ export default function SettingsPage(): JSX.Element {
         </>
       }
     >
-      {isAdmin && hasServerSections ? (
-        <AdminHost highlightUserId={searchParams.get("user")}>{sections}</AdminHost>
-      ) : (
-        sections
-      )}
+      {sections}
 
       {page.showPasswordModal && (
         <PasswordModal
