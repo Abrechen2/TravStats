@@ -2,23 +2,15 @@ import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { buildTerminalRideMapLayers } from "../Dashboard/tabs/terminalRideMapOverlay";
 import { busPaths } from "../Trips/tripBusLayer";
 import { railBounds } from "../rail/RailRouteMap";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { FerryJourney } from "../../types/ferry";
-
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
-}
 
 /** Which line the map draws, so the caption can say so. */
 export type FerryLineKind = "seaRoute" | "drawn" | "straight";

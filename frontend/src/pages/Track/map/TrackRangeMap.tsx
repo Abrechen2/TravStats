@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import type { Layer } from "@deck.gl/core";
+import MapGL, { type MapRef } from "react-map-gl/maplibre";
+import { DeckGLOverlay } from "../../../components/map/DeckGLOverlay";
 import { SharedMapOverlays } from "../../../components/map/SharedMapOverlays";
 import { useBasemapStyle } from "../../../components/map/useBasemapStyle";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -11,15 +10,6 @@ import { linesBounds, type LonLat } from "./trackGeometry";
 import TrackFogLayer, { type FogStatus } from "./TrackFogLayer";
 
 const FRAME_PADDING = { top: 40, right: 24, bottom: 40, left: 24 };
-
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, getTooltip: tooltipOf }),
-    { position: "top-left" }
-  );
-  overlay.setProps({ layers });
-  return null;
-}
 
 export interface TrackRangeMapProps extends Omit<TrackLayerInput, "lines"> {
   /** All stretches of the range, for the frame; the drawn ones may be the replay's trail. */
@@ -123,7 +113,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         onLoad={(): void => setMapLoaded(true)}
       >
         {mapLoaded && layers.fog && <TrackFogLayer onStatus={props.onFogStatus} />}
-        {mapLoaded && <DeckGLOverlay layers={deckLayers} />}
+        {mapLoaded && <DeckGLOverlay layers={deckLayers} getTooltip={tooltipOf} />}
         <SharedMapOverlays />
       </MapGL>
       <span

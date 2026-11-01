@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { buildTerminalRideLines } from "../Dashboard/tabs/terminalRideMapOverlay";
@@ -11,14 +11,6 @@ import { railBounds } from "../rail/RailRouteMap";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { BusJourney } from "../../types/bus";
-
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
-}
 
 type RideLine = Pick<BusJourney, "geometry" | "geometrySource">;
 

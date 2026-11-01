@@ -1,25 +1,13 @@
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Lodging } from "../../types/lodging";
-
-interface DeckOverlayProps {
-  layers: Layer[];
-}
-
-function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
-}
 
 interface LodgingMiniMapProps {
   lodging: Lodging;

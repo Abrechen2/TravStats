@@ -2,9 +2,9 @@ import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
-import MapGL, { useControl } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL from "react-map-gl/maplibre";
 import type { Layer } from "@deck.gl/core";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import {
   buildRailDeckLayers,
   buildRailPaths,
@@ -20,14 +20,6 @@ import type { RailJourney } from "../../types/rail";
 
 /** Degrees of margin around the line, so the stations never sit on the frame. */
 const BOUNDS_PAD_DEG = 0.3;
-
-function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers });
-  return null;
-}
 
 /** [[west, south], [east, north]] around every point of the line. */
 export function railBounds(
