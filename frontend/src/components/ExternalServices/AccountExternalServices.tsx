@@ -1,3 +1,4 @@
+import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
 import { useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card } from "../ui/Card";
@@ -194,6 +195,8 @@ export default function AccountExternalServices(): JSX.Element {
               {service.id === "dawarich" ? <DawarichProviderHint check={dawarichSaved} /> : null}
               {/* The nightly photo scan reads the connected library (forgejo#94). */}
               {service.id === "immich" ? <PhotoJourneyNightlyScanCard /> : null}
+              {/* Visit-photo copies become Immich links (forgejo#21, forgejo#397). */}
+              {service.id === "immich" ? <VisitPhotoImmichLink connected /> : null}
             </div>
           )
         }
