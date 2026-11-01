@@ -23,6 +23,7 @@ import { errorContent, timeRefused } from "./shared";
 import { profileZoneBodySchema, profileZoneViewSchema } from "../../settings/profileZoneSettings";
 import {
   homeAirportsResponseSchema,
+  homeMoveBodySchema,
   homePeriodsBodySchema,
   nearbyHomeAirportsQuerySchema,
   nearbyHomeAirportsResponseSchema,
@@ -273,6 +274,32 @@ registry.registerPath({
     body: { content: { "application/json": { schema: homePeriodsBodySchema } }, required: true },
   },
   responses: { 200: homeAirportsOk, 400: homeRefused },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/home-airports/periods",
+  summary: "Move: append a home period",
+  description:
+    "Appends a period from `fromDate`, closes the running one at `fromDate` (exclusive end: " +
+    "its last day is the day before), and creates the first period when there is none. " +
+    "Idempotent on `clientRef`: a ref seen before answers 200 with the stored periods and " +
+    "adds nothing. 409 `HOME_PERIOD_OVERLAP` when `fromDate` is not after the running " +
+    "period's start (the body still carries both shapes).",
+  tags: settingsTag,
+  request: {
+    body: { content: { "application/json": { schema: homeMoveBodySchema } }, required: true },
+  },
+  responses: {
+    200: homeAirportsOk,
+    400: homeRefused,
+    409: {
+      description: "HOME_PERIOD_OVERLAP",
+      content: {
+        "application/json": { schema: homeAirportsResponseSchema.extend({ error: z.string() }) },
+      },
+    },
+  },
 });
 
 registry.registerPath({

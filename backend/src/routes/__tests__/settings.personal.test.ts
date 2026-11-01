@@ -36,18 +36,34 @@ describe("settings — personal", () => {
     request(app).put("/api/v1/settings/personal").set("Cookie", cookie).send(body);
 
   it("is empty until set", async () => {
-    expect((await get()).body).toEqual({ homePlace: null, passportExpiry: null });
+    expect((await get()).body).toEqual({
+      homePlace: null,
+      homePlaceSource: "legacy",
+      passportExpiry: null,
+    });
   });
 
   it("stores both, leaves an unnamed one alone and clears with null", async () => {
     const set = await put({ homePlace: home, passportExpiry: "2031-04-30" }).expect(200);
-    expect(set.body).toEqual({ homePlace: home, passportExpiry: "2031-04-30" });
+    expect(set.body).toEqual({
+      homePlace: home,
+      homePlaceSource: "legacy",
+      passportExpiry: "2031-04-30",
+    });
 
     await put({ passportExpiry: "2032-01-15" }).expect(200);
-    expect((await get()).body).toEqual({ homePlace: home, passportExpiry: "2032-01-15" });
+    expect((await get()).body).toEqual({
+      homePlace: home,
+      homePlaceSource: "legacy",
+      passportExpiry: "2032-01-15",
+    });
 
     await put({ homePlace: null }).expect(200);
-    expect((await get()).body).toEqual({ homePlace: null, passportExpiry: "2032-01-15" });
+    expect((await get()).body).toEqual({
+      homePlace: null,
+      homePlaceSource: "legacy",
+      passportExpiry: "2032-01-15",
+    });
   });
 
   it("onlyIfEmpty writes a field only where the server holds none", async () => {
@@ -57,7 +73,11 @@ describe("settings — personal", () => {
       passportExpiry: "2029-01-01",
       onlyIfEmpty: true,
     }).expect(200);
-    expect(migrated.body).toEqual({ homePlace: home, passportExpiry: "2031-04-30" });
+    expect(migrated.body).toEqual({
+      homePlace: home,
+      homePlaceSource: "legacy",
+      passportExpiry: "2031-04-30",
+    });
   });
 
   it("refuses a malformed day, a place off the globe and unknown fields", async () => {

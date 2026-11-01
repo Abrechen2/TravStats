@@ -96,9 +96,10 @@ export async function loadHomePeriods(userId: string): Promise<HomePeriod[]> {
  */
 export async function saveHomePeriods(
   userId: string,
-  periods: readonly HomePeriod[]
+  periods: readonly HomePeriod[],
+  db: Pick<typeof prisma, "userSettings"> = prisma
 ): Promise<void> {
-  const existing = await prisma.userSettings.findUnique({
+  const existing = await db.userSettings.findUnique({
     where: { userId },
     select: { data: true },
   });
@@ -106,7 +107,7 @@ export async function saveHomePeriods(
     [HOME_PERIODS_KEY]: periods,
     [LEGACY_HISTORY_KEY]: legacyHistoryOf(periods),
   };
-  await prisma.userSettings.upsert({
+  await db.userSettings.upsert({
     where: { userId },
     update: { data: { ...asObject(existing?.data), ...home } as unknown as Prisma.InputJsonValue },
     create: { userId, data: { ...defaultSettings, ...home } as unknown as Prisma.InputJsonValue },

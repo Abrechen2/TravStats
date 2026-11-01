@@ -63,7 +63,14 @@ registry.registerPath({
 });
 
 const personal = z.object({
-  homePlace: homePlaceSchema.nullable(),
+  homePlace: homePlaceSchema
+    .nullable()
+    .describe(
+      "The residence of the current home period (zone resolved from its coordinates); the legacy column only without one"
+    ),
+  homePlaceSource: z
+    .enum(["period", "legacy"])
+    .describe("Where `homePlace` came from. Additive; older clients ignore it."),
   passportExpiry: z.string().nullable().describe("Calendar day YYYY-MM-DD"),
 });
 
@@ -86,7 +93,10 @@ registry.registerPath({
   summary: "Set or clear the home place and passport expiry",
   description:
     "An absent field is left alone, `null` clears it. With `onlyIfEmpty` a field is written only " +
-    "where the server holds none yet (the Companion's one-time upload).",
+    "where the server holds none yet (the Companion's one-time upload). `homePlace` edits the " +
+    "current home period's residence when there is one (airports and dates stay); otherwise it " +
+    "is stored as the legacy column. `homePlace: null` while a current period holds a residence " +
+    "is refused (409): edit or remove the period instead.",
   tags: ["Settings"],
   request: { body: { content: { "application/json": { schema: putPersonalSettingsSchema } } } },
   responses: {
@@ -95,6 +105,7 @@ registry.registerPath({
       content: { "application/json": { schema: personal } },
     },
     400: { description: "PERSONAL_SETTINGS_INVALID", content: errorContent },
+    409: { description: "HOME_PLACE_IS_PERIOD", content: errorContent },
     403: { description: "The shared demo account", content: errorContent },
   },
 });

@@ -10,6 +10,8 @@ import {
 } from "../tripRecording/bounds";
 import type { RecordingBreak } from "../tripRecording/segments";
 import { profileZoneFromSettings } from "../../shared/time/profileZone";
+import { deriveHomePlace } from "../home/homePlace";
+import { homePeriodsFromData } from "../home/homeStore";
 import { positionKey, type ZoneCircle } from "./classify";
 import type { PointsRemovedCause } from "./deleteRange";
 import { privacyCirclesFor } from "./privacyCircles";
@@ -104,9 +106,27 @@ export async function homeCircle(
 ): Promise<ZoneCircle | null> {
   const settings = await db.userSettings.findUnique({
     where: { userId },
-    select: { homePlace: true },
+    select: { homePlace: true, data: true },
   });
-  return circleOfHome(settings?.homePlace);
+  return circleOfHome((await deriveHomePlace(settings)).homePlace);
+}
+
+/**
+ * Residences of the periods that are over: homes the user has left. A shared
+ * route keeps away from them even when no column change recorded the move
+ * (the home periods are edited without touching `home_place`).
+ */
+async function pastResidenceCircles(
+  db: Pick<Db, "userSettings">,
+  userId: string
+): Promise<ZoneCircle[]> {
+  const settings = await db.userSettings.findUnique({ where: { userId }, select: { data: true } });
+  const circles: ZoneCircle[] = [];
+  for (const period of await homePeriodsFromData(settings?.data)) {
+    const circle = period.toDate !== null ? circleOfHome(period.residence) : null;
+    if (circle) circles.push(circle);
+  }
+  return circles;
 }
 
 export async function boundsOf(db: Db, userId: string, tripId: string) {
@@ -269,7 +289,8 @@ export async function narrowingFor(
       select: { fromAt: true, toAt: true },
     }),
   ]);
-  const homes = withCircles(stored, [...since.homes, ...(home ? [home] : [])]);
+  const pastResidences = await pastResidenceCircles(db, userId);
+  const homes = withCircles(stored, [...since.homes, ...pastResidences, ...(home ? [home] : [])]);
   return {
     bounds,
     homes,

@@ -1530,15 +1530,11 @@
   "personalFacts": {
     "loadFailed": "Your personal details could not be loaded.",
     "notSet": "Not set",
-    "clear": "Remove",
     "homePlace": {
-      "label": "Home place",
-      "description": "The Companion app uses it too, for example for the “time to leave” reminder.",
-      "search": "Search for a place",
-      "searchAction": "Search",
-      "searchFailed": "The place search did not answer. Please try again.",
-      "searchDegraded": "The place service is unreachable right now. That is not “no match” – please search again later.",
-      "noResults": "No matching place found."
+      "label": "Home",
+      "description": "The residence of your current home period. The Companion app uses it, for example, for the leave-now reminder.",
+      "legacyHint": "This place comes from an older entry and belongs to no home period. Add your residence under Home so it applies everywhere.",
+      "editLink": "Change under Home"
     },
     "passport": {
       "label": "Passport valid until",
