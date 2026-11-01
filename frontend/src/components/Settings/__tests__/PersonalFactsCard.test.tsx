@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -10,10 +11,6 @@ const getFacts = vi.fn();
 const putFacts = vi.fn();
 vi.mock("../../../lib/api/companionData", () => ({
   personalApi: { get: () => getFacts(), put: (p: unknown) => putFacts(p) },
-}));
-const search = vi.fn();
-vi.mock("../../../lib/api/geo", () => ({
-  searchPlaces: (...a: unknown[]) => search(...a),
 }));
 const addToast = vi.fn();
 vi.mock("../../../store/toastStore", () => ({
@@ -28,21 +25,46 @@ describe("PersonalFactsCard (home place, passport expiry)", () => {
   beforeEach(() => {
     getFacts.mockReset().mockResolvedValue({ homePlace: HOME, passportExpiry: "2030-05-01" });
     putFacts.mockReset();
-    search.mockReset();
     addToast.mockReset();
   });
 
   it("shows what the Companion wrote", async () => {
-    render(<PersonalFactsCard />);
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("Hamburg, Deutschland")).toBeTruthy();
     expect(
       (screen.getByLabelText("settings:personalFacts.passport.label") as HTMLInputElement).value
     ).toBe("2030-05-01");
   });
 
+  it("offers no home place editor: it shows the residence and links to the home periods", async () => {
+    getFacts.mockResolvedValue({
+      homePlace: HOME,
+      homePlaceSource: "period",
+      passportExpiry: null,
+    });
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("Hamburg, Deutschland")).toBeTruthy();
+    expect(screen.queryByLabelText("settings:personalFacts.homePlace.search")).toBeNull();
+    expect(screen.getByTestId("home-place-edit-link").getAttribute("href")).toBe(
+      "/settings/flight?section=homeAirport"
+    );
+  });
+
   it("saves a changed passport expiry and shows the server's answer", async () => {
     putFacts.mockResolvedValue({ homePlace: HOME, passportExpiry: "2031-01-02" });
-    render(<PersonalFactsCard />);
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
     await screen.findByText("Hamburg, Deutschland");
     const input = screen.getByLabelText(
       "settings:personalFacts.passport.label"
@@ -56,7 +78,11 @@ describe("PersonalFactsCard (home place, passport expiry)", () => {
 
   it("tells the user when saving the passport expiry fails and keeps the stored day", async () => {
     putFacts.mockRejectedValue(new Error("500"));
-    render(<PersonalFactsCard />);
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
     await screen.findByText("Hamburg, Deutschland");
     const input = screen.getByLabelText(
       "settings:personalFacts.passport.label"
@@ -71,50 +97,23 @@ describe("PersonalFactsCard (home place, passport expiry)", () => {
     expect(input.value).toBe("2030-05-01");
   });
 
-  it("says the place service is unreachable instead of 'no match' on a degraded search", async () => {
-    search.mockResolvedValue({ results: [], degraded: true });
-    render(<PersonalFactsCard />);
-    await userEvent.type(
-      await screen.findByLabelText("settings:personalFacts.homePlace.search"),
-      "Lissabon"
-    );
-    await userEvent.click(screen.getByText("settings:personalFacts.homePlace.searchAction"));
-    expect(await screen.findByText("settings:personalFacts.homePlace.searchDegraded")).toBeTruthy();
-    expect(screen.queryByText("settings:personalFacts.homePlace.noResults")).toBeNull();
-  });
-
-  it("sets the home place from a search hit", async () => {
-    search.mockResolvedValue({
-      results: [{ name: "Lissabon", city: "Lissabon", country: "Portugal", lat: 38.7, lon: -9.1 }],
-      degraded: false,
-    });
-    putFacts.mockResolvedValue({
-      homePlace: { name: "Lissabon, Portugal", lat: 38.7, lon: -9.1, zone: null },
-      passportExpiry: "2030-05-01",
-    });
-    render(<PersonalFactsCard />);
-    await userEvent.type(
-      await screen.findByLabelText("settings:personalFacts.homePlace.search"),
-      "Lissabon"
-    );
-    await userEvent.click(screen.getByText("settings:personalFacts.homePlace.searchAction"));
-    await userEvent.click(await screen.findByText("Lissabon, Portugal"));
-    await waitFor(() =>
-      expect(putFacts).toHaveBeenCalledWith({
-        homePlace: { name: "Lissabon, Portugal", lat: 38.7, lon: -9.1, zone: null },
-      })
-    );
-  });
-
   it("says the details could not be loaded instead of showing 'not set'", async () => {
     getFacts.mockRejectedValue(new Error("offline"));
-    render(<PersonalFactsCard />);
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("settings:personalFacts.loadFailed")).toBeTruthy();
     expect(screen.queryByText("settings:personalFacts.notSet")).toBeNull();
   });
 
   it("does not clear the stored passport expiry when the date field is left half-typed", async () => {
-    render(<PersonalFactsCard />);
+    render(
+      <MemoryRouter>
+        <PersonalFactsCard />
+      </MemoryRouter>
+    );
     await screen.findByText("Hamburg, Deutschland");
     const input = screen.getByLabelText(
       "settings:personalFacts.passport.label"

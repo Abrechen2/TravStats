@@ -6,11 +6,13 @@ import { narrowShareSnapshots } from "../../services/travtrack/shareNarrow";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { settingsLimiter } from "../../middleware/rateLimit";
+import { putPersonalSettingsSchema, type HomePlace } from "../../schemas/companionData";
 import {
-  homePlaceSchema,
-  putPersonalSettingsSchema,
-  type HomePlace,
-} from "../../schemas/companionData";
+  deriveHomePlace,
+  withCurrentResidence,
+  type HomePlaceSource,
+} from "../../services/home/homePlace";
+import { homePeriodsFromData, saveHomePeriods } from "../../services/home/homeStore";
 
 /**
  * Personal facts the Companion used to keep on the phone only
@@ -34,23 +36,77 @@ router.use(settingsLimiter);
 
 interface PersonalPayload {
   homePlace: HomePlace | null;
+  /** Where `homePlace` came from: the current home period's residence, or the legacy column. */
+  homePlaceSource: HomePlaceSource;
   passportExpiry: string | null;
 }
 
-type StoredPersonal = { homePlace: Prisma.JsonValue | null; passportExpiry: Date | null } | null;
+type StoredPersonal = {
+  homePlace: Prisma.JsonValue | null;
+  passportExpiry: Date | null;
+  data: Prisma.JsonValue | null;
+} | null;
 
-function toPayload(row: StoredPersonal): PersonalPayload {
-  const home = homePlaceSchema.safeParse(row?.homePlace);
+async function toPayload(row: StoredPersonal): Promise<PersonalPayload> {
+  const home = await deriveHomePlace(row);
   return {
-    homePlace: home.success ? home.data : null,
+    ...home,
     passportExpiry: row?.passportExpiry ? row.passportExpiry.toISOString().slice(0, 10) : null,
   };
 }
 
-const SELECT = { homePlace: true, passportExpiry: true } as const;
+const SELECT = { homePlace: true, passportExpiry: true, data: true } as const;
 
 /** A calendar day as the DATE column takes it: midnight UTC of that day. */
 const dayToDate = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
+
+/**
+ * `homePlace` from an app that still knows only the place. With a current home
+ * period it edits that period's residence (airports and dates stay) and the
+ * legacy column follows as a mirror; without one it is the legacy write as
+ * before. A shared route keeps away from the new home AND every one it
+ * replaces (TravTrack plan T7): the replaced home is recorded by a trigger on
+ * the column, so the column first takes the home being replaced, then the new
+ * one; the narrowing runs in the same transaction under the TravTrack lock, and
+ * if it fails the home does not change.
+ */
+async function writeHomePlace(
+  userId: string,
+  homePlace: HomePlace | null,
+  onlyIfEmpty: boolean
+): Promise<void> {
+  const row = await prisma.userSettings.findUnique({ where: { userId }, select: SELECT });
+  const before = await deriveHomePlace(row);
+  const periods = await homePeriodsFromData(row?.data);
+  const edited = homePlace ? withCurrentResidence(periods, homePlace) : null;
+  // `onlyIfEmpty` never overwrites a home the account already has.
+  if (onlyIfEmpty && before.homePlace) return;
+  if (homePlace === null && before.homePlaceSource === "period") {
+    throw new AppError(
+      "The home place is the current home period's residence; edit or remove that period instead",
+      409,
+      "HOME_PLACE_IS_PERIOD"
+    );
+  }
+  await prisma.$transaction(
+    async (tx) => {
+      await takeTravTrackLock(tx, userId);
+      if (edited && before.homePlace) {
+        await tx.userSettings.updateMany({
+          where: { userId },
+          data: { homePlace: before.homePlace },
+        });
+      }
+      await tx.userSettings.updateMany({
+        where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
+        data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
+      });
+      if (edited) await saveHomePeriods(userId, edited, tx);
+      await narrowShareSnapshots(tx, userId);
+    },
+    { timeout: 60_000 }
+  );
+}
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -58,7 +114,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       where: { userId: req.userId! },
       select: SELECT,
     });
-    res.json(toPayload(row));
+    res.json(await toPayload(row));
   } catch (error) {
     next(error);
   }
@@ -83,24 +139,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       skipDuplicates: true,
     });
 
-    if (homePlace !== undefined) {
-      // A shared route keeps away from the new home AND every one it replaces
-      // (TravTrack plan T7). The replaced home is recorded by a trigger on this
-      // row, under its row lock, so two changes at once both count; the
-      // narrowing runs in the same transaction under the TravTrack lock, and
-      // if it fails the home does not change.
-      await prisma.$transaction(
-        async (tx) => {
-          await takeTravTrackLock(tx, userId);
-          await tx.userSettings.updateMany({
-            where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
-            data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
-          });
-          await narrowShareSnapshots(tx, userId);
-        },
-        { timeout: 60_000 }
-      );
-    }
+    if (homePlace !== undefined) await writeHomePlace(userId, homePlace, onlyIfEmpty);
     if (passportExpiry !== undefined) {
       await prisma.userSettings.updateMany({
         where: onlyIfEmpty ? { userId, passportExpiry: null } : { userId },
@@ -109,7 +148,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     }
 
     const row = await prisma.userSettings.findUnique({ where: { userId }, select: SELECT });
-    res.json(toPayload(row));
+    res.json(await toPayload(row));
   } catch (error) {
     next(error);
   }

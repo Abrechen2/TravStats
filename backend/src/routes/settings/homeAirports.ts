@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from "../../middleware/apiErrorCode";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
@@ -8,12 +9,17 @@ import {
   sortPeriods,
   type HomePeriod,
 } from "../../utils/homeAirport";
-import { homePeriodsBodySchema, nearbyHomeAirportsQuerySchema } from "../../schemas/home";
+import {
+  homeMoveBodySchema,
+  homePeriodsBodySchema,
+  nearbyHomeAirportsQuerySchema,
+} from "../../schemas/home";
 import {
   loadAirportsForHome,
   loadHomePeriods,
   saveHomePeriods,
 } from "../../services/home/homeStore";
+import { appendHomePeriod } from "../../services/home/homeMove";
 import { findNearbyHomeAirports } from "../../services/home/nearbyAirports";
 import { triggerDataQualityChecks } from "../../services/dataQualityTrigger";
 import { todayIn } from "../../shared/time/clock";
@@ -86,7 +92,13 @@ router.get(
     try {
       const parsed = nearbyHomeAirportsQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: "HOME_NEARBY_INVALID", issues: parsed.error.issues });
+        res
+          .status(400)
+          .json({
+            error: "HOME_NEARBY_INVALID",
+            code: "HOME_NEARBY_INVALID" satisfies ApiErrorCode,
+            issues: parsed.error.issues,
+          });
         return;
       }
       res.json({
@@ -105,7 +117,13 @@ router.put(
     try {
       const parsed = homePeriodsBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: "HOME_PERIODS_INVALID", issues: parsed.error.issues });
+        res
+          .status(400)
+          .json({
+            error: "HOME_PERIODS_INVALID",
+            code: "HOME_PERIODS_INVALID" satisfies ApiErrorCode,
+            issues: parsed.error.issues,
+          });
         return;
       }
       const periods = sortPeriods(parsed.data.periods);
@@ -115,11 +133,66 @@ router.put(
       const known = await loadAirportsForHome(codes);
       const unknown = codes.filter((c) => !known.has(c));
       if (unknown.length > 0) {
-        res.status(400).json({ error: "HOME_AIRPORT_UNKNOWN", codes: unknown });
+        res
+          .status(400)
+          .json({
+            error: "HOME_AIRPORT_UNKNOWN",
+            code: "HOME_AIRPORT_UNKNOWN" satisfies ApiErrorCode,
+            codes: unknown,
+          });
         return;
       }
       await save(req.userId!, periods);
       res.json(view(periods));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /periods — "I moved": append a period, close the running one. Idempotent on `clientRef`.
+router.post(
+  "/periods",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = homeMoveBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res
+          .status(400)
+          .json({
+            error: "HOME_PERIODS_INVALID",
+            code: "HOME_PERIODS_INVALID" satisfies ApiErrorCode,
+            issues: parsed.error.issues,
+          });
+        return;
+      }
+      const codes = parsed.data.airports.map((a) => a.code);
+      const known = await loadAirportsForHome(codes);
+      const unknown = codes.filter((c) => !known.has(c));
+      if (unknown.length > 0) {
+        res
+          .status(400)
+          .json({
+            error: "HOME_AIRPORT_UNKNOWN",
+            code: "HOME_AIRPORT_UNKNOWN" satisfies ApiErrorCode,
+            codes: unknown,
+          });
+        return;
+      }
+      const result = await appendHomePeriod(req.userId!, parsed.data);
+      if (result.kind === "overlap") {
+        res
+          .status(409)
+          .json({
+            error: "HOME_PERIOD_OVERLAP",
+            code: "HOME_PERIOD_OVERLAP" satisfies ApiErrorCode,
+            ...view(result.periods),
+          });
+        return;
+      }
+      if (result.kind === "created")
+        void triggerDataQualityChecks(req.userId!, { trigger: "home_settings" });
+      res.json(view(result.periods));
     } catch (error) {
       next(error);
     }

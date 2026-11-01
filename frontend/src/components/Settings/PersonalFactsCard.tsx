@@ -1,40 +1,28 @@
-import { useEffect, useState, type FormEvent, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { personalApi, type PersonalFacts } from "../../lib/api/companionData";
-import { searchPlaces, type PlaceSearchResult } from "../../lib/api/geo";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { SectionCard } from "./SettingsShared";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 
-const NAME_MAX = 200;
-
-function placeName(hit: PlaceSearchResult): string {
-  const parts = [hit.name, hit.city, hit.country].filter((p): p is string => !!p);
-  return [...new Set(parts)].join(", ").slice(0, NAME_MAX);
-}
-
-type SearchState =
-  | { kind: "idle" }
-  | { kind: "busy" }
-  | { kind: "failed" }
-  | { kind: "degraded" }
-  | { kind: "results"; hits: PlaceSearchResult[] };
-
 /**
  * Home place and passport expiry (forgejo#398) — facts the Companion writes
- * to the server (`/settings/personal`), shown and editable here. The server
- * keeps one value per field and the last write wins (the endpoint has no rev),
- * so every save shows what the server answered, and a failed one keeps the
- * stored value on screen and says so.
+ * to the server (`/settings/personal`). The passport expiry is edited here; the
+ * server keeps one value and the last write wins (the endpoint has no rev), so
+ * every save shows what the server answered, and a failed one keeps the stored
+ * value on screen and says so.
+ *
+ * The home place is NOT edited here any more (plan `2026-11-01-home-one-source`):
+ * it is the residence of the current home period, edited with the home periods
+ * ("Zuhause"). This card shows it and links there.
  */
 export default function PersonalFactsCard(): JSX.Element {
-  const { t, i18n } = useTranslation(["settings"]);
+  const { t } = useTranslation(["settings"]);
   const [facts, setFacts] = useState<PersonalFacts | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [query, setQuery] = useState("");
-  const [search, setSearch] = useState<SearchState>({ kind: "idle" });
 
   useEffect(() => {
     let alive = true;
@@ -66,31 +54,6 @@ export default function PersonalFactsCard(): JSX.Element {
     }
   };
 
-  const runSearch = async (event: FormEvent): Promise<void> => {
-    event.preventDefault();
-    const q = query.trim();
-    if (q.length < 2) return;
-    setSearch({ kind: "busy" });
-    try {
-      const { results, degraded } = await searchPlaces(q, i18n?.language);
-      if (results.length === 0) setSearch({ kind: degraded ? "degraded" : "results", hits: [] });
-      else setSearch({ kind: "results", hits: results.slice(0, 5) });
-    } catch (error) {
-      logger.warn("Home place search failed", error);
-      setSearch({ kind: "failed" });
-    }
-  };
-
-  const pick = async (hit: PlaceSearchResult): Promise<void> => {
-    const ok = await save({
-      homePlace: { name: placeName(hit), lat: hit.lat, lon: hit.lon, zone: null },
-    });
-    if (ok) {
-      setSearch({ kind: "idle" });
-      setQuery("");
-    }
-  };
-
   const home = facts?.homePlace ?? null;
   return (
     <SectionCard>
@@ -100,76 +63,25 @@ export default function PersonalFactsCard(): JSX.Element {
           sub={
             loadFailed
               ? t("settings:personalFacts.loadFailed")
-              : t("settings:personalFacts.homePlace.description")
+              : facts?.homePlaceSource === "legacy" && home
+                ? t("settings:personalFacts.homePlace.legacyHint")
+                : t("settings:personalFacts.homePlace.description")
           }
           control={
             <span className="flex flex-wrap items-center" style={{ gap: 8 }}>
               <span data-testid="home-place-value">
                 {facts ? (home?.name ?? t("settings:personalFacts.notSet")) : "…"}
               </span>
-              {home && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={saving}
-                  onClick={() => void save({ homePlace: null })}
-                >
-                  {t("settings:personalFacts.clear")}
-                </button>
-              )}
+              <Link
+                to="/settings/flight?section=homeAirport"
+                className="t-caption underline"
+                data-testid="home-place-edit-link"
+              >
+                {t("settings:personalFacts.homePlace.editLink")}
+              </Link>
             </span>
           }
         />
-        {facts && (
-          <div className="flex flex-col" style={{ gap: 8, paddingBottom: 8 }}>
-            <form onSubmit={(e) => void runSearch(e)} className="flex flex-wrap" style={{ gap: 8 }}>
-              <input
-                className="input"
-                style={{ flex: "1 1 220px", minHeight: "var(--ts-size-touch-min)" }}
-                value={query}
-                aria-label={t("settings:personalFacts.homePlace.search")}
-                placeholder={t("settings:personalFacts.homePlace.search")}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <button
-                type="submit"
-                className="btn-secondary"
-                disabled={saving || search.kind === "busy" || query.trim().length < 2}
-              >
-                {t("settings:personalFacts.homePlace.searchAction")}
-              </button>
-            </form>
-            {search.kind === "failed" && (
-              <p role="alert" className="t-caption">
-                {t("settings:personalFacts.homePlace.searchFailed")}
-              </p>
-            )}
-            {search.kind === "degraded" && (
-              <p role="alert" className="t-caption">
-                {t("settings:personalFacts.homePlace.searchDegraded")}
-              </p>
-            )}
-            {search.kind === "results" && search.hits.length === 0 && (
-              <p className="t-caption">{t("settings:personalFacts.homePlace.noResults")}</p>
-            )}
-            {search.kind === "results" && search.hits.length > 0 && (
-              <ul className="flex flex-col" style={{ gap: 4 }}>
-                {search.hits.map((hit, i) => (
-                  <li key={`${hit.externalRef ?? hit.name}-${i}`}>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      disabled={saving}
-                      onClick={() => void pick(hit)}
-                    >
-                      {placeName(hit)}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
         <SettingRow
           title={t("settings:personalFacts.passport.label")}
           htmlFor="settings-passport-expiry"

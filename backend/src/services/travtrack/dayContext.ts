@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
 import type { DomainKey } from "../../shared/domains";
-import { homePlaceSchema } from "../../schemas/companionData";
+import { deriveHomePlace } from "../home/homePlace";
 import { loadVisibleDomains } from "../domainVisibility";
 import { staySuggestionsEnabled } from "../settings/suggestionSwitches";
 import {
@@ -158,11 +158,10 @@ async function tripContext(userId: string, window: Span): Promise<DayContextEntr
 async function homeContext(userId: string, read: SafeSpan): Promise<DayContextEntry[]> {
   const settings = await prisma.userSettings.findUnique({
     where: { userId },
-    select: { homePlace: true },
+    select: { homePlace: true, data: true },
   });
-  const parsed = homePlaceSchema.safeParse(settings?.homePlace);
-  if (!parsed.success) return [];
-  const home = parsed.data;
+  const home = (await deriveHomePlace(settings)).homePlace;
+  if (!home) return [];
   const out: DayContextEntry[] = [];
   for (const segment of read.segments) {
     let run: StoredPoint[] = [];

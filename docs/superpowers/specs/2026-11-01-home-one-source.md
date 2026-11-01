@@ -21,6 +21,7 @@ second, separate value: **the home place is the residence of the current period*
 | Readers | TravTrack day context, TravTrack share-narrowing (`shareNarrow`, `travtrack_share_past_homes`) and the data export read the derived value; past-home narrowing may read past periods directly. |
 | New field | `homePlaceSource: "period" | "legacy"` on `GET /settings/personal`, additive. |
 | Move (new) | `POST /settings/home-airports/periods` appends `{fromDate, residence, airports, clientRef}`: closes the open period the day before `fromDate`, idempotent on `clientRef` (same ref → same answer, no second period). 409 `HOME_PERIOD_OVERLAP` when `fromDate` is not after the open period's start. Also creates the first period when there is none. (Option (a), chosen 2026-11-01 for the Companion's offline outbox.) |
+| Refusal codes | every refusal of `/settings/home-airports/*` (`HOME_PERIOD_OVERLAP` 409, `HOME_AIRPORT_UNKNOWN`, `HOME_PERIODS_INVALID`, `HOME_NEARBY_INVALID` 400) carries the code in `code` as well as `error` (additive; the web keeps reading `error`). Typed by `middleware/apiErrorCode.ts`. `PUT /settings/personal` `homePlace: null` while a period holds the residence: 409 `HOME_PLACE_IS_PERIOD`. |
 | Migration | none required; the legacy column stays read-only fallback. Dropping it needs a plan entry naming the app version that stops writing it. |
 
 ## Companion (phase C1)
