@@ -116,7 +116,7 @@ export default function SettingsPage(): JSX.Element {
   const service = current?.id === "services" ? searchParams.get("service") : null;
   const anchor = isCanonical ? (namedAnchor(location.search, location.hash) ?? service) : null;
   const match = isCanonical ? searchParams.get("match") : null;
-  const namedMount = current ? mountFor(current.id, anchor, match) : undefined;
+  const namedMount = current ? mountFor(current.id, anchor, match, isAdmin) : undefined;
   const named = namedMount?.id ?? null;
 
   // A page of a switched-off domain says so instead of drawing its settings.

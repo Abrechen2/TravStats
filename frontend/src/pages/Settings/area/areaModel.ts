@@ -53,6 +53,11 @@ export interface AreaSectionDef extends SectionDef<string> {
   component: string;
   /** Registry section ids this mount stands in for until their block exists. */
   anchors: readonly string[];
+  /**
+   * Anchors it answers for only when no visible mount owns them: a service card
+   * the server owns, for an account that cannot see the server's section.
+   */
+  fallbackAnchors: readonly string[];
   /** Row ids (`?match=`) that scroll to this mount. */
   matches: readonly string[];
   /** The mount exists only while this domain is on (master data catalogues). */
@@ -78,6 +83,7 @@ const adminPageDomain = new Map<string, DomainKey | undefined>(
 
 interface MountOptions {
   anchors?: readonly string[];
+  fallbackAnchors?: readonly string[];
   matches?: readonly string[];
 }
 
@@ -106,6 +112,7 @@ function mount(
     source,
     component,
     anchors: options.anchors ?? [],
+    fallbackAnchors: options.fallbackAnchors ?? [],
     matches: options.matches ?? [],
     // Whatever the server side of a mount is, only an admin sees it.
     ...(source === "admin" ? { adminOnly: true } : {}),
@@ -118,7 +125,7 @@ const P = (id: SettingsSectionId, options?: MountOptions & { as?: string }): Are
 const A = (id: AdminSectionId, options?: MountOptions & { as?: string }): AreaSectionDef =>
   mount(options?.as ?? id, "admin", id, options);
 
-/** Service cards the services page holds besides the ones with a mount of their own. */
+/** Service cards with a mount of their own (the server's own services). */
 const OWN_SERVICE_MOUNTS = [
   "smtp",
   "webdav",
@@ -127,9 +134,16 @@ const OWN_SERVICE_MOUNTS = [
   "usageStats",
   "updatesTemplates",
 ];
-const SERVICE_ANCHORS = (registryPage("services")?.sections ?? [])
-  .map((s) => s.id)
-  .filter((id) => !OWN_SERVICE_MOUNTS.includes(id) && id !== "selfHostedRouting");
+const SERVICE_CARDS = (registryPage("services")?.sections ?? []).filter(
+  (s) => !OWN_SERVICE_MOUNTS.includes(s.id)
+);
+/** Cards that exist only on the server's side (every row admin-only): the instance mount's. */
+const INSTANCE_ONLY_CARDS = SERVICE_CARDS.filter(
+  (s) => s.rows.length > 0 && s.rows.every((r) => r.audience === "admin")
+).map((s) => s.id);
+const SERVICE_ANCHORS = SERVICE_CARDS.map((s) => s.id).filter(
+  (id) => !INSTANCE_ONLY_CARDS.includes(id)
+);
 
 /**
  * The rows of the service cards that are the SERVER's side ("Alle Konten"):
@@ -205,10 +219,10 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("import", { anchors: ["railImport"] }),
   ]),
   page("services", "globe", [
-    P("externalServices", { anchors: SERVICE_ANCHORS }),
+    P("externalServices", { anchors: SERVICE_ANCHORS, fallbackAnchors: INSTANCE_ONLY_CARDS }),
     A("externalServices", {
       as: "instanceServices",
-      anchors: ["selfHostedRouting"],
+      anchors: INSTANCE_ONLY_CARDS,
       matches: INSTANCE_SERVICE_ROWS,
     }),
     A("smtp"),
@@ -282,19 +296,27 @@ export function findAreaPage(id: string | undefined): AreaPageDef | undefined {
   return AREA_PAGES.find((p) => p.id === id);
 }
 
-/** The mount an anchor, alias or `?match=` row id points at on a page. */
+/**
+ * The mount an anchor, alias or `?match=` row id points at on a page. An account
+ * without the permission is answered by a mount it can see: a service card the
+ * server owns (`aviationstack`) falls back to the catalogue the account has.
+ */
 export function mountFor(
   pageId: string,
   anchor: string | null,
-  match: string | null = null
+  match: string | null = null,
+  isAdmin = true
 ): AreaSectionDef | undefined {
-  const sections = findAreaPage(pageId)?.sections ?? [];
+  const sections = (findAreaPage(pageId)?.sections ?? []).filter((s) => isAdmin || !s.adminOnly);
   if (match) {
     const byMatch = sections.find((s) => s.matches.includes(match));
     if (byMatch) return byMatch;
   }
   if (!anchor) return undefined;
-  return sections.find((s) => s.id === anchor || s.anchors.includes(anchor));
+  return (
+    sections.find((s) => s.id === anchor || s.anchors.includes(anchor)) ??
+    sections.find((s) => s.fallbackAnchors.includes(anchor))
+  );
 }
 
 /**

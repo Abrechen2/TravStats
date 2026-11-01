@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { mountFor } from "../areaModel";
 import { searchArea } from "../areaSearch";
 import { SETTINGS_REGISTRY, type RegistryAccess } from "../../registry";
 
@@ -85,5 +86,15 @@ describe("a row of the server's side of a service card", () => {
     const hit = find("Client-ID des Servers").find((h) => h.rowId === "oskidI")!;
     expect(hit).toBeDefined();
     expect(hit.highlight).toBe("instanceServices");
+  });
+});
+
+describe("which mount answers for a service card", () => {
+  it("gives a server-only card (geocoder) to the server's section for an admin", () => {
+    expect(mountFor("services", "geocoder", null, true)?.id).toBe("instanceServices");
+  });
+
+  it("gives the same card to the account's catalogue when the account is no admin", () => {
+    expect(mountFor("services", "geocoder", null, false)?.id).toBe("externalServices");
   });
 });
