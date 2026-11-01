@@ -118,16 +118,21 @@ describe("CarbonByModeSection", () => {
     expect(text).not.toContain("stats:carbon.savedDescription");
   });
 
-  it("renders nothing when the request fails, rather than a card of zeros", async () => {
-    getCo2.mockRejectedValue(new Error("boom"));
-    const { container } = render(
+  it("says why the figures are missing and retries, instead of vanishing on a failed request", async () => {
+    getCo2.mockRejectedValueOnce({ response: { status: 500 } });
+    getCo2.mockResolvedValueOnce(response());
+    render(
       <MemoryRouter>
         <CarbonByModeSection />
       </MemoryRouter>
     );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("stats:carbon.loadError");
+    expect(alert.textContent).toContain("stats:carbon.reasonStatus");
     await act(async () => {
-      await Promise.resolve();
+      screen.getByRole("button", { name: /retry/i }).click();
     });
-    expect(container.textContent).toBe("");
+    await waitFor(() => expect(screen.getByTestId("carbon-by-mode")).toBeTruthy());
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

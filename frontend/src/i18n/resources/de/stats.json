@@ -1497,6 +1497,9 @@
         "coverage": "Die Kachel nennt, wie viele Fahrten verglichen wurden.",
         "exclusions": "Tram, Metro und Shuttle-Busse, Fahrten unter 100 km Luftlinie und Fahrten ohne Distanz. Es ist eine Schätzung, keine Messung."
       }
-    }
+    },
+    "loadError": "CO₂-Werte konnten nicht geladen werden.",
+    "reasonNetwork": "Der Server hat nicht geantwortet (Netzwerk).",
+    "reasonStatus": "Der Server antwortete mit Fehler {{status}}."
   }
 }

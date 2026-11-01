@@ -8,6 +8,7 @@ import { dateLocaleForLanguage } from "../../../lib/units";
 import type { DomainKey } from "../../../shared/domains";
 import type { Co2ModeStats, Co2Stats } from "../../../types/co2";
 import StatCard from "../StatCard";
+import StatsSectionsLoadError from "../StatsSectionsLoadError";
 import CountingHelp from "../counting/CountingHelp";
 
 const MODE_DOMAIN: Record<Co2ModeStats["mode"], DomainKey> = {
@@ -51,25 +52,47 @@ export default function CarbonByModeSection(): JSX.Element | null {
     rental: rentalOn,
   };
   const [data, setData] = useState<Co2Stats | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const result = await statsApi.getCo2();
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          setFailure(null);
+        }
       } catch (err) {
         logger.error("CarbonByModeSection: fetch failed", err);
-        if (!cancelled) setFailed(true);
+        // The reason, not just the fact: a server status, or the network.
+        const status = (err as { response?: { status?: number } }).response?.status;
+        if (!cancelled) {
+          setFailure(
+            status === undefined
+              ? t("stats:carbon.reasonNetwork")
+              : t("stats:carbon.reasonStatus", { status })
+          );
+        }
       }
     })();
     return (): void => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt, t]);
 
-  if (failed || data === null) return null;
+  if (failure !== null) {
+    return (
+      <section className="mt-8" data-testid="carbon-by-mode-error">
+        <StatsSectionsLoadError
+          message={`${t("stats:carbon.loadError")} ${failure}`}
+          onRetry={() => setAttempt((n) => n + 1)}
+        />
+      </section>
+    );
+  }
+  if (data === null) return null;
   const modes = data.modes.filter((m) => visible[MODE_DOMAIN[m.mode]] === true && m.records > 0);
   const showFlights = visible.flight === true && data.flights.records > 0;
   if (modes.length === 0 && !showFlights) return null;

@@ -1497,6 +1497,9 @@
         "coverage": "The tile says how many trips were compared.",
         "exclusions": "Tram, metro and shuttle buses, trips under 100 km straight-line and trips without a distance. It is an estimate, not a measurement."
       }
-    }
+    },
+    "loadError": "The CO₂ figures could not be loaded.",
+    "reasonNetwork": "The server did not respond (network).",
+    "reasonStatus": "The server answered with error {{status}}."
   }
 }
