@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from "../../middleware/apiErrorCode";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
@@ -8,12 +9,14 @@ import {
   sortPeriods,
   type HomePeriod,
 } from "../../utils/homeAirport";
-import { homePeriodsBodySchema, nearbyHomeAirportsQuerySchema } from "../../schemas/home";
 import {
-  loadAirportsForHome,
-  loadHomePeriods,
-  saveHomePeriods,
-} from "../../services/home/homeStore";
+  homeMoveBodySchema,
+  homePeriodsBodySchema,
+  nearbyHomeAirportsQuerySchema,
+} from "../../schemas/home";
+import { loadAirportsForHome, loadHomePeriods } from "../../services/home/homeStore";
+import { updateHomePeriods } from "../../services/home/homeWrite";
+import { appendHomePeriod } from "../../services/home/homeMove";
 import { findNearbyHomeAirports } from "../../services/home/nearbyAirports";
 import { triggerDataQualityChecks } from "../../services/dataQualityTrigger";
 import { todayIn } from "../../shared/time/clock";
@@ -60,10 +63,18 @@ function view(periods: readonly HomePeriod[]) {
   return { history: legacyHistoryOf(periods), periods };
 }
 
-/** Store, then let the inbox re-ask or close its question about the residence. */
-async function save(userId: string, periods: readonly HomePeriod[]): Promise<void> {
-  await saveHomePeriods(userId, periods);
-  void triggerDataQualityChecks(userId, { trigger: "home_settings" });
+/**
+ * Store through the one home write path (lock, replaced home recorded, shared
+ * routes narrowed), then let the inbox re-ask or close its question about the
+ * residence. Null when `change` found nothing to change.
+ */
+async function save(
+  userId: string,
+  change: (periods: readonly HomePeriod[]) => HomePeriod[] | null
+): Promise<HomePeriod[] | null> {
+  const stored = await updateHomePeriods(userId, change);
+  if (stored) void triggerDataQualityChecks(userId, { trigger: "home_settings" });
+  return stored;
 }
 
 async function airportFor(code: string) {
@@ -86,7 +97,11 @@ router.get(
     try {
       const parsed = nearbyHomeAirportsQuerySchema.safeParse(req.query);
       if (!parsed.success) {
-        res.status(400).json({ error: "HOME_NEARBY_INVALID", issues: parsed.error.issues });
+        res.status(400).json({
+          error: "HOME_NEARBY_INVALID",
+          code: "HOME_NEARBY_INVALID" satisfies ApiErrorCode,
+          issues: parsed.error.issues,
+        });
         return;
       }
       res.json({
@@ -105,7 +120,11 @@ router.put(
     try {
       const parsed = homePeriodsBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: "HOME_PERIODS_INVALID", issues: parsed.error.issues });
+        res.status(400).json({
+          error: "HOME_PERIODS_INVALID",
+          code: "HOME_PERIODS_INVALID" satisfies ApiErrorCode,
+          issues: parsed.error.issues,
+        });
         return;
       }
       const periods = sortPeriods(parsed.data.periods);
@@ -115,11 +134,66 @@ router.put(
       const known = await loadAirportsForHome(codes);
       const unknown = codes.filter((c) => !known.has(c));
       if (unknown.length > 0) {
-        res.status(400).json({ error: "HOME_AIRPORT_UNKNOWN", codes: unknown });
+        res.status(400).json({
+          error: "HOME_AIRPORT_UNKNOWN",
+          code: "HOME_AIRPORT_UNKNOWN" satisfies ApiErrorCode,
+          codes: unknown,
+        });
         return;
       }
-      await save(req.userId!, periods);
+      await save(req.userId!, () => periods);
       res.json(view(periods));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /periods — "I moved": append a period, close the running one. Idempotent on `clientRef`.
+router.post(
+  "/periods",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = homeMoveBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: "HOME_PERIODS_INVALID",
+          code: "HOME_PERIODS_INVALID" satisfies ApiErrorCode,
+          issues: parsed.error.issues,
+        });
+        return;
+      }
+      const codes = parsed.data.airports.map((a) => a.code);
+      const known = await loadAirportsForHome(codes);
+      const unknown = codes.filter((c) => !known.has(c));
+      if (unknown.length > 0) {
+        res.status(400).json({
+          error: "HOME_AIRPORT_UNKNOWN",
+          code: "HOME_AIRPORT_UNKNOWN" satisfies ApiErrorCode,
+          codes: unknown,
+        });
+        return;
+      }
+      const result = await appendHomePeriod(req.userId!, parsed.data);
+      if (result.kind === "full") {
+        res.status(400).json({
+          error: "HOME_PERIODS_INVALID",
+          code: "HOME_PERIODS_INVALID" satisfies ApiErrorCode,
+          ...view(result.periods),
+        });
+        return;
+      }
+      if (result.kind === "overlap") {
+        res.status(409).json({
+          error: "HOME_PERIOD_OVERLAP",
+          code: "HOME_PERIOD_OVERLAP" satisfies ApiErrorCode,
+          ...view(result.periods),
+        });
+        return;
+      }
+      if (result.kind === "created")
+        void triggerDataQualityChecks(req.userId!, { trigger: "home_settings" });
+      res.json(view(result.periods));
     } catch (error) {
       next(error);
     }
@@ -131,10 +205,11 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction): Pr
   try {
     const { iata, fromDate } = moveSchema.parse(req.body);
     const moveDate = fromDate || todayIn((await profileZoneOf(req.userId!)).zone);
-    const periods = await loadHomePeriods(req.userId!);
-    const updated = applyLegacyMove(periods, iata, moveDate, await airportFor(iata));
-    await save(req.userId!, updated);
-    res.json(view(updated));
+    const airport = await airportFor(iata);
+    const updated = await save(req.userId!, (periods) =>
+      applyLegacyMove(periods, iata, moveDate, airport)
+    );
+    res.json(view(updated ?? []));
   } catch (error) {
     next(error);
   }
@@ -151,15 +226,16 @@ router.patch(
         return;
       }
       const patch = editSchema.parse(req.body);
-      const periods = await loadHomePeriods(req.userId!);
-      if (idx >= periods.length) {
+      const airport = patch.iata ? await airportFor(patch.iata) : null;
+      const sorted = await save(req.userId!, (periods) =>
+        idx >= periods.length
+          ? null
+          : sortPeriods(periods.map((p, i) => (i === idx ? applyLegacyEdit(p, patch, airport) : p)))
+      );
+      if (!sorted) {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
-      const airport = patch.iata ? await airportFor(patch.iata) : null;
-      const edited = applyLegacyEdit(periods[idx], patch, airport);
-      const sorted = sortPeriods(periods.map((p, i) => (i === idx ? edited : p)));
-      await save(req.userId!, sorted);
       res.json(view(sorted));
     } catch (error) {
       next(error);
@@ -177,13 +253,13 @@ router.delete(
         res.status(400).json({ error: "Invalid index" });
         return;
       }
-      const periods = await loadHomePeriods(req.userId!);
-      if (idx >= periods.length) {
+      const updated = await save(req.userId!, (periods) =>
+        idx >= periods.length ? null : periods.filter((_, i) => i !== idx)
+      );
+      if (!updated) {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
-      const updated = periods.filter((_, i) => i !== idx);
-      await save(req.userId!, updated);
       res.json(view(updated));
     } catch (error) {
       next(error);

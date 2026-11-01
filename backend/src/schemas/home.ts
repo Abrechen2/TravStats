@@ -97,6 +97,30 @@ export const homePeriodsBodySchema = z
   })
   .openapi("HomePeriodsBody");
 
+/** One move: a new home from `fromDate` on. */
+export const homeMoveBodySchema = z
+  .object({
+    fromDate: isoDay.describe("First day at the new home."),
+    residence: homeResidenceSchema,
+    airports: homePeriodSchema.shape.airports,
+    clientRef: z
+      .string()
+      .trim()
+      .min(1)
+      .max(100)
+      .describe("Idempotency key: the same ref again answers the same, adds nothing."),
+  })
+  .superRefine((move, ctx) => {
+    if (move.airports.filter((a) => a.primary).length !== 1) {
+      ctx.addIssue({ code: "custom", path: ["airports"], message: "exactly one primary" });
+    }
+    const codes = move.airports.map((a) => a.code);
+    if (new Set(codes).size !== codes.length) {
+      ctx.addIssue({ code: "custom", path: ["airports"], message: "duplicate airport" });
+    }
+  })
+  .openapi("HomeMoveBody");
+
 /** What every home-airports endpoint answers: both shapes, side by side. */
 export const homeAirportsResponseSchema = z
   .object({

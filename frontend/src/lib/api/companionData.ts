@@ -68,7 +68,10 @@ export interface HomePlace {
 }
 
 export interface PersonalFacts {
+  /** The current home period's residence; the legacy column only without one. */
   homePlace: HomePlace | null;
+  /** Where `homePlace` came from. Absent on servers before the home periods were the record. */
+  homePlaceSource?: "period" | "legacy";
   /** A calendar day, YYYY-MM-DD. */
   passportExpiry: string | null;
 }

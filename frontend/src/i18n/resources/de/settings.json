@@ -1538,15 +1538,11 @@
   "personalFacts": {
     "loadFailed": "Deine persönlichen Angaben konnten nicht geladen werden.",
     "notSet": "Nicht gesetzt",
-    "clear": "Entfernen",
     "homePlace": {
-      "label": "Heimatort",
-      "description": "Wird auch von der Companion-App genutzt, zum Beispiel für die Erinnerung zum Losfahren.",
-      "search": "Ort suchen",
-      "searchAction": "Suchen",
-      "searchFailed": "Die Ortssuche hat nicht geantwortet. Bitte versuche es erneut.",
-      "searchDegraded": "Der Ortsdienst ist gerade nicht erreichbar. Das ist kein „kein Treffer“ – bitte später erneut suchen.",
-      "noResults": "Kein passender Ort gefunden."
+      "label": "Wohnort",
+      "description": "Der Wohnort deiner aktuellen Zuhause-Periode. Die Companion-App nutzt ihn zum Beispiel für die Erinnerung zum Losfahren.",
+      "legacyHint": "Dieser Ort stammt aus einer älteren Angabe und gehört zu keiner Zuhause-Periode. Lege dort deinen Wohnort an, damit er überall gilt.",
+      "editLink": "Unter „Zuhause“ ändern"
     },
     "passport": {
       "label": "Reisepass gültig bis",
