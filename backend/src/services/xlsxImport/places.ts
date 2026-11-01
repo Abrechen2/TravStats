@@ -106,6 +106,7 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
       city: cell.text(raw.city),
       country: cell.text(raw.country),
       notes: cell.text(raw.notes),
+      tags: cell.list(raw.tags),
       visited: cell.bool(raw.visited),
     };
     const labels = labelForms(fields.name, fields.city);
@@ -162,6 +163,7 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
       city: fields.city ?? null,
       country: fields.country ?? null,
       notes: fields.notes ?? null,
+      tags: fields.tags ?? [],
       visited: fields.visited ?? false,
     });
     if (!parsed.success) {

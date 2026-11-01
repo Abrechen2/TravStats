@@ -36,6 +36,7 @@ export interface RoadtripRow {
   nightsKnown: boolean;
   startOdometerKm: number | null;
   endOdometerKm: number | null;
+  tags?: string[];
   notes: string | null;
 }
 
@@ -107,6 +108,7 @@ export function roadtripRows(details: readonly RoadtripDetail[]): {
       nightsKnown: d.nights.nightsKnown,
       startOdometerKm: r.startOdometerKm,
       endOdometerKm: r.endOdometerKm,
+      tags: r.tags,
       notes: r.notes,
     });
     d.stations.forEach((s, i) =>
@@ -209,6 +211,13 @@ export function roadtripSheet(t: T): SheetSpec<RoadtripRow> {
         kind: "number",
         width: 12,
         value: (r) => r.endOdometerKm,
+      },
+      {
+        key: "tags",
+        header: t("xlsx:columns.tags"),
+        kind: "text",
+        width: 20,
+        value: (r) => (r.tags ?? []).join(", "),
       },
       {
         key: "notes",
@@ -329,6 +338,13 @@ export function tourSheet(t: T): SheetSpec<TourSummary> {
         width: 30,
         reference: true,
         value: (r) => (r.anchorStopId ? refCell(r.anchorStopTitle, r.anchorStopId) : null),
+      },
+      {
+        key: "tags",
+        header: t("xlsx:columns.tags"),
+        kind: "text",
+        width: 20,
+        value: (r) => (r.tags ?? []).join(", "),
       },
       {
         key: "notes",

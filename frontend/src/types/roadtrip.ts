@@ -171,4 +171,5 @@ export interface CreateRoadtripInput {
   notes?: string;
   tripId?: string | null;
   startOdometerKm?: number;
+  tags?: string[];
 }

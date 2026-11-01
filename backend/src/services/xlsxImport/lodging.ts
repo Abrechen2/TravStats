@@ -104,6 +104,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
       notes: cell.text(raw.notes),
       visited: cell.bool(raw.visited),
       amenities: cell.list(raw.amenities),
+      tags: cell.list(raw.tags),
     };
     const labels = labelForms(fields.name, fields.city);
 
@@ -157,6 +158,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
       lon: fields.lon ?? null,
       stars: fields.stars ?? null,
       amenities: fields.amenities ?? [],
+      tags: fields.tags ?? [],
       notes: fields.notes ?? null,
     });
     if (!parsed.success) {

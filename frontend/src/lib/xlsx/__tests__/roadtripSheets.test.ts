@@ -183,4 +183,16 @@ describe("roadtrip sheets", () => {
     ]);
     expect(pointRows.rows[1]).toMatchObject({ id: "p2", notes: "Rast" });
   });
+
+  it("writes a roadtrip's and a tour's tags into their sheets, so the file keeps them (forgejo#405)", async () => {
+    const d = detail();
+    (d.roadtrip as { tags?: string[] }).tags = ["Familie", "Sommer"];
+    const tourRow = { id: "t1", name: "Grat", tags: ["Gipfel"] } as never;
+    const wb = await buildWorkbook(buildSheets(t, { roadtrips: [d], tours: [tourRow] } as never));
+    const buffer = await wb.xlsx.writeBuffer();
+    const [roadtrips] = await parseWorkbook(buffer as ArrayBuffer, [roadtripSheet(t)] as never[]);
+    expect(roadtrips.rows[0].tags).toBe("Familie, Sommer");
+    const [tours] = await parseWorkbook(buffer as ArrayBuffer, [tourSheet(t)] as never[]);
+    expect(tours.rows[0].tags).toBe("Gipfel");
+  });
 });

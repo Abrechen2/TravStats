@@ -25,6 +25,8 @@ export interface TourSummary {
   vehicle: StoredRoadtripVehicle | null;
   kindAssignedAutomatically: boolean;
   notes: string | null;
+  /** Free-form labels (forgejo#405); absent on older backends. */
+  tags?: string[];
   /** A tour only: the roadtrip station it set out from, and that station's title. */
   anchorStopId: string | null;
   anchorStopTitle: string | null;
