@@ -8,6 +8,8 @@ import { routeStage } from "../../services/travplan/stageRouting";
 import { bookingSchema } from "../../services/travplan/schema";
 import { matchPlaceholders } from "../../services/travplan/placeholders";
 import { parseState } from "../../services/travplan/upgrade";
+import { searchPlaces } from "../../services/travplan/placeSearch";
+import { deletePlan, previewPlanDelete } from "../../services/travplan/planDelete";
 
 const router = Router();
 const uuid = z.string().uuid();
@@ -16,6 +18,40 @@ const route =
   (req: AuthRequest, res: Response, next: NextFunction) => {
     void fn(req, res).catch(next);
   };
+
+router.get(
+  "/travplan/places",
+  authenticate,
+  route(async (req, res) => {
+    const q = z
+      .object({
+        q: z.string().trim().min(2).max(120),
+        language: z.enum(["de", "en"]).default("de"),
+        kind: z.enum(["any", "port"]).default("any"),
+      })
+      .parse(req.query);
+    res.json(await searchPlaces(req.userId!, q.q, q.language, q.kind));
+  })
+);
+
+router.get(
+  "/trips/:tripId/plan/delete-preview",
+  authenticate,
+  route(async (req, res) => {
+    res.json(await previewPlanDelete(req.userId!, uuid.parse(req.params.tripId)));
+  })
+);
+
+router.delete(
+  "/trips/:tripId/plan",
+  authenticate,
+  requireWriteScope,
+  rejectDemo,
+  route(async (req, res) => {
+    await deletePlan(req.userId!, uuid.parse(req.params.tripId));
+    res.json({ deleted: true });
+  })
+);
 
 router.post(
   "/trips/:tripId/plan/placeholder-matches",
