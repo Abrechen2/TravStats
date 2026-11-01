@@ -12,7 +12,9 @@ import {
 import { formatDayForLocale } from "../../../lib/lodgingFormat";
 import { logger } from "../../../lib/logger";
 import Button from "../../ui/Button";
+import { SettingItem } from "../../ui/settings";
 import { SectionCard, SectionTitle } from "../SettingsShared";
+import { useRowCopy } from "../rowCopy";
 import CompanionRenameDialog from "./CompanionRenameDialog";
 import CompanionMergeDialog from "./CompanionMergeDialog";
 import { CompanionDeleteDialog, DeleteUnusedDialog } from "./CompanionDeleteDialogs";
@@ -20,7 +22,7 @@ import { CompanionDeleteDialog, DeleteUnusedDialog } from "./CompanionDeleteDial
 const NS = "companions:manage";
 
 /** Where an account link is made: the trip-sharing section, never a second copy of it. */
-export const SHARING_SETTINGS_PATH = "/settings/trips?section=sharing";
+export const SHARING_SETTINGS_PATH = "/settings/sharing#accounts";
 
 type Open =
   | { kind: "rename"; companion: ManagedCompanion }
@@ -39,7 +41,8 @@ type Open =
  * which would read as "you have no companions".
  */
 export default function CompanionsSection(): JSX.Element {
-  const { t, i18n } = useTranslation(["companions"]);
+  const { t, i18n } = useTranslation(["companions", "settingsRows"]);
+  const copy = useRowCopy("sharing")("personen");
   const coarse = useCoarsePointer();
   const [data, setData] = useState<{
     companions: ManagedCompanion[];
@@ -73,43 +76,48 @@ export default function CompanionsSection(): JSX.Element {
 
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
-
-      {loadFailed && (
-        <div role="alert" className="flex flex-wrap items-center gap-2">
-          <p className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {t(`${NS}.loadFailed`)}
-          </p>
-          <Button onClick={() => void load()}>{t(`${NS}.retry`)}</Button>
-        </div>
-      )}
-
-      {data === null && !loadFailed && <p className="t-caption">{t(`${NS}.loading`)}</p>}
-
-      {data !== null && companions.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
-
-      {companions.length > 0 && (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="t-caption">{t(`${NS}.count`, { count: companions.length })}</p>
-            <Button disabled={unused === 0} onClick={() => setOpen({ kind: "deleteUnused" })}>
-              {t(`${NS}.actions.deleteUnused`, { count: unused })}
-            </Button>
+      <SectionTitle title={t("settingsRows:sharing.sections.companions")} />
+      <SettingItem
+        title={copy.title}
+        sub={copy.sub}
+        help={copy.help}
+        error={loadFailed ? t(`${NS}.loadFailed`) : undefined}
+      >
+        {loadFailed && (
+          <div>
+            <Button onClick={() => void load()}>{t(`${NS}.retry`)}</Button>
           </div>
-          <ul className="flex flex-col" style={{ gap: rowGap }}>
-            {companions.map((companion) => (
-              <CompanionRow
-                key={companion.id}
-                companion={companion}
-                kinds={data?.kinds ?? []}
-                language={i18n.language}
-                canMerge={companions.length > 1}
-                onOpen={setOpen}
-              />
-            ))}
-          </ul>
-        </>
-      )}
+        )}
+
+        {data === null && !loadFailed && <p className="t-caption">{t(`${NS}.loading`)}</p>}
+
+        {data !== null && companions.length === 0 && (
+          <p className="t-caption">{t(`${NS}.empty`)}</p>
+        )}
+
+        {companions.length > 0 && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="t-caption">{t(`${NS}.count`, { count: companions.length })}</p>
+              <Button disabled={unused === 0} onClick={() => setOpen({ kind: "deleteUnused" })}>
+                {t(`${NS}.actions.deleteUnused`, { count: unused })}
+              </Button>
+            </div>
+            <ul className="flex flex-col" style={{ gap: rowGap }}>
+              {companions.map((companion) => (
+                <CompanionRow
+                  key={companion.id}
+                  companion={companion}
+                  kinds={data?.kinds ?? []}
+                  language={i18n.language}
+                  canMerge={companions.length > 1}
+                  onOpen={setOpen}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+      </SettingItem>
 
       {open?.kind === "rename" && (
         <CompanionRenameDialog

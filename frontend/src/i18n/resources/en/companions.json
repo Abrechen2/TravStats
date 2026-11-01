@@ -81,16 +81,11 @@
       "done": "{{source}} is now {{target}}."
     },
     "delete": {
-      "title": "Delete {{name}}?",
-      "body": "{{name}} is on no entry and will be removed from your list for good.",
-      "submit": "Delete",
       "done": "{{name}} deleted."
     },
     "deleteUnused": {
-      "title": "Delete unused travel companions?",
       "body_one": "{{count}} person is on no entry, paid nothing and is linked to no account. Deleting removes this name from your list for good.",
       "body_other": "{{count}} people are on no entry, paid nothing and are linked to no account. Deleting removes these names from your list for good.",
-      "submit": "Delete",
       "done_one": "{{count}} person deleted.",
       "done_other": "{{count}} people deleted."
     },

@@ -17,6 +17,10 @@ import { RailImportMemoryRows } from "./RailImportMemoryRows";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { ImportLogSection } from "../import/ImportLogSection";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useExpertRows } from "./frame/useExpertRows";
+import SpreadsheetSection from "./SpreadsheetSection";
+import TrackArchiveSection from "./TrackArchiveSection";
+import { useRowCopy } from "./rowCopy";
 
 /**
  * The one place for LISTS — a whole collection at once, from a file.
@@ -33,7 +37,10 @@ import { useDomainColors } from "../../hooks/useDomainColors";
  * hidden from them.
  */
 export default function ImportSection(): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings", "common", "settingsRows"]);
+  const row = useRowCopy("data");
+  // "Beim Import von bahn.de" is an expert section (design §1).
+  const railExpert = useExpertRows(1);
   const { colorOf } = useDomainColors();
   const { isEnabled } = useEnabledDomains();
   // Places need BOTH the user's domain choice and the instance beta flag —
@@ -72,10 +79,7 @@ export default function ImportSection(): JSX.Element {
       // templates from the parser workshop, into the same preview.
       // forgejo#204: a connection shared from bahn.de, read on bahn.de itself
       // by a bookmarklet — one connection, not a list, but set up once here.
-      rail: [
-        <RailBookmarkletTile key="rail-db-bookmarklet" />,
-        <RailImportMemoryRows key="rail-import-memory" />,
-      ],
+      rail: [<RailBookmarkletTile key="rail-db-bookmarklet" />],
       poi: [
         <PlaceCsvImportTile key="poi-csv" onImported={handleImported} />,
         <PlaceDocumentImportTile key="poi-document" onImported={handleImported} />,
@@ -97,37 +101,44 @@ export default function ImportSection(): JSX.Element {
         : isEnabled(key)
   );
 
+  const lists = row("listen");
+  const log = row("implog");
   return (
-    <SectionCard>
-      <SectionTitle
-        title={t("settings:import.title")}
-        description={t("settings:import.description")}
-      />
-      {/* Whether flights sharing a booking reference become a trip lives in
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+      <SectionCard>
+        <SectionTitle title={t("settingsRows:data.sections.import")} />
+        <SettingRows>
+          <SpreadsheetSection part="import" />
+          <TrackArchiveSection part="import" />
+        </SettingRows>
+      </SectionCard>
+      <SectionCard>
+        <SectionTitle title={lists.title} description={lists.sub} />
+        {/* Whether flights sharing a booking reference become a trip lives in
           the "Reisen" section (TripsSection) — one setting, one place. */}
-      <SettingRows>
-        {groups.map((key) => {
-          const tiles = listImporters[key] ?? [];
-          return (
-            <div key={key} className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-              <span className="t-label-mono inline-flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: colorOf(key) }}
-                />
-                {t(`common:${DOMAINS[key].i18nKey}`)}
-              </span>
-              {tiles.length > 0 ? (
-                <SettingRows>{tiles}</SettingRows>
-              ) : (
-                <p className="t-caption">{t("settings:import.noRoutes")}</p>
-              )}
-            </div>
-          );
-        })}
-      </SettingRows>
-      {/*
+        <SettingRows>
+          {groups.map((key) => {
+            const tiles = listImporters[key] ?? [];
+            return (
+              <div key={key} className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+                <span className="t-label-mono inline-flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: colorOf(key) }}
+                  />
+                  {t(`common:${DOMAINS[key].i18nKey}`)}
+                </span>
+                {tiles.length > 0 ? (
+                  <SettingRows>{tiles}</SettingRows>
+                ) : (
+                  <p className="t-caption">{t("settings:import.noRoutes")}</p>
+                )}
+              </div>
+            );
+          })}
+        </SettingRows>
+        {/*
         One log for every list import — behind a button, not unrolled beneath
         the tiles. It grows with every run, and an always-open log pushed the
         tiles (the thing one comes here to USE) further down the page with each
@@ -137,23 +148,30 @@ export default function ImportSection(): JSX.Element {
         itself an overlay — and an overlay over an overlay is how a dialog
         became unclickable once already.
       */}
-      <div>
-        <button
-          type="button"
-          data-testid="import-log-toggle"
-          aria-expanded={logOpen}
-          aria-controls="import-log-panel"
-          onClick={() => setLogOpen((open) => !open)}
-          className="btn-secondary"
-        >
-          <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span> {t("settings:import.log.title")}
-        </button>
-        {logOpen && (
-          <div id="import-log-panel">
-            <ImportLogSection reloadKey={importToken} />
-          </div>
-        )}
-      </div>
-    </SectionCard>
+        <div>
+          <button
+            type="button"
+            data-testid="import-log-toggle"
+            aria-expanded={logOpen}
+            aria-controls="import-log-panel"
+            onClick={() => setLogOpen((open) => !open)}
+            className="btn-secondary"
+          >
+            <span aria-hidden="true">{logOpen ? "▾" : "▸"}</span> {log.title}
+          </button>
+          {logOpen && (
+            <div id="import-log-panel">
+              <ImportLogSection reloadKey={importToken} />
+            </div>
+          )}
+        </div>
+      </SectionCard>
+      {railExpert && isEnabled("rail") && (
+        <SectionCard>
+          <SectionTitle title={t("settingsRows:data.sections.railImport")} />
+          <RailImportMemoryRows />
+        </SectionCard>
+      )}
+    </div>
   );
 }

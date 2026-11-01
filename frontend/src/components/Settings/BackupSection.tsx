@@ -1,25 +1,20 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import Pill from "../ui/Pill";
-import { token } from "../ui/tokens";
+import { backupApi, type InstanceBackupStatus } from "../../lib/api/backup";
+import { logger } from "../../lib/logger";
 import { profileWallClock } from "../../lib/profileInstant";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
-import { useExpertRows } from "./frame/useExpertRows";
+import { SettingRows } from "../ui/SettingRow";
+import { SettingItem, StatusValue } from "../ui/settings";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import MeExportRow from "./MeExportRow";
+import SpreadsheetSection from "./SpreadsheetSection";
+import TrackArchiveSection from "./TrackArchiveSection";
+import WebdavSyncRow from "./WebdavSyncRow";
+import { useRowCopy } from "./rowCopy";
 
-interface LastBackup {
-  completedAt: string | null;
-  size: string;
-  status: string;
-}
-
-interface BackupSectionProps {
-  lastBackup: LastBackup | null;
-  backupStatus: { running: boolean } | null;
-  isAdmin: boolean;
-  /** Further rows of the same card — the spreadsheet export and import. */
-  children?: ReactNode;
-}
+/** Re-read while a backup runs, so "läuft gerade" does not outlive the run. */
+const POLL_MS = 30_000;
 
 /**
  * ISO date and minute, as round 4 (E7) sets dates in a data line — on the
@@ -30,60 +25,91 @@ function isoMinute(iso: string): string {
   return local ? `${local.slice(0, 10)} ${local.slice(11, 16)}` : iso;
 }
 
-export default function BackupSection({
-  lastBackup,
-  backupStatus,
-  isAdmin,
-  children,
-}: BackupSectionProps): JSX.Element {
-  const { t } = useTranslation(["settings"]);
-  // Getting the data out is standard; the instance backup's last run is a
-  // detail for whoever operates the server (forgejo#321).
-  const expert = useExpertRows(1);
+/**
+ * "Letzte Sicherung des Servers" (design R3): every account sees WHEN the
+ * server last backed itself up — a status row, nothing to set: the admin takes
+ * care of it. It reads the minimal `GET /settings/instance-backup`, because the
+ * backup list itself is admin-only; a failed read says so and offers a retry
+ * rather than reading as "no backup yet".
+ */
+function InstanceBackupRow(): JSX.Element {
+  const { t } = useTranslation(["settings", "settingsRows"]);
+  const copy = useRowCopy("data")("srvbackup");
+  const [status, setStatus] = useState<InstanceBackupStatus | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  const sizeMb = lastBackup ? (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) : null;
+  const load = useCallback(async (): Promise<void> => {
+    try {
+      setStatus(await backupApi.getInstanceStatus());
+      setFailed(false);
+    } catch (error) {
+      logger.error("Failed to load the instance backup status:", error);
+      setFailed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const running = status?.running === true;
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => void load(), POLL_MS);
+    return () => clearInterval(timer);
+  }, [running, load]);
 
   return (
-    <SectionCard>
-      <SectionTitle
-        title={t("settings:backup.title")}
-        description={t("settings:backup.description")}
-      />
-      <SettingRows>
-        {expert && (
-          <SettingRow
-            expert
-            title={t("settings:backup.lastInstanceBackup")}
-            sub={
-              backupStatus?.running ? (
-                t("settings:backup.status.running")
-              ) : lastBackup ? (
-                <span style={{ fontFamily: "var(--ts-font-mono)" }}>
-                  {lastBackup.completedAt ? isoMinute(lastBackup.completedAt) : "—"} ·{" "}
-                  {t("settings:backup.status.size", { size: sizeMb })}
-                </span>
-              ) : (
-                t("settings:backup.status.noBackup")
-              )
-            }
-            control={
-              backupStatus?.running ? (
-                <Pill color={token("accent")}>{t("settings:backup.status.runningShort")}</Pill>
-              ) : lastBackup ? (
-                <Pill color={token("good")}>OK</Pill>
-              ) : (
-                <Pill color={token("muted")} dashed>
-                  {t("settings:backup.status.noneShort")}
-                </Pill>
-              )
-            }
-          />
-        )}
-        {children}
-      </SettingRows>
-      <p className="t-caption">
-        {isAdmin ? t("settings:backup.adminNote") : t("settings:backup.userNote")}
-      </p>
-    </SectionCard>
+    <SettingItem
+      title={copy.title}
+      sub={copy.sub}
+      error={failed ? t("settings:backup.instance.loadFailed") : undefined}
+      control={
+        failed ? (
+          <button type="button" className="btn-secondary" onClick={() => void load()}>
+            {t("settings:backup.instance.retry")}
+          </button>
+        ) : status ? (
+          <StatusValue>
+            {running
+              ? t("settings:backup.instance.running")
+              : status.completedAt
+                ? isoMinute(status.completedAt)
+                : t("settings:backup.instance.none")}
+          </StatusValue>
+        ) : null
+      }
+    />
+  );
+}
+
+/**
+ * The page's two data sections that leave the server: "Sicherung" (the
+ * server's last backup for everyone, the account's own copy on WebDAV) and
+ * "Mitnehmen" (what the account downloads: all its data as JSON, the Excel
+ * sheet, the recordings). A backup restores an instance; the spreadsheet is
+ * for reading and editing — they are not the same thing, and the rows say so.
+ */
+export default function BackupSection(): JSX.Element {
+  const { t } = useTranslation(["settingsRows"]);
+  return (
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+      <SectionCard>
+        <SectionTitle title={t("settingsRows:data.sections.backup")} />
+        <SettingRows>
+          <InstanceBackupRow />
+          <WebdavSyncRow />
+        </SettingRows>
+      </SectionCard>
+      <div id="settings-export">
+        <SectionCard>
+          <SectionTitle title={t("settingsRows:data.sections.export")} />
+          <SettingRows>
+            <MeExportRow />
+            <SpreadsheetSection part="export" />
+            <TrackArchiveSection part="export" />
+          </SettingRows>
+        </SectionCard>
+      </div>
+    </div>
   );
 }

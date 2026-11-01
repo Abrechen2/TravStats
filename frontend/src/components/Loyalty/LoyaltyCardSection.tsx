@@ -12,7 +12,8 @@ import LoyaltyCardForm, { type CardDomain, type CardPrefill } from "./LoyaltyCar
 import { coverageOf } from "./cardCoverage";
 import MaskedNumber from "./MaskedNumber";
 import TierBadge from "./TierBadge";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { ConfirmDialog } from "../ui/settings";
+import { useDialogCopy } from "../Settings/rowCopy";
 
 interface Props {
   domain: CardDomain;
@@ -38,7 +39,8 @@ export default function LoyaltyCardSection({
   onChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["loyalty", "common"]);
-  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
+  const dialog = useDialogCopy();
+  const [asking, setAsking] = useState<LoyaltyMembership | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedSignal, setSavedSignal] = useState(0);
@@ -50,8 +52,7 @@ export default function LoyaltyCardSection({
   };
 
   const remove = async (card: LoyaltyMembership): Promise<void> => {
-    const message = t("loyalty:confirmDelete", { name: card.programName });
-    if (!(await askConfirm({ message, destructive: true }))) return;
+    setAsking(null);
     setError(null);
     try {
       await deleteLoyaltyMembership(card.id);
@@ -109,7 +110,7 @@ export default function LoyaltyCardSection({
                     </button>
                     <button
                       type="button"
-                      onClick={() => void remove(card)}
+                      onClick={() => setAsking(card)}
                       className="text-xs hover:underline"
                       style={{ color: "var(--ts-bad)", fontWeight: 600 }}
                     >
@@ -161,7 +162,14 @@ export default function LoyaltyCardSection({
           onAdopt={(prefill) => setEditing({ kind: "new", prefill })}
         />
       )}
-      {confirmDialog}
+      {asking && (
+        <ConfirmDialog
+          open
+          {...dialog("carddelete", { name: asking.programName })}
+          onConfirm={() => void remove(asking)}
+          onCancel={() => setAsking(null)}
+        />
+      )}
     </SectionCard>
   );
 }

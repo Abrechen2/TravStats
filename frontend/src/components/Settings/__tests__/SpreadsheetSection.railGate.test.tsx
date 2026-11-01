@@ -31,7 +31,7 @@ describe("Excel export — rail follows the domain choice", () => {
   it("leaves rail out while the user has the domain off", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     render(<SpreadsheetSection />);
-    fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "settingsRows:data.excelexp.btn" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
     expect(railApi.listAll).not.toHaveBeenCalled();
     expect(vi.mocked(exportWorkbook).mock.calls[0][1].rail).toEqual([]);
@@ -40,7 +40,7 @@ describe("Excel export — rail follows the domain choice", () => {
   it("exports the rides with the beta switch off", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "rail"], betaFeaturesEnabled: false });
     render(<SpreadsheetSection />);
-    fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "settingsRows:data.excelexp.btn" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
     expect(railApi.listAll).toHaveBeenCalledTimes(1);
   });

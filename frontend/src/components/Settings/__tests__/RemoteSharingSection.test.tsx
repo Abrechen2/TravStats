@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 
@@ -67,16 +67,16 @@ describe("RemoteSharingSection", () => {
     api.listOffers.mockResolvedValue([]);
   });
 
-  it("draws nothing while the server has the feature off", async () => {
+  it("names the admin's switch as the reason, and offers no button, while the server has the feature off", async () => {
     api.status.mockResolvedValue({
       available: false,
       reason: "switch-off",
       origin: null,
       peerAdmitted: true,
     });
-    const { container } = render(<RemoteSharingSection />);
-    await waitFor(() => expect(api.status).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
+    render(<RemoteSharingSection />);
+    expect(await screen.findByText("settings:blocks.dep.noFederation.reason")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "settingsRows:sharing.fcodes.btn" })).toBeNull();
     expect(api.listPeople).not.toHaveBeenCalled();
   });
 
@@ -104,7 +104,7 @@ describe("RemoteSharingSection", () => {
       },
     ]);
     await userEvent.click(
-      await screen.findByRole("button", { name: "sharing:remote.invites.create" })
+      await screen.findByRole("button", { name: "settingsRows:sharing.fcodes.btn" })
     );
     expect(await screen.findByDisplayValue(CODE)).toBeInTheDocument();
     expect(await screen.findByText(/sharing:remote.invites.open/)).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe("RemoteSharingSection", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("withdraws a person's consent only on a second click, and says it was done (F-S4e)", async () => {
+  it("withdraws a person's consent only after the confirmation block, and says it was done (F-S4e)", async () => {
     const person = {
       id: "p1",
       origin: OTHER,
@@ -191,9 +191,10 @@ describe("RemoteSharingSection", () => {
       await screen.findByRole("button", { name: "sharing:remote.people.withdraw" })
     );
     expect(api.withdrawPerson).not.toHaveBeenCalled();
-    expect(screen.getByText(/sharing:remote.people.withdrawConfirm/)).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent(/settingsRows:dialogs.shareend.title/);
     await userEvent.click(
-      screen.getByRole("button", { name: "sharing:remote.people.withdrawYes" })
+      within(dialog).getByRole("button", { name: /settingsRows:dialogs.shareend.confirm/ })
     );
     expect(api.withdrawPerson).toHaveBeenCalledWith("p1");
     expect(await screen.findByRole("status")).toHaveTextContent(
@@ -231,7 +232,7 @@ describe("RemoteSharingSection", () => {
     render(<RemoteSharingSection />);
     await screen.findByText("sharing:remote.people.none");
     api.listInvites.mockRejectedValueOnce(new Error("down"));
-    await userEvent.click(screen.getByRole("button", { name: "sharing:remote.invites.create" }));
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:sharing.fcodes.btn" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("sharing:remote.errors.listsFailed");
   });
 

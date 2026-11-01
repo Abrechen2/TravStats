@@ -50,7 +50,8 @@
     "description": "Alle deine Programme an einem Ort — mit den Ketten und einzelnen Hotels, für die sie gelten.",
     "coversNothing": "noch keiner Kette zugeordnet",
     "editHotels": "Einzelne Hotels",
-    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden."
+    "noIndependentHotels": "Keine eigenständigen Hotels ohne Kette vorhanden.",
+    "hotelCoverageError": "Ich konnte die Hotels dieser Karte nicht speichern."
   },
   "about": {
     "buildLabel": "Build",
@@ -249,7 +250,6 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
-    "description": "Gilt für dein Konto. Für jeden Bereich: ob, wann und wohin.",
     "emailNotifications": "E-Mail-Benachrichtigungen aktivieren",
     "flightReminder": "Flug-Erinnerung",
     "checkInReminder": "Check-in Reminder",
@@ -288,15 +288,10 @@
       "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     },
-    "emailSub": "Wohin Erinnerungen gehen; leer = keine",
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden",
-    "mailCard": "Mail an",
-    "appCard": "App",
     "carriedOver": "Deine bisherigen Einstellungen wurden übernommen.",
     "domainOff": "„{{area}}“ ist ausgeschaltet, deshalb gibt es dazu keine Erinnerungen. Schalte den Bereich ein, um sie zu bekommen.",
     "domainOffAction": "Zu Bereiche & Farben",
-    "rowFailed": "Nicht gespeichert.",
-    "retry": "Erneut versuchen",
     "rowSwitch": "Erinnerungen für {{area}}",
     "whenGroup": "{{area}}: wann",
     "whereGroup": "{{area}}: wohin",
@@ -311,15 +306,6 @@
     },
     "channelApp": "App",
     "channelMail": "Mail",
-    "table": {
-      "area": "Bereich",
-      "on": "An",
-      "when": "Wann",
-      "where": "Wohin"
-    },
-    "mailReason": {
-      "no_email": "Keine Mail-Adresse hinterlegt – Mail ist deshalb nicht wählbar."
-    },
     "pushStatus": {
       "ok": "Gekoppeltes Gerät: Push ist aktiv.",
       "no_relay": "Kein Push-Relay eingerichtet – die App erinnert dann selbst.",
@@ -375,25 +361,12 @@
   },
   "backup": {
     "title": "Meine Daten & Sync",
-    "description": "Ein Backup friert Datenbank und hochgeladene Dateien zu einem Zeitpunkt ein. Angestoßen, heruntergeladen und wiederhergestellt wird es im Admin-Bereich — hier siehst du nur den Stand.",
-    "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
-    "userNote": "Backups werden vom Administrator verwaltet.",
     "autoBackup": "Automatische Backups aktivieren",
     "backupInterval": "Backup-Intervall",
     "exportFormat": "Export-Format",
     "cloudSync": "Cloud-Sync aktivieren",
     "retentionDays": "Aufbewahrungsdauer (Tage)",
     "retentionDaysDescription": "Backups älter als {{days}} Tage werden automatisch gelöscht",
-    "status": {
-      "title": "Backup-Status",
-      "running": "Backup läuft...",
-      "lastBackup": "Letztes Backup: {{date}}",
-      "size": "Größe: {{size}} MB",
-      "noBackup": "Noch kein Backup erstellt",
-      "path": "Backup-Pfad: {{path}}",
-      "runningShort": "Läuft",
-      "noneShort": "Keins"
-    },
     "intervals": {
       "daily": "Täglich",
       "weekly": "Wöchentlich",
@@ -404,11 +377,14 @@
       "csv": "CSV",
       "pdf": "PDF"
     },
-    "lastInstanceBackup": "Letztes Instanz-Backup"
+    "instance": {
+      "running": "läuft gerade",
+      "none": "Noch keine",
+      "loadFailed": "Ich konnte den Stand der Sicherung nicht lesen.",
+      "retry": "Erneut versuchen"
+    }
   },
   "meExport": {
-    "title": "Meine Daten herunterladen",
-    "description": "Deine Reisedaten und Einträge als eine JSON-Datei — nur deine Daten, ohne Passwörter, Tokens und gespeicherte Schlüssel. Fotos, Dokumente und Belege sind nur als Verzeichnis enthalten, nicht als Dateien.",
     "button": "Herunterladen",
     "running": "Wird vorbereitet …",
     "done": "Die Datei wurde heruntergeladen.",
@@ -878,31 +854,19 @@
     },
     "railMemory": {
       "localTransit": {
-        "title": "U-Bahn und Tram beim Bahn-Import",
-        "sub": "Womit ein bahn.de-Import diese Abschnitte vorbelegt. Beim Import kannst du jederzeit anders wählen.",
-        "skip": "Überspringen",
-        "rail": "Als Bahnfahrt"
+        "skip": "weglassen",
+        "rail": "als Bahnfahrt"
       },
       "bus": {
-        "title": "Busse beim Bahn-Import",
-        "sub": "Womit ein bahn.de-Import Busabschnitte vorbelegt.",
-        "skip": "Überspringen",
-        "bus": "Als Busfahrt"
+        "skip": "weglassen",
+        "bus": "als Busfahrt"
       },
-      "saved": "Gespeichert.",
       "openImport": "Zum Bahn-Import"
     }
   },
   "trips": {
     "title": "Reisen",
-    "description": "Wie TravStats Reisen aus deinen Einträgen bildet.",
-    "autoCreateTrips": {
-      "label": "Reisen automatisch anlegen",
-      "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
-    },
     "defaultColor": {
-      "label": "Reisefarbe für neue Reisen",
-      "description": "Die Farbe, mit der jede neue Reise beginnt — auch aus Importen und Vorschlägen. „Automatisch“ wechselt wie bisher durch die Palette.",
       "automatic": "Automatisch",
       "colors": {
         "818cf8": "Indigo",
@@ -921,17 +885,12 @@
   "calendarFeed": {
     "title": "Kalender-Abo",
     "description": "Ein geheimer Link, den jede Kalender-App abonnieren kann – Apple Kalender, Google Kalender, Outlook, Thunderbird. Er enthält deine kommenden Reisen und Einträge sowie die der letzten 30 Tage und aktualisiert sich von selbst.",
-    "stateNone": "Kein Kalender-Link",
-    "stateActive": "Kalender-Link aktiv",
-    "noneHint": "Erstelle einen Link und füge ihn in deiner Kalender-App als Abonnement hinzu.",
     "createdAt": "Erstellt am {{date}}",
     "lastUsed": "zuletzt abgerufen am {{date}}",
     "neverUsed": "noch nie abgerufen",
     "create": "Link erstellen",
     "regenerate": "Neuen Link erzeugen",
     "revoke": "Widerrufen",
-    "confirmRegenerate": "Der bisherige Link funktioniert danach nicht mehr – jedes Abo damit bleibt stehen, bis du den neuen Link einträgst. Neuen Link erzeugen?",
-    "confirmRevoke": "Der Link funktioniert danach nicht mehr, und Kalender-Apps können deine Reisen nicht mehr abrufen. Widerrufen?",
     "urlLabel": "Dein Kalender-Link",
     "keepSecret": "Wer den Link kennt, sieht deine Reisen – teile ihn nicht. Gerät er in falsche Hände, erzeuge einen neuen.",
     "unreachable": "Google Kalender kann diese Adresse nicht erreichen – trage unter Admin → Instanz eine öffentliche Adresse ein.",
@@ -950,24 +909,7 @@
     }
   },
   "inboxSuggestions": {
-    "title": "Vorschläge im Posteingang",
-    "description": "Welche Vorschläge TravStats dir im Posteingang macht. Ausgeschaltet wird nichts mehr berechnet oder abgefragt; deine bisherigen Entscheidungen bleiben erhalten und gelten wieder, sobald du einschaltest.",
-    "trips": {
-      "label": "Reise-Vorschläge",
-      "description": "Schlägt neue Reisen vor und ordnet Einträge vorhandenen Reisen zu."
-    },
-    "stays": {
-      "label": "Aufenthalts-Vorschläge aus Dawarich",
-      "description": "Erkennt aus deinem Dawarich-Standortverlauf, wo du dich aufgehalten hast. Ausgeschaltet wird Dawarich nicht mehr abgefragt."
-    },
-    "immichEvidence": {
-      "label": "Immich-Fotos als Hinweis auf den Ort",
-      "description": "Zieht für Aufenthalts-Vorschläge deine Immich-Fotos aus derselben Zeit und Umgebung heran: Anzahl und Ort laut Immich. Nur mit eingerichteter Immich-Verbindung; ausgeschaltet wird Immich dafür nicht abgefragt."
-    },
-    "llmPlaceClassification": {
-      "label": "Ortstyp per KI bestimmen",
-      "description": "Lässt die KI aus den Namen der Orte in der Nähe schätzen, was für ein Ort es war (z. B. Café, Museum). Gesendet werden nur diese Namen, keine Koordinaten. Zuerst eine lokale KI (Ollama); ein Cloud-Anbieter nur, wenn die Administration ihm zugestimmt hat."
-    }
+    "title": "Vorschläge im Posteingang"
   },
   "homeCountry": {
     "none": "Nicht festgelegt"
@@ -1372,8 +1314,6 @@
     "action": "Zu Bereiche & Farben"
   },
   "webdavSync": {
-    "title": "Mit WebDAV abgleichen",
-    "description": "Lädt deinen vollständigen Datenexport regelmäßig auf deinen eigenen WebDAV-Speicher, zum Beispiel Nextcloud.",
     "whatIsUploaded": "Hochgeladen wird der vollständige Export deines Kontos als gepackte JSON-Datei — dieselben Daten wie der Admin-Export „Alle Daten“, ohne Zugangsdaten. Fotos und Dokumente selbst sind nicht enthalten.",
     "setup": "Einrichten",
     "hide": "Ausblenden",
@@ -1424,8 +1364,12 @@
       "cleanupIncomplete": "Mehr alte Versionen als ein Durchlauf aufräumt; der Rest folgt bei den nächsten Durchläufen.",
       "alreadyRunning": "Ein Abgleich läuft bereits.",
       "invalidInput": "Eine Eingabe ist ungültig.",
-      "unknown": "Der Abgleich ist fehlgeschlagen."
-    }
+      "unknown": "Der Abgleich ist fehlgeschlagen.",
+      "rateLimited": "Du hast zu oft hintereinander abgeglichen. Versuch es in ein paar Minuten wieder."
+    },
+    "versionsInvalid": "Ganze Zahl von 1 bis 30.",
+    "connection": "Verbindung",
+    "connectionHint": "Die Verbindung gehört später zu Dienste → Backup-Ziel; bis dahin richtest du sie hier ein."
   },
   "locationProvider": {
     "title": "Standortquelle",

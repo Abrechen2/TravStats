@@ -153,6 +153,23 @@ describe("MembershipsSection", () => {
     expect(vi.mocked(updateMembership).mock.calls[0][1].lodgingIds).toEqual(["l-indie"]);
   });
 
+  it("says a refused hotel link was not saved instead of leaving it looking saved", async () => {
+    vi.mocked(listMemberships).mockResolvedValue([card]);
+    vi.mocked(listLodgings).mockResolvedValue([
+      { ...lodgingRow, id: "l-indie", name: "Hotel Sonnenhof", chainId: null },
+    ]);
+    vi.mocked(updateMembership).mockRejectedValue(new Error("Network Error"));
+
+    render(<MembershipsSection />);
+    await userEvent.click(await screen.findByTestId("membership-hotels-m-1"));
+    await userEvent.click(screen.getByLabelText("Hotel Sonnenhof"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "settings:memberships.hotelCoverageError"
+    );
+    expect(screen.getByLabelText("Hotel Sonnenhof")).not.toBeChecked();
+  });
+
   it("chains two quick toggles for the same card instead of the second overwriting the first", async () => {
     // Both clicks fire before the FIRST PATCH has resolved — the stale-closure
     // bug computed both next-lists from the same render-time snapshot ([]), so

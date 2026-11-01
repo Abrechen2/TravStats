@@ -15,7 +15,10 @@ import ReceivedRemoteOffers from "../sharing/ReceivedRemoteOffers";
 import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSharingCopy";
 import Button from "../ui/Button";
 import { Field, Input } from "../ui/Field";
+import { ConfirmDialog, SettingItem } from "../ui/settings";
+import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { useDependency, useDialogCopy, useRowCopy } from "./rowCopy";
 
 const NS = "sharing:remote";
 
@@ -32,7 +35,10 @@ interface Lists {
  * Every refusal is its own sentence, naming the other server where it matters.
  */
 export default function RemoteSharingSection(): JSX.Element | null {
-  const { t } = useTranslation(["sharing"]);
+  const { t } = useTranslation(["sharing", "settingsRows"]);
+  const row = useRowCopy("sharing");
+  const dependency = useDependency();
+  const dialog = useDialogCopy();
   const fmt = useDisplayFormat();
   const [status, setStatus] = useState<RemoteSharingStatus | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
@@ -45,8 +51,8 @@ export default function RemoteSharingSection(): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<RemoteSharingError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  /** The person whose consent is about to be withdrawn: a second click confirms. */
-  const [confirming, setConfirming] = useState<string | null>(null);
+  /** The person whose consent is about to be withdrawn: the confirmation block asks. */
+  const [confirming, setConfirming] = useState<RemotePerson | null>(null);
 
   const load = useCallback(async () => {
     let next: RemoteSharingStatus;
@@ -106,12 +112,13 @@ export default function RemoteSharingSection(): JSX.Element | null {
       setNotice(t(`${NS}.invites.revoked`));
     }, `${NS}.errors.revokeFailed`);
 
-  const withdraw = (person: RemotePerson): void =>
+  const withdraw = (person: RemotePerson): void => {
+    setConfirming(null);
     void run(async () => {
       await sharingRemoteApi.withdrawPerson(person.id);
-      setConfirming(null);
       setNotice(t(`${NS}.people.withdrawn`, { name: person.displayName, origin: person.origin }));
     }, `${NS}.errors.withdrawFailed`);
+  };
 
   const claim = (event: FormEvent): void => {
     event.preventDefault();
@@ -127,143 +134,151 @@ export default function RemoteSharingSection(): JSX.Element | null {
     }, `${NS}.errors.claimFailed`);
   };
 
+  const copy = row("fcodes");
+  const heading = <SectionTitle title={t("settingsRows:sharing.sections.servers")} />;
   if (loadFailed && !status)
     return (
       <SectionCard>
-        <SectionTitle title={t(`${NS}.title`)} />
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
+        {heading}
+        <SettingRows>
+          <SettingItem title={copy.title} error={t(`${NS}.errors.loadFailed`)} />
+        </SettingRows>
       </SectionCard>
     );
-  if (!status?.available) return null;
+  if (!status) return null;
+  if (!status.available)
+    return (
+      <SectionCard>
+        {heading}
+        <SettingRows>
+          <SettingItem title={copy.title} sub={copy.sub} dependency={dependency("noFederation")} />
+        </SettingRows>
+      </SectionCard>
+    );
 
+  const ending = confirming ? dialog("shareend", { name: confirming.displayName }) : null;
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
+      {heading}
+      <SettingRows>
+        <SettingItem title={copy.title} sub={copy.sub} help={copy.help}>
+          <ReceivedRemoteOffers refresh={offersVersion} />
 
-      <ReceivedRemoteOffers refresh={offersVersion} />
-
-      {listsFailed && (
-        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <span style={{ color: "var(--ts-warn)" }}>{t(`${NS}.errors.listsFailed`)}</span>
-          <Button disabled={busy} onClick={() => void load()}>
-            {t(`${NS}.errors.retry`)}
-          </Button>
-        </div>
-      )}
-
-      <div className="mb-6">
-        <h3 className="t-label-mono mb-2">{t(`${NS}.invites.title`)}</h3>
-        <p className="t-caption mb-3">{t(`${NS}.invites.hint`)}</p>
-        <Button variant="primary" disabled={busy} onClick={createInvite}>
-          {t(`${NS}.invites.create`)}
-        </Button>
-        {created && (
-          <div className="mt-3">
-            <Field
-              label={t(`${NS}.invites.codeLabel`)}
-              htmlFor="remote-invite-code"
-              hint={t(`${NS}.invites.codeHint`, { date: fmt.dateTime(created.expiresAt) })}
-            >
-              <Input
-                id="remote-invite-code"
-                readOnly
-                value={created.code}
-                onFocus={(e) => e.target.select()}
-              />
-            </Field>
-          </div>
-        )}
-        {lists && lists.invites.length > 0 && (
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {lists.invites.map((invite) => (
-              <li key={invite.id} className="flex flex-wrap items-center justify-between gap-2">
-                <span>{t(`${NS}.invites.open`, { date: fmt.dateTime(invite.expiresAt) })}</span>
-                <Button disabled={busy} onClick={() => revoke(invite)}>
-                  {t(`${NS}.invites.revoke`)}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <form onSubmit={claim} className="mb-6 flex flex-wrap items-end gap-2">
-        <div className="min-w-[12rem] flex-1">
-          <Field label={t(`${NS}.claim.label`)} htmlFor="remote-claim-code">
-            <Input
-              id="remote-claim-code"
-              value={code}
-              placeholder={t(`${NS}.claim.placeholder`)}
-              onChange={(e) => setCode(e.target.value)}
-              autoComplete="off"
-            />
-          </Field>
-        </div>
-        <Button type="submit" variant="primary" disabled={busy || code.trim() === ""}>
-          {t(`${NS}.claim.submit`)}
-        </Button>
-      </form>
-
-      {failure && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(failure.key, { origin: failure.origin })}
-        </p>
-      )}
-      {notice && (
-        <p role="status" className="mb-4 text-sm">
-          {notice}
-        </p>
-      )}
-
-      {lists && (
-        <div>
-          <h3 className="t-label-mono mb-2">{t(`${NS}.people.title`)}</h3>
-          {lists.people.length === 0 ? (
-            <p className="t-caption">{t(`${NS}.people.none`)}</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {lists.people.map((person) => (
-                <li key={person.id} className="flex flex-col gap-1">
-                  <span>
-                    {t(`${NS}.people.row`, {
-                      name: person.displayName,
-                      username: person.username,
-                      origin: person.origin,
-                    })}{" "}
-                    ·{" "}
-                    <span className="t-caption">
-                      {t(`sharing:settings.consents.status.${person.consent}`)}
-                    </span>
-                  </span>
-                  {person.consent === "accepted" &&
-                    (confirming === person.id ? (
-                      <span className="flex flex-col gap-1">
-                        <span className="t-caption">
-                          {t(`${NS}.people.withdrawConfirm`, { name: person.displayName })}
-                        </span>
-                        <span className="flex flex-wrap gap-2">
-                          <Button variant="danger" disabled={busy} onClick={() => withdraw(person)}>
-                            {t(`${NS}.people.withdrawYes`)}
-                          </Button>
-                          <Button disabled={busy} onClick={() => setConfirming(null)}>
-                            {t(`${NS}.people.withdrawNo`)}
-                          </Button>
-                        </span>
-                      </span>
-                    ) : (
-                      <span>
-                        <Button disabled={busy} onClick={() => setConfirming(person.id)}>
-                          {t(`${NS}.people.withdraw`)}
-                        </Button>
-                      </span>
-                    ))}
-                </li>
-              ))}
-            </ul>
+          {listsFailed && (
+            <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: "var(--ts-warn)" }}>{t(`${NS}.errors.listsFailed`)}</span>
+              <Button disabled={busy} onClick={() => void load()}>
+                {t(`${NS}.errors.retry`)}
+              </Button>
+            </div>
           )}
-        </div>
+
+          <div>
+            <p className="t-caption mb-3">{t(`${NS}.invites.hint`)}</p>
+            <Button variant="primary" disabled={busy} onClick={createInvite}>
+              {copy.btn ?? t(`${NS}.invites.create`)}
+            </Button>
+            {created && (
+              <div className="mt-3">
+                <Field
+                  label={t(`${NS}.invites.codeLabel`)}
+                  htmlFor="remote-invite-code"
+                  hint={t(`${NS}.invites.codeHint`, { date: fmt.dateTime(created.expiresAt) })}
+                >
+                  <Input
+                    id="remote-invite-code"
+                    readOnly
+                    value={created.code}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </Field>
+              </div>
+            )}
+            {lists && lists.invites.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-2 text-sm">
+                {lists.invites.map((invite) => (
+                  <li key={invite.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>{t(`${NS}.invites.open`, { date: fmt.dateTime(invite.expiresAt) })}</span>
+                    <Button disabled={busy} onClick={() => revoke(invite)}>
+                      {t(`${NS}.invites.revoke`)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <form onSubmit={claim} className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[12rem] flex-1">
+              <Field label={t(`${NS}.claim.label`)} htmlFor="remote-claim-code">
+                <Input
+                  id="remote-claim-code"
+                  value={code}
+                  placeholder={t(`${NS}.claim.placeholder`)}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoComplete="off"
+                />
+              </Field>
+            </div>
+            <Button type="submit" variant="primary" disabled={busy || code.trim() === ""}>
+              {t(`${NS}.claim.submit`)}
+            </Button>
+          </form>
+
+          {failure && (
+            <p role="alert" className="mb-4 text-sm" style={{ color: "var(--ts-warn)" }}>
+              {t(failure.key, { origin: failure.origin })}
+            </p>
+          )}
+          {notice && (
+            <p role="status" className="mb-4 text-sm">
+              {notice}
+            </p>
+          )}
+
+          {lists && (
+            <div>
+              <h3 className="t-label-mono mb-2">{t(`${NS}.people.title`)}</h3>
+              {lists.people.length === 0 ? (
+                <p className="t-caption">{t(`${NS}.people.none`)}</p>
+              ) : (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {lists.people.map((person) => (
+                    <li key={person.id} className="flex flex-col gap-1">
+                      <span>
+                        {t(`${NS}.people.row`, {
+                          name: person.displayName,
+                          username: person.username,
+                          origin: person.origin,
+                        })}{" "}
+                        ·{" "}
+                        <span className="t-caption">
+                          {t(`sharing:settings.consents.status.${person.consent}`)}
+                        </span>
+                      </span>
+                      {person.consent === "accepted" && (
+                        <span>
+                          <Button disabled={busy} onClick={() => setConfirming(person)}>
+                            {t(`${NS}.people.withdraw`)}
+                          </Button>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </SettingItem>
+      </SettingRows>
+      {confirming && ending && (
+        <ConfirmDialog
+          open
+          {...ending}
+          busy={busy}
+          onConfirm={() => withdraw(confirming)}
+          onCancel={() => setConfirming(null)}
+        />
       )}
     </SectionCard>
   );

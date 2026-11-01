@@ -55,7 +55,8 @@ describe("ShareLinksSection", () => {
   it("lists a live link with its reach and revokes it", async () => {
     renderSection(false);
     expect(await screen.findByText(/sharing:links.section.views/)).toBeTruthy();
-    expect(screen.getByText(/sharing:links.section.adminOnly/)).toBeTruthy();
+    // A non-admin sees the server's state as a status row, never a switch.
+    expect(screen.getByText("sharing:links.section.stateOn")).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
     api.list.mockResolvedValue({ enabled: true, links: [] });
     await userEvent.click(screen.getByRole("button", { name: "sharing:links.section.revoke" }));
@@ -64,10 +65,10 @@ describe("ShareLinksSection", () => {
     expect(addToast).toHaveBeenCalledWith("success", "sharing:links.section.revoked");
   });
 
-  it("directs admins to instance administration without an instance switch here", async () => {
+  it("shows an admin no state row and no switch here: the instance switch has its own row", async () => {
     renderSection(true);
-    const link = await screen.findByRole("link", { name: "sharing:links.section.adminLink" });
-    expect(link.getAttribute("href")).toBe("/admin?section=instance");
+    expect(await screen.findByText(/sharing:links.section.views/)).toBeTruthy();
+    expect(screen.queryByText("sharing:links.section.stateOn")).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(admin.updateInstanceSettings).not.toHaveBeenCalled();
   });

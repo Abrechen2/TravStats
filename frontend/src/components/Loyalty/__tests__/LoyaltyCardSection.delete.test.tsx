@@ -53,14 +53,32 @@ describe("LoyaltyCardSection — delete", () => {
 
     const row = screen.getByTestId("loyalty-card-m1");
     await user.click(within(row).getByRole("button", { name: "Löschen" }));
-    const dialog = screen.getByTestId("confirm-modal");
+    const dialog = screen.getByRole("dialog");
     expect(dialog.textContent).toContain("Miles & More");
     expect(api.deleteLoyaltyMembership).not.toHaveBeenCalled();
 
-    await user.click(within(dialog).getByRole("button", { name: "Löschen" }));
+    await user.click(within(dialog).getByRole("button", { name: "Karte löschen" }));
     await waitFor(() => expect(api.deleteLoyaltyMembership).toHaveBeenCalledWith("m1"));
     expect(onChanged).toHaveBeenCalled();
     expect(native).not.toHaveBeenCalled();
+  });
+
+  it("says the card could not be deleted instead of looking deleted, and keeps the list", async () => {
+    api.deleteLoyaltyMembership.mockRejectedValue(new Error("Network Error"));
+    const onChanged = vi.fn();
+    const user = userEvent.setup();
+    render(<LoyaltyCardSection domain="flight" cards={[card]} onChanged={onChanged} />);
+    await user.click(
+      within(screen.getByTestId("loyalty-card-m1")).getByRole("button", { name: "Löschen" })
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Karte löschen" })
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Ich konnte die Karte nicht löschen"
+    );
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(screen.getByTestId("loyalty-card-m1")).toBeInTheDocument();
   });
 
   it("keeps the card when the question is cancelled", async () => {
@@ -73,6 +91,6 @@ describe("LoyaltyCardSection — delete", () => {
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
 
     expect(api.deleteLoyaltyMembership).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("confirm-modal")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

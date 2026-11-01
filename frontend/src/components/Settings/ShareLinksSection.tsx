@@ -11,7 +11,9 @@ import type { ShareLink, ShareLinkList } from "../../types/shareLinks";
 import { shareLinkErrorKey } from "../shareLinks/shareLinkCopy";
 import Button from "../ui/Button";
 import { SettingRows } from "../ui/SettingRow";
+import { SettingItem, StatusValue } from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { useRowCopy } from "./rowCopy";
 
 const NS = "sharing:links.section";
 
@@ -22,7 +24,8 @@ const NS = "sharing:links.section";
  * Instance configuration lives in Administration; admins get a direct link.
  */
 export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JSX.Element {
-  const { t } = useTranslation(["sharing"]);
+  const { t } = useTranslation(["sharing", "settingsRows"]);
+  const row = useRowCopy("sharing");
   const format = useDisplayFormat();
   const addToast = useToastStore((state) => state.addToast);
   const [list, setList] = useState<ShareLinkList | null>(null);
@@ -64,47 +67,49 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
   };
 
   const enabled = list?.enabled === true;
+  const stateCopy = row("linkserlaubt");
+  const listCopy = row("linkliste");
 
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
+      <SectionTitle title={t("settingsRows:sharing.sections.shareLinks")} />
       <SettingRows>
-        {list && (
-          <p className="t-caption">
-            {enabled ? t(`${NS}.stateOn`) : t(`${NS}.stateOff`)} ·{" "}
-            {isAdmin ? (
-              <Link to="/admin?section=instance">{t(`${NS}.adminLink`)}</Link>
-            ) : (
-              t(`${NS}.adminOnly`)
-            )}
-          </p>
+        {list && !isAdmin && (
+          <SettingItem
+            title={stateCopy.title}
+            scope="allAccounts"
+            control={
+              <StatusValue>{enabled ? t(`${NS}.stateOn`) : t(`${NS}.stateOff`)}</StatusValue>
+            }
+          />
         )}
-        {loadFailed && (
-          <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {t(`${NS}.loadFailed`)}
-          </p>
-        )}
-        {list && list.links.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
-        {list && list.links.length > 0 && (
-          <ul className="flex flex-col gap-2">
-            {list.links.map((link) => (
-              <li key={link.id} className="flex flex-wrap items-center justify-between gap-2">
-                <span>
-                  {target(link)}
-                  <span className="t-caption">
-                    {" · "}
-                    {t(`${NS}.endsAt`, { date: format.dateTime(link.effectiveExpiresAt) })}
-                    {" · "}
-                    {t(`${NS}.views`, { count: link.viewCount })}
+        <SettingItem
+          title={listCopy.title}
+          sub={listCopy.sub}
+          error={loadFailed ? t(`${NS}.loadFailed`) : undefined}
+        >
+          {list && list.links.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
+          {list && list.links.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {list.links.map((link) => (
+                <li key={link.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {target(link)}
+                    <span className="t-caption">
+                      {" · "}
+                      {t(`${NS}.endsAt`, { date: format.dateTime(link.effectiveExpiresAt) })}
+                      {" · "}
+                      {t(`${NS}.views`, { count: link.viewCount })}
+                    </span>
                   </span>
-                </span>
-                <Button variant="danger" disabled={busy} onClick={() => void revoke(link)}>
-                  {t(`${NS}.revoke`)}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <Button variant="danger" disabled={busy} onClick={() => void revoke(link)}>
+                    {t(`${NS}.revoke`)}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SettingItem>
       </SettingRows>
     </SectionCard>
   );

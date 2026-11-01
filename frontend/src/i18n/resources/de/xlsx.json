@@ -309,15 +309,15 @@
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {
       "add": {
-        "label": "Nur hinzufügen",
+        "label": "Hinzufügen",
         "hint": "Legt neue Einträge an. Was schon da ist, bleibt unverändert — auch wenn die Datei etwas anderes sagt."
       },
       "merge": {
-        "label": "Zusammenlegen",
+        "label": "Abgleichen",
         "hint": "Zeilen mit ID ändern den vorhandenen Eintrag. Zeilen ohne ID werden neu angelegt, soweit das Blatt es zulässt (Flüge, Orte, Besuche, Roadtrips, Stationen, Touren, Tourpunkte). Nichts wird gelöscht."
       },
       "replace": {
-        "label": "Bestand ersetzen",
+        "label": "Ersetzen",
         "hint": "Wie Zusammenlegen — und löscht zusätzlich alles, was in der Datei fehlt."
       }
     },

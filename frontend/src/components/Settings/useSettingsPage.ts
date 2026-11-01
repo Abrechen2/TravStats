@@ -11,7 +11,7 @@ import {
   type AutoSaveState,
 } from "../../store/settingsAutosave";
 import { useAuthStore } from "../../store/authStore";
-import { settingsApi, authApi, backupApi } from "../../lib/api";
+import { settingsApi, authApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { SettingWriteError } from "../ui/settings";
@@ -89,14 +89,6 @@ export function useSettingsPage() {
     confirmPassword: "",
   });
   const [passwordError, setPasswordError] = useState("");
-
-  // Backup
-  const [lastBackup, setLastBackup] = useState<{
-    completedAt: string | null;
-    size: string;
-    status: string;
-  } | null>(null);
-  const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
 
   // Auto-update
   const [autoUpdateSettings, setAutoUpdateSettings] = useState<AutoUpdateSettings>({
@@ -229,29 +221,6 @@ export function useSettingsPage() {
       flushAutosave();
     };
   }, []);
-
-  useEffect(() => {
-    if (user?.isAdmin) {
-      const loadBackupInfo = async () => {
-        try {
-          const [backupsData, statusData] = await Promise.all([
-            backupApi.list(),
-            backupApi.getStatus(),
-          ]);
-          const completedBackups = backupsData.backups.filter((b) => b.status === "completed");
-          if (completedBackups.length > 0) {
-            setLastBackup(completedBackups[0]);
-          }
-          setBackupStatus(statusData);
-        } catch (error) {
-          logger.error("Failed to load backup info:", error);
-        }
-      };
-      loadBackupInfo();
-      const interval = setInterval(loadBackupInfo, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
 
   // ---- Handlers --------------------------------------------------------------
 
@@ -457,9 +426,6 @@ export function useSettingsPage() {
     passwordError,
     handlePasswordChange,
     closePasswordModal,
-    // Backup
-    lastBackup,
-    backupStatus,
     // Auto-update
     autoUpdateSettings,
     serverSettingsLoad,

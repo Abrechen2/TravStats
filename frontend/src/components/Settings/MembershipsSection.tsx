@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { ErrorLine } from "../ui/settings";
 import { MembershipManager } from "../lodging/MembershipManager";
 import { listChains, listLodgings, updateMembership } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
@@ -45,6 +46,8 @@ export default function MembershipsSection({
   const [chains, setChains] = useState<LodgingChain[]>([]);
   const [openPicker, setOpenPicker] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState<number | undefined>(undefined);
+  // A refused hotel link must not look saved: the checkbox row says so.
+  const [coverageError, setCoverageError] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -102,10 +105,12 @@ export default function MembershipsSection({
         : currentLodgingIds.filter((id) => id !== lodgingId);
       try {
         const updated = await updateMembership(membership.id, { lodgingIds: nextLodgingIds });
+        setCoverageError(false);
         setReloadSignal((prev) => (prev ?? 0) + 1);
         return updated.lodgingIds;
       } catch (err) {
         logger.error("MembershipsSection: failed to update hotel coverage", err);
+        setCoverageError(true);
         // Keep building on the list we intended, even though this PATCH
         // failed — so a follow-up click still starts from the right base
         // instead of reverting to the original render-time snapshot.
@@ -155,6 +160,9 @@ export default function MembershipsSection({
                       {l.name}
                     </label>
                   ))
+                )}
+                {coverageError && (
+                  <ErrorLine>{t("settings:memberships.hotelCoverageError")}</ErrorLine>
                 )}
               </div>
             )}

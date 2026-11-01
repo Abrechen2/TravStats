@@ -30,7 +30,7 @@ describe("Excel export — ferry domain", () => {
 
   const exportOnce = async (): Promise<void> => {
     render(<SpreadsheetSection />);
-    fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "settingsRows:data.excelexp.btn" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
   };
 
@@ -50,6 +50,6 @@ describe("Excel export — ferry domain", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "ferry"], betaFeaturesEnabled: true });
     await exportOnce();
     expect(ferryApi.listAll).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("xlsx:export.description")).toBeTruthy();
+    expect(screen.getByText("settingsRows:data.excelexp.s")).toBeTruthy();
   });
 });

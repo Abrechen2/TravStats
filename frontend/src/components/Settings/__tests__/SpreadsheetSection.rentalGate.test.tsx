@@ -30,7 +30,7 @@ describe("Excel export — rental domain", () => {
 
   const exportOnce = async (): Promise<void> => {
     render(<SpreadsheetSection />);
-    fireEvent.click(screen.getAllByRole("button", { name: "xlsx:export.button" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "settingsRows:data.excelexp.btn" })[0]);
     await waitFor(() => expect(exportWorkbook).toHaveBeenCalled());
   };
 
@@ -50,6 +50,6 @@ describe("Excel export — rental domain", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "rental"], betaFeaturesEnabled: true });
     await exportOnce();
     expect(rentalApi.listAll).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("xlsx:export.description")).toBeTruthy();
+    expect(screen.getByText("settingsRows:data.excelexp.s")).toBeTruthy();
   });
 });

@@ -32,6 +32,9 @@ vi.mock("../../import/RailBookmarkletTile", () => ({
 vi.mock("../../import/PlaceDocumentImportTile", () => ({
   PlaceDocumentImportTile: () => <div data-testid="tile-poi-document" />,
 }));
+// The Excel and recordings rows have their own tests; here they are markers.
+vi.mock("../SpreadsheetSection", () => ({ default: () => <div data-testid="row-spreadsheet" /> }));
+vi.mock("../TrackArchiveSection", () => ({ default: () => <div data-testid="row-tracks" /> }));
 // The log fetches on mount — render a marker that reports the reload key it
 // was handed, so a missed refresh signal is visible instead of silent.
 vi.mock("../../import/ImportLogSection", () => ({

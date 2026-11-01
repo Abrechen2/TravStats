@@ -231,6 +231,29 @@ vi.mock("../../components/Settings/LoyaltySection", () => ({
 vi.mock("../../components/Settings/HomeAirportSection", () => ({
   default: () => <div data-testid="home-airport-stub" />,
 }));
+// The rebuilt rows read these themselves; the page tests answer them instead of the network.
+vi.mock("@/lib/api/backup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/backup")>();
+  return {
+    ...actual,
+    backupApi: {
+      ...actual.backupApi,
+      getInstanceStatus: vi.fn().mockResolvedValue({ completedAt: null, running: false }),
+    },
+  };
+});
+vi.mock("@/lib/api/externalServices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/externalServices")>();
+  return {
+    ...actual,
+    externalServicesApi: {
+      ...actual.externalServicesApi,
+      accountOverview: vi
+        .fn()
+        .mockResolvedValue({ connections: [], ownKeys: [], aiConsents: [], instanceProvided: [] }),
+    },
+  };
+});
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));

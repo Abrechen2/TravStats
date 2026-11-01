@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as plainRender, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 
 import TrackArchiveSection from "../TrackArchiveSection";
+
+const render = (ui: ReactElement) => plainRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const mockToursVisible = vi.fn(() => true);
 const importFiles = vi.fn();
@@ -58,10 +62,13 @@ describe("TrackArchiveSection", () => {
     mockToursVisible.mockReturnValue(true);
   });
 
-  it("is not there while tours sit behind the beta switch", () => {
+  it("stays as locked rows with the reason and the jump while tours are off", () => {
     mockToursVisible.mockReturnValue(false);
-    const { container } = render(<TrackArchiveSection />);
-    expect(container).toBeEmptyDOMElement();
+    render(<TrackArchiveSection />);
+    expect(screen.getAllByText("settings:blocks.dep.toursOff.reason")).toHaveLength(2);
+    expect(screen.getByText("settingsRows:data.gpxzip.btn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /settingsRows:data.gpxzip.btn/ })).toBeDisabled();
+    expect(screen.getByLabelText("roadtrips:trackArchive.choose")).toBeDisabled();
   });
 
   it("previews first, writes nothing, and applies exactly the files it previewed", async () => {
@@ -104,7 +111,7 @@ describe("TrackArchiveSection", () => {
       filename: "travstats-aufzeichnungen-2026-09-25.zip",
     });
     render(<TrackArchiveSection />);
-    fireEvent.click(screen.getByText("roadtrips:trackArchive.exportButton"));
+    fireEvent.click(screen.getByText("settingsRows:data.gpxzip.btn"));
     await waitFor(() =>
       expect(downloadBlob).toHaveBeenCalledWith(blob, "travstats-aufzeichnungen-2026-09-25.zip")
     );

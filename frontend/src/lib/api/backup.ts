@@ -15,7 +15,20 @@ export interface BackupScheduleSettings {
   hostZone?: string;
 }
 
+/** What every account may know about the server's own backup (`GET /settings/instance-backup`). */
+export interface InstanceBackupStatus {
+  /** When the newest completed backup finished; null when there is none. */
+  completedAt: string | null;
+  running: boolean;
+}
+
 export const backupApi = {
+  /** Open to every account; the backup list stays admin-only. */
+  getInstanceStatus: async (): Promise<InstanceBackupStatus> => {
+    const { data } = await api.get<InstanceBackupStatus>("/settings/instance-backup");
+    return data;
+  },
+
   getBackupSettings: async (): Promise<BackupScheduleSettings> => {
     const { data } = await api.get<BackupScheduleSettings>("/admin/backup-settings");
     return data;

@@ -14,7 +14,11 @@ import type {
 import { sharingErrorKey } from "../sharing/sharingCopy";
 import Button from "../ui/Button";
 import { Field, Input, Select } from "../ui/Field";
+import { ConfirmDialog, SettingItem } from "../ui/settings";
+import { SettingRows } from "../ui/SettingRow";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { useDialogCopy, useRowCopy } from "./rowCopy";
 
 const NS = "sharing:settings";
 
@@ -26,7 +30,11 @@ const NS = "sharing:settings";
  * no-op; a failed load says so instead of drawing empty lists.
  */
 export default function SharingSection(): JSX.Element {
-  const { t } = useTranslation(["sharing"]);
+  const { t } = useTranslation(["sharing", "settingsRows", "settings"]);
+  const row = useRowCopy("sharing");
+  const dialog = useDialogCopy();
+  const isDemo = useIsDemoAccount();
+  const [ending, setEnding] = useState<ShareConsent | null>(null);
   const addToast = useToastStore((state) => state.addToast);
   const [consents, setConsents] = useState<ShareConsentList | null>(null);
   const [companions, setCompanions] = useState<LinkableCompanionList | null>(null);
@@ -75,6 +83,7 @@ export default function SharingSection(): JSX.Element {
   };
 
   const withdraw = (consent: ShareConsent): void => {
+    setEnding(null);
     void run(async () => {
       await sharingApi.answerConsent(consent.id, "withdraw");
       return t(`${NS}.consents.withdrawn`);
@@ -97,85 +106,108 @@ export default function SharingSection(): JSX.Element {
 
   const live = (list: ShareConsent[]) => list.filter((c) => c.status !== "withdrawn");
 
+  const requestCopy = row("anfragen");
+  const linkCopy = row("verkn");
+  const lock = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+  const end = ending ? dialog("shareend", { name: ending.person.displayName }) : null;
+
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
-
-      <form onSubmit={request} className="mb-6 flex flex-wrap items-end gap-2">
-        <div className="min-w-[12rem] flex-1">
-          <Field label={t(`${NS}.request.label`)} htmlFor="share-request-username">
-            <Input
-              id="share-request-username"
-              value={username}
-              placeholder={t(`${NS}.request.placeholder`)}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="off"
-            />
-          </Field>
-        </div>
-        <Button type="submit" variant="primary" disabled={busy || username.trim() === ""}>
-          {t(`${NS}.request.submit`)}
-        </Button>
-      </form>
-
-      {loadFailed && (
-        <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-          {t(`${NS}.errors.loadFailed`)}
-        </p>
-      )}
-
-      {consents && (
-        <div className="mb-6">
-          <h3 className="t-label-mono mb-2">{t(`${NS}.consents.title`)}</h3>
-          {live(consents.outgoing).length + live(consents.incoming).length === 0 ? (
-            <p className="t-caption">{t(`${NS}.consents.none`)}</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {[
-                ...live(consents.outgoing).map((c) => ({ c, dir: "outgoing" as const })),
-                ...live(consents.incoming).map((c) => ({ c, dir: "incoming" as const })),
-              ].map(({ c, dir }) => (
-                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
-                    {t(`${NS}.consents.${dir}`, { name: c.person.displayName })} ·{" "}
-                    <span className="t-caption">{t(`${NS}.consents.status.${c.status}`)}</span>
-                  </span>
-                  {(c.status === "pending" || c.status === "accepted") && (
-                    <Button disabled={busy} onClick={() => withdraw(c)}>
-                      {t(`${NS}.consents.withdraw`)}
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {companions && (
-        <div>
-          <h3 className="t-label-mono mb-2">{t(`${NS}.companions.title`)}</h3>
-          <p className="t-caption mb-3">
-            {companions.linkableUsers.length === 0
-              ? t(`${NS}.companions.noLinkable`)
-              : t(`${NS}.companions.hint`)}
-          </p>
-          {companions.companions.length === 0 ? (
-            <p className="t-caption">{t(`${NS}.companions.none`)}</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {companions.companions.map((companion) => (
-                <CompanionLinkRow
-                  key={companion.id}
-                  companion={companion}
-                  users={companions.linkableUsers}
-                  disabled={busy}
-                  onChange={(userId) => relink(companion, userId)}
+      <SectionTitle title={t("settingsRows:sharing.sections.accounts")} />
+      <SettingRows>
+        <SettingItem
+          title={requestCopy.title}
+          sub={requestCopy.sub}
+          help={requestCopy.help}
+          locked={lock}
+          error={loadFailed ? t(`${NS}.errors.loadFailed`) : undefined}
+        >
+          <form onSubmit={request} className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[12rem] flex-1">
+              <Field label={t(`${NS}.request.label`)} htmlFor="share-request-username">
+                <Input
+                  id="share-request-username"
+                  value={username}
+                  placeholder={t(`${NS}.request.placeholder`)}
+                  disabled={isDemo}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="off"
                 />
-              ))}
-            </ul>
+              </Field>
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isDemo || busy || username.trim() === ""}
+            >
+              {t(`${NS}.request.submit`)}
+            </Button>
+          </form>
+          {consents &&
+            (live(consents.outgoing).length + live(consents.incoming).length === 0 ? (
+              <p className="t-caption">{t(`${NS}.consents.none`)}</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {[
+                  ...live(consents.outgoing).map((c) => ({ c, dir: "outgoing" as const })),
+                  ...live(consents.incoming).map((c) => ({ c, dir: "incoming" as const })),
+                ].map(({ c, dir }) => (
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {t(`${NS}.consents.${dir}`, { name: c.person.displayName })} ·{" "}
+                      <span className="t-caption">{t(`${NS}.consents.status.${c.status}`)}</span>
+                    </span>
+                    {(c.status === "pending" || c.status === "accepted") && (
+                      <Button
+                        disabled={isDemo || busy}
+                        // Nothing was shared while a request is still open: no question.
+                        onClick={() => (c.status === "accepted" ? setEnding(c) : withdraw(c))}
+                      >
+                        {t(`${NS}.consents.withdraw`)}
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ))}
+        </SettingItem>
+        <SettingItem title={linkCopy.title} sub={linkCopy.sub} locked={lock}>
+          {companions && (
+            <>
+              <p className="t-caption">
+                {companions.linkableUsers.length === 0
+                  ? t(`${NS}.companions.noLinkable`)
+                  : t(`${NS}.companions.hint`)}
+              </p>
+              {companions.companions.length === 0 ? (
+                <p className="t-caption">{t(`${NS}.companions.none`)}</p>
+              ) : (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {companions.companions.map((companion) => (
+                    <CompanionLinkRow
+                      key={companion.id}
+                      companion={companion}
+                      users={companions.linkableUsers}
+                      disabled={isDemo || busy}
+                      onChange={(userId) => relink(companion, userId)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </>
           )}
-        </div>
+        </SettingItem>
+      </SettingRows>
+      {ending && end && (
+        <ConfirmDialog
+          open
+          {...end}
+          busy={busy}
+          onConfirm={() => withdraw(ending)}
+          onCancel={() => setEnding(null)}
+        />
       )}
     </SectionCard>
   );

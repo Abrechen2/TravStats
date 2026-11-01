@@ -10,6 +10,8 @@ import { listLoyaltyMemberships } from "../../lib/api/loyalty";
 import { logger } from "../../lib/logger";
 import { LOYALTY_DOMAINS, type LoyaltyDomain } from "../../shared/domains";
 import type { LoyaltyMembership } from "../../types/loyalty";
+import { SettingItem, useGuardedNavigate } from "../ui/settings";
+import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 /** The anchor each domain's block answers to inside the settings section. */
@@ -52,6 +54,17 @@ export default function LoyaltySection(): JSX.Element {
       ),
     [isEnabled, railVisible]
   );
+
+  // A travel type that is off keeps its place on the page, with the reason and the way
+  // to turn it on — a missing block would read as "no cards" rather than "switched off".
+  const offDomains = useMemo(
+    () =>
+      LOYALTY_DOMAINS.filter(
+        (d): d is Exclude<LoyaltyDomain, "rental"> => d !== "rental" && !domains.includes(d)
+      ),
+    [domains]
+  );
+  const go = useGuardedNavigate();
 
   const reload = useCallback(async (): Promise<void> => {
     try {
@@ -108,10 +121,6 @@ export default function LoyaltySection(): JSX.Element {
     );
   };
 
-  if (domains.length === 0) {
-    return <p className="t-caption">{t("loyalty:noDomains")}</p>;
-  }
-
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
       {loadError && (
@@ -119,6 +128,21 @@ export default function LoyaltySection(): JSX.Element {
           {t("loyalty:loadError")}
         </p>
       )}
+      {offDomains.map((domain) => (
+        <SectionCard key={domain}>
+          <SectionTitle title={t(`loyalty:sections.${domain}.title`)} />
+          <SettingItem
+            title={t(`loyalty:sections.${domain}.title`)}
+            dependency={{
+              reason: t("loyalty:domainOff", { area: t(`loyalty:sections.${domain}.title`) }),
+              jump: {
+                label: t("loyalty:domainOffAction"),
+                onJump: () => go("/settings/domains"),
+              },
+            }}
+          />
+        </SectionCard>
+      ))}
       {domains.map((domain) => (
         <div
           key={domain}

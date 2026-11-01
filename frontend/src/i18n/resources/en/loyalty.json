@@ -1,30 +1,29 @@
 {
   "title": "Loyalty programmes",
-  "noDomains": "None of your active travel types has loyalty programmes. Flights, cruises and lodging can be switched on above under Modules.",
   "sections": {
     "flight": {
-      "title": "Frequent flyer programmes",
-      "description": "Your airlines' mileage programmes — with the airlines they cover."
+      "title": "Airlines",
+      "description": "Suggestions from your flights show up here to accept."
     },
     "cruise": {
-      "title": "Cruise line programmes",
+      "title": "Cruise lines",
       "description": "Your cruise lines' clubs and loyalty programmes."
     },
     "lodging": {
-      "title": "Hotel programmes",
-      "description": "With the chains and single hotels they cover."
+      "title": "Hotels",
+      "description": "Chains and single hotels"
     },
     "rail": {
-      "title": "Rail programmes",
-      "description": "Your rail operators' loyalty programmes, e.g. BahnBonus — with the operators they cover."
+      "title": "Rail",
+      "description": "Your rail operators' loyalty programmes, e.g. BahnBonus."
     }
   },
-  "empty": "No programmes added yet.",
-  "add": "Add programme",
-  "loadError": "Loyalty programmes could not be loaded.",
+  "empty": "No cards yet.",
+  "add": "Add card",
+  "loadError": "I couldn't load your cards.",
   "saveError": "The programme could not be saved.",
   "duplicateError": "A programme with this name already exists in this section.",
-  "deleteError": "The programme could not be deleted.",
+  "deleteError": "I couldn't delete the card.",
   "confirmDelete": "Delete “{{name}}”?",
   "field": {
     "programName": "Programme name",
@@ -91,5 +90,8 @@
     "oneworld": "oneworld",
     "loadError": "The alliances could not be loaded — airline codes can still be added one by one.",
     "tooMany": "That would be more than {{max}} airlines — a programme can cover at most {{max}}."
-  }
+  },
+  "hotelCoverageError": "I couldn't save the hotels of this card.",
+  "domainOff": "“{{area}}” is off. Turn the travel type on to manage cards for it.",
+  "domainOffAction": "Go to travel types"
 }

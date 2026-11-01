@@ -13,10 +13,6 @@ import CountryCountingCard from "../../components/Settings/CountryCountingCard";
 import DefaultsSection from "../../components/Settings/DefaultsSection";
 import NotificationsSection from "../../components/Settings/NotificationsSection";
 import BackupSection from "../../components/Settings/BackupSection";
-import MeExportRow from "../../components/Settings/MeExportRow";
-import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
-import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
-import WebdavSyncRow from "../../components/Settings/WebdavSyncRow";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
 import ApiTokensSection from "../../components/Settings/ApiTokensSection";
@@ -29,6 +25,7 @@ import TripRecordingSection from "../../components/Settings/TripRecordingSection
 import SharingSection from "../../components/Settings/SharingSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
+import CompareHandoverRow from "../../components/Settings/CompareHandoverRow";
 import CompanionsSection from "../../components/Settings/companions/CompanionsSection";
 import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -101,23 +98,9 @@ export default function SettingsSectionSwitch({
     case "countryCounting":
       return <CountryCountingCard />;
     case "backup":
-      return (
-        <BackupSection
-          lastBackup={page.lastBackup}
-          backupStatus={page.backupStatus}
-          isAdmin={isAdmin}
-        >
-          {/* In the same card as the backup, because both answer "get my data
-              out" — but they are not the same thing: a backup restores an
-              instance, the spreadsheet is for reading and editing. */}
-          <MeExportRow />
-          <SpreadsheetSection />
-          {/* The recordings the spreadsheet cannot carry. */}
-          <TrackArchiveSection />
-          {/* The same export, on a schedule, to the user's own share (expert). */}
-          <WebdavSyncRow />
-        </BackupSection>
-      );
+      // Sicherung and Mitnehmen: the server's last backup for everyone, the
+      // account's own copy on WebDAV, and what the account downloads.
+      return <BackupSection />;
     case "import":
       return <ImportSection />;
     case "trips":
@@ -197,19 +180,9 @@ export default function SettingsSectionSwitch({
       // Map look, home page and lists: one section, three jump rows.
       return <ViewsJumpCard />;
     case "comparisonConsent":
-      return (
-        <ContextLinksCard
-          scope="privacy.comparisonConsent"
-          links={[{ id: "consent", to: "/compare" }]}
-        />
-      );
+      return <CompareHandoverRow row="rangliste" withTitle />;
     case "encryptedGrants":
-      return (
-        <ContextLinksCard
-          scope="privacy.encryptedGrants"
-          links={[{ id: "grants", to: "/encrypted-share" }]}
-        />
-      );
+      return <CompareHandoverRow row="verschl" withTitle={!isFeatureVisible("comparison")} />;
     default:
       return null;
   }
