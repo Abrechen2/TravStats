@@ -208,6 +208,23 @@ describe("leaving the page flushes immediate writes", () => {
     act(() => useAuthStore.setState({ user: null }));
   });
 
+  it("a request still in flight when another account signs in sends nothing further", async () => {
+    let finish: () => void = () => undefined;
+    const write = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    useAuthStore.setState({ user: { id: "a" } as never });
+    render(<Row saved="kg" write={write} />);
+    click("pick lb");
+    await tick(400);
+    click("pick kg");
+    await act(async () => {
+      useAuthStore.setState({ user: { id: "b" } as never });
+    });
+    await act(async () => finish());
+    await tick(5000);
+    expect(write).toHaveBeenCalledTimes(1);
+    act(() => useAuthStore.setState({ user: null }));
+  });
+
   it("does not write at all when the choice went back to the saved value", async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     render(<Row saved="kg" write={write} />);

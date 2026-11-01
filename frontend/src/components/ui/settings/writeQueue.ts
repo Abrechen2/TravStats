@@ -112,6 +112,9 @@ async function run(entry: WriteEntry, keepalive: boolean): Promise<void> {
     failure = reasonOf(error);
   }
   entry.inFlight = false;
+  // The queue was reset meanwhile (another account signed in): this request
+  // belongs to the previous one, and nothing it learned may be acted on.
+  if (entries.get(entry.key) !== entry) return;
   if (entry.timer) {
     // A newer choice is waiting for its own debounce: it reports for itself.
     entry.state = "waiting";
