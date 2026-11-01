@@ -7,9 +7,9 @@
  * is identical — same Eurostat SeaRoute / ORNL Global Shipping Lane
  * Network data — only the loader and pathfinder are now ours.
  *
- * Limitations (Phase 2 scope):
+ * Limitations:
  *   - Inland river legs (region='river') are rejected → fall through
- *     to the river calculator (Phase 3) or haversine.
+ *     to `riverCalculator` or haversine.
  *   - Ports >200 km from any marnet node fall back to haversine, since
  *     the snap distances would dominate and confuse the metric.
  *

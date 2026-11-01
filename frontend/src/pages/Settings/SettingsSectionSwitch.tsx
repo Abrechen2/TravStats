@@ -124,7 +124,7 @@ export default function SettingsSectionSwitch({
       // Public share links (forgejo#281): own links and a pointer to administration.
       return <ShareLinksSection isAdmin={isAdmin} />;
     case "calendarFeed":
-      // The calendar subscription (forgejo#310), behind its beta key.
+      // The calendar subscription (forgejo#310), released from beta (forgejo#390).
       return <CalendarFeedSection />;
     case "dawarich":
       // The connection itself is edited under Dienste (settings redesign, package 5).

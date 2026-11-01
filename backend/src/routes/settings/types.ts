@@ -128,6 +128,12 @@ export interface SettingsResponse extends SettingsDataJson {
    */
   shareLinksEnabled: boolean;
   /**
+   * READ-ONLY: whether this server issues calendar subscription URLs (forgejo#310).
+   * A client offers the subscription only when it is true; the Companion follows it
+   * instead of guessing (forgejo#390). Released from beta, so today always true.
+   */
+  calendarFeedEnabled: boolean;
+  /**
    * The user's OWN choice of which evidence tier the country headline counts
    * from, or null when they follow the instance (spec §3.2).
    *

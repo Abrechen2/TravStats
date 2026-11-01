@@ -34,9 +34,7 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   devicePairing: [/koppel/i, /\bpair/i],
   roadtrips: [/Roadtrip|Touren/, /Roadtrip|\btours\b/i],
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
-  flightTrackUpload: [/Flugspuren/, /flight tracks/i],
   travPlan: [/TravPlan/, /TravPlan/],
-  calendarFeed: [/Kalender-Abo/, /calendar subscription/i],
   federatedTripSharing: [/Reisen über Server|anderen Servern teilen/i, /across servers/i],
   travTrack: [/TravTrack/, /TravTrack/],
 };

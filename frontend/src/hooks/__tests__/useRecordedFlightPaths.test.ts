@@ -1,6 +1,6 @@
 // forgejo#312 — the map's flights pick up their recorded lines only while the
-// user switched on „Aufgezeichnete Flugwege zeigen" AND the `flightTrackUpload`
-// beta key is open; by default the dashboard neither fetches nor draws them.
+// user switched on „Aufgezeichnete Flugwege zeigen"; by default the dashboard
+// neither fetches nor draws them. The feature left beta on 2026-11-01 (forgejo#390).
 // A failed fetch is said, not passed off as "no flight was recorded".
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -9,13 +9,6 @@ import type { GeoJSONFeature } from "../../types";
 const getTrackLinesMock = vi.fn();
 vi.mock("../../lib/api", () => ({
   flightsApi: { getTrackLines: (...args: unknown[]) => getTrackLinesMock(...args) },
-}));
-let betaOn = true;
-vi.mock("../useBetaFeatures", () => ({
-  useBetaFeatures: () => ({
-    betaFeaturesEnabled: betaOn,
-    isFeatureVisible: (key: string) => betaOn && key === "flightTrackUpload",
-  }),
 }));
 const addToastMock = vi.fn();
 vi.mock("../../store/toastStore", () => ({
@@ -53,7 +46,6 @@ describe("useRecordedFlightPaths", () => {
   beforeEach(() => {
     getTrackLinesMock.mockReset();
     addToastMock.mockReset();
-    betaOn = true;
     useRecordedFlightPathsStore.setState({ show: true });
   });
 
@@ -87,14 +79,6 @@ describe("useRecordedFlightPaths", () => {
       })
     );
     expect(result.current[1]).toBe(flights[1]);
-  });
-
-  it("asks for nothing while the beta key is closed", async () => {
-    betaOn = false;
-    const flights = [feature("a")];
-    const { result } = renderHook(() => useRecordedFlightPaths(flights));
-    expect(result.current).toBe(flights);
-    expect(getTrackLinesMock).not.toHaveBeenCalled();
   });
 
   it("says when the lines could not be loaded and keeps the great circles", async () => {

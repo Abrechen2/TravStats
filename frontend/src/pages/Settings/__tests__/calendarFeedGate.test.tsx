@@ -4,33 +4,25 @@ import { sectionsOf } from "../surface";
 import type { BetaFeatureKey } from "../../../config/betaFeatures";
 
 /**
- * The calendar subscription card (forgejo#310) sits on the "Reisen" page
- * behind its own beta key, `calendarFeed`: absent while the instance's beta
- * switch is off, there when it is on. Since forgejo#321 it is a section of
- * its own, so the gate lives in the page table rather than inside a section.
+ * The calendar subscription card (forgejo#310) sits on the "Reisen" page. It
+ * left beta on 2026-11-01 (forgejo#390): it is there whether or not the
+ * instance's beta switch is on, so a stale gate cannot hide it again.
  */
 const trips = findAreaPage("trips")!;
-const shown = (open: boolean, deepLinked: string | null = null): string[] =>
+const shown = (betaOpen: boolean): string[] =>
   sectionsOf(trips, {
     level: "expert",
-    isGateOpen: (key: BetaFeatureKey) => open && key === "calendarFeed",
+    isGateOpen: (_key: BetaFeatureKey) => betaOpen,
     isAdmin: false,
-    deepLinked,
+    deepLinked: null,
   }).shown;
 
-describe("calendar feed card gate", () => {
-  it("is absent from the trips page while the beta switch is off", () => {
-    expect(shown(false)).toContain("suggestions");
-    expect(shown(false)).not.toContain("calendarFeed");
+describe("calendar feed card", () => {
+  it("is on the trips page with the beta switch off (released, forgejo#390)", () => {
+    expect(shown(false)).toContain("calendarFeed");
   });
 
-  it("is on the trips page when the beta switch is on", () => {
+  it("is on the trips page with the beta switch on", () => {
     expect(shown(true)).toContain("calendarFeed");
-  });
-
-  // Only device pairing lets a link lift its gate (CLAUDE.md, beta gating);
-  // un-gating anything else is the owner's call.
-  it("stays out when a link names it while the switch is off", () => {
-    expect(shown(false, "calendarFeed")).not.toContain("calendarFeed");
   });
 });

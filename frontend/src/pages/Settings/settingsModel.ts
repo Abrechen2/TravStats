@@ -80,7 +80,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("trips"),
   section("suggestions"),
   section("sharing"),
-  section("calendarFeed", "standard", { gate: "calendarFeed" }),
+  section("calendarFeed", "standard"),
   section("companions"),
   // TravTrack's history shows while the account holds data or the instance
   // shows TravTrack (plan T6); the stay scan is standard, only its two area

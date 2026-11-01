@@ -40,8 +40,11 @@ A logbook first — you record trips by hand, scan a boarding pass, or
 import a confirmation email, and TravStats turns them into history,
 stats and maps. Recording is optional and opt-in: the TravStats
 Companion app (in beta) can record your own flights and trips on your
-phone and upload them to your own server. TravTrack, an opt-in location
-history with privacy zones, is in development. TravStats does not follow
+phone and upload them to your own server. TravTrack is an opt-in location
+history with privacy zones: positions arrive from the Companion, from
+OwnTracks and Overland (a per-device ingest token, `POST /api/v1/travtrack/ingest/owntracks`
+and `/overland`), or from files and a copy of your Dawarich history (below).
+TravStats does not follow
 other aircraft or people, and nobody sees where you are unless you
 create a share link yourself. Flight data is optionally enriched from
 AirLabs / Aviationstack / OpenSky, but everything you record lives in
@@ -54,6 +57,9 @@ no ads.
 - 🏆 **270+ achievements** across flights, cruises and cross-domain — bronze to diamond
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
+- 📍 **TravTrack location history** *(opt-in)* — record from the Companion, OwnTracks or Overland, or import GPX / KML / GeoJSON / TCX files, a Google Timeline export or a copy of your Dawarich history; privacy zones drop fixes on the server
+- 🚆 **More than flights and cruises** — rail, bus, ferry, rental cars, hotels and places, road trips and tours, each with its own map layer and statistics
+- 🖼️ **Immich albums** on trips, and **trip sharing** between servers with consent on both sides
 - 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
 - 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
 - 💾 **Automated backups** with retention + optional WebDAV sync
@@ -318,8 +324,9 @@ back. Take your own backup first, and unset it again afterwards.
 See [CHANGELOG.md](CHANGELOG.md) for the full history and
 [ROADMAP.md](ROADMAP.md) for where things are heading. A native iOS &
 Android app (boarding-pass scan, a 3D globe of your travels) is in the
-works — no release date yet; hotels & places-of-interest, CO₂ tracking
-and a trip planner are on the map too.
+works — no release date yet. Hotels and places, rail, bus, ferry and
+rental, CO₂ figures, global search and the TravPlan planner (beta) are
+already in the server and the web app.
 
 ## Known limitations
 

@@ -392,20 +392,18 @@ describe("calendar feed", () => {
     }
   });
 
-  it("is off with the instance's beta switch: no URL issued, none answered", async () => {
+  it("is released from beta: no URL is refused or hidden with the beta switch off (forgejo#390)", async () => {
     const { url } = await issue(owner);
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     try {
-      expect((await request(app).get(feedPath(url))).status).toBe(404);
-      const refused = await request(app).post("/api/v1/calendar-feed").set("Cookie", owner.cookie);
-      expect(refused.status).toBe(409);
-      expect(refused.body.code).toBe("CALENDAR_FEED_DISABLED");
+      expect((await request(app).get(feedPath(url))).status).toBe(200);
       const state = await request(app).get("/api/v1/calendar-feed").set("Cookie", owner.cookie);
-      expect(state.body.data.enabled).toBe(false);
+      expect(state.body.data.enabled).toBe(true);
+      const settings = await request(app).get("/api/v1/settings").set("Cookie", owner.cookie);
+      expect(settings.body.calendarFeedEnabled).toBe(true);
     } finally {
       await updateInstanceSettings({ betaFeaturesEnabled: true });
     }
-    expect((await request(app).get(feedPath(url))).status).toBe(200);
   });
 
   const bearer = async (

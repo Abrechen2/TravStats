@@ -36,7 +36,8 @@ import { jitterModeOfRoute } from "../../services/tracks/tourJitterMode";
  * A track hangs off the SECTION and a time window, never a leg — see the
  * `TripRouteTrack` model's own doc comment in schema.prisma. This router
  * only stores it; adopting a segment of it onto a leg is a separate,
- * explicit action (task 5, not built here).
+ * explicit action (task 5, `services/tour/tracks/adoptTrack.ts`, called from
+ * `tourLegs.ts`).
  *
  * **Middleware is PER ROUTE, never `router.use()`** — a router-level
  * `authenticate` here would swallow every LATER `/api/v1` mount's requests,

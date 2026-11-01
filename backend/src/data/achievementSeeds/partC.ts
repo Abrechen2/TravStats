@@ -1,7 +1,7 @@
 // Achievement seed definitions — Part C
 // Cruise-domain achievements (27) + cross-domain shared achievements (5).
-// Part of the multi-domain refactor — requirement checkers for these types
-// land in a follow-up commit (Part B of Phase 8).
+// Part of the multi-domain refactor — the requirement types are evaluated by
+// `services/evidence/badges/` (see `badgeFamiliesCore.ts`).
 
 import type { AchievementDefinition } from "../achievements";
 

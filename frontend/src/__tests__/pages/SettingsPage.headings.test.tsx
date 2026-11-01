@@ -27,6 +27,16 @@ import { join } from "node:path";
 // The modules below are the ones the sections import directly.
 // Shared trips (2026-10-09): the trip overview, the settings and the inbox
 // read the sharing API on mount; answered empty so no request escapes.
+// The calendar subscription card left beta (forgejo#390) and loads its state on mount.
+vi.mock("@/lib/api/calendarFeed", () => ({
+  calendarFeedApi: {
+    status: vi
+      .fn()
+      .mockResolvedValue({ enabled: true, active: false, createdAt: null, lastUsedAt: null }),
+    issue: vi.fn(),
+    revoke: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
     tripSharing: vi.fn().mockResolvedValue({

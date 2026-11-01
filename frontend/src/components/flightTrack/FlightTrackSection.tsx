@@ -6,7 +6,6 @@ import FlightTrackControls from "./FlightTrackControls";
 import { JitterNote } from "../tracks/JitterNote";
 import { flownVsGreatCircle, type AirportPosition } from "./flownVsGreatCircle";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useSettingsStore } from "../../store/settingsStore";
 import { flightsApi } from "../../lib/api";
 import { convertDistance, getDistanceLabel } from "../../lib/units";
@@ -57,10 +56,9 @@ export function shownTrackSpan(
  * uploaded file (forgejo#312). A failed load says so in one line instead of
  * passing for "no recording": the two are different answers.
  *
- * Without the `flightTrackUpload` beta key it is what it was: nothing while
- * loading and nothing without a recording. With it, a flight without one gets
- * the upload, and one with a recording gets replace, delete and the measured
- * distance set against the great circle.
+ * A flight without a recording gets the upload, and one with a recording gets
+ * replace, delete and the measured distance set against the great circle
+ * (released from beta, forgejo#390).
  *
  * Since TravTrack (plan T5) the line may come from the account's location
  * provider; the section names its origin, says when Dawarich answered short or
@@ -74,8 +72,6 @@ export default function FlightTrackSection({
   scheduled,
 }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "stats"]);
-  const { isFeatureVisible } = useBetaFeatures();
-  const canUpload = isFeatureVisible("flightTrackUpload");
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const [state, setState] = useState<TrackState>({ kind: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
@@ -104,9 +100,6 @@ export default function FlightTrackSection({
   const pick = (next: TrackOrigin): void => setSource(next === info.origin ? null : next);
   const note = <TrackOriginNote info={info} onPick={pick} />;
   const ownOrNone = info.origin === null || info.origin === "travstats";
-  if (state.kind === "none" && !canUpload && info.alternatives.length === 0) {
-    if (info.coverage !== "unreachable") return null;
-  }
   if (state.kind === "failed" && source !== null) {
     return (
       <DetailSection title={t("flights:track.title")}>
@@ -134,7 +127,7 @@ export default function FlightTrackSection({
       <DetailSection title={t("flights:track.title")}>
         <div className="flex flex-col gap-2">
           {note}
-          {canUpload && ownOrNone && (
+          {ownOrNone && (
             <>
               <p className="t-caption">{t("flights:track.uploadIntro")}</p>
               <FlightTrackControls flightId={flightId} hasTrack={false} onChanged={reload} />
@@ -153,8 +146,7 @@ export default function FlightTrackSection({
       : "flights:track.captionFile";
   // A recording with holes measures only its recorded stretches, so set beside
   // the great circle it would read as a shorter flight ("−60 %"); say nothing.
-  const comparison =
-    canUpload && gaps === 0 ? flownVsGreatCircle(track.distanceKm, departure, arrival) : null;
+  const comparison = gaps === 0 ? flownVsGreatCircle(track.distanceKm, departure, arrival) : null;
   const span = shownTrackSpan(track.times, scheduled);
 
   return (
@@ -198,9 +190,7 @@ export default function FlightTrackSection({
         {ownOrNone && (
           <GeoExportButtons path={geoExportPaths.flight(flightId)} testId="flight-track-export" />
         )}
-        {canUpload && ownOrNone && (
-          <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />
-        )}
+        {ownOrNone && <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />}
       </div>
     </DetailSection>
   );

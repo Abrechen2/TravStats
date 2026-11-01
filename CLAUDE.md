@@ -295,8 +295,12 @@ explicit answer. The server side of a Companion feature is part of the feature,
 not a follow-up.
 
 First case: the Companion's trip recording was designed device-only
-(`adrs/0013` point 4 in the Companion repo) and is being reversed —
-companion#73 (upload) and forgejo#316 (receive, store, show, export).
+(`adrs/0013` point 4 in the Companion repo) and has been reversed —
+companion#73 (upload) and forgejo#316. Slice 1 of forgejo#316 is built
+(`routes/trips/tripRecording.ts`: receive, store, show on the trip map, GPX
+export; spec `docs/superpowers/specs/2026-10-20-trip-recording-server.md`).
+Slice 2 is open: the stay and place suggestions do not yet read the recorded
+points as evidence.
 
 ## Language Policy
 

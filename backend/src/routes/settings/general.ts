@@ -23,6 +23,7 @@ import {
 } from "../../services/settings/profileZoneSettings";
 import { isValidZone } from "../../shared/time/zonedParts";
 import { parseSettingsLevel, settingsLevelSchema } from "../../shared/settingsLevel";
+import { calendarFeedEnabled } from "../../services/calendarFeed/feedService";
 import { homeSettingsView } from "../../services/home/homeStore";
 import { canonicalProfilePictureUrl } from "../../services/files/privateFileUrls";
 import {
@@ -287,6 +288,7 @@ function buildSettingsResponse(
     betaFeaturesEnabled: boolean;
     openDataEnabled: boolean;
     shareLinksEnabled: boolean;
+    calendarFeedEnabled: boolean;
     countryThreshold: CountryTier;
     /**
      * Whether THIS account has any track evidence. Per-user, unlike the two
@@ -371,6 +373,7 @@ function buildSettingsResponse(
     betaFeaturesEnabled: extra.betaFeaturesEnabled,
     openDataEnabled: extra.openDataEnabled,
     shareLinksEnabled: extra.shareLinksEnabled,
+    calendarFeedEnabled: extra.calendarFeedEnabled,
     instanceCountryThreshold: extra.countryThreshold,
     hasCountryTracks: extra.hasCountryTracks,
     profileZone: profileZoneView(baseData),
@@ -410,6 +413,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       betaFeaturesEnabled,
       openDataEnabled,
       shareLinksEnabled,
+      calendarFeedEnabled: await calendarFeedEnabled(),
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
@@ -568,6 +572,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       betaFeaturesEnabled,
       openDataEnabled,
       shareLinksEnabled,
+      calendarFeedEnabled: await calendarFeedEnabled(),
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
