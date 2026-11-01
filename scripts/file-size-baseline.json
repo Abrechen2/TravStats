@@ -10,7 +10,6 @@
     "frontend/src/components/DeckGLMap.tsx": 956,
     "backend/src/routes/flights.ts": 947,
     "backend/src/services/flightEnrichmentService.ts": 902,
-    "frontend/src/components/FlightCertificate.tsx": 883,
-    "backend/src/utils/achievementChecks.ts": 861
+    "frontend/src/components/FlightCertificate.tsx": 883
   }
 }
