@@ -9,6 +9,7 @@ import { getInstanceSettings } from "../instanceSettingsService";
 import type { FeedContext } from "./feedEvent";
 import { writeCalendar, type IcsEvent } from "./ics";
 import { busEvents, ferryEvents, flightEvents, railEvents, rentalEvents } from "./journeyEvents";
+import { placeVisitEvents } from "./placeEvents";
 import { roadtripStationEvents, tourEvents } from "./roadtripEvents";
 import { cruiseEvents, stayEvents, tripEvents } from "./stayCruiseTripEvents";
 import { calendarTokenHash, generateCalendarToken, looksLikeCalendarToken } from "./token";
@@ -40,9 +41,9 @@ const DOMAIN_READERS: Record<DomainKey, Reader[]> = {
   flight: [flightEvents],
   cruise: [cruiseEvents],
   lodging: [stayEvents],
-  // A place visit is a record of having been somewhere, kept by day or less;
-  // nothing in it is scheduled, so it has no place in a calendar of plans.
-  poi: [],
+  // Only a visit still ahead is a plan (forgejo#405); one that has happened is
+  // history and stays out — see `placeEvents.ts`.
+  poi: [placeVisitEvents],
   // Tours share the roadtrip switch and beta key, as they do in the UI.
   roadtrip: [roadtripStationEvents, tourEvents],
   rail: [railEvents],
