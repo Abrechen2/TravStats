@@ -1,4 +1,3 @@
-import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
 import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
