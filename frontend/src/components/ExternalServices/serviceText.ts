@@ -1,6 +1,6 @@
 import { formatDateTime } from "../../lib/displayFormat";
 import { apiErrorMachineCode } from "../../lib/apiError";
-import type { AdminService, ServiceLastTest, ServiceField } from "../../lib/api/externalServices";
+import type { ServiceLastTest, ServiceField } from "../../lib/api/externalServices";
 import { EXTERNAL_SERVICE_ERROR_CODES } from "../../lib/api/externalServices";
 import { adminStatus } from "./serviceStatus";
 
@@ -61,27 +61,6 @@ export function lastTestLine(t: TFn, lastTest: ServiceLastTest | null): string {
   return lastTest.ok
     ? t(`${NS}:test.ok`, { when })
     : t(`${NS}:test.failed`, { when, reason: testReasonText(t, lastTest.reason) });
-}
-
-/** The line under a row's purpose: why it is off, or how the last test went. */
-export function adminTestLine(t: TFn, service: AdminService): string {
-  // "Blocked for accounts with their own key" only means something where accounts can have one.
-  if (!service.enabled) {
-    return t(`${NS}:test.${service.level === "instanceAndAccount" ? "offBlocks" : "offPlain"}`);
-  }
-  if (!service.configured) {
-    return t(`${NS}:test.${service.credential === "url" ? "missingUrl" : "missingKey"}`);
-  }
-  return lastTestLine(t, service.lastTest);
-}
-
-/** Where the instance's credential comes from, as the row's footnote. */
-export function sourceLine(t: TFn, service: AdminService): string {
-  if (!service.enabled) {
-    return t(`${NS}:source.${service.level === "instanceAndAccount" ? "off" : "offInstance"}`);
-  }
-  if (service.instanceSource === "instance") return t(`${NS}:source.instance`);
-  return service.configured ? t(`${NS}:source.keyless`) : t(`${NS}:source.none`);
 }
 
 export function statusLabel(t: TFn, status: ReturnType<typeof adminStatus>): string {

@@ -20,10 +20,6 @@ export function registryPage(id: string): RegistryPage | undefined {
   return SETTINGS_REGISTRY.find((p) => p.id === id);
 }
 
-export function registrySection(pageId: string, sectionId: string): RegistrySection | undefined {
-  return registryPage(pageId)?.sections.find((s) => s.id === sectionId);
-}
-
 /** What the viewing account may see: the registry's gates, answered by the caller. */
 export interface RegistryAccess {
   isAdmin: boolean;

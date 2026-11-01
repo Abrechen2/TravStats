@@ -1,5 +1,5 @@
 import { ADMIN_PAGES, type AdminSectionId } from "../../Admin/adminSections";
-import { SETTINGS_PAGES, type SettingsSectionId } from "../settingsModel";
+import { SETTINGS_SECTIONS, type SettingsSectionId } from "../settingsModel";
 import { registryPage, type RegistryGroup } from "../registry";
 import type { MenuGroupDef, PageDef, SectionDef } from "../surface";
 import type { IconName } from "../../../components/ui/Icon";
@@ -72,7 +72,7 @@ export interface AreaPageDef extends PageDef<AreaPageId, string> {
 }
 
 const personalDefs = new Map<string, SectionDef<string>>(
-  SETTINGS_PAGES.flatMap((p) => p.sections.map((s) => [s.id, s] as const))
+  SETTINGS_SECTIONS.map((s) => [s.id, s] as const)
 );
 const adminDefs = new Map<string, SectionDef<string>>(
   ADMIN_PAGES.flatMap((p) => p.sections.map((s) => [s.id, s] as const))

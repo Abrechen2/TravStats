@@ -32,14 +32,6 @@ function todayIso(): string {
 
 type Editing = { mode: HomeEditorMode; index: number | null } | null;
 
-/** The periods after a move: the running one closes the day the new one begins. */
-export function applyMove(periods: HomePeriod[], next: HomePeriod): HomePeriod[] {
-  const closed = periods.map((p) => (p.toDate === null ? { ...p, toDate: next.fromDate } : p));
-  return [...closed, { ...next, toDate: null }].sort((a, b) =>
-    a.fromDate < b.fromDate ? -1 : a.fromDate > b.fromDate ? 1 : 0
-  );
-}
-
 function AirportList({ period }: { period: HomePeriod }): JSX.Element {
   const { t } = useTranslation(["settings"]);
   return (

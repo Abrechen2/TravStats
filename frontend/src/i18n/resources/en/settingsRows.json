@@ -1227,13 +1227,15 @@
     "loadFailed": "I couldn't load the backup settings.",
     "deps": {
       "autoOff": "Only works with “Back up automatically”.",
-      "webdavOff": "Only works with the WebDAV copy."
+      "webdavOff": "Only works with the WebDAV copy.",
+      "webdavUnknown": "Only works with the WebDAV copy. I can't read its state right now."
     },
     "errors": {
       "range": "I take values from {{min}} to {{max}}.",
       "download": "I couldn't download the backup.",
       "delete": "I couldn't delete the backup.",
-      "list": "I couldn't load the backups."
+      "list": "I couldn't load the backups.",
+      "webdavStatus": "I can't read whether the WebDAV copy is on, so uploading and the list of cloud backups are missing."
     },
     "zoneHost": "Server's time zone ({{zone}})",
     "zoneEffective": "The server is backing up in {{zone}} right now.",
@@ -1269,7 +1271,8 @@
       "busy": "A backup or restore is running right now. Try again afterwards.",
       "rateLimited": "I restore only a few backups an hour. Try again later.",
       "failed": "I couldn't restore the backup."
-    }
+    },
+    "retry": "Try again"
   },
   "maintenance": {
     "debug": {

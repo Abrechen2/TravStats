@@ -1,6 +1,5 @@
 {
   "title": "Admin",
-  "sectionPicker": "Section",
   "description": "Manage your self-hosted TravStats instance",
   "loading": "Loading...",
   "tabs": {
@@ -16,13 +15,7 @@
     "smtp": "Email / SMTP",
     "timeModel": "Time model"
   },
-  "tabs2": {
-    "general": "General",
-    "flight": "Flight",
-    "cruise": "Cruise"
-  },
   "cruiseMasterData": {
-    "menuLabel": "Ships & Ports",
     "userAdded": "User-added",
     "ship": {
       "title": "Ships",
@@ -57,7 +50,6 @@
     }
   },
   "airlineAircraftMasterData": {
-    "menuLabel": "Airlines, Aircraft & Airports",
     "userAdded": "User-added",
     "airline": {
       "title": "Airlines",
@@ -219,8 +211,6 @@
     "testing": "Testing…",
     "testOk": "WebDAV connection successful",
     "testFailed": "WebDAV connection failed",
-    "testNeedsSave": "The test checks the saved configuration — save first, then test.",
-    "testNeedsEnabled": "The test checks the saved configuration, and WebDAV sync is switched off there.",
     "fields": {
       "enabled": {
         "label": "Enable WebDAV sync",
@@ -235,9 +225,7 @@
       },
       "password": {
         "label": "Password",
-        "help": "Stored encrypted at rest (AES-GCM). For Nextcloud use an app password.",
-        "placeholderKeep": "Keep existing password",
-        "placeholderSet": "Enter password"
+        "help": "Stored encrypted at rest (AES-GCM). For Nextcloud use an app password."
       },
       "backupPath": {
         "label": "Remote backup path",
@@ -365,15 +353,6 @@
       "emailFailed": "Email failed"
     },
     "description": "Invitation links for new users. Each link works exactly once and expires after seven days."
-  },
-  "userLimitWarning": {
-    "title": "⚠️ User Limit Warning"
-  },
-  "demoWarning": {
-    "title": "🔓 Demo Account Active"
-  },
-  "systemInfo": {
-    "title": "System Information"
   },
   "airlineLogos": {
     "title": "Airline logos",
@@ -642,32 +621,15 @@
   "feedback": {
     "title": "Parser Feedback Statistics",
     "timePeriod": "Time Period:",
-    "days7": "Last 7 days",
-    "days30": "Last 30 days",
-    "days90": "Last 90 days",
     "year": "Last year",
-    "totalEntries": "Total Feedback Entries",
-    "avgQuality": "Average Quality Score",
-    "commonIssues": "Common Issues",
-    "byProvider": "Distribution by Parser Provider",
-    "bySourceType": "Distribution by Source Type",
     "noData": "No data available",
     "email": "Email",
     "boardingPass": "Boarding Pass",
-    "ofTotal": "{{pct}}% of total",
-    "mostCommonIssues": "Most Common Issues",
-    "noIssues": "No issues reported",
-    "recentEntries": "Recent Feedback Entries ({{count}})",
     "quality": "{{score}}% quality",
     "loading": "Loading feedback statistics...",
     "details": "Feedback Details",
     "notFound": "Feedback not found",
-    "provider": "Provider",
-    "qualityScore": "Quality Score",
-    "issues": "Issues",
-    "parsedResult": "Parsed Result",
-    "correctedResult": "Corrected Result",
-    "userCorrections": "User Corrections"
+    "provider": "Provider"
   },
   "masterData": {
     "showingOf": "Showing {{shown}} of {{total}} entries — refine the search to see more.",
@@ -870,12 +832,9 @@
     "enabledSub": "Without this, comparing stays on this server.",
     "origin": "Public address of this server",
     "originHint": "https, no port or path — the way other servers reach it.",
-    "generateKey": "Generate key",
-    "rotateWarning": "A new key cuts the existing connections until the other servers' admins have pinned it again.",
     "tripSharing": "Share trips with other servers",
     "tripSharingSub": "People on trusted servers can share trips with accounts on this server. The facts of a shared trip travel signed over TLS to the companion's server; private fields never do. Takes effect only with a key and beta features switched on.",
     "fingerprint": "Fingerprint — give it to the other server's admin through a second channel (e.g. a phone call):",
-    "peers": "Trusted servers",
     "verifiedAt": "verified on {{date}}",
     "unverified": "not verified yet",
     "outdated": "needs an update",
@@ -971,7 +930,6 @@
     "title": "Template repository",
     "description": "Where the parser templates are synced from. Point it at your own copy of the template repository — a fork, or a self-hosted mirror — to use templates the official one does not have. The sync then reads every template from that URL; templates only the old repository named are withdrawn.",
     "url": "Repository URL (raw files)",
-    "urlHint": "The raw-file root, which holds index.json. https, or plain http to a host on your own network only. Empty = the server's setting, or the official repository ({{defaultUrl}}).",
     "readsFrom": {
       "admin": "The sync reads from {{url}} (set here).",
       "env": "The sync reads from {{url}} (the server's TEMPLATE_REPO_BASE_URL).",
@@ -1017,53 +975,10 @@
     "portsMasterData": "Ports",
     "lodgingChainsMasterData": "Hotel chains"
   },
-  "menu": {
-    "manage": "Administration",
-    "operations": "Services & operations",
-    "masterFlight": "Master data · Flight",
-    "masterCruise": "Master data · Cruise",
-    "masterLodging": "Master data · Lodging"
-  },
-  "search": {
-    "keywords": {
-      "instance": "Instance name, name, address, public address, URL, home network, registration, maximum accounts, beta, beta features, sign-in background",
-      "shareLinks": "Public links, share, sharing",
-      "importMode": "Import mode, import",
-      "usageStats": "Usage statistics, statistics, telemetry, anonymous",
-      "about": "Version, licence, data sources, attribution, about, imprint, documentation",
-      "federation": "Server connections, federation, other instance, server",
-      "push": "Push, notifications, relay, push relay",
-      "users": "Users, accounts, lock account, reset two-factor, password",
-      "invitations": "Invitation, invite, invitation link, registration",
-      "externalServices": "API keys, global keys, AirLabs, Aviationstack, AeroDataBox, OpenSky, Logostream, Google Places, Immich, routing, OpenRouteService, rail, open data, operator logos, Wikidata, Wikimedia, Geocoder, address, coordinates, Nominatim, Photon, place search, AI parser, Transitous, db-rest, OpenRailRouting",
-      "parsers": "Parser, AI, LLM, Ollama, OpenAI, Claude, read bookings",
-      "templateRepo": "Templates, template repository, repository",
-      "smtp": "Email, SMTP, mail server, delivery",
-      "backups": "Backup, restore, schedule",
-      "webdav": "WebDAV, sync, Nextcloud",
-      "timeModel": "Time model, time zone, local time",
-      "logging": "Log, logging, debug, diagnostics",
-      "system": "System, system information, version, export, statistics",
-      "airlinesMasterData": "Airlines, master data, logo",
-      "aircraftMasterData": "Aircraft, aircraft types, master data",
-      "airportsMasterData": "Airports, master data, IATA",
-      "shipsMasterData": "Ships, master data, IMO",
-      "portsMasterData": "Ports, master data, UN/LOCODE",
-      "lodgingChainsMasterData": "Hotel chains, chains, master data, hotels, lodging, merge",
-      "travTrack": "TravTrack, location history, location, recording, Companion",
-      "travPlan": "TravPlan, planning, trip planning, planning mode, plan"
-    },
-    "expertKeywords": {
-      "instance": "Home network address, LAN, passkey, rpId, origins",
-      "parsers": "Ollama URL, pull model, model, quota, exchange-rate source",
-      "externalServices": "allow own keys, permissions, Photon address, Nominatim address, OpenRailRouting address"
-    }
-  },
   "operatorLogos": {
     "title": "Open data for logos and pictures",
     "description": "Logos of rail operators, coach companies, ferry lines and rental companies, and pictures of ships, car models and train categories on the map cards come from Wikidata and Wikimedia Commons – freely licensed files only, with their authors credited. The server asks, never the browser, and sends only the name of the company, ship, car model or train category. Switched off, the cards show monograms and no pictures.",
     "switch": "Load logos and pictures from open data",
-    "switchSub": "Applies to the whole instance. No account, no key.",
     "loadFailed": "The setting could not be loaded.",
     "saveFailed": "The setting could not be saved."
   },
@@ -1145,13 +1060,8 @@
       "personal_feeder": "Personal with feeder ($10 credit)",
       "custom": "Custom budget"
     },
-    "customBudget": "Monthly budget in US dollars",
-    "spent": "This month ({{month}}): {{spent}} of {{budget}} used, {{calls}} calls",
-    "exhausted": "The budget is reached. AeroAPI is not asked again until next month; the other providers take over.",
     "cost": "Assumed cost per call: flight status {{flights}}, flight track {{track}} (unverified).",
     "rateLimit": "At most 10 result sets per minute; beyond that TravStats waits or falls back to other providers.",
-    "tracksTitle": "Fetch real flight tracks",
-    "tracksSub": "After landing, fetches the track FlightAware recorded once and stores it when the flight has no recording of its own. Every fetch spends budget. Off until you switch it on.",
     "sweep": {
       "label": "Last run ({{at}})",
       "status": {
@@ -1170,8 +1080,7 @@
     "saving": "Saving …",
     "saved": "Saved.",
     "loadFailed": "The AeroAPI settings could not be loaded.",
-    "saveFailed": "The AeroAPI settings could not be saved.",
-    "budgetRequired": "A custom budget needs an amount above 0."
+    "saveFailed": "The AeroAPI settings could not be saved."
   },
   "catalogues": {
     "running": "Running …",
@@ -1196,34 +1105,6 @@
     },
     "errors": {
       "failed": "The import failed."
-    }
-  },
-  "dawarichGlobal": {
-    "title": "Dawarich (instance-wide)",
-    "subtitle": "One Dawarich connection for all accounts. Anyone with their own overrides it.",
-    "baseUrl": "Base URL",
-    "apiKey": "API key",
-    "apiKeyHint": "The stored key is only shown masked. Leave it unchanged to keep it.",
-    "test": "Test connection",
-    "testing": "Testing …",
-    "save": "Save",
-    "saving": "Saving …",
-    "saved": "Instance-wide Dawarich connection saved.",
-    "cleared": "Instance-wide Dawarich connection removed.",
-    "saveFailed": "Saving failed.",
-    "loadFailed": "The Dawarich settings could not be loaded. They can only be edited once loaded.",
-    "retry": "Try again",
-    "connected": "Connected · v{{version}}",
-    "sweep": {
-      "title": "Sweep country days now",
-      "description": "Re-reads country days for every account using Dawarich instead of waiting for 04:40 UTC. May take several minutes.",
-      "action": "Sweep now",
-      "running_": "Running … (may take a while)",
-      "done": "Done: {{users}} accounts, {{days}} days written.",
-      "doneWithFailures": "Finished, but {{failed}} of {{users}} accounts failed or Dawarich was unreachable ({{days}} days written). See the server log.",
-      "failed": "The sweep failed.",
-      "lost": "Outcome unknown: the server lost track of the job (restart?). Please run it again.",
-      "running": "A sweep is already running."
     }
   }
 }

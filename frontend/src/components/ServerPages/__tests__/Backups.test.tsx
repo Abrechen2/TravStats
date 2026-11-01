@@ -237,4 +237,14 @@ describe("Sicherungen › Vorhandene", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("cloud-list")).toBeInTheDocument();
   });
+
+  it("says why upload and the cloud list are missing when the WebDAV status cannot be read, and retries", async () => {
+    admin.getWebDAVSettings.mockRejectedValueOnce(httpError());
+    admin.getWebDAVSettings.mockResolvedValue({ settings: { enabled: true } });
+    render(<BackupsExisting />);
+    expect(await screen.findByText(/backups\.errors\.webdavStatus/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:backups.retry" }));
+    expect(await screen.findByTestId("cloud-list")).toBeInTheDocument();
+    expect(screen.queryByText(/backups\.errors\.webdavStatus/)).toBeNull();
+  });
 });

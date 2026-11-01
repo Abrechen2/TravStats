@@ -54,7 +54,7 @@ export default function BackupsExisting(): JSX.Element {
   const row = useRowCopy("backups");
   const dialog = useDialogCopy();
   const addToast = useToastStore((s) => s.addToast);
-  const webdav = useWebdavEnabled();
+  const { enabled: webdav, failed: webdavFailed, retry: retryWebdav } = useWebdavEnabled();
   const [backups, setBackups] = useState<Backup[] | null>(null);
   const [status, setStatus] = useState<Status>(null);
   const [listFailed, setListFailed] = useState(false);
@@ -355,6 +355,14 @@ export default function BackupsExisting(): JSX.Element {
           })}
         </ul>
       </SettingItem>
+      {webdavFailed && webdav === null ? (
+        <ErrorLine>
+          {t("settingsRows:backups.errors.webdavStatus")}{" "}
+          <button type="button" className="t-caption underline" onClick={retryWebdav}>
+            {t("settingsRows:backups.retry")}
+          </button>
+        </ErrorLine>
+      ) : null}
       {webdav === true ? (
         <SettingItem title={fetchRow.title} sub={fetchRow.sub} scope="allAccounts">
           <CloudBackupList

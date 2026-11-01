@@ -11,8 +11,7 @@ import { settingsApi } from "../../../lib/api";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
-import { SETTINGS_MENU, SETTINGS_PAGES } from "../../../pages/Settings/settingsModel";
-import { pageOfSection } from "../../../pages/Settings/surface";
+import { AREA_MENU, findAreaPage } from "../../../pages/Settings/area/areaModel";
 
 /**
  * Owner 2026-08-23: trips get their own settings section, and the
@@ -31,10 +30,10 @@ describe("TripsSection", () => {
   });
 
   it("lives on its own general page, in the menu's ungated first block", () => {
-    const page = pageOfSection(SETTINGS_PAGES, "trips");
+    const page = findAreaPage("trips");
     expect(page?.id).toBe("trips");
     expect(page?.domain).toBeUndefined();
-    expect(SETTINGS_MENU.flatMap((g) => g.pages)).toContain("trips");
+    expect(AREA_MENU.flatMap((g) => g.pages)).toContain("trips");
   });
 
   it("renders the automatic-trip switch checked when the setting is on", () => {

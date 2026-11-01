@@ -2,8 +2,6 @@
   "title": "Einstellungen",
   "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
   "demoLocked": "Im Demo-Zugang gesperrt — alle Besucher teilen sich dieses Konto.",
-  "roadmap": "Roadmap · Punkt 9",
-  "backToDashboard": "← Zurück zum Dashboard",
   "tabs": {
     "general": "Allgemein",
     "flight": "Flug",
@@ -26,23 +24,13 @@
     "title": "Unterkunfts-Präferenzen",
     "description": "Basiswährung für Übernachtungs-Statistiken und Ausgabensummen.",
     "baseCurrency": "Basiswährung",
-    "baseCurrencyHint": "Alle Übernachtungen werden zum EZB-Kurs des jeweiligen Check-in-Tages in diese Währung umgerechnet. Bereits gespeicherte Aufenthalte behalten ihren ursprünglichen Umrechnungskurs — eine Änderung wirkt sich nur auf künftige Berechnungen aus.",
     "geocoder": {
       "title": "Geocoder",
       "description": "Nur für Admins: Adresssuche und Koordinaten-Auflösung dieser Instanz konfigurieren.",
-      "photonUrlLabel": "Photon-URL (Adresssuche)",
-      "photonUrlHint": "Wird für die Live-Suche während der Eingabe genutzt (z. B. in der Unterkunft- oder Reise-Standortauswahl). Leer lassen für den öffentlichen Standarddienst photon.komoot.io.",
-      "nominatimUrlLabel": "Nominatim-URL (Koordinaten-Auflösung)",
-      "nominatimUrlHint": "Wird für einmalige Geocoding-Anfragen genutzt. Leer lassen für den öffentlichen Standarddienst nominatim.openstreetmap.org.",
-      "saveSuccess": "Geocoder-Einstellungen gespeichert.",
       "saveError": "Geocoder-Einstellungen konnten nicht gespeichert werden.",
       "loadError": "Geocoder-Einstellungen konnten nicht geladen werden.",
       "retry": "Erneut versuchen",
-      "testButton": "Verbindung testen",
-      "testing": "Teste Verbindung …",
-      "testSuccess": "Verbindung erfolgreich — {{count}} Treffer für „Berlin“.",
-      "testEmpty": "Verbindung erfolgreich, aber keine Treffer für „Berlin“.",
-      "testError": "Verbindung fehlgeschlagen. Bitte URL und Erreichbarkeit prüfen."
+      "testing": "Teste Verbindung …"
     }
   },
   "memberships": {
@@ -202,7 +190,6 @@
     "description": "Definiere die Standard-Einheiten für Statistiken.",
     "distance": "Distanz",
     "currency": "Währung",
-    "temperature": "Temperatur",
     "options": {
       "kilometers": "Kilometer",
       "miles": "Meilen",
@@ -214,11 +201,7 @@
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
     },
-    "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden.",
-    "distanceSub": "Für Strecken und Statistiken",
-    "currencySub": "Für Ausgabensummen; Wechselkurse von der EZB",
     "weight": "Gewicht",
-    "weightSub": "Für Freigepäck, das ohne Einheit eingetragen ist; umgerechnet wird nichts",
     "weightOptions": {
       "kg": "Kilogramm",
       "lb": "Pfund"
@@ -250,10 +233,6 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
-    "emailNotifications": "E-Mail-Benachrichtigungen aktivieren",
-    "flightReminder": "Flug-Erinnerung",
-    "checkInReminder": "Check-in Reminder",
-    "featureUpdates": "Neue Feature-Updates",
     "options": {
       "off": "Aus",
       "24h": "24h vorher",
@@ -262,21 +241,7 @@
     "email": "Benachrichtigungs-E-Mail",
     "save": "Speichern",
     "saved": "Gespeichert!",
-    "smtpTitle": "SMTP-Konfiguration",
-    "smtpHost": "Host",
-    "smtpPort": "Port",
-    "smtpSecure": "Sicher (TLS)",
-    "smtpUsername": "Benutzername",
-    "smtpPassword": "Passwort",
-    "smtpFromEmail": "Absender-E-Mail",
-    "smtpFromName": "Absendername",
-    "smtpEnabled": "E-Mail-Benachrichtigungen aktivieren",
-    "testConnection": "Verbindung testen",
-    "testSuccess": "Verbindung erfolgreich!",
     "testFailed": "Verbindung fehlgeschlagen: {{error}}",
-    "smtpDelete": "Zugangsdaten löschen",
-    "smtpDeleted": "SMTP-Zugangsdaten gelöscht",
-    "smtpDeleteFailed": "Zugangsdaten konnten nicht gelöscht werden",
     "smtpDeleteConfirm": {
       "title": "SMTP-Zugangsdaten löschen?",
       "message": "Host, Benutzername und Passwort werden von dieser Instanz entfernt. Danach verschickt TravStats keine E-Mails mehr — keine Erinnerungen, keine Einladungen, keine Passwort-Zurücksetzung. Du kannst die Daten jederzeit neu eintragen.",
@@ -284,9 +249,7 @@
     },
     "loadError": "Benachrichtigungen konnten nicht geladen werden",
     "smtpHelp": {
-      "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal.",
-      "credentials": "Gmail/Outlook verlangen App-Passwörter statt des Kontopassworts (2FA vorausgesetzt). Self-hosted Postfix-Server erlauben meist SMTP-AUTH mit Systemnutzer.",
-      "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
+      "ports": "587 + STARTTLS (Standard, \"Sicher (TLS)\" aus), 465 + implizites TLS (\"Sicher (TLS)\" an), 25 nur ohne Auth und lokal."
     },
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden",
     "carriedOver": "Deine bisherigen Einstellungen wurden übernommen.",
@@ -337,9 +300,7 @@
         "name": "Unterkunft",
         "what": "Check-in, Adresse, Nächte"
       }
-    },
-    "smtpSaveFailed": "Die SMTP-Einstellungen konnten nicht gespeichert werden. Prüfe Host, Port und Zugangsdaten und versuche es erneut.",
-    "unknownError": "Unbekannter Fehler"
+    }
   },
   "privacy": {
     "comparisonConsent": {
@@ -361,12 +322,9 @@
   },
   "backup": {
     "title": "Meine Daten & Sync",
-    "autoBackup": "Automatische Backups aktivieren",
     "backupInterval": "Backup-Intervall",
-    "exportFormat": "Export-Format",
     "cloudSync": "Cloud-Sync aktivieren",
     "retentionDays": "Aufbewahrungsdauer (Tage)",
-    "retentionDaysDescription": "Backups älter als {{days}} Tage werden automatisch gelöscht",
     "intervals": {
       "daily": "Täglich",
       "weekly": "Wöchentlich",
@@ -412,18 +370,7 @@
   "training": {
     "title": "Training-Einstellungen",
     "description": "Konfiguriere die Verwendung trainierter LLM-Modelle für bessere Parsing-Genauigkeit",
-    "useTrainedModels": "Trainierte Modelle verwenden",
-    "useTrainedModelsDescription": "Automatisch trainierte Modelle verwenden, wenn verfügbar",
-    "preferredEmailModel": "Email-Modell-Präferenz",
-    "preferredEmailModelDescription": "Bestimmt welches Modell für Email-Parsing verwendet wird",
-    "preferredVisionModel": "Vision-Modell-Präferenz",
-    "preferredVisionModelDescription": "Bestimmt welches Modell für Boarding-Pass-Parsing verwendet wird",
-    "trainingSeparateModels": "Separate Modelle für Email/Vision",
-    "trainingSeparateModelsDescription": "Verwendet getrennte Modelle für bessere Spezialisierung (empfohlen)",
-    "saveSettings": "Einstellungen speichern",
-    "savingSettings": "Wird gespeichert...",
     "updated": "Training-Einstellungen erfolgreich aktualisiert",
-    "updateFailed": "Fehler beim Aktualisieren der Training-Einstellungen",
     "modelOptions": {
       "auto": "Auto (trainiert wenn verfügbar, sonst Base)",
       "trained": "Nur trainiertes Modell",
@@ -433,19 +380,11 @@
   "developer": {
     "title": "Developer Options",
     "description": "Erweiterte Funktionen für Parser-Entwicklung und Debugging",
-    "modeTitle": "Parser-Entwicklermodus",
-    "modeDescription": "Aktiviert Zugriff auf die Parser-Seite mit Template-Verwaltung und Parse-Logs",
     "confirmTitle": "Entwicklermodus aktivieren?",
     "confirmMessage": "Dies schaltet erweiterte Parser-Funktionen frei, die technisches Verständnis erfordern.",
     "updateError": "Fehler beim Aktualisieren des Entwicklermodus",
     "risks": {
-      "title": "Hinweise:",
-      "items": {
-        "resourceUsage": "LLM-Parsing (Ollama) benötigt einen konfigurierten Ollama-Server",
-        "technicalKnowledge": "Erfordert technisches Verständnis",
-        "unexpectedResults": "Eine selbst abgeleitete Vorlage ist nur so gut wie die Beispiel-Mail, aus der sie stammt",
-        "longTraining": "Eigene Templates erfordern Kenntnis des Email-Formats der Airline"
-      }
+      "title": "Hinweise:"
     },
     "cancel": "Abbrechen",
     "activate": "Aktivieren"
@@ -453,14 +392,9 @@
   "features": {
     "title": "Was festgehalten wird",
     "costTracking": "Kostenerfassung",
-    "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
-    "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
     "description": "Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Abgeschaltete Funktionen lassen sich jederzeit wieder einschalten — es gehen keine Daten verloren.",
-    "liveTracking": "Live-Verfolgung",
-    "liveTrackingDesc": "Die TravStats-App zeichnet deine Position während des Flugs auf und schickt die Flugspur hierher. Aus: Der Server nimmt keine Aufzeichnung mehr an; gespeicherte Flugspuren bleiben.",
-    "seatStatistics": "Sitzplatz-Statistik",
-    "seatStatisticsDesc": "Der Abschnitt zu Sitzplätzen in der Flugstatistik. Aus blendet ihn aus; deine Sitzplätze bleiben gespeichert."
+    "liveTracking": "Live-Verfolgung"
   },
   "autoSave": {
     "idle": "Änderungen werden automatisch gespeichert",
@@ -470,18 +404,13 @@
     "failed": "Speichern fehlgeschlagen",
     "retry": "Erneut versuchen"
   },
-  "scrollToTop": "Nach oben",
-  "sectionPicker": "Bereich",
   "parser": {
     "title": "Parser-Konfiguration",
     "description": "Konfiguriere, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",
-    "saveSettings": "Einstellungen speichern",
     "saved": "Parser-Einstellungen erfolgreich gespeichert!",
     "saveFailed": "Fehler beim Speichern der Einstellungen",
     "available": "Verfügbar",
     "unavailable": "Nicht verfügbar",
-    "preferred": "Bevorzugter Parser",
-    "providerStatus": "Provider-Status:",
     "vision": {
       "title": "Vision Parser (Bordkarte)",
       "description": "Hochgeladene Bordkarten-Bilder parsen"
@@ -548,17 +477,10 @@
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Optionale Schlüssel für Live-Flugdaten und zusätzliche Flughafen-Informationen. Hat der Administrator einen hinterlegt, wird er automatisch benutzt; ein eigener hat Vorrang. Schlüssel werden verschlüsselt gespeichert und nie wieder angezeigt.",
-    "parserApis": "Parser APIs",
-    "flightApis": "Flugdaten APIs",
     "shared": "Geteilt",
-    "sharedTooltip": "Vom Administrator geteilter Schlüssel - wird automatisch verwendet",
     "own": "Eigener Schlüssel",
-    "ownTooltip": "Eigener API-Schlüssel eingegeben - hat Vorrang vor geteilten Schlüsseln",
     "notConfigured": "Nicht konfiguriert",
-    "notConfiguredTooltip": "Kein API-Schlüssel konfiguriert - verwende geteilten Schlüssel oder ENV-Variable falls verfügbar",
     "getKey": "API-Schlüssel erstellen",
-    "enterKey": "API-Schlüssel eingeben",
-    "sharedPlaceholder": "Vom Administrator geteilt",
     "show": "Anzeigen",
     "hide": "Verstecken",
     "clear": "Löschen",
@@ -579,7 +501,6 @@
       "remainingOnly": "Noch {{remaining}} Abfragen übrig (Stand der letzten Abfrage).",
       "requestsLine": "Dazu noch {{remaining}} von {{limit}} Anfragen beim Vermittler RapidAPI."
     },
-    "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
     "save": "API-Schlüssel speichern",
     "saving": "Wird gespeichert...",
     "saved": "API-Schlüssel erfolgreich gespeichert",
@@ -647,19 +568,14 @@
   "routing": {
     "title": "Routing-Anbieter",
     "description": "Bestimmt, welcher Anbieter eine Etappe oder eine Busfahrt entlang der Straße berechnet. Ohne Anbieter bleibt jede Etappe und jede Busfahrt eine Luftlinie. Ein ausgewählter Anbieter erhält die Koordinaten von Start und Ziel, um die Strecke zu berechnen — sie verlassen damit diese Instanz.",
-    "providerLabel": "Anbieter",
     "provider": {
       "none": "Kein Anbieter",
       "openrouteservice": "OpenRouteService",
       "graphhopper": "GraphHopper",
       "custom": "Eigener OSRM-Server"
     },
-    "noneHint": "Ohne Anbieter bleibt „Berechnet“ in der Touren-Ansicht deaktiviert — jede Etappe und jede Busfahrt bleibt eine Luftlinie, bis hier einer eingerichtet wird.",
-    "customUrlLabel": "Basis-URL",
-    "customUrlHint": "Adresse eines selbst gehosteten OSRM-Servers, z. B. https://osrm.example.com.",
     "loadError": "Routing-Einstellungen konnten nicht geladen werden",
     "retry": "Erneut versuchen",
-    "saveSuccess": "Routing-Einstellungen gespeichert",
     "saveError": "Routing-Einstellungen konnten nicht gespeichert werden",
     "openrouteservice": {
       "label": "OpenRouteService API-Schlüssel",
@@ -679,14 +595,12 @@
     "openrouteservice": {
       "label": "Eigener OpenRouteService-Schlüssel",
       "description": "Nur für dein Konto. Kostenlos: 2000 Routing-Anfragen/Tag.",
-      "remove": "Eigenen OpenRouteService-Schlüssel entfernen",
-      "removePending": "Dein OpenRouteService-Schlüssel wird beim Speichern entfernt."
+      "remove": "Eigenen OpenRouteService-Schlüssel entfernen"
     },
     "graphhopper": {
       "label": "Eigener GraphHopper-Schlüssel",
       "description": "Nur für dein Konto. Kostenlos: 500 Routing-Anfragen/Tag.",
-      "remove": "Eigenen GraphHopper-Schlüssel entfernen",
-      "removePending": "Dein GraphHopper-Schlüssel wird beim Speichern entfernt."
+      "remove": "Eigenen GraphHopper-Schlüssel entfernen"
     }
   },
   "import": {
@@ -1093,56 +1007,11 @@
     "views": "Ansichten",
     "privacy": "Privatsphäre & Teilen"
   },
-  "deepLink": {
-    "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
-  },
   "search": {
     "label": "Einstellungen durchsuchen",
     "placeholder": "Einstellung suchen …",
     "results": "Treffer",
     "noResults": "Nichts gefunden.",
-    "keywords": {
-      "profile": "Benutzername, Name, E-Mail, Profilbild, Avatar, Konto",
-      "security": "Passwort, Kennwort, Passkey, Zwei-Faktor, 2FA, TOTP, Authenticator, Anmeldung, Login",
-      "apitokens": "Token, API-Token, Zugriffsschlüssel, Schnittstelle, Automatisierung, Skript",
-      "devices": "Handy, Smartphone, App, Companion, Koppeln, Kopplungscode, QR-Code, Gerät",
-      "display": "Sprache, Deutsch, Englisch, Design, Dunkel, Hell, Theme, Darstellung",
-      "units": "Kilometer, Meilen, Einheit, Währung, Basiswährung, Datumsformat, Uhrzeit, 24 Stunden, Zeitzone",
-      "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
-      "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen, Reisefarbe, Farbe",
-      "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
-      "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
-      "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen, Bahn-Import merken, U-Bahn überspringen, Tram, Bus, bahn.de, Standard merken",
-      "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
-      "externalServices": "AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava, KI-Parser, Bahn, Transitous, db-rest, OpenRailRouting, Karten, Ortssuche, Photon, Nominatim",
-      "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
-      "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
-      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan, Live-Verfolgung, Live-Tracking, Position, Flugspur, Sitzplatz-Statistik, Sitzplätze, Fensterplatz, Gangplatz",
-      "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
-      "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit, Freigabe, nur während des Flugs",
-      "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine, Seetage, Reisetage",
-      "domains": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, Bahn, Bus, Fähre, Mietwagen, Plan, Reisen planen, TravPlan, ein- und ausschalten, Farbe, Farben, Kartenfarbe, Linienfarbe",
-      "suggestions": "Vorschläge, Posteingang, Reisevorschläge, Aufenthalte vorschlagen, Immich-Belege, Fotos als Beleg, Ortstyp, KI-Klassifizierung",
-      "sharing": "Teilen, Mitreisende, Einwilligung, geteilte Reise, Begleiter",
-      "shareLinks": "Öffentlicher Link, Freigabe, teilen, Link",
-      "calendarFeed": "Kalender, iCal, ICS, Abo, Kalenderabo",
-      "dawarich": "Dawarich, Standortverlauf, Standortquelle, Positionen, Verbindung",
-      "locationProvider": "Standortquelle, Standort, Positionen, TravTrack, Dawarich, Keine, Quelle wechseln, Aufzeichnung",
-      "tripRecording": "Aufzeichnung, Positionen, App, Track, Reise aufzeichnen",
-      "stayScan": "Aufenthalte, Aufenthalt erkennen, Radius, Mindestdauer, Orte automatisch erkennen, Orte erkennen, Orte als Fläche, Gelände, neu auswerten, Märkte, Marktgelände, Einkaufszentren, Parks, Zoos, Freizeitparks, Museen",
-      "companions": "Mitreisende, Begleitpersonen, Personen, Umbenennen, Zusammenführen, Doppelt, Duplikat, Löschen, Namen",
-      "travTrack": "TravTrack, Standortverlauf, Verlauf, Positionen, Privatzonen, Zone, Zeitraum löschen, Export, GPX",
-      "mapAppearance": "Karte, Kartenaussehen, Farben, Routenfarbe, Palette, Linien, Ebenen, Beschriftung, Kartenmodus, Flugfarbe, Kreuzfahrtfarbe, Routen ausblenden, Routen einblenden, Linien ausblenden, nur Flughäfen, nur Häfen, nur Marker, ohne Flugrouten, Flugrouten, Kreuzfahrtrouten, Bahnlinien",
-      "dashboardAppearance": "Dashboard, Bereiche, Kartenmodus, Ansicht, Startseite",
-      "listAppearance": "Liste, Listen, Spalten, Sortierung, Seitengröße, Zeilen",
-      "comparisonConsent": "Vergleich, Freunde, Bestenliste, Einwilligung, Summen, Rangliste",
-      "encryptedGrants": "Verschlüsselte Freigabe, Ende-zu-Ende, Gerät, Übertragung, Empfänger, Kategorien"
-    },
-    "expertKeywords": {
-      "autoupdate": "Abfrageintervall, Intervall, Ablauf",
-      "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
-      "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
-    },
     "count_one": "{{count}} Treffer",
     "count_other": "{{count}} Treffer",
     "countMore": "{{shown}} von {{count}} Treffern · weiter tippen",
@@ -1153,9 +1022,6 @@
     "title": "Zugsuche",
     "description": "Welche Fahrplandienste die Zugsuche im Bahn-Logbuch fragen darf. Jede Suche schickt Zugnummer, Bahnhof und Tag an den Dienst — sie verlassen damit diese Instanz. Beide Dienste sind kostenlos und werden von Freiwilligen für nicht-kommerzielle Nutzung betrieben.",
     "transitous": "Transitous",
-    "transitousHint": "Europaweit, liefert auch den Streckenverlauf. Setze RAIL_LOOKUP_CONTACT, damit der Dienst dich als Betreiber erreichen kann.",
-    "dbRest": "db-rest",
-    "dbRestHint": "Nur Deutschland, inoffiziell, etwa 100 Anfragen pro Minute für alle Nutzer zusammen.",
     "loadError": "Die Einstellung konnte nicht geladen werden.",
     "saveError": "Die Einstellung konnte nicht gespeichert werden."
   },
@@ -1167,10 +1033,8 @@
     "switchedOff": "Gespeichert. Der Streckenrouter ist aus.",
     "saveError": "Die Adresse konnte nicht gespeichert werden.",
     "invalidUrl": "Das ist keine gültige Adresse: http(s), ohne Zugangsdaten, ohne ?-Teil.",
-    "testButton": "Verbindung testen",
     "test": {
       "ok": "Verbunden. Profil {{profile}}, Kartenstand {{date}}.",
-      "dateUnknown": "unbekannt",
       "notConfigured": "Es ist keine Adresse eingetragen.",
       "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
       "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
@@ -1180,7 +1044,6 @@
         "both": "Profile „tram“ und „subway“ vorhanden: Straßenbahn- und U-Bahn-Fahrten werden nur über ihr eigenes Gleisnetz berechnet.",
         "missing": "Kein eigenes Profil für {{modes}}. Solche Fahrten werden dann nur berechnet, wenn diese Instanz Anfragen mit eigenem Modell (ch.disable) annimmt – sonst bleiben sie bei der Luftlinie, nie auf dem Eisenbahnnetz. Wie man die Profile ergänzt, steht in der Anleitung „rail-routing“.",
         "tram": "Straßenbahn („tram“)",
-        "subway": "U-Bahn („subway“)",
         "and": " und "
       }
     },
@@ -1235,7 +1098,6 @@
     "color": "Farbe"
   },
   "level": {
-    "defaultsNote": "Bestehende Konten starten auf der Ebene Experte, neue Konten auf Standard.",
     "label": "Ansicht",
     "standard": "Standard",
     "expert": "Experte",
@@ -1267,13 +1129,11 @@
       "none": "Nicht eingerichtet",
       "setUp": "Eingerichtet"
     },
-    "ownOverrides": "Dein eigener Schlüssel wird statt dem der Instanz genutzt.",
     "groups": {
       "cross": "Bereichsübergreifend",
       "routing": "Straßenrouting",
       "maps": "Karten & Ortssuche"
     },
-    "dawarichPointer": "Eingerichtet unter Standortverlauf →",
     "what": {
       "immich": "Fotos zu Reisen und Orten",
       "dawarich": "Standortverlauf, Länder und Aufenthalte",
@@ -1290,38 +1150,23 @@
       "graphhopper": "Straßenrouten statt Luftlinie",
       "logostream": "Airline-Logos in hoher Auflösung",
       "googlePlaces": "Ortssuche und Ortsdetails",
-      "operatorLogos": "Logos von Bahn, Bus, Fähre und Mietwagen",
-      "llmParser": "Buchungen aus E-Mails und PDFs lesen, mit OpenAI, Claude oder eigenem Ollama",
       "transitous": "Züge nach Nummer und Bahnhof suchen",
-      "dbRest": "Züge der Deutschen Bahn nachschlagen",
-      "openRailRouting": "Bahnstrecken statt Luftlinie (eigener Dienst)",
       "photon": "Ortssuche beim Tippen",
       "nominatim": "Adressen in Koordinaten umwandeln"
     },
     "count_one": "1 Dienst",
     "count_other": "{{count}} Dienste",
-    "summaryAdmin": "{{shared}} eingerichtet",
     "legend": {
       "admin": "läuft für jedes Konto, ohne dass du etwas tun musst",
       "own": "dein eigener Schlüssel wird statt dem der Instanz genutzt",
-      "adminSurface": "gilt für jedes Konto dieser Instanz",
       "none": "kein Konto kann den Dienst nutzen"
     },
     "action": {
-      "useOwn": "Eigenen Schlüssel nutzen",
       "edit": "Bearbeiten",
       "setUp": "Einrichten"
-    },
-    "names": {
-      "llmParser": "KI-Parser"
-    },
-    "adminPointer": "In der Administration einrichten →",
-    "instanceOnly": "Stellt die Instanz für alle bereit; einrichten kann das nur der Admin.",
-    "parserPointer": "Eingerichtet unter Import & Parser →",
-    "instanceStatusFailed": "Ob die Instanz diese Dienste betreibt, ließ sich gerade nicht abfragen."
+    }
   },
   "frame": {
-    "surfaces": "Bereiche der Einstellungen",
     "breadcrumb": "Pfad",
     "surface": {
       "settings": "Einstellungen",
@@ -1337,20 +1182,14 @@
     "setup": "Einrichten",
     "hide": "Ausblenden",
     "url": "WebDAV-Adresse",
-    "urlHint": "Nur öffentliche https-Adressen. Ein Speicher im Heimnetz ist nur für Administratoren erlaubt.",
-    "urlHintAdmin": "Als Administrator darfst du auch einen Speicher im Heimnetz angeben; übers Internet nur mit https.",
     "username": "Benutzername",
     "password": "Passwort",
-    "passwordStored": "Ein Passwort ist gespeichert. Es wird nie angezeigt.",
-    "passwordKeepPlaceholder": "Leer lassen, um das gespeicherte zu behalten",
-    "clearPassword": "Passwort entfernen",
     "remotePath": "Ordner auf dem Speicher",
     "schedule": "Zeitplan",
     "schedules": {
       "daily": "Täglich",
       "weekly": "Wöchentlich"
     },
-    "keepVersions": "Versionen behalten",
     "save": "Speichern",
     "saving": "Speichern …",
     "runNow": "Jetzt abgleichen",
@@ -1405,9 +1244,6 @@
   },
   "travTrack": {
     "title": "TravTrack"
-  },
-  "contextLinks": {
-    "open": "Öffnen"
   },
   "views": {
     "title": "Karte, Start & Listen",

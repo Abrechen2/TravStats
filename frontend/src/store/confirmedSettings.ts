@@ -20,15 +20,24 @@ function requireLoaded(): void {
   if (useRemoteSettingsStatus.getState().failed) throw new SettingWriteError("notLoaded");
 }
 
+/** `keepalive` lets a save started while the page is being left outlive it. */
+export interface SaveOptions {
+  keepalive?: boolean;
+}
+
+const send = (opts?: SaveOptions) =>
+  opts?.keepalive ? settingsApi.updateKeepalive : settingsApi.update;
+
 export async function saveSwitch<K extends SwitchKey>(
   key: K,
-  value: SwitchValue<K>
+  value: SwitchValue<K>,
+  opts?: SaveOptions
 ): Promise<void> {
   requireLoaded();
   const payload = (
     SWITCH_PAYLOADS[key] as (v: unknown) => Parameters<typeof settingsApi.update>[0]
   )(value);
-  await settingsApi.update(payload);
+  await send(opts)(payload);
   const store = useSuggestionSwitchesStore;
   store.setState({ [key]: value } as Partial<ReturnType<typeof store.getState>>);
   if (key === "railImportLocalTransit" || key === "railImportBus") {
@@ -70,8 +79,11 @@ export function saveDomainEnabled(key: string, on: boolean): Promise<void> {
   return result;
 }
 
-export async function saveAutoCreateTrips(autoCreateTrips: boolean): Promise<void> {
+export async function saveAutoCreateTrips(
+  autoCreateTrips: boolean,
+  opts?: SaveOptions
+): Promise<void> {
   requireLoaded();
-  await settingsApi.update({ autoCreateTrips });
+  await send(opts)({ autoCreateTrips });
   useSettingsStore.setState({ autoCreateTrips });
 }

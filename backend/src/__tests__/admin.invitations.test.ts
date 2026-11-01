@@ -135,8 +135,13 @@ describe("admin/invitations — POST /email", () => {
     expect(stored?.emailSentAt).not.toBeNull();
   });
 
-  it("creates an invitation and marks emailStatus=failed on SMTP throw", async () => {
-    mockSendInvitationEmail.mockRejectedValue(new Error("SMTP auth failed"));
+  it("answers a stable SMTP code, never the transport's text, when the invitation mail fails", async () => {
+    mockSendInvitationEmail.mockRejectedValue(
+      Object.assign(new Error("Invalid login: 535 5.7.8 user@secret.example"), {
+        code: "EAUTH",
+        responseCode: 535,
+      })
+    );
 
     const res = await request(app)
       .post("/api/v1/admin/invitations/email")
@@ -145,13 +150,13 @@ describe("admin/invitations — POST /email", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.emailSent).toBe(false);
-    expect(res.body.emailError).toContain("SMTP auth failed");
+    expect(res.body.emailError).toBe("SMTP_AUTH");
 
     const stored = await prisma.invitation.findUnique({
       where: { id: res.body.invitation.id },
     });
     expect(stored?.emailStatus).toBe("failed");
-    expect(stored?.emailError).toContain("SMTP auth failed");
+    expect(stored?.emailError).toBe("SMTP_AUTH");
   });
 
   it("rejects invalid email with 400", async () => {

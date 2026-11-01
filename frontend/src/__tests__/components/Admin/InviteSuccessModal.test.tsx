@@ -54,7 +54,31 @@ describe("InviteSuccessModal", () => {
     );
 
     expect(screen.getByText(/emailFailed/i)).toBeInTheDocument();
-    expect(screen.getByText(/SMTP auth failed/)).toBeInTheDocument();
+    expect(screen.queryByText(/SMTP auth failed/)).toBeNull();
+  });
+
+  it("names a failed invitation mail by its SMTP code and never prints the transport's text", () => {
+    const { rerender } = render(
+      <InviteSuccessModal
+        inviteUrl="http://…/register?token=abc"
+        emailSent={false}
+        emailError="SMTP_AUTH"
+        recipientEmail="jane@example.com"
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/services\.smtp\.SMTP_AUTH/)).toBeInTheDocument();
+    rerender(
+      <InviteSuccessModal
+        inviteUrl="http://…/register?token=abc"
+        emailSent={false}
+        emailError="Invalid login: 535 user@secret.example"
+        recipientEmail="jane@example.com"
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/535|secret/)).toBeNull();
+    expect(screen.getByText(/services\.smtp\.SMTP_UNKNOWN/)).toBeInTheDocument();
   });
 
   it("fires onClose when Done is clicked", async () => {

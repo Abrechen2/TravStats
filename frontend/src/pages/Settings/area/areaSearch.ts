@@ -1,4 +1,7 @@
-import { foldForSearch } from "../settingsSearchMatch";
+/** Case, accents and ß folded away: "Wahrung" finds "Währung", "strasse" finds "Straße". */
+export function foldForSearch(text: string): string {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ß/g, "ss").toLowerCase().trim();
+}
 import {
   isRowFindable,
   type RegistryAccess,

@@ -173,21 +173,12 @@ vi.mock("../../components/Settings/StravaConnectionCard", () => ({
 vi.mock("../../components/Services/ServicesPage", () => ({
   default: () => <div data-testid="account-external-services" />,
 }));
-vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
-  default: () => <div data-testid="immich-connection-card" />,
-}));
 vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="photo-journey-nightly-scan-card" />,
 }));
 // Public share links (forgejo#281) load their list on mount — not the subject here.
 vi.mock("../../components/Settings/ShareLinksSection", () => ({
   default: () => <div data-testid="share-links-section" />,
-}));
-vi.mock("../../components/Settings/RoutingProviderSection", () => ({
-  default: () => <div data-testid="routing-provider-section" />,
-}));
-vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
-  default: () => <div data-testid="personal-routing-keys" />,
 }));
 
 // The page's data hook fires API requests on mount. Everything it returns is

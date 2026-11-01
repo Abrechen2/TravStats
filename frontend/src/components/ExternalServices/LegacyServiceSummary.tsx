@@ -123,26 +123,3 @@ export default function LegacyServiceSummary({
     </div>
   );
 }
-
-/** A sentence and the link to the service's row: for a form that kept its other parts. */
-export function ServiceMovedNote({
-  serviceId,
-  text,
-}: {
-  serviceId: string;
-  text: string;
-}): JSX.Element {
-  const { t } = useTranslation(["externalServices"]);
-  return (
-    <p className="t-caption" data-testid="service-moved-note" data-service={serviceId}>
-      {text}{" "}
-      <Link
-        to={externalServiceLink("admin", serviceId)}
-        className="underline"
-        style={{ color: "var(--ts-accent)" }}
-      >
-        {t("externalServices:actions.openInServices")}
-      </Link>
-    </p>
-  );
-}

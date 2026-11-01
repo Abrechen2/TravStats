@@ -13,8 +13,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
-import { SETTINGS_PAGES } from "../../pages/Settings/settingsModel";
-import { pageOfSection } from "../../pages/Settings/surface";
+import { SETTINGS_SECTIONS } from "../../pages/Settings/settingsModel";
 import { SECTION_LABEL_KEY } from "../../pages/Settings/sectionLabels";
 import { findNamed, queryNamed } from "../helpers/namedElement";
 
@@ -181,21 +180,12 @@ vi.mock("../../components/Settings/StravaConnectionCard", () => ({
 vi.mock("../../components/Services/ServicesPage", () => ({
   default: () => <div data-testid="account-external-services" />,
 }));
-vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
-  default: () => <div data-testid="immich-connection-card" />,
-}));
 vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="photo-journey-nightly-scan-card" />,
 }));
 // Public share links (forgejo#281) load their list on mount — not the subject here.
 vi.mock("../../components/Settings/ShareLinksSection", () => ({
   default: () => <div data-testid="share-links-section" />,
-}));
-vi.mock("../../components/Settings/RoutingProviderSection", () => ({
-  default: () => <div data-testid="routing-provider-section" />,
-}));
-vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
-  default: () => <div data-testid="personal-routing-keys" />,
 }));
 // Einstellungen → Bonusprogramme loads every loyalty card on mount; these
 // cases are about the page's navigation, not about the cards.
@@ -531,27 +521,11 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
   });
 });
 
-describe("the settings page table", () => {
-  it("gives every section exactly one home", () => {
-    const seen = new Map<string, string>();
-    for (const page of SETTINGS_PAGES) {
-      for (const section of page.sections) {
-        expect(seen.has(section.id), `${section.id} is on two pages`).toBe(false);
-        seen.set(section.id, page.id);
-      }
-    }
-    // And the lookup agrees with the table it is built from.
-    for (const [section, pageId] of seen) {
-      expect(pageOfSection(SETTINGS_PAGES, section)?.id).toBe(pageId);
-    }
-  });
-
+describe("the settings section table", () => {
   it("labels every section, so no chip or heading renders a raw id", () => {
-    for (const page of SETTINGS_PAGES) {
-      for (const section of page.sections) {
-        expect(SECTION_LABEL_KEY[section.id], `${section.id} has no label key`).toBeTruthy();
-        expect(section.labelKey).toBe(SECTION_LABEL_KEY[section.id]);
-      }
+    for (const section of SETTINGS_SECTIONS) {
+      expect(SECTION_LABEL_KEY[section.id], `${section.id} has no label key`).toBeTruthy();
+      expect(section.labelKey).toBe(SECTION_LABEL_KEY[section.id]);
     }
   });
 });
