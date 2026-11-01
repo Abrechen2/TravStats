@@ -288,6 +288,7 @@ router.post(
           mode: body.mode,
           color: body.color,
           notes: body.notes,
+          tags: body.tags ?? [],
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
           orderIdx: last ? last.orderIdx + 1 : 0,

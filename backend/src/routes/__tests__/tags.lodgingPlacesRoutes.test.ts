@@ -126,6 +126,17 @@ describe("tags on lodging, places, roadtrips and tours", () => {
     expect(read.body.roadtrip.tags).toEqual(["Wohnmobil"]);
   });
 
+  it("keeps the tags of a tour section created inside a trip", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Section trip" } });
+    const section = await request(app)
+      .post(`/api/v1/trips/${trip.id}/routes`)
+      .set("Cookie", cookie)
+      .send({ name: "Tag etappe", mode: "foot", tags: ["Etappe"] });
+    expect(section.status).toBe(201);
+    expect(section.body.route.tags).toEqual(["Etappe"]);
+    await prisma.trip.delete({ where: { id: trip.id } });
+  });
+
   it("offers their tags in the shared vocabulary", async () => {
     const res = await request(app).get("/api/v1/tags").query({ limit: "50" }).set("Cookie", cookie);
     const names = (res.body.tags as Array<{ name: string }>).map((t) => t.name);
