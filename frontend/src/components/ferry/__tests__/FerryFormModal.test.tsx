@@ -8,6 +8,11 @@ const mocks = vi.hoisted(() => ({
   trips: vi.fn(),
   t: (s: string) => s,
   seaRoute: "unchanged" as string,
+  suggestions: vi.fn(),
+}));
+vi.mock("../../../lib/api/entrySuggestions", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/entrySuggestions")>()),
+  entrySuggestionsApi: { ferry: (...a: unknown[]) => mocks.suggestions(...a) },
 }));
 vi.mock("../../../lib/api/ferry", () => ({
   ferryApi: {
@@ -71,6 +76,14 @@ beforeEach(() => {
   mocks.trips.mockResolvedValue([]);
   mocks.save.mockReset();
   mocks.seaRoute = "unchanged";
+  mocks.suggestions.mockReset();
+  mocks.suggestions.mockResolvedValue({
+    operators: [],
+    vessels: [],
+    fareClasses: [],
+    cabinTypes: [],
+    terminals: [],
+  });
   useToastStore.setState({ toasts: [] });
 });
 describe("Ferry editor", () => {
@@ -255,5 +268,30 @@ describe("Ferry editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(useToastStore.getState().toasts).toEqual([]);
+  });
+});
+
+describe("Ferry editor — suggestions from earlier crossings (forgejo#405)", () => {
+  it("offers the operators and vessels of the user's crossings and a click fills the field", async () => {
+    mocks.suggestions.mockResolvedValue({
+      operators: ["Color Line"],
+      vessels: ["Color Magic"],
+      fareClasses: [],
+      cabinTypes: [],
+      terminals: [],
+    });
+    render(<FerryFormModal journey={null} onClose={() => {}} onSaved={() => {}} />);
+    const chips = await screen.findAllByRole("button", { name: "common:suggestionChip" });
+    expect(chips.map((c) => c.textContent).sort()).toEqual(["Color Line", "Color Magic"]);
+    fireEvent.click(chips.find((c) => c.textContent === "Color Line")!);
+    expect((screen.getByLabelText("ferry:operator") as HTMLInputElement).value).toBe("Color Line");
+  });
+
+  it("says so when the suggestions could not be loaded, instead of showing no chips silently", async () => {
+    mocks.suggestions.mockRejectedValue(new Error("503"));
+    render(<FerryFormModal journey={null} onClose={() => {}} onSaved={() => {}} />);
+    expect(await screen.findByTestId("ferry-suggestions-failed")).toHaveTextContent(
+      "common:suggestionsFailed"
+    );
   });
 });

@@ -351,6 +351,7 @@
     "usage_other": "used {{count}} times"
   },
   "suggestionChip": "Use {{field}} {{value}}",
+  "suggestionsFailed": "Suggestions from your earlier entries could not be loaded.",
   "demoBetaNotice": {
     "title": "Beta features are switched on",
     "body": "This demo runs with the beta features switched on. What you see here may still change – your feedback is welcome.",

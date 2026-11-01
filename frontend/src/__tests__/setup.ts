@@ -14,6 +14,19 @@ vi.mock("../lib/webgl2", async (importActual) => ({
   probeWebGL2: () => true,
 }));
 
+// The forms' chips (forgejo#405) fetch the user's own earlier entries on open. A test that
+// renders such a form must neither reach the network nor settle a state update outside
+// act(): every call stays pending, so the form shows no chips and no failure. A test about
+// the chips themselves mocks this module with its own data.
+vi.mock("../lib/api/entrySuggestions", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/api/entrySuggestions")>();
+  const pending = (): Promise<never> => new Promise(() => {});
+  return {
+    ...actual,
+    entrySuggestionsApi: { ferry: pending, rental: pending, cruise: pending, place: pending },
+  };
+});
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
