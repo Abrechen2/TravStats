@@ -1,4 +1,6 @@
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
+import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { StationsInput } from "../../schemas/roadtrip";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
@@ -57,7 +59,8 @@ function nightColumns(station: Station): {
  */
 export async function assertPlacesOwned(
   userId: string,
-  stations: readonly Station[]
+  stations: readonly Station[],
+  db: Pick<typeof prisma, "place"> = prisma
 ): Promise<void> {
   const ids = [
     ...new Set(
@@ -65,7 +68,7 @@ export async function assertPlacesOwned(
     ),
   ];
   if (ids.length === 0) return;
-  const owned = await prisma.place.count({ where: { id: { in: ids }, userId } });
+  const owned = await db.place.count({ where: { id: { in: ids }, userId } });
   if (owned !== ids.length) throw new AppError("Place not found", 404);
 }
 
@@ -77,13 +80,14 @@ export async function assertPlacesOwned(
  */
 export async function assertStaysOwned(
   userId: string,
-  stations: readonly Station[]
+  stations: readonly Station[],
+  db: Pick<typeof prisma, "lodgingStay"> = prisma
 ): Promise<void> {
   const ids = [
     ...new Set(stations.flatMap((s) => (s.night.kind === "stay" ? [s.night.lodgingStayId] : []))),
   ];
   if (ids.length === 0) return;
-  const owned = await prisma.lodgingStay.count({ where: { id: { in: ids }, userId } });
+  const owned = await db.lodgingStay.count({ where: { id: { in: ids }, userId } });
   if (owned !== ids.length) throw new AppError("Stay not found", 404);
 }
 
@@ -110,165 +114,219 @@ export async function assertStaysOwned(
  * replace, so a station appended elsewhere between the writer's read and this
  * write is never deleted by a list that did not know it existed.
  */
+export interface ReplaceOptions {
+  expectedStationIds?: readonly string[];
+  /**
+   * Compare-and-set on the stops the write replaces: `version` renders a stored stop, `expected`
+   * holds what the writer last read per id. A stop edited since (by the phone, say) fails the
+   * write with `ROADTRIP_STATIONS_CHANGED` instead of being overwritten from a stale list.
+   */
+  expectedVersions?: {
+    version: (row: ExistingStop) => string;
+    expected: ReadonlyMap<string, string>;
+  };
+}
+
+type ExistingStop = Prisma.TripStopGetPayload<{ select: typeof EXISTING_SELECT }>;
+const EXISTING_SELECT = {
+  id: true,
+  tripId: true,
+  title: true,
+  lat: true,
+  lon: true,
+  startDate: true,
+  endDate: true,
+  notes: true,
+  lodgingStayId: true,
+  overnight: true,
+  viaPoint: true,
+  placeId: true,
+  countryVisitKind: true,
+} as const;
+
 export async function replaceStations(
   userId: string,
   routeId: string,
   stations: readonly Station[],
-  options: { expectedStationIds?: readonly string[] } = {}
+  options: ReplaceOptions = {}
+) {
+  const result = await prisma.$transaction(
+    (tx) => replaceStationsIn(tx, userId, routeId, stations, options),
+    { timeout: 20_000 }
+  );
+  return finishRoute(userId, routeId, result);
+}
+
+/** Routing runs after the commit; a ferry or rail leg is never road-routed (autoRouteNewLegs). */
+export async function finishRoute(
+  userId: string,
+  routeId: string,
+  result: Awaited<ReturnType<typeof replaceStationsIn>>
+) {
+  const routedCount = await autoRouteNewLegs(userId, routeId, result.createdLegs);
+  const { route, legs } = routedCount > 0 ? await readRouteAndLegs(routeId) : result;
+  return { route, legs, stations: result.stations };
+}
+
+/** The write itself, inside the caller's transaction (the travel plan's, for a handover). */
+export async function replaceStationsIn(
+  tx: DbTransaction,
+  userId: string,
+  routeId: string,
+  stations: readonly Station[],
+  options: ReplaceOptions = {}
 ) {
   const givenIds = stations.flatMap((s) => (s.id === undefined ? [] : [s.id]));
   if (new Set(givenIds).size !== givenIds.length) {
     throw new AppError("A station may appear once — a return visit is its own station", 400);
   }
-  await assertStaysOwned(userId, stations);
-  await assertPlacesOwned(userId, stations);
+  await assertStaysOwned(userId, stations, tx);
+  await assertPlacesOwned(userId, stations, tx);
 
   const mode = (
-    await prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { mode: true } })
+    await tx.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { mode: true } })
   ).mode;
-
-  const result = await prisma.$transaction(
-    async (tx) => {
-      await lockRoute(tx, routeId);
-      const existing = await tx.tripStop.findMany({
-        where: { routeId },
-        select: { id: true, tripId: true, lat: true, lon: true },
-      });
-      const known = new Set(existing.map((s) => s.id));
-      if (options.expectedStationIds !== undefined) {
-        // Compared against the stations a writer CAN list: one without a
-        // coordinate (only legacy rows — every writer refuses to create one)
-        // is in no editor's list, and counting it made every write 409 for
-        // good (review M2). It is dropped by this write, as it always was.
-        const placed = new Set(
-          existing.flatMap((s) => (s.lat !== null && s.lon !== null ? [s.id] : []))
-        );
-        const expected = new Set(options.expectedStationIds);
-        const same = expected.size === placed.size && [...placed].every((id) => expected.has(id));
-        if (!same) {
-          throw new AppError(
-            "The stations changed since they were read; read the roadtrip again",
-            409,
-            "ROADTRIP_STATIONS_CHANGED"
-          );
-        }
-      }
-      const unknown = givenIds.find((id) => !known.has(id));
-      if (unknown !== undefined) {
-        throw new AppError("A station id does not belong to this roadtrip", 400);
-      }
-      // A trip's timeline stop is a place the traveller was; turning it into
-      // a nameless bend in the line would take it off the trip's timeline
-      // without saying so. A route correction is always a point of its own.
-      const onTimeline = new Set(existing.flatMap((s) => (s.tripId !== null ? [s.id] : [])));
-      if (
-        stations.some((s) => s.night.kind === "via" && s.id !== undefined && onTimeline.has(s.id))
-      ) {
-        throw new AppError(
-          "A stop of the trip's timeline cannot become a route correction",
-          400,
-          "VIA_POINT_ON_TIMELINE"
-        );
-      }
-
-      // A timeline stop stays one while it is a station: its edits here are
-      // the facts the timeline editor propagates, and released below it is an
-      // ordinary stop of its trip again. The roadtrip's own stations sit on
-      // no trip and are never shared.
-      const timelineIds = [...onTimeline];
-      const before = await shareSnapshots(tx, "stop", timelineIds);
-
-      // Free every position first: `@@unique([routeId, routeOrderIdx])`
-      // would otherwise collide mid-reorder.
-      await tx.tripStop.updateMany({ where: { routeId }, data: { routeOrderIdx: null } });
-
-      const stayIds = stations.flatMap((station) =>
-        station.night.kind === "stay" ? [station.night.lodgingStayId] : []
+  await lockRoute(tx, routeId);
+  const existing = await tx.tripStop.findMany({
+    where: { routeId },
+    select: EXISTING_SELECT,
+  });
+  const known = new Set(existing.map((s) => s.id));
+  if (options.expectedStationIds !== undefined) {
+    // Compared against the stations a writer CAN list: one without a
+    // coordinate (only legacy rows — every writer refuses to create one)
+    // is in no editor's list, and counting it made every write 409 for
+    // good (review M2). It is dropped by this write, as it always was.
+    const placed = new Set(
+      existing.flatMap((s) => (s.lat !== null && s.lon !== null ? [s.id] : []))
+    );
+    const expected = new Set(options.expectedStationIds);
+    const same = expected.size === placed.size && [...placed].every((id) => expected.has(id));
+    if (!same) {
+      throw new AppError(
+        "The stations changed since they were read; read the roadtrip again",
+        409,
+        "ROADTRIP_STATIONS_CHANGED"
       );
-      const stayPurposes = new Map(
-        (stayIds.length === 0
-          ? []
-          : await tx.lodgingStay.findMany({
-              where: { userId, id: { in: stayIds } },
-              select: { id: true, lodging: { select: { countryVisitKind: true } } },
-            })
-        ).map((stay) => [stay.id, stay.lodging.countryVisitKind])
+    }
+  }
+  if (options.expectedVersions) {
+    const { version, expected } = options.expectedVersions;
+    const stale = existing.some((s) => expected.has(s.id) && expected.get(s.id) !== version(s));
+    if (stale)
+      throw new AppError(
+        "A station was edited since it was read; read the roadtrip again",
+        409,
+        "ROADTRIP_STATIONS_CHANGED"
       );
-      const ordered: StopCoords[] = [];
-      for (const [index, station] of stations.entries()) {
-        const data = {
-          title: station.title,
-          lat: station.lat,
-          lon: station.lon,
-          startDate: station.startDate ?? null,
-          endDate: station.endDate ?? null,
-          ...stationTimeColumns({
-            startDate: station.startDate ?? null,
-            endDate: station.endDate ?? null,
-            lat: station.lat,
-            lon: station.lon,
-          }),
-          notes: station.notes ?? null,
-          ...nightColumns(station),
-          // Keep the explicit purpose if deleting the linked stay later leaves a free night.
-          ...(station.night.kind === "stay"
-            ? { countryVisitKind: stayPurposes.get(station.night.lodgingStayId) }
-            : {}),
-          routeId,
-          routeOrderIdx: index,
-        };
-        const row =
-          station.id === undefined
-            ? await tx.tripStop.create({
-                data: { ...data, tripId: null, domain: "roadtrip" },
-                select: { id: true, lat: true, lon: true },
-              })
-            : await tx.tripStop.update({
-                where: { id: station.id },
-                data,
-                select: { id: true, lat: true, lon: true },
-              });
-        ordered.push(row);
-      }
+  }
+  const unknown = givenIds.find((id) => !known.has(id));
+  if (unknown !== undefined) {
+    throw new AppError("A station id does not belong to this roadtrip", 400);
+  }
+  // A trip's timeline stop is a place the traveller was; turning it into
+  // a nameless bend in the line would take it off the trip's timeline
+  // without saying so. A route correction is always a point of its own.
+  const onTimeline = new Set(existing.flatMap((s) => (s.tripId !== null ? [s.id] : [])));
+  if (stations.some((s) => s.night.kind === "via" && s.id !== undefined && onTimeline.has(s.id))) {
+    throw new AppError(
+      "A stop of the trip's timeline cannot become a route correction",
+      400,
+      "VIA_POINT_ON_TIMELINE"
+    );
+  }
 
-      // Dropped stations: a timeline stop goes back to its trip, a
-      // roadtrip-owned one is deleted with its legs.
-      await tx.tripStop.updateMany({
-        where: { routeId, routeOrderIdx: null, tripId: { not: null } },
-        data: {
-          routeId: null,
-          lodgingStayId: null,
-          overnight: false,
-          viaPoint: false,
-          placeId: null,
-        },
-      });
-      await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
-      await propagateWrites(tx, userId, "stop", timelineIds, before);
+  // A timeline stop stays one while it is a station: its edits here are
+  // the facts the timeline editor propagates, and released below it is an
+  // ordinary stop of its trip again. The roadtrip's own stations sit on
+  // no trip and are never shared.
+  const timelineIds = [...onTimeline];
+  const before = await shareSnapshots(tx, "stop", timelineIds);
 
-      const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
+  // Free every position first: `@@unique([routeId, routeOrderIdx])`
+  // would otherwise collide mid-reorder.
+  await tx.tripStop.updateMany({ where: { routeId }, data: { routeOrderIdx: null } });
 
-      return {
-        createdLegs,
-        route: await tx.tripRoute.findUniqueOrThrow({
-          where: { id: routeId },
-          include: ROUTE_SELECT,
-        }),
-        stations: await tx.tripStop.findMany({
-          where: { routeId },
-          orderBy: { routeOrderIdx: "asc" },
-          select: STATION_DTO_SELECT,
-        }),
-        legs: await tx.tripRouteLeg.findMany({
-          where: { routeId },
-          orderBy: { fromStop: { routeOrderIdx: "asc" } },
-        }),
-      };
-    },
-    { timeout: 20_000 }
+  const stayIds = stations.flatMap((station) =>
+    station.night.kind === "stay" ? [station.night.lodgingStayId] : []
   );
+  const stayPurposes = new Map(
+    (stayIds.length === 0
+      ? []
+      : await tx.lodgingStay.findMany({
+          where: { userId, id: { in: stayIds } },
+          select: { id: true, lodging: { select: { countryVisitKind: true } } },
+        })
+    ).map((stay) => [stay.id, stay.lodging.countryVisitKind])
+  );
+  const ordered: StopCoords[] = [];
+  for (const [index, station] of stations.entries()) {
+    const data = {
+      title: station.title,
+      lat: station.lat,
+      lon: station.lon,
+      startDate: station.startDate ?? null,
+      endDate: station.endDate ?? null,
+      ...stationTimeColumns({
+        startDate: station.startDate ?? null,
+        endDate: station.endDate ?? null,
+        lat: station.lat,
+        lon: station.lon,
+      }),
+      notes: station.notes ?? null,
+      ...nightColumns(station),
+      // Keep the explicit purpose if deleting the linked stay later leaves a free night.
+      ...(station.night.kind === "stay"
+        ? { countryVisitKind: stayPurposes.get(station.night.lodgingStayId) }
+        : {}),
+      routeId,
+      routeOrderIdx: index,
+    };
+    const row =
+      station.id === undefined
+        ? await tx.tripStop.create({
+            data: { ...data, tripId: null, domain: "roadtrip" },
+            select: { id: true, lat: true, lon: true },
+          })
+        : await tx.tripStop.update({
+            where: { id: station.id },
+            data,
+            select: { id: true, lat: true, lon: true },
+          });
+    ordered.push(row);
+  }
 
-  const routedCount = await autoRouteNewLegs(userId, routeId, result.createdLegs);
-  const { route, legs } = routedCount > 0 ? await readRouteAndLegs(routeId) : result;
-  return { route, legs, stations: result.stations };
+  // Dropped stations: a timeline stop goes back to its trip, a
+  // roadtrip-owned one is deleted with its legs.
+  await tx.tripStop.updateMany({
+    where: { routeId, routeOrderIdx: null, tripId: { not: null } },
+    data: {
+      routeId: null,
+      lodgingStayId: null,
+      overnight: false,
+      viaPoint: false,
+      placeId: null,
+    },
+  });
+  await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
+  await propagateWrites(tx, userId, "stop", timelineIds, before);
+
+  const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
+
+  return {
+    createdLegs,
+    route: await tx.tripRoute.findUniqueOrThrow({
+      where: { id: routeId },
+      include: ROUTE_SELECT,
+    }),
+    stations: await tx.tripStop.findMany({
+      where: { routeId },
+      orderBy: { routeOrderIdx: "asc" },
+      select: STATION_DTO_SELECT,
+    }),
+    legs: await tx.tripRouteLeg.findMany({
+      where: { routeId },
+      orderBy: { fromStop: { routeOrderIdx: "asc" } },
+    }),
+  };
 }

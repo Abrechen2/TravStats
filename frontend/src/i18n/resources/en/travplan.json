@@ -29,7 +29,8 @@
     "packing": "Preparation",
     "budget": "Budget & tasks",
     "handover": "Ready to travel",
-    "actual": "Plan vs. actual"
+    "actual": "Plan vs. actual",
+    "route": "Route"
   },
   "fields": {
     "name": "Trip name",
@@ -142,7 +143,14 @@
     "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
     "PLAN_STAGE_CHANGED": "The stage changed in the meantime. Please calculate the route again.",
     "PLAN_VARIANT_LIMIT": "More than three variants are not possible.",
-    "RATE_LIMITED": "Too many comparisons in a short time. Please try again in a minute."
+    "RATE_LIMITED": "Too many comparisons in a short time. Please try again in a minute.",
+    "PLAN_NOT_A_ROUTE": "Only a route plan has stations that can be taken into the logbook.",
+    "PLAN_STATION_FUTURE": "This station has not been reached yet. It can be taken over once the day has come.",
+    "PLAN_STATION_HANDED_OVER": "This station is already in the logbook.",
+    "PLAN_STATION_UNDATED": "No day is known for this station yet. Enter the duration or departure of the stage before it.",
+    "PLACE_SOURCE_FAILED": "This source did not answer.",
+    "PLAN_WEATHER_DISABLED": "Open data services are switched off on this server. Climate averages need the admin to allow them.",
+    "PLAN_WEATHER_NO_DATA": "There are no measurements for this place and season."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -233,6 +241,8 @@
   "noAutoCount": "Releasing a plan confirms no visits. Past plan dates do not automatically count as experiences.",
   "confirmVisit": "Confirm as actually experienced",
   "unconfirmVisit": "Withdraw confirmation",
+  "listCountsRoute": "{{stations}} stations · {{stages}} stages",
+  "listCountsStay": "{{ideas}} ideas · {{bookings}} bookings",
   "readyStatus": "Ready to travel",
   "planningStatus": "Planning",
   "noPush": "Hints stay in the app. Intentionally open points stay quiet.",
@@ -312,5 +322,274 @@
     "config": "Settings"
   },
   "configMoved": "TravPlan's configuration now lives in one place: in Administration under Instance.",
-  "configOpenAdmin": "Open TravPlan in Administration"
+  "configOpenAdmin": "Open TravPlan in Administration",
+  "more": "More",
+  "savedToast": "Saved.",
+  "planThis": {
+    "body": "This trip has no plan yet. With TravPlan you plan route, bookings and packing before you leave.",
+    "action": "Plan this trip"
+  },
+  "create": {
+    "title": {
+      "1": "Plan a new trip",
+      "2": "Bookings and placeholders"
+    },
+    "shape": "Kind of plan",
+    "shapeStay": "One destination",
+    "shapeRoute": "A route",
+    "destination": "Where to?",
+    "destinationSearch": "Search a place, port or region",
+    "start": "Start",
+    "startSearch": "Search the starting place",
+    "goal": "Destination",
+    "back": "Return to the start",
+    "name": "Trip name",
+    "taken": "Taken from the place - you can change it.",
+    "weather": "The weather is fetched for {{place}}.",
+    "next": "Next",
+    "back1": "Back",
+    "bookingsIntro": "What is settled, what is still missing? For anything open add a placeholder (say, the ferry, estimated at 180 €). Import real bookings afterwards in the Bookings section - a matching placeholder is then replaced.",
+    "addPlaceholder": "Add a placeholder",
+    "estimate": "Estimate",
+    "finish": "Create plan",
+    "openPlan": "Open plan",
+    "partial": "The plan was created, but not everything could be added: {{reason}}"
+  },
+  "deletePlan": {
+    "open": "Delete plan",
+    "title": "Delete the plan “{{name}}”?",
+    "removes": "This will be deleted",
+    "nothing": "The plan is empty.",
+    "what": {
+      "stations_one": "{{count}} station",
+      "stations_other": "{{count}} stations",
+      "stages_one": "{{count}} stage",
+      "stages_other": "{{count}} stages",
+      "variants_one": "{{count}} variant",
+      "variants_other": "{{count}} variants",
+      "items_one": "{{count}} appointment",
+      "items_other": "{{count}} appointments",
+      "ideas_one": "{{count}} idea",
+      "ideas_other": "{{count}} ideas",
+      "bookings_one": "{{count}} booking or placeholder in the plan",
+      "bookings_other": "{{count}} bookings and placeholders in the plan",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks",
+      "packing_one": "{{count}} packing item",
+      "packing_other": "{{count}} packing items",
+      "receipts_one": "{{count}} entry in the change history",
+      "receipts_other": "{{count}} entries in the change history",
+      "proposals_one": "{{count}} AI proposal",
+      "proposals_other": "{{count}} AI proposals"
+    },
+    "stays": "This stays",
+    "staysBody": "The trip itself and everything already in the logbook: flights, stays, ferries, stations and photos. A plan is not travel evidence, so deleting one removes none of it.",
+    "staysStations": "{{count}} station(s) were already taken into the logbook and stay there.",
+    "shell": "The trip is then only a name and dates. You can delete it separately if you wish.",
+    "undoNote": "Deleting cannot be undone.",
+    "confirm": "Delete plan for good",
+    "previewFailed": "What would be deleted could not be loaded, so nothing is deleted now.",
+    "failed": "The plan could not be deleted. Nothing was changed."
+  },
+  "overview": {
+    "countdown": {
+      "in": "{{count}} days to go",
+      "tomorrow": "You leave tomorrow",
+      "today": "You leave today",
+      "running": "Day {{count}} of the trip",
+      "over": "The trip is over",
+      "unknown": "No trip date yet"
+    },
+    "items": "Appointments",
+    "ideas": "Ideas",
+    "openTasks": "Open tasks",
+    "next": "Next up",
+    "nothingNext": "Nothing urgent right now.",
+    "ready": "Ready to go?",
+    "done": "Done",
+    "open": "Open",
+    "readiness": {
+      "planned": "Route or programme is set",
+      "nights": "All nights are sorted",
+      "transport": "All journeys are sorted",
+      "tasks": "Tasks done",
+      "packing": "Everything packed"
+    },
+    "weather": "Weather",
+    "weatherMore": "Weather and packing list",
+    "handoverBody": "Once the trip is over (or a station reached) you take it into the logbook. Until then none of it counts as travelled.",
+    "handoverOpen": "To the trip wrap-up"
+  },
+  "route": {
+    "legend": "Legend",
+    "tone": {
+      "booked": "Booked",
+      "placeholder": "Placeholder",
+      "own": "Own drive",
+      "spontaneous": "Spontaneous",
+      "undecided": "Open",
+      "idea": "Ideas"
+    },
+    "mode": {
+      "drive": "Drive",
+      "ferry": "Ferry",
+      "rail": "Rail",
+      "flight": "Flight",
+      "other": "Other"
+    },
+    "night": {
+      "booked": "Booked accommodation",
+      "idea": "Ideas for the night",
+      "pitch": "Free pitch",
+      "spontaneous": "Decide on the spot",
+      "onboard": "On board"
+    },
+    "search": {
+      "searching": "Searching …",
+      "none": "No matches.",
+      "failed": "The search failed: {{reason}}",
+      "unavailable": "{{source}} is not answering: {{reason}}",
+      "visits_one": "visited {{count}}× already",
+      "visits_other": "visited {{count}}× already",
+      "source": {
+        "own": "My places",
+        "port": "Ports",
+        "geocoder": "Place search"
+      }
+    },
+    "stats": {
+      "stations": "Stations",
+      "nights": "Nights",
+      "km": "Driving distance",
+      "time": "Driving time",
+      "unmeasured": "{{count}} drive(s) still lack kilometres and duration."
+    },
+    "empty": {
+      "title": "Where does the route start?",
+      "body": "Search the starting place. Add further stations one after another."
+    },
+    "add": {
+      "start": "Search the starting place",
+      "next": "Next station",
+      "search": "Search a place, port or region"
+    },
+    "station": {
+      "edit": "Edit station",
+      "place": "Place",
+      "changePlace": "Search another place",
+      "title": "Name",
+      "nights": "Nights",
+      "pinned": "Fixed arrival day",
+      "pinnedHint": "Optional. A fixed day does not move when something before it takes longer.",
+      "night": "Overnight",
+      "booking": "Booking",
+      "noLodging": "The plan has no accommodation booking yet. Add it in the Bookings section.",
+      "candidate": "Idea for the night (campsite, hotel …)",
+      "dayUnknown": "Day not known yet",
+      "nightsCount_one": "{{count}} night",
+      "nightsCount_other": "{{count}} nights",
+      "dayTrips": "Day trips",
+      "noWeather": "Weather: no data yet",
+      "weather": {
+        "forecast": "Forecast",
+        "climate": "Climate average"
+      },
+      "up": "Move up",
+      "down": "Move down"
+    },
+    "stage": {
+      "add": "Add a stage from {{from}} to {{to}}",
+      "edit": "Edit stage",
+      "mode": "Mode of travel",
+      "departDay": "Departure day",
+      "departHint": "Empty = follows from the station before.",
+      "departTime": "Departure time",
+      "distance": "Distance in km",
+      "duration": "Duration in minutes",
+      "overnight": "Night ferry (sleep on board)",
+      "overnightShort": "overnight",
+      "notMeasured": "Not calculated yet",
+      "recalculate": "Calculate again",
+      "routing": "Calculating …",
+      "placeholder": "Add a placeholder",
+      "source": {
+        "routed": "routed",
+        "straight": "straight line",
+        "user": "yours",
+        "booking": "from the booking"
+      },
+      "reason": "Route not calculated: {{reason}}. The previous values stay.",
+      "reasons": {
+        "no_provider": "no routing service is set up on this server",
+        "unroutable_mode": "this mode of travel is not calculated by road routing",
+        "provider_error": "the routing service did not answer",
+        "no_route": "no route was found between the places",
+        "point_not_near_road": "a place is too far from any road",
+        "rate_limited": "the routing service's daily quota is used up",
+        "auth": "the routing service rejected the access key",
+        "untrustworthy": "the routing service's answer was not plausible"
+      }
+    },
+    "map": {
+      "label": "Route map with {{count}} stations",
+      "unavailable": "The map needs WebGL and is not available in this browser.",
+      "note": "The line joins the stations in order; the calculated road is in the stages."
+    },
+    "variants": {
+      "title": "Variants",
+      "intro": "Compare the active route with alternatives. Activating swaps the two - nothing is lost.",
+      "active": "Active",
+      "activate": "Activate",
+      "km": "Driving distance",
+      "driveDays": "Driving days",
+      "destinationNights": "Nights at the destination",
+      "stageCosts": "Ferries and stages",
+      "fuel": "Fuel (estimated)",
+      "unknown": "unknown",
+      "unknownCosts_one": "{{count}} price missing",
+      "unknownCosts_other": "{{count}} prices missing",
+      "obsolete_one": "{{count}} stage no longer fits any station and is not counted.",
+      "obsolete_other": "{{count}} stages no longer fit any station and are not counted.",
+      "name": "Variant name",
+      "copy": "Copy the active route",
+      "create": "Add variant",
+      "limit": "More than three variants are not possible."
+    },
+    "handover": {
+      "title": "Take stations into the logbook",
+      "intro": "Once a station is reached the plan writes it to the logbook: the stop on the roadtrip, the booked night as a stay and the ferry you arrived on. Open placeholders never become records.",
+      "noStations": "The plan has no stations yet.",
+      "confirm": "Take into logbook",
+      "withdraw": "Withdraw",
+      "inLogbook": "In logbook",
+      "ready": "Ready",
+      "notReached": "Not reached yet",
+      "records_one": "{{count}} entry written by the plan. Withdrawing deletes only what you have not changed since.",
+      "records_other": "{{count}} entries written by the plan. Withdrawing deletes only what you have not changed since.",
+      "placeholders_one": "{{count}} placeholder stays in the plan and is not taken over.",
+      "placeholders_other": "{{count}} placeholders stay in the plan and are not taken over."
+    }
+  },
+  "match": {
+    "title": "Matches a placeholder",
+    "intro": "\"{{booking}}\" looks like the real booking for \"{{placeholder}}\".",
+    "inactiveVariant": "The placeholder belongs to the alternative route.",
+    "table": "Differences",
+    "identical": "No differing details.",
+    "replace": "Replace placeholder",
+    "addAdditional": "Add as additional booking",
+    "another": "Choose another placeholder ({{n}}/{{total}})",
+    "field": {
+      "provider": "Provider",
+      "reference": "Reference",
+      "day": "Day",
+      "time": "Time",
+      "amount": "Amount"
+    },
+    "change": {
+      "changed": "Changed",
+      "new": "New"
+    }
+  },
+  "assignToDay": "Put on {{day}}"
 }

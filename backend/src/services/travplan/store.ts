@@ -1,6 +1,8 @@
 import { assertAnchorsCurrent } from "./anchors";
 import { randomUUID, createHash } from "node:crypto";
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
+import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import type { Prisma, TravelPlan } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { emptyState, createPlanSchema, proposalContentSchema } from "./schema";
@@ -15,6 +17,7 @@ import { scheduleRoute } from "./routeSchedule";
 import { compareVariants } from "./variants";
 import { todayIn } from "../../shared/time/clock";
 import { isValidZone } from "../../shared/time/zonedParts";
+import { applyHandover, applyWithdraw, handoverStation, withdrawStation } from "./routeHandover";
 import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
 import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
@@ -102,7 +105,10 @@ export async function listPlans(userId: string): Promise<PlanSummary[]> {
       p.state->>'startDay' AS "startDay",p.state->>'endDay' AS "endDay",
       p.state->>'status' AS status,
       jsonb_array_length(p.state->'ideas')::int AS "ideasCount",
-      jsonb_array_length(p.state->'bookings')::int AS "bookingsCount"
+      jsonb_array_length(p.state->'bookings')::int AS "bookingsCount",
+      COALESCE(p.state->>'shape','stay') AS shape,
+      COALESCE(jsonb_array_length(p.state->'stations'),0)::int AS "stationsCount",
+      COALESCE(jsonb_array_length(p.state->'stages'),0)::int AS "stagesCount"
     FROM travel_plans p JOIN trips t ON t.id=p.trip_id
     WHERE t.user_id=${userId}
     ORDER BY p.updated_at DESC LIMIT 500
@@ -274,6 +280,13 @@ export async function writePlan(
       body.operation.id,
       await prepareExecution(userId, tripId, initial, body.operation.id)
     );
+  // A handover writes its logbook records inside the plan's transaction, after the revision is
+  // reserved: a lost race or a failure rolls the records back with the plan change.
+  let afterCommit: (() => Promise<void>) | undefined;
+  const txOptions =
+    body.operation.type === "station_handover" || body.operation.type === "station_withdraw"
+      ? { timeout: SHARE_TX_TIMEOUT_MS }
+      : undefined;
   if (body.operation.type === "undo") {
     const target = await prisma.travelPlanMutation.findFirst({
       where: { id: body.operation.mutationId, planId: owned.id, revision: owned.revision },
@@ -289,7 +302,7 @@ export async function writePlan(
     }
   }
   try {
-    return await prisma.$transaction(async (tx) => {
+    const committed = await prisma.$transaction(async (tx) => {
       const row = await tx.travelPlan.findFirst({
         where: { id: owned.id, trip: { userId } },
         include: { trip: { select: { name: true } } },
@@ -319,6 +332,13 @@ export async function writePlan(
         const saved = change.before as unknown as { state: PlanState; name: string };
         next = parseState(saved.state);
         name = saved.name;
+        // Records in the logbook are not part of the plan's undo: withdraw the station instead.
+        if (canonical(next.stationLinks) !== canonical(before.stationLinks))
+          throw new AppError(
+            "A handover is withdrawn from the station, not undone",
+            409,
+            "PLAN_UNDO_STALE"
+          );
       } else if (body.operation.type === "proposal") {
         await assertAnchorsCurrent(tx, userId, tripId, before);
         const proposal = await tx.travelPlanProposal.findFirst({
@@ -356,6 +376,27 @@ export async function writePlan(
           where: { id: proposal.id },
           data: { status: "accepted" },
         });
+      } else if (body.operation.type === "station_handover") {
+        const handover = await handoverStation(
+          tx,
+          userId,
+          tripId,
+          before,
+          body.operation.stationId,
+          row.trip.name
+        );
+        afterCommit = handover.afterCommit;
+        next = applyHandover(before, handover);
+      } else if (body.operation.type === "station_withdraw") {
+        const withdrawal = await withdrawStation(
+          tx,
+          userId,
+          tripId,
+          before,
+          body.operation.stationId
+        );
+        afterCommit = withdrawal.afterCommit;
+        next = applyWithdraw(before, body.operation.stationId, withdrawal);
       } else if (body.operation.type === "refresh_existing") {
         next = await adoptExisting(tx, userId, tripId, before);
       } else if (body.operation.type === "link_actual") {
@@ -413,7 +454,15 @@ export async function writePlan(
         data: { result: asJson(result) },
       });
       return result;
-    });
+    }, txOptions);
+    // Routing and other post-commit work never fails an already committed handover.
+    await afterCommit?.().catch((error) =>
+      logger.warn(
+        { operation: "travplan.afterCommit", error: String(error) },
+        "post-commit step failed"
+      )
+    );
+    return committed;
   } catch (error) {
     const result = await replay();
     if (result) return result;

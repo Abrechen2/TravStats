@@ -2,7 +2,13 @@ import { useId, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { parserApi } from "../../lib/api/client";
 import { documentsApi } from "../../lib/api/documents";
-import type { PlanBooking, PlanView } from "../../lib/api/travplan";
+import {
+  travplanApi,
+  type PlaceholderMatch,
+  type PlanBooking,
+  type PlanView,
+} from "../../lib/api/travplan";
+import { PlaceholderMatchDialog } from "./PlaceholderMatchDialog";
 import { bookingDrafts } from "./bookingDrafts";
 import { Button, Card, Field, Input, TextArea } from "../../components/ui";
 import { PlanActions, PlanCardHead, PlanGrow, PlanRow } from "./planLayout";
@@ -13,10 +19,15 @@ const MAX_PASTE_CHARS = 200000;
 export default function ImportPanel({
   plan,
   onDraft,
+  onReplace,
+  busy: planBusy = false,
   onError,
 }: {
   plan: PlanView;
   onDraft: (booking: PlanBooking) => void;
+  /** Takes the imported booking's facts into an open placeholder (id kept, spec §5.2). */
+  onReplace: (placeholderId: string, booking: PlanBooking) => Promise<boolean>;
+  busy?: boolean;
   onError: (error: unknown) => void;
 }) {
   const { t } = useTranslation("travplan");
@@ -26,7 +37,36 @@ export default function ImportPanel({
     [retain, setRetain] = useState(false),
     [busy, setBusy] = useState(false),
     [drafts, setDrafts] = useState<PlanBooking[] | null>(null),
+    [review, setReview] = useState<{
+      index: number;
+      matches: PlaceholderMatch[];
+    } | null>(null),
     uid = useId();
+  const dropDraft = (index: number) => setDrafts((d) => d?.filter((_, j) => index !== j) || null);
+  /** Placeholders are looked up first; a lookup that fails is reported, never skipped silently. */
+  async function pick(index: number, booking: PlanBooking) {
+    if (!plan.state.bookings.some((b) => b.placeholder)) {
+      onDraft(booking);
+      dropDraft(index);
+      return;
+    }
+    setBusy(true);
+    try {
+      const matches = await travplanApi.placeholderMatches(
+        plan.tripId,
+        booking as unknown as Record<string, unknown>
+      );
+      if (matches.length) setReview({ index, matches });
+      else {
+        onDraft(booking);
+        dropDraft(index);
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function parse() {
     setBusy(true);
     try {
@@ -134,18 +174,35 @@ export default function ImportPanel({
                     {b.day || t("review.unknown")} · {b.reference || t("review.unknown")}
                   </p>
                 </PlanGrow>
-                <Button
-                  onClick={() => {
-                    onDraft(b);
-                    setDrafts((d) => d?.filter((_, j) => i !== j) || null);
-                  }}
-                >
+                <Button disabled={busy} onClick={() => void pick(i, b)}>
                   {t("readCandidates")}
                 </Button>
               </PlanRow>
             ))
           )}
         </div>
+      )}
+      {review && drafts?.[review.index] && (
+        <PlaceholderMatchDialog
+          booking={drafts[review.index]}
+          matches={review.matches}
+          placeholders={plan.state.bookings}
+          busy={planBusy}
+          onClose={() => setReview(null)}
+          onAdd={() => {
+            onDraft(drafts[review.index]);
+            dropDraft(review.index);
+            setReview(null);
+          }}
+          onReplace={(placeholderId) => {
+            const booking = drafts[review.index];
+            void onReplace(placeholderId, booking).then((ok) => {
+              if (!ok) return;
+              dropDraft(review.index);
+              setReview(null);
+            });
+          }}
+        />
       )}
     </Card>
   );

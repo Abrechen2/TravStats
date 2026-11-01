@@ -2,6 +2,8 @@ import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
 import { apiErrorMachineCode } from "../apiError";
 import type {
+  PlanPlace,
+  PlaceholderMatch,
   PlanView,
   PlanSummary,
   PlanState,
@@ -56,7 +58,57 @@ export interface PlanActual {
   }[];
   unplanned: { kind: "lodging" | "place"; day: string; lat: number; lon: number; label: string }[];
 }
+/** `GET /travplan/places`: every hit carries what a form needs; a failing source is named. */
+export interface PlaceHit {
+  source: "own" | "port" | "geocoder";
+  visits: number | null;
+  place: PlanPlace;
+}
+export interface PlaceSearch {
+  places: PlaceHit[];
+  unavailable: { source: PlaceHit["source"]; code: string }[];
+}
+/** `GET /trips/:id/plan/delete-preview`: what the confirmation block lists. */
+export interface PlanDeletePreview {
+  removes: Record<
+    | "items"
+    | "ideas"
+    | "bookings"
+    | "placeholders"
+    | "stations"
+    | "stages"
+    | "variants"
+    | "tasks"
+    | "packing"
+    | "receipts"
+    | "proposals",
+    number
+  >;
+  keeps: { stations: number; confirmedItems: number };
+  tripIsEmptyShell: boolean;
+}
 export const travplanApi = {
+  places: async (q: string, language: "de" | "en", kind: "any" | "port" = "any") =>
+    (await api.get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
+  deletePreview: async (tripId: string) =>
+    (await api.get<PlanDeletePreview>("/trips/" + tripId + "/plan/delete-preview")).data,
+  deletePlan: async (tripId: string) =>
+    (await api.delete<{ deleted: true }>("/trips/" + tripId + "/plan")).data,
+  /** Routes one stage on the server; a failed router keeps the stored figures. */
+  routeStage: async (plan: PlanView, stageId: string) =>
+    (
+      await api.post<PlanView>("/trips/" + plan.tripId + "/plan/stages/" + stageId + "/route", {
+        baseRevision: plan.revision,
+        clientRef: newPlanId(),
+      })
+    ).data,
+  placeholderMatches: async (tripId: string, booking: Record<string, unknown>) =>
+    (
+      await api.post<{ matches: PlaceholderMatch[] }>(
+        "/trips/" + tripId + "/plan/placeholder-matches",
+        { booking }
+      )
+    ).data.matches,
   locations: async (q: string, language: "de" | "en") =>
     (
       await api.get<{

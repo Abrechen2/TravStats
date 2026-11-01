@@ -208,6 +208,12 @@ export interface PlanStationWeather {
     precipitationMm: number | null;
   }[];
 }
+/** A station handed over to the logbook; `created` is what the plan itself wrote (spec §5.9). */
+export interface PlanStationLink {
+  stationId: string;
+  tripStopId: string;
+  created: { kind: "stop" | "stay" | "lodging" | "ferry"; id: string; version: string }[];
+}
 export interface PlanState {
   version: 2;
   shape: "stay" | "route";
@@ -243,7 +249,7 @@ export interface PlanState {
   activeVariantName: string;
   vehicle: PlanVehicle | null;
   roadtripId: string | null;
-  stationLinks: { stationId: string; tripStopId: string }[];
+  stationLinks: PlanStationLink[];
   stationWeather: PlanStationWeather[];
 }
 export interface PlanFinding {
@@ -379,6 +385,8 @@ export type PlanOperation =
       duration: number | null;
     }
   | { type: "handover" }
+  | { type: "station_handover"; stationId: string }
+  | { type: "station_withdraw"; stationId: string }
   | { type: "execution"; id: string; execution: PlanItem["execution"] }
   | { type: "undo"; mutationId: string }
   | { type: "proposal"; proposalId: string };
@@ -412,4 +420,8 @@ export interface PlanSummary {
   status: PlanState["status"];
   ideasCount: number;
   bookingsCount: number;
+  shape: PlanState["shape"];
+  /** Route plans only; 0 on a stay plan. */
+  stationsCount: number;
+  stagesCount: number;
 }

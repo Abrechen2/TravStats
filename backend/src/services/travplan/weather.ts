@@ -14,7 +14,7 @@ import {
 } from "./store";
 import { forecastSchema } from "./schema";
 import { parseState } from "./upgrade";
-import type { PlanView } from "./types";
+import type { PlanState, PlanView } from "./types";
 const nullableNumbers = z.array(z.number().finite().nullable()).max(16);
 const responseSchema = z.object({
   timezone: z.string(),
@@ -114,17 +114,26 @@ export async function refreshForecast(
   if (Buffer.byteLength(JSON.stringify({ ...state, forecast })) > 1024 * 1024)
     throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
   await assertEnabled();
+  return commitWeather(row, state, { ...state, forecast }, tripId, request, payloadHash);
+}
+
+/** Stores a weather-only change of the plan under the standard revision check and receipt. */
+export async function commitWeather(
+  row: Awaited<ReturnType<typeof ownedPlan>>,
+  state: PlanState,
+  next: PlanState,
+  tripId: string,
+  request: { clientRef: string; baseRevision: number },
+  payloadHash: string
+): Promise<PlanView> {
   return prisma.$transaction(async (tx) => {
     const changed = await tx.travelPlan.updateMany({
       where: { id: row.id, revision: request.baseRevision },
-      data: { revision: { increment: 1 }, state: asJson({ ...state, forecast }) },
+      data: { revision: { increment: 1 }, state: asJson(next) },
     });
     if (changed.count !== 1)
       throw new AppError("Plan changed while fetching weather", 409, "PLAN_REVISION_CONFLICT");
-    const result = view(
-      { ...row, revision: row.revision + 1, state: asJson({ ...state, forecast }) },
-      row.trip.name
-    );
+    const result = view({ ...row, revision: row.revision + 1, state: asJson(next) }, row.trip.name);
     const mutation = await tx.travelPlanMutation.create({
       data: {
         planId: row.id,

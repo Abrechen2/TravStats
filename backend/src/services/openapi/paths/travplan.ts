@@ -145,6 +145,9 @@ register(
         status: z.enum(["planning", "ready", "archived"]),
         ideasCount: z.number(),
         bookingsCount: z.number(),
+        shape: z.enum(["stay", "route"]),
+        stationsCount: z.number(),
+        stagesCount: z.number(),
       })
     ),
   })
@@ -223,6 +226,15 @@ register(
   "post",
   "/trips/{tripId}/plan/forecast",
   "Fetch a bounded forecast on request. Old data survives provider failure.",
+  result,
+  z.object({ clientRef: uuid, baseRevision: z.number().int() })
+);
+register(
+  "post",
+  "/trips/{tripId}/plan/stations/{stationId}/climate",
+  "Average the last ten years of measured weather for one route station's own days. Needs the " +
+    "open-data switch; a provider failure (error `extra.reason`: timeout, rateLimited, " +
+    "unavailable) or a missing measurement leaves the stored values unchanged.",
   result,
   z.object({ clientRef: uuid, baseRevision: z.number().int() })
 );
@@ -315,3 +327,74 @@ registry.registerPath({
     429: { description: "Daily limit reached", content: errorContent },
   },
 });
+
+const placeHit = z.object({
+  source: z.enum(["own", "port", "geocoder"]),
+  visits: z.number().int().nullable(),
+  place: z.object({
+    name: z.string(),
+    lat: z.number(),
+    lon: z.number(),
+    country: z.string().nullable(),
+    zone: z.string().nullable(),
+    ref: z.object({ kind: z.enum(["port", "geo", "place"]), id: z.string() }).nullable(),
+  }),
+});
+registry.registerPath({
+  method: "get",
+  path: "/travplan/places",
+  tags: ["TravPlan"],
+  description:
+    "One place search for every TravPlan picker: the account's own places, ports and the geocoder, merged. " +
+    "Each hit carries name, coordinates, country and time zone. A source that cannot answer is named in `unavailable` with its own reason code; the other sources still answer.",
+  security: [{ BearerAuth: [] }],
+  request: {
+    query: z.object({
+      q: z.string().min(2).max(120),
+      language: z.enum(["de", "en"]).optional(),
+      kind: z.enum(["any", "port"]).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Merged hits",
+      content: json(
+        z.object({
+          places: z.array(placeHit),
+          unavailable: z.array(
+            z.object({ source: z.enum(["own", "port", "geocoder"]), code: z.string() })
+          ),
+        })
+      ),
+    },
+  },
+});
+const deletePreview = z.object({
+  removes: z.object({
+    items: z.number().int(),
+    ideas: z.number().int(),
+    bookings: z.number().int(),
+    placeholders: z.number().int(),
+    stations: z.number().int(),
+    stages: z.number().int(),
+    variants: z.number().int(),
+    tasks: z.number().int(),
+    packing: z.number().int(),
+    receipts: z.number().int(),
+    proposals: z.number().int(),
+  }),
+  keeps: z.object({ stations: z.number().int(), confirmedItems: z.number().int() }),
+  tripIsEmptyShell: z.boolean(),
+});
+register(
+  "get",
+  "/trips/{tripId}/plan/delete-preview",
+  "What deleting the plan removes and what stays in the logbook. Read-only.",
+  deletePreview
+);
+register(
+  "delete",
+  "/trips/{tripId}/plan",
+  "Delete the plan (owner only). Removes the plan document, its undo receipts and AI proposals. The trip and every logbook record stay - a plan is not travel evidence.",
+  z.object({ deleted: z.literal(true) })
+);

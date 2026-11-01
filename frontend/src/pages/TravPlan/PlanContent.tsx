@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanCollection, type PlanState } from "../../lib/api/travplan";
 import { documentsApi, type TravelDocument } from "../../lib/api/documents";
@@ -17,6 +18,11 @@ import { PackingSection } from "./sections/PackingSection";
 import { BudgetSection } from "./sections/BudgetSection";
 import { PlanActualPanel } from "./sections/PlanActualPanel";
 import PlanAI from "./PlanAI";
+import { RouteSection } from "./route/RouteSection";
+import { shortDay } from "./route/RouteTimeline";
+import { PlanDeleteDialog } from "./PlanDeleteDialog";
+import { PlanMenu } from "./PlanMenu";
+import { UndoToast } from "./UndoToast";
 import { PlanHandover } from "./PlanHandover";
 
 export const PLAN_SECTIONS = [
@@ -31,6 +37,9 @@ export const PLAN_SECTIONS = [
   "actual",
 ];
 
+/** The strip shows five places; the rest are reached from the overview, the header or a finding. */
+const STRIP_SECTIONS = ["overview", "workspace", "import", "packing", "budget"];
+
 export default function PlanContent({ tripId, section }: { tripId: string; section: string }) {
   const { t } = useTranslation("travplan"),
     { plan, setPlan, loading, busy, error, setError, refresh, mutate, message } = usePlan(tripId),
@@ -39,7 +48,9 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     [query, setQuery] = useState(""),
     [weatherBusy, setWeatherBusy] = useState(false),
     [suggestions, setSuggestions] = useState<string[]>([]),
-    [documents, setDocuments] = useState<TravelDocument[]>([]);
+    [documents, setDocuments] = useState<TravelDocument[]>([]),
+    [deleting, setDeleting] = useState(false),
+    navigate = useNavigate();
   const onError = useCallback((e: unknown) => setError(message(e)), [message, setError]);
   useEffect(() => {
     setEditor(null);
@@ -89,7 +100,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     prefix = "/plan/" + tripId;
   function edit(key: PlanCollection, row?: object, extras?: Partial<EditorState>) {
     setEditor({
-      title: t("edit"),
+      title: t(row ? "edit" : "add"),
       collection: key,
       fields: editors[key],
       value: row ? entryRecord(row) : newEntry(key, state.timezone, state.currency, day),
@@ -143,24 +154,35 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
       <SectionLabel>{t("tagline")}</SectionLabel>
       <PageHeader
         title={plan.name}
-        meta={`${state.destination} · ${state.startDay} – ${state.endDay}`}
+        meta={[
+          state.destination,
+          [shortDay(state.startDay), shortDay(state.endDay)].filter(Boolean).join(" – "),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
-            <Button
-              onClick={() =>
-                setEditor({
-                  title: t("editTrip"),
-                  fields: settingFields,
-                  value: { name: plan.name, ...state },
-                })
-              }
-            >
-              {t("editTrip")}
-            </Button>
-            <Button disabled={busy} onClick={() => void refresh()}>
-              {t("refresh")}
-            </Button>
-            <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>
+            <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>
+            <PlanMenu>
+              <Button
+                onClick={() =>
+                  setEditor({
+                    title: t("editTrip"),
+                    fields: settingFields,
+                    value: { name: plan.name, ...state },
+                  })
+                }
+              >
+                {t("editTrip")}
+              </Button>
+              <Button disabled={busy} onClick={() => void refresh()}>
+                {t("refresh")}
+              </Button>
+              <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>
+              <Button variant="danger" onClick={() => setDeleting(true)}>
+                {t("deletePlan.open")}
+              </Button>
+            </PlanMenu>
           </>
         }
       />
@@ -169,31 +191,37 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
         className="flex overflow-x-auto"
         style={{ gap: "var(--ts-space-sm)", paddingBottom: "var(--ts-space-md)" }}
       >
-        {PLAN_SECTIONS.map((s) => (
-          <PlanLink key={s} variant="tab" to={prefix + "/" + s} current={s === section}>
-            {t("sections." + s)}
-          </PlanLink>
-        ))}
+        {(STRIP_SECTIONS.includes(section) ? STRIP_SECTIONS : [...STRIP_SECTIONS, section]).map(
+          (s) => (
+            <PlanLink key={s} variant="tab" to={prefix + "/" + s} current={s === section}>
+              {t(s === "workspace" && state.shape === "route" ? "sections.route" : "sections." + s)}
+            </PlanLink>
+          )
+        )}
       </nav>
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
-      {plan.lastMutationId && (
-        <PlanActions>
-          <Button
-            disabled={busy}
-            onClick={() => void mutate({ type: "undo", mutationId: plan.lastMutationId! })}
-          >
-            {t("undo")}
-          </Button>
-        </PlanActions>
-      )}
+      <UndoToast
+        mutationId={plan.lastMutationId}
+        busy={busy}
+        onUndo={(mutationId) => void mutate({ type: "undo", mutationId })}
+      />
       {section === "overview" && <OverviewSection ctx={ctx} />}
-      {section === "workspace" && <WorkspaceSection ctx={ctx} />}
+      {section === "workspace" &&
+        (state.shape === "route" ? <RouteSection ctx={ctx} /> : <WorkspaceSection ctx={ctx} />)}
       {section === "import" && <ImportSection ctx={ctx} />}
       {section === "transfer" && <TransferSection ctx={ctx} />}
       {section === "ai" && <PlanAI key={tripId} plan={plan} mutate={mutate} onError={onError} />}
       {section === "packing" && <PackingSection ctx={ctx} />}
       {section === "budget" && <BudgetSection ctx={ctx} />}
       {section === "handover" && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
+      {deleting && (
+        <PlanDeleteDialog
+          tripId={tripId}
+          name={plan.name}
+          onClose={() => setDeleting(false)}
+          onDeleted={() => navigate("/plan")}
+        />
+      )}
       {section === "actual" && <PlanActualPanel ctx={ctx} />}
       {editor && (
         <PlanEditor

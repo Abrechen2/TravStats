@@ -147,7 +147,7 @@ describe("Plan variants", () => {
 
   it("keeps station links and weather through a variant round trip", () => {
     const { a, b, g1 } = route();
-    const link = { stationId: a.id, tripStopId: uid() };
+    const link = { stationId: a.id, tripStopId: uid(), created: [] };
     const weather = {
       stationId: a.id,
       kind: "forecast" as const,

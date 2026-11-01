@@ -1,7 +1,7 @@
 import { useTranslation } from "../../../hooks/useTranslation";
 import { Button, Card } from "../../../components/ui";
 import { PlanActions, PlanCardHead, PlanGrid, PlanGrow, PlanNotice, PlanRow } from "../planLayout";
-import { PlanMetrics, PlanTasks } from "../PlanParts";
+import { PlanMetrics } from "../PlanParts";
 import { formatMoney, type PlanCtx } from "../planContext";
 
 export function BudgetSection({ ctx }: { ctx: PlanCtx }) {
@@ -69,7 +69,6 @@ export function BudgetSection({ ctx }: { ctx: PlanCtx }) {
             </PlanRow>
           ))}
         </Card>
-        <PlanTasks state={state} busy={busy} edit={(task) => edit("tasks", task)} mutate={mutate} />
       </PlanGrid>
     </>
   );

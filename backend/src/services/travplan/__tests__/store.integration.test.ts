@@ -558,7 +558,14 @@ describe("Travel plan transactions against an isolated PostgreSQL database", () 
     const p = await create(),
       response = await get("/travplan/plans");
     const summary = response.body.plans.find((r: { tripId: string }) => r.tripId === p.tripId);
-    expect(summary).toMatchObject({ destination: "Madeira", ideasCount: 0, bookingsCount: 0 });
+    expect(summary).toMatchObject({
+      destination: "Madeira",
+      ideasCount: 0,
+      bookingsCount: 0,
+      shape: "stay",
+      stationsCount: 0,
+      stagesCount: 0,
+    });
     expect(summary).not.toHaveProperty("state");
   });
   it("mirrors planned dates into an empty canonical trip while creating no actual travel records", async () => {

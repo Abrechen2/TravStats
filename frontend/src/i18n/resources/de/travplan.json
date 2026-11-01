@@ -29,7 +29,8 @@
     "packing": "Vorbereitung",
     "budget": "Budget & Aufgaben",
     "handover": "Reisebereit",
-    "actual": "Plan & Wirklichkeit"
+    "actual": "Plan & Wirklichkeit",
+    "route": "Route"
   },
   "fields": {
     "name": "Reisename",
@@ -142,7 +143,14 @@
     "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird.",
     "PLAN_STAGE_CHANGED": "Die Etappe wurde inzwischen geändert. Bitte die Strecke neu berechnen.",
     "PLAN_VARIANT_LIMIT": "Mehr als drei Varianten sind nicht möglich.",
-    "RATE_LIMITED": "Zu viele Vergleiche in kurzer Zeit. Bitte in einer Minute erneut versuchen."
+    "RATE_LIMITED": "Zu viele Vergleiche in kurzer Zeit. Bitte in einer Minute erneut versuchen.",
+    "PLAN_NOT_A_ROUTE": "Nur ein Routenplan hat Stationen, die ins Logbuch übernommen werden können.",
+    "PLAN_STATION_FUTURE": "Diese Station ist noch nicht erreicht. Übernehmen kannst du sie erst, wenn der Tag da ist.",
+    "PLAN_STATION_HANDED_OVER": "Diese Station ist schon im Logbuch.",
+    "PLAN_STATION_UNDATED": "Für diese Station ist noch kein Tag bekannt. Trage Dauer oder Abfahrt der Etappe davor ein.",
+    "PLACE_SOURCE_FAILED": "Diese Quelle hat nicht geantwortet.",
+    "PLAN_WEATHER_DISABLED": "Offene Datendienste sind auf diesem Server ausgeschaltet. Klimamittel gibt es erst, wenn der Admin sie freigibt.",
+    "PLAN_WEATHER_NO_DATA": "Für diesen Ort und diese Jahreszeit liegen keine Messwerte vor."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -233,6 +241,8 @@
   "noAutoCount": "Die Freigabe bestätigt keine Besuche. Auch vergangene Plantermine zählen nicht automatisch als erlebt.",
   "confirmVisit": "Als tatsächlich erlebt bestätigen",
   "unconfirmVisit": "Bestätigung zurücknehmen",
+  "listCountsRoute": "{{stations}} Stationen · {{stages}} Etappen",
+  "listCountsStay": "{{ideas}} Ideen · {{bookings}} Buchungen",
   "readyStatus": "Reisebereit",
   "planningStatus": "In Planung",
   "noPush": "Hinweise bleiben in der Oberfläche. Bewusst offene Punkte bleiben ruhig.",
@@ -312,5 +322,274 @@
     "config": "Einstellungen"
   },
   "configMoved": "Die Konfiguration von TravPlan liegt jetzt an einer Stelle: in der Administration unter Instanz.",
-  "configOpenAdmin": "TravPlan in der Administration öffnen"
+  "configOpenAdmin": "TravPlan in der Administration öffnen",
+  "more": "Mehr",
+  "savedToast": "Gespeichert.",
+  "planThis": {
+    "body": "Zu dieser Reise gibt es noch keinen Plan. Mit TravPlan planst du Route, Buchungen und Packliste, bevor es losgeht.",
+    "action": "Diese Reise planen"
+  },
+  "create": {
+    "title": {
+      "1": "Neue Reise planen",
+      "2": "Buchungen und Platzhalter"
+    },
+    "shape": "Art des Plans",
+    "shapeStay": "Ein Ziel",
+    "shapeRoute": "Eine Route",
+    "destination": "Wohin geht es?",
+    "destinationSearch": "Ort, Hafen oder Region suchen",
+    "start": "Start",
+    "startSearch": "Startort suchen",
+    "goal": "Ziel",
+    "back": "Zurück zum Start",
+    "name": "Name der Reise",
+    "taken": "Mit dem Ort übernommen – du kannst es ändern.",
+    "weather": "Das Wetter wird für {{place}} abgerufen.",
+    "next": "Weiter",
+    "back1": "Zurück",
+    "bookingsIntro": "Was steht schon fest, was fehlt noch? Für Offenes legst du einen Platzhalter an (z. B. die Fähre, geschätzt 180 €). Echte Buchungen importierst du danach im Bereich Buchungen – ein passender Platzhalter wird dann ersetzt.",
+    "addPlaceholder": "Platzhalter hinzufügen",
+    "estimate": "Schätzung",
+    "finish": "Plan anlegen",
+    "openPlan": "Plan öffnen",
+    "partial": "Der Plan ist angelegt, aber nicht alles konnte übernommen werden: {{reason}}"
+  },
+  "deletePlan": {
+    "open": "Plan löschen",
+    "title": "Plan „{{name}}“ löschen?",
+    "removes": "Das wird gelöscht",
+    "nothing": "Der Plan ist leer.",
+    "what": {
+      "stations_one": "{{count}} Station",
+      "stations_other": "{{count}} Stationen",
+      "stages_one": "{{count}} Etappe",
+      "stages_other": "{{count}} Etappen",
+      "variants_one": "{{count}} Variante",
+      "variants_other": "{{count}} Varianten",
+      "items_one": "{{count}} Termin",
+      "items_other": "{{count}} Termine",
+      "ideas_one": "{{count}} Idee",
+      "ideas_other": "{{count}} Ideen",
+      "bookings_one": "{{count}} Buchung oder Platzhalter im Plan",
+      "bookings_other": "{{count}} Buchungen und Platzhalter im Plan",
+      "tasks_one": "{{count}} Aufgabe",
+      "tasks_other": "{{count}} Aufgaben",
+      "packing_one": "{{count}} Packlistenpunkt",
+      "packing_other": "{{count}} Packlistenpunkte",
+      "receipts_one": "{{count}} Eintrag im Änderungsverlauf",
+      "receipts_other": "{{count}} Einträge im Änderungsverlauf",
+      "proposals_one": "{{count}} KI-Vorschlag",
+      "proposals_other": "{{count}} KI-Vorschläge"
+    },
+    "stays": "Das bleibt",
+    "staysBody": "Die Reise selbst und alles, was schon im Logbuch steht: Flüge, Unterkünfte, Fähren, Stationen und Fotos. Ein Plan ist kein Reisenachweis, deshalb nimmt sein Löschen nichts davon weg.",
+    "staysStations": "{{count}} Station(en) wurden bereits ins Logbuch übernommen und bleiben dort.",
+    "shell": "Die Reise besteht dann nur noch aus dem Namen und den Daten. Du kannst sie bei Bedarf separat löschen.",
+    "undoNote": "Das Löschen lässt sich nicht rückgängig machen.",
+    "confirm": "Plan endgültig löschen",
+    "previewFailed": "Es konnte nicht geladen werden, was gelöscht würde. Deshalb wird jetzt nichts gelöscht.",
+    "failed": "Der Plan konnte nicht gelöscht werden. Es wurde nichts verändert."
+  },
+  "overview": {
+    "countdown": {
+      "in": "Noch {{count}} Tage",
+      "tomorrow": "Morgen geht es los",
+      "today": "Heute geht es los",
+      "running": "Tag {{count}} der Reise",
+      "over": "Die Reise ist vorbei",
+      "unknown": "Noch kein Reisedatum"
+    },
+    "items": "Termine",
+    "ideas": "Ideen",
+    "openTasks": "Offene Aufgaben",
+    "next": "Als Nächstes",
+    "nothingNext": "Gerade gibt es nichts Dringendes.",
+    "ready": "Reisebereit?",
+    "done": "Erledigt",
+    "open": "Offen",
+    "readiness": {
+      "planned": "Route oder Programm steht",
+      "nights": "Alle Nächte sind geklärt",
+      "transport": "Alle Wege sind geklärt",
+      "tasks": "Aufgaben erledigt",
+      "packing": "Alles gepackt"
+    },
+    "weather": "Wetter",
+    "weatherMore": "Wetter und Packliste",
+    "handoverBody": "Wenn die Reise vorbei ist (oder eine Station erreicht), übernimmst du sie ins Logbuch. Vorher zählt nichts davon als gereist.",
+    "handoverOpen": "Zum Reiseabschluss"
+  },
+  "route": {
+    "legend": "Zeichenerklärung",
+    "tone": {
+      "booked": "Gebucht",
+      "placeholder": "Platzhalter",
+      "own": "Eigene Fahrt",
+      "spontaneous": "Spontan",
+      "undecided": "Offen",
+      "idea": "Ideen"
+    },
+    "mode": {
+      "drive": "Fahrt",
+      "ferry": "Fähre",
+      "rail": "Bahn",
+      "flight": "Flug",
+      "other": "Sonstiges"
+    },
+    "night": {
+      "booked": "Gebuchte Unterkunft",
+      "idea": "Ideen für die Nacht",
+      "pitch": "Freier Stellplatz",
+      "spontaneous": "Spontan vor Ort",
+      "onboard": "An Bord"
+    },
+    "search": {
+      "searching": "Suche …",
+      "none": "Keine Treffer.",
+      "failed": "Die Suche ist fehlgeschlagen: {{reason}}",
+      "unavailable": "{{source}} antwortet nicht: {{reason}}",
+      "visits_one": "schon {{count}}× besucht",
+      "visits_other": "schon {{count}}× besucht",
+      "source": {
+        "own": "Meine Orte",
+        "port": "Häfen",
+        "geocoder": "Ortssuche"
+      }
+    },
+    "stats": {
+      "stations": "Stationen",
+      "nights": "Nächte",
+      "km": "Fahrstrecke",
+      "time": "Fahrzeit",
+      "unmeasured": "Für {{count}} Fahrt(en) fehlen noch Kilometer und Dauer."
+    },
+    "empty": {
+      "title": "Wo startet die Route?",
+      "body": "Suche den Startort. Weitere Stationen fügst du danach nacheinander hinzu."
+    },
+    "add": {
+      "start": "Startort suchen",
+      "next": "Nächste Station",
+      "search": "Ort, Hafen oder Region suchen"
+    },
+    "station": {
+      "edit": "Station bearbeiten",
+      "place": "Ort",
+      "changePlace": "Anderen Ort suchen",
+      "title": "Bezeichnung",
+      "nights": "Nächte",
+      "pinned": "Fester Ankunftstag",
+      "pinnedHint": "Optional. Ein fester Tag verschiebt sich nicht, wenn davor etwas länger dauert.",
+      "night": "Übernachtung",
+      "booking": "Buchung",
+      "noLodging": "Es gibt noch keine Unterkunftsbuchung im Plan. Lege sie im Bereich Buchungen an.",
+      "candidate": "Idee für die Nacht (Campingplatz, Hotel …)",
+      "dayUnknown": "Tag noch unbekannt",
+      "nightsCount_one": "{{count}} Nacht",
+      "nightsCount_other": "{{count}} Nächte",
+      "dayTrips": "Tagesausflüge",
+      "noWeather": "Wetter: noch keine Angabe",
+      "weather": {
+        "forecast": "Vorhersage",
+        "climate": "Klimamittel"
+      },
+      "up": "Nach oben",
+      "down": "Nach unten"
+    },
+    "stage": {
+      "add": "Etappe von {{from}} nach {{to}} anlegen",
+      "edit": "Etappe bearbeiten",
+      "mode": "Verkehrsmittel",
+      "departDay": "Abfahrtstag",
+      "departHint": "Leer = ergibt sich aus der Station davor.",
+      "departTime": "Abfahrtszeit",
+      "distance": "Strecke in km",
+      "duration": "Dauer in Minuten",
+      "overnight": "Nachtfähre (Übernachtung an Bord)",
+      "overnightShort": "über Nacht",
+      "notMeasured": "Noch nicht berechnet",
+      "recalculate": "Neu berechnen",
+      "routing": "Wird berechnet …",
+      "placeholder": "Platzhalter anlegen",
+      "source": {
+        "routed": "berechnet",
+        "straight": "Luftlinie",
+        "user": "von dir",
+        "booking": "laut Buchung"
+      },
+      "reason": "Strecke nicht berechnet: {{reason}}. Die bisherigen Werte bleiben.",
+      "reasons": {
+        "no_provider": "Auf diesem Server ist kein Routing-Dienst eingerichtet",
+        "unroutable_mode": "dieses Verkehrsmittel wird nicht per Straßenrouting berechnet",
+        "provider_error": "der Routing-Dienst hat nicht geantwortet",
+        "no_route": "zwischen den Orten wurde keine Strecke gefunden",
+        "point_not_near_road": "ein Ort liegt zu weit von jeder Straße entfernt",
+        "rate_limited": "das Tageskontingent des Routing-Dienstes ist aufgebraucht",
+        "auth": "der Routing-Dienst hat den Zugangsschlüssel abgelehnt",
+        "untrustworthy": "die Antwort des Routing-Dienstes war nicht plausibel"
+      }
+    },
+    "map": {
+      "label": "Karte der Route mit {{count}} Stationen",
+      "unavailable": "Die Karte braucht WebGL und ist in diesem Browser nicht verfügbar.",
+      "note": "Die Linie verbindet die Stationen in Reihenfolge; die berechnete Straße steht in den Etappen."
+    },
+    "variants": {
+      "title": "Varianten",
+      "intro": "Vergleiche die aktive Route mit Alternativen. Beim Aktivieren tauschen beide die Plätze – nichts geht verloren.",
+      "active": "Aktiv",
+      "activate": "Aktivieren",
+      "km": "Fahrstrecke",
+      "driveDays": "Fahrtage",
+      "destinationNights": "Nächte am Ziel",
+      "stageCosts": "Fähren und Etappen",
+      "fuel": "Kraftstoff (geschätzt)",
+      "unknown": "unbekannt",
+      "unknownCosts_one": "{{count}} Preis fehlt",
+      "unknownCosts_other": "{{count}} Preise fehlen",
+      "obsolete_one": "{{count}} Etappe passt zu keiner Station mehr und wird nicht mitgezählt.",
+      "obsolete_other": "{{count}} Etappen passen zu keiner Station mehr und werden nicht mitgezählt.",
+      "name": "Name der Variante",
+      "copy": "Aktive Route kopieren",
+      "create": "Variante anlegen",
+      "limit": "Mehr als drei Varianten sind nicht möglich."
+    },
+    "handover": {
+      "title": "Stationen ins Logbuch übernehmen",
+      "intro": "Ist eine Station erreicht, schreibt der Plan sie ins Logbuch: den Halt auf dem Roadtrip, die gebuchte Nacht als Aufenthalt und die Fähre, mit der du angekommen bist. Offene Platzhalter werden nie zu Einträgen.",
+      "noStations": "Der Plan hat noch keine Stationen.",
+      "confirm": "Ins Logbuch übernehmen",
+      "withdraw": "Zurücknehmen",
+      "inLogbook": "Im Logbuch",
+      "ready": "Bereit",
+      "notReached": "Noch nicht erreicht",
+      "records_one": "{{count}} Eintrag vom Plan geschrieben. Zurücknehmen löscht nur, was du seither nicht verändert hast.",
+      "records_other": "{{count}} Einträge vom Plan geschrieben. Zurücknehmen löscht nur, was du seither nicht verändert hast.",
+      "placeholders_one": "{{count}} Platzhalter bleibt im Plan und wird nicht übernommen.",
+      "placeholders_other": "{{count}} Platzhalter bleiben im Plan und werden nicht übernommen."
+    }
+  },
+  "match": {
+    "title": "Passt zu einem Platzhalter",
+    "intro": "„{{booking}}“ sieht aus wie die echte Buchung zu „{{placeholder}}“.",
+    "inactiveVariant": "Der Platzhalter gehört zur Alternativroute.",
+    "table": "Unterschiede",
+    "identical": "Keine abweichenden Angaben.",
+    "replace": "Platzhalter ersetzen",
+    "addAdditional": "Als zusätzliche Buchung",
+    "another": "Anderen Platzhalter wählen ({{n}}/{{total}})",
+    "field": {
+      "provider": "Anbieter",
+      "reference": "Referenz",
+      "day": "Tag",
+      "time": "Uhrzeit",
+      "amount": "Betrag"
+    },
+    "change": {
+      "changed": "Geändert",
+      "new": "Neu"
+    }
+  },
+  "assignToDay": "Auf {{day}} legen"
 }

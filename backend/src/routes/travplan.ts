@@ -23,6 +23,7 @@ import { parseState } from "../services/travplan/upgrade";
 import { generateProposal } from "../services/travplan/ai";
 import { findLocations } from "../services/travplan/locations";
 import { refreshForecast } from "../services/travplan/weather";
+import { refreshStationClimate } from "../services/travplan/climate";
 import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
@@ -225,6 +226,18 @@ router.post(
       .strict()
       .parse(req.body);
     res.json(await refreshForecast(req.userId!, tripId(req), body));
+  })
+);
+router.post(
+  "/trips/:tripId/plan/stations/:stationId/climate",
+  ...writeGuard,
+  route(async (req, res) => {
+    const body = z
+      .object({ clientRef: uuid, baseRevision: z.number().int().min(1) })
+      .strict()
+      .parse(req.body);
+    const stationId = z.string().uuid().parse(req.params.stationId);
+    res.json(await refreshStationClimate(req.userId!, tripId(req), stationId, body));
   })
 );
 router.get(

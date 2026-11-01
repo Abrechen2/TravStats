@@ -28,7 +28,15 @@ export function ImportSection({ ctx }: { ctx: PlanCtx }) {
           key={tripId}
           plan={plan}
           onError={onError}
+          busy={busy}
           onDraft={(b: PlanBooking) => edit("bookings", b, { review: true })}
+          onReplace={(placeholderId, b) =>
+            mutate({
+              type: "replace_placeholder",
+              placeholderId,
+              value: b as unknown as Record<string, unknown>,
+            })
+          }
         />
         <PlanStack>
           <Card>

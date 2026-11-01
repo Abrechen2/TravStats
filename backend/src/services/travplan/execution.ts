@@ -5,7 +5,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { createFlightSchema } from "../../schemas/flight";
 import { buildFlightCreateData } from "../flights/flightCreateData";
 import { fxColumnsFor, getBaseCurrency, type FxColumns } from "../fx/snapshot";
-import { createLodgingSchema, createStaySchema } from "../../schemas/lodging";
+import { createLodgingSchema, createStaySchema, LODGING_TYPES } from "../../schemas/lodging";
 import { buildLodgingCreateData } from "../lodging/createLodging";
 import { buildStayCreateData, type StayCreateColumns } from "../lodging/stayWrites";
 import type { PlanState, PlanBooking } from "./types";
@@ -29,7 +29,11 @@ const sharesGroupPrice = (b: PlanBooking) => !!b.priceGroupId || b.details.packa
  * (buildLodgingCreateData / buildStayCreateData, like trip/package/commit.ts). The hand-written
  * row it replaced had no check-in/-out instants, no check-out time and no coordinates.
  */
-async function prepareHotel(userId: string, b: PlanBooking) {
+export async function prepareHotel(
+  userId: string,
+  b: PlanBooking,
+  type: (typeof LODGING_TYPES)[number] = "hotel"
+) {
   const checkOutTime =
     typeof b.details.checkOutTime === "string" && HH_MM.test(b.details.checkOutTime)
       ? b.details.checkOutTime
@@ -59,7 +63,7 @@ async function prepareHotel(userId: string, b: PlanBooking) {
   const lodging = await buildLodgingCreateData(
     userId,
     {
-      type: "hotel",
+      type,
       name: b.title,
       city: b.city || null,
       country: b.country || null,
