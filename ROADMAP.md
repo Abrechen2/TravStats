@@ -2,247 +2,97 @@
 
 TravStats is a solo-maintained side project. This roadmap is a direction,
 not a commitment — features land when they're ready and the maintainer has time.
+[CHANGELOG.md](CHANGELOG.md) is the record of what shipped when; this file
+keeps the shape of it and what is still ahead.
 
 ---
 
-## ✈️ v1.0 — What's in the box
+## ✅ Shipped
 
-Everything below ships with the first stable release.
+Everything in this section is in the server and the web app today (2.8).
+Items marked *(beta)* sit behind the instance's beta switch.
 
-**Core tracking**
-- Manual flight entry with categories, tags, travel companions, costs
-- Boarding-pass scanner (QR, barcode, OCR)
-- Email import (plain text, HTML, `.msg`/`.eml`) with local LLM parsing via Ollama
-- Duplicate detection with a "save anyway" escape hatch
-- 5 flight states: flown, scheduled, cancelled, historical, duplicated
+**Logbook and capture**
+- Flights, cruises, rail, bus, ferry, rental cars, hotels and places, road trips and day tours — each with its own forms, map layer and statistics
+- Boarding-pass scanner (QR, barcode, OCR), email and PDF import (plain text, HTML, `.msg`/`.eml`) with optional local LLM parsing via Ollama
+- Importers: Flightradar24, OpenFlights, App in the Air, FlightAware, Excel/CSV round trip, bahn.de connections, GPX/KML/GeoJSON/TCX tracks, Google Timeline, a Dawarich copy
+- Trips that group any mix of domains; duplicate detection with a "save anyway" escape hatch; companions, tags, costs in any currency with a recorded rate
 
-**Visualisation**
-- Six map modes: Routes · Heatmap · Hexagon (3D) · 3D Columns · Trips · Globe
-- Flight timeline + calendar view with travel-intensity heatmap
-- Year-over-year statistics, seat/zone/class distribution, top routes
+**TravTrack and the Companion**
+- TravTrack, an opt-in own location history with privacy zones and an explored-places view *(beta)*; positions from the Companion, OwnTracks, Overland, files and a Dawarich copy
+- Device pairing and the Companion app (iOS/Android, in beta); the server keeps what the phone records — flight tracks and trip recordings (forgejo#316 slice 1)
+- Recorded flight tracks (GPX/KML/TCX/FIT) drawn on the flight page and the map; calendar subscription (`.ics`) for upcoming trips
 
-**Automation**
-- Automatic flight-data lookup via AirLabs, Aviationstack, OpenSky
-- Automatic pending-update flow during active flights
-- Historical enrichment scheduler
-- 24h/2h email reminders before departure (SMTP)
-- Automated database backups with retention + optional WebDAV sync
+**Planning and sharing**
+- TravPlan, the planning mode for trips that have not happened yet *(beta)*
+- Immich albums on trips (link or import); public share links; trip sharing between servers with consent on both sides *(beta)*; friend leaderboard *(beta)*
 
-**Gamification**
-- 58 Battlefield-style achievements across 5 categories
-- Downloadable vintage-passport flight certificate (PNG export)
-- Optional small-group leaderboard
+**Visualisation and statistics**
+- Map modes per domain, a 3D globe, sea routes from the shipping-lane network, colour modes for flights and cruises
+- Cross-domain statistics, year-over-year views, CO₂ for every mode, punctuality, global search from the top bar
+- 270+ achievements, curated checklists, the vintage-passport flight certificate
 
-**Admin & ops**
-- Invite-only user management (1–10 users by default)
-- SMTP, API-key, historical-enrichment and backup configuration in-app
-- Anonymised diagnostic-export bundle for bug reports
-- Export to CSV, GeoJSON, KML (Google Earth)
+**Data and automation**
+- Flight-data lookup (AirLabs, Aviationstack, OpenSky and others), live tracking, historical enrichment, weather and elevations from open data
+- Reminders by e-mail, automated backups with retention and WebDAV sync, an anonymised diagnostic bundle, export to CSV, GeoJSON, KML and GPX
 
----
-
-## 🚢 v1.1 — Cruises module
-
-TravStats grows from a flight-only logbook into a full travel logbook.
-
-- First-class cruise data model (ship, voyage, itinerary, cabin, sea days)
-- `/cruises` page parallel to flights with own forms, map view, stats
-- Port-to-port map visualisation alongside flight routes
-- "Seafarer" achievement category
-- Combined travel statistics across flights + cruises
+**Admin and operations**
+- Invite-only users, two-factor authentication and passkeys, a rebuilt settings area (2.8), external-service credentials managed in the admin UI
+- Public REST API with OpenAPI 3.0 and Swagger UI, Personal Access Tokens with `read` / `write` / `admin` scopes
 
 ---
 
-## 🏆 v1.2 — Special flights & collections
+## 🔭 Ahead
 
-- Flight highlights (first flight, jubilee flight, storm flight, longest layover, livery spots, retro cabins)
-- Collections gallery with photo uploads per highlight
-- "Collector" achievement category (livery hunter, route completionist, …)
-- Same pattern for cruise highlights (maiden voyage, formal night, …)
+What is still open. Nothing here is promised for a particular release.
 
----
+**Release the betas** — TravTrack, TravPlan, trip sharing between servers and
+the leaderboard leave the beta switch one by one, each on the owner's word after
+a field test (the registry in `frontend/src/config/betaFeatures.ts` names the
+condition for each).
 
-## 🌱 v1.3 — CO₂ footprint & sustainability
+**Server is the record** — forgejo#316 slice 2: the stay and place suggestions
+read recorded trip points as evidence.
 
-- Per-flight CO₂ calculation based on aircraft type, distance, cabin class
-- Per-cruise CO₂ estimation (ship class, duration, cabin category)
-- Dashboard with equivalents (car km, trees needed, trips avoided)
-- Class comparison (Economy vs Business vs First, Inside vs Suite)
-- Carbon-conscious achievement tier
+**Companion** — a public store build (today: TestFlight) and the rest of the
+app-side features that need server data.
 
----
-
-## 🧭 v1.4 — Trip planner & itineraries
-
-- Group flights + cruises into **trips** with drag-and-drop
-- Timeline with layovers, connections, sea days
-- Minimum-connection-time warnings
-- Shareable public trip pages with map + itinerary
-
----
-
-## 📥 v1.5 — Importers, onboarding & full provider field capture
-
-V1 finale. Two parallel scope items in one release: a pluggable
-import pipeline so existing logbooks can seed TravStats on day one,
-plus a silent schema rounding pass for the existing flight-lookup
-providers so the next round of features (block-time analytics, hull
-gallery, quality badges) doesn't need a follow-up provider re-fetch.
-
-### Importers (user-facing headline)
-
-Pluggable parser pipeline — same skeleton across providers; new
-sources slot in as parser plug-ins.
-
-**Sources (initial set)**
-
-- **Flightradar24 logbook** (Issue #99) — first-class importer for
-  the `my.flightradar24.com` CSV export. Handles column mapping,
-  in-app TZ conversion via the existing airport-lookup service,
-  preview screen with per-row validation, funnels into the existing
-  `POST /flights/batch`. The most common pre-existing logbook,
-  especially Silver/Gold subscribers
-- **OpenFlights** — flat CSV per-flight export, one of the oldest
-  free flight-logbook formats
-- **App in the Air** — JSON export from the iOS/Android app
-- **FlightAware "My Flights"** — CSV export from FlightAware accounts
-- **Generic logbook CSV** with a column-mapping wizard — covers
-  custom Excel sheets and niche apps; users drag their columns onto
-  TravStats fields, TZ conversion still server-side
-
-**Shared skeleton**
-
-- Provider-specific parser plug-in (column mapping, type coercion,
-  format detection)
-- Centralised airport lookup + TZ conversion (reuses
-  `enrichFlightAirports` already used by `flightsBatch.ts`)
-- Preview screen with per-row validation, edit / drop per row
-- Bulk dispatch through `POST /flights/batch` (existing chunking,
-  dedup, PNR-based trip auto-grouping for free)
-- Source attribution via `dataSource: 'imported_<provider>'` so the
-  origin stays visible in dashboard filters and analytics
-- Status defaulting: rows with `dep_utc` in the past → `flown`,
-  future → `scheduled`
-
-**Cruise-side equivalent** (Cruisemapper, MyShipTracking exports)
-deferred to V2 — the parser skeleton + bulk-route are flight-specific
-today; cruise needs its own batch endpoint first.
-
-### Provider field capture (silent backend pass)
-
-Stores everything cheap-to-keep that the existing flight-lookup
-providers already return.
-
-- **AeroDataBox**: persist `runwayTime` (off-block / on-block) on both
-  ends, `isCargo`, `lastUpdatedUtc`, `quality` tags (`string[]`),
-  `baggageBelt`, `checkInDesk`, plus per-airport `timeZone` /
-  `shortName` / `municipalityName`
-- **Backfill** via the existing historical-enrichment scheduler — no
-  manual refresh needed for users on AeroDataBox
-- **Skipped on purpose**:
-  - `aircraft.image` (CC-BY-SA attribution requirement — defer until
-    a hull-gallery UI exists; storing the URL without rendering
-    creates a legal display obligation we can't satisfy)
-  - `distance.{meter,mile,nm,feet}` (redundant — derive from `km` on
-    read instead of duplicating four columns)
-
-No UI changes from this half — fields land silently in the schema
-and start populating in the background. Consuming UI features
-(block-time analytics, hull gallery, quality badges) move to V2.
-
----
-
-## 🤖 v2.0 — Advanced import & automation
+## 🤖 Parsers and automation
 
 - Two-stage multi-flight email parser (block-split + per-flight extraction)
-- Community-shared airline templates via GitHub
-- Multi-version template scoring (pick the best parse automatically)
-- **Cloud-mode parser** — Groq (Llama 3) and Gemini Flash adapters as
-  fallbacks for users without a self-hosted Ollama; same template
-  engine, GPU-less option
+- Community-shared airline templates via the template repository
+- Cloud-mode parser — Groq and Gemini Flash adapters as fallbacks for users
+  without a self-hosted Ollama
 
----
+## 💰 Costs
 
-## 💱 v2.1 — Multi-source data enrichment
+Costs and the currency pipeline are in (see Shipped); what remains is the
+structural rewrite of the cost data model.
 
-Layered free-tier integrations to broaden travel-data coverage. All
-sources chosen to keep TravStats hostable as a SaaS without
-non-commercial licence traps.
+- **Unified `Expense` model** — one row per cost line, attached polymorphically
+  to a flight, booking, trip, cruise or cruise stop, each with the original
+  amount plus a snapshot of the exchange rate taken at entry time
+- Payment metadata (method, paid-by, reimbursement status), trip-level budget
+  and default currency, and a stats overhaul on top (`SUM(amountInBase)` per
+  category, per-trip P&L)
+- Migration of the legacy price columns into the new rows
 
-- **Multi-currency trip costs** — record costs in any of 200+
-  currencies; backend normalises to the user's display currency using
-  historical FX rates from the Frankfurter / ECB pipeline
-- **Weather at departure & arrival** — METAR / TAF history (NOAA AWC
-  for the last 96 h, IEM Mesonet for everything older) layered into
-  the flight detail page: wind, visibility, temperature, conditions.
-  Lazy-fetched per flight, cached per airport-day
-- **Live ship tracking** *(extends v1.1 Cruises)* — opt-in AIS-stream
-  layer (AISStream.io) showing your booked or current ship's
-  real-time position on the cruise map, fed by a single backend
-  WebSocket subscription fanned out to clients
+## 🚢 Live data
 
----
+- Opt-in AIS layer (AISStream.io) showing a booked or current ship's position
+  on the cruise map, fed by one backend WebSocket fanned out to clients
 
-## 💰 v2.2 — Cost & expense overhaul
-
-Refactor the cost data model. Today, prices live as scalar columns on
-`Flight` (`price`, `taxes`, `fees`, the dead `ticketPrice`) and
-duplicated on `Booking` (`price`), with a `seenBookingIds` dedup hack
-in the stats layer to avoid double-counting. Cruises have no cost
-fields at all, and the dashboard `totalCost` blindly sums values
-across currencies. The v2.1 Frankfurter pipeline is the prerequisite;
-v2.0 is the structural rewrite that makes use of it.
-
-- **Unified `Expense` model** — one row per cost line, polymorphically
-  attached to a Flight, Booking, Trip, Cruise, or CruiseStop. Each row
-  carries the original amount + currency plus a snapshot
-  `amountInBase` / `fxRate` / `fxDate` captured at entry time, so
-  historical stats stay stable when FX moves later
-- **Cost categories** — ticket, tax, fee, ancillary (parking, baggage,
-  lounge, transfer), hotel, excursion, gratuity. Replaces the implicit
-  taxes/fees split
-- **Payment metadata** — payment method, paid-by (self vs employer),
-  reimbursement status, optional companion split
-- **Cruise costs** — solved for free by the polymorphic `Expense`:
-  attach to `Cruise` for the booking, `CruiseStop` for shore
-  excursions and onboard charges
-- **Trip-level budget & default currency** — each Trip can carry a
-  base currency that pre-fills new flights/cruises within it; falls
-  back to the user-level setting otherwise
-- **Stats overhaul** — `totalCost`, `costPerKm`, `costPerHour` move
-  from raw float sums to `SUM(amountInBase) GROUP BY category`, plus
-  category breakdown (how much of last year's $12k was actually
-  ancillaries?), reimbursement-aware filters, and per-trip P&L
-- **Migration** — backfill existing `Flight.price/taxes/fees` and
-  `Booking.price` rows into `Expense`, FX-snapshot via the v2.1
-  Frankfurter pipeline, then drop the legacy columns including the
-  long-dead `ticketPrice`
-
----
-
-## 👥 v2.3 — Social & sharing
+## 👥 Social and insights
 
 - Year-in-review share graphics (Instagram story, Twitter card, animated WebM)
-- Friend invites with side-by-side stat comparison
 - Shared route-map images (PNG/SVG, customisable themes)
+- Pattern detection ("your most active month is …"), route recommendations,
+  seat-preference analytics, jetlag score and recovery estimation
 
----
+## 📱 Web as an app
 
-## 🧠 v2.4 — Smart insights
-
-- Pattern detection ("your most active month is …")
-- Route recommendations based on history
-- Seat-preference analytics over time
-- Jetlag score and recovery estimation
-
----
-
-## 📱 v2.5 — PWA & mobile
-
-- Service worker, offline access, install-as-app manifest
-- Camera-first boarding-pass scan on mobile
-- Push notifications (gate changes, check-in reminders)
-- Touch-friendly map gestures
+- Service worker, offline access, install-as-app manifest, push notifications
+  (gate changes, check-in reminders). The phone itself is the Companion's job.
 
 ---
 
@@ -255,7 +105,6 @@ Running in parallel across versions.
 - Error tracking, performance dashboard
 - Route-aggregation clustering (replace median for multi-corridor routes)
 - Confidence-score calibration via user feedback loop
-- Optional 2FA for admins
 - OurAirports CSV as fallback / cross-check source for the airport seed
 
 ---

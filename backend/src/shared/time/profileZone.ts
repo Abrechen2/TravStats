@@ -13,7 +13,7 @@ import { isValidZone } from "./zonedParts";
  * A user who never set one (seeds leave it out, #87) or whose value is not a
  * zone this runtime knows gets UTC, labelled `default-utc` so the caller can
  * show the hint the owner asked for until the user confirms a zone at the
- * next login (a later phase builds that prompt).
+ * next login (`ProfileZonePrompt` in the web app).
  */
 
 export type ProfileZoneSource = "profile" | "default-utc";
