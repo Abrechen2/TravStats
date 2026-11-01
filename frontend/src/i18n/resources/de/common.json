@@ -421,5 +421,10 @@
     "manual": "eigener Kurs",
     "none": "kein Kurs",
     "label": "Umrechnung"
+  },
+  "geoExport": {
+    "label": "Als Datei laden:",
+    "empty": "Dafür gibt es nichts zu exportieren – keine gespeicherte Linie bzw. keine Orte.",
+    "error": "Der Export ist fehlgeschlagen. Bitte später erneut versuchen."
   }
 }

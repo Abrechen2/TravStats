@@ -1,4 +1,6 @@
 import { LIST_PALETTE_HEX } from "../lib/listPalette";
+import GeoExportButtons from "../components/export/GeoExportButtons";
+import { geoExportPaths } from "../lib/api/geoExport";
 import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
 import type { PlaceLabelMode } from "../lib/placeLabel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -437,6 +439,12 @@ export default function PlaceListDetailPage(): JSX.Element {
                 countries: list.countryCount,
               })}
             </p>
+            <GeoExportButtons
+              path={geoExportPaths.places}
+              params={{ listId: list.id }}
+              testId="place-list-export"
+              className="mt-2 flex flex-wrap items-center gap-2"
+            />
           </div>
 
           <button

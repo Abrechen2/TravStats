@@ -12,6 +12,8 @@ import { useDisplayFormat } from "../../lib/displayFormat";
 import { useToastStore } from "../../store/toastStore";
 import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
 import { JitterNote } from "../tracks/JitterNote";
+import GeoExportButtons from "../export/GeoExportButtons";
+import { geoExportPaths } from "../../lib/api/geoExport";
 
 interface Props {
   cruiseId: string;
@@ -186,39 +188,45 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
             {state.overview.tracks.length === 0 ? (
               <p className="t-caption">{t("tracks.empty")}</p>
             ) : (
-              <ul className="space-y-2" aria-label={t("tracks.listTitle")}>
-                {state.overview.tracks.map((track) => (
-                  <li
-                    key={track.id}
-                    className="flex flex-wrap items-center gap-3 rounded-lg border border-(--color-border) p-3"
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {track.name ?? t(`trips:tours.tracks.source.${track.source}`)} ·{" "}
-                      {day(track.startedAt)} – {day(track.endedAt)}
-                    </span>
-                    <span className="t-caption">{km(track.distanceKm)} km</span>
-                    <span className="t-caption">
-                      {track.coveredLegs.length === 0
-                        ? t("tracks.coversNone")
-                        : t("tracks.coversLegs", { count: track.coveredLegs.length })}
-                    </span>
-                    {track.truncated && (
-                      <span className="t-caption text-(--warning)">{t("tracks.truncated")}</span>
-                    )}
-                    <JitterNote
-                      jitterDropped={track.jitterDropped}
-                      className="t-caption basis-full order-last"
-                    />
-                    <button
-                      type="button"
-                      className="text-xs underline"
-                      onClick={() => setPendingRemove(track)}
+              <>
+                <GeoExportButtons
+                  path={geoExportPaths.cruise(cruiseId)}
+                  testId="cruise-track-export"
+                />
+                <ul className="space-y-2" aria-label={t("tracks.listTitle")}>
+                  {state.overview.tracks.map((track) => (
+                    <li
+                      key={track.id}
+                      className="flex flex-wrap items-center gap-3 rounded-lg border border-(--color-border) p-3"
                     >
-                      {t("tracks.remove")}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <span className="min-w-0 flex-1 truncate">
+                        {track.name ?? t(`trips:tours.tracks.source.${track.source}`)} ·{" "}
+                        {day(track.startedAt)} – {day(track.endedAt)}
+                      </span>
+                      <span className="t-caption">{km(track.distanceKm)} km</span>
+                      <span className="t-caption">
+                        {track.coveredLegs.length === 0
+                          ? t("tracks.coversNone")
+                          : t("tracks.coversLegs", { count: track.coveredLegs.length })}
+                      </span>
+                      {track.truncated && (
+                        <span className="t-caption text-(--warning)">{t("tracks.truncated")}</span>
+                      )}
+                      <JitterNote
+                        jitterDropped={track.jitterDropped}
+                        className="t-caption basis-full order-last"
+                      />
+                      <button
+                        type="button"
+                        className="text-xs underline"
+                        onClick={() => setPendingRemove(track)}
+                      >
+                        {t("tracks.remove")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </>
         )}

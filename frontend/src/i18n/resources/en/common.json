@@ -421,5 +421,10 @@
     "manual": "own rate",
     "none": "no rate",
     "label": "Conversion"
+  },
+  "geoExport": {
+    "label": "Download as file:",
+    "empty": "There is nothing to export – no stored line or no places.",
+    "error": "The export failed. Please try again later."
   }
 }

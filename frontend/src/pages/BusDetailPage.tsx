@@ -14,6 +14,8 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
 import { BusRouteMap } from "../components/bus/BusRouteMap";
+import GeoExportButtons from "../components/export/GeoExportButtons";
+import { geoExportPaths } from "../lib/api/geoExport";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useBusRouting } from "../hooks/useBusRouting";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -314,6 +316,13 @@ export default function BusDetailPage(): JSX.Element {
             <WebGLGuard>
               <BusRouteMap ride={ride} />
             </WebGLGuard>
+            {ride.geometry && (
+              <GeoExportButtons
+                path={geoExportPaths.bus(ride.id)}
+                testId="bus-line-export"
+                className="mt-2 flex flex-wrap items-center gap-2"
+              />
+            )}
           </DetailSection>
 
           {ride.companions.length > 0 && (
