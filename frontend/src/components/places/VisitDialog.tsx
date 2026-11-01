@@ -94,6 +94,7 @@ export function VisitDialog({
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [notes, setNotes] = useState(initial.notes);
+  const [rating, setRating] = useState<number | null>(initial.rating);
   const [tripId, setTripId] = useState(initial.tripId);
   const [files, setFiles] = useState<File[]>([]);
 
@@ -126,7 +127,7 @@ export function VisitDialog({
     };
   }, [tripsAttempt]);
 
-  const draft = { mode, date, time, notes, tripId };
+  const draft = { mode, date, time, notes, rating, tripId };
   // The photos are input too: closing must not drop a picked file silently.
   const snapshot = { ...draft, files: files.map((f) => `${f.name}:${f.size}`) };
   const { dirty, markSaved } = useDirtyGuard({ ...initial, files: [] }, snapshot);
@@ -173,7 +174,7 @@ export function VisitDialog({
 
   const handleSave = async (): Promise<void> => {
     if (missing.length > 0) return;
-    const input = visitPayload(draft, today, place.id);
+    const input = visitPayload(draft, today, place.id, isEdit);
     failure.clear();
     const outcome = await saving.save(
       () => (visit ? updateVisit(visit.id, input) : createVisit(place.id, input)),
@@ -397,6 +398,36 @@ export function VisitDialog({
             onChange={(e) => setNotes(e.target.value)}
           />
         </Labelled>
+
+        <fieldset>
+          <legend className="t-caption mb-1">{t("places:visit.rating.label")}</legend>
+          <div className="flex flex-wrap items-center gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={rating === n}
+                aria-label={t("places:visit.rating.set", { count: n })}
+                onClick={() => setRating(rating === n ? null : n)}
+                className={`rounded-md px-2 py-1 text-xl leading-none ${COARSE}`}
+                style={{
+                  color: rating !== null && n <= rating ? "var(--domain-poi)" : "var(--text-muted)",
+                }}
+              >
+                {rating !== null && n <= rating ? "★" : "☆"}
+              </button>
+            ))}
+            {rating !== null && (
+              <button
+                type="button"
+                onClick={() => setRating(null)}
+                className={`t-caption underline ${COARSE}`}
+              >
+                {t("places:visit.rating.clear")}
+              </button>
+            )}
+          </div>
+        </fieldset>
 
         {offerPhotos && (
           <Labelled id="visit-dialog-photos" label={t("places:visit.photos")}>

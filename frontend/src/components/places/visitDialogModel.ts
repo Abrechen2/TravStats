@@ -24,6 +24,8 @@ export interface VisitDraft {
   /** `HH:mm` or "", used in `today` and `other` mode. */
   time: string;
   notes: string;
+  /** 1..5 stars, or null for "not rated" (forgejo#405). */
+  rating: number | null;
   /** "" = file by date (create only), `NO_TRIP`, or a trip id. */
   tripId: string;
 }
@@ -35,7 +37,7 @@ export interface VisitDraft {
  * "unknown", so opening and closing it changes nothing.
  */
 export function visitDraft(visit: PlaceVisit | null | undefined): VisitDraft {
-  if (!visit) return { mode: "today", date: "", time: "", notes: "", tripId: "" };
+  if (!visit) return { mode: "today", date: "", time: "", notes: "", rating: null, tripId: "" };
   const shown = visitTime(visit);
   const { date, time } = shown ? splitTimeValue(shown) : { date: "", time: "" };
   return {
@@ -43,6 +45,7 @@ export function visitDraft(visit: PlaceVisit | null | undefined): VisitDraft {
     date,
     time,
     notes: visit.notes ?? "",
+    rating: visit.rating !== null && visit.rating >= 1 && visit.rating <= 5 ? visit.rating : null,
     tripId: visit.tripId ?? NO_TRIP,
   };
 }
@@ -73,7 +76,13 @@ export function isAheadOf(day: string | null, today: string): boolean {
  * trip whose days hold its day; `NO_TRIP` says "on no trip"; an id is that
  * trip. On an edit "" never occurs — the picker offers it on create only.
  */
-export function visitPayload(draft: VisitDraft, today: string, placeId: string): VisitInput {
+export function visitPayload(
+  draft: VisitDraft,
+  today: string,
+  placeId: string,
+  /** An edit sends `rating: null` to clear a stored one; a create leaves an unrated visit out. */
+  isEdit = false
+): VisitInput {
   const day = draftDay(draft, today);
   const visitedAt =
     day === null
@@ -81,5 +90,6 @@ export function visitPayload(draft: VisitDraft, today: string, placeId: string):
       : wallClockInput("visitedAt", day, draft.time, { placeRef: { kind: "place", id: placeId } });
   const trip =
     draft.tripId === "" ? {} : { tripId: draft.tripId === NO_TRIP ? null : draft.tripId };
-  return { visitedAt, notes: draft.notes.trim() || null, ...trip };
+  const rating = isEdit || draft.rating !== null ? { rating: draft.rating } : {};
+  return { visitedAt, notes: draft.notes.trim() || null, ...rating, ...trip };
 }

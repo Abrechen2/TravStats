@@ -782,7 +782,13 @@
     "photoRetry": "Fotos erneut hochladen",
     "continueWithoutPhoto": "Weiter ohne Fotos",
     "recorded": "Besuch bei „{{name}}“ eingetragen.",
-    "photosTooMany": "höchstens {{max}} Fotos"
+    "photosTooMany": "höchstens {{max}} Fotos",
+    "rating": {
+      "label": "Bewertung (optional)",
+      "set_one": "1 Stern",
+      "set_other": "{{count}} Sterne",
+      "clear": "Bewertung entfernen"
+    }
   },
   "merge": {
     "action": "Dublette zusammenführen",

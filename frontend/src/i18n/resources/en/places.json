@@ -782,7 +782,13 @@
     "photoRetry": "Upload photos again",
     "continueWithoutPhoto": "Continue without photos",
     "recorded": "Visit to “{{name}}” recorded.",
-    "photosTooMany": "at most {{max}} photos"
+    "photosTooMany": "at most {{max}} photos",
+    "rating": {
+      "label": "Rating (optional)",
+      "set_one": "1 star",
+      "set_other": "{{count}} stars",
+      "clear": "Remove rating"
+    }
   },
   "merge": {
     "action": "Merge a duplicate",

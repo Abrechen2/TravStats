@@ -30,6 +30,7 @@ vi.mock("../../../hooks/useTranslation", async () => {
 });
 
 import { VisitDialog } from "../VisitDialog";
+import { visitAt } from "./visitFixtures";
 
 const PLACE = { id: "p1", name: "Wartburg" };
 const stored = { id: "v-new", placeId: "p1" } as unknown as PlaceVisit;
@@ -299,5 +300,31 @@ describe("VisitDialog", () => {
     expect(save()).toBeDisabled();
     expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent("höchstens 20 Fotos");
     expect(createVisit).not.toHaveBeenCalled();
+  });
+  it("lets the web set a visit's rating (forgejo#405: it could only be read, never edited)", async () => {
+    await renderDialog();
+    await userEvent.click(screen.getByRole("button", { name: "4 Sterne" }));
+    await userEvent.click(save());
+    await waitFor(() => expect(createVisit).toHaveBeenCalled());
+    expect(createVisit.mock.calls[0][1]).toMatchObject({ rating: 4 });
+  });
+
+  it("leaves an unrated new visit without a rating key", async () => {
+    await renderDialog();
+    await userEvent.click(save());
+    await waitFor(() => expect(createVisit).toHaveBeenCalled());
+    expect(createVisit.mock.calls[0][1]).not.toHaveProperty("rating");
+  });
+
+  it("edits a stored rating and clears it with null", async () => {
+    await renderDialog({ visit: visitAt("v1", "2026-05-01T10:00:00Z", { rating: 3 }) });
+    expect(screen.getByRole("button", { name: "3 Sterne" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Bewertung entfernen" }));
+    await userEvent.click(save());
+    await waitFor(() => expect(updateVisit).toHaveBeenCalled());
+    expect(updateVisit.mock.calls[0][1]).toMatchObject({ rating: null });
   });
 });
