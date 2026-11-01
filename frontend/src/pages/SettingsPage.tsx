@@ -15,6 +15,7 @@ import { SectionFrame } from "../components/Settings/frame/SectionFrame";
 import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
 import { VersionLine } from "../components/Settings/frame/VersionLine";
 import {
+  PageExpertNoteShownContext,
   PageHiddenRowsContext,
   useHiddenRowsCollector,
 } from "../components/Settings/frame/useExpertRows";
@@ -235,28 +236,32 @@ export default function SettingsPage(): JSX.Element {
 
   const sections = (
     <PageHiddenRowsContext.Provider value={reportHiddenRows}>
-      {/* Asks before a page with unsaved groups is left, and sends waiting writes. */}
-      <LeaveGuardHost />
-      <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-        {visible.shown.map((id, index) => {
-          const mount = mounts.get(id)!;
-          return (
-            <SectionFrame
-              key={id}
-              headingAbove={index === 0 ? title : null}
-              anchorId={`settings-${id}`}
-              label={labelOf(id)}
-              expert={mount.level === "expert"}
-              frame={frameOf(mount)}
-              deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
-              revealExpertRows={named === id && searchParams.get("expert") === "1"}
-              highlighted={highlighted === id}
-            >
-              {body(mount)}
-            </SectionFrame>
-          );
-        })}
-      </div>
+      <PageExpertNoteShownContext.Provider
+        value={!domainOff && !isExpertPage && hiddenSettings > 0}
+      >
+        {/* Asks before a page with unsaved groups is left, and sends waiting writes. */}
+        <LeaveGuardHost />
+        <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+          {visible.shown.map((id, index) => {
+            const mount = mounts.get(id)!;
+            return (
+              <SectionFrame
+                key={id}
+                headingAbove={index === 0 ? title : null}
+                anchorId={`settings-${id}`}
+                label={labelOf(id)}
+                expert={mount.level === "expert"}
+                frame={frameOf(mount)}
+                deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
+                revealExpertRows={named === id && searchParams.get("expert") === "1"}
+                highlighted={highlighted === id}
+              >
+                {body(mount)}
+              </SectionFrame>
+            );
+          })}
+        </div>
+      </PageExpertNoteShownContext.Provider>
     </PageHiddenRowsContext.Provider>
   );
 
