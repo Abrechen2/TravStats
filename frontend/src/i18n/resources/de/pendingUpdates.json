@@ -136,5 +136,17 @@
     "fullBadge": "Vollständig",
     "slimBadge": "Basis",
     "disclaimer": "Vorschlag · nicht verifiziert · basiert auf {{count}} Referenzflügen ({{confidence}}% Konfidenz)"
+  },
+  "bulk": {
+    "apply": "Alle {{count}} übernehmen",
+    "reject": "Alle {{count}} verwerfen",
+    "applyConfirm": "{{count}} Updates auf deine Flüge anwenden?",
+    "rejectConfirm": "{{count}} Updates verwerfen?",
+    "yes": "Ja, ausführen",
+    "cancel": "Abbrechen",
+    "applyDone": "{{count}} Updates übernommen.",
+    "rejectDone": "{{count}} Updates verworfen.",
+    "partial": "{{done}} erledigt, {{failed}} fehlgeschlagen – sie bleiben im Posteingang.",
+    "failed": "Die Sammelaktion ist fehlgeschlagen. Der Stand wurde neu geladen."
   }
 }

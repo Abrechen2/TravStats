@@ -4,6 +4,7 @@ import type { TripSuggestionList } from "../../../types/tripSuggestion";
 import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
 import { Card } from "../../ui/Card";
 import EmptyState from "../../ui/EmptyState";
+import BulkUpdatesBar from "./BulkUpdatesBar";
 import PhotoScanPanel from "./PhotoScanPanel";
 import type { InboxSource } from "./model";
 
@@ -40,11 +41,14 @@ export default function SourcePanel({
   empty,
   proposalInfo,
   reload,
+  updateIds = [],
 }: {
   source: InboxSource | "all";
   empty: boolean;
   proposalInfo: TripSuggestionList | null;
   reload: () => Promise<void>;
+  /** The flight updates currently shown; the bulk bar acts on exactly these. */
+  updateIds?: string[];
 }) {
   const { t } = useTranslation(["dataQuality", "pendingUpdates", "trips"]);
   const showTripNotes = (source === "all" || source === "trips") && proposalInfo;
@@ -54,6 +58,7 @@ export default function SourcePanel({
       {source === "updates" && (
         <p className="t-caption">{t("dataQuality:inbox.flightUpdates.description")}</p>
       )}
+      {source === "updates" && <BulkUpdatesBar ids={updateIds} reload={reload} />}
       {source === "dawarich" && <DawarichStayScanCard onScanned={() => void reload()} />}
       {showTripNotes && proposalInfo.home === "missing" && (
         <p role="status" className="t-caption text-(--ts-warn)">

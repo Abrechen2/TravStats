@@ -136,5 +136,17 @@
     "fullBadge": "Full",
     "slimBadge": "Basic",
     "disclaimer": "Suggestion · unverified · based on {{count}} reference flights ({{confidence}}% confidence)"
+  },
+  "bulk": {
+    "apply": "Apply all {{count}}",
+    "reject": "Reject all {{count}}",
+    "applyConfirm": "Apply {{count}} updates to your flights?",
+    "rejectConfirm": "Reject {{count}} updates?",
+    "yes": "Yes, do it",
+    "cancel": "Cancel",
+    "applyDone": "{{count}} updates applied.",
+    "rejectDone": "{{count}} updates rejected.",
+    "partial": "{{done}} done, {{failed}} failed – they stay in the inbox.",
+    "failed": "The bulk action failed. The list was reloaded."
   }
 }

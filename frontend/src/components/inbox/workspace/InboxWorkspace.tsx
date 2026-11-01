@@ -260,6 +260,7 @@ export default function InboxWorkspace({
         empty={sourceEmpty}
         proposalInfo={data.proposalInfo}
         reload={data.reload}
+        updateIds={visible.flatMap((item) => (item.source === "updates" ? [item.data.id] : []))}
       />
       {historySource && (
         <div className="space-y-3">
