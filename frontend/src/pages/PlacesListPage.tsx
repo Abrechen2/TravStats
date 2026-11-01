@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import GeoExportButtons from "../components/export/GeoExportButtons";
+import { geoExportPaths } from "../lib/api/geoExport";
 import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -453,6 +455,11 @@ export default function PlacesListPage(): JSX.Element {
             </button>
           </div>
         </div>
+        <GeoExportButtons
+          path={geoExportPaths.places}
+          testId="places-export"
+          className="mb-3 flex flex-wrap items-center gap-2"
+        />
 
         {deleteFailure !== null && (
           <div className="mb-3">

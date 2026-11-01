@@ -20,6 +20,8 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
 import { FerryRouteMap } from "../components/ferry/FerryRouteMap";
+import GeoExportButtons from "../components/export/GeoExportButtons";
+import { geoExportPaths } from "../lib/api/geoExport";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { FerryFormModal } from "../components/ferry/FerryFormModal";
@@ -263,6 +265,13 @@ export default function FerryDetailPage() {
             <WebGLGuard>
               <FerryRouteMap ride={ride} />
             </WebGLGuard>
+            {ride.geometry && (
+              <GeoExportButtons
+                path={geoExportPaths.ferry(ride.id)}
+                testId="ferry-line-export"
+                className="mt-2 flex flex-wrap items-center gap-2"
+              />
+            )}
           </DetailSection>
           {ride.companions.length > 0 && (
             <DetailSection title={t("ferry:companionNames")}>

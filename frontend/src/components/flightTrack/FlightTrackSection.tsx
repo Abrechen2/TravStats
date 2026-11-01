@@ -19,6 +19,8 @@ import { NO_ORIGIN_INFO, type TrackOrigin, type TrackOriginInfo } from "../../li
 import { formatTimeValueShown } from "../../lib/displayFormat";
 import type { TimeValue } from "../../shared/time";
 import WebGLGuard from "../map/WebGLGuard";
+import GeoExportButtons from "../export/GeoExportButtons";
+import { geoExportPaths } from "../../lib/api/geoExport";
 
 type TrackState =
   | { kind: "loading" }
@@ -192,6 +194,9 @@ export default function FlightTrackSection({
               difference: `${comparison.differencePercent > 0 ? "+" : ""}${comparison.differencePercent}`,
             })}
           </p>
+        )}
+        {ownOrNone && (
+          <GeoExportButtons path={geoExportPaths.flight(flightId)} testId="flight-track-export" />
         )}
         {canUpload && ownOrNone && (
           <FlightTrackControls flightId={flightId} hasTrack onChanged={reload} />

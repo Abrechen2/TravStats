@@ -66,6 +66,7 @@
     "flights/trackLines.ts",
     "flights/trackSource.ts",
     "flightsBatch.ts",
+    "geoExport.ts",
     "geoServer.ts",
     "health.ts",
     "imageParse.ts",

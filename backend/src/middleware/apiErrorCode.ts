@@ -57,6 +57,8 @@ export type ApiErrorCode =
   | "DAWARICH_OWN_CONNECTION_REQUIRED"
   | "DAWARICH_SCAN_UNAVAILABLE"
   | "DAWARICH_PLACES_DISABLED"
+  /** A GPX/KML export (forgejo#402) found nothing to write: no recorded line, no stored geometry, no places. */
+  | "GEO_EXPORT_EMPTY"
   /** The account switched stay suggestions off (forgejo#306): no scan, no review. */
   | "STAY_SUGGESTIONS_DISABLED"
   | "DAWARICH_STAY_SCAN_FAILED"
