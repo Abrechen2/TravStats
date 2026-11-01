@@ -3,6 +3,7 @@ import { achievements } from "../../data/achievements";
 import {
   calculateRentalAchievementStats,
   checkRentalAchievement,
+  foldRentalAchievementStats,
   RENTAL_REQUIREMENT_TYPES,
 } from "../rentalAchievements";
 
@@ -64,12 +65,52 @@ describe("rental achievements", () => {
     await prisma.user.deleteMany({ where: { username: USER } });
   });
 
+  // forgejo#405: kilometres come from odometer PAIRS only; the long rental is calendar days.
+  it("folds odometer kilometres, countries, companies and the longest rental", () => {
+    const rental = (over: object) =>
+      ({
+        id: "x",
+        provider: "Sixt",
+        pickupCountry: null,
+        returnCountry: null,
+        pickupTime: new Date("2025-05-01T08:00:00Z"),
+        pickupTimezone: "Europe/Berlin",
+        returnTime: new Date("2025-05-03T08:00:00Z"),
+        returnTimezone: "Europe/Berlin",
+        odometerOutKm: null,
+        odometerInKm: null,
+        ...over,
+      }) as never;
+    const stats = foldRentalAchievementStats([
+      rental({ odometerOutKm: 1000, odometerInKm: 1600, pickupCountry: "PT", returnCountry: "ES" }),
+      // Half a pair, and a car that ran backwards, add no kilometres.
+      rental({ odometerOutKm: 5, provider: " sixt " }),
+      rental({ odometerOutKm: 900, odometerInKm: 100, provider: "Europcar" }),
+      rental({ returnTime: new Date("2025-05-16T08:00:00Z"), pickupCountry: "pt" }),
+    ]);
+    expect(stats).toMatchObject({
+      rentalOdometerKm: 600,
+      rentalCountries: 2,
+      rentalCompanies: 2,
+      // 1 May to 16 May, counter-style: fifteen days.
+      rentalLongestDays: 15,
+    });
+    expect(
+      checkRentalAchievement({ requirementType: "rental_longest_days", requirement: 14 }, stats)
+    ).toEqual({ isUnlocked: true, progress: 15 });
+  });
+
   it("measures completed rentals only", async () => {
     expect(await calculateRentalAchievementStats(userId)).toEqual({
       rentalCount: 2,
       rentalOneWayCount: 1,
       // Half a pair is no reading: the one-way rental has only its out-km.
       rentalOdometerDocumented: 1,
+      rentalOdometerKm: 400,
+      // The fixtures' stations carry no country: nothing to count, never a guess.
+      rentalCountries: 0,
+      rentalCompanies: 1,
+      rentalLongestDays: 3,
     });
   });
 
@@ -89,7 +130,15 @@ describe("rental achievements", () => {
     ).toBeNull();
     const seeds = achievements.filter((a) => a.domain === "rental");
     expect(seeds.map((a) => a.code).sort()).toEqual([
+      "RENTAL_10",
+      "RENTAL_25",
+      "RENTAL_COMPANIES_5",
+      "RENTAL_COUNTRIES_10",
+      "RENTAL_COUNTRIES_3",
       "RENTAL_FIRST",
+      "RENTAL_KM_25000",
+      "RENTAL_KM_5000",
+      "RENTAL_LONG_14",
       "RENTAL_ODOMETER_5",
       "RENTAL_ONE_WAY",
     ]);

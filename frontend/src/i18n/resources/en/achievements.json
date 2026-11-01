@@ -1437,6 +1437,114 @@
     "TRAVTRACK_KM_10000": {
       "name": "Ten thousand kilometres on the ground",
       "description": "10,000 kilometres on the ground measured by TravTrack"
+    },
+    "BUS_25": {
+      "name": "Regular on the coach",
+      "description": "Completed 25 bus rides"
+    },
+    "BUS_100": {
+      "name": "Coach rider by passion",
+      "description": "Completed 100 bus rides"
+    },
+    "BUS_KM_1000": {
+      "name": "A thousand kilometres of road",
+      "description": "Travelled 1,000 km by bus"
+    },
+    "BUS_KM_10000": {
+      "name": "Ten thousand kilometres of tarmac",
+      "description": "Travelled 10,000 km by bus"
+    },
+    "BUS_COUNTRIES_3": {
+      "name": "Across borders by coach",
+      "description": "Reached bus stops in three countries"
+    },
+    "BUS_COUNTRIES_10": {
+      "name": "A continent by coach",
+      "description": "Reached bus stops in ten countries"
+    },
+    "BUS_CROSS_BORDER_1": {
+      "name": "Border crossing by coach",
+      "description": "A bus ride across a national border"
+    },
+    "BUS_CROSS_BORDER_10": {
+      "name": "Border hopper by coach",
+      "description": "Ten bus rides across a national border"
+    },
+    "BUS_OPERATORS_5": {
+      "name": "Five bus companies",
+      "description": "Rode with five different bus companies"
+    },
+    "BUS_LONG_500": {
+      "name": "Long haul by coach",
+      "description": "A single bus ride of more than 500 km"
+    },
+    "FERRY_10": {
+      "name": "Regular on board",
+      "description": "Completed 10 ferry crossings"
+    },
+    "FERRY_50": {
+      "name": "Honorary ferry captain",
+      "description": "Completed 50 ferry crossings"
+    },
+    "FERRY_KM_1000": {
+      "name": "A thousand kilometres of water",
+      "description": "Travelled 1,000 km by ferry"
+    },
+    "FERRY_KM_5000": {
+      "name": "Five thousand kilometres of sea",
+      "description": "Travelled 5,000 km by ferry"
+    },
+    "FERRY_COUNTRIES_3": {
+      "name": "Three countries by water",
+      "description": "Reached ferry ports in three countries"
+    },
+    "FERRY_COUNTRIES_10": {
+      "name": "Ten countries by sea",
+      "description": "Reached ferry ports in ten countries"
+    },
+    "FERRY_PORTS_15": {
+      "name": "Fifteen harbours",
+      "description": "Called at fifteen different ferry ports"
+    },
+    "FERRY_LINES_5": {
+      "name": "Five ferry lines",
+      "description": "Sailed with five different ferry lines"
+    },
+    "FERRY_VEHICLE": {
+      "name": "Driving on board",
+      "description": "A crossing with a vehicle aboard"
+    },
+    "RENTAL_10": {
+      "name": "Regular renter",
+      "description": "Completed 10 rentals"
+    },
+    "RENTAL_25": {
+      "name": "Key ring",
+      "description": "Completed 25 rentals"
+    },
+    "RENTAL_KM_5000": {
+      "name": "Five thousand rental kilometres",
+      "description": "Drove 5,000 km in rental cars, shown by the odometer"
+    },
+    "RENTAL_KM_25000": {
+      "name": "Twenty-five thousand rental kilometres",
+      "description": "Drove 25,000 km in rental cars, shown by the odometer"
+    },
+    "RENTAL_COUNTRIES_3": {
+      "name": "Rental cars in three countries",
+      "description": "Used rental stations in three countries"
+    },
+    "RENTAL_COUNTRIES_10": {
+      "name": "Rental cars in ten countries",
+      "description": "Used rental stations in ten countries"
+    },
+    "RENTAL_COMPANIES_5": {
+      "name": "Five rental companies",
+      "description": "Rented from five different companies"
+    },
+    "RENTAL_LONG_14": {
+      "name": "Two weeks behind the wheel",
+      "description": "A single rental of at least 14 days"
     }
   },
   "header": {

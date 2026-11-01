@@ -1437,6 +1437,114 @@
     "TRAVTRACK_KM_10000": {
       "name": "Zehntausend Kilometer am Boden",
       "description": "10.000 Kilometer am Boden von TravTrack gemessen"
+    },
+    "BUS_25": {
+      "name": "Stammgast im Bus",
+      "description": "25 Busfahrten abgeschlossen"
+    },
+    "BUS_100": {
+      "name": "Busfahrer aus Leidenschaft",
+      "description": "100 Busfahrten abgeschlossen"
+    },
+    "BUS_KM_1000": {
+      "name": "Tausend Kilometer Landstraße",
+      "description": "1.000 km mit dem Bus zurückgelegt"
+    },
+    "BUS_KM_10000": {
+      "name": "Zehntausend Kilometer Asphalt",
+      "description": "10.000 km mit dem Bus zurückgelegt"
+    },
+    "BUS_COUNTRIES_3": {
+      "name": "Mit dem Bus über Grenzen",
+      "description": "Haltestellen in drei Ländern erreicht"
+    },
+    "BUS_COUNTRIES_10": {
+      "name": "Kontinent im Bus",
+      "description": "Haltestellen in zehn Ländern erreicht"
+    },
+    "BUS_CROSS_BORDER_1": {
+      "name": "Grenzübertritt im Bus",
+      "description": "Eine Busfahrt über eine Landesgrenze"
+    },
+    "BUS_CROSS_BORDER_10": {
+      "name": "Grenzgänger im Bus",
+      "description": "Zehn Busfahrten über eine Landesgrenze"
+    },
+    "BUS_OPERATORS_5": {
+      "name": "Fünf Busunternehmen",
+      "description": "Mit fünf verschiedenen Busunternehmen gefahren"
+    },
+    "BUS_LONG_500": {
+      "name": "Langstrecke im Bus",
+      "description": "Eine einzelne Busfahrt über 500 km"
+    },
+    "FERRY_10": {
+      "name": "Stammgast an Bord",
+      "description": "10 Fährüberfahrten abgeschlossen"
+    },
+    "FERRY_50": {
+      "name": "Fährkapitän ehrenhalber",
+      "description": "50 Fährüberfahrten abgeschlossen"
+    },
+    "FERRY_KM_1000": {
+      "name": "Tausend Kilometer Wasser",
+      "description": "1.000 km mit der Fähre zurückgelegt"
+    },
+    "FERRY_KM_5000": {
+      "name": "Fünftausend Kilometer Meer",
+      "description": "5.000 km mit der Fähre zurückgelegt"
+    },
+    "FERRY_COUNTRIES_3": {
+      "name": "Über das Wasser in drei Länder",
+      "description": "Fährhäfen in drei Ländern erreicht"
+    },
+    "FERRY_COUNTRIES_10": {
+      "name": "Zehn Länder zur See",
+      "description": "Fährhäfen in zehn Ländern erreicht"
+    },
+    "FERRY_PORTS_15": {
+      "name": "Fünfzehn Häfen",
+      "description": "Fünfzehn verschiedene Fährhäfen angelaufen"
+    },
+    "FERRY_LINES_5": {
+      "name": "Fünf Reedereien",
+      "description": "Mit fünf verschiedenen Fährlinien gefahren"
+    },
+    "FERRY_VEHICLE": {
+      "name": "Mit dem Auto an Bord",
+      "description": "Eine Überfahrt mit Fahrzeug"
+    },
+    "RENTAL_10": {
+      "name": "Mietwagen-Stammkunde",
+      "description": "10 Mieten abgeschlossen"
+    },
+    "RENTAL_25": {
+      "name": "Schlüsselbund",
+      "description": "25 Mieten abgeschlossen"
+    },
+    "RENTAL_KM_5000": {
+      "name": "Fünftausend Mietkilometer",
+      "description": "5.000 km mit Mietwagen gefahren, belegt durch den Tachostand"
+    },
+    "RENTAL_KM_25000": {
+      "name": "Fünfundzwanzigtausend Mietkilometer",
+      "description": "25.000 km mit Mietwagen gefahren, belegt durch den Tachostand"
+    },
+    "RENTAL_COUNTRIES_3": {
+      "name": "Mietwagen in drei Ländern",
+      "description": "Mietstationen in drei Ländern genutzt"
+    },
+    "RENTAL_COUNTRIES_10": {
+      "name": "Mietwagen in zehn Ländern",
+      "description": "Mietstationen in zehn Ländern genutzt"
+    },
+    "RENTAL_COMPANIES_5": {
+      "name": "Fünf Vermieter",
+      "description": "Bei fünf verschiedenen Vermietern gemietet"
+    },
+    "RENTAL_LONG_14": {
+      "name": "Zwei Wochen am Steuer",
+      "description": "Eine einzelne Miete über mindestens 14 Tage"
     }
   },
   "header": {

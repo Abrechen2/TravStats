@@ -1,6 +1,12 @@
 import type { Achievement } from "../prisma";
 import { prisma } from "../db";
-import { countableRentalWhere, odometerDistanceKm } from "../shared/rentalCounting";
+import {
+  countableRentalWhere,
+  odometerDistanceKm,
+  rentalCountries,
+  rentalDays,
+} from "../shared/rentalCounting";
+import { operatorKey } from "../shared/railRideKinds";
 import { isOneWay } from "../services/rental/rentalWrite";
 
 /**
@@ -16,6 +22,12 @@ import { isOneWay } from "../services/rental/rentalWrite";
  * known and the car did not run backwards (`odometerDistanceKm`), never on
  * an invoice figure or an estimate.
  *
+ * The depth rungs (forgejo#405, thresholds a proposal): kilometres are the
+ * odometer pairs only — the badge rewards data, so an invoice figure or an
+ * estimate never feeds it; countries are the stations' stored countries
+ * (`rentalCountries`); a company is the folded provider name; the long rental
+ * is the most calendar days of one (`rentalDays`).
+ *
  * Hidden while the user has the rental domain off: `services/achievementVisibility`
  * drops every `domain: "rental"` badge from lists, counts and points then.
  */
@@ -24,12 +36,20 @@ export interface RentalAchievementStats {
   rentalCount: number;
   rentalOneWayCount: number;
   rentalOdometerDocumented: number;
+  rentalOdometerKm: number;
+  rentalCountries: number;
+  rentalCompanies: number;
+  rentalLongestDays: number;
 }
 
 export const EMPTY_RENTAL_STATS: RentalAchievementStats = {
   rentalCount: 0,
   rentalOneWayCount: 0,
   rentalOdometerDocumented: 0,
+  rentalOdometerKm: 0,
+  rentalCountries: 0,
+  rentalCompanies: 0,
+  rentalLongestDays: 0,
 };
 
 export const RENTAL_BADGE_SELECT = {
@@ -41,6 +61,8 @@ export const RENTAL_BADGE_SELECT = {
   pickupTimezone: true,
   returnTime: true,
   returnTimezone: true,
+  pickupCountry: true,
+  returnCountry: true,
   pickupAirportId: true,
   returnAirportId: true,
   pickupLat: true,
@@ -60,6 +82,8 @@ export interface RentalBadgeRow {
   pickupTimezone: string;
   returnTime: Date;
   returnTimezone: string;
+  pickupCountry: string | null;
+  returnCountry: string | null;
   pickupAirportId: number | null;
   returnAirportId: number | null;
   pickupLat: number;
@@ -89,6 +113,13 @@ export function foldRentalAchievementStats(
     rentalCount: rows.length,
     rentalOneWayCount: rows.filter((r) => isOneWay(r)).length,
     rentalOdometerDocumented: rows.filter(hasOdometerPair).length,
+    rentalOdometerKm: rows.reduce(
+      (sum, r) => sum + (odometerDistanceKm(r.odometerOutKm, r.odometerInKm) ?? 0),
+      0
+    ),
+    rentalCountries: new Set(rows.flatMap((r) => rentalCountries(r))).size,
+    rentalCompanies: new Set(rows.flatMap((r) => operatorKey(r.provider) ?? [])).size,
+    rentalLongestDays: Math.max(0, ...rows.map((r) => rentalDays(r))),
   };
 }
 
@@ -102,6 +133,10 @@ const MEASURE: Record<string, keyof RentalAchievementStats> = {
   rental_count: "rentalCount",
   rental_one_way: "rentalOneWayCount",
   rental_odometer_documented: "rentalOdometerDocumented",
+  rental_odometer_km: "rentalOdometerKm",
+  rental_countries: "rentalCountries",
+  rental_companies: "rentalCompanies",
+  rental_longest_days: "rentalLongestDays",
 };
 
 export const RENTAL_REQUIREMENT_TYPES: readonly string[] = Object.keys(MEASURE);
@@ -113,6 +148,6 @@ export function checkRentalAchievement(
 ): { isUnlocked: boolean; progress: number } | null {
   const key = MEASURE[achievement.requirementType];
   if (!key) return null;
-  const progress = stats[key];
+  const progress = Math.round(stats[key]);
   return { isUnlocked: progress >= achievement.requirement, progress };
 }

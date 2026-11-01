@@ -11,6 +11,7 @@ import {
   BUS_REQUIREMENT_TYPES,
   calculateBusAchievementStats,
   checkBusAchievement,
+  foldBusAchievementStats,
 } from "../busAchievements";
 
 /**
@@ -68,7 +69,18 @@ describe("bus achievements", () => {
 
   it("measures completed rides, the night bus and three terminals of which two share a name", async () => {
     const stats = await calculateBusAchievementStats(userId);
-    expect(stats).toEqual({ busRidesCount: 2, busNightRides: 1, busTerminals: 3 });
+    expect(stats).toEqual({
+      busRidesCount: 2,
+      busNightRides: 1,
+      busTerminals: 3,
+      busKm: 535,
+      busCountries: 2,
+      // Berlin → Prague crosses a border; Hamburg → Berlin does not.
+      busCrossBorderRides: 1,
+      // No operator recorded: nothing to count, never a made-up company.
+      busOperators: 0,
+      busLongestKm: 280,
+    });
     expect(
       checkBusAchievement({ requirementType: "bus_night_rides", requirement: 1 }, stats)
     ).toEqual({ isUnlocked: true, progress: 1 });
@@ -76,8 +88,84 @@ describe("bus achievements", () => {
       checkBusAchievement({ requirementType: "rail_count", requirement: 1 }, stats)
     ).toBeNull();
     const seeds = achievements.filter((a) => a.domain === "bus");
-    expect(seeds.map((a) => a.code).sort()).toEqual(["BUS_FIRST", "BUS_NIGHT", "BUS_TERMINALS_10"]);
+    expect(seeds.map((a) => a.code).sort()).toEqual([
+      "BUS_100",
+      "BUS_25",
+      "BUS_COUNTRIES_10",
+      "BUS_COUNTRIES_3",
+      "BUS_CROSS_BORDER_1",
+      "BUS_CROSS_BORDER_10",
+      "BUS_FIRST",
+      "BUS_KM_1000",
+      "BUS_KM_10000",
+      "BUS_LONG_500",
+      "BUS_NIGHT",
+      "BUS_OPERATORS_5",
+      "BUS_TERMINALS_10",
+    ]);
     for (const a of seeds) expect(BUS_REQUIREMENT_TYPES).toContain(a.requirementType);
+  });
+
+  // forgejo#405: the depth rungs read the rules rail reads.
+  it("measures kilometres, countries, border rides, operators and the long ride", async () => {
+    const stats = await calculateBusAchievementStats(userId);
+    const check = (requirementType: string, requirement: number) =>
+      checkBusAchievement({ requirementType, requirement }, stats);
+    expect(check("bus_km", 500)).toEqual({ isUnlocked: true, progress: 535 });
+    expect(check("bus_km", 1000)?.isUnlocked).toBe(false);
+    expect(check("bus_countries", 3)).toEqual({ isUnlocked: false, progress: 2 });
+    expect(check("bus_cross_border", 1)).toEqual({ isUnlocked: true, progress: 1 });
+    expect(check("bus_operators", 5)).toEqual({ isUnlocked: false, progress: 0 });
+    expect(check("bus_longest_km", 500)).toEqual({ isUnlocked: false, progress: 280 });
+  });
+
+  it("opens the rides behind a depth badge, with the badge's own figure", async () => {
+    const res = await resolveMetricEvidence(userId, "badgeBusKm", ALL, PAGE);
+    if (!res) throw new Error("badgeBusKm is not served");
+    expect(res.measure.value).toBe(535);
+    expect(res.entries.map((e) => e.href)).toEqual([
+      expect.stringMatching(/^\/bus\//),
+      expect.stringMatching(/^\/bus\//),
+    ]);
+    assertSumInvariant(res, Math.round);
+  });
+
+  it("counts operators once however they are spelled, and skips rides with no distance", () => {
+    const ride = (over: object) =>
+      ({
+        id: "x",
+        depStationName: "A",
+        depLat: 1,
+        depLon: 1,
+        arrStationName: "B",
+        arrLat: 2,
+        arrLon: 2,
+        departureTime: new Date("2025-01-01T08:00:00Z"),
+        arrivalTime: null,
+        depTimezone: null,
+        arrTimezone: null,
+        depPrecision: null,
+        arrPrecision: null,
+        operator: null,
+        depCountry: "DE",
+        arrCountry: "DE",
+        distanceKm: null,
+        ...over,
+      }) as never;
+    const stats = foldBusAchievementStats([
+      ride({ operator: "FlixBus", distanceKm: 100 }),
+      ride({ operator: "  flixbus ", distanceKm: 50 }),
+      ride({ operator: "Regiobus", distanceKm: null }),
+      ride({ operator: null, depCountry: null, arrCountry: "FR" }),
+    ]);
+    expect(stats).toMatchObject({
+      busOperators: 2,
+      busKm: 150,
+      busLongestKm: 100,
+      busCountries: 2,
+      // A terminal the geocoder could not place is no evidence of a border.
+      busCrossBorderRides: 0,
+    });
   });
 
   it("lists the rides behind the tab's and the badges' figures", async () => {

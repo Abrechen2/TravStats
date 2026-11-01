@@ -5,6 +5,7 @@ import {
   FERRY_REQUIREMENT_TYPES,
   calculateFerryAchievementStats,
   checkFerryAchievement,
+  foldFerryAchievementStats,
 } from "../ferryAchievements";
 import { BADGE_WITHOUT_EVIDENCE, badgeEvidenceKey } from "../../shared/badgeEvidence";
 
@@ -67,13 +68,66 @@ describe("ferry achievements", () => {
 
   it("measures completed crossings, the overnight one and three distinct ports", async () => {
     const stats = await calculateFerryAchievementStats(userId);
-    expect(stats).toEqual({ ferryCrossingsCount: 3, ferryNightCrossings: 1, ferryPorts: 3 });
+    expect(stats).toEqual({
+      ferryCrossingsCount: 3,
+      ferryNightCrossings: 1,
+      ferryPorts: 3,
+      ferryKm: 0,
+      ferryCountries: 0,
+      ferryOperators: 0,
+      ferryVehicleCrossings: 0,
+    });
     expect(
       checkFerryAchievement({ requirementType: "ferry_night_crossings", requirement: 1 }, stats)
     ).toEqual({ isUnlocked: true, progress: 1 });
     expect(
       checkFerryAchievement({ requirementType: "bus_count", requirement: 1 }, stats)
     ).toBeNull();
+  });
+
+  // forgejo#405: the depth rungs. A vehicle is a type or a registration, nothing else.
+  it("measures kilometres, countries, lines and a vehicle aboard from the crossing's own record", () => {
+    const crossing = (over: object) =>
+      ({
+        id: "x",
+        depStationName: "A",
+        depLat: 1,
+        depLon: 1,
+        arrStationName: "B",
+        arrLat: 2,
+        arrLon: 2,
+        departureTime: new Date("2025-01-01T08:00:00Z"),
+        arrivalTime: null,
+        depTimezone: null,
+        arrTimezone: null,
+        depPrecision: null,
+        arrPrecision: null,
+        operator: null,
+        depCountry: null,
+        arrCountry: null,
+        distanceKm: null,
+        vehicleType: null,
+        vehicleRegistration: null,
+        ...over,
+      }) as never;
+    const stats = foldFerryAchievementStats([
+      crossing({ operator: "Stena Line", depCountry: "DE", arrCountry: "SE", distanceKm: 452.4 }),
+      crossing({ operator: "stena  line", depCountry: "SE", arrCountry: "DK", vehicleType: "Pkw" }),
+      crossing({ operator: "TT-Line", vehicleRegistration: " " }),
+    ]);
+    expect(stats).toMatchObject({
+      ferryKm: 452.4,
+      ferryCountries: 3,
+      ferryOperators: 2,
+      // Whitespace is no registration; one crossing names a vehicle type.
+      ferryVehicleCrossings: 1,
+    });
+    expect(
+      checkFerryAchievement({ requirementType: "ferry_km", requirement: 1000 }, stats)
+    ).toEqual({ isUnlocked: false, progress: 452 });
+    expect(
+      checkFerryAchievement({ requirementType: "ferry_vehicle", requirement: 1 }, stats)
+    ).toEqual({ isUnlocked: true, progress: 1 });
   });
 
   it("seeds ferry badges whose rules the ferry check answers, each with an evidence answer", () => {

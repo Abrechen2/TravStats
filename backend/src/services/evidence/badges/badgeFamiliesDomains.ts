@@ -14,6 +14,24 @@ import {
   RAIL_REQUIREMENT_TYPES,
 } from "../../../utils/railAchievements";
 import {
+  checkBusAchievement,
+  BUS_REQUIREMENT_TYPES,
+  foldBusAchievementStats,
+} from "../../../utils/busAchievements";
+import {
+  checkFerryAchievement,
+  FERRY_REQUIREMENT_TYPES,
+  foldFerryAchievementStats,
+  loadFerryBadgeRows,
+} from "../../../utils/ferryAchievements";
+import {
+  checkRentalAchievement,
+  foldRentalAchievementStats,
+  loadRentalBadgeRows,
+  RENTAL_REQUIREMENT_TYPES,
+} from "../../../utils/rentalAchievements";
+import { loadBusRows } from "../../bus/busStats";
+import {
   badgeDomainCounts,
   checkCrossDomainAchievement,
   CROSS_DOMAIN_REQUIREMENT_TYPES,
@@ -55,6 +73,11 @@ import {
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "../entryMappersDomains";
+import {
+  busEvidenceEntry,
+  ferryEvidenceEntry,
+  rentalEvidenceEntry,
+} from "../entryMappersRentalBus";
 import { coreFamily } from "./badgeFamiliesCore";
 import {
   erase,
@@ -106,6 +129,34 @@ async function railFamily(userId: string, rule: BadgeRule) {
         { subtitle: null }
       ),
     async (subset) => progressOf(checkRailAchievement(rule, foldRailAchievementStats(subset)))
+  );
+}
+
+/** Bus, ferry and rental depth badges (forgejo#405): the counted rides, folded by the badge's own module. */
+async function busFamily(userId: string, rule: BadgeRule) {
+  const rows = await loadBusRows(userId);
+  return entryAs(
+    rows,
+    (r) => busEvidenceEntry(r, {}),
+    async (subset) => progressOf(checkBusAchievement(rule, foldBusAchievementStats(subset)))
+  );
+}
+
+async function ferryFamily(userId: string, rule: BadgeRule) {
+  const rows = await loadFerryBadgeRows(userId);
+  return entryAs(
+    rows,
+    (r) => ferryEvidenceEntry(r, {}),
+    async (subset) => progressOf(checkFerryAchievement(rule, foldFerryAchievementStats(subset)))
+  );
+}
+
+async function rentalFamily(userId: string, rule: BadgeRule) {
+  const rows = await loadRentalBadgeRows(userId);
+  return entryAs(
+    rows,
+    (r) => rentalEvidenceEntry(r, {}),
+    async (subset) => progressOf(checkRentalAchievement(rule, foldRentalAchievementStats(subset)))
   );
 }
 
@@ -293,6 +344,9 @@ const INSIGHT_TYPES = [
 /** Every requirement type a domain family answers. */
 export const DOMAIN_REQUIREMENT_TYPES: readonly string[] = [
   ...RAIL_REQUIREMENT_TYPES,
+  ...BUS_REQUIREMENT_TYPES,
+  ...FERRY_REQUIREMENT_TYPES,
+  ...RENTAL_REQUIREMENT_TYPES,
   ...CROSS_DOMAIN_REQUIREMENT_TYPES,
   "trips_fully_documented",
   ...ROADTRIP_REQUIREMENT_TYPES,
@@ -318,6 +372,9 @@ export async function loadBadgeFamily(
     );
   }
   if (RAIL_REQUIREMENT_TYPES.includes(type)) return railFamily(userId, rule);
+  if (BUS_REQUIREMENT_TYPES.includes(type)) return busFamily(userId, rule);
+  if (FERRY_REQUIREMENT_TYPES.includes(type)) return ferryFamily(userId, rule);
+  if (RENTAL_REQUIREMENT_TYPES.includes(type)) return rentalFamily(userId, rule);
   if (CROSS_DOMAIN_REQUIREMENT_TYPES.includes(type) || type === "trips_fully_documented") {
     return tripFamily(userId, rule);
   }
