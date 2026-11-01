@@ -6,7 +6,10 @@ import { AppError } from "../../middleware/errorHandler";
 import { routeOverrideSchema, routeOverrideKeySchema } from "../../schemas/cruise";
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { haversineKm } from "../../shared/geo/haversine";
-import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
+import {
+  precomputeLegDistancesForCruise,
+  recomputeLegsForCruise,
+} from "../../services/cruiseDistance/cruiseLegService";
 import {
   propagateWrite,
   shareSnapshot,
@@ -149,6 +152,8 @@ router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: 
     // next to zero legs: the map still draws the user's line while the
     // statistics silently fall back to inline haversine. Mirrors POST / and
     // PATCH /:id in routes/cruises.ts.
+    // Sea routing for the other legs runs before the transaction (forgejo#346).
+    const legDistances = await precomputeLegDistancesForCruise(req.params.id);
     const { row, replaced } = await prisma.$transaction(
       async (tx) => {
         // The legs are facts of the cruise: a shared cruise's copies follow them.
@@ -164,7 +169,7 @@ router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: 
           update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
         });
 
-        await recomputeLegsForCruise(req.params.id, tx);
+        await recomputeLegsForCruise(req.params.id, tx, legDistances);
         await propagateWrite(tx, userId, "cruise", req.params.id, before);
 
         return { row, replaced: existing !== null };

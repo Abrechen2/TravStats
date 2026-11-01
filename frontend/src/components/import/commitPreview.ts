@@ -51,7 +51,16 @@ export async function commitPreviewRows(
   } catch (err) {
     logger.error("import_batch_create_failed", { dataSource, err });
   }
-  const query = batchId ? `?batchId=${encodeURIComponent(batchId)}` : "";
+  // Badges are checked once, by the LAST chunk, not by every one of them
+  // (forgejo#334): 250 chunks meant 250 full re-reads of the account.
+  const queryFor = (isLast: boolean) => {
+    const params = new URLSearchParams();
+    if (batchId) params.set("batchId", batchId);
+    if (!isLast) params.set("deferAchievements", "1");
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+  let lastChunkChecked = false;
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
@@ -84,17 +93,32 @@ export async function commitPreviewRows(
       dataSource,
     }));
     const chunkIndex = Math.floor(i / CHUNK_SIZE);
+    const isLast = i + CHUNK_SIZE >= rows.length;
     try {
       const res = await api.post<{ count?: number; skipped?: number }>(
-        `/flights/batch${query}`,
+        `/flights/batch${queryFor(isLast)}`,
         payload
       );
-      committed += res.data?.count ?? chunk.length;
+      const count = res.data?.count ?? chunk.length;
+      committed += count;
       skipped += res.data?.skipped ?? 0;
+      // The server only checks when the chunk created something.
+      if (isLast && count > 0) lastChunkChecked = true;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error("import_commit_chunk_failed", { chunkIndex, dataSource, message });
       failures.push({ chunkIndex, error: message });
+    }
+  }
+
+  // The last chunk failed or added nothing (all duplicates): earlier chunks
+  // deferred, so the check still has to happen once.
+  if (committed > 0 && !lastChunkChecked) {
+    try {
+      await api.post("/achievements/check");
+    } catch (err) {
+      // The flights are in; a late badge appears on the next write.
+      logger.warn("import_achievement_check_failed", { dataSource, err });
     }
   }
 

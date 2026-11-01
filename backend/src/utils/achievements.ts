@@ -111,13 +111,41 @@ export function checkAndUpdateAchievements(
  * that limit is the part of #39 that remains open: a lost badge appears to the
  * user one save later rather than as an error.
  */
-export async function recheckAchievements(userId: string, after: string): Promise<void> {
-  try {
-    await checkAndUpdateAchievements(userId);
-  } catch (error) {
-    logger.error({ error, userId, context: { after } }, "[Achievements] Re-check failed");
+export function recheckAchievements(userId: string, after: string): Promise<void> {
+  // Coalesce (forgejo#345): the station editor saves on every pause, and each
+  // write used to queue its own full run behind the last. While a run for this
+  // user is in flight, a new request only marks it dirty; the loop below then
+  // makes ONE follow-up pass, which reads state newer than every write that
+  // marked it. Every caller gets the loop's promise, so one that awaits still
+  // returns only after a run that started after its own write.
+  const pending = rechecksPerUser.get(userId);
+  if (pending) {
+    pending.dirty = true;
+    return pending.done;
   }
+  const state: { dirty: boolean; done: Promise<void> } = {
+    dirty: false,
+    done: Promise.resolve(),
+  };
+  rechecksPerUser.set(userId, state);
+  state.done = (async () => {
+    try {
+      do {
+        state.dirty = false;
+        try {
+          await checkAndUpdateAchievements(userId);
+        } catch (error) {
+          logger.error({ error, userId, context: { after } }, "[Achievements] Re-check failed");
+        }
+      } while (state.dirty);
+    } finally {
+      rechecksPerUser.delete(userId);
+    }
+  })();
+  return state.done;
 }
+
+const rechecksPerUser = new Map<string, { dirty: boolean; done: Promise<void> }>();
 
 async function runAchievementCheck(
   userId: string,

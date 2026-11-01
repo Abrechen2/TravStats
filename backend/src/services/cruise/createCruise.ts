@@ -17,7 +17,7 @@ import { prisma, type DbTransaction } from "../../db";
 import type { createCruiseSchema } from "../../schemas/cruise";
 import type { z } from "zod";
 import { CRUISE_INCLUDE } from "../../routes/cruises/include";
-import { recomputeLegsForCruise } from "../cruiseDistance/cruiseLegService";
+import { precomputeLegDistances, recomputeLegsForCruise } from "../cruiseDistance/cruiseLegService";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../../shared/statusDerivation";
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../companionService";
@@ -118,6 +118,17 @@ export async function createCruiseRecord(
     await getBaseCurrency(userId)
   );
 
+  // Sea routing happens here, before the transaction opens (forgejo#346): inside
+  // it, a long itinerary with uncached port pairs could outlast the timeout.
+  const legDistances = await precomputeLegDistances({
+    kind: effectiveKind,
+    departurePortId: rest.departurePortId ?? null,
+    arrivalPortId: rest.arrivalPortId ?? null,
+    stopPortIds: [...(stops ?? [])]
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .flatMap((s) => (!s.isAtSea && s.portId != null ? [s.portId] : [])),
+  });
+
   const cruise = await prisma.$transaction(async (tx) => {
     const created = await tx.cruise.create({
       data: {
@@ -167,7 +178,7 @@ export async function createCruiseRecord(
       });
     }
 
-    await recomputeLegsForCruise(created.id, tx);
+    await recomputeLegsForCruise(created.id, tx, legDistances);
     await propagateWrite(tx, userId, "cruise", created.id);
     await provenance.inTx?.(tx, created.id);
     return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });

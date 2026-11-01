@@ -115,4 +115,26 @@ describe("commitPreviewRows — rows from a tracker export", () => {
     expect(payload[1]).not.toHaveProperty("departureFold");
     expect(payload[1]).not.toHaveProperty("arrivalFold");
   });
+
+  it("defers the badge check on all chunks but the last (forgejo#334)", async () => {
+    const rows = Array.from({ length: 45 }, (_, i) => ({ ...base, sourceRowIndex: i }));
+    post.mockResolvedValue({ data: { count: 5, skipped: 0 } });
+    await commitPreviewRows(rows, "imported_jetlog");
+    const urls = post.mock.calls.map(([url]) => String(url));
+    expect(urls).toHaveLength(3);
+    expect(urls[0]).toContain("deferAchievements=1");
+    expect(urls[1]).toContain("deferAchievements=1");
+    expect(urls[2]).not.toContain("deferAchievements");
+  });
+
+  it("runs one explicit check when the last chunk adds nothing (forgejo#334)", async () => {
+    const rows = Array.from({ length: 25 }, (_, i) => ({ ...base, sourceRowIndex: i }));
+    post.mockImplementation(async (url: string) =>
+      url.startsWith("/flights/batch")
+        ? { data: { count: url.includes("deferAchievements") ? 20 : 0, skipped: 5 } }
+        : { data: {} }
+    );
+    await commitPreviewRows(rows, "imported_jetlog");
+    expect(post.mock.calls[post.mock.calls.length - 1][0]).toBe("/achievements/check");
+  });
 });

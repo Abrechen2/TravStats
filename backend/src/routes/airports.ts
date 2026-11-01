@@ -70,8 +70,11 @@ router.get(
       const exactMatches = await prisma.airport.findMany({
         where: {
           OR: [
-            { iata: { equals: searchTerm, mode: "insensitive" } },
-            { icao: { equals: searchTerm, mode: "insensitive" } },
+            // Codes are stored upper-case; a case-sensitive equality is a
+            // plain `=` the btree indexes can serve, where `mode:
+            // "insensitive"` becomes an ILIKE they cannot (forgejo#344).
+            { iata: { equals: searchTerm.toUpperCase() } },
+            { icao: { equals: searchTerm.toUpperCase() } },
           ],
         },
         orderBy: { isClosed: "asc" },

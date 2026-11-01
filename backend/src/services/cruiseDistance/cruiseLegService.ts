@@ -18,7 +18,7 @@ import { buildLegRouteOverrideMap, portLegRouteKey } from "../../shared/cruise/l
 import { computeLegDistance } from "./index";
 import { polylineDistanceKm } from "./polylineDistance";
 import { CRUISE_TRACK_COVERAGE_SELECT, resolveRecordedLegs } from "./recordedLegs";
-import type { PortPoint } from "./types";
+import type { ComputedLeg, PortPoint } from "./types";
 
 /**
  * Bumps when the orchestrator's calculator chain or chaining logic changes.
@@ -34,9 +34,129 @@ export const ORCHESTRATOR_VERSION = "1.2.0";
 /** `cruise_legs.method` of a leg measured along a recording (2.7). */
 export const RECORDED_TRACK_METHOD = "recorded_track";
 
+/**
+ * Leg measurements computed BEFORE a transaction opens (forgejo#346).
+ *
+ * Sea routing (marnet A*, the fine mask, possibly the coarse A*) is slow and
+ * ran once per leg, in sequence, inside the interactive transaction that
+ * rewrites the cruise — a 12–15-port cruise with uncached pairs could outlast
+ * the transaction timeout and fail the save with "Transaction already closed".
+ * The writers now measure first, outside, and hand the result to
+ * `recomputeLegsForCruise`, which then only reads, `deleteMany`s and
+ * `createMany`s. The key is the full input of the measurement (both ports and
+ * the cruise kind), so a stale or missing entry can only cost a recompute
+ * inside the transaction — never a wrong number.
+ */
+export type LegDistanceCache = Map<string, ComputedLeg>;
+
+const legCacheKey = (fromId: number, toId: number, kind: string | undefined) =>
+  `${fromId}>${toId}|${kind ?? ""}`;
+
+const toPortPoint = (p: {
+  id: number;
+  lat: number;
+  lon: number;
+  unlocode: string | null;
+  region: string | null;
+  name: string;
+  city: string | null;
+  country: string | null;
+}): PortPoint => ({
+  id: p.id,
+  lat: p.lat,
+  lon: p.lon,
+  unlocode: p.unlocode,
+  region: p.region,
+  name: p.name,
+  city: p.city,
+  country: p.country,
+});
+
+/** Measure every consecutive pair of the itinerary the cruise is about to have. */
+export async function precomputeLegDistances(input: {
+  kind: string | undefined;
+  departurePortId: number | null | undefined;
+  arrivalPortId: number | null | undefined;
+  /** Port calls in itinerary order; sea days and unresolved stops left out. */
+  stopPortIds: number[];
+  /** Which legs of the sequence a drawn line or a recording already decides. */
+  coveredLegs?: (sequence: PortPoint[]) => boolean[];
+}): Promise<LegDistanceCache> {
+  const ids = [
+    ...new Set(
+      [input.departurePortId, input.arrivalPortId, ...input.stopPortIds].filter(
+        (id): id is number => typeof id === "number"
+      )
+    ),
+  ];
+  const cache: LegDistanceCache = new Map();
+  if (ids.length < 2) return cache;
+  const ports = new Map(
+    (await prisma.port.findMany({ where: { id: { in: ids } } })).map((p) => [p.id, p])
+  );
+  const point = (id: number | null | undefined) => {
+    const port = id == null ? undefined : ports.get(id);
+    return port ? toPortPoint(port) : null;
+  };
+  const sequence = buildEffectivePortSequence(
+    point(input.departurePortId),
+    input.stopPortIds.flatMap((id) => point(id) ?? []),
+    point(input.arrivalPortId)
+  );
+  const covered = input.coveredLegs?.(sequence) ?? [];
+  for (let i = 1; i < sequence.length; i++) {
+    // A leg a recording or a manual line decides is never routed (see
+    // `recomputeLegsForCruise`), so measuring it here would be wasted work.
+    if (covered[i - 1]) continue;
+    const key = legCacheKey(sequence[i - 1].id, sequence[i].id, input.kind);
+    if (cache.has(key)) continue;
+    cache.set(
+      key,
+      await computeLegDistance(sequence[i - 1], sequence[i], { cruiseKind: input.kind })
+    );
+  }
+  return cache;
+}
+
+/** Same, for a cruise's itinerary as it is stored now (writes that leave stops alone). */
+export async function precomputeLegDistancesForCruise(cruiseId: string): Promise<LegDistanceCache> {
+  const [cruise, stops, overrides, tracks] = await Promise.all([
+    prisma.cruise.findUnique({
+      where: { id: cruiseId },
+      select: { kind: true, departurePortId: true, arrivalPortId: true },
+    }),
+    prisma.cruiseStop.findMany({
+      where: { cruiseId, isAtSea: false, portId: { not: null } },
+      orderBy: { dayNumber: "asc" },
+      select: { portId: true },
+    }),
+    prisma.cruiseLegRoute.findMany({
+      where: { cruiseId },
+      select: { fromKind: true, fromRef: true, toKind: true, toRef: true, waypoints: true },
+    }),
+    prisma.cruiseTrack.findMany({ where: { cruiseId }, select: CRUISE_TRACK_COVERAGE_SELECT }),
+  ]);
+  if (!cruise) return new Map();
+  const overrideByLeg = buildLegRouteOverrideMap(overrides);
+  return precomputeLegDistances({
+    kind: cruise.kind,
+    departurePortId: cruise.departurePortId,
+    arrivalPortId: cruise.arrivalPortId,
+    stopPortIds: stops.flatMap((s) => (s.portId === null ? [] : [s.portId])),
+    coveredLegs: (sequence) => {
+      const { recorded } = resolveRecordedLegs(sequence, tracks);
+      return sequence.slice(1).map((to, i) => {
+        const manual = overrideByLeg.get(portLegRouteKey(sequence[i].id, to.id));
+        return recorded[i] !== null || (manual !== undefined && manual.length >= 2);
+      });
+    },
+  });
+}
+
 export async function recomputeLegsForCruise(
   cruiseId: string,
-  tx?: DbTransaction
+  tx?: DbTransaction,
+  precomputed?: LegDistanceCache
 ): Promise<number> {
   const client = tx ?? prisma;
 
@@ -56,26 +176,6 @@ export async function recomputeLegsForCruise(
     }),
     client.cruiseTrack.findMany({ where: { cruiseId }, select: CRUISE_TRACK_COVERAGE_SELECT }),
   ]);
-
-  const toPortPoint = (p: {
-    id: number;
-    lat: number;
-    lon: number;
-    unlocode: string | null;
-    region: string | null;
-    name: string;
-    city: string | null;
-    country: string | null;
-  }): PortPoint => ({
-    id: p.id,
-    lat: p.lat,
-    lon: p.lon,
-    unlocode: p.unlocode,
-    region: p.region,
-    name: p.name,
-    city: p.city,
-    country: p.country,
-  });
 
   const portCallPorts = stops
     .filter((s): s is typeof s & { port: NonNullable<typeof s.port> } => s.port !== null)
@@ -149,7 +249,9 @@ export async function recomputeLegsForCruise(
       continue;
     }
 
-    const computed = await computeLegDistance(from, to, { cruiseKind: cruise?.kind });
+    const computed =
+      precomputed?.get(legCacheKey(from.id, to.id, cruise?.kind)) ??
+      (await computeLegDistance(from, to, { cruiseKind: cruise?.kind }));
     rows.push({
       cruiseId,
       ordinal: i - 1,
