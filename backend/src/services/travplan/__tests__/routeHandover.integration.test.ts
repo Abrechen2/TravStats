@@ -373,4 +373,69 @@ describe("route plan handover (spec 5.9, C1)", () => {
       "stop"
     );
   });
+
+  /** The window between the writer's read of the plan and its transaction: an edit lands here. */
+  async function editLandsFirst(tripId: string) {
+    const real = prisma.travelPlanMutation.findUnique.bind(prisma.travelPlanMutation);
+    const spy = jest.spyOn(prisma.travelPlanMutation, "findUnique").mockImplementationOnce((async (
+      args: Parameters<typeof real>[0]
+    ) => {
+      await prisma.travelPlan.update({
+        where: { tripId },
+        data: { revision: { increment: 1 } },
+      });
+      return real(args);
+    }) as unknown as typeof prisma.travelPlanMutation.findUnique);
+    return () => spy.mockRestore();
+  }
+  const records = (tripId: string, since: Date) =>
+    Promise.all([
+      prisma.tripRoute.count({ where: { tripId } }),
+      prisma.lodgingStay.count({ where: { tripId } }),
+      prisma.lodging.count({ where: { userId: owner, createdAt: { gte: since } } }),
+      prisma.ferryJourney.count({ where: { tripId } }),
+    ]);
+
+  it("leaves no logbook record behind when an edit wins the plan revision during a handover", async () => {
+    const since = new Date();
+    const plan = await routePlan();
+    const restore = await editLandsFirst(plan.tripId);
+    const lost = await plan.handover(plan.ids.a);
+    restore();
+    expect(lost.status).toBe(409);
+    expect(await records(plan.tripId, since)).toEqual([0, 0, 0, 0]);
+    expect(await prisma.tripStop.count({ where: { route: { tripId: plan.tripId } } })).toBe(0);
+  });
+
+  it("a handover retried after a lost race ends with exactly the records a clean one writes, all withdrawable", async () => {
+    const since = new Date();
+    const plan = await routePlan();
+    const restore = await editLandsFirst(plan.tripId);
+    const lost = await plan.handover(plan.ids.a);
+    restore();
+    expect(lost.status).toBe(409);
+    const current = await request(app)
+      .get("/api/v1/trips/" + plan.tripId + "/plan")
+      .set("Cookie", cookie());
+    const retry = await post("/trips/" + plan.tripId + "/plan/mutations", {
+      clientRef: randomUUID(),
+      baseRevision: current.body.revision,
+      operation: { type: "station_handover", stationId: plan.ids.a },
+    });
+    expect(retry.status).toBe(200);
+    const link = retry.body.state.stationLinks[0];
+    expect(link.created.map((c: { kind: string }) => c.kind).sort()).toEqual([
+      "lodging",
+      "stay",
+      "stop",
+    ]);
+    const out = await post("/trips/" + plan.tripId + "/plan/mutations", {
+      clientRef: randomUUID(),
+      baseRevision: retry.body.revision,
+      operation: { type: "station_withdraw", stationId: plan.ids.a },
+    });
+    expect(out.status).toBe(200);
+    expect(await records(plan.tripId, since)).toEqual([1, 0, 0, 0]);
+    expect(await prisma.tripStop.count({ where: { route: { tripId: plan.tripId } } })).toBe(0);
+  });
 });

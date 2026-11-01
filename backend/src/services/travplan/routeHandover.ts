@@ -10,23 +10,19 @@
  * fingerprint in the plan; edited, photographed or documented, it stays. The plan's own records
  * are never trusted to be unchanged: that is what the fingerprint is for.
  *
- * A placeholder never becomes a record (C4). Records are written outside the plan's own
- * transaction (the station writer has its own); a lost race on the plan revision therefore
- * leaves records that the retry adopts instead of duplicating (same stop on the same day within
- * 150 m, `externalRef:"travplan:<id>"` on stays and crossings).
+ * A placeholder never becomes a record (C4). Every write here runs in the plan's own
+ * transaction, after the revision is reserved: a lost race on the plan revision rolls the
+ * records back with it, so a failed or retried handover leaves nothing behind. Routing of the
+ * legs it created happens after the commit (`HandoverOutcome.afterCommit`).
  */
-import { prisma } from "../../db";
+import type { DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { ApiErrorCode } from "../../middleware/apiErrorCode";
-import { replaceStations, type Station } from "../roadtrip/replaceStations";
+import { replaceStationsIn, finishRoute, type Station } from "../roadtrip/replaceStations";
+import { lockRoute } from "../roadtrip/lockRoute";
 import { recomputeTripStatus } from "../tripStatusService";
-import {
-  propagateDelete,
-  propagateWrite,
-  shareSnapshot,
-  SHARE_TX_TIMEOUT_MS,
-} from "../sharing/propagate";
+import { propagateDelete, propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { haversineKm } from "../../shared/geo/haversine";
 import { localDay } from "../../shared/time/instant";
 import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
@@ -77,6 +73,8 @@ export const stopFingerprint = (s: {
 export interface HandoverOutcome {
   roadtripId: string;
   link: PlanStationLink;
+  /** Work that needs the committed rows (road routing of new legs, the trip's status). */
+  afterCommit: () => Promise<void>;
 }
 
 function fail(status: number, code: ApiErrorCode, message: string): never {
@@ -93,13 +91,14 @@ function chooseLodgingType(state: PlanState, booking: PlanBooking) {
 }
 
 async function ensureRoadtrip(
+  tx: DbTransaction,
   userId: string,
   tripId: string,
   state: PlanState,
   name: string
 ): Promise<string> {
   const known = state.roadtripId
-    ? await prisma.tripRoute.findFirst({
+    ? await tx.tripRoute.findFirst({
         where: { id: state.roadtripId, userId, kind: "roadtrip" },
         select: { id: true },
       })
@@ -107,20 +106,20 @@ async function ensureRoadtrip(
   if (known) return known.id;
   // The plan's route may exist without the plan knowing yet (a lost revision race): adopt the
   // trip's only roadtrip rather than make a second one.
-  const onTrip = await prisma.tripRoute.findMany({
+  const onTrip = await tx.tripRoute.findMany({
     where: { userId, tripId, kind: "roadtrip" },
     select: { id: true },
     take: 2,
   });
   if (onTrip.length === 1) return onTrip[0].id;
-  const last = await prisma.tripRoute.findFirst({
+  const last = await tx.tripRoute.findFirst({
     where: { userId, tripId },
     orderBy: { orderIdx: "desc" },
     select: { orderIdx: true },
   });
   const vehicle = state.vehicle?.kind;
   return (
-    await prisma.tripRoute.create({
+    await tx.tripRoute.create({
       data: {
         userId,
         tripId,
@@ -138,6 +137,7 @@ async function ensureRoadtrip(
 
 /** The booked night as a lodging + stay, or null when the station has none the plan can vouch for. */
 async function writeStay(
+  tx: DbTransaction,
   userId: string,
   tripId: string,
   state: PlanState,
@@ -150,7 +150,7 @@ async function writeStay(
   const booking = state.bookings.find((b) => b.id === bookingId);
   // C4: a placeholder stays in the plan.
   if (!booking || booking.placeholder) return null;
-  const prior = await prisma.lodgingStay.findFirst({
+  const prior = await tx.lodgingStay.findFirst({
     where: { userId, externalRef: "travplan:" + station.id },
     select: { id: true, updatedAt: true },
   });
@@ -169,45 +169,40 @@ async function writeStay(
     country: booking.country || station.place.country || "",
   };
   const ready = await prepareHotel(userId, dated, chooseLodgingType(state, booking));
-  return prisma.$transaction(
-    async (tx) => {
-      const exact =
-        dated.city && dated.country && dated.address
-          ? await tx.lodging.findFirst({
-              where: {
-                userId,
-                name: dated.title,
-                city: dated.city,
-                country: dated.country,
-                address: dated.address,
-              },
-            })
-          : null;
-      const lodging = exact ?? (await tx.lodging.create({ data: ready.lodging }));
-      const stay = await tx.lodgingStay.create({
-        data: {
-          ...ready.stay,
-          userId,
-          tripId,
-          lodgingId: lodging.id,
-          externalRef: "travplan:" + station.id,
-        },
-      });
-      await propagateWrite(tx, userId, "lodgingStay", stay.id);
-      const persisted = await tx.lodgingStay.findUniqueOrThrow({
-        where: { id: stay.id },
-        select: { updatedAt: true },
-      });
-      return {
-        stay: { kind: "stay" as const, id: stay.id, version: persisted.updatedAt.toISOString() },
-        lodging: exact
-          ? null
-          : { kind: "lodging" as const, id: lodging.id, version: lodging.updatedAt.toISOString() },
-        stayId: stay.id,
-      };
+  const exact =
+    dated.city && dated.country && dated.address
+      ? await tx.lodging.findFirst({
+          where: {
+            userId,
+            name: dated.title,
+            city: dated.city,
+            country: dated.country,
+            address: dated.address,
+          },
+        })
+      : null;
+  const lodging = exact ?? (await tx.lodging.create({ data: ready.lodging }));
+  const stay = await tx.lodgingStay.create({
+    data: {
+      ...ready.stay,
+      userId,
+      tripId,
+      lodgingId: lodging.id,
+      externalRef: "travplan:" + station.id,
     },
-    { timeout: SHARE_TX_TIMEOUT_MS }
-  );
+  });
+  await propagateWrite(tx, userId, "lodgingStay", stay.id);
+  const persisted = await tx.lodgingStay.findUniqueOrThrow({
+    where: { id: stay.id },
+    select: { updatedAt: true },
+  });
+  return {
+    stay: { kind: "stay" as const, id: stay.id, version: persisted.updatedAt.toISOString() },
+    lodging: exact
+      ? null
+      : { kind: "lodging" as const, id: lodging.id, version: lodging.updatedAt.toISOString() },
+    stayId: stay.id,
+  };
 }
 
 type StopRow = Prisma.TripStopGetPayload<{
@@ -266,16 +261,25 @@ function asStation(row: StopRow): Station {
   };
 }
 
-const readStops = (routeId: string) =>
-  prisma.tripStop.findMany({
+const readStops = (tx: DbTransaction, routeId: string) =>
+  tx.tripStop.findMany({
     where: { routeId, routeOrderIdx: { not: null } },
     orderBy: { routeOrderIdx: "asc" },
     select: STOP_SELECT,
   });
+/** The precondition of a reconciling write: the ids AND the content of the stops it replaces. */
+const replaceGuard = (rows: StopRow[]) => ({
+  expectedStationIds: placed(rows),
+  expectedVersions: {
+    version: (r: Parameters<typeof stopFingerprint>[0]) => stopFingerprint(r),
+    expected: new Map(rows.map((r) => [r.id, stopFingerprint(r)] as const)),
+  },
+});
 const placed = (rows: StopRow[]) =>
   rows.filter((r) => r.lat !== null && r.lon !== null).map((r) => r.id);
 
 export async function handoverStation(
+  tx: DbTransaction,
   userId: string,
   tripId: string,
   state: PlanState,
@@ -297,15 +301,17 @@ export async function handoverStation(
     fail(409, "PLAN_STATION_HANDED_OVER", "The station is already in the logbook");
   const depart = addDays(arrive, station.nights);
 
-  const routeId = await ensureRoadtrip(userId, tripId, state, tripName);
-  const stay = await writeStay(userId, tripId, state, station, arrive, depart);
+  const routeId = await ensureRoadtrip(tx, userId, tripId, state, tripName);
+  // Locked before the stops are read, so what is reconciled is what is there when the write lands.
+  await lockRoute(tx, routeId);
+  const stay = await writeStay(tx, userId, tripId, state, station, arrive, depart);
   const night: Station["night"] = stay
     ? { kind: "stay", lodgingStayId: stay.stayId }
     : station.nights > 0 && station.night.kind !== "onboard"
       ? { kind: "free", countryVisitKind: "visit" }
       : { kind: "pass", placeId: null };
 
-  const rows = await readStops(routeId);
+  const rows = await readStops(tx, routeId);
   // The phone's own stop ("Tonight here") is the station: same day, within 150 m, or the stop
   // the plan already linked. Adopt it instead of adding a second one.
   const linkedId = existing?.tripStopId;
@@ -350,7 +356,7 @@ export async function handoverStation(
     list.splice(after < 0 ? list.length : after, 0, ours);
   }
   const index = at >= 0 ? at : list.indexOf(ours);
-  const result = await replaceStations(userId, routeId, list, { expectedStationIds: placed(rows) });
+  const result = await replaceStationsIn(tx, userId, routeId, list, replaceGuard(rows));
   const stop = result.stations[index];
   const created: Created[] = [];
   if (!adopted)
@@ -373,16 +379,18 @@ export async function handoverStation(
     });
   if (stay) created.push(stay.stay, ...(stay.lodging ? [stay.lodging] : []));
 
-  const ferry = await writeFerry(userId, tripId, state, station, result.legs, stop.id);
+  const ferry = await writeFerry(tx, userId, tripId, state, station, result.legs, stop.id);
   if (ferry) created.push(ferry);
-  await recomputeTripStatus(tripId);
+  await recomputeTripStatus(tripId, tx);
   return {
     roadtripId: routeId,
     link: { stationId, tripStopId: stop.id, created },
+    afterCommit: async () => void (await finishRoute(userId, routeId, result)),
   };
 }
 
 async function writeFerry(
+  tx: DbTransaction,
   userId: string,
   tripId: string,
   state: PlanState,
@@ -398,7 +406,7 @@ async function writeFerry(
   // over out of order must not turn some other drive into a ferry.
   const fromStop = state.stationLinks.find((l) => l.stationId === stage.fromStationId)?.tripStopId;
   const leg = legs.find((l) => l.toStopId === stopId && l.fromStopId === fromStop);
-  const prior = await prisma.ferryJourney.findFirst({
+  const prior = await tx.ferryJourney.findFirst({
     where: { userId, externalRef: "travplan:" + stage.id },
     select: { id: true, updatedAt: true },
   });
@@ -447,47 +455,42 @@ async function writeFerry(
     companions: _c,
     ...plain
   } = input;
-  return prisma.$transaction(
-    async (tx) => {
-      const legRow = leg
-        ? await tx.tripRouteLeg.findFirst({
-            where: { id: leg.id },
-            include: { ferryJourney: { select: { id: true } } },
-          })
-        : null;
-      const linkable = legRow && !legRow.ferryJourney;
-      const created = await tx.ferryJourney.create({
-        data: {
-          ...plain,
-          ...merged,
-          ...fx,
-          userId,
-          tripId,
-          externalRef: "travplan:" + stage.id,
-          ...(linkable ? { roadtripLegId: legRow.id, roadtripLegBefore: snapshotOf(legRow) } : {}),
-        },
-      });
-      if (linkable)
-        await tx.tripRouteLeg.update({
-          where: { id: legRow.id },
-          data: {
-            mode: "ferry",
-            source: "straight",
-            waypoints: undefined,
-            confidence: "low",
-            drivingMinutes: null,
-            distanceKm: created.distanceKm ?? legRow.distanceKm,
-          },
-        });
-      await propagateWrite(tx, userId, "ferry", created.id);
-      const persisted = await tx.ferryJourney.findUniqueOrThrow({
-        where: { id: created.id },
-        select: { updatedAt: true },
-      });
-      return { kind: "ferry" as const, id: created.id, version: persisted.updatedAt.toISOString() };
+  const legRow = leg
+    ? await tx.tripRouteLeg.findFirst({
+        where: { id: leg.id },
+        include: { ferryJourney: { select: { id: true } } },
+      })
+    : null;
+  const linkable = legRow && !legRow.ferryJourney;
+  const created = await tx.ferryJourney.create({
+    data: {
+      ...plain,
+      ...merged,
+      ...fx,
+      userId,
+      tripId,
+      externalRef: "travplan:" + stage.id,
+      ...(linkable ? { roadtripLegId: legRow.id, roadtripLegBefore: snapshotOf(legRow) } : {}),
     },
-    { timeout: SHARE_TX_TIMEOUT_MS }
-  );
+  });
+  if (linkable)
+    await tx.tripRouteLeg.update({
+      where: { id: legRow.id },
+      data: {
+        mode: "ferry",
+        source: "straight",
+        waypoints: undefined,
+        confidence: "low",
+        drivingMinutes: null,
+        distanceKm: created.distanceKm ?? legRow.distanceKm,
+      },
+    });
+  await propagateWrite(tx, userId, "ferry", created.id);
+  const persisted = await tx.ferryJourney.findUniqueOrThrow({
+    where: { id: created.id },
+    select: { updatedAt: true },
+  });
+  return { kind: "ferry" as const, id: created.id, version: persisted.updatedAt.toISOString() };
 }
 
 /** The plan after a handover: the link recorded, the roadtrip remembered. */
@@ -508,9 +511,11 @@ export interface WithdrawOutcome {
   /** Records the plan wrote that the user changed since, and that therefore stay. */
   kept: number;
   removed: number;
+  afterCommit: () => Promise<void>;
 }
 
 export async function withdrawStation(
+  tx: DbTransaction,
   userId: string,
   tripId: string,
   state: PlanState,
@@ -520,6 +525,7 @@ export async function withdrawStation(
   if (!link || link.created.length === 0)
     fail(404, "PLAN_ITEM_NOT_FOUND", "Nothing of this station was handed over by the plan");
   const remaining: Created[] = [];
+  const reroute: (() => Promise<void>)[] = [];
   let removed = 0;
   const done = (c: Created, gone: boolean) => {
     if (gone) removed++;
@@ -528,89 +534,108 @@ export async function withdrawStation(
   const of = (kind: Created["kind"]) => link.created.filter((c) => c.kind === kind);
 
   for (const c of of("ferry")) {
-    done(c, await withdrawFerry(userId, c));
+    done(c, await withdrawFerry(tx, userId, c));
   }
-  for (const c of of("stop")) done(c, await withdrawStop(userId, state.roadtripId, c));
-  for (const c of of("stay")) done(c, await withdrawStay(userId, tripId, c));
+  for (const c of of("stop")) done(c, await withdrawStop(tx, userId, state.roadtripId, c, reroute));
+  for (const c of of("stay")) done(c, await withdrawStay(tx, userId, tripId, c));
   for (const c of of("lodging")) {
     // A house only goes when the stay it was made for is gone and nothing else uses it.
-    done(c, remaining.some((r) => r.kind === "stay") ? false : await withdrawLodging(userId, c));
+    done(
+      c,
+      remaining.some((r) => r.kind === "stay") ? false : await withdrawLodging(tx, userId, c)
+    );
   }
-  await recomputeTripStatus(tripId);
+  await recomputeTripStatus(tripId, tx);
   return {
+    afterCommit: async () => {
+      for (const finish of reroute) await finish();
+    },
     link: remaining.length ? { ...link, created: remaining } : null,
     kept: remaining.length,
     removed,
   };
 }
 
-async function withdrawFerry(userId: string, c: Created): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
-    const row = await tx.ferryJourney.findFirst({
-      where: { id: c.id, userId },
-      include: { documents: { select: { id: true } } },
-    });
-    if (!row) return true;
-    if (row.updatedAt.toISOString() !== c.version || row.documents.length) return false;
-    if (row.roadtripLegId) await restoreLeg(tx, row.roadtripLegId, row.roadtripLegBefore);
-    const shared = await shareSnapshot(tx, "ferry", row.id);
-    await tx.ferryJourney.delete({ where: { id: row.id } });
-    await propagateDelete(tx, userId, shared);
-    return true;
+async function withdrawFerry(tx: DbTransaction, userId: string, c: Created): Promise<boolean> {
+  const row = await tx.ferryJourney.findFirst({
+    where: { id: c.id, userId },
+    include: { documents: { select: { id: true } } },
   });
+  if (!row) return true;
+  if (row.updatedAt.toISOString() !== c.version || row.documents.length) return false;
+  if (row.roadtripLegId) await restoreLeg(tx, row.roadtripLegId, row.roadtripLegBefore);
+  const shared = await shareSnapshot(tx, "ferry", row.id);
+  await tx.ferryJourney.delete({ where: { id: row.id } });
+  await propagateDelete(tx, userId, shared);
+  return true;
 }
 
-async function withdrawStop(userId: string, routeId: string | null, c: Created): Promise<boolean> {
+async function withdrawStop(
+  tx: DbTransaction,
+  userId: string,
+  routeId: string | null,
+  c: Created,
+  reroute: (() => Promise<void>)[]
+): Promise<boolean> {
   if (!routeId) return false;
-  const route = await prisma.tripRoute.findFirst({
+  const route = await tx.tripRoute.findFirst({
     where: { id: routeId, userId },
     select: { id: true },
   });
   if (!route) return true;
-  const rows = await readStops(routeId);
+  await lockRoute(tx, routeId);
+  const rows = await readStops(tx, routeId);
   const row = rows.find((r) => r.id === c.id);
   if (!row) return true;
-  const photos = await prisma.tripPhoto.count({ where: { stopId: row.id } });
+  const photos = await tx.tripPhoto.count({ where: { stopId: row.id } });
   if (stopFingerprint(row) !== c.version || photos > 0) return false;
-  await replaceStations(userId, routeId, rows.filter((r) => r.id !== row.id).map(asStation), {
-    expectedStationIds: placed(rows),
-  });
+  const result = await replaceStationsIn(
+    tx,
+    userId,
+    routeId,
+    rows.filter((r) => r.id !== row.id).map(asStation),
+    replaceGuard(rows)
+  );
+  reroute.push(async () => void (await finishRoute(userId, routeId, result)));
   return true;
 }
 
-async function withdrawStay(userId: string, tripId: string, c: Created): Promise<boolean> {
-  return prisma.$transaction(async (tx) => {
-    const stay = await tx.lodgingStay.findFirst({
-      where: { id: c.id, userId },
-      include: { documents: { select: { id: true } } },
-    });
-    if (!stay) return true;
-    const stopHolds = await tx.tripStop.count({ where: { lodgingStayId: stay.id } });
-    if (
-      stay.tripId !== tripId ||
-      stay.updatedAt.toISOString() !== c.version ||
-      stay.documents.length ||
-      stopHolds > 0
-    )
-      return false;
-    const shared = await shareSnapshot(tx, "lodgingStay", stay.id);
-    await tx.lodgingStay.delete({ where: { id: stay.id } });
-    await propagateDelete(tx, userId, shared);
-    return true;
+async function withdrawStay(
+  tx: DbTransaction,
+  userId: string,
+  tripId: string,
+  c: Created
+): Promise<boolean> {
+  const stay = await tx.lodgingStay.findFirst({
+    where: { id: c.id, userId },
+    include: { documents: { select: { id: true } } },
   });
+  if (!stay) return true;
+  const stopHolds = await tx.tripStop.count({ where: { lodgingStayId: stay.id } });
+  if (
+    stay.tripId !== tripId ||
+    stay.updatedAt.toISOString() !== c.version ||
+    stay.documents.length ||
+    stopHolds > 0
+  )
+    return false;
+  const shared = await shareSnapshot(tx, "lodgingStay", stay.id);
+  await tx.lodgingStay.delete({ where: { id: stay.id } });
+  await propagateDelete(tx, userId, shared);
+  return true;
 }
 
-async function withdrawLodging(userId: string, c: Created): Promise<boolean> {
-  const lodging = await prisma.lodging.findFirst({
+async function withdrawLodging(tx: DbTransaction, userId: string, c: Created): Promise<boolean> {
+  const lodging = await tx.lodging.findFirst({
     where: { id: c.id, userId },
     include: { photos: { select: { id: true } } },
   });
   if (!lodging) return true;
-  const used = await prisma.lodgingStay.count({ where: { lodgingId: lodging.id } });
+  const used = await tx.lodgingStay.count({ where: { lodgingId: lodging.id } });
   if (used > 0 || lodging.photos.length || lodging.updatedAt.toISOString() !== c.version)
     return false;
   // share-exempt: deletes the house the plan itself created for the stay it just withdrew
-  await prisma.lodging.deleteMany({ where: { id: lodging.id, userId } });
+  await tx.lodging.deleteMany({ where: { id: lodging.id, userId } });
   return true;
 }
 
