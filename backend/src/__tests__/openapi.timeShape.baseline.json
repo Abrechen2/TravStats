@@ -15,7 +15,6 @@
     "GET /roadtrips/{id} .endDate",
     "GET /roadtrips/{id} .startDate",
     "GET /roadtrips/{id} .tours[].startedAt",
-    "GET /search .data.hits[].date",
     "GET /tours .tours[].endDate",
     "GET /tours .tours[].startDate",
     "GET /tours/{routeId}/tracks .tracks[].endedAt",

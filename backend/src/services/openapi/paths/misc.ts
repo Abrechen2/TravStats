@@ -14,6 +14,7 @@ import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
 import { evidenceResponseSchema } from "../../../schemas/evidence";
 import { busTimesSchema } from "../../../schemas/times";
+import { localDateValueSchema } from "../../../shared/time/wire";
 import { EVIDENCE_PAGE_SIZE } from "../../../shared/evidence";
 
 const achievement = registry.register(
@@ -297,11 +298,11 @@ registry.registerPath({
                   id: z.string(),
                   title: z.string(),
                   subtitle: z.string().nullable(),
-                  date: z
-                    .string()
-                    .datetime()
+                  date: localDateValueSchema
                     .nullable()
-                    .describe("Departure, check-in, pickup or start; null for a place or list"),
+                    .describe(
+                      "The local day the entry starts on, in its own place's zone; null for a place or list"
+                    ),
                   path: z.string().describe("Web route that opens the entry"),
                 })
               ),

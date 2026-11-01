@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { LocalDateValue } from "../../shared/time/wire";
 
 /** Mirrors `backend/src/services/search/types.ts`; change both. */
 export type SearchDomain =
@@ -20,8 +21,8 @@ export interface SearchHit {
   id: string;
   title: string;
   subtitle: string | null;
-  /** UTC instant the entry starts; null for a place or a list. */
-  date: string | null;
+  /** The local day the entry starts on, at its own place; null for a place or a list. */
+  date: LocalDateValue | null;
   /** Web route that opens the entry. */
   path: string;
 }

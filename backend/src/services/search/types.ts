@@ -1,4 +1,7 @@
 import type { DomainKey } from "../../shared/domains";
+import { localDay } from "../../shared/time/instant";
+import { serializeDay, type LocalDateValue } from "../../shared/time/wire";
+import { fromDbDate } from "../../shared/time/localDate";
 
 /**
  * What a search hit belongs to. `trip` and `tour` are not domains in the
@@ -42,8 +45,8 @@ export interface SearchHit {
   id: string;
   title: string;
   subtitle: string | null;
-  /** ISO instant the entry starts (departure, check-in, pickup, trip start); null when it has none. */
-  date: string | null;
+  /** The local day the entry starts on, in its own place's zone (`zone` null: no place known); null when it has none. */
+  date: LocalDateValue | null;
   /** Web route that opens the entry, e.g. `/flights/<id>`. */
   path: string;
 }
@@ -65,8 +68,23 @@ export function joinParts(parts: Array<string | null | undefined>, sep = " · ")
   return kept.length > 0 ? kept.join(sep) : null;
 }
 
-export function iso(d: Date | null | undefined): string | null {
-  return d ? d.toISOString() : null;
+/** The local day of an instant at a place (zone null: the UTC day, labelled by `zone: null`). */
+export function dayAt(
+  instant: Date | null | undefined,
+  zone: string | null | undefined,
+  precision: LocalDateValue["precision"] = "day"
+): LocalDateValue | null {
+  if (!instant) return null;
+  const z = zone ?? null;
+  return serializeDay(z ? localDay(instant, z) : instant.toISOString().slice(0, 10), z, precision);
+}
+
+/** A `@db.Date` column as a day in its stored zone. */
+export function dbDay(
+  value: Date | null | undefined,
+  zone: string | null | undefined
+): LocalDateValue | null {
+  return value ? serializeDay(fromDbDate(value), zone ?? null) : null;
 }
 
 /** Splits `limit + 1` fetched rows into the shown rows and the "more exist" flag. */

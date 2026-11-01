@@ -24,14 +24,10 @@ The server decides what is searchable: the account's enabled domains, `roadtrip`
 | `failed` | domain[] | Domains whose search errored. **Incomplete, not empty** — show it. If every requested domain fails the call is a 500. |
 | `capped` | boolean | The 60-hit cap cut hits off. |
 
-Hit: `domain` (the list above), `kind` (`flight|cruise|lodging|place|placeList|rail|bus|ferry|rental|roadtrip|tour|trip`; `poi` holds `place` and `placeList`), `id` (string), `title` (string), `subtitle` (string or null), `date` (UTC instant string or null — departure, check-in, pickup or start; null for places and lists; **not** zone-resolved, see Open), `path` (web route; the Companion maps `kind` + `id` to its own screen).
+Hit: `domain` (the list above), `kind` (`flight|cruise|lodging|place|placeList|rail|bus|ferry|rental|roadtrip|tour|trip`; `poi` holds `place` and `placeList`), `id` (string), `title` (string), `subtitle` (string or null), `date` (a `LocalDateValue` `{date, zone, precision}` or null — the local day of the departure, check-in, pickup or start at its own place; flights, rides and rentals use the departure/pickup place's zone, a tour day has `zone: null`; null for places and lists), `path` (web route; the Companion maps `kind` + `id` to its own screen).
 
 Matching: flights on number, airline, airport codes/names and a typed route (`MUC-VIE`); cruises on ship, line, ports; stays on name, town, chain (`id` is the lodging, not the stay); places on name, local name, town, list name; rides on line/train number/vessel and stations; rentals on company, stations, vehicle; tours/roadtrips on name (roadtrips also vehicle); trips on name and origin/destination labels.
 
 ## Also
 
 `GET /lodging` accepts `q` as an alias of `search` (`search` wins when both are sent).
-
-## Open
-
-`hits[].date` is a bare UTC instant (listed in `openapi.timeShape.baseline.json`) because a hit's zone differs per domain; a `TimeValue` per hit is the follow-up if the Companion needs the local day.

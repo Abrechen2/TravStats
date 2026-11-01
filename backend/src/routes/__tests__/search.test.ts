@@ -119,6 +119,8 @@ describe("GET /api/v1/search", () => {
     expect(byNumber.status).toBe(200);
     const titles = byNumber.body.data.hits.map((h: { title: string }) => h.title);
     expect(titles).toEqual(["LH456", "LH123", "LH789"]);
+    // The day is the airport's, not the server's: 10:00 UTC at MUC is still 1 February.
+    expect(byNumber.body.data.hits[0].date).toMatchObject({ date: "2026-02-01", precision: "day" });
     expect(byNumber.body.data.hits[0]).toMatchObject({
       domain: "flight",
       kind: "flight",
@@ -264,7 +266,7 @@ describe("GET /api/v1/search", () => {
     });
     try {
       const res = await search({ q: "dated roadtrip", domains: "roadtrip" });
-      expect(res.body.data.hits[0].date).toBe("2026-07-04T00:00:00.000Z");
+      expect(res.body.data.hits[0].date).toEqual({ date: "2026-07-04", zone: null, precision: "day" });
     } finally {
       spy.mockRestore();
       await prisma.userSettings.update({

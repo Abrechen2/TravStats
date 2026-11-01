@@ -35,7 +35,7 @@ const result = (over: Partial<SearchResult> = {}): SearchResult => ({
       id: "f1",
       title: "LH123",
       subtitle: "MUC → VIE",
-      date: "2026-01-01T10:00:00.000Z",
+      date: { date: "2026-01-01", zone: "Europe/Berlin", precision: "day" },
       path: "/flights/f1",
     },
     {

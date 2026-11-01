@@ -1,6 +1,9 @@
 import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
-import { iso, joinParts, page, type DomainSearcher, type SearchHit } from "./types";
+import { getCachedAirport } from "../airportCache";
+import { flightTimes, type FlightTimeColumns } from "../flights/timesDto";
+import { serializeDay, type LocalDateValue } from "../../shared/time/wire";
+import { dayAt, dbDay, joinParts, page, type DomainSearcher, type SearchHit } from "./types";
 
 /**
  * One searcher per domain. Every one is owner-scoped on `userId` first (the
@@ -34,6 +37,30 @@ function routePair(q: string): [string, string] | null {
   const tokens = q.split(/\s*(?:-|–|→|>|\s)\s*/).filter(Boolean);
   if (tokens.length !== 2) return null;
   return tokens.every((t) => /^[A-Za-z]{3,4}$/.test(t)) ? [tokens[0], tokens[1]] : null;
+}
+
+/** The departure's local day, read the way every flight read does (`flightTimes`): stored zone, else today's catalogue zone. */
+async function flightDepartureDay(
+  f: FlightTimeColumns & {
+    depIata: string | null;
+    depIcao: string | null;
+    arrIata: string | null;
+    arrIcao: string | null;
+  }
+): Promise<LocalDateValue | null> {
+  if (!f.departureTime) return null;
+  const catalogue = async (stored: string | null, iata: string | null, icao: string | null) => {
+    if (stored) return stored;
+    for (const code of [iata, icao]) {
+      if (!code) continue;
+      const airport = await getCachedAirport(code).catch(() => null);
+      if (airport?.timezone) return airport.timezone;
+    }
+    return null;
+  };
+  const dep = await catalogue(f.depTimezone, f.depIata, f.depIcao);
+  const departure = flightTimes(f, { dep, arr: null }).departure;
+  return departure ? serializeDay(departure.local.slice(0, 10), departure.zone, "day") : null;
 }
 
 export const searchFlights: DomainSearcher = async (userId, q, limit) => {
@@ -71,12 +98,26 @@ export const searchFlights: DomainSearcher = async (userId, q, limit) => {
       arrIata: true,
       arrIcao: true,
       departureTime: true,
+      arrivalTime: true,
+      depTimeSemantics: true,
+      arrTimeSemantics: true,
+      depTimezone: true,
+      arrTimezone: true,
+      depPrecision: true,
+      arrPrecision: true,
+      actualDeparture: true,
+      actualArrival: true,
+      runwayDepartureTime: true,
+      runwayArrivalTime: true,
+      onlineCheckInOpensAt: true,
+      onlineCheckInZone: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
+  const zones = await Promise.all(shown.map((f) => flightDepartureDay(f)));
   return {
     more,
-    hits: shown.map((f) => {
+    hits: shown.map((f, i) => {
       const code = f.flightNumber
         ? f.flightNumber.startsWith(f.airlineIata ?? "\0")
           ? f.flightNumber
@@ -89,7 +130,7 @@ export const searchFlights: DomainSearcher = async (userId, q, limit) => {
         id: f.id,
         title: code ?? route ?? f.airline ?? "—",
         subtitle: code ? joinParts([route, f.airline]) : f.airline,
-        date: iso(f.departureTime),
+        date: zones[i],
         path: `/flights/${f.id}`,
       } satisfies SearchHit;
     }),
@@ -122,6 +163,8 @@ export const searchCruises: DomainSearcher = async (userId, q, limit) => {
       cruiseLine: true,
       routeName: true,
       startDate: true,
+      startDay: true,
+      startZone: true,
       ship: { select: { name: true } },
       departurePort: { select: { name: true } },
       arrivalPort: { select: { name: true } },
@@ -136,7 +179,7 @@ export const searchCruises: DomainSearcher = async (userId, q, limit) => {
       id: c.id,
       title: c.shipNameOverride ?? c.ship?.name ?? c.routeName ?? c.cruiseLine ?? "—",
       subtitle: joinParts([c.cruiseLine, arrow(c.departurePort?.name, c.arrivalPort?.name)]),
-      date: iso(c.startDate),
+      date: c.startDay ? dbDay(c.startDay, c.startZone) : dayAt(c.startDate, c.startZone),
       path: `/cruises/${c.id}`,
     })),
   };
@@ -157,7 +200,11 @@ export const searchLodging: DomainSearcher = async (userId, q, limit) => {
       name: true,
       city: true,
       chain: { select: { name: true } },
-      stays: { select: { checkIn: true }, orderBy: { checkIn: "desc" }, take: 1 },
+      stays: {
+        select: { checkIn: true, checkInDate: true, stayZone: true },
+        orderBy: { checkIn: "desc" },
+        take: 1,
+      },
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -169,7 +216,9 @@ export const searchLodging: DomainSearcher = async (userId, q, limit) => {
       id: l.id,
       title: l.name,
       subtitle: joinParts([l.city, l.chain?.name]),
-      date: iso(l.stays[0]?.checkIn),
+      date: l.stays[0]?.checkInDate
+        ? dbDay(l.stays[0].checkInDate, l.stays[0].stayZone)
+        : dayAt(l.stays[0]?.checkIn, l.stays[0]?.stayZone),
       path: `/lodging/${l.id}`,
     })),
   };
@@ -236,6 +285,8 @@ type RideRow = {
   dep: string;
   arr: string;
   departureTime: Date | null;
+  depTimezone: string | null;
+  depPrecision: string | null;
 };
 
 function rideHit(domain: "rail" | "bus" | "ferry", r: RideRow, label: string | null): SearchHit {
@@ -246,7 +297,11 @@ function rideHit(domain: "rail" | "bus" | "ferry", r: RideRow, label: string | n
     id: r.id,
     title: label ?? route ?? "—",
     subtitle: label ? route : null,
-    date: iso(r.departureTime),
+    date: dayAt(
+      r.departureTime,
+      r.depTimezone,
+      r.depPrecision === "month" || r.depPrecision === "year" ? r.depPrecision : "day"
+    ),
     path: `/${domain}/${r.id}`,
   };
 }
@@ -271,6 +326,8 @@ export const searchRail: DomainSearcher = async (userId, q, limit) => {
       depStationName: true,
       arrStationName: true,
       departureTime: true,
+      depTimezone: true,
+      depPrecision: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -279,7 +336,14 @@ export const searchRail: DomainSearcher = async (userId, q, limit) => {
     hits: shown.map((r) =>
       rideHit(
         "rail",
-        { id: r.id, dep: r.depStationName, arr: r.arrStationName, departureTime: r.departureTime },
+        {
+          id: r.id,
+          dep: r.depStationName,
+          arr: r.arrStationName,
+          departureTime: r.departureTime,
+          depTimezone: r.depTimezone,
+          depPrecision: r.depPrecision,
+        },
         joinParts([r.trainCategory, r.trainNumber], " ")
       )
     ),
@@ -300,6 +364,8 @@ export const searchBus: DomainSearcher = async (userId, q, limit) => {
       depStationName: true,
       arrStationName: true,
       departureTime: true,
+      depTimezone: true,
+      depPrecision: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -308,7 +374,14 @@ export const searchBus: DomainSearcher = async (userId, q, limit) => {
     hits: shown.map((r) =>
       rideHit(
         "bus",
-        { id: r.id, dep: r.depStationName, arr: r.arrStationName, departureTime: r.departureTime },
+        {
+          id: r.id,
+          dep: r.depStationName,
+          arr: r.arrStationName,
+          departureTime: r.departureTime,
+          depTimezone: r.depTimezone,
+          depPrecision: r.depPrecision,
+        },
         r.lineName
       )
     ),
@@ -329,6 +402,8 @@ export const searchFerry: DomainSearcher = async (userId, q, limit) => {
       depStationName: true,
       arrStationName: true,
       departureTime: true,
+      depTimezone: true,
+      depPrecision: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -337,7 +412,14 @@ export const searchFerry: DomainSearcher = async (userId, q, limit) => {
     hits: shown.map((r) =>
       rideHit(
         "ferry",
-        { id: r.id, dep: r.depStationName, arr: r.arrStationName, departureTime: r.departureTime },
+        {
+          id: r.id,
+          dep: r.depStationName,
+          arr: r.arrStationName,
+          departureTime: r.departureTime,
+          depTimezone: r.depTimezone,
+          depPrecision: r.depPrecision,
+        },
         r.vesselName
       )
     ),
@@ -364,6 +446,7 @@ export const searchRentals: DomainSearcher = async (userId, q, limit) => {
       returnStationName: true,
       vehicleExample: true,
       pickupTime: true,
+      pickupTimezone: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -379,7 +462,7 @@ export const searchRentals: DomainSearcher = async (userId, q, limit) => {
         r.returnStationName !== r.pickupStationName ? `→ ${r.returnStationName}` : null,
         r.vehicleExample,
       ]),
-      date: iso(r.pickupTime),
+      date: dayAt(r.pickupTime, r.pickupTimezone),
       path: `/rentals/${r.id}`,
     })),
   };
@@ -405,7 +488,11 @@ function routeSearcher(kind: "tour" | "roadtrip"): DomainSearcher {
         name: true,
         vehicleName: true,
         tourDate: true,
-        stops: { select: { startDate: true }, orderBy: { startDate: "asc" }, take: 1 },
+        stops: {
+          select: { startDate: true, startUtc: true, stopZone: true },
+          orderBy: { startDate: "asc" },
+          take: 1,
+        },
       },
     });
     const { rows: shown, more } = page(rows, limit);
@@ -417,7 +504,13 @@ function routeSearcher(kind: "tour" | "roadtrip"): DomainSearcher {
         id: r.id,
         title: r.name,
         subtitle: kind === "roadtrip" ? r.vehicleName : null,
-        date: iso(kind === "tour" ? r.tourDate : r.stops[0]?.startDate),
+        // A tour day names no place; a roadtrip is dated by its first station on that station's clock.
+        date:
+          kind === "tour"
+            ? dbDay(r.tourDate, null)
+            : r.stops[0]?.startUtc
+              ? dayAt(r.stops[0].startUtc, r.stops[0].stopZone)
+              : dayAt(r.stops[0]?.startDate, null),
         path: kind === "tour" ? `/tours/${r.id}` : `/roadtrips/${r.id}`,
       })),
     };
@@ -441,6 +534,8 @@ export const searchTrips: DomainSearcher = async (userId, q, limit) => {
       originLabel: true,
       destinationLabel: true,
       startDate: true,
+      startDay: true,
+      startZone: true,
     },
   });
   const { rows: shown, more } = page(rows, limit);
@@ -452,7 +547,7 @@ export const searchTrips: DomainSearcher = async (userId, q, limit) => {
       id: t.id,
       title: t.name,
       subtitle: arrow(t.originLabel, t.destinationLabel),
-      date: iso(t.startDate),
+      date: t.startDay ? dbDay(t.startDay, t.startZone) : dayAt(t.startDate, t.startZone),
       path: `/trips/${t.id}`,
     })),
   };

@@ -274,7 +274,7 @@ export default function GlobalSearch(): JSX.Element {
                             className="shrink-0 text-xs tabular-nums"
                             style={{ color: "var(--ts-muted)" }}
                           >
-                            {fmt.date(hit.date)}
+                            {fmt.localDateValue(hit.date)}
                           </span>
                         )}
                       </div>
