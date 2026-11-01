@@ -6,6 +6,8 @@ export type FerryDistanceSource = "great_circle" | "user" | "sea_route";
 export type FerryGeometrySource = "straight" | "manual" | "sea_route";
 export interface FerryJourney {
   id: string;
+  /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
+  co2?: import("./co2").Co2Estimate | null;
   roadtripLegId: string | null;
   userId: string;
   operator: string | null;

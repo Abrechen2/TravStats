@@ -28,6 +28,8 @@ export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
 export interface RailJourney {
   id: string;
   userId: string;
+  /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
+  co2?: import("./co2").Co2Estimate | null;
   operator: string | null;
   trainCategory: string | null;
   trainNumber: string | null;

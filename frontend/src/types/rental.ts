@@ -42,6 +42,8 @@ export interface RentalTimes {
 }
 
 export interface RentalBooking {
+  /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
+  co2?: import("./co2").Co2Estimate | null;
   id: string;
   provider: string;
   operatedBy: string | null;

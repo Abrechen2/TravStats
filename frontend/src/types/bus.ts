@@ -60,6 +60,8 @@ export type BusTimes = RailTimes;
 export interface BusJourney {
   id: string;
   userId: string;
+  /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
+  co2?: import("./co2").Co2Estimate | null;
   operator: string | null;
   lineName: string | null;
   rideKind: BusRideKind | null;

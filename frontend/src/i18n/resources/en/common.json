@@ -426,5 +426,22 @@
     "label": "Download as file:",
     "empty": "There is nothing to export – no stored line or no places.",
     "error": "The export failed. Please try again later."
+  },
+  "co2": {
+    "label": "CO₂ (estimate)",
+    "labelLowerBound": "CO₂ (estimate, lower bound)",
+    "labelVehicle": "CO₂ per vehicle (estimate)",
+    "savedVsFlight": "CO₂ saved versus flying (estimate)",
+    "tripTotal": "CO₂ of this trip: ≈ {{total}} (estimate)",
+    "unmeasured_one": "{{count}} entry without a known distance left out",
+    "unmeasured_other": "{{count}} entries without a known distance left out",
+    "modes": {
+      "flight": "Flight",
+      "rail": "Rail",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "cruise": "Cruise",
+      "rental": "Rental car"
+    }
   }
 }

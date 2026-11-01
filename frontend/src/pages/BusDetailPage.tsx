@@ -16,6 +16,7 @@ import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
 import { BusRouteMap } from "../components/bus/BusRouteMap";
 import GeoExportButtons from "../components/export/GeoExportButtons";
 import { geoExportPaths } from "../lib/api/geoExport";
+import { co2Kpis } from "../lib/co2Kpis";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { useBusRouting } from "../hooks/useBusRouting";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -231,6 +232,8 @@ export default function BusDetailPage(): JSX.Element {
         ]
       : []),
     ...(price !== null ? [{ key: "price", value: price, label: t("bus:detail.price") }] : []),
+    // Estimated CO2, and the saving against flying where there was a flight to compare (forgejo#395).
+    ...co2Kpis(ride.co2, t, locale),
   ];
 
   return (

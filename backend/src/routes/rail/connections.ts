@@ -8,6 +8,7 @@ import { railQuerySchema } from "../../schemas/rail";
 import { groupRailLegs } from "../../shared/railJourneyGrouping";
 import { RAIL_GROUPING_SELECT } from "../../services/rail/railGroupingSelect";
 import { withStationShortCodes } from "../../services/rail/railStations";
+import { withRailCo2 } from "../../services/co2/rideDto";
 import { withRailTimes } from "../../services/rail/timesDto";
 import { withRailSource } from "../../services/rail/railSource";
 import { buildRailWhere, RAIL_INCLUDE } from "../rail";
@@ -56,7 +57,10 @@ async function loadLegs(userId: string, ids: string[]) {
     include: RAIL_INCLUDE,
   });
   return new Map(
-    rows.map((row) => [row.id, withRailSource(withStationShortCodes(withRailTimes(row)))])
+    rows.map((row) => [
+      row.id,
+      withRailSource(withStationShortCodes(withRailCo2(withRailTimes(row)))),
+    ])
   );
 }
 

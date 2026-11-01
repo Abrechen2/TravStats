@@ -12,6 +12,7 @@ import { statusPillProps } from "../components/table/statusPillStyle";
 import ListLoadFailed from "../components/table/ListLoadFailed";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { ferryDeleteMessage } from "../lib/ferry/ferryDeleteMessage";
+import { co2Kpis } from "../lib/co2Kpis";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import Button from "../components/ui/Button";
@@ -147,6 +148,8 @@ export default function FerryDetailPage() {
             label: t("ferry:price"),
           },
         ]),
+    // Estimated CO2, and the saving against flying where there was a flight to compare (forgejo#395).
+    ...co2Kpis(ride.co2, t, locale),
   ];
   return (
     <AppShell width="list">

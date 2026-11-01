@@ -12,6 +12,7 @@ import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { railExtractTarget } from "../lib/extractTargets";
+import { co2Kpis } from "../lib/co2Kpis";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteRefresh } from "../components/rail/RailRouteRefresh";
@@ -211,6 +212,8 @@ export default function RailDetailPage(): JSX.Element {
     ...(journey.delayMinutes !== null
       ? [{ key: "delay", value: delayText, label: t("rail:detail.delay") }]
       : []),
+    // Estimated CO2, and the saving against flying where there was a flight to compare (forgejo#395).
+    ...co2Kpis(journey.co2, t, locale),
   ];
 
   // The station's clock, its zone named, and the user's own clock as a hint (Q2).

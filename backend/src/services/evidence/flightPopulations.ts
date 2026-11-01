@@ -72,9 +72,12 @@ export interface FlightCo2Row extends FlightCoordinateRow {
 }
 
 /** `co2FootprintKg` alone — the one measure whose per-flight figure needs the cabin. */
-export async function loadCountableCo2Rows(userId: string): Promise<FlightCo2Row[]> {
+export async function loadCountableCo2Rows(
+  userId: string,
+  tripId?: string
+): Promise<FlightCo2Row[]> {
   const rows = await prisma.flight.findMany({
-    where: countableFlightsOf(userId),
+    where: { ...countableFlightsOf(userId), ...(tripId === undefined ? {} : { tripId }) },
     select: {
       id: true,
       ...FLIGHT_DAY_SELECT,

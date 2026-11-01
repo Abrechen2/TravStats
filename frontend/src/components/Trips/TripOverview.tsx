@@ -18,6 +18,8 @@ import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
 import TripPeopleSection from "../sharing/TripPeopleSection";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
+import TripCo2Line from "./TripCo2Line";
+import type { Co2Stats } from "../../types/co2";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -162,7 +164,8 @@ export default function TripOverview({
   language,
   onChanged,
 }: {
-  trip: Trip;
+  /** `co2` is sent by `GET /trips/:id` only (forgejo#395). */
+  trip: Trip & { co2?: Co2Stats };
   t: T;
   language: string;
   onChanged: () => void;
@@ -251,6 +254,8 @@ export default function TripOverview({
           ))}
         </div>
       )}
+
+      <TripCo2Line co2={trip.co2} />
 
       <div className={`grid grid-cols-1 gap-6 ${hasSide ? "lg:grid-cols-[1.6fr_1fr]" : ""}`}>
         <div className="flex min-w-0 flex-col gap-6">

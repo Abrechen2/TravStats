@@ -426,5 +426,22 @@
     "label": "Als Datei laden:",
     "empty": "Dafür gibt es nichts zu exportieren – keine gespeicherte Linie bzw. keine Orte.",
     "error": "Der Export ist fehlgeschlagen. Bitte später erneut versuchen."
+  },
+  "co2": {
+    "label": "CO₂ (Schätzung)",
+    "labelLowerBound": "CO₂ (Schätzung, Untergrenze)",
+    "labelVehicle": "CO₂ je Fahrzeug (Schätzung)",
+    "savedVsFlight": "CO₂ gespart gegenüber dem Flug (Schätzung)",
+    "tripTotal": "CO₂ dieser Reise: ≈ {{total}} (Schätzung)",
+    "unmeasured_one": "{{count}} Eintrag ohne bekannte Distanz nicht eingerechnet",
+    "unmeasured_other": "{{count}} Einträge ohne bekannte Distanz nicht eingerechnet",
+    "modes": {
+      "flight": "Flug",
+      "rail": "Bahn",
+      "bus": "Bus",
+      "ferry": "Fähre",
+      "cruise": "Kreuzfahrt",
+      "rental": "Mietwagen"
+    }
   }
 }

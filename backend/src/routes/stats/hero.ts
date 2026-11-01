@@ -17,6 +17,7 @@ import { buildWhere, computeSummary } from "../../services/stats/summary";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { getBaseCurrency } from "../../services/fx/snapshot";
 import { readYearQuery, statsScope } from "../../utils/stats/domainYear";
+import co2StatsRouter from "./co2";
 
 const router = Router();
 
@@ -134,5 +135,8 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
     next(error);
   }
 });
+
+// `/co2`, carbon for the other modes (forgejo#395), rides along with the hero it extends.
+router.use(co2StatsRouter);
 
 export default router;

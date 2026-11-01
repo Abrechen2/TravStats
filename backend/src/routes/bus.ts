@@ -17,6 +17,7 @@ import {
   type UpdateBusJourneyInput,
 } from "../schemas/bus";
 import { mergeBusJourney } from "../services/bus/busJourneyWrite";
+import { withBusCo2 } from "../services/co2/rideDto";
 import { withBusTimes } from "../services/bus/timesDto";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import {
@@ -182,7 +183,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
     res.json({
       success: true,
-      data: data.map(withBusTimes),
+      data: data.map((r) => withBusCo2(withBusTimes(r))),
       // `railListSummary` reads operator and the two station names — the columns a bus row shares.
       meta: {
         total,
@@ -244,7 +245,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: BUS_INCLUDE,
     });
     if (!ride) throw new AppError("Bus ride not found", 404);
-    res.json({ success: true, data: withBusTimes(ride) });
+    res.json({ success: true, data: withBusCo2(withBusTimes(ride)) });
   } catch (err) {
     next(err);
   }
@@ -272,7 +273,7 @@ router.post(
           });
           return (
             ride && {
-              ride: withBusTimes(ride),
+              ride: withBusCo2(withBusTimes(ride)),
               report: busGeometryReport({ kind: "unchanged" }, ride.geometrySource),
             }
           );
@@ -337,7 +338,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
   });
 
   logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
-  return { ride: withBusTimes(ride), report: busGeometryReport(edit, "straight") };
+  return { ride: withBusCo2(withBusTimes(ride)), report: busGeometryReport(edit, "straight") };
 }
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -409,7 +410,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await restatusTrips([existing.tripId, ride.tripId]);
     res.json({
       success: true,
-      data: withBusTimes(ride),
+      data: withBusCo2(withBusTimes(ride)),
       meta: { geometry: busGeometryReport(edit, existing.geometrySource) },
     });
   } catch (err) {
@@ -436,7 +437,7 @@ router.post(
         where: { id: req.params.id, userId },
         include: BUS_INCLUDE,
       });
-      res.json({ success: true, data: withBusTimes(ride), meta: { geometry: report } });
+      res.json({ success: true, data: withBusCo2(withBusTimes(ride)), meta: { geometry: report } });
     } catch (err) {
       next(err);
     }

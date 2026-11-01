@@ -2,6 +2,7 @@ import { z } from "zod";
 import { acrissTraits } from "../../schemas/rental";
 import { rentalInvoiceFeeSchema, type RentalInvoiceFee } from "../../schemas/rentalImport";
 import { rentalCost, rentalDays, rentalDrivenKm } from "../../shared/rentalCounting";
+import { rentalCo2 } from "../co2/transportCo2";
 import { isOneWay } from "./rentalWrite";
 import { rentalTimes, type RentalTimeColumns } from "./timesDto";
 import { fromDbDate } from "../../shared/time/localDate";
@@ -89,5 +90,7 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     // Companion shows after a return (D11 b).
     invoiceMissing: row.status === "completed" && rentalDrivenKm(row) === null,
     times: rentalTimes(row),
+    // Estimated CO2 (forgejo#395); null without driven km, and for an electric car.
+    co2: rentalCo2(row),
   };
 }

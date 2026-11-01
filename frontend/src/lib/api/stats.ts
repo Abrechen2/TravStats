@@ -1,3 +1,4 @@
+import type { Co2Stats } from "../../types/co2";
 import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
@@ -129,6 +130,12 @@ export const statsApi = {
   getDomainRecords: async (): Promise<DomainRecord[]> => {
     const { data } = await api.get<{ records: DomainRecord[] }>("/stats/domain-records");
     return data.records;
+  },
+
+  /** Carbon per mode of travel, lifetime (forgejo#395). */
+  getCo2: async (): Promise<Co2Stats> => {
+    const { data } = await api.get<Co2Stats>("/stats/co2");
+    return data;
   },
 
   getTravelAccount: async (): Promise<TravelAccountResponse> => {

@@ -61,6 +61,7 @@ import { provenanceForWrite } from "../services/tripSummaryProvenance";
 import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { withTripTimes } from "../services/trips/timesDto";
+import { loadCo2Stats } from "../services/co2/co2Stats";
 import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
 import { detachTrip } from "../services/sharing/detach";
 import {
@@ -367,6 +368,7 @@ router.get(
         placeCountries,
         cost,
         distance,
+        co2,
       ] = await Promise.all([
         airportFactsFor(trip.flights),
         cruiseCountriesByTrip([trip.id]),
@@ -376,6 +378,8 @@ router.get(
         placeCountriesByTrip([trip.id]),
         tripPageCost(userId, trip.id),
         loadTripDistance(userId, trip.id),
+        // The trip's carbon per mode, each listed (forgejo#395).
+        loadCo2Stats(userId, trip.id),
       ]);
       // The stored zone first, then the catalogue — with `times` (ADR 0002).
       const flights = await enrichFlightsForClients(trip.flights);
@@ -404,6 +408,7 @@ router.get(
           countries,
           journalEntries,
           cost,
+          co2,
           ...distance,
         }),
       });
