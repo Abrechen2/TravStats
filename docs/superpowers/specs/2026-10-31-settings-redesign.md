@@ -32,6 +32,7 @@ this file is the plan and the record of what was built.
 | 1 | Page autosave survives navigation; pending/failed state on the row | P1 |
 | 2 | Immediate preference writes serialized (domains, currency, auto-trips, notifications) | P1 |
 | 3 | Standard/Expert reclassification + search metadata from row definitions | P2 |
+| 3b | Menu groups follow the target layout (canvas board 1): account — Konto, Darstellung, Bereiche, Reisen & Posteingang, Standort, Ansichten (new), Daten, Privatsphäre & Teilen (new), Dienste; admin — Instanz, Externe Dienste, Parser & Import, TravTrack & TravPlan, Betrieb. Old deep links keep resolving | P2 |
 | 4 | Specialist service forms honour the level; open-data endpoint exposed | P2 |
 | 5 | Legacy service editors become status + deep link | P2 |
 | 6 | TravPlan instance config: one form | P2 |
@@ -63,4 +64,7 @@ this file is the plan and the record of what was built.
 
 | # | Branch | State |
 |---|---|---|
-| 1+2 | `fix/settings-save-correctness` | built, pushed to forgejo, awaiting owner merge decision |
+| 1+2 | `fix/settings-save-correctness` | in 2.8.0-rc.8 (follow-up `bfd27b251`) |
+| 11 | reminders per domain (forgejo#410) | in 2.8.0-rc.8 |
+
+Owner, 2026-11-01: package 3b added — the canvas regrouping had no package of its own. Order: 3 → 3b → 4–7 → 8–9 (design) → 10. Everything ships in 2.8.
