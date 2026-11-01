@@ -43,6 +43,12 @@ export function Segmented<T extends string>({
   // and finger-operated at once, so the width cannot decide this.
   const coarse = useCoarsePointer();
 
+  // A chosen option that cannot be focused (a stored source that stopped working)
+  // must not leave the group without a tab stop: the first enabled one takes it.
+  const tabStop = options.some((o) => o.value === value && !o.disabled)
+    ? value
+    : options.find((o) => !o.disabled)?.value;
+
   const move = (event: KeyboardEvent<HTMLButtonElement>, index: number): void => {
     const step =
       event.key === "ArrowRight" || event.key === "ArrowDown"
@@ -82,7 +88,7 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={checked}
             aria-label={option.name}
-            tabIndex={checked ? 0 : -1}
+            tabIndex={option.value === tabStop ? 0 : -1}
             disabled={disabled || option.disabled}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => move(event, index)}
