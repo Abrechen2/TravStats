@@ -77,4 +77,14 @@ describe("CatalogueReseed (forgejo#397)", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("airports.seedingFailed")
     );
   });
+
+  it("releases a running airport run when its status can no longer be read", async () => {
+    post.mockResolvedValue({ data: { statusId: 1 } });
+    render(<CatalogueReseed />);
+    await screen.findByTestId("airport-seeding-status");
+    get.mockRejectedValue(new Error("500"));
+    await userEvent.click(runButtons()[0]);
+    await waitFor(() => expect(runButtons()[0]).not.toBeDisabled());
+    expect(screen.getAllByRole("alert").length).toBeGreaterThan(0);
+  });
 });

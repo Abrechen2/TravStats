@@ -74,7 +74,15 @@ export default function CatalogueReseed(): JSX.Element {
       }
     } catch (err: unknown) {
       logger.error("CatalogueReseed: seeding status failed", err);
-      if (mounted.current) setStatusFailed(true);
+      if (!mounted.current) return;
+      setStatusFailed(true);
+      // A running airport run must not stay "running" (button locked, no end)
+      // because its status could not be read: say so and release the button.
+      setPhase((p) =>
+        p.airports.s === "running"
+          ? { ...p, airports: { s: "error", text: t("catalogues.airports.statusFailed") } }
+          : p
+      );
     }
   }, [t]);
 

@@ -1448,7 +1448,7 @@
       "action": "Sweep now",
       "running_": "Running … (may take a while)",
       "done": "Done: {{users}} accounts, {{days}} days written.",
-      "doneWithFailures": "Finished, but {{failed}} of {{users}} accounts failed ({{days}} days written). See the server log.",
+      "doneWithFailures": "Finished, but {{failed}} of {{users}} accounts failed or Dawarich was unreachable ({{days}} days written). See the server log.",
       "failed": "The sweep failed.",
       "lost": "Outcome unknown: the server lost track of the job (restart?). Please run it again.",
       "running": "A sweep is already running."

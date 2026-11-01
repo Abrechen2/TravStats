@@ -100,15 +100,15 @@ export default function DawarichGlobalSettings(): JSX.Element {
     try {
       const r = await dawarichAdminApi.sweepNow();
       setSweepMsg({
-        ok: r.failed === 0,
+        ok: r.failed === 0 && r.degraded === 0,
         text: t(
-          r.failed === 0
+          r.failed === 0 && r.degraded === 0
             ? "admin:dawarichGlobal.sweep.done"
             : "admin:dawarichGlobal.sweep.doneWithFailures",
           {
             users: r.users,
             days: r.daysWritten,
-            failed: r.failed,
+            failed: r.failed + r.degraded,
           }
         ),
       });

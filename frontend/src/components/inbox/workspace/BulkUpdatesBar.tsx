@@ -8,6 +8,9 @@ import Button from "../../ui/Button";
 
 type Action = "apply" | "reject";
 
+/** `bulkIdsSchema` on the server: 1 to 200 ids per call. */
+const CHUNK = 200;
+
 /**
  * "Alle übernehmen / verwerfen" for the flight updates the inbox currently
  * shows (forgejo#397). Applying rewrites flights, so it asks once; the server
@@ -32,14 +35,21 @@ export default function BulkUpdatesBar({
     setBusy(true);
     setMessage(null);
     try {
-      const result =
-        action === "apply"
-          ? await pendingUpdatesApi.applyMany(ids)
-          : await pendingUpdatesApi.rejectMany(ids);
-      const done = (action === "apply" ? result.applied : result.rejected) ?? 0;
+      // The server takes at most 200 ids per call; a longer list goes in chunks.
+      let done = 0;
+      let failed = 0;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const part = ids.slice(i, i + CHUNK);
+        const result =
+          action === "apply"
+            ? await pendingUpdatesApi.applyMany(part)
+            : await pendingUpdatesApi.rejectMany(part);
+        done += (action === "apply" ? result.applied : result.rejected) ?? 0;
+        failed += result.failed;
+      }
       setMessage(
-        result.failed > 0
-          ? { ok: false, text: t("pendingUpdates:bulk.partial", { done, failed: result.failed }) }
+        failed > 0
+          ? { ok: false, text: t("pendingUpdates:bulk.partial", { done, failed }) }
           : { ok: true, text: t(`pendingUpdates:bulk.${action}Done`, { count: done }) }
       );
     } catch (err: unknown) {

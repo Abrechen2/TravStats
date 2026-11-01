@@ -1448,7 +1448,7 @@
       "action": "Jetzt auswerten",
       "running_": "Läuft … (kann dauern)",
       "done": "Fertig: {{users}} Konten, {{days}} Tage geschrieben.",
-      "doneWithFailures": "Fertig, aber {{failed}} von {{users}} Konten sind fehlgeschlagen ({{days}} Tage geschrieben). Details im Server-Log.",
+      "doneWithFailures": "Fertig, aber bei {{failed}} von {{users}} Konten ging es schief oder Dawarich war nicht erreichbar ({{days}} Tage geschrieben). Details im Server-Log.",
       "failed": "Die Auswertung ist fehlgeschlagen.",
       "lost": "Stand unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten.",
       "running": "Es läuft bereits eine Auswertung."

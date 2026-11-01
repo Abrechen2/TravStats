@@ -98,4 +98,20 @@ describe("DawarichGlobalSettings (forgejo#397)", () => {
     await run();
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("sweep.running"));
   });
+
+  it("does not call a sweep with only degraded accounts a success", async () => {
+    sweepNow.mockResolvedValue({
+      users: 2,
+      failed: 0,
+      degraded: 2,
+      monthsSwept: 0,
+      daysWritten: 0,
+      partialDays: 0,
+    });
+    render(<DawarichGlobalSettings />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "admin:dawarichGlobal.sweep.action" })
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("sweep.doneWithFailures");
+  });
 });

@@ -55,4 +55,20 @@ describe("BulkUpdatesBar (forgejo#397)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("bulk.failed");
     expect(reload).toHaveBeenCalled();
   });
+
+  it("sends more than 200 updates in chunks the server accepts and adds the outcomes up", async () => {
+    const ids = Array.from({ length: 450 }, (_, n) => `u${n}`);
+    applyMany.mockImplementation(async (part: string[]) => ({
+      requested: part.length,
+      applied: part.length,
+      failed: 0,
+      results: [],
+    }));
+    render(<BulkUpdatesBar ids={ids} reload={vi.fn().mockResolvedValue(undefined)} />);
+    await userEvent.click(screen.getByRole("button", { name: /bulk\.apply/ }));
+    await userEvent.click(screen.getByRole("button", { name: "pendingUpdates:bulk.yes" }));
+    await waitFor(() => expect(applyMany).toHaveBeenCalledTimes(3));
+    expect(applyMany.mock.calls.map((c) => (c[0] as string[]).length)).toEqual([200, 200, 50]);
+    expect(await screen.findByRole("status")).toHaveTextContent('"count":450');
+  });
 });
