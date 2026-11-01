@@ -118,6 +118,7 @@
     "stats/cruiseInsights.ts",
     "stats/crossDomain.ts",
     "stats/domainRecords.ts",
+    "stats/flightFigures.ts",
     "stats/flightInsights.ts",
     "stats/hero.ts",
     "stats/insights.ts",
