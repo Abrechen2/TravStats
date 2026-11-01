@@ -88,7 +88,7 @@ export default function MaintenanceAirportEnrich(): JSX.Element {
       }
     >
       {found ? (
-        <p role="status" className="text-sm" style={{ color: "var(--ts-text-secondary)" }}>
+        <p role="status" className="text-sm" style={{ color: "var(--ts-muted)" }}>
           {found}
         </p>
       ) : null}
