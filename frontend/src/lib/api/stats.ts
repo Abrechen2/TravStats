@@ -5,6 +5,7 @@ import type { Wrapped } from "../../types/wrapped";
 import type { FlightInsights } from "../../types/flightInsights";
 import type { CruiseInsights } from "../../types/cruiseInsights";
 import type { DomainRecord } from "../../types/domainRecords";
+import type { CrossDomainStats } from "../../types/crossDomainStats";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -129,6 +130,12 @@ export const statsApi = {
   getDomainRecords: async (): Promise<DomainRecord[]> => {
     const { data } = await api.get<{ records: DomainRecord[] }>("/stats/domain-records");
     return data.records;
+  },
+
+  /** Cheap cross-domain statistics (forgejo#399). */
+  getCrossDomainStats: async (): Promise<CrossDomainStats> => {
+    const { data } = await api.get<CrossDomainStats>("/stats/cross-domain");
+    return data;
   },
 
   getTravelAccount: async (): Promise<TravelAccountResponse> => {

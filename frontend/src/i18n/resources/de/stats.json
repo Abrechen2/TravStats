@@ -1468,5 +1468,120 @@
       "entries": "Gemeinsame Einträge",
       "countries": "Länder zusammen"
     }
+  },
+  "crossDomain": {
+    "title": "Zahlen über alle Reisearten",
+    "loadFailed": "Die übergreifenden Zahlen konnten nicht geladen werden.",
+    "unavailable": "Einige Zahlen konnten nicht berechnet werden: {{blocks}}.",
+    "blocks": {
+      "streaks": "Serien",
+      "rhythm": "Rhythmus",
+      "timeShift": "Zeitzonen",
+      "unseen": "letzte Besuche",
+      "pricePerKm": "Preis pro km",
+      "nightsByCountry": "Nächte pro Land",
+      "schengen": "Schengen",
+      "photos": "Fotos"
+    },
+    "domains": {
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "lodging": "Unterkünfte",
+      "poi": "Orte",
+      "roadtrip": "Roadtrips",
+      "rail": "Bahn",
+      "rental": "Mietwagen",
+      "bus": "Bus",
+      "ferry": "Fähre"
+    },
+    "streak": {
+      "title": "Längste Serie unterwegs",
+      "value_one": "{{count}} Tag",
+      "value_other": "{{count}} Tage",
+      "range": "{{from}} bis {{to}} — ein Tag zählt, wenn irgendein Eintrag dich von zu Hause weg zeigt.",
+      "current": "Läuft gerade: {{count}} Tage (seit {{from}}).",
+      "none": "Gerade läuft keine Serie."
+    },
+    "months": {
+      "title": "Monate in Folge",
+      "value_one": "{{count}} Monat",
+      "value_other": "{{count}} Monate",
+      "range": "{{from}} bis {{to}}, jeweils mit mindestens einem Tag unterwegs.",
+      "current": "Läuft gerade: {{count}} Monate."
+    },
+    "timeShift": {
+      "title": "Über Zeitzonen verschobene Stunden",
+      "value": "{{hours}} Std.",
+      "biggest": "Größter Sprung: {{hours}} Std. {{direction}}{{route}}.",
+      "east": "nach Osten",
+      "west": "nach Westen",
+      "jetLag": "Rund {{days}} Tage Jetlag (Schätzung: ein Tag je Stunde nach Osten, ein halber je Stunde nach Westen, ab {{min}} Std.).",
+      "unmeasured": "{{count}} Flüge ohne Uhrzeit oder Zeitzone bleiben außen vor."
+    },
+    "schengen": {
+      "title": "Schengen-Tage (90 in 180)",
+      "value": "{{used}} / {{allowed}}",
+      "left": "Noch {{remaining}} Tage in den {{window}} Tagen seit {{from}}.",
+      "note": "Aus deinem Logbuch gezählt, keine Rechtsberatung. Ein Tag ohne Eintrag zählt nicht als Tag außerhalb des Raums."
+    },
+    "rhythm": {
+      "title": "Wann du reist",
+      "seasons": {
+        "winter": "Winter",
+        "spring": "Frühling",
+        "summer": "Sommer",
+        "autumn": "Herbst"
+      },
+      "weekdays": {
+        "mon": "Mo",
+        "tue": "Di",
+        "wed": "Mi",
+        "thu": "Do",
+        "fri": "Fr",
+        "sat": "Sa",
+        "sun": "So"
+      },
+      "days": "{{count}} Tage",
+      "note": "Tage unterwegs, alle Reisearten je einmal gezählt. Jahreszeiten wie auf der Nordhalbkugel."
+    },
+    "unseen": {
+      "title": "Lange nicht gesehen",
+      "country": "Länder",
+      "airport": "Flughäfen",
+      "place": "Orte",
+      "item": "{{label}} — vor {{years}} Jahren ({{date}})",
+      "none": "Nichts war ein Jahr oder länger nicht mehr dran.",
+      "unknown": "Noch keine datierten Besuche."
+    },
+    "pricePerKm": {
+      "title": "Preis pro Kilometer",
+      "row": "{{domain}} ({{currency}}): {{perKm}} pro km — {{spend}} auf {{km}} km",
+      "noKm": "{{domain}} ({{currency}}): {{spend}} ausgegeben, keine Strecke erfasst",
+      "booked": "{{count}} Fahrten auf einer gemeinsamen Buchung bleiben außen vor.",
+      "note": "Je Währung, nie über Währungen hinweg addiert. Luftlinien machen den Satz zu einer Obergrenze."
+    },
+    "nights": {
+      "title": "Nächte pro Land, alle Arten",
+      "row": "{{country}}: {{total}} Nächte (Unterkunft {{hotel}}, Zug {{rail}}, Bus {{bus}})",
+      "unattributed": "{{count}} Nächte lassen sich keinem Land zuordnen (auf See, im Schlafwagen über die Grenze, in der Luft).",
+      "note": "Jede Nacht zählt einmal, egal welcher Eintrag sie beansprucht."
+    },
+    "photos": {
+      "title": "Fotos",
+      "value_one": "{{count}} Foto",
+      "value_other": "{{count}} Fotos",
+      "busiest": "Fleißigster Tag: {{day}} ({{count}} Fotos).",
+      "trips": "Meistfotografierte Reisen",
+      "countries": "Meistfotografierte Länder",
+      "places": "Meistfotografierte Orte",
+      "left": "{{noDate}} ohne Datum, {{noCountry}} ohne Koordinaten."
+    },
+    "help": {
+      "unit": "Tage und Monate mit mindestens einem Eintrag in irgendeiner Reiseart (ein Tag mit Flug und Hotelnacht zählt einmal); Stunden als Änderung des UTC-Versatzes zwischen Abflug- und Ankunftszone; Schengen-Tage als verschiedene Tage mit einem Eintrag in einem Mitgliedsland; Preis pro Kilometer je Art und Währung; Nächte so, wie die Reisebilanz sie zählt, eine je Nacht.",
+      "time": "Tage sind die Kalendertage jedes Eintrags auf seiner eigenen Uhr (Flughafen, Bahnhof, Hotel). Serien laufen bis heute; eine, die gestern endete, zählt noch als laufend. Schengen betrachtet die 180 Tage bis heute.",
+      "source": "Flüge, Aufenthalte, Bahn-, Bus- und Fährfahrten, Ortsbesuche und Reisefotos, jeweils nach der Regel der eigenen Art: nur geflogene Flüge, vorbeigegangene Aufenthalte, abgeschlossene Fahrten, stattgefundene Besuche.",
+      "coverage": "Für die Zeitzonen-Zahlen braucht ein Flug echte Uhrzeiten und Zonen, für den Preis pro Kilometer eine Fahrt einen eigenen Preis (nicht den einer gemeinsamen Buchung) und eine Strecke, eine Nacht ein bekanntes Land. Was sich nicht ableiten lässt, bleibt draußen und wird genannt, nie als Null gezählt.",
+      "exclusions": "Ein Tag ohne Eintrag ist kein Tag zu Hause und keiner außerhalb des Schengen-Raums. Kreuzfahrten und Roadtrips ordnen dich keinem Land zu. Die Jetlag-Zahl ist eine Schätzung. Das ist eine Logbuch-Zählung, keine Rechtsberatung."
+    }
   }
 }

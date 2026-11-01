@@ -44,6 +44,7 @@ import statsCruiseInsightsRoutes from "./stats/cruiseInsights";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
 import statsInsightRoutes from "./stats/insights";
 import statsDomainRecordsRoutes from "./stats/domainRecords";
+import statsCrossDomainRoutes from "./stats/crossDomain";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -307,6 +308,12 @@ export const apiMounts: ApiMount[] = [
     id: "stats.domainRecords",
     base: "/api/v1/stats/domain-records",
     router: statsDomainRecordsRoutes,
+  },
+  // forgejo#399 — cross-domain statistics; the same reason as the route above.
+  {
+    id: "stats.crossDomain",
+    base: "/api/v1/stats/cross-domain",
+    router: statsCrossDomainRoutes,
   },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   // The user's own verdicts on passport countries (forgejo#308).
