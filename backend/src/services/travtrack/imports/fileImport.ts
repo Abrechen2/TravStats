@@ -259,9 +259,10 @@ export async function startGpxImport(
       spooled = file.path;
       assertImportSize(sniffFormat(await readHead(spooled)), file.size, opts.maxBytes);
     }
-    if (readerQueueFull()) throw busy();
+    if (readerQueueFull() || fileImportsFull()) throw busy();
     const importId = await createRunningImport(userId, file.originalName);
     const path = spooled;
+    fileImportsRunning += 1;
     const job = startJob("travtrack.fileImport", userId, async (reportProgress) => {
       try {
         await opts.beforeRun?.();
@@ -273,6 +274,7 @@ export async function startGpxImport(
         );
       } finally {
         releaseActiveImport(importId, importId);
+        fileImportsRunning -= 1;
         discardSpool(path);
       }
     });
@@ -312,6 +314,13 @@ async function createRunningImport(userId: string, originalName: string | undefi
     });
   return importId;
 }
+
+/** File imports between "accepted" and "finished": the points of each wait in memory until stored. */
+export const MAX_FILE_IMPORTS = 3;
+let fileImportsRunning = 0;
+
+/** True when no further file import is taken: reading AND storing are bounded, not only reading. */
+export const fileImportsFull = (): boolean => fileImportsRunning >= MAX_FILE_IMPORTS;
 
 /**
  * Whether this account has an import a process is working on — asked BEFORE the

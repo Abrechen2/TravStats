@@ -127,6 +127,17 @@ describe("TravTrack — Google Timeline and other track files", () => {
       expect(first.origin).toBe(`gpx:${importId}`);
     });
 
+    it("a time beyond the Date range is a fix without a time, not a failed import", async () => {
+      const wild = {
+        locations: [
+          { latitudeE7: e7(37.5), longitudeE7: e7(127), timestampMs: "99999999999999999" },
+          { latitudeE7: e7(37.6), longitudeE7: e7(127), timestamp: "2026-10-12T01:00:00Z" },
+        ],
+      };
+      const { outcome } = await importFile(json(wild));
+      expect(outcome.report).toMatchObject({ stored: 1, withoutTime: 1 });
+    });
+
     it("an unfinished file (cut off mid-array) is refused as unreadable and the import fails with it", async () => {
       const cut = Buffer.from(JSON.stringify(records).slice(0, 150));
       expect(await codeOf(readTrackFile(cut))).toBe("TRAVTRACK_IMPORT_UNREADABLE");

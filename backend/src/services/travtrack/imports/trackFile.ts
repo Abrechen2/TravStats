@@ -78,7 +78,8 @@ export function mapFixes(fixes: Fixes): MappedTrack {
   let untilMs: number | null = null;
   for (let i = 0; i < fixes.time.length; i++) {
     const t = fixes.time[i];
-    if (!Number.isFinite(t)) continue;
+    // Beyond the Date range a time is garbage, and `toISOString` would throw mid-import.
+    if (!Number.isFinite(t) || Math.abs(t) > 8.64e15) continue;
     withTime.push(i);
     if (fromMs === null || t < fromMs) fromMs = t;
     if (untilMs === null || t > untilMs) untilMs = t;

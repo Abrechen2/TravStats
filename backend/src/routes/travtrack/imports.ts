@@ -8,6 +8,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { travTrackImportLimiter } from "../../middleware/travTrackImportLimiter";
 import {
   deleteTravTrackImport,
+  fileImportsFull,
   hasLiveImport,
   importOrigin,
   listTravTrackImports,
@@ -60,17 +61,30 @@ const fileUpload = multer({
   limits: { fileSize: TRACK_IMPORT_MAX_BYTES, files: 1, fields: 5, fieldSize: 1024, parts: 8 },
 });
 
+/** Accounts whose upload body is being taken right now. */
+const uploading = new Set<string>();
+const MAX_CONCURRENT_UPLOADS = 3;
+
 /**
  * Refuses an upload before its body is read: an import of this account is
  * already running (409), or the reader's line is full (503). The connection is
  * closed with the answer, so the rest of a large body is not taken.
  */
 function refuseEarly(req: AuthRequest, res: Response, next: NextFunction): void {
+  const userId = req.userId!;
   void (async () => {
-    if (readerQueueFull()) throw busy();
-    if (await hasLiveImport(req.userId!)) {
-      throw new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+    if (readerQueueFull() || fileImportsFull() || uploading.size >= MAX_CONCURRENT_UPLOADS) {
+      throw busy();
     }
+    // One body at a time per account, and a handful on the instance: capacity is
+    // reserved here, before the first byte of a file is read, and released with the response.
+    const running = () =>
+      new AppError("An import is running already", 409, "TRAVTRACK_IMPORT_RUNNING");
+    if (uploading.has(userId)) throw running();
+    // Reserved synchronously, before the await below, so two requests cannot both pass.
+    uploading.add(userId);
+    res.once("close", () => uploading.delete(userId));
+    if (await hasLiveImport(userId)) throw running();
   })().then(
     () => next(),
     (err: unknown) => {
