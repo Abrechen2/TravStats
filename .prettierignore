@@ -58,3 +58,6 @@ docs/
 
 # Parser test fixtures are inputs, byte for byte.
 test-samples/
+
+# Vitest writes its JSON report here during a run; not source.
+frontend/.vitest/

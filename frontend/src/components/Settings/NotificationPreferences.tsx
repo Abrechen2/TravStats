@@ -152,18 +152,21 @@ export default function NotificationPreferencesCards(): JSX.Element {
       <SectionCard>
         <SectionTitle title={t("settingsRows:notifications.sections.domains")} />
         <SettingRows>
-          {REMINDER_DOMAINS.map((domain) => (
-            <ReminderRow
-              key={domain}
-              domain={domain}
-              saved={prefs.domains[domain]}
-              push={prefs.push}
-              mail={prefs.mail}
-              domainOn={isEnabled(domain)}
-              locked={isDemo}
-              write={writeDomain}
-            />
-          ))}
+          {/* A server older than this web build sends no row for the newer areas; draw none rather than crash. */}
+          {REMINDER_DOMAINS.filter((domain) => prefs.domains[domain] !== undefined).map(
+            (domain) => (
+              <ReminderRow
+                key={domain}
+                domain={domain}
+                saved={prefs.domains[domain]}
+                push={prefs.push}
+                mail={prefs.mail}
+                domainOn={isEnabled(domain)}
+                locked={isDemo}
+                write={writeDomain}
+              />
+            )
+          )}
         </SettingRows>
         <p className="t-caption">{t("settings:notifications.carriedOver")}</p>
       </SectionCard>
