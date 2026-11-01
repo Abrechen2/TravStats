@@ -775,12 +775,12 @@
        "de": [
         "API-Schlüssel",
         "Für Skripte und Werkzeuge",
-        "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
+        "Ein Schlüssel (API-Token) umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
        ],
        "en": [
         "API keys",
         "For scripts and tools",
-        "A key bypasses the second step. You see it only once. Revoking locks the tool out at once."
+        "A key (API token) bypasses the second step. You see it only once. Revoking locks the tool out at once."
        ]
       }
      ]
