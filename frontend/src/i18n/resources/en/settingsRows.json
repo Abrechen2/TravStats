@@ -1,0 +1,295 @@
+{
+  "trips": {
+    "sections": {
+      "trips": "Trips",
+      "suggestions": "Inbox suggestions",
+      "calendarFeed": "Calendar"
+    },
+    "autoreise": {
+      "t": "Group trips on import",
+      "s": "Same booking reference, one trip"
+    },
+    "reisefarbe": {
+      "t": "Colour of new trips"
+    },
+    "rvor": {
+      "t": "Suggest trips",
+      "h": "Off: nothing is computed. Your decisions stay."
+    },
+    "avor": {
+      "t": "Suggest stays",
+      "s": "From your location history"
+    },
+    "immichbeleg": {
+      "t": "Immich photos as evidence"
+    },
+    "kiort": {
+      "t": "Detect place type with AI",
+      "s": "Place names only, no coordinates"
+    },
+    "ics": {
+      "t": "Calendar feed",
+      "s": "Your trips in any calendar app",
+      "h": "You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address.",
+      "btn": "Create link",
+      "res": "Link created · visible only now · Copy"
+    }
+  },
+  "sharing": {
+    "sections": {
+      "companions": "Companions",
+      "accounts": "With accounts on this server",
+      "servers": "With other servers",
+      "shareLinks": "Public links",
+      "compare": "Compare & hand over"
+    },
+    "personen": {
+      "t": "People",
+      "s": "Rename, merge, delete",
+      "h": "Merging changes every entry with this person and can't be undone.",
+      "btn": "Delete unused"
+    },
+    "anfragen": {
+      "t": "Share trips",
+      "h": "Withdrawing stops syncing. What's shared stays as an own copy.",
+      "btn": "Ask"
+    },
+    "verkn": {
+      "t": "Link person to account",
+      "s": "Needed before you share"
+    },
+    "fcodes": {
+      "t": "Invitation code",
+      "s": "Single use, expires",
+      "h": "You redeem someone else's code here too.",
+      "btn": "Create code",
+      "res": "Code created · valid until tomorrow 14:00"
+    },
+    "linkserlaubt": {
+      "t": "Allow public links",
+      "h": "Turning off revokes every link of every account at once."
+    },
+    "linkliste": {
+      "t": "Your links",
+      "s": "Created on a flight, trip or year"
+    },
+    "rangliste": {
+      "t": "Leaderboard",
+      "s": "Who sees your totals"
+    },
+    "verschl": {
+      "t": "Hand over encrypted",
+      "s": "Full entries to another account"
+    }
+  },
+  "notifications": {
+    "sections": {
+      "channel": "Where",
+      "domains": "Before you leave"
+    },
+    "erimail": {
+      "t": "Mail to",
+      "s": "Empty: no mail"
+    },
+    "pushstate": {
+      "t": "Notifications to the app",
+      "h": "Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."
+    },
+    "r_flight": {
+      "t": "Flight",
+      "h": "Plus one own time, whole hours from 1 to 168."
+    },
+    "r_cruise": {
+      "t": "Cruise"
+    },
+    "r_rail": {
+      "t": "Rail"
+    },
+    "r_bus": {
+      "t": "Bus"
+    },
+    "r_ferry": {
+      "t": "Ferry"
+    },
+    "r_lodging": {
+      "t": "Stay"
+    }
+  },
+  "loyalty": {
+    "sections": {
+      "loyalty": "Cards"
+    },
+    "tr_flight": {
+      "t": "Airlines",
+      "h": "Suggestions from your flights show up here to accept.",
+      "btn": "Add card"
+    },
+    "tr_hotel": {
+      "t": "Hotels",
+      "s": "Chains and single hotels",
+      "btn": "Add card"
+    },
+    "tr_rail": {
+      "t": "Rail",
+      "btn": "Add card"
+    },
+    "tr_cruise": {
+      "t": "Cruise lines",
+      "btn": "Add card"
+    }
+  },
+  "data": {
+    "sections": {
+      "backup": "Backup",
+      "export": "Take out",
+      "import": "Bring in",
+      "railImport": "When importing from bahn.de"
+    },
+    "srvbackup": {
+      "t": "Last server backup",
+      "s": "Your admin takes care of it"
+    },
+    "webdaveigen": {
+      "t": "Own copy on WebDAV",
+      "s": "Your export, on a schedule",
+      "h": "Set up the connection under Services → Backup target."
+    },
+    "webdavtakt": {
+      "t": "How often",
+      "o": [
+        "daily",
+        "weekly"
+      ]
+    },
+    "webdavvers": {
+      "t": "Versions to keep",
+      "s": "1–30"
+    },
+    "webdavjetzt": {
+      "t": "Upload now",
+      "btn": "Upload now",
+      "res": "Uploaded · just now"
+    },
+    "meine": {
+      "t": "All my data",
+      "s": "JSON, without passwords or keys",
+      "h": "Photos and documents aren't included.",
+      "btn": "Download",
+      "res": "Ready · Download"
+    },
+    "excelexp": {
+      "t": "Excel sheet",
+      "s": "One sheet per travel type",
+      "h": "Edit it and read it back in, also into another account.",
+      "btn": "Create",
+      "res": "Ready · Download"
+    },
+    "gpxzip": {
+      "t": "Recordings",
+      "s": "All tours as GPX in a ZIP",
+      "btn": "Download",
+      "res": "Ready · Download"
+    },
+    "listen": {
+      "t": "Import lists",
+      "s": "CSV, Flightradar24, other apps"
+    },
+    "excelimp": {
+      "t": "Read Excel sheet",
+      "s": "With preview",
+      "h": "Add · Merge · Replace. Replace affects every sheet in the file with at least one row and deletes what the file doesn't mention there. I take a backup of the whole server first.",
+      "btn": "Choose file"
+    },
+    "gpxin": {
+      "t": "Read recordings",
+      "s": "GPX, TCX, FIT or ZIP",
+      "h": "ZIP up to 500 files and 200 MB, one recording up to 15 MB.",
+      "btn": "Choose files"
+    },
+    "implog": {
+      "t": "Past imports",
+      "s": "Undo as a whole",
+      "h": "Entries something else already points to stay; I'll say which."
+    },
+    "ubahn": {
+      "t": "Metro and tram",
+      "s": "Preselection, changeable per import",
+      "o": [
+        "skip",
+        "as rail journey"
+      ]
+    },
+    "busleg": {
+      "t": "Bus legs",
+      "o": [
+        "skip",
+        "as bus ride"
+      ]
+    }
+  },
+  "dialogs": {
+    "icsnew": {
+      "title": "Create new calendar link?",
+      "affects": "Your calendar feed",
+      "amount": "Every calendar using the old link",
+      "after": "Those calendars stop getting trips.",
+      "confirm": "Regenerate"
+    },
+    "icsrevoke": {
+      "title": "Withdraw calendar link?",
+      "affects": "Your calendar feed",
+      "amount": "Every calendar using the link",
+      "after": "Those calendars stop getting trips. You can create a new link at any time.",
+      "confirm": "Withdraw"
+    },
+    "shareend": {
+      "title": "Stop sharing?",
+      "affects": "{{name}}",
+      "amount_one": "{{count}} shared trip",
+      "amount_other": "{{count}} shared trips",
+      "after": "They stay as your copy; changes no longer arrive.",
+      "confirm": "Stop"
+    },
+    "merge": {
+      "title": "Merge {{from}} into {{to}}?",
+      "affects": "{{from}}",
+      "amount_one": "{{count}} entry",
+      "amount_other": "{{count}} entries",
+      "after": "They will name {{to}}. This can't be undone.",
+      "confirm": "Merge"
+    },
+    "unused": {
+      "title": "Delete unused companions?",
+      "affects": "People without entries",
+      "amount_one": "{{count}} person",
+      "amount_other": "{{count}} people",
+      "after": "They disappear from all suggestions.",
+      "confirm_one": "Delete {{count}}",
+      "confirm_other": "Delete {{count}}"
+    },
+    "companiondel": {
+      "title": "Delete {{name}}?",
+      "affects": "{{name}}",
+      "amount": "No entries",
+      "after": "The person disappears from all suggestions.",
+      "confirm": "Delete"
+    },
+    "linksoff": {
+      "title": "Turn off public links?",
+      "affects": "Every account on this server",
+      "amount_one": "{{count}} link",
+      "amount_other": "{{count}} links",
+      "after": "I delete them at once. Turning on again won't bring them back.",
+      "confirm_one": "Delete {{count}} link",
+      "confirm_other": "Delete {{count}} links"
+    },
+    "replace": {
+      "title": "Replace contents?",
+      "affects": "The sheets {{sheets}} in your account",
+      "amount": "{{missing}} entries are missing from the file and will be deleted. {{kept}} come from {{file}}.",
+      "after": "These sheets will only hold what the file contains. I take a backup of the whole server first.",
+      "confirm": "Replace {{missing}} entries",
+      "word": "REPLACE"
+    }
+  }
+}

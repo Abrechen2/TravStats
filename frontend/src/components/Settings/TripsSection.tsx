@@ -1,53 +1,74 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
-import { Select, Switch } from "../ui/Field";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { SettingRows } from "../ui/SettingRow";
+import { ChoiceControl, SettingItem, SwitchControl } from "../ui/settings";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { TRIP_COLORS } from "../../lib/tripColors";
+import { useDocWrite } from "./useDocWrite";
+import { useRowCopy } from "./rowCopy";
 
 /** A select value cannot be null; this stands for "automatic". */
 const AUTOMATIC = "auto";
 
 /**
- * Settings that belong to trips rather than to any one domain (owner,
- * 2026-08-23). Trips are no domain (`DOMAIN_KEYS` is flight|cruise|lodging|
- * poi), so this section is always visible — no domain gate applies.
+ * "Reisen" (settings rebuild, design §4 A5): the settings that belong to trips
+ * rather than to any one domain. Both rows write at once and keep the user's
+ * choice when the server refuses (B6); the stores take a value only after the
+ * server confirmed it, so no later save of the document carries a refused one.
  *
- * The automatic-trip switch moved here from the list importer: it decides
- * what an import DOES with flights that share a booking reference, which is a
- * question about trips, and a setting lives in exactly one place (owner
- * decision, against "show it in both").
+ * The automatic-trip switch decides what an import DOES with flights that
+ * share a booking reference — a question about trips, and a setting lives in
+ * exactly one place (owner, 2026-08-23).
  */
 export default function TripsSection(): JSX.Element {
-  const { t } = useTranslation(["settings"]);
-  const autoCreateTrips = useSettingsStore((s) => s.autoCreateTrips);
-  const setAutoCreateTrips = useSettingsStore((s) => s.setAutoCreateTrips);
+  const { t } = useTranslation(["settings", "settingsRows"]);
+  const row = useRowCopy("trips");
+  const isDemo = useIsDemoAccount();
+  const savedAuto = useSettingsStore((s) => s.autoCreateTrips);
+  const savedColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
+
+  const auto = useDocWrite<boolean>(
+    "trips.autoCreateTrips",
+    savedAuto,
+    (autoCreateTrips) => ({ autoCreateTrips }),
+    (autoCreateTrips) => useSettingsStore.setState({ autoCreateTrips })
+  );
   // The server's preference (forgejo#321): every new trip that names no colour
   // — an import, a suggestion, the "new trip" form — starts with it.
-  const tripColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
-  const setTripColor = useSuggestionSwitchesStore((s) => s.setTripDefaultColor);
+  const color = useDocWrite<string>(
+    "trips.defaultColor",
+    savedColor ?? AUTOMATIC,
+    (value) => ({ tripDefaults: { color: value === AUTOMATIC ? null : value } }),
+    (value) =>
+      useSuggestionSwitchesStore.setState({ tripDefaultColor: value === AUTOMATIC ? null : value })
+  );
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+  const autoCopy = row("autoreise");
+  const colorCopy = row("reisefarbe");
+  const swatch = color.value === AUTOMATIC ? null : color.value;
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:trips.title")}
-        description={t("settings:trips.description")}
-      />
-      {/* Persists immediately via the store's setter (like the base currency). */}
+      <SectionTitle title={t("settingsRows:trips.sections.trips")} />
       <SettingRows>
-        <Switch
-          id="trips-auto-create-trips"
-          checked={autoCreateTrips}
-          onChange={setAutoCreateTrips}
-          label={t("settings:trips.autoCreateTrips.label")}
-          sub={t("settings:trips.autoCreateTrips.description")}
+        <SettingItem
+          title={autoCopy.title}
+          sub={autoCopy.sub}
+          help={autoCopy.help}
+          save={auto}
+          locked={locked}
+          control={<SwitchControl checked={auto.value} onChange={auto.choose} />}
         />
-        <SettingRow
-          title={t("settings:trips.defaultColor.label")}
-          sub={t("settings:trips.defaultColor.description")}
-          htmlFor="trips-default-color"
+        <SettingItem
+          title={colorCopy.title}
+          sub={colorCopy.sub}
+          save={color}
+          locked={locked}
           control={
             // Swatch and select stay on one line; the swatch alone must not
             // wrap above the select on a narrower row (iPad, forgejo#321).
@@ -59,22 +80,22 @@ export default function TripsSection(): JSX.Element {
                 style={{
                   width: 20,
                   height: 20,
-                  background: tripColor ?? "transparent",
-                  border: tripColor ? "none" : "1px dashed var(--ts-border-input)",
+                  background: swatch ?? "transparent",
+                  border: swatch ? "none" : "1px dashed var(--ts-border-input)",
                 }}
               />
-              <Select
-                id="trips-default-color"
-                value={tripColor ?? AUTOMATIC}
-                onChange={(e) => setTripColor(e.target.value === AUTOMATIC ? null : e.target.value)}
-              >
-                <option value={AUTOMATIC}>{t("settings:trips.defaultColor.automatic")}</option>
-                {TRIP_COLORS.map((color) => (
-                  <option key={color} value={color}>
-                    {t(`settings:trips.defaultColor.colors.${color.slice(1)}`)}
-                  </option>
-                ))}
-              </Select>
+              <ChoiceControl<string>
+                label={colorCopy.title}
+                value={color.value}
+                onChange={color.choose}
+                options={[
+                  { value: AUTOMATIC, label: t("settings:trips.defaultColor.automatic") },
+                  ...TRIP_COLORS.map((c) => ({
+                    value: c as string,
+                    label: t(`settings:trips.defaultColor.colors.${c.slice(1)}`),
+                  })),
+                ]}
+              />
             </span>
           }
         />

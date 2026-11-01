@@ -37,6 +37,7 @@ import enImmich from "./resources/en/immich.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
 import enUsageStats from "./resources/en/usageStats.json";
 import enPushRelay from "./resources/en/pushRelay.json";
+import enSettingsRows from "./resources/en/settingsRows.json";
 import enLodging from "./resources/en/lodging.json";
 import enLocation from "./resources/en/location.json";
 import enTrack from "./resources/en/track.json";
@@ -83,6 +84,7 @@ import deImmich from "./resources/de/immich.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
 import deUsageStats from "./resources/de/usageStats.json";
 import dePushRelay from "./resources/de/pushRelay.json";
+import deSettingsRows from "./resources/de/settingsRows.json";
 import deLodging from "./resources/de/lodging.json";
 import deLocation from "./resources/de/location.json";
 import deTrack from "./resources/de/track.json";
@@ -151,6 +153,7 @@ const resources = {
     whatsNew: enWhatsNew,
     usageStats: enUsageStats,
     pushRelay: enPushRelay,
+    settingsRows: enSettingsRows,
     lodging: enLodging,
     location: enLocation,
     track: enTrack,
@@ -200,6 +203,7 @@ const resources = {
     whatsNew: deWhatsNew,
     usageStats: deUsageStats,
     pushRelay: dePushRelay,
+    settingsRows: deSettingsRows,
     lodging: deLodging,
     location: deLocation,
     track: deTrack,
@@ -258,6 +262,7 @@ i18n.use(initReactI18next).init({
     "whatsNew",
     "usageStats",
     "pushRelay",
+    "settingsRows",
     "lodging",
     "location",
     "track",

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -13,8 +12,9 @@ import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import Button from "../ui/Button";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
-import DemoLockedNotice from "./DemoLockedNotice";
+import { SettingRows } from "../ui/SettingRow";
+import { ActionControl, ConfirmDialog, ErrorLine, SettingItem } from "../ui/settings";
+import { useDialogCopy, useRowCopy } from "./rowCopy";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 const NS = "settings:calendarFeed";
@@ -35,10 +35,12 @@ type CopyState = "idle" | "copied" | "failed";
  * or `localhost` — Google Calendar fetches from the internet and never gets it.
  */
 export default function CalendarFeedSection(): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
+  const { t } = useTranslation(["settings", "common", "settingsRows"]);
   const format = useDisplayFormat();
   const isDemo = useIsDemoAccount();
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const row = useRowCopy("trips");
+  const dialog = useDialogCopy();
+  const [asking, setAsking] = useState<"regenerate" | "revoke" | null>(null);
   const [status, setStatus] = useState<CalendarFeedStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [issued, setIssued] = useState<IssuedCalendarFeed | null>(null);
@@ -61,17 +63,7 @@ export default function CalendarFeedSection(): JSX.Element {
   }, [load]);
 
   const issue = async (): Promise<void> => {
-    // Replacing a live URL ends every subscription to it — say so first.
-    if (
-      status?.active &&
-      !(await confirm({
-        message: t(`${NS}.confirmRegenerate`),
-        confirmText: t(`${NS}.regenerate`),
-        destructive: true,
-      }))
-    ) {
-      return;
-    }
+    setAsking(null);
     setBusy(true);
     setErrorKey(null);
     setCopy("idle");
@@ -87,15 +79,7 @@ export default function CalendarFeedSection(): JSX.Element {
   };
 
   const revoke = async (): Promise<void> => {
-    if (
-      !(await confirm({
-        message: t(`${NS}.confirmRevoke`),
-        confirmText: t(`${NS}.revoke`),
-        destructive: true,
-      }))
-    ) {
-      return;
-    }
+    setAsking(null);
     setBusy(true);
     setErrorKey(null);
     try {
@@ -141,9 +125,12 @@ export default function CalendarFeedSection(): JSX.Element {
         }
       : null);
 
+  const copy_ = row("ics");
+  const regenerate = dialog("icsnew");
+  const withdraw = dialog("icsrevoke");
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.description`)} />
+      <SectionTitle title={t("settingsRows:trips.sections.calendarFeed")} />
       <SettingRows>
         {loadFailed && (
           <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
@@ -157,90 +144,101 @@ export default function CalendarFeedSection(): JSX.Element {
         {status && !status.enabled && <p className="t-caption">{t(`${NS}.unavailable`)}</p>}
 
         {status?.enabled && (
-          <SettingRow
-            title={active ? t(`${NS}.stateActive`) : t(`${NS}.stateNone`)}
+          <SettingItem
+            title={copy_.title}
+            help={copy_.help}
             sub={
               active && status.createdAt
                 ? [
+                    copy_.sub,
                     t(`${NS}.createdAt`, { date: format.dateTime(status.createdAt) }),
                     status.lastUsedAt
                       ? t(`${NS}.lastUsed`, { date: format.dateTime(status.lastUsedAt) })
                       : t(`${NS}.neverUsed`),
                   ].join(" · ")
-                : t(`${NS}.noneHint`)
+                : copy_.sub
             }
+            locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+            error={errorKey ? t(errorKey) : undefined}
             control={
-              isDemo ? undefined : (
-                <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-                  <Button
-                    variant={active ? "secondary" : "primary"}
-                    disabled={busy}
-                    onClick={() => void issue()}
-                  >
-                    {active ? t(`${NS}.regenerate`) : t(`${NS}.create`)}
-                  </Button>
-                  {active && (
-                    <Button variant="danger" disabled={busy} onClick={() => void revoke()}>
-                      {t(`${NS}.revoke`)}
-                    </Button>
-                  )}
-                </span>
-              )
+              <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+                <ActionControl
+                  label={active ? t(`${NS}.regenerate`) : (copy_.btn ?? t(`${NS}.create`))}
+                  busy={busy}
+                  onClick={() => (active ? setAsking("regenerate") : void issue())}
+                />
+                {active && (
+                  <ActionControl
+                    danger
+                    label={t(`${NS}.revoke`)}
+                    busy={busy}
+                    onClick={() => setAsking("revoke")}
+                  />
+                )}
+              </span>
             }
-          />
-        )}
-
-        {isDemo && status?.enabled && <DemoLockedNotice />}
-
-        {active && !link && <p className="t-caption">{t(`${NS}.notRecoverable`)}</p>}
-
-        {link && (
-          <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-            <label className="label" htmlFor="calendar-feed-url">
-              {t(`${NS}.urlLabel`)}
-            </label>
-            <input
-              id="calendar-feed-url"
-              className="input"
-              readOnly
-              value={link.url}
-              onFocus={(event) => event.currentTarget.select()}
-              style={{ fontFamily: "var(--ts-font-mono)" }}
-            />
-            {!link.reachableFromInternet && (
-              <p role="note" className="t-caption" style={{ color: "var(--ts-warn)" }}>
-                {t(`${NS}.unreachable`)}
-              </p>
+          >
+            {active && !link && <p className="t-caption">{t(`${NS}.notRecoverable`)}</p>}
+            {link && (
+              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                <label className="label" htmlFor="calendar-feed-url">
+                  {t(`${NS}.urlLabel`)}
+                </label>
+                <input
+                  id="calendar-feed-url"
+                  className="input"
+                  readOnly
+                  value={link.url}
+                  onFocus={(event) => event.currentTarget.select()}
+                  style={{ fontFamily: "var(--ts-font-mono)" }}
+                />
+                {!link.reachableFromInternet && (
+                  <p role="note" className="t-caption" style={{ color: "var(--ts-warn)" }}>
+                    {t(`${NS}.unreachable`)}
+                  </p>
+                )}
+                <p className="t-caption">{t(`${NS}.keepSecret`)}</p>
+                <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+                  <Button variant="primary" onClick={() => void copyUrl()}>
+                    {t(`${NS}.copy`)}
+                  </Button>
+                  <a className="btn-secondary" href={link.webcalUrl}>
+                    {t(`${NS}.openInCalendar`)}
+                  </a>
+                </span>
+                {copy === "copied" && (
+                  <p role="status" className="t-caption" style={{ color: "var(--ts-good)" }}>
+                    {t(`${NS}.copied`)}
+                  </p>
+                )}
+                {copy === "failed" && <ErrorLine>{t(`${NS}.copyFailed`)}</ErrorLine>}
+              </div>
             )}
-            <p className="t-caption">{t(`${NS}.keepSecret`)}</p>
-            <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-              <Button variant="primary" onClick={() => void copyUrl()}>
-                {t(`${NS}.copy`)}
-              </Button>
-              <a className="btn-secondary" href={link.webcalUrl}>
-                {t(`${NS}.openInCalendar`)}
-              </a>
-            </span>
-            {copy === "copied" && (
-              <p role="status" className="t-caption" style={{ color: "var(--ts-good)" }}>
-                {t(`${NS}.copied`)}
-              </p>
-            )}
-            {copy === "failed" && (
-              <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-                {t(`${NS}.copyFailed`)}
-              </p>
-            )}
-          </div>
-        )}
-
-        {errorKey && (
-          <p role="alert" className="t-caption" style={{ color: "var(--ts-bad)" }}>
-            {t(errorKey)}
-          </p>
+          </SettingItem>
         )}
       </SettingRows>
-      {confirmDialog}
+      <ConfirmDialog
+        open={asking === "regenerate"}
+        title={regenerate.title}
+        affects={regenerate.affects}
+        amount={regenerate.amount}
+        after={regenerate.after}
+        confirmLabel={regenerate.confirmLabel}
+        busy={busy}
+        onConfirm={() => void issue()}
+        onCancel={() => setAsking(null)}
+      />
+      <ConfirmDialog
+        open={asking === "revoke"}
+        title={withdraw.title}
+        affects={withdraw.affects}
+        amount={withdraw.amount}
+        after={withdraw.after}
+        confirmLabel={withdraw.confirmLabel}
+        busy={busy}
+        onConfirm={() => void revoke()}
+        onCancel={() => setAsking(null)}
+      />
     </SectionCard>
   );
 }

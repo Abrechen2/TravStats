@@ -71,10 +71,10 @@ describe("CalendarFeedSection", () => {
 
   it("creates a link and shows it once, with copy and a webcal link", async () => {
     render(<CalendarFeedSection />);
-    expect(await screen.findByText("settings:calendarFeed.stateNone")).toBeTruthy();
+    expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
     api.status.mockResolvedValue(live);
 
-    await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.create" }));
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:trips.ics.btn" }));
 
     const field = await screen.findByLabelText("settings:calendarFeed.urlLabel");
     expect((field as HTMLInputElement).value).toBe(URL_HTTPS);
@@ -87,7 +87,7 @@ describe("CalendarFeedSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.copy" }));
     expect(writeText).toHaveBeenCalledWith(URL_HTTPS);
     expect(await screen.findByText("settings:calendarFeed.copied")).toBeTruthy();
-    expect(await screen.findByText("settings:calendarFeed.stateActive")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "settings:calendarFeed.revoke" })).toBeTruthy();
   });
 
   it("warns under the link when Google Calendar cannot reach its address, and only then", async () => {
@@ -99,7 +99,7 @@ describe("CalendarFeedSection", () => {
     });
     render(<CalendarFeedSection />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+      await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
     await screen.findByLabelText("settings:calendarFeed.urlLabel");
     expect(screen.getByText("settings:calendarFeed.unreachable")).toBeTruthy();
@@ -108,7 +108,7 @@ describe("CalendarFeedSection", () => {
   it("shows no reachability warning for a named address", async () => {
     render(<CalendarFeedSection />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+      await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
     await screen.findByLabelText("settings:calendarFeed.urlLabel");
     expect(screen.queryByText("settings:calendarFeed.unreachable")).toBeNull();
@@ -144,7 +144,7 @@ describe("CalendarFeedSection", () => {
     Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
     render(<CalendarFeedSection />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+      await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
     await userEvent.click(
       await screen.findByRole("button", { name: "settings:calendarFeed.copy" })
@@ -161,13 +161,13 @@ describe("CalendarFeedSection", () => {
       await screen.findByRole("button", { name: "settings:calendarFeed.regenerate" })
     );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("settings:calendarFeed.confirmRegenerate")).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: /cancel/i }));
+    expect(within(dialog).getByText("settingsRows:dialogs.icsnew.title")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "settings:blocks.confirm.cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(api.issue).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.regenerate" }));
-    await confirmDialog("settings:calendarFeed.regenerate");
+    await confirmDialog("settingsRows:dialogs.icsnew.confirm");
     await waitFor(() => expect(api.issue).toHaveBeenCalledTimes(1));
   });
 
@@ -177,16 +177,16 @@ describe("CalendarFeedSection", () => {
     expect(await screen.findByText(/settings:calendarFeed.neverUsed/)).toBeTruthy();
     api.status.mockResolvedValue(none);
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.revoke" }));
-    await confirmDialog("settings:calendarFeed.revoke");
+    await confirmDialog("settingsRows:dialogs.icsrevoke.confirm");
     await waitFor(() => expect(api.revoke).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText("settings:calendarFeed.stateNone")).toBeTruthy();
+    expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
   });
 
   it("says the feed is switched off when the server refuses with CALENDAR_FEED_DISABLED", async () => {
     api.issue.mockRejectedValue(refusal(409, "CALENDAR_FEED_DISABLED"));
     render(<CalendarFeedSection />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "settings:calendarFeed.create" })
+      await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
     expect(await screen.findByText("settings:calendarFeed.errors.disabled")).toBeTruthy();
     expect(screen.queryByText("English prose")).toBeNull();
@@ -200,9 +200,10 @@ describe("CalendarFeedSection", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "settings:calendarFeed.revoke" })
     );
-    await confirmDialog("settings:calendarFeed.revoke");
+    await confirmDialog("settingsRows:dialogs.icsrevoke.confirm");
     expect(await screen.findByText("settings:calendarFeed.errors.revoke")).toBeTruthy();
-    expect(screen.getByText("settings:calendarFeed.stateActive")).toBeTruthy();
+    // A refused revoke leaves the link live: the button to revoke is still there.
+    expect(screen.getByRole("button", { name: "settings:calendarFeed.revoke" })).toBeTruthy();
   });
 
   it("says when the state cannot be loaded, and loads it again on request", async () => {
@@ -210,7 +211,7 @@ describe("CalendarFeedSection", () => {
     render(<CalendarFeedSection />);
     expect(await screen.findByText(/settings:calendarFeed.loadFailed/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.retry" }));
-    expect(await screen.findByText("settings:calendarFeed.stateNone")).toBeTruthy();
+    expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
     expect(screen.queryByText(/settings:calendarFeed.loadFailed/)).toBeNull();
   });
 
@@ -218,13 +219,17 @@ describe("CalendarFeedSection", () => {
     api.status.mockResolvedValue({ ...none, enabled: false });
     render(<CalendarFeedSection />);
     expect(await screen.findByText("settings:calendarFeed.unavailable")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "settings:calendarFeed.create" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "settingsRows:trips.ics.btn" })).toBeNull();
   });
 
   it("offers the shared demo account no button to mint a link", async () => {
     demo = true;
     render(<CalendarFeedSection />);
-    expect(await screen.findByText("settings:calendarFeed.stateNone")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "settings:calendarFeed.create" })).toBeNull();
+    expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
+    // Locked means locked: the button is there, disabled, with the reason written under the row.
+    const button = screen.getByRole("button", { name: "settingsRows:trips.ics.btn" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("settings:blocks.lock.demo")).toBeTruthy();
   });
 });

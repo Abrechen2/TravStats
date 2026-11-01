@@ -1,0 +1,295 @@
+{
+  "trips": {
+    "sections": {
+      "trips": "Reisen",
+      "suggestions": "Vorschläge im Eingang",
+      "calendarFeed": "Kalender"
+    },
+    "autoreise": {
+      "t": "Reisen beim Import bilden",
+      "s": "Gleiche Buchungsnummer, eine Reise"
+    },
+    "reisefarbe": {
+      "t": "Farbe neuer Reisen"
+    },
+    "rvor": {
+      "t": "Reisen vorschlagen",
+      "h": "Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben."
+    },
+    "avor": {
+      "t": "Aufenthalte vorschlagen",
+      "s": "Aus deinem Standortverlauf"
+    },
+    "immichbeleg": {
+      "t": "Immich-Fotos als Beleg"
+    },
+    "kiort": {
+      "t": "Ortsart per KI erkennen",
+      "s": "Nur Ortsnamen, keine Koordinaten"
+    },
+    "ics": {
+      "t": "Kalender-Abo",
+      "s": "Deine Reisen in jeder Kalender-App",
+      "h": "Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers.",
+      "btn": "Link erstellen",
+      "res": "Link erstellt · nur jetzt sichtbar · Kopieren"
+    }
+  },
+  "sharing": {
+    "sections": {
+      "companions": "Mitreisende",
+      "accounts": "Mit Konten auf diesem Server",
+      "servers": "Mit anderen Servern",
+      "shareLinks": "Öffentliche Links",
+      "compare": "Vergleichen & übergeben"
+    },
+    "personen": {
+      "t": "Personen",
+      "s": "Umbenennen, zusammenführen, löschen",
+      "h": "Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen.",
+      "btn": "Unbenutzte löschen"
+    },
+    "anfragen": {
+      "t": "Reisen teilen",
+      "h": "Zurückziehen beendet das Abgleichen. Schon Geteiltes bleibt als eigene Kopie.",
+      "btn": "Anfragen"
+    },
+    "verkn": {
+      "t": "Person mit Konto verknüpfen",
+      "s": "Nötig, bevor ihr teilt"
+    },
+    "fcodes": {
+      "t": "Einladungscode",
+      "s": "Gilt einmal, verfällt",
+      "h": "Einen Code von anderen löst du hier auch ein.",
+      "btn": "Code erstellen",
+      "res": "Code erstellt · gilt bis morgen 14:00"
+    },
+    "linkserlaubt": {
+      "t": "Öffentliche Links erlauben",
+      "h": "Ausschalten zieht sofort alle Links aller Konten zurück."
+    },
+    "linkliste": {
+      "t": "Deine Links",
+      "s": "Erstellt an Flug, Reise oder Jahr"
+    },
+    "rangliste": {
+      "t": "Rangliste",
+      "s": "Wer deine Summen sieht"
+    },
+    "verschl": {
+      "t": "Verschlüsselt übergeben",
+      "s": "Ganze Einträge an ein anderes Konto"
+    }
+  },
+  "notifications": {
+    "sections": {
+      "channel": "Wohin",
+      "domains": "Vor der Abreise"
+    },
+    "erimail": {
+      "t": "Mail an",
+      "s": "Leer: keine Mails"
+    },
+    "pushstate": {
+      "t": "Mitteilungen an die App",
+      "h": "Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt. Der Server muss sie außerdem senden dürfen."
+    },
+    "r_flight": {
+      "t": "Flug",
+      "h": "Bis zu einer eigenen Zeit, ganze Stunden von 1 bis 168."
+    },
+    "r_cruise": {
+      "t": "Kreuzfahrt"
+    },
+    "r_rail": {
+      "t": "Bahn"
+    },
+    "r_bus": {
+      "t": "Bus"
+    },
+    "r_ferry": {
+      "t": "Fähre"
+    },
+    "r_lodging": {
+      "t": "Unterkunft"
+    }
+  },
+  "loyalty": {
+    "sections": {
+      "loyalty": "Karten"
+    },
+    "tr_flight": {
+      "t": "Airlines",
+      "h": "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen.",
+      "btn": "Karte hinzufügen"
+    },
+    "tr_hotel": {
+      "t": "Hotels",
+      "s": "Ketten und einzelne Häuser",
+      "btn": "Karte hinzufügen"
+    },
+    "tr_rail": {
+      "t": "Bahn",
+      "btn": "Karte hinzufügen"
+    },
+    "tr_cruise": {
+      "t": "Reedereien",
+      "btn": "Karte hinzufügen"
+    }
+  },
+  "data": {
+    "sections": {
+      "backup": "Sicherung",
+      "export": "Mitnehmen",
+      "import": "Einlesen",
+      "railImport": "Beim Import von bahn.de"
+    },
+    "srvbackup": {
+      "t": "Letzte Sicherung des Servers",
+      "s": "Kümmert sich der Admin drum"
+    },
+    "webdaveigen": {
+      "t": "Eigene Kopie auf WebDAV",
+      "s": "Dein Export, regelmäßig",
+      "h": "Die Verbindung richtest du unter Dienste → Backup-Ziel ein."
+    },
+    "webdavtakt": {
+      "t": "Wie oft",
+      "o": [
+        "täglich",
+        "wöchentlich"
+      ]
+    },
+    "webdavvers": {
+      "t": "Versionen behalten",
+      "s": "1–30"
+    },
+    "webdavjetzt": {
+      "t": "Jetzt hochladen",
+      "btn": "Jetzt hochladen",
+      "res": "Hochgeladen · gerade eben"
+    },
+    "meine": {
+      "t": "Alle meine Daten",
+      "s": "JSON, ohne Passwörter und Schlüssel",
+      "h": "Fotos und Dokumente sind nicht dabei.",
+      "btn": "Herunterladen",
+      "res": "Fertig · Herunterladen"
+    },
+    "excelexp": {
+      "t": "Excel-Tabelle",
+      "s": "Ein Blatt pro Reiseart",
+      "h": "Lässt sich bearbeiten und wieder einlesen, auch in ein anderes Konto.",
+      "btn": "Erstellen",
+      "res": "Fertig · Herunterladen"
+    },
+    "gpxzip": {
+      "t": "Aufzeichnungen",
+      "s": "Alle Touren als GPX im ZIP",
+      "btn": "Herunterladen",
+      "res": "Fertig · Herunterladen"
+    },
+    "listen": {
+      "t": "Listen importieren",
+      "s": "CSV, Flightradar24, andere Apps"
+    },
+    "excelimp": {
+      "t": "Excel-Tabelle einlesen",
+      "s": "Mit Vorschau",
+      "h": "Hinzufügen · Abgleichen · Ersetzen. Ersetzen betrifft jedes Blatt der Datei mit mindestens einer Zeile und löscht dort, was in der Datei fehlt. Vorher lege ich eine Sicherung des ganzen Servers an.",
+      "btn": "Datei wählen"
+    },
+    "gpxin": {
+      "t": "Aufzeichnungen einlesen",
+      "s": "GPX, TCX, FIT oder ZIP",
+      "h": "ZIP bis 500 Dateien und 200 MB, eine Aufzeichnung bis 15 MB.",
+      "btn": "Dateien wählen"
+    },
+    "implog": {
+      "t": "Bisherige Importe",
+      "s": "Ganz zurücknehmen",
+      "h": "Einträge, auf die schon anderes verweist, bleiben; ich sage, welche."
+    },
+    "ubahn": {
+      "t": "U-Bahn und Tram",
+      "s": "Vorauswahl, im Import änderbar",
+      "o": [
+        "weglassen",
+        "als Bahnfahrt"
+      ]
+    },
+    "busleg": {
+      "t": "Busabschnitte",
+      "o": [
+        "weglassen",
+        "als Busfahrt"
+      ]
+    }
+  },
+  "dialogs": {
+    "icsnew": {
+      "title": "Neuen Kalender-Link erzeugen?",
+      "affects": "Dein Kalender-Abo",
+      "amount": "Jeder Kalender, der den alten Link nutzt",
+      "after": "Diese Kalender bekommen keine Reisen mehr.",
+      "confirm": "Neu erzeugen"
+    },
+    "icsrevoke": {
+      "title": "Kalender-Link zurückziehen?",
+      "affects": "Dein Kalender-Abo",
+      "amount": "Jeder Kalender, der den Link nutzt",
+      "after": "Diese Kalender bekommen keine Reisen mehr. Einen neuen Link kannst du jederzeit erzeugen.",
+      "confirm": "Zurückziehen"
+    },
+    "shareend": {
+      "title": "Teilen beenden?",
+      "affects": "{{name}}",
+      "amount_one": "{{count}} geteilte Reise",
+      "amount_other": "{{count}} geteilte Reisen",
+      "after": "Sie bleiben als deine Kopie; Änderungen kommen nicht mehr nach.",
+      "confirm": "Beenden"
+    },
+    "merge": {
+      "title": "{{from}} in {{to}} aufgehen lassen?",
+      "affects": "{{from}}",
+      "amount_one": "{{count}} Eintrag",
+      "amount_other": "{{count}} Einträge",
+      "after": "Sie nennen danach {{to}}. Das lässt sich nicht zurücknehmen.",
+      "confirm": "Zusammenführen"
+    },
+    "unused": {
+      "title": "Unbenutzte Mitreisende löschen?",
+      "affects": "Personen ohne Eintrag",
+      "amount_one": "{{count}} Person",
+      "amount_other": "{{count}} Personen",
+      "after": "Sie verschwinden aus allen Vorschlägen.",
+      "confirm_one": "{{count}} löschen",
+      "confirm_other": "{{count}} löschen"
+    },
+    "companiondel": {
+      "title": "{{name}} löschen?",
+      "affects": "{{name}}",
+      "amount": "Ohne Eintrag",
+      "after": "Die Person verschwindet aus allen Vorschlägen.",
+      "confirm": "Löschen"
+    },
+    "linksoff": {
+      "title": "Öffentliche Links ausschalten?",
+      "affects": "Alle Konten auf diesem Server",
+      "amount_one": "{{count}} Link",
+      "amount_other": "{{count}} Links",
+      "after": "Ich lösche sie sofort. Wieder einschalten bringt sie nicht zurück.",
+      "confirm_one": "{{count}} Link löschen",
+      "confirm_other": "{{count}} Links löschen"
+    },
+    "replace": {
+      "title": "Inhalte ersetzen?",
+      "affects": "Die Blätter {{sheets}} in deinem Konto",
+      "amount": "{{missing}} Einträge fehlen in der Datei und werden gelöscht. {{kept}} kommen aus {{file}}.",
+      "after": "Diese Blätter enthalten nur noch, was in der Datei steht. Vorher lege ich eine Sicherung des ganzen Servers an.",
+      "confirm": "{{missing}} Einträge ersetzen",
+      "word": "ERSETZEN"
+    }
+  }
+}
