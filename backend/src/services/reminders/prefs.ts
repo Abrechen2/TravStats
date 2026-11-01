@@ -10,7 +10,17 @@ import logger from "../../utils/logger";
  * migration's backfill written in TypeScript, so "no row" and "backfilled row"
  * answer the same.
  */
-export const REMINDER_DOMAINS = ["flight", "cruise", "rail", "bus", "ferry", "lodging"] as const;
+export const REMINDER_DOMAINS = [
+  "flight",
+  "cruise",
+  "rail",
+  "bus",
+  "ferry",
+  "lodging",
+  "rental",
+  "roadtrip",
+  "poi",
+] as const;
 export type ReminderDomain = (typeof REMINDER_DOMAINS)[number];
 export type ReminderChannel = "app" | "mail" | "both";
 

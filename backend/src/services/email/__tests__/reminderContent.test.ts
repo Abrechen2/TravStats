@@ -677,6 +677,9 @@ describe("reminder colours", () => {
       lodging: DOMAINS.lodging.color,
       ferry: DOMAINS.ferry.color,
       bus: DOMAINS.bus.color,
+      rental: DOMAINS.rental.color,
+      roadtrip: DOMAINS.roadtrip.color,
+      poi: DOMAINS.poi.color,
     });
   });
 

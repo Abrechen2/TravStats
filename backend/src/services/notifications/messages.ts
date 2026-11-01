@@ -225,6 +225,10 @@ const ENTRY_COPY = {
     bus: (h: number) => `Abfahrt in ${h} Stunden`,
     ferry: (h: number) => `Abfahrt in ${h} Stunden`,
     lodging: (h: number) => `Check-in in ${h} Stunden`,
+    rental: (h: number) => `Abholung in ${h} Stunden`,
+    rentalReturn: (h: number) => `Rückgabe in ${h} Stunden`,
+    roadtrip: (h: number) => `Station in ${h} Stunden`,
+    poi: (h: number) => `Besuch in ${h} Stunden`,
     flight: (h: number) => `Abflug in ${h} Stunden`,
   },
   en: {
@@ -234,6 +238,10 @@ const ENTRY_COPY = {
     bus: (h: number) => `departs in ${h} hours`,
     ferry: (h: number) => `departs in ${h} hours`,
     lodging: (h: number) => `check-in in ${h} hours`,
+    rental: (h: number) => `pick-up in ${h} hours`,
+    rentalReturn: (h: number) => `return in ${h} hours`,
+    roadtrip: (h: number) => `next stop in ${h} hours`,
+    poi: (h: number) => `visit in ${h} hours`,
     flight: (h: number) => `departs in ${h} hours`,
   },
 } as const;
@@ -244,7 +252,16 @@ const ENTRY_COPY = {
  * than guessing one (ADR 0002). `at` null (a stay without a time) shows none.
  */
 export function entryReminderMessage(
-  domain: "cruise" | "rail" | "bus" | "ferry" | "lodging",
+  domain:
+    | "cruise"
+    | "rail"
+    | "bus"
+    | "ferry"
+    | "lodging"
+    | "rental"
+    | "rentalReturn"
+    | "roadtrip"
+    | "poi",
   entry: { label: string; detail: string | null; at: Date | null; zone: string | null },
   hours: number,
   locale: Locale

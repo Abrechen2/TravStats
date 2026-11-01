@@ -4,7 +4,11 @@ import path from "path";
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
 import { generateApiToken } from "../utils/apiTokens";
-import { legacyPref, REMINDER_DOMAINS, REMINDER_USER_SELECT } from "../services/reminders/prefs";
+import { legacyPref, REMINDER_USER_SELECT } from "../services/reminders/prefs";
+
+// The six areas the migration backfilled. Areas added later (rental, roadtrip, poi) have no
+// backfilled row: an account without one is read through legacyPref, which this suite pins.
+const REMINDER_DOMAINS = ["flight", "cruise", "rail", "bus", "ferry", "lodging"] as const;
 
 /**
  * The backfill of 20261031120900_reminders_per_domain: every account gets, per
