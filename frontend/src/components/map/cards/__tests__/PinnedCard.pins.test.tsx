@@ -1,14 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PinnedCard } from "../PinnedCard";
-import { buildGlobeLayers, type BuildGlobeLayersOptions } from "../../../Globe/buildGlobeLayers";
-import { EarthOcclusionExtension } from "../../../Globe/EarthOcclusionExtension";
+import {
+  buildNativeGlobe,
+  type NativeGlobeInput,
+  type NativeGlobeSpec,
+} from "../../../Globe/native/nativeGlobeLayers";
+import { pinnedFromHit, resolveNativeHit } from "../../../Globe/native/nativeGlobeHits";
+import { ALL_ROUTES_VISIBLE } from "../../../../lib/mapRoutes";
 import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../../lib/lodgingColor";
 import { DEFAULT_PLACE_COLOR_CONFIG } from "../../../../lib/placeColor";
 import type { GlobePinned } from "../../../Globe/globeLayerTypes";
 import type { Lodging } from "../../../../types/lodging";
 import type { Place } from "../../../../types/place";
-import type { Layer } from "@deck.gl/core";
 
 /**
  * Moved here with the card on 2026-09-20: it is shared map chrome now, not
@@ -66,32 +70,17 @@ const PLACE = {
 
 const WISHLIST = { ...PLACE, id: "p2", visited: false, visitCount: 0 } as Place;
 
-function baseOptions(over: Partial<BuildGlobeLayersOptions>): BuildGlobeLayersOptions {
-  return {
-    arcsData: [],
-    antipodalArcs: [],
+function nativeSpec(over: Partial<NativeGlobeInput>): NativeGlobeSpec {
+  return buildNativeGlobe({
+    nightCells: [],
+    showNight: false,
     cruisePaths: [],
+    cruiseWidthScale: 1,
     airportPoints: [],
-    portPoints: [],
-    headFlightArc: null,
-    activeQuartile: null,
-    lite: false,
-    occlusionExt: new EarthOcclusionExtension(),
-    occlusionProps: { earthOcclusionEnabled: true, earthOcclusionFadeBand: 0.04 },
-    onArcHover: vi.fn(),
-    onAirportHover: vi.fn(),
-    onPortHover: vi.fn(),
-    onCruisePathHover: vi.fn(),
-    setPinned: vi.fn(),
-    flightColorConfig: {
-      mode: "solid",
-      colors: {},
-    } as unknown as BuildGlobeLayersOptions["flightColorConfig"],
-    arcWidthScale: 1,
-    cruiseArcWidthScale: 1,
     airportColor: [1, 1, 1],
-    portColor: [2, 2, 2],
     airportRadius: 5,
+    portPoints: [],
+    portColor: [2, 2, 2],
     portRadius: 5,
     lodgings: [],
     lodgingColors: DEFAULT_LODGING_COLOR_CONFIG,
@@ -99,25 +88,23 @@ function baseOptions(over: Partial<BuildGlobeLayersOptions>): BuildGlobeLayersOp
     places: [],
     placeColors: DEFAULT_PLACE_COLOR_CONFIG,
     placeRadius: 5,
-    onPinHover: vi.fn(),
-    nightCells: [],
-    showNight: false,
+    extraLayers: [],
+    routesVisible: ALL_ROUTES_VISIBLE,
+    lite: false,
     ...over,
-  };
+  });
 }
 
-function clickHandler(layers: Layer[], id: string): (info: { object?: unknown }) => void {
-  const found = layers.find((l) => l.id === id);
-  if (!found) throw new Error("no layer " + id);
-  return (found.props as unknown as { onClick: (info: { object?: unknown }) => void }).onClick;
+/** What a click on feature `index` of the layer pins — the path a map click takes. */
+function clickPins(spec: NativeGlobeSpec, layerId: string, index: number) {
+  const hit = resolveNativeHit(spec.targets, layerId, index);
+  return hit ? pinnedFromHit(hit, [0, 0]) : null;
 }
 
 describe("clicking a pin on the globe", () => {
   it("pins the lodging card at the hotel's own coordinates", () => {
-    const setPinned = vi.fn();
-    const layers = buildGlobeLayers(baseOptions({ lodgings: [LODGING], setPinned }));
-    clickHandler(layers, "globe-lodging-pins")({ object: LODGING });
-    expect(setPinned).toHaveBeenCalledWith({
+    const spec = nativeSpec({ lodgings: [LODGING] });
+    expect(clickPins(spec, "globe-lodging-pins", 0)).toEqual({
       kind: "lodging",
       data: LODGING,
       anchorLngLat: [8.6, 50.1],
@@ -125,21 +112,17 @@ describe("clicking a pin on the globe", () => {
   });
 
   it("pins the place card the same way", () => {
-    const setPinned = vi.fn();
-    const layers = buildGlobeLayers(baseOptions({ places: [PLACE], setPinned }));
-    clickHandler(layers, "globe-place-pins")({ object: PLACE });
-    expect(setPinned).toHaveBeenCalledWith({
+    const spec = nativeSpec({ places: [PLACE] });
+    expect(clickPins(spec, "globe-place-pins", 0)).toEqual({
       kind: "place",
       data: PLACE,
       anchorLngLat: [8.65, 50.12],
     });
   });
 
-  it("ignores a click that carried no object", () => {
-    const setPinned = vi.fn();
-    const layers = buildGlobeLayers(baseOptions({ lodgings: [LODGING], setPinned }));
-    clickHandler(layers, "globe-lodging-pins")({ object: undefined });
-    expect(setPinned).not.toHaveBeenCalled();
+  it("pins nothing for a feature index that is not in the layer's data", () => {
+    const spec = nativeSpec({ lodgings: [LODGING] });
+    expect(clickPins(spec, "globe-lodging-pins", 5)).toBeNull();
   });
 });
 

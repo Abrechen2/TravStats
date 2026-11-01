@@ -27,6 +27,7 @@ import {
   calculateDistance,
   createRouteKey,
   endpointIdentity,
+  ARC_BASE_OFFSET_M,
   getArcPeakAltitudeMeters,
   getArcSteps,
   greatCircleWaypoints as computeGreatCircleWaypoints,
@@ -49,12 +50,13 @@ function greatCircleWaypoints(
   from: [number, number],
   to: [number, number],
   peakAltitudeM: number,
-  steps: number
+  steps: number,
+  baseOffsetM: number
 ): [number, number, number][] {
-  const key = `${from[0]},${from[1]}|${to[0]},${to[1]}|${peakAltitudeM}|${steps}`;
+  const key = `${from[0]},${from[1]}|${to[0]},${to[1]}|${peakAltitudeM}|${steps}|${baseOffsetM}`;
   let hit = waypointCache.get(key);
   if (!hit) {
-    hit = computeGreatCircleWaypoints(from, to, peakAltitudeM, steps);
+    hit = computeGreatCircleWaypoints(from, to, peakAltitudeM, steps, baseOffsetM);
     if (waypointCache.size >= WAYPOINT_CACHE_MAX) waypointCache.clear();
     waypointCache.set(key, hit);
   }
@@ -77,7 +79,8 @@ export function buildGlobeArcData(
   flights: readonly GeoJSONFeature[],
   minRouteCount: number,
   lite: boolean,
-  altitudeFactor: number
+  altitudeFactor: number,
+  baseOffsetM: number = ARC_BASE_OFFSET_M
 ): GlobeArcData {
   interface RouteAcc {
     count: number;
@@ -206,7 +209,13 @@ export function buildGlobeArcData(
       antipodals.push({
         from: r.from,
         to: r.to,
-        waypoints: greatCircleWaypoints(r.from, r.to, 0, getArcSteps(distanceKm, lite)),
+        waypoints: greatCircleWaypoints(
+          r.from,
+          r.to,
+          0,
+          getArcSteps(distanceKm, lite),
+          baseOffsetM
+        ),
         count: r.count,
         flightIds: r.flightIds,
         departure: r.departure,
@@ -224,7 +233,13 @@ export function buildGlobeArcData(
     arcs.push({
       from: r.from,
       to: r.to,
-      waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm, lite)),
+      waypoints: greatCircleWaypoints(
+        r.from,
+        r.to,
+        peakAltitudeM,
+        getArcSteps(distanceKm, lite),
+        baseOffsetM
+      ),
       count: r.count,
       flightIds: r.flightIds,
       departure: r.departure,

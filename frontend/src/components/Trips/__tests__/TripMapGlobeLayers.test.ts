@@ -10,6 +10,7 @@ import {
 } from "../TripMapGlobeLayers";
 import { EarthOcclusionExtension } from "../../Globe/EarthOcclusionExtension";
 import { CRUISE_PATH_ALTITUDE_M, MARKER_ALTITUDE_M } from "../../Globe/buildGlobeLayers";
+import { ARC_BASE_OFFSET_M } from "../../Globe/arcUtils";
 
 /**
  * The trip map is the THIRD renderer in this app, and until now its globe
@@ -127,10 +128,10 @@ describe("buildTripMapGlobeLayers: flight arcs", () => {
     );
     const peak = Math.max(...path.map((p) => p[2]));
     expect(peak).toBeGreaterThan(0);
-    // Endpoints sit on the surface; only the middle lifts. The profile is
-    // peak*sin(pi*t), so the ends land within float noise of zero, not on it.
-    expect(path[0][2]).toBeCloseTo(0, 6);
-    expect(path[path.length - 1][2]).toBeCloseTo(0, 6);
+    // Endpoints sit a few km off the surface (forgejo#331: ARC_BASE_OFFSET_M,
+    // so they do not z-fight the globe mesh); only the middle lifts further.
+    expect(path[0][2]).toBeCloseTo(ARC_BASE_OFFSET_M, 6);
+    expect(path[path.length - 1][2]).toBeCloseTo(ARC_BASE_OFFSET_M, 6);
   });
 
   it("keeps longitudes unwrapped, so an antimeridian crossing is not drawn the long way round", () => {

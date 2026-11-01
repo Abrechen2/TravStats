@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging } from "../../../../types/lodging";
-import type { Layer } from "@deck.gl/core";
 
 /**
  * THE bug, end to end: `/dashboard/lodging?mode=globe` drew an empty sphere
@@ -12,7 +11,7 @@ import type { Layer } from "@deck.gl/core";
  * `<GlobeView>` call without `lodgingsOverride`.
  *
  * So this test walks the whole chain with only the renderer itself stubbed:
- * LodgingTab → MapContainer3D (real) → GlobeView (captured) → buildGlobeLayers
+ * LodgingTab → MapContainer3D (real) → GlobeView (captured) → buildNativeGlobe
  * (real). It fails if ANY link drops the lodgings again.
  *
  * What it cannot judge: whether the pins are visible on screen. jsdom has no
@@ -52,8 +51,8 @@ vi.mock("../../../GlobeView", () => ({
 
 import { LodgingTab } from "../LodgingTab";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
-import { buildGlobeLayers, type BuildGlobeLayersOptions } from "../../../Globe/buildGlobeLayers";
-import { EarthOcclusionExtension } from "../../../Globe/EarthOcclusionExtension";
+import { buildNativeGlobe, type NativeGlobeSpec } from "../../../Globe/native/nativeGlobeLayers";
+import { ALL_ROUTES_VISIBLE } from "../../../../lib/mapRoutes";
 import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../../lib/lodgingColor";
 import { DEFAULT_PLACE_COLOR_CONFIG } from "../../../../lib/placeColor";
 
@@ -85,33 +84,18 @@ const LODGING: Lodging = {
   totalSpendBaseByCurrency: {},
 };
 
-/** Everything buildGlobeLayers needs that the tab has no opinion about. */
-function layersFromGlobeProps(props: Record<string, unknown>): Layer[] {
-  const opts: BuildGlobeLayersOptions = {
-    arcsData: [],
-    antipodalArcs: [],
+/** Everything the native layer builder needs that the tab has no opinion about. */
+function specFromGlobeProps(props: Record<string, unknown>): NativeGlobeSpec {
+  return buildNativeGlobe({
+    nightCells: [],
+    showNight: false,
     cruisePaths: [],
+    cruiseWidthScale: 1,
     airportPoints: [],
-    portPoints: [],
-    headFlightArc: null,
-    activeQuartile: null,
-    lite: false,
-    occlusionExt: new EarthOcclusionExtension(),
-    occlusionProps: { earthOcclusionEnabled: true, earthOcclusionFadeBand: 0.04 },
-    onArcHover: vi.fn(),
-    onAirportHover: vi.fn(),
-    onPortHover: vi.fn(),
-    onCruisePathHover: vi.fn(),
-    setPinned: vi.fn(),
-    flightColorConfig: {
-      mode: "solid",
-      colors: {},
-    } as unknown as BuildGlobeLayersOptions["flightColorConfig"],
-    arcWidthScale: 1,
-    cruiseArcWidthScale: 1,
     airportColor: [1, 1, 1],
-    portColor: [2, 2, 2],
     airportRadius: 5,
+    portPoints: [],
+    portColor: [2, 2, 2],
     portRadius: 5,
     lodgings: (props.lodgings ?? []) as readonly Lodging[],
     lodgingColors: DEFAULT_LODGING_COLOR_CONFIG,
@@ -119,11 +103,10 @@ function layersFromGlobeProps(props: Record<string, unknown>): Layer[] {
     places: [],
     placeColors: DEFAULT_PLACE_COLOR_CONFIG,
     placeRadius: 5,
-    onPinHover: vi.fn(),
-    nightCells: [],
-    showNight: false,
-  };
-  return buildGlobeLayers(opts);
+    extraLayers: [],
+    routesVisible: ALL_ROUTES_VISIBLE,
+    lite: false,
+  });
 }
 
 describe("LodgingTab in globe mode", () => {
@@ -176,8 +159,8 @@ describe("LodgingTab in globe mode", () => {
     // Only the lodging appearance section, exactly as in flat-map mode.
     expect(props.appearanceDomains).toEqual(["lodging"]);
 
-    const pins = layersFromGlobeProps(props).find((l) => l.id === "globe-lodging-pins");
-    expect(pins).toBeDefined();
-    expect((pins?.props as unknown as { data: Lodging[] }).data).toHaveLength(1);
+    const spec = specFromGlobeProps(props);
+    expect(spec.layers.map((l) => l.id)).toContain("globe-lodging-pins");
+    expect(spec.sources["globe-lodging-pins"].features).toHaveLength(1);
   });
 });
