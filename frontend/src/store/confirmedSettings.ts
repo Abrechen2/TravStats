@@ -1,4 +1,6 @@
 import { settingsApi } from "../lib/api";
+import { SettingWriteError } from "../components/ui/settings/writeQueue";
+import { useRemoteSettingsStatus } from "./remoteSettingsStatus";
 import { useCapabilitiesEpochStore } from "./capabilitiesEpochStore";
 import { useSettingsStore } from "./settingsStore";
 import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
@@ -13,10 +15,16 @@ import { SWITCH_PAYLOADS, type SwitchKey, type SwitchValue } from "./suggestionS
  * write queue (`useSettingWrite`) instead: it keeps the choice, says it was not
  * saved, and offers "Erneut versuchen" / "Verwerfen" on that row.
  */
+/** Settings that never loaded are not written over the server's (forgejo#372). */
+function requireLoaded(): void {
+  if (useRemoteSettingsStatus.getState().failed) throw new SettingWriteError("notLoaded");
+}
+
 export async function saveSwitch<K extends SwitchKey>(
   key: K,
   value: SwitchValue<K>
 ): Promise<void> {
+  requireLoaded();
   const payload = (
     SWITCH_PAYLOADS[key] as (v: unknown) => Parameters<typeof settingsApi.update>[0]
   )(value);
@@ -32,6 +40,7 @@ export async function saveSwitch<K extends SwitchKey>(
 }
 
 export async function saveBaseCurrency(baseCurrency: string): Promise<void> {
+  requireLoaded();
   await settingsApi.update({ baseCurrency });
   useSettingsStore.setState({ baseCurrency });
 }
@@ -46,6 +55,7 @@ let domainChain: Promise<unknown> = Promise.resolve();
  */
 export function saveDomainEnabled(key: string, on: boolean): Promise<void> {
   const run = async (): Promise<void> => {
+    requireLoaded();
     const current = useSettingsStore.getState().enabledDomains;
     const next = on
       ? current.includes(key as (typeof current)[number])
@@ -61,6 +71,7 @@ export function saveDomainEnabled(key: string, on: boolean): Promise<void> {
 }
 
 export async function saveAutoCreateTrips(autoCreateTrips: boolean): Promise<void> {
+  requireLoaded();
   await settingsApi.update({ autoCreateTrips });
   useSettingsStore.setState({ autoCreateTrips });
 }

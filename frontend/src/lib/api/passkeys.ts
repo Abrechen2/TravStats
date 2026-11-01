@@ -40,6 +40,7 @@ export const passkeyApi = {
   registerOptions: async (reauth: {
     password: string;
     code?: string;
+    recoveryCode?: string;
   }): Promise<PublicKeyCredentialCreationOptionsJSON> => {
     const { data } = await api.post<PublicKeyCredentialCreationOptionsJSON>(
       "/auth/passkeys/register/options",

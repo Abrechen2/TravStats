@@ -15,6 +15,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { passkeyApi, type Passkey, type PasskeyUnavailableReason } from "../../lib/api";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { secondFactorField } from "../../lib/secondFactorInput";
 import { logger } from "../../lib/logger";
 import { formatDate } from "../../lib/displayFormat";
 import Button from "../ui/Button";
@@ -106,7 +107,7 @@ export default function PasskeySection(): JSX.Element | null {
     try {
       const options = await passkeyApi.registerOptions({
         password,
-        ...(needsCode ? { code: code.trim() } : {}),
+        ...(needsCode ? secondFactorField(code) : {}),
       });
       const response = await startRegistration({ optionsJSON: options });
       await passkeyApi.registerVerify(name.trim(), response);

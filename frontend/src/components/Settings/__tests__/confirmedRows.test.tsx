@@ -117,3 +117,18 @@ describe("enabled domains", () => {
     expect(useSettingsStore.getState().enabledDomains).toEqual(["flight", "rail"]);
   });
 });
+
+describe("a settings document that never loaded", () => {
+  it("is not written over: a domain flip is refused as notLoaded and nothing is sent", async () => {
+    const { useRemoteSettingsStatus } = await import("../../../store/remoteSettingsStatus");
+    useRemoteSettingsStatus.setState({ failed: true } as never);
+    try {
+      await expect(saveDomainEnabled("cruise", true)).rejects.toMatchObject({
+        reason: "notLoaded",
+      });
+      expect(update).not.toHaveBeenCalled();
+    } finally {
+      useRemoteSettingsStatus.setState({ failed: false } as never);
+    }
+  });
+});

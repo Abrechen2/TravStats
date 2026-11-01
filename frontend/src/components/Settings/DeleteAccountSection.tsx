@@ -7,6 +7,7 @@ import { authApi } from "../../lib/api/auth";
 import { twoFactorApi } from "../../lib/api/twoFactor";
 import { passkeyApi } from "../../lib/api/passkeys";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { secondFactorField } from "../../lib/secondFactorInput";
 import { logger } from "../../lib/logger";
 import { useAuthStore } from "../../store/authStore";
 import { SectionCard } from "./SettingsShared";
@@ -114,7 +115,7 @@ export default function DeleteAccountSection(): JSX.Element {
         await authApi.deleteAccount({
           password,
           confirmation: word,
-          ...(hasTwoFactor ? { code: code.trim() } : {}),
+          ...(hasTwoFactor ? secondFactorField(code) : {}),
         });
       }
       setAsking(false);
