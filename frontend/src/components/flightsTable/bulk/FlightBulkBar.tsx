@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { Flight, Trip } from "../../../types";
 import FlightBulkEditModal from "./FlightBulkEditModal";
+import FlightRefreshModal from "./FlightRefreshModal";
 import type { FlightSelection } from "./useFlightSelection";
 
 const BAR_BUTTON =
@@ -28,6 +29,7 @@ export default function FlightBulkBar({
 }): JSX.Element | null {
   const { t } = useTranslation(["flights", "common"]);
   const [editing, setEditing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   if (!selection.selecting) return null;
   const count = selection.selected.size;
   return (
@@ -53,9 +55,25 @@ export default function FlightBulkBar({
       >
         {t("flights:bulk.edit", { count })}
       </button>
+      <button
+        type="button"
+        className={BAR_BUTTON}
+        onClick={() => setRefreshing(true)}
+        disabled={count === 0}
+      >
+        {t("flights:refresh.action")}
+      </button>
       <button type="button" className={BAR_BUTTON} onClick={selection.stop}>
         {t("flights:bulk.stop")}
       </button>
+      {refreshing ? (
+        <FlightRefreshModal
+          flights={[...selection.selected.values()]}
+          labelOf={labelOf}
+          onClose={() => setRefreshing(false)}
+          onApplied={onApplied}
+        />
+      ) : null}
       {editing ? (
         <FlightBulkEditModal
           flights={[...selection.selected.values()]}

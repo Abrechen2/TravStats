@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { NO_OWN_CLIENT_NOTE } from "./statsNoOwnClient";
 import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
 import { excludedCountrySchema } from "../../../schemas/countryOverride";
 import {
@@ -22,8 +23,6 @@ import {
   timeseriesResponseSchema,
   funStatsSchema,
   routeRankingResponseSchema,
-  businessStatsSchema,
-  uniqueStatsSchema,
   airportStatsSchema,
   punctualityStatsSchema,
   seatStatsSchema,
@@ -572,7 +571,8 @@ registry.registerPath({
   summary: "The playful figures",
   description:
     "Time-of-day buckets, weekend warrior, fastest day and the rest. All read " +
-    "the clock at the airport, never UTC.",
+    "the clock at the airport, never UTC. " +
+    NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {
@@ -586,11 +586,6 @@ const routeRanking = registry.register(
   "RouteRanking",
   routeRankingResponseSchema.openapi("RouteRanking")
 );
-const businessStats = registry.register(
-  "BusinessStats",
-  businessStatsSchema.openapi("BusinessStats")
-);
-const uniqueStats = registry.register("UniqueStats", uniqueStatsSchema.openapi("UniqueStats"));
 const airportStats = registry.register(
   "AirportStats",
   airportStatsSchema.extend({ scope: statsScopeSchema }).openapi("AirportStats")
@@ -626,32 +621,6 @@ registry.registerPath({
       content: { "application/json": { schema: airportStats } },
     },
     ...yearScopeErrors,
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/stats/business",
-  summary: "Business travel",
-  tags: statsTag,
-  responses: {
-    200: {
-      description: "Cost and category aggregates",
-      content: { "application/json": { schema: businessStats } },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/stats/unique",
-  summary: "Firsts and unique counts",
-  tags: statsTag,
-  responses: {
-    200: {
-      description: "The one-off figures",
-      content: { "application/json": { schema: uniqueStats } },
-    },
   },
 });
 
@@ -704,6 +673,7 @@ registry.registerPath({
   method: "get",
   path: "/stats/seats",
   summary: "Seats and cabin classes",
+  description: NO_OWN_CLIENT_NOTE,
   tags: statsTag,
   responses: {
     200: {

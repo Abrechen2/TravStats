@@ -46,6 +46,7 @@ describe("web prefs registry", () => {
       "statsHiddenSections",
       "tablePrefs",
       "trackMap",
+      "flightTimeHistory",
     ];
     for (const name of names) expect(section(name)).toBeDefined();
     const { WEB_PREF_SECTIONS } = await import("../registry");
@@ -181,5 +182,42 @@ describe("web prefs registry", () => {
     expect(section("theme").read()).toEqual({ mapTheme: "glassmorphism" });
     section("theme").apply({ mapTheme: "classic" });
     expect(section("theme").read()).toEqual({ mapTheme: "classic" });
+  });
+
+  it("flightTimeHistory carries the browser-only estimate history to the account and back (forgejo#407)", async () => {
+    const sample = (n: number) => ({
+      flightNumber: `LH${n}`,
+      departureIata: "FRA",
+      arrivalIata: "JFK",
+      boardingTime: "09:30",
+      departureTime: "10:00",
+      arrivalTime: "13:00",
+      date: "2024-01-01",
+    });
+    // The old localStorage value is what a first sync uploads: it is not a default.
+    window.localStorage.setItem(
+      "travstats_historical_flight_times",
+      JSON.stringify([sample(1), { junk: true }, sample(2)])
+    );
+    const { section } = await fresh();
+    const s = section("flightTimeHistory");
+    expect(s.isDefault(s.read())).toBe(false);
+    expect(s.read()).toEqual({ entries: [sample(1), sample(2)] });
+
+    // A value from the server replaces this browser's copy, bounded.
+    s.apply({ entries: Array.from({ length: 90 }, (_, i) => sample(i)) });
+    const kept = stored("travstats_historical_flight_times") as unknown[];
+    expect(kept).toHaveLength(60);
+    expect(kept[59]).toEqual(sample(89));
+  });
+
+  it("storing a flight time tells the sync, so the account sees it (forgejo#407)", async () => {
+    vi.resetModules();
+    const { onLocalPrefWrite } = await import("../prefEvents");
+    const { storeHistoricalFlightTime } = await import("../../timeEstimation");
+    const seen = vi.fn();
+    onLocalPrefWrite((k) => k === "travstats_historical_flight_times", seen);
+    storeHistoricalFlightTime("LH400", "FRA", "JFK", "09:30", "10:00", "13:00", "2024-01-01");
+    expect(seen).toHaveBeenCalledTimes(1);
   });
 });

@@ -270,7 +270,27 @@ router.post(
     try {
       const { iata, icao, lat, lon } = enrichAirportSchema.parse(req.body);
 
-      const enriched = await enrichAirportData({ iata, icao, lat, lon });
+      // A code is asked with the reason a miss happened: "no source knows it"
+      // (404) and "the sources could not be asked" (503) are different answers,
+      // and the second used to read as the first (forgejo#407).
+      let unavailable: { reason: string } | null = null;
+      for (const code of [iata, icao]) {
+        if (!code) continue;
+        const looked = await lookupOrCreateAirport(code);
+        if (looked.status === "found") return res.json(looked.airport);
+        if (looked.status === "unavailable") unavailable ??= { reason: looked.reason };
+      }
+
+      const enriched = await enrichAirportData({ lat, lon });
+      if (!enriched && unavailable) {
+        throw new AppError(
+          "Airport lookup is temporarily unavailable",
+          503,
+          "AIRPORT_LOOKUP_UNAVAILABLE",
+          undefined,
+          unavailable
+        );
+      }
 
       if (!enriched) {
         return res.status(404).json({

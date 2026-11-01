@@ -55,6 +55,22 @@
     },
     "applied": "Die Werte aus dem Beleg wurden übernommen."
   },
+  "stored": {
+    "action": "Gespeicherte Werte",
+    "title": "Gespeicherte Werte aus dem Beleg",
+    "loading": "Die gespeicherten Werte werden geladen …",
+    "retry": "Erneut versuchen",
+    "parser": "Gelesen mit: {{parser}}",
+    "notFound": "Dieser Beleg existiert nicht mehr.",
+    "rateLimited": "Zu viele Anfragen. Bitte in ein paar Minuten noch einmal versuchen.",
+    "network": "Keine Verbindung zum Server.",
+    "failed": "Die gespeicherten Werte konnten nicht geladen werden.",
+    "reason": {
+      "notParsed": "Dieser Beleg wurde noch nie gelesen. „Werte übernehmen“ liest ihn jetzt.",
+      "unreadable": "Die gespeicherte Lesung hat ein unbekanntes Format. „Werte übernehmen“ liest den Beleg neu.",
+      "nothingFound": "Beim Lesen wurden keine Werte gefunden."
+    }
+  },
   "rentalCategory": {
     "pickup": "Abholung",
     "return": "Rückgabe",

@@ -44,7 +44,11 @@
  *   device's touch interaction needed.
  * - The trip gallery's group-by-day toggle (`travstats.gallery.groupByDay`)
  *   — not asked for in the report; a candidate if it is missed.
- * - Auth (`auth-storage`), caches (`timeEstimation` history) — not preferences.
+ * - Auth (`auth-storage`) — not a preference.
+ *
+ * FOLLOWS THE USER, though it is data rather than taste: `flightTimeHistory` — the
+ * flight form's time estimate learns from the times the user entered before
+ * (forgejo#407, H15). It was a per-browser cache; the server is the record.
  *
  * Language, units and the other settings on the settings page are already
  * server-side (`/settings`) and are not part of this.
@@ -90,6 +94,7 @@ import {
   serializeHiddenDomains,
 } from "../../shared/dashboardDomainFilter";
 import type { MapTheme } from "../../types/mapTheme";
+import { HISTORICAL_FLIGHT_TIMES_KEY, sanitizeHistory } from "../flightTimeHistory";
 import { useWebPrefsEpochStore } from "./prefEvents";
 import { DEFAULT_PREFS, PREFS_KEY, loadTrackPrefs, parsePrefs } from "./trackMap";
 import {
@@ -339,6 +344,19 @@ const trackMap: WebPrefSectionDef = {
   subscribe: onKey(PREFS_KEY),
 };
 
+const flightTimeHistory: WebPrefSectionDef = {
+  name: "flightTimeHistory",
+  defaultValue: { entries: [] },
+  read: () => ({ entries: sanitizeHistory(readJson(HISTORICAL_FLIGHT_TIMES_KEY)) }),
+  isDefault: (value) =>
+    !isPlainObject(value) || !Array.isArray(value.entries) || value.entries.length === 0,
+  apply: (value) => {
+    if (!isPlainObject(value)) return;
+    writeJson(HISTORICAL_FLIGHT_TIMES_KEY, sanitizeHistory(value.entries));
+  },
+  subscribe: onKey(HISTORICAL_FLIGHT_TIMES_KEY),
+};
+
 /** Every synced section. The server knows the same names. */
 export const WEB_PREF_SECTIONS: readonly WebPrefSectionDef[] = [
   mapAppearance,
@@ -350,4 +368,5 @@ export const WEB_PREF_SECTIONS: readonly WebPrefSectionDef[] = [
   statsHiddenSections,
   tablePrefs,
   trackMap,
+  flightTimeHistory,
 ];

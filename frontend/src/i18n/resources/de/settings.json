@@ -690,6 +690,10 @@
       }
     },
     "preview": {
+      "lookup": {
+        "action": "Mit Flugdaten-Anbieter prüfen ({{count}})",
+        "running": "Prüfe … {{done}} von {{total}}"
+      },
       "title": "Import-Vorschau",
       "summary": "{{ok}} bereit · {{duplicates}} Duplikate · {{problems}} Probleme",
       "commit_one": "{{count}} Zeile importieren",

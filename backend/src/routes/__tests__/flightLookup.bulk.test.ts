@@ -70,4 +70,32 @@ describe("POST /flight-lookup/bulk", () => {
       providerFailures: [{ provider: "airlabs", outcome: "quota" }],
     });
   });
+
+  it("looks each item up on its own date and reports a bad date as that row's failure (forgejo#407)", async () => {
+    lookupMock.mockResolvedValue([{ flightNumber: "LH400" }]);
+    const res = await post({
+      items: [
+        { flightNumber: "LH400", date: "2024-03-01" },
+        { flightNumber: "BA117", date: "not-a-date" },
+        { flightNumber: "AF1" },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(lookupMock).toHaveBeenCalledTimes(2);
+    expect((lookupMock.mock.calls[0][1] as Date).toISOString().slice(0, 10)).toBe("2024-03-01");
+    expect(res.body.results[1]).toMatchObject({
+      index: 1,
+      flightNumber: "BA117",
+      success: false,
+      error: "INVALID_DATE",
+    });
+    expect(res.body.results[2]).toMatchObject({ index: 2, success: true });
+  });
+
+  it("rejects a body that sends both shapes, or more than ten items", async () => {
+    expect(
+      (await post({ flightNumbers: ["LH400"], items: [{ flightNumber: "LH400" }] })).status
+    ).toBe(400);
+    expect((await post({ items: Array(11).fill({ flightNumber: "LH400" }) })).status).toBe(400);
+  });
 });

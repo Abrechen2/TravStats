@@ -690,6 +690,10 @@
       }
     },
     "preview": {
+      "lookup": {
+        "action": "Check with flight-data provider ({{count}})",
+        "running": "Checking … {{done}} of {{total}}"
+      },
       "title": "Preview import",
       "summary": "{{ok}} ready · {{duplicates}} duplicates · {{problems}} problems",
       "commit_one": "Import {{count}} row",

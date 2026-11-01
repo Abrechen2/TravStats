@@ -9,6 +9,8 @@
 import { toLocal } from "../shared/time";
 import { calculateDistance } from "./geo";
 import { logger } from "./logger";
+import { HISTORICAL_FLIGHT_TIMES_KEY, MAX_HISTORICAL_FLIGHT_TIMES } from "./flightTimeHistory";
+import { emitLocalPrefWrite } from "./webPrefs/prefEvents";
 
 interface HistoricalFlightTime {
   flightNumber: string;
@@ -28,7 +30,7 @@ interface TimeEstimationResult {
   sampleCount?: number;
 }
 
-const HISTORICAL_DATA_KEY = "travstats_historical_flight_times";
+const HISTORICAL_DATA_KEY = HISTORICAL_FLIGHT_TIMES_KEY;
 
 /**
  * Store a successful flight time for future reference
@@ -60,12 +62,14 @@ export function storeHistoricalFlightTime(
       date,
     });
 
-    // Keep only last 100 entries (prevent unlimited growth)
-    if (data.length > 100) {
-      data.splice(0, data.length - 100);
+    // Keep only the newest entries: the history follows the account now, and
+    // the server bounds what one section may hold.
+    if (data.length > MAX_HISTORICAL_FLIGHT_TIMES) {
+      data.splice(0, data.length - MAX_HISTORICAL_FLIGHT_TIMES);
     }
 
     localStorage.setItem(HISTORICAL_DATA_KEY, JSON.stringify(data));
+    emitLocalPrefWrite(HISTORICAL_DATA_KEY);
   } catch (error) {
     logger.error("Failed to store historical flight time:", error);
   }

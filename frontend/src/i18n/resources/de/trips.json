@@ -277,6 +277,28 @@
     "endTimeLabel": "Endzeit",
     "timeHint": "Zeit optional — sie ordnet mehrere Einträge am selben Tag. Tagebuch-Einträge stehen immer am Tagesende."
   },
+  "bookingAssign": {
+    "action": "Flüge dieser Buchung zuordnen",
+    "title": "Flüge dieser Buchung zuordnen",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "file": "Zuordnen",
+    "filing": "Wird zugeordnet …",
+    "selected_one": "{{count}} Flug gewählt",
+    "selected_other": "{{count}} Flüge gewählt",
+    "searchLabel": "Flüge durchsuchen",
+    "searchPlaceholder": "Datum, Flughafen, Flugnummer …",
+    "loading": "Flüge werden geladen …",
+    "loadFailed": "Die Flüge konnten nicht geladen werden.",
+    "empty": "Es gibt keine Flüge, die noch nicht zu dieser Buchung gehören.",
+    "noMatches": "Kein Flug passt zur Suche.",
+    "onOtherBooking": "gehört zu einer anderen Buchung",
+    "truncated_one": "… und {{count}} weiterer Flug – such nach ihm.",
+    "truncated_other": "… und {{count}} weitere Flüge – such nach ihnen.",
+    "alreadyHere_one": "{{count}} Flug gehört schon zu dieser Buchung.",
+    "alreadyHere_other": "{{count}} Flüge gehören schon zu dieser Buchung.",
+    "timeout": "Die Antwort kam nicht rechtzeitig. Ob die Flüge zugeordnet wurden, weiß ich nicht – ich lade die Reise neu, schau dort nach."
+  },
   "bookingEdit": {
     "title": "Buchung bearbeiten",
     "pnr": "PNR",

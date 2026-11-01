@@ -1309,6 +1309,22 @@
       "t": "Alle Daten aller Konten",
       "s": "JSON"
     },
+    "enrich": {
+      "t": "Flughafen nachladen",
+      "s": "Holt einen Flughafen, der im Katalog fehlt, aus der externen Quelle",
+      "h": "Gib den IATA-Code (3 Buchstaben) oder den ICAO-Code (4 Buchstaben) ein. Ist der Flughafen schon im Katalog, bleibt er unverändert.",
+      "placeholder": "IATA oder ICAO, z. B. FRA oder EDDF",
+      "action": "Nachladen",
+      "found": "{{name}} ({{code}}) ist im Katalog.",
+      "failure": {
+        "invalidCode": "Das ist kein Flughafen-Code. Ich brauche 3 Buchstaben (IATA) oder 4 (ICAO).",
+        "notFound": "Zu diesem Code habe ich in der externen Quelle keinen Flughafen gefunden.",
+        "forbidden": "Dafür ist dieses Konto nicht freigegeben (Demo-Konto oder nur lesender Zugang).",
+        "rateLimited": "Zu viele Anfragen. Versuch es in ein paar Minuten noch einmal.",
+        "unreachable": "Die externe Quelle antwortet nicht. Ob der Flughafen existiert, weiß ich deshalb nicht.",
+        "failed": "Das Nachladen ist fehlgeschlagen."
+      }
+    },
     "reseed": {
       "t": "Kataloge neu einlesen",
       "s": "Flughäfen, Airlines, Flugzeugtypen",

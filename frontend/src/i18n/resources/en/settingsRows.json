@@ -1309,6 +1309,22 @@
       "t": "All data of all accounts",
       "s": "JSON"
     },
+    "enrich": {
+      "t": "Fetch an airport",
+      "s": "Pulls an airport missing from the catalogue from the external source",
+      "h": "Enter the IATA code (3 letters) or the ICAO code (4 letters). An airport already in the catalogue stays as it is.",
+      "placeholder": "IATA or ICAO, e.g. FRA or EDDF",
+      "action": "Fetch",
+      "found": "{{name}} ({{code}}) is in the catalogue.",
+      "failure": {
+        "invalidCode": "That is not an airport code. I need 3 letters (IATA) or 4 (ICAO).",
+        "notFound": "The external source has no airport for this code.",
+        "forbidden": "This account may not do that (demo account or read-only access).",
+        "rateLimited": "Too many requests. Try again in a few minutes.",
+        "unreachable": "The external source did not answer, so I cannot tell whether the airport exists.",
+        "failed": "Fetching the airport failed."
+      }
+    },
     "reseed": {
       "t": "Re-read catalogues",
       "s": "Airports, airlines, aircraft types",

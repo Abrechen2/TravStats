@@ -295,7 +295,43 @@
     "cancellationNotice": "This text contains a cancellation notice. Do not import this candidate as a new flown booking. Check the existing flight’s status instead.",
     "unconfirmedTimeNotice": "Times were not confirmed by the source text. In particular, 00:00 may only be a placeholder for a date without a time. Check and enter the actual times before importing."
   },
+  "refresh": {
+    "action": "Update flights",
+    "title": "Update flights",
+    "intro": "Asks the flight-data provider about the selected flights and fills in only fields that are still empty on yours: aircraft type, registration and Mode-S code. Nothing that is already there is overwritten.",
+    "start": "Ask provider",
+    "running": "Asking provider … {{done}} of {{total}}",
+    "apply": "Fill in {{count}} flights",
+    "applying": "Filling in …",
+    "close": "Close",
+    "willFill": "Fills in: {{fields}}",
+    "nothingNew": "The provider has nothing that is still missing here.",
+    "mismatch": "The provider lists a different route for this number – nothing is filled in.",
+    "ambiguous": "The provider names several flights for this day – nothing is filled in automatically.",
+    "applied": "filled in",
+    "applyFailed": "Could not be saved.",
+    "field": {
+      "aircraft": "Aircraft type",
+      "aircraftRegistration": "Registration",
+      "aircraftModeS": "Mode-S code"
+    }
+  },
   "lookup": {
+    "found_one": "The provider knows this flight",
+    "found_other": "The provider knows {{count}} matching flights",
+    "empty": "No provider knows this flight on this day.",
+    "reason": {
+      "noFlightNumber": "No flight number – not asked.",
+      "noDate": "No date – not asked.",
+      "invalidDate": "The date is invalid – not asked.",
+      "providers": "The lookup failed at a data provider – that does not mean the flight does not exist.",
+      "demo": "Flight lookup is switched off in the demo account.",
+      "rateLimited": "Too many flight lookups in a short time. Check again later.",
+      "network": "No connection to the server.",
+      "timeout": "The server did not answer in time.",
+      "invalid": "The server refused the request.",
+      "server": "The flight lookup failed."
+    },
     "resultsTitle_one": "Found {{count}} flight",
     "resultsTitle_other": "Found {{count}} flights",
     "departs": "Departs",

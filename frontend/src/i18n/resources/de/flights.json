@@ -295,7 +295,43 @@
     "cancellationNotice": "Dieser Text enthält eine Stornierungsmitteilung. Übernimm den Vorschlag nicht als neue geflogene Buchung. Prüfe stattdessen den Status des bestehenden Flugs.",
     "unconfirmedTimeNotice": "Uhrzeiten wurden nicht sicher aus dem Text gelesen. Insbesondere kann 00:00 nur ein Platzhalter für ein Datum ohne Uhrzeit sein. Prüfe und ergänze die tatsächlichen Zeiten vor dem Übernehmen."
   },
+  "refresh": {
+    "action": "Flüge aktualisieren",
+    "title": "Flüge aktualisieren",
+    "intro": "Fragt für die gewählten Flüge den Flugdaten-Anbieter und ergänzt nur Felder, die bei dir noch leer sind: Flugzeugtyp, Kennzeichen und Mode-S-Code. Nichts Vorhandenes wird überschrieben.",
+    "start": "Anbieter fragen",
+    "running": "Frage Anbieter … {{done}} von {{total}}",
+    "apply": "{{count}} Flüge ergänzen",
+    "applying": "Wird ergänzt …",
+    "close": "Schließen",
+    "willFill": "Ergänzt: {{fields}}",
+    "nothingNew": "Der Anbieter hat nichts, was hier noch fehlt.",
+    "mismatch": "Der Anbieter nennt für diese Nummer eine andere Strecke – nichts wird ergänzt.",
+    "ambiguous": "Der Anbieter nennt mehrere Flüge für diesen Tag – nichts wird automatisch ergänzt.",
+    "applied": "ergänzt",
+    "applyFailed": "Konnte nicht gespeichert werden.",
+    "field": {
+      "aircraft": "Flugzeugtyp",
+      "aircraftRegistration": "Kennzeichen",
+      "aircraftModeS": "Mode-S-Code"
+    }
+  },
   "lookup": {
+    "found_one": "Anbieter kennt den Flug",
+    "found_other": "Anbieter kennt {{count}} passende Flüge",
+    "empty": "Kein Anbieter kennt diesen Flug an diesem Tag.",
+    "reason": {
+      "noFlightNumber": "Keine Flugnummer – nicht abgefragt.",
+      "noDate": "Kein Datum – nicht abgefragt.",
+      "invalidDate": "Das Datum ist ungültig – nicht abgefragt.",
+      "providers": "Die Abfrage ist an einem Datenanbieter gescheitert – das heißt nicht, dass es den Flug nicht gibt.",
+      "demo": "Im Demo-Konto ist die Flugsuche abgeschaltet.",
+      "rateLimited": "Zu viele Flugsuchen in kurzer Zeit. Später noch einmal prüfen.",
+      "network": "Keine Verbindung zum Server.",
+      "timeout": "Der Server hat nicht rechtzeitig geantwortet.",
+      "invalid": "Der Server hat die Abfrage abgelehnt.",
+      "server": "Die Flugsuche ist fehlgeschlagen."
+    },
     "resultsTitle_one": "{{count}} Flug gefunden",
     "resultsTitle_other": "{{count}} Flüge gefunden",
     "departs": "Abflug",

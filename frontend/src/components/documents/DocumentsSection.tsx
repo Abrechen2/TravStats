@@ -25,6 +25,7 @@ import { logger } from "../../lib/logger";
 import type { ExtractTarget } from "../../lib/extractValues";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
 import { ExtractValuesAction } from "./ExtractValuesAction";
+import { StoredValuesAction } from "./StoredValuesAction";
 
 interface Props {
   /** Which record these documents hang off. One of the five the API serves. */
@@ -302,7 +303,10 @@ export default function DocumentsSection({
         ].join(" · ")}
       </span>
       {extract && !locked && EXTRACTABLE.has(doc.format) && (
-        <ExtractValuesAction documentId={doc.id} target={extract} />
+        <>
+          <StoredValuesAction documentId={doc.id} target={extract} />
+          <ExtractValuesAction documentId={doc.id} target={extract} />
+        </>
       )}
       {rentalCategories && !locked && (
         <RentalCategorySelect

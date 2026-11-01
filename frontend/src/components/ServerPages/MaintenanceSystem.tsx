@@ -14,6 +14,7 @@ import {
   StatusValue,
 } from "../ui/settings";
 import type { AdminUser, SystemInfoData } from "./types";
+import MaintenanceAirportEnrich from "./MaintenanceAirportEnrich";
 import { CATALOGUE_KINDS, useCatalogueReseed } from "./useCatalogueReseed";
 
 /**
@@ -164,6 +165,7 @@ export default function MaintenanceSystem(): JSX.Element {
           reseed.jobs[kind] ? <JobStatus key={kind} job={reseed.jobs[kind]!} /> : null
         )}
       </SettingItem>
+      <MaintenanceAirportEnrich />
       {demo ? (
         <SettingItem
           title={del.title}
