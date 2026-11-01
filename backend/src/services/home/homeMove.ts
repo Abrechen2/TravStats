@@ -4,13 +4,8 @@
  * replay a request, so a `clientRef` seen before answers with the stored
  * periods and adds nothing.
  */
-import { prisma } from "../../db";
-import { takeTravTrackLock } from "../travtrack/lock";
-import { narrowShareSnapshots } from "../travtrack/shareNarrow";
-import { Prisma } from "../../prisma";
-import { defaultSettings } from "../../routes/settings/types";
-import { legacyHistoryOf, sortPeriods, type HomePeriod } from "../../utils/homeAirport";
-import { HOME_PERIODS_KEY, LEGACY_HISTORY_KEY, homePeriodsFromData } from "./homeStore";
+import { sortPeriods, type HomePeriod } from "../../utils/homeAirport";
+import { commitHomePeriods, withLockedHomeSettings } from "./homeWrite";
 
 /** Recent client refs per user, in the settings blob next to the periods. */
 export const HOME_MOVE_REFS_KEY = "homeMoveRefs";
@@ -53,17 +48,8 @@ export function appendPeriod(periods: readonly HomePeriod[], move: MoveInput): H
 }
 
 export async function appendHomePeriod(userId: string, move: MoveInput): Promise<AppendResult> {
-  await prisma.userSettings.createMany({
-    data: [{ userId, data: { ...defaultSettings } as unknown as Prisma.InputJsonValue }],
-    skipDuplicates: true,
-  });
-  return prisma.$transaction(async (tx) => {
-    await takeTravTrackLock(tx, userId);
-    // Row lock: a replay racing its original must see the first one's ref.
-    const rows = await tx.$queryRaw<Array<{ data: unknown }>>`
-      SELECT data FROM user_settings WHERE user_id = ${userId} FOR UPDATE`;
-    const blob = (rows[0]?.data ?? {}) as Record<string, unknown>;
-    const periods = await homePeriodsFromData(blob);
+  return withLockedHomeSettings(userId, async (tx, locked) => {
+    const { blob, periods } = locked;
     const refs = Array.isArray(blob[HOME_MOVE_REFS_KEY])
       ? (blob[HOME_MOVE_REFS_KEY] as unknown[]).filter((r): r is string => typeof r === "string")
       : [];
@@ -71,18 +57,9 @@ export async function appendHomePeriod(userId: string, move: MoveInput): Promise
     if (periods.length >= MAX_PERIODS) return { kind: "full", periods };
     const next = appendPeriod(periods, move);
     if (!next) return { kind: "overlap", periods };
-    const data = {
-      ...blob,
-      [HOME_PERIODS_KEY]: next,
-      [LEGACY_HISTORY_KEY]: legacyHistoryOf(next),
+    await commitHomePeriods(tx, userId, locked, next, {
       [HOME_MOVE_REFS_KEY]: [...refs, move.clientRef].slice(-MAX_REFS),
-    };
-    await tx.userSettings.update({
-      where: { userId },
-      data: { data: data as unknown as Prisma.InputJsonValue },
     });
-    // A shared route keeps away from the homes of the new list (same transaction).
-    await narrowShareSnapshots(tx, userId);
     return { kind: "created", periods: next };
   });
 }

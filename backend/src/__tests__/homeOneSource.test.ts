@@ -115,6 +115,28 @@ describe("home as one source", () => {
     expect(circle).toMatchObject({ lat: KOELN.lat, lon: KOELN.lon });
   });
 
+  it("a PUT homePlace racing a move cannot erase the move (lost update)", async () => {
+    await setData([period("2020-01-01", null, KOELN)]);
+    const rounds = await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        i % 2 === 0
+          ? put({ homePlace: { ...MUENCHEN, name: `M${i}`, zone: null } })
+          : move({
+              fromDate: `202${i}-05-01`,
+              residence: MUENCHEN,
+              airports: [{ code: "CGN", primary: true }],
+              clientRef: `race-${i}`,
+            })
+      )
+    );
+    const moves = rounds.filter((_, i) => i % 2 === 1).filter((r) => r.status === 200).length;
+    const stored = (await prisma.userSettings.findUniqueOrThrow({ where: { userId } })).data as {
+      homePeriods: unknown[];
+    };
+    // Every accepted move is still there (overlaps are refused, never silently dropped).
+    expect(stored.homePeriods.length).toBe(1 + moves);
+  });
+
   describe("POST /settings/home-airports/periods (a move)", () => {
     const body = (clientRef: string, fromDate = "2024-05-01") => ({
       fromDate,

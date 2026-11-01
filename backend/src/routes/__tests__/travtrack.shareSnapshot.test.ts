@@ -1,3 +1,4 @@
+import { Prisma } from "../../prisma";
 import request from "supertest";
 
 import app from "../../index";
@@ -335,6 +336,76 @@ describe("TravTrack — a shared trip's route snapshot", () => {
         expect(crosses(g, { ...home, radiusM: 1000 })).toBe(false);
       }
     }
+  });
+
+  describe("the home is a home period's residence (plan 2026-11-01-home-one-source)", () => {
+    const period = (
+      fromDate: string,
+      toDate: string | null,
+      residence: { name: string; lat: number; lon: number },
+      code: string,
+      residenceConfirmed: boolean
+    ) => ({
+      fromDate,
+      toDate,
+      residence,
+      residenceConfirmed,
+      airports: [{ code, primary: true }],
+    });
+    const setPeriods = async (periods: unknown[]) => {
+      await prisma.userSettings.update({
+        where: { userId: owner },
+        data: { data: { homePeriods: periods } as never, homePlace: Prisma.DbNull },
+      });
+    };
+    const expectRecordedPastHome = async (home: { lat: number; lon: number }) => {
+      const rows = await prisma.travTrackSharePastHome.findMany({ select: { homePlace: true } });
+      const places = rows.map((r) => r.homePlace as { lat?: number; lon?: number } | null);
+      expect(places.some((p) => p?.lat === home.lat && p?.lon === home.lon)).toBe(true);
+    };
+    const expectHidden = async (home: { lat: number; lon: number }) => {
+      const read = (await recipientRead()) ?? [];
+      const copies = [read, (await stored())?.geometry as Geometry];
+      for (const g of copies) {
+        expect(near(g, home, 1000)).toBe(false);
+        expect(crosses(g, { ...home, radiusM: 1000 })).toBe(false);
+      }
+    };
+
+    it("PATCH that moves the current residence keeps the former residence hidden", async () => {
+      await setPeriods([period("2020-01-01", null, { name: "Zuhause", ...HOME }, "GMP", false)]);
+      await walk();
+      await share();
+      await as(ownerCookie)
+        .patch("/api/v1/settings/home-airports/0")
+        .send({ iata: "ICN" })
+        .expect(200);
+      await expectRecordedPastHome(HOME);
+      await expectHidden(HOME);
+    });
+
+    it("DELETE of a period keeps its residence hidden for a route shared before", async () => {
+      await setPeriods([
+        period("2015-01-01", "2024-01-01", { name: "Alt", ...HOME }, "GMP", true),
+        period("2024-01-01", null, { name: "Neu", lat: 37.5, lon: 127.04 }, "ICN", true),
+      ]);
+      await walk();
+      await share();
+      await as(ownerCookie).del("/api/v1/settings/home-airports/0").expect(200);
+      await expectHidden(HOME);
+    });
+
+    it("PUT /periods that drops the home keeps it hidden", async () => {
+      await setPeriods([period("2020-01-01", null, { name: "Zuhause", ...HOME }, "GMP", true)]);
+      await walk();
+      await share();
+      await as(ownerCookie)
+        .put("/api/v1/settings/home-airports/periods")
+        .send({ periods: [] })
+        .expect(200);
+      await expectRecordedPastHome(HOME);
+      await expectHidden(HOME);
+    });
   });
 
   it("widened trip dates do not extend the shared route until the owner shares again", async () => {

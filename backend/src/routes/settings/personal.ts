@@ -1,7 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import { takeTravTrackLock } from "../../services/travtrack/lock";
 import { narrowShareSnapshots } from "../../services/travtrack/shareNarrow";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
@@ -12,7 +11,7 @@ import {
   withCurrentResidence,
   type HomePlaceSource,
 } from "../../services/home/homePlace";
-import { homePeriodsFromData, saveHomePeriods } from "../../services/home/homeStore";
+import { commitHomePeriods, withLockedHomeSettings } from "../../services/home/homeWrite";
 
 /**
  * Personal facts the Companion used to keep on the phone only
@@ -75,39 +74,29 @@ async function writeHomePlace(
   homePlace: HomePlace | null,
   onlyIfEmpty: boolean
 ): Promise<void> {
-  await prisma.$transaction(
-    async (tx) => {
-      await takeTravTrackLock(tx, userId);
-      // Read under the lock: a move or edit that committed meanwhile is part of what we derive from.
-      const row = await tx.userSettings.findUnique({ where: { userId }, select: SELECT });
-      const before = await deriveHomePlace(row);
-      // `onlyIfEmpty` never overwrites a home the account already has.
-      if (onlyIfEmpty && before.homePlace) return;
-      if (homePlace === null && before.homePlaceSource === "period") {
-        throw new AppError(
-          "The home place is the current home period's residence; edit or remove that period instead",
-          409,
-          "HOME_PLACE_IS_PERIOD"
-        );
-      }
-      const edited = homePlace
-        ? withCurrentResidence(await homePeriodsFromData(row?.data), homePlace)
-        : null;
-      if (edited && before.homePlace) {
-        await tx.userSettings.updateMany({
-          where: { userId },
-          data: { homePlace: before.homePlace },
-        });
-      }
-      await tx.userSettings.updateMany({
-        where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
-        data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
-      });
-      if (edited) await saveHomePeriods(userId, edited, tx);
-      await narrowShareSnapshots(tx, userId);
-    },
-    { timeout: 60_000 }
-  );
+  await withLockedHomeSettings(userId, async (tx, locked) => {
+    const { before } = locked;
+    // `onlyIfEmpty` never overwrites a home the account already has.
+    if (onlyIfEmpty && before.homePlace) return;
+    if (homePlace === null && before.homePlaceSource === "period") {
+      throw new AppError(
+        "The home place is the current home period's residence; edit or remove that period instead",
+        409,
+        "HOME_PLACE_IS_PERIOD"
+      );
+    }
+    const edited = homePlace ? withCurrentResidence(locked.periods, homePlace) : null;
+    if (edited) {
+      await commitHomePeriods(tx, userId, locked, edited);
+      return;
+    }
+    // No current period: the legacy column, as before (its trigger records the replaced home).
+    await tx.userSettings.updateMany({
+      where: onlyIfEmpty ? { userId, homePlace: { equals: Prisma.DbNull } } : { userId },
+      data: { homePlace: homePlace === null ? Prisma.DbNull : homePlace },
+    });
+    await narrowShareSnapshots(tx, userId);
+  });
 }
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
