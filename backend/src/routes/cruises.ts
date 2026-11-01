@@ -19,7 +19,10 @@ import {
   CRUISE_GEOMETRY_INCLUDE,
   type GeometryFeatureCollection,
 } from "../services/cruise/cruiseGeometry";
-import { recomputeLegsForCruise } from "../services/cruiseDistance/cruiseLegService";
+import {
+  precomputeLegDistances,
+  recomputeLegsForCruise,
+} from "../services/cruiseDistance/cruiseLegService";
 import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -463,6 +466,32 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     );
     const fxColumns = fx.columns;
 
+    // Sea routing runs before the transaction opens (forgejo#346). The
+    // itinerary is the merged one: the request's where it sent it, else stored.
+    const portsChangedEarly = "departurePortId" in parsed.data || "arrivalPortId" in parsed.data;
+    const legDistances =
+      stops !== undefined || portsChangedEarly
+        ? await precomputeLegDistances({
+            kind: rest.kind ?? existing.kind,
+            departurePortId:
+              rest.departurePortId !== undefined ? rest.departurePortId : existing.departurePortId,
+            arrivalPortId:
+              rest.arrivalPortId !== undefined ? rest.arrivalPortId : existing.arrivalPortId,
+            stopPortIds:
+              stops !== undefined
+                ? [...stops]
+                    .sort((a, b) => a.dayNumber - b.dayNumber)
+                    .flatMap((s) => (!s.isAtSea && s.portId != null ? [s.portId] : []))
+                : (
+                    await prisma.cruiseStop.findMany({
+                      where: { cruiseId: existing.id, isAtSea: false, portId: { not: null } },
+                      orderBy: { dayNumber: "asc" },
+                      select: { portId: true },
+                    })
+                  ).flatMap((s) => (s.portId === null ? [] : [s.portId])),
+          })
+        : undefined;
+
     const updated = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "cruise", existing.id);
       if (resolvedCompanionsForUpdate !== undefined) {
@@ -532,7 +561,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       // departure/arrival port invalidates them just like changed stops.
       const portsChanged = "departurePortId" in parsed.data || "arrivalPortId" in parsed.data;
       if (stops !== undefined || portsChanged) {
-        await recomputeLegsForCruise(existing.id, tx);
+        await recomputeLegsForCruise(existing.id, tx, legDistances);
       }
       await propagateWrite(tx, userId, "cruise", existing.id, before);
 

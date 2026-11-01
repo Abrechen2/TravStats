@@ -19,7 +19,10 @@ import {
   pullDawarichWindow,
 } from "../../services/tour/tracks/pullDawarichTrack";
 import { cruiseTrackColumns, prepareCruiseTrack } from "../../services/cruise/prepareCruiseTrack";
-import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
+import {
+  precomputeLegDistancesForCruise,
+  recomputeLegsForCruise,
+} from "../../services/cruiseDistance/cruiseLegService";
 import {
   propagateWrite,
   shareSnapshot,
@@ -73,6 +76,8 @@ async function storeTrack(
     truncated: boolean;
   }
 ): Promise<{ id: string }> {
+  // Sea routing runs before the transaction opens (forgejo#346).
+  const legDistances = await precomputeLegDistancesForCruise(cruiseId);
   return prisma.$transaction(
     async (tx) => {
       // The legs are facts of the cruise: a shared cruise's copies follow them.
@@ -81,7 +86,7 @@ async function storeTrack(
         data: { cruiseId, ...data, source: trackSource.parse(data.source) },
         select: { id: true },
       });
-      await recomputeLegsForCruise(cruiseId, tx);
+      await recomputeLegsForCruise(cruiseId, tx, legDistances);
       await propagateWrite(tx, userId, "cruise", cruiseId, before);
       return track;
     },
