@@ -351,16 +351,44 @@ export interface RouteGeometryFeatureCollection {
  * once the database does the ordering. Callers are trusted to have already
  * checked ownership of `routeId` — this function itself does not.
  */
-export async function buildRouteGeometry(routeId: string): Promise<RouteGeometryFeatureCollection> {
-  const legs = await prisma.tripRouteLeg.findMany({
-    where: { routeId },
-    orderBy: { fromStop: { routeOrderIdx: "asc" } },
-    include: {
-      fromStop: { select: { lat: true, lon: true } },
-      toStop: { select: { lat: true, lon: true } },
-    },
-  });
+type RouteLegForGeometry = Prisma.TripRouteLegGetPayload<{
+  include: typeof ROUTE_LEG_GEOMETRY_INCLUDE;
+}>;
 
+export async function buildRouteGeometry(routeId: string): Promise<RouteGeometryFeatureCollection> {
+  const byRoute = await loadRouteLegs([routeId]);
+  return buildRouteGeometryFromLegs(byRoute.get(routeId) ?? []);
+}
+
+const ROUTE_LEG_GEOMETRY_INCLUDE = {
+  fromStop: { select: { lat: true, lon: true } },
+  toStop: { select: { lat: true, lon: true } },
+} as const;
+
+/**
+ * Load step of the geometry build: ONE query for any number of routes
+ * (forgejo#342 — the batch endpoint used to run one per route inside a
+ * `Promise.all`, 100 concurrent queries against a pool of 10). Rows come
+ * back grouped by route, each group in the stop order of its route.
+ */
+export async function loadRouteLegs(
+  routeIds: string[]
+): Promise<Map<string, RouteLegForGeometry[]>> {
+  const legs = await prisma.tripRouteLeg.findMany({
+    where: { routeId: { in: routeIds } },
+    orderBy: { fromStop: { routeOrderIdx: "asc" } },
+    include: ROUTE_LEG_GEOMETRY_INCLUDE,
+  });
+  const byRoute = new Map<string, RouteLegForGeometry[]>();
+  for (const id of routeIds) byRoute.set(id, []);
+  for (const leg of legs) byRoute.get(leg.routeId)?.push(leg);
+  return byRoute;
+}
+
+/** Pure build step: one section's ordered legs into its FeatureCollection. */
+export function buildRouteGeometryFromLegs(
+  legs: RouteLegForGeometry[]
+): RouteGeometryFeatureCollection {
   const features: RouteGeometryFeature[] = legs.flatMap((leg) => {
     const coordinates = isCoordinatePolyline(leg.waypoints)
       ? leg.waypoints

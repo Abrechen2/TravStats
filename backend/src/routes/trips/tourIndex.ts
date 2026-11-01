@@ -8,7 +8,11 @@ import { listToursQuerySchema } from "../../schemas/roadtrip";
 import { travelledKm } from "../../services/tour/tourDistance";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import logger from "../../utils/logger";
-import { buildRouteGeometry, RouteGeometryFeatureCollection } from "./tourLegs";
+import {
+  buildRouteGeometryFromLegs,
+  loadRouteLegs,
+  RouteGeometryFeatureCollection,
+} from "./tourLegs";
 import { toDto, ROUTE_SELECT } from "./tourRoutes";
 import { resolveTrip } from "../trips";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../../services/sync/clientRef";
@@ -337,14 +341,9 @@ router.post(
 
       const computedAt = Date.now();
       const data: Record<string, RouteGeometryFeatureCollection> = {};
-      const results = await Promise.all(
-        routes.map(async (route) => ({
-          id: route.id,
-          collection: await buildRouteGeometry(route.id),
-        }))
-      );
-      for (const r of results) {
-        data[r.id] = r.collection;
+      const legsByRoute = await loadRouteLegs(routes.map((r) => r.id));
+      for (const route of routes) {
+        data[route.id] = buildRouteGeometryFromLegs(legsByRoute.get(route.id) ?? []);
       }
 
       logger.info({
