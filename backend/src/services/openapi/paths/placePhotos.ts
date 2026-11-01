@@ -332,3 +332,16 @@ registry.registerPath({
   request: { params: z.object({ id: uuid }) },
   responses: windowPhotos,
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/{id}/trip-photos",
+  summary: "Trip photos taken during this rental",
+  description:
+    "Photos of the rental's trip taken between hand-over and return; what happened at the " +
+    "counter wins over the booked time when it is exact. None when the rental is on no trip or " +
+    "a side is known by its day only (`reason: noClock`).",
+  tags: ["Rentals"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});
