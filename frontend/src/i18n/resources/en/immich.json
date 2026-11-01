@@ -109,5 +109,14 @@
     },
     "manualNote": "Only the nightly run is shown here. “Scan photos” in the inbox reports its own result there, with the reason if Immich does not answer.",
     "notConnectedDemo": "The demo account has no photo library — the nightly scan does not run for it."
+  },
+  "visitPhotos": {
+    "title": "Link visit photos",
+    "hint": "Replaces photo copies on place visits with links when Immich holds the same file. Saves backup space.",
+    "run": "Link with Immich",
+    "running": "Running … (may take a while)",
+    "done": "{{checked}} photos checked, {{linked}} linked.",
+    "lost": "Outcome unknown: the server lost track of the job (restart?). Run it again – photos already linked stay linked.",
+    "failed": "Linking failed."
   }
 }

@@ -8,6 +8,7 @@ import DemoLockedNotice from "./DemoLockedNotice";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
 import { Segmented } from "../ui/Segmented";
+import VisitPhotoImmichLink from "./VisitPhotoImmichLink";
 
 /**
  * User-facing Immich connection settings.
@@ -206,6 +207,7 @@ export default function ImmichConnectionCard({
                 : t(failureKey(testResult.kind))}
             </p>
           )}
+          <VisitPhotoImmichLink connected={Boolean(status?.hasKey || status?.isShared)} />
           {error && (
             <p role="alert" className="text-sm" style={{ color: token("bad") }}>
               {error}

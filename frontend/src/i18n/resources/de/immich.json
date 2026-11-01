@@ -109,5 +109,14 @@
     },
     "manualNote": "Hier steht nur der nächtliche Lauf. „Fotos durchsuchen“ im Posteingang meldet sein Ergebnis dort, mit Grund, wenn Immich nicht antwortet.",
     "notConnectedDemo": "Der Demo-Zugang hat keine Fotobibliothek — die nächtliche Suche läuft für ihn nicht."
+  },
+  "visitPhotos": {
+    "title": "Besuchsfotos verknüpfen",
+    "hint": "Ersetzt Fotokopien an Ortsbesuchen durch Verknüpfungen, wenn Immich dieselbe Datei kennt. Spart Speicher im Backup.",
+    "run": "Mit Immich verknüpfen",
+    "running": "Läuft … (kann dauern)",
+    "done": "{{checked}} Fotos geprüft, {{linked}} verknüpft.",
+    "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Bitte erneut starten – schon verknüpfte Fotos bleiben es.",
+    "failed": "Die Verknüpfung ist fehlgeschlagen."
   }
 }
