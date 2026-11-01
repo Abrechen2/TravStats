@@ -6,7 +6,8 @@ import { api } from "./client";
  * belong to their trip, and the entry only looks at them.
  */
 
-export type PhotoWindowEntry = "lodging" | "flights" | "cruises" | "rail" | "bus" | "ferry" | "rentals";
+export type PhotoWindowEntry =
+  "lodging" | "flights" | "cruises" | "rail" | "bus" | "ferry" | "rentals";
 
 export interface WindowPhoto {
   id: string;

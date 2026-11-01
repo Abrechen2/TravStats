@@ -39,7 +39,9 @@ const wrappedChaptersSchema = z
         nights: z
           .number()
           .int()
-          .describe("Nights of the roadtrips whose nights are fully known (stays and free pitches)"),
+          .describe(
+            "Nights of the roadtrips whose nights are fully known (stays and free pitches)"
+          ),
         nightsUnknown: z
           .number()
           .int()
