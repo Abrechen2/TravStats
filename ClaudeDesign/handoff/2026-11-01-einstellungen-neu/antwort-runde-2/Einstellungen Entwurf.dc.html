@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:#07090c;}
+*{box-sizing:border-box;}
+a{color:#f0a947;text-decoration:none;} a:hover{color:#f6bd66;text-decoration:underline;}
+@keyframes tsSpin{to{transform:rotate(360deg);}}
+</style>
+</helmet>
+<section style="padding:80px;display:flex;flex-direction:column;gap:64px;background:#07090c;color:#e7e3dc;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:14px;width:max-content">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:1366px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">TravStats · Einstellungen neu · Runde 2 · 01.11.2026</span>
+    <h1 style="margin:0;font-size:42px;font-weight:800;letter-spacing:-1px;color:#f4ece0">Ein Bereich, zwei Stufen, eine Dienste-Seite</h1>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;color:rgba(231,227,220,0.6)">
+      <a href="#G">G · Gliederung</a><a href="#B">B · Bausteine</a><a href="#1a">1 · Erster Besuch</a><a href="#2a">2 · Speichern scheitert</a><a href="#3a">3 · Standort</a><a href="#4a">4 · Dienst verbinden</a><a href="#5a">5 · Admin</a><a href="#6a">6 · Suche</a><a href="#7a">7 · Gefahr + Aufgabe</a><a href="#8a">8 · Konto löschen</a><a href="#R">Was ist neu</a>
+      <span>Texte, Zuordnungen, offene Fragen: Einstellungen-Konzept.md</span>
+    </div>
+  </div>
+
+  <div id="R" style="width:1366px;background:#0b0d10;border:1px solid rgba(231,227,220,0.12);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;font-weight:700;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">R</span><h2 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0">Was sich gegenüber Runde 1 geändert hat</h2><a href="Runde 1/Einstellungen Entwurf.dc.html" style="font-size:12px">Runde 1 ansehen</a></div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 28px">
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Owner</span><span>Wohnort = Heimatort, ein Umzug ist ein neuer Zeitraum</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Owner</span><span>„Routen auf der Karte“ und „Sitzplatz-Statistik“ gestrichen</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Owner</span><span>Konto löschen fertig gezeichnet: Tippwort, „Löschung läuft bis …“, Abbrechen (8a, 8b)</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Owner</span><span>Adressen englisch: /settings/account, /settings/sharing, /settings/server …</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">R7</span><span>Dienste neu aus dem Katalog: 31 Karten, eine je Eintrag, nur die Fähigkeiten aus der Tabelle</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">R8</span><span>Dawarich: Quelle, Aufenthalte und Ländertage nur mit eigener Verbindung, die Abhängigkeit sagt es</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">R19</span><span>Öffentliche Adresse ist Pflicht und warnt, solange sie fehlt; LAN-Adresse nur für Strava</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">R3, R21, R22</span><span>Server-Sicherung als Statuszeile; Ersetzen-Dialog nennt Blätter und Server-Sicherung; Demo-Sperren wie der Server</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Prüfung 1, 2</span><span>OpenSky mit Client-ID und Secret je Konto und Server; Server-Verbindungen und Flugwege auf Standard</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Prüfung 3, 4</span><span>Gesperrt = disabled + aria-disabled; Dialog hält den Fokus, Escape schließt, Tippwort wird geprüft</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Prüfung 5, 8</span><span>Suche sagt „8 von 23 · weiter tippen“; ungespeicherte Gruppe warnt vor dem Verlassen (5c)</span></div>
+      <div style="display:flex;gap:14px;align-items:baseline;min-height:28px;border-bottom:1px solid rgba(231,227,220,0.12)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);width:96px;flex:none">Prüfung 6, 7</span><span>Alle Dialoge, Ergebnisse und Formmeldungen DE/EN in der Ich-Form; Abstände, Radien, Schriftgrößen nur noch aus tokens.json</span></div>
+    </div>
+  </div>
+
+  <div id="G" style="width:1366px;background:#0b0d10;border:1px solid rgba(231,227,220,0.12);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:24px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">G</span>
+      <h2 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0">Gliederung</h2>
+      <span style="color:rgba(231,227,220,0.6);font-size:12px">{{ outlineMeta }}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px">
+      <sc-for list="{{ outline }}" as="p" hint-placeholder-count="8">
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:16px;font-weight:700;color:#f4ece0">{{ p.title }}</span>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:{{ p.whoFg }};background:{{ p.whoBg }};border:1px solid {{ p.whoBd }};white-space:nowrap">{{ p.who }}</span>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ p.meta }}</div>
+          <div style="display:flex;flex-direction:column;border-top:1px solid rgba(231,227,220,0.12)">
+            <sc-for list="{{ p.secs }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;gap:8px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(231,227,220,0.06)">
+                <span style="flex:1;font-size:14px">{{ s.title }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(231,227,220,0.6);text-align:right">{{ s.meta }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:rgba(231,227,220,0.6)">
+      <span>Adresse = /settings/&lt;seite&gt;</span><span>E = Experte (Zeilen/Abschnitt)</span><span>A = nur Admin</span><span>Inventar-Gruppen in Mono rechts</span><span>Flüge/Kreuzfahrten erscheinen im Menü, solange die Reiseart an ist; über „Reisearten“ immer erreichbar</span>
+    </div>
+  </div>
+
+  <div id="B" style="width:1366px;background:#0b0d10;border:1px solid rgba(231,227,220,0.12);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">B</span>
+      <h2 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0">Bausteine</h2>
+      <span style="color:rgba(231,227,220,0.6);font-size:12px">nur aus tokens.json · Zeile 64 hoch, jede Fläche 44 · Fokus 2 px accent + focusRing</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B1 · Einstellungszeile — Aufbau</span>
+        <div style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:14px;min-height:44px">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:500">Name</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">[Geltung]</span><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#f0a947;background:rgba(240,169,71,0.12);border:1px solid rgba(240,169,71,0.45)">Experte</span><span style="font-size:12px;color:#5ec2b2">[Speicherzustand]</span></div>
+              <div style="font-size:12px;color:rgba(231,227,220,0.6)">Kurzzeile, nur wenn der Name nicht reicht</div>
+            </div>
+            <span style="width:44px;height:44px;border-radius:999px;border:1px dashed rgba(231,227,220,0.28);display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.45)">?</span>
+            <span style="min-width:120px;height:44px;border-radius:12px;border:1px dashed rgba(231,227,220,0.28);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(231,227,220,0.6)">Bedienung</span>
+          </div>
+          <div style="height:32px;border-radius:12px;border:1px dashed rgba(231,227,220,0.28);display:flex;align-items:center;padding:0 14px;font-size:12px;color:rgba(231,227,220,0.6)">darunter, je nach Lage: Fehlerzeile · Abhängigkeit · Aufgabe · Hilfe · Einmal-gezeigt</div>
+        </div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6);line-height:1.5">Hilfe öffnet sich in der Zeile, nie als Seite. Keine Einleitung über Abschnitten: ein Abschnitt hat nur seinen Mono-Titel.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B2 · Schalter</span>
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;background:#1a1f26;border:1px solid rgba(231,227,220,0.16)"><span style="width:24px;height:24px;border-radius:999px;background:rgba(231,227,220,0.6)"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">aus</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;justify-content:flex-end;background:#f0a947;border:1px solid #f0a947"><span style="width:24px;height:24px;border-radius:999px;background:#0b0d10"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">an</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;justify-content:flex-end;background:#f6bd66;border:1px solid #f6bd66"><span style="width:24px;height:24px;border-radius:999px;background:#0b0d10"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Hover</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;justify-content:flex-end;background:#f0a947;border:1px solid #f0a947;outline:2px solid #f0a947;outline-offset:2px;box-shadow:0 0 0 3px rgba(240,169,71,0.18)"><span style="width:24px;height:24px;border-radius:999px;background:#0b0d10"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Fokus</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;opacity:0.5"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;background:#1a1f26;border:1px solid rgba(231,227,220,0.16)"><span style="width:24px;height:24px;border-radius:999px;background:rgba(231,227,220,0.6)"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">wirkt nicht</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;opacity:0.5"><span style="width:52px;height:32px;border-radius:999px;padding:4px;display:flex;justify-content:flex-end;background:#f0a947;border:1px solid #f0a947"><span style="width:24px;height:24px;border-radius:999px;background:#0b0d10"></span></span><span style="font-size:12px;color:rgba(231,227,220,0.6)">gesperrt</span></div>
+        </div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">role="switch", aria-checked · Trefferfläche 60×44 · Leertaste schaltet · wirkt nicht / gesperrt: disabled + aria-disabled, nicht fokussierbar, der Grund steht als Zeile darunter („Im Demo-Konto gesperrt“ oder die Abhängigkeit)</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B3 · Auswahl</span>
+        <div style="display:flex;gap:4px;padding:4px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:12px;align-self:flex-start">
+          <span style="min-height:44px;padding:0 14px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:600;display:flex;align-items:center;white-space:nowrap">24 h</span><span style="min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;font-weight:600;white-space:nowrap">12 h</span>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Segment bis 3 Werte · Pfeiltasten wechseln</span>
+        <div style="min-height:44px;width:240px;padding:0 14px 0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);display:flex;align-items:center;justify-content:space-between">Europe/Berlin<span style="color:rgba(231,227,220,0.45)">⌄</span></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Liste ab 4 Werten, mit Tippsuche</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B4 · Eingabe</span>
+        <div style="height:44px;width:260px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);display:flex;align-items:center;padding:0 14px;color:rgba(231,227,220,0.45)">leer</div>
+        <div style="height:44px;width:260px;border-radius:12px;background:#14181d;border:1px solid rgba(240,169,71,0.45);display:flex;align-items:center;padding:0 14px">geändert, nicht gespeichert</div>
+        <div style="height:44px;width:260px;border-radius:12px;background:#14181d;border:1px solid #e65a4f;display:flex;align-items:center;padding:0 14px">reise.example</div>
+        <span style="font-size:12px;color:#e65a4f">Ich brauche https:// am Anfang der Adresse.</span>
+        <div style="height:44px;width:260px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.16);display:flex;align-items:center;padding:0 14px;font-family:'IBM Plex Mono',monospace;color:rgba(231,227,220,0.6)">•••• gespeichert</div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Geheimnis: nie wieder angezeigt, leer = behalten</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B5 · Aktion · Status · Sprung</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="min-height:46px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);font-size:16px;font-weight:700;display:flex;align-items:center">Exportieren</span>
+          <span style="min-height:46px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);font-size:16px;font-weight:700;display:flex;align-items:center;color:#e65a4f">Tage löschen</span>
+          <span style="min-height:46px;padding:0 14px;border-radius:12px;background:#f0a947;color:#0b0d10;font-size:16px;font-weight:700;display:flex;align-items:center">Speichern</span>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Aktion · Gefahr (öffnet B9) · Gruppe speichern (nur eine pro Gruppe)</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><span>Gespeichert</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(231,227,220,0.6)">18.204 Punkte · 2 Telefone</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><span>Kartendarstellung</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">an der Karte ›</span></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Status: Messwert in Mono · Sprung: Chevron = führt woandershin</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B6 · Speicherzustand · einzeln</span>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+          <span style="color:rgba(231,227,220,0.45)">ruhend — nichts zu sehen</span>
+          <span style="display:inline-flex;align-items:center;gap:8px;color:#6fa0d6"><span style="width:10px;height:10px;border-radius:999px;border:2px solid #6fa0d6;border-right-color:transparent"></span>Gleich gespeichert</span>
+          <span style="color:#5ec2b2">✓ Gespeichert <span style="color:rgba(231,227,220,0.45)">· verblasst nach 2 s</span></span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 8px 8px 14px;border-radius:12px;background:rgba(216,149,47,0.12);border:1px solid rgba(216,149,47,0.45)"><span style="flex:1;color:#e7e3dc;font-size:14px"><b style="color:#d8952f">Ich konnte das nicht speichern.</b> Der Server antwortet gerade nicht. Deine Auswahl bleibt stehen.</span><span style="font-weight:600;color:rgba(231,227,220,0.6)">Verwerfen</span><span style="min-height:44px;padding:0 10px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);display:flex;align-items:center;font-weight:700;color:#e7e3dc">Erneut versuchen</span></div>
+          <span style="color:rgba(231,227,220,0.6)">warn, nicht bad: nichts ist kaputt, nur noch nicht angekommen. Verlassen der Seite schickt den Schreibvorgang trotzdem ab.</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B6 · Speicherzustand · Gruppe</span>
+        <div style="display:flex;flex-direction:column;border-radius:14px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#101317"><span style="flex:1;color:rgba(231,227,220,0.45);font-size:14px">unverändert</span><span style="min-height:40px;padding:0 14px;border-radius:12px;background:#1a1f26;color:rgba(231,227,220,0.6);font-weight:700;display:flex;align-items:center;opacity:0.5">Speichern</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#101317;border-top:1px solid rgba(231,227,220,0.12)"><span style="flex:1;color:#d8952f;font-size:14px;font-weight:600">Nicht gespeichert</span><span style="color:rgba(231,227,220,0.6);font-weight:700">Verwerfen</span><span style="min-height:40px;padding:0 14px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;display:flex;align-items:center">Speichern</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#101317;border-top:1px solid rgba(231,227,220,0.12)"><span style="flex:1;color:#6fa0d6;font-size:14px;font-weight:600">Ergebnis kommt gleich</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#101317;border-top:1px solid rgba(231,227,220,0.12)"><span style="flex:1;color:#5ec2b2;font-size:14px;font-weight:600">Verbunden · gerade geprüft</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#101317;border-top:1px solid rgba(231,227,220,0.12)"><span style="flex:1;color:#d8952f;font-size:14px;font-weight:600">Ich komme nicht hinein: Der Schlüssel wurde abgelehnt.</span></div>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Verlassen mit „Nicht gespeichert“ fragt: Änderungen verwerfen? · Verwerfen / Bleiben</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B7 · Stufen-Umschaltung</span>
+        <div style="display:flex;gap:4px;padding:4px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:14px;width:260px"><span style="flex:1;min-height:44px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;display:flex;align-items:center;justify-content:center">Standard</span><span style="flex:1;min-height:44px;border-radius:12px;font-weight:700;display:flex;align-items:center;justify-content:center">Experte</span></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Experte zeigt 16 weitere Einstellungen</span>
+        <div style="display:flex;gap:4px;padding:4px;background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:14px;width:260px"><span style="flex:1;min-height:44px;border-radius:12px;font-weight:700;display:flex;align-items:center;justify-content:center">Standard</span><span style="flex:1;min-height:44px;border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;display:flex;align-items:center;justify-content:center;outline:2px solid #f0a947;outline-offset:2px">Experte</span></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Fokus · sofort gespeichert, pro Konto · neue Konten Standard</span>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(231,227,220,0.6);padding:8px 14px;border-radius:12px;background:rgba(240,169,71,0.15)">Experten-Einstellung · nur für diesen Besuch sichtbar. <b style="color:#f0a947">Immer zeigen</b></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Einmal-gezeigt nach Suche oder Link, Stufe bleibt</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B8 · Geltungsbereich</span>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:12px;color:rgba(231,227,220,0.6)">
+          <span style="display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Gilt für dein Konto — Seitenkopf, Grundfall</span>
+          <span style="display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="7" rx="2"></rect><rect x="3" y="14" width="18" height="7" rx="2"></rect></svg>Alle Konten — an jeder Instanz-Zeile, nur Admin sieht sie</span>
+          <span style="display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"></rect></svg>Nur dieses Gerät — an jeder Geräte-Zeile</span>
+          <span>Konto ist der Normalfall und steht einmal im Seitenkopf; Abweichungen stehen an der Zeile. Instanz-Seiten sagen es im Kopf: „Gilt für alle Konten · nur Admin“.</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B10 · Abhängigkeit</span>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+          <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:999px;background:#6fa0d6"></span><span style="flex:1">Kreuzfahrten ist aus.</span><b style="color:#f0a947">Einschalten ›</b></span>
+          <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:999px;background:#6fa0d6"></span><span style="flex:1">Dawarich ist noch nicht verbunden.</span><b style="color:#f0a947">Verbinden ›</b></span>
+          <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:999px;background:#6fa0d6"></span><span style="flex:1">Der Admin hat keine KI freigegeben.</span></span>
+          <span style="display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;border-radius:12px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><span>Öffentliche Links erlauben</span><span style="font-family:'IBM Plex Mono',monospace;color:#e7e3dc">Auf diesem Server aus</span></span>
+          <span style="color:rgba(231,227,220,0.6)">info, nie bad · Bedienung bleibt sichtbar bei 50 %, Zeile verschwindet nie still · Nicht-Admin bekommt statt Regler eine Statuszeile</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B11 · Hintergrundaufgabe</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:10px 14px;border-radius:14px;background:#1a1f26;display:flex;flex-direction:column;gap:8px"><div style="display:flex;font-size:14px"><span style="flex:1">Startet gleich</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6fa0d6">wartet</span></div><div style="height:6px;border-radius:999px;background:#2a2f36"></div></div>
+          <div style="padding:10px 14px;border-radius:14px;background:#1a1f26;display:flex;flex-direction:column;gap:8px"><div style="display:flex;font-size:14px"><span style="flex:1">Lese 216 von 540</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6fa0d6">40 %</span></div><div style="height:6px;border-radius:999px;background:#2a2f36"><div style="width:40%;height:6px;border-radius:999px;background:#6fa0d6"></div></div><span style="font-size:12px;color:rgba(231,227,220,0.6)">fertig in etwa 1 Minute · du kannst die Seite verlassen</span></div>
+          <div style="padding:10px 14px;border-radius:14px;background:#1a1f26;display:flex;font-size:14px"><span style="flex:1">540 übernommen · 312 entfernt</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5ec2b2">fertig</span></div>
+          <div style="padding:10px 14px;border-radius:14px;background:#1a1f26;display:flex;font-size:14px;gap:8px"><span style="flex:1">Angehalten bei Tag 41 von 180</span><b style="color:#f0a947">Fortsetzen</b></div>
+          <div style="padding:10px 14px;border-radius:14px;background:rgba(216,149,47,0.12);border:1px solid rgba(216,149,47,0.45);display:flex;font-size:14px;gap:8px"><span style="flex:1"><b style="color:#d8952f">Ich konnte nicht weitermachen:</b> Dawarich antwortet nicht.</span><b>Erneut versuchen</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B15 · Pflichtangabe fehlt</span>
+        <div style="height:44px;width:260px;border-radius:12px;background:#14181d;border:1px solid rgba(216,149,47,0.45);display:flex;align-items:center;padding:0 14px;color:rgba(231,227,220,0.45)">https://…</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:12px;background:rgba(216,149,47,0.12);border:1px solid rgba(216,149,47,0.45);font-size:12px"><span style="width:8px;height:8px;border-radius:999px;background:#d8952f;flex:none"></span>Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost.</div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">warn, kein Formfehler: die Instanz läuft, aber Links gehen ins Leere. Menüeintrag „Server“ bekommt den warn-Punkt.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B16 · Suche, gekappt</span>
+        <div style="background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:8px;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;padding:8px 10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">8 von 23 Treffern · weiter tippen</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">Schließen</span></div>
+          <div style="display:flex;align-items:center;gap:10px;min-height:56px;padding:0 10px"><div style="flex:1"><div style="font-weight:500">Offene Updates verwerfen nach</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Flüge › Live-Updates</div></div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#f0a947;background:rgba(240,169,71,0.12);border:1px solid rgba(240,169,71,0.45)">Experte</span></div>
+          <div style="padding:10px;font-size:12px;color:rgba(231,227,220,0.6);border-top:1px solid rgba(231,227,220,0.12)">Experten-Treffer öffnen sich, ohne deine Stufe zu ändern.</div>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Eine gekappte Liste sagt, was sie kappt (Systemregel). Pfeiltasten wandern, Enter springt.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B17 · Konto löschen</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:10px 14px;border-radius:16px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><div><div style="font-weight:500">Konto löschen</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Mit allen Einträgen, Fotos und Dateien</div></div><span style="min-height:46px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);color:#e65a4f;font-weight:700;font-size:16px;display:flex;align-items:center">Konto löschen</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:10px 14px;border-radius:16px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><div><div style="font-weight:500">Konto löschen</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Bis dahin kannst du dich anmelden und abbrechen.</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#d8952f">Löschung läuft bis 01.12.2026</span></div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Frist 30 Tage [Annahme, Frage 27] · danach Knopf „Löschung abbrechen“ · Demo gesperrt</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B9 · Bestätigung</span>
+        <div style="background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:26px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:24px;display:flex;flex-direction:column;gap:14px">
+          <span style="font-size:26px;font-weight:800;color:#f4ece0">Tage löschen?</span>
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px 14px;font-size:14px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:rgba(231,227,220,0.6)">BETRIFFT</span><span>Gespeicherte Positionen vom 03. bis 05.10.2026</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:rgba(231,227,220,0.6)">WIE VIEL</span><span>1.204 Punkte an 3 Tagen</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:rgba(231,227,220,0.6)">DANACH</span><span>Die Tage bleiben leer, auch wenn ein Telefon sie später nachreicht.</span>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px"><span style="min-height:46px;padding:0 20px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);font-weight:700;font-size:16px;display:flex;align-items:center">Abbrechen</span><span style="min-height:52px;padding:0 20px;border-radius:12px;background:#e65a4f;color:#0b0d10;font-weight:700;font-size:16px;display:flex;align-items:center">1.204 Punkte löschen</span></div>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Drei Slots, eine Vorlage · Knopf nennt die Menge · Fokus startet auf Abbrechen und bleibt im Dialog (Tab läuft im Kreis) · Escape = Abbrechen · Mit Tippwort (Ersetzen, Wiederherstellen, Neu einlesen, Passkey-Domain, Konto löschen) bleibt der Gefahr-Knopf aus, bis das Wort stimmt</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B12 · Dienst-Karte · B13 · Menüeintrag</span>
+        <div style="display:flex;align-items:center;gap:14px;min-height:68px;padding:10px 14px;border-radius:16px;background:#14181d;border:1px solid rgba(231,227,220,0.12)"><div style="flex:1"><div style="font-size:16px;font-weight:700">Immich</div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Fotos</div></div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Verbunden</span><span style="color:rgba(231,227,220,0.45)">›</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Über den Server</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#5ec2b2;background:rgba(94,194,178,0.12);border:1px solid rgba(94,194,178,0.45)">Immer an</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#6fa0d6;background:rgba(111,160,214,0.12);border:1px dashed rgba(111,160,214,0.45)">Prüft gleich</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:rgba(231,227,220,0.62);background:rgba(231,227,220,0.07);border:1px solid rgba(231,227,220,0.28)">Nicht eingerichtet</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:#d8952f;background:rgba(216,149,47,0.12);border:1px solid rgba(216,149,47,0.45)">Schlüssel abgelehnt</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;color:rgba(231,227,220,0.62);background:rgba(231,227,220,0.07);border:1px solid rgba(231,227,220,0.28)">Vom Admin abgeschaltet</span>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">Offen: oben Konto-Zeilen, darunter Server-Zeilen mit „Alle Konten“. Nur was der Dienst kann: kein Test, wo kein Tester ist.</span>
+        <div style="display:flex;flex-direction:column;gap:4px;width:276px;padding:8px;border-radius:14px;background:#0b0d10;border:1px solid rgba(231,227,220,0.12)">
+          <span style="min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;color:rgba(231,227,220,0.75)">Erinnerungen</span>
+          <span style="min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;background:#14181d;color:#f4ece0;font-weight:700">Reisearten</span>
+          <span style="min-height:44px;padding:0 14px 0 28px;border-radius:12px;display:flex;align-items:center;gap:10px;color:rgba(231,227,220,0.75)"><span style="width:8px;height:8px;border-radius:999px;background:#f0a947"></span>Flüge</span>
+          <span style="min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;gap:10px;color:rgba(231,227,220,0.75)"><span style="flex:1">Standort</span><span style="width:8px;height:8px;border-radius:999px;background:#d8952f"></span></span>
+          <span style="min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;gap:10px;color:rgba(231,227,220,0.75)"><span style="flex:1">Wartung</span><span style="font-size:11px;font-weight:700;color:#f0a947">E</span></span>
+        </div>
+        <span style="font-size:12px;color:rgba(231,227,220,0.6)">ruhend · aktiv · Unterseite mit Reiseart-Farbe · braucht Entscheidung (warn-Punkt) · nur Experte</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6)">B14 · Reisearten-Farben (tokens.json → domainColor)</span>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px">
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#f0a947"></span>Flüge</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#4aa6b0"></span>Kreuzfahrten</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#5ec2b2"></span>Unterkünfte</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#e7e3dc"></span>Orte</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#a597e8"></span>Bahn</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#c49a6c"></span>Bus · vorläufig</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#5686b8"></span>Fähre · #5686b8 (Frage 19)</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#d98cb3"></span>Mietwagen · vorläufig</span>
+        <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:999px;background:#a9c46a"></span>Touren &amp; Roadtrips</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <h2 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0">Bildschirme · iPad quer 1366 × 1024</h2>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="1a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">1a</span><span style="font-size:16px;font-weight:700">Erster Besuch · Standard</span><span style="color:rgba(231,227,220,0.6);font-size:12px">neues Konto landet auf Reisearten, drei Schritte oben</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="first" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="1b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">1b</span><span style="font-size:16px;font-weight:700">Erster Besuch · Experte</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="first" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="2a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">2a</span><span style="font-size:16px;font-weight:700">Speichern scheitert · Standard</span><span style="color:rgba(231,227,220,0.6);font-size:12px">„12 h“ bleibt gewählt, Zeile sagt warum</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="fail" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="2b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">2b</span><span style="font-size:16px;font-weight:700">Speichern scheitert · Experte</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="fail" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="2c" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">2c</span><span style="font-size:16px;font-weight:700">Speichern scheitert · iPad hoch 820 × 1180</span></div><div style="width:820px;height:1180px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="fail" level="standard" orient="hoch" hint-size="820px,1180px" style="width:820px;height:1180px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="3a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">3a</span><span style="font-size:16px;font-weight:700">Standort einrichten, Aufenthalte suchen · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="loc" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="3b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">3b</span><span style="font-size:16px;font-weight:700">Standort · Experte</span><span style="color:rgba(231,227,220,0.6);font-size:12px">+ Zeitraum, weitere Apps, Diagnose</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="loc" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="4a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">4a</span><span style="font-size:16px;font-weight:700">Immich verbinden, Test läuft · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="svc1" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="4b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">4b</span><span style="font-size:16px;font-weight:700">Verbunden · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="svc2" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="4c" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">4c</span><span style="font-size:16px;font-weight:700">Verbunden · Experte</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="svc2" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="5a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">5a</span><span style="font-size:16px;font-weight:700">Admin ändert die Adresse für Telefone · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="admin" level="standard" admin="{{ true }}" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="5b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">5b</span><span style="font-size:16px;font-weight:700">Admin · Experte</span><span style="color:rgba(231,227,220,0.6);font-size:12px">+ LAN-Adresse, Passkeys, Tageslimits, Wartung, Stammdaten</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="admin" level="experte" admin="{{ true }}" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="5c" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">5c</span><span style="font-size:16px;font-weight:700">Verlassen mit ungespeicherter Gruppe</span><span style="color:rgba(231,227,220,0.6);font-size:12px">Fokus liegt auf „Bleiben“</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="admin2" level="standard" admin="{{ true }}" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="6a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">6a</span><span style="font-size:16px;font-weight:700">Suche „Update“ · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="search1" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="6b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">6b</span><span style="font-size:16px;font-weight:700">Treffer geöffnet, Stufe bleibt Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="search2" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="6c" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">6c</span><span style="font-size:16px;font-weight:700">Derselbe Treffer · Experte</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="search2" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="7a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">7a</span><span style="font-size:16px;font-weight:700">Excel-Import „Ersetzen“ bestätigen · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="danger1" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="7b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">7b</span><span style="font-size:16px;font-weight:700">Import läuft im Hintergrund · Standard</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="danger2" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="7c" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">7c</span><span style="font-size:16px;font-weight:700">Import läuft · Experte</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="danger2" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;max-width:4300px">
+      <div id="8a" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">8a</span><span style="font-size:16px;font-weight:700">Konto löschen · Tippwort</span><span style="color:rgba(231,227,220,0.6);font-size:12px">Knopf bleibt aus, bis LÖSCHEN dasteht</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="delete1" level="standard" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+      <div id="8b" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#f0a947;color:#0b0d10">8b</span><span style="font-size:16px;font-weight:700">Löschung läuft · Experte</span><span style="color:rgba(231,227,220,0.6);font-size:12px">Abbrechen bis zum Ende der Frist</span></div><div style="width:1366px;height:1024px;border-radius:18px;overflow:hidden;border:1px solid rgba(231,227,220,0.12)"><dc-import name="Einstellungen" flow="delete2" level="experte" hint-size="1366px,1024px" style="width:1366px;height:1024px"></dc-import></div></div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { db: null };
+  componentDidMount(){ fetch('./settings-data.json').then(r=>r.json()).then(db=>this.setState({db})); }
+  renderVals(){
+    const d=this.state.db;
+    if(!d) return { outline: [], outlineMeta: '' };
+    let rows=0;
+    const outline=d.pages.map(p=>{
+      const who = p.ad ? (p.x?'Admin · E':'Nur Admin') : (p.dom?'Alle · wenn an':'Alle');
+      const tone = p.ad ? ['#f0a947','rgba(240,169,71,0.12)','rgba(240,169,71,0.45)'] : ['rgba(231,227,220,0.62)','rgba(231,227,220,0.07)','rgba(231,227,220,0.28)'];
+      const secs=p.s.map(s=>{
+        const rs=[...s.rows, ...((s.use||[]).map(k=>d.tpl[k]))];
+        rows+=rs.length;
+        const inv=[...new Set(rs.map(r=>(r.inv||'').split(' ')[0].split('/')[0]).filter(Boolean))].join(' ');
+        const x=s.x||rs.some(r=>r.x)?' · E':'';
+        const a=s.ad||rs.some(r=>r.ad)?' · A':'';
+        return { title: s.svc ? s.svc.n[0] : s.de, meta: inv + x + a };
+      });
+      const secsOut = p.svcPage ? [{title:'30 Dienste in 5 Gruppen', meta:'A13 C3 C4 C5 C6 C8'}, ...secs.slice(0,0)] : secs;
+      return { title:p.de, who, whoFg:tone[0], whoBg:tone[1], whoBd:tone[2], meta: '/settings/'+p.id+' · '+p.s.length+(p.svcPage?' Dienste':' Abschnitte'), secs: p.svcPage ? d.cats.slice(1).map(c=>({title:c[1]+' · '+p.s.filter(s=>s.cat===c[0]).length, meta: p.s.filter(s=>s.cat===c[0]).map(s=>s.svc.n[0]+(s.ad?' (A)':'')).join(', ')})) : secsOut };
+    });
+    return { outline, outlineMeta: d.pages.length+' Seiten · '+rows+' Zeilen · Menü: Dein Konto · Server (nur Admin) · Über' };
+  }
+}
+</script>
+</body>
+</html>
