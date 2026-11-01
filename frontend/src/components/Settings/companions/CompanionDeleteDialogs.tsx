@@ -5,8 +5,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { companionsApi, type ManagedCompanion } from "../../../lib/api/companions";
 import { logger } from "../../../lib/logger";
 import { useToastStore } from "../../../store/toastStore";
-import Button from "../../ui/Button";
-import Dialog from "../../ui/Dialog";
+import { ConfirmDialog } from "../../ui/settings";
+import { useDialogCopy } from "../rowCopy";
 import { companionErrorKey } from "./companionErrorCopy";
 
 const NS = "companions:manage";
@@ -45,31 +45,21 @@ export function CompanionDeleteDialog({
   onDone: () => void;
 }): JSX.Element {
   const { busy, run, t } = useConfirm(onDone);
+  const dialog = useDialogCopy();
   const name = companion.name;
   return (
-    <Dialog
+    <ConfirmDialog
       open
-      onClose={onClose}
+      {...dialog("companiondel", { name })}
       busy={busy}
-      title={t(`${NS}.delete.title`, { name })}
-      dismissLabel={t("common:buttons.cancel")}
-      action={
-        <Button
-          variant="danger"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              await companionsApi.remove(companion.id);
-              return t(`${NS}.delete.done`, { name });
-            }, `${NS}.errors.deleteFailed`)
-          }
-        >
-          {t(`${NS}.delete.submit`)}
-        </Button>
+      onCancel={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          await companionsApi.remove(companion.id);
+          return t(`${NS}.delete.done`, { name });
+        }, `${NS}.errors.deleteFailed`)
       }
-    >
-      <p className="text-sm">{t(`${NS}.delete.body`, { name })}</p>
-    </Dialog>
+    />
   );
 }
 
@@ -83,29 +73,19 @@ export function DeleteUnusedDialog({
   onDone: () => void;
 }): JSX.Element {
   const { busy, run, t } = useConfirm(onDone);
+  const dialog = useDialogCopy();
   return (
-    <Dialog
+    <ConfirmDialog
       open
-      onClose={onClose}
+      {...dialog("unused", { count })}
       busy={busy}
-      title={t(`${NS}.deleteUnused.title`)}
-      dismissLabel={t("common:buttons.cancel")}
-      action={
-        <Button
-          variant="danger"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              const deleted = await companionsApi.deleteUnused();
-              return t(`${NS}.deleteUnused.done`, { count: deleted });
-            }, `${NS}.errors.deleteFailed`)
-          }
-        >
-          {t(`${NS}.deleteUnused.submit`)}
-        </Button>
+      onCancel={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          const deleted = await companionsApi.deleteUnused();
+          return t(`${NS}.deleteUnused.done`, { count: deleted });
+        }, `${NS}.errors.deleteFailed`)
       }
-    >
-      <p className="text-sm">{t(`${NS}.deleteUnused.body`, { count })}</p>
-    </Dialog>
+    />
   );
 }

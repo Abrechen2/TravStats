@@ -88,6 +88,8 @@ export interface ImportModeState {
 export interface InstanceSettingsResponse {
   settings: InstanceSettings;
   passkeyStatus: PasskeyStatus;
+  /** What switching public links off would delete (present on a GET). */
+  shareLinkStats?: { links: number; accounts: number };
 }
 
 export interface InstanceSettingsPatch {

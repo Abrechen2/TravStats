@@ -236,10 +236,9 @@
     "shareend": {
       "title": "Stop sharing?",
       "affects": "{{name}}",
-      "amount_one": "{{count}} shared trip",
-      "amount_other": "{{count}} shared trips",
       "after": "They stay as your copy; changes no longer arrive.",
-      "confirm": "Stop"
+      "confirm": "Stop",
+      "amount": "All trips you share with this person"
     },
     "merge": {
       "title": "Merge {{from}} into {{to}}?",

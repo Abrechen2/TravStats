@@ -69,16 +69,46 @@ describe("CompanionsSection", () => {
     const used = await rowOf("c1");
     expect(used.queryByRole("button", { name: "companions:manage.actions.delete" })).toBeNull();
     expect(used.getByText("companions:manage.inUseHint")).toBeTruthy();
-    expect(used.getByRole("link").getAttribute("href")).toBe("/settings/trips?section=sharing");
+    expect(used.getByRole("link").getAttribute("href")).toBe("/settings/sharing#accounts");
     const free = await rowOf("c3");
     api.remove.mockResolvedValue();
     await userEvent.click(free.getByRole("button", { name: "companions:manage.actions.delete" }));
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
-        name: "companions:manage.delete.submit",
+        name: "settingsRows:dialogs.companiondel.confirm",
       })
     );
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith("c3"));
+  });
+
+  it("says a refused delete failed and keeps the person; deleting all unused goes through the same block", async () => {
+    const free = await (async () => {
+      renderSection();
+      return rowOf("c3");
+    })();
+    api.remove.mockRejectedValue(new Error("Network Error"));
+    await userEvent.click(free.getByRole("button", { name: "companions:manage.actions.delete" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "settingsRows:dialogs.companiondel.confirm",
+      })
+    );
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", expect.any(String))
+    );
+    expect(screen.getByTestId("companion-row-c3")).toBeTruthy();
+
+    api.deleteUnused.mockResolvedValue(1);
+    await userEvent.click(
+      screen.getByRole("button", { name: "companions:manage.actions.deleteUnused" })
+    );
+    expect(screen.getByRole("dialog")).toHaveTextContent("settingsRows:dialogs.unused.title");
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "settingsRows:dialogs.unused.confirm",
+      })
+    );
+    await waitFor(() => expect(api.deleteUnused).toHaveBeenCalled());
   });
 
   it("turns a rename onto a taken name into an offer to merge, with a preview", async () => {

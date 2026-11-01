@@ -3,8 +3,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 type Exists = (key: string) => boolean;
 
 /** `i18n.exists`, tolerant of the suite's key-echo mock, which has no such method. */
-const existsOf = (i18n: { exists?: Exists }): Exists =>
-  typeof i18n.exists === "function" ? (key) => i18n.exists!(key) : () => true;
+const existsOf = (i18n: { exists?: Exists } | undefined): Exists =>
+  typeof i18n?.exists === "function" ? (key) => i18n.exists!(key) : () => true;
 
 export interface RowCopy {
   title: string;

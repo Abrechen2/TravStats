@@ -236,10 +236,9 @@
     "shareend": {
       "title": "Teilen beenden?",
       "affects": "{{name}}",
-      "amount_one": "{{count}} geteilte Reise",
-      "amount_other": "{{count}} geteilte Reisen",
       "after": "Sie bleiben als deine Kopie; Änderungen kommen nicht mehr nach.",
-      "confirm": "Beenden"
+      "confirm": "Beenden",
+      "amount": "Alle Reisen, die du mit dieser Person teilst"
     },
     "merge": {
       "title": "{{from}} in {{to}} aufgehen lassen?",

@@ -518,13 +518,8 @@
       }
     },
     "section": {
-      "title": "Public links",
-      "description": "Links you created for a flight, a trip or a year in review. Anyone with a link sees the chosen details until it expires or you revoke it.",
-      "switch": "Allow public links",
-      "switchSub": "Default: off. Switching off revokes every existing link of every user at once.",
-      "stateOn": "Public links are allowed",
-      "stateOff": "Public links are switched off",
-      "adminOnly": "Managed under Administration → Instance.",
+      "stateOn": "On on this server",
+      "stateOff": "Off on this server",
       "empty": "No active links.",
       "kind": {
         "flight": "Flight",
@@ -538,8 +533,7 @@
       "revoked": "Link revoked – it no longer works.",
       "loadFailed": "The links could not be loaded.",
       "saveFailed": "The switch could not be saved.",
-      "adminLink": "Administration → Instance",
-      "adminDescription": "Instance-wide permission for public links for all users."
+      "title": "Public links"
     },
     "errors": {
       "disabled": "Public links are switched off on this instance.",

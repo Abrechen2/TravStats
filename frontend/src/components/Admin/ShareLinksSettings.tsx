@@ -3,24 +3,38 @@ import type { JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { Switch } from "../ui/Field";
+import { ConfirmDialog, ErrorLine, SettingItem, SwitchControl } from "../ui/settings";
+import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
+import { useDialogCopy, useRowCopy } from "../Settings/rowCopy";
 
 const NS = "sharing:links.section";
 
-/** Instance-wide permission, separate from the user's own public links. */
+/**
+ * "Öffentliche Links erlauben" (design §4 C1/A12): the instance-wide
+ * permission, an "Alle Konten" row. Switching it ON writes at once. Switching
+ * it OFF deletes every link of every account (`deleteAllShareLinks`), so it
+ * goes through the confirmation block, which names the amount the server
+ * reports — and a refused write is said, not swallowed.
+ */
 export default function ShareLinksSettings(): JSX.Element {
-  const { t } = useTranslation(["sharing"]);
+  const { t } = useTranslation(["sharing", "settingsRows"]);
+  const row = useRowCopy("sharing");
+  const dialog = useDialogCopy();
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [stats, setStats] = useState<{ links: number; accounts: number } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
     adminApi.getInstanceSettings().then(
-      ({ settings }) => {
-        if (alive) setEnabled(settings.shareLinksEnabled);
+      (response) => {
+        if (!alive) return;
+        setEnabled(response.settings.shareLinksEnabled);
+        setStats(response.shareLinkStats ?? null);
       },
       (error: unknown) => {
         logger.error("Loading the share-link instance setting failed:", error);
@@ -32,12 +46,14 @@ export default function ShareLinksSettings(): JSX.Element {
     };
   }, []);
 
-  const toggle = async (on: boolean): Promise<void> => {
+  const write = async (on: boolean): Promise<void> => {
+    setAsking(false);
     setBusy(true);
     setSaveFailed(false);
     try {
       const { settings } = await adminApi.updateInstanceSettings({ shareLinksEnabled: on });
       setEnabled(settings.shareLinksEnabled);
+      if (!on) setStats({ links: 0, accounts: 0 });
     } catch (error) {
       logger.error("Saving the share-link instance setting failed:", error);
       setSaveFailed(true);
@@ -46,21 +62,36 @@ export default function ShareLinksSettings(): JSX.Element {
     }
   };
 
+  const copy = row("linkserlaubt");
+  const off = dialog("linksoff", { count: stats?.links ?? 0, accounts: stats?.accounts ?? 0 });
   return (
     <SectionCard>
-      <SectionTitle title={t(`${NS}.title`)} description={t(`${NS}.adminDescription`)} />
-      {enabled !== null && (
-        <Switch
-          id="share-links-enabled"
-          checked={enabled}
-          disabled={busy}
-          onChange={(on) => void toggle(on)}
-          label={t(`${NS}.switch`)}
-          sub={t(`${NS}.switchSub`)}
-        />
-      )}
-      {loadFailed && <p role="alert">{t(`${NS}.loadFailed`)}</p>}
-      {saveFailed && <p role="alert">{t(`${NS}.saveFailed`)}</p>}
+      <SectionTitle title={t("settingsRows:sharing.sections.shareLinks")} />
+      <SettingRows>
+        {enabled !== null && (
+          <SettingItem
+            title={copy.title}
+            sub={copy.sub}
+            help={copy.help}
+            scope="allAccounts"
+            error={saveFailed ? t(`${NS}.saveFailed`) : undefined}
+            control={
+              <SwitchControl
+                checked={enabled}
+                onChange={(on) => (on ? void write(true) : setAsking(true))}
+              />
+            }
+          />
+        )}
+        {loadFailed && <ErrorLine>{t(`${NS}.loadFailed`)}</ErrorLine>}
+      </SettingRows>
+      <ConfirmDialog
+        open={asking}
+        {...off}
+        busy={busy}
+        onConfirm={() => void write(false)}
+        onCancel={() => setAsking(false)}
+      />
     </SectionCard>
   );
 }

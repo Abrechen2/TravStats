@@ -518,13 +518,8 @@
       }
     },
     "section": {
-      "title": "Öffentliche Links",
-      "description": "Links, die du für einen Flug, eine Reise oder einen Jahresrückblick erstellt hast. Wer einen Link hat, sieht die gewählten Angaben, bis er abläuft oder du ihn widerrufst.",
-      "switch": "Öffentliche Links erlauben",
-      "switchSub": "Standard: aus. Ausschalten widerruft sofort alle bestehenden Links aller Nutzer.",
-      "stateOn": "Öffentliche Links sind erlaubt",
-      "stateOff": "Öffentliche Links sind ausgeschaltet",
-      "adminOnly": "Änderbar unter Administration → Instanz.",
+      "stateOn": "Auf diesem Server an",
+      "stateOff": "Auf diesem Server aus",
       "empty": "Keine aktiven Links.",
       "kind": {
         "flight": "Flug",
@@ -538,8 +533,7 @@
       "revoked": "Link widerrufen – er funktioniert nicht mehr.",
       "loadFailed": "Die Links konnten nicht geladen werden.",
       "saveFailed": "Der Schalter konnte nicht gespeichert werden.",
-      "adminLink": "Administration → Instanz",
-      "adminDescription": "Instanzweite Freigabe für öffentliche Links aller Nutzer."
+      "title": "Öffentliche Links"
     },
     "errors": {
       "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet.",
