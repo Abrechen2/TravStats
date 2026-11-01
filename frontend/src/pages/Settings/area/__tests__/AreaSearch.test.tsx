@@ -55,6 +55,18 @@ describe("the search box", () => {
     expect(within(screen.getByRole("list")).getAllByRole("link")).toHaveLength(MAX_HITS);
   });
 
+  it("lets the person see every hit past the first eight ('8 von 72' had no way to the rest)", () => {
+    renderSearch(true);
+    type("en");
+    const all = screen.getByTestId("settings-search-show-all");
+    fireEvent.click(all);
+    expect(screen.getByRole("list").querySelectorAll("a").length).toBeGreaterThan(MAX_HITS);
+    expect(screen.queryByTestId("settings-search-show-all")).toBeNull();
+    // A new query starts short again.
+    type("eng");
+    expect(screen.getByRole("list").querySelectorAll("a").length).toBeLessThanOrEqual(MAX_HITS);
+  });
+
   it("says how many results there are when they all fit", () => {
     renderSearch(true);
     type("Geburtstagsflug");

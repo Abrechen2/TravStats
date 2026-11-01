@@ -39,7 +39,10 @@ export function AreaSearch({ isAdmin }: { isAdmin: boolean }): JSX.Element {
     () => searchArea(query, SETTINGS_REGISTRY, access, lang),
     [query, access, lang]
   );
-  const shown = result.hits.slice(0, MAX_HITS);
+  // "Show all" belongs to one query: a new query starts short again.
+  const [expandedFor, setExpandedFor] = useState<string | null>(null);
+  const expanded = expandedFor === query;
+  const shown = expanded ? result.hits : result.hits.slice(0, MAX_HITS);
   const searching = query.trim().length >= 2;
 
   const open = (hit: AreaSearchHit): void => {
@@ -90,7 +93,7 @@ export function AreaSearch({ isAdmin }: { isAdmin: boolean }): JSX.Element {
                 className="t-caption"
                 style={{ padding: "var(--ts-space-xs) var(--ts-space-md)" }}
               >
-                {result.hits.length > MAX_HITS
+                {!expanded && result.hits.length > MAX_HITS
                   ? t("settings:search.countMore", {
                       shown: MAX_HITS,
                       count: result.hits.length,
@@ -137,6 +140,17 @@ export function AreaSearch({ isAdmin }: { isAdmin: boolean }): JSX.Element {
                 >
                   {t("settings:search.expertNote")}
                 </p>
+              )}
+              {!expanded && result.hits.length > MAX_HITS && (
+                <button
+                  type="button"
+                  data-testid="settings-search-show-all"
+                  className="btn-secondary"
+                  onClick={() => setExpandedFor(query)}
+                  style={{ minHeight: coarse ? "var(--ts-size-touch-min)" : undefined }}
+                >
+                  {t("settings:search.showAll", { count: result.hits.length })}
+                </button>
               )}
             </>
           )}

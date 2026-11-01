@@ -229,7 +229,7 @@
       "bus": "Bus",
       "ferry": "Fähren"
     },
-    "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
+    "disabledHint": "Bereich deaktiviert — Einstellungen → Reisearten"
   },
   "addPicker": {
     "button": "Hinzufügen",
@@ -302,7 +302,7 @@
       "wishlist": "Merkliste",
       "unlisted": "In keiner Liste"
     },
-    "disabled": "Der Bereich Orte ist noch nicht aktiviert. Schalte ihn unter Einstellungen → Bereiche frei.",
+    "disabled": "Der Bereich Orte ist noch nicht aktiviert. Schalte ihn unter Einstellungen → Reisearten frei.",
     "goToSettings": "Zu den Einstellungen",
     "listFilter": "Nach Liste filtern",
     "allLists": "Alle Orte",
@@ -312,7 +312,7 @@
   },
   "tabDisabled": {
     "title": "Bereich deaktiviert",
-    "body": "Der Bereich „{{domain}}“ ist deaktiviert. Schalte ihn unter Einstellungen → Bereiche frei, um Inhalte zu sehen.",
+    "body": "Der Bereich „{{domain}}“ ist deaktiviert. Schalte ihn unter Einstellungen → Reisearten frei, um Inhalte zu sehen.",
     "goToSettings": "Zu den Einstellungen"
   },
   "sidebar": {

@@ -254,7 +254,7 @@
     "saveFailed": "Notification preferences could not be saved",
     "carriedOver": "Your existing choices were carried over.",
     "domainOff": "“{{area}}” is switched off, so there are no reminders for it. Switch the area on to get them.",
-    "domainOffAction": "Go to Domains & colours",
+    "domainOffAction": "Go to Travel types",
     "rowSwitch": "Reminders for {{area}}",
     "whenGroup": "{{area}}: when",
     "whereGroup": "{{area}}: where",
@@ -410,6 +410,7 @@
   },
   "autoSave": {
     "idle": "Changes are saved automatically",
+    "idleWithButtons": "Switches and choices save themselves; groups with a button save when you press it",
     "saving": "Saving …",
     "saved": "Saved",
     "pending": "Unsaved changes",
@@ -1031,6 +1032,7 @@
     "count_one": "{{count}} result",
     "count_other": "{{count}} results",
     "countMore": "{{shown}} of {{count}} results · keep typing",
+    "showAll": "Show all {{count}}",
     "noResultsFor": "Nothing found for “{{query}}”.",
     "expertNote": "Expert results open without changing your level."
   },
@@ -1191,7 +1193,7 @@
   },
   "domainOff": {
     "message": "This domain is switched off: {{domain}}. Its settings appear here once you switch it on.",
-    "action": "Go to Domains & colours"
+    "action": "Go to Travel types"
   },
   "webdavSync": {
     "whatIsUploaded": "What is uploaded is your account's complete export as a compressed JSON file — the same data as the admin export \"All data\", without credentials. Photos and documents themselves are not included.",

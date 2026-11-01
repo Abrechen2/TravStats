@@ -4,7 +4,8 @@ import { alpha } from "../ui/tokens";
 import { ServiceCardShell } from "../ui/settings";
 import AccountSide from "./AccountSide";
 import ServerSide from "./ServerSide";
-import { cardStatus, toneOf, type CardStatus } from "./cardStatus";
+import { toneOf, type CardStatus } from "./cardStatus";
+import { useCardStatusOf } from "./useCardStatusOf";
 import { UNREACHABLE_NOTE } from "./unreachable";
 import { useServices } from "./servicesContext";
 import type { ServiceCardDef } from "./serviceCards";
@@ -71,18 +72,12 @@ export default function ServiceCard({
     }
   }, [linked]);
 
+  const statusOf = useCardStatusOf(isAdmin);
   const data = account.data;
   const acct = [...(data?.connections ?? []), ...(data?.ownKeys ?? [])].find(
     (s) => s.id === card.id
   );
-  const status = cardStatus({
-    card,
-    isAdmin,
-    account: acct,
-    consent: data?.aiConsents.find((c) => c.id === card.id),
-    provided: data?.instanceProvided.find((s) => s.id === card.id),
-    admin: admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id),
-  });
+  const status = statusOf(card);
   // Where to get a key: the account's own view carries it for every account, the admin's for the server.
   const keyUrl =
     acct?.getKeyUrl ??

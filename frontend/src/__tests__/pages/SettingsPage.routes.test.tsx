@@ -407,7 +407,7 @@ describe("SettingsPage — one page per menu entry", () => {
 
   // forgejo#321 prototype: the page stays and says the domain is off, with
   // the way to switch it on — a bookmark no longer lands on the account page.
-  it("says a switched-off domain's page is off and points to Bereiche & Farben", async () => {
+  it("says a switched-off domain's page is off and points to Reisearten", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
     renderAt("/settings/cruise?section=cruisePreferences");
     const notice = await screen.findByText("settings:domainOff.message");

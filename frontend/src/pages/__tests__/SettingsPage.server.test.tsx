@@ -548,7 +548,7 @@ describe("SettingsPage, the server's pages — master data of a switched-off dom
   });
 
   // The suite's settings store enables no domain, so cruise is off here.
-  it("says the domain is off and points to Bereiche & Farben, instead of leaving the page", async () => {
+  it("says the domain is off and points to Reisearten, instead of leaving the page", async () => {
     renderAdmin("/admin/shipsMasterData");
     await findNamed("region", "admin:pages.shipsMasterData");
     const ships = document.getElementById("settings-shipsMasterData") as HTMLElement;

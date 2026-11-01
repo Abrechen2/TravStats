@@ -3,7 +3,7 @@ import { BetaFeatureRouteGuard } from "../components/BetaFeatureRouteGuard";
 import { useTravPlanCapabilities } from "../hooks/useTravPlanVisible";
 import TravPlanPage from "./TravPlanPage";
 
-/** Where the account's TravPlan switch lives: Einstellungen → Darstellung → Bereiche & Farben. */
+/** Where the account's TravPlan switch lives: Einstellungen → Darstellung → Reisearten. */
 const TRAVPLAN_SWITCH_PATH = "/settings/display";
 
 /**

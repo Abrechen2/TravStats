@@ -22,6 +22,7 @@ import { useExpertRows } from "./frame/useExpertRows";
 import SpreadsheetSection from "./SpreadsheetSection";
 import TrackArchiveSection from "./TrackArchiveSection";
 import { useRowCopy } from "./rowCopy";
+import { DATA_PART_ANCHOR } from "./DataJumpList";
 
 /**
  * The one place for LISTS — a whole collection at once, from a file.
@@ -110,13 +111,15 @@ export default function ImportSection(): JSX.Element {
   const log = row("implog");
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-      <SectionCard>
-        <SectionTitle title={t("settingsRows:data.sections.import")} />
-        <SettingRows>
-          <SpreadsheetSection part="import" />
-          <TrackArchiveSection part="import" />
-        </SettingRows>
-      </SectionCard>
+      <div id={DATA_PART_ANCHOR.import} tabIndex={-1} style={{ outline: "none" }}>
+        <SectionCard>
+          <SectionTitle title={t("settingsRows:data.sections.import")} />
+          <SettingRows>
+            <SpreadsheetSection part="import" />
+            <TrackArchiveSection part="import" />
+          </SettingRows>
+        </SectionCard>
+      </div>
       <SectionCard>
         <SectionTitle title={lists.title} description={lists.sub} />
         {/* Whether flights sharing a booking reference become a trip lives in

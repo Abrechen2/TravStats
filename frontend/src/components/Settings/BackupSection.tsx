@@ -7,6 +7,7 @@ import { profileWallClock } from "../../lib/profileInstant";
 import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, StatusValue } from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { DataJumpList, DATA_PART_ANCHOR } from "./DataJumpList";
 import MeExportRow from "./MeExportRow";
 import SpreadsheetSection from "./SpreadsheetSection";
 import TrackArchiveSection from "./TrackArchiveSection";
@@ -93,14 +94,17 @@ export default function BackupSection(): JSX.Element {
   const { t } = useTranslation(["settingsRows"]);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
-      <SectionCard>
-        <SectionTitle title={t("settingsRows:data.sections.backup")} />
-        <SettingRows>
-          <InstanceBackupRow />
-          <WebdavSyncRow />
-        </SettingRows>
-      </SectionCard>
-      <div id="settings-export">
+      <DataJumpList />
+      <div id={DATA_PART_ANCHOR.backup} tabIndex={-1} style={{ outline: "none" }}>
+        <SectionCard>
+          <SectionTitle title={t("settingsRows:data.sections.backup")} />
+          <SettingRows>
+            <InstanceBackupRow />
+            <WebdavSyncRow />
+          </SettingRows>
+        </SectionCard>
+      </div>
+      <div id={DATA_PART_ANCHOR.export} tabIndex={-1} style={{ outline: "none" }}>
         <SectionCard>
           <SectionTitle title={t("settingsRows:data.sections.export")} />
           <SettingRows>
