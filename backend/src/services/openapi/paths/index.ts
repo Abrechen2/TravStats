@@ -38,6 +38,7 @@ import "./companions";
 import "./sharingRemote";
 import "./airports";
 import "./stats";
+import "./statsNoOwnClient";
 import "./statsPage";
 import "./statsCo2";
 import "./statsNetworkRoute";

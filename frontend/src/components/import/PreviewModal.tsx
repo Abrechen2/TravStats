@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { hasHardError, type PreviewFlag, type PreviewRowEnriched } from "../../lib/api/import";
+import { useBulkLookup } from "../../hooks/useBulkLookup";
+import type { LookupOutcome, LookupRow } from "../../lib/flightLookupBatch";
+import { lookupOutcomeText } from "../../lib/lookupOutcomeText";
 
 export interface PreviewCommitResult {
   committed: number;
@@ -67,7 +70,20 @@ export function PreviewModal({
   flightsListHref,
   notice,
 }: PreviewModalProps): JSX.Element {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "flights", "errors"]);
+  const lookup = useBulkLookup<unknown>();
+  // Only rows the provider can be asked about: a flight number and a real day.
+  const lookupRows: LookupRow[] = useMemo(
+    () =>
+      rows
+        .filter((r) => !hasHardError(r.flags) && (r.flightNumberNormalised ?? r.flightNumber))
+        .map((r) => ({
+          key: String(r.sourceRowIndex),
+          flightNumber: r.flightNumberNormalised ?? r.flightNumber ?? "",
+          date: r.date ? r.date.slice(0, 10) : null,
+        })),
+    [rows]
+  );
 
   const initialChecked = useMemo(() => {
     const m = new Map<number, boolean>();
@@ -207,6 +223,7 @@ export function PreviewModal({
             checked={checked}
             toggle={toggle}
             isSubmitting={isSubmitting}
+            lookup={lookup.outcomes}
             t={t}
           />
         )}
@@ -220,6 +237,19 @@ export function PreviewModal({
               <p className="mr-auto text-sm" style={{ color: "rgb(252, 165, 165)" }}>
                 {submitState.message}
               </p>
+            )}
+            {lookupRows.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void lookup.run(lookupRows)}
+                disabled={isSubmitting || lookup.running}
+                className="btn-secondary mr-auto px-3 py-1.5 text-sm disabled:opacity-50"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                {lookup.running && lookup.progress
+                  ? t("settings:import.preview.lookup.running", lookup.progress)
+                  : t("settings:import.preview.lookup.action", { count: lookupRows.length })}
+              </button>
             )}
             <button
               onClick={onClose}
@@ -250,10 +280,12 @@ interface RowsViewProps {
   checked: Map<number, boolean>;
   toggle: (idx: number) => void;
   isSubmitting: boolean;
+  /** Provider answers from "Mit Anbieter prüfen", by `sourceRowIndex`; empty until asked. */
+  lookup: ReadonlyMap<string, LookupOutcome<unknown>>;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
-function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JSX.Element {
+function RowsView({ rows, checked, toggle, isSubmitting, lookup, t }: RowsViewProps): JSX.Element {
   return (
     <div className="overflow-auto px-6 py-4">
       <table className="w-full text-sm">
@@ -310,6 +342,20 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                 </td>
                 <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
                   {r.flightNumberNormalised ?? r.flightNumber ?? "—"}
+                  {lookup.get(String(r.sourceRowIndex)) && (
+                    <span
+                      className="block text-xs"
+                      style={{
+                        color:
+                          lookup.get(String(r.sourceRowIndex))?.status === "found"
+                            ? "var(--text-muted)"
+                            : "rgb(252, 211, 77)",
+                      }}
+                      data-testid="preview-lookup-outcome"
+                    >
+                      {lookupOutcomeText(lookup.get(String(r.sourceRowIndex))!, t)}
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
                   {hardError ? "—" : t(`flights:status.${r.statusDefault}`)}
