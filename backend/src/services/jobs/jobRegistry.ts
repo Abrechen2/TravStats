@@ -41,7 +41,9 @@ export type JobKind =
   | "rail.rerouteLocalTransit"
   | "webdavSync.run"
   | "travtrack.fileImport"
-  | "travtrack.dawarichImport";
+  | "travtrack.dawarichImport"
+  | "placeVisitPhotos.immichLink"
+  | "dawarich.countryDaySweep";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

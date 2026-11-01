@@ -3,6 +3,14 @@ import type { Flight } from "../../types";
 import { api } from "./client";
 import type { FlightUpdateData, PendingUpdate } from "./types";
 
+export interface BulkPendingResult {
+  requested: number;
+  applied?: number;
+  rejected?: number;
+  failed: number;
+  results: { id: string; status: "applied" | "rejected" | "failed"; error?: string }[];
+}
+
 // Pending Updates API
 export const pendingUpdatesApi = {
   getAll: async (filters?: {
@@ -66,6 +74,17 @@ export const pendingUpdatesApi = {
 
   reject: async (id: string): Promise<{ success: boolean }> => {
     const { data } = await api.post<{ success: boolean }>(`/pending-updates/${id}/reject`);
+    return data;
+  },
+
+  /** Apply many at once; the server answers per id, so a partial failure is visible. */
+  applyMany: async (ids: string[]): Promise<BulkPendingResult> => {
+    const { data } = await api.post<BulkPendingResult>("/pending-updates/apply", { ids });
+    return data;
+  },
+
+  rejectMany: async (ids: string[]): Promise<BulkPendingResult> => {
+    const { data } = await api.post<BulkPendingResult>("/pending-updates/reject", { ids });
     return data;
   },
 

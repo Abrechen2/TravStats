@@ -44,7 +44,6 @@ jest.mock("../services/logManager", () => ({
   deleteLogFile: jest.fn(),
   cleanupOldLogs: jest.fn(),
   getLogStats: jest.fn(),
-  searchLogs: jest.fn(),
   getLogFilePathForDownload: jest.fn(),
 }));
 jest.mock("../services/apiKeyTester", () => ({

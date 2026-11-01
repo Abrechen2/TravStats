@@ -174,35 +174,6 @@ export async function getLogStats(): Promise<LogStatsResponse> {
   };
 }
 
-/** Search the newest files (plain and compressed) — at most 10 files, 1000 hits. */
-export async function searchLogs(query: {
-  query?: string;
-  level?: string;
-  category?: string;
-  startDate?: Date;
-  endDate?: Date;
-}): Promise<LogFileEntry[]> {
-  const files = (await listLogFiles()).filter((file) => {
-    const modified = Date.parse(file.modified);
-    if (query.startDate && modified < query.startDate.getTime()) return false;
-    if (query.endDate && modified > query.endDate.getTime()) return false;
-    return true;
-  });
-
-  const results: LogFileEntry[] = [];
-  for (const file of files.slice(0, 10)) {
-    const page = await readLogFile(file.filename, {
-      limit: 1000,
-      level: query.level,
-      category: query.category,
-      search: query.query,
-    });
-    results.push(...page.entries);
-    if (results.length >= 1000) break;
-  }
-  return results.slice(0, 1000);
-}
-
 /** Content type for a download: gzip for a rotated file, NDJSON otherwise. */
 export function logFileContentType(filename: string): string {
   return filename.endsWith(".gz") ? "application/gzip" : "application/x-ndjson";

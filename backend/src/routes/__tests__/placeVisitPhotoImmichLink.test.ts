@@ -17,7 +17,9 @@ import request from "supertest";
 
 import app from "../../index";
 import { prisma } from "../../db";
+import { ImmichError } from "../../services/immich/types";
 import { getPlacePhotoDir } from "../../middleware/upload";
+import { getJob } from "../../services/jobs/jobRegistry";
 import { generateToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
 
@@ -38,6 +40,15 @@ describe("place-visit photos as Immich links", () => {
   let strangerCookie: string;
   let cookie: string;
   let visitId: string;
+
+  const waitForJobDone = async (jobId: string) => {
+    for (let i = 0; i < 100; i++) {
+      const job = getJob(jobId, userId);
+      if (job && job.status !== "running") return job;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    throw new Error("job did not finish");
+  };
 
   const photo = async (checksum: string | null) => {
     const filename = `link-${stamp}-${Math.random().toString(36).slice(2)}.jpg`;
@@ -85,8 +96,10 @@ describe("place-visit photos as Immich links", () => {
       .post("/api/v1/places/visits/photos/immich-link")
       .set("Cookie", cookie);
 
-    expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ checked: 2, linked: 1 });
+    // A job, not a held request: the pass outlasts the client's timeout.
+    expect(res.status).toBe(202);
+    const job = await waitForJobDone(res.body.data.jobId);
+    expect(job.result).toEqual({ checked: 2, linked: 1 });
     const linked = await prisma.placeVisitPhoto.findUniqueOrThrow({ where: { id: matched.id } });
     expect(linked).toMatchObject({ immichAssetId: ASSET, filename: null });
     expect(fs.existsSync(path.join(getPlacePhotoDir(), matched.filename!))).toBe(false);
@@ -98,6 +111,18 @@ describe("place-visit photos as Immich links", () => {
     expect(
       (await prisma.placeVisitPhoto.findUniqueOrThrow({ where: { id: unhashed.id } })).filename
     ).toBe(unhashed.filename);
+  });
+
+  it("reports an unreachable Immich as a failed job with its kind, not as success", async () => {
+    await photo("unreachable-sha1");
+    findAssetIdByChecksum.mockRejectedValue(new ImmichError("unreachable", "down"));
+    const res = await request(app)
+      .post("/api/v1/places/visits/photos/immich-link")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(202);
+    const job = await waitForJobDone(res.body.data.jobId);
+    expect(job.status).toBe("failed");
+    expect(job.error?.code).toBe("unreachable");
   });
 
   it("answers 409 when the user has no Immich to link into", async () => {

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { waitForJob } from "./jobs";
 import {
   DAWARICH_FAILURE_KINDS,
   type DawarichConnectionStatus,
@@ -64,5 +65,45 @@ export const dawarichApi = {
   }): Promise<DawarichTestResult> => {
     const { data } = await api.post<DawarichTestResult>("/settings/dawarich/test", payload);
     return data;
+  },
+};
+
+/** What one country-day sweep did, as `runDawarichCountryDaySweep` counts it. */
+export interface CountryDaySweepResult {
+  users: number;
+  failed: number;
+  degraded: number;
+  monthsSwept: number;
+  daysWritten: number;
+  partialDays: number;
+}
+
+/** The instance-wide connection (tier 2 of the resolver) and its country-day sweep. */
+export const dawarichAdminApi = {
+  getSettings: async (): Promise<{ baseUrl: string | null; apiKey: string | null }> => {
+    const { data } = await api.get("/admin/dawarich");
+    return data;
+  },
+
+  updateSettings: async (payload: {
+    baseUrl?: string | null;
+    apiKey?: string | null;
+  }): Promise<{ baseUrl: string | null; apiKey: string | null }> => {
+    const { data } = await api.put("/admin/dawarich", payload);
+    return data;
+  },
+
+  testConnection: async (payload: {
+    baseUrl?: string;
+    apiKey?: string;
+  }): Promise<DawarichTestResult> => {
+    const { data } = await api.post<DawarichTestResult>("/admin/dawarich/test", payload);
+    return data;
+  },
+
+  /** Starts the sweep as a job and waits for its outcome (JobFailedError / JobLostError). */
+  sweepNow: async (): Promise<CountryDaySweepResult> => {
+    const { data } = await api.post<{ jobId: string }>("/admin/dawarich/country-days/sweep", {});
+    return waitForJob<CountryDaySweepResult>(data.jobId);
   },
 };

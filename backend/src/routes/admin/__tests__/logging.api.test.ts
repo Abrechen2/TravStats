@@ -109,6 +109,13 @@ describe("reading a log file", () => {
     );
   });
 
+  // forgejo#397: the cross-file /search read at most 10 files and 1000 hits, unpaged, and
+  // never said it had cut — the per-file reader (filters + paging) is the search.
+  it("no longer serves the unbounded cross-file /search", async () => {
+    const res = await admin(request(app).get("/api/v1/admin/logging/search?query=entry"));
+    expect(res.status).toBe(404);
+  });
+
   it("pages newest first with total and hasMore", async () => {
     const first = await admin(
       request(app).get("/api/v1/admin/logging/files/fixture.log/entries?limit=2")

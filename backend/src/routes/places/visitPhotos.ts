@@ -26,6 +26,7 @@ import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream"
 import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
+import { startJob } from "../../services/jobs/jobRegistry";
 import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./visitPhotoDto";
 import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
@@ -325,17 +326,22 @@ router.post(
   immichImportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const outcome = await linkVisitPhotosToImmich(req.userId!);
-      if (outcome.kind === "notConfigured") {
+      const userId = req.userId!;
+      // Refused before any work starts, so "no Immich" is an answer, not a job.
+      if ((await getImmichConnection(userId)) === null) {
         res.status(409).json({ error: "notConfigured" });
         return;
       }
-      res.json({ success: true, data: { checked: outcome.checked, linked: outcome.linked } });
+      // A job, not a held request: one Immich search per photo outlasts the
+      // client's ten-second timeout, which would report a pass that went on
+      // and finished as "failed" (CLAUDE.md, defect class 3).
+      const job = startJob("placeVisitPhotos.immichLink", userId, async () => {
+        const outcome = await linkVisitPhotosToImmich(userId);
+        if (outcome.kind === "notConfigured") throw new AppError("notConfigured", 409);
+        return { checked: outcome.checked, linked: outcome.linked };
+      });
+      res.status(202).json({ success: true, data: { jobId: job.id } });
     } catch (error) {
-      if (error instanceof ImmichError) {
-        res.status(502).json({ error: error.kind });
-        return;
-      }
       next(error);
     }
   }

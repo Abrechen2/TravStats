@@ -1,5 +1,6 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
+import CatalogueReseed from "./CatalogueReseed";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import HelpIcon from "../Help/HelpIcon";
 import { AdminSubBlock } from "./AdminSubBlock";
@@ -164,6 +165,7 @@ export default function SystemInfo({
           {t("admin:systemInfo.exportDescription")}
         </p>
         <AirlineLogoRefreshButton />
+        <CatalogueReseed />
       </AdminSubBlock>
       {confirmDialog}
     </div>

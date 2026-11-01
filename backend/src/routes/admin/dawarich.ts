@@ -22,8 +22,11 @@ import {
 import { runDawarichCountryDaySweep } from "../../jobs/dawarichCountryDaySweepScheduler";
 import { testDawarichConnection } from "../../services/dawarich/dawarichTester";
 import { DawarichError, normalizeDawarichBaseUrl } from "../../services/dawarich/errors";
+import { findRunningJob, startJob } from "../../services/jobs/jobRegistry";
 import logger from "../../utils/logger";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
+
+const SWEEP_JOB = "dawarich.countryDaySweep" as const;
 
 const router = Router();
 
@@ -141,14 +144,23 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = dawarichCountryDaySweepSchema.parse(req.body ?? {});
-      const result = await runDawarichCountryDaySweep(body);
-
-      logger.info({
-        message: "dawarich_country_day_sweep_triggered",
-        context: { triggeredBy: req.userId, ...result },
+      // Two sweeps at once would fetch the same months twice from a machine
+      // TravStats does not own.
+      if (findRunningJob([SWEEP_JOB])) {
+        throw new AppError("A country-day sweep is already running", 409, "SWEEP_RUNNING");
+      }
+      // A job, not a held request: the sweep "may take minutes", far past the
+      // client's timeout, which would report a sweep that went on as failed.
+      const triggeredBy = req.userId!;
+      const job = startJob(SWEEP_JOB, triggeredBy, async () => {
+        const result = await runDawarichCountryDaySweep(body);
+        logger.info({
+          message: "dawarich_country_day_sweep_triggered",
+          context: { triggeredBy, ...result },
+        });
+        return result;
       });
-
-      res.json(result);
+      res.status(202).json({ jobId: job.id });
     } catch (error) {
       next(error);
     }

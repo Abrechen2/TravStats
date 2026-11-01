@@ -441,19 +441,20 @@ registry.registerPath({
     "matching them by name would be a guess. At most 500 per call.",
   tags: placesTag,
   responses: {
-    200: {
-      description: "How many copies were checked and linked",
+    202: {
+      description:
+        "Started as a background job; poll `GET /jobs/{id}`. The finished job's result is " +
+        "`{ checked, linked }`; a failure carries Immich's failure kind as its code.",
       content: {
         "application/json": {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ checked: z.number().int(), linked: z.number().int() }),
+            data: z.object({ jobId: z.string() }),
           }),
         },
       },
     },
     409: { description: "Immich is not configured for this user", content: errorContent },
-    502: { description: "Immich could not be asked", content: errorContent },
   },
 });
 

@@ -537,4 +537,13 @@ export type ApiErrorCode =
   | "CLIENT_REF_REUSED"
   /** A repeat create whose key made a row that has been deleted since (410):
    *  nothing is re-created. `extra.kind`, `extra.entityId` name it. */
-  | "CLIENT_REF_TARGET_GONE";
+  | "CLIENT_REF_TARGET_GONE"
+  /** Enriching one flight from reference flights (forgejo#397, `POST /flights/:id/enrich-historical`):
+   *  the user's switch is off (400), the flight has no number (400), no live-tracked
+   *  reference flights exist (404), or the confidence is under the user's minimum (400). */
+  | "ENRICH_DISABLED"
+  | "ENRICH_NO_FLIGHT_NUMBER"
+  | "ENRICH_NO_REFERENCE"
+  | "ENRICH_CONFIDENCE_LOW"
+  /** The admin country-day sweep is already running (forgejo#397, 409). */
+  | "SWEEP_RUNNING";
