@@ -106,17 +106,21 @@ export default function CommunityExportPanel({
       return;
     }
     // Too long for a link: the JSON goes to the clipboard, the form opens empty.
+    // The tab opens first, inside the click: after an await the browser may
+    // no longer count it as the user's own action and block the popup.
+    const clipboard = window.isSecureContext ? navigator.clipboard : undefined;
+    const writing = clipboard?.writeText
+      ? clipboard.writeText(issue.fields.template_json)
+      : Promise.reject(new Error("clipboard unavailable"));
+    window.open(issue.urlWithoutJson, "_blank", "noopener,noreferrer");
     let copied = false;
     try {
-      if (window.isSecureContext && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(issue.fields.template_json);
-        copied = true;
-      }
+      await writing;
+      copied = true;
     } catch (error) {
       logger.error({ error }, "CommunityExportPanel: clipboard unavailable");
     }
     setCopy(copied ? "copied" : "manual");
-    window.open(issue.urlWithoutJson, "_blank", "noopener,noreferrer");
   };
 
   const saveFile = (): void => {

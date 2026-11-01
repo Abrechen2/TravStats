@@ -381,6 +381,8 @@
   "handoff": {
     "link": "Not recognised? Create a template for it",
     "hint": "Opens the workshop with this document.",
-    "textName": "pasted-text.txt"
+    "textName": "pasted-text.txt",
+    "failed": "\"{{name}}\" could not be uploaded.",
+    "retry": "Try again"
   }
 }

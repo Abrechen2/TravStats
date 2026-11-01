@@ -58,7 +58,7 @@ export default function ParserPage(): JSX.Element {
   /** The domain the annotation is FOR — the classifier's answer until the
    *  user corrects it (forgejo#124 phase 6). */
   const [domain, setDomain] = useState<WorkshopDomain>("flight");
-  const handleFileUpload = async (file: File, type: TrainingUploadType): Promise<void> => {
+  const handleFileUpload = async (file: File, type: TrainingUploadType): Promise<boolean> => {
     try {
       const result = await trainingApi.upload(file, type);
       // A boarding pass is a flight by construction; only mail is classified,
@@ -66,6 +66,7 @@ export default function ParserPage(): JSX.Element {
       const detected = result.domain ?? "flight";
       setUploadedFile({ id: result.id, type: result.type, detected });
       setDomain(detected);
+      return true;
     } catch (error) {
       logger.error({ err: error }, "ParserPage: upload failed");
       // A screenshot the OCR could not read says so in the reader's language;
@@ -77,12 +78,19 @@ export default function ParserPage(): JSX.Element {
           ? t(`parser:annotate.uploadErrors.${code}`)
           : t("parser:annotate.uploadError")
       );
+      return false;
     }
   };
 
   // "Not recognised? Create a template for it" lands here with the document
   // already in hand (forgejo#330): upload it once, then drop the router state
   // so a reload does not upload it a second time.
+  /** A handed-over document whose upload failed: kept so it can be tried again. */
+  const [failedHandoff, setFailedHandoff] = useState<File | null>(null);
+  const startHandedOver = async (file: File): Promise<void> => {
+    setFailedHandoff(null);
+    if (!(await handleFileUpload(file, uploadTypeOf(file)))) setFailedHandoff(file);
+  };
   const location = useLocation();
   const navigate = useNavigate();
   const handedOver = useRef<File | null>(null);
@@ -92,7 +100,7 @@ export default function ParserPage(): JSX.Element {
     handedOver.current = document_;
     setActiveTab("annotate");
     navigate(location.pathname, { replace: true, state: null });
-    void handleFileUpload(document_, uploadTypeOf(document_));
+    void startHandedOver(document_);
   }, [location.state]);
 
   /**
@@ -184,6 +192,28 @@ export default function ParserPage(): JSX.Element {
               style={{ color: "var(--ts-muted)" }}
             >
               {t("parser:workshop.dismiss")}
+            </button>
+          </div>
+        )}
+
+        {failedHandoff && activeTab === "annotate" && !uploadedFile && (
+          <div
+            role="alert"
+            className="mb-6 flex items-center justify-between gap-4 p-4 text-sm"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+              color: "var(--warning)",
+            }}
+          >
+            <span>{t("parser:handoff.failed", { name: failedHandoff.name })}</span>
+            <button
+              type="button"
+              className="btn-secondary text-xs px-3 py-1.5"
+              onClick={() => void startHandedOver(failedHandoff)}
+            >
+              {t("parser:handoff.retry")}
             </button>
           </div>
         )}

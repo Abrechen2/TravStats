@@ -381,6 +381,8 @@
   "handoff": {
     "link": "Nicht erkannt? Vorlage dafür anlegen",
     "hint": "Öffnet die Werkstatt mit diesem Dokument.",
-    "textName": "eingefuegter-text.txt"
+    "textName": "eingefuegter-text.txt",
+    "failed": "„{{name}}“ konnte nicht hochgeladen werden.",
+    "retry": "Erneut versuchen"
   }
 }

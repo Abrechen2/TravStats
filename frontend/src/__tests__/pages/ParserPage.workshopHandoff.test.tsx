@@ -145,6 +145,12 @@ describe("a document handed over from 'not recognised'", () => {
       expect(addToast).toHaveBeenCalledWith("error", "parser:annotate.uploadError")
     );
     expect(screen.getByText("parser:annotate.title")).toBeInTheDocument();
+    // The document is not lost: it can be tried again without picking it anew.
+    upload.mockResolvedValue({ id: "td-shot", type: "email", status: "pending", domain: "rail" });
+    fireEvent.click(await screen.findByRole("button", { name: "parser:handoff.retry" }));
+    await screen.findByLabelText("parser:workshop.domainTitle");
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "parser:handoff.retry" })).toBeNull();
   });
 
   it("ignores a location state that carries no file", () => {
