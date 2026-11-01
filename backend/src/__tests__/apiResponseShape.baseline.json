@@ -182,6 +182,7 @@
     "bus/stats.ts",
     "bus/tickets.ts",
     "calendarFeed.ts",
+    "checkinImport.ts",
     "comparison.ts",
     "cruises.ts",
     "cruises/facets.ts",

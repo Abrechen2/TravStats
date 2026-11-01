@@ -401,7 +401,7 @@ Goal: catch bugs both Gemini and I missed. Surface findings to user before merge
 ## 10 · Out of scope (deferred)
 
 - **OpenFlights / App in the Air / FlightAware first-class adapters** — Generic-CSV-Wizard covers their use cases; first-class adapters slot in as v1.5.x patches if real demand arises (and we get representative samples).
-- **Cruise-side equivalent importer** — needs `/cruises/batch` endpoint first; tracked under v2.
+- **Cruise-side equivalent importer** — no `/cruises/batch` endpoint was needed: cruises (and rail, bus, ferry, rental) import through the spreadsheet importer (`POST /xlsx-import`, `services/xlsxImport/`). Check-in app files (Träwelling, travelynx) go through `POST /checkin-import` (forgejo#401).
 - **Boot-time backfill of new AeroDataBox fields** — lazy via existing scheduler is sufficient; explicit "Bulk historical refresh" UI from 1.4 covers the manual case.
 - **Aircraft type / hull image rendering** — needs CC-BY-SA attribution UI which doesn't exist; defer.
 - **Block-time analytics dashboard** — depends on `runwayDepartureTime` / `runwayArrivalTime` populated; data lands in v1.5, UI in v2.

@@ -88,6 +88,7 @@ import "./countryFlags";
 import "./loginBackgrounds";
 import "./externalServices";
 import "./xlsxImport";
+import "./checkinImport";
 import "./settingsRouting";
 import "./documents";
 import "./notes";
