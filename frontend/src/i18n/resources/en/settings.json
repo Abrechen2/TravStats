@@ -523,26 +523,14 @@
   },
   "autoUpdate": {
     "title": "Live updates",
-    "description": "Fetches current data while a flight is under way. Anything it finds lands under “Pending updates” and is applied only after you confirm it — never automatically. Only flights already in your list are affected.",
     "viewPending": "View Pending Updates",
     "enabled": "Enable Automatic Updates",
     "requireApproval": "Require Approval",
     "expiryHours": "Expiry Time (hours)",
-    "expiryHoursDescription": "How long pending updates remain available before expiring",
-    "saved": "Auto-update settings saved successfully",
-    "saveFailed": "Failed to save auto-update settings",
     "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values."
   },
   "historicalEnrichment": {
     "title": "Fill in older flights",
-    "description": "Fills in older flights from live-tracked flights with the same number. Every suggestion is an estimate and is saved only after you confirm it.",
-    "enabled": "Enable historical flight data enrichment",
-    "minConfidence": "Min. Confidence (%)",
-    "minConfidenceDescription": "Only show suggestions with at least X% confidence",
-    "maxPerDay": "Max. per Day",
-    "maxPerDayDescription": "Maximum number of new suggestions per night",
-    "saved": "Enrichment settings saved successfully",
-    "saveFailed": "Failed to save enrichment settings",
     "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values.",
     "candidates": {
       "title": "Enrichment candidates",
@@ -986,7 +974,6 @@
   },
   "devices": {
     "title": "Companion app",
-    "description": "Connect the TravStats app on your phone. Scan the QR code in the app to pair the device — a device-bound token is created automatically.",
     "connectButton": "Pair a phone",
     "qrTitle": "Scan with the TravStats app",
     "qrHint": "Open the app → Settings → \"Connect device\" and scan this code.",
@@ -1024,7 +1011,6 @@
   },
   "apiTokens": {
     "title": "API keys",
-    "description": "Personal access tokens for AI agents, scripts, and external apps. To connect the TravStats app, use \"Devices\" instead. A token is shown exactly once at creation — never again.",
     "docsTitle": "API documentation",
     "docsBody": "Full endpoints, examples and schemas — try them interactively with your token.",
     "docsLink": "Open Swagger UI →",
@@ -1068,7 +1054,6 @@
   },
   "security": {
     "title": "Sign-in",
-    "description": "Protect your sign-in with a one-time code from an authenticator app. Entirely optional — without setup, nothing about your sign-in changes.",
     "enable": "Enable two-factor",
     "scanHint": "Scan the QR code with your authenticator app.",
     "manualHint": "If you cannot scan, enter this key by hand:",
@@ -1078,19 +1063,12 @@
     "setupFailed": "I couldn't start the setup.",
     "saveCodes": "Keep these recovery codes somewhere safe. They are shown this one time only and each works once.",
     "enabled": "Two-factor is on. {{count}} recovery codes left.",
-    "tokenWarning": "Note: API tokens bypass the second factor. Anyone holding a token gets in without a code — revoke tokens you no longer need under \"API Tokens\".",
     "regenerate": "Regenerate",
     "confirmRegenerate": "Regenerate codes",
-    "disable": "Disable two-factor",
     "confirmDisable": "Disable",
     "passwordLabel": "Password to confirm",
     "wrongPassword": "That password is not right.",
-    "sectionDescription": "How your sign-in is protected.",
-    "passwordTitle": "Password",
-    "passwordSub": "For signing in with your username",
     "passwordChange": "Change",
-    "twoFactorTitle": "Two-factor authentication",
-    "active": "Active",
     "statusFailed": "I couldn't check whether the second step is on.",
     "needsTwoFactor": "Needs two-step sign-in first.",
     "regenerateDialog": {
@@ -1104,7 +1082,6 @@
   "scopeHint": "Applies to your account only.",
   "passkeys": {
     "title": "Passkeys",
-    "description": "Sign in with a fingerprint, face, PIN or your password manager instead of a password. A passkey replaces both the password and the verification code, because the device already asks you to approve it.",
     "none": "No passkey registered yet.",
     "add": "Add",
     "nameLabel": "Name for this passkey",
@@ -1510,37 +1487,21 @@
     "open": "Open"
   },
   "views": {
-    "mapAppearance": {
-      "title": "Map appearance",
-      "description": "Colours, palettes, layers and labels are set where you see them: in the map panel. Jump there from here.",
-      "routes": {
-        "title": "Route colours and palettes",
-        "sub": "Colour flight and cruise routes by mode."
-      },
-      "lines": {
-        "title": "Show and hide routes on the map",
-        "sub": "Leave out the lines per area and show only airports, ports, stations and stops. The map panel saves it for your account."
-      },
-      "layers": {
-        "title": "Layers and labels",
-        "sub": "Which map layers and labels are visible."
-      }
+    "title": "Map, home & lists",
+    "map": {
+      "name": "Map look",
+      "sub": "Style, lines, labels",
+      "jump": "On the map"
     },
-    "dashboardAppearance": {
-      "title": "Dashboard",
-      "description": "Which areas the dashboard shows and in which map mode is chosen on the dashboard itself.",
-      "sections": {
-        "title": "Areas and map mode",
-        "sub": "Each area has its own mode; it is remembered for your account."
-      }
+    "start": {
+      "name": "Home page",
+      "sub": "Travel types and map mode",
+      "jump": "On the home page"
     },
-    "listAppearance": {
-      "title": "Lists",
-      "description": "Columns, sorting and page size of the lists are set in the list itself.",
-      "columns": {
-        "title": "Columns and page size",
-        "sub": "The flight list is the entry point; other areas have their own list."
-      }
+    "lists": {
+      "name": "Lists",
+      "sub": "Columns, sorting, page size",
+      "jump": "On each list"
     }
   },
   "area": {

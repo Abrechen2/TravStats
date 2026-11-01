@@ -3,80 +3,14 @@
 import type { RegistryPage } from "../types";
 
 export const CRUISE_PAGE: RegistryPage = {
-  ...{
-    id: "cruise",
-    group: "account",
-    de: "Kreuzfahrten",
-    en: "Cruises",
-    level: "standard",
-    audience: "all",
-    domain: "cruise",
-    demoLocked: false,
-  },
+  ...{"id":"cruise","group":"account","de":"Kreuzfahrten","en":"Cruises","level":"standard","audience":"all","domain":"cruise","demoLocked":false},
   sections: [
-    {
-      id: "cruisePreferences",
-      de: "Neue Kreuzfahrten starten mit",
-      en: "New cruises start with",
-      level: "standard",
-      scope: "account",
-      audience: "all",
-      demoLocked: false,
-      rows: [
-        {
-          id: "klinie",
-          kind: "input",
-          level: "standard",
-          scope: "account",
-          audience: "all",
-          domain: "cruise",
-          demoLocked: false,
-          de: "Reederei",
-          en: "Cruise line",
-          terms: { de: "", en: "" },
-        },
-        {
-          id: "kkabine",
-          kind: "select",
-          level: "standard",
-          scope: "account",
-          audience: "all",
-          domain: "cruise",
-          demoLocked: false,
-          de: "Kabine",
-          en: "Cabin",
-          terms: {
-            de: "keine Innen Meerblick Balkon Suite",
-            en: "none Inside Ocean view Balcony Suite",
-          },
-        },
-      ],
-    },
-    {
-      id: "counting",
-      de: "Zählen",
-      en: "Counting",
-      level: "standard",
-      scope: "account",
-      audience: "all",
-      demoLocked: false,
-      rows: [
-        {
-          id: "seetage",
-          kind: "toggle",
-          level: "standard",
-          scope: "account",
-          audience: "all",
-          domain: "cruise",
-          demoLocked: false,
-          de: "Seetage als Reisetage",
-          en: "Sea days count as travel days",
-          terms: {
-            de: "Die Zahl der Seetage bleibt sichtbar.",
-            en: "The number of sea days stays visible.",
-          },
-        },
-      ],
-    },
+      {"id":"cruisePreferences","de":"Neue Kreuzfahrten starten mit","en":"New cruises start with","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"klinie","kind":"input","level":"standard","scope":"account","audience":"all","domain":"cruise","demoLocked":false,"de":"Reederei","en":"Cruise line","terms":{"de":"","en":""}},
+        {"id":"kkabine","kind":"select","level":"standard","scope":"account","audience":"all","domain":"cruise","demoLocked":false,"de":"Kabine","en":"Cabin","terms":{"de":"keine Innen Meerblick Balkon Suite","en":"none Inside Ocean view Balcony Suite"}},
+      ]},
+      {"id":"counting","de":"Zählen","en":"Counting","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"seetage","kind":"toggle","level":"standard","scope":"account","audience":"all","domain":"cruise","demoLocked":false,"de":"Seetage als Reisetage","en":"Sea days count as travel days","terms":{"de":"Die Zahl der Seetage bleibt sichtbar.","en":"The number of sea days stays visible."}},
+      ]},
   ],
 };

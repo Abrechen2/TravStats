@@ -65,8 +65,6 @@ export type SettingsSectionId =
   | "import"
   | "externalServices"
   | "mapAppearance"
-  | "dashboardAppearance"
-  | "listAppearance"
   | "comparisonConsent"
   | "encryptedGrants";
 
@@ -115,7 +113,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: "views",
     labelKey: "settings:groups.views",
     icon: "layers",
-    sections: [section("mapAppearance"), section("dashboardAppearance"), section("listAppearance")],
+    sections: [section("mapAppearance")],
   },
   {
     // Trips are no domain, so this page never hides (owner, 2026-08-23).

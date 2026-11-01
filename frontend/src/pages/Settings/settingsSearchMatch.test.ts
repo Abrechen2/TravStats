@@ -148,7 +148,7 @@ describe("settings search — routes on the map (Ansichten)", () => {
     const { default: copy } = await import(`../../i18n/resources/${lang}/settings.json`);
     const candidate: SettingsSearchCandidate = {
       section: "mapAppearance",
-      label: copy.views.mapAppearance.title,
+      label: copy.views.title,
       groupLabel: "Ansichten",
       href: "/settings/views?section=mapAppearance",
       keywords: splitKeywords(copy.search.keywords.mapAppearance),

@@ -1,6 +1,5 @@
 import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
-import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../lib/mapRoutes";
-import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -62,7 +61,6 @@ export default function SettingsSectionSwitch({
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
-  const { isEnabled } = useEnabledDomains();
 
   switch (section) {
     case "profile":
@@ -196,30 +194,8 @@ export default function SettingsSectionSwitch({
     case "loyalty":
       return <LoyaltySection />;
     case "mapAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.mapAppearance"
-          links={[
-            { id: "routes", to: `/dashboard?${MAP_PANEL_PARAM}=${MAP_PANEL_ROUTES}` },
-            { id: "lines", to: "/dashboard" },
-            { id: "layers", to: "/dashboard" },
-          ]}
-        />
-      );
-    case "dashboardAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.dashboardAppearance"
-          links={[{ id: "sections", to: "/dashboard" }]}
-        />
-      );
-    case "listAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.listAppearance"
-          links={[{ id: "columns", to: isEnabled("flight") ? "/flights" : "/dashboard" }]}
-        />
-      );
+      // Map look, home page and lists: one section, three jump rows.
+      return <ViewsJumpCard />;
     case "comparisonConsent":
       return (
         <ContextLinksCard

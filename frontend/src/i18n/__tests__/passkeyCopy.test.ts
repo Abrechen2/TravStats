@@ -19,7 +19,6 @@ describe("passkey copy exists in both languages", () => {
   it("covers every label the passkey section asks for", () => {
     for (const key of [
       "title",
-      "description",
       "none",
       "add",
       "nameLabel",
@@ -49,7 +48,7 @@ describe("passkey copy exists in both languages", () => {
   // The insecure-origin text is the one a self-hoster on a LAN IP will actually
   // hit, so it has to name the cause rather than just say "not available".
   it("explains the HTTPS requirement rather than shrugging", () => {
-    expect(deSettings.passkeys.insecureOrigin).toMatch(/HTTPS/);
-    expect(enSettings.passkeys.insecureOrigin).toMatch(/HTTPS/);
+    expect(deSettings.passkeys.insecureOrigin).toMatch(/https/i);
+    expect(enSettings.passkeys.insecureOrigin).toMatch(/https/i);
   });
 });

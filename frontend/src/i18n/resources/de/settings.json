@@ -523,26 +523,14 @@
   },
   "autoUpdate": {
     "title": "Live-Updates",
-    "description": "Ruft während aktiver Flüge regelmäßig aktuelle Daten ab. Gefundene Änderungen landen unter „Ausstehende Updates“ und werden erst nach deiner Bestätigung übernommen — nie automatisch. Betrifft nur Flüge, die bereits in deiner Liste stehen.",
     "viewPending": "Ausstehende Updates anzeigen",
     "enabled": "Automatische Updates aktivieren",
     "requireApproval": "Bestätigung erforderlich",
     "expiryHours": "Ablaufzeit (Stunden)",
-    "expiryHoursDescription": "Wie lange ausstehende Updates verfügbar bleiben, bevor sie ablaufen",
-    "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
-    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen",
     "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
   },
   "historicalEnrichment": {
     "title": "Ältere Flüge ergänzen",
-    "description": "Ergänzt ältere Flüge aus live getrackten Flügen derselben Flugnummer. Alle Vorschläge sind Schätzungen und werden erst nach deiner Bestätigung gespeichert.",
-    "enabled": "Historische Flugdaten-Anreicherung aktivieren",
-    "minConfidence": "Min. Konfidenz (%)",
-    "minConfidenceDescription": "Nur Vorschläge mit mindestens X% Konfidenz anzeigen",
-    "maxPerDay": "Max. pro Tag",
-    "maxPerDayDescription": "Maximale Anzahl neuer Vorschläge pro Nacht",
-    "saved": "Anreicherungs-Einstellungen gespeichert",
-    "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen",
     "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden.",
     "candidates": {
       "title": "Kandidaten zum Anreichern",
@@ -986,7 +974,6 @@
   },
   "devices": {
     "title": "Companion-App",
-    "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
     "connectButton": "Telefon koppeln",
     "qrTitle": "Mit der TravStats-App scannen",
     "qrHint": "App öffnen → Einstellungen → „Gerät verbinden\" und diesen Code scannen.",
@@ -1024,7 +1011,6 @@
   },
   "apiTokens": {
     "title": "API-Schlüssel",
-    "description": "Persönliche Zugriffstokens für KI-Agenten, Skripte und externe Apps. Zum Verbinden der TravStats-App nutze stattdessen „Geräte\". Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
     "docsTitle": "API-Dokumentation",
     "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
     "docsLink": "Swagger UI öffnen →",
@@ -1068,7 +1054,6 @@
   },
   "security": {
     "title": "Anmeldung",
-    "description": "Schütze die Anmeldung zusätzlich mit einem Einmalcode aus einer Authenticator-App. Freiwillig — ohne Einrichtung ändert sich an deiner Anmeldung nichts.",
     "enable": "Zwei-Faktor aktivieren",
     "scanHint": "Scanne den QR-Code mit deiner Authenticator-App.",
     "manualHint": "Falls du nicht scannen kannst, gib diesen Schlüssel von Hand ein:",
@@ -1078,33 +1063,25 @@
     "setupFailed": "Ich konnte die Einrichtung nicht starten.",
     "saveCodes": "Bewahre diese Wiederherstellungscodes sicher auf. Die Anzeige erfolgt nur dieses eine Mal, und jeder Code funktioniert genau einmal.",
     "enabled": "Zwei-Faktor ist aktiv. Noch {{count}} Wiederherstellungscodes übrig.",
-    "tokenWarning": "Hinweis: API-Tokens umgehen den zweiten Faktor. Wer ein Token besitzt, kommt ohne Code hinein — widerrufe nicht mehr benötigte Tokens unter „API-Tokens\".",
     "regenerate": "Neu erzeugen",
     "confirmRegenerate": "Codes neu erzeugen",
-    "disable": "Zwei-Faktor deaktivieren",
     "confirmDisable": "Deaktivieren",
     "passwordLabel": "Passwort zur Bestätigung",
     "wrongPassword": "Das Passwort stimmt nicht.",
-    "sectionDescription": "Wie deine Anmeldung geschützt ist.",
-    "passwordTitle": "Passwort",
-    "passwordSub": "Für die Anmeldung mit deinem Benutzernamen",
     "passwordChange": "Ändern",
-    "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
-    "active": "Aktiv",
     "statusFailed": "Ich konnte nicht nachsehen, ob der zweite Faktor an ist.",
     "needsTwoFactor": "Erst mit zweitem Faktor.",
     "regenerateDialog": {
       "title": "Neue Ersatzcodes?",
       "affects": "Deine bisherigen Ersatzcodes",
       "amount": "{{count}} unbenutzte Codes",
-      "after": "Sie gelten nicht mehr. Die neuen zeige ich dir nur einmal.",
+      "after": "Die alten gelten dann nicht mehr. Die neuen zeige ich dir nur einmal.",
       "confirm": "Neu erzeugen"
     }
   },
   "scopeHint": "Gilt nur für dein Konto.",
   "passkeys": {
     "title": "Passkeys",
-    "description": "Melde dich mit Fingerabdruck, Gesichtserkennung, PIN oder deinem Passwortmanager an — statt mit dem Passwort. Ein Passkey ersetzt beides: Passwort und Bestätigungscode, weil das Gerät die Freigabe schon selbst abfragt.",
     "none": "Noch kein Passkey hinterlegt.",
     "add": "Hinzufügen",
     "nameLabel": "Name für diesen Passkey",
@@ -1510,37 +1487,21 @@
     "open": "Öffnen"
   },
   "views": {
-    "mapAppearance": {
-      "title": "Kartenaussehen",
-      "description": "Farben, Paletten, Ebenen und Beschriftungen stellst du dort ein, wo du sie siehst: im Bedienfeld der Karte. Von hier springst du hin.",
-      "routes": {
-        "title": "Routenfarben und Paletten",
-        "sub": "Flug- und Kreuzfahrtrouten nach Modus einfärben."
-      },
-      "lines": {
-        "title": "Routen auf der Karte ein- und ausblenden",
-        "sub": "Pro Bereich die Linien weglassen und nur Flughäfen, Häfen, Bahnhöfe und Haltestellen zeigen. Das Bedienfeld der Karte speichert es für dein Konto."
-      },
-      "layers": {
-        "title": "Ebenen und Beschriftungen",
-        "sub": "Welche Kartenebenen und Beschriftungen sichtbar sind."
-      }
+    "title": "Karte, Start & Listen",
+    "map": {
+      "name": "Kartendarstellung",
+      "sub": "Stil, Linien, Beschriftungen",
+      "jump": "An der Karte"
     },
-    "dashboardAppearance": {
-      "title": "Dashboard",
-      "description": "Welche Bereiche das Dashboard zeigt und in welchem Kartenmodus, wählst du auf dem Dashboard selbst.",
-      "sections": {
-        "title": "Bereiche und Kartenmodus",
-        "sub": "Pro Bereich eigener Modus; er wird für dein Konto gemerkt."
-      }
+    "start": {
+      "name": "Startseite",
+      "sub": "Reisearten und Kartenart",
+      "jump": "Auf der Startseite"
     },
-    "listAppearance": {
-      "title": "Listen",
-      "description": "Spalten, Sortierung und Seitengröße der Listen stellst du in der Liste selbst ein.",
-      "columns": {
-        "title": "Spalten und Seitengröße",
-        "sub": "Die Flugliste ist der Einstieg; andere Bereiche haben ihre eigene Liste."
-      }
+    "lists": {
+      "name": "Listen",
+      "sub": "Spalten, Sortierung, Seitengröße",
+      "jump": "An jeder Liste"
     }
   },
   "area": {

@@ -44,7 +44,6 @@ describe("two-factor copy exists in both languages", () => {
   it("covers every label the settings section asks for", () => {
     for (const key of [
       "title",
-      "description",
       "enable",
       "scanHint",
       "manualHint",
@@ -54,10 +53,8 @@ describe("two-factor copy exists in both languages", () => {
       "setupFailed",
       "saveCodes",
       "enabled",
-      "tokenWarning",
       "regenerate",
       "confirmRegenerate",
-      "disable",
       "confirmDisable",
       "passwordLabel",
       "wrongPassword",
@@ -75,7 +72,7 @@ describe("two-factor copy exists in both languages", () => {
   });
 
   it("states the PAT bypass rather than hiding it", () => {
-    expect(deSettings.security.tokenWarning).toMatch(/API-Tokens/);
-    expect(enSettings.security.tokenWarning).toMatch(/API tokens/);
+    expect(deSettings.rows.twoFactor.help).toMatch(/API-Schlüssel umgehen den zweiten Faktor/);
+    expect(enSettings.rows.twoFactor.help).toMatch(/API keys bypass the second step/);
   });
 });

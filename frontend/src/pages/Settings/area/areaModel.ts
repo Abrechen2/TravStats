@@ -186,8 +186,6 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("display", { as: "language" }),
     P("units"),
     P("mapAppearance", { as: "views", anchors: [] }),
-    P("dashboardAppearance"),
-    P("listAppearance"),
   ]),
   page("domains", "layers", [P("domains"), P("planning"), P("countryCounting")]),
   page(

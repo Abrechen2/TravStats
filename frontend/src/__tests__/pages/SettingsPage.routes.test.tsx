@@ -102,6 +102,16 @@ vi.mock("../../components/Settings/AboutSection", () => ({
   default: () => <section>about</section>,
 }));
 
+vi.mock("@/lib/api/stats", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/stats")>();
+  return {
+    ...actual,
+    statsApi: {
+      ...actual.statsApi,
+      getPassport: vi.fn().mockResolvedValue({ summary: { countries: 0, countriesTotal: 0 } }),
+    },
+  };
+});
 vi.mock("@/lib/api/flights", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/flights")>();
   return {
