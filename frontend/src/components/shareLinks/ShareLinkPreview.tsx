@@ -107,6 +107,58 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
             (trip.notes.truncated ? ` (${t(`${NS}.view.moreNotes`)})` : ""),
       ]);
     }
+  } else if (view.kind === "cruise") {
+    const c = view.cruise;
+    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
+    const day = (d: { date: string } | null) => (d ? format.localDate(d.date) : null);
+    if (c.owner !== undefined) rows.push([label("cruise", "owner"), c.owner ?? none]);
+    if (c.ship) {
+      rows.push([entry("ship"), c.ship.name ?? none]);
+      if (c.ship.line) rows.push([entry("cruiseLine"), c.ship.line]);
+    }
+    if (c.dates) {
+      rows.push([
+        label("cruise", "dates"),
+        [day(c.dates.start), day(c.dates.end)].filter(Boolean).join(" – ") || none,
+      ]);
+    }
+    if (c.ports) {
+      rows.push([
+        entry("ports"),
+        c.ports.map((p) => (p.atSea ? entry("seaDay") : (p.name ?? "?"))).join(", ") || none,
+      ]);
+    }
+  } else if (view.kind === "stay") {
+    const s = view.stay;
+    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
+    const day = (d: { date: string } | null) => (d ? format.localDate(d.date) : none);
+    if (s.owner !== undefined) rows.push([label("stay", "owner"), s.owner ?? none]);
+    if (s.name !== undefined) rows.push([label("stay", "name"), s.name]);
+    if (s.location) {
+      rows.push([
+        entry("address"),
+        [s.location.address, s.location.city, s.location.country].filter(Boolean).join(", ") ||
+          none,
+      ]);
+    }
+    if (s.dates) {
+      rows.push([entry("checkIn"), day(s.dates.checkIn)]);
+      rows.push([entry("checkOut"), day(s.dates.checkOut)]);
+    }
+  } else if (view.kind === "visit") {
+    const v = view.visit;
+    const entry = (key: string) => t(`${NS}.view.entry.${key}`);
+    if (v.owner !== undefined) rows.push([label("visit", "owner"), v.owner ?? none]);
+    if (v.place) {
+      rows.push([
+        label("visit", "place"),
+        [v.place.name, v.place.city, v.place.country].filter(Boolean).join(", "),
+      ]);
+    }
+    if (v.date !== undefined) rows.push([entry("when"), v.date ? format.timeValue(v.date) : none]);
+    if (v.rating !== undefined) {
+      rows.push([entry("rating"), v.rating ? `${v.rating} ${entry("ofFive")}` : none]);
+    }
   } else {
     const w = view.wrapped;
     rows.push([t(`${NS}.view.year`, { year: w.year }), ""]);

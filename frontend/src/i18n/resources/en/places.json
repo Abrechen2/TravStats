@@ -100,7 +100,8 @@
     "countryVisit": "Visit beyond a transit stop",
     "countryTransit": "Transit / airport / rest area only",
     "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this.",
-    "countryTransitByCategory": "A service area or fuel station always counts as ground presence, never as a visit of the country. If you really visited something there, change the category."
+    "countryTransitByCategory": "A service area or fuel station always counts as ground presence, never as a visit of the country. If you really visited something there, change the category.",
+    "tags": "Tags"
   },
   "detail": {
     "backToList": "Back to the list",
@@ -782,7 +783,13 @@
     "photoRetry": "Upload photos again",
     "continueWithoutPhoto": "Continue without photos",
     "recorded": "Visit to “{{name}}” recorded.",
-    "photosTooMany": "at most {{max}} photos"
+    "photosTooMany": "at most {{max}} photos",
+    "rating": {
+      "label": "Rating (optional)",
+      "set_one": "1 star",
+      "set_other": "{{count}} stars",
+      "clear": "Remove rating"
+    }
   },
   "merge": {
     "action": "Merge a duplicate",

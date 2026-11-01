@@ -43,6 +43,7 @@ export interface UpdateTourRouteInput {
   mode?: LegMode;
   color?: string | null;
   notes?: string | null;
+  tags?: string[];
   startOdometerKm?: number | null;
   endOdometerKm?: number | null;
   /** Kind-specific fields (2.7) — see `kindFieldsSchema` on the server. */

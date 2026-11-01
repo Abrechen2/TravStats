@@ -104,7 +104,8 @@
     "survivorChain": "Kette „{{name}}“",
     "deletePhotosNote_one": "Dazu 1 Foto der Unterkunft, das mit gelöscht wird.",
     "deletePhotosNote_other": "Dazu {{count}} Fotos der Unterkunft, die mit gelöscht werden.",
-    "survivorTripsUnnamed": "verknüpfte Reisen"
+    "survivorTripsUnnamed": "verknüpfte Reisen",
+    "stayDocuments": "Unterlagen · {{period}}"
   },
   "nightPrice": {
     "roomRate": "Zimmer pro Nacht",
@@ -172,7 +173,8 @@
     "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
     "website": "Webseite",
     "amenitySuggestions": "Deine Ausstattung",
-    "removeAmenity": "{{name}} entfernen"
+    "removeAmenity": "{{name}} entfernen",
+    "tags": "Tags"
   },
   "type": {
     "hotel": "Hotel",

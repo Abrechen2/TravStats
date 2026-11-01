@@ -1,3 +1,4 @@
+import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import type { JSX } from "react";
 
 import DocumentsSection from "../documents/DocumentsSection";
@@ -190,6 +191,10 @@ export function PlaceVisitRow({
             layout="inline"
             onChanged={onChanged}
           />
+          {/* A visit that has not happened can be shared too: "wir treffen uns hier". */}
+          <div>
+            <ShareLinkButton kind="visit" targetId={visit.id} variant="link" />
+          </div>
         </div>
       )}
     </li>

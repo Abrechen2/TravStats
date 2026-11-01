@@ -25,6 +25,7 @@ import {
   type PlaceCategory,
 } from "../../shared/placeCategories";
 import type { Place } from "../../types/place";
+import TagInput from "../TagInput";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -119,6 +120,7 @@ export function PlaceFormModal({
     if (known?.country) setCountry((prev) => (prev.trim() === "" ? (known.country ?? prev) : prev));
   };
   const [notes, setNotes] = useState(initial.notes);
+  const [tags, setTags] = useState<string[]>(initial.tags);
   const [visited, setVisited] = useState(initial.visited);
   const [countryVisitKind, setCountryVisitKind] = useState<"visit" | "transit">(
     initial.countryVisitKind ?? "visit"
@@ -190,6 +192,7 @@ export function PlaceFormModal({
     city,
     country,
     notes,
+    tags,
     visited,
     countryVisitKind,
     externalRef,
@@ -567,6 +570,15 @@ export function PlaceFormModal({
           >
             {t("places:form.statusHint")}
           </p>
+
+          <Field id="place-form-tags" label={t("places:form.tags")}>
+            <TagInput
+              id="place-form-tags"
+              value={tags}
+              onChange={setTags}
+              className={INPUT_CLASS}
+            />
+          </Field>
 
           <Field id="place-form-notes" label={t("places:form.notes")}>
             <textarea

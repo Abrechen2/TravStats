@@ -1061,7 +1061,19 @@
       "ferryDesc": "{{km}} km by ferry",
       "ferryNoKm": "distance not recorded",
       "ferryUnmeasured_one": "{{count}} crossing without a distance",
-      "ferryUnmeasured_other": "{{count}} crossings without a distance"
+      "ferryUnmeasured_other": "{{count}} crossings without a distance",
+      "roadtripsKm": "{{km}} km driven",
+      "roadtripsNoKm": "distance not recorded",
+      "roadtripsKmUnmeasured_one": "{{count}} roadtrip without a distance",
+      "roadtripsKmUnmeasured_other": "{{count}} roadtrips without a distance",
+      "roadtripsNights_one": "{{count}} night on the road",
+      "roadtripsNights_other": "{{count}} nights on the road",
+      "roadtripsNightsUnknown_one": "{{count}} roadtrip with unknown nights",
+      "roadtripsNightsUnknown_other": "{{count}} roadtrips with unknown nights",
+      "toursKm": "{{km}} km on tour",
+      "toursNoKm": "distance not recorded",
+      "toursKmUnmeasured_one": "{{count}} tour without a distance",
+      "toursKmUnmeasured_other": "{{count}} tours without a distance"
     },
     "help": {
       "stays": {

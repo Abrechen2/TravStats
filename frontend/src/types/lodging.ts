@@ -166,6 +166,8 @@ export interface Lodging {
   /** Wikidata item of the house, set by the OpenStreetMap enrichment. */
   wikidataId?: string | null;
   amenities: string[];
+  /** Free-form labels (forgejo#405). Absent on older backends. */
+  tags?: string[];
   notes: string | null;
   /**
    * Has the user been here, or is the house only noted down? A saved-places
@@ -212,6 +214,7 @@ export interface LodgingInput {
   /** Empty string or null clears it. */
   website?: string | null;
   amenities?: string[];
+  tags?: string[];
   notes?: string | null;
   /** The OSM house a "nearby" pick named ("osm:node/1"); the server stores it
    *  only while the lodging has no reference yet. */

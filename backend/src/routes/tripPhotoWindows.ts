@@ -11,12 +11,13 @@ import {
   flightTripPhotos,
   lodgingTripPhotos,
   railTripPhotos,
+  rentalTripPhotos,
   type WindowResult,
 } from "../services/photos/tripPhotoWindows";
 
 /**
- * Read-only trip photographs on a stay, a flight, a cruise, a train or bus ride
- * and a ferry crossing
+ * Read-only trip photographs on a stay, a flight, a cruise, a train or bus ride,
+ * a ferry crossing and a rental
  * (package 9, item 4) — found by when and where they were taken, see the service.
  *
  * Mounted on `/api/v1`, so middleware is PER ROUTE: a `router.use` here would
@@ -83,6 +84,14 @@ router.get(
   authenticate,
   statsLimiter,
   windowRoute(ferryTripPhotos, "Ferry journey not found")
+);
+
+// Like the bus and ferry endpoints: answers whatever the rental switch says.
+router.get(
+  "/rentals/:id/trip-photos",
+  authenticate,
+  statsLimiter,
+  windowRoute(rentalTripPhotos, "Rental not found")
 );
 
 export default router;

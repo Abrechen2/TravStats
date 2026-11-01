@@ -419,6 +419,7 @@ async function createPlace(
         isoCountryCode: resolveCountryCode(country),
         externalRef: input.externalRef ?? null,
         notes: input.notes ?? null,
+        tags: input.tags ?? [],
         visited: input.visited,
         countryVisitKind: input.countryVisitKind,
         dataSource: "manual",
@@ -466,6 +467,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (input.address !== undefined) data.address = input.address;
     if (input.city !== undefined) data.city = input.city;
     if (input.notes !== undefined) data.notes = input.notes;
+    if (input.tags !== undefined) data.tags = input.tags;
     if (input.visited !== undefined) data.visited = input.visited;
     if (input.countryVisitKind !== undefined) data.countryVisitKind = input.countryVisitKind;
     if (input.externalRef !== undefined) {

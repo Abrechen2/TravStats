@@ -22,6 +22,7 @@ export const createRoadtripSchema = z.object({
   vehicleName: z.string().trim().min(1).max(120).nullish(),
   color: hexColor.optional(),
   notes: z.string().max(20000).optional(),
+  tags: z.array(z.string().trim().max(40)).max(30).optional(),
   startOdometerKm: odometer.optional(),
   endOdometerKm: odometer.optional(),
   tripId: z.string().uuid().nullish(),

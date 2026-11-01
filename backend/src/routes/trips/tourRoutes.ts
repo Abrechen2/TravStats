@@ -110,6 +110,7 @@ export function toDto(route: {
   orderIdx: number;
   color: string | null;
   notes: string | null;
+  tags: string[];
   startOdometerKm: number | null;
   endOdometerKm: number | null;
   kind: string;
@@ -131,6 +132,7 @@ export function toDto(route: {
     orderIdx: route.orderIdx,
     color: route.color,
     notes: route.notes,
+    tags: route.tags,
     startOdometerKm: route.startOdometerKm,
     endOdometerKm: route.endOdometerKm,
     kind: route.kind,
@@ -286,6 +288,7 @@ router.post(
           mode: body.mode,
           color: body.color,
           notes: body.notes,
+          tags: body.tags ?? [],
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
           orderIdx: last ? last.orderIdx + 1 : 0,

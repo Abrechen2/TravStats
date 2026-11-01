@@ -230,6 +230,14 @@ describe("LodgingDetailPage", () => {
     });
   });
 
+  // forgejo#405: lodging had no tags to show.
+  it("shows the house's tags as chips", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({ tags: ["work", "spa"] }));
+    renderDetailPage();
+    expect(await screen.findByText("#work")).toBeInTheDocument();
+    expect(screen.getByText("#spa")).toBeInTheDocument();
+  });
+
   it("renders the FX readout line when a stay has fxRate + totalPriceBase", async () => {
     getLodgingMock.mockResolvedValue(makeLodging());
 

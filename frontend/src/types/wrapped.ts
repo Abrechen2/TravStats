@@ -94,8 +94,20 @@ export interface WrappedTravTrack {
 export interface WrappedChapters {
   lodging: { stays: number; nights: number; nightsUnknown: number } | null;
   places: { visits: number; places: number } | null;
-  roadtrips: { roadtrips: number } | null;
-  tours: { tours: number } | null;
+  /**
+   * The figures after `roadtrips` are optional for a server older than
+   * forgejo#405. `km` is null when no roadtrip of the year has a leg; `nights`
+   * counts only the roadtrips whose nights are fully known, `nightsUnknown`
+   * the rest.
+   */
+  roadtrips: {
+    roadtrips: number;
+    km?: number | null;
+    unmeasured?: number;
+    nights?: number;
+    nightsUnknown?: number;
+  } | null;
+  tours: { tours: number; km?: number | null; unmeasured?: number } | null;
   rentals: { rentals: number; days: number } | null;
   /** `km` null when no ride has a distance — unknown, never 0. */
   bus: { rides: number; km: number | null; unmeasured?: number; nights: number } | null;

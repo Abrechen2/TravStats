@@ -108,7 +108,8 @@ ${SHARE_PAGE_ITINERARY_JS}
     ? {
         loading: "Wird geladen …", gone: "Dieser Link ist nicht (mehr) gültig.",
         slow: "Zu viele Anfragen – bitte einen Moment warten.", offline: "Keine Verbindung – zeigt den letzten Stand.",
-        validUntil: "Link gültig bis", flight: "Flug", trip: "Reise", year: "Jahresrückblick",
+        validUntil: "Link gültig bis", flight: "Flug", trip: "Reise", year: "Jahresrückblick", cruise: "Kreuzfahrt", stay: "Unterkunft", visit: "Besuch", address: "Adresse",
+        ship: "Schiff", cruiseLine: "Reederei", stayDates: "Aufenthalt", ports: "Häfen", seaDay: "Seetag", dayWord: "Tag", when: "Wann", rating: "Bewertung", ofFive: "von 5",
         from: "Von", to: "Nach", dep: "Abflug", arr: "Ankunft", local: "Ortszeit", eta: "Ankunft (voraussichtlich)",
         scheduled: "Geplant", inFlight: "In der Luft", landed: "Gelandet", cancelled: "Annulliert", unknown: "Status unbekannt",
         reported: "nach gemeldeten Zeiten", schedule: "nach Flugplan", aircraft: "Flugzeug",
@@ -121,7 +122,8 @@ ${SHARE_PAGE_ITINERARY_JS}
     : {
         loading: "Loading …", gone: "This link is not valid (any more).",
         slow: "Too many requests – please wait a moment.", offline: "No connection – showing the last state.",
-        validUntil: "Link valid until", flight: "Flight", trip: "Trip", year: "Year in review",
+        validUntil: "Link valid until", flight: "Flight", trip: "Trip", year: "Year in review", cruise: "Cruise", stay: "Stay", visit: "Visit", address: "Address",
+        ship: "Ship", cruiseLine: "Cruise line", stayDates: "Stay", ports: "Ports", seaDay: "At sea", dayWord: "Day", when: "When", rating: "Rating", ofFive: "of 5",
         from: "From", to: "To", dep: "Departure", arr: "Arrival", local: "local time", eta: "Arrival (expected)",
         scheduled: "Scheduled", inFlight: "In the air", landed: "Landed", cancelled: "Cancelled", unknown: "Status unknown",
         reported: "from reported times", schedule: "from the schedule", aircraft: "Aircraft",
@@ -269,6 +271,45 @@ ${SHARE_PAGE_ITINERARY_JS}
     if (t.itinerary) renderItinerary(t.itinerary);
   }
 
+  // Single entries (forgejo#405): a head card, the chosen rows, nothing else.
+  function entryHead(title, sub, owner) {
+    var head = el("div", "card");
+    head.appendChild(el("h1", null, title));
+    if (sub) head.appendChild(el("p", "sub", sub));
+    if (owner) row(head, T.sharedBy, owner);
+    root.appendChild(head);
+  }
+  function span(a, b) { return [a && fmt.day(a.date, a.precision), b && fmt.day(b.date, b.precision)].filter(Boolean).join(" – "); }
+  function renderCruise(c) {
+    entryHead((c.ship && (c.ship.name || c.ship.line)) || T.cruise, c.dates ? span(c.dates.start, c.dates.end) : "", c.owner);
+    if (c.ship && c.ship.name && c.ship.line) { var s = el("div", "card"); row(s, T.cruiseLine, c.ship.line); root.appendChild(s); }
+    if (c.ports && c.ports.length) {
+      var card = el("div", "card"); card.appendChild(el("p", "big", T.ports));
+      var ol = el("ol", "plan");
+      c.ports.forEach(function (p) {
+        ol.appendChild(el("li", null, T.dayWord + " " + p.dayNumber + (p.day ? " (" + fmt.day(p.day.date, p.day.precision) + ")" : "") + ": " + (p.atSea ? T.seaDay : (p.name || "?"))));
+      });
+      card.appendChild(ol); root.appendChild(card);
+    }
+  }
+  function renderStay(s) {
+    entryHead(s.name || T.stay, s.location ? [s.location.city, s.location.country].filter(Boolean).join(", ") : "", s.owner);
+    var card = el("div", "card");
+    if (s.location && s.location.address) row(card, T.address, s.location.address);
+    if (s.dates) {
+      if (s.dates.checkIn) row(card, T.checkIn, fmt.day(s.dates.checkIn.date, s.dates.checkIn.precision));
+      if (s.dates.checkOut) row(card, T.checkOut, fmt.day(s.dates.checkOut.date, s.dates.checkOut.precision));
+    }
+    if (card.firstChild) root.appendChild(card);
+  }
+  function renderVisit(v) {
+    entryHead(v.place ? v.place.name : T.visit, v.place ? [v.place.city, v.place.country].filter(Boolean).join(", ") : "", v.owner);
+    var card = el("div", "card");
+    if (v.date) row(card, T.when, clock(v.date));
+    if (v.rating) row(card, T.rating, v.rating + " " + T.ofFive);
+    if (card.firstChild) root.appendChild(card);
+  }
+
   function renderItinerary(it) {
     var card = el("div", "card"); card.appendChild(el("p", "big", T.itinerary));
     var entries = itineraryEntries(it, fmt, T);
@@ -322,6 +363,9 @@ ${SHARE_PAGE_ITINERARY_JS}
     if (v.kind === "flight") renderFlight(v.flight);
     else if (v.kind === "trip") renderTrip(v.trip);
     else if (v.kind === "wrapped") renderWrapped(v.wrapped);
+    else if (v.kind === "cruise") renderCruise(v.cruise);
+    else if (v.kind === "stay") renderStay(v.stay);
+    else if (v.kind === "visit") renderVisit(v.visit);
     root.appendChild(el("p", "note", T.validUntil + " " + fmt.instant(data.expiresAt)));
     return v.kind;
   }

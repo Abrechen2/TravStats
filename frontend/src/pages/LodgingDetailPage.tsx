@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TagChips from "../components/common/TagChips";
 import WikipediaCard from "../components/common/WikipediaCard";
 import LodgingEnrichButton from "../components/lodging/LodgingEnrichButton";
 import type { JSX, ReactNode } from "react";
@@ -14,6 +15,7 @@ import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
+import { LodgingStayDocuments } from "../components/lodging/LodgingStayDocuments";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { StayDeleteConfirm } from "../components/lodging/StayDeleteConfirm";
@@ -573,6 +575,12 @@ export default function LodgingDetailPage(): JSX.Element {
             </dl>
           </DetailSection>
 
+          {(lodging.tags ?? []).length > 0 && (
+            <DetailSection title={t("lodging:field.tags")}>
+              <TagChips tags={lodging.tags ?? []} />
+            </DetailSection>
+          )}
+
           {lodging.amenities.length > 0 && (
             <DetailSection title={t("lodging:field.amenities")}>
               <div className="flex flex-wrap gap-1.5">
@@ -590,6 +598,8 @@ export default function LodgingDetailPage(): JSX.Element {
           )}
 
           {id && <LodgingPhotoSection lodgingId={id} />}
+
+          <LodgingStayDocuments stays={lodging.stays} />
 
           {/* The notes, under the same name the form gives them. They were
               stored and never shown, so anything typed there disappeared on

@@ -252,3 +252,114 @@ describe("share page itinerary", () => {
     expect(SHARE_PAGE_ITINERARY_JS).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML/);
   });
 });
+
+/**
+ * forgejo#405: the page renders a single cruise, stay or visit. Run the real
+ * script against a minimal DOM and read back the text it wrote — a renderer
+ * that threw, or wrote a key the view does not carry, would show a blank page.
+ */
+class FakeNode {
+  children: FakeNode[] = [];
+  textContent = "";
+  className = "";
+  get firstChild(): FakeNode | undefined {
+    return this.children[0];
+  }
+  appendChild(child: FakeNode): FakeNode {
+    this.children.push(child);
+    return child;
+  }
+  removeChild(child: FakeNode): void {
+    this.children = this.children.filter((c) => c !== child);
+  }
+  setAttribute(): void {}
+  text(): string {
+    return [this.textContent, ...this.children.map((c) => c.text())].filter(Boolean).join("\n");
+  }
+}
+
+async function renderedText(view: unknown): Promise<string> {
+  const root = new FakeNode();
+  const context = {
+    navigator: { language: "de-DE" },
+    document: {
+      documentElement: {},
+      getElementById: () => root,
+      createElement: () => new FakeNode(),
+    },
+    location: { hash: "#token" },
+    fetch: () =>
+      Promise.resolve({
+        status: 200,
+        ok: true,
+        json: () => Promise.resolve({ data: { expiresAt: "2030-06-08T10:00:00.000Z", view } }),
+      }),
+    setInterval: () => 1,
+    clearInterval: () => {},
+    URL,
+    Intl,
+    decodeURIComponent,
+  };
+  new vm.Script(SHARE_PAGE_JS).runInNewContext(context);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return root.text();
+}
+
+const day = (date: string) => ({ date, precision: "day" });
+
+describe("share page single entries", () => {
+  it("writes a cruise's ship, dates and ports", async () => {
+    const text = await renderedText({
+      kind: "cruise",
+      cruise: {
+        owner: "Anna",
+        ship: { name: "Harbor Queen", line: "Circle Line" },
+        dates: { start: day("2030-06-07"), end: day("2030-06-08") },
+        ports: [
+          { dayNumber: 1, name: "Pier 83", atSea: false, day: day("2030-06-07") },
+          { dayNumber: 2, name: null, atSea: true, day: null },
+        ],
+      },
+    });
+    expect(text).toContain("Harbor Queen");
+    expect(text).toContain("Circle Line");
+    expect(text).toContain("Pier 83");
+    expect(text).toContain("Seetag");
+    expect(text).toContain("Anna");
+  });
+
+  it("writes a stay's name, address and nights, and nothing it was not sent", async () => {
+    const text = await renderedText({
+      kind: "stay",
+      stay: {
+        name: "Hotel Hudson View",
+        location: { address: "356 W 58th St", city: "New York", country: "US" },
+        dates: { checkIn: day("2030-06-01"), checkOut: day("2030-06-04") },
+      },
+    });
+    expect(text).toContain("Hotel Hudson View");
+    expect(text).toContain("356 W 58th St");
+    expect(text).toContain("Check-in");
+    const bare = await renderedText({ kind: "stay", stay: { name: "Hotel Hudson View" } });
+    expect(bare).not.toContain("356 W 58th St");
+  });
+
+  it("writes a visit's place, day and rating", async () => {
+    const text = await renderedText({
+      kind: "visit",
+      visit: {
+        place: { name: "Statue of Liberty", city: "New York", country: null },
+        date: {
+          utc: "2030-06-02T14:00:00.000Z",
+          local: "2030-06-02T10:00:00",
+          zone: "America/New_York",
+          offset: "-04:00",
+          precision: "minute",
+        },
+        rating: 4,
+      },
+    });
+    expect(text).toContain("Statue of Liberty");
+    expect(text).toContain("4 von 5");
+  });
+});

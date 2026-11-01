@@ -57,6 +57,38 @@ describe("WrappedChapterCards — bus kilometres", () => {
   });
 });
 
+// forgejo#405: roadtrips and tours state kilometres (and roadtrip nights) too.
+describe("WrappedChapterCards — roadtrip and tour kilometres", () => {
+  it("says the distance was not recorded instead of 0 km", () => {
+    draw({
+      ...NONE,
+      roadtrips: { roadtrips: 1, km: null, unmeasured: 1, nights: 0, nightsUnknown: 1 },
+      tours: { tours: 1, km: null, unmeasured: 1 },
+    });
+    expect(screen.getByText(/roadtripsNoKm/)).toBeInTheDocument();
+    expect(screen.getByText(/toursNoKm/)).toBeInTheDocument();
+    expect(screen.queryByText(/roadtripsKm(?!Unmeasured)\b/)).toBeNull();
+  });
+
+  it("names the kilometres, the roadtrips without any and the nights", () => {
+    draw({
+      ...NONE,
+      roadtrips: { roadtrips: 3, km: 1500, unmeasured: 1, nights: 8, nightsUnknown: 1 },
+    });
+    expect(
+      screen.getByText(
+        "stats:wrapped.chapters.roadtripsDesc · stats:wrapped.chapters.roadtripsKm · stats:wrapped.chapters.roadtripsKmUnmeasured · stats:wrapped.chapters.roadtripsNights · stats:wrapped.chapters.roadtripsNightsUnknown"
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("draws only the old line for a server that sends no figures", () => {
+    draw({ ...NONE, roadtrips: { roadtrips: 1 }, tours: { tours: 1 } });
+    expect(screen.getByText("stats:wrapped.chapters.roadtripsDesc")).toBeInTheDocument();
+    expect(screen.getByText("stats:wrapped.chapters.toursDesc")).toBeInTheDocument();
+  });
+});
+
 // Ferry parity with bus: the same abstention, and no card at all when hidden.
 describe("WrappedChapterCards — ferry crossings", () => {
   it("draws the ferry chapter with its kilometres and the crossings they leave out", () => {

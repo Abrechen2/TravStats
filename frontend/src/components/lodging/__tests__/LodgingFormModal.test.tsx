@@ -6,6 +6,7 @@ import { createLodging, updateLodging } from "../../../lib/api/lodging";
 import type { Lodging } from "../../../types/lodging";
 import type { LocationCoordinates, LocationSelection } from "../../location/LocationInput";
 
+vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
     amenities: [
@@ -246,5 +247,24 @@ describe("LodgingFormModal", () => {
     await waitFor(() => expect(updateLodging).toHaveBeenCalled());
     const [, payload] = vi.mocked(updateLodging).mock.calls[0];
     expect(payload.amenities).toEqual(["WLAN", "Pool", "Garten"]);
+  });
+
+  // forgejo#405: lodging was one of the four domains without tags.
+  it("edits a house's tags and sends them, keeping the stored ones", async () => {
+    vi.mocked(updateLodging).mockResolvedValue({ ...baseLodging });
+    render(
+      <LodgingFormModal
+        mode="edit"
+        lodging={{ ...baseLodging, tags: ["work"] }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    await userEvent.type(screen.getByLabelText("lodging:field.tags"), "spa,");
+    await userEvent.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() => expect(updateLodging).toHaveBeenCalled());
+    const [, payload] = vi.mocked(updateLodging).mock.calls[0];
+    expect(payload.tags).toEqual(["work", "spa"]);
   });
 });

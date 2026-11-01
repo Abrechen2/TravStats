@@ -19,6 +19,7 @@ export interface PlaceFormFields {
   city: string;
   country: string;
   notes: string;
+  tags: string[];
   visited: boolean;
   /** Provenance the picker mints; never typed (see the form). */
   externalRef: string;
@@ -41,6 +42,7 @@ export function placeFormFields(place: Place | null, initialName = ""): PlaceFor
     city: place?.city ?? "",
     country: place?.country ?? "",
     notes: place?.notes ?? "",
+    tags: place?.tags ?? [],
     visited: place?.visited ?? false,
     externalRef: place?.externalRef ?? "",
   };
@@ -65,6 +67,7 @@ export function placePayload(fields: PlaceFormFields): PlaceInput | null {
     city: orNull(fields.city),
     country: orNull(fields.country),
     notes: orNull(fields.notes),
+    tags: fields.tags,
     visited: fields.visited,
     countryVisitKind: fields.countryVisitKind ?? "visit",
     externalRef: orNull(fields.externalRef),

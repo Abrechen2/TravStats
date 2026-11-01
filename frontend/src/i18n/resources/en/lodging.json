@@ -104,7 +104,8 @@
     "survivorChain": "chain “{{name}}”",
     "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
     "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
-    "survivorTripsUnnamed": "linked trips"
+    "survivorTripsUnnamed": "linked trips",
+    "stayDocuments": "Documents · {{period}}"
   },
   "nightPrice": {
     "roomRate": "Room per night",
@@ -172,7 +173,8 @@
     "ratingOverallDerived": "Average of room, breakfast and service",
     "website": "Website",
     "amenitySuggestions": "Your amenities",
-    "removeAmenity": "Remove {{name}}"
+    "removeAmenity": "Remove {{name}}",
+    "tags": "Tags"
   },
   "type": {
     "hotel": "Hotel",

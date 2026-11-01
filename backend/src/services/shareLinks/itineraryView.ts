@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import type { Prisma } from "../../prisma";
 import type { ItineraryItem, ItineraryView } from "../../schemas/shareLinkItinerary";
 import { now } from "../../shared/time/clock";
 import { cruiseStopTimes, cruiseTimes } from "../cruise/timesDto";
@@ -28,7 +29,7 @@ import { nowMarker, sortItinerary } from "./itineraryNow";
  */
 
 /** A cancelled entry never happens; a flight marked as a duplicate is the same flight twice. */
-const NOT_CANCELLED = { status: { not: "cancelled" } } as const;
+export const NOT_CANCELLED = { status: { not: "cancelled" } } as const;
 const flightOnPlan = () => ({ status: { notIn: ["cancelled", "duplicated"] } });
 
 const RIDE_TIME_SELECT = {
@@ -66,9 +67,14 @@ async function flightItems(tripId: string): Promise<ItineraryItem[]> {
   }));
 }
 
-async function stayItems(tripId: string): Promise<ItineraryItem[]> {
+const stayItems = (tripId: string) => stayItemsWhere({ tripId, ...NOT_CANCELLED });
+
+/** The stays a `where` names, as itinerary items — the single-stay link (forgejo#405) reads one through here too. */
+export async function stayItemsWhere(
+  where: Prisma.LodgingStayWhereInput
+): Promise<Array<Extract<ItineraryItem, { kind: "stay" }>>> {
   const rows = await prisma.lodgingStay.findMany({
-    where: { tripId, ...NOT_CANCELLED },
+    where,
     select: {
       checkIn: true,
       checkOut: true,
@@ -102,9 +108,14 @@ async function stayItems(tripId: string): Promise<ItineraryItem[]> {
   });
 }
 
-async function cruiseItems(tripId: string): Promise<ItineraryItem[]> {
+const cruiseItems = (tripId: string) => cruiseItemsWhere({ tripId, ...NOT_CANCELLED });
+
+/** The cruises a `where` names, as itinerary items — the single-cruise link (forgejo#405) reads one through here too. */
+export async function cruiseItemsWhere(
+  where: Prisma.CruiseWhereInput
+): Promise<Array<Extract<ItineraryItem, { kind: "cruise" }>>> {
   const rows = await prisma.cruise.findMany({
-    where: { tripId, ...NOT_CANCELLED },
+    where,
     select: {
       shipNameOverride: true,
       cruiseLine: true,

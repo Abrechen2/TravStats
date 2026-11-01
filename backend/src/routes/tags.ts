@@ -9,7 +9,7 @@ import { tagSuggestLimiter } from "../middleware/rateLimit";
 /**
  * `GET /tags` — the tags the caller has already used, for the tag input of
  * every form that carries tags (flights incl. special flights, trips,
- * cruises, rail, bus and ferry rides, rentals; lodging and places have no tags column). Tags are plain `text[]`
+ * cruises, rail, bus and ferry rides, rentals, lodging houses, places, roadtrips and tours). Tags are plain `text[]`
  * columns, not a table, so the vocabulary only exists as an aggregation.
  */
 const router = Router();
@@ -57,6 +57,12 @@ router.get(
           SELECT btrim(t) FROM ferry_journeys, unnest(tags) AS t WHERE user_id = ${userId}
           UNION ALL
           SELECT btrim(t) FROM rental_bookings, unnest(tags) AS t WHERE user_id = ${userId}
+          UNION ALL
+          SELECT btrim(t) FROM lodgings, unnest(tags) AS t WHERE user_id = ${userId}
+          UNION ALL
+          SELECT btrim(t) FROM places, unnest(tags) AS t WHERE user_id = ${userId}
+          UNION ALL
+          SELECT btrim(t) FROM trip_routes, unnest(tags) AS t WHERE user_id = ${userId}
         ),
         spellings AS (
           SELECT lower(tag) AS key, tag, count(*)::int AS n

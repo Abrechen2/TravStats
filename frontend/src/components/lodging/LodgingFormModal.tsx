@@ -106,6 +106,7 @@ export function LodgingFormModal({
   const [pinBeforePick, setPinBeforePick] = useState<LocationCoordinates | null>(null);
   const [stars, setStars] = useState<string>(initial.stars);
   const [amenities, setAmenities] = useState<string[]>(initial.amenities);
+  const [tags, setTags] = useState<string[]>(initial.tags);
   const entrySuggestions = useLodgingEntrySuggestions();
   const [notes, setNotes] = useState<string>(initial.notes);
   const [website, setWebsite] = useState<string>(initial.website);
@@ -130,6 +131,7 @@ export function LodgingFormModal({
     osmRef,
     stars,
     amenities,
+    tags,
     notes,
     countryVisitKind,
     website,
@@ -264,6 +266,7 @@ export function LodgingFormModal({
       lon,
       stars: stars.trim() ? Number.parseInt(stars, 10) : null,
       amenities,
+      tags,
       notes: notes.trim() || null,
       // Empty clears it — same explicit `null` rule as the fields above.
       website: website.trim() || null,
@@ -498,6 +501,15 @@ export function LodgingFormModal({
               listLabel={t("lodging:field.amenitySuggestions")}
               removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
               placeholder={t("lodging:field.amenitiesPlaceholder")}
+              className={FIELD_CLASS}
+            />
+          </div>
+          <div className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
+            <label htmlFor="lodging-form-tags">{t("lodging:field.tags")}</label>
+            <TagInput
+              id="lodging-form-tags"
+              value={tags}
+              onChange={setTags}
               className={FIELD_CLASS}
             />
           </div>

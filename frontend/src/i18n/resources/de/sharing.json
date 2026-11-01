@@ -467,6 +467,24 @@
         "totals": "Summen des Jahres",
         "topAirline": "Meistgeflogene Airline",
         "topRoute": "Häufigste Strecke"
+      },
+      "cruise": {
+        "owner": "Dein Vorname",
+        "ship": "Schiff und Reederei",
+        "dates": "Reisedaten",
+        "ports": "Häfen und Seetage"
+      },
+      "stay": {
+        "owner": "Dein Vorname",
+        "name": "Name der Unterkunft",
+        "location": "Adresse, Ort und Land",
+        "dates": "Check-in und Check-out"
+      },
+      "visit": {
+        "owner": "Dein Vorname",
+        "place": "Ort (Name, Stadt, Land)",
+        "date": "Datum des Besuchs",
+        "rating": "Deine Bewertung (Sterne)"
       }
     },
     "view": {
@@ -513,6 +531,19 @@
           "visit": "Besuch",
           "stop": "Station"
         }
+      },
+      "entry": {
+        "ship": "Schiff",
+        "cruiseLine": "Reederei",
+        "ports": "Häfen",
+        "seaDay": "Seetag",
+        "dayWord": "Tag",
+        "checkIn": "Check-in",
+        "checkOut": "Check-out",
+        "address": "Adresse",
+        "when": "Wann",
+        "rating": "Bewertung",
+        "ofFive": "von 5"
       }
     },
     "section": {
@@ -522,7 +553,10 @@
       "kind": {
         "flight": "Flug",
         "trip": "Reise",
-        "wrapped": "Jahresrückblick {{year}}"
+        "wrapped": "Jahresrückblick {{year}}",
+        "cruise": "Kreuzfahrt",
+        "stay": "Unterkunft",
+        "visit": "Besuch"
       },
       "endsAt": "endet {{date}}",
       "views_one": "{{count}} Aufruf",

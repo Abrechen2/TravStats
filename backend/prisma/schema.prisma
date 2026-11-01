@@ -283,31 +283,31 @@ model ApiToken {
 /// encrypts each notification for this phone alone (`travstats-push v1`);
 /// the token addresses it through push.travstats.de at Apple or Google.
 model DevicePush {
-  apiTokenId      String   @id @map("api_token_id")
-  apiToken        ApiToken @relation(fields: [apiTokenId], references: [id], onDelete: Cascade)
-  userId          String   @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiTokenId      String    @id @map("api_token_id")
+  apiToken        ApiToken  @relation(fields: [apiTokenId], references: [id], onDelete: Cascade)
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// "ios" | "android"
   platform        String
   token           String
   /// "production" | "sandbox" — iOS only, from the build's entitlement.
-  apnsEnvironment String?  @map("apns_environment")
+  apnsEnvironment String?   @map("apns_environment")
   /// base64url, 32 bytes
-  publicKey       String   @map("public_key")
-  flightChanges   Boolean  @default(true) @map("flight_changes")
-  reminders       Boolean  @default(true)
+  publicKey       String    @map("public_key")
+  flightChanges   Boolean   @default(true) @map("flight_changes")
+  reminders       Boolean   @default(true)
   /// Trips whose departure reminders this phone does not want (forgejo#286):
   /// the Companion's per-trip "Erinnerungen für diese Reise" switch. Applies
   /// to reminders only — a flight-change notice is not a reminder.
-  mutedTripIds    String[] @default([]) @map("muted_trip_ids")
+  mutedTripIds    String[]  @default([]) @map("muted_trip_ids")
   /// "de" | "en" — the language the server writes this phone's texts in.
-  locale          String   @default("de")
+  locale          String    @default("de")
   /// Set when the relay named this device token dead (410 token-invalid). The
   /// row stays so the phone can be told ("token_rejected"); a registration with
   /// a different token clears it.
   tokenRejectedAt DateTime? @map("token_rejected_at")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   deliveries PushDelivery[]
 
@@ -480,10 +480,14 @@ model CountryOverride {
 model PublicShareLink {
   id                 String    @id @default(uuid())
   userId             String    @map("user_id")
-  /// flight | trip | wrapped
+  /// flight | trip | wrapped | cruise | stay | visit
   kind               String
   flightId           String?   @map("flight_id")
   tripId             String?   @map("trip_id")
+  /// The single entry of a `cruise` / `stay` / `visit` link (forgejo#405).
+  cruiseId           String?   @map("cruise_id")
+  lodgingStayId      String?   @map("lodging_stay_id")
+  placeVisitId       String?   @map("place_visit_id")
   year               Int?
   /// The owner's selection from the kind's allow-list (`services/shareLinks/fields.ts`).
   fields             String[]
@@ -502,13 +506,19 @@ model PublicShareLink {
   lastViewedAt       DateTime? @map("last_viewed_at")
   createdAt          DateTime  @default(now()) @map("created_at")
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight Flight? @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight      Flight?      @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  cruise      Cruise?      @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay LodgingStay? @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  placeVisit  PlaceVisit?  @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([flightId])
   @@index([tripId])
+  @@index([cruiseId])
+  @@index([lodgingStayId])
+  @@index([placeVisitId])
   @@map("public_share_links")
 }
 
@@ -1542,15 +1552,15 @@ model AdminSettings {
 
   // === INSTANCE SERVICE SETTINGS THAT USED TO COME FROM ENV (forgejo#392) ===
   /// A self-run geo server origin (https, no path). Null = the public providers.
-  ownGeoUrl          String? @map("own_geo_url")
+  ownGeoUrl             String?   @map("own_geo_url")
   /// Overpass endpoint for the market-visit catalogue. Null = overpass-api.de.
-  marketOverpassUrl  String? @map("market_overpass_url")
+  marketOverpassUrl     String?   @map("market_overpass_url")
   /// An e-mail or URL put into the rail lookup's User-Agent, so Transitous can reach the operator.
-  railLookupContact  String? @map("rail_lookup_contact")
+  railLookupContact     String?   @map("rail_lookup_contact")
   /// AISStream key (encrypted), the ferry live position.
-  globalAisstreamApiKey String? @map("global_aisstream_api_key")
+  globalAisstreamApiKey String?   @map("global_aisstream_api_key")
   /// When the one-time import of the old service ENV variables ran; never read again after.
-  envImportedAt      DateTime? @map("env_imported_at")
+  envImportedAt         DateTime? @map("env_imported_at")
 
   // === IMPORT MODE (forgejo#304) ===
   // Lifts the upload and import rate limits until this instant, so a first
@@ -2294,7 +2304,7 @@ model TripStop {
 /// stop may be the same place — which is what makes a day hike from a base
 /// camp expressible. The vehicle link arrives with phase 2.
 model TripRoute {
-  id       String  @id @default(uuid())
+  id       String   @id @default(uuid())
   /// The owner, held DIRECTLY rather than read through the trip.
   ///
   /// A tour may stand on its own since 2026-09-21 (owner ruling: "Sie
@@ -2302,16 +2312,18 @@ model TripRoute {
   /// read an owner from. Holding it here also means authorisation never
   /// depends on a join that a later query might forget — a foreign key
   /// proves existence, not ownership.
-  userId   String  @map("user_id")
+  userId   String   @map("user_id")
   /// The trip this section belongs to, or NULL for a standalone tour.
-  tripId   String? @map("trip_id")
+  tripId   String?  @map("trip_id")
   name     String
   /// Default mode for legs created in this section:
   /// road | ferry | rail | foot | bike
   mode     String
-  orderIdx Int     @default(0) @map("order_idx")
+  orderIdx Int      @default(0) @map("order_idx")
   color    String?
   notes    String?
+  /// Free-form labels for a roadtrip or a tour (forgejo#405).
+  tags     String[] @default([])
 
   /// Odometer at section start and end. Deliberately NOT reconciled with
   /// the sum of the legs: the difference is the finding.
@@ -2743,6 +2755,9 @@ model Cruise {
 
   documents Document[]
 
+  /// Public single-entry links to this record (forgejo#405).
+  publicShareLinks PublicShareLink[]
+
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
   @@index([userId])
@@ -3166,6 +3181,8 @@ model Lodging {
   /// Wikidata item of the house itself, from its OpenStreetMap tags.
   wikidataId         String?   @map("wikidata_id")
   amenities          String[]  @default([])
+  /// Free-form labels like every other domain's (forgejo#405).
+  tags               String[]  @default([])
   notes              String?
   /// Has the user actually been here, or is it only noted down? A saved-places
   /// export mixes both, and only the user knows which is which — so the import
@@ -3309,6 +3326,9 @@ model LodgingStay {
   roadtripStations TripStop[]
 
   documents Document[]
+
+  /// Public single-entry links to this record (forgejo#405).
+  publicShareLinks PublicShareLink[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -3535,8 +3555,10 @@ model Place {
   coverPhotoId String? @map("cover_photo_id")
 
   notes      String?
-  dataSource String? @map("data_source") // manual | import | curated
-  batchId    String? @map("batch_id")
+  /// Free-form labels like every other domain's (forgejo#405).
+  tags       String[] @default([])
+  dataSource String?  @map("data_source") // manual | import | curated
+  batchId    String?  @map("batch_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -3686,6 +3708,9 @@ model PlaceVisit {
   captures      PlaceCapture[]
 
   documents Document[]
+
+  /// Public single-entry links to this record (forgejo#405).
+  publicShareLinks PublicShareLink[]
 
   @@index([placeId])
   @@index([tripId])

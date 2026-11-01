@@ -12,6 +12,7 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
 import { RentalRouteMap } from "../components/rental/RentalRouteMap";
@@ -384,6 +385,7 @@ export default function RentalDetailPage(): JSX.Element {
           </DetailSection>
 
           <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} rentalCategories />
+          {rental.tripId && <TripPhotoWindowStrip entry="rentals" id={rental.id} />}
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

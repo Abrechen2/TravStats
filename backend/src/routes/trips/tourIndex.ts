@@ -293,6 +293,7 @@ async function createTour(userId: string, raw: unknown, claim: ClaimClientRef) {
         anchorStopId: anchorStopId ?? null,
         color: body.color,
         notes: body.notes,
+        tags: body.tags ?? [],
         startOdometerKm: body.startOdometerKm,
         endOdometerKm: body.endOdometerKm,
         orderIdx: last ? last.orderIdx + 1 : 0,

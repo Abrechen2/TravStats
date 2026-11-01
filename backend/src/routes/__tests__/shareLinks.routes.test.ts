@@ -1225,3 +1225,133 @@ describe("trip itinerary (forgejo#302)", () => {
     });
   });
 });
+
+// forgejo#405 item 9: the single-entry link, for a cruise, a lodging stay and
+// a place visit. Fixtures: the itinerary trip's entries, which carry every
+// private value (`NEVER_ON_ITINERARY`) a view must not reach.
+describe("single-entry links: cruise, stay, visit", () => {
+  const entries = async (owner: TestAccount) => {
+    const { ids } = await makeItineraryTrip(owner.id);
+    return { stay: ids[4], cruise: ids[9], visit: ids[11] };
+  };
+  const bodyText = (res: request.Response): string => JSON.stringify(res.body);
+
+  it("shares a cruise with only the chosen fields, and never a cabin, price or reference", async () => {
+    const { cruise } = await entries(anna);
+    const { token } = await tokenFor(anna, {
+      kind: "cruise",
+      targetId: cruise,
+      fields: ["ship", "dates", "ports"],
+    });
+    const res = await view(token);
+    expect(res.status).toBe(200);
+    const shown = res.body.data.view;
+    expect(shown.kind).toBe("cruise");
+    expect(shown.cruise.ship).toEqual({ name: "Harbor Queen", line: "Circle Line" });
+    expect(shown.cruise.dates.start.date).toBe("2030-06-07");
+    expect(shown.cruise.ports[0]).toMatchObject({ dayNumber: 1, name: "Pier 83", atSea: false });
+    // Not chosen, so absent — not null.
+    expect(shown.cruise).not.toHaveProperty("owner");
+    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
+      expect(bodyText(res)).not.toContain(secret);
+    }
+  });
+
+  it("shares a stay's address only when `location` is chosen", async () => {
+    const { stay } = await entries(anna);
+    const without = await tokenFor(anna, {
+      kind: "stay",
+      targetId: stay,
+      fields: ["name", "dates"],
+    });
+    const plain = await view(without.token);
+    expect(plain.body.data.view.stay).toMatchObject({ name: "Hotel Hudson View" });
+    expect(plain.body.data.view.stay).not.toHaveProperty("location");
+    expect(bodyText(plain)).not.toContain("356 W 58th St");
+
+    const withLocation = await tokenFor(anna, {
+      kind: "stay",
+      targetId: stay,
+      fields: ["name", "location", "dates"],
+    });
+    const shown = (await view(withLocation.token)).body.data.view.stay;
+    expect(shown.location).toEqual({
+      address: "356 W 58th St",
+      city: "New York",
+      country: "US",
+    });
+    expect(shown.dates.checkIn.date).toBe("2030-06-01");
+    expect(shown.dates.checkOut.date).toBe("2030-06-04");
+    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
+      expect(bodyText(await view(withLocation.token))).not.toContain(secret);
+    }
+  });
+
+  it("shares a visit's place, date and rating, never its note", async () => {
+    const { visit } = await entries(anna);
+    await prisma.placeVisit.update({ where: { id: visit }, data: { rating: 4 } });
+    const { token } = await tokenFor(anna, {
+      kind: "visit",
+      targetId: visit,
+      fields: ["place", "date", "rating"],
+    });
+    const res = await view(token);
+    const shown = res.body.data.view.visit;
+    expect(shown.place).toEqual({ name: "Statue of Liberty", city: "New York", country: null });
+    expect(shown.date).toMatchObject({ precision: "minute", zone: "America/New_York" });
+    expect(shown.rating).toBe(4);
+    for (const secret of [...NEVER_ON_ITINERARY, ...NEVER_PUBLIC]) {
+      expect(bodyText(res)).not.toContain(secret);
+    }
+  });
+
+  it("answers a stranger's entry, a cancelled stay and an unknown id with the same 404", async () => {
+    const mine = await entries(anna);
+    for (const [kind, targetId] of [
+      ["cruise", mine.cruise],
+      ["stay", mine.stay],
+      ["visit", mine.visit],
+    ] as const) {
+      const fields = [SHARE_LINK_FIELDS[kind][1]];
+      const stranger = await create(eve, { kind, targetId, fields });
+      const unknown = await create(anna, {
+        kind,
+        targetId: "00000000-0000-4000-8000-000000000000",
+        fields,
+      });
+      expect(stranger.status).toBe(404);
+      expect(unknown.status).toBe(404);
+      expect(stranger.body).toEqual(unknown.body);
+    }
+    await prisma.lodgingStay.update({ where: { id: mine.stay }, data: { status: "cancelled" } });
+    expect(
+      (await create(anna, { kind: "stay", targetId: mine.stay, fields: ["name"] })).status
+    ).toBe(404);
+  });
+
+  it("refuses a field that belongs to another kind", async () => {
+    const { visit } = await entries(anna);
+    const res = await create(anna, { kind: "visit", targetId: visit, fields: ["ports"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("lists the link with its entry id, and stops serving it when the entry is deleted", async () => {
+    const { visit } = await entries(anna);
+    const { token, id } = await tokenFor(anna, {
+      kind: "visit",
+      targetId: visit,
+      fields: ["place"],
+    });
+    const list = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
+    expect(list.body.data.links.find((l: { id: string }) => l.id === id)).toMatchObject({
+      kind: "visit",
+      targetId: visit,
+    });
+    expect((await view(token)).status).toBe(200);
+
+    await prisma.placeVisit.delete({ where: { id: visit } });
+    expect((await view(token)).status).toBe(404);
+    const after = await request(app).get("/api/v1/share-links").set("Cookie", anna.cookie);
+    expect(after.body.data.links.some((l: { id: string }) => l.id === id)).toBe(false);
+  });
+});

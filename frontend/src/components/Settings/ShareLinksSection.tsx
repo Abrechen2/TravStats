@@ -62,7 +62,15 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
 
   const target = (link: ShareLink): JSX.Element | string => {
     if (link.kind === "wrapped") return t(`${NS}.kind.wrapped`, { year: link.targetId });
-    const to = link.kind === "flight" ? `/flights/${link.targetId}` : `/trips/${link.targetId}`;
+    // A stay and a visit have no page of their own to link to (they hang off a house and
+    // a place), so they are named, not linked.
+    if (link.kind === "stay" || link.kind === "visit") return t(`${NS}.kind.${link.kind}`);
+    const to =
+      link.kind === "flight"
+        ? `/flights/${link.targetId}`
+        : link.kind === "cruise"
+          ? `/cruises/${link.targetId}`
+          : `/trips/${link.targetId}`;
     return <Link to={to}>{t(`${NS}.kind.${link.kind}`)}</Link>;
   };
 

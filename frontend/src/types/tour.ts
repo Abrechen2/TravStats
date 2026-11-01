@@ -66,6 +66,8 @@ export interface TourRoute {
   orderIdx: number;
   color: string | null;
   notes: string | null;
+  /** Free-form labels (forgejo#405). Absent on older backends. */
+  tags?: string[];
   startOdometerKm: number | null;
   endOdometerKm: number | null;
   stopCount: number;

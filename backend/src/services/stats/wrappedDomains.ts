@@ -13,6 +13,8 @@ import { now as clockNow } from "../../shared/time/clock";
 import type { DomainKey } from "../../shared/domains";
 import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
 import { toursVisible } from "../tourVisibility";
+import { countRoadtripNights } from "../../shared/tour/roadtrip";
+import { travelledKm } from "../tour/tourDistance";
 import { roadtripHasStarted } from "./roadtripEvidence";
 import type { WrappedCruise, WrappedRail } from "./wrapped";
 import type { WrappedChapterRows } from "./wrappedChapters";
@@ -44,8 +46,10 @@ import {
  *  - stays: those that are over (`lodgingCounting.classifyStay`), under the
  *    check-in's year where the record can be placed in one (`lodgingTiming`);
  *  - places: visits that happened, on the place's calendar (`placeCounting`);
- *  - roadtrips: those that have started, under their first station's year;
+ *  - roadtrips: those that have started, under their first station's year,
+ *    with their legs' kilometres and their nights (null when not fully known);
  *  - tours: dated day tours whose day is past (`tourDate`, a floating date),
+ *    with their recording's (else their legs') kilometres,
  *    while the instance shows tours (`toursVisible`, the web's rule — not the
  *    roadtrip domain toggle);
  *  - rentals: completed, under the pickup's year (`rentalCounting`);
@@ -156,9 +160,27 @@ async function loadChapterRows(
         select: {
           id: true,
           name: true,
+          legs: { select: { distanceKm: true } },
+          // `viaPoint` stays selected so the night count skips route corrections.
           stops: {
             where: { viaPoint: false },
-            select: { startDate: true, lodgingStay: { select: { checkIn: true } } },
+            select: {
+              startDate: true,
+              endDate: true,
+              viaPoint: true,
+              overnight: true,
+              lodgingStayId: true,
+              lodgingStay: {
+                select: {
+                  checkIn: true,
+                  checkOut: true,
+                  datePrecision: true,
+                  nights: true,
+                  status: true,
+                  lodging: { select: { type: true } },
+                },
+              },
+            },
           },
         },
       })
@@ -167,7 +189,13 @@ async function loadChapterRows(
       shown
         ? prisma.tripRoute.findMany({
             where: { userId, kind: "tour" },
-            select: { id: true, name: true, tourDate: true },
+            select: {
+              id: true,
+              name: true,
+              tourDate: true,
+              legs: { select: { distanceKm: true } },
+              tracks: { select: { distanceKm: true } },
+            },
           })
         : null
     ),
@@ -275,7 +303,27 @@ async function loadChapterRows(
               { id: route.id, name: route.name, startDate: starts[0] },
               { subtitle: null }
             );
-            return [{ year: starts[0].getUTCFullYear(), entry }];
+            const counted = countRoadtripNights(
+              route.stops.map((s) => ({
+                lodgingStayId: s.lodgingStayId,
+                overnight: s.overnight,
+                viaPoint: s.viaPoint,
+                startDate: s.startDate,
+                endDate: s.endDate,
+                stay: s.lodgingStay
+                  ? { ...s.lodgingStay, lodgingType: s.lodgingStay.lodging.type }
+                  : null,
+              }))
+            );
+            return [
+              {
+                year: starts[0].getUTCFullYear(),
+                // No leg is no distance, not a 0 km drive.
+                km: route.legs.length > 0 ? travelledKm(route.legs) : null,
+                nights: counted.nightsKnown ? counted.nights : null,
+                entry,
+              },
+            ];
           }),
     tours:
       tourRoutes === null
@@ -294,7 +342,14 @@ async function loadChapterRows(
               ),
               href: `/tours/${route.id}`,
             };
-            return [{ year: Number(day.slice(0, 4)), entry }];
+            // A recording measures a day tour better than its drawn legs.
+            const km =
+              route.tracks.length > 0
+                ? route.tracks.reduce((n, t) => n + t.distanceKm, 0)
+                : route.legs.length > 0
+                  ? travelledKm(route.legs)
+                  : null;
+            return [{ year: Number(day.slice(0, 4)), km, entry }];
           }),
     rentals:
       rentals === null

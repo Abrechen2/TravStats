@@ -16,7 +16,7 @@ export { FLIGHT_PHASES };
  * schema names fails at home instead of reaching a stranger.
  */
 
-export const SHARE_LINK_KINDS = ["flight", "trip", "wrapped"] as const;
+export const SHARE_LINK_KINDS = ["flight", "trip", "wrapped", "cruise", "stay", "visit"] as const;
 export type ShareLinkKind = (typeof SHARE_LINK_KINDS)[number];
 
 /** The allow-list. A field not listed for a kind cannot be asked for. */
@@ -36,6 +36,11 @@ export const SHARE_LINK_FIELDS = {
     "itinerary",
   ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
+  // Single entries (forgejo#405): only what the owner ticks, and never a price,
+  // booking reference, cabin or room number, note, document, photo or companion.
+  cruise: ["owner", "ship", "dates", "ports"],
+  stay: ["owner", "name", "location", "dates"],
+  visit: ["owner", "place", "date", "rating"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
 
 export type ShareLinkField<K extends ShareLinkKind = ShareLinkKind> =
@@ -59,7 +64,7 @@ const targetIdSchema = z.string().trim().min(1).max(100);
 const selectionBase = z.strictObject({
   kind: z.enum(SHARE_LINK_KINDS),
   targetId: targetIdSchema.describe(
-    'The flight or trip id; for `wrapped` the calendar year, e.g. `"2026"`.'
+    'The flight, trip, cruise, lodging stay or place visit id; for `wrapped` the calendar year, e.g. `"2026"`.'
   ),
   fields: z
     .array(z.string().min(1).max(40))
@@ -250,6 +255,56 @@ const tripView = z.strictObject({
   itinerary: itineraryViewSchema.optional(),
 });
 
+const entryDay = localDateValueSchema.nullable();
+
+/** A cruise on its own (forgejo#405). No cabin, price, booking reference or companion has a member. */
+const cruiseView = z.strictObject({
+  owner: z.string().nullable().optional(),
+  ship: z.strictObject({ name: z.string().nullable(), line: z.string().nullable() }).optional(),
+  dates: z.strictObject({ start: entryDay, end: entryDay }).optional(),
+  ports: z
+    .array(
+      z.strictObject({
+        dayNumber: z.number().int().describe("Day of the cruise"),
+        name: z.string().nullable().describe("Null on a sea day"),
+        atSea: z.boolean(),
+        day: entryDay,
+      })
+    )
+    .optional(),
+});
+
+/** A lodging stay on its own (forgejo#405). The address is its own opt-in field (`location`). */
+const stayView = z.strictObject({
+  owner: z.string().nullable().optional(),
+  name: z.string().optional().describe("The lodging's name"),
+  location: z
+    .strictObject({
+      address: z.string().nullable(),
+      city: z.string().nullable(),
+      country: z.string().nullable(),
+    })
+    .optional(),
+  dates: z.strictObject({ checkIn: entryDay, checkOut: entryDay }).optional(),
+});
+
+/** A place visit on its own (forgejo#405). The visit's note, photos and trip never travel. */
+const visitView = z.strictObject({
+  owner: z.string().nullable().optional(),
+  place: z
+    .strictObject({
+      name: z.string(),
+      city: z.string().nullable(),
+      country: z.string().nullable(),
+    })
+    .optional(),
+  date: timeValueSchema
+    .nullable()
+    .describe("On the place's clock, cut to the stored precision; null for an undated visit")
+    .optional(),
+  rating: z.number().int().min(1).max(5).nullable().optional(),
+});
+
 const wrappedView = z.strictObject({
   owner: z.string().nullable().optional(),
   year: z.number().int(),
@@ -278,11 +333,17 @@ export const publicViewSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("flight"), flight: flightView }),
   z.strictObject({ kind: z.literal("trip"), trip: tripView }),
   z.strictObject({ kind: z.literal("wrapped"), wrapped: wrappedView }),
+  z.strictObject({ kind: z.literal("cruise"), cruise: cruiseView }),
+  z.strictObject({ kind: z.literal("stay"), stay: stayView }),
+  z.strictObject({ kind: z.literal("visit"), visit: visitView }),
 ]);
 export type PublicView = z.infer<typeof publicViewSchema>;
 export type FlightView = z.infer<typeof flightView>;
 export type TripView = z.infer<typeof tripView>;
 export type WrappedView = z.infer<typeof wrappedView>;
+export type CruiseView = z.infer<typeof cruiseView>;
+export type StayView = z.infer<typeof stayView>;
+export type VisitView = z.infer<typeof visitView>;
 
 export const publicShareResponseSchema = z
   .object({
