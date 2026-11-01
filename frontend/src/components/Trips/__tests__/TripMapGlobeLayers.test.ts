@@ -9,7 +9,7 @@ import {
   type TripPointDatum,
 } from "../TripMapGlobeLayers";
 import { EarthOcclusionExtension } from "../../Globe/EarthOcclusionExtension";
-import { CRUISE_PATH_ALTITUDE_M, MARKER_ALTITUDE_M } from "../../Globe/buildGlobeLayers";
+import { bridgeExtraLayers } from "../../Globe/native/nativeExtras";
 
 /**
  * The trip map is the THIRD renderer in this app, and until now its globe
@@ -71,7 +71,7 @@ const stop: TripPointDatum = {
   kind: "stop",
 };
 
-function build(overrides: Partial<Parameters<typeof buildTripMapGlobeLayers>[0]> = {}): Layer[] {
+function buildStack(overrides: Partial<Parameters<typeof buildTripMapGlobeLayers>[0]> = {}) {
   return buildTripMapGlobeLayers({
     flightArcs: [flightArc],
     cruisePaths: [cruisePath],
@@ -83,6 +83,11 @@ function build(overrides: Partial<Parameters<typeof buildTripMapGlobeLayers>[0]>
     occlusionProps: { earthOcclusionEnabled: true, earthOcclusionFadeBand: 0.04 },
     ...overrides,
   });
+}
+
+function build(overrides: Partial<Parameters<typeof buildTripMapGlobeLayers>[0]> = {}): Layer[] {
+  const { deck, native } = buildStack(overrides);
+  return [...deck, ...native];
 }
 
 function layerById(layers: Layer[], id: string): Layer {
@@ -139,38 +144,41 @@ describe("buildTripMapGlobeLayers: flight arcs", () => {
   });
 });
 
-describe("buildTripMapGlobeLayers: cruise legs", () => {
-  it("lifts the leg to the globe's cruise altitude so it does not z-fight the sphere", () => {
+describe("buildTripMapGlobeLayers: ground data is native, not floating (forgejo#331)", () => {
+  it("builds cruise legs with no altitude — a deck.gl layer lifted 5 km floats off the surface at close zoom", () => {
     const paths = layerById(build(), "trip-cruise-paths");
     expect(paths).toBeInstanceOf(PathLayer);
     const path = (paths.props as unknown as { getPath: (d: TripCruisePath) => number[][] }).getPath(
       cruisePath
     );
     expect(path).toHaveLength(cruisePath.path.length);
-    for (const p of path) expect(p[2]).toBe(CRUISE_PATH_ALTITUDE_M);
+    for (const p of path) expect(p).toHaveLength(2);
   });
-});
 
-describe("buildTripMapGlobeLayers: markers", () => {
-  it("lifts markers above the cruise altitude, as the dashboard globe does", () => {
+  it("builds markers at ground level, sized in pixels — a metre radius balloons into a continent at globe zoom", () => {
     const airports = layerById(build(), "trip-airports");
     expect(airports).toBeInstanceOf(ScatterplotLayer);
     const pos = (
       airports.props as unknown as { getPosition: (d: TripPointDatum) => number[] }
     ).getPosition(airport);
-    expect(pos[2]).toBe(MARKER_ALTITUDE_M);
-    expect(MARKER_ALTITUDE_M).toBeGreaterThan(CRUISE_PATH_ALTITUDE_M);
+    expect(pos).toHaveLength(2);
+    expect((airports.props as unknown as { radiusUnits?: string }).radiusUnits).toBe("pixels");
   });
 
-  it("sizes markers in pixels — a metre radius balloons into a continent at globe zoom", () => {
-    const airports = layerById(build(), "trip-airports");
-    expect((airports.props as unknown as { radiusUnits?: string }).radiusUnits).toBe("pixels");
+  it("hands the dots, cruise legs and tour sections to MapLibre; only the arcs stay on deck.gl", () => {
+    const { deck, native } = buildStack({ lodgingPoints: [stop] });
+    expect(deck.map((l) => l.id)).toEqual(["trip-flight-arcs"]);
+    const { bridged, remaining } = bridgeExtraLayers(native);
+    expect(remaining).toEqual([]);
+    expect(bridged.map((b) => b.id).sort()).toEqual(
+      ["lodging-pins", "trip-airports", "trip-cruise-paths", "trip-stops", "trip-tour-paths"].sort()
+    );
   });
 });
 
 describe("buildTripMapGlobeLayers: horizon", () => {
-  it("clips every layer at the horizon — without it the far side bleeds through", () => {
-    for (const layer of build({ tourPaths: [], lodgingPoints: [stop] })) {
+  it("clips the deck.gl arcs at the horizon — without it the far side bleeds through", () => {
+    for (const layer of buildStack().deck) {
       const extensions = (layer.props as unknown as { extensions?: unknown[] }).extensions ?? [];
       expect(
         extensions.some((e) => e instanceof EarthOcclusionExtension),
