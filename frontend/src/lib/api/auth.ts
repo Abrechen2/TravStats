@@ -56,6 +56,20 @@ export const authApi = {
     await api.post("/auth/logout");
   },
 
+  /**
+   * Delete the caller's own account at once. Refused with `code`
+   * DELETE_PASSWORD_INCORRECT, DELETE_SECOND_FACTOR_REQUIRED / _INVALID,
+   * DELETE_LAST_ADMIN, or 403 DEMO_ACCOUNT_FORBIDDEN.
+   */
+  deleteAccount: async (body: {
+    password: string;
+    confirmation: string;
+    code?: string;
+    recoveryCode?: string;
+  }): Promise<void> => {
+    await api.delete("/auth/me", { data: body });
+  },
+
   /** Validates the HttpOnly session cookie. Rejects with 401 when it is gone. */
   me: async (): Promise<{ user: User }> => {
     const { data } = await api.get<{ user: User }>("/auth/me");

@@ -5,8 +5,8 @@ import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
 import ProfileSection from "../../components/Settings/ProfileSection";
-import PersonalFactsCard from "../../components/Settings/PersonalFactsCard";
-import HomeCountryCard from "../../components/Settings/HomeCountryCard";
+import HomeSection from "../../components/Settings/HomeSection";
+import DeleteAccountSection from "../../components/Settings/DeleteAccountSection";
 import HomeAirportSection from "../../components/Settings/HomeAirportSection";
 import DisplaySection from "../../components/Settings/DisplaySection";
 import UnitsSection from "../../components/Settings/UnitsSection";
@@ -37,6 +37,7 @@ import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
+import PlanningSection from "../../components/Settings/PlanningSection";
 import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
 import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
@@ -73,13 +74,13 @@ export default function SettingsSectionSwitch({
             removingProfilePicture={page.removingProfilePicture}
             onAvatarUpload={page.handleAvatarUpload}
             onAvatarDelete={page.handleAvatarDelete}
-            onSetProfile={page.setProfile}
           />
-          {/* A personal fact like the name above; it orders booking templates. */}
-          <HomeCountryCard />
-          <PersonalFactsCard />
         </div>
       );
+    case "home":
+      return <HomeSection />;
+    case "deletion":
+      return <DeleteAccountSection />;
     case "security":
       return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;
     case "apitokens":
@@ -89,7 +90,7 @@ export default function SettingsSectionSwitch({
     case "notifications":
       return <NotificationsSection />;
     case "display":
-      return <DisplaySection display={page.display} onSetDisplay={page.setDisplay} />;
+      return <DisplaySection display={page.display} />;
     case "units":
       return (
         <UnitsSection
@@ -103,6 +104,8 @@ export default function SettingsSectionSwitch({
       // (forgejo#321): they were two sections that listed the same domains
       // twice, a screen apart.
       return <ModuleSection />;
+    case "planning":
+      return <PlanningSection />;
     case "countryCounting":
       return <CountryCountingCard />;
     case "backup":
@@ -166,9 +169,9 @@ export default function SettingsSectionSwitch({
     case "externalServices":
       return <AccountExternalServices />;
     case "homeAirport":
-      return <HomeAirportSection />;
+      return <HomeAirportSection view="airports" />;
     case "defaults":
-      return <DefaultsSection defaults={page.defaults} onSetDefaults={page.setDefaults} />;
+      return <DefaultsSection defaults={page.defaults} />;
     case "features":
       return <FeaturesSection />;
     case "enrichment":
@@ -194,7 +197,7 @@ export default function SettingsSectionSwitch({
         />
       );
     case "cruisePreferences":
-      return <CruisePreferencesSection cruise={page.cruise} onSetCruise={page.setCruise} />;
+      return <CruisePreferencesSection cruise={page.cruise} />;
     case "loyalty":
       return <LoyaltySection />;
     case "mapAppearance":

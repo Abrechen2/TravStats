@@ -18,17 +18,9 @@
     "webPrefsRejected": "The server did not accept your display settings. They still apply on this device, but not on your others."
   },
   "cruisePreferences": {
-    "title": "Cruise preferences",
-    "description": "Defaults for newly created cruises and how they render on the map.",
-    "defaultLine": "Default cruise line",
-    "defaultLinePlaceholder": "e.g. AIDA Cruises",
-    "defaultLineHint": "Prefilled in \"New cruise → Manual\" when no ship is picked.",
+    "title": "New cruises start with",
     "defaultCabin": "Default cabin category",
-    "defaultCabinNone": "– no preset –",
-    "showArcs": "Show cruise routes on the map",
-    "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map.",
-    "countSeaDays": "Count sea days",
-    "countSeaDaysHint": "Sea days count towards the travel days in the cruise statistics. Off: the travel days leave them out; the number of sea days itself stays visible."
+    "defaultCabinNone": "– no preset –"
   },
   "lodgingPreferences": {
     "title": "Lodging preferences",
@@ -86,22 +78,12 @@
     "madeBy": "A project by"
   },
   "profile": {
-    "title": "User Profile",
-    "description": "Adjust username, contact information and your profile picture.",
-    "changePassword": "Change Password",
-    "uploadAvatar": "Upload profile picture",
-    "chooseFile": "Choose file",
+    "title": "Profile",
     "firstName": "First name",
     "lastName": "Last name",
     "username": "Username",
-    "usernameHint": "The sign-in name cannot be changed here.",
-    "email": "Email Address",
+    "email": "E-mail",
     "birthdate": "Birthday",
-    "birthdateHint": "Optional. Only used for the \"Birthday Flight\" achievement — day and month are compared against a flight's departure date.",
-    "deleteAccount": "Delete Account",
-    "deletionRequested": "Deletion request pending",
-    "dangerZone": "Danger Zone",
-    "dangerZoneDescription": "This action cannot be undone.",
     "invalidFileType": "Please select an image file",
     "fileTooLarge": "Image file is too large (max. 5MB)",
     "uploadSuccess": "Profile picture uploaded successfully",
@@ -110,18 +92,22 @@
     "removeError": "Error removing profile picture",
     "uploadError": "Error uploading profile picture",
     "save": "Save profile",
-    "saved": "Profile saved",
-    "saveFailed": "Failed to save profile",
     "help": {
       "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service."
     },
-    "editProfile": "Edit profile",
-    "changePicture": "Change picture"
+    "changePicture": "Change picture",
+    "group": {
+      "label": "Profile"
+    },
+    "usernameSub": "For signing in, can't change",
+    "emailSub": "For a new password",
+    "emailHelp": "Reminders use their own address under Reminders.",
+    "emailBad": "That doesn't look like an e-mail address. I'll save once it does.",
+    "birthdateSub": "Optional",
+    "birthdateHelp": "Unlocks the “Birthday flight” achievement."
   },
   "homeAirport": {
-    "title": "Home",
-    "description": "Where you live and which airports you fly from – with dates, because a move does not change old trips. Distances such as “away from home” or “farthest from home” are measured from your residence; returns home, round trips and connections are recognised by your home airports.",
-    "currentLabel": "Current home",
+    "title": "Home airports",
     "notSet": "No home set yet.",
     "setNow": "Set your home",
     "iMoved": "I moved",
@@ -160,7 +146,6 @@
     "fromDateHint": "Trips before this date still count towards your previous home – a move does not change old data.",
     "savedToast": "Home saved.",
     "loadError": "Your home could not be loaded.",
-    "confirmDelete": "Really delete this period?",
     "errors": {
       "residenceMissing": "Please pick where you live.",
       "airportMissing": "Please pick at least one home airport.",
@@ -168,15 +153,28 @@
       "invalid": "The details do not fit together – check the dates and the airports.",
       "unknownAirport": "The catalogue does not know this airport: {{codes}}.",
       "saveFailed": "Saving failed. Please try again.",
-      "deleteFailed": "The period could not be deleted."
+      "deleteFailed": "The period could not be deleted.",
+      "overlap": "That move lies before a period that already exists. I reloaded the list, please check the date."
     },
-    "help": {
-      "historyExplained": "When you move, your previous home is not overwritten but kept as an earlier period. Old trips keep the home they had then."
+    "residenceRow": {
+      "name": "Home town",
+      "sub": "Distances are measured from here",
+      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home is also your home in the Companion app."
+    },
+    "airportsRow": {
+      "name": "Home airports",
+      "sub": "Up to three, one as default",
+      "help": "They belong to your current home. When you move, the old ones keep their period."
+    },
+    "deleteDialog": {
+      "title": "Delete period?",
+      "amount": "1 period",
+      "after": "Trips from that time then count against the home before or after it.",
+      "confirm": "Delete period"
     }
   },
   "display": {
-    "title": "Display & Language",
-    "description": "Control language, timezone, and date/time formats centrally.",
+    "title": "Language & time",
     "language": "Language",
     "languages": {
       "de": "Deutsch",
@@ -185,10 +183,6 @@
     "timezone": "Timezone",
     "dateFormat": "Date Format",
     "timeFormat": "Time Format",
-    "languageSub": "Interface and date formats",
-    "timezoneSub": "For showing local times",
-    "dateFormatSub": "In prose and forms; tables show ISO",
-    "timeFormatSub": "Departure, arrival and check-in times",
     "dateFormats": {
       "dmy": "DD.MM.YYYY",
       "iso": "YYYY-MM-DD",
@@ -200,14 +194,10 @@
     }
   },
   "domainColors": {
-    "title": "Domain colours",
-    "description": "One colour per domain — used in the statistics, the trip timeline, the activity sidebar, the import log and everywhere else a domain is marked with a single colour.",
-    "mapNote": "The map is unaffected: there a route can be coloured by status or by frequency, a yearly bar cannot. Map colours stay in the map panel.",
-    "lowContrast": "A very dark colour barely separates from the background. It is used exactly as picked — affected marks get a hairline outline so they stay findable.",
-    "reset": "Reset to brand colours"
+    "lowContrast": "A very dark colour barely separates from the background. It is used exactly as picked — affected marks get a hairline outline so they stay findable."
   },
   "units": {
-    "title": "Units & Formats",
+    "title": "Units",
     "description": "Define the standard units for statistics.",
     "distance": "Distance",
     "currency": "Currency",
@@ -222,10 +212,6 @@
       "CHF": "CHF (Fr)",
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
-    },
-    "help": {
-      "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
-      "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
     },
     "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were.",
     "distanceSub": "For distances and statistics",
@@ -243,8 +229,7 @@
     }
   },
   "defaults": {
-    "title": "Default Values",
-    "description": "New flights will be created with these defaults.",
+    "title": "New flights start with",
     "flightStatus": "Status",
     "seatClass": "Seat Class",
     "favoriteAirline": "Favorite Airline",
@@ -260,10 +245,6 @@
       "private": "Private",
       "vacation": "Vacation",
       "noneShort": "None"
-    },
-    "help": {
-      "status": "\"Scheduled\" makes sense for upcoming flights; \"Flown\" is convenient when quickly entering past flights.",
-      "category": "Business / private / vacation — only relevant for your statistics, has no effect on live data or cost calculation."
     }
   },
   "notifications": {
@@ -494,7 +475,7 @@
     "activate": "Activate"
   },
   "features": {
-    "title": "Features",
+    "title": "What is recorded",
     "costTracking": "Cost Tracking",
     "costTrackingDesc": "Show tax and fee fields on flight forms and enable business cost statistics. Price and currency are always available.",
     "trackAircraft": "Track tail numbers",
@@ -541,7 +522,7 @@
     }
   },
   "autoUpdate": {
-    "title": "Automatic Updates",
+    "title": "Live updates",
     "description": "Fetches current data while a flight is under way. Anything it finds lands under “Pending updates” and is applied only after you confirm it — never automatically. Only flights already in your list are affected.",
     "viewPending": "View Pending Updates",
     "enabled": "Enable Automatic Updates",
@@ -553,7 +534,7 @@
     "loadFailed": "The settings could not be loaded. Changes are disabled so defaults are not saved over your real values."
   },
   "historicalEnrichment": {
-    "title": "Historical Enrichment",
+    "title": "Fill in older flights",
     "description": "Fills in older flights from live-tracked flights with the same number. Every suggestion is an estimate and is saved only after you confirm it.",
     "enabled": "Enable historical flight data enrichment",
     "minConfidence": "Min. Confidence (%)",
@@ -1001,13 +982,10 @@
     }
   },
   "homeCountry": {
-    "label": "Home country",
-    "description": "Decides which booking templates are tried first. Templates for other countries stay active.",
-    "none": "Not set",
-    "loadFailed": "Home country could not be loaded."
+    "none": "Not set"
   },
   "devices": {
-    "title": "Devices",
+    "title": "Companion app",
     "description": "Connect the TravStats app on your phone. Scan the QR code in the app to pair the device — a device-bound token is created automatically.",
     "connectButton": "Connect new device",
     "qrTitle": "Scan with the TravStats app",
@@ -1032,15 +1010,20 @@
     "ip": "IP {{ip}}",
     "revoked": "Signed out",
     "unpairButton": "Sign out",
-    "confirmUnpair": "Really sign out this device? The app on it will lose access immediately.",
     "errors": {
       "load": "Failed to load devices",
       "start": "Failed to start pairing",
       "unpair": "Failed to sign out device"
+    },
+    "unpairDialog": {
+      "title": "Sign out phone?",
+      "amount": "1 phone",
+      "after": "It loses access at once and must be paired again.",
+      "confirm": "Sign out"
     }
   },
   "apiTokens": {
-    "title": "API Tokens",
+    "title": "API keys",
     "description": "Personal access tokens for AI agents, scripts, and external apps. To connect the TravStats app, use \"Devices\" instead. A token is shown exactly once at creation — never again.",
     "docsTitle": "API documentation",
     "docsBody": "Full endpoints, examples and schemas — try them interactively with your token.",
@@ -1054,13 +1037,11 @@
       "admin": "Admin — full access"
     },
     "create": "Create token",
-    "existingTitle": "Existing tokens",
     "empty": "No tokens created yet.",
     "lastUsed": "Last used: {{when}}",
     "neverUsed": "Never used",
     "revoked": "Revoked",
     "revokeButton": "Revoke",
-    "confirmRevoke": "Really revoke this token? External tools using it will lose access immediately.",
     "justCreatedTitle": "Token created",
     "justCreatedWarning": "Copy this token NOW — it will not be shown again. Only the hash is persisted.",
     "copy": "Copy",
@@ -1077,10 +1058,16 @@
       "read": "Read",
       "write": "Write",
       "admin": "Admin"
+    },
+    "revokeDialog": {
+      "title": "Revoke key?",
+      "amount": "1 key",
+      "after": "The tool is locked out at once.",
+      "confirm": "Revoke"
     }
   },
   "security": {
-    "title": "Security",
+    "title": "Sign-in",
     "description": "Protect your sign-in with a one-time code from an authenticator app. Entirely optional — without setup, nothing about your sign-in changes.",
     "enable": "Enable two-factor",
     "scanHint": "Scan the QR code with your authenticator app.",
@@ -1124,7 +1111,7 @@
     "notConfigured": "An administrator has to set this instance's public address before passkeys can be used."
   },
   "countryCounting": {
-    "title": "Counting countries",
+    "title": "Countries",
     "description": "Which kind of evidence makes a country count towards your total.",
     "label": "A country counts from …",
     "help": "Changes the counted number only, never the list. There is deliberately no hours-based option: nothing records whether you left the airport, and a number you can turn until the total feels right is not a measurement any more.",
@@ -1275,16 +1262,12 @@
     "description": "Trip positions from the app are stored on this server and shown on the trip map.",
     "more": "Switched off, the server accepts no new ones; what is stored stays until you delete it."
   },
-  "travPlan": {
-    "label": "Plan – plan trips",
-    "description": "The planning area: plan trips ahead, with stages, packing list and weather. Switched off, it leaves the menu; your plans are kept and come back as soon as you switch it on."
-  },
   "menu": {
     "domains": "Domains",
     "version": "TravStats {{version}}"
   },
   "domains": {
-    "title": "Domains & colours",
+    "title": "What you record",
     "description": "One domain, one row: switch it on and pick its colour right beside it. Domains that are off stay listed here, so you can switch them on.",
     "color": "Colour"
   },
@@ -1535,20 +1518,6 @@
       }
     }
   },
-  "personalFacts": {
-    "loadFailed": "Your personal details could not be loaded.",
-    "notSet": "Not set",
-    "homePlace": {
-      "label": "Home",
-      "description": "The residence of your current home period. The Companion app uses it, for example, for the leave-now reminder.",
-      "legacyHint": "This place comes from an older entry and belongs to no home period. Add your residence under Home so it applies everywhere.",
-      "editLink": "Change under Home"
-    },
-    "passport": {
-      "label": "Passport valid until",
-      "description": "The Companion app warns six months ahead."
-    }
-  },
   "area": {
     "pages": {
       "account": "Profile & sign-in",
@@ -1734,6 +1703,133 @@
       "publicUrlMissing": {
         "reason": "Still missing. Until then invitations, e-mails and calendars point to localhost."
       }
+    }
+  },
+  "home": {
+    "title": "Home",
+    "loadFailed": "I couldn't load this. I change nothing until it has loaded.",
+    "country": {
+      "name": "Home country",
+      "sub": "Booking templates from here first",
+      "help": "Filters nothing, only changes the order."
+    },
+    "passport": {
+      "name": "Passport valid until",
+      "sub": "The Companion app warns 6 months ahead"
+    },
+    "loading": "Still loading this …"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "name": "Delete account",
+    "sub": "With all entries, photos and files",
+    "help": "The account is gone at once, for your admin too. Download your data first, there is no way back.",
+    "open": "Delete account …",
+    "password": "Your password",
+    "code": "Code from the authenticator app or a backup code",
+    "continue": "Continue",
+    "refused": {
+      "DELETE_PASSWORD_INCORRECT": "The password is wrong. I deleted nothing.",
+      "DELETE_SECOND_FACTOR_REQUIRED": "Your account has a second step. I need the code before I delete anything.",
+      "DELETE_SECOND_FACTOR_INVALID": "The code is wrong. I deleted nothing.",
+      "DELETE_LAST_ADMIN": "You are the last admin. Give the role to another account first, then I can delete this one.",
+      "DEMO_ACCOUNT_FORBIDDEN": "I don't delete the demo account.",
+      "offline": "The server isn't answering. I deleted nothing.",
+      "other": "I couldn't delete the account. It is still there."
+    },
+    "dialog": {
+      "title": "Delete account?",
+      "affects": "Your account {{username}} with all entries, photos and files",
+      "amount": "Everything you have here",
+      "after": "It is gone at once, for your admin too. It can't be brought back.",
+      "confirm": "Delete account"
+    }
+  },
+  "planning": {
+    "title": "Plan"
+  },
+  "firstVisit": {
+    "title": "First",
+    "language": "Language & units",
+    "home": "Home town",
+    "location": "Location source",
+    "hide": "Hide"
+  },
+  "rows": {
+    "language": {
+      "name": "Language"
+    },
+    "timezone": {
+      "name": "Time zone",
+      "sub": "For local times and daily values"
+    },
+    "dateFormat": {
+      "name": "Date",
+      "sub": "Tables always show 2026-12-31"
+    },
+    "timeFormat": {
+      "name": "Time"
+    },
+    "distance": {
+      "name": "Distance"
+    },
+    "weight": {
+      "name": "Baggage",
+      "sub": "For allowances without a unit",
+      "help": "Converts nothing."
+    },
+    "currency": {
+      "name": "Main currency",
+      "sub": "All totals in this currency",
+      "help": "Amounts already converted keep their value. ECB rates back to 1999."
+    },
+    "domainJump": "Settings",
+    "resetColors": {
+      "name": "Reset colours",
+      "help": "The map has its own colours and stays as it is."
+    },
+    "travPlan": {
+      "name": "Plan trips",
+      "sub": "Ideas and plans before you go",
+      "help": "Turning off keeps your plans.",
+      "offOnServer": "This server doesn't offer planning."
+    },
+    "flightStatus": {
+      "name": "Status"
+    },
+    "seatClass": {
+      "name": "Class"
+    },
+    "favoriteAirline": {
+      "name": "Airline"
+    },
+    "flightCategory": {
+      "name": "Purpose",
+      "sub": "Statistics only"
+    },
+    "costTracking": {
+      "name": "Taxes and fees",
+      "sub": "Also business-travel totals",
+      "help": "Price and currency are always there."
+    },
+    "trackAircraft": {
+      "name": "Aircraft registration",
+      "help": "Off: aircraft types only, no individual aircraft."
+    },
+    "liveTracking": {
+      "name": "Flight path from phone",
+      "sub": "Recorded by the Companion app",
+      "help": "Off: the server stops accepting flight paths."
+    },
+    "cruiseLine": {
+      "name": "Cruise line"
+    },
+    "cruiseCabin": {
+      "name": "Cabin"
+    },
+    "seaDays": {
+      "name": "Sea days count as travel days",
+      "help": "The number of sea days stays visible."
     }
   }
 }

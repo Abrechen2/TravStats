@@ -175,10 +175,12 @@ const page = (
 
 export const AREA_PAGES: readonly AreaPageDef[] = [
   page("account", "user", [
-    P("profile", { anchors: ["home"] }),
+    P("profile"),
+    P("home"),
     P("security"),
     P("devices"),
     P("apitokens"),
+    P("deletion"),
   ]),
   page("display", "languages", [
     P("display", { as: "language" }),
@@ -187,7 +189,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("dashboardAppearance"),
     P("listAppearance"),
   ]),
-  page("domains", "layers", [P("domains"), P("countryCounting")]),
+  page("domains", "layers", [P("domains"), P("planning"), P("countryCounting")]),
   page(
     "flight",
     "plane",

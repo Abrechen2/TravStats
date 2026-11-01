@@ -11,36 +11,38 @@ vi.mock("../../../hooks/useTravPlanVisible", () => ({
   useTravPlanInstanceOn: () => mocks.instanceOn(),
 }));
 
-import TravPlanModuleRow from "../TravPlanModuleRow";
+import PlanningSection from "../PlanningSection";
 
 /**
  * The account's TravPlan switch beside the domains (owner, 2026-10-27:
  * "alles einzeln aktivierbar so wie die Domains").
  */
-describe("TravPlanModuleRow", () => {
+describe("PlanningSection", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mocks.instanceOn.mockReturnValue(true);
     useSuggestionSwitchesStore.setState({ travPlan: false });
   });
 
-  it("is not drawn while the instance does not offer TravPlan", () => {
+  it("stays visible but locked, with its reason, while the instance does not offer TravPlan", () => {
     mocks.instanceOn.mockReturnValue(false);
-    const { container } = render(<TravPlanModuleRow />);
-    expect(container).toBeEmptyDOMElement();
+    render(<PlanningSection />);
+    const toggle = screen.getByRole("switch", { name: /settings:rows\.travPlan\.name/ });
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText("settings:rows.travPlan.offOnServer")).toBeInTheDocument();
   });
 
   it("reads the switch from what GET /settings said", () => {
     useSuggestionSwitchesStore.getState().noteRemote({ travPlan: { enabled: true } });
-    render(<TravPlanModuleRow />);
-    expect(screen.getByRole("switch", { name: /settings:travPlan\.label/ })).toBeChecked();
+    render(<PlanningSection />);
+    expect(screen.getByRole("switch", { name: /settings:rows\.travPlan\.name/ })).toBeChecked();
   });
 
   it("switching it on saves it, then has the navigation ask again", async () => {
     const update = vi.spyOn(settingsApi, "update").mockResolvedValue({} as UserSettings);
     const before = useCapabilitiesEpochStore.getState().epoch.travPlan;
-    render(<TravPlanModuleRow />);
-    await userEvent.click(screen.getByRole("switch", { name: /settings:travPlan\.label/ }));
+    render(<PlanningSection />);
+    await userEvent.click(screen.getByRole("switch", { name: /settings:rows\.travPlan\.name/ }));
     expect(useSuggestionSwitchesStore.getState().travPlan).toBe(true);
     expect(update).toHaveBeenCalledWith({ travPlan: { enabled: true } });
     await waitFor(() =>

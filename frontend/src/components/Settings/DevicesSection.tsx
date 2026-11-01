@@ -20,7 +20,7 @@ import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { useBlockConfirm } from "./useBlockConfirm";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -61,7 +61,7 @@ function formatRemaining(totalSeconds: number): string {
 
 export default function DevicesSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
+  const { confirm: askConfirm, dialog: confirmDialog } = useBlockConfirm();
   const isDemo = useIsDemoAccount();
   const [devices, setDevices] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
@@ -180,9 +180,15 @@ export default function DevicesSection(): JSX.Element {
     }
   };
 
-  const handleUnpair = async (id: string): Promise<void> => {
-    const message = t("settings:devices.confirmUnpair");
-    if (!(await askConfirm({ message, destructive: true }))) return;
+  const handleUnpair = async (id: string, label: string): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:devices.unpairDialog.title"),
+      affects: label,
+      amount: t("settings:devices.unpairDialog.amount"),
+      after: t("settings:devices.unpairDialog.after"),
+      confirmLabel: t("settings:devices.unpairDialog.confirm"),
+    });
+    if (!confirmed) return;
     try {
       await apiTokensApi.revoke(id);
       void reload();
@@ -440,7 +446,7 @@ export default function DevicesSection(): JSX.Element {
                 {!dev.revokedAt && !isDemo && (
                   <button
                     type="button"
-                    onClick={() => handleUnpair(dev.id)}
+                    onClick={() => handleUnpair(dev.id, dev.label)}
                     className="ml-3 px-3 py-1.5 text-xs rounded-md"
                     style={{
                       background: "transparent",

@@ -1,4 +1,4 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import { SectionCard } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
 import CurrencySelect from "../common/CurrencySelect";
@@ -6,7 +6,6 @@ import HelpIcon from "../Help/HelpIcon";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import { UnitRow } from "./UnitRow";
-import DemoLockedNotice from "./DemoLockedNotice";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
@@ -43,16 +42,11 @@ export default function UnitsSection({
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:units.title")}
-        description={t("settings:units.description")}
-      />
-      {isDemo && <DemoLockedNotice />}
       <SettingRows>
         <UnitRow
           field="distanceUnit"
-          title={t("settings:units.distance")}
-          sub={t("settings:units.distanceSub")}
+          title={t("settings:rows.distance.name")}
+          sub={undefined}
           saved={units.distanceUnit}
           values={DISTANCE_UNITS}
           shortLabel={(value) => t(`settings:units.short.${value}`)}
@@ -61,8 +55,9 @@ export default function UnitsSection({
         />
         <UnitRow
           field="weightUnit"
-          title={t("settings:units.weight")}
-          sub={t("settings:units.weightSub")}
+          title={t("settings:rows.weight.name")}
+          sub={t("settings:rows.weight.sub")}
+          help={t("settings:rows.weight.help")}
           // Persisted state from before the preference existed has none.
           saved={resolveWeightUnit(units.weightUnit)}
           values={WEIGHT_UNITS}
@@ -72,17 +67,17 @@ export default function UnitsSection({
           locked={isDemo}
         />
         <SettingRow
-          title={t("settings:units.currency")}
+          title={t("settings:rows.currency.name")}
           htmlFor="units-base-currency"
           sub={
             <span className="inline-flex items-center gap-1.5">
-              {t("settings:units.currencySub")}
+              {t("settings:rows.currency.sub")}
               {/* Why the choice is narrower than what you may RECORD in — the
                   one question this field reliably raises. */}
               <HelpIcon
-                content={`${t("settings:units.currencyHint")} ${t("lodging:fx.baseCurrencyExplainer")}`}
+                content={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
                 position="top"
-                subject={t("settings:units.currencySub")}
+                subject={t("settings:rows.currency.name")}
               />
             </span>
           }

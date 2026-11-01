@@ -187,30 +187,28 @@ describe("ProfileSection on the demo account", () => {
         removingProfilePicture={false}
         onAvatarUpload={() => {}}
         onAvatarDelete={() => {}}
-        onSetProfile={() => {}}
       />
     );
   };
 
-  it("explains instead of offering the name and birthdate fields", () => {
+  it("shows the name, e-mail and birthday fields locked, each with the reason", () => {
     isDemoMock.current = true;
     renderProfile();
-    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:profile.firstName")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:profile.lastName")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:profile.birthdate")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("settings:profile.email")).not.toBeInTheDocument();
-    // The username is read-only for everybody and stays visible: a visitor
-    // still needs to see which account they are looking at.
-    expect(screen.getByLabelText("settings:profile.username")).toBeInTheDocument();
+    for (const label of ["firstName", "lastName", "birthdate", "email"]) {
+      expect(screen.getByLabelText(`settings:profile.${label}`)).toBeDisabled();
+    }
+    expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThanOrEqual(4);
+    // The username is shown for everybody: a visitor still needs to see which
+    // account they are looking at.
+    expect(screen.getAllByText("@demo").length).toBeGreaterThan(0);
   });
 
   it("offers them for a normal account — the case above is not vacuous", () => {
     isDemoMock.current = false;
     renderProfile();
-    expect(screen.getByLabelText("settings:profile.firstName")).toBeInTheDocument();
-    expect(screen.getByLabelText("settings:profile.birthdate")).toBeInTheDocument();
-    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("settings:profile.firstName")).toBeEnabled();
+    expect(screen.getByLabelText("settings:profile.birthdate")).toBeEnabled();
+    expect(screen.queryByText("settings:blocks.lock.demo")).not.toBeInTheDocument();
   });
 });
 
@@ -232,7 +230,7 @@ describe("the display and units cards on the demo account", () => {
   const units = { distanceUnit: "kilometers" as const, weightUnit: "kg" as const, currency: "EUR" };
 
   const renderDisplay = (): void => {
-    render(<DisplaySection display={display} onSetDisplay={() => {}} />);
+    render(<DisplaySection display={display} />);
   };
   const renderUnits = (): void => {
     render(<UnitsSection units={units} baseCurrency="EUR" onSetBaseCurrency={() => {}} />);
@@ -241,19 +239,18 @@ describe("the display and units cards on the demo account", () => {
   it("says the display settings are locked, and disables them", () => {
     isDemoMock.current = true;
     renderDisplay();
-    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
-    expect(screen.getByLabelText("settings:display.timezone")).toBeDisabled();
-    expect(screen.getByRole("radiogroup", { name: "settings:display.dateFormat" })).toHaveAttribute(
-      "aria-disabled",
-      "true"
-    );
+    expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("settings:rows.timezone.name")).toBeDisabled();
+    expect(
+      screen.getByRole("radiogroup", { name: "settings:rows.dateFormat.name" })
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("says the units are locked, and disables them", () => {
     isDemoMock.current = true;
     renderUnits();
-    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
-    expect(screen.getByRole("radiogroup", { name: "settings:units.distance" })).toHaveAttribute(
+    expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThan(0);
+    expect(screen.getByRole("radiogroup", { name: "settings:rows.distance.name" })).toHaveAttribute(
       "aria-disabled",
       "true"
     );
@@ -263,8 +260,8 @@ describe("the display and units cards on the demo account", () => {
     isDemoMock.current = false;
     renderDisplay();
     renderUnits();
-    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("settings:display.timezone")).toBeEnabled();
+    expect(screen.queryByText("settings:blocks.lock.demo")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("settings:rows.timezone.name")).toBeEnabled();
   });
 });
 
@@ -282,7 +279,7 @@ describe("the weight unit on the units card", () => {
     const setUnits = vi.fn();
     Object.assign(useSettingsStore.getState(), { setUnits, saveRemoteSettings: save });
     renderWith({ distanceUnit: "kilometers", weightUnit: "kg" });
-    const group = screen.getByRole("radiogroup", { name: "settings:units.weight" });
+    const group = screen.getByRole("radiogroup", { name: "settings:rows.weight.name" });
     const radios = Array.from(group.querySelectorAll('[role="radio"]'));
     expect(radios.map((radio) => radio.textContent)).toEqual(["kg", "lb"]);
     expect(radios[0]).toHaveAttribute("aria-checked", "true");
@@ -299,7 +296,7 @@ describe("the weight unit on the units card", () => {
 
   it("shows kilograms for settings saved before the preference existed", () => {
     renderWith({ distanceUnit: "kilometers" });
-    const group = screen.getByRole("radiogroup", { name: "settings:units.weight" });
+    const group = screen.getByRole("radiogroup", { name: "settings:rows.weight.name" });
     expect(group.querySelector('[aria-checked="true"]')?.textContent).toBe("kg");
   });
 });

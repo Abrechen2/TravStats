@@ -69,9 +69,9 @@ describe("the settings search reads the registry", () => {
   });
 
   it("marks the mounted section a hit should highlight, through the page's aliases", () => {
-    // Registry section `home` has no block of its own: Profil draws it.
-    const hit = find("Reisepass").find((h) => h.sectionId === "home");
-    if (hit) expect(hit.highlight).toBe("profile");
+    // Registry section `home` has its own block now (Zuhause).
+    const hit = find("Reisepass").find((h) => h.sectionId === "home")!;
+    expect(hit.highlight).toBe("home");
     // A service card answers to the one section that draws the catalogue.
     const card = find("Immich").find((h) => h.sectionId === "immich")!;
     expect(card.highlight).toBe("externalServices");

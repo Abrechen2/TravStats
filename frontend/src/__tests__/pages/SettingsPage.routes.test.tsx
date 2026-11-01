@@ -157,10 +157,9 @@ vi.unmock("../../store/settingsStore");
 // unconditionally and fetch on mount. They were never the subject of these
 // cases — the gate used to keep them out of the tree, and the network guard in
 // `src/__tests__/setup.ts` failed the suite the moment it stopped.
-// Fetches the user's settings on mount (P5 home country) — not the subject here.
-vi.mock("../../components/Settings/PersonalFactsCard", () => ({ default: () => null }));
-vi.mock("../../components/Settings/HomeCountryCard", () => ({
-  default: () => <div data-testid="home-country-card" />,
+// Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/HomeSection", () => ({
+  default: () => <div data-testid="home-section" />,
 }));
 vi.mock("../../components/ExternalServices/LegacyServiceSummary", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,

@@ -1,51 +1,59 @@
 import type React from "react";
 
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+const demo = vi.hoisted(() => ({ value: false }));
+vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.value }));
 
+import { generalSettingsWereSaved, useSettingsStore } from "../../../store/settingsStore";
 import ProfileSection from "../ProfileSection";
 
 /**
- * Every field in this form can be found by the name shown beside it.
- *
- * Five inputs — username, first name, last name, e-mail and birthday — each had
- * a `<label>` next to them and nothing tying the two together: no `htmlFor`, no
- * wrapping label, no `aria-label`. Sighted mouse users never noticed; a screen
- * reader could not name the fields, and clicking the label text did not focus
- * anything (audit finding AUD-026).
- *
- * `getByLabelText` is the assertion on purpose: it fails exactly when the
- * association is missing, which a query by position or class would not.
+ * Profil: every field is found by the name beside it (AUD-026), the account name
+ * is shown and not offered for editing (AUD-025), and the group saves with a
+ * button: a refused save keeps what was typed and says so instead of snapping back.
  */
-function renderSection(overrides: Record<string, unknown> = {}) {
+const PROFILE = {
+  username: "dennis",
+  email: "d@example.com",
+  firstName: "Dennis",
+  lastName: "Wittke",
+  birthdate: "1980-01-01",
+};
+const save = vi.fn();
+const setProfile = vi.fn();
+
+function renderSection(): void {
   const props = {
-    profile: {
-      username: "dennis",
-      email: "d@example.com",
-      firstName: "Dennis",
-      lastName: "Wittke",
-      birthdate: "1980-01-01",
-    },
+    profile: PROFILE,
     uploadingProfilePicture: false,
     removingProfilePicture: false,
     onAvatarUpload: vi.fn(),
     onAvatarDelete: vi.fn(),
-    onSetProfile: vi.fn(),
-    ...overrides,
   };
-  const rendered = render(
-    <ProfileSection {...(props as unknown as React.ComponentProps<typeof ProfileSection>)} />
-  );
-  return { props, ...rendered };
+  render(<ProfileSection {...(props as unknown as React.ComponentProps<typeof ProfileSection>)} />);
 }
 
-describe("ProfileSection labels", () => {
+beforeEach(() => {
+  demo.value = false;
+  Object.assign(useSettingsStore.getState(), {
+    setProfile,
+    saveRemoteSettings: save,
+    profile: { ...PROFILE },
+  });
+});
+afterEach(() => {
+  cleanup();
+  save.mockReset();
+  setProfile.mockReset();
+});
+
+describe("ProfileSection", () => {
   it.each([
-    "settings:profile.username",
     "settings:profile.firstName",
     "settings:profile.lastName",
     "settings:profile.email",
@@ -55,24 +63,83 @@ describe("ProfileSection labels", () => {
     expect(screen.getByLabelText(label)).toBeTruthy();
   });
 
-  // AUD-025: the field was editable and "Save profile" sent it, but the account
-  // name lives in a column nothing here writes — the next load put the old name
-  // straight back. Showing it is honest; offering to edit it was not.
   it("shows the account name without offering to change it", () => {
-    const { props } = renderSection();
-    const input = screen.getByLabelText("settings:profile.username") as HTMLInputElement;
-
-    expect(input.readOnly).toBe(true);
-    expect(input.value).toBe("dennis");
-    expect(props.onSetProfile).not.toHaveBeenCalled();
-    // And it says why, rather than leaving a dead field to be puzzled over.
-    expect(screen.getByText("settings:profile.usernameHint")).toBeTruthy();
+    renderSection();
+    expect(screen.getByText("@dennis")).toBeTruthy();
+    expect(screen.queryByLabelText("settings:profile.username")).not.toBeInTheDocument();
   });
 
-  // Round 4 (E10): the profile saves as it changes, like every other section;
-  // a button that only repeated the auto-save suggested edits were not kept.
-  it("draws no save button of its own", () => {
+  it("writes nothing until the user saves, then writes the group once", async () => {
+    save.mockResolvedValue(undefined);
     renderSection();
-    expect(screen.queryByRole("button", { name: /settings:profile\.save/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("settings:profile.firstName"), {
+      target: { value: "Denis" },
+    });
+    expect(screen.getByText("settings:blocks.save.unsaved")).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+    });
+    expect(setProfile).toHaveBeenCalledWith(expect.objectContaining({ firstName: "Denis" }));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("a refused save keeps the typed value, says it was not saved and restores the store", async () => {
+    save.mockRejectedValue(Object.assign(new Error("500"), { response: { status: 500 } }));
+    renderSection();
+    const first = screen.getByLabelText("settings:profile.firstName") as HTMLInputElement;
+    fireEvent.change(first, { target: { value: "Denis" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+    });
+    expect(first.value).toBe("Denis");
+    expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
+    expect(setProfile).toHaveBeenLastCalledWith(
+      expect.objectContaining({ firstName: "Dennis", email: "d@example.com" })
+    );
+  });
+
+  it("when only the birthday write was refused, the other fields stay saved in the store", async () => {
+    const partial = new Error("birthdate refused");
+    const store = await import("../../../store/settingsStore");
+    const spy = vi
+      .spyOn(store, "generalSettingsWereSaved")
+      .mockImplementation((e) => e === partial);
+    save.mockRejectedValue(partial);
+    try {
+      renderSection();
+      fireEvent.change(screen.getByLabelText("settings:profile.firstName"), {
+        target: { value: "Denis" },
+      });
+      fireEvent.change(screen.getByLabelText("settings:profile.birthdate"), {
+        target: { value: "1981-02-03" },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+      });
+      expect(setProfile).toHaveBeenLastCalledWith({ birthdate: "1980-01-01" });
+      expect(generalSettingsWereSaved).toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("refuses to save an e-mail that is not one, and says why", async () => {
+    renderSection();
+    fireEvent.change(screen.getByLabelText("settings:profile.email"), {
+      target: { value: "not-an-address" },
+    });
+    expect(screen.getByText("settings:profile.emailBad")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "settings:profile.save" }));
+    });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("locks the fields in the demo account, with the reason, and offers no save", () => {
+    demo.value = true;
+    renderSection();
+    expect(screen.getByLabelText("settings:profile.firstName")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "settings:profile.save" })).not.toBeInTheDocument();
   });
 });

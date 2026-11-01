@@ -1,11 +1,21 @@
 import React from "react";
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import DemoLockedNotice from "./DemoLockedNotice";
+import { SectionCard } from "./SettingsShared";
 import HelpIcon from "../Help/HelpIcon";
 import { Icon } from "../ui/Icon";
+import { SettingRows } from "../ui/SettingRow";
+import {
+  ActionControl,
+  GroupStateMark,
+  InputControl,
+  SettingItem,
+  StatusValue,
+  useGroupSave,
+} from "../ui/settings";
+import { useSettingItem } from "../ui/settings/itemContext";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { canonicalPrivateFileUrl } from "../../lib/privateFileUrl";
+import { generalSettingsWereSaved, useSettingsStore } from "../../store/settingsStore";
 
 interface ProfileSectionProps {
   profile: {
@@ -13,8 +23,6 @@ interface ProfileSectionProps {
     email: string;
     profilePicture?: string;
     birthdate?: string | null;
-    // Real name (#241) — optional, and shown next to the username because one
-    // identifies you to the instance while the other is how you are addressed.
     firstName?: string | null;
     lastName?: string | null;
   };
@@ -22,36 +30,103 @@ interface ProfileSectionProps {
   removingProfilePicture: boolean;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarDelete: () => void;
-  onSetProfile: (partial: {
-    username?: string;
-    email?: string;
-    birthdate?: string | null;
-    firstName?: string | null;
-    lastName?: string | null;
-  }) => void;
 }
 
+interface ProfileDraft extends Record<string, unknown> {
+  firstName: string;
+  lastName: string;
+  email: string;
+  birthdate: string;
+}
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function DateField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}): JSX.Element {
+  const { id, locked, describedBy, changed } = useSettingItem();
+  return (
+    <input
+      id={id}
+      type="date"
+      className="input"
+      value={value}
+      disabled={locked}
+      aria-disabled={locked || undefined}
+      aria-describedby={describedBy}
+      style={changed ? { border: "1px solid var(--ts-accent)" } : undefined}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+/**
+ * Profil: the picture, then one group with a save button — names, e-mail and
+ * birthday travel together ("Profil speichern"), and a failed save keeps the
+ * draft instead of snapping back. The settings document is written only when
+ * the user saves; until then the draft lives apart from the store.
+ */
 export default function ProfileSection({
   profile,
   uploadingProfilePicture,
   removingProfilePicture,
   onAvatarUpload,
   onAvatarDelete,
-  onSetProfile,
 }: ProfileSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const isDemo = useIsDemoAccount();
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
+
+  const saved: ProfileDraft = {
+    firstName: profile.firstName ?? "",
+    lastName: profile.lastName ?? "",
+    email: profile.email,
+    birthdate: profile.birthdate ?? "",
+  };
+  const group = useGroupSave<ProfileDraft>({
+    id: "account.profile",
+    label: t("settings:profile.group.label"),
+    saved,
+    write: async (draft) => {
+      const store = useSettingsStore.getState();
+      const previous = { ...store.profile };
+      store.setProfile({
+        firstName: draft.firstName.trim() || null,
+        lastName: draft.lastName.trim() || null,
+        email: draft.email.trim(),
+        birthdate: draft.birthdate || null,
+      });
+      try {
+        await useSettingsStore.getState().saveRemoteSettings();
+      } catch (error) {
+        // Only the birthdate write was refused: the rest is saved, take back
+        // the birthdate alone. Otherwise the whole document was refused.
+        const partial = generalSettingsWereSaved(error);
+        useSettingsStore.getState().setProfile(
+          partial
+            ? { birthdate: previous.birthdate }
+            : {
+                firstName: previous.firstName,
+                lastName: previous.lastName,
+                email: previous.email,
+                birthdate: previous.birthdate,
+              }
+        );
+        throw error;
+      }
+    },
+  });
+  const emailBad = group.draft.email.trim() !== "" && !EMAIL_SHAPE.test(group.draft.email.trim());
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:profile.title")}
-        description={t("settings:profile.description")}
-      />
-      {/* The head of the card: who this is. Round 4 draws a square tile with
-          the initial (or the picture), the name, one meta line and the one
-          action on the picture; "change password" moved to Sicherheit. */}
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-lg)" }}>
         <div
           className="flex items-center justify-center overflow-hidden shrink-0"
@@ -90,9 +165,7 @@ export default function ProfileSection({
             />
           </span>
         </div>
-        {isDemo ? (
-          <DemoLockedNotice />
-        ) : (
+        {isDemo ? null : (
           <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
             {/* Native <input type=file> shows the browser-locale "Choose File"
                 label which conflicts with the app i18n. Hide it visually and
@@ -135,109 +208,80 @@ export default function ProfileSection({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          {/*
-           * The username is shown, not edited. It used to be a plain input whose
-           * contents "Save profile" dutifully sent — the server stored it in the
-           * settings blob, answered 200, and the next load replaced it with the
-           * real name from /auth/me again, because the account name is a column
-           * on User and nothing here ever touched it. A rename that survives
-           * would need a uniqueness check and a decision about existing sessions;
-           * until that exists, showing the name is honest and an editable field
-           * is not (audit finding AUD-025).
-           */}
-          <label className="label" htmlFor="profile-username">
-            {t("settings:profile.username")}
-          </label>
-          <input
-            id="profile-username"
-            type="text"
-            value={profile.username}
-            readOnly
-            aria-describedby="profile-username-hint"
-            className="input opacity-70 cursor-not-allowed"
+      <SettingRows>
+        <SettingItem
+          title={t("settings:profile.username")}
+          sub={t("settings:profile.usernameSub")}
+          control={<StatusValue>@{profile.username}</StatusValue>}
+        />
+        <SettingItem
+          title={t("settings:profile.firstName")}
+          locked={locked}
+          changed={group.isChanged("firstName")}
+          control={
+            <InputControl
+              value={group.draft.firstName}
+              onChange={(firstName) => group.edit({ firstName })}
+            />
+          }
+        />
+        <SettingItem
+          title={t("settings:profile.lastName")}
+          locked={locked}
+          changed={group.isChanged("lastName")}
+          control={
+            <InputControl
+              value={group.draft.lastName}
+              onChange={(lastName) => group.edit({ lastName })}
+            />
+          }
+        />
+        <SettingItem
+          title={t("settings:profile.email")}
+          sub={t("settings:profile.emailSub")}
+          help={t("settings:profile.emailHelp")}
+          locked={locked}
+          changed={group.isChanged("email")}
+          error={emailBad ? t("settings:profile.emailBad") : undefined}
+          control={
+            <InputControl
+              type="email"
+              inputMode="email"
+              value={group.draft.email}
+              onChange={(email) => group.edit({ email })}
+            />
+          }
+        />
+        <SettingItem
+          title={t("settings:profile.birthdate")}
+          sub={t("settings:profile.birthdateSub")}
+          help={t("settings:profile.birthdateHelp")}
+          locked={locked}
+          changed={group.isChanged("birthdate")}
+          control={
+            <DateField
+              value={group.draft.birthdate}
+              onChange={(birthdate) => group.edit({ birthdate })}
+            />
+          }
+        />
+      </SettingRows>
+      {!isDemo && (
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+          <ActionControl
+            label={t("settings:profile.save")}
+            busy={group.state === "saving"}
+            onClick={() => {
+              if (emailBad || group.state === "unchanged") return;
+              void group.save();
+            }}
           />
-          <p
-            id="profile-username-hint"
-            className="text-xs mt-1"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {t("settings:profile.usernameHint")}
-          </p>
+          {group.state !== "unchanged" && (
+            <ActionControl label={t("settings:blocks.save.discardGroup")} onClick={group.discard} />
+          )}
+          <GroupStateMark state={group.state} reason={group.reason} />
         </div>
-        {/* The name greets every visitor from the header, the e-mail address
-            is a password-reset vector, and the birthdate drives an
-            achievement — all three are shown to or used by whoever logs in
-            next, so the server refuses them for the shared demo account. The
-            notice above the fold says so once; repeating it per field would
-            say it four times. The username stays: a visitor still needs to
-            see which account they are looking at, and it is read-only for
-            everybody anyway. */}
-        {!isDemo && (
-          <>
-            <div>
-              <label className="label" htmlFor="profile-first-name">
-                {t("settings:profile.firstName")}
-              </label>
-              <input
-                id="profile-first-name"
-                type="text"
-                value={profile.firstName ?? ""}
-                onChange={(e) => onSetProfile({ firstName: e.target.value })}
-                className="input"
-                autoComplete="given-name"
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="profile-last-name">
-                {t("settings:profile.lastName")}
-              </label>
-              <input
-                id="profile-last-name"
-                type="text"
-                value={profile.lastName ?? ""}
-                onChange={(e) => onSetProfile({ lastName: e.target.value })}
-                className="input"
-                autoComplete="family-name"
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="profile-email">
-                {t("settings:profile.email")}
-              </label>
-              <input
-                id="profile-email"
-                type="email"
-                value={profile.email}
-                onChange={(e) => onSetProfile({ email: e.target.value })}
-                className="input"
-                autoComplete="email"
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="profile-birthdate">
-                {t("settings:profile.birthdate")}
-              </label>
-              <input
-                id="profile-birthdate"
-                type="date"
-                value={profile.birthdate ?? ""}
-                onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
-                className="input"
-                aria-describedby="profile-birthdate-hint"
-              />
-              <p
-                id="profile-birthdate-hint"
-                className="text-xs mt-1"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {t("settings:profile.birthdateHint")}
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+      )}
     </SectionCard>
   );
 }

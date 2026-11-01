@@ -118,10 +118,10 @@ describe("the area mounts what the registry lists", () => {
   /**
    * Registry sections whose block does not exist yet: they are searchable and
    * their address works, but nothing draws them until the package that builds
-   * them (3: account deletion, 4: planning, 7: server access). A stale entry
+   * them (7: server access). A stale entry
    * fails, so the list can only shrink.
    */
-  const NOT_MOUNTED_YET = ["account/deletion", "domains/planning", "users/access"];
+  const NOT_MOUNTED_YET = ["users/access"];
 
   it("has a page for every registry page, and none besides", () => {
     expect(AREA_PAGES.map((p) => p.id)).toEqual(SETTINGS_REGISTRY.map((p) => p.id));

@@ -30,7 +30,7 @@ import {
 } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { useBlockConfirm } from "./useBlockConfirm";
 
 /**
  * Scopes a token may be minted with, in widening order.
@@ -48,7 +48,7 @@ const NON_ADMIN_SCOPES: ApiTokenScope[] = SCOPES.filter((scope) => scope !== "ad
 
 export default function ApiTokensSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
+  const { confirm: askConfirm, dialog: confirmDialog } = useBlockConfirm();
   const isDemo = useIsDemoAccount();
   const isAdmin = useAuthStore((state) => state.user?.isAdmin === true);
   const scopes = isAdmin ? SCOPES : NON_ADMIN_SCOPES;
@@ -115,9 +115,15 @@ export default function ApiTokensSection(): JSX.Element {
     }
   };
 
-  const handleRevoke = async (id: string): Promise<void> => {
-    const message = t("settings:apiTokens.confirmRevoke");
-    if (!(await askConfirm({ message, destructive: true }))) return;
+  const handleRevoke = async (id: string, label: string): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:apiTokens.revokeDialog.title"),
+      affects: label,
+      amount: t("settings:apiTokens.revokeDialog.amount"),
+      after: t("settings:apiTokens.revokeDialog.after"),
+      confirmLabel: t("settings:apiTokens.revokeDialog.confirm"),
+    });
+    if (!confirmed) return;
     try {
       await apiTokensApi.revoke(id);
       void reload();
@@ -183,7 +189,7 @@ export default function ApiTokensSection(): JSX.Element {
                       {!isDemo && (
                         <button
                           type="button"
-                          onClick={() => handleRevoke(tok.id)}
+                          onClick={() => handleRevoke(tok.id, tok.label)}
                           className="btn-secondary"
                           style={{ color: "var(--ts-bad)" }}
                         >

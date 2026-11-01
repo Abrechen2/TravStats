@@ -21,11 +21,9 @@ import CruisePreferencesSection from "../CruisePreferencesSection";
 import FeaturesSection from "../FeaturesSection";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
-import { STATS_HIDDEN_SECTIONS_PREFIX } from "../../../hooks/useSectionVisibility";
 import { TRIP_COLORS } from "../../../lib/tripColors";
 
 const CRUISE = { defaultLine: "", defaultCabinType: null, showCruiseArcs: true };
-const SEAT_KEY = `${STATS_HIDDEN_SECTIONS_PREFIX}flight`;
 
 /**
  * The settings prototype rows of forgejo#321: each is a server setting that
@@ -36,7 +34,6 @@ describe("settings prototype rows", () => {
   beforeEach(() => {
     update.mockReset().mockResolvedValue({});
     toast.mockReset();
-    localStorage.removeItem(SEAT_KEY);
     useSuggestionSwitchesStore.setState({
       tripDefaultColor: null,
       cruiseSeaDaysCounted: true,
@@ -87,8 +84,8 @@ describe("settings prototype rows", () => {
   });
 
   it("sea days: a switch, on by default, that saves its own key", async () => {
-    render(<CruisePreferencesSection cruise={{ ...CRUISE }} onSetCruise={vi.fn()} />);
-    const sw = screen.getByRole("switch", { name: /settings:cruisePreferences\.countSeaDays$/ });
+    render(<CruisePreferencesSection cruise={{ ...CRUISE }} />);
+    const sw = screen.getByRole("switch", { name: /settings:rows\.seaDays\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
     expect(update).toHaveBeenCalledWith({ cruiseSeaDays: { counted: false } });
@@ -98,7 +95,7 @@ describe("settings prototype rows", () => {
   it("live tracking: on by default, off is saved, a failure rolls back", async () => {
     update.mockRejectedValueOnce(new Error("offline"));
     render(<FeaturesSection />);
-    const sw = screen.getByRole("switch", { name: /settings:features\.liveTracking$/ });
+    const sw = screen.getByRole("switch", { name: /settings:rows\.liveTracking\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
     expect(update).toHaveBeenCalledWith({ liveTracking: { enabled: false } });
@@ -106,17 +103,8 @@ describe("settings prototype rows", () => {
     expect(toast).toHaveBeenCalledWith("error", expect.any(String));
   });
 
-  it("seat statistics: a standard switch, and it is the statistics tab's own section switch", async () => {
-    useSettingsLevelStore.setState({ level: "standard" });
+  it("seat statistics: no longer a switch here (design 2026-11-01)", () => {
     render(<FeaturesSection />);
-    const sw = screen.getByRole("switch", { name: /settings:features\.seatStatistics$/ });
-    expect(sw).toBeChecked();
-    await userEvent.click(sw);
-    await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem(SEAT_KEY) ?? "[]")).toEqual(["seats"])
-    );
-    expect(sw).not.toBeChecked();
-    await userEvent.click(sw);
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(SEAT_KEY) ?? "[]")).toEqual([]));
+    expect(screen.queryByRole("switch", { name: /seatStatistics$/ })).not.toBeInTheDocument();
   });
 });

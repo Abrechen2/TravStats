@@ -18,17 +18,9 @@
     "webPrefsRejected": "Der Server hat deine Darstellungseinstellungen nicht angenommen. Auf diesem Gerät gelten sie weiter, auf deinen anderen nicht."
   },
   "cruisePreferences": {
-    "title": "Kreuzfahrt-Präferenzen",
-    "description": "Standardwerte für neu angelegte Kreuzfahrten und Darstellung auf der Karte.",
-    "defaultLine": "Standard-Reederei",
-    "defaultLinePlaceholder": "z. B. AIDA Cruises",
-    "defaultLineHint": "Wird in „Neue Kreuzfahrt → Manuell“ vorausgefüllt, wenn kein Schiff gewählt wurde.",
+    "title": "Neue Kreuzfahrten starten mit",
     "defaultCabin": "Standard-Kabinenkategorie",
-    "defaultCabinNone": "– keine Vorauswahl –",
-    "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
-    "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map.",
-    "countSeaDays": "Seetage zählen",
-    "countSeaDaysHint": "Seetage zählen in der Kreuzfahrt-Statistik bei den Reisetagen mit. Aus: Die Reisetage zählen ohne Seetage; die Zahl der Seetage selbst bleibt sichtbar."
+    "defaultCabinNone": "– keine Vorauswahl –"
   },
   "lodgingPreferences": {
     "title": "Unterkunfts-Präferenzen",
@@ -86,22 +78,12 @@
     "madeBy": "Ein Projekt von"
   },
   "profile": {
-    "title": "Benutzer-Profil",
-    "description": "Passe Benutzername, Kontaktinformationen und dein Profilbild an.",
-    "changePassword": "Passwort ändern",
-    "uploadAvatar": "Profilbild hochladen",
-    "chooseFile": "Datei auswählen",
+    "title": "Profil",
     "firstName": "Vorname",
     "lastName": "Nachname",
     "username": "Benutzername",
-    "usernameHint": "Der Anmeldename lässt sich hier nicht ändern.",
-    "email": "E-Mail-Adresse",
+    "email": "E-Mail",
     "birthdate": "Geburtstag",
-    "birthdateHint": "Optional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.",
-    "deleteAccount": "Account löschen",
-    "deletionRequested": "Löschanfrage vorgemerkt",
-    "dangerZone": "Gefahrenbereich",
-    "dangerZoneDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
     "invalidFileType": "Bitte wähle eine Bilddatei aus",
     "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
     "uploadSuccess": "Profilbild erfolgreich hochgeladen",
@@ -110,18 +92,22 @@
     "removeError": "Fehler beim Entfernen des Profilbilds",
     "uploadError": "Fehler beim Hochladen des Profilbilds",
     "save": "Profil speichern",
-    "saved": "Profil gespeichert",
-    "saveFailed": "Fehler beim Speichern des Profils",
     "help": {
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet."
     },
-    "editProfile": "Profil bearbeiten",
-    "changePicture": "Bild ändern"
+    "changePicture": "Bild ändern",
+    "group": {
+      "label": "Profil"
+    },
+    "usernameSub": "Zum Anmelden, bleibt fest",
+    "emailSub": "Für ein neues Passwort",
+    "emailHelp": "Erinnerungen haben eine eigene Adresse unter Erinnerungen.",
+    "emailBad": "Das sieht nicht wie eine E-Mail-Adresse aus. Ich speichere erst, wenn sie stimmt.",
+    "birthdateSub": "Optional",
+    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei."
   },
   "homeAirport": {
-    "title": "Zuhause",
-    "description": "Wo du wohnst und von welchen Flughäfen du fliegst – mit Datum, denn ein Umzug ändert keine alten Reisen. Abstände wie „weg von zu Hause“ oder „am weitesten von zu Hause“ werden vom Wohnort gemessen, Heimkehr, Rundreisen und Umstiege über die Heimatflughäfen erkannt.",
-    "currentLabel": "Aktuelles Zuhause",
+    "title": "Heimatflughäfen",
     "notSet": "Noch kein Zuhause hinterlegt.",
     "setNow": "Zuhause festlegen",
     "iMoved": "Ich bin umgezogen",
@@ -160,7 +146,6 @@
     "fromDateHint": "Reisen vor diesem Datum zählen weiter zum vorherigen Zuhause – ein Umzug verändert keine alten Daten.",
     "savedToast": "Zuhause gespeichert.",
     "loadError": "Dein Zuhause konnte nicht geladen werden.",
-    "confirmDelete": "Diesen Zeitraum wirklich löschen?",
     "errors": {
       "residenceMissing": "Bitte wähle deinen Wohnort.",
       "airportMissing": "Bitte wähle mindestens einen Heimatflughafen.",
@@ -168,15 +153,28 @@
       "invalid": "Die Angaben passen nicht zusammen – prüfe die Daten und die Flughäfen.",
       "unknownAirport": "Diesen Flughafen kennt der Katalog nicht: {{codes}}.",
       "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
-      "deleteFailed": "Der Zeitraum konnte nicht gelöscht werden."
+      "deleteFailed": "Der Zeitraum konnte nicht gelöscht werden.",
+      "overlap": "Der Umzug liegt vor einem Zeitraum, den es schon gibt. Ich habe die Liste neu geladen, bitte prüf das Datum."
     },
-    "help": {
-      "historyExplained": "Wenn du umziehst, wird dein bisheriges Zuhause nicht überschrieben, sondern als früherer Zeitraum gespeichert. Alte Reisen behalten das damalige Zuhause."
+    "residenceRow": {
+      "name": "Wohnort",
+      "sub": "Von hier misst TravStats Entfernungen",
+      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Wohnort ist auch dein Heimatort in der Companion-App."
+    },
+    "airportsRow": {
+      "name": "Heimatflughäfen",
+      "sub": "Bis zu drei, einer als Standard",
+      "help": "Die Flughäfen gehören zum aktuellen Wohnort. Ziehst du um, bleiben die alten mit ihrem Zeitraum."
+    },
+    "deleteDialog": {
+      "title": "Zeitraum löschen?",
+      "amount": "1 Zeitraum",
+      "after": "Reisen aus dieser Zeit zählen dann gegen den Wohnort davor oder danach.",
+      "confirm": "Zeitraum löschen"
     }
   },
   "display": {
-    "title": "Anzeige & Sprache",
-    "description": "Sprache, Zeitzone sowie Datums- und Zeitformat zentral steuern.",
+    "title": "Sprache & Zeit",
     "language": "Sprache",
     "languages": {
       "de": "Deutsch",
@@ -185,10 +183,6 @@
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat",
-    "languageSub": "Oberfläche und Datumsformate",
-    "timezoneSub": "Für die Anzeige lokaler Zeiten",
-    "dateFormatSub": "In Fließtext und Formularen; Tabellen zeigen ISO",
-    "timeFormatSub": "Uhrzeiten von Abflug, Ankunft und Check-in",
     "dateFormats": {
       "dmy": "TT.MM.JJJJ",
       "iso": "JJJJ-MM-TT",
@@ -200,14 +194,10 @@
     }
   },
   "domainColors": {
-    "title": "Bereichsfarben",
-    "description": "Die Farbe je Bereich — sie gilt in den Statistiken, in der Reise-Zeitleiste, in der Aktivitätsleiste, im Import-Protokoll und überall sonst, wo ein Bereich mit einer einzelnen Farbe gekennzeichnet wird.",
-    "mapNote": "Die Karte bleibt davon unberührt: dort lässt sich eine Route nach Status oder Häufigkeit einfärben, ein Jahresbalken nicht. Die Kartenfarben stellst du weiter im Kartenbereich ein.",
-    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben.",
-    "reset": "Auf Markenfarben zurücksetzen"
+    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben."
   },
   "units": {
-    "title": "Einheiten & Formate",
+    "title": "Einheiten",
     "description": "Definiere die Standard-Einheiten für Statistiken.",
     "distance": "Distanz",
     "currency": "Währung",
@@ -222,10 +212,6 @@
       "CHF": "CHF (Fr)",
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
-    },
-    "help": {
-      "distance": "Kilometer (Standard in DE/EU), Meilen (US) oder Nautische Meilen (wie bei Airlines üblich). Die zugrunde liegende Berechnung bleibt gleich — nur die Anzeige ändert sich.",
-      "currency": "Wird für Ticketpreise und Kostenstatistiken verwendet. Keine automatische Umrechnung bestehender Flüge — alte Werte bleiben in der ursprünglichen Währung gespeichert."
     },
     "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden.",
     "distanceSub": "Für Strecken und Statistiken",
@@ -243,8 +229,7 @@
     }
   },
   "defaults": {
-    "title": "Standard-Werte",
-    "description": "Neue Flüge werden mit diesen Vorgaben angelegt.",
+    "title": "Neue Flüge starten mit",
     "flightStatus": "Status",
     "seatClass": "Sitzklasse",
     "favoriteAirline": "Lieblings-Airline",
@@ -260,10 +245,6 @@
       "private": "Privat",
       "vacation": "Urlaub",
       "noneShort": "Keine"
-    },
-    "help": {
-      "status": "\"Geplant\" ist sinnvoll für zukünftige Flüge; \"Geflogen\" für den Schnelleintrag vergangener Flüge.",
-      "category": "Business / Privat / Urlaub — nur für deine Statistiken relevant, wirkt sich nicht auf Live-Daten oder Kosten aus."
     }
   },
   "notifications": {
@@ -494,7 +475,7 @@
     "activate": "Aktivieren"
   },
   "features": {
-    "title": "Funktionen",
+    "title": "Was festgehalten wird",
     "costTracking": "Kostenerfassung",
     "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
@@ -541,7 +522,7 @@
     }
   },
   "autoUpdate": {
-    "title": "Automatische Updates",
+    "title": "Live-Updates",
     "description": "Ruft während aktiver Flüge regelmäßig aktuelle Daten ab. Gefundene Änderungen landen unter „Ausstehende Updates“ und werden erst nach deiner Bestätigung übernommen — nie automatisch. Betrifft nur Flüge, die bereits in deiner Liste stehen.",
     "viewPending": "Ausstehende Updates anzeigen",
     "enabled": "Automatische Updates aktivieren",
@@ -553,7 +534,7 @@
     "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
   },
   "historicalEnrichment": {
-    "title": "Historische Anreicherung",
+    "title": "Ältere Flüge ergänzen",
     "description": "Ergänzt ältere Flüge aus live getrackten Flügen derselben Flugnummer. Alle Vorschläge sind Schätzungen und werden erst nach deiner Bestätigung gespeichert.",
     "enabled": "Historische Flugdaten-Anreicherung aktivieren",
     "minConfidence": "Min. Konfidenz (%)",
@@ -1001,13 +982,10 @@
     }
   },
   "homeCountry": {
-    "label": "Heimatland",
-    "description": "Bestimmt, welche Buchungsvorlagen zuerst geprüft werden. Vorlagen anderer Länder bleiben aktiv.",
-    "none": "Nicht festgelegt",
-    "loadFailed": "Heimatland konnte nicht geladen werden."
+    "none": "Nicht festgelegt"
   },
   "devices": {
-    "title": "Geräte",
+    "title": "Companion-App",
     "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
     "connectButton": "Neues Gerät verbinden",
     "qrTitle": "Mit der TravStats-App scannen",
@@ -1032,15 +1010,20 @@
     "ip": "IP {{ip}}",
     "revoked": "Abgemeldet",
     "unpairButton": "Abmelden",
-    "confirmUnpair": "Gerät wirklich abmelden? Die App auf diesem Gerät verliert sofort den Zugriff.",
     "errors": {
       "load": "Geräte konnten nicht geladen werden",
       "start": "Kopplung konnte nicht gestartet werden",
       "unpair": "Gerät konnte nicht abgemeldet werden"
+    },
+    "unpairDialog": {
+      "title": "Telefon abmelden?",
+      "amount": "1 Telefon",
+      "after": "Es verliert sofort den Zugang und muss neu gekoppelt werden.",
+      "confirm": "Abmelden"
     }
   },
   "apiTokens": {
-    "title": "API-Tokens",
+    "title": "API-Schlüssel",
     "description": "Persönliche Zugriffstokens für KI-Agenten, Skripte und externe Apps. Zum Verbinden der TravStats-App nutze stattdessen „Geräte\". Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
     "docsTitle": "API-Dokumentation",
     "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
@@ -1054,13 +1037,11 @@
       "admin": "Admin — voller Zugriff"
     },
     "create": "Token erstellen",
-    "existingTitle": "Bestehende Tokens",
     "empty": "Noch keine Tokens erstellt.",
     "lastUsed": "Zuletzt: {{when}}",
     "neverUsed": "Noch nie benutzt",
     "revoked": "Widerrufen",
     "revokeButton": "Widerrufen",
-    "confirmRevoke": "Token wirklich widerrufen? Externe Tools mit diesem Token verlieren sofort den Zugriff.",
     "justCreatedTitle": "Token erstellt",
     "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
     "copy": "Kopieren",
@@ -1077,10 +1058,16 @@
       "read": "Lesen",
       "write": "Schreiben",
       "admin": "Admin"
+    },
+    "revokeDialog": {
+      "title": "Schlüssel zurückziehen?",
+      "amount": "1 Schlüssel",
+      "after": "Das Werkzeug kommt sofort nicht mehr hinein.",
+      "confirm": "Zurückziehen"
     }
   },
   "security": {
-    "title": "Sicherheit",
+    "title": "Anmeldung",
     "description": "Schütze die Anmeldung zusätzlich mit einem Einmalcode aus einer Authenticator-App. Freiwillig — ohne Einrichtung ändert sich an deiner Anmeldung nichts.",
     "enable": "Zwei-Faktor aktivieren",
     "scanHint": "Scanne den QR-Code mit deiner Authenticator-App.",
@@ -1124,7 +1111,7 @@
     "notConfigured": "Für Passkeys muss ein Administrator zuerst die öffentliche Adresse dieser Instanz hinterlegen."
   },
   "countryCounting": {
-    "title": "Länderzählung",
+    "title": "Länder",
     "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
     "label": "Ein Land zählt ab …",
     "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
@@ -1275,16 +1262,12 @@
     "description": "Reisepositionen aus der App liegen auf diesem Server und erscheinen auf der Reisekarte.",
     "more": "Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
   },
-  "travPlan": {
-    "label": "Plan – Reisen planen",
-    "description": "Der Planungsbereich: Reisen vorab planen, mit Etappen, Packliste und Wetter. Ausgeschaltet verschwindet er aus dem Menü; deine Pläne bleiben erhalten und sind wieder da, sobald du ihn einschaltest."
-  },
   "menu": {
     "domains": "Bereiche",
     "version": "TravStats {{version}}"
   },
   "domains": {
-    "title": "Bereiche & Farben",
+    "title": "Was du festhältst",
     "description": "Ein Bereich, eine Zeile: einschalten und seine Farbe gleich daneben. Ausgeschaltete Bereiche bleiben hier sichtbar, damit du sie einschalten kannst.",
     "color": "Farbe"
   },
@@ -1535,20 +1518,6 @@
       }
     }
   },
-  "personalFacts": {
-    "loadFailed": "Deine persönlichen Angaben konnten nicht geladen werden.",
-    "notSet": "Nicht gesetzt",
-    "homePlace": {
-      "label": "Wohnort",
-      "description": "Der Wohnort deiner aktuellen Zuhause-Periode. Die Companion-App nutzt ihn zum Beispiel für die Erinnerung zum Losfahren.",
-      "legacyHint": "Dieser Ort stammt aus einer älteren Angabe und gehört zu keiner Zuhause-Periode. Lege dort deinen Wohnort an, damit er überall gilt.",
-      "editLink": "Unter „Zuhause“ ändern"
-    },
-    "passport": {
-      "label": "Reisepass gültig bis",
-      "description": "Die Companion-App warnt sechs Monate vorher."
-    }
-  },
   "area": {
     "pages": {
       "account": "Profil & Anmeldung",
@@ -1734,6 +1703,133 @@
       "publicUrlMissing": {
         "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
       }
+    }
+  },
+  "home": {
+    "title": "Zuhause",
+    "loadFailed": "Ich konnte das nicht laden. Ich ändere nichts, bis es geladen ist.",
+    "country": {
+      "name": "Heimatland",
+      "sub": "Buchungsvorlagen von hier zuerst",
+      "help": "Filtert nichts, ändert nur die Reihenfolge."
+    },
+    "passport": {
+      "name": "Reisepass gültig bis",
+      "sub": "Die Companion-App warnt 6 Monate vorher"
+    },
+    "loading": "Ich lade das noch …"
+  },
+  "deleteAccount": {
+    "title": "Konto löschen",
+    "name": "Konto löschen",
+    "sub": "Mit allen Einträgen, Fotos und Dateien",
+    "help": "Das Konto ist sofort weg, auch für den Admin. Lade vorher deine Daten herunter, danach geht es nicht mehr.",
+    "open": "Konto löschen …",
+    "password": "Dein Passwort",
+    "code": "Code aus der Authenticator-App oder ein Ersatzcode",
+    "continue": "Weiter",
+    "refused": {
+      "DELETE_PASSWORD_INCORRECT": "Das Passwort stimmt nicht. Ich habe nichts gelöscht.",
+      "DELETE_SECOND_FACTOR_REQUIRED": "Dein Konto hat einen zweiten Faktor. Ich brauche den Code, bevor ich etwas lösche.",
+      "DELETE_SECOND_FACTOR_INVALID": "Der Code stimmt nicht. Ich habe nichts gelöscht.",
+      "DELETE_LAST_ADMIN": "Du bist der letzte Admin. Gib die Rolle erst einem anderen Konto, dann kann ich dieses löschen.",
+      "DEMO_ACCOUNT_FORBIDDEN": "Das Demo-Konto lösche ich nicht.",
+      "offline": "Der Server antwortet gerade nicht. Ich habe nichts gelöscht.",
+      "other": "Ich konnte das Konto nicht löschen. Es ist noch da."
+    },
+    "dialog": {
+      "title": "Konto löschen?",
+      "affects": "Dein Konto {{username}} mit allen Einträgen, Fotos und Dateien",
+      "amount": "Alles, was du hier hast",
+      "after": "Es ist sofort weg, auch für den Admin. Das lässt sich nicht zurückholen.",
+      "confirm": "Konto löschen"
+    }
+  },
+  "planning": {
+    "title": "Planen"
+  },
+  "firstVisit": {
+    "title": "Zuerst",
+    "language": "Sprache & Einheiten",
+    "home": "Wohnort",
+    "location": "Standortquelle",
+    "hide": "Ausblenden"
+  },
+  "rows": {
+    "language": {
+      "name": "Sprache"
+    },
+    "timezone": {
+      "name": "Zeitzone",
+      "sub": "Für Ortszeiten und Tageswerte"
+    },
+    "dateFormat": {
+      "name": "Datum",
+      "sub": "Tabellen zeigen immer 2026-12-31"
+    },
+    "timeFormat": {
+      "name": "Uhrzeit"
+    },
+    "distance": {
+      "name": "Entfernung"
+    },
+    "weight": {
+      "name": "Gepäck",
+      "sub": "Für Freigepäck ohne Einheit",
+      "help": "Rechnet nichts um."
+    },
+    "currency": {
+      "name": "Hauptwährung",
+      "sub": "Alle Summen in dieser Währung",
+      "help": "Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."
+    },
+    "domainJump": "Einstellungen",
+    "resetColors": {
+      "name": "Farben zurücksetzen",
+      "help": "Die Karte hat eigene Farben und bleibt, wie sie ist."
+    },
+    "travPlan": {
+      "name": "Reisen planen",
+      "sub": "Ideen und Pläne vor der Reise",
+      "help": "Ausschalten behält deine Pläne.",
+      "offOnServer": "Dieser Server bietet das Planen nicht an."
+    },
+    "flightStatus": {
+      "name": "Status"
+    },
+    "seatClass": {
+      "name": "Klasse"
+    },
+    "favoriteAirline": {
+      "name": "Airline"
+    },
+    "flightCategory": {
+      "name": "Anlass",
+      "sub": "Nur für Statistiken"
+    },
+    "costTracking": {
+      "name": "Steuern und Gebühren",
+      "sub": "Auch Geschäftsreise-Summen",
+      "help": "Preis und Währung gibt es immer."
+    },
+    "trackAircraft": {
+      "name": "Kennzeichen der Maschine",
+      "help": "Aus: nur Flugzeugtypen, keine einzelnen Maschinen."
+    },
+    "liveTracking": {
+      "name": "Flugweg vom Telefon",
+      "sub": "Die Companion-App zeichnet ihn auf",
+      "help": "Aus: Der Server nimmt keine Flugwege mehr an."
+    },
+    "cruiseLine": {
+      "name": "Reederei"
+    },
+    "cruiseCabin": {
+      "name": "Kabine"
+    },
+    "seaDays": {
+      "name": "Seetage als Reisetage",
+      "help": "Die Zahl der Seetage bleibt sichtbar."
     }
   }
 }
