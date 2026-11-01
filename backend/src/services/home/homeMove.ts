@@ -5,6 +5,8 @@
  * periods and adds nothing.
  */
 import { prisma } from "../../db";
+import { takeTravTrackLock } from "../travtrack/lock";
+import { narrowShareSnapshots } from "../travtrack/shareNarrow";
 import { Prisma } from "../../prisma";
 import { defaultSettings } from "../../routes/settings/types";
 import { legacyHistoryOf, sortPeriods, type HomePeriod } from "../../utils/homeAirport";
@@ -13,11 +15,14 @@ import { HOME_PERIODS_KEY, LEGACY_HISTORY_KEY, homePeriodsFromData } from "./hom
 /** Recent client refs per user, in the settings blob next to the periods. */
 export const HOME_MOVE_REFS_KEY = "homeMoveRefs";
 const MAX_REFS = 50;
+/** The whole-list PUT refuses more (`homePeriodsBodySchema`); an append must not outgrow it. */
+const MAX_PERIODS = 100;
 
 export type AppendResult =
   | { kind: "created"; periods: HomePeriod[] }
   | { kind: "replayed"; periods: HomePeriod[] }
-  | { kind: "overlap"; periods: HomePeriod[] };
+  | { kind: "overlap"; periods: HomePeriod[] }
+  | { kind: "full"; periods: HomePeriod[] };
 
 export interface MoveInput {
   fromDate: string;
@@ -53,6 +58,7 @@ export async function appendHomePeriod(userId: string, move: MoveInput): Promise
     skipDuplicates: true,
   });
   return prisma.$transaction(async (tx) => {
+    await takeTravTrackLock(tx, userId);
     // Row lock: a replay racing its original must see the first one's ref.
     const rows = await tx.$queryRaw<Array<{ data: unknown }>>`
       SELECT data FROM user_settings WHERE user_id = ${userId} FOR UPDATE`;
@@ -62,6 +68,7 @@ export async function appendHomePeriod(userId: string, move: MoveInput): Promise
       ? (blob[HOME_MOVE_REFS_KEY] as unknown[]).filter((r): r is string => typeof r === "string")
       : [];
     if (refs.includes(move.clientRef)) return { kind: "replayed", periods };
+    if (periods.length >= MAX_PERIODS) return { kind: "full", periods };
     const next = appendPeriod(periods, move);
     if (!next) return { kind: "overlap", periods };
     const data = {
@@ -74,6 +81,8 @@ export async function appendHomePeriod(userId: string, move: MoveInput): Promise
       where: { userId },
       data: { data: data as unknown as Prisma.InputJsonValue },
     });
+    // A shared route keeps away from the homes of the new list (same transaction).
+    await narrowShareSnapshots(tx, userId);
     return { kind: "created", periods: next };
   });
 }

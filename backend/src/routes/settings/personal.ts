@@ -75,22 +75,24 @@ async function writeHomePlace(
   homePlace: HomePlace | null,
   onlyIfEmpty: boolean
 ): Promise<void> {
-  const row = await prisma.userSettings.findUnique({ where: { userId }, select: SELECT });
-  const before = await deriveHomePlace(row);
-  const periods = await homePeriodsFromData(row?.data);
-  const edited = homePlace ? withCurrentResidence(periods, homePlace) : null;
-  // `onlyIfEmpty` never overwrites a home the account already has.
-  if (onlyIfEmpty && before.homePlace) return;
-  if (homePlace === null && before.homePlaceSource === "period") {
-    throw new AppError(
-      "The home place is the current home period's residence; edit or remove that period instead",
-      409,
-      "HOME_PLACE_IS_PERIOD"
-    );
-  }
   await prisma.$transaction(
     async (tx) => {
       await takeTravTrackLock(tx, userId);
+      // Read under the lock: a move or edit that committed meanwhile is part of what we derive from.
+      const row = await tx.userSettings.findUnique({ where: { userId }, select: SELECT });
+      const before = await deriveHomePlace(row);
+      // `onlyIfEmpty` never overwrites a home the account already has.
+      if (onlyIfEmpty && before.homePlace) return;
+      if (homePlace === null && before.homePlaceSource === "period") {
+        throw new AppError(
+          "The home place is the current home period's residence; edit or remove that period instead",
+          409,
+          "HOME_PLACE_IS_PERIOD"
+        );
+      }
+      const edited = homePlace
+        ? withCurrentResidence(await homePeriodsFromData(row?.data), homePlace)
+        : null;
       if (edited && before.homePlace) {
         await tx.userSettings.updateMany({
           where: { userId },
