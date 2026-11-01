@@ -37,17 +37,6 @@ export const readLogFileQuerySchema = z.object({
 });
 
 /**
- * Schema for log search query
- */
-export const searchLogsQuerySchema = z.object({
-  query: z.string().max(200).optional(),
-  level: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
-  category: logCategory.optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
-});
-
-/**
  * Schema for parser settings
  */
 export const parserSettingsSchema = z.object({
@@ -61,5 +50,4 @@ export const parserSettingsSchema = z.object({
 export type LoggingConfigInput = z.infer<typeof loggingConfigSchema>;
 export type ToggleDebugLoggingInput = z.infer<typeof toggleDebugLoggingSchema>;
 export type ReadLogFileQuery = z.infer<typeof readLogFileQuerySchema>;
-export type SearchLogsQuery = z.infer<typeof searchLogsQuerySchema>;
 export type ParserSettingsInput = z.infer<typeof parserSettingsSchema>;

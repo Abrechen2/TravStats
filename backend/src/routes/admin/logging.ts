@@ -10,7 +10,6 @@ import {
   readLogFile,
   deleteLogFile,
   getLogStats,
-  searchLogs,
   resolveLogFile,
   logFileContentType,
 } from "../../services/logManager";
@@ -19,7 +18,6 @@ import {
   loggingConfigSchema,
   toggleDebugLoggingSchema,
   readLogFileQuerySchema,
-  searchLogsQuerySchema,
 } from "../../schemas/admin";
 import type {
   LogCleanupResult,
@@ -143,16 +141,6 @@ router.post("/cleanup", async (_req: AuthRequest, res: Response, next: NextFunct
   try {
     const result: LogCleanupResult = await enforceLogRetention();
     res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get("/search", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const query = searchLogsQuerySchema.parse(req.query);
-    const results = await searchLogs(query);
-    res.json({ results, count: results.length, query });
   } catch (error) {
     next(error);
   }
