@@ -2283,6 +2283,63 @@
         "",
         ""
        ]
+      },
+      {
+       "id": "r_rental",
+       "t": "remind",
+       "dom": "rental",
+       "v": false,
+       "ch": "App",
+       "che": "App",
+       "inv": "A2 Reminders (rental)",
+       "de": [
+        "Mietwagen",
+        "",
+        ""
+       ],
+       "en": [
+        "Rental car",
+        "",
+        ""
+       ]
+      },
+      {
+       "id": "r_roadtrip",
+       "t": "remind",
+       "dom": "roadtrip",
+       "v": false,
+       "ch": "App",
+       "che": "App",
+       "inv": "A2 Reminders (roadtrip)",
+       "de": [
+        "Roadtrip",
+        "",
+        ""
+       ],
+       "en": [
+        "Roadtrip",
+        "",
+        ""
+       ]
+      },
+      {
+       "id": "r_poi",
+       "t": "remind",
+       "dom": "poi",
+       "v": false,
+       "ch": "App",
+       "che": "App",
+       "inv": "A2 Reminders (poi)",
+       "de": [
+        "Orte",
+        "",
+        ""
+       ],
+       "en": [
+        "Places",
+        "",
+        ""
+       ]
       }
      ]
     }
@@ -6300,6 +6357,28 @@
        "res": [
         "Fertig · Herunterladen",
         "Ready · Download"
+       ]
+      },
+      {
+       "id": "enrich",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "btn": [
+        "Nachladen",
+        "Fetch"
+       ],
+       "inv": "C3 Action: fetch one airport missing from the catalogue (forgejo#407)",
+       "de": [
+        "Flughafen nachladen",
+        "Holt einen Flughafen, der im Katalog fehlt, aus der externen Quelle",
+        "Gib den IATA-Code (3 Buchstaben) oder den ICAO-Code (4 Buchstaben) ein. Ist der Flughafen schon im Katalog, bleibt er unverändert."
+       ],
+       "en": [
+        "Fetch an airport",
+        "Pulls an airport missing from the catalogue from the external source",
+        "Enter the IATA code (3 letters) or the ICAO code (4 letters). An airport already in the catalogue stays as it is."
        ]
       },
       {
