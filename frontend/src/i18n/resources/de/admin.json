@@ -1439,7 +1439,7 @@
     "saved": "Instanzweite Dawarich-Verbindung gespeichert.",
     "cleared": "Instanzweite Dawarich-Verbindung entfernt.",
     "saveFailed": "Speichern fehlgeschlagen.",
-    "loadFailed": "Die Dawarich-Einstellungen konnten nicht geladen werden. Sie lassen sich erst bearbeiten, wenn sie geladen sind.",
+    "loadFailed": "Die Dawarich-Einstellungen konnten nicht geladen werden. Bearbeiten ist erst möglich, wenn sie geladen sind.",
     "retry": "Erneut versuchen",
     "connected": "Verbunden · v{{version}}",
     "sweep": {
