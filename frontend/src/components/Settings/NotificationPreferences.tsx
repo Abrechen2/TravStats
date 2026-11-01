@@ -1,142 +1,85 @@
-import { useState, useEffect, useRef, useId } from "react";
+import { useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import {
   notificationsApi,
   type NotificationPreferences,
-  type NotificationPreferencesPatch,
   type ReminderDomain,
   type ReminderDomainPrefs,
 } from "../../lib/api";
-import { useToastStore } from "../../store/toastStore";
-import RemindersTable from "./RemindersTable";
-import { applyPatch, mergePatch } from "./reminderPrefs";
+import { logger } from "../../lib/logger";
+import {
+  Dependency,
+  InputControl,
+  SettingItem,
+  StatusValue,
+  useSettingWrite,
+} from "../ui/settings";
+import { SettingRows } from "../ui/SettingRow";
+import { SectionCard, SectionTitle } from "./SettingsShared";
+import ReminderRow from "./ReminderRow";
+import { REMINDER_DOMAINS } from "./reminderPrefs";
+import { useDependency, useRowCopy } from "./rowCopy";
 
 /**
- * Reminders per domain, saved as they change.
+ * Reminders (design §4 A2), two sections: "Wohin" (the address, and whether the
+ * app can be reached at all) and "Vor der Abreise" (one row per area).
  *
- * Round 4 (decision E10) removed the save button from settings: a control that
- * looks set but is not stored until a button further down is pressed was the
- * one way to lose a change here. A switch or chip writes at once; the address
- * writes when the field is left. The write model is the serialized one: one PUT
- * in flight, edits made meanwhile merge into a queued patch, `confirmed` is the
- * last snapshot the server answered. A failed write restores that snapshot and
- * the row it concerned says so and offers a retry.
+ * Every row writes at once and keeps the user's pick when the server refuses
+ * (B6). The page is never drawn from defaults while the server could not be
+ * read: showing "off" for switches that may be on, and then saving over them,
+ * is the lie the failed-load state exists to avoid.
  */
-export default function NotificationPreferences(): JSX.Element {
-  const { t } = useTranslation(["settings", "common"]);
+export default function NotificationPreferencesCards(): JSX.Element {
+  const { t } = useTranslation(["settings", "common", "settingsRows"]);
+  const row = useRowCopy("notifications");
+  const dependency = useDependency();
   const { isEnabled } = useEnabledDomains();
-  const addToast = useToastStore((state) => state.addToast);
-  const mailReasonId = useId();
-  const appReasonId = useId();
-
+  const isDemo = useIsDemoAccount();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
-  const [drafts, setDrafts] = useState<Partial<Record<ReminderDomain, string>>>({});
-  // The address as typed, until the field is left. Server answers must not overwrite it.
+  // The address as typed, until the field is left.
   const [emailDraft, setEmailDraft] = useState<string | null>(null);
-  const [failed, setFailed] = useState<ReadonlySet<ReminderDomain>>(new Set());
 
-  const confirmed = useRef<NotificationPreferences | null>(null);
-  const inFlight = useRef(false);
-  const queued = useRef<NotificationPreferencesPatch | null>(null);
-  const sending = useRef<NotificationPreferencesPatch>({});
-  // What each failed row tried to write, kept for its retry button.
-  const failedPatch = useRef<Partial<Record<ReminderDomain, Partial<ReminderDomainPrefs>>>>({});
-
-  const load = async (): Promise<void> => {
+  const load = useCallback(async (): Promise<void> => {
     setLoadState("loading");
     try {
-      const data = await notificationsApi.getPreferences();
-      confirmed.current = data;
-      setPrefs(data);
+      setPrefs(await notificationsApi.getPreferences());
       setLoadState("loaded");
-    } catch (err) {
-      // Not the defaults: showing "off" for switches that may be on, and then
-      // saving over them, is the lie this state exists to avoid.
+    } catch (error) {
+      logger.error("Loading the reminder preferences failed:", error);
       setLoadState("failed");
-      addToast("error", err instanceof Error ? err.message : t("settings:notifications.loadError"));
     }
-  };
-
+  }, []);
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
-  const send = async (patch: NotificationPreferencesPatch): Promise<void> => {
-    inFlight.current = true;
-    sending.current = patch;
-    try {
-      const updated = await notificationsApi.updatePreferences(patch);
-      confirmed.current = updated;
-      // Only adopt the response when no newer edit is waiting: it would
-      // otherwise flip the control back until the next response lands.
-      if (!queued.current) setPrefs(updated);
-    } catch (error) {
-      if (queued.current) {
-        // Fields the newer edit does not override ride along, so they are retried.
-        queued.current = mergePatch(patch, queued.current);
-      } else {
-        if (confirmed.current) setPrefs(confirmed.current);
-        const rows = Object.keys(patch.domains ?? {}) as ReminderDomain[];
-        for (const row of rows) failedPatch.current[row] = patch.domains?.[row];
-        if (rows.length > 0) setFailed((prev) => new Set([...prev, ...rows]));
-        addToast(
-          "error",
-          error instanceof Error ? error.message : t("settings:notifications.saveFailed")
-        );
-      }
-    } finally {
-      inFlight.current = false;
-      sending.current = {};
-      const next = queued.current;
-      queued.current = null;
-      if (next) void send(next);
-    }
-  };
+  const email = useSettingWrite<string | null>(
+    "notifications.email",
+    prefs?.notificationEmail ?? null,
+    async (value) =>
+      setPrefs(await notificationsApi.updatePreferences({ notificationEmail: value }))
+  );
 
-  const save = (patch: NotificationPreferencesPatch): void => {
-    setPrefs((current) => (current ? applyPatch(current, patch) : current));
-    if (inFlight.current) {
-      queued.current = mergePatch(queued.current, patch);
-      return;
-    }
-    void send(patch);
-  };
-
-  const changeDomain = (domain: ReminderDomain, change: Partial<ReminderDomainPrefs>): void => {
-    setFailed((prev) => {
-      if (!prev.has(domain)) return prev;
-      const next = new Set(prev);
-      next.delete(domain);
-      return next;
-    });
-    delete failedPatch.current[domain];
-    save({ domains: { [domain]: change } });
-  };
-
-  const retryDomain = (domain: ReminderDomain): void => {
-    const change = failedPatch.current[domain];
-    if (change) changeDomain(domain, change);
-  };
-
-  const setDraft = (domain: ReminderDomain, text: string | undefined): void => {
-    setDrafts((prev) => {
-      const next = { ...prev };
-      if (text === undefined) delete next[domain];
-      else next[domain] = text;
-      return next;
-    });
-  };
+  const writeDomain = useCallback(
+    async (domain: ReminderDomain, value: ReminderDomainPrefs): Promise<void> => {
+      setPrefs(await notificationsApi.updatePreferences({ domains: { [domain]: value } }));
+    },
+    []
+  );
 
   if (loadState === "failed") {
     return (
-      <div role="alert">
-        <p className="t-caption">{t("settings:notifications.loadError")}</p>
-        <button type="button" className="btn-secondary" onClick={() => void load()}>
-          {t("common:buttons.retry")}
-        </button>
-      </div>
+      <SectionCard>
+        <div role="alert">
+          <p className="t-caption">{t("settings:notifications.loadError")}</p>
+          <button type="button" className="btn-secondary" onClick={() => void load()}>
+            {t("common:buttons.retry")}
+          </button>
+        </div>
+      </SectionCard>
     );
   }
   if (loadState === "loading" || !prefs) {
@@ -146,66 +89,72 @@ export default function NotificationPreferences(): JSX.Element {
   const commitEmail = (): void => {
     if (emailDraft === null) return;
     const trimmed = emailDraft.trim();
-    const value = trimmed === "" ? null : trimmed;
     setEmailDraft(null);
-    const latest = { ...confirmed.current, ...sending.current, ...queued.current };
-    if (value === latest.notificationEmail) return;
-    save({ notificationEmail: value });
+    email.choose(trimmed === "" ? null : trimmed);
   };
-
-  const mailReason = prefs.mail.available ? null : t("settings:notifications.mailReason.no_email");
+  const mailCopy = row("erimail");
+  const pushCopy = row("pushstate");
+  const noRelay = !prefs.push.available && (prefs.push.reason ?? "no_relay") === "no_relay";
   const pushWords = t(
     `settings:notifications.pushStatus.${prefs.push.available ? "ok" : (prefs.push.reason ?? "no_relay")}`
   );
-  const appBlocked = !prefs.push.available && prefs.push.reason === "no_device_token";
+  const lock = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
 
   return (
-    <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
-      <div className="grid sm:grid-cols-2" style={{ gap: "var(--ts-space-md)" }}>
-        <div className="card flex flex-col" style={{ gap: 6, padding: "var(--ts-space-md)" }}>
-          <label
-            htmlFor="notification-email"
-            style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
-          >
-            {t("settings:notifications.mailCard")}
-          </label>
-          <input
-            id="notification-email"
-            type="email"
-            className="input"
-            value={emailDraft ?? prefs.notificationEmail ?? ""}
-            onChange={(e) => setEmailDraft(e.target.value)}
-            onBlur={commitEmail}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitEmail();
-            }}
-            placeholder="name@example.com"
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+      <SectionCard>
+        <SectionTitle title={t("settingsRows:notifications.sections.channel")} />
+        <SettingRows>
+          <SettingItem
+            title={mailCopy.title}
+            sub={mailCopy.sub}
+            save={email}
+            locked={lock}
+            control={
+              <span
+                onBlur={commitEmail}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEmail();
+                }}
+              >
+                <InputControl
+                  type="email"
+                  value={emailDraft ?? email.value ?? ""}
+                  onChange={setEmailDraft}
+                  placeholder="name@example.com"
+                />
+              </span>
+            }
           />
-          <span id={mailReasonId} className="t-caption">
-            {mailReason ?? t("settings:notifications.emailSub")}
-          </span>
-        </div>
-        <div className="card flex flex-col" style={{ gap: 6, padding: "var(--ts-space-md)" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
-            {t("settings:notifications.appCard")}
-          </span>
-          <span id={appReasonId} data-blocked={appBlocked || undefined} className="t-caption">
-            {pushWords}
-          </span>
-        </div>
-      </div>
-      <RemindersTable
-        prefs={prefs}
-        drafts={drafts}
-        failed={failed}
-        onChange={changeDomain}
-        onDraft={setDraft}
-        onRetry={retryDomain}
-        mailReasonId={mailReasonId}
-        appReasonId={appReasonId}
-        isDomainOn={(domain) => isEnabled(domain)}
-      />
-      <p className="t-caption">{t("settings:notifications.carriedOver")}</p>
+          <SettingItem
+            title={pushCopy.title}
+            help={pushCopy.help}
+            control={<StatusValue>{pushWords}</StatusValue>}
+          >
+            {noRelay ? <Dependency reason={dependency("noPush").reason} /> : null}
+          </SettingItem>
+        </SettingRows>
+      </SectionCard>
+      <SectionCard>
+        <SectionTitle title={t("settingsRows:notifications.sections.domains")} />
+        <SettingRows>
+          {REMINDER_DOMAINS.map((domain) => (
+            <ReminderRow
+              key={domain}
+              domain={domain}
+              saved={prefs.domains[domain]}
+              push={prefs.push}
+              mail={prefs.mail}
+              domainOn={isEnabled(domain)}
+              locked={isDemo}
+              write={writeDomain}
+            />
+          ))}
+        </SettingRows>
+        <p className="t-caption">{t("settings:notifications.carriedOver")}</p>
+      </SectionCard>
     </div>
   );
 }

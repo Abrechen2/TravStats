@@ -1,9 +1,4 @@
-import type {
-  NotificationPreferences,
-  NotificationPreferencesPatch,
-  ReminderDomain,
-  ReminderDomainPrefs,
-} from "../../lib/api";
+import type { ReminderDomain } from "../../lib/api";
 
 export const REMINDER_DOMAINS: readonly ReminderDomain[] = [
   "flight",
@@ -37,36 +32,4 @@ export function checkCustomLead(raw: string): CustomLeadCheck {
   if (hours < MIN_CUSTOM_HOURS || hours > MAX_CUSTOM_HOURS) return { ok: false, reason: "range" };
   if (isPreset(hours)) return { ok: false, reason: "preset" };
   return { ok: true, hours };
-}
-
-/** Folds a newer patch over an older one, domain by domain and field by field. */
-export function mergePatch(
-  older: NotificationPreferencesPatch | null,
-  newer: NotificationPreferencesPatch
-): NotificationPreferencesPatch {
-  if (!older) return newer;
-  const domains: Partial<Record<ReminderDomain, Partial<ReminderDomainPrefs>>> = {
-    ...older.domains,
-  };
-  for (const key of Object.keys(newer.domains ?? {}) as ReminderDomain[]) {
-    domains[key] = { ...domains[key], ...newer.domains?.[key] };
-  }
-  const merged: NotificationPreferencesPatch = { ...older, ...newer };
-  if (older.domains || newer.domains) merged.domains = domains;
-  return merged;
-}
-
-export function applyPatch(
-  prefs: NotificationPreferences,
-  patch: NotificationPreferencesPatch
-): NotificationPreferences {
-  const domains = { ...prefs.domains };
-  for (const key of Object.keys(patch.domains ?? {}) as ReminderDomain[]) {
-    domains[key] = { ...domains[key], ...patch.domains?.[key] };
-  }
-  return {
-    ...prefs,
-    ...(patch.notificationEmail !== undefined && { notificationEmail: patch.notificationEmail }),
-    domains,
-  };
 }

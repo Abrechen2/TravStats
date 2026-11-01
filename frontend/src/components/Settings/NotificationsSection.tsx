@@ -1,25 +1,12 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import NotificationPreferences from "./NotificationPreferences";
-import DemoLockedNotice from "./DemoLockedNotice";
-import { useTranslation } from "../../hooks/useTranslation";
-import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import type { JSX } from "react";
+import NotificationPreferencesCards from "./NotificationPreferences";
 
+/**
+ * The reminders page (design §4 A2): its two sections draw their own headings.
+ * The shared demo account is not hidden from the page but locked row by row —
+ * the address is a password-reset vector, so the server refuses the write
+ * (finding C3), and the preferences are read-only there.
+ */
 export default function NotificationsSection(): JSX.Element {
-  const { t } = useTranslation(["settings"]);
-  const isDemo = useIsDemoAccount();
-
-  return (
-    <SectionCard>
-      <SectionTitle
-        title={t("settings:notifications.title")}
-        description={t("settings:notifications.description")}
-      />
-      {/* Not a preference on the shared account: whoever writes the address
-          can ask for a password-reset link to their own inbox and lock every
-          other visitor out, which is why the server refuses the write. The
-          preferences are not even fetched — there is nothing here that
-          belongs to the person reading it. */}
-      {isDemo ? <DemoLockedNotice /> : <NotificationPreferences />}
-    </SectionCard>
-  );
+  return <NotificationPreferencesCards />;
 }
