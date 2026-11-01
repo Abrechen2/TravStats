@@ -1249,7 +1249,8 @@
   "tripRecording": {
     "title": "Reise-Aufzeichnung",
     "label": "Positionen aus der App speichern",
-    "description": "Die Positionen, die die TravStats-App während einer Reise aufzeichnet, werden auf diesem Server gespeichert und auf der Reisekarte gezeigt. Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
+    "description": "Reisepositionen aus der App liegen auf diesem Server und erscheinen auf der Reisekarte.",
+    "more": "Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
   },
   "travPlan": {
     "label": "Plan – Reisen planen",

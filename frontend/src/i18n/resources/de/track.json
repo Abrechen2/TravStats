@@ -87,7 +87,8 @@
     "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht."
   },
   "settings": {
-    "intro": "Die Positionen, die deine Companion für TravTrack aufzeichnet, liegen hier auf deinem Server – nur für dich, nie geteilt oder föderiert. Gespeichert bleibt alles, bis du es löschst.",
+    "manage": "Importe, Kopie und Löschen",
+    "intro": "Die Positionen, die dein Companion aufzeichnet, liegen auf deinem Server – nur für dich.",
     "off": "TravTrack ist auf diesem Server ausgeschaltet: Es wird nichts mehr aufgezeichnet. Was gespeichert ist, kannst du hier weiter exportieren und löschen.",
     "loadFailed": "TravTrack konnte nicht geladen werden. Lade die Seite neu.",
     "empty": "Noch keine Positionen gespeichert.",

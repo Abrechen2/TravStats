@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { LocationProviderSettings } from "../../../lib/api/locationProvider";
@@ -69,6 +69,8 @@ describe("LocationProviderSection", () => {
     show();
     expect(await screen.findByRole("radio", { name: new RegExp(DAWARICH) })).toBeChecked();
     expect(screen.getByRole("radio", { name: new RegExp(NONE) })).not.toBeChecked();
+    // The explanation sits behind the row's info button; the row keeps one line.
+    fireEvent.click(screen.getByRole("button", { name: "help.about" }));
     expect(screen.getByText("settings:locationProvider.nothingMoves")).toBeInTheDocument();
     expect(
       screen.getByText("settings:locationProvider.options.dawarich.points.readOnly")

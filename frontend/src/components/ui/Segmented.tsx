@@ -7,6 +7,8 @@ export interface SegmentedOption<T extends string> {
   label: ReactNode;
   /** The spoken name, when the pill shows a symbol: "km" reads "Kilometer". */
   name?: string;
+  /** This one option cannot be chosen right now (a source that is not set up). */
+  disabled?: boolean;
 }
 
 interface SegmentedProps<T extends string> {
@@ -50,7 +52,12 @@ export function Segmented<T extends string>({
           : 0;
     if (step === 0) return;
     event.preventDefault();
-    const next = (index + step + options.length) % options.length;
+    let next = index;
+    for (let i = 0; i < options.length; i++) {
+      next = (next + step + options.length) % options.length;
+      if (!options[next].disabled) break;
+    }
+    if (next === index || options[next].disabled) return;
     onChange(options[next].value);
     refs.current[next]?.focus();
   };
@@ -76,7 +83,7 @@ export function Segmented<T extends string>({
             aria-checked={checked}
             aria-label={option.name}
             tabIndex={checked ? 0 : -1}
-            disabled={disabled}
+            disabled={disabled || option.disabled}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => move(event, index)}
             className="ts-chip"
@@ -93,7 +100,7 @@ export function Segmented<T extends string>({
               fontSize: 13,
               fontWeight: 600,
               whiteSpace: "nowrap",
-              opacity: disabled ? 0.5 : 1,
+              opacity: disabled || option.disabled ? 0.5 : 1,
             }}
           >
             {option.label}
