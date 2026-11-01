@@ -28,9 +28,6 @@ describe("ContextLinksCard — a setting that lives in its context, findable fro
 
   // Each new section's copy exists in both languages, row by row.
   it.each([
-    ["views", "mapAppearance", ["routes", "lines", "layers"]],
-    ["views", "dashboardAppearance", ["sections"]],
-    ["views", "listAppearance", ["columns"]],
     ["privacy", "comparisonConsent", ["consent"]],
     ["privacy", "encryptedGrants", ["grants"]],
   ])("has DE and EN copy for %s.%s", (group, section, rows) => {

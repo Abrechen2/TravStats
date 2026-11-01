@@ -5,19 +5,17 @@ import { SettingsMenuColumn, SettingsMenuCompact, type SettingsMenuGroup } from 
 import { SectionChips, type SectionChip } from "./SectionChips";
 import { SettingsLevelSwitch } from "./SettingsLevelSwitch";
 import { useStableScrollbar } from "./useStableScrollbar";
-import { SettingsBreadcrumb, SurfaceTabs, type SettingsSurface } from "./SurfaceTabs";
+import { SettingsBreadcrumb } from "./SettingsBreadcrumb";
 
 interface Props {
-  /** Which half of settings this is — names the active tab and the breadcrumb. */
-  surface: SettingsSurface;
-  /** Draws the Administration tab. */
-  isAdmin: boolean;
   /** The menu's landmark name. */
   navLabel: string;
   groups: SettingsMenuGroup[];
   activePage: string;
   hiddenPages: number;
   search: ReactNode;
+  /** How many more settings Experte shows (the sidebar's level switch says so). */
+  moreExpert: number;
   /** Under the menu column. */
   menuFooter?: ReactNode;
   /** The page title — the active menu entry's label, word for word. */
@@ -33,19 +31,18 @@ interface Props {
 }
 
 /**
- * The frame both settings surfaces share (forgejo#321): the sticky menu on the
- * left, and on the right the page — its title, the level switch, the section
- * chips and the sections. The scrollbar's gutter is reserved while it is open,
+ * The frame of the one settings area (forgejo#321): the sticky menu on the left
+ * — search, level switch, pages — and on the right the page: its title, the
+ * section chips and the sections. The scrollbar's gutter is reserved while it is open,
  * so moving between a long page and a short one does not shift the layout.
  */
 export function SettingsLayout({
-  surface,
-  isAdmin,
   navLabel,
   groups,
   activePage,
   hiddenPages,
   search,
+  moreExpert,
   menuFooter,
   title,
   meta,
@@ -57,12 +54,16 @@ export function SettingsLayout({
   children,
 }: Props): JSX.Element {
   useStableScrollbar();
-  const menu = { label: navLabel, groups, activeId: activePage, hiddenPages, search };
+  const menu = {
+    label: navLabel,
+    groups,
+    activeId: activePage,
+    hiddenPages,
+    search,
+    levelSwitch: <SettingsLevelSwitch moreCount={moreExpert} />,
+  };
   return (
     <AppShell width="list">
-      <div style={{ marginBottom: "var(--ts-space-xl)" }}>
-        <SurfaceTabs surface={surface} isAdmin={isAdmin} />
-      </div>
       <div
         className="grid md:grid-cols-[240px_minmax(0,1fr)]"
         style={{ gap: "var(--ts-space-xxl)" }}
@@ -73,8 +74,8 @@ export function SettingsLayout({
 
         <div className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
           <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-            <SettingsBreadcrumb surface={surface} page={title} />
-            <PageHeader title={title} meta={meta} actions={<SettingsLevelSwitch />} />
+            <SettingsBreadcrumb page={title} />
+            <PageHeader title={title} meta={meta} />
           </div>
           <div className="md:hidden">
             <SettingsMenuCompact {...menu} />

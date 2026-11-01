@@ -57,11 +57,9 @@ describe("ModuleSection — one row per domain, switch and colour", () => {
     expect(screen.getByLabelText(/domain\.cruise.*settings:domains\.color/)).not.toBeDisabled();
   });
 
-  it("is one section, titled 'Bereiche & Farben'", () => {
+  it("draws no heading of its own: the page frame names the section", () => {
     render(<ModuleSection />);
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
-      "settings:domains.title",
-    ]);
+    expect(screen.queryAllByRole("heading")).toHaveLength(0);
   });
 });
 

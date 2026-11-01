@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UserSettings } from "../../../lib/api/types";
 import { settingsApi } from "../../../lib/api";
@@ -24,6 +24,9 @@ describe("TripRecordingSection", () => {
     render(<TripRecordingSection />);
     expect(screen.getByText(/settings:tripRecording\.description/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("switch", { name: /settings:tripRecording\.label/ }));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 450));
+    });
     expect(useSuggestionSwitchesStore.getState().tripRecording).toBe(false);
     expect(update).toHaveBeenCalledWith({ tripRecording: { enabled: false } });
   });

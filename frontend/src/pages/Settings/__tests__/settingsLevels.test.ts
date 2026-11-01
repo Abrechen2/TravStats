@@ -70,7 +70,7 @@ describe("the standard/expert classification", () => {
     ["account", ["profile", "security", "devices", "notifications"]],
     ["display", ["display", "units", "domains", "countryCounting"]],
     ["trips", ["trips", "suggestions", "sharing"]],
-    ["views", ["mapAppearance", "dashboardAppearance", "listAppearance"]],
+    ["views", ["mapAppearance"]],
     ["privacy", ["shareLinks", "comparisonConsent", "encryptedGrants"]],
     // The stay scan is standard; detecting places as areas just runs, and its
     // two switches are expert rows inside it (forgejo#318).

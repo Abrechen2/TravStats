@@ -12,15 +12,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import DemoLockedNotice from "./DemoLockedNotice";
+import { SectionCard } from "./SettingsShared";
+import { SettingRows } from "../ui/SettingRow";
+import { ActionControl, LinkButton, SettingItem } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { useBlockConfirm } from "./useBlockConfirm";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -61,7 +62,7 @@ function formatRemaining(totalSeconds: number): string {
 
 export default function DevicesSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
+  const { confirm: askConfirm, dialog: confirmDialog } = useBlockConfirm();
   const isDemo = useIsDemoAccount();
   const [devices, setDevices] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +70,7 @@ export default function DevicesSection(): JSX.Element {
   const [claimedName, setClaimedName] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [now, setNow] = useState<number>(() => Date.now());
   const [copied, setCopied] = useState(false);
 
@@ -80,9 +82,12 @@ export default function DevicesSection(): JSX.Element {
     try {
       const all = await apiTokensApi.list();
       setDevices(all.filter((tok) => tok.deviceId));
+      setLoadFailed(false);
+      setError(null);
     } catch (err) {
       logger.error("Failed to load devices", err);
       setError(t("settings:devices.errors.load"));
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -180,9 +185,15 @@ export default function DevicesSection(): JSX.Element {
     }
   };
 
-  const handleUnpair = async (id: string): Promise<void> => {
-    const message = t("settings:devices.confirmUnpair");
-    if (!(await askConfirm({ message, destructive: true }))) return;
+  const handleUnpair = async (id: string, label: string): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:devices.unpairDialog.title"),
+      affects: label,
+      amount: t("settings:devices.unpairDialog.amount"),
+      after: t("settings:devices.unpairDialog.after"),
+      confirmLabel: t("settings:devices.unpairDialog.confirm"),
+    });
+    if (!confirmed) return;
     try {
       await apiTokensApi.revoke(id);
       void reload();
@@ -199,102 +210,101 @@ export default function DevicesSection(): JSX.Element {
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:devices.title")}
-        description={t("settings:devices.description")}
-      />
-
-      {/* Pairing panel */}
-      {isDemo ? (
-        <DemoLockedNotice />
-      ) : !session ? (
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={starting}
-          className="px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-          style={{ background: "var(--accent)", color: "white" }}
+      <SettingRows>
+        <SettingItem
+          title={t("settings:rows.phones.name")}
+          help={t("settings:rows.phones.help")}
+          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+          error={error ?? undefined}
+          control={
+            !session && !isDemo ? (
+              <ActionControl
+                label={t("settings:devices.connectButton")}
+                busy={starting}
+                onClick={() => void handleStart()}
+              />
+            ) : undefined
+          }
         >
-          {starting ? t("common:loading.title") : t("settings:devices.connectButton")}
-        </button>
-      ) : (
-        <div
-          className="rounded-lg p-4 space-y-4"
-          style={{
-            background: "var(--bg-elevated)",
-            border: "1px solid var(--color-border)",
-          }}
-        >
-          {claimedName !== null ? (
-            <div className="flex flex-col items-center gap-2 py-2 text-center">
-              <p className="text-base font-medium" style={{ color: "var(--success)" }}>
-                {t("settings:devices.claimed", {
-                  name: claimedName || t("settings:devices.unnamedDevice"),
-                })}
-              </p>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-sm rounded-md"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {t("settings:devices.done")}
-              </button>
-            </div>
-          ) : !session.publicUrl ? (
-            <div className="space-y-3">
-              <div
-                className="text-sm rounded-md p-3"
-                style={{
-                  background: "rgba(245, 158, 11, 0.1)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {t("settings:devices.noPublicUrl")}
-              </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-3 py-1.5 text-sm rounded-md"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--text-primary)",
-                }}
-              >
-                {t("settings:devices.cancel")}
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 text-center">
-              <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                {t("settings:devices.qrTitle")}
-              </p>
-              <div className="rounded-lg bg-white p-3">
-                <QRCodeSVG
-                  value={JSON.stringify({
-                    v: 1,
-                    u: session.publicUrl,
-                    c: session.code,
-                    n: SERVER_NAME,
-                  })}
-                  size={200}
-                  level="M"
-                  // Without this the SVG is an unnamed graphic: a screen
-                  // reader announces nothing at all where the code is.
-                  title={t("settings:devices.qrAlt")}
-                />
-              </div>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                {t("settings:devices.qrHint")}
-              </p>
+          {/* Pairing panel */}
+          {session && !isDemo && (
+            <div
+              className="rounded-lg p-4 space-y-4"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              {claimedName !== null ? (
+                <div className="flex flex-col items-center gap-2 py-2 text-center">
+                  <p className="text-base font-medium" style={{ color: "var(--success)" }}>
+                    {t("settings:devices.claimed", {
+                      name: claimedName || t("settings:devices.unnamedDevice"),
+                    })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-4 py-2 text-sm rounded-md"
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {t("settings:devices.done")}
+                  </button>
+                </div>
+              ) : !session.publicUrl ? (
+                <div className="space-y-3">
+                  <div
+                    className="text-sm rounded-md p-3"
+                    style={{
+                      background: "rgba(245, 158, 11, 0.1)",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {t("settings:devices.noPublicUrl")}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-3 py-1.5 text-sm rounded-md"
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {t("settings:devices.cancel")}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {t("settings:devices.qrTitle")}
+                  </p>
+                  <div className="rounded-lg bg-white p-3">
+                    <QRCodeSVG
+                      value={JSON.stringify({
+                        v: 1,
+                        u: session.publicUrl,
+                        c: session.code,
+                        n: SERVER_NAME,
+                      })}
+                      size={200}
+                      level="M"
+                      // Without this the SVG is an unnamed graphic: a screen
+                      // reader announces nothing at all where the code is.
+                      title={t("settings:devices.qrAlt")}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {t("settings:devices.qrHint")}
+                  </p>
 
-              {/*
+                  {/*
                 The code as text, not only inside the QR payload.
 
                 The app's manual pairing path — type the address, type the
@@ -304,158 +314,162 @@ export default function DevicesSection(): JSX.Element {
                 the screen. That path had no source to read from as long as
                 the code lived only in `JSON.stringify(...)` above.
               */}
-              <div className="w-full space-y-1">
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:devices.codeLabel")}
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <code
-                    data-testid="pairing-code"
-                    className="font-mono text-sm px-2 py-1 rounded-md select-all"
-                    style={{
-                      background: "var(--bg-muted)",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {pairingCodeChunks(session.code).map((chunk, i) => (
-                      <span key={i} className={i === 0 ? "" : "ml-1.5"}>
-                        {chunk}
-                      </span>
-                    ))}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={(): void => {
-                      void handleCopyCode();
-                    }}
-                    className="px-3 py-1.5 text-xs rounded-md font-medium"
-                    style={{
-                      background: "transparent",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {copied ? t("settings:devices.codeCopied") : t("settings:devices.codeCopy")}
-                  </button>
-                </div>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:devices.codeHint")}
-                </p>
-              </div>
-              <p
-                className="text-sm font-medium"
-                style={{ color: expired ? "var(--danger)" : "var(--text-secondary)" }}
-              >
-                {expired
-                  ? t("settings:devices.expired")
-                  : t("settings:devices.countdown", {
-                      time: formatRemaining(remainingSeconds),
-                    })}
-              </p>
-              <div className="flex gap-2">
-                {expired && (
-                  <button
-                    type="button"
-                    onClick={handleStart}
-                    disabled={starting}
-                    className="px-4 py-2 text-sm rounded-md font-medium disabled:opacity-50"
-                    style={{ background: "var(--accent)", color: "white" }}
-                  >
-                    {t("settings:devices.retry")}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 text-sm rounded-md"
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  {t("settings:devices.cancel")}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <div className="text-sm" style={{ color: "var(--danger)" }}>
-          {error}
-        </div>
-      )}
-
-      {/* Device list */}
-      <div>
-        <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-          {t("settings:devices.existingTitle")}
-        </h3>
-        {loading ? (
-          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("common:loading.title")}
-          </div>
-        ) : devices.length === 0 ? (
-          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("settings:devices.empty")}
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {devices.map((dev) => (
-              <li
-                key={dev.id}
-                className="flex items-center justify-between rounded-md p-3"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  opacity: dev.revokedAt ? 0.5 : 1,
-                }}
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-xl" aria-hidden>
-                    {platformIcon(dev.platform)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                      {dev.label}
+                  <div className="w-full space-y-1">
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("settings:devices.codeLabel")}
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <code
+                        data-testid="pairing-code"
+                        className="font-mono text-sm px-2 py-1 rounded-md select-all"
+                        style={{
+                          background: "var(--bg-muted)",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        {pairingCodeChunks(session.code).map((chunk, i) => (
+                          <span key={i} className={i === 0 ? "" : "ml-1.5"}>
+                            {chunk}
+                          </span>
+                        ))}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={(): void => {
+                          void handleCopyCode();
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-md font-medium"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        {copied ? t("settings:devices.codeCopied") : t("settings:devices.codeCopy")}
+                      </button>
                     </div>
-                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {dev.lastUsedAt
-                        ? t("settings:devices.lastUsed", {
-                            when: formatDateTime(dev.lastUsedAt),
-                          })
-                        : t("settings:devices.neverUsed")}
-                      {dev.lastUsedIp && ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}
-                      {dev.revokedAt && ` · ${t("settings:devices.revoked")}`}
-                    </div>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("settings:devices.codeHint")}
+                    </p>
+                  </div>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: expired ? "var(--danger)" : "var(--text-secondary)" }}
+                  >
+                    {expired
+                      ? t("settings:devices.expired")
+                      : t("settings:devices.countdown", {
+                          time: formatRemaining(remainingSeconds),
+                        })}
+                  </p>
+                  <div className="flex gap-2">
+                    {expired && (
+                      <button
+                        type="button"
+                        onClick={handleStart}
+                        disabled={starting}
+                        className="px-4 py-2 text-sm rounded-md font-medium disabled:opacity-50"
+                        style={{ background: "var(--accent)", color: "white" }}
+                      >
+                        {t("settings:devices.retry")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="px-4 py-2 text-sm rounded-md"
+                      style={{
+                        background: "transparent",
+                        border: "1px solid var(--color-border)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {t("settings:devices.cancel")}
+                    </button>
                   </div>
                 </div>
-                {/* Unpairing revokes the same token row ApiTokensSection lists
+              )}
+            </div>
+          )}
+
+          {/* Device list */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              {t("settings:devices.existingTitle")}
+            </h3>
+            {loadFailed ? (
+              <LinkButton onClick={() => void reload()}>
+                {t("settings:blocks.save.retry")}
+              </LinkButton>
+            ) : loading ? (
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("common:loading.title")}
+              </div>
+            ) : devices.length === 0 ? (
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("settings:devices.empty")}
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {devices.map((dev) => (
+                  <li
+                    key={dev.id}
+                    className="flex items-center justify-between rounded-md p-3"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--color-border)",
+                      opacity: dev.revokedAt ? 0.5 : 1,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xl" aria-hidden>
+                        {platformIcon(dev.platform)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="font-medium truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {dev.label}
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {dev.lastUsedAt
+                            ? t("settings:devices.lastUsed", {
+                                when: formatDateTime(dev.lastUsedAt),
+                              })
+                            : t("settings:devices.neverUsed")}
+                          {dev.lastUsedIp &&
+                            ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}
+                          {dev.revokedAt && ` · ${t("settings:devices.revoked")}`}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Unpairing revokes the same token row ApiTokensSection lists
                     (via /settings/tokens, guarded for the demo account) — the
                     section-level notice above already explains the lock, so
                     this action is simply not offered rather than repeated. */}
-                {!dev.revokedAt && !isDemo && (
-                  <button
-                    type="button"
-                    onClick={() => handleUnpair(dev.id)}
-                    className="ml-3 px-3 py-1.5 text-xs rounded-md"
-                    style={{
-                      background: "transparent",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--danger)",
-                    }}
-                  >
-                    {t("settings:devices.unpairButton")}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                    {!dev.revokedAt && !isDemo && (
+                      <button
+                        type="button"
+                        onClick={() => handleUnpair(dev.id, dev.label)}
+                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--danger)",
+                        }}
+                      >
+                        {t("settings:devices.unpairButton")}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SettingItem>
+      </SettingRows>
       {confirmDialog}
     </SectionCard>
   );

@@ -15,3 +15,10 @@ export const loginVerifySchema = z.object({
 export const renamePasskeySchema = z.object({
   name: z.string().trim().min(1).max(60),
 });
+
+/** Registering a passkey needs a fresh password (and second factor) re-authentication. */
+export const registerOptionsSchema = z.object({
+  password: z.string().min(1).max(200).optional(),
+  code: z.string().max(16).optional(),
+  recoveryCode: z.string().max(64).optional(),
+});

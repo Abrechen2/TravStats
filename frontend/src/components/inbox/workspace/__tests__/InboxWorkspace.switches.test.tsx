@@ -34,7 +34,7 @@ vi.mock("../../../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../../../lib/api/dawarichStays", () => ({
   dawarichStaysApi: { list: vi.fn(), listPage: vi.fn(), choices: vi.fn() },
 }));
-vi.mock("../../../Settings/DawarichStayScanCard", () => ({
+vi.mock("../../../Settings/location/StayScanSection", () => ({
   default: () => <p>gps-scan-card</p>,
 }));
 vi.mock("../../../GlobeLoader", () => ({ GlobeLoader: () => null }));

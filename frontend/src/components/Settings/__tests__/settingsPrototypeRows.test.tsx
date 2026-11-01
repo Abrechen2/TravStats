@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -21,11 +21,15 @@ import CruisePreferencesSection from "../CruisePreferencesSection";
 import FeaturesSection from "../FeaturesSection";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
-import { STATS_HIDDEN_SECTIONS_PREFIX } from "../../../hooks/useSectionVisibility";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import { TRIP_COLORS } from "../../../lib/tripColors";
 
+const settle = async (): Promise<void> => {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 450));
+  });
+};
 const CRUISE = { defaultLine: "", defaultCabinType: null, showCruiseArcs: true };
-const SEAT_KEY = `${STATS_HIDDEN_SECTIONS_PREFIX}flight`;
 
 /**
  * The settings prototype rows of forgejo#321: each is a server setting that
@@ -36,7 +40,6 @@ describe("settings prototype rows", () => {
   beforeEach(() => {
     update.mockReset().mockResolvedValue({});
     toast.mockReset();
-    localStorage.removeItem(SEAT_KEY);
     useSuggestionSwitchesStore.setState({
       tripDefaultColor: null,
       cruiseSeaDaysCounted: true,
@@ -46,6 +49,7 @@ describe("settings prototype rows", () => {
   });
   afterEach(() => {
     cleanup();
+    act(() => resetWriteQueue());
     useSettingsLevelStore.setState({ level: null });
   });
 
@@ -87,36 +91,46 @@ describe("settings prototype rows", () => {
   });
 
   it("sea days: a switch, on by default, that saves its own key", async () => {
-    render(<CruisePreferencesSection cruise={{ ...CRUISE }} onSetCruise={vi.fn()} />);
-    const sw = screen.getByRole("switch", { name: /settings:cruisePreferences\.countSeaDays$/ });
+    render(<CruisePreferencesSection cruise={{ ...CRUISE }} />);
+    const sw = screen.getByRole("switch", { name: /settings:rows\.seaDays\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
+    await settle();
     expect(update).toHaveBeenCalledWith({ cruiseSeaDays: { counted: false } });
     expect(useSuggestionSwitchesStore.getState().cruiseSeaDaysCounted).toBe(false);
   });
 
-  it("live tracking: on by default, off is saved, a failure rolls back", async () => {
+  it("live tracking: on by default; a refused save keeps the choice on the row and retries there (no toast, no rollback)", async () => {
     update.mockRejectedValueOnce(new Error("offline"));
     render(<FeaturesSection />);
-    const sw = screen.getByRole("switch", { name: /settings:features\.liveTracking$/ });
+    const sw = screen.getByRole("switch", { name: /settings:rows\.liveTracking\.name$/ });
     expect(sw).toBeChecked();
     await userEvent.click(sw);
+    await settle();
     expect(update).toHaveBeenCalledWith({ liveTracking: { enabled: false } });
-    await waitFor(() => expect(sw).toBeChecked());
-    expect(toast).toHaveBeenCalledWith("error", expect.any(String));
+    expect(sw).not.toBeChecked();
+    expect(useSuggestionSwitchesStore.getState().liveTracking).toBe(true);
+    expect(screen.getByText(/settings:blocks\.save\.failed/)).toBeInTheDocument();
+    expect(toast).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    await waitFor(() => expect(useSuggestionSwitchesStore.getState().liveTracking).toBe(false));
+    expect(update).toHaveBeenCalledTimes(2);
   });
 
-  it("seat statistics: a standard switch, and it is the statistics tab's own section switch", async () => {
-    useSettingsLevelStore.setState({ level: "standard" });
-    render(<FeaturesSection />);
-    const sw = screen.getByRole("switch", { name: /settings:features\.seatStatistics$/ });
-    expect(sw).toBeChecked();
+  it("sea days: a refused save keeps the choice, and Verwerfen puts the saved value back", async () => {
+    update.mockRejectedValueOnce(new Error("offline"));
+    render(<CruisePreferencesSection cruise={{ ...CRUISE }} />);
+    const sw = screen.getByRole("switch", { name: /settings:rows\.seaDays\.name$/ });
     await userEvent.click(sw);
-    await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem(SEAT_KEY) ?? "[]")).toEqual(["seats"])
-    );
+    await settle();
     expect(sw).not.toBeChecked();
-    await userEvent.click(sw);
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(SEAT_KEY) ?? "[]")).toEqual([]));
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
+    expect(sw).toBeChecked();
+    expect(useSuggestionSwitchesStore.getState().cruiseSeaDaysCounted).toBe(true);
+  });
+
+  it("seat statistics: no longer a switch here (design 2026-11-01)", () => {
+    render(<FeaturesSection />);
+    expect(screen.queryByRole("switch", { name: /seatStatistics$/ })).not.toBeInTheDocument();
   });
 });

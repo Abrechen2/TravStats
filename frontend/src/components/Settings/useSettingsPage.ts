@@ -14,6 +14,7 @@ import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
+import { SettingWriteError } from "../ui/settings";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export type { AutoSaveState };
@@ -55,7 +56,6 @@ export function useSettingsPage() {
   const setUnits = useSettingsStore((s) => s.setUnits);
   const setDefaults = useSettingsStore((s) => s.setDefaults);
   const setCruise = useSettingsStore((s) => s.setCruise);
-  const setBaseCurrency = useSettingsStore((s) => s.setBaseCurrency);
   const saveRemoteSettings = useSettingsStore((s) => s.saveRemoteSettings);
   const hasPendingChanges = useSettingsStore((s) => s.hasPendingChanges);
 
@@ -106,7 +106,6 @@ export function useSettingsPage() {
     onlyDuringFlight: true,
     expiryHours: 24,
   });
-  const [loadingAutoUpdateSettings, setLoadingAutoUpdateSettings] = useState(false);
 
   // Whether autoUpdate / historicalEnrichment hold the server's values. They
   // start as placeholders, and every toggle PUTs the whole object, so saving
@@ -122,8 +121,6 @@ export function useSettingsPage() {
       minConfidence: 60,
       maxPerDay: 50,
     });
-  const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] =
-    useState(false);
 
   // API keys
   const [apiKeysStatus, setApiKeysStatus] = useState<{
@@ -338,45 +335,58 @@ export function useSettingsPage() {
     }
   };
 
-  // Saved as they change (round 4, E10): the section passes the value it just
-  // set, because the state update has not landed when the save runs. A success
-  // says nothing — the switch already shows it; a failure says so and puts the
-  // server's value back, so the screen never shows a state that is not stored.
-  const saveAutoUpdateSettings = async (next: AutoUpdateSettings = autoUpdateSettings) => {
-    if (serverSettingsLoad !== "loaded") return;
-    try {
-      setLoadingAutoUpdateSettings(true);
-      setAutoUpdateSettings(next);
-      await settingsApi.update({ autoUpdate: next });
-    } catch (error) {
-      logger.error("Failed to save auto-update settings:", error);
-      addToast("error", t("settings:autoUpdate.saveFailed") || "Fehler beim Speichern");
-      const reloaded = await settingsApi.get().catch(() => null);
-      if (reloaded?.autoUpdate) setAutoUpdateSettings(reloaded.autoUpdate);
-    } finally {
-      setLoadingAutoUpdateSettings(false);
+  // Saved as they change, one setting at a time through the settings area's
+  // write queue (the section passes the field it changed). The whole object is
+  // PUT, so the saves are chained and each builds on the last CONFIRMED
+  // object: two rows saving at once cannot overwrite each other. A refusal
+  // throws to the row, which keeps the user's choice and offers "Erneut
+  // versuchen"; nothing is rolled back here and no toast is raised.
+  const autoUpdateConfirmed = useRef(autoUpdateSettings);
+  const enrichmentConfirmed = useRef(historicalEnrichmentSettings);
+  const saveChain = useRef<Promise<unknown>>(Promise.resolve());
+  useEffect(() => {
+    if (serverSettingsLoad === "loaded") {
+      autoUpdateConfirmed.current = autoUpdateSettings;
+      enrichmentConfirmed.current = historicalEnrichmentSettings;
     }
+    // Only a fresh load re-bases the confirmed objects.
+  }, [serverSettingsLoad]);
+
+  const queueSave = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = saveChain.current.then(task, task);
+    saveChain.current = run.catch(() => undefined);
+    return run;
   };
 
-  const saveHistoricalEnrichmentSettings = async (
-    next: HistoricalEnrichmentSettings = historicalEnrichmentSettings
-  ) => {
-    if (serverSettingsLoad !== "loaded") return;
-    try {
-      setLoadingHistoricalEnrichmentSettings(true);
-      setHistoricalEnrichmentSettings(next);
-      await settingsApi.update({ historicalEnrichment: next });
-    } catch (error) {
-      logger.error("Failed to save historical enrichment settings:", error);
-      addToast("error", t("settings:historicalEnrichment.saveFailed") || "Fehler beim Speichern");
-      const reloaded = await settingsApi.get().catch(() => null);
-      if (reloaded?.historicalEnrichment) {
-        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
+  const saveAutoUpdateSettings = (patch: Partial<AutoUpdateSettings>): Promise<void> =>
+    queueSave(async () => {
+      if (serverSettingsLoad !== "loaded") throw new SettingWriteError("notLoaded");
+      const next = { ...autoUpdateConfirmed.current, ...patch };
+      try {
+        await settingsApi.update({ autoUpdate: next });
+      } catch (error) {
+        logger.error("Failed to save auto-update settings:", error);
+        throw error;
       }
-    } finally {
-      setLoadingHistoricalEnrichmentSettings(false);
-    }
-  };
+      autoUpdateConfirmed.current = next;
+      setAutoUpdateSettings(next);
+    });
+
+  const saveHistoricalEnrichmentSettings = (
+    patch: Partial<HistoricalEnrichmentSettings>
+  ): Promise<void> =>
+    queueSave(async () => {
+      if (serverSettingsLoad !== "loaded") throw new SettingWriteError("notLoaded");
+      const next = { ...enrichmentConfirmed.current, ...patch };
+      try {
+        await settingsApi.update({ historicalEnrichment: next });
+      } catch (error) {
+        logger.error("Failed to save historical enrichment settings:", error);
+        throw error;
+      }
+      enrichmentConfirmed.current = next;
+      setHistoricalEnrichmentSettings(next);
+    });
 
   const saveApiKeys = async () => {
     setLoadingApiKeys(true);
@@ -431,7 +441,6 @@ export function useSettingsPage() {
     setUnits,
     setDefaults,
     setCruise,
-    setBaseCurrency,
     // Derived
     hasParserAccess,
     // Profile
@@ -453,15 +462,11 @@ export function useSettingsPage() {
     backupStatus,
     // Auto-update
     autoUpdateSettings,
-    setAutoUpdateSettings,
-    loadingAutoUpdateSettings,
     serverSettingsLoad,
     reloadServerSettings: loadServerSettings,
     saveAutoUpdateSettings,
     // Enrichment
     historicalEnrichmentSettings,
-    setHistoricalEnrichmentSettings,
-    loadingHistoricalEnrichmentSettings,
     saveHistoricalEnrichmentSettings,
     // API keys
     apiKeysStatus,

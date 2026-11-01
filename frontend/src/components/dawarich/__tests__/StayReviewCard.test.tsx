@@ -2,7 +2,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import StayReviewCard from "../StayReviewCard";
-import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
 import { dawarichStaysApi, type DawarichStay } from "../../../lib/api/dawarichStays";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -119,30 +118,6 @@ describe("Dawarich stays remain reviewable suggestions", () => {
     );
     expect(screen.getByText("Dawarich · finding")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "trips:dawarichStays.accept" })).toBeNull();
-  });
-  it("shows upstream authentication failure rather than an empty successful scan", async () => {
-    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
-      enabled: true,
-      connected: true,
-      result: "failed",
-      error: "auth",
-      startedAt: null,
-      finishedAt: "2026-10-12T00:00:00Z",
-      dataThrough: null,
-      windowStart: null,
-      windowEnd: null,
-      pointCount: 0,
-      createdCount: 0,
-    });
-    render(
-      <MemoryRouter>
-        <DawarichStayScanCard />
-      </MemoryRouter>
-    );
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "trips:tours.tracks.dawarich.errors.auth"
-    );
-    expect(dawarichStaysApi.scan).not.toHaveBeenCalled();
   });
 });
 

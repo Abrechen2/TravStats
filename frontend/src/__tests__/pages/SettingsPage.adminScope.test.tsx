@@ -1,4 +1,4 @@
-vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
+vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
@@ -8,11 +8,11 @@ vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
 }));
 
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
-import { findNamed, queryNamed } from "../helpers/namedElement";
+import { findNamed } from "../helpers/namedElement";
 
 // Measured 2026-09-19: these renders take ~1 s each on a developer machine
 // and 6–8 s on the CI runner under coverage instrumentation, past Vitest's
@@ -131,10 +131,9 @@ vi.unmock("../../store/settingsStore");
 // unconditionally and fetch on mount. They were never the subject of these
 // cases — the gate used to keep them out of the tree, and the network guard in
 // `src/__tests__/setup.ts` failed the suite the moment it stopped.
-// Fetches the user's settings on mount (P5 home country) — not the subject here.
-vi.mock("../../components/Settings/PersonalFactsCard", () => ({ default: () => null }));
-vi.mock("../../components/Settings/HomeCountryCard", () => ({
-  default: () => <div data-testid="home-country-card" />,
+// Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/HomeSection", () => ({
+  default: () => <div data-testid="home-section" />,
 }));
 vi.mock("../../components/ExternalServices/LegacyServiceSummary", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,
@@ -171,8 +170,22 @@ vi.mock("../../components/Settings/LoyaltySection", () => ({
   default: () => <div data-testid="loyalty-section-stub" />,
 }));
 
-// Flipped per test — the admin surface is what these cases are about.
+// Flipped per test — the server's pages are what these cases are about.
 let isAdmin = false;
+
+// The services catalogue loads from the server — not the subject here.
+vi.mock("../../components/ExternalServices/AccountExternalServices", () => ({
+  default: () => <div data-testid="account-external-services" />,
+}));
+
+// The server's sections load accounts, parser settings and more on mount; the
+// boundary under test is which page is drawn, not what is in it.
+vi.mock("../../pages/Admin/AdminHost", () => ({
+  AdminHost: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AdminSectionBody: ({ section }: { section: string }) => (
+    <div data-testid={`admin-body-${section}`} />
+  ),
+}));
 
 vi.mock("../../components/Settings/useSettingsPage", () => ({
   useSettingsPage: () => ({
@@ -219,53 +232,58 @@ const renderAt = (initialEntry: string): void => {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/settings" element={<SettingsLegacyRedirect />} />
-        <Route path="/settings/:group" element={<SettingsPage />} />
-        <Route path="/admin" element={<div data-testid="admin-page" />} />
-        <Route path="/admin/:page" element={<AdminWhere />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/:page" element={<SettingsPage />} />
+        <Route path="/admin" element={<SettingsPage />} />
+        <Route path="/admin/:page" element={<SettingsPage />} />
       </Routes>
     </MemoryRouter>
   );
 };
 
-function AdminWhere(): JSX.Element {
-  const location = useLocation();
-  return <div data-testid="admin-page">{location.pathname + location.search}</div>;
-}
-
-/** `t` echoes the key, so a nav entry or a section for the old one reads this. */
-const ADMIN_LABEL = "settings:admin.title";
-
 /*
- * Options and links are looked up by their text, which is their accessible
- * name here, rather than by role. This page holds ~460 <option>s (currency,
- * country, home country), and a role query weighs the accessible name and
- * visibility of every candidate through jsdom's getComputedStyle: measured
- * 2026-10-09 at 5-7 s for one `queryByRole("link", { name })` on a developer
- * machine, which ran a test past 33 s under coverage on the CI runner.
+ * The page is told apart by its title (`t` echoes the key), not by role: this
+ * page holds ~460 <option>s (currency, country, home country), and a role
+ * query weighs the accessible name and visibility of every candidate through
+ * jsdom's getComputedStyle: measured 2026-10-09 at 5-7 s for one
+ * `queryByRole("link", { name })` on a developer machine.
  */
-const navListsAdmin = (): boolean =>
-  queryNamed("button", ADMIN_LABEL) !== null ||
-  screen.queryByText(ADMIN_LABEL, { selector: "option" }) !== null ||
-  queryNamed("region", ADMIN_LABEL) !== null;
+const pageTitle = async (key: string): Promise<void> => {
+  await waitFor(() =>
+    expect(document.querySelector("h1")).toHaveTextContent(`settings:area.pages.${key}`)
+  );
+};
 
-describe("SettingsPage — the settings/admin boundary", () => {
+const ADMIN_ONLY_NOTICE = "settings:area.adminOnlyNotice";
+
+describe("SettingsPage — the account/server boundary", () => {
   beforeEach(() => {
     isAdmin = false;
     useSettingsStore.setState({ betaFeaturesEnabled: false, enabledDomains: ["flight"] });
   });
 
-  it("offers no Admin section to an admin — the panel is a peer, not a subsection", async () => {
+  it("is one area: there is no second Administration tab, for an admin or anyone", async () => {
     isAdmin = true;
-    renderAt("/settings");
+    renderAt("/settings/account");
     await findNamed("region", "settings:profile.title");
-    expect(navListsAdmin()).toBe(false);
+    expect(screen.queryByRole("navigation", { name: "settings:frame.surfaces" })).toBeNull();
   });
 
-  it("offers no Admin section to a normal user either", async () => {
-    renderAt("/settings");
+  it("lists the server's group in the menu for an admin only", async () => {
+    isAdmin = true;
+    renderAt("/settings/account");
     await findNamed("region", "settings:profile.title");
-    expect(navListsAdmin()).toBe(false);
+    const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
+    expect(menu.querySelector('a[href="/settings/server"]')).not.toBeNull();
+    expect(menu).toHaveTextContent("settings:area.menu.server");
+  });
+
+  it("keeps the server's group out of the menu of an account without the permission", async () => {
+    renderAt("/settings/account");
+    await findNamed("region", "settings:profile.title");
+    const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
+    expect(menu.querySelector('a[href="/settings/server"]')).toBeNull();
+    expect(menu).not.toHaveTextContent("settings:area.menu.server");
   });
 
   /**
@@ -273,87 +291,84 @@ describe("SettingsPage — the settings/admin boundary", () => {
    * /admin. The bookmarks outlive it, so they must land where that button
    * pointed rather than silently falling back to "profile".
    */
-  it("sends an admin's bookmarked ?section=admin on to /admin", async () => {
+  it("sends an admin's bookmarked ?section=admin on to the Server page", async () => {
     isAdmin = true;
     renderAt("/settings?section=admin");
-    // The redirect runs in an effect, so it lands a tick after the first paint.
-    expect(await screen.findByTestId("admin-page")).toBeTruthy();
+    await pageTitle("server");
+    expect(screen.getByTestId("admin-body-instance")).toBeTruthy();
   });
 
-  it("does NOT redirect a non-admin — they have no admin panel to be sent to", async () => {
+  it("sends a non-admin's ?section=admin to their own account page", async () => {
     renderAt("/settings?section=admin");
     await findNamed("region", "settings:profile.title");
-    expect(screen.queryByTestId("admin-page")).toBeNull();
+    await pageTitle("account");
+    expect(screen.queryByTestId("admin-body-instance")).toBeNull();
   });
 
-  it("states the scope of the surface, so a same-named admin entry is distinguishable", async () => {
-    renderAt("/settings");
-    expect(await screen.findByText("settings:scopeHint")).toBeTruthy();
+  it("states the scope of the page, so a same-named server entry is distinguishable", async () => {
+    renderAt("/settings/account");
+    expect(await screen.findByText("settings:area.scope.account")).toBeTruthy();
   });
 
   /**
-   * forgejo#88 finding 11.
-   *
-   * `/settings?tab=lodging&section=lodgingPreferences` is a real link out of a
-   * changelog. It redirects correctly to the lodging page, and the page still
-   * draws the rest of the group — but for a normal account the section the
-   * ADDRESS names is simply not there, and nothing said so. The reader was left
-   * comparing the URL with the screen and finding nothing.
-   *
-   * Explained, not redirected: the rest of that page is genuinely theirs.
+   * forgejo#88 finding 11, rebuilt: an admin address opened by an account
+   * without the permission used to leave the address and the screen
+   * disagreeing. It now lands on the account's own page with the line that
+   * says why (design §6) — no panel is drawn, and nothing is asked of the server.
    */
-  const LODGING_DEEP_LINK = "/settings?tab=lodging&section=lodgingPreferences";
-  const ADMIN_ONLY_HINT = "settings:deepLink.adminOnlySection";
+  it.each(["/admin/users", "/admin/logging", "/settings/server", "/settings/masterdata"])(
+    "sends a non-admin from %s to their own page, and says why",
+    async (address) => {
+      renderAt(address);
+      expect(await screen.findByText(ADMIN_ONLY_NOTICE)).toBeTruthy();
+      await pageTitle("account");
+      expect(document.querySelector('[data-testid^="admin-body-"]')).toBeNull();
+    }
+  );
 
-  it("says why a deep-linked admin-only section is not on the page", async () => {
-    useSettingsStore.setState({
-      betaFeaturesEnabled: false,
-      enabledDomains: ["flight", "lodging"],
-    });
-    renderAt(LODGING_DEEP_LINK);
-
-    expect(await screen.findByText(ADMIN_ONLY_HINT)).toBeTruthy();
-    // The section itself stays out — this is a permission, not a beta gate,
-    // so naming it in a URL does not lift it.
-    expect(queryNamed("region", "settings:lodgingPreferences.geocoder.title")).toBeNull();
-    // The group holds nothing else for this account since its loyalty
-    // section moved to Einstellungen → Bonusprogramme; the hint is the page.
-    expect(queryNamed("region", "settings:memberships.title")).toBeNull();
+  it("sends a non-admin's old backups address to the data page, where the backup status is", async () => {
+    renderAt("/admin/backups");
+    expect(await screen.findByText(ADMIN_ONLY_NOTICE)).toBeTruthy();
+    await pageTitle("data");
   });
 
-  it("offers no lodging tab to an account the lodging group has nothing for", async () => {
-    useSettingsStore.setState({
-      betaFeaturesEnabled: false,
-      enabledDomains: ["flight", "lodging"],
-    });
-    renderAt("/settings/lodging");
-    // The empty group sends the reader to the general page.
-    expect(await findNamed("region", "settings:profile.title")).toBeTruthy();
-    // By text, not by role: see `navListsAdmin` for what a role query costs here.
-    expect(screen.queryByText("settings:tabs.lodging", { selector: "a, a *" })).toBeNull();
-  });
-
-  // forgejo#321: the geocoder configures the instance and moved to
-  // Administration (Externe Dienste › Karten & Ortssuche since the prototype),
-  // so an admin's old link follows it there.
-  it("sends an admin on to the geocoder in Administration", async () => {
+  it("draws the server's page for an admin on the same address, with no notice", async () => {
     isAdmin = true;
-    useSettingsStore.setState({
-      betaFeaturesEnabled: false,
-      enabledDomains: ["flight", "lodging"],
-    });
-    renderAt(LODGING_DEEP_LINK);
+    renderAt("/admin/users");
+    await pageTitle("users");
+    expect(screen.getByTestId("admin-body-users")).toBeTruthy();
+    expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
+  });
 
-    expect(await screen.findByTestId("admin-page")).toHaveTextContent(
-      "/admin/externalServices?section=geocoder"
-    );
-    expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
+  it("keeps the notice off an address everyone may open (About moved to everyone)", async () => {
+    renderAt("/admin/instance#about");
+    await pageTitle("about");
+    expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
+  });
+
+  // The geocoder configures the instance: for a normal account the old
+  // lodging address is just their display page, with nothing said (§6.2).
+  it("sends a non-admin's old lodging address to the display page", async () => {
+    renderAt("/settings?tab=lodging&section=lodgingPreferences");
+    await pageTitle("display");
+    expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
+  });
+
+  it("sends an old /settings/lodging address to the display page too", async () => {
+    renderAt("/settings/lodging");
+    await pageTitle("display");
+  });
+
+  it("sends an admin on to the geocoder, a service card of Dienste", async () => {
+    isAdmin = true;
+    renderAt("/settings?tab=lodging&section=lodgingPreferences");
+    await pageTitle("services");
+    expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 
   it("stays quiet on a deep link to a section everyone may see", async () => {
     renderAt("/settings?section=profile");
-
     await findNamed("region", "settings:profile.title");
-    expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
+    expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 });

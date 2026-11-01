@@ -9,11 +9,13 @@ import {
 } from "../../../store/settingsLevelStore";
 
 /**
- * Standard | Experte, at the top of every settings and admin page. One
+ * Standard | Experte, in the sidebar under the search (design §0.2). One
  * preference per account (forgejo#321), stored with the account's settings,
- * so a phone and a laptop show the same amount.
+ * so a phone and a laptop show the same amount. Under it, one line says what
+ * the other level adds: "Experte zeigt N weitere Einstellungen" at Standard,
+ * "Alles sichtbar · Feinarbeit ist markiert" at Expert.
  */
-export function SettingsLevelSwitch(): JSX.Element {
+export function SettingsLevelSwitch({ moreCount }: { moreCount: number }): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const level = useEffectiveSettingsLevel();
   const known = useSettingsLevelKnown();
@@ -21,7 +23,7 @@ export function SettingsLevelSwitch(): JSX.Element {
   // One sentence says what "Experte" adds (forgejo#318), so the choice is
   // not a guess; small, under the pills, at the page's top right.
   return (
-    <div className="flex flex-col items-end" style={{ gap: "var(--ts-space-xs)" }}>
+    <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
       <Segmented<SettingsLevel>
         label={t("settings:level.label")}
         value={level}
@@ -32,8 +34,14 @@ export function SettingsLevelSwitch(): JSX.Element {
           { value: "expert", label: t("settings:level.expert") },
         ]}
       />
-      <p className="t-caption text-right" style={{ color: "var(--ts-muted)", maxWidth: "22rem" }}>
-        <span>{t("settings:level.hint")}</span> <span>{t("settings:level.defaultsNote")}</span>
+      <p
+        className="t-caption"
+        data-testid="settings-level-more"
+        style={{ color: "var(--ts-muted)" }}
+      >
+        {level === "expert"
+          ? t("settings:level.allVisible")
+          : t("settings:level.moreInExpert", { count: moreCount })}
       </p>
     </div>
   );

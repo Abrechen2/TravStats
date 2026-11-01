@@ -93,7 +93,7 @@ describe("NotificationPreferences (reminders per domain)", () => {
     const link = within(cruise).getByRole("link", {
       name: "settings:notifications.domainOffAction",
     });
-    expect(link.getAttribute("href")).toBe("/settings/display?section=domains");
+    expect(link.getAttribute("href")).toBe("/settings/domains#domains");
     // an area that is on keeps its controls
     expect(within(domainRow("flight")).getByRole("switch")).toBeTruthy();
   });

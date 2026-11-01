@@ -1,12 +1,11 @@
 import { ContextLinksCard } from "../../components/Settings/ContextLinksCard";
-import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../lib/mapRoutes";
-import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
 import ProfileSection from "../../components/Settings/ProfileSection";
-import PersonalFactsCard from "../../components/Settings/PersonalFactsCard";
-import HomeCountryCard from "../../components/Settings/HomeCountryCard";
+import HomeSection from "../../components/Settings/HomeSection";
+import DeleteAccountSection from "../../components/Settings/DeleteAccountSection";
 import HomeAirportSection from "../../components/Settings/HomeAirportSection";
 import DisplaySection from "../../components/Settings/DisplaySection";
 import UnitsSection from "../../components/Settings/UnitsSection";
@@ -37,11 +36,12 @@ import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
+import PlanningSection from "../../components/Settings/PlanningSection";
 import AccountExternalServices from "../../components/ExternalServices/AccountExternalServices";
-import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
+import StayScanSection from "../../components/Settings/location/StayScanSection";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
-import LocationProviderSection from "../../components/Settings/LocationProviderSection";
-import TravTrackSection from "../../components/Settings/TravTrackSection";
+import LocationSourceSection from "../../components/Settings/location/LocationSourceSection";
+import TravTrackLocationSection from "../../components/Settings/location/TravTrackLocationSection";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -61,7 +61,6 @@ export default function SettingsSectionSwitch({
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
   const { isFeatureVisible } = useBetaFeatures();
-  const { isEnabled } = useEnabledDomains();
 
   switch (section) {
     case "profile":
@@ -73,13 +72,13 @@ export default function SettingsSectionSwitch({
             removingProfilePicture={page.removingProfilePicture}
             onAvatarUpload={page.handleAvatarUpload}
             onAvatarDelete={page.handleAvatarDelete}
-            onSetProfile={page.setProfile}
           />
-          {/* A personal fact like the name above; it orders booking templates. */}
-          <HomeCountryCard />
-          <PersonalFactsCard />
         </div>
       );
+    case "home":
+      return <HomeSection />;
+    case "deletion":
+      return <DeleteAccountSection />;
     case "security":
       return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;
     case "apitokens":
@@ -89,21 +88,16 @@ export default function SettingsSectionSwitch({
     case "notifications":
       return <NotificationsSection />;
     case "display":
-      return <DisplaySection display={page.display} onSetDisplay={page.setDisplay} />;
+      return <DisplaySection display={page.display} />;
     case "units":
-      return (
-        <UnitsSection
-          units={page.units}
-          onSetUnits={page.setUnits}
-          baseCurrency={page.baseCurrency}
-          onSetBaseCurrency={page.setBaseCurrency}
-        />
-      );
+      return <UnitsSection units={page.units} baseCurrency={page.baseCurrency} />;
     case "domains":
       // The module switch and the domain colour, one row per domain
       // (forgejo#321): they were two sections that listed the same domains
       // twice, a screen apart.
       return <ModuleSection />;
+    case "planning":
+      return <PlanningSection />;
     case "countryCounting":
       return <CountryCountingCard />;
     case "backup":
@@ -155,31 +149,29 @@ export default function SettingsSectionSwitch({
       return <LegacyServiceSummary serviceId="dawarich" scope="account" />;
     case "locationProvider":
       // Where recordings go and positions are read from (TravTrack plan S5).
-      return <LocationProviderSection />;
+      return <LocationSourceSection />;
     case "travTrack":
       // TravTrack's own history: summary, export, zones, delete (plan T6).
-      return <TravTrackSection />;
+      return <TravTrackLocationSection />;
     case "tripRecording":
       // Whether the app's trip positions are stored here (forgejo#316).
       return <TripRecordingSection />;
     case "stayScan":
-      return <DawarichStayScanCard />;
+      return <StayScanSection />;
     case "externalServices":
       return <AccountExternalServices />;
     case "homeAirport":
-      return <HomeAirportSection />;
+      return <HomeAirportSection view="airports" />;
     case "defaults":
-      return <DefaultsSection defaults={page.defaults} onSetDefaults={page.setDefaults} />;
+      return <DefaultsSection defaults={page.defaults} />;
     case "features":
       return <FeaturesSection />;
     case "enrichment":
       return (
         <EnrichmentSection
           historicalEnrichmentSettings={page.historicalEnrichmentSettings}
-          loadingHistoricalEnrichmentSettings={page.loadingHistoricalEnrichmentSettings}
           loadState={page.serverSettingsLoad}
           onRetryLoad={page.reloadServerSettings}
-          onSetHistoricalEnrichmentSettings={page.setHistoricalEnrichmentSettings}
           onSave={page.saveHistoricalEnrichmentSettings}
         />
       );
@@ -187,42 +179,23 @@ export default function SettingsSectionSwitch({
       return (
         <AutoUpdateSection
           autoUpdateSettings={page.autoUpdateSettings}
-          loadingAutoUpdateSettings={page.loadingAutoUpdateSettings}
           loadState={page.serverSettingsLoad}
           onRetryLoad={page.reloadServerSettings}
-          onSetAutoUpdateSettings={page.setAutoUpdateSettings}
           onSave={page.saveAutoUpdateSettings}
+          flightDataAvailable={
+            page.apiKeysStatus
+              ? Object.values(page.apiKeysStatus).some((provider) => provider.hasAccess)
+              : null
+          }
         />
       );
     case "cruisePreferences":
-      return <CruisePreferencesSection cruise={page.cruise} onSetCruise={page.setCruise} />;
+      return <CruisePreferencesSection cruise={page.cruise} />;
     case "loyalty":
       return <LoyaltySection />;
     case "mapAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.mapAppearance"
-          links={[
-            { id: "routes", to: `/dashboard?${MAP_PANEL_PARAM}=${MAP_PANEL_ROUTES}` },
-            { id: "lines", to: "/dashboard" },
-            { id: "layers", to: "/dashboard" },
-          ]}
-        />
-      );
-    case "dashboardAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.dashboardAppearance"
-          links={[{ id: "sections", to: "/dashboard" }]}
-        />
-      );
-    case "listAppearance":
-      return (
-        <ContextLinksCard
-          scope="views.listAppearance"
-          links={[{ id: "columns", to: isEnabled("flight") ? "/flights" : "/dashboard" }]}
-        />
-      );
+      // Map look, home page and lists: one section, three jump rows.
+      return <ViewsJumpCard />;
     case "comparisonConsent":
       return (
         <ContextLinksCard

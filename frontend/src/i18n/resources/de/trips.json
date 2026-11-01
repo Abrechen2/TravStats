@@ -673,18 +673,8 @@
   "dawarichStays": {
     "title": "Dawarich-Aufenthalte",
     "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
-    "suggestionsPaused": "Pausiert: Aufenthalts-Vorschläge sind in den Einstellungen unter „Reisen“ ausgeschaltet. Deine Einwilligung und bisherigen Entscheidungen bleiben erhalten.",
-    "placesPaused": "Pausiert: Der Bereich Orte ist ausgeschaltet. Aktiviere Orte in den Einstellungen, um neue Aufenthalte zu erkennen. Deine Einwilligung und bisherigen Vorschläge bleiben erhalten.",
-    "disabled": "Automatische Erkennung ist ausgeschaltet. Vorhandene Vorschläge bleiben prüfbar.",
-    "nextScan": "Nächste automatische Auswertung",
-    "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
-    "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
     "travtrack": {
-      "title": "Aufenthalte aus TravTrack",
-      "source": "Aus deinem TravTrack-Verlauf",
-      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
-      "off": "TravTrack ist auf diesem Server gerade ausgeschaltet. Es werden keine neuen Aufenthalte erkannt; du kannst die Erkennung aber jederzeit ausschalten.",
-      "staleData": "Die neuesten Positionsdaten in TravTrack sind mehr als 24 Stunden alt. Prüfe, ob dein Telefon noch aufzeichnet und hochlädt."
+      "description": "Aus deinem TravTrack-Verlauf werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung."
     },
     "areas": {
       "description": "Märkte, Einkaufszentren, Parks, Zoos, Freizeitparks und Museen werden als ganzes Gelände vorgeschlagen statt als einzelne Aufenthalte – das läuft mit der Aufenthaltserkennung mit. Dafür werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt; deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen."
@@ -703,18 +693,6 @@
         "cancelled": "Marktauswertung pausiert"
       }
     },
-    "lookback": "Zeitraum auswerten",
-    "days": "Letzte {{count}} Tage",
-    "summary": "Vorschläge aus deinem Standortverlauf – eingetragen wird erst nach deiner Bestätigung.",
-    "enable": "Aufenthalte automatisch erkennen",
-    "ownConnection": "Speichere zuerst deine eigene Dawarich-Verbindung. Eine gemeinsam konfigurierte Verbindung reicht hierfür nicht.",
-    "scan": "Jetzt auswerten",
-    "running": "Auswertung läuft …",
-    "inbox": "Vorschläge prüfen",
-    "window": "Geprüfter Zeitraum",
-    "dataThrough": "Neuester gelieferter Punkt",
-    "scanCount": "Punkte: {{points}} · Neue Vorschläge: {{created}}",
-    "error": "Die Aktion konnte nicht abgeschlossen werden. Bitte prüfe die Verbindung und lade erneut.",
     "filter": "Vorschläge anzeigen",
     "loading": "Vorschläge werden geladen …",
     "empty": "Keine Vorschläge in dieser Ansicht.",
@@ -740,15 +718,6 @@
     "tripConflict": "Der vorhandene Besuch ist einer anderen Reise zugeordnet. Bitte prüfe die Reiseauswahl.",
     "invalidInterval": "Das Ende muss nach dem Beginn liegen; ein bestätigter Aufenthalt darf nicht in der Zukunft liegen.",
     "ambiguousTime": "Diese lokale Uhrzeit ist wegen einer Zeitumstellung nicht eindeutig oder existiert nicht. Bitte korrigiere sie.",
-    "result": {
-      "paused": "Auswertung pausiert",
-      "running": "Auswertung läuft",
-      "succeeded": "Auswertung abgeschlossen",
-      "partial": "Auswertung teilweise – bitte die Datenlücken beachten",
-      "failed": "Auswertung fehlgeschlagen",
-      "interrupted": "Auswertung unterbrochen; bitte erneut starten",
-      "stale": "Auswertung abgebrochen – der Standortverlauf wurde währenddessen gelöscht; die nächste Auswertung liest ihn neu"
-    },
     "status": {
       "pending": "Zu prüfen",
       "accepted": "Übernommen",

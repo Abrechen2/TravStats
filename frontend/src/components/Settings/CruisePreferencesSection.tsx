@@ -1,107 +1,102 @@
-import { SectionCard, SectionTitle } from "./SettingsShared";
+import type { JSX } from "react";
+import { SectionCard } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { CruiseSettings } from "../../store/settingsStore";
-import { Switch } from "../ui/Field";
-import { Segmented } from "../ui/Segmented";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { useSettingsStore, type CruiseSettings } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
+import { SettingRows } from "../ui/SettingRow";
+import {
+  ChoiceControl,
+  InputControl,
+  SettingItem,
+  SwitchControl,
+  useSettingWrite,
+} from "../ui/settings";
+import { saveSwitch } from "../../store/confirmedSettings";
+import { useDocumentSetting } from "./useDocumentSetting";
 
-/** A radio value cannot be null; this stands for "no default cabin". */
 const NO_CABIN = "none";
+type Cabin = NonNullable<CruiseSettings["defaultCabinType"]>;
+
+const CABIN_TYPES: readonly Cabin[] = ["inside", "oceanview", "balcony", "suite"];
 
 interface CruisePreferencesSectionProps {
   cruise: CruiseSettings;
-  onSetCruise: (partial: Partial<CruiseSettings>) => void;
 }
 
-const CABIN_TYPES: Array<CruiseSettings["defaultCabinType"]> = [
-  null,
-  "inside",
-  "oceanview",
-  "balcony",
-  "suite",
-];
+const setCruise = (partial: Partial<CruiseSettings>): void =>
+  useSettingsStore.getState().setCruise(partial);
 
 /**
- * Cruise-domain preferences section. Small but real — sets the defaults
- * that "Neue Kreuzfahrt → Manuell" prefills (line + cabin type) and the
- * map-layer toggle. Lives in the cruise tab scaffolded in commit
- * fbbcd13; future cruise-specific sections (route preferences, cruise
- * API keys, …) can be added alongside this one.
+ * "Neue Kreuzfahrten starten mit" and "Zählen". "Routen auf der Karte" is gone
+ * from here (design 2026-11-01): the map's own panel owns the cruise layer.
  */
 export default function CruisePreferencesSection({
   cruise,
-  onSetCruise,
 }: CruisePreferencesSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "cruise"]);
-  // A server setting (forgejo#321): the cruise statistics read it, so it
-  // saves at once rather than with the rest of this card.
+  const isDemo = useIsDemoAccount();
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
   const seaDaysCounted = useSuggestionSwitchesStore((s) => s.cruiseSeaDaysCounted);
-  const setSeaDaysCounted = useSuggestionSwitchesStore((s) => s.setCruiseSeaDaysCounted);
+  const seaDays = useSettingWrite<boolean>("cruise.seaDaysCounted", seaDaysCounted, (on) =>
+    saveSwitch("cruiseSeaDaysCounted", on)
+  );
+
+  const line = useDocumentSetting<string>("cruise.defaultLine", cruise.defaultLine, (defaultLine) =>
+    setCruise({ defaultLine })
+  );
+  const cabin = useDocumentSetting<string>(
+    "cruise.defaultCabinType",
+    cruise.defaultCabinType ?? NO_CABIN,
+    (value) => setCruise({ defaultCabinType: value === NO_CABIN ? null : (value as Cabin) })
+  );
 
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:cruisePreferences.title")}
-        description={t("settings:cruisePreferences.description")}
-      />
-
       <SettingRows>
-        <SettingRow
-          title={t("settings:cruisePreferences.defaultLine")}
-          sub={t("settings:cruisePreferences.defaultLineHint")}
-          htmlFor="cruise-default-line"
+        <SettingItem
+          title={t("settings:rows.cruiseLine.name")}
+          save={line}
+          locked={locked}
+          control={<InputControl value={line.value} onChange={line.choose} />}
+        />
+        <SettingItem
+          title={t("settings:rows.cruiseCabin.name")}
+          save={cabin}
+          locked={locked}
           control={
-            <input
-              id="cruise-default-line"
-              type="text"
-              className="input"
-              style={{ minWidth: 240 }}
-              value={cruise.defaultLine}
-              onChange={(e): void => onSetCruise({ defaultLine: e.target.value })}
-              placeholder={t("settings:cruisePreferences.defaultLinePlaceholder")}
+            <ChoiceControl<string>
+              label={t("settings:rows.cruiseCabin.name")}
+              value={cabin.value}
+              options={[
+                {
+                  value: NO_CABIN,
+                  label: t("settings:defaults.options.noneShort"),
+                  name: t("settings:cruisePreferences.defaultCabinNone"),
+                },
+                ...CABIN_TYPES.map((c) => ({
+                  value: c as string,
+                  label: t(`cruise:cabinType.${c}`),
+                })),
+              ]}
+              onChange={cabin.choose}
             />
           }
         />
-        <SettingRow
-          title={t("settings:cruisePreferences.defaultCabin")}
+        <SettingItem
+          title={t("settings:rows.seaDays.name")}
+          help={t("settings:rows.seaDays.help")}
+          save={seaDays}
+          locked={locked}
           control={
-            <Segmented
-              label={t("settings:cruisePreferences.defaultCabin")}
-              value={cruise.defaultCabinType ?? NO_CABIN}
-              options={CABIN_TYPES.map((cabin) =>
-                cabin === null
-                  ? {
-                      value: NO_CABIN,
-                      label: t("settings:defaults.options.noneShort"),
-                      name: t("settings:cruisePreferences.defaultCabinNone"),
-                    }
-                  : { value: cabin, label: t(`cruise:cabinType.${cabin}`) }
-              )}
-              onChange={(value): void =>
-                onSetCruise({
-                  defaultCabinType:
-                    value === NO_CABIN
-                      ? null
-                      : (value as NonNullable<CruiseSettings["defaultCabinType"]>),
-                })
-              }
+            <SwitchControl
+              checked={seaDays.value}
+              onChange={seaDays.choose}
+              label={t("settings:rows.seaDays.name")}
             />
           }
-        />
-        <Switch
-          id="cruise-count-sea-days"
-          checked={seaDaysCounted}
-          onChange={setSeaDaysCounted}
-          label={t("settings:cruisePreferences.countSeaDays")}
-          sub={t("settings:cruisePreferences.countSeaDaysHint")}
-        />
-        <Switch
-          id="cruise-show-arcs"
-          checked={cruise.showCruiseArcs}
-          onChange={(on): void => onSetCruise({ showCruiseArcs: on })}
-          label={t("settings:cruisePreferences.showArcs")}
-          sub={t("settings:cruisePreferences.showArcsHint")}
         />
       </SettingRows>
     </SectionCard>

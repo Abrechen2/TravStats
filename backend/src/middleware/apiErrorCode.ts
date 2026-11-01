@@ -109,6 +109,26 @@ export type ApiErrorCode =
    *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
    *  into its own sentence, in the reader's language. */
   | "USERNAME_RESERVED"
+  /** Deleting one's own account: the password is wrong. */
+  | "DELETE_PASSWORD_INCORRECT"
+  /** The account has two-factor and the request carried no code. */
+  | "DELETE_SECOND_FACTOR_REQUIRED"
+  /** The code or recovery code was not accepted. */
+  | "DELETE_SECOND_FACTOR_INVALID"
+  /** The passkey assertion for a re-authentication was not accepted. */
+  | "DELETE_PASSKEY_INVALID"
+  /** A passkey younger than 24 h cannot confirm a deletion (a stolen session could have added it). */
+  | "REAUTH_PASSKEY_TOO_NEW"
+  /** Fresh re-authentication (passkey registration): password wrong, code missing or wrong. */
+  | "REAUTH_PASSWORD_INCORRECT"
+  | "REAUTH_SECOND_FACTOR_REQUIRED"
+  | "REAUTH_SECOND_FACTOR_INVALID"
+  /** A passkey re-authentication was asked of an account without a passkey. */
+  | "NO_PASSKEY"
+  /** Passkeys cannot be used here (no secure origin configured). */
+  | "PASSKEY_UNAVAILABLE"
+  /** The only remaining admin cannot delete itself; hand the role over first. */
+  | "DELETE_LAST_ADMIN"
   /** A restore was asked for a part the archive does not carry — a file
    *  restore from an archive with no `uploads.tar.gz`, say. */
   | "RESTORE_ARCHIVE_INCOMPLETE"

@@ -11,6 +11,9 @@ import { useSuggestionSwitchesStore } from "./suggestionSwitchesStore";
 import { useSettingsLevelStore } from "./settingsLevelStore";
 import { deviceZone } from "../shared/time";
 import { serializedKey } from "./serializedSetting";
+import { markBirthdateSaved, markGeneralSaved } from "./settingsPartialSave";
+
+export { birthdateWasSaved, generalSettingsWereSaved } from "./settingsPartialSave";
 import type { WeightUnit } from "../lib/baggageAllowance";
 
 /**
@@ -733,6 +736,11 @@ export const useSettingsStore = create<SettingsState>()(
             // so it was never refused, and `hasPendingChanges` will offer it
             // to the next debounce.
             const generalFailed = results[0].status === "rejected";
+            // Say so on the error itself: a row that wrote a units choice must
+            // not undo it because only the birthdate PUT was refused.
+            if (!generalFailed) markGeneralSaved(failures[0].reason);
+            else if (profile.birthdate !== undefined && results[1].status === "fulfilled")
+              markBirthdateSaved(failures[0].reason);
             const restore = generalFailed ? groupsFromSnapshot(confirmedSnapshot) : null;
             if (restore) {
               const stillPending = snapshotOf(get()) === sentSnapshot;

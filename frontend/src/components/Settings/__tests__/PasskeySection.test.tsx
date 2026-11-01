@@ -100,6 +100,9 @@ describe("PasskeySection", () => {
     render(<PasskeySection />);
 
     fireEvent.click(await screen.findByRole("button", { name: "settings:passkeys.add" }));
+    fireEvent.change(await screen.findByLabelText("settings:passkeys.passwordLabel"), {
+      target: { value: "password123" },
+    });
     fireEvent.change(await screen.findByLabelText("settings:passkeys.nameLabel"), {
       target: { value: "Bitwarden" },
     });
@@ -121,6 +124,9 @@ describe("PasskeySection", () => {
     render(<PasskeySection />);
 
     fireEvent.click(await screen.findByRole("button", { name: "settings:passkeys.add" }));
+    fireEvent.change(await screen.findByLabelText("settings:passkeys.passwordLabel"), {
+      target: { value: "password123" },
+    });
     fireEvent.change(await screen.findByLabelText("settings:passkeys.nameLabel"), {
       target: { value: "Phone" },
     });
@@ -137,6 +143,9 @@ describe("PasskeySection", () => {
     render(<PasskeySection />);
 
     fireEvent.click(await screen.findByRole("button", { name: "settings:passkeys.add" }));
+    fireEvent.change(await screen.findByLabelText("settings:passkeys.passwordLabel"), {
+      target: { value: "password123" },
+    });
     fireEvent.change(await screen.findByLabelText("settings:passkeys.nameLabel"), {
       target: { value: "Phone" },
     });
@@ -162,5 +171,77 @@ describe("PasskeySection", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "settings:passkeys.remove" }));
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith("p1"));
+  });
+
+  describe("adding a passkey asks for the password again (a stolen session must not plant one)", () => {
+    const fill = async (password = "password123"): Promise<void> => {
+      fireEvent.click(await screen.findByRole("button", { name: "settings:passkeys.add" }));
+      fireEvent.change(await screen.findByLabelText("settings:passkeys.nameLabel"), {
+        target: { value: "Phone" },
+      });
+      if (password)
+        fireEvent.change(screen.getByLabelText("settings:passkeys.passwordLabel"), {
+          target: { value: password },
+        });
+    };
+
+    it("sends the password with the options request, before any browser ceremony", async () => {
+      api.registerOptions.mockResolvedValue({ challenge: "c" });
+      startRegistration.mockResolvedValue({ id: "cred-1" });
+      api.registerVerify.mockResolvedValue({ id: "p1", name: "Phone" });
+      render(<PasskeySection />);
+      await fill();
+      fireEvent.click(screen.getByRole("button", { name: "settings:passkeys.confirmAdd" }));
+      await waitFor(() =>
+        expect(api.registerOptions).toHaveBeenCalledWith({ password: "password123" })
+      );
+    });
+
+    it("cannot be confirmed without a password", async () => {
+      render(<PasskeySection />);
+      await fill("");
+      expect(screen.getByRole("button", { name: "settings:passkeys.confirmAdd" })).toBeDisabled();
+    });
+
+    const refused = (code: string): Error =>
+      Object.assign(new Error(code), { response: { status: 403, data: { code } } });
+
+    it("a wrong password says so in its own words and starts no ceremony", async () => {
+      api.registerOptions.mockRejectedValue(refused("REAUTH_PASSWORD_INCORRECT"));
+      render(<PasskeySection />);
+      await fill();
+      fireEvent.click(screen.getByRole("button", { name: "settings:passkeys.confirmAdd" }));
+      expect(
+        await screen.findByText("settings:passkeys.reauth.REAUTH_PASSWORD_INCORRECT")
+      ).toBeInTheDocument();
+      expect(startRegistration).not.toHaveBeenCalled();
+    });
+
+    it("a missing second factor turns the code field on and sends the code next time", async () => {
+      api.registerOptions.mockRejectedValueOnce(refused("REAUTH_SECOND_FACTOR_REQUIRED"));
+      api.registerOptions.mockResolvedValue({ challenge: "c" });
+      startRegistration.mockResolvedValue({ id: "cred-1" });
+      api.registerVerify.mockResolvedValue({ id: "p1", name: "Phone" });
+      render(<PasskeySection />);
+      await fill();
+      fireEvent.click(screen.getByRole("button", { name: "settings:passkeys.confirmAdd" }));
+      fireEvent.change(await screen.findByLabelText("settings:passkeys.codeLabel"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "settings:passkeys.confirmAdd" }));
+      await waitFor(() =>
+        expect(api.registerOptions).toHaveBeenLastCalledWith({
+          password: "password123",
+          code: "123456",
+        })
+      );
+    });
+  });
+
+  it("says the list could not be loaded instead of claiming there are no passkeys", async () => {
+    api.list.mockRejectedValue(new Error("Network Error"));
+    render(<PasskeySection />);
+    expect(await screen.findByText("settings:passkeys.listFailed")).toBeInTheDocument();
+    expect(screen.queryByText("settings:passkeys.none")).toBeNull();
   });
 });

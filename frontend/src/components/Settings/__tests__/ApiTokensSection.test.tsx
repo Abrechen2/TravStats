@@ -109,4 +109,27 @@ describe("ApiTokensSection", () => {
     expect(detail.closest("details")).not.toHaveAttribute("open");
     expect(screen.getByText("settings:apiTokens.errors.technicalDetail")).toBeInTheDocument();
   });
+
+  it("says the keys could not be loaded, with a retry, instead of claiming there are none", async () => {
+    api.list.mockRejectedValueOnce(new Error("Network Error"));
+    api.list.mockResolvedValueOnce([TOKEN]);
+    render(<ApiTokensSection />);
+    expect(await screen.findByText("settings:apiTokens.errors.load")).toBeInTheDocument();
+    expect(screen.queryByText("settings:apiTokens.empty")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    expect(await screen.findByText("Home Assistant")).toBeInTheDocument();
+    expect(screen.queryByText("settings:apiTokens.errors.load")).toBeNull();
+  });
+
+  it("says so under the row when a key cannot be created", async () => {
+    api.list.mockResolvedValue([]);
+    api.create.mockRejectedValue(new Error("500"));
+    render(<ApiTokensSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "settings:apiTokens.create" }));
+    fireEvent.change(await screen.findByLabelText("settings:apiTokens.newLabel"), {
+      target: { value: "Skript" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "settings:apiTokens.create" }));
+    expect(await screen.findByText("settings:apiTokens.errors.create")).toBeInTheDocument();
+  });
 });

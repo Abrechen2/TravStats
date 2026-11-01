@@ -1,20 +1,30 @@
 /**
- * Two-factor authentication, under Settings → Security.
+ * Anmeldung: password, second factor, backup codes and passkeys, one row each.
  *
- * Once-revealed UX, same contract as the API tokens section: the recovery
- * codes exist in plaintext exactly once, in component state, and are gone on
- * refresh. Regenerating is the way back — recovering the old sheet is not.
+ * Once-revealed UX: the backup codes exist in plaintext exactly once, in
+ * component state, and are gone on refresh. Regenerating is the way back —
+ * recovering the old sheet is not. Every failure is a line under its own row,
+ * in the design's first person; a status that could not be read is said, not
+ * assumed to be "off".
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
-import { SectionCard, SectionTitle } from "./SettingsShared";
-import DemoLockedNotice from "./DemoLockedNotice";
-import Pill from "../ui/Pill";
-import { token } from "../ui/tokens";
-import { SettingRow, SettingRows } from "../ui/SettingRow";
+import { SectionCard } from "./SettingsShared";
+import { SettingRows } from "../ui/SettingRow";
+import Button from "../ui/Button";
+import { Input } from "../ui/Field";
+import {
+  ActionControl,
+  ErrorLine,
+  LinkButton,
+  SettingItem,
+  StatusValue,
+  SwitchControl,
+} from "../ui/settings";
 import PasskeySection from "./PasskeySection";
+import { useBlockConfirm } from "./useBlockConfirm";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { twoFactorApi } from "../../lib/api";
@@ -22,24 +32,20 @@ import { logger } from "../../lib/logger";
 
 /** `codes` is the one-shot reveal; it is reachable from setup and from a
  *  regeneration, so it is a stage rather than a flag on either. */
-type Stage = "loading" | "off" | "setup" | "codes" | "on";
+type Stage = "loading" | "unknown" | "off" | "setup" | "codes" | "on";
 
 /** Which password-gated action the prompt is currently collecting for. */
 type PasswordIntent = "disable" | "regenerate" | null;
 
 interface SecuritySectionProps {
-  /**
-   * Opens the password dialog the settings page owns. Round 4 moved "change
-   * password" here from the profile header: it is a sign-in protection like
-   * the two below it, not a profile field. Optional so the section still
-   * renders on its own in tests.
-   */
+  /** Opens the password dialog the settings page owns. */
   onChangePassword?: () => void;
 }
 
 export default function SecuritySection({ onChangePassword }: SecuritySectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const isDemo = useIsDemoAccount();
+  const { confirm: askConfirm, dialog: confirmDialog } = useBlockConfirm();
   const [stage, setStage] = useState<Stage>("loading");
   const [secret, setSecret] = useState("");
   const [otpauthUrl, setOtpauthUrl] = useState("");
@@ -48,23 +54,32 @@ export default function SecuritySection({ onChangePassword }: SecuritySectionPro
   const [codesLeft, setCodesLeft] = useState(0);
   const [intent, setIntent] = useState<PasswordIntent>(null);
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ row: "factor" | "codes"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Empty dep array on purpose — see the note in ApiTokensSection: the
-  // project's useTranslation wrapper does not give a stable `t`.
-  useEffect(() => {
-    void twoFactorApi
+  const loadStatus = (): void => {
+    setStage("loading");
+    twoFactorApi
       .getTwoFactorStatus()
       .then((status) => {
         setCodesLeft(status.recoveryCodesLeft);
         setStage(status.enabled ? "on" : "off");
       })
       .catch((err) => {
+        // Never guess "off": an account that has the factor on would be shown
+        // an enable switch, and switching it on again is not harmless.
         logger.error("Failed to read two-factor status", err);
-        setStage("off");
+        setStage("unknown");
       });
-  }, []);
+  };
+
+  // Empty dep array on purpose: the project's useTranslation wrapper does not
+  // give a stable `t`.
+  useEffect(loadStatus, []);
+
+  const locked = isDemo
+    ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
+    : undefined;
 
   const startSetup = async (): Promise<void> => {
     setError(null);
@@ -77,7 +92,7 @@ export default function SecuritySection({ onChangePassword }: SecuritySectionPro
       setStage("setup");
     } catch (err) {
       logger.error("Failed to start two-factor setup", err);
-      setError(t("settings:security.setupFailed"));
+      setError({ row: "factor", text: t("settings:security.setupFailed") });
     } finally {
       setBusy(false);
     }
@@ -94,7 +109,7 @@ export default function SecuritySection({ onChangePassword }: SecuritySectionPro
     } catch {
       // Deliberately stays on "setup": the QR code must remain on screen so a
       // mistyped digit does not mean starting over with a new secret.
-      setError(t("settings:security.wrongCode"));
+      setError({ row: "factor", text: t("settings:security.wrongCode") });
     } finally {
       setBusy(false);
     }
@@ -108,6 +123,16 @@ export default function SecuritySection({ onChangePassword }: SecuritySectionPro
 
   const submitPassword = async (): Promise<void> => {
     setError(null);
+    if (intent === "regenerate") {
+      const go = await askConfirm({
+        title: t("settings:security.regenerateDialog.title"),
+        affects: t("settings:security.regenerateDialog.affects"),
+        amount: t("settings:security.regenerateDialog.amount", { count: codesLeft }),
+        after: t("settings:security.regenerateDialog.after"),
+        confirmLabel: t("settings:security.regenerateDialog.confirm"),
+      });
+      if (!go) return;
+    }
     setBusy(true);
     try {
       if (intent === "disable") {
@@ -126,194 +151,184 @@ export default function SecuritySection({ onChangePassword }: SecuritySectionPro
       setIntent(null);
       setPassword("");
     } catch {
-      setError(t("settings:security.wrongPassword"));
+      setError({
+        row: intent === "disable" ? "factor" : "codes",
+        text: t("settings:security.wrongPassword"),
+      });
     } finally {
       setBusy(false);
     }
   };
 
+  const on = stage === "on" || (stage === "codes" && recoveryCodes.length > 0);
+  const promptFor = (which: Exclude<PasswordIntent, null>): JSX.Element | null =>
+    intent === which ? (
+      <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+        <label className="flex flex-col" style={{ gap: 4 }}>
+          <span className="t-caption">{t("settings:security.passwordLabel")}</span>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+          <Button
+            variant="primary"
+            disabled={busy || password === ""}
+            onClick={() => void submitPassword()}
+          >
+            {which === "disable"
+              ? t("settings:security.confirmDisable")
+              : t("settings:security.confirmRegenerate")}
+          </Button>
+          <Button variant="secondary" onClick={() => setIntent(null)}>
+            {t("common:buttons.cancel")}
+          </Button>
+        </span>
+      </div>
+    ) : null;
+
   return (
     <SectionCard>
-      <SectionTitle
-        title={t("settings:security.title")}
-        description={t("settings:security.sectionDescription")}
-      />
       <SettingRows>
-        {onChangePassword && (
-          <SettingRow
-            title={t("settings:security.passwordTitle")}
-            sub={t("settings:security.passwordSub")}
-            control={
-              isDemo ? (
-                <DemoLockedNotice />
-              ) : (
-                <button type="button" className="btn-secondary" onClick={onChangePassword}>
-                  {t("settings:security.passwordChange")}
-                </button>
-              )
-            }
-          />
-        )}
+        <SettingItem
+          title={t("settings:rows.password.name")}
+          locked={locked}
+          control={
+            onChangePassword ? (
+              <ActionControl
+                label={t("settings:security.passwordChange")}
+                onClick={onChangePassword}
+              />
+            ) : undefined
+          }
+        />
 
-        {isDemo ? (
-          <DemoLockedNotice />
-        ) : (
-          <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            <SettingRow
-              title={t("settings:security.twoFactorTitle")}
-              sub={t("settings:security.description")}
-              control={
-                stage === "on" ? (
-                  <>
-                    <Pill color={token("good")}>{t("settings:security.active")}</Pill>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => openPrompt("disable")}
-                    >
-                      {t("settings:security.disable")}
-                    </button>
-                  </>
-                ) : stage === "off" ? (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={busy}
-                    onClick={() => void startSetup()}
-                  >
-                    {t("settings:security.enable")}
-                  </button>
-                ) : null
-              }
-            />
-
-            {stage === "on" && (
-              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-                <p className="t-caption">{t("settings:security.enabled", { count: codesLeft })}</p>
-                {/* Stated plainly rather than hidden: a token bypasses this entirely. */}
-                <p className="t-caption">{t("settings:security.tokenWarning")}</p>
-                <div>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => openPrompt("regenerate")}
-                  >
-                    {t("settings:security.regenerate")}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {stage === "setup" && (
-              <div className="space-y-3">
-                <p className="text-sm">{t("settings:security.scanHint")}</p>
-                <QRCodeSVG value={otpauthUrl} size={168} />
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {t("settings:security.manualHint")}
-                </p>
-                <p className="text-xs font-mono">{secret}</p>
-
-                <label
-                  className="block text-sm font-medium mb-1.5"
-                  style={{ color: "var(--text-secondary)" }}
-                  htmlFor="activate-code"
-                >
-                  {t("settings:security.codeLabel")}
-                </label>
-                <input
-                  id="activate-code"
-                  className="input w-full"
+        <SettingItem
+          title={t("settings:rows.twoFactor.name")}
+          sub={t("settings:rows.twoFactor.sub")}
+          help={t("settings:rows.twoFactor.help")}
+          locked={locked}
+          error={error?.row === "factor" ? error.text : undefined}
+          control={
+            stage === "loading" ? (
+              <StatusValue>…</StatusValue>
+            ) : stage === "unknown" ? undefined : (
+              <SwitchControl
+                checked={on || stage === "setup"}
+                label={t("settings:rows.twoFactor.name")}
+                onChange={(next) => {
+                  if (busy || stage === "setup") return;
+                  if (next) void startSetup();
+                  else openPrompt("disable");
+                }}
+              />
+            )
+          }
+        >
+          {stage === "unknown" && (
+            <p
+              className="t-caption flex flex-wrap items-center"
+              style={{ gap: "var(--ts-space-sm)", margin: 0 }}
+            >
+              <ErrorLine>{t("settings:security.statusFailed")}</ErrorLine>
+              <LinkButton onClick={loadStatus}>{t("settings:blocks.save.retry")}</LinkButton>
+            </p>
+          )}
+          {stage === "setup" && (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              <p className="text-sm" style={{ margin: 0 }}>
+                {t("settings:security.scanHint")}
+              </p>
+              <QRCodeSVG value={otpauthUrl} size={168} />
+              <p className="t-caption" style={{ margin: 0 }}>
+                {t("settings:security.manualHint")}
+              </p>
+              <p className="text-xs font-mono" style={{ margin: 0 }}>
+                {secret}
+              </p>
+              <label className="flex flex-col" style={{ gap: 4 }}>
+                <span className="t-caption">{t("settings:security.codeLabel")}</span>
+                <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                 />
-
-                {error && (
-                  <div role="alert" className="text-sm text-red-400">
-                    {error}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={busy}
-                    onClick={() => void activate()}
-                  >
-                    {t("settings:security.activate")}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => setStage("off")}>
-                    {t("common:buttons.cancel")}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {stage === "codes" && (
-              <div className="space-y-2">
-                <p className="text-sm">{t("settings:security.saveCodes")}</p>
-                <ul className="font-mono text-sm">
-                  {recoveryCodes.map((entry) => (
-                    <li key={entry}>{entry}</li>
-                  ))}
-                </ul>
-                <button type="button" className="btn-secondary" onClick={() => setStage("on")}>
-                  {t("common:buttons.done")}
-                </button>
-              </div>
-            )}
-
-            {intent !== null && (
-              <div className="space-y-2">
-                <label
-                  className="block text-sm font-medium mb-1.5"
-                  style={{ color: "var(--text-secondary)" }}
-                  htmlFor="twofa-password"
+              </label>
+              <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+                <Button variant="primary" disabled={busy} onClick={() => void activate()}>
+                  {t("settings:security.activate")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setError(null);
+                    setStage("off");
+                  }}
                 >
-                  {t("settings:security.passwordLabel")}
-                </label>
-                <input
-                  id="twofa-password"
-                  type="password"
-                  className="input w-full"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
+                  {t("common:buttons.cancel")}
+                </Button>
+              </span>
+            </div>
+          )}
+          {promptFor("disable")}
+        </SettingItem>
 
-                {error && (
-                  <div role="alert" className="text-sm text-red-400">
-                    {error}
-                  </div>
-                )}
+        <SettingItem
+          title={t("settings:rows.backupCodes.name")}
+          sub={t("settings:rows.backupCodes.sub")}
+          help={t("settings:rows.backupCodes.help")}
+          locked={locked}
+          dependency={
+            on || stage === "loading" || stage === "setup" || stage === "unknown"
+              ? undefined
+              : { reason: t("settings:security.needsTwoFactor") }
+          }
+          error={error?.row === "codes" ? error.text : undefined}
+          control={
+            on ? (
+              <ActionControl
+                label={t("settings:security.regenerate")}
+                onClick={() => openPrompt("regenerate")}
+              />
+            ) : (
+              <ActionControl label={t("settings:security.regenerate")} onClick={() => undefined} />
+            )
+          }
+        >
+          {on && stage !== "codes" && (
+            <p className="t-caption" style={{ margin: 0 }}>
+              {t("settings:security.enabled", { count: codesLeft })}
+            </p>
+          )}
+          {stage === "codes" && (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              <p className="text-sm" style={{ margin: 0 }}>
+                {t("settings:security.saveCodes")}
+              </p>
+              <ul className="font-mono text-sm">
+                {recoveryCodes.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+              <span>
+                <Button variant="secondary" onClick={() => setStage("on")}>
+                  {t("common:buttons.done")}
+                </Button>
+              </span>
+            </div>
+          )}
+          {promptFor("regenerate")}
+        </SettingItem>
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={busy}
-                    onClick={() => void submitPassword()}
-                  >
-                    {intent === "disable"
-                      ? t("settings:security.confirmDisable")
-                      : t("settings:security.confirmRegenerate")}
-                  </button>
-                  <button type="button" className="btn-secondary" onClick={() => setIntent(null)}>
-                    {t("common:buttons.cancel")}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Passkeys sit under the TOTP block: same section, independent feature.
-            A passkey replaces the password rather than adding to it, so neither
-            switch depends on the other. */}
+        {/* A passkey replaces the password rather than adding to it, so neither
+            switch above depends on it. */}
         <PasskeySection />
       </SettingRows>
+      {confirmDialog}
     </SectionCard>
   );
 }

@@ -17,6 +17,10 @@ package-lock.json
 # Generated, and compared byte for byte against their generator. Formatting
 # them would turn the next regeneration into a diff, or a guard red.
 frontend/src/lib/generated/
+# The settings registry, emitted by frontend/scripts/generate-settings-registry.mjs
+# from the designer's settings-data.json: one row per line, and the generator's
+# own --check compares it byte for byte.
+frontend/src/pages/Settings/registry/data/
 # The Prisma 7 client, emitted by `prisma generate` into a path the generator
 # requires. It is gitignored, so Prettier would only ever reformat a file the
 # next `generate` overwrites — and `--check` on a tree where it has not been

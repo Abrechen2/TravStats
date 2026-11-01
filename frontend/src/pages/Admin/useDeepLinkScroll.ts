@@ -63,11 +63,14 @@ const SCROLL_INTENT_KEYS = new Set([
  * @param loading page's own "still loading" flag — the DOM has no
  *   `admin-<id>` elements yet while this is true (see the first effect).
  * @param deepLinkedSection the `?section=` target, or null if there is none.
+ * @param anchorPrefix the DOM id prefix of a section: `settings-<id>` in the one
+ *   settings area, `admin-<id>` on the old Administration page.
  */
 export function useDeepLinkScroll(
   containerRef: RefObject<HTMLElement | null>,
   loading: boolean,
-  deepLinkedSection: string | null
+  deepLinkedSection: string | null,
+  anchorPrefix: string = "admin"
 ): void {
   // Keyed on `loading` rather than `[]`: on the very first render the page
   // is still showing its own loading placeholder, so `admin-<id>` does not
@@ -76,17 +79,17 @@ export function useDeepLinkScroll(
   // imperatively (by the page's own `jump` callback) and needs no effect.
   useEffect(() => {
     if (loading || !deepLinkedSection) return;
-    const el = document.getElementById(`admin-${deepLinkedSection}`);
+    const el = document.getElementById(`${anchorPrefix}-${deepLinkedSection}`);
     // Feature-checked: jsdom has no layout, so the method is absent there.
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ block: "start", behavior: "smooth" });
     }
-  }, [loading, deepLinkedSection]);
+  }, [loading, deepLinkedSection, anchorPrefix]);
 
   useEffect(() => {
     if (loading || !deepLinkedSection) return;
     const container = containerRef.current;
-    const el = document.getElementById(`admin-${deepLinkedSection}`);
+    const el = document.getElementById(`${anchorPrefix}-${deepLinkedSection}`);
     if (!container || !el) return;
     if (typeof el.scrollIntoView !== "function") return;
     // Feature-checked like LazySection's own observer: absent in jsdom.
@@ -129,5 +132,5 @@ export function useDeepLinkScroll(
     const budgetTimer = window.setTimeout(cancel, DEEP_LINK_ALIGN_BUDGET_MS);
 
     return cancel;
-  }, [loading, deepLinkedSection, containerRef]);
+  }, [loading, deepLinkedSection, containerRef, anchorPrefix]);
 }

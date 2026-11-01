@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useGuardedNavigate } from "../../ui/settings/leaveGuard";
 import { Icon, type IconName } from "../../ui/Icon";
 import { Select } from "../../ui/Field";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -15,6 +16,8 @@ export interface SettingsMenuEntry {
   badge?: number;
   /** A domain page's colour, as a dot — always from the domain colour store. */
   color?: string;
+  /** Drawn under the entry above it (Flüge and Kreuzfahrten under Reisearten). */
+  indent?: boolean;
 }
 
 export interface SettingsMenuGroup {
@@ -32,6 +35,8 @@ interface Props {
   /** Pages the standard level keeps out of the menu. */
   hiddenPages: number;
   search: ReactNode;
+  /** Under the search: the Standard | Experte switch with its count. */
+  levelSwitch?: ReactNode;
   /** Under the menu: the version line. */
   footer?: ReactNode;
 }
@@ -48,6 +53,7 @@ export function SettingsMenuColumn({
   activeId,
   hiddenPages,
   search,
+  levelSwitch,
   footer,
 }: Props): JSX.Element {
   const coarse = useCoarsePointer();
@@ -64,6 +70,7 @@ export function SettingsMenuColumn({
       }}
     >
       {search}
+      {levelSwitch}
       <nav aria-label={label} className="flex flex-col overflow-y-auto" style={{ gap: 2 }}>
         {groups.map((group, index) => (
           <div
@@ -96,6 +103,7 @@ export function SettingsMenuColumn({
                     gap: "var(--ts-space-sm)",
                     minHeight: coarse ? "var(--ts-size-touch-min)" : 36,
                     padding: "0 var(--ts-space-md)",
+                    paddingLeft: entry.indent ? "var(--ts-space-xl)" : undefined,
                     borderRadius: "var(--ts-radius-button)",
                     fontSize: 14,
                     fontWeight: active ? 700 : 500,
@@ -145,13 +153,15 @@ export function SettingsMenuCompact({
   activeId,
   hiddenPages,
   search,
+  levelSwitch,
 }: Props): JSX.Element {
   const { t } = useTranslation(["settings"]);
-  const navigate = useNavigate();
+  const navigate = useGuardedNavigate();
   const entries = groups.flatMap((g) => g.entries);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {search}
+      {levelSwitch}
       <Select
         aria-label={t("settings:pagePicker")}
         value={activeId}

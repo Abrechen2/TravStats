@@ -1,4 +1,4 @@
-vi.mock("../../components/Settings/DawarichStayScanCard", () => ({ default: () => null }));
+vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
@@ -13,7 +13,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SettingsPage from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSettingsLevelStore } from "../../store/settingsLevelStore";
-import { SETTINGS_PAGES } from "../../pages/Settings/settingsModel";
+import { AREA_PAGES } from "../../pages/Settings/area/areaModel";
+
+// The pages an account without the admin permission opens.
+const OWN_PAGES = AREA_PAGES.filter((p) => !p.adminOnly);
 import { repeatedHeadings } from "../helpers/repeatedHeadings";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -124,6 +127,16 @@ vi.mock("../../components/Settings/AboutSection", () => ({
   default: () => <section>about</section>,
 }));
 
+vi.mock("@/lib/api/stats", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/stats")>();
+  return {
+    ...actual,
+    statsApi: {
+      ...actual.statsApi,
+      getPassport: vi.fn().mockResolvedValue({ summary: { countries: 0, countriesTotal: 0 } }),
+    },
+  };
+});
 vi.mock("@/lib/api/flights", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/flights")>();
   return {
@@ -179,10 +192,9 @@ vi.unmock("../../store/settingsStore");
 // unconditionally and fetch on mount. They were never the subject of these
 // cases — the gate used to keep them out of the tree, and the network guard in
 // `src/__tests__/setup.ts` failed the suite the moment it stopped.
-// Fetches the user's settings on mount (P5 home country) — not the subject here.
-vi.mock("../../components/Settings/PersonalFactsCard", () => ({ default: () => null }));
-vi.mock("../../components/Settings/HomeCountryCard", () => ({
-  default: () => <div data-testid="home-country-card" />,
+// Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/HomeSection", () => ({
+  default: () => <div data-testid="home-section" />,
 }));
 vi.mock("../../components/ExternalServices/LegacyServiceSummary", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,
@@ -314,20 +326,18 @@ describe("SettingsPage — no heading repeats the one above it (forgejo#321)", (
     useSettingsLevelStore.setState({ level: "expert" });
   });
 
-  it.each(SETTINGS_PAGES.map((p) => [p.id]))("holds on /settings/%s", async (page) => {
+  it.each(OWN_PAGES.map((p) => [p.id]))("holds on /settings/%s", async (page) => {
     const { unmount } = render(
       <MemoryRouter initialEntries={[`/settings/${page}`]}>
         <Routes>
-          <Route path="/settings/:group" element={<SettingsPage />} />
+          <Route path="/settings/:page" element={<SettingsPage />} />
         </Routes>
       </MemoryRouter>
     );
     // Real copy: wait for the page's first section by its landmark id.
     await waitFor(() =>
       expect(
-        document.getElementById(
-          `settings-${SETTINGS_PAGES.find((p) => p.id === page)!.sections[0].id}`
-        )
+        document.getElementById(`settings-${OWN_PAGES.find((p) => p.id === page)!.sections[0].id}`)
       ).not.toBeNull()
     );
     expect(repeatedHeadings(document.body)).toEqual([]);

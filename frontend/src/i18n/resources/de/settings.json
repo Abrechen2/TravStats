@@ -18,17 +18,9 @@
     "webPrefsRejected": "Der Server hat deine Darstellungseinstellungen nicht angenommen. Auf diesem Gerät gelten sie weiter, auf deinen anderen nicht."
   },
   "cruisePreferences": {
-    "title": "Kreuzfahrt-Präferenzen",
-    "description": "Standardwerte für neu angelegte Kreuzfahrten und Darstellung auf der Karte.",
-    "defaultLine": "Standard-Reederei",
-    "defaultLinePlaceholder": "z. B. AIDA Cruises",
-    "defaultLineHint": "Wird in „Neue Kreuzfahrt → Manuell“ vorausgefüllt, wenn kein Schiff gewählt wurde.",
+    "title": "Neue Kreuzfahrten starten mit",
     "defaultCabin": "Standard-Kabinenkategorie",
-    "defaultCabinNone": "– keine Vorauswahl –",
-    "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
-    "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map.",
-    "countSeaDays": "Seetage zählen",
-    "countSeaDaysHint": "Seetage zählen in der Kreuzfahrt-Statistik bei den Reisetagen mit. Aus: Die Reisetage zählen ohne Seetage; die Zahl der Seetage selbst bleibt sichtbar."
+    "defaultCabinNone": "– keine Vorauswahl –"
   },
   "lodgingPreferences": {
     "title": "Unterkunfts-Präferenzen",
@@ -86,22 +78,12 @@
     "madeBy": "Ein Projekt von"
   },
   "profile": {
-    "title": "Benutzer-Profil",
-    "description": "Passe Benutzername, Kontaktinformationen und dein Profilbild an.",
-    "changePassword": "Passwort ändern",
-    "uploadAvatar": "Profilbild hochladen",
-    "chooseFile": "Datei auswählen",
+    "title": "Profil",
     "firstName": "Vorname",
     "lastName": "Nachname",
     "username": "Benutzername",
-    "usernameHint": "Der Anmeldename lässt sich hier nicht ändern.",
-    "email": "E-Mail-Adresse",
+    "email": "E-Mail",
     "birthdate": "Geburtstag",
-    "birthdateHint": "Optional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.",
-    "deleteAccount": "Account löschen",
-    "deletionRequested": "Löschanfrage vorgemerkt",
-    "dangerZone": "Gefahrenbereich",
-    "dangerZoneDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
     "invalidFileType": "Bitte wähle eine Bilddatei aus",
     "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
     "uploadSuccess": "Profilbild erfolgreich hochgeladen",
@@ -110,18 +92,22 @@
     "removeError": "Fehler beim Entfernen des Profilbilds",
     "uploadError": "Fehler beim Hochladen des Profilbilds",
     "save": "Profil speichern",
-    "saved": "Profil gespeichert",
-    "saveFailed": "Fehler beim Speichern des Profils",
     "help": {
       "avatar": "PNG oder JPG, max. 5 MB. Wird lokal in der Datenbank gespeichert, nicht an externe Dienste gesendet."
     },
-    "editProfile": "Profil bearbeiten",
-    "changePicture": "Bild ändern"
+    "changePicture": "Bild ändern",
+    "group": {
+      "label": "Profil"
+    },
+    "usernameSub": "Zum Anmelden, bleibt fest",
+    "emailSub": "Für ein neues Passwort",
+    "emailHelp": "Erinnerungen haben eine eigene Adresse unter Erinnerungen.",
+    "emailBad": "Das sieht nicht wie eine E-Mail-Adresse aus. Ich speichere erst, wenn sie stimmt.",
+    "birthdateSub": "Optional",
+    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei."
   },
   "homeAirport": {
-    "title": "Zuhause",
-    "description": "Wo du wohnst und von welchen Flughäfen du fliegst – mit Datum, denn ein Umzug ändert keine alten Reisen. Abstände wie „weg von zu Hause“ oder „am weitesten von zu Hause“ werden vom Wohnort gemessen, Heimkehr, Rundreisen und Umstiege über die Heimatflughäfen erkannt.",
-    "currentLabel": "Aktuelles Zuhause",
+    "title": "Heimatflughäfen",
     "notSet": "Noch kein Zuhause hinterlegt.",
     "setNow": "Zuhause festlegen",
     "iMoved": "Ich bin umgezogen",
@@ -160,7 +146,6 @@
     "fromDateHint": "Reisen vor diesem Datum zählen weiter zum vorherigen Zuhause – ein Umzug verändert keine alten Daten.",
     "savedToast": "Zuhause gespeichert.",
     "loadError": "Dein Zuhause konnte nicht geladen werden.",
-    "confirmDelete": "Diesen Zeitraum wirklich löschen?",
     "errors": {
       "residenceMissing": "Bitte wähle deinen Wohnort.",
       "airportMissing": "Bitte wähle mindestens einen Heimatflughafen.",
@@ -168,15 +153,28 @@
       "invalid": "Die Angaben passen nicht zusammen – prüfe die Daten und die Flughäfen.",
       "unknownAirport": "Diesen Flughafen kennt der Katalog nicht: {{codes}}.",
       "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
-      "deleteFailed": "Der Zeitraum konnte nicht gelöscht werden."
+      "deleteFailed": "Der Zeitraum konnte nicht gelöscht werden.",
+      "overlap": "Der Umzug liegt vor einem Zeitraum, den es schon gibt. Ich habe die Liste neu geladen, bitte prüf das Datum."
     },
-    "help": {
-      "historyExplained": "Wenn du umziehst, wird dein bisheriges Zuhause nicht überschrieben, sondern als früherer Zeitraum gespeichert. Alte Reisen behalten das damalige Zuhause."
+    "residenceRow": {
+      "name": "Wohnort",
+      "sub": "Von hier misst TravStats Entfernungen",
+      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Wohnort ist auch dein Heimatort in der Companion-App."
+    },
+    "airportsRow": {
+      "name": "Heimatflughäfen",
+      "sub": "Bis zu drei, einer als Standard",
+      "help": "Die Flughäfen gehören zum aktuellen Wohnort. Ziehst du um, bleiben die alten mit ihrem Zeitraum."
+    },
+    "deleteDialog": {
+      "title": "Zeitraum löschen?",
+      "amount": "1 Zeitraum",
+      "after": "Reisen aus dieser Zeit zählen dann gegen den Wohnort davor oder danach.",
+      "confirm": "Zeitraum löschen"
     }
   },
   "display": {
-    "title": "Anzeige & Sprache",
-    "description": "Sprache, Zeitzone sowie Datums- und Zeitformat zentral steuern.",
+    "title": "Sprache & Zeit",
     "language": "Sprache",
     "languages": {
       "de": "Deutsch",
@@ -185,10 +183,6 @@
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat",
-    "languageSub": "Oberfläche und Datumsformate",
-    "timezoneSub": "Für die Anzeige lokaler Zeiten",
-    "dateFormatSub": "In Fließtext und Formularen; Tabellen zeigen ISO",
-    "timeFormatSub": "Uhrzeiten von Abflug, Ankunft und Check-in",
     "dateFormats": {
       "dmy": "TT.MM.JJJJ",
       "iso": "JJJJ-MM-TT",
@@ -200,14 +194,10 @@
     }
   },
   "domainColors": {
-    "title": "Bereichsfarben",
-    "description": "Die Farbe je Bereich — sie gilt in den Statistiken, in der Reise-Zeitleiste, in der Aktivitätsleiste, im Import-Protokoll und überall sonst, wo ein Bereich mit einer einzelnen Farbe gekennzeichnet wird.",
-    "mapNote": "Die Karte bleibt davon unberührt: dort lässt sich eine Route nach Status oder Häufigkeit einfärben, ein Jahresbalken nicht. Die Kartenfarben stellst du weiter im Kartenbereich ein.",
-    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben.",
-    "reset": "Auf Markenfarben zurücksetzen"
+    "lowContrast": "Eine sehr dunkle Farbe hebt sich kaum vom Hintergrund ab. Geändert wird an deiner Wahl trotzdem nichts — betroffene Markierungen bekommen nur einen feinen Rand, damit sie auffindbar bleiben."
   },
   "units": {
-    "title": "Einheiten & Formate",
+    "title": "Einheiten",
     "description": "Definiere die Standard-Einheiten für Statistiken.",
     "distance": "Distanz",
     "currency": "Währung",
@@ -222,10 +212,6 @@
       "CHF": "CHF (Fr)",
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
-    },
-    "help": {
-      "distance": "Kilometer (Standard in DE/EU), Meilen (US) oder Nautische Meilen (wie bei Airlines üblich). Die zugrunde liegende Berechnung bleibt gleich — nur die Anzeige ändert sich.",
-      "currency": "Wird für Ticketpreise und Kostenstatistiken verwendet. Keine automatische Umrechnung bestehender Flüge — alte Werte bleiben in der ursprünglichen Währung gespeichert."
     },
     "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden.",
     "distanceSub": "Für Strecken und Statistiken",
@@ -243,8 +229,7 @@
     }
   },
   "defaults": {
-    "title": "Standard-Werte",
-    "description": "Neue Flüge werden mit diesen Vorgaben angelegt.",
+    "title": "Neue Flüge starten mit",
     "flightStatus": "Status",
     "seatClass": "Sitzklasse",
     "favoriteAirline": "Lieblings-Airline",
@@ -260,10 +245,6 @@
       "private": "Privat",
       "vacation": "Urlaub",
       "noneShort": "Keine"
-    },
-    "help": {
-      "status": "\"Geplant\" ist sinnvoll für zukünftige Flüge; \"Geflogen\" für den Schnelleintrag vergangener Flüge.",
-      "category": "Business / Privat / Urlaub — nur für deine Statistiken relevant, wirkt sich nicht auf Live-Daten oder Kosten aus."
     }
   },
   "notifications": {
@@ -494,7 +475,7 @@
     "activate": "Aktivieren"
   },
   "features": {
-    "title": "Funktionen",
+    "title": "Was festgehalten wird",
     "costTracking": "Kostenerfassung",
     "costTrackingDesc": "Steuer- und Gebührenfelder in Flugformularen anzeigen und Business-Statistiken auswerten. Preis und Währung sind immer verfügbar.",
     "trackAircraft": "Heckkennungen erfassen",
@@ -541,27 +522,15 @@
     }
   },
   "autoUpdate": {
-    "title": "Automatische Updates",
-    "description": "Ruft während aktiver Flüge regelmäßig aktuelle Daten ab. Gefundene Änderungen landen unter „Ausstehende Updates“ und werden erst nach deiner Bestätigung übernommen — nie automatisch. Betrifft nur Flüge, die bereits in deiner Liste stehen.",
+    "title": "Live-Updates",
     "viewPending": "Ausstehende Updates anzeigen",
     "enabled": "Automatische Updates aktivieren",
     "requireApproval": "Bestätigung erforderlich",
     "expiryHours": "Ablaufzeit (Stunden)",
-    "expiryHoursDescription": "Wie lange ausstehende Updates verfügbar bleiben, bevor sie ablaufen",
-    "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
-    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen",
     "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden."
   },
   "historicalEnrichment": {
-    "title": "Historische Anreicherung",
-    "description": "Ergänzt ältere Flüge aus live getrackten Flügen derselben Flugnummer. Alle Vorschläge sind Schätzungen und werden erst nach deiner Bestätigung gespeichert.",
-    "enabled": "Historische Flugdaten-Anreicherung aktivieren",
-    "minConfidence": "Min. Konfidenz (%)",
-    "minConfidenceDescription": "Nur Vorschläge mit mindestens X% Konfidenz anzeigen",
-    "maxPerDay": "Max. pro Tag",
-    "maxPerDayDescription": "Maximale Anzahl neuer Vorschläge pro Nacht",
-    "saved": "Anreicherungs-Einstellungen gespeichert",
-    "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen",
+    "title": "Ältere Flüge ergänzen",
     "loadFailed": "Die Einstellungen konnten nicht geladen werden. Die Änderung ist gesperrt, damit keine Standardwerte gespeichert werden.",
     "candidates": {
       "title": "Kandidaten zum Anreichern",
@@ -1001,15 +970,11 @@
     }
   },
   "homeCountry": {
-    "label": "Heimatland",
-    "description": "Bestimmt, welche Buchungsvorlagen zuerst geprüft werden. Vorlagen anderer Länder bleiben aktiv.",
-    "none": "Nicht festgelegt",
-    "loadFailed": "Heimatland konnte nicht geladen werden."
+    "none": "Nicht festgelegt"
   },
   "devices": {
-    "title": "Geräte",
-    "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
-    "connectButton": "Neues Gerät verbinden",
+    "title": "Companion-App",
+    "connectButton": "Telefon koppeln",
     "qrTitle": "Mit der TravStats-App scannen",
     "qrHint": "App öffnen → Einstellungen → „Gerät verbinden\" und diesen Code scannen.",
     "qrAlt": "QR-Code für die Gerätekopplung",
@@ -1032,16 +997,20 @@
     "ip": "IP {{ip}}",
     "revoked": "Abgemeldet",
     "unpairButton": "Abmelden",
-    "confirmUnpair": "Gerät wirklich abmelden? Die App auf diesem Gerät verliert sofort den Zugriff.",
     "errors": {
-      "load": "Geräte konnten nicht geladen werden",
-      "start": "Kopplung konnte nicht gestartet werden",
-      "unpair": "Gerät konnte nicht abgemeldet werden"
+      "load": "Ich konnte die Telefone nicht laden.",
+      "start": "Ich konnte die Kopplung nicht starten.",
+      "unpair": "Ich konnte das Telefon nicht abmelden."
+    },
+    "unpairDialog": {
+      "title": "Telefon abmelden?",
+      "amount": "1 Telefon",
+      "after": "Es verliert sofort den Zugang und muss neu gekoppelt werden.",
+      "confirm": "Abmelden"
     }
   },
   "apiTokens": {
-    "title": "API-Tokens",
-    "description": "Persönliche Zugriffstokens für KI-Agenten, Skripte und externe Apps. Zum Verbinden der TravStats-App nutze stattdessen „Geräte\". Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
+    "title": "API-Schlüssel",
     "docsTitle": "API-Dokumentation",
     "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
     "docsLink": "Swagger UI öffnen →",
@@ -1053,64 +1022,68 @@
       "write": "Write — lesen + schreiben",
       "admin": "Admin — voller Zugriff"
     },
-    "create": "Token erstellen",
-    "existingTitle": "Bestehende Tokens",
+    "create": "Neuer Schlüssel",
     "empty": "Noch keine Tokens erstellt.",
     "lastUsed": "Zuletzt: {{when}}",
     "neverUsed": "Noch nie benutzt",
     "revoked": "Widerrufen",
     "revokeButton": "Widerrufen",
-    "confirmRevoke": "Token wirklich widerrufen? Externe Tools mit diesem Token verlieren sofort den Zugriff.",
     "justCreatedTitle": "Token erstellt",
     "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
     "copy": "Kopieren",
     "copied": "Kopiert!",
     "dismiss": "Verstanden",
     "errors": {
-      "load": "Die Tokens konnten nicht geladen werden. Lade die Seite neu oder versuche es später erneut.",
-      "create": "Der Token konnte nicht erstellt werden. Versuche es erneut.",
-      "revoke": "Der Token konnte nicht widerrufen werden. Versuche es erneut.",
-      "labelRequired": "Beschreibung ist erforderlich",
+      "load": "Ich konnte die Schlüssel nicht laden.",
+      "create": "Ich konnte den Schlüssel nicht anlegen.",
+      "revoke": "Ich konnte den Schlüssel nicht zurückziehen.",
+      "labelRequired": "Ich brauche einen Namen für den Schlüssel.",
       "technicalDetail": "Technische Details"
     },
     "scopesShort": {
       "read": "Lesen",
       "write": "Schreiben",
       "admin": "Admin"
+    },
+    "revokeDialog": {
+      "title": "Schlüssel zurückziehen?",
+      "amount": "1 Schlüssel",
+      "after": "Das Werkzeug kommt sofort nicht mehr hinein.",
+      "confirm": "Zurückziehen"
     }
   },
   "security": {
-    "title": "Sicherheit",
-    "description": "Schütze die Anmeldung zusätzlich mit einem Einmalcode aus einer Authenticator-App. Freiwillig — ohne Einrichtung ändert sich an deiner Anmeldung nichts.",
+    "title": "Anmeldung",
     "enable": "Zwei-Faktor aktivieren",
     "scanHint": "Scanne den QR-Code mit deiner Authenticator-App.",
     "manualHint": "Falls du nicht scannen kannst, gib diesen Schlüssel von Hand ein:",
     "codeLabel": "Code aus der App",
     "activate": "Aktivieren",
-    "wrongCode": "Der Code stimmt nicht.",
-    "setupFailed": "Die Einrichtung konnte nicht gestartet werden.",
+    "wrongCode": "Ich erwarte einen anderen Code. Nimm den aktuellen aus der App.",
+    "setupFailed": "Ich konnte die Einrichtung nicht starten.",
     "saveCodes": "Bewahre diese Wiederherstellungscodes sicher auf. Die Anzeige erfolgt nur dieses eine Mal, und jeder Code funktioniert genau einmal.",
     "enabled": "Zwei-Faktor ist aktiv. Noch {{count}} Wiederherstellungscodes übrig.",
-    "tokenWarning": "Hinweis: API-Tokens umgehen den zweiten Faktor. Wer ein Token besitzt, kommt ohne Code hinein — widerrufe nicht mehr benötigte Tokens unter „API-Tokens\".",
-    "regenerate": "Neue Wiederherstellungscodes",
+    "regenerate": "Neu erzeugen",
     "confirmRegenerate": "Codes neu erzeugen",
-    "disable": "Zwei-Faktor deaktivieren",
     "confirmDisable": "Deaktivieren",
     "passwordLabel": "Passwort zur Bestätigung",
     "wrongPassword": "Das Passwort stimmt nicht.",
-    "sectionDescription": "Wie deine Anmeldung geschützt ist.",
-    "passwordTitle": "Passwort",
-    "passwordSub": "Für die Anmeldung mit deinem Benutzernamen",
     "passwordChange": "Ändern",
-    "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
-    "active": "Aktiv"
+    "statusFailed": "Ich konnte nicht nachsehen, ob der zweite Faktor an ist.",
+    "needsTwoFactor": "Erst mit zweitem Faktor.",
+    "regenerateDialog": {
+      "title": "Neue Ersatzcodes?",
+      "affects": "Deine bisherigen Ersatzcodes",
+      "amount": "{{count}} unbenutzte Codes",
+      "after": "Die alten gelten dann nicht mehr. Die neuen zeige ich dir nur einmal.",
+      "confirm": "Neu erzeugen"
+    }
   },
   "scopeHint": "Gilt nur für dein Konto.",
   "passkeys": {
     "title": "Passkeys",
-    "description": "Melde dich mit Fingerabdruck, Gesichtserkennung, PIN oder deinem Passwortmanager an — statt mit dem Passwort. Ein Passkey ersetzt beides: Passwort und Bestätigungscode, weil das Gerät die Freigabe schon selbst abfragt.",
     "none": "Noch kein Passkey hinterlegt.",
-    "add": "Passkey hinzufügen",
+    "add": "Hinzufügen",
     "nameLabel": "Name für diesen Passkey",
     "namePlaceholder": "z. B. Handy, Notebook, Bitwarden",
     "confirmAdd": "Anlegen",
@@ -1118,18 +1091,34 @@
     "rpIdLabel": "Gültig für",
     "lastUsed": "zuletzt benutzt",
     "neverUsed": "noch nie benutzt",
-    "addFailed": "Der Passkey konnte nicht angelegt werden.",
-    "removeFailed": "Der Passkey konnte nicht entfernt werden.",
-    "insecureOrigin": "Passkeys brauchen HTTPS. Über eine reine LAN-Adresse ohne HTTPS verweigert der Browser sie — erreichbar über den Tunnel funktionieren sie.",
-    "notConfigured": "Für Passkeys muss ein Administrator zuerst die öffentliche Adresse dieser Instanz hinterlegen."
+    "addFailed": "Ich konnte den Passkey nicht anlegen.",
+    "removeFailed": "Ich konnte den Passkey nicht entfernen.",
+    "insecureOrigin": "Ich lege Passkeys nur über https an.",
+    "notConfigured": "Ich brauche dafür erst eine Passkey-Domain vom Admin.",
+    "passwordLabel": "Dein Passwort, zur Bestätigung",
+    "codeLabel": "Code aus der Authenticator-App oder ein Ersatzcode",
+    "listFailed": "Ich konnte die Passkeys nicht laden.",
+    "reauth": {
+      "REAUTH_PASSWORD_INCORRECT": "Das Passwort stimmt nicht. Ich habe keinen Passkey angelegt.",
+      "REAUTH_SECOND_FACTOR_REQUIRED": "Dein Konto hat einen zweiten Faktor. Ich brauche den Code, bevor ich einen Passkey anlege.",
+      "REAUTH_SECOND_FACTOR_INVALID": "Der Code stimmt nicht. Ich habe keinen Passkey angelegt."
+    }
   },
   "countryCounting": {
-    "title": "Länderzählung",
-    "description": "Ab welchem Nachweis ein Land in deiner Länderzahl mitgezählt wird.",
-    "label": "Ein Land zählt ab …",
-    "help": "Ändert nur die gezählte Zahl, nie die Liste. Es gibt bewusst keine Stundengrenze: Ob du den Flughafen verlassen hast, ist nirgends erfasst, und eine Zahl zum Drehen wäre keine Messung mehr.",
-    "useInstanceDefault": "Standard dieser Instanz übernehmen ({{tier}})",
-    "instanceShort": "Instanz ({{tier}})"
+    "title": "Länder",
+    "loadFailed": "Ich konnte die Zahlen nicht lesen. Das heißt nicht, dass es null Länder sind.",
+    "visited": {
+      "name": "Als besucht gezählt",
+      "sub": "Länder mit bestätigtem Aufenthalt"
+    },
+    "ground": {
+      "name": "Mit Bodenkontakt",
+      "sub": "Alle Länder, in denen etwas belegt ist"
+    },
+    "passport": {
+      "name": "Länderpass",
+      "open": "Öffnen"
+    }
   },
   "groups": {
     "account": "Konto",
@@ -1192,7 +1181,12 @@
       "autoupdate": "Abfrageintervall, Intervall, Ablauf",
       "backup": "Instanz-Backup, letzte Sicherung, WebDAV, Nextcloud, Abgleich, Sync",
       "externalServices": "eigener Schlüssel, eigener API-Schlüssel, API-Schlüssel, Kontingent, Quote, AirLabs-Schlüssel, Aviationstack-Schlüssel, AeroDataBox-Schlüssel, AeroAPI-Schlüssel, OpenSky-Zugang, GraphHopper-Schlüssel, OpenRouteService-Schlüssel"
-    }
+    },
+    "count_one": "{{count}} Treffer",
+    "count_other": "{{count}} Treffer",
+    "countMore": "{{shown}} von {{count}} Treffern · weiter tippen",
+    "noResultsFor": "Nichts gefunden für „{{query}}“.",
+    "expertNote": "Experten-Treffer öffnen sich, ohne deine Stufe zu ändern."
   },
   "railProviders": {
     "title": "Zugsuche",
@@ -1270,16 +1264,12 @@
     "description": "Reisepositionen aus der App liegen auf diesem Server und erscheinen auf der Reisekarte.",
     "more": "Ausgeschaltet nimmt der Server keine neuen an; Gespeichertes bleibt, bis du es löschst."
   },
-  "travPlan": {
-    "label": "Plan – Reisen planen",
-    "description": "Der Planungsbereich: Reisen vorab planen, mit Etappen, Packliste und Wetter. Ausgeschaltet verschwindet er aus dem Menü; deine Pläne bleiben erhalten und sind wieder da, sobald du ihn einschaltest."
-  },
   "menu": {
     "domains": "Bereiche",
     "version": "TravStats {{version}}"
   },
   "domains": {
-    "title": "Bereiche & Farben",
+    "title": "Was du festhältst",
     "description": "Ein Bereich, eine Zeile: einschalten und seine Farbe gleich daneben. Ausgeschaltete Bereiche bleiben hier sichtbar, damit du sie einschalten kannst.",
     "color": "Farbe"
   },
@@ -1300,7 +1290,10 @@
     "showInExpert": "In Experte zeigen",
     "pageMore_one": "1 weitere Einstellung auf dieser Seite ist nur in der Ansicht „Experte“ zu sehen.",
     "pageMore_other": "{{count}} weitere Einstellungen auf dieser Seite sind nur in der Ansicht „Experte“ zu sehen.",
-    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen."
+    "hint": "„Experte“ zeigt zusätzlich Feineinstellungen, eigene API-Schlüssel und technische Optionen.",
+    "moreInExpert_one": "Experte zeigt {{count}} weitere Einstellung",
+    "moreInExpert_other": "Experte zeigt {{count}} weitere Einstellungen",
+    "allVisible": "Alles sichtbar · Feinarbeit ist markiert"
   },
   "sectionChips": "Abschnitte auf dieser Seite",
   "pagePicker": "Seite",
@@ -1436,46 +1429,6 @@
   },
   "locationProvider": {
     "title": "Standortquelle",
-    "description": "Woher TravStats Positionen liest, um dir Ländertage, Aufenthalte und Strecken vorzuschlagen, und wofür die Companion aufzeichnet.",
-    "legend": "Standortquelle wählen",
-    "loadError": "Die Standortquelle konnte nicht geladen werden.",
-    "meaning": "Was das bedeutet",
-    "nothingMoves": "Ein Wechsel ändert nur, was ab jetzt aufgezeichnet und gelesen wird. Es wird nichts verschoben, kopiert oder gelöscht.",
-    "connectDawarich": "Erst Dawarich verbinden",
-    "status": {
-      "notConfigured": "Dawarich ist als Standortquelle gewählt, aber deine eigene Dawarich-Verbindung fehlt oder funktioniert nicht mehr. Bis du sie wieder einträgst, liest TravStats nichts aus Dawarich.",
-      "unavailable": "TravTrack ist als Standortquelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin wird darüber nichts aufgezeichnet oder gelesen."
-    },
-    "options": {
-      "none": {
-        "label": "Keine",
-        "sub": "TravStats liest keine Positionen.",
-        "points": {
-          "manual": "Keine automatischen Vorschläge aus Positionen: Ländertage und Aufenthalte trägst du selbst ein.",
-          "noHistory": "Die Companion bietet keinen Standortverlauf an.",
-          "ownRecording": "Flüge und Reisen zeichnet die Companion selbst auf. Die Strecke gehört zum Eintrag und liegt hier auf dem Server."
-        }
-      },
-      "travtrack": {
-        "label": "TravTrack",
-        "sub": "Der Standortverlauf hier auf deinem Server.",
-        "points": {
-          "records": "Die Companion zeichnet über TravTrack auf, Alltag, Flug und Reise; die Punkte liegen auf diesem Server und sind Teil der Sicherung.",
-          "segment": "Die Strecke eines Flugs oder einer Reise ist ein Abschnitt in TravTrack, verknüpft mit dem Eintrag.",
-          "inbox": "TravTrack schickt Vorschläge in den Posteingang: Ländertage, Aufenthalte, fehlende Fahrten.",
-          "zones": "Privatzonen und Löschen verwaltest du in TravTrack."
-        }
-      },
-      "dawarich": {
-        "label": "Dawarich",
-        "sub": "Dein eigenes Dawarich, nur gelesen.",
-        "points": {
-          "readOnly": "TravStats liest aus deinem Dawarich, wie bisher. Es schreibt dort nichts und löscht dort nichts.",
-          "suggestions": "TravStats zählt daraus Ländertage und schlägt Aufenthalte im Posteingang vor.",
-          "recording": "Flüge und Reisen zeichnet die Companion vorerst weiter selbst auf."
-        }
-      }
-    },
     "errors": {
       "dawarichNotConfigured": "Dawarich lässt sich erst als Standortquelle wählen, wenn du unter „Dawarich-Verbindung“ deine eigene Verbindung eingetragen hast.",
       "travtrackUnavailable": "TravTrack ist auf diesem Server nicht verfügbar.",
@@ -1494,51 +1447,614 @@
     "open": "Öffnen"
   },
   "views": {
-    "mapAppearance": {
-      "title": "Kartenaussehen",
-      "description": "Farben, Paletten, Ebenen und Beschriftungen stellst du dort ein, wo du sie siehst: im Bedienfeld der Karte. Von hier springst du hin.",
-      "routes": {
-        "title": "Routenfarben und Paletten",
-        "sub": "Flug- und Kreuzfahrtrouten nach Modus einfärben."
-      },
-      "lines": {
-        "title": "Routen auf der Karte ein- und ausblenden",
-        "sub": "Pro Bereich die Linien weglassen und nur Flughäfen, Häfen, Bahnhöfe und Haltestellen zeigen. Das Bedienfeld der Karte speichert es für dein Konto."
-      },
-      "layers": {
-        "title": "Ebenen und Beschriftungen",
-        "sub": "Welche Kartenebenen und Beschriftungen sichtbar sind."
-      }
+    "title": "Karte, Start & Listen",
+    "map": {
+      "name": "Kartendarstellung",
+      "sub": "Stil, Linien, Beschriftungen",
+      "jump": "An der Karte"
     },
-    "dashboardAppearance": {
-      "title": "Dashboard",
-      "description": "Welche Bereiche das Dashboard zeigt und in welchem Kartenmodus, wählst du auf dem Dashboard selbst.",
-      "sections": {
-        "title": "Bereiche und Kartenmodus",
-        "sub": "Pro Bereich eigener Modus; er wird für dein Konto gemerkt."
-      }
+    "start": {
+      "name": "Startseite",
+      "sub": "Reisearten und Kartenart",
+      "jump": "Auf der Startseite"
     },
-    "listAppearance": {
-      "title": "Listen",
-      "description": "Spalten, Sortierung und Seitengröße der Listen stellst du in der Liste selbst ein.",
-      "columns": {
-        "title": "Spalten und Seitengröße",
-        "sub": "Die Flugliste ist der Einstieg; andere Bereiche haben ihre eigene Liste."
-      }
+    "lists": {
+      "name": "Listen",
+      "sub": "Spalten, Sortierung, Seitengröße",
+      "jump": "An jeder Liste"
     }
   },
-  "personalFacts": {
-    "loadFailed": "Deine persönlichen Angaben konnten nicht geladen werden.",
-    "notSet": "Nicht gesetzt",
-    "homePlace": {
-      "label": "Wohnort",
-      "description": "Der Wohnort deiner aktuellen Zuhause-Periode. Die Companion-App nutzt ihn zum Beispiel für die Erinnerung zum Losfahren.",
-      "legacyHint": "Dieser Ort stammt aus einer älteren Angabe und gehört zu keiner Zuhause-Periode. Lege dort deinen Wohnort an, damit er überall gilt.",
-      "editLink": "Unter „Zuhause“ ändern"
+  "area": {
+    "pages": {
+      "account": "Profil & Anmeldung",
+      "display": "Sprache & Einheiten",
+      "domains": "Reisearten",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "trips": "Reisen & Eingang",
+      "sharing": "Teilen",
+      "notifications": "Erinnerungen",
+      "location": "Standort",
+      "loyalty": "Treueprogramme",
+      "data": "Daten",
+      "services": "Dienste",
+      "server": "Server",
+      "users": "Nutzer",
+      "backups": "Sicherungen",
+      "maintenance": "Wartung",
+      "masterdata": "Stammdaten",
+      "about": "Über TravStats"
+    },
+    "menu": {
+      "account": "Dein Konto",
+      "server": "Server · nur Admin"
+    },
+    "scope": {
+      "account": "Gilt für dein Konto",
+      "mixed": "Gilt für dein Konto · Zeilen mit „Alle Konten“ gelten für den Server",
+      "instance": "Gilt für alle Konten · nur Admin"
+    },
+    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin."
+  },
+  "blocks": {
+    "scope": {
+      "allAccounts": "Alle Konten",
+      "device": "Nur dieses Gerät"
+    },
+    "save": {
+      "waiting": "Gleich gespeichert",
+      "saved": "Gespeichert",
+      "failed": "Ich konnte das nicht speichern. {{reason}} Deine Auswahl bleibt stehen.",
+      "reason": {
+        "offline": "Der Server antwortet gerade nicht.",
+        "rejected": "Der Server hat den Wert nicht angenommen.",
+        "timezone": "Diese Zeitzone kenne ich nicht.",
+        "demo": "Im Demo-Konto speichere ich das nicht.",
+        "notLoaded": "Die Einstellungen sind nicht geladen. Ich speichere nichts, um deine nicht zu überschreiben."
+      },
+      "retry": "Erneut versuchen",
+      "discard": "Verwerfen",
+      "unsaved": "Nicht gespeichert",
+      "groupSaving": "Ich speichere …",
+      "saveGroup": "Speichern",
+      "saveAndTest": "Speichern & testen",
+      "discardGroup": "Verwerfen"
+    },
+    "lock": {
+      "demo": "Im Demo-Konto gesperrt"
+    },
+    "secret": {
+      "set": "Gespeichert · wird nicht mehr angezeigt",
+      "empty": "Noch nichts gespeichert",
+      "keepHint": "Leer lassen behält den gespeicherten Wert."
+    },
+    "job": {
+      "waiting": "Startet gleich",
+      "progress": "{{done}} von {{total}}",
+      "eta": "fertig in etwa {{eta}}",
+      "mayLeave": "du kannst die Seite verlassen",
+      "done": "fertig · {{result}}",
+      "paused": "Angehalten bei Tag {{at}} von {{total}}",
+      "resume": "Fortsetzen",
+      "failed": "Ich konnte nicht weitermachen: {{reason}}",
+      "retry": "Erneut versuchen",
+      "unknown": "Ich weiß nicht, ob es fertig wurde: Der Server hat zwischendurch neu gestartet.",
+      "check": "Nachsehen"
+    },
+    "confirm": {
+      "affects": "Betrifft",
+      "amount": "Wie viel",
+      "after": "Danach",
+      "typeWord": "Zum Bestätigen {{word}} tippen",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "leave": {
+      "title": "Änderungen verwerfen?",
+      "amount_one": "{{count}} geänderte Angabe",
+      "amount_other": "{{count}} geänderte Angaben",
+      "after": "Die Angaben stehen wieder wie zuletzt gespeichert.",
+      "discard": "Verwerfen",
+      "stay": "Bleiben"
+    },
+    "card": {
+      "open": "Öffnen",
+      "close": "Schließen"
+    },
+    "oneShot": "Experten-Einstellung · nur für diesen Besuch sichtbar. Deine Stufe bleibt Standard.",
+    "oneShotAlways": "Immer zeigen",
+    "dep": {
+      "noImmich": {
+        "reason": "Immich ist nicht verbunden.",
+        "jump": "Verbinden"
+      },
+      "noFlightData": {
+        "reason": "Braucht einen Flugdaten-Dienst.",
+        "jump": "Zu Dienste"
+      },
+      "autoOff": {
+        "reason": "Wirkt erst mit Live-Updates."
+      },
+      "stayOff": {
+        "reason": "Wirkt erst mit Aufenthaltsvorschlägen.",
+        "jump": "Einschalten"
+      },
+      "placesOff": {
+        "reason": "Orte ist aus.",
+        "jump": "Einschalten"
+      },
+      "cruiseOff": {
+        "reason": "Kreuzfahrten ist aus.",
+        "jump": "Einschalten"
+      },
+      "toursOff": {
+        "reason": "Touren ist aus.",
+        "jump": "Einschalten"
+      },
+      "noLocSource": {
+        "reason": "Wirkt erst mit einer Standortquelle.",
+        "jump": "Quelle wählen"
+      },
+      "aiNotAllowed": {
+        "reason": "Der Admin hat keine KI freigegeben."
+      },
+      "noFederation": {
+        "reason": "Der Admin hat andere Server nicht freigegeben."
+      },
+      "noPublicUrl": {
+        "reason": "Dem Server fehlt eine öffentliche Adresse.",
+        "jump": "Adresse setzen"
+      },
+      "no2fa": {
+        "reason": "Erst mit zweitem Faktor."
+      },
+      "noSmtp": {
+        "reason": "Der Server verschickt keine Mails.",
+        "jump": "Mail einrichten"
+      },
+      "noWebdav": {
+        "reason": "Noch kein WebDAV-Speicher verbunden.",
+        "jump": "Verbinden"
+      },
+      "noTravTrack": {
+        "reason": "Der Server bietet TravTrack nicht an."
+      },
+      "noTravPlan": {
+        "reason": "Der Server bietet Planen nicht an.",
+        "jump": "Anbieten"
+      },
+      "webdavOff": {
+        "reason": "Wirkt erst mit WebDAV-Kopie."
+      },
+      "noMailAddr": {
+        "reason": "Mail geht erst mit einer Adresse oben."
+      },
+      "envPinned": {
+        "reason": "Vom Server-Start festgelegt ({{name}}). Wirksam: {{value}}."
+      },
+      "noOllama": {
+        "reason": "Braucht Ollama."
+      },
+      "noOwnDawarich": {
+        "reason": "Braucht deine eigene Dawarich-Verbindung. Die des Servers reicht dafür nicht.",
+        "jump": "Verbinden"
+      },
+      "dawSrcMissing": {
+        "reason": "Dawarich ist für dich noch nicht verbunden. Bis dahin liest TravStats keine Positionen.",
+        "jump": "Verbinden"
+      },
+      "noPush": {
+        "reason": "Der Server sendet gerade keine Mitteilungen an die App."
+      },
+      "publicUrlMissing": {
+        "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
+      }
+    },
+    "number": {
+      "range": "Ich nehme Werte von {{min}} bis {{max}}."
+    }
+  },
+  "home": {
+    "title": "Zuhause",
+    "loadFailed": "Ich konnte das nicht laden. Ich ändere nichts, bis es geladen ist.",
+    "country": {
+      "name": "Heimatland",
+      "sub": "Buchungsvorlagen von hier zuerst",
+      "help": "Filtert nichts, ändert nur die Reihenfolge."
     },
     "passport": {
-      "label": "Reisepass gültig bis",
-      "description": "Die Companion-App warnt sechs Monate vorher."
+      "name": "Reisepass gültig bis",
+      "sub": "Die Companion-App warnt 6 Monate vorher"
+    },
+    "loading": "Ich lade das noch …"
+  },
+  "deleteAccount": {
+    "title": "Konto löschen",
+    "name": "Konto löschen",
+    "sub": "Mit allen Einträgen, Fotos und Dateien",
+    "help": "Das Konto ist sofort weg, auch für den Admin. Lade vorher deine Daten herunter, danach geht es nicht mehr.",
+    "open": "Konto löschen …",
+    "password": "Dein Passwort",
+    "code": "Code aus der Authenticator-App oder ein Ersatzcode",
+    "continue": "Weiter",
+    "refused": {
+      "DELETE_PASSWORD_INCORRECT": "Das Passwort stimmt nicht. Ich habe nichts gelöscht.",
+      "DELETE_SECOND_FACTOR_REQUIRED": "Dein Konto hat einen zweiten Faktor. Ich brauche den Code, bevor ich etwas lösche.",
+      "DELETE_SECOND_FACTOR_INVALID": "Der Code stimmt nicht. Ich habe nichts gelöscht.",
+      "DELETE_LAST_ADMIN": "Du bist der letzte Admin. Gib die Rolle erst einem anderen Konto, dann kann ich dieses löschen.",
+      "DEMO_ACCOUNT_FORBIDDEN": "Das Demo-Konto lösche ich nicht.",
+      "offline": "Der Server antwortet gerade nicht. Ich habe nichts gelöscht.",
+      "other": "Ich konnte das Konto nicht löschen. Es ist noch da.",
+      "DELETE_PASSKEY_INVALID": "Der Passkey wurde nicht bestätigt. Ich habe nichts gelöscht.",
+      "NO_PASSKEY": "Zu diesem Konto gibt es keinen Passkey. Bestätige mit dem Passwort.",
+      "PASSKEY_UNAVAILABLE": "Passkeys gehen hier gerade nicht. Bestätige mit dem Passwort.",
+      "passkeyCancelled": "Du hast den Passkey nicht bestätigt. Ich habe nichts gelöscht.",
+      "REAUTH_PASSKEY_TOO_NEW": "Dieser Passkey ist noch keine 24 Stunden alt. Bestätige mit dem Passwort oder warte bis morgen."
+    },
+    "dialog": {
+      "title": "Konto löschen?",
+      "affects": "Dein Konto {{username}} mit allen Einträgen, Fotos und Dateien",
+      "amount": "Alles, was du hier hast",
+      "after": "Es ist sofort weg, auch für den Admin. Das lässt sich nicht zurückholen.",
+      "confirm": "Konto löschen"
+    },
+    "passkeyHint": "Ich frage deinen Passkey, bevor ich löschen darf. Das geschieht erst im nächsten Schritt.",
+    "usePasskey": "Stattdessen mit Passkey bestätigen",
+    "usePassword": "Stattdessen mit Passwort bestätigen"
+  },
+  "planning": {
+    "title": "Planen"
+  },
+  "firstVisit": {
+    "title": "Zuerst",
+    "language": "Sprache & Einheiten",
+    "home": "Wohnort",
+    "location": "Standortquelle",
+    "hide": "Ausblenden"
+  },
+  "rows": {
+    "language": {
+      "name": "Sprache"
+    },
+    "timezone": {
+      "name": "Zeitzone",
+      "sub": "Für Ortszeiten und Tageswerte"
+    },
+    "dateFormat": {
+      "name": "Datum",
+      "sub": "Tabellen zeigen immer 2026-12-31"
+    },
+    "timeFormat": {
+      "name": "Uhrzeit"
+    },
+    "distance": {
+      "name": "Entfernung"
+    },
+    "weight": {
+      "name": "Gepäck",
+      "sub": "Für Freigepäck ohne Einheit",
+      "help": "Rechnet nichts um."
+    },
+    "currency": {
+      "name": "Hauptwährung",
+      "sub": "Alle Summen in dieser Währung",
+      "help": "Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."
+    },
+    "domainJump": "Einstellungen",
+    "resetColors": {
+      "name": "Farben zurücksetzen",
+      "help": "Die Karte hat eigene Farben und bleibt, wie sie ist."
+    },
+    "travPlan": {
+      "name": "Reisen planen",
+      "sub": "Ideen und Pläne vor der Reise",
+      "help": "Ausschalten behält deine Pläne.",
+      "offOnServer": "Dieser Server bietet das Planen nicht an."
+    },
+    "flightStatus": {
+      "name": "Status"
+    },
+    "seatClass": {
+      "name": "Klasse"
+    },
+    "favoriteAirline": {
+      "name": "Airline"
+    },
+    "flightCategory": {
+      "name": "Anlass",
+      "sub": "Nur für Statistiken"
+    },
+    "costTracking": {
+      "name": "Steuern und Gebühren",
+      "sub": "Auch Geschäftsreise-Summen",
+      "help": "Preis und Währung gibt es immer."
+    },
+    "trackAircraft": {
+      "name": "Kennzeichen der Maschine",
+      "help": "Aus: nur Flugzeugtypen, keine einzelnen Maschinen."
+    },
+    "liveTracking": {
+      "name": "Flugweg vom Telefon",
+      "sub": "Die Companion-App zeichnet ihn auf",
+      "help": "Aus: Der Server nimmt keine Flugwege mehr an."
+    },
+    "cruiseLine": {
+      "name": "Reederei"
+    },
+    "cruiseCabin": {
+      "name": "Kabine"
+    },
+    "seaDays": {
+      "name": "Seetage als Reisetage",
+      "help": "Die Zahl der Seetage bleibt sichtbar."
+    },
+    "password": {
+      "name": "Passwort"
+    },
+    "twoFactor": {
+      "name": "Zweiter Faktor",
+      "sub": "Code aus einer Authenticator-App",
+      "help": "API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."
+    },
+    "backupCodes": {
+      "name": "Ersatzcodes",
+      "sub": "Falls das Telefon fehlt",
+      "help": "Neue Codes machen die alten wertlos. Du siehst sie nur einmal."
+    },
+    "passkeys": {
+      "name": "Passkeys",
+      "sub": "Anmelden ohne Passwort",
+      "help": "Ein Passkey ersetzt Passwort und zweiten Faktor. Er gilt nur unter der Adresse, unter der du ihn angelegt hast."
+    },
+    "phones": {
+      "name": "Gekoppelte Telefone",
+      "help": "Der Kopplungscode verfällt nach wenigen Minuten. Abmelden nimmt dem Telefon sofort den Zugang."
+    },
+    "apiKeys": {
+      "name": "API-Schlüssel",
+      "sub": "Für Skripte und Werkzeuge",
+      "help": "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
+    },
+    "liveUpdates": {
+      "name": "Live-Updates abrufen",
+      "sub": "Während ein Flug unterwegs ist",
+      "noFlightData": "Braucht einen Flugdaten-Dienst.",
+      "toServices": "Zu Dienste"
+    },
+    "approveUpdates": {
+      "name": "Updates erst nach Freigabe"
+    },
+    "updateExpiry": {
+      "name": "Offene Updates verwerfen nach",
+      "sub": "1 bis 168 Stunden"
+    },
+    "openUpdates": {
+      "name": "Offene Updates",
+      "count": "{{count}} offen"
+    },
+    "enrichment": {
+      "name": "Ältere Flüge ergänzen",
+      "sub": "Aus Live-Flügen mit derselben Nummer",
+      "help": "Es entstehen nur Vorschläge im Eingang."
+    },
+    "enrichmentConfidence": {
+      "name": "Mindestens sicher",
+      "sub": "0–100 %"
+    },
+    "enrichmentPerNight": {
+      "name": "Vorschläge pro Nacht",
+      "sub": "1–1000"
+    }
+  },
+  "location": {
+    "source": {
+      "name": "Standort kommt von",
+      "sub": "Für Ländertage, Aufenthalte, Routen",
+      "help": "Umschalten verschiebt und löscht nichts. TravTrack speichert auf diesem Server. Dawarich geht nur mit deiner eigenen Dawarich-Verbindung.",
+      "options": {
+        "none": "Keine",
+        "travtrack": "TravTrack",
+        "dawarich": "Dawarich"
+      },
+      "loadError": "Ich konnte die Standortquelle nicht laden.",
+      "status": {
+        "notConfigured": "Dawarich ist als Quelle gewählt, aber deine eigene Verbindung fehlt oder geht nicht mehr. Bis du sie wieder einträgst, lese ich nichts aus Dawarich.",
+        "unavailable": "TravTrack ist als Quelle gewählt, auf diesem Server aber gerade nicht verfügbar. Bis dahin zeichne und lese ich darüber nichts."
+      },
+      "errors": {
+        "dawarichNotConfigured": "Ich kann Dawarich erst wählen, wenn deine eigene Dawarich-Verbindung eingetragen ist.",
+        "travtrackUnavailable": "TravTrack gibt es auf diesem Server gerade nicht."
+      }
+    },
+    "dawlink": {
+      "name": "Deine Dawarich-Verbindung",
+      "connected": "Verbunden",
+      "notConnected": "Nicht verbunden",
+      "jump": "Öffnen"
+    },
+    "stay": {
+      "scan": {
+        "name": "Automatisch suchen",
+        "sub": "Alle 6 Stunden, auch Märkte, Parks, Museen",
+        "help": "Funde landen als Vorschlag im Eingang. Pausiert, solange Orte oder Aufenthaltsvorschläge aus sind."
+      },
+      "period": {
+        "name": "Zeitraum für „Jetzt suchen“",
+        "days_one": "Letzter Tag",
+        "days_other": "Letzte {{count}} Tage"
+      },
+      "now": {
+        "name": "Jetzt suchen",
+        "label": "Jetzt suchen",
+        "busy": "Ich suche …",
+        "inbox": "Vorschläge ansehen"
+      },
+      "loadError": "Ich konnte den Stand der Suche nicht laden.",
+      "next": "Nächste automatische Suche: {{at}}",
+      "pause": {
+        "disabled": "Die automatische Suche ist aus. Vorhandene Vorschläge kannst du weiter prüfen.",
+        "suggestionsDisabled": "Pausiert: Aufenthaltsvorschläge sind aus. Deine Einwilligung und bisherige Entscheidungen bleiben.",
+        "placesDisabled": "Pausiert: Orte ist aus. Deine Einwilligung und bisherige Vorschläge bleiben.",
+        "connectionMissing": "Pausiert: Ich finde keine eigene Dawarich-Verbindung von dir. Die des Servers reicht dafür nicht.",
+        "travTrackDisabled": "Pausiert: TravTrack ist auf diesem Server gerade aus. Ich erkenne keine neuen Aufenthalte, bis es wieder an ist."
+      },
+      "result": {
+        "done": "{{created}} neue Vorschläge aus {{points}} Punkten, {{at}}",
+        "partial": "Nur teilweise gesucht: {{created}} neue Vorschläge aus {{points}} Punkten. Es fehlen Daten, {{at}}",
+        "interrupted": "Die Suche wurde unterbrochen. Starte sie noch einmal.",
+        "stale": "Ich habe die Suche abgebrochen, weil dein Standortverlauf währenddessen gelöscht wurde. Die nächste liest ihn neu.",
+        "running": "Ich suche in deinem Standortverlauf",
+        "failed": "Das letzte Suchen hat nicht geklappt."
+      },
+      "window": "Geprüft: {{from}} bis {{to}}",
+      "dataThrough": "Neuester Punkt: {{at}}",
+      "noPoints": "Für diesen Zeitraum kamen keine Punkte. Daraus kann ich keine Aufenthalte ableiten.",
+      "stale": "Die neuesten Punkte sind über 24 Stunden alt. Sieh nach, ob dein Telefon noch aufzeichnet und hochlädt oder Dawarich noch synchronisiert.",
+      "errors": {
+        "placesOff": "Orte ist aus. Schalte es ein, dann kann ich suchen.",
+        "travTrackOff": "TravTrack ist auf diesem Server aus. Ich kann daraus nichts lesen.",
+        "ownConnection": "Dafür brauche ich deine eigene Dawarich-Verbindung. Die des Servers reicht nicht.",
+        "unavailable": "Ich kann gerade nicht suchen: Die automatische Suche ist aus, oder es läuft schon eine.",
+        "rateLimited": "Du hast in kurzer Zeit zu oft gesucht. Versuche es in ein paar Minuten noch einmal.",
+        "offline": "Der Server antwortet gerade nicht.",
+        "generic": "Der Server hat die Suche nicht angenommen.",
+        "jobFailed": "Die Suche ist unterwegs abgebrochen."
+      }
+    },
+    "tt": {
+      "sum": {
+        "name": "Gespeichert",
+        "empty": "Noch keine Positionen gespeichert.",
+        "value": "{{count}} Positionen, {{from}} bis {{to}}, {{devices}} Gerät(e)",
+        "open": "Track öffnen",
+        "off": "TravTrack ist auf diesem Server aus: Es wird nichts aufgezeichnet. Was gespeichert ist, kannst du weiter exportieren und löschen.",
+        "loadError": "Ich konnte TravTrack nicht laden."
+      },
+      "zones": {
+        "name": "Schutzzonen",
+        "sub": "Hier wird nichts gespeichert",
+        "help": "Eine neue Zone löscht Punkte, die schon darin liegen; vorher siehst du, wie viele. Entfernen holt nichts zurück.",
+        "none": "Noch keine Schutzzone.",
+        "radius": "Umkreis {{metres}} m",
+        "remove": "Entfernen",
+        "add": "Zone anlegen",
+        "fields": {
+          "name": "Name",
+          "centre": "Mittelpunkt",
+          "radius": "Umkreis"
+        },
+        "namePlaceholder": "z. B. Zuhause",
+        "centreHint": "Koordinaten oder ein Google-Maps-Link, z. B. 52.5200, 13.4050",
+        "centreInvalid": "Diese Koordinaten kann ich nicht lesen.",
+        "confirmAffects": "Punkte, die schon in der Zone „{{name}}“ liegen",
+        "confirmAmount_one": "{{count}} gespeicherte Position",
+        "confirmAmount_other": "{{count}} gespeicherte Positionen",
+        "confirmAfter": "Die Zone ist angelegt, die Punkte sind gelöscht. Das lässt sich nicht zurückholen.",
+        "confirmDo_one": "{{count}} Position löschen und Zone anlegen",
+        "confirmDo_other": "{{count}} Positionen löschen und Zone anlegen",
+        "removeTitle": "Schutzzone „{{name}}“ entfernen?",
+        "removeAffects": "Die Zone „{{name}}“",
+        "removeAmount": "Eine Zone, {{metres}} m Umkreis",
+        "removeAfter": "Dort wird wieder aufgezeichnet. Was die Zone gelöscht hat, bleibt gelöscht.",
+        "removeDo": "Zone entfernen",
+        "addTitle": "Punkte in der Zone löschen?",
+        "notAdded": "Ich habe die Schutzzone nicht angelegt.",
+        "notRemoved": "Ich habe die Schutzzone nicht entfernt.",
+        "added": "Schutzzone angelegt.",
+        "addedDeleted_one": "Schutzzone angelegt, {{count}} Position darin gelöscht.",
+        "addedDeleted_other": "Schutzzone angelegt, {{count}} Positionen darin gelöscht.",
+        "loadError": "Ich konnte die Schutzzonen nicht laden."
+      },
+      "cities": {
+        "name": "Städte benennen",
+        "sub": "Orte ab 30 Minuten",
+        "help": "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder. In Schutzzonen suche ich nie.",
+        "loadError": "Ich konnte die Einstellung nicht laden.",
+        "notSource": "Wirkt erst, wenn TravTrack deine Standortquelle ist."
+      },
+      "apps": {
+        "name": "Weitere Apps",
+        "sub": "OwnTracks und Overland",
+        "help": "Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal.",
+        "kind": "App",
+        "label": "Name des Geräts",
+        "labelPlaceholder": "z. B. Mein Telefon",
+        "create": "Schlüssel anlegen",
+        "revoke": "Widerrufen",
+        "none": "Noch keine App verbunden.",
+        "lastUsed": "zuletzt {{at}}",
+        "neverUsed": "noch nie benutzt",
+        "shownOnce": "Diesen Schlüssel siehst du nur jetzt. Kopiere ihn, bevor du schließt.",
+        "done": "Fertig, kopiert",
+        "revokeTitle": "Schlüssel „{{name}}“ widerrufen?",
+        "revokeAffects": "Die App „{{name}}“ ({{kind}})",
+        "revokeAmount": "Ein Schlüssel",
+        "revokeAfter": "Die App kann nichts mehr senden. Bereits gespeicherte Punkte bleiben.",
+        "revokeDo": "Schlüssel widerrufen",
+        "notCreated": "Ich habe den Schlüssel nicht angelegt.",
+        "notRevoked": "Ich habe den Schlüssel nicht widerrufen.",
+        "loadError": "Ich konnte die Schlüssel nicht laden."
+      }
+    },
+    "history": {
+      "copy": {
+        "name": "Aus Dawarich übernehmen",
+        "sub": "Ganz oder ein Zeitraum",
+        "help": "Braucht deine eigene Dawarich-Verbindung. Lässt sich anhalten und fortsetzen.",
+        "whole": "Alles übernehmen",
+        "span": "Nur einen Zeitraum",
+        "from": "Vom",
+        "until": "Bis",
+        "start": "Übernehmen",
+        "stop": "Anhalten",
+        "loadError": "Ich konnte den Stand der Kopie nicht laden.",
+        "running": "Ich kopiere dein Dawarich",
+        "result": "{{stored}} Positionen übernommen",
+        "resultIncomplete": "{{stored}} Positionen übernommen, aber nicht alles kam an",
+        "gaps": "Was fehlt",
+        "noConnection": "Deine eigene Dawarich-Verbindung fehlt."
+      },
+      "gpx": {
+        "name": "GPX-Dateien",
+        "jump": "Zu den Importen"
+      },
+      "export": {
+        "name": "Verlauf exportieren",
+        "sub": "GPX oder JSON",
+        "label": "Exportieren"
+      },
+      "delete": {
+        "name": "Tage löschen",
+        "help": "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht.",
+        "from": "Vom",
+        "to": "Bis",
+        "do": "Tage löschen",
+        "count": "Zähle …",
+        "title": "Positionen löschen?",
+        "affects": "Alle gespeicherten Positionen vom {{from}} bis {{to}}, beide Tage eingeschlossen",
+        "amount_one": "{{count}} Position",
+        "amount_other": "{{count}} Positionen",
+        "after": "Die Tage bleiben gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück.",
+        "confirm_one": "{{count}} Position löschen",
+        "confirm_other": "{{count}} Positionen löschen",
+        "done_one": "{{count}} Position gelöscht.",
+        "done_other": "{{count}} Positionen gelöscht.",
+        "notCounted": "Ich konnte nicht zählen, was im Zeitraum liegt. Gelöscht habe ich nichts.",
+        "notDone": "Ich habe nichts gelöscht.",
+        "invalidRange": "Das Von-Datum liegt nach dem Bis-Datum."
+      },
+      "diag": {
+        "name": "Diagnose",
+        "sub": "Warum Punkte fehlen",
+        "help": "Braucht das Diagnose-Protokoll in der Companion-App.",
+        "open": "Öffnen",
+        "close": "Schließen",
+        "deleteAffects": "Das Diagnoseprotokoll aller Geräte",
+        "deleteAmount": "Alle Tage der letzten 14",
+        "deleteAfter": "Gespeicherte Positionen bleiben.",
+        "deleteDo": "Protokoll löschen"
+      },
+      "title": "Verlauf"
     }
   }
 }

@@ -9,6 +9,9 @@ import type { SettingsSectionId } from "./settingsModel";
  */
 export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   profile: "settings:profile.title",
+  home: "settings:home.title",
+  deletion: "settings:deleteAccount.title",
+  planning: "settings:planning.title",
   security: "settings:security.title",
   devices: "settings:devices.title",
   notifications: "settings:notifications.title",
@@ -38,9 +41,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   backup: "settings:backup.title",
   import: "settings:import.title",
   externalServices: "settings:externalServices.title",
-  mapAppearance: "settings:views.mapAppearance.title",
-  dashboardAppearance: "settings:views.dashboardAppearance.title",
-  listAppearance: "settings:views.listAppearance.title",
+  mapAppearance: "settings:views.title",
   comparisonConsent: "settings:privacy.comparisonConsent.title",
   encryptedGrants: "settings:privacy.encryptedGrants.title",
 };

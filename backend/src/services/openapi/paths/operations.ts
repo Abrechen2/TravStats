@@ -664,6 +664,33 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "delete",
+  path: "/auth/me",
+  summary: "Delete the caller's own account, at once",
+  description:
+    "Removes the account with every row and file. Needs the password, the second factor " +
+    "where the account has one (or, instead of both, a passkey assertion from " +
+    "POST /auth/passkeys/reauth/options in `passkeyResponse`: 403 DELETE_PASSKEY_INVALID), " +
+    "where the account has one, and the typed word (DELETE or LÖSCHEN). Refused for the " +
+    "shared demo (403 DEMO_ACCOUNT_FORBIDDEN) and the last admin (409 DELETE_LAST_ADMIN). " +
+    "A wrong password is 403 DELETE_PASSWORD_INCORRECT (not 401: the client signs out on 401); a missing or wrong code is 403 " +
+    "DELETE_SECOND_FACTOR_REQUIRED / DELETE_SECOND_FACTOR_INVALID.",
+  tags: authTag,
+  responses: {
+    200: {
+      description: "Deleted; the session cookie is cleared",
+      content: { "application/json": { schema: z.object({ deleted: z.literal(true) }) } },
+    },
+    400: badInput,
+    403: {
+      description: "Wrong password or second factor, or the shared demo account",
+      content: errorContent,
+    },
+    409: { description: "The last remaining admin", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/auth/change-password",
   summary: "Change the password",

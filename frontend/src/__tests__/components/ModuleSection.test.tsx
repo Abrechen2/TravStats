@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 // Mock the settings API so the real store's setEnabledDomains does not
 // fire a real HTTP call via settingsApi.update(...).
@@ -74,10 +74,10 @@ describe("ModuleSection", () => {
     expect(lodgingToggle).not.toBeDisabled();
   });
 
-  it("toggling an available domain updates the store", () => {
+  it("toggling an available domain updates the store once the server confirmed it", async () => {
     render(<ModuleSection />);
     const flightToggle = screen.getByRole("switch", { name: /domain\.flight/ });
     fireEvent.click(flightToggle);
-    expect(useSettingsStore.getState().enabledDomains).toEqual([]);
+    await waitFor(() => expect(useSettingsStore.getState().enabledDomains).toEqual([]));
   });
 });

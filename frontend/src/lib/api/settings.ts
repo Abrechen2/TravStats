@@ -236,6 +236,16 @@ export const settingsApi = {
     });
     return data;
   },
+  /** "I moved": append a period and close the running one. Idempotent on `clientRef`; refused with `HOME_PERIOD_OVERLAP`. */
+  moveHome: async (move: {
+    fromDate: string;
+    residence: NonNullable<HomePeriod["residence"]>;
+    airports: HomePeriod["airports"];
+    clientRef: string;
+  }): Promise<HomeAirportsResponse> => {
+    const { data } = await api.post<HomeAirportsResponse>("/settings/home-airports/periods", move);
+    return data;
+  },
   nearbyHomeAirports: async (lat: number, lon: number): Promise<NearbyHomeAirport[]> => {
     const { data } = await api.get<{ airports: NearbyHomeAirport[] }>(
       "/settings/home-airports/nearby",

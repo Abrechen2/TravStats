@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TripSuggestionList } from "../../../types/tripSuggestion";
-import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
+import StayScanSection from "../../Settings/location/StayScanSection";
 import { Card } from "../../ui/Card";
 import EmptyState from "../../ui/EmptyState";
 import BulkUpdatesBar from "./BulkUpdatesBar";
@@ -59,7 +59,7 @@ export default function SourcePanel({
         <p className="t-caption">{t("dataQuality:inbox.flightUpdates.description")}</p>
       )}
       {source === "updates" && <BulkUpdatesBar ids={updateIds} reload={reload} />}
-      {source === "dawarich" && <DawarichStayScanCard onScanned={() => void reload()} />}
+      {source === "dawarich" && <StayScanSection onScanned={() => void reload()} />}
       {showTripNotes && proposalInfo.home === "missing" && (
         <p role="status" className="t-caption text-(--ts-warn)">
           {t(`${TRIPS}.home.missing`)}{" "}

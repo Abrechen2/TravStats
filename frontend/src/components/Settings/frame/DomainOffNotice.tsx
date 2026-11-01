@@ -5,8 +5,8 @@ import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import type { DomainKey } from "../../../shared/domains";
 import { DOMAINS } from "../../../shared/domains";
 
-/** Where a domain is switched on: Einstellungen › Darstellung › Bereiche & Farben. */
-export const DOMAINS_SETTINGS_PATH = "/settings/display?section=domains";
+/** Where a domain is switched on: Einstellungen › Reisearten. */
+export const DOMAINS_SETTINGS_PATH = "/settings/domains#domains";
 
 /**
  * Said on the page of a switched-off domain instead of its settings

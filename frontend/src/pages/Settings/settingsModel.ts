@@ -32,6 +32,9 @@ export type SettingsPageId =
 /** Every section that can render. Ids are stable — links carry them. */
 export type SettingsSectionId =
   | "profile"
+  | "home"
+  | "deletion"
+  | "planning"
   | "security"
   | "devices"
   | "notifications"
@@ -62,8 +65,6 @@ export type SettingsSectionId =
   | "import"
   | "externalServices"
   | "mapAppearance"
-  | "dashboardAppearance"
-  | "listAppearance"
   | "comparisonConsent"
   | "encryptedGrants";
 
@@ -83,12 +84,14 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     icon: "user",
     sections: [
       section("profile"),
+      section("home"),
       section("security"),
       // Behind its beta key; `?section=devices` still shows it, because a
       // pairing code has no other place to be minted while the key is closed.
       section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
       section("notifications"),
       section("apitokens", "expert", { settings: 1 }),
+      section("deletion"),
     ],
   },
   {
@@ -99,6 +102,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
       section("display"),
       section("units"),
       section("domains"),
+      section("planning"),
       section("countryCounting"),
     ],
   },
@@ -109,7 +113,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: "views",
     labelKey: "settings:groups.views",
     icon: "layers",
-    sections: [section("mapAppearance"), section("dashboardAppearance"), section("listAppearance")],
+    sections: [section("mapAppearance")],
   },
   {
     // Trips are no domain, so this page never hides (owner, 2026-08-23).

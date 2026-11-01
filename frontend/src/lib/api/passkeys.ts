@@ -36,9 +36,15 @@ export const passkeyApi = {
     return data.passkeys;
   },
 
-  registerOptions: async (): Promise<PublicKeyCredentialCreationOptionsJSON> => {
+  /** Needs a fresh password (and a code where the account has two-factor). */
+  registerOptions: async (reauth: {
+    password: string;
+    code?: string;
+    recoveryCode?: string;
+  }): Promise<PublicKeyCredentialCreationOptionsJSON> => {
     const { data } = await api.post<PublicKeyCredentialCreationOptionsJSON>(
-      "/auth/passkeys/register/options"
+      "/auth/passkeys/register/options",
+      reauth
     );
     return data;
   },
@@ -63,6 +69,14 @@ export const passkeyApi = {
 
   loginVerify: async (response: unknown): Promise<{ user: User }> => {
     const { data } = await api.post<{ user: User }>("/auth/passkeys/login/verify", { response });
+    return data;
+  },
+
+  /** Challenge for proving a passkey of the signed-in account (deleting the account). */
+  reauthOptions: async (): Promise<PublicKeyCredentialRequestOptionsJSON> => {
+    const { data } = await api.post<PublicKeyCredentialRequestOptionsJSON>(
+      "/auth/passkeys/reauth/options"
+    );
     return data;
   },
 

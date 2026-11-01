@@ -65,7 +65,7 @@ export type TravTrackAccess = "pending" | "visible" | "hidden";
  * `useTravTrackVisible`, the chrome, still fails closed.
  *
  * TravTrack switched off hides the page even for an account holding data;
- * Settings keeps that account's summary, export and delete (`TravTrackSection`).
+ * Settings keeps that account's summary, export and delete (`TravTrackLocationSection`).
  */
 export function useTravTrackState(): {
   access: TravTrackAccess;

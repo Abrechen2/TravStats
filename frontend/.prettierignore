@@ -1,0 +1,7 @@
+# Prettier reads .prettierignore from the directory it runs in. The root file lists these
+# generated paths; this copy keeps `npx prettier --write src` inside frontend/ from
+# reformatting them (the registry data is compared byte for byte by its generator).
+src/lib/generated/
+src/pages/Settings/registry/data/
+src/theme/tokens.css
+src/theme/tokens.ts

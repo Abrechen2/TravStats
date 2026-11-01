@@ -801,12 +801,12 @@
        "de": [
         "Konto löschen",
         "Mit allen Einträgen, Fotos und Dateien",
-        "Nach der Bestätigung läuft eine Frist. Bis dahin kannst du dich anmelden und abbrechen. Danach ist alles weg, auch für den Admin."
+        "Nach der Bestätigung ist alles sofort weg, auch für den Admin. Vorher kannst du deine Daten herunterladen."
        ],
        "en": [
         "Delete account",
         "With all entries, photos and files",
-        "After you confirm, a grace period runs. Until then you can sign in and cancel. After that everything is gone, for your admin too."
+        "After you confirm, everything is gone at once, for your admin too. You can download your data first."
        ]
       }
      ]

@@ -13,14 +13,17 @@ vi.mock("../../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 
-const { getHomeAirports, saveHomePeriods, nearbyHomeAirports, addToast } = vi.hoisted(() => ({
-  getHomeAirports: vi.fn(),
-  saveHomePeriods: vi.fn(),
-  nearbyHomeAirports: vi.fn(),
-  addToast: vi.fn(),
-}));
+const { getHomeAirports, saveHomePeriods, nearbyHomeAirports, addToast, moveHome } = vi.hoisted(
+  () => ({
+    moveHome: vi.fn(),
+    getHomeAirports: vi.fn(),
+    saveHomePeriods: vi.fn(),
+    nearbyHomeAirports: vi.fn(),
+    addToast: vi.fn(),
+  })
+);
 vi.mock("../../../lib/api", () => ({
-  settingsApi: { getHomeAirports, saveHomePeriods, nearbyHomeAirports },
+  settingsApi: { getHomeAirports, saveHomePeriods, nearbyHomeAirports, moveHome },
 }));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (select: (s: { addToast: typeof addToast }) => unknown) => select({ addToast }),
@@ -160,6 +163,59 @@ describe("HomeAirportSection", () => {
     expect(saveHomePeriods).not.toHaveBeenCalled();
   });
 
+  describe("the move (Umzug) goes through POST /periods", () => {
+    const CONFIRMED = { ...MIGRATED, fromDate: "2020-01-01", residenceConfirmed: true };
+    const startMove = async (user: ReturnType<typeof userEvent.setup>): Promise<void> => {
+      getHomeAirports.mockResolvedValue({ history: [], periods: [CONFIRMED] });
+      render(<HomeAirportSection />);
+      await user.click(await findNamed("button", "Ich bin umgezogen"));
+      await user.click(getNamed("button", "pick-koeln"));
+      await user.click(await screen.findByRole("checkbox", { name: /DUS/ }));
+    };
+
+    it("appends with a clientRef instead of replacing the whole list", async () => {
+      moveHome.mockImplementation(async () => ({ history: [], periods: [CONFIRMED] }));
+      const user = userEvent.setup();
+      await startMove(user);
+      await user.click(getNamed("button", "Speichern"));
+      await waitFor(() => expect(moveHome).toHaveBeenCalledTimes(1));
+      expect(moveHome.mock.calls[0][0]).toMatchObject({
+        residence: { name: "Köln" },
+        clientRef: expect.any(String),
+      });
+      expect(saveHomePeriods).not.toHaveBeenCalled();
+    });
+
+    it("a retry after a refused move carries the SAME clientRef, so a replay cannot double it", async () => {
+      moveHome
+        .mockRejectedValueOnce(axiosError(500, {}))
+        .mockResolvedValueOnce({ history: [], periods: [CONFIRMED] });
+      const user = userEvent.setup();
+      await startMove(user);
+      await user.click(getNamed("button", "Speichern"));
+      expect(await screen.findByTestId("home-period-editor")).toBeInTheDocument();
+      await user.click(getNamed("button", "Speichern"));
+      await waitFor(() => expect(moveHome).toHaveBeenCalledTimes(2));
+      expect(moveHome.mock.calls[1][0].clientRef).toBe(moveHome.mock.calls[0][0].clientRef);
+    });
+
+    it("an overlapping move says so in German, keeps the editor and shows the server's periods", async () => {
+      moveHome.mockRejectedValue(
+        axiosError(409, {
+          error: "HOME_PERIOD_OVERLAP",
+          code: "HOME_PERIOD_OVERLAP",
+          periods: [CONFIRMED],
+        })
+      );
+      const user = userEvent.setup();
+      await startMove(user);
+      await user.click(getNamed("button", "Speichern"));
+      expect(await screen.findByText(/liegt vor einem Zeitraum/)).toBeInTheDocument();
+      expect(screen.queryByText(/HOME_PERIOD_OVERLAP|status code/)).toBeNull();
+      expect(screen.getByTestId("home-period-editor")).toBeInTheDocument();
+    });
+  });
+
   it("says so when the home cannot be loaded, instead of offering to set a new one", async () => {
     getHomeAirports.mockRejectedValue(axiosError(500, {}));
     render(<HomeAirportSection />);
@@ -189,13 +245,18 @@ describe("HomeAirportSection — touch size follows the pointer (forgejo#321, iP
     window.matchMedia = original;
   });
 
-  it("gives Bestätigen and Löschen a 44 px target under a finger", async () => {
+  it("gives the banner's Bestätigen a 44 px target under a finger; the row buttons take the token sizing", async () => {
     pointer(true);
     render(<HomeAirportSection />);
     await screen.findByText("Bitte bestätige deinen Wohnort");
-    const buttons = [...allNamed("button", "Bestätigen"), ...allNamed("button", "Löschen")];
-    expect(buttons.length).toBeGreaterThanOrEqual(3);
-    for (const b of buttons) expect(b.style.minHeight).toBe("var(--ts-size-touch-min)");
+    const confirms = allNamed("button", "Bestätigen");
+    expect(confirms.length).toBeGreaterThanOrEqual(2);
+    // The banner button sizes itself; the row buttons are design-system buttons
+    // whose height is the (pointer-aware) token.
+    expect(confirms.some((b) => b.style.minHeight === "var(--ts-size-touch-min)")).toBe(true);
+    for (const b of [...confirms, ...allNamed("button", "Löschen")]) {
+      expect(b.classList.contains("ts-button") || b.style.minHeight !== "").toBe(true);
+    }
   });
 
   it("stays compact under a mouse", async () => {

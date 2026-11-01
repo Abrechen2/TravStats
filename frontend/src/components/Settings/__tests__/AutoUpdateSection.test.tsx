@@ -3,11 +3,19 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({
+    t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k),
+  }),
+}));
+vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+const getAll = vi.fn();
+vi.mock("../../../lib/api/pendingUpdates", () => ({
+  pendingUpdatesApi: { getAll: () => getAll() },
 }));
 
 import AutoUpdateSection from "../AutoUpdateSection";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
+import { resetWriteQueue, DEBOUNCE_MS } from "../../ui/settings/writeQueue";
 
 const SETTINGS = {
   enabled: true,
@@ -17,97 +25,110 @@ const SETTINGS = {
   expiryHours: 24,
 };
 
-function renderSection(onSave = vi.fn(), onSet = vi.fn()) {
+function renderSection(
+  onSave = vi.fn().mockResolvedValue(undefined),
+  flight: boolean | null = null
+) {
   render(
     <MemoryRouter>
       <AutoUpdateSection
         autoUpdateSettings={SETTINGS}
-        loadingAutoUpdateSettings={false}
         loadState="loaded"
         onRetryLoad={vi.fn()}
-        onSetAutoUpdateSettings={onSet}
         onSave={onSave}
+        flightDataAvailable={flight}
       />
     </MemoryRouter>
   );
-  return { onSave, onSet };
+  return onSave;
 }
 
+const flush = async (): Promise<void> => {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 10);
+  });
+};
+
 describe("AutoUpdateSection", () => {
-  beforeEach(() => useSettingsLevelStore.setState({ level: "expert" }));
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    getAll.mockReset().mockResolvedValue({ updates: [], count: 2 });
+    useSettingsLevelStore.setState({ level: "expert" });
+  });
   afterEach(() => {
     cleanup();
+    resetWriteQueue();
+    vi.useRealTimers();
     act(() => useSettingsLevelStore.setState({ level: null }));
   });
 
-  it("has no save button: a switch writes the value it just set", () => {
-    const { onSave } = renderSection();
-    expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
-
-    fireEvent.click(screen.getByRole("switch", { name: "settings:autoUpdate.requireApproval" }));
-
-    expect(onSave).toHaveBeenCalledWith({ ...SETTINGS, requireApproval: false });
+  it("writes only the field a switch changed", async () => {
+    const onSave = renderSection();
+    fireEvent.click(screen.getByRole("switch", { name: "settings:rows.approveUpdates.name" }));
+    await flush();
+    expect(onSave).toHaveBeenCalledWith({ requireApproval: false });
   });
 
-  it("writes a number when its field is left, not on every keystroke", () => {
-    const { onSave, onSet } = renderSection();
-    const field = screen.getByLabelText("settings:autoUpdate.expiryHours");
+  it("a refused write keeps the choice, says so and retries per row (no toast, no snap-back)", async () => {
+    const onSave = vi
+      .fn()
+      .mockRejectedValueOnce(Object.assign(new Error("x"), { response: { status: 500 } }))
+      .mockResolvedValue(undefined);
+    renderSection(onSave);
+    const sw = (): HTMLElement =>
+      screen.getByRole("switch", { name: "settings:rows.approveUpdates.name" });
+    fireEvent.click(sw());
+    await flush();
+    expect(sw()).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText(/settings:blocks.save.failed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    await flush();
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(onSave).toHaveBeenLastCalledWith({ requireApproval: false });
+    expect(screen.queryByText(/settings:blocks.save.failed/)).toBeNull();
+  });
 
-    fireEvent.change(field, { target: { value: "30" } });
-    expect(onSet).toHaveBeenCalledWith({ ...SETTINGS, expiryHours: 30 });
+  it("an out-of-range expiry is explained and never sent", async () => {
+    const onSave = renderSection();
+    fireEvent.change(screen.getByLabelText("settings:rows.updateExpiry.name"), {
+      target: { value: "500" },
+    });
+    await flush();
     expect(onSave).not.toHaveBeenCalled();
-
-    fireEvent.blur(field);
-    expect(onSave).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("AutoUpdateSection — standard level: decisions stay, tuning waits", () => {
-  beforeEach(() => useSettingsLevelStore.setState({ level: "standard" }));
-  afterEach(() => {
-    cleanup();
-    act(() => useSettingsLevelStore.setState({ level: null }));
+    expect(screen.getByText(/settings:blocks.number.range/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("settings:rows.updateExpiry.name"), {
+      target: { value: "30" },
+    });
+    await flush();
+    expect(onSave).toHaveBeenCalledWith({ expiryHours: 30 });
   });
 
-  it("keeps approval at the standard level, hides expiry, and offers no inert interval / only-during-flight control (forgejo#389)", () => {
-    renderSection();
+  it("names the missing flight data service, with the jump to Dienste", async () => {
+    renderSection(undefined, false);
+    await act(async () => {});
+    expect(screen.getByText("settings:rows.liveUpdates.noFlightData")).toBeInTheDocument();
     expect(
-      screen.getByRole("switch", { name: "settings:autoUpdate.requireApproval" })
+      screen.getByRole("button", { name: /settings:rows.liveUpdates.toServices/ })
     ).toBeInTheDocument();
+  });
+
+  it("shows how many updates are open, and leaves the count out when it cannot be read", async () => {
+    renderSection();
+    expect(await screen.findByText(/settings:rows.openUpdates.count/)).toBeInTheDocument();
+    cleanup();
+    getAll.mockRejectedValue(new Error("down"));
+    renderSection();
+    await act(async () => {});
+    expect(screen.queryByText(/settings:rows.openUpdates.count/)).toBeNull();
     expect(
-      screen.queryByRole("switch", { name: "settings:autoUpdate.onlyDuringFlight" })
-    ).toBeNull();
-    expect(screen.queryByLabelText("settings:autoUpdate.checkInterval")).toBeNull();
-    expect(screen.queryByLabelText("settings:autoUpdate.expiryHours")).toBeNull();
-  });
-});
-
-describe("AutoUpdateSection — touch size follows the pointer (forgejo#321, iPad look)", () => {
-  const original = window.matchMedia;
-  const pointer = (coarse: boolean): void => {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: coarse && query === "(pointer: coarse)",
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
-  };
-  afterEach(() => {
-    window.matchMedia = original;
+      screen.getByRole("button", { name: /settings:autoUpdate.viewPending/ })
+    ).toBeInTheDocument();
   });
 
-  it("gives the pending-updates link a 44 px target under a finger", () => {
-    pointer(true);
+  it("hides the expiry at the standard level", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
     renderSection();
-    const link = screen.getByRole("link", { name: /settings:autoUpdate.viewPending/ });
-    expect(link.style.minHeight).toBe("var(--ts-size-touch-min)");
-    expect(link.style.display).toBe("inline-flex");
-  });
-
-  it("stays an inline text link under a mouse", () => {
-    pointer(false);
-    renderSection();
-    const link = screen.getByRole("link", { name: /settings:autoUpdate.viewPending/ });
-    expect(link.style.minHeight).toBe("");
+    await act(async () => {});
+    expect(screen.queryByLabelText("settings:rows.updateExpiry.name")).toBeNull();
   });
 });

@@ -1,36 +1,62 @@
-import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
+vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
 
+import { useSettingsStore } from "../../../store/settingsStore";
+import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import CruisePreferencesSection from "../CruisePreferencesSection";
 
 const CRUISE = { defaultLine: "AIDA", defaultCabinType: "balcony", showCruiseArcs: true } as const;
+const save = vi.fn();
+const setCruise = vi.fn();
+
+const settle = async (ms: number): Promise<void> => {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+};
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  Object.assign(useSettingsStore.getState(), { setCruise, saveRemoteSettings: save });
+  render(<CruisePreferencesSection cruise={{ ...CRUISE }} />);
+});
+afterEach(() => {
+  cleanup();
+  act(() => resetWriteQueue());
+  vi.useRealTimers();
+  save.mockReset();
+  setCruise.mockReset();
+});
 
 describe("CruisePreferencesSection", () => {
-  it("offers the cabin types as pills and clears the default back to null", () => {
-    const onSetCruise = vi.fn();
-    render(<CruisePreferencesSection cruise={{ ...CRUISE }} onSetCruise={onSetCruise} />);
-
-    expect(screen.getByRole("radio", { name: "cruise:cabinType.balcony" })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
-    fireEvent.click(
-      screen.getByRole("radio", { name: "settings:cruisePreferences.defaultCabinNone" })
-    );
-    expect(onSetCruise).toHaveBeenCalledWith({ defaultCabinType: null });
-
-    fireEvent.click(screen.getByRole("radio", { name: "cruise:cabinType.suite" }));
-    expect(onSetCruise).toHaveBeenLastCalledWith({ defaultCabinType: "suite" });
+  it("shows the stored cabin and clears the default back to null", async () => {
+    save.mockResolvedValue(undefined);
+    const select = screen.getByRole("combobox", { name: "settings:rows.cruiseCabin.name" });
+    expect(select).toHaveValue("balcony");
+    fireEvent.change(select, { target: { value: "none" } });
+    await settle(400);
+    expect(setCruise).toHaveBeenCalledWith({ defaultCabinType: null });
+    fireEvent.change(select, { target: { value: "suite" } });
+    await settle(400);
+    expect(setCruise).toHaveBeenLastCalledWith({ defaultCabinType: "suite" });
   });
 
-  it("toggles the map arcs with a switch", () => {
-    const onSetCruise = vi.fn();
-    render(<CruisePreferencesSection cruise={{ ...CRUISE }} onSetCruise={onSetCruise} />);
-    fireEvent.click(screen.getByRole("switch", { name: "settings:cruisePreferences.showArcs" }));
-    expect(onSetCruise).toHaveBeenCalledWith({ showCruiseArcs: false });
+  it("offers no 'routes on the map' switch any more", () => {
+    expect(screen.queryByRole("switch", { name: /showArcs/ })).not.toBeInTheDocument();
+  });
+
+  it("a refused cabin save keeps the pick, says so and puts only the cabin back in the store", async () => {
+    save.mockRejectedValue(new Error("Network Error"));
+    const select = screen.getByRole("combobox", { name: "settings:rows.cruiseCabin.name" });
+    fireEvent.change(select, { target: { value: "suite" } });
+    await settle(400);
+    expect(select).toHaveValue("suite");
+    expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
+    expect(setCruise).toHaveBeenLastCalledWith({ defaultCabinType: "balcony" });
   });
 });
