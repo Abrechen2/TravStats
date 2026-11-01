@@ -142,7 +142,9 @@ export function buildWrapped(
   /** `null` = the user does not see rail, as for every chapter. */
   rail: readonly WrappedRail[] | null = [],
   /** forgejo#265 — stays, places, roadtrips, tours, rentals, bus; `null` per hidden domain. */
-  chapterRows: WrappedChapterRows = NO_CHAPTERS
+  chapterRows: WrappedChapterRows = NO_CHAPTERS,
+  /** Years that carry only the account's own TravTrack figures (forgejo#400): they enter the picker, nothing else. */
+  extraYears: readonly number[] = []
 ): Wrapped | null {
   // A user who switched flights off gets no flight story and no flight year
   // in the picker (forgejo#265) — the cut every other domain gets in its loader.
@@ -173,6 +175,7 @@ export function buildWrapped(
       ...cruisesPerYear.keys(),
       ...(rail ?? []).map((r) => r.year),
       ...chapterYears(chapterRows),
+      ...extraYears,
     ]),
   ].sort((a, b) => a - b);
   if (availableYears.length === 0) return null;

@@ -160,3 +160,26 @@ describe("TravTrack badges", () => {
     expect((await loadAchievementVisibility(otherId))("shared", "TRAVTRACK_KM_1000")).toBe(false);
   });
 });
+
+describe("a TravTrack-only account's year in review (forgejo#400)", () => {
+  it("offers a year that holds only TravTrack figures, and renders it with only the TravTrack chapter", async () => {
+    // The flight made in beforeAll is not in 2026-06; this account's logbook has no entry in 2025.
+    await walk(userId, "2025-03-02", null);
+    const wrapped = await loadWrapped(userId, 2025, { withTravTrack: true });
+    expect(wrapped).not.toBeNull();
+    expect(wrapped!.availableYears).toContain(2025);
+    expect(wrapped!.year).toBe(2025);
+    expect(wrapped!.flights).toBe(0);
+    expect(wrapped!.travTrack?.daysRecorded).toBe(1);
+  });
+
+  it("does not offer the year to a public share link, which never carries TravTrack", async () => {
+    const wrapped = await loadWrapped(userId, null);
+    expect(wrapped?.availableYears ?? []).not.toContain(2025);
+  });
+
+  it("offers no TravTrack-only year to an account whose TravTrack is not the working source", async () => {
+    const wrapped = await loadWrapped(otherId, null, { withTravTrack: true });
+    expect(wrapped?.availableYears ?? []).not.toContain(2026);
+  });
+});

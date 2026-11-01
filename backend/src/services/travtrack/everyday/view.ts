@@ -1,3 +1,4 @@
+import { prisma } from "../../../db";
 import { midnightOf } from "../range";
 import { profileZoneOf } from "../../../shared/time/profileZone";
 import { providerIs } from "../../locationProvider/provider";
@@ -51,4 +52,29 @@ export async function travTrackYearStats(
   if (!(await providerIs(userId, "travtrack"))) return null;
   const summary = await loadEverydaySummary(userId, await yearWindow(userId, year));
   return summary ? everydayView(summary) : null;
+}
+
+/**
+ * The calendar years (profile zone) in which this account has privacy-safe
+ * TravTrack figures, ascending — so an account that only records, with no
+ * logbook entry in a year, still gets that year in its review (forgejo#400).
+ * Candidates come from the stored points' years; each is then confirmed by
+ * `travTrackYearStats`, because a year whose every fix lies in a privacy zone
+ * has nothing to show. `skip` are years the caller already has.
+ */
+export async function travTrackYears(
+  userId: string,
+  skip: ReadonlySet<number> = new Set()
+): Promise<number[]> {
+  if (!(await providerIs(userId, "travtrack"))) return [];
+  const { zone } = await profileZoneOf(userId);
+  const rows = await prisma.$queryRaw<{ y: number }[]>`
+    SELECT DISTINCT EXTRACT(YEAR FROM (t AT TIME ZONE 'UTC') AT TIME ZONE ${zone})::int AS y
+    FROM travtrack_points WHERE user_id = ${userId}`;
+  const out: number[] = [];
+  for (const { y } of rows.sort((a, b) => a.y - b.y)) {
+    if (skip.has(y)) continue;
+    if (await travTrackYearStats(userId, y)) out.push(y);
+  }
+  return out;
 }
