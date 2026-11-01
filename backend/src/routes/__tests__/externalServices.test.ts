@@ -341,6 +341,14 @@ describe("external services (forgejo#392)", () => {
       expect(view.body.instanceProvided.map((s: { id: string }) => s.id)).toContain("aeroapi");
     });
 
+    it("an account sees where to get a key, the same address the admin view carries", async () => {
+      const view = await request(app)
+        .get("/api/v1/settings/external-services")
+        .set("Cookie", cookieA);
+      const airlabs = view.body.ownKeys.find((s: { id: string }) => s.id === "airlabs");
+      expect(airlabs.getKeyUrl).toBe("https://airlabs.co/");
+    });
+
     it("the effective source is shown: account → instance → none, never env (invariant 1)", async () => {
       const source = async () =>
         (

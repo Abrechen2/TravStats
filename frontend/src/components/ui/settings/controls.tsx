@@ -2,7 +2,7 @@ import { useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import Button from "../Button";
-import { Input, Select } from "../Field";
+import { Input, Select, TextArea } from "../Field";
 import { Segmented, type SegmentedOption } from "../Segmented";
 import { alpha } from "../tokens";
 import { useSettingItem } from "./itemContext";
@@ -161,6 +161,41 @@ export function InputControl({
       onChange={(event) => onChange(event.target.value)}
       style={{
         minWidth: 220,
+        opacity: locked ? 0.5 : 1,
+        ...(changed && !invalid ? { border: `1px solid ${alpha("var(--ts-accent)", 45)}` } : null),
+      }}
+    />
+  );
+}
+
+/** B4, several lines of text (one entry per line); same row contract as `InputControl`. */
+export function TextAreaControl({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+  rows?: number;
+}): JSX.Element {
+  const { id, locked, invalid, describedBy, changed } = useSettingItem();
+  return (
+    <TextArea
+      id={id}
+      rows={rows}
+      value={value}
+      placeholder={placeholder}
+      invalid={invalid}
+      disabled={locked}
+      aria-disabled={locked || undefined}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
+      onChange={(event) => onChange(event.target.value)}
+      style={{
+        minWidth: 280,
+        fontFamily: "var(--ts-font-mono)",
         opacity: locked ? 0.5 : 1,
         ...(changed && !invalid ? { border: `1px solid ${alpha("var(--ts-accent)", 45)}` } : null),
       }}

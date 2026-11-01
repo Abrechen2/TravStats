@@ -7,6 +7,7 @@ export {
   JumpControl,
   SecretControl,
   StatusValue,
+  TextAreaControl,
   SwitchControl,
   type ChoiceOption,
 } from "./controls";

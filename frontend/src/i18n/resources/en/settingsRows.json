@@ -289,6 +289,97 @@
       "amount": "One card",
       "after": "The card and its links to airlines, chains or hotels are gone. Your flights, stays and journeys stay.",
       "confirm": "Delete card"
+    },
+    "rpid": {
+      "title": "Change passkey domain?",
+      "affects": "Every passkey of every account",
+      "amount": "All passkeys created so far",
+      "after": "None will work; each must be created again.",
+      "confirm": "Change",
+      "word": "CHANGE"
+    },
+    "userdel": {
+      "title": "Delete {{name}}?",
+      "affects": "The account {{name}} with all entries and files",
+      "amount_one": "{{count}} flight",
+      "amount_other": "{{count}} flights",
+      "after": "It can only be restored from a backup.",
+      "confirm": "Delete",
+      "word": "{{name}}"
+    },
+    "userlock": {
+      "title": "Lock {{name}}?",
+      "affects": "{{name}}",
+      "amount": "One account",
+      "after": "They can't sign in. Their data stays.",
+      "confirm": "Lock"
+    },
+    "user2fa": {
+      "title": "Reset second step?",
+      "affects": "{{name}}",
+      "amount": "One account",
+      "after": "They sign in with password only until they set it up again.",
+      "confirm": "Reset"
+    },
+    "invrevoke": {
+      "title": "Revoke invitation?",
+      "affects": "{{name}}",
+      "amount": "One invitation",
+      "after": "The link stops working at once.",
+      "confirm": "Revoke"
+    },
+    "restore": {
+      "title": "Restore backup?",
+      "affects": "Backup of {{date}}",
+      "amount": "All accounts",
+      "after": "Everything changed since is gone. I'll back up the current state first.",
+      "confirm": "Restore",
+      "word": "RESTORE"
+    },
+    "restorekey": {
+      "title": "Re-enter the services’ credentials?",
+      "affects": "Backup of {{date}}",
+      "amount": "Every stored key and password of the services",
+      "after": "The backup uses a different key; I can't decrypt these credentials and you enter them again afterwards. Or put the original key (ENCRYPTION_KEY) back and try once more.",
+      "confirm": "Restore anyway"
+    },
+    "bakdel": {
+      "title": "Delete backup?",
+      "affects": "Backup of {{date}}",
+      "amount": "{{size}}",
+      "after": "I delete the WebDAV copy too if “Also clean up on WebDAV” is on.",
+      "confirm": "Delete"
+    },
+    "logclean": {
+      "title": "Delete old logs?",
+      "affects": "Log files older than {{days}} days",
+      "amount_one": "{{count}} file · {{size}}",
+      "amount_other": "{{count}} files · {{size}}",
+      "after": "They can no longer be viewed.",
+      "confirm": "Delete"
+    },
+    "logdel": {
+      "title": "Delete log file?",
+      "affects": "{{name}}",
+      "amount": "One file",
+      "after": "It can no longer be viewed.",
+      "confirm": "Delete"
+    },
+    "reseed": {
+      "title": "Re-read catalogues?",
+      "affects": "Airports, airlines, aircraft types",
+      "amount": "All shipped entries; your own stay",
+      "after": "Shipped entries are up to date. Works three times an hour.",
+      "confirm": "Re-read",
+      "word": "REREAD"
+    },
+    "demodel": {
+      "title": "Delete demo account?",
+      "affects": "The account {{name}} with all entries",
+      "amount_one": "{{count}} flight",
+      "amount_other": "{{count}} flights",
+      "after": "No one can sign in as demo any more.",
+      "confirm": "Delete"
     }
   },
   "services": {
@@ -833,7 +924,10 @@
       "ollamaModels": "Installed on the server",
       "noModels": "No model installed yet",
       "modelsUnknown": "I can't get the model list",
-      "fedNoOrigin": "Enter this server's address first."
+      "fedNoOrigin": "Enter this server's address first.",
+      "getKey": "Get a key for {{name}} ›",
+      "immichMode": "Link or copy photos",
+      "immichModeLoadFailed": "I couldn't read how new photos are taken over by default."
     },
     "status": {
       "needsConsent": "Waiting for your consent",
@@ -894,5 +988,382 @@
         "amount": "One key"
       }
     }
+  },
+  "server": {
+    "instname": {
+      "t": "Name",
+      "s": "In e-mails and backups"
+    },
+    "loginbilder": {
+      "t": "Sign-in page images",
+      "s": "Everyone sees them, signed in or not",
+      "h": "Removing all brings back the shipped ones."
+    },
+    "puburl": {
+      "t": "Public address",
+      "s": "For invitations, e-mails and password resets",
+      "h": "Required. Without it, links point to localhost. Calendar feeds and the Strava return use it too."
+    },
+    "pairurl": {
+      "t": "Address for phones",
+      "s": "Goes into the pairing QR",
+      "h": "Empty: the address you have TravStats open at right now. Passkeys use it when no allowed addresses are set."
+    },
+    "lanurl": {
+      "t": "Local network address",
+      "s": "Only for the Strava return",
+      "h": "Phones don't get it; pairing uses the address for phones."
+    },
+    "rpid": {
+      "t": "Passkey domain",
+      "s": "Domain only, no IP",
+      "h": "Changing it voids every passkey ever created."
+    },
+    "origins": {
+      "t": "Allowed addresses",
+      "s": "One per line, with https and port",
+      "h": "The first one counts. Several only on the same domain. Empty: the address for phones."
+    },
+    "beta": {
+      "t": "Show beta features",
+      "s": "For every account",
+      "h": "Opens: pairing phones, tours, planning, ship tracks, flight path upload, leaderboard, encrypted handover, calendar feed, sharing with other servers, TravTrack."
+    },
+    "ttoffer": {
+      "t": "Offer TravTrack",
+      "s": "Store location on this server"
+    },
+    "tpoffer": {
+      "t": "Offer planning",
+      "h": "Off keeps all plans, only hides them."
+    },
+    "tplimits": {
+      "t": "Planning: requests per day",
+      "s": "AI · weather, per account"
+    },
+    "laenderstd": {
+      "t": "A country counts from",
+      "s": "Accounts may differ"
+    },
+    "importmodus": {
+      "t": "Big import",
+      "s": "Lifts upload limits for 24 h",
+      "h": "Turns itself off."
+    },
+    "leserfolge": {
+      "t": "Who reads first",
+      "h": "Templates read flight mails in under a second."
+    },
+    "kiaktiv": {
+      "t": "Use AI",
+      "s": "Reading, column mapping, summaries",
+      "h": "Off: no AI, even if Ollama is set up."
+    },
+    "cloudorder": {
+      "t": "Cloud AI order",
+      "s": "Ollama always comes first",
+      "h": "Only providers with key and approval are tried."
+    },
+    "builtin": {
+      "t": "Always included"
+    },
+    "olltest": {
+      "t": "Check Ollama"
+    },
+    "sections": {
+      "general": "General",
+      "addresses": "Addresses",
+      "passkeys": "Passkeys",
+      "features": "What the server offers",
+      "parsers": "Reading bookings"
+    },
+    "loadFailed": "I couldn't load the server's settings.",
+    "retry": "Try again",
+    "running": "Running …",
+    "groups": {
+      "general": "General",
+      "addresses": "Addresses",
+      "passkeys": "Passkeys",
+      "planLimits": "Planning: requests per day",
+      "parsers": "Reading bookings"
+    },
+    "errors": {
+      "scheme": "I need http:// or https:// at the start of the address.",
+      "domain": "I need a domain, not an IP address.",
+      "limit": "I take at most {{max}}."
+    },
+    "publicUrlMissing": "Still missing. Until then invitations, e-mails and calendars point to localhost.",
+    "publicUrlBanner": "The public address is still missing. Until then invitations, e-mails and calendars point to localhost.",
+    "publicUrlBannerJump": "Enter the address",
+    "deps": {
+      "needsBeta": "The server only offers this with beta features.",
+      "needsBetaJump": "Go to beta features"
+    },
+    "offersLoadFailed": "I couldn't read whether TravTrack and planning are offered.",
+    "limit": {
+      "ai": "AI requests",
+      "weather": "Weather requests"
+    },
+    "importMode": {
+      "off": "Off",
+      "all": "24 h for all",
+      "one": "24 h for one account",
+      "choose": "Choose account"
+    },
+    "parsers": {
+      "templateFirst": "Templates first",
+      "llmFirst": "AI first",
+      "builtin": "Text recognition (OCR) and templates",
+      "noOllama": "Needs Ollama.",
+      "check": "Check",
+      "testOk": "Reachable · just checked",
+      "testNoModel": "Reachable, but the model {{model}} is missing.",
+      "test_unreachable": "I can't reach Ollama.",
+      "test_failed": "I couldn't check Ollama."
+    },
+    "cloud": {
+      "loading": "Reading which providers are on …",
+      "loadFailed": "I couldn't read which providers are on.",
+      "noneEnabled": "No provider is on. Switch one on under Services.",
+      "ready": "ready",
+      "missing": "key missing",
+      "open": "Open",
+      "up": "{{name}} up",
+      "down": "{{name}} down",
+      "enable": "switch on under Services"
+    }
+  },
+  "users": {
+    "maxnutzer": {
+      "t": "Maximum accounts"
+    },
+    "registr": {
+      "t": "Sign up without invitation",
+      "h": "Anyone can then create an account until the maximum is reached."
+    },
+    "nutzerliste": {
+      "t": "Accounts",
+      "h": "Per account under ⋯: lock, set new password, reset second step, delete."
+    },
+    "einlliste": {
+      "t": "Invitations",
+      "s": "A link works once, for 7 days",
+      "h": "By e-mail only works if the server sends mail."
+    },
+    "sections": {
+      "access": "Access",
+      "accounts": "Accounts",
+      "invitations": "Invitations"
+    },
+    "groups": {
+      "access": "Access"
+    },
+    "errors": {
+      "range": "I take values from {{min}} to {{max}}.",
+      "load": "I couldn't load the accounts.",
+      "lock": "I couldn't lock or unlock the account.",
+      "reset2fa": "I couldn't reset the second step.",
+      "delete": "I couldn't delete the account.",
+      "loadInvitations": "I couldn't load the invitations.",
+      "create": "I couldn't create the invitation.",
+      "resend": "I couldn't send the e-mail.",
+      "revoke": "I couldn't revoke the invitation."
+    },
+    "done": {
+      "delete": "{{name}} deleted",
+      "lock": "{{name}} locked",
+      "reset2fa": "{{name}}'s second step reset"
+    },
+    "counts": "{{flights}} flights · {{achievements}} achievements",
+    "demo": "Demo",
+    "menu": "Actions for {{name}}",
+    "noMail": "By e-mail only works once the server sends mail. Set it up under Services.",
+    "noInvitations": "No invitations in this view.",
+    "linkOnly": "Link only",
+    "invitationMeta": "by {{creator}} · valid until {{until}}",
+    "status": {
+      "used": "used",
+      "expired": "expired",
+      "active": "open"
+    }
+  },
+  "backups": {
+    "autobak": {
+      "t": "Back up automatically",
+      "s": "At 02:00"
+    },
+    "baktakt": {
+      "t": "How often"
+    },
+    "bakhalten": {
+      "t": "Keep for",
+      "s": "1–365 days",
+      "h": "The last full backup always stays."
+    },
+    "bakzone": {
+      "t": "Time zone for 02:00"
+    },
+    "bakwddel": {
+      "t": "Also clean up on WebDAV"
+    },
+    "bakjetzt": {
+      "t": "Back up now"
+    },
+    "bakliste": {
+      "t": "Backups",
+      "h": "Per backup under ⋯: download, upload, restore, delete."
+    },
+    "bakwdload": {
+      "t": "Fetch backups from WebDAV",
+      "s": "After moving servers"
+    },
+    "sections": {
+      "automatic": "Automatic",
+      "backups": "Existing backups"
+    },
+    "groups": {
+      "automatic": "Automatic"
+    },
+    "loadFailed": "I couldn't load the backup settings.",
+    "deps": {
+      "autoOff": "Only works with “Back up automatically”.",
+      "webdavOff": "Only works with the WebDAV copy."
+    },
+    "errors": {
+      "range": "I take values from {{min}} to {{max}}.",
+      "download": "I couldn't download the backup.",
+      "delete": "I couldn't delete the backup.",
+      "list": "I couldn't load the backups."
+    },
+    "zoneHost": "Server's time zone ({{zone}})",
+    "zoneEffective": "The server is backing up in {{zone}} right now.",
+    "job": {
+      "running": "Backing up",
+      "done": "Backed up"
+    },
+    "now": "Back up now",
+    "restored": "Backup restored",
+    "empty": "No backup yet.",
+    "onWebdav": "also on WebDAV",
+    "webdavFailed": "WebDAV: upload failed",
+    "menu": "Actions for the backup of {{date}}",
+    "restoreAction": {
+      "full": "Restore everything",
+      "database": "Restore the database only",
+      "files": "Restore the files only"
+    },
+    "restoreScope": {
+      "full": "All accounts: database and files",
+      "database": "All accounts: database only",
+      "files": "All accounts: files only"
+    },
+    "restoreFailure": {
+      "keyMismatch": "The backup uses a different key.",
+      "unknown": "I don't know whether the restore finished: the server restarted meanwhile. Check the backups and your data.",
+      "incomplete": "The archive is missing the part you chose. I restored nothing.",
+      "unreadable": "I can't read the file part of the archive. I restored nothing.",
+      "migrationFailed": "The archive is older and couldn't be brought to this version's state. I changed nothing.",
+      "schemaIncomplete": "I restored the archive, but the database is missing something this version needs. Details are in the server log.",
+      "newer": "This archive is from a newer version. I won't restore it; update this server first.",
+      "unversioned": "I can't match this archive's database state to a version. I changed nothing.",
+      "busy": "A backup or restore is running right now. Try again afterwards.",
+      "rateLimited": "I restore only a few backups an hour. Try again later.",
+      "failed": "I couldn't restore the backup."
+    }
+  },
+  "maintenance": {
+    "debug": {
+      "t": "Verbose logging",
+      "s": "Slows the server down"
+    },
+    "loglevel": {
+      "t": "Level"
+    },
+    "logtage": {
+      "t": "Keep for",
+      "s": "1–90 days"
+    },
+    "loghttp": {
+      "t": "Log requests"
+    },
+    "logdb": {
+      "t": "Log database"
+    },
+    "logparser": {
+      "t": "Log reading"
+    },
+    "logfiles": {
+      "t": "Log files",
+      "s": "View, download, delete"
+    },
+    "logclean": {
+      "t": "Delete old logs"
+    },
+    "sysver": {
+      "t": "Version"
+    },
+    "fulljson": {
+      "t": "All data of all accounts",
+      "s": "JSON"
+    },
+    "reseed": {
+      "t": "Re-read catalogues",
+      "s": "Airports, airlines, aircraft types",
+      "h": "At most three times an hour. Entries you added stay untouched.",
+      "action": "Re-read",
+      "running": {
+        "airports": "Reading airports",
+        "airlines": "Reading airlines",
+        "aircraft": "Reading aircraft types"
+      },
+      "done": {
+        "airports": "Airports updated",
+        "airlines": "{{count}} airlines re-read",
+        "aircraft": "{{count}} aircraft types re-read"
+      },
+      "doneNoCount": {
+        "airports": "Airports updated",
+        "airlines": "Airlines re-read",
+        "aircraft": "Aircraft types re-read"
+      },
+      "failure": {
+        "rateLimited": "Works three times an hour. Try again later.",
+        "forbidden": "I need an admin for this.",
+        "failed": "I couldn't re-read.",
+        "statusFailed": "I couldn't read the state and don't know whether it finished.",
+        "seedingFailed": "Reading the airports stopped halfway."
+      }
+    },
+    "demodel": {
+      "t": "Delete demo account"
+    },
+    "tzreport": {
+      "t": "Time conversion"
+    },
+    "tzresolve": {
+      "t": "Determine time zones again",
+      "s": "Dry run first, then apply"
+    },
+    "sections": {
+      "logging": "Log",
+      "system": "System",
+      "timeModel": "Time zones"
+    },
+    "logLoadFailed": "I couldn't load the log.",
+    "systemLoadFailed": "I couldn't load the system data.",
+    "usersLoadFailed": "I couldn't load the accounts for the report.",
+    "groups": {
+      "logging": "Log"
+    },
+    "deps": {
+      "envPinned": "Pinned at server start (LOG_LEVEL). In effect: {{level}}."
+    },
+    "errors": {
+      "range": "I take values from {{min}} to {{max}}.",
+      "export": "I couldn't put the data together.",
+      "demo": "I couldn't delete the demo account."
+    },
+    "nothingOld": "No file is older than the retention.",
+    "download": "Download"
   }
 }

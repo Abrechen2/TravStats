@@ -18,6 +18,8 @@ export interface SettingsMenuEntry {
   color?: string;
   /** Drawn under the entry above it (Flüge and Kreuzfahrten under Reisearten). */
   indent?: boolean;
+  /** B15: something required on this page is missing; the dot carries `warnLabel`. */
+  warn?: { label: string };
 }
 
 export interface SettingsMenuGroup {
@@ -123,6 +125,20 @@ export function SettingsMenuColumn({
                         flexShrink: 0,
                         borderRadius: "var(--ts-radius-pill)",
                         background: entry.color,
+                      }}
+                    />
+                  )}
+                  {entry.warn && (
+                    <span
+                      role="img"
+                      aria-label={entry.warn.label}
+                      data-warn-dot=""
+                      style={{
+                        width: 8,
+                        height: 8,
+                        flexShrink: 0,
+                        borderRadius: "var(--ts-radius-pill)",
+                        background: "var(--ts-warn)",
                       }}
                     />
                   )}

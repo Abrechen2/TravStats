@@ -87,6 +87,7 @@ export const adminExternalServicesResponseSchema = z.object({
 
 export const accountServiceViewSchema = z.object({
   id: z.string(),
+  getKeyUrl: z.string().nullable(),
   recommended: z.enum(["free", "freeCredit"]).nullable(),
   effectiveSource: z.enum(["account", "instance", "none", "off"]),
   accountDisabled: z.boolean(),

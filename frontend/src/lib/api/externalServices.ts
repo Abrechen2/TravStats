@@ -101,6 +101,8 @@ export type EffectiveSource = "account" | "instance" | "none" | "off";
 
 export interface AccountService {
   id: string;
+  /** Where to get a key; null when there is nothing to get. Absent on a server before 2.8. */
+  getKeyUrl?: string | null;
   recommended: ServiceRecommended;
   effectiveSource: EffectiveSource;
   accountDisabled: boolean;

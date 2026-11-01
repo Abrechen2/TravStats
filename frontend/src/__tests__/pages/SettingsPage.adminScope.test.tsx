@@ -200,6 +200,20 @@ vi.mock("@/lib/api/backup", async (importOriginal) => {
     },
   };
 });
+// The menu asks an admin's server whether its public address is set (B15).
+vi.mock("@/lib/api/admin", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/admin")>();
+  return {
+    ...actual,
+    adminApi: {
+      ...actual.adminApi,
+      getInstanceSettings: vi.fn().mockResolvedValue({
+        settings: { frontendUrl: "https://trav.example" },
+        passkeyStatus: null,
+      }),
+    },
+  };
+});
 vi.mock("@/lib/api/externalServices", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/externalServices")>();
   return {
@@ -239,8 +253,7 @@ vi.mock("../../components/Services/ServicesPage", () => ({
 
 // The server's sections load accounts, parser settings and more on mount; the
 // boundary under test is which page is drawn, not what is in it.
-vi.mock("../../pages/Admin/AdminHost", () => ({
-  AdminHost: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock("../../pages/Admin/AdminSectionBody", () => ({
   AdminSectionBody: ({ section }: { section: string }) => (
     <div data-testid={`admin-body-${section}`} />
   ),
@@ -395,7 +408,7 @@ describe("SettingsPage — the account/server boundary", () => {
     isAdmin = true;
     renderAt("/admin/users");
     await pageTitle("users");
-    expect(screen.getByTestId("admin-body-users")).toBeTruthy();
+    expect(screen.getAllByTestId("admin-body-users")[0]).toBeTruthy();
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 

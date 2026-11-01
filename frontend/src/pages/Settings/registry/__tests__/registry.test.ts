@@ -121,7 +121,7 @@ describe("the area mounts what the registry lists", () => {
    * them (7: server access). A stale entry
    * fails, so the list can only shrink.
    */
-  const NOT_MOUNTED_YET = ["users/access"];
+  const NOT_MOUNTED_YET: string[] = [];
 
   it("has a page for every registry page, and none besides", () => {
     expect(AREA_PAGES.map((p) => p.id)).toEqual(SETTINGS_REGISTRY.map((p) => p.id));

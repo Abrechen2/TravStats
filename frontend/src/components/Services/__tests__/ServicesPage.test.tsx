@@ -24,6 +24,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
+vi.mock("../ImmichModeRow", () => ({ default: () => null }));
 vi.mock("../../Settings/DawarichProviderHint", () => ({ default: () => null }));
 
 const api = vi.hoisted(() => ({
@@ -90,6 +91,25 @@ describe("ServicesPage", () => {
     );
     expect(SERVICE_CARDS).toHaveLength(31);
     expect(api.adminOverview).not.toHaveBeenCalled();
+  });
+
+  it("an open card links to where a key is got: from the account's view, and from the admin's for the server", async () => {
+    api.accountOverview.mockResolvedValue(
+      accountOverview({
+        ownKeys: [
+          {
+            ...accountOverview().ownKeys[0],
+            id: "airlabs",
+            getKeyUrl: "https://airlabs.co/account",
+          },
+        ],
+      })
+    );
+    await show(false);
+    const el = await open("airlabs");
+    const link = el.querySelector("[data-key-link='airlabs'] a") as HTMLAnchorElement;
+    expect(link.href).toBe("https://airlabs.co/account");
+    expect(link.rel).toContain("noopener");
   });
 
   it("an account sees no server controls, a status line instead", async () => {

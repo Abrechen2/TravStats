@@ -22,6 +22,18 @@ vi.mock("../../lib/api/travtrack", async (original) => ({
   travTrackApi: track,
 }));
 
+const admin = vi.hoisted(() => ({
+  getInstanceSettings: vi.fn(),
+  updateInstanceSettings: vi.fn(),
+  getImportMode: vi.fn(),
+  getUsers: vi.fn(),
+}));
+vi.mock("../../lib/api", async (original) => ({
+  ...(await original<typeof import("../../lib/api")>()),
+  adminApi: admin,
+}));
+vi.mock("../../components/Admin/BetaFeatureList", () => ({ default: () => null }));
+
 const authState = { user: { id: "a1", isAdmin: true } };
 vi.mock("../../store/authStore", () => ({
   useAuthStore: (sel?: (s: typeof authState) => unknown) => (sel ? sel(authState) : authState),
@@ -30,12 +42,12 @@ vi.unmock("../../store/settingsStore");
 
 import { useTravPlanVisible } from "../useTravPlanVisible";
 import { useTravTrackVisible } from "../useTravTrackVisible";
-import TravPlanSettings from "../../components/Admin/TravPlanSettings";
-import TravTrackSettings from "../../components/Admin/TravTrackSettings";
+import ServerOffers from "../../components/ServerPages/ServerOffers";
+import { resetInstanceStore } from "../../components/ServerPages/instanceStore";
 import { useSettingsStore } from "../../store/settingsStore";
 
 /**
- * Codex P2 (2026-10-26): flipping a switch in Admin → Instanz updated only the
+ * Codex P2 (2026-10-26): flipping a switch in Server › Was der Server anbietet updated only the
  * card. The navigation kept the capabilities it had read at mount, so the
  * TravPlan / TravTrack entry stayed wrong until a reload. A saved switch now
  * makes every capabilities reader ask again — tested here with the nav hook
@@ -50,14 +62,22 @@ function TrackProbe() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetInstanceStore();
   useSettingsStore.setState({ betaFeaturesEnabled: true });
+  admin.getInstanceSettings.mockResolvedValue({
+    settings: { betaFeaturesEnabled: true, countryThreshold: "transited" },
+    passkeyStatus: null,
+  });
+  admin.getImportMode.mockResolvedValue({ until: null, userId: null, hours: 24 });
+  admin.getUsers.mockResolvedValue({ users: [] });
+  plan.config.mockResolvedValue({ enabled: false, aiDailyLimit: 10, weatherDailyLimit: 20 });
+  track.config.mockResolvedValue({ enabled: false });
 });
 
 describe("a saved instance switch reaches the navigation without a reload", () => {
   it("TravPlan: the entry appears and disappears as the switch is flipped", async () => {
     let on = false;
     plan.capabilities.mockImplementation(async () => ({ enabled: on }));
-    plan.config.mockResolvedValue({ enabled: false, aiDailyLimit: 10, weatherDailyLimit: 20 });
     plan.setConfig.mockImplementation(async (body: { enabled: boolean }) => {
       on = body.enabled;
       return { enabled: on, aiDailyLimit: 10, weatherDailyLimit: 20 };
@@ -65,16 +85,17 @@ describe("a saved instance switch reaches the navigation without a reload", () =
     render(
       <MemoryRouter>
         <PlanProbe />
-        <TravPlanSettings />
+        <ServerOffers />
       </MemoryRouter>
     );
     await waitFor(() => expect(plan.capabilities).toHaveBeenCalled());
     expect(screen.getByTestId("nav")).toHaveTextContent("hidden");
 
-    await userEvent.click(await screen.findByRole("switch"));
+    const planSwitch = await screen.findByRole("switch", { name: "settingsRows:server.tpoffer.t" });
+    await userEvent.click(planSwitch);
     await waitFor(() => expect(screen.getByTestId("nav")).toHaveTextContent("shown"));
 
-    await userEvent.click(screen.getByRole("switch"));
+    await userEvent.click(planSwitch);
     await waitFor(() => expect(screen.getByTestId("nav")).toHaveTextContent("hidden"));
   });
 
@@ -85,7 +106,6 @@ describe("a saved instance switch reaches the navigation without a reload", () =
       active: true,
       hasData: true,
     }));
-    track.config.mockResolvedValue({ enabled: false });
     track.setConfig.mockImplementation(async (body: { enabled: boolean }) => {
       on = body.enabled;
       return { enabled: on };
@@ -93,13 +113,15 @@ describe("a saved instance switch reaches the navigation without a reload", () =
     render(
       <MemoryRouter>
         <TrackProbe />
-        <TravTrackSettings />
+        <ServerOffers />
       </MemoryRouter>
     );
     await waitFor(() => expect(track.capabilities).toHaveBeenCalled());
     expect(screen.getByTestId("nav")).toHaveTextContent("hidden");
 
-    await userEvent.click(await screen.findByRole("switch"));
+    await userEvent.click(
+      await screen.findByRole("switch", { name: "settingsRows:server.ttoffer.t" })
+    );
     await waitFor(() => expect(screen.getByTestId("nav")).toHaveTextContent("shown"));
   });
 });

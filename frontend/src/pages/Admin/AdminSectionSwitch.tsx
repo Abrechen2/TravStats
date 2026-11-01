@@ -1,109 +1,27 @@
 import type { JSX } from "react";
-import BackupManagement from "../../components/Admin/BackupManagement";
 import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
-import ImportModeSettings from "../../components/Admin/ImportModeSettings";
-import TravTrackSettings from "../../components/Admin/TravTrackSettings";
-import TravPlanSettings from "../../components/Admin/TravPlanSettings";
-import InstanceSettings from "../../components/Admin/InstanceSettings";
-import SystemInfoTab from "../../components/Admin/SystemInfo";
-import UserManagement from "../../components/Admin/UserManagement";
-import InvitationManagement from "../../components/Admin/InvitationManagement";
-import CreateLinkInviteModal from "../../components/Admin/CreateLinkInviteModal";
-import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModal";
-import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
 import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import ServicesPage from "../../components/Services/ServicesPage";
 import AboutSection from "../../components/Settings/AboutSection";
-import ParserSettingsTab from "../../components/Admin/ParserSettings";
-import LoggingManager from "../../components/Admin/LoggingManager";
+import BackupsAutomatic from "../../components/ServerPages/BackupsAutomatic";
+import BackupsExisting from "../../components/ServerPages/BackupsExisting";
+import MaintenanceLogging from "../../components/ServerPages/MaintenanceLogging";
+import MaintenanceSystem from "../../components/ServerPages/MaintenanceSystem";
+import MaintenanceTimeModel from "../../components/ServerPages/MaintenanceTimeModel";
+import ServerGeneral from "../../components/ServerPages/ServerGeneral";
+import ServerOffers from "../../components/ServerPages/ServerOffers";
+import ServerParsers from "../../components/ServerPages/ServerParsers";
+import UsersAccess from "../../components/ServerPages/UsersAccess";
+import UsersAccounts from "../../components/ServerPages/UsersAccounts";
+import UsersInvitations from "../../components/ServerPages/UsersInvitations";
 import ShipsSection from "../../components/Admin/masterData/ShipsSection";
 import PortsSection from "../../components/Admin/masterData/PortsSection";
 import AirlinesSection from "../../components/Admin/masterData/AirlinesSection";
 import AircraftSection from "../../components/Admin/masterData/AircraftSection";
 import AirportsSection from "../../components/Admin/masterData/AirportsSection";
 import LodgingChainsSection from "../../components/Admin/masterData/LodgingChainsSection";
-import TimeModelSection from "../../components/Admin/timeModel/TimeModelSection";
 import type { ActiveSection } from "./adminSections";
-
-import type { SystemInfoData, AdminUser } from "../../components/Admin/SystemInfo";
-import type { Invitation } from "../../components/Admin/InvitationManagement";
-import type { ParserSettingsData } from "../../components/Admin/ParserSettings";
-import type { LoggingConfig, LogFile, LogStats } from "../../components/Admin/LoggingManager";
-
-export interface InviteSuccessState {
-  inviteUrl: string;
-  emailSent: boolean | undefined;
-  emailError: string | null;
-  recipientEmail: string | null;
-}
-
-export interface OllamaTestState {
-  status: "idle" | "loading" | "ok" | "error" | "warn";
-  message?: string;
-}
-
-/**
- * Everything a section's JSX reads, gathered in one bag so AdminPage keeps
- * its state declarations and this file is only about wiring — the part that
- * grows with every new admin setting. Mirrors `SettingsSectionSwitch`'s
- * `page` prop; Admin has no equivalent `useAdminPage` hook to pass instead,
- * so the bag is a plain interface built at the call site.
- */
-export interface AdminSectionSwitchProps {
-  section: ActiveSection;
-
-  // system
-  systemInfo: SystemInfoData | null;
-  users: AdminUser[];
-  onExportData: () => void;
-  onDeleteUser: (userId: string) => void;
-
-  // users
-  onToggleUserActive: (userId: string) => void;
-  onResetTwoFactor: (userId: string) => void;
-  /** `?user=` — the account a deep link into user management meant. */
-  highlightUserId?: string | null;
-
-  // invitations
-  invitations: Invitation[];
-  invitationStatusFilter: "all" | "active" | "used" | "expired";
-  onInvitationStatusFilterChange: (filter: "all" | "active" | "used" | "expired") => void;
-  onCreateLinkInvitation: (expiresInDays: 1 | 7 | 30) => void;
-  onCreateEmailInvitation: (email: string, expiresInDays: 1 | 7 | 30) => void;
-  onCopyInvitationLink: (invitation: Invitation) => void;
-  onResendInvitationEmail: (invitation: Invitation) => void;
-  onRevokeInvitation: (id: string) => void;
-  inviteLinkModalOpen: boolean;
-  onOpenInviteLinkModal: () => void;
-  onCloseInviteLinkModal: () => void;
-  inviteEmailModalOpen: boolean;
-  onOpenInviteEmailModal: () => void;
-  onCloseInviteEmailModal: () => void;
-  inviteCreating: boolean;
-  inviteSuccess: InviteSuccessState | null;
-  onCloseInviteSuccess: () => void;
-
-  // parsers
-  parserSettings: ParserSettingsData | null;
-  savingParsers: boolean;
-  onSaveParserSettings: () => void;
-  onParserSettingsChange: (settings: ParserSettingsData) => void;
-  onTestOllama: () => void;
-  ollamaTestState: OllamaTestState;
-
-  // logging
-  loggingConfig: LoggingConfig | null;
-  logFiles: LogFile[];
-  logStats: LogStats | null;
-  savingLogging: boolean;
-  onSaveLoggingConfig: () => void;
-  onToggleDebugLogging: () => void;
-  onDownloadLogFile: (filename: string) => void;
-  onDeleteLogFile: (filename: string) => void;
-  onCleanupLogs: () => void;
-  onLoggingConfigChange: (config: LoggingConfig) => void;
-}
 
 /**
  * How each section is framed (see `SectionFrame`): `own` sections draw their
@@ -112,10 +30,10 @@ export interface AdminSectionSwitchProps {
  */
 export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   instance: "card",
-  travTrack: "own",
-  travPlan: "own",
+  travTrack: "card",
+  travPlan: "card",
   shareLinks: "own",
-  importMode: "own",
+  importMode: "card",
   usageStats: "card",
   about: "own",
   federation: "card",
@@ -140,164 +58,75 @@ export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
 };
 
 /**
- * Renders one admin section's content. Kept apart from the page so the page
- * is about navigation and data loading, and this file is about wiring the
- * sections up — see SettingsSectionSwitch for the pattern this copies.
+ * Renders one server section. The server pages are built on the settings
+ * blocks (package 7) and each loads what it shows; `mountId` tells the two
+ * mounts that share a component apart (Zugang and Konten are both `users`,
+ * Automatisch and Vorhandene Sicherungen both `backups`).
  */
-export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.Element | null {
-  switch (props.section) {
+export default function AdminSectionSwitch({
+  section,
+  mountId,
+}: {
+  section: ActiveSection;
+  mountId: string;
+}): JSX.Element | null {
+  switch (section) {
+    case "instance":
+      return <ServerGeneral />;
+    case "travTrack":
+      return <ServerOffers />;
+    case "parsers":
+      return (
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+          <ExternalServicesPointer />
+          <ServerParsers />
+        </div>
+      );
+    case "users":
+      return mountId === "access" ? <UsersAccess /> : <UsersAccounts />;
+    case "invitations":
+      return <UsersInvitations />;
+    case "backups":
+      return mountId === "automatic" ? <BackupsAutomatic /> : <BackupsExisting />;
+    case "logging":
+      return <MaintenanceLogging />;
+    case "system":
+      return <MaintenanceSystem />;
+    case "timeModel":
+      return <MaintenanceTimeModel />;
+
     case "shipsMasterData":
       return <ShipsSection />;
-
     case "portsMasterData":
       return <PortsSection />;
-
     case "airlinesMasterData":
       return <AirlinesSection />;
-
     case "aircraftMasterData":
       return <AircraftSection />;
-
     case "airportsMasterData":
       return <AirportsSection />;
-
     case "lodgingChainsMasterData":
       return <LodgingChainsSection />;
-
-    case "system":
-      return props.systemInfo ? (
-        <SystemInfoTab
-          systemInfo={props.systemInfo}
-          users={props.users}
-          onExportData={props.onExportData}
-          onDeleteDemoUser={props.onDeleteUser}
-        />
-      ) : null;
-
-    case "users":
-      return (
-        <UserManagement
-          users={props.users}
-          onToggleUserActive={props.onToggleUserActive}
-          onDeleteUser={props.onDeleteUser}
-          onResetTwoFactor={props.onResetTwoFactor}
-          highlightUserId={props.highlightUserId}
-        />
-      );
-
-    case "invitations":
-      return (
-        <>
-          <InvitationManagement
-            invitations={props.invitations}
-            statusFilter={props.invitationStatusFilter}
-            onStatusFilterChange={props.onInvitationStatusFilterChange}
-            onCreateLink={props.onOpenInviteLinkModal}
-            onCreateEmail={props.onOpenInviteEmailModal}
-            onCopyLink={props.onCopyInvitationLink}
-            onResendEmail={props.onResendInvitationEmail}
-            onRevoke={props.onRevokeInvitation}
-          />
-
-          {props.inviteLinkModalOpen && (
-            <CreateLinkInviteModal
-              onCreate={props.onCreateLinkInvitation}
-              onClose={props.onCloseInviteLinkModal}
-              creating={props.inviteCreating}
-            />
-          )}
-
-          {props.inviteEmailModalOpen && (
-            <CreateEmailInviteModal
-              onCreate={props.onCreateEmailInvitation}
-              onClose={props.onCloseInviteEmailModal}
-              creating={props.inviteCreating}
-            />
-          )}
-
-          {props.inviteSuccess && (
-            <InviteSuccessModal
-              inviteUrl={props.inviteSuccess.inviteUrl}
-              emailSent={props.inviteSuccess.emailSent}
-              emailError={props.inviteSuccess.emailError}
-              recipientEmail={props.inviteSuccess.recipientEmail}
-              onClose={props.onCloseInviteSuccess}
-            />
-          )}
-        </>
-      );
 
     case "externalServices":
       // The services page itself: an administrator's cards carry both sides.
       return <ServicesPage isAdmin />;
-
-    case "parsers":
-      return props.parserSettings ? (
-        <>
-          <ExternalServicesPointer />
-          <ParserSettingsTab
-            parserSettings={props.parserSettings}
-            savingParsers={props.savingParsers}
-            onSave={props.onSaveParserSettings}
-            onParserSettingsChange={props.onParserSettingsChange}
-            onTestOllama={props.onTestOllama}
-            ollamaTestState={props.ollamaTestState}
-          />
-        </>
-      ) : null;
-
-    case "templateRepo":
-      // Where the templates come from (forgejo#309): edited under Externe Dienste.
-      return <LegacyServiceSummary serviceId="updatesTemplates" />;
-
-    case "logging":
-      return props.loggingConfig ? (
-        <LoggingManager
-          loggingConfig={props.loggingConfig}
-          logFiles={props.logFiles}
-          logStats={props.logStats}
-          savingLogging={props.savingLogging}
-          onSave={props.onSaveLoggingConfig}
-          onToggleDebug={props.onToggleDebugLogging}
-          onDownload={props.onDownloadLogFile}
-          onDelete={props.onDeleteLogFile}
-          onCleanup={props.onCleanupLogs}
-          onLoggingConfigChange={props.onLoggingConfigChange}
-        />
-      ) : null;
-
-    case "instance":
-      return <InstanceSettings />;
-    case "travTrack":
-      return <TravTrackSettings />;
-    case "travPlan":
-      return <TravPlanSettings />;
     case "shareLinks":
       return <ShareLinksSettings />;
-    case "importMode":
-      return <ImportModeSettings />;
+    case "about":
+      return <AboutSection />;
+    case "templateRepo":
+      return <LegacyServiceSummary serviceId="updatesTemplates" />;
     case "usageStats":
       return <LegacyServiceSummary serviceId="usageStats" />;
-    case "about":
-      // Moved here from personal settings › Darstellung (tester, 2026-10-20);
-      // every account still sees the version under the settings menu.
-      return <AboutSection />;
     case "federation":
       return <LegacyServiceSummary serviceId="federation" />;
     case "push":
       return <LegacyServiceSummary serviceId="push" />;
-
-    case "backups":
-      return <BackupManagement />;
     case "webdav":
       return <LegacyServiceSummary serviceId="webdav" />;
-
-    case "timeModel":
-      return <TimeModelSection users={props.users} />;
-
     case "smtp":
       return <LegacyServiceSummary serviceId="smtp" />;
-
     default:
       return null;
   }

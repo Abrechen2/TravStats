@@ -103,10 +103,8 @@
       "menuLabel": "Airports"
     }
   },
-  "instanceLabel": "Instance",
   "instance": {
     "title": "Instance settings",
-    "subtitle": "Name, registration and base URL of this TravStats instance.",
     "loadFailed": "Could not load instance settings",
     "saved": "Instance settings saved",
     "saveFailed": "Failed to save instance settings",
@@ -195,7 +193,6 @@
     },
     "passkeys": {
       "title": "Passkeys (WebAuthn)",
-      "subtitle": "Lets users sign in with a fingerprint, face, PIN or password manager. Passkeys need HTTPS — browsers refuse them on a plain LAN address.",
       "statusUsable": "Passkeys are usable on this instance.",
       "status": {
         "notConfigured": "Not set up yet — add at least one origin below.",
@@ -248,23 +245,13 @@
       }
     }
   },
-  "totalUsers": "Total Users",
-  "activeUsers": "Active Users",
   "totalFlights": "Total Flights",
-  "saveConfiguration": "Save Configuration",
-  "saveSettings": "Save Settings",
-  "saveConfig": "Save Config",
   "refresh": "🔄 Refresh",
   "refreshing": "⏳ Loading...",
   "users": {
     "title": "User Management",
     "table": {
-      "username": "Username",
-      "flights": "Flights",
-      "achievements": "Achievements",
-      "role": "Role",
-      "status": "Status",
-      "actions": "Actions"
+      "username": "Username"
     },
     "role": {
       "admin": "Admin",
@@ -283,7 +270,6 @@
     },
     "deleteConfirm": {
       "title": "Delete user?",
-      "message": "Permanently delete user \"{{username}}\" and all their data (flights, trips, achievements, settings)?\n\nThis action cannot be undone.",
       "confirm": "Yes, delete permanently"
     },
     "resetPasswordModal": {
@@ -296,7 +282,6 @@
         "description": "Generates a random temporary password (12 characters).",
         "button": "Generate Temporary Password",
         "mustChange": "Must change password on next login",
-        "tempPasswordLabel": "Temporary Password (shown once):",
         "copy": "Copy",
         "copied": "Copied!",
         "regenerate": "Generate new password",
@@ -314,7 +299,6 @@
     },
     "resetTwoFactorConfirm": {
       "title": "Reset two-factor",
-      "message": "Turn off two-factor sign-in for “{{username}}”? Their next sign-in will need the password only. This is the way back into the account when both the phone AND the recovery codes are gone.",
       "confirm": "Reset"
     },
     "description": "Everyone on this instance — change roles and deactivate accounts. A deactivated account can no longer sign in; its data is kept.",
@@ -325,9 +309,6 @@
   },
   "invitations": {
     "title": "Manage Invitations",
-    "invitationLinks": "Invitation Links",
-    "createButton": "+ Create Invitation",
-    "copiedToClipboard": "Invitation link copied to clipboard!",
     "actions": {
       "createLink": "+ Create link",
       "createEmail": "✉ Invite by email",
@@ -336,7 +317,6 @@
       "resendEmail": "✉ Resend",
       "revoke": "🗑 Revoke"
     },
-    "confirmRevoke": "Really revoke this invitation? The link becomes invalid immediately.",
     "expiresLegend": "Valid for",
     "expires": {
       "24h": "24 hours",
@@ -379,47 +359,21 @@
     },
     "toasts": {
       "resent": "Invitation resent",
-      "resendFailed": "Resend failed",
-      "revoked": "Invitation revoked",
-      "revokeFailed": "Revoke failed"
-    },
-    "table": {
-      "email": "Email",
-      "createdBy": "Created By",
-      "expires": "Expires",
-      "usedBy": "Used by",
-      "status": "Status",
-      "actions": "Actions"
+      "revoked": "Invitation revoked"
     },
     "status": {
-      "usedOn": "Used on {{date}}",
-      "expired": "Expired",
-      "active": "Active",
       "emailFailed": "Email failed"
     },
     "description": "Invitation links for new users. Each link works exactly once and expires after seven days."
   },
   "userLimitWarning": {
-    "title": "⚠️ User Limit Warning",
-    "message": "You have reached the recommended user limit ({{maxUsers}} users). Performance may be affected with more users."
+    "title": "⚠️ User Limit Warning"
   },
   "demoWarning": {
-    "title": "🔓 Demo Account Active",
-    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active. It is created automatically with sample data on first start. When you no longer need it, delete it here — all demo data (flights, cruises, trips) is removed with it.",
-    "button": "Delete Demo User"
+    "title": "🔓 Demo Account Active"
   },
   "systemInfo": {
-    "title": "System Information",
-    "configuration": "Configuration",
-    "dataManagement": "Data Management",
-    "registration": "Registration",
-    "enabled": "✅ Enabled",
-    "disabled": "❌ Disabled",
-    "version": "Version",
-    "buildLabel": "Build",
-    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running — the image is byte-identical to the tested RC, while the registry tag already points to the final version.",
-    "exportButton": "Download Full Backup (JSON)",
-    "exportDescription": "Exports all user data as JSON — for backups and for analysis."
+    "title": "System Information"
   },
   "airlineLogos": {
     "title": "Airline logos",
@@ -437,59 +391,21 @@
     "confirmMessage": "This will download a JSON file with all user data."
   },
   "toasts": {
-    "userUpdated": "User updated successfully",
-    "userUpdateFailed": "Failed to update user",
-    "userDeleted": "User deleted",
-    "userDeleteFailed": "Failed to delete user",
-    "invitationCopied": "Invitation link copied to clipboard!\n\n{{inviteUrl}}",
-    "invitationFailed": "Failed to create invitation",
-    "exportFailed": "Failed to export data",
-    "parserSettingsSaved": "Parser settings saved successfully!",
-    "parserSettingsFailed": "Failed to save parser settings",
-    "debugLoggingToggled": "Debug logging {{state}} successfully!",
-    "debugLoggingFailed": "Failed to toggle debug logging",
-    "loggingConfigSaved": "Logging configuration saved successfully!",
-    "loggingConfigFailed": "Failed to save logging configuration",
     "logFileDownloadFailed": "Failed to download log file",
-    "logFileDeleted": "Log file deleted successfully!",
     "logFileDeletFailed": "Failed to delete log file",
     "cleanupComplete": "Cleanup complete: deleted {{deletedCount}} files, freed {{freed}}",
     "cleanupFailed": "Failed to cleanup logs",
-    "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
-    "ollamaTestFailed": "Ollama connection failed",
-    "enabled": "enabled",
-    "disabled": "disabled",
-    "twoFactorReset": "Two-factor has been reset",
-    "twoFactorResetFailed": "Two-factor could not be reset",
     "cleanupPartial": "{{failedCount}} files could not be deleted."
-  },
-  "prompts": {
-    "enterEmail": "Enter email (optional):",
-    "confirmExport": "Export all data? This will download a JSON file with all user data.",
-    "confirmDeleteLog": "Delete log file \"{{filename}}\"? This action cannot be undone.",
-    "confirmCleanupLogs": "Delete old log files based on retention policy? This action cannot be undone.",
-    "confirmDeleteDemo": "Delete the demo user account? All demo data (flights, cruises, trips, achievements) will be removed too. Cannot be undone."
   },
   "logging": {
     "title": "Debug Logging & Diagnostics",
     "description": "Controls the logging behavior of the system. Debug mode enables detailed output for troubleshooting.",
-    "debugMode": "Enable Debug Mode",
-    "debugModeDisable": "Disable Debug Mode",
     "help": {
-      "levels": "error → warn → info → debug → trace (from least to most detailed)",
-      "warning": "Debug mode can impact performance and generates large log files. Only enable for short diagnostic periods."
+      "levels": "error → warn → info → debug → trace (from least to most detailed)"
     },
     "debugActive": {
-      "title": "Debug Mode Active",
-      "message": "Debug logging is enabled with detailed instrumentation. This may impact performance and generate large log files. Consider disabling after troubleshooting."
+      "title": "Debug Mode Active"
     },
-    "stats": {
-      "totalFiles": "Total Log Files",
-      "totalSize": "Total Size",
-      "oldestLog": "Oldest Log",
-      "newestLog": "Newest Log"
-    },
-    "configSection": "Logging Configuration",
     "level": {
       "label": "Log Level",
       "hint": "Higher levels include all lower levels (e.g., Debug includes Info, Warn, Error)",
@@ -517,18 +433,11 @@
       "parser": {
         "label": "Log Parser Operations",
         "hint": "Log LLM operations with provider details (category: parser)"
-      },
-      "verboseOnly": "These logs are written only while the log level is Debug or Trace."
+      }
     },
     "files": {
       "title": "Log Files",
-      "cleanup": "Cleanup Old Logs",
       "empty": "No log files found",
-      "colFilename": "Filename",
-      "colCategory": "Category",
-      "colSize": "Size",
-      "colModified": "Modified",
-      "colActions": "Actions",
       "download": "Download",
       "delete": "Delete",
       "view": "View"
@@ -563,18 +472,8 @@
     }
   },
   "parserSettings": {
-    "builtin": {
-      "ocrHint": "Reads boarding passes from images",
-      "templatesName": "Templates (regex)",
-      "templatesHint": "Reads booking emails from known senders"
-    },
     "title": "Global Parser Configuration",
     "description": "Default parsers for all users. Local ones are free; cloud AI costs per request and needs a key.",
-    "defaultSettings": "Default Settings",
-    "defaultSettingsDescription": "These defaults will be applied to new user accounts. Users can change them in their settings.",
-    "visionParser": "Default Vision Parser (Boarding Pass)",
-    "textParser": "Default Text Parser (Email)",
-    "autoHelp": "Auto mode automatically selects the best available parser",
     "llmSwitch": {
       "title": "AI model",
       "label": "Use the AI model (reading bookings and trip summaries)",
@@ -584,81 +483,36 @@
       "title": "Ollama LLM Parser",
       "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails. Always tried first when a URL is set — no consent needed within your network.",
       "urlLabel": "Ollama URL",
-      "urlPlaceholder": "http://localhost:11434",
       "remoteOptIn": {
         "label": "I agree that booking data is sent to this address if it is outside my network."
       },
-      "modelLabel": "Model",
-      "modelPlaceholder": "gemma3:12b",
-      "testButton": "Test Connection",
-      "testing": "Testing…",
-      "statusConnected": "Connected",
-      "statusDisconnected": "Not reachable",
-      "modelNotFound": "Model not found",
-      "modelsAvailable": "Available models",
-      "connectionSuccess": "Ollama reachable",
-      "connectionFailed": "Connection failed",
-      "addressMoved": "The address and consent for a remote Ollama are set under External services; the model and test stay here.",
       "pull": {
         "title": "Download a model",
-        "placeholder": "e.g. gemma3:12b, llama3.1:8b",
         "action": "Download",
         "running": "Downloading …",
         "done": "{{model}} was downloaded.",
-        "failed": "The model could not be downloaded. Check the name and that Ollama is reachable.",
-        "connectionFailed": "No connection to Ollama. Check the address and that the service is running."
-      },
-      "modelsLoadingPlaceholder": "Loading models …",
-      "noModelsPlaceholder": "No models found — enter a name or download one below",
-      "modelsLoading": "Loading available models …",
-      "selectModel": "-- Select model --"
+        "failed": "The model could not be downloaded. Check the name and that Ollama is reachable."
+      }
     },
     "order": {
       "label": "Who reads first?",
-      "templateFirst": "Templates first, AI as the fallback (recommended)",
-      "llmFirst": "AI first, templates as the fallback",
       "hint": "Applies to flights, stays, cruises and places alike. Measured 2026-09-17 on 31 flight mails: the templates read every one in under a second, the language model took 19 minutes and missed three. \"AI first\" is worth it when no template covers your senders."
     },
     "userPermissions": {
-      "title": "User permissions",
-      "allowUserApiKeys": "Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)"
+      "title": "User permissions"
     },
     "provider": {
       "title": "AI provider",
       "description": "Who reads the bookings no template knows? Ollama always goes first when it is configured. If it does not answer, TravStats asks the cloud providers that are switched on below, in order. Switching on, key, model and consent are set under External services; only the order is set here.",
       "chain": {
         "title": "Cloud provider priority",
-        "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer.",
-        "moveUp": "Move up",
-        "moveDown": "Move down"
+        "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer."
       },
-      "baseUrlLabel": "Base URL (with version path)",
-      "baseUrlPlaceholder": "https://api.openai.com/v1",
-      "baseUrlHint": "Outside your network only with https://. Examples: https://openrouter.ai/api/v1, https://ollama.com/v1",
-      "modelLabel": "Model",
-      "keyLabel": "API key",
-      "keyPlaceholder": "sk-…",
-      "keyHint": "Stored encrypted and never shown again — only the first and last four characters.",
-      "testButton": "Test connection",
-      "testing": "Testing …",
       "test": {
-        "ok": "Connected — the provider offers {{count}} models.",
-        "okModelMissing": "Connected, but this provider does not offer the model “{{model}}”.",
-        "okNoList": "Connected. The provider lists no models — check the model name yourself.",
-        "cloud": "This provider is outside your network.",
         "errors": {
-          "invalid_url": "That is not a valid URL.",
-          "unsupported_protocol": "Only http:// or https:// is possible.",
-          "credentials_in_url": "Credentials do not belong in the URL — enter the key in the “API key” field.",
-          "https_required": "A provider outside your network needs https://.",
-          "auth": "The provider rejected the API key.",
           "unreachable": "The provider is not reachable. Check the URL and the network.",
           "failed": "The connection test failed."
         }
-      },
-      "saveErrors": {
-        "LLM_BASE_URL_HTTPS_REQUIRED": "An AI provider outside your network needs https://. Nothing was saved.",
-        "LLM_BASE_URL_INVALID": "The AI provider's base URL is invalid. Nothing was saved."
       },
       "slots": {
         "openai": {
@@ -703,105 +557,46 @@
         }
       },
       "loading": "Loading provider status …",
-      "loadFailed": "The provider status could not be loaded.",
-      "noneEnabled": "No cloud provider is switched on.",
-      "enableInServices": "Switch on in External services",
-      "openInServices": "Open in External services",
-      "status": {
-        "active": "Ready",
-        "missing": "Key missing"
-      }
-    },
-    "accountKeysFxMoved": "Whether accounts may bring their own keys, and the exchange-rate fallback, are service settings and live under External services."
+      "loadFailed": "The provider status could not be loaded."
+    }
   },
   "backup": {
     "title": "Backup Management",
     "description": "Backups capture all data on this instance and can be restored after data loss or a move. A restore replaces the current data entirely — take another backup first.",
     "loading": "Loading backups...",
-    "creating": "Creating backup...",
     "running": "Backup running",
-    "createNow": "Create Backup Now",
     "startedAt": "Started at {{date}}",
-    "noBackups": "No backups available",
     "deleteConfirm": "Do you really want to delete the backup from {{date}}?",
-    "type": {
-      "full": "Full",
-      "partial": "Partial"
-    },
     "status": {
       "completed": "Completed",
       "running": "Running...",
       "failed": "Failed",
       "pending": "Pending"
     },
-    "table": {
-      "date": "Date",
-      "status": "Status",
-      "size": "Size",
-      "type": "Type",
-      "cloud": "Cloud"
-    },
     "actions": {
       "download": "Download",
-      "restore": "Restore",
       "upload": "Upload",
       "uploading": "Uploading..."
     },
     "cloud": {
-      "syncedAt": "Uploaded on {{date}}",
       "failed": "Failed"
     },
     "restore": {
-      "title": "Restore Backup",
-      "warning": "Warning: This action will replace all current data!",
-      "backupFrom": "Backup from: {{date}}",
-      "scope": "Restore Scope",
-      "scopeFull": "Full (Database + Files)",
-      "scopeDatabase": "Database Only",
-      "scopeFiles": "Files Only",
-      "createBackupBefore": "Create backup before restore (recommended)",
-      "confirmLabel": "To confirm, type \"{{text}}\":",
-      "confirmText": "Restore",
-      "confirmButton": "Restore",
-      "keyMismatchTitle": "This archive was written with a different encryption key",
-      "keyMismatchBody": "The stored API keys, the SMTP password and the Immich/Dawarich credentials cannot be decrypted on this instance. Put the original key back (ENCRYPTION_KEY, or encryption.key in the secrets directory) and try again — or confirm here and enter those credentials again afterwards.",
-      "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
-      "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
-      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored.",
-      "migrationFailed": "The archive comes from an older version and could not be brought up to this version's database schema. Nothing was changed. The server log names the migration that failed.",
-      "schemaIncomplete": "The archive was restored, but the database lacks something this version expects (a migration or the sync triggers). The server log has the details.",
-      "archiveNewer": "This archive comes from a newer TravStats version and cannot be restored here. Update this instance to at least the archive's version. Nothing was changed.",
-      "archiveUnversioned": "This archive's database cannot be matched to any version (its migration history is missing, or a migration had failed). Nothing was changed.",
-      "inProgress": "Restoring …"
+      "title": "Restore Backup"
     },
-    "settingsSaved": "Backup settings saved",
-    "settingsFailed": "Failed to save backup settings",
     "schedule": {
       "title": "Automatic Backup",
       "description": "Scheduled backups run at 02:00 in the zone chosen below – daily, on Sundays or on the 1st of the month, depending on the interval.",
-      "enableAutoBackup": "Enable automatic backup",
-      "interval": "Interval",
-      "retentionDays": "Retention (days)",
-      "zone": "Time zone of the backup hour",
-      "zoneHost": "The server's time zone ({{zone}})",
-      "zoneEffective": "Backups run at 02:00 in {{zone}}.",
       "loadFailed": "The backup settings could not be loaded. Saving is disabled so nothing gets overwritten."
     },
     "toasts": {
       "loadFailed": "Failed to load backups",
-      "started": "Backup started",
       "createFailed": "Failed to create backup",
-      "downloading": "Backup is being downloaded",
       "downloadFailed": "Failed to download backup",
       "downloadTruncated": "The download from the WebDAV share ended early, so the backup is incomplete and was not kept. Please try again.",
-      "restoring": "Backup is being restored",
-      "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
-      "deleteFailed": "Failed to delete backup",
       "synced": "Backup uploaded",
       "syncFailed": "Failed to upload backup",
-      "created": "Backup created",
-      "restored": "Backup restored",
       "outcomeUnknown": "The server no longer reports the outcome — check the backup list before trying again."
     },
     "failure": {
@@ -814,12 +609,6 @@
       "RESTORE_FAILED": "The restore failed. The cause is in the server log.",
       "BACKUP_INTERRUPTED": "The backup was cut off because the server restarted or a restore was applied. Simply start it again."
     },
-    "cloudRetention": "Also delete expired backups from WebDAV.",
-    "retentionProtection": "Cleanup runs after a successful automatic backup. The last available full backup is retained.",
-    "deleteRemote": "Also delete the WebDAV copy",
-    "deleteLocalOnly": "The local backup will be deleted. A WebDAV copy is retained unless you explicitly select it.",
-    "remoteDeleteFailed": "WebDAV deletion failed. The local backup is retained. Check the connection and try again.",
-    "remoteTargetUnknown": "The original WebDAV target is unknown or changed. Upload this backup again before deleting both copies, or delete locally only.",
     "cloudFailure": {
       "WEBDAV_BACKUP_AUTH": "The WebDAV server rejected the credentials. Check the user name and password in the WebDAV settings.",
       "WEBDAV_BACKUP_QUOTA": "The WebDAV server is out of space or refused a file this large (507/413). Free some space and try again.",
@@ -835,7 +624,6 @@
       "WEBDAV_DOWNLOAD_CHECKSUM_MISMATCH": "The downloaded file does not match its checksum and was discarded. Please try again."
     },
     "unverified": "Not checked by checksum",
-    "unverifiedHint": "This backup was uploaded before checksums existed and was checked by its size only.",
     "cloudList": {
       "title": "Backups on the WebDAV server",
       "description": "Bring a backup back from the WebDAV server into the backup list, e.g. after moving servers. It can then be restored like any other.",
@@ -1174,7 +962,6 @@
     "activeFor": "On for {{account}} until {{until}}.",
     "unknownAccount": "a deleted account",
     "account": "Which account?",
-    "allAccounts": "All accounts",
     "start": "Switch on for {{hours}} hours",
     "stop": "End now",
     "loadFailed": "The import mode could not be loaded.",
@@ -1326,9 +1113,7 @@
   "travTrack": {
     "title": "TravTrack",
     "description": "The own location history: positions reach this server from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import. Switching it off deletes nothing — accounts holding data keep their summary, export and delete.",
-    "needsBeta": "TravTrack is a beta feature. Switch on this instance's beta features first.",
     "switch": "Offer TravTrack on this server",
-    "switchSub": "Accounts can then choose TravTrack as their location source.",
     "errors": {
       "loadFailed": "The TravTrack switch could not be loaded.",
       "saveFailed": "The TravTrack switch could not be saved.",
@@ -1339,19 +1124,14 @@
     "title": "TravPlan",
     "description": "The planning mode: plan trips ahead and compare them on the way. Switching it off deletes no plans — they stay stored and reappear once TravPlan is switched on.",
     "switch": "Offer TravPlan on this server",
-    "switchSub": "Every account then sees the planning mode in the navigation.",
     "errors": {
       "loadFailed": "The TravPlan switch could not be loaded.",
       "saveFailed": "The TravPlan switch could not be saved.",
       "disabled": "TravPlan is switched off on this server. Switch on the beta features first."
     },
-    "defaultsNote": "TravPlan stays on for accounts that already had plans; for everyone else it starts off.",
     "limits": {
       "title": "Daily limits per account",
       "help": "Requests, not cost: how many AI and weather lookups one account may trigger per UTC day.",
-      "aiDailyLimit": "AI requests per account and UTC day",
-      "weatherDailyLimit": "Weather lookups per account and UTC day",
-      "tooHigh": "At most {{max}}.",
       "save": "Save limits",
       "retry": "Try again"
     }
@@ -1394,18 +1174,13 @@
     "budgetRequired": "A custom budget needs an amount above 0."
   },
   "catalogues": {
-    "run": "Re-seed",
     "running": "Running …",
     "airports": {
       "title": "Airports",
       "description": "Re-imports the airport catalogue (OurAirports). Runs in the background; existing entries stay.",
       "done": "Airport catalogue imported.",
-      "seedingFailed": "Importing the airports failed.",
-      "statusFailed": "The airport import status could not be read.",
       "status": {
-        "pending": "Import is queued.",
         "running": "Import running: {{processed}} of {{total}} airports.",
-        "completed": "Catalogue complete ({{total}} airports in the last import).",
         "failed": "The last import failed."
       }
     },
@@ -1420,9 +1195,6 @@
       "done": "{{count}} new aircraft types imported."
     },
     "errors": {
-      "rateLimited": "Too many re-seeds – at most 3 per hour. Please try again later.",
-      "forbidden": "Administrator permission is required.",
-      "unknownOutcome": "No answer received – the server may still be working. Check the catalogue later.",
       "failed": "The import failed."
     }
   },

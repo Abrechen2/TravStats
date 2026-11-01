@@ -289,6 +289,97 @@
       "amount": "Eine Karte",
       "after": "Die Karte und ihre Zuordnung zu Airlines, Ketten oder Hotels sind weg. Deine Flüge, Aufenthalte und Fahrten bleiben.",
       "confirm": "Karte löschen"
+    },
+    "rpid": {
+      "title": "Passkey-Domain ändern?",
+      "affects": "Alle Passkeys aller Konten",
+      "amount": "Alle bisher angelegten Passkeys",
+      "after": "Keiner funktioniert danach mehr; jeder muss neu angelegt werden.",
+      "confirm": "Ändern",
+      "word": "ÄNDERN"
+    },
+    "userdel": {
+      "title": "{{name}} löschen?",
+      "affects": "Das Konto {{name}} mit allen Einträgen und Dateien",
+      "amount_one": "{{count}} Flug",
+      "amount_other": "{{count}} Flüge",
+      "after": "Es lässt sich nur aus einer Sicherung zurückholen.",
+      "confirm": "Löschen",
+      "word": "{{name}}"
+    },
+    "userlock": {
+      "title": "{{name}} sperren?",
+      "affects": "{{name}}",
+      "amount": "Ein Konto",
+      "after": "Es kann sich nicht mehr anmelden. Seine Daten bleiben.",
+      "confirm": "Sperren"
+    },
+    "user2fa": {
+      "title": "Zweiten Faktor zurücksetzen?",
+      "affects": "{{name}}",
+      "amount": "Ein Konto",
+      "after": "Es meldet sich wieder nur mit Passwort an, bis es den Faktor neu einrichtet.",
+      "confirm": "Zurücksetzen"
+    },
+    "invrevoke": {
+      "title": "Einladung zurückziehen?",
+      "affects": "{{name}}",
+      "amount": "Eine Einladung",
+      "after": "Der Link gilt sofort nicht mehr.",
+      "confirm": "Zurückziehen"
+    },
+    "restore": {
+      "title": "Sicherung zurückspielen?",
+      "affects": "Sicherung vom {{date}}",
+      "amount": "Alle Konten",
+      "after": "Was seitdem geändert wurde, ist weg. Ich sichere vorher den jetzigen Stand.",
+      "confirm": "Zurückspielen",
+      "word": "WIEDERHERSTELLEN"
+    },
+    "restorekey": {
+      "title": "Zugangsdaten der Dienste neu eintragen?",
+      "affects": "Sicherung vom {{date}}",
+      "amount": "Alle gespeicherten Schlüssel und Passwörter der Dienste",
+      "after": "Die Sicherung nutzt einen anderen Schlüssel; ich kann diese Zugangsdaten nicht entschlüsseln und du trägst sie danach neu ein. Oder du legst den ursprünglichen Schlüssel (ENCRYPTION_KEY) zurück und versuchst es noch einmal.",
+      "confirm": "Trotzdem zurückspielen"
+    },
+    "bakdel": {
+      "title": "Sicherung löschen?",
+      "affects": "Sicherung vom {{date}}",
+      "amount": "{{size}}",
+      "after": "Die Kopie auf WebDAV lösche ich mit, wenn „Auch auf WebDAV aufräumen“ an ist.",
+      "confirm": "Löschen"
+    },
+    "logclean": {
+      "title": "Alte Protokolle löschen?",
+      "affects": "Protokolldateien älter als {{days}} Tage",
+      "amount_one": "{{count}} Datei · {{size}}",
+      "amount_other": "{{count}} Dateien · {{size}}",
+      "after": "Die Dateien lassen sich nicht mehr ansehen.",
+      "confirm": "Löschen"
+    },
+    "logdel": {
+      "title": "Protokolldatei löschen?",
+      "affects": "{{name}}",
+      "amount": "Eine Datei",
+      "after": "Die Datei lässt sich nicht mehr ansehen.",
+      "confirm": "Löschen"
+    },
+    "reseed": {
+      "title": "Kataloge neu einlesen?",
+      "affects": "Flughäfen, Airlines, Flugzeugtypen",
+      "amount": "Alle mitgelieferten Einträge; deine eigenen bleiben",
+      "after": "Mitgelieferte Einträge sind auf dem neuen Stand. Das geht dreimal pro Stunde.",
+      "confirm": "Neu einlesen",
+      "word": "EINLESEN"
+    },
+    "demodel": {
+      "title": "Demo-Konto löschen?",
+      "affects": "Das Konto {{name}} mit allen Einträgen",
+      "amount_one": "{{count}} Flug",
+      "amount_other": "{{count}} Flüge",
+      "after": "Niemand kann sich mehr als Demo anmelden.",
+      "confirm": "Löschen"
     }
   },
   "services": {
@@ -833,7 +924,10 @@
       "ollamaModels": "Auf dem Server installiert",
       "noModels": "Noch kein Modell installiert",
       "modelsUnknown": "Ich komme nicht an die Modellliste",
-      "fedNoOrigin": "Erst die Adresse dieses Servers eintragen."
+      "fedNoOrigin": "Erst die Adresse dieses Servers eintragen.",
+      "getKey": "Schlüssel für {{name}} besorgen ›",
+      "immichMode": "Fotos verknüpfen oder kopieren",
+      "immichModeLoadFailed": "Ich konnte nicht lesen, wie neue Fotos standardmäßig übernommen werden."
     },
     "status": {
       "needsConsent": "Wartet auf deine Zustimmung",
@@ -894,5 +988,382 @@
         "amount": "Ein Schlüssel"
       }
     }
+  },
+  "server": {
+    "instname": {
+      "t": "Name",
+      "s": "In Mails und Sicherungen"
+    },
+    "loginbilder": {
+      "t": "Bilder der Anmeldeseite",
+      "s": "Sieht jeder, auch ohne Anmeldung",
+      "h": "Alle entfernen bringt die mitgelieferten zurück."
+    },
+    "puburl": {
+      "t": "Öffentliche Adresse",
+      "s": "Für Einladungen, Mails und neue Passwörter",
+      "h": "Pflicht. Ohne sie zeigen Links auf localhost. Auch Kalender-Abos und der Rücksprung von Strava nutzen sie."
+    },
+    "pairurl": {
+      "t": "Adresse für Telefone",
+      "s": "Steht im Kopplungs-QR",
+      "h": "Leer: die Adresse, unter der du TravStats gerade offen hast. Passkeys nehmen sie, wenn keine erlaubten Adressen eingetragen sind."
+    },
+    "lanurl": {
+      "t": "Adresse im eigenen Netz",
+      "s": "Nur für den Rücksprung von Strava",
+      "h": "Telefone bekommen sie nicht; das Koppeln nimmt die Adresse für Telefone."
+    },
+    "rpid": {
+      "t": "Passkey-Domain",
+      "s": "Nur die Domain, keine IP",
+      "h": "Ändern macht jeden angelegten Passkey wertlos."
+    },
+    "origins": {
+      "t": "Erlaubte Adressen",
+      "s": "Eine pro Zeile, mit https und Port",
+      "h": "Die erste zählt. Mehrere nur mit derselben Domain. Leer: die Adresse für Telefone."
+    },
+    "beta": {
+      "t": "Beta-Funktionen zeigen",
+      "s": "Für alle Konten",
+      "h": "Öffnet: Telefone koppeln, Touren, Planen, Schiffswege, Flugwege hochladen, Rangliste, verschlüsselt übergeben, Kalender-Abo, Teilen mit anderen Servern, TravTrack."
+    },
+    "ttoffer": {
+      "t": "TravTrack anbieten",
+      "s": "Standort auf diesem Server speichern"
+    },
+    "tpoffer": {
+      "t": "Planen anbieten",
+      "h": "Aus behält alle Pläne, blendet sie nur aus."
+    },
+    "tplimits": {
+      "t": "Planen: Anfragen pro Tag",
+      "s": "KI · Wetter, je Konto"
+    },
+    "laenderstd": {
+      "t": "Ein Land zählt ab",
+      "s": "Konten können abweichen"
+    },
+    "importmodus": {
+      "t": "Großer Import",
+      "s": "Hebt Upload-Grenzen für 24 h auf",
+      "h": "Schaltet sich von selbst ab."
+    },
+    "leserfolge": {
+      "t": "Wer zuerst liest",
+      "h": "Vorlagen lesen Flugmails in unter einer Sekunde."
+    },
+    "kiaktiv": {
+      "t": "KI verwenden",
+      "s": "Lesen, Spalten zuordnen, Zusammenfassungen",
+      "h": "Aus: keine KI, auch wenn Ollama eingerichtet ist."
+    },
+    "cloudorder": {
+      "t": "Reihenfolge der Cloud-KI",
+      "s": "Ollama kommt immer zuerst",
+      "h": "Versucht wird nur, wer Schlüssel und Freigabe hat."
+    },
+    "builtin": {
+      "t": "Immer dabei"
+    },
+    "olltest": {
+      "t": "Ollama prüfen"
+    },
+    "sections": {
+      "general": "Allgemein",
+      "addresses": "Adressen",
+      "passkeys": "Passkeys",
+      "features": "Was der Server anbietet",
+      "parsers": "Buchungen lesen"
+    },
+    "loadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
+    "retry": "Erneut versuchen",
+    "running": "Läuft …",
+    "groups": {
+      "general": "Allgemein",
+      "addresses": "Adressen",
+      "passkeys": "Passkeys",
+      "planLimits": "Planen: Anfragen pro Tag",
+      "parsers": "Buchungen lesen"
+    },
+    "errors": {
+      "scheme": "Ich brauche http:// oder https:// am Anfang der Adresse.",
+      "domain": "Ich brauche eine Domain, keine IP-Adresse.",
+      "limit": "Ich nehme höchstens {{max}}."
+    },
+    "publicUrlMissing": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost.",
+    "publicUrlBanner": "Die öffentliche Adresse fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost.",
+    "publicUrlBannerJump": "Adresse eintragen",
+    "deps": {
+      "needsBeta": "Der Server bietet das nur mit Beta-Funktionen an.",
+      "needsBetaJump": "Zu den Beta-Funktionen"
+    },
+    "offersLoadFailed": "Ich konnte nicht lesen, ob TravTrack und Planen angeboten werden.",
+    "limit": {
+      "ai": "KI-Anfragen",
+      "weather": "Wetter-Anfragen"
+    },
+    "importMode": {
+      "off": "Aus",
+      "all": "24 h für alle",
+      "one": "24 h für ein Konto",
+      "choose": "Konto wählen"
+    },
+    "parsers": {
+      "templateFirst": "Vorlagen zuerst",
+      "llmFirst": "KI zuerst",
+      "builtin": "Texterkennung (OCR) und Vorlagen",
+      "noOllama": "Braucht Ollama.",
+      "check": "Prüfen",
+      "testOk": "Erreichbar · gerade geprüft",
+      "testNoModel": "Erreichbar, aber das Modell {{model}} fehlt.",
+      "test_unreachable": "Ich erreiche Ollama nicht.",
+      "test_failed": "Ich konnte Ollama nicht prüfen."
+    },
+    "cloud": {
+      "loading": "Ich lese, welche Anbieter an sind …",
+      "loadFailed": "Ich konnte nicht lesen, welche Anbieter an sind.",
+      "noneEnabled": "Kein Anbieter ist an. Schalte einen unter Dienste an.",
+      "ready": "bereit",
+      "missing": "Schlüssel fehlt",
+      "open": "Öffnen",
+      "up": "{{name}} nach oben",
+      "down": "{{name}} nach unten",
+      "enable": "unter Dienste anschalten"
+    }
+  },
+  "users": {
+    "maxnutzer": {
+      "t": "Höchstens Konten"
+    },
+    "registr": {
+      "t": "Anmelden ohne Einladung",
+      "h": "Dann kann sich jeder ein Konto anlegen, bis die Höchstzahl erreicht ist."
+    },
+    "nutzerliste": {
+      "t": "Konten",
+      "h": "Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen."
+    },
+    "einlliste": {
+      "t": "Einladungen",
+      "s": "Ein Link gilt einmal und 7 Tage",
+      "h": "Per Mail geht nur, wenn der Server Mails verschickt."
+    },
+    "sections": {
+      "access": "Zugang",
+      "accounts": "Konten",
+      "invitations": "Einladungen"
+    },
+    "groups": {
+      "access": "Zugang"
+    },
+    "errors": {
+      "range": "Ich nehme Werte von {{min}} bis {{max}}.",
+      "load": "Ich konnte die Konten nicht laden.",
+      "lock": "Ich konnte das Konto nicht sperren oder freigeben.",
+      "reset2fa": "Ich konnte den zweiten Faktor nicht zurücksetzen.",
+      "delete": "Ich konnte das Konto nicht löschen.",
+      "loadInvitations": "Ich konnte die Einladungen nicht laden.",
+      "create": "Ich konnte die Einladung nicht anlegen.",
+      "resend": "Ich konnte die Mail nicht verschicken.",
+      "revoke": "Ich konnte die Einladung nicht zurückziehen."
+    },
+    "done": {
+      "delete": "{{name}} gelöscht",
+      "lock": "{{name}} gesperrt",
+      "reset2fa": "Zweiter Faktor von {{name}} zurückgesetzt"
+    },
+    "counts": "{{flights}} Flüge · {{achievements}} Erfolge",
+    "demo": "Demo",
+    "menu": "Aktionen für {{name}}",
+    "noMail": "Per Mail geht erst, wenn der Server Mails verschickt. Richte ihn unter Dienste ein.",
+    "noInvitations": "Keine Einladungen in dieser Ansicht.",
+    "linkOnly": "Nur Link",
+    "invitationMeta": "von {{creator}} · gilt bis {{until}}",
+    "status": {
+      "used": "eingelöst",
+      "expired": "abgelaufen",
+      "active": "offen"
+    }
+  },
+  "backups": {
+    "autobak": {
+      "t": "Automatisch sichern",
+      "s": "Um 02:00"
+    },
+    "baktakt": {
+      "t": "Wie oft"
+    },
+    "bakhalten": {
+      "t": "Aufheben",
+      "s": "1–365 Tage",
+      "h": "Die letzte vollständige Sicherung bleibt immer."
+    },
+    "bakzone": {
+      "t": "Zeitzone für 02:00"
+    },
+    "bakwddel": {
+      "t": "Auch auf WebDAV aufräumen"
+    },
+    "bakjetzt": {
+      "t": "Jetzt sichern"
+    },
+    "bakliste": {
+      "t": "Sicherungen",
+      "h": "Je Sicherung unter ⋯: herunterladen, hochladen, wiederherstellen, löschen."
+    },
+    "bakwdload": {
+      "t": "Sicherungen von WebDAV holen",
+      "s": "Nach einem Umzug"
+    },
+    "sections": {
+      "automatic": "Automatisch",
+      "backups": "Vorhandene Sicherungen"
+    },
+    "groups": {
+      "automatic": "Automatisch"
+    },
+    "loadFailed": "Ich konnte die Einstellungen der Sicherung nicht laden.",
+    "deps": {
+      "autoOff": "Wirkt erst mit „Automatisch sichern“.",
+      "webdavOff": "Wirkt erst mit WebDAV-Kopie."
+    },
+    "errors": {
+      "range": "Ich nehme Werte von {{min}} bis {{max}}.",
+      "download": "Ich konnte die Sicherung nicht herunterladen.",
+      "delete": "Ich konnte die Sicherung nicht löschen.",
+      "list": "Ich konnte die Sicherungen nicht laden."
+    },
+    "zoneHost": "Zeitzone des Servers ({{zone}})",
+    "zoneEffective": "Der Server sichert gerade nach {{zone}}.",
+    "job": {
+      "running": "Sichere",
+      "done": "Gesichert"
+    },
+    "now": "Jetzt sichern",
+    "restored": "Sicherung zurückgespielt",
+    "empty": "Noch keine Sicherung.",
+    "onWebdav": "auch auf WebDAV",
+    "webdavFailed": "WebDAV: Hochladen gescheitert",
+    "menu": "Aktionen für die Sicherung vom {{date}}",
+    "restoreAction": {
+      "full": "Alles zurückspielen",
+      "database": "Nur die Datenbank zurückspielen",
+      "files": "Nur die Dateien zurückspielen"
+    },
+    "restoreScope": {
+      "full": "Alle Konten: Datenbank und Dateien",
+      "database": "Alle Konten: nur die Datenbank",
+      "files": "Alle Konten: nur die Dateien"
+    },
+    "restoreFailure": {
+      "keyMismatch": "Die Sicherung nutzt einen anderen Schlüssel.",
+      "unknown": "Ich weiß nicht, ob das Zurückspielen fertig wurde: Der Server hat zwischendurch neu gestartet. Sieh bei den Sicherungen und deinen Daten nach.",
+      "incomplete": "Dem Archiv fehlt der gewählte Teil. Ich habe nichts zurückgespielt.",
+      "unreadable": "Ich kann den Dateiteil des Archivs nicht lesen. Ich habe nichts zurückgespielt.",
+      "migrationFailed": "Das Archiv ist älter und ließ sich nicht auf den Stand dieser Version bringen. Ich habe nichts verändert.",
+      "schemaIncomplete": "Ich habe das Archiv eingespielt, aber der Datenbank fehlt etwas, das diese Version braucht. Details stehen im Server-Log.",
+      "newer": "Dieses Archiv stammt aus einer neueren Version. Ich spiele es nicht ein; aktualisiere erst diesen Server.",
+      "unversioned": "Ich kann den Datenbankstand dieses Archivs keiner Version zuordnen. Ich habe nichts verändert.",
+      "busy": "Gerade läuft eine Sicherung oder ein Zurückspielen. Versuch es danach noch einmal.",
+      "rateLimited": "Ich spiele nur wenige Sicherungen pro Stunde zurück. Versuch es später noch einmal.",
+      "failed": "Ich konnte die Sicherung nicht zurückspielen."
+    }
+  },
+  "maintenance": {
+    "debug": {
+      "t": "Ausführlich protokollieren",
+      "s": "Macht den Server langsamer"
+    },
+    "loglevel": {
+      "t": "Stufe"
+    },
+    "logtage": {
+      "t": "Aufheben",
+      "s": "1–90 Tage"
+    },
+    "loghttp": {
+      "t": "Anfragen mitschreiben"
+    },
+    "logdb": {
+      "t": "Datenbank mitschreiben"
+    },
+    "logparser": {
+      "t": "Lesen mitschreiben"
+    },
+    "logfiles": {
+      "t": "Protokolldateien",
+      "s": "Ansehen, laden, löschen"
+    },
+    "logclean": {
+      "t": "Alte Protokolle löschen"
+    },
+    "sysver": {
+      "t": "Version"
+    },
+    "fulljson": {
+      "t": "Alle Daten aller Konten",
+      "s": "JSON"
+    },
+    "reseed": {
+      "t": "Kataloge neu einlesen",
+      "s": "Flughäfen, Airlines, Flugzeugtypen",
+      "h": "Höchstens dreimal pro Stunde. Selbst angelegte Einträge bleiben unberührt.",
+      "action": "Neu einlesen",
+      "running": {
+        "airports": "Lese Flughäfen ein",
+        "airlines": "Lese Airlines ein",
+        "aircraft": "Lese Flugzeugtypen ein"
+      },
+      "done": {
+        "airports": "Flughäfen aktualisiert",
+        "airlines": "{{count}} Airlines neu eingelesen",
+        "aircraft": "{{count}} Flugzeugtypen neu eingelesen"
+      },
+      "doneNoCount": {
+        "airports": "Flughäfen aktualisiert",
+        "airlines": "Airlines neu eingelesen",
+        "aircraft": "Flugzeugtypen neu eingelesen"
+      },
+      "failure": {
+        "rateLimited": "Das geht dreimal pro Stunde. Versuch es später noch einmal.",
+        "forbidden": "Dafür brauche ich einen Admin.",
+        "failed": "Ich konnte nicht neu einlesen.",
+        "statusFailed": "Ich konnte den Stand nicht lesen und weiß nicht, ob es fertig wurde.",
+        "seedingFailed": "Das Einlesen der Flughäfen ist unterwegs abgebrochen."
+      }
+    },
+    "demodel": {
+      "t": "Demo-Konto löschen"
+    },
+    "tzreport": {
+      "t": "Umstellung der Zeiten"
+    },
+    "tzresolve": {
+      "t": "Zeitzonen neu bestimmen",
+      "s": "Erst Probelauf, dann übernehmen"
+    },
+    "sections": {
+      "logging": "Protokoll",
+      "system": "System",
+      "timeModel": "Zeitzonen"
+    },
+    "logLoadFailed": "Ich konnte das Protokoll nicht laden.",
+    "systemLoadFailed": "Ich konnte die Systemdaten nicht laden.",
+    "usersLoadFailed": "Ich konnte die Konten für den Bericht nicht laden.",
+    "groups": {
+      "logging": "Protokoll"
+    },
+    "deps": {
+      "envPinned": "Vom Server-Start festgelegt (LOG_LEVEL). Wirksam: {{level}}."
+    },
+    "errors": {
+      "range": "Ich nehme Werte von {{min}} bis {{max}}.",
+      "export": "Ich konnte die Daten nicht zusammenstellen.",
+      "demo": "Ich konnte das Demo-Konto nicht löschen."
+    },
+    "nothingOld": "Keine Datei ist älter als die Aufbewahrung.",
+    "download": "Herunterladen"
   }
 }
