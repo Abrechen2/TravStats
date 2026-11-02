@@ -727,6 +727,21 @@ describe("TravPlan guest pairing by claim code (forgejo#404)", () => {
     expect((await claim(plan.planId, c)).body.code).toBe("PLAN_GUEST_CLAIM_INVALID");
   });
 
+  it("keeps the code when the phone token could not be issued (token limit)", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    for (let n = 0; n < 5; n++) {
+      const c = (await code(plan, guest.cookie)).body.code as string;
+      expect((await claim(plan.planId, c)).status).toBe(201);
+    }
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    expect((await claim(plan.planId, c)).body.code).toBe("PLAN_GUEST_PAT_LIMIT");
+    await prisma.travelPlanGuestSession.deleteMany({
+      where: { memberId: guest.memberId, kind: "pat" },
+    });
+    expect((await claim(plan.planId, c)).status).toBe(201);
+  });
+
   it("retires an earlier unused code when a new one is minted", async () => {
     const plan = await newPlan();
     const guest = await joinGuest(plan);

@@ -32,20 +32,20 @@ export async function mintClaimCode(input: {
 }): Promise<{ code: string; expiresAt: Date }> {
   const code = newCode();
   const expiresAt = new Date(Date.now() + CLAIM_MINUTES * 60_000);
-  await prisma.$transaction([
+  await prisma.$transaction(async (tx) => {
+    // The member row is the lock, so two quick requests cannot both leave a code behind.
+    await tx.$queryRaw`SELECT id FROM travel_plan_members WHERE id = ${input.memberId} FOR UPDATE`;
     // One open code per member: a fresh QR retires the one before it.
-    prisma.travelPlanGuestClaim.deleteMany({
-      where: { memberId: input.memberId, usedAt: null },
-    }),
-    prisma.travelPlanGuestClaim.create({
+    await tx.travelPlanGuestClaim.deleteMany({ where: { memberId: input.memberId, usedAt: null } });
+    await tx.travelPlanGuestClaim.create({
       data: {
         memberId: input.memberId,
         planId: input.planId,
         codeHash: hashToken(code),
         expiresAt,
       },
-    }),
-  ]);
+    });
+  });
   return { code, expiresAt };
 }
 
@@ -54,9 +54,10 @@ export async function redeemClaimCode(
   rawCode: string
 ): Promise<{ token: string; expiresAt: Date }> {
   // The single atomic step: only one caller can flip `usedAt`, whatever else happens next.
+  const codeHash = hashToken(normaliseCode(rawCode));
   const claimed = await prisma.travelPlanGuestClaim.updateManyAndReturn({
     where: {
-      codeHash: hashToken(normaliseCode(rawCode)),
+      codeHash,
       planId,
       usedAt: null,
       expiresAt: { gt: new Date() },
@@ -65,8 +66,19 @@ export async function redeemClaimCode(
     select: { memberId: true },
   });
   if (claimed.length !== 1) throw invalid();
+  try {
+    return await issueFor(claimed[0].memberId, planId);
+  } catch (error) {
+    // A token the person never received must not cost them the code (limit reached, database
+    // hiccup). A refusal that says the member is gone also frees it; it expires on its own.
+    await prisma.travelPlanGuestClaim.updateMany({ where: { codeHash }, data: { usedAt: null } });
+    throw error;
+  }
+}
+
+async function issueFor(memberId: string, planId: string) {
   const member = await prisma.travelPlanMember.findUnique({
-    where: { id: claimed[0].memberId },
+    where: { id: memberId },
     select: { id: true, planId: true, kind: true, status: true, remoteOrigin: true },
   });
   if (
