@@ -170,6 +170,9 @@ reg(
     planId: uuid,
     tripId: uuid,
     planName: z.string(),
+    hostName: z.string(),
+    ownerName: z.string().nullable(),
+    expiresAt: z.string().datetime(),
     memberId: uuid,
     displayName: z.string(),
     origin: z.string(),
@@ -190,9 +193,23 @@ reg(
 reg(
   "post",
   "/guest/plans/{planId}/pat",
-  "Mint a phone token for this plan (browser session only, five at most). Shown once.",
+  "Mint a phone token for this plan (browser session only, five at most). Shown once. The token lives 90 days (`expiresAt`); a phone should prefer the claim-code flow below.",
   z.object({ token: z.string(), expiresAt: z.string().datetime() }),
   { guest: true, status: 201, params: planId }
+);
+reg(
+  "post",
+  "/guest/plans/{planId}/pat/code",
+  "Mint a one-time pairing code for the Companion's QR (browser session only; a phone token gets 403 PLAN_GUEST_REQUIRED). Single use, valid five minutes, stored hashed; a new code retires the member's earlier unused one.",
+  z.object({ code: z.string(), expiresAt: z.string().datetime() }),
+  { guest: true, status: 201, params: planId }
+);
+reg(
+  "post",
+  "/guest/plans/{planId}/pat/claim",
+  "No credential. Redeems a pairing code once for a phone token (90 days). 400 PLAN_GUEST_CLAIM_INVALID is the one answer for an unknown, used, expired or other plan's code and for a member who is no longer active. Rate limited per address.",
+  z.object({ token: z.string(), expiresAt: z.string().datetime() }),
+  { guest: true, status: 201, params: planId, body: z.object({ code: z.string() }) }
 );
 reg(
   "get",

@@ -359,7 +359,12 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/sharing/inbox/count",
-  summary: "Open consent requests plus unread sharing notices",
+  summary: "Open consent requests, unread sharing notices and open remote offers",
   tags,
-  responses: { 200: ok("The inbox badge's share", z.object({ count: z.number().int() })) },
+  responses: {
+    200: ok(
+      "The inbox badge's share. `count` includes `remoteOffers` (the offers GET /sharing/remote/offers lists; 0 while cross-server trip sharing is off).",
+      z.object({ count: z.number().int(), remoteOffers: z.number().int() })
+    ),
+  },
 });

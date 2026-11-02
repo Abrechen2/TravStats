@@ -5863,6 +5863,7 @@ model TravelPlanMember {
   invites   TravelPlanGuestInvite[]
   joins     TravelPlanGuestJoin[]
   sessions  TravelPlanGuestSession[]
+  claims    TravelPlanGuestClaim[]
   documents TravelPlanDocument[]
 
   @@unique([planId, userId])
@@ -6817,22 +6818,43 @@ model TravelPlanGuestJoin {
 /// `ts_gpat_` bearer for the phone). Only the hash is stored; `peerFingerprint` is the pin of
 /// the guest's server at the time, so a re-pinned key ends the session without anybody looking.
 model TravelPlanGuestSession {
-  id              String   @id @default(uuid())
-  memberId        String   @map("member_id")
-  planId          String   @map("plan_id")
+  id              String    @id @default(uuid())
+  memberId        String    @map("member_id")
+  planId          String    @map("plan_id")
   /// session | pat
   kind            String
-  tokenHash       String   @unique @map("token_hash")
-  peerFingerprint String   @map("peer_fingerprint")
-  expiresAt       DateTime @map("expires_at")
-  lastUsedAt      DateTime @default(now()) @map("last_used_at")
-  createdAt       DateTime @default(now()) @map("created_at")
+  tokenHash       String    @unique @map("token_hash")
+  peerFingerprint String    @map("peer_fingerprint")
+  expiresAt       DateTime  @map("expires_at")
+  lastUsedAt      DateTime  @default(now()) @map("last_used_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  /// Set when the owner ended the guest's access (or the guest left): the row stays until it would
+  /// have expired so the door can answer "revoked" instead of "never heard of it".
+  revokedAt       DateTime? @map("revoked_at")
 
   member TravelPlanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
   @@index([expiresAt])
   @@map("travel_plan_guest_sessions")
+}
+
+/// A one-time claim code a browser guest session mints so the Companion can pair by scanning a QR
+/// (forgejo#404): short-lived, single use, only the hash is stored. Redeeming it yields a `pat`.
+model TravelPlanGuestClaim {
+  id        String    @id @default(uuid())
+  memberId  String    @map("member_id")
+  planId    String    @map("plan_id")
+  codeHash  String    @unique @map("code_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  member TravelPlanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([expiresAt])
+  @@map("travel_plan_guest_claims")
 }
 
 /// A document a member put on the plan's trip (spec §6.8, D6). A member reads only the documents

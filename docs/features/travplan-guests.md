@@ -43,7 +43,23 @@ H's admin pinned for the origin the vouch names, and it re-checks that pin on **
    member becomes `active` (`remote_subject = sub`) and H issues the session: cookie `ts_guest`
    (HttpOnly, SameSite=Lax, `Secure` by the instance's cookie rule, path `/api/v1/guest`), 30 days
    sliding, only a hash stored, remembering the **fingerprint of the issuer's pinned key**.
-5. Phone: a browser session may mint up to five `ts_gpat_…` tokens for the same plan (90 days).
+5. Phone: the browser session shows a QR holding a **claim code**, never a token. The Companion
+   scans it in-app and redeems the code once for a `ts_gpat_…` token (**90 days**, `expiresAt` in the
+   response; at most five open tokens per member).
+   - `POST /api/v1/guest/plans/:planId/pat/code` (browser session only; a phone token gets 403
+     `PLAN_GUEST_REQUIRED`) → 201 `{code, expiresAt}`. 10 symbols from a 30-symbol alphabet, valid 5
+     minutes, single use, stored as a SHA-256 hash, bound to member and plan. A new code retires the
+     member's unused one.
+   - `POST /api/v1/guest/plans/:planId/pat/claim {code}` (no credential, 10 attempts per 10 minutes
+     per masked address) → 201 `{token, expiresAt}`. Unknown, used, expired, another plan's code and
+     a member who is no longer active all answer 400 `PLAN_GUEST_CLAIM_INVALID`: no oracle.
+   - QR payload (JSON read in-app, not a URL, so no OS handler opens it):
+     `{"v":1,"k":"guest","u":<host origin>,"p":<planId>,"c":<code>,"n":<host display name>}`.
+   - `POST /pat` (direct token) stays for existing clients; new clients use the code.
+   - Refusals at the guest door: `PLAN_GUEST_REVOKED` (access ended by the owner or the guest, pin
+     withdrawn; ended credentials are kept as tombstones until they would have expired) versus
+     `PLAN_GUEST_EXPIRED`. After the nightly sweep removes an expired row it is
+     `PLAN_GUEST_REQUIRED` again.
 
 ## Principals and isolation
 
@@ -96,7 +112,9 @@ member, ≤ 10 non-owner members per plan, ≤ 20 remote members per host.
 | Non-canonical encodings | only the canonical spelling verifies |
 | Open redirect | G redirects only to a verified peer, to a fixed path; the page also checks the origin |
 | Invitation guessing / probing | 256-bit secret, hashed, constant-time compare, one answer for every failure, rate limited |
-| Token theft from the host's database | only hashes stored |
+| Token theft from the host's database | only hashes stored (tokens and claim codes) |
+| QR screenshot / shoulder-surf of the pairing QR | holds a claim code, not a credential: one use, 5 minutes, one plan; redeeming it elsewhere first is visible to the guest as a failed scan. Not a URL, so the OS opens nothing |
+| Guessing a claim code | 30^10 values, 5-minute life, 10 tries per address and 10 minutes, one answer for every failure |
 | Stolen guest cookie | scoped to one plan, ends with the member, the pin or the 30-day idle expiry; no way to the owner's account |
 | Malicious guest content | all plan JSON is Zod-validated like any member's; documents are sandboxed attachments |
 | Guest exhausting the owner's quota | per-day owner limits apply; per-member rate limits |

@@ -25,6 +25,9 @@ export interface GuestSessionInfo {
   planId: string;
   tripId: string;
   planName: string;
+  hostName: string;
+  ownerName: string | null;
+  expiresAt: string;
   memberId: string;
   displayName: string;
   origin: string;
@@ -77,9 +80,13 @@ export const travplanGuestsApi = {
     return { blob: res.data, filename: match?.[1] ?? "reise.travstats" };
   },
   leave: async () => (await guestHttp.post<{ left: true }>("/guest/leave")).data,
-  phoneToken: async (planId: string) =>
-    (await guestHttp.post<{ token: string; expiresAt: string }>("/guest/plans/" + planId + "/pat"))
-      .data,
+  /** A one-time pairing code for the Companion's QR; never the phone token itself. */
+  pairingCode: async (planId: string) =>
+    (
+      await guestHttp.post<{ code: string; expiresAt: string }>(
+        "/guest/plans/" + planId + "/pat/code"
+      )
+    ).data,
 };
 
 /** Plan documents for a co-planner on this server (`user`) or a guest (the guest door). */

@@ -12,6 +12,7 @@ import fs from "node:fs";
 import { z } from "zod";
 import {
   assertPathPlan,
+  claimLimiter,
   authenticateGuest,
   guestLimiter,
   joinLimiter,
@@ -56,6 +57,11 @@ import {
   completeJoin,
   startJoin,
 } from "../services/travplan/guests/invites";
+import { mintClaimCode, redeemClaimCode } from "../services/travplan/guests/claims";
+import { getInstanceSettings } from "../services/instanceSettingsService";
+import { guestIdentity } from "../services/travplan/guests/peers";
+import { PERSON_SELECT, toPerson } from "../services/sharing/people";
+import { prisma } from "../db";
 import {
   GUEST_COOKIE,
   endCredential,
@@ -131,6 +137,26 @@ router.post(
   })
 );
 
+// Pairing a phone (forgejo#404): the code is the credential, so the door is the code itself.
+// Unknown, used, expired, another plan's and a revoked member's code all answer one refusal.
+router.post(
+  "/plans/:planId/pat/claim",
+  claimLimiter,
+  route(async (req, res) => {
+    await assertTravPlanOffered();
+    await assertEnabled();
+    const planId = uuid.safeParse(req.params.planId);
+    const body = z
+      .object({ code: z.string().min(6).max(40) })
+      .strict()
+      .safeParse(req.body);
+    if (!planId.success || !body.success)
+      throw new AppError("That code is not valid", 400, "PLAN_GUEST_CLAIM_INVALID");
+    const pat = await redeemClaimCode(planId.data, body.data.code);
+    res.status(201).json({ token: pat.token, expiresAt: pat.expiresAt.toISOString() });
+  })
+);
+
 // ---- Everything below is one guest on one plan. ----------------------------------------------
 router.use(authenticateGuest, guestLimiter);
 
@@ -139,10 +165,18 @@ router.get(
   route(async (req, res) => {
     const g = req.guest!;
     const access = await planAccess(actorOf(req), g.tripId);
+    const [settings, identity, owner] = await Promise.all([
+      getInstanceSettings(),
+      guestIdentity(),
+      prisma.user.findUnique({ where: { id: access.ownerId }, select: PERSON_SELECT }),
+    ]);
     res.json({
       planId: g.planId,
       tripId: g.tripId,
       planName: access.row.trip.name,
+      hostName: settings.instanceName?.trim() || new URL(identity.origin).host,
+      ownerName: owner ? toPerson(owner).displayName : null,
+      expiresAt: g.expiresAt.toISOString(),
       memberId: g.memberId,
       displayName: g.displayName,
       origin: g.origin,
@@ -188,6 +222,22 @@ router.post(
       origin: req.guest!.origin,
     });
     res.status(201).json({ token: pat.token, expiresAt: pat.expiresAt.toISOString() });
+  })
+);
+
+// A one-time code for the Companion's QR; the phone token itself never leaves the server until
+// the phone redeems the code at `/pat/claim`.
+router.post(
+  "/plans/:planId/pat/code",
+  route(async (req, res) => {
+    if (req.guest!.kind !== "session")
+      throw new AppError(
+        "Only a browser session may mint a pairing code",
+        403,
+        "PLAN_GUEST_REQUIRED"
+      );
+    const claim = await mintClaimCode({ memberId: req.guest!.memberId, planId: req.guest!.planId });
+    res.status(201).json({ code: claim.code, expiresAt: claim.expiresAt.toISOString() });
   })
 );
 

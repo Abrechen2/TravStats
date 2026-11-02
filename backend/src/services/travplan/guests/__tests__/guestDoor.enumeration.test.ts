@@ -111,6 +111,8 @@ describe("the guest door", () => {
     expect(guestEndpoints.length).toBeGreaterThan(10);
     for (const e of guestEndpoints) {
       if (e.path.startsWith("/guest/join/")) continue;
+      // The claim code is its own credential; its refusal is pinned in guests.integration.test.ts.
+      if (e.path.endsWith("/pat/claim")) continue;
       const method = e.method as "get" | "post" | "put" | "patch" | "delete";
       const url = "/api/v1" + e.path.replace(/\{[^}]+\}/g, () => randomUUID());
       const r = await request(app)[method](url).send({});

@@ -178,6 +178,7 @@
     "PLAN_GUEST_LIMIT": "Too many guests are already invited on this server (at most 20).",
     "PLAN_GUEST_RATE_LIMITED": "Too many requests in a short time. Wait a moment.",
     "PLAN_GUEST_CSRF": "This request did not come from the TravStats page and was refused. Reload the page.",
+    "PLAN_GUEST_CLAIM_INVALID": "This pairing code is not valid (any more). It has expired or was already used. Create a new one in the browser.",
     "PLAN_GUEST_PAT_LIMIT": "You already have five phone tokens. Sign out to make room.",
     "PLAN_DOCUMENT_LIMIT": "You have already uploaded 50 documents for this plan.",
     "PLAN_DOCUMENT_DUPLICATE": "This file is already in the owner's trip and is not added a second time.",
@@ -712,7 +713,8 @@
     "exportFailed": "The file could not be created. Please try again.",
     "phone": {
       "open": "Pair phone",
-      "hint": "Scan the code with the TravStats app. It works for this plan only and is shown once."
+      "hint": "Scan the code in the TravStats app. It works for this plan only and can be redeemed once.",
+      "expires": "The code is valid for about {{minutes}} more minutes. After that, tap \"Pair phone\" again."
     },
     "ended": {
       "title": "Your access has ended",

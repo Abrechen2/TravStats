@@ -15,6 +15,7 @@ import {
   requestConsent,
   withdrawConsent,
 } from "../services/sharing/consent";
+import { countReceivedOffers } from "../services/sharing/federation/offerInbox";
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
 import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
@@ -190,7 +191,13 @@ router.post(
 router.get(
   "/inbox/count",
   handle(async (req, res) => {
-    res.json({ success: true, data: { count: await inboxCount(req.userId!) } });
+    // `remoteOffers` is already inside `count`; it is named so a client that counted them itself
+    // can stop (its presence is the signal).
+    const [local, remoteOffers] = await Promise.all([
+      inboxCount(req.userId!),
+      countReceivedOffers(req.userId!),
+    ]);
+    res.json({ success: true, data: { count: local + remoteOffers, remoteOffers } });
   })
 );
 
