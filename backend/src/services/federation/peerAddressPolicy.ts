@@ -127,7 +127,7 @@ function check(list: BlockList, address: string): boolean {
 export function listedPrivateAddress(address: string): boolean {
   const list = privateList();
   const a = bareHost(address);
-  return list !== null && !check(never, a) && check(list, a);
+  return list !== null && !publicAddress(a) && !check(never, a) && check(list, a);
 }
 
 /** An address a peer may be reached at: public, or (opt-in) inside a listed range. */

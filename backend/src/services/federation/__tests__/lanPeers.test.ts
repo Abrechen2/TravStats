@@ -219,6 +219,15 @@ describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
     });
   });
 
+  it("refuses an explicit port on a name with a public answer, and a CIDR that covers public space", async () => {
+    jest.mocked(lookup).mockResolvedValue([{ address: "8.8.8.8", family: 4 }] as never);
+    await expect(exchange("https://pub.example:8443", { action: "ping" })).rejects.toMatchObject({
+      kind: "private-address",
+    });
+    process.env[ENV] = "0.0.0.0/0";
+    expect(listedPrivateAddress("8.8.8.8")).toBe(false);
+  });
+
   it("refuses an IPv6 literal outside the list and a loopback literal", async () => {
     await expect(exchange("http://[fd01::5]:3010", { action: "ping" })).rejects.toBeInstanceOf(
       PeerRefusal

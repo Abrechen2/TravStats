@@ -32,8 +32,8 @@ FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8
 With it set, a peer origin (connection file, QR, admin pin, envelope) and this server's own
 origin may be `http://192.168.178.187:3010`: http and explicit ports are allowed, an IP literal
 must lie in a listed range, and a DNS name must resolve only to listed or public addresses.
-Plain http is used only when every answer is in a listed range; a name with a public answer
-needs https. Loopback, link-local (169.254.169.254 included), unspecified and multicast stay
+Plain http or an explicit port is used only when every answer is in a listed (non-public)
+range; a name with a public answer needs https on port 443. Loopback, link-local (169.254.169.254 included), unspecified and multicast stay
 refused even if a CIDR covers them. An invalid entry is ignored with a boot warning; the list is
 logged once. Signatures, key pinning, nonces and admission are unchanged. Unset = no change.
 

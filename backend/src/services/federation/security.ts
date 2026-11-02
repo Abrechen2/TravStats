@@ -111,10 +111,14 @@ export async function exchange(
       await lookup(host, { all: true }).catch(() => {
         throw refused("unreachable");
       });
-  // Every answer must be public or in a listed range; plain http only where NONE is public.
+  // Every answer must be public or in a listed range; plain http or an explicit port only where
+  // NONE is public (the opt-in is for LAN peers, not for other ports on the internet).
   if (!answers.length || !answers.every((a) => peerAddressAllowed(a.address)))
     throw refused("private-address");
-  if (url.protocol === "http:" && !answers.every((a) => listedPrivateAddress(a.address)))
+  if (
+    (url.protocol === "http:" || url.port) &&
+    !answers.every((a) => listedPrivateAddress(a.address))
+  )
     throw refused("private-address");
   const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
   const bytes = Buffer.from(JSON.stringify(outgoing));
