@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
-import { travplanApi, type PlanSummary } from "../../lib/api/travplan";
+import { travplanApi, type PlanInvitation, type PlanSummary } from "../../lib/api/travplan";
+import { apiErrorMachineCode } from "../../lib/apiError";
 import { PlanCreate } from "./PlanCreate";
 import { shortDay } from "./route/RouteTimeline";
 import {
@@ -23,14 +24,25 @@ export function PlanList() {
     [plans, setPlans] = useState<PlanSummary[]>([]),
     [enabled, setEnabled] = useState<boolean | null>(null),
     [error, setError] = useState(""),
+    [invitations, setInvitations] = useState<PlanInvitation[]>([]),
     [create, setCreate] = useState(false);
+  async function answer(invitation: PlanInvitation, accept: boolean) {
+    try {
+      await travplanApi.answerInvitation(invitation.memberId, accept ? "accept" : "decline");
+      setInvitations((all) => all.filter((i) => i.memberId !== invitation.memberId));
+      if (accept) setPlans(await travplanApi.list());
+    } catch (cause) {
+      setError(t("errors." + apiErrorMachineCode(cause), { defaultValue: t("errors.unknown") }));
+    }
+  }
   useEffect(() => {
     let live = true;
-    Promise.all([travplanApi.list(), travplanApi.capabilities()])
-      .then(([rows, caps]) => {
+    Promise.all([travplanApi.list(), travplanApi.capabilities(), travplanApi.invitations()])
+      .then(([rows, caps, open]) => {
         if (live) {
           setPlans(rows);
           setEnabled(caps.enabled);
+          setInvitations(open);
         }
       })
       .catch(() => {
@@ -57,6 +69,15 @@ export function PlanList() {
       />
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
       {enabled === false && <PlanNotice>{t("disabled")}</PlanNotice>}
+      {invitations.map((i) => (
+        <PlanNotice key={i.memberId}>
+          <p>{t("members.invitation", { owner: i.ownerName, plan: i.planName })}</p>
+          <Button variant="primary" onClick={() => void answer(i, true)}>
+            {t("members.accept")}
+          </Button>{" "}
+          <Button onClick={() => void answer(i, false)}>{t("members.decline")}</Button>
+        </PlanNotice>
+      ))}
       <PlanGrid>
         {plans.map((p) => (
           <HeroCard key={p.id}>
@@ -67,6 +88,9 @@ export function PlanList() {
                 </StatusPill>
               </div>
               <h2 className="t-card-title">{p.name}</h2>
+              {p.role === "editor" && (
+                <p className="t-caption">{t("members.sharedBy", { owner: p.ownerName ?? "" })}</p>
+              )}
               <p className="t-body">
                 {p.destination} ·{" "}
                 {[shortDay(p.startDay), shortDay(p.endDay)].filter(Boolean).join(" – ")}

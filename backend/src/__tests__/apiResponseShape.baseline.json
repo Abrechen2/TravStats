@@ -133,6 +133,7 @@
     "training.ts",
     "travplan.ts",
     "travplan/importPolicy.ts",
+    "travplan/memberEndpoints.ts",
     "travplan/routeEndpoints.ts",
     "travtrack.ts",
     "travtrack/day.ts",

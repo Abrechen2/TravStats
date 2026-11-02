@@ -1,6 +1,12 @@
 import { appLocale } from "../../lib/units";
 import type { TravelDocument } from "../../lib/api/documents";
-import type { PlanCollection, PlanOperation, PlanState, PlanView } from "../../lib/api/travplan";
+import type {
+  PlanCollection,
+  PlanMember,
+  PlanOperation,
+  PlanState,
+  PlanView,
+} from "../../lib/api/travplan";
 import type { EditorState } from "./PlanEditor";
 
 /** What every planning section reads from the page that owns the plan. */
@@ -24,6 +30,8 @@ export interface PlanCtx {
   setWeatherBusy: (busy: boolean) => void;
   suggestions: string[];
   setSuggestions: (suggestions: string[]) => void;
+  /** Everyone on the plan the caller may see; just the caller until the roster has loaded. */
+  members: PlanMember[];
 }
 
 const MAX_CALENDAR_DAYS = 366;

@@ -134,6 +134,11 @@ export const packingSchema = z
     scope: z.enum(["personal", "shared"]),
     note: text(1000),
     manual: z.boolean(),
+    /**
+     * Personal item: whose it is (visible to that member only; null = the owner's, as every
+     * item was before members). Shared item: who brings it, or null for nobody yet.
+     */
+    ownerMemberId: id.nullable().default(null),
   })
   .strict();
 export const taskSchema = z
@@ -147,9 +152,13 @@ export const costSchema = z
     currency,
     paid: money,
     kind: z.enum(["estimate", "booked"]),
+    /** Members the cost is split between; empty = not split (the trip total only). */
+    splitMemberIds: z.array(id).max(20).default([]),
   })
   .strict()
   .refine((v) => v.amount === null || v.paid <= v.amount);
+/** One member's private note on the plan; shown to that member only (spec §6.2). */
+export const memberNoteSchema = z.object({ memberId: id, text: text(2000) }).strict();
 export const decisionSchema = z
   .object({
     id: text(200).min(1),
@@ -337,6 +346,7 @@ export const stateSchema = settingsSchema
     packing: z.array(packingSchema).max(200),
     tasks: z.array(taskSchema).max(200),
     costs: z.array(costSchema).max(200),
+    memberNotes: z.array(memberNoteSchema).max(20).default([]),
     decisions: z.array(decisionSchema).max(500),
     forecast: forecastSchema.nullable(),
     stations: z.array(stationSchema).max(60),
@@ -514,6 +524,7 @@ const operationSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z.object({ type: z.literal("handover") }).strict(),
+  z.object({ type: z.literal("member_note"), text: text(2000) }).strict(),
   z.object({ type: z.literal("station_handover"), stationId: id }).strict(),
   z.object({ type: z.literal("station_withdraw"), stationId: id }).strict(),
   z.object({ type: z.literal("execution"), id, execution: itemSchema.shape.execution }).strict(),
@@ -572,6 +583,7 @@ export function emptyState(): PlanState {
     packing: [],
     tasks: [],
     costs: [],
+    memberNotes: [],
     decisions: [],
     forecast: null,
     stations: [],

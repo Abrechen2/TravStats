@@ -7,10 +7,11 @@ import { PackingProfile } from "../PackingProfile";
 import WeatherLocation from "../WeatherLocation";
 import { newEntry } from "../editorModel";
 import { entryRecord, type PlanCtx } from "../planContext";
+import { BringsSelect } from "../MemberPanels";
 
 function PackingList({ ctx }: { ctx: PlanCtx }) {
   const { t } = useTranslation("travplan"),
-    { state, busy, edit, mutate } = ctx;
+    { state, busy, edit, mutate, members } = ctx;
   return (
     <Card>
       <PlanCardHead
@@ -42,6 +43,20 @@ function PackingList({ ctx }: { ctx: PlanCtx }) {
               </small>
             </PlanCheck>
           </PlanGrow>
+          {p.scope === "shared" && (
+            <BringsSelect
+              value={p.ownerMemberId}
+              members={members}
+              disabled={busy}
+              onChange={(ownerMemberId) =>
+                void mutate({
+                  type: "upsert",
+                  collection: "packing",
+                  value: entryRecord({ ...p, ownerMemberId }),
+                })
+              }
+            />
+          )}
           <Button onClick={() => edit("packing", p)}>{t("edit")}</Button>
           <Button
             disabled={busy}

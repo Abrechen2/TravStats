@@ -28,6 +28,7 @@ import { packingSuggestions } from "../services/travplan/rules";
 import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
+import memberEndpoints from "./travplan/memberEndpoints";
 import {
   assertTravPlanForUser,
   assertTravPlanOffered,
@@ -35,6 +36,7 @@ import {
   travPlanUserEnabled,
 } from "../services/travplan/availability";
 import { planVersusActual } from "../services/travplan/actual/planActual";
+import { accessiblePlan, assertOwner, planAccess } from "../services/travplan/access";
 import { planActualLimiter } from "../middleware/planActualLimit";
 const router = Router();
 const uuid = z.string().uuid();
@@ -90,6 +92,7 @@ router.use("/travplan", (req: AuthRequest, res, next) => {
 });
 router.use("/trips/:tripId/plan", userGate);
 router.use(routeEndpoints);
+router.use(memberEndpoints);
 const tripId = (req: AuthRequest) => uuid.parse(req.params.tripId);
 router.get(
   "/travplan/config",
@@ -145,7 +148,9 @@ router.get(
   authenticate,
   route(async (req, res) => {
     const result = await readPlan(req.userId!, tripId(req));
-    res.setHeader("ETag", '"' + result.revision + '"');
+    // Per principal: the view leaves out other members' personal parts, so one revision is two
+    // different bodies for two members. A client sends it back as If-None-Match; 304 = unchanged.
+    res.setHeader("ETag", '"' + result.revision + "-" + (result.self?.memberId ?? "") + '"');
     res.json(result);
   })
 );
@@ -174,7 +179,7 @@ router.get(
   "/trips/:tripId/plan/proposals",
   authenticate,
   route(async (req, res) => {
-    const plan = await ownedPlan(req.userId!, tripId(req));
+    const plan = await accessiblePlan(req.userId!, tripId(req));
     const rows = await prisma.travelPlanProposal.findMany({
       where: { planId: plan.id },
       orderBy: { createdAt: "desc" },
@@ -201,6 +206,7 @@ router.post(
       .object({ request: z.string().trim().min(1).max(1000) })
       .strict()
       .parse(req.body);
+    assertOwner(await planAccess(req.userId!, tripId(req)));
     res.status(201).json(await generateProposal(req.userId!, tripId(req), body.request));
   })
 );
@@ -208,6 +214,7 @@ router.delete(
   "/trips/:tripId/plan/proposals/:proposalId",
   ...writeGuard,
   route(async (req, res) => {
+    assertOwner(await planAccess(req.userId!, tripId(req)));
     const plan = await ownedPlan(req.userId!, tripId(req));
     const changed = await prisma.travelPlanProposal.updateMany({
       where: { id: uuid.parse(req.params.proposalId), planId: plan.id, status: "pending" },
@@ -244,7 +251,7 @@ router.get(
   "/trips/:tripId/plan/packing-suggestions",
   authenticate,
   route(async (req, res) => {
-    const plan = await ownedPlan(req.userId!, tripId(req));
+    const plan = await accessiblePlan(req.userId!, tripId(req));
     res.json({ suggestions: packingSuggestions(parseState(plan.state)) });
   })
 );

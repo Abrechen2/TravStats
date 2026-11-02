@@ -190,6 +190,10 @@ describe("plan state v2 upgrade", () => {
       roadtripId: null,
       stationLinks: [],
       stationWeather: [],
+      // Members (forgejo#404): a v1 plan has none, and its packing and costs belong to no one.
+      memberNotes: [],
+      packing: v1.packing.map((p) => ({ ...p, ownerMemberId: null })),
+      costs: v1.costs.map((c) => ({ ...c, splitMemberIds: [] })),
       items: v1.items.map((i) => ({ ...i, stationId: null })),
       bookings: v1.bookings.map((b) => ({
         ...b,

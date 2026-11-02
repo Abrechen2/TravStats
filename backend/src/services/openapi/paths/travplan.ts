@@ -40,6 +40,31 @@ const result = registry.register(
       })
     ),
     lastMutationId: uuid.optional(),
+    lastMutation: z
+      .object({
+        id: uuid,
+        actor: z.object({ memberId: uuid, displayName: z.string() }).nullable(),
+        createdAt: z.string().datetime(),
+        summary: z.string(),
+      })
+      .optional(),
+    self: z
+      .object({
+        memberId: uuid,
+        kind: z.enum(["owner", "local", "remote"]),
+        isOwner: z.boolean(),
+      })
+      .optional(),
+    memberShares: z
+      .array(
+        z.object({
+          memberId: uuid,
+          displayName: z.string(),
+          ok: z.boolean(),
+          code: z.string().optional(),
+        })
+      )
+      .optional(),
   })
 );
 const proposal = z.object({
@@ -397,4 +422,131 @@ register(
   "/trips/{tripId}/plan",
   "Delete the plan (owner only). Removes the plan document, its undo receipts and AI proposals. The trip and every logbook record stay - a plan is not travel evidence.",
   z.object({ deleted: z.literal(true) })
+);
+
+// Co-planners on this server (forgejo#404, spec §6.1-6.6).
+const self = z.object({
+  memberId: uuid,
+  kind: z.enum(["owner", "local", "remote"]),
+  isOwner: z.boolean(),
+});
+const member = z.object({
+  id: uuid,
+  kind: z.enum(["owner", "local", "remote"]),
+  displayName: z.string(),
+  username: z.string().nullable(),
+  role: z.enum(["owner", "editor"]),
+  status: z.enum(["invited", "active", "left", "revoked"]),
+  createdAt: z.string().datetime(),
+  decidedAt: z.string().datetime().nullable(),
+  shared: z.boolean(),
+});
+const memberShare = z.object({
+  memberId: uuid,
+  displayName: z.string(),
+  ok: z.boolean(),
+  code: z.string().optional(),
+});
+function registerMember(
+  method: "get" | "post" | "delete",
+  path: string,
+  description: string,
+  success: z.ZodType,
+  options: { status?: 200 | 201; body?: z.ZodType; extra?: z.ZodRawShape } = {}
+) {
+  registry.registerPath({
+    method,
+    path,
+    tags: ["TravPlan"],
+    description,
+    security: [{ BearerAuth: [] }],
+    request: {
+      ...(path.includes("{tripId}") ? { params: params.extend(options.extra ?? {}) } : {}),
+      ...(!path.includes("{tripId}") && options.extra ? { params: z.object(options.extra) } : {}),
+      ...(options.body ? { body: { content: json(options.body) } } : {}),
+    },
+    responses: {
+      [options.status ?? 200]: { description: "Success", content: json(success) },
+      400: { description: "Invalid input", content: errorContent },
+      403: {
+        description: "Owner-only act, missing consent or read-only scope",
+        content: errorContent,
+      },
+      404: { description: "Not found, or not a member", content: errorContent },
+      409: { description: "Duplicate, limit or owner cannot leave", content: errorContent },
+    },
+  });
+}
+registerMember(
+  "get",
+  "/trips/{tripId}/plan/collab",
+  "Who is on the plan, as whom the caller acts, and the unread notices of what other members changed. A member sees active members only and no usernames; the owner sees everyone.",
+  z.object({
+    self,
+    members: z.array(member),
+    notices: z.array(
+      z.object({
+        id: uuid,
+        actorName: z.string(),
+        summary: z.string(),
+        createdAt: z.string().datetime(),
+      })
+    ),
+  })
+);
+registerMember(
+  "post",
+  "/trips/{tripId}/plan/notices/read",
+  "Marks the caller's notices read.",
+  z.object({ read: z.number().int() })
+);
+registerMember(
+  "post",
+  "/trips/{tripId}/plan/members",
+  "Owner: invite an account on this server by username. Needs the sharing consent accepted in both directions (403 PLAN_MEMBER_CONSENT_MINE / PLAN_MEMBER_CONSENT_THEIRS names whose answer is missing).",
+  member,
+  { status: 201, body: z.object({ username: z.string() }) }
+);
+registerMember(
+  "delete",
+  "/trips/{tripId}/plan/members/{memberId}",
+  "Owner: remove a member or withdraw an open invitation. Their past changes keep their name.",
+  z.object({ revoked: z.literal(true) }),
+  { extra: { memberId: uuid } }
+);
+registerMember(
+  "post",
+  "/trips/{tripId}/plan/members/{memberId}/share",
+  "Owner: give one member the linked copy of the trip now. A refusal comes back as `ok: false` with its code.",
+  memberShare,
+  { extra: { memberId: uuid } }
+);
+registerMember(
+  "post",
+  "/trips/{tripId}/plan/leave",
+  "A member leaves the plan. The owner deletes the plan instead (409 PLAN_OWNER_CANNOT_LEAVE).",
+  z.object({ left: z.literal(true) })
+);
+registerMember(
+  "get",
+  "/travplan/invitations",
+  "Open invitations to plan together.",
+  z.object({
+    invitations: z.array(
+      z.object({
+        memberId: uuid,
+        tripId: uuid,
+        planName: z.string(),
+        ownerName: z.string(),
+        createdAt: z.string().datetime(),
+      })
+    ),
+  })
+);
+registerMember(
+  "post",
+  "/travplan/invitations/{memberId}/{answer}",
+  "Accept or decline an invitation (`answer` is `accept` or `decline`).",
+  z.object({ status: z.enum(["active", "left"]) }),
+  { extra: { memberId: uuid, answer: z.enum(["accept", "decline"]) } }
 );

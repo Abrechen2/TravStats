@@ -6,8 +6,9 @@
  */
 import { AppError } from "../../middleware/errorHandler";
 import { fetchOpenData, isOpenDataEnabled } from "../openData/http";
-import { configuration, reserveUsage, ownedPlan, hash, assertEnabled } from "./store";
+import { configuration, reserveUsage, hash, assertEnabled } from "./store";
 import { commitWeather } from "./weather";
+import { planAccess } from "./access";
 import { parseState } from "./upgrade";
 import { scheduleRoute } from "./routeSchedule";
 import { stationWeatherSchema } from "./schema";
@@ -140,14 +141,18 @@ export async function refreshStationClimate(
   now: Date = new Date()
 ): Promise<PlanView> {
   await assertEnabled();
-  const row = await ownedPlan(userId, tripId),
+  const access = await planAccess(userId, tripId),
+    row = access.row,
     state = parseState(row.state),
     payloadHash = hash({ type: "climate", stationId, ...request });
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: row.id, clientRef: request.clientRef } },
   });
   if (receipt) {
-    if (receipt.payloadHash !== payloadHash)
+    if (
+      receipt.payloadHash !== payloadHash ||
+      (receipt.actorMemberId && receipt.actorMemberId !== access.member.id)
+    )
       throw new AppError("Mutation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
     return receipt.result as unknown as PlanView;
   }
@@ -202,5 +207,5 @@ export async function refreshStationClimate(
   if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024)
     throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
   await assertEnabled();
-  return commitWeather(row, state, next, tripId, request, payloadHash);
+  return commitWeather(access, state, next, tripId, request, payloadHash);
 }

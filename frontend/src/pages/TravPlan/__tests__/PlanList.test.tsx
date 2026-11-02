@@ -6,6 +6,7 @@ import { PlanList } from "../PlanList";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   capabilities: vi.fn(),
+  invitations: vi.fn().mockResolvedValue([]),
   t: (key: string, opts?: Record<string, unknown>) =>
     opts ? `${key}:${Object.values(opts).join(",")}` : key,
 }));
@@ -13,7 +14,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: mocks.t, i18n: { language: "de" } }),
 }));
 vi.mock("../../../lib/api/travplan", () => ({
-  travplanApi: { list: mocks.list, capabilities: mocks.capabilities },
+  travplanApi: {
+    list: mocks.list,
+    capabilities: mocks.capabilities,
+    invitations: mocks.invitations,
+  },
 }));
 
 const base = {

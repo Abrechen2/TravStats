@@ -2,6 +2,9 @@ import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
 import { apiErrorMachineCode } from "../apiError";
 import type {
+  PlanCollab,
+  PlanMember,
+  PlanMemberShare,
   PlanPlace,
   PlaceholderMatch,
   PlanView,
@@ -28,6 +31,14 @@ export interface PlanConfig {
   enabled: boolean;
   aiDailyLimit: number;
   weatherDailyLimit: number;
+}
+/** `GET /travplan/invitations`: an open invitation to plan together. */
+export interface PlanInvitation {
+  memberId: string;
+  tripId: string;
+  planName: string;
+  ownerName: string;
+  createdAt: string;
 }
 /** `GET /trips/:tripId/plan/actual` — plan versus actual (TravTrack plan L5). Read-only. */
 export type PlanStationStatus = "visited" | "shifted" | "skipped" | "unknown";
@@ -135,6 +146,33 @@ export const travplanApi = {
     clientRef = newPlanId()
   ) => (await api.post<PlanView>("/travplan/plans", { name, settings, tripId, clientRef })).data,
   get: async (id: string) => (await api.get<PlanView>("/trips/" + id + "/plan")).data,
+  /** The polling read: null while nothing changed (304 against the held revision). */
+  poll: async (held: PlanView) => {
+    const res = await api.get<PlanView>("/trips/" + held.tripId + "/plan", {
+      headers: { "If-None-Match": '"' + held.revision + "-" + (held.self?.memberId ?? "") + '"' },
+      validateStatus: (status) => status === 200 || status === 304,
+    });
+    return res.status === 304 ? null : res.data;
+  },
+  collab: async (id: string) => (await api.get<PlanCollab>("/trips/" + id + "/plan/collab")).data,
+  readNotices: async (id: string) =>
+    (await api.post<{ read: number }>("/trips/" + id + "/plan/notices/read")).data,
+  invite: async (id: string, username: string) =>
+    (await api.post<PlanMember>("/trips/" + id + "/plan/members", { username })).data,
+  removeMember: async (id: string, memberId: string) =>
+    (await api.delete<{ revoked: true }>("/trips/" + id + "/plan/members/" + memberId)).data,
+  shareWithMember: async (id: string, memberId: string) =>
+    (await api.post<PlanMemberShare>("/trips/" + id + "/plan/members/" + memberId + "/share")).data,
+  leave: async (id: string) =>
+    (await api.post<{ left: true }>("/trips/" + id + "/plan/leave")).data,
+  invitations: async () =>
+    (await api.get<{ invitations: PlanInvitation[] }>("/travplan/invitations")).data.invitations,
+  answerInvitation: async (memberId: string, answer: "accept" | "decline") =>
+    (
+      await api.post<{ status: "active" | "left" }>(
+        "/travplan/invitations/" + memberId + "/" + answer
+      )
+    ).data,
   write: async (plan: PlanView, operation: PlanOperation, clientRef = newPlanId()) =>
     (
       await api.post<PlanView>("/trips/" + plan.tripId + "/plan/mutations", {

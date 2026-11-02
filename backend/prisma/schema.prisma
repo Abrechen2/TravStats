@@ -45,6 +45,7 @@ model User {
   reminderClaims            ReminderClaim[]
   clientWriteRefs           ClientWriteRef[]
   travelPlanUsage           TravelPlanUsage[]
+  travelPlanMembers         TravelPlanMember[]       @relation("TravelPlanMemberUser")
   username                  String                   @unique
   passwordHash              String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
@@ -5804,21 +5805,79 @@ model TravelPlan {
   trip      Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
   mutations TravelPlanMutation[]
   proposals TravelPlanProposal[]
+  members   TravelPlanMember[]
+  notices   TravelPlanNotice[]
 
   @@map("travel_plans")
 }
 
+/// Who may work on a plan (spec 2026-10-17 §6.1). `owner` is the trip's owner, one row per plan,
+/// kept in step lazily (`services/travplan/access.ts`). `local` is an account on this server;
+/// `remote` (a guest from another server, §6.5) has its columns here but no endpoint yet.
+/// Rows are never deleted when someone leaves: past mutations name their `actor`.
+model TravelPlanMember {
+  id            String    @id @default(uuid())
+  planId        String    @map("plan_id")
+  /// owner | local | remote
+  kind          String
+  userId        String?   @map("user_id")
+  remoteOrigin  String?   @map("remote_origin")
+  remoteSubject String?   @map("remote_subject")
+  displayName   String    @map("display_name")
+  /// owner | editor
+  role          String    @default("editor")
+  /// invited | active | left | revoked
+  status        String    @default("invited")
+  invitedAt     DateTime  @default(now()) @map("invited_at")
+  joinedAt      DateTime? @map("joined_at")
+  revokedAt     DateTime? @map("revoked_at")
+  /// When the linked copy of the trip reached this member's logbook (handover, §6.4).
+  sharedAt      DateTime? @map("shared_at")
+
+  plan    TravelPlan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user    User?              @relation("TravelPlanMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  notices TravelPlanNotice[]
+
+  @@unique([planId, userId])
+  @@unique([planId, remoteOrigin, remoteSubject])
+  @@index([userId, status])
+  @@map("travel_plan_members")
+}
+
+/// A change by one member, told to each other member (spec §6.3). Read by the recipient only.
+model TravelPlanNotice {
+  id            String    @id @default(uuid())
+  planId        String    @map("plan_id")
+  recipientId   String    @map("recipient_id")
+  mutationId    String    @map("mutation_id")
+  actorMemberId String?   @map("actor_member_id")
+  actorName     String    @map("actor_name")
+  /// `<operation type>` or `<operation type>:<collection>`; the client words it.
+  summary       String
+  createdAt     DateTime  @default(now()) @map("created_at")
+  readAt        DateTime? @map("read_at")
+
+  plan      TravelPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  recipient TravelPlanMember @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+  @@map("travel_plan_notices")
+}
+
 model TravelPlanMutation {
-  id           String     @id @default(uuid())
-  planId       String     @map("plan_id")
-  clientRef    String     @map("client_ref")
-  payloadHash  String     @map("payload_hash")
-  baseRevision Int        @map("base_revision")
-  revision     Int
-  before       Json
-  result       Json
-  createdAt    DateTime   @default(now()) @map("created_at")
-  plan         TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  planId        String     @map("plan_id")
+  clientRef     String     @map("client_ref")
+  payloadHash   String     @map("payload_hash")
+  baseRevision  Int        @map("base_revision")
+  revision      Int
+  before        Json
+  result        Json
+  /// The member who made the change; null on a receipt older than members.
+  actorMemberId String?    @map("actor_member_id")
+  summary       String     @default("")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  plan          TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@unique([planId, clientRef])
   @@index([planId, createdAt])

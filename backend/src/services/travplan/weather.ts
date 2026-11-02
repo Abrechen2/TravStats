@@ -6,13 +6,14 @@ import {
   configuration,
   reserveUsage,
   readPlan,
-  ownedPlan,
   asJson,
   hash,
-  view,
+  viewFor,
   assertEnabled,
 } from "./store";
 import { forecastSchema } from "./schema";
+import { planAccess, type PlanAccess } from "./access";
+import { recordNotices } from "./members";
 import { parseState } from "./upgrade";
 import type { PlanState, PlanView } from "./types";
 const nullableNumbers = z.array(z.number().finite().nullable()).max(16);
@@ -32,14 +33,18 @@ export async function refreshForecast(
   request: { clientRef: string; baseRevision: number }
 ): Promise<PlanView> {
   await assertEnabled();
-  const row = await ownedPlan(userId, tripId),
+  const access = await planAccess(userId, tripId),
+    row = access.row,
     state = parseState(row.state),
     payloadHash = hash({ type: "forecast", ...request });
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: row.id, clientRef: request.clientRef } },
   });
   if (receipt) {
-    if (receipt.payloadHash !== payloadHash)
+    if (
+      receipt.payloadHash !== payloadHash ||
+      (receipt.actorMemberId && receipt.actorMemberId !== access.member.id)
+    )
       throw new AppError("Mutation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
     return receipt.result as unknown as PlanView;
   }
@@ -114,18 +119,19 @@ export async function refreshForecast(
   if (Buffer.byteLength(JSON.stringify({ ...state, forecast })) > 1024 * 1024)
     throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
   await assertEnabled();
-  return commitWeather(row, state, { ...state, forecast }, tripId, request, payloadHash);
+  return commitWeather(access, state, { ...state, forecast }, tripId, request, payloadHash);
 }
 
 /** Stores a weather-only change of the plan under the standard revision check and receipt. */
 export async function commitWeather(
-  row: Awaited<ReturnType<typeof ownedPlan>>,
+  access: PlanAccess,
   state: PlanState,
   next: PlanState,
   tripId: string,
   request: { clientRef: string; baseRevision: number },
   payloadHash: string
 ): Promise<PlanView> {
+  const row = access.row;
   return prisma.$transaction(async (tx) => {
     const changed = await tx.travelPlan.updateMany({
       where: { id: row.id, revision: request.baseRevision },
@@ -133,7 +139,11 @@ export async function commitWeather(
     });
     if (changed.count !== 1)
       throw new AppError("Plan changed while fetching weather", 409, "PLAN_REVISION_CONFLICT");
-    const result = view({ ...row, revision: row.revision + 1, state: asJson(next) }, row.trip.name);
+    const result = viewFor(
+      { ...row, revision: row.revision + 1, state: asJson(next) },
+      row.trip.name,
+      access
+    );
     const mutation = await tx.travelPlanMutation.create({
       data: {
         planId: row.id,
@@ -143,9 +153,23 @@ export async function commitWeather(
         revision: result.revision,
         before: asJson({ state, name: row.trip.name }),
         result: asJson(result),
+        actorMemberId: access.member.id,
+        summary: "weather",
       },
     });
     result.lastMutationId = mutation.id;
+    result.lastMutation = {
+      id: mutation.id,
+      actor: { memberId: access.member.id, displayName: access.member.displayName },
+      createdAt: mutation.createdAt.toISOString(),
+      summary: "weather",
+    };
+    await recordNotices(tx, {
+      planId: row.id,
+      mutationId: mutation.id,
+      actor: { id: access.member.id, displayName: access.member.displayName },
+      summary: "weather",
+    });
     await tx.travelPlanMutation.update({
       where: { id: mutation.id },
       data: { result: asJson(result) },
