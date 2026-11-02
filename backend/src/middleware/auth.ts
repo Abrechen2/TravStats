@@ -15,6 +15,8 @@ import {
 
 export interface AuthRequest extends Request {
   userId?: string;
+  /** Set by `adminStepUpGate` when a write-scope token re-proved password (and TOTP) for this call. */
+  adminStepUpVerified?: boolean;
   /**
    * When the request authenticated via Personal Access Token (PAT),
    * this is populated. Cookie sessions leave it undefined. Route
