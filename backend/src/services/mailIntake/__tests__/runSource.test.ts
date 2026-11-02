@@ -1,0 +1,869 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
+
+import { prisma } from "../../../db";
+import { hashPassword } from "../../../utils/password";
+import { encrypt } from "../../../utils/encryption";
+import { updatePolicy } from "../../externalServices/policy";
+import { sweepDocuments } from "../../documents/documentService";
+import { documentPath } from "../../documents/documentStore";
+import fs from "fs";
+import dns from "dns";
+import { runSource } from "../runSource";
+import {
+  retryMessage,
+  buildInbox,
+  allowSenderOf,
+  dismissMessage,
+  fileOriginalWithEntry,
+} from "../inbox";
+import { rotateToken } from "../addressToken";
+import { scrubMailCredentialsAfterRestore } from "../afterRestore";
+import { buildMail, FakeMailbox } from "./helpers";
+
+const parseDocument = jest.fn<(input: { userId?: string }) => Promise<unknown>>();
+jest.mock("../../parsing/parseDocument", () => ({
+  parseDocument: (input: { userId?: string }) => parseDocument(input),
+}));
+
+const FLIGHT_BODY = {
+  domain: "flight",
+  flights: [{ flightNumber: "LH400" }],
+  llmDisabledByAdmin: false,
+};
+const EMPTY_BODY = { domain: "flight", flights: [], llmDisabledByAdmin: false };
+const found = (): Promise<unknown> => Promise.resolve({ domain: "flight", body: FLIGHT_BODY });
+const nothing = (disabled = false): Promise<unknown> =>
+  Promise.resolve({ domain: "flight", body: { ...EMPTY_BODY, llmDisabledByAdmin: disabled } });
+
+describe("mail intake run (forgejo#313)", () => {
+  const prefix = `mi-${Date.now()}`;
+  let userId: string;
+  let otherUserId: string;
+  let box: FakeMailbox;
+  let personalId: string;
+  let instanceId: string;
+
+  const mkSource = async (over: Record<string, unknown> = {}) =>
+    prisma.mailIntakeSource.create({
+      data: {
+        kind: "imap_folder",
+        userId,
+        host: "imap.example.org",
+        port: 993,
+        tlsMode: "tls",
+        username: "me@example.org",
+        passwordEncrypted: encrypt("secret-pw"),
+        folder: "TravStats",
+        enabled: true,
+        ...over,
+      },
+    });
+
+  let lookup: jest.SpiedFunction<typeof dns.promises.lookup>;
+  const resolveTo = (address: string) =>
+    lookup.mockImplementation((async () => [
+      { address, family: address.includes(":") ? 6 : 4 },
+    ]) as never);
+
+  beforeAll(async () => {
+    lookup = jest.spyOn(dns.promises, "lookup");
+    const passwordHash = await hashPassword("password123");
+    userId = (await prisma.user.create({ data: { username: `${prefix}-a`, passwordHash } })).id;
+    otherUserId = (await prisma.user.create({ data: { username: `${prefix}-b`, passwordHash } }))
+      .id;
+  });
+
+  beforeEach(async () => {
+    resolveTo("93.184.216.34"); // every test host is "public" unless a test says otherwise
+    parseDocument.mockReset();
+    parseDocument.mockImplementation(found);
+    await prisma.mailIntakeMessage.deleteMany({});
+    await prisma.mailIntakeSource.deleteMany({});
+    await prisma.mailIntakeSender.deleteMany({});
+    await prisma.mailIntakeAddress.deleteMany({});
+    await prisma.document.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await updatePolicy((p) => ({ ...p, disabled: p.disabled.filter((x) => x !== "mailIntake") }));
+    box = new FakeMailbox();
+    personalId = (await mkSource()).id;
+  });
+
+  afterAll(async () => {
+    lookup.mockRestore();
+    await prisma.document.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
+  });
+
+  const messages = () => prisma.mailIntakeMessage.findMany({ orderBy: { uid: "asc" } });
+
+  describe("mode A — a personal folder", () => {
+    it("stores the mail as a Document with the original attached, and proposes it", async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<a@x>" }) });
+      const result = await runSource(personalId, box);
+
+      expect(result).toMatchObject({ ran: true, seen: 1, proposed: 1 });
+      const [message] = await messages();
+      expect(message).toMatchObject({ status: "proposed", userId, domain: "flight" });
+      expect(message.summary).toEqual({ found: 1 });
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: message.documentId! } });
+      expect(doc).toMatchObject({ source: "mail", format: "eml", parsedDomain: "flight", userId });
+      expect(doc.unlinkedAt).not.toBeNull(); // unfiled: the sweep clock runs, the card shows the date
+      expect(fs.readFileSync(documentPath(doc.storedName)).equals(box.mails[0].raw)).toBe(true);
+      // flagged \Seen + $TravStats via markProcessed; nothing deleted from the box
+      expect([...box.flagged]).toEqual([1]);
+      expect(box.mails).toHaveLength(1);
+    });
+
+    it("a second run creates nothing new (idempotent by Message-ID)", async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<a@x>" }) });
+      await runSource(personalId, box);
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
+      const second = await runSource(personalId, box);
+
+      expect(second.proposed).toBe(0);
+      expect(await messages()).toHaveLength(1);
+      expect(await prisma.document.count({ where: { userId } })).toBe(1);
+    });
+
+    it("a changed UIDVALIDITY rescans without creating a duplicate", async () => {
+      box.add({ uid: 5, raw: buildMail({ messageId: "<a@x>" }) });
+      await runSource(personalId, box);
+      box.uidValidity = "2000";
+      box.mails[0].uid = 1;
+      const again = await runSource(personalId, box);
+
+      expect(again.error).toBeUndefined();
+      expect(await messages()).toHaveLength(1);
+      const source = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+      expect(source.uidValidity).toBe("2000");
+    });
+
+    it("a mail with no Message-ID is still taken once, keyed by its UID", async () => {
+      box.add({ uid: 3, raw: buildMail({ messageId: null }) });
+      await runSource(personalId, box);
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
+      await runSource(personalId, box);
+      expect(await messages()).toHaveLength(1);
+    });
+
+    it("reads at most 25 mails per run and carries on with the rest next time", async () => {
+      for (let i = 1; i <= 30; i += 1) {
+        box.add({ uid: i, raw: buildMail({ messageId: `<m${i}@x>`, body: `Booking ${i}` }) });
+      }
+      await runSource(personalId, box);
+      expect(await messages()).toHaveLength(25);
+      await runSource(personalId, box);
+      expect(await messages()).toHaveLength(30);
+    });
+
+    it("a mail over the size limit becomes a visible failure, not a silent skip", async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<big@x>" }), size: 5 * 1024 * 1024 });
+      await runSource(personalId, box);
+      const [message] = await messages();
+      expect(message).toMatchObject({ status: "failed", reason: "mail_too_large" });
+      expect((await buildInbox(userId)).items.map((i) => i.reason)).toEqual(["mail_too_large"]);
+    });
+
+    it("enforces the cap on the bytes received, not on the size the server reported", async () => {
+      // The listing claims 1 KB; the mail is 3 MB.
+      box.add({
+        uid: 1,
+        raw: buildMail({ messageId: "<liar@x>", body: "x".repeat(3 * 1024 * 1024) }),
+        size: 1024,
+      });
+      await runSource(personalId, box);
+      const [message] = await messages();
+      expect(message).toMatchObject({
+        status: "failed",
+        reason: "mail_too_large",
+        documentId: null,
+      });
+      expect(parseDocument).not.toHaveBeenCalled();
+      expect(await prisma.document.count({ where: { userId } })).toBe(0);
+    });
+
+    it("a mail the parser finds nothing in stays an unfiled document with the reason", async () => {
+      parseDocument.mockImplementation(() => nothing());
+      box.add({ uid: 1, raw: buildMail({ subject: "Newsletter" }) });
+      await runSource(personalId, box);
+      const [message] = await messages();
+      expect(message).toMatchObject({ status: "nothing", reason: "nothing_found" });
+      const item = (await buildInbox(userId)).items[0];
+      expect(item.deletesAt).not.toBeNull();
+    });
+
+    it("says llm_not_allowed when nothing was found because the admin switched the model off", async () => {
+      parseDocument.mockImplementation(() => nothing(true));
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      expect((await messages())[0].reason).toBe("llm_not_allowed");
+    });
+
+    it("a parser failure keeps the original, shows a retry, and the retry succeeds", async () => {
+      parseDocument.mockRejectedValueOnce(new Error("parser timeout"));
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      const [failed] = await messages();
+      expect(failed).toMatchObject({ status: "failed", reason: "parser_timeout" });
+      expect(failed.documentId).not.toBeNull();
+
+      await retryMessage(userId, failed.id);
+      expect((await messages())[0]).toMatchObject({ status: "proposed", reason: null });
+    });
+
+    it("an unexpected parser error is parse_failed, not a lost mail", async () => {
+      parseDocument.mockRejectedValueOnce(new Error("boom"));
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      expect((await messages())[0]).toMatchObject({ status: "failed", reason: "parse_failed" });
+    });
+
+    it("an identical mail forwarded twice is a duplicate, not a second proposal", async () => {
+      const raw = buildMail({ messageId: "<same@x>" });
+      box.add({ uid: 1, raw });
+      box.add({ uid: 2, raw: Buffer.from(raw) }); // same bytes, second UID
+      await runSource(personalId, box);
+      const rows = await messages();
+      // same Message-ID: the second is skipped outright
+      expect(rows).toHaveLength(1);
+    });
+
+    it("different Message-ID but identical bytes: recorded as duplicate and linked to the first", async () => {
+      const a = buildMail({ messageId: "<one@x>" });
+      box.add({ uid: 1, raw: a });
+      await runSource(personalId, box);
+      // a re-delivered copy under a new Message-ID header still hashes differently, so
+      // simulate identical bytes by reusing the stored document's content.
+      const doc = await prisma.document.findFirstOrThrow({ where: { userId } });
+      // The first delivery stays recorded under another id; the same bytes arrive again.
+      await prisma.mailIntakeMessage.updateMany({ data: { messageId: "<recorded-earlier@x>" } });
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
+      await runSource(personalId, box);
+      const rows = await messages();
+      const row = rows.find((r) => r.messageId !== "<recorded-earlier@x>")!;
+      expect(row).toMatchObject({ status: "duplicate", documentId: doc.id });
+    });
+
+    it("a refused flag change does not fail the run (idempotency is the Message-ID)", async () => {
+      box.refuseFlags = true;
+      box.add({ uid: 1, raw: buildMail({}) });
+      const result = await runSource(personalId, box);
+      expect(result.error).toBeUndefined();
+      expect(await messages()).toHaveLength(1);
+    });
+  });
+
+  describe("review findings", () => {
+    it("a kept mail whose outcome was never recorded (a crash in between) is parsed, not hidden as a duplicate", async () => {
+      const raw = buildMail({ messageId: "<crash@x>" });
+      box.add({ uid: 1, raw });
+      await runSource(personalId, box);
+      // Simulate the crash: the document is there, the outcome row is not.
+      await prisma.mailIntakeMessage.deleteMany({});
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
+      parseDocument.mockClear();
+      await runSource(personalId, box);
+      expect((await messages())[0]).toMatchObject({ status: "proposed" });
+      expect(parseDocument).toHaveBeenCalledTimes(1);
+      expect(await prisma.document.count({ where: { userId } })).toBe(1);
+    });
+
+    it("two callers at once: one runs, the other is told a run is in progress", async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<c@x>" }) });
+      const [a, b] = await Promise.all([runSource(personalId, box), runSource(personalId, box)]);
+      expect([a.skipped ?? null, b.skipped ?? null].sort()).toEqual([null, "running"]);
+      expect(await messages()).toHaveLength(1);
+    });
+
+    it("a source re-pointed to another mailbox during a run keeps its reset cursor", async () => {
+      box.add({ uid: 7, raw: buildMail({ messageId: "<x@x>" }) });
+      const original = box.withFolder.bind(box);
+      box.withFolder = (async (conn: never, run: never) =>
+        original(conn, (async (session: { fetchSource: (...a: never[]) => unknown }) => {
+          const fetchSource = session.fetchSource.bind(session);
+          session.fetchSource = (async (...args: never[]) => {
+            await prisma.mailIntakeSource.update({
+              where: { id: personalId },
+              data: { host: "other.example.org", lastUid: 0, uidValidity: null },
+            });
+            return fetchSource(...args);
+          }) as never;
+          return (run as (s: unknown) => unknown)(session);
+        }) as never)) as never;
+      await runSource(personalId, box);
+      const row = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+      expect(row).toMatchObject({ host: "other.example.org", lastUid: 0, uidValidity: null });
+    });
+  });
+
+  describe("failures reach the user as themselves", () => {
+    it.each(["auth_failed", "folder_missing"] as const)(
+      "%s keeps its own reason (a real IMAP server answered), is stored with its time and cleared by the next good run",
+      async (kind) => {
+        box.failWith = kind;
+        const bad = await runSource(personalId, box);
+        expect(bad).toMatchObject({ ran: true, error: kind });
+        const failed = await prisma.mailIntakeSource.findUniqueOrThrow({
+          where: { id: personalId },
+        });
+        expect(failed.lastError).toBe(kind);
+        expect(failed.lastErrorAt).not.toBeNull();
+        expect((await buildInbox(userId)).sourceProblem?.error).toBe(kind);
+
+        box.failWith = null;
+        await runSource(personalId, box);
+        const ok = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+        expect(ok.lastError).toBeNull();
+        expect(ok.lastOkAt).not.toBeNull();
+      }
+    );
+
+    it.each([
+      "connection_refused",
+      "host_not_found",
+      "timeout",
+      "tls_error",
+      "protocol_error",
+    ] as const)(
+      "a personal folder's %s is reported as unreachable — no port-scan oracle",
+      async (kind) => {
+        box.failWith = kind;
+        expect((await runSource(personalId, box)).error).toBe("unreachable");
+      }
+    );
+
+    it("the admin's instance mailbox keeps the precise kind (LAN diagnosis)", async () => {
+      await prisma.mailIntakeSource.delete({ where: { id: personalId } });
+      const instance = await mkSource({
+        kind: "instance_mailbox",
+        userId: null,
+        address: "t@example.org",
+      });
+      box.failWith = "connection_refused";
+      expect((await runSource(instance.id, box)).error).toBe("connection_refused");
+    });
+
+    it.each(["127.0.0.1", "10.0.0.5", "192.168.1.9", "169.254.169.254", "::1", "64:ff9b::7f00:1"])(
+      "a personal host resolving to %s is refused before any connection (SSRF)",
+      async (address) => {
+        resolveTo(address);
+        const result = await runSource(personalId, box);
+        expect(result.error).toBe("blocked_host");
+        expect(box.connections).toHaveLength(0);
+      }
+    );
+
+    it("re-checks on every connect: a host that was public at save and private later is refused (DNS rebinding)", async () => {
+      resolveTo("93.184.216.34");
+      expect((await runSource(personalId, box)).error).toBeUndefined();
+      resolveTo("10.0.0.5");
+      expect((await runSource(personalId, box)).error).toBe("blocked_host");
+      expect(box.connections).toHaveLength(1);
+    });
+
+    it("connects to the address it checked, not to a second lookup", async () => {
+      resolveTo("93.184.216.34");
+      await runSource(personalId, box);
+      expect(box.connections[0]).toMatchObject({
+        host: "imap.example.org",
+        connectHost: "93.184.216.34",
+      });
+    });
+
+    it("one blocked address among several is enough to refuse the host", async () => {
+      lookup.mockImplementation((async () => [
+        { address: "93.184.216.34", family: 4 },
+        { address: "10.0.0.5", family: 4 },
+      ]) as never);
+      expect((await runSource(personalId, box)).error).toBe("blocked_host");
+    });
+
+    it("the instance mailbox may sit on the LAN", async () => {
+      await prisma.mailIntakeSource.delete({ where: { id: personalId } });
+      const instance = await mkSource({
+        kind: "instance_mailbox",
+        userId: null,
+        address: "t@example.org",
+      });
+      resolveTo("192.168.1.9");
+      const result = await runSource(instance.id, box);
+      expect(result.error).toBeUndefined();
+      expect(box.connections).toHaveLength(1);
+    });
+
+    it("a source without a password says credentials_missing instead of trying", async () => {
+      await prisma.mailIntakeSource.update({
+        where: { id: personalId },
+        data: { passwordEncrypted: null },
+      });
+      const result = await runSource(personalId, box);
+      expect(result.error).toBe("credentials_missing");
+      expect(box.connections).toHaveLength(0);
+    });
+
+    it("a personal source never uses plain IMAP", async () => {
+      await prisma.mailIntakeSource.update({
+        where: { id: personalId },
+        data: { tlsMode: "none" },
+      });
+      const result = await runSource(personalId, box);
+      expect(result.error).toBe("plain_not_allowed");
+      expect(box.connections).toHaveLength(0);
+    });
+
+    it("decrypts the stored password only to hand it to the connection", async () => {
+      await runSource(personalId, box);
+      expect(box.connections[0]).toMatchObject({
+        password: "secret-pw",
+        folder: "TravStats",
+        tlsMode: "tls",
+      });
+      const row = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+      expect(row.passwordEncrypted).not.toContain("secret-pw");
+    });
+  });
+
+  describe("off means off", () => {
+    it("a source is off until its owner switches it on", async () => {
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { enabled: false } });
+      expect(await runSource(personalId, box)).toMatchObject({ ran: false, skipped: "disabled" });
+      expect(box.connections).toHaveLength(0);
+    });
+
+    it("the admin switching the service off stops every run before any connection", async () => {
+      await updatePolicy((p) => ({ ...p, disabled: [...p.disabled, "mailIntake"] }));
+      expect(await runSource(personalId, box)).toMatchObject({
+        ran: false,
+        skipped: "service_off",
+      });
+      expect(box.connections).toHaveLength(0);
+    });
+  });
+
+  describe("mode B — the instance mailbox and forwarding addresses", () => {
+    let token: string;
+
+    beforeEach(async () => {
+      await prisma.mailIntakeSource.delete({ where: { id: personalId } });
+      instanceId = (
+        await mkSource({
+          kind: "instance_mailbox",
+          userId: null,
+          address: "trips@example.org",
+          username: "trips@example.org",
+          folder: "INBOX",
+        })
+      ).id;
+      token = await rotateToken(userId);
+    });
+
+    const forwarded = (over: Record<string, unknown> = {}) =>
+      buildMail({
+        deliveredTo: `trips+${token}@example.org`,
+        from: "Me <me@gmail.example>",
+        messageId: `<f${Math.random()}@x>`,
+        authResults: "mx.example.org; dmarc=pass header.from=gmail.example",
+        ...over,
+      });
+
+    it("rejects mail to a token nobody holds, without storing or parsing it", async () => {
+      box.add({ uid: 1, raw: buildMail({ deliveredTo: "trips+zzzzzzzzzz@example.org" }) });
+      await runSource(instanceId, box);
+      const [row] = await messages();
+      expect(row).toMatchObject({ status: "rejected", reason: "unknown_token", userId: null });
+      expect(row.documentId).toBeNull();
+      expect(parseDocument).not.toHaveBeenCalled();
+      expect(await prisma.document.count()).toBe(0);
+    });
+
+    it("rejects an unknown sender and offers to allow it — the mail is neither parsed nor kept", async () => {
+      box.add({ uid: 1, raw: forwarded() });
+      await runSource(instanceId, box);
+      const [row] = await messages();
+      expect(row).toMatchObject({
+        status: "rejected",
+        reason: "sender_not_allowed",
+        userId,
+        fromAddress: "me@gmail.example",
+      });
+      expect(parseDocument).not.toHaveBeenCalled();
+      const card = (await buildInbox(userId)).items[0];
+      expect(card).toMatchObject({ status: "rejected", from: "me@gmail.example" });
+
+      await allowSenderOf(userId, row.id);
+      expect(await prisma.mailIntakeSender.count({ where: { userId } })).toBe(1);
+      expect((await buildInbox(userId)).items).toHaveLength(0);
+    });
+
+    it("takes mail from an allowed sender and proposes it to that user only", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 1, raw: forwarded() });
+      const result = await runSource(instanceId, box);
+      expect(result.proposed).toBe(1);
+      const [row] = await messages();
+      expect(row).toMatchObject({ status: "proposed", userId });
+      expect(parseDocument).toHaveBeenCalledWith(expect.objectContaining({ userId }));
+      expect((await buildInbox(otherUserId)).items).toHaveLength(0);
+    });
+
+    it("rejects an allowed sender whose DMARC failed at the receiving provider", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({
+        uid: 1,
+        raw: forwarded({ authResults: "mx.example.org; dmarc=fail header.from=gmail.example" }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages())[0]).toMatchObject({ status: "rejected", reason: "dmarc_failed" });
+      expect(parseDocument).not.toHaveBeenCalled();
+    });
+
+    it("trusts the receiving provider's header, not one the sender wrote lower down", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const raw = Buffer.from(
+        forwarded({ authResults: "mx.example.org; dmarc=fail header.from=gmail.example" })
+          .toString("utf8")
+          .replace(
+            "Subject:",
+            "Authentication-Results: forged.example; dmarc=pass header.from=gmail.example\r\nSubject:"
+          )
+      );
+      box.add({ uid: 1, raw });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("dmarc_failed");
+    });
+
+    it.each([
+      ["Sender", "Sender: me@gmail.example"],
+      ["Return-Path", "Return-Path: <me@gmail.example>"],
+      ["X-Original-Sender", "X-Original-Sender: me@gmail.example"],
+    ])(
+      "a forged %s naming an allowed address does not authorise a mail from someone else",
+      async (_name, header) => {
+        await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+        box.add({
+          uid: 1,
+          raw: forwarded({
+            from: "Mallory <mallory@evil.example>",
+            extraHeaders: [header],
+            authResults: "mx.example.org; dmarc=pass header.from=evil.example",
+          }),
+        });
+        await runSource(instanceId, box);
+        expect((await messages())[0]).toMatchObject({
+          status: "rejected",
+          reason: "sender_not_allowed",
+          fromAddress: "mallory@evil.example",
+        });
+        expect(parseDocument).not.toHaveBeenCalled();
+      }
+    );
+
+    it("a From that is not exactly one mailbox is refused as from_invalid, whatever it contains", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const dmarc = "mx.example.org; dmarc=pass header.from=gmail.example";
+      box.add({
+        uid: 1,
+        raw: forwarded({
+          from: "me@gmail.example, mallory@evil.example",
+          authResults: dmarc,
+          messageId: "<l@x>",
+        }),
+      });
+      box.add({
+        uid: 2,
+        raw: forwarded({
+          from: "mallory@evil.example",
+          extraHeaders: ["From: me@gmail.example"],
+          authResults: dmarc,
+          messageId: "<d@x>",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((r) => r.reason)).toEqual(["from_invalid", "from_invalid"]);
+      expect(parseDocument).not.toHaveBeenCalled();
+    });
+
+    it("an allowed address in the DISPLAY NAME does not authorise the real sender", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({
+        uid: 1,
+        raw: forwarded({
+          from: '"me@gmail.example" <mallory@evil.example>',
+          authResults: "mx.example.org; dmarc=pass header.from=evil.example",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages())[0]).toMatchObject({
+        reason: "sender_not_allowed",
+        fromAddress: "mallory@evil.example",
+      });
+    });
+
+    it("a dmarc=pass that names no header.from does not count", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 1, raw: forwarded({ authResults: "mx.example.org; dmarc=pass" }) });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("dmarc_unverified");
+    });
+
+    it("an allowed From without a DMARC pass is not authorised (dmarc_unverified), also with no verdict at all", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 1, raw: forwarded({ authResults: undefined, messageId: "<n1@x>" }) });
+      box.add({
+        uid: 2,
+        raw: forwarded({ authResults: "mx.example.org; spf=pass; dkim=pass", messageId: "<n2@x>" }),
+      });
+      box.add({
+        uid: 3,
+        raw: forwarded({
+          authResults: "mx.example.org; dmarc=pass header.from=other.example",
+          messageId: "<n3@x>",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((m) => m.reason)).toEqual([
+        "dmarc_unverified",
+        "dmarc_unverified",
+        "dmarc_unverified",
+      ]);
+      expect(parseDocument).not.toHaveBeenCalled();
+    });
+
+    it("with an authserv-id configured, only that provider's verdict counts — even a forged one on top is ignored", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      await prisma.mailIntakeSource.update({
+        where: { id: instanceId },
+        data: { authservId: "mx.example.org" },
+      });
+      // forged "pass" on top, the real provider's "fail" below it
+      const forged = Buffer.from(
+        "Authentication-Results: attacker.example; dmarc=pass header.from=gmail.example\r\n" +
+          forwarded({
+            authResults: "mx.example.org; dmarc=fail header.from=gmail.example",
+          }).toString("utf8")
+      );
+      box.add({ uid: 1, raw: forged });
+      // the real provider's pass, with a forged fail on top, is accepted
+      box.add({
+        uid: 2,
+        raw: Buffer.from(
+          "Authentication-Results: attacker.example; dmarc=fail header.from=gmail.example\r\n" +
+            forwarded({ messageId: "<ok@x>" }).toString("utf8")
+        ),
+      });
+      await runSource(instanceId, box);
+      const rows = await messages();
+      expect(rows[0]).toMatchObject({ status: "rejected", reason: "dmarc_failed" });
+      expect(rows[1]).toMatchObject({ status: "proposed" });
+    });
+
+    it("with no authserv-id configured a forged header below the provider's does not override it", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const raw = Buffer.from(
+        forwarded({ authResults: "mx.example.org; dmarc=fail header.from=gmail.example" })
+          .toString("utf8")
+          .replace(
+            "Subject:",
+            "Authentication-Results: forged; dmarc=pass header.from=gmail.example\r\nSubject:"
+          )
+      );
+      box.add({ uid: 1, raw });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("dmarc_failed");
+    });
+
+    it("a rejected mail that arrives again with the SAME Message-ID, after the sender was allowed, is taken", async () => {
+      const raw = forwarded({ messageId: "<same-id@x>" });
+      box.add({ uid: 1, raw });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("sender_not_allowed");
+
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 2, raw });
+      await runSource(instanceId, box);
+      const rows = await messages();
+      expect(rows).toHaveLength(1); // the rejection was replaced, not duplicated
+      expect(rows[0]).toMatchObject({ status: "proposed", uid: 2 });
+    });
+
+    it("the same Message-ID forwarded by two accounts is two mails, not one", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      await prisma.mailIntakeSender.create({
+        data: { userId: otherUserId, address: "me@gmail.example" },
+      });
+      const otherToken = await rotateToken(otherUserId);
+      box.add({ uid: 1, raw: forwarded({ messageId: "<shared@x>" }) });
+      box.add({
+        uid: 2,
+        raw: forwarded({
+          messageId: "<shared@x>",
+          deliveredTo: `trips+${otherToken}@example.org`,
+          body: "other copy",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((r) => [r.userId, r.status])).toEqual([
+        [userId, "proposed"],
+        [otherUserId, "proposed"],
+      ]);
+    });
+
+    it("a revoked token stops working at once", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const old = token;
+      token = await rotateToken(userId);
+      box.add({
+        uid: 1,
+        raw: buildMail({ deliveredTo: `trips+${old}@example.org`, from: "me@gmail.example" }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("unknown_token");
+    });
+
+    it("a sender allowed by one user does not let another user's token through", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const otherToken = await rotateToken(otherUserId);
+      box.add({
+        uid: 1,
+        raw: buildMail({
+          deliveredTo: `trips+${otherToken}@example.org`,
+          from: "me@gmail.example",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages())[0]).toMatchObject({
+        reason: "sender_not_allowed",
+        userId: otherUserId,
+      });
+    });
+  });
+
+  describe("inbox actions", () => {
+    it("dismissing a proposal hides the card and leaves the mail unfiled until the sweep", async () => {
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      const [row] = await messages();
+      await dismissMessage(userId, row.id);
+      expect((await buildInbox(userId)).items).toHaveLength(0);
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: row.documentId! } });
+      expect(doc.linkedAt).toBeNull();
+      await sweepDocuments(); // inside its TTL: still there
+      expect(await prisma.document.count({ where: { id: doc.id } })).toBe(1);
+    });
+
+    it("another user cannot dismiss or retry a mail that is not theirs", async () => {
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      const [row] = await messages();
+      await expect(dismissMessage(otherUserId, row.id)).rejects.toMatchObject({ statusCode: 404 });
+      await expect(retryMessage(otherUserId, row.id)).rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("a proposal whose original was filed with an entry is no longer a card", async () => {
+      box.add({ uid: 1, raw: buildMail({}) });
+      await runSource(personalId, box);
+      const [row] = await messages();
+      const flight = await prisma.flight.create({
+        data: {
+          userId,
+          depIata: "FRA",
+          depLat: 50,
+          depLon: 8,
+          arrIata: "JFK",
+          arrLat: 40,
+          arrLon: -73,
+          departureTime: new Date("2026-11-12T08:00:00Z"),
+          status: "scheduled",
+        },
+      });
+      await prisma.document.update({
+        where: { id: row.documentId! },
+        data: { flightId: flight.id, linkedAt: new Date(), unlinkedAt: null },
+      });
+      expect((await buildInbox(userId)).items).toHaveLength(0);
+      await prisma.flight.delete({ where: { id: flight.id } });
+    });
+  });
+
+  describe("the original mail ends up on the entry created from the proposal", () => {
+    const flightData = (over: object = {}) => ({
+      userId,
+      depIata: "FRA",
+      depLat: 50,
+      depLon: 8,
+      arrIata: "JFK",
+      arrLat: 40,
+      arrLon: -73,
+      departureTime: new Date("2026-11-12T08:00:00Z"),
+      status: "scheduled",
+      ...over,
+    });
+    const proposal = async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<imp@x>" }) });
+      await runSource(personalId, box);
+      return (await messages())[0];
+    };
+
+    it("imports a proposal and the .eml Document is linked to the new flight", async () => {
+      const row = await proposal();
+      const openedAt = new Date();
+      const flight = await prisma.flight.create({ data: flightData() });
+
+      const filed = await fileOriginalWithEntry(userId, row.id, openedAt);
+
+      expect(filed).toEqual({ type: "flight", id: flight.id });
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: row.documentId! } });
+      expect(doc).toMatchObject({
+        flightId: flight.id,
+        format: "eml",
+        source: "mail",
+        unlinkedAt: null,
+      });
+      expect(doc.linkedAt).not.toBeNull();
+      // filed: the card is gone and the sweep will never delete it
+      expect((await buildInbox(userId)).items).toHaveLength(0);
+      await prisma.flight.delete({ where: { id: flight.id } });
+    });
+
+    it("files nothing when the user saved nothing, and keeps the card", async () => {
+      const row = await proposal();
+      expect(await fileOriginalWithEntry(userId, row.id, new Date())).toBeNull();
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: row.documentId! } });
+      expect(doc.flightId).toBeNull();
+      expect((await buildInbox(userId)).items).toHaveLength(1);
+    });
+
+    it("never files the mail with an entry that existed before the proposal arrived", async () => {
+      const old = await prisma.flight.create({ data: flightData() });
+      const row = await proposal();
+      expect(await fileOriginalWithEntry(userId, row.id, new Date(0))).toBeNull();
+      await prisma.flight.delete({ where: { id: old.id } });
+    });
+
+    it("another account's entry is never a candidate", async () => {
+      const row = await proposal();
+      const foreign = await prisma.flight.create({ data: flightData({ userId: otherUserId }) });
+      expect(await fileOriginalWithEntry(userId, row.id, new Date(0))).toBeNull();
+      await prisma.flight.delete({ where: { id: foreign.id } });
+    });
+
+    it("refuses a mail that is not the caller's", async () => {
+      const row = await proposal();
+      await expect(fileOriginalWithEntry(otherUserId, row.id, new Date())).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    });
+  });
+
+  describe("restore", () => {
+    it("clears every stored password and switches the sources off, naming the reason", async () => {
+      const count = await scrubMailCredentialsAfterRestore();
+      expect(count).toBe(1);
+      const row = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+      expect(row).toMatchObject({
+        passwordEncrypted: null,
+        enabled: false,
+        lastError: "credentials_missing",
+      });
+    });
+  });
+});

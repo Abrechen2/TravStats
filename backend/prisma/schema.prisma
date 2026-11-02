@@ -28,6 +28,10 @@ datasource db {
 }
 
 model User {
+  mailIntakeSources         MailIntakeSource[]
+  mailIntakeAddress         MailIntakeAddress?
+  mailIntakeSenders         MailIntakeSender[]
+  mailIntakeMessages        MailIntakeMessage[]
   comparisonDevices         ComparisonDevice[]
   comparisonPublications    ComparisonPublication[]
   comparisonLinks           ComparisonLink[]
@@ -4338,17 +4342,18 @@ model Document {
   /// owed it from the moment the document became unfiled.
   unlinkedAt DateTime? @map("unlinked_at")
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight        Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  cruise        Cruise?        @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
-  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
-  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  placeVisit    PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
-  railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
-  rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
-  busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
-  ferryJourney  FerryJourney?  @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
-  tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  rentalBooking      RentalBooking?      @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
+  busJourney         BusJourney?         @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney       FerryJourney?       @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  tripExpense        TripExpense?        @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
+  mailIntakeMessages MailIntakeMessage[]
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -6593,4 +6598,111 @@ model ExternalServiceTest {
   @@unique([userId, serviceId])
   @@unique([serviceId], where: raw("user_id IS NULL"), map: "external_service_tests_instance_service_key")
   @@map("external_service_tests")
+}
+
+/// A mailbox TravStats reads booking mails from (forgejo#313, spec
+/// 2026-10-17-mail-intake-design.md). `userId` set = a user's own IMAP folder
+/// (mode A); null = the instance mailbox behind the forwarding addresses
+/// (mode B). Off until someone switches it on (`enabled` defaults false).
+model MailIntakeSource {
+  id                String    @id @default(uuid())
+  userId            String?   @map("user_id")
+  /// imap_folder | instance_mailbox
+  kind              String
+  host              String
+  port              Int
+  /// tls | starttls | none. `none` is accepted for the instance mailbox only.
+  tlsMode           String    @default("tls") @map("tls_mode")
+  username          String
+  /// The instance mailbox's own address, the base of the plus-addresses
+  /// (`trips@example.org` → `trips+token@example.org`); a login name is not
+  /// always an address. Null for a personal folder.
+  address           String?
+  /// The authserv-id of the receiving provider ("mx.example.org"). When set,
+  /// only an Authentication-Results header carrying it is believed; unset, the
+  /// topmost one is (the provider prepends its own).
+  authservId        String?   @map("authserv_id")
+  /// AES-256-GCM like every other stored secret; null after a restore, when
+  /// the user has to enter it again (spec §9 decision 4).
+  passwordEncrypted String?   @map("password_encrypted")
+  folder            String    @default("INBOX")
+  enabled           Boolean   @default(false)
+  lastRunAt         DateTime? @map("last_run_at")
+  lastOkAt          DateTime? @map("last_ok_at")
+  /// A stable failure kind (`auth_failed`, `folder_missing`, …), never prose.
+  lastError         String?   @map("last_error")
+  lastErrorAt       DateTime? @map("last_error_at")
+  /// IMAP UIDVALIDITY of the folder at the last run; a change restarts the scan.
+  uidValidity       String?   @map("uid_validity")
+  lastUid           Int       @default(0) @map("last_uid")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user     User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages MailIntakeMessage[]
+
+  @@unique([userId])
+  @@unique([kind], where: raw("user_id IS NULL"), map: "mail_intake_sources_instance_key")
+  @@map("mail_intake_sources")
+}
+
+/// A user's forwarding address token (mode B). Looked up by hash; the token is
+/// also kept encrypted so the settings page can show the address again.
+model MailIntakeAddress {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  tokenHash      String   @unique @map("token_hash")
+  tokenEncrypted String   @map("token_encrypted")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mail_intake_addresses")
+}
+
+/// An address a user forwards from; mail to their token from anyone else is rejected.
+model MailIntakeSender {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  address   String
+  allowedAt DateTime @default(now()) @map("allowed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, address])
+  @@map("mail_intake_senders")
+}
+
+/// One fetched mail: the idempotency key (`sourceId`, `messageId`) and the audit.
+model MailIntakeMessage {
+  id          String    @id @default(uuid())
+  sourceId    String    @map("source_id")
+  /// The account the mail belongs to; null when no account could be resolved
+  /// (an unknown or revoked forwarding token).
+  userId      String?   @map("user_id")
+  messageId   String    @map("message_id")
+  uid         Int
+  receivedAt  DateTime? @map("received_at")
+  fromAddress String?   @map("from_address")
+  subject     String?
+  documentId  String?   @map("document_id")
+  /// proposed | duplicate | nothing | rejected | failed
+  status      String
+  /// A stable reason code (`sender_not_allowed`, `dmarc_failed`, `parser_timeout`, …).
+  reason      String?
+  /// Domain the parser detected, and a small preview of what it found.
+  domain      String?
+  summary     Json?
+  authResult  String?   @map("auth_result")
+  /// The user discarded the proposal; the mail stays an unfiled document until the sweep.
+  dismissedAt DateTime? @map("dismissed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  source   MailIntakeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceId, messageId, userId])
+  @@index([userId, status])
+  @@map("mail_intake_messages")
 }

@@ -23,6 +23,7 @@ import SpreadsheetSection from "./SpreadsheetSection";
 import TrackArchiveSection from "./TrackArchiveSection";
 import { useRowCopy } from "./rowCopy";
 import { DATA_PART_ANCHOR } from "./DataJumpList";
+import MailIntakeSettingsCard from "../MailIntake/MailIntakeSettingsCard";
 
 /**
  * The one place for LISTS — a whole collection at once, from a file.
@@ -120,6 +121,7 @@ export default function ImportSection(): JSX.Element {
           </SettingRows>
         </SectionCard>
       </div>
+      <MailIntakeSettingsCard />
       <SectionCard>
         <SectionTitle title={lists.title} description={lists.sub} />
         {/* Whether flights sharing a booking reference become a trip lives in

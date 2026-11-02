@@ -1,3 +1,5 @@
+// The mail-intake card loads its own settings; it has its own tests.
+vi.mock("../../components/MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
 vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);

@@ -1,7 +1,7 @@
 # Mail intake — booking mails arrive by themselves
 
 Tracks `dennis/TravStats` forgejo#313, from the market analysis in forgejo#303. Branch
-`docs/mail-intake-design`. **Status: draft, nothing decided.** The open decisions are in §9.
+`docs/mail-intake-design`. **Status: decided 2026-11-02, being built.** The decisions are in §9.
 
 > A booking mail reaches TravStats without the user pasting it: forwarded to an address, or
 > picked up from a mailbox folder. It lands in the inbox as a proposal with its original mail
@@ -154,19 +154,52 @@ Reading Gmail through its API needs a Google Cloud project per instance, the res
 self-hoster would have to create their own project. Mode A with an app password reaches the
 same mailbox for a fraction of the effort. OAuth stays an idea in forgejo#303.
 
-## 9. Open decisions for the owner
+## 9. Decided 2026-11-02 (owner delegated: build autonomously)
 
-1. **Order:** mode A (personal folder) first, mode B (forwarding address) first, or both in
-   the first cut? Proposal: **both**. B is what users know from TripIt; A is what works when the
-   admin set up nothing. They share the whole pipeline; only the fetch differs.
-2. **Auto-create:** only proposals in the first cut (proposal), or create directly when a
-   template matched with full confidence?
-3. **Processed mail in the folder:** flag + keyword (proposal), or move to a subfolder?
-4. **Backup of IMAP passwords:** left out (user re-enters after restore — proposal), or
-   included encrypted with the instance key?
-5. **Webhook (mode C)** for Cloudflare Email Workers: later (proposal), or in the first cut
-   because prod sits behind Cloudflare?
-6. **Polling interval:** 5 minutes plus IDLE (proposal).
+1. **Order:** both mode A (personal IMAP folder) and mode B (forwarding address through one
+   instance mailbox) in the first cut. They share the whole pipeline; only the fetch differs.
+2. **Auto-create:** none. Proposals only, into the inbox; an entry exists only after the user
+   confirms.
+3. **Processed mail:** flagged `\Seen` plus the keyword `$TravStats`; never moved, never deleted.
+4. **Backup of IMAP passwords:** not kept. A restore clears every stored password and switches
+   the source off with the reason `credentials_missing`; the user enters the password again.
+5. **Webhook (mode C):** not in the first cut.
+6. **Polling:** every 5 minutes, plus IMAP IDLE where the server supports it.
+
+Everything is **off by default**: a source has `enabled = false` until its owner switches it
+on, and the whole feature is one external service (`mailIntake`) that the admin can switch off
+or forbid for accounts like any other.
+
+### Phase table
+
+| # | Phase (§10) | Status |
+|---|---|---|
+| 1 | Data model, migration, encrypted credentials, token/sender tables | built |
+| 2 | IMAP fetcher, scheduler (5 min + IDLE), status, dedupe, failure kinds | built |
+| 3 | Pipeline: Document, parse, classify, proposal | built |
+| 4 | Settings + admin UI, inbox card, DE/EN | built |
+| 5 | Security: allowed senders, Authentication-Results, token revoke | built |
+| 6 | Browser check (golden path, failures reaching the inbox) | open (not done by the builder) |
+
+### Deviations from the sketch above, as built
+
+- The token is stored as a hash for lookup **and** encrypted, so the settings page can show the
+  address again (a hash alone could only show it once).
+- Plain IMAP (`tlsMode: none`) is accepted for the instance mailbox only, which the admin sets
+  up; a personal folder needs TLS or STARTTLS.
+- Mode B authorises only the `From` address that DMARC aligned (`dmarc=pass`); `Sender`, `Return-Path` and
+  `X-Original-Sender` never authorise. An instance mailbox may pin the receiving provider's authserv-id.
+- A personal host must resolve to public addresses only (checked on save and on every connect, pinned to
+  the checked address); its connection failures collapse to `unreachable`. The size cap is enforced while
+  downloading.
+- A mail rejected for an unknown sender is not stored; "allow this sender" takes effect for the
+  next forward.
+- Not behind a beta key: the service is off per mailbox until its owner switches it on, and the admin can
+  switch the whole service off (catalogue id `mailIntake`).
+- "Übernehmen" hands the original mail to the existing import dialog; filing that original with the created
+  entry is not automatic yet. A proposal for a package, place, bus or ferry only offers "Mail ansehen".
+- Certificates are always verified: a mail server with a self-signed certificate cannot be used.
+- A mail over the size cap on the instance mailbox has no known owner (it is not opened) and is only logged.
 
 ## 10. Build order once decided
 

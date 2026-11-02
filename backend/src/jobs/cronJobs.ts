@@ -163,6 +163,11 @@ export const CRON_JOBS: CronJob[] = [
       (await import("./tripShareDeliveryScheduler")).stopTripShareDeliveryScheduler(),
   },
   {
+    name: "mail_intake",
+    start: async () => (await import("./mailIntakeScheduler")).startMailIntakeScheduler(),
+    stop: async () => (await import("./mailIntakeScheduler")).stopMailIntakeScheduler(),
+  },
+  {
     name: "reminder",
     start: async () => (await import("../services/reminderScheduler")).startReminderScheduler(),
     stop: async () => (await import("../services/reminderScheduler")).stopReminderScheduler(),

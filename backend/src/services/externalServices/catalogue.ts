@@ -464,6 +464,16 @@ export const SERVICES: readonly ServiceDef[] = [
     requiredFields: ["url", "username", "password"],
     tester: "webdav",
   }),
+  // Booking mails read from a mailbox over IMAP (forgejo#313). Instance level: the admin
+  // switches it off for everyone; each mailbox (a user's folder, the instance mailbox
+  // behind the forwarding addresses) has its own credentials and its own off-by-default
+  // switch on its row, so there is no catalogue field to hold them.
+  svc({
+    id: "mailIntake",
+    category: "syncMail",
+    level: "instance",
+    credential: "none",
+  }),
   svc({
     id: "smtp",
     category: "syncMail",

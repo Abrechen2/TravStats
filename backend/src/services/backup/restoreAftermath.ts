@@ -1,3 +1,4 @@
+import { scrubMailCredentialsAfterRestore } from "../mailIntake/afterRestore";
 import { suspendComparisonAfterRestore } from "../federation/restore";
 import { suspendTripFederationAfterRestore } from "../sharing/federation/restore";
 import { prisma } from "../../db";
@@ -213,6 +214,7 @@ function settlingSteps(
     ["sync_history", () => resetSyncHistory(reason)],
     ["share_links", () => deleteAllShareLinks(reason)],
     ["calendar_feeds", () => deleteAllCalendarFeeds(reason)],
+    ["mail_intake_credentials", () => scrubMailCredentialsAfterRestore()],
   ];
   if (!backupsBefore) return steps;
   return [

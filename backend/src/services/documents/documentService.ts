@@ -75,11 +75,11 @@ const OWNER_COLUMN = {
 } as const satisfies Record<EntryType, keyof Document>;
 
 /**
- * How the row came to be. `parse` (a parse route kept its input) and `receipt`
+ * How the row came to be. `parse` (a parse route kept its input), `mail` (the mail intake fetched it) and `receipt`
  * (the receipt upload, see receipts.ts) are the server's own; a client may say
  * `upload` or `companion`, nothing else.
  */
-export const DOCUMENT_SOURCES = ["upload", "companion", "parse", "receipt"] as const;
+export const DOCUMENT_SOURCES = ["upload", "companion", "parse", "receipt", "mail"] as const;
 export type DocumentSource = (typeof DOCUMENT_SOURCES)[number];
 
 /**

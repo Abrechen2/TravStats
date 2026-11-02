@@ -461,5 +461,6 @@
       "tour": "Touren",
       "trip": "Reisen"
     }
-  }
+  },
+  "mailOriginalNotFiled": "Der Eintrag ist angelegt, die Original-Mail konnte aber nicht daran abgelegt werden. Die Mail bleibt im Posteingang."
 }

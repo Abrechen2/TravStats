@@ -598,6 +598,17 @@
       "quotaLine": "–",
       "adminPurpose": "The instance's backups and exports to a share; accounts may add their own targets"
     },
+    "mailIntake": {
+      "name": "Booking mail intake",
+      "purpose": "Booking mails from a mailbox as proposals in the inbox",
+      "why": "Fetches booking confirmations over IMAP from a mail folder or through the instance's forwarding address, so nobody has to paste them by hand.",
+      "cost": "Free.",
+      "quota": "–",
+      "dataOut": "Nothing leaves the server except the login to your own mail server. If a cloud AI provider is allowed, it reads the mails too.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Guide",
+      "quotaLine": "–"
+    },
     "smtp": {
       "name": "E-mail (SMTP)",
       "purpose": "Invitations, password reset, notices",

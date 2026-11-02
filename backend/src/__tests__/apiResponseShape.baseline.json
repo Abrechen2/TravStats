@@ -78,6 +78,7 @@
     "locationCapabilities.ts",
     "lodgingGeocode.ts",
     "loginBackgrounds.ts",
+    "mailIntake.ts",
     "mapConfig.ts",
     "meExport.ts",
     "mounts.ts",
