@@ -97,6 +97,19 @@ The owner's server stays authoritative for the plan; the member works **on their
 | `GET …/collab` · `POST …/notices/read` · `GET|POST …/documents` · `GET …/documents/:id/file` · `GET …/export` | as the owner routes |
 | `POST …/leave` | ends the membership |
 
+Companion needs (2026-11-02), part of S2:
+
+- Invites: `GET /api/v1/remote-plans` lists invitations too (`state: "invited"`), answered by
+  `POST /api/v1/remote-plans/:connectionId/:planId/accept|decline`.
+- Polling: `GET …/:planId` carries an `ETag`; `If-None-Match` answers 304 from the member server's
+  read cache while it is fresh (no peer round trip), otherwise the host's ETag is passed through.
+- Offline: the member's server forwards `clientRef` unchanged; a replay after a 503 gets the host's
+  stored receipt, never a second mutation. Clients keep their queue on 503 and drop cache and queue
+  only on `REMOTE_PLAN_NOT_SHARED` / `REMOTE_PLAN_NOT_FOUND`. An on-device cache for offline reading
+  is fine (as for own plans).
+- Feature detection: an older server answers `/sharing/connections` with a plain 404 (no `code`);
+  federation switched off answers 404 `SHARE_REMOTE_DISABLED`. The `code` tells them apart.
+
 Error codes: `REMOTE_PLAN_UNREACHABLE` (503, host offline; `extra.origin`), `REMOTE_PLAN_NOT_SHARED`
 (403 — connection inactive, switch off or membership ended; one code, the UI says "nicht mehr
 geteilt"), `REMOTE_PLAN_NOT_FOUND` (404).
