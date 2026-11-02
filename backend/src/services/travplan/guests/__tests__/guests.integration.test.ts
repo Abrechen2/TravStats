@@ -873,6 +873,30 @@ describe("TravPlan plan documents (D6)", () => {
         notes: "PRIVATE-STOP-NOTE",
       },
     });
+    // An unrelated flight of the owner's on the same trip, with a booking and a price.
+    const booking = await prisma.booking.create({
+      data: { userId: owner, tripId: plan.tripId, pnr: "PNR-SECRET", price: 4321, currency: "EUR" },
+    });
+    await prisma.flight.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        bookingId: booking.id,
+        flightNumber: "XY999",
+        airline: "Secret Air",
+        depIata: "FRA",
+        depLat: 50,
+        depLon: 8,
+        arrIata: "FNC",
+        arrLat: 32.7,
+        arrLon: -16.7,
+        departureTime: new Date("2027-03-10T08:00:00Z"),
+        arrivalTime: new Date("2027-03-10T12:00:00Z"),
+        price: 1234.5,
+        bookingReference: "BOOKREF-SECRET",
+        seatNumber: "12A",
+      },
+    });
     await prisma.tripJournalEntry.create({
       data: { tripId: plan.tripId, date: new Date(), body: "PRIVATE-JOURNAL" },
     });
@@ -884,6 +908,36 @@ describe("TravPlan plan documents (D6)", () => {
     expect(archive.file.roadtrips.map((r) => r.name)).toEqual(["Inselrunde"]);
     expect(archive.file.roadtrips[0].stations.map((s) => s.title)).toEqual(["Funchal"]);
     expect(JSON.stringify(archive.file)).not.toContain("PRIVATE");
+    // Nothing of the unrelated flight or its booking reaches the guest.
+    expect(archive.file.flights).toEqual([]);
+    expect(archive.file.bookings).toEqual([]);
+    const text = JSON.stringify(archive.file);
+    for (const secret of [
+      "PNR-SECRET",
+      "BOOKREF-SECRET",
+      "XY999",
+      "Secret Air",
+      "4321",
+      "1234.5",
+      "12A",
+    ])
+      expect(text).not.toContain(secret);
+  });
+
+  it("gives a revoked guest no file, whether the credential is gone or only the membership ended", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    // Membership ended while the credential is still around (a request racing the revocation).
+    await prisma.travelPlanMember.update({
+      where: { id: guest.memberId },
+      data: { status: "revoked" },
+    });
+    // The guest door answers an ended access with its one code (401 PLAN_GUEST_REQUIRED), as for the plan itself.
+    expect((await exportOf(plan.planId, guest.cookie)).status).toBe(401);
+    // The owner's removal also deletes the credential.
+    const other = await joinGuest(plan, { username: "second" });
+    await call("delete", `/trips/${plan.tripId}/plan/members/${other.memberId}`, owner);
+    expect((await exportOf(plan.planId, other.cookie)).status).toBe(401);
   });
 
   it("refuses the export to a credential of another plan, and once the guest has left", async () => {

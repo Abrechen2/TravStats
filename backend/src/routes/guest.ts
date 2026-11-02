@@ -33,6 +33,7 @@ import { searchPlaces } from "../services/travplan/placeSearch";
 import { routeStage } from "../services/travplan/stageRouting";
 import { matchPlaceholders } from "../services/travplan/placeholders";
 import { bookingSchema } from "../services/travplan/schema";
+import { scopeFileForGuest } from "../services/trip/exchange/guestScope";
 import { collectTrip } from "../services/trip/exchange/collect";
 import {
   buildManifest,
@@ -305,10 +306,10 @@ router.get(
 
 // ---- The trip as a file (spec §6.6 leaving, §6.7 the guest's own logbook copy) ----------------
 /**
- * The plan's trip as a `.travstats` file: what the handover wrote to the owner's logbook — the
- * roadtrip with its stations, legs and ferry links (format version 4), stays and crossings — in
- * its public half. Documents, photos, the journal, notes, prices and companions are the owner's
- * and are not in it (`private: false`). Planned but not yet confirmed stations live in the plan,
+ * The plan's trip as a `.travstats` file, scoped to what the plan shows a guest
+ * (`scopeFileForGuest`): the roadtrip with its stations, legs and ferry links (format version 4)
+ * and only the stays and crossings those name. Every other entry of the owner's trip, bookings
+ * (PNRs, references, prices), documents, photos, the journal, notes and companions are left out. Planned but not yet confirmed stations live in the plan,
  * not in the trip, so they are not in the file either; the guest imports it on their own server
  * with the ordinary single-trip import. Read-only: it changes nothing on this server.
  */
@@ -317,7 +318,9 @@ router.get(
   route(async (req, res) => {
     const { ownerId } = await planAccess(actorOf(req), trip(req));
     const options = { documents: false, photos: false, private: false };
-    const collected = presentFiles(await collectTrip(ownerId, trip(req), options));
+    const full = await collectTrip(ownerId, trip(req), options);
+    // Only what the plan shows a guest: the roadtrip, the stays and crossings it names.
+    const collected = presentFiles({ ...full, file: scopeFileForGuest(full.file), files: [] });
     const now = new Date();
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(

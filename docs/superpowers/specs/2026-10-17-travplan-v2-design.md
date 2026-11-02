@@ -661,10 +661,12 @@ DUPLICATE|TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover o
   readers still take every other file; a v4 file is refused by name by a v3 reader (`TRIP_FILE_VERSION_UNSUPPORTED`). A private export adds
   route notes, odometer readings and station notes. Importing into a shared trip propagates the roadtrip to the members; a roadtrip of the
   same name on the target trip is skipped as a duplicate.
-- **§6.6/§6.7 guest file**: `GET /api/v1/guest/plans/:planId/export` returns the owner's trip as a v4 `.travstats` (public half; no journal,
-  notes, prices, photos, documents). One endpoint serves both "Reise übernehmen" and the leaving export: planned-but-unconfirmed stations live
-  in the plan, not the trip, so the file holds exactly what the handover confirmed. Web: "Reise als Datei sichern" in guest mode.
-  Deviation from §6.7: the owner's journal is not in the file (journal is private in the format); there is no separate "owner confirms" switch.
+- **§6.6/§6.7 guest file**: `GET /api/v1/guest/plans/:planId/export` returns a **guest-scoped** v4 `.travstats`
+  (`scopeFileForGuest`): the plan trip's roadtrip(s) with stations and legs, plus only the stays and crossings those name.
+  No other entry, no `bookings` (PNR, price), no booking link or `externalRef`, no journal, notes, documents or photos.
+  One endpoint serves "Reise übernehmen" and the leaving export. Web: "Reise als Datei sichern" in guest mode. A revoked guest
+  gets the door's 401 `PLAN_GUEST_REQUIRED` like for every other guest route (not 404). Deviations from §6.7: no journal, and no
+  separate "owner confirms" switch.
 - **Local members and remote guests**: both receive the route on handover through the propagation of the handover's own writes
   (`ensureRoadtrip`, `replaceStationsIn`, ferry link).
 
