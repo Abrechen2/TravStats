@@ -189,9 +189,96 @@ it("lists the caller's remote people with their server", async () => {
       username: "ben",
       displayName: "Ben",
       consent: "accepted",
+      statsLevel: "off",
+      leaderboard: "unavailable",
       createdAt: far.createdAt.toISOString(),
     },
   ]);
+});
+
+describe("the simplified setup (forgejo#301)", () => {
+  let far: { id: string };
+  beforeAll(async () => {
+    far = await prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: anna } });
+  });
+
+  it("is findable only after the person says yes: the default is off", async () => {
+    const before = await request(app).get("/api/v1/sharing/remote/findable").set(as(anna));
+    expect(before.body).toEqual({ success: true, data: { findable: false } });
+    const on = await request(app)
+      .put("/api/v1/sharing/remote/findable")
+      .set(as(anna))
+      .send({ findable: true });
+    expect(on.body.data).toEqual({ findable: true });
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: anna } })).federationFindable).toBe(
+      true
+    );
+    await request(app)
+      .put("/api/v1/sharing/remote/findable")
+      .set(as(anna))
+      .send({ findable: false });
+  });
+
+  it("refuses a level outside the vocabulary and sets a valid one", async () => {
+    const bad = await request(app)
+      .put(`/api/v1/sharing/remote/people/${far.id}/stats-level`)
+      .set(as(anna))
+      .send({ level: "everything" });
+    expect(bad.status).toBe(400);
+    const ok = await request(app)
+      .put(`/api/v1/sharing/remote/people/${far.id}/stats-level`)
+      .set(as(anna))
+      .send({ level: "overview" });
+    expect(ok.body.data).toMatchObject({ id: far.id, statsLevel: "overview" });
+    await request(app)
+      .put(`/api/v1/sharing/remote/people/${far.id}/stats-level`)
+      .set(as(anna))
+      .send({ level: "off" });
+  });
+
+  it("does not let one account set a level on another account's pairing", async () => {
+    const other = (
+      await prisma.user.create({
+        data: { username: `rr-${randomUUID().slice(0, 8)}`, passwordHash: "test-only" },
+      })
+    ).id;
+    users.push(other);
+    const res = await request(app)
+      .put(`/api/v1/sharing/remote/people/${far.id}/stats-level`)
+      .set(as(other))
+      .send({ level: "full" });
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SHARE_REMOTE_PERSON_NOT_FOUND");
+    expect(
+      (await prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: far.id } })).statsLevel
+    ).toBe("off");
+  });
+
+  it("names an unadmitted server when looking someone up on it", async () => {
+    const origin = "https://never-pinned.sharing-remote-route.test";
+    const res = await request(app)
+      .post("/api/v1/sharing/remote/people/find")
+      .set(as(anna))
+      .send({ origin, username: "ben" });
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ code: "SHARE_REMOTE_PEER_NOT_ADMITTED", origin });
+  });
+
+  it("answers a statistics read of an unadmitted server with its own reason", async () => {
+    const res = await request(app)
+      .get(`/api/v1/sharing/remote/people/${far.id}/stats`)
+      .set(as(anna));
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("SHARE_REMOTE_PEER_NOT_ADMITTED");
+  });
+
+  it("refuses a leaderboard switch for a pairing made with a code", async () => {
+    const res = await request(app)
+      .put(`/api/v1/sharing/remote/people/${far.id}/leaderboard`)
+      .set(as(anna))
+      .send({ on: true });
+    expect(res.body.code).toBe("SHARE_REMOTE_LEADERBOARD_UNAVAILABLE");
+  });
 });
 
 describe("while the feature is off", () => {
@@ -217,6 +304,9 @@ describe("while the feature is off", () => {
     ["get", "/invites"],
     ["post", "/invites"],
     ["get", "/people"],
+    ["get", "/findable"],
+    ["get", "/servers"],
+    ["post", "/people/find"],
     ["delete", "/invites/00000000-0000-4000-8000-000000000000"],
   ] as const)("refuses %s %s with SHARE_REMOTE_DISABLED", async (method, path) => {
     const res = await request(app)[method](`/api/v1/sharing/remote${path}`).set(as(anna));

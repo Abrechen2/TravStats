@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from "@jest/globals";
 import { prisma } from "../../../db";
 import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
 import { REMOTE_MEMBER_STATES, ROSTER_CONSENT_STATUSES } from "../../../schemas/sharingRemote";
-import { OUTBOX_KINDS } from "../../../schemas/tripSharePeer";
+import { OUTBOX_KINDS, STATS_LEVELS } from "../../../schemas/tripSharePeer";
 
 /**
  * The sharing vocabularies live twice — as Zod unions in code and as CHECK
@@ -18,6 +18,7 @@ const CHECKS = {
   trip_share_remote_members_state_check: REMOTE_MEMBER_STATES,
   trip_share_outbox_kind_check: OUTBOX_KINDS,
   trip_share_roster_consents_status_check: ROSTER_CONSENT_STATUSES,
+  remote_share_accounts_stats_level_check: STATS_LEVELS,
 } as const;
 
 afterAll(async () => {

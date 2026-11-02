@@ -28,6 +28,7 @@
 import { prisma, type DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { requireTripFederation } from "./access";
+import { endShowing } from "./remoteStats";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
 import { remoteShareError } from "./errors";
@@ -211,7 +212,14 @@ export async function withdrawRemoteConsent(
   const pairing = await prisma.remoteShareAccount.findFirst({ where: { id: remoteId, userId } });
   if (!pairing)
     throw remoteShareError("SHARE_REMOTE_PERSON_NOT_FOUND", 404, "No such person", { userId });
-  await prisma.$transaction((tx) => revokePairing(tx, pairing, true, false), { timeout: 30_000 });
+  await prisma.$transaction(
+    async (tx) => {
+      await revokePairing(tx, pairing, true, false);
+      // What was shown to this person (statistics, leaderboard) ends with the pairing.
+      await endShowing(tx, pairing);
+    },
+    { timeout: 30_000 }
+  );
   return readRemotePerson(userId, remoteId);
 }
 

@@ -57,6 +57,9 @@ model User {
   lastName                  String?                  @map("last_name")
   isAdmin                   Boolean                  @default(false) @map("is_admin")
   isActive                  Boolean                  @default(true) @map("is_active")
+  /// Opt-in to being found by users of connected servers (simplified setup 2026-11-02, forgejo#301).
+  /// Default off: nobody appears in another server's lookup without saying yes.
+  federationFindable        Boolean                  @default(false) @map("federation_findable")
   invitedBy                 String?                  @map("invited_by")
   createdAt                 DateTime                 @default(now()) @map("created_at")
   // Email notification preferences
@@ -4994,22 +4997,29 @@ model ShareConsent {
 /// not trip consent. Neither channel is an id of the other server: both are random handshake
 /// entropy, so a remote id can never resolve to a local user or trip.
 model RemoteShareAccount {
-  id              String   @id @default(uuid())
+  id                  String   @id @default(uuid())
   /// The local side of the pairing.
-  userId          String   @map("user_id")
-  origin          String
+  userId              String   @map("user_id")
+  origin              String
   /// How the other server names its user in this pairing (minted there).
-  channel         String
+  channel             String
   /// How this server names `userId` towards that server (minted here).
-  localChannel    String   @map("local_channel")
-  username        String
-  displayName     String   @map("display_name")
+  localChannel        String   @map("local_channel")
+  username            String
+  displayName         String   @map("display_name")
   /// SHA-256 of the invitation secret this side redeemed to make the pairing (null when the other
   /// side redeemed ours, or before 2026-10-21): a retry of the same code that the issuer answers
   /// "used" is recognised as already connected instead of failing.
-  claimedCodeHash String?  @map("claimed_code_hash")
-  createdAt       DateTime @default(now()) @map("created_at")
+  claimedCodeHash     String?  @map("claimed_code_hash")
+  /// What `userId` lets this person see of their statistics: off | overview | full (CHECK
+  /// remote_share_accounts_stats_level_check, simplified setup 2026-11-02). Default off.
+  statsLevel          String   @default("off") @map("stats_level")
+  /// The leaderboard pairing made together with this one when the person was found through the
+  /// connected server (null for a pairing made by an invitation code).
+  leaderboardRemoteId String?  @unique @map("leaderboard_remote_id")
+  createdAt           DateTime @default(now()) @map("created_at")
 
+  leaderboardRemote LeaderboardRemote?      @relation(fields: [leaderboardRemoteId], references: [id], onDelete: SetNull)
   user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")
   consentsTargeted  ShareConsent[]          @relation("ShareConsentRemoteTarget")
@@ -5747,6 +5757,7 @@ model LeaderboardRemote {
   user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   consents     LeaderboardConsent[]
   boardMembers LeaderboardBoardMember[]
+  sharePairing RemoteShareAccount?
 
   @@unique([origin, channel])
   @@index([userId])

@@ -52,6 +52,9 @@ import * as resyncModule from "../resync";
 import * as entriesUpModule from "../entriesUp";
 import * as nudgeModule from "../nudge";
 import * as peerFeaturesModule from "../peerFeatures";
+import * as directoryModule from "../directory";
+import * as offerByNameModule from "../offerByName";
+import * as remoteStatsModule from "../remoteStats";
 import { resetIdentityCache } from "../../../federation/identity";
 import { encryptApiKey } from "../../../../utils/encryption";
 import { preparePeerDatabase } from "./peerDatabase";
@@ -90,6 +93,9 @@ export interface Server {
   entriesUp: typeof entriesUpModule;
   nudge: typeof nudgeModule;
   peerFeatures: typeof peerFeaturesModule;
+  directory: typeof directoryModule;
+  offerByName: typeof offerByNameModule;
+  remoteStats: typeof remoteStatsModule;
   resetIdentity: () => void;
   encrypt: (value: string) => string | null;
   app: express.Express;
@@ -131,6 +137,9 @@ const serverA = (): Server => ({
   entriesUp: entriesUpModule,
   nudge: nudgeModule,
   peerFeatures: peerFeaturesModule,
+  directory: directoryModule,
+  offerByName: offerByNameModule,
+  remoteStats: remoteStatsModule,
   resetIdentity: resetIdentityCache,
   encrypt: encryptApiKey,
   app: peerApp(tripSharePeerRouter, comparisonPeerRouter),
@@ -173,6 +182,9 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         entriesUp: require("../entriesUp"),
         nudge: require("../nudge"),
         peerFeatures: require("../peerFeatures"),
+        directory: require("../directory"),
+        offerByName: require("../offerByName"),
+        remoteStats: require("../remoteStats"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,
         encrypt: require("../../../../utils/encryption").encryptApiKey,
         app: peerApp(
@@ -371,6 +383,7 @@ function useServers(count: 2 | 3): void {
     for (const s of all) {
       s.peerFeatures.forgetPeerFeatures();
       s.nudge.forgetNudges();
+      s.directory.resetDirectoryLookups();
     }
     offline.clear();
     jest.restoreAllMocks();

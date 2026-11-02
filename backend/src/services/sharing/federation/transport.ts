@@ -34,6 +34,9 @@ export const BODY_BUDGET = {
   resync: 8_192,
   "entries-up": 1_048_576,
   nudge: 8_192,
+  // Simplified setup (2026-11-02): a lookup and a statistics read are short requests.
+  "directory-pair": 8_192,
+  "stats-read": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
 export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
 
@@ -72,6 +75,15 @@ export const ENTRIES_TRANSPORT: PeerTransport = transport(
 export const PROPAGATION_TRANSPORT: PeerTransport = transport(
   BODY_BUDGET["fact-update"] + ENVELOPE_OVERHEAD,
   BODY_BUDGET["fact-update"] + ENVELOPE_OVERHEAD
+);
+
+/**
+ * A statistics read (2026-11-02): a short request, answered with up to a page of entries (the
+ * reply is as large as an `entries` message).
+ */
+export const STATS_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["stats-read"] + ENVELOPE_OVERHEAD,
+  BODY_BUDGET.entries + ENVELOPE_OVERHEAD
 );
 
 /** The header every message carries. */

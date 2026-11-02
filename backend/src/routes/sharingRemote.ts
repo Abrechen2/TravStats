@@ -1,6 +1,7 @@
 import { Router, type NextFunction, type Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import type { Request } from "express";
+import type { ShareEntity } from "../services/sharing/shareTypes";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
@@ -16,12 +17,22 @@ import {
   revokeTripInvite,
 } from "../services/sharing/federation/invites";
 import { listRemotePeople } from "../services/sharing/federation/remotePeople";
-import { offerTrip } from "../services/sharing/federation/offers";
+import { offerTripTo } from "../services/sharing/federation/offerByName";
 import {
   acceptOffer,
   declineOffer,
   listReceivedOffers,
 } from "../services/sharing/federation/offerInbox";
+import { findRemotePerson } from "../services/sharing/federation/directory";
+import {
+  getFindable,
+  readRemoteEntries,
+  readRemoteOverview,
+  setFindable,
+  setRemoteLeaderboard,
+  setStatsLevel,
+} from "../services/sharing/federation/remoteStats";
+import { listConnectedServers } from "../services/sharing/federation/connectedServers";
 import { tripRemoteSharing } from "../services/sharing/federation/tripRemoteSharing";
 import {
   dismissParked,
@@ -33,6 +44,12 @@ import { requestAddition } from "../services/sharing/federation/addRequest";
 import {
   addRequestBodySchema,
   remoteClaimBodySchema,
+  remoteEntriesQuerySchema,
+  remoteFindableSchema,
+  remoteFindBodySchema,
+  remoteLeaderboardBodySchema,
+  remoteStatsLevelBodySchema,
+  remoteStatsQuerySchema,
   remoteMemberIdSchema,
   rosterDecisionBodySchema,
   rosterRefSchema,
@@ -73,6 +90,24 @@ const remoteInviteLimiter = rateLimit({
     const userId = (req as { userId?: string }).userId;
     if (userId) return `share-remote:${userId}`;
     return `share-remote-ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
+  },
+});
+
+/**
+ * Looking people up on other servers: 30 an hour per user. A lookup makes this server contact
+ * another one, and the answer is the same for "no such user" and "not findable" — the budget is
+ * what keeps a guessing run from being cheap (the other server bounds it per peer as well).
+ */
+const remoteLookupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many lookups, please try again later", code: "RATE_LIMITED" },
+  keyGenerator: (req: Request): string => {
+    const userId = (req as { userId?: string }).userId;
+    if (userId) return `share-remote-lookup:${userId}`;
+    return `share-remote-lookup-ip:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`;
   },
 });
 
@@ -157,6 +192,82 @@ router.get(
   })
 );
 
+// The simplified setup (2026-11-02, forgejo#301): servers trust each other (the admins pinned
+// keys), people opt in to being found, and each pairing carries its own switches.
+router.get(
+  "/findable",
+  handle(async (req, res) => {
+    res.json({ success: true, data: { findable: await getFindable(req.userId!) } });
+  })
+);
+
+router.put(
+  "/findable",
+  handle(async (req, res) => {
+    const { findable } = remoteFindableSchema.parse(req.body ?? {});
+    res.json({ success: true, data: { findable: await setFindable(req.userId!, findable) } });
+  })
+);
+
+router.get(
+  "/servers",
+  handle(async (_req, res) => {
+    res.json({ success: true, data: await listConnectedServers() });
+  })
+);
+
+router.post(
+  "/people/find",
+  remoteLookupLimiter,
+  handle(async (req, res) => {
+    const { origin, username } = remoteFindBodySchema.parse(req.body ?? {});
+    res
+      .status(201)
+      .json({ success: true, data: await findRemotePerson(req.userId!, origin, username) });
+  })
+);
+
+router.put(
+  "/people/:id/stats-level",
+  handle(async (req, res) => {
+    const id = remoteInviteIdSchema.parse(req.params.id);
+    const { level } = remoteStatsLevelBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await setStatsLevel(req.userId!, id, level) });
+  })
+);
+
+router.put(
+  "/people/:id/leaderboard",
+  handle(async (req, res) => {
+    const id = remoteInviteIdSchema.parse(req.params.id);
+    const { on } = remoteLeaderboardBodySchema.parse(req.body ?? {});
+    res.json({ success: true, data: await setRemoteLeaderboard(req.userId!, id, on) });
+  })
+);
+
+router.get(
+  "/people/:id/stats",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const id = remoteInviteIdSchema.parse(req.params.id);
+    const { year } = remoteStatsQuerySchema.parse(req.query);
+    res.json({ success: true, data: await readRemoteOverview(req.userId!, id, year ?? null) });
+  })
+);
+
+router.get(
+  "/people/:id/stats/entries",
+  remoteInviteLimiter,
+  handle(async (req, res) => {
+    const id = remoteInviteIdSchema.parse(req.params.id);
+    const { entity, offset } = remoteEntriesQuerySchema.parse(req.query);
+    res.json({
+      success: true,
+      data: await readRemoteEntries(req.userId!, id, entity as ShareEntity, offset),
+    });
+  })
+);
+
 router.get(
   "/trips/:tripId",
   handle(async (req, res) => {
@@ -171,8 +282,9 @@ router.post(
   remoteInviteLimiter,
   handle(async (req, res) => {
     const tripId = remoteTripIdSchema.parse(req.params.tripId);
-    const { remoteId } = remoteOfferBodySchema.parse(req.body ?? {});
-    res.status(201).json({ success: true, data: await offerTrip(req.userId!, tripId, remoteId) });
+    const body = remoteOfferBodySchema.parse(req.body ?? {});
+    // By name: a findable person on a connected server is paired on the way (one lookup).
+    res.status(201).json({ success: true, data: await offerTripTo(req.userId!, tripId, body) });
   })
 );
 

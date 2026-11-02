@@ -39,6 +39,8 @@ import { serveAddRequest } from "../services/sharing/federation/addRequest";
 import { serveResync } from "../services/sharing/federation/resync";
 import { serveEntriesUp } from "../services/sharing/federation/entriesUp";
 import { serveNudge } from "../services/sharing/federation/nudge";
+import { serveDirectoryPair } from "../services/sharing/federation/directory";
+import { serveStatsRead } from "../services/sharing/federation/remoteStats";
 import { servedFeatures } from "../services/sharing/federation/peerFeatures";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
@@ -88,6 +90,10 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveEntriesUp(origin, body);
     case "nudge":
       return serveNudge(origin, body);
+    case "directory-pair":
+      return serveDirectoryPair(origin, body);
+    case "stats-read":
+      return serveStatsRead(origin, body);
   }
 }
 

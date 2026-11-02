@@ -34,7 +34,15 @@ export const TRIP_SHARE_VERSIONS = [1] as const;
  * from before them answers an unknown kind with the uniform 403, so a sender asks first
  * (`peerFeatures.ts`) and does not send what the other side does not name.
  */
-export const TRIP_SHARE_FEATURES = ["resync", "entries-up", "nudge"] as const;
+export const TRIP_SHARE_FEATURES = [
+  "resync",
+  "entries-up",
+  "nudge",
+  // Simplified setup (2026-11-02, forgejo#301): finding a person on a connected server and reading
+  // the statistics they chose to show.
+  "directory",
+  "stats",
+] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
 const uuid = z.string().uuid();
@@ -60,6 +68,96 @@ export const inviteClaimSchema = z.strictObject({
   username,
   displayName,
 });
+
+/**
+ * Server-level trust (owner direction 2026-10-26, forgejo#301): a user of one admitted server
+ * looks up a user of the other, who opted in to being found. `username` is the person asked for,
+ * `channel` the asker's server's name for its user in the pairing, `leaderboardChannel` the one
+ * both servers will use for the leaderboard pairing made together with it. The names are that
+ * server's word, under its signature. The answer never says why it is `paired: false` (no such
+ * user, not findable, consent withdrawn, pairing limit): nothing to enumerate users with.
+ */
+export const directoryPairSchema = z.strictObject({
+  kind: z.literal("directory-pair"),
+  ...header,
+  username,
+  channel: uuid,
+  leaderboardChannel: uuid,
+  fromUsername: username,
+  fromDisplayName: displayName,
+});
+
+export const directoryPairReplySchema = z.discriminatedUnion("paired", [
+  z.strictObject({
+    kind: z.literal("directory-pair-reply"),
+    paired: z.literal(true),
+    /** The answering server's name for its user in this pairing. */
+    channel: uuid,
+    /** The channel the asker must hold for its own user (equals the proposed one unless a pairing existed). */
+    adoptChannel: uuid,
+    leaderboardChannel: uuid,
+    username,
+    displayName,
+  }),
+  z.strictObject({
+    kind: z.literal("directory-pair-reply"),
+    paired: z.literal(false),
+    /** True when this server's per-peer lookup budget is spent: the asker may try later. */
+    limited: z.boolean().optional(),
+  }),
+]);
+
+/** What a person lets a paired person see of their statistics (CHECK remote_share_accounts_stats_level_check). */
+export const STATS_LEVELS = ["off", "overview", "full"] as const;
+export type StatsLevel = (typeof STATS_LEVELS)[number];
+
+/**
+ * A viewer's server reads the statistics a person on this server chose to show it. `from` is the
+ * viewer's pairing channel (as in an offer), `to` the one of the person asked. `overview` needs
+ * level overview or full; `entries` needs full and pages through one entry type.
+ */
+export const statsReadSchema = z.strictObject({
+  kind: z.literal("stats-read"),
+  ...header,
+  from: uuid,
+  to: uuid,
+  part: z.enum(["overview", "entries"]),
+  year: z.number().int().min(1900).max(2200).nullable(),
+  entity: z.enum(SHARE_ENTITIES).optional(),
+  offset: z.number().int().min(0).max(1_000_000).optional(),
+});
+
+export const STATS_PAGE_SIZE = 25;
+
+/**
+ * Refusals read alike for every cause (unknown pairing, level too low, person gone): the
+ * viewer's screen says "not shared", and nothing tells a stranger which pairings exist.
+ */
+export const statsReplySchema = z.union([
+  z.strictObject({ kind: z.literal("stats-reply"), status: z.literal("notShared") }),
+  z.strictObject({
+    kind: z.literal("stats-reply"),
+    status: z.literal("ok"),
+    level: z.enum(["overview", "full"]),
+    part: z.literal("overview"),
+    /** The leaderboard's totals shape, every group the person has visible; reused, not invented. */
+    snapshot: z.json(),
+  }),
+  z.strictObject({
+    kind: z.literal("stats-reply"),
+    status: z.literal("ok"),
+    level: z.literal("full"),
+    part: z.literal("entries"),
+    entity: z.enum(SHARE_ENTITIES),
+    total: z.number().int().min(0),
+    offset: z.number().int().min(0),
+    entries: z.array(wireEntrySchema).max(STATS_PAGE_SIZE),
+  }),
+]);
+export type DirectoryPair = z.infer<typeof directoryPairSchema>;
+export type DirectoryPairReply = z.infer<typeof directoryPairReplySchema>;
+export type StatsRead = z.infer<typeof statsReadSchema>;
+export type StatsReply = z.infer<typeof statsReplySchema>;
 
 /** Most entries an `entries` message may carry, and a trip may hold to be offered (spec §4). */
 export const MAX_ENTRIES_PER_MESSAGE = 50;
@@ -322,6 +420,8 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   resyncSchema,
   entriesUpSchema,
   nudgeSchema,
+  directoryPairSchema,
+  statsReadSchema,
 ]);
 
 /** The group messages; a header of one of these is answered `schema` when the body fails. */
