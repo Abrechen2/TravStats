@@ -139,6 +139,16 @@ export async function serveDirectoryPair(
       // leaderboard consent, so they get a pairing of their own and the old one stays apart.
       const existing = byChannel;
       if (!existing) {
+        // A person this user withdrew from or declined does not come back by asking again with a
+        // fresh channel: the decision is theirs, and a name is all a new channel proves.
+        const refusedBefore = await tx.shareConsent.count({
+          where: {
+            targetId: user.id,
+            status: { in: ["withdrawn", "declined"] },
+            remoteRequester: { origin, username: body.fromUsername },
+          },
+        });
+        if (refusedBefore > 0) throw new Unpaired();
         const held = await tx.remoteShareAccount.count({ where: { userId: user.id } });
         if (held >= DIRECTORY_PAIRING_LIMIT) throw new Unpaired();
       }

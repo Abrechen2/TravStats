@@ -640,7 +640,17 @@
       "notMember": "Du teilst diese Reise mit niemandem auf einem anderen Server (mehr).",
       "isHome": "Diese Reise ist auf deinem Server zu Hause – biete sie hier direkt an.",
       "rosterNotFound": "Diese Person ist nicht (mehr) auf der Reise.",
-      "withdrawFailed": "Die Zustimmung konnte nicht entzogen werden."
+      "withdrawFailed": "Die Zustimmung konnte nicht entzogen werden.",
+      "personUnknown": "Auf {{origin}} gibt es keine auffindbare Person mit diesem Benutzernamen. Entweder stimmt der Name nicht, oder die Person hat sich nicht für Verbundene Server sichtbar gemacht.",
+      "lookupLimited": "{{origin}} beantwortet gerade keine weiteren Suchanfragen von deinem Server. Versuch es später noch einmal.",
+      "statsNotShared": "Diese Person zeigt dir ihre Statistik nicht – oder nicht in diesem Umfang.",
+      "leaderboardUnavailable": "Diese Verbindung wurde mit einem Einladungscode gemacht und hat keine Rangliste. Such die Person über den verbundenen Server, um sie zu bekommen.",
+      "serverNotConnected": "Dieser Server ist nicht verbunden.",
+      "findFailed": "Die Suche ist fehlgeschlagen.",
+      "findableFailed": "Die Einstellung konnte nicht gespeichert werden.",
+      "levelFailed": "Die Stufe konnte nicht gespeichert werden.",
+      "leaderboardFailed": "Der Schalter konnte nicht gespeichert werden.",
+      "statsFailed": "Die Statistik konnte nicht geladen werden."
     },
     "trip": {
       "title": "Reisende auf anderen Servern",
@@ -735,6 +745,19 @@
         "note": "Nachricht (optional)",
         "submit": "Anfrage senden",
         "sent": "Anfrage gesendet: {{origin}} entscheidet, ob {{name}} die Reise angeboten bekommt."
+      },
+      "otherServer": {
+        "title": "Auf anderem Server",
+        "pick": "Server",
+        "username": "Benutzername der Person",
+        "submit": "Reise anbieten",
+        "noServers": "Dein Admin hat noch keinen Server verbunden.",
+        "warnTitle": "Bitte beachten",
+        "warnStored": "Die Reise wird auf dem anderen Server gespeichert und kann dort vom Admin gelesen werden.",
+        "warnEdits": "Änderungen gelten in beide Richtungen: Was dort geändert wird, ändert auch deine Reise.",
+        "warnPrivate": "Private Notizen, Kosten und Dokumente bleiben bei dir.",
+        "warnRecall": "Was einmal gesendet wurde, lässt sich nicht zurückholen.",
+        "warnAccept": "Die Person nimmt das Angebot in ihrem Posteingang an – vorher kommt nichts an."
       }
     },
     "offers": {
@@ -769,6 +792,63 @@
         "loadFailed": "Die angebotenen Reisen konnten nicht geladen werden.",
         "acceptFailed": "Die Reise konnte nicht übernommen werden.",
         "declineFailed": "Das Angebot konnte nicht abgelehnt werden."
+      }
+    },
+    "connected": {
+      "title": "Personen auf verbundenen Servern",
+      "hint": "Server, denen dein Admin vertraut, brauchen keine Einladungscodes: Du suchst die Person über ihren Benutzernamen. Die Person erscheint nur, wenn sie sich für verbundene Server auffindbar gemacht hat.",
+      "findable": {
+        "label": "Für verbundene Server auffindbar",
+        "sub": "Aus: Niemand auf einem verbundenen Server kann dich finden. An: Man findet dich über deinen Benutzernamen und kann dir Reisen anbieten – du entscheidest bei jedem Angebot selbst, und wer dich sieht, sieht von deiner Statistik erst etwas, wenn du es unten erlaubst."
+      },
+      "find": {
+        "title": "Person suchen",
+        "server": "Server",
+        "noServers": "Dein Admin hat noch keinen Server verbunden.",
+        "username": "Benutzername",
+        "submit": "Suchen",
+        "done": "{{name}} (@{{username}}) auf {{origin}} ist verbunden. Es wird noch nichts geteilt – das stellst du unten ein."
+      },
+      "none": "Noch niemand verbunden.",
+      "row": "{{name}} (@{{username}}) auf {{origin}}",
+      "leaderboard": {
+        "label": "In meiner Rangliste zeigen",
+        "sub": "Diese Person sieht meine Summen in ihrer Rangliste.",
+        "unavailable": "Keine Rangliste – diese Verbindung kam über einen Einladungscode."
+      },
+      "stats": {
+        "label": "Meine Statistik für diese Person",
+        "off": "Aus",
+        "overview": "Übersicht",
+        "full": "Voll",
+        "hintOverview": "Übersicht: Summen und Jahreswerte, keine einzelnen Einträge.",
+        "hintFull": "Voll: die ganze Statistik samt den Einträgen dahinter – ohne private Notizen, Kosten und Dokumente.",
+        "view": "Statistik ansehen",
+        "close": "Schließen",
+        "year": "Jahr",
+        "allTime": "Gesamt",
+        "load": "Laden",
+        "entries": "Einträge",
+        "entity": "Art",
+        "more": "Mehr laden",
+        "empty": "Keine Einträge.",
+        "of": "{{shown}} von {{total}}",
+        "level": {
+          "overview": "Diese Person zeigt dir ihre Übersicht.",
+          "full": "Diese Person zeigt dir ihre ganze Statistik."
+        },
+        "entities": {
+          "flight": "Flüge",
+          "lodgingStay": "Unterkünfte",
+          "cruise": "Kreuzfahrten",
+          "rail": "Bahnfahrten",
+          "bus": "Busfahrten",
+          "ferry": "Fähren",
+          "rental": "Mietwagen"
+        },
+        "metric": "Kennzahl",
+        "value": "Wert",
+        "unknown": "unbekannt"
       }
     }
   },

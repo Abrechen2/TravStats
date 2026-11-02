@@ -118,6 +118,8 @@ describe("RemoteSharingSection", () => {
         username: "ben",
         displayName: "Ben",
         consent: "accepted",
+        statsLevel: "off",
+        leaderboard: "unavailable",
         createdAt: "2026-10-20T10:00:00.000Z",
       },
     ]);
@@ -151,6 +153,8 @@ describe("RemoteSharingSection", () => {
       username: "anna",
       displayName: "Anna",
       consent: "accepted",
+      statsLevel: "off",
+      leaderboard: "unavailable",
       createdAt: "2026-10-20T10:00:00.000Z",
     });
     render(<RemoteSharingSection />);
@@ -166,6 +170,8 @@ describe("RemoteSharingSection", () => {
       username: "anna",
       displayName: "Anna",
       consent: "accepted",
+      statsLevel: "off",
+      leaderboard: "unavailable",
       createdAt: "2026-10-20T10:00:00.000Z",
       alreadyConnected: true,
     });
@@ -182,10 +188,12 @@ describe("RemoteSharingSection", () => {
       username: "ben",
       displayName: "Ben",
       consent: "accepted" as const,
+      statsLevel: "off" as const,
+      leaderboard: "unavailable" as const,
       createdAt: "2026-10-20T10:00:00.000Z",
     };
     api.listPeople.mockResolvedValue([person]);
-    api.withdrawPerson.mockResolvedValue({ ...person, consent: "withdrawn" });
+    api.withdrawPerson.mockResolvedValue({ ...person, consent: "withdrawn" as const });
     render(<RemoteSharingSection />);
     await userEvent.click(
       await screen.findByRole("button", { name: "sharing:remote.people.withdraw" })
@@ -213,6 +221,8 @@ describe("RemoteSharingSection", () => {
         username: "ben",
         displayName: "Ben",
         consent: "accepted",
+        statsLevel: "off",
+        leaderboard: "unavailable",
         createdAt: "2026-10-20T10:00:00.000Z",
       },
     ]);
@@ -243,6 +253,8 @@ describe("RemoteSharingSection", () => {
       username: "anna",
       displayName: "Anna",
       consent: "accepted",
+      statsLevel: "off",
+      leaderboard: "unavailable",
       createdAt: "2026-10-20T10:00:00.000Z",
     });
     render(<RemoteSharingSection />);

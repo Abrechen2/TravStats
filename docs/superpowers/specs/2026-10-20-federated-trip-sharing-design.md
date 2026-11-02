@@ -1035,3 +1035,70 @@ Direction (concept board: https://claude.ai/artifact/UPvVWW7fkBxa9Z9sWS8obB):
    person accepts in their inbox.
 
 Not built yet; planned after 2.7. The existing invite codes stay until it is.
+
+## As built — simplified setup (2026-11-02, `fix/federation-simple-301`, forgejo#301)
+
+The owner direction above is built, additively: invitation codes (`invite-claim`, trip-page codes)
+work exactly as before; nothing here is required for a server that already uses them.
+
+**Trust.** Server-to-server trust is the admins' pin (connection file + fingerprint, unchanged,
+`admin/federation.ts`). A user sees the pinned, enabled and pinged servers at
+`GET /sharing/remote/servers`. Every call towards a server the admin has not admitted still stops at
+`requireAdmitted` (`SHARE_REMOTE_PEER_NOT_ADMITTED`, `extra.origin`).
+
+**Findable (default off).** `users.federation_findable`. Being findable is the person's standing yes
+to receive trip offers from people on connected servers; every offer still waits for their answer
+in the inbox. Switching it off stops new lookups; existing pairings stay until withdrawn.
+
+**Pairing without a code — peer kind `directory-pair`** (trip-share/1, feature `directory` in the
+ping). Asker sends `{username, channel, leaderboardChannel, fromUsername, fromDisplayName}`.
+The answer is `paired:false` for EVERY refusal (unknown name, not findable, inactive, a consent the
+person withdrew or declined earlier for the same origin + username, pairing limit 200, channel
+clash), `limited:true` when the per-peer budget (60 lookups/hour) is spent. A pairing is reused only by
+the channel the asker already holds; a reused or renamed username gets fresh channels, statsLevel
+off and no leaderboard consent. On success both servers hold a `RemoteShareAccount` with its
+consents (trip offers) and a `LeaderboardRemote` with the same channel, linked through
+`remote_share_accounts.leaderboard_remote_id`. Nothing is shared by pairing.
+
+**Per person.** `remote_share_accounts.stats_level` (`off|overview|full`, CHECK, default off) and the
+leaderboard switch (the existing `LeaderboardConsent`: on = accepted with all groups and the visible
+domains, off = withdrawn). Withdrawing a person resets both. Statistics travel on the trip-share
+transport (signed, purpose trip-share/1), peer kind `stats-read` (feature `stats`): `overview` =
+the leaderboard's totals snapshot for every group, lifetime or one year, no entries; `entries` (level
+full only) = 25 fact-list entries of one type (`wire/shapes`; no notes, costs, documents, seat; share
+key random per read). A domain the owner or the viewer has hidden shows no entries. Every refusal
+reads `notShared`. The bridge to the leaderboard code is `services/federation/leaderboardBridge.ts`,
+outside both sides of `separation.test.ts`.
+
+**Offers by name.** `POST /sharing/remote/trips/:id/offers` accepts `{origin, username}` as well as
+`{remoteId}`; the trip is checked first, then the person is looked up and paired, then the F-S4c
+offer goes out.
+
+### Contract for the Companion (additive; minimum server version: the one carrying this section)
+
+All enveloped `{success, data}`, authenticated, `SHARE_REMOTE_DISABLED` (404) while off.
+
+| Call | Body / query | Answer |
+|---|---|---|
+| `GET /sharing/remote/findable` · `PUT` | `{findable: boolean}` | `{findable}` |
+| `GET /sharing/remote/servers` | | `[{origin}]` |
+| `POST /sharing/remote/people/find` | `{origin, username}` | person (201) |
+| `GET /sharing/remote/people` | | person gains `statsLevel: off\|overview\|full`, `leaderboard: unavailable\|off\|on` |
+| `PUT /sharing/remote/people/:id/stats-level` | `{level}` | person |
+| `PUT /sharing/remote/people/:id/leaderboard` | `{on}` | person |
+| `GET /sharing/remote/people/:id/stats?year=` | | `{level, snapshot}` (leaderboard snapshot shape) |
+| `GET /sharing/remote/people/:id/stats/entries?entity=&offset=` | entity ∈ flight, lodgingStay, cruise, rail, bus, ferry, rental | `{entity,total,offset,entries:[{entity,shareKey,facts}]}` |
+| `POST /sharing/remote/trips/:id/offers` | `{remoteId}` or `{origin, username}` | member (201) |
+
+New codes (all with `extra.origin` where a server is named): `SHARE_REMOTE_PERSON_UNKNOWN` (404, one
+answer for unknown and not findable), `SHARE_REMOTE_LOOKUP_LIMITED` (429),
+`SHARE_REMOTE_STATS_NOT_SHARED` (403), `SHARE_REMOTE_LEADERBOARD_UNAVAILABLE` (409, pairing made with a
+code). Lookups are limited to 30/hour per user.
+
+**Not built / open.** (1) Pairings are bound to channels, not to a stable remote user id attested by
+the peer: a new person under a withdrawn person's name is refused by name (fail closed), but a
+renamed person cannot be recognised as the same one. A server-attested user id in the envelope would
+fix this and is a protocol change. (2) "Voll" serves the figures and the entries behind them as fact
+lists, not a replica of the owner's whole statistics page (routes, airports, map): the web shows
+totals and an entry list. (3) Per-person levels apply to pairings made through the directory for the
+leaderboard; code pairings have the statistics level but no leaderboard.

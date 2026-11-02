@@ -30,6 +30,11 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_NOT_MEMBER: "sharing:remote.errors.notMember",
   SHARE_REMOTE_IS_HOME: "sharing:remote.errors.isHome",
   SHARE_REMOTE_ROSTER_NOT_FOUND: "sharing:remote.errors.rosterNotFound",
+  SHARE_REMOTE_PERSON_UNKNOWN: "sharing:remote.errors.personUnknown",
+  SHARE_REMOTE_LOOKUP_LIMITED: "sharing:remote.errors.lookupLimited",
+  SHARE_REMOTE_STATS_NOT_SHARED: "sharing:remote.errors.statsNotShared",
+  SHARE_REMOTE_LEADERBOARD_UNAVAILABLE: "sharing:remote.errors.leaderboardUnavailable",
+  SHARE_REMOTE_SERVER_NOT_CONNECTED: "sharing:remote.errors.serverNotConnected",
   TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
 };
 

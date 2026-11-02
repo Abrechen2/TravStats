@@ -22,6 +22,7 @@ import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
 import TripRecordingSection from "../../components/Settings/TripRecordingSection";
 import SharingSection from "../../components/Settings/SharingSection";
+import RemotePeopleSection from "../../components/Settings/RemotePeopleSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
 import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import CompareHandoverRow from "../../components/Settings/CompareHandoverRow";
@@ -114,6 +115,7 @@ export default function SettingsSectionSwitch({
       return (
         <div className="space-y-4">
           <SharingSection />
+          {isFeatureVisible("federatedTripSharing") && <RemotePeopleSection />}
           {isFeatureVisible("federatedTripSharing") && <RemoteSharingSection />}
         </div>
       );

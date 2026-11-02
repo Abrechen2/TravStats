@@ -157,6 +157,24 @@ describe("finding a person on a connected server", () => {
   });
 });
 
+describe("a person the user withdrew from", () => {
+  it("does not come back by asking again with a fresh channel, and nothing is created", async () => {
+    const { anna, ben, person } = await annaFindsBen();
+    const benRow = await b.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: ben } });
+    await b.lifecycle.withdrawRemoteConsent(ben, benRow.id);
+    // Anna's server lost its pairing (a restore): it asks with a brand-new channel.
+    await a.prisma.remoteShareAccount.deleteMany({ where: { userId: anna } });
+    await expectRefusal(
+      a.directory.findRemotePerson(anna, B, person.username),
+      "SHARE_REMOTE_PERSON_UNKNOWN"
+    );
+    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
+    expect(
+      await b.prisma.shareConsent.count({ where: { targetId: ben, status: "accepted" } })
+    ).toBe(0);
+  });
+});
+
 describe("a reused or renamed username", () => {
   it("never inherits the old person's pairing, level or leaderboard consent", async () => {
     const { anna, ben } = await annaFindsBen();
