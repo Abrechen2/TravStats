@@ -33,7 +33,10 @@ import {
   readServerQrPayload,
 } from "../../services/federation/connectionFile";
 import { parsePeerPublicKey } from "../../services/federation/peerKey";
-import { holdConnectionsOfOrigin } from "../../services/sharing/federation/connections/hooks";
+import {
+  holdAllConnections,
+  holdConnectionsOfOrigin,
+} from "../../services/sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
@@ -108,8 +111,19 @@ router.put(
   "/",
   handle(async (req, res) => {
     const body = federationSettingsSchema.parse(req.body);
+    const id = await ensureAdminSettingsRow();
+    const before = await prisma.adminSettings.findUnique({
+      where: { id },
+      select: { federationOrigin: true },
+    });
+    // Peers address this server by its origin: a different one is a new party to them, so their
+    // side has re-pinned or lost us; do locally what a re-pin does (first-time set: nothing to
+    // hold). The hold comes FIRST: if the write below then fails, the connections are merely
+    // reconfirm-able, and a retry still sees the old origin and holds again.
+    if (before?.federationOrigin && before.federationOrigin !== body.origin)
+      await holdAllConnections();
     await prisma.adminSettings.update({
-      where: { id: await ensureAdminSettingsRow() },
+      where: { id },
       data: { federationEnabled: body.enabled, federationOrigin: body.origin },
     });
     resetIdentityCache();
@@ -143,12 +157,16 @@ router.post(
     const pem = generateKeyPairSync("ed25519")
       .privateKey.export({ type: "pkcs8", format: "pem" })
       .toString();
+    // Peers pinned the old key: they refuse this server until their admins pin the new one, and
+    // their re-pin sends their side of every connection to reconfirm. Mirror that here, or this
+    // side keeps showing active connections and plan members the peers have already ended. Held
+    // before the key is written, so a failure in between fails closed and a retry holds again.
+    await holdAllConnections();
     await prisma.adminSettings.update({
       where: { id: await ensureAdminSettingsRow() },
       data: { federationPrivateKey: encryptApiKey(pem) },
     });
     resetIdentityCache();
-    // Peers pinned the old key: they refuse this server until their admins pin the new one.
     logger.info(
       { operation: "federation_key_generated", userId: req.userId },
       "Federation key generated"
