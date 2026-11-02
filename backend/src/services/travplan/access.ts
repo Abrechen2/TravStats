@@ -6,8 +6,10 @@
  * directions. A person who is neither gets the same 404 as a plan that does not exist, so a
  * trip id never confirms that somebody has planned on it.
  *
- * Remote guests (§6.5) have their columns on `TravelPlanMember` and no way in yet: `kind:
- * "remote"` is never resolved here.
+ * A remote guest (§6.5) is not a user: it arrives as a `GuestActor` that the guest router built
+ * from a verified `ts_guest` credential. It is resolved against ONE plan - the one its credential
+ * names - and against its member row's current status, so a removal takes effect inside a
+ * request already running. A `kind: "remote"` row is never reachable through a user id.
  */
 import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
@@ -64,13 +66,44 @@ export async function ensureOwnerMember(
   }
 }
 
-export async function planAccess(userId: string, tripId: string) {
+/** A guest from another server, as the guest router hands it to the plan services. */
+export interface GuestActor {
+  guest: { memberId: string; planId: string };
+}
+/** Whoever acts on a plan: an account on this server (its id) or a remote guest. */
+export type PlanActor = string | GuestActor;
+
+export const isGuest = (actor: PlanActor): actor is GuestActor => typeof actor !== "string";
+
+/** The account that pays for quota and owns the records an act touches: the owner for a guest. */
+export async function quotaUserOf(actor: PlanActor, tripId: string): Promise<string> {
+  if (!isGuest(actor)) return actor;
+  return (await planAccess(actor, tripId)).ownerId;
+}
+
+export async function planAccess(actor: PlanActor, tripId: string) {
   const row = await prisma.travelPlan.findFirst({
     where: { tripId },
     include: { trip: { select: { name: true, id: true, userId: true } } },
   });
   if (!row) throw notFound();
   const ownerId = row.trip.userId;
+  if (isGuest(actor)) {
+    // One plan only: a credential for another plan is not a credential for this one.
+    if (actor.guest.planId !== row.id) throw notFound();
+    const guest = await prisma.travelPlanMember.findFirst({
+      where: { id: actor.guest.memberId, planId: row.id, kind: "remote", status: "active" },
+      select: { id: true, displayName: true },
+    });
+    if (!guest) throw notFound();
+    return {
+      row,
+      ownerId,
+      isOwner: false as const,
+      member: { id: guest.id, kind: "remote" as const, displayName: guest.displayName },
+    };
+  }
+  const userId = actor;
   if (ownerId === userId) {
     return {
       row,
@@ -116,6 +149,6 @@ export function assertOwner(access: Pick<PlanAccess, "isOwner">): void {
 }
 
 /** A plan the caller may read and edit, in the shape `ownedPlan` returns. */
-export async function accessiblePlan(userId: string, tripId: string) {
-  return (await planAccess(userId, tripId)).row;
+export async function accessiblePlan(actor: PlanActor, tripId: string) {
+  return (await planAccess(actor, tripId)).row;
 }

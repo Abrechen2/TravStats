@@ -31,6 +31,7 @@ import {
 } from "../../services/federation/connectionFile";
 import { parsePeerPublicKey } from "../../services/federation/peerKey";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
+import { endGuestsOfOrigin } from "../../services/travplan/guests/sessions";
 import {
   federationSettingsSchema,
   peerOriginSchema,
@@ -192,6 +193,9 @@ router.post(
     // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
     if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
     else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
+    // Guests of a plan who came in through that server lose their access with its pin (forgejo#404).
+    if (previous && (previous.publicKey !== pem || !body.enabled))
+      await endGuestsOfOrigin(body.origin);
     res.json(await state());
   })
 );
@@ -323,6 +327,7 @@ router.post(
       data: { enabled: false, verifiedAt: null },
     });
     await holdPeerMemberships(origin, "peer-blocked");
+    await endGuestsOfOrigin(origin);
     res.json({ suspended: true });
   })
 );

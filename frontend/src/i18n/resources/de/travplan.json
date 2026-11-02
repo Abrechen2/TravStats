@@ -137,7 +137,7 @@
     "PLAN_TOO_LARGE": "Der Plan ist zu groß, um ihn zu speichern. Entferne nicht mehr benötigte Einträge oder Ideen und versuche es dann erneut.",
     "PLAN_ITEM_NOT_FOUND": "Dieser Eintrag existiert nicht mehr – vermutlich wurde er inzwischen gelöscht. Lade die Seite neu, um den aktuellen Stand zu sehen.",
     "PLAN_PROPOSAL_NOT_FOUND": "Diesen Vorschlag gibt es nicht mehr. Erstelle bei Bedarf einen neuen.",
-    "PLAN_DOCUMENT_NOT_FOUND": "Ein verknüpftes Dokument gehört nicht (mehr) zu dieser Reise. Entferne es aus der Buchung und speichere erneut.",
+    "PLAN_DOCUMENT_NOT_FOUND": "Dieses Dokument gibt es nicht oder es gehört nicht zum Plan.",
     "PLAN_WEATHER_INVALID": "Die Wetterquelle hat unbrauchbare Daten geliefert. Die gespeicherte Vorhersage bleibt erhalten; versuche es später erneut.",
     "PLAN_INVALID_NIGHT": "Diese Übernachtungsart passt nicht zur Anreise.",
     "PLAN_SHAPE_IN_USE": "Der Plan hat Stationen; entferne sie, bevor er wieder ein Ziel-Plan wird.",
@@ -165,7 +165,24 @@
     "SHARE_USER_NOT_FOUND": "Das Konto dieser Person ist nicht mehr aktiv.",
     "SHARE_CONSENT_REQUIRED": "Diese Person hat das Teilen mit dir nicht (mehr) zugelassen.",
     "SHARE_GROUP_CONSENT_REQUIRED": "Nicht alle Beteiligten dieser Reise haben dem Teilen mit dieser Person zugestimmt.",
-    "PLAN_SHARE_FAILED": "Die Reise konnte nicht geteilt werden."
+    "PLAN_SHARE_FAILED": "Die Reise konnte nicht geteilt werden.",
+    "PLAN_GUEST_REQUIRED": "Du bist hier nicht als Gast angemeldet. Öffne den Einladungslink noch einmal.",
+    "PLAN_GUEST_EXPIRED": "Deine Gastsitzung ist abgelaufen. Bitte die Besitzerin oder den Besitzer des Plans um einen neuen Einladungslink.",
+    "PLAN_GUEST_REVOKED": "Dein Zugang zu diesem Plan wurde beendet, oder der Server, über den du eingeladen wurdest, ist hier nicht mehr freigegeben.",
+    "PLAN_GUEST_INVITE_INVALID": "Dieser Einladungslink gilt nicht (mehr). Er ist abgelaufen, schon benutzt oder zurückgezogen. Bitte um einen neuen.",
+    "PLAN_GUEST_JOIN_NOT_STARTED": "Der Beitritt wurde in diesem Browser nicht begonnen. Öffne den Einladungslink noch einmal und bleibe im selben Browser.",
+    "PLAN_GUEST_VOUCH_INVALID": "Die Bestätigung deines Servers wurde abgelehnt (ungültig, abgelaufen oder schon benutzt). Öffne den Einladungslink noch einmal.",
+    "PLAN_GUEST_PEER_NOT_ADMITTED": "Der Admin hat diesen Server nicht freigegeben (festgesetzt und geprüft). Ohne das kann niemand von dort mitplanen.",
+    "PLAN_GUEST_HOST_NOT_ADMITTED": "Dein Admin hat den Server, der dich eingeladen hat, nicht freigegeben. Dein Server bestätigt deshalb nichts für ihn.",
+    "PLAN_GUEST_FEDERATION_OFF": "Die Verbindung zu anderen Servern ist auf diesem Server ausgeschaltet.",
+    "PLAN_GUEST_LIMIT": "Auf diesem Server sind schon zu viele Gäste eingeladen (höchstens 20).",
+    "PLAN_GUEST_RATE_LIMITED": "Zu viele Anfragen in kurzer Zeit. Warte einen Moment.",
+    "PLAN_GUEST_CSRF": "Diese Anfrage kam nicht aus der TravStats-Seite und wurde abgelehnt. Lade die Seite neu.",
+    "PLAN_GUEST_PAT_LIMIT": "Du hast schon fünf Telefon-Zugänge. Melde dich ab, um Platz zu schaffen.",
+    "PLAN_DOCUMENT_LIMIT": "Du hast schon 50 Dokumente für diesen Plan hochgeladen.",
+    "PLAN_DOCUMENT_DUPLICATE": "Diese Datei liegt schon in der Reise der Besitzerin oder des Besitzers und wird nicht noch einmal hinzugefügt.",
+    "PLAN_DOCUMENT_TOO_LARGE": "Die Datei ist größer als 20 MB.",
+    "network": "Der Server antwortet nicht. Prüfe deine Verbindung und versuche es noch einmal."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -668,5 +685,58 @@
     "noText": "In der Datei steckt kein lesbarer Text.",
     "disabled": "Das Sprachmodell ist auf diesem Server abgeschaltet; es wurden nur eindeutig beschriftete Angaben gesucht.",
     "unreachable": "Das Sprachmodell ist nicht erreichbar; es wurden nur eindeutig beschriftete Angaben gesucht."
+  },
+  "guests": {
+    "join": {
+      "title": "Einladung zum gemeinsamen Planen",
+      "intro": "Du wurdest eingeladen, auf diesem Server an einem Reiseplan mitzuplanen. Dafür bestätigt dein eigener TravStats-Server, wer du bist.",
+      "privacy": "Dein Server sieht den Plan nicht: Er bestätigt nur deinen Namen. Der Plan bleibt auf diesem Server.",
+      "confirm": "Mit deinem TravStats-Server bestätigen",
+      "incomplete": "Der Link ist unvollständig. Kopiere ihn noch einmal vollständig, mit allem nach dem #.",
+      "working": "Dein Zugang wird eingerichtet …",
+      "failedTitle": "Beitritt nicht möglich",
+      "toLogin": "Zur Anmeldung"
+    },
+    "vouch": {
+      "title": "Beim Planen bestätigen",
+      "question": "Bei {{host}} als {{name}} bestätigen?",
+      "privacy": "{{host}} erfährt nur deinen Anzeigenamen und eine für diesen Server eigene Kennung. Es bekommt weder dein Passwort noch deine Daten, und dieser Server sieht den Plan nicht.",
+      "confirm": "Bestätigen",
+      "cancel": "Abbrechen",
+      "invalid": "Dieser Link ist nicht vollständig oder nicht gültig."
+    },
+    "banner": "Du planst als Gast {{name}} auf {{host}} mit. Du siehst nur diesen Plan.",
+    "leave": "Plan verlassen",
+    "phone": {
+      "open": "Telefon koppeln",
+      "hint": "Scanne den Code mit der TravStats-App. Er gilt nur für diesen Plan und wird nur einmal angezeigt."
+    },
+    "ended": {
+      "title": "Dein Zugang ist beendet",
+      "body": "Du kannst diesen Plan nicht mehr öffnen.",
+      "toLogin": "Zur Anmeldung"
+    },
+    "invite": {
+      "title": "Gast von einem anderen Server",
+      "intro": "Lade eine Person von einem verbundenen Server ein. Die Person bestätigt sich über ihren eigenen Server und arbeitet danach hier im Plan. Der Server der Person sieht den Plan nicht.",
+      "noServers": "Es ist kein verbundener Server freigegeben. Der Admin richtet das unter Einstellungen → Instanz ein.",
+      "server": "Server",
+      "username": "Benutzername dort (nur zur Anzeige)",
+      "send": "Einladungslink erzeugen",
+      "linkOnce": "Link für {{name}}. Er gilt sieben Tage, einmal, und wird nur jetzt angezeigt. Schicke ihn auf einem Weg deiner Wahl.",
+      "link": "Einladungslink",
+      "copy": "Link kopieren"
+    },
+    "member": {
+      "remote": "Gast von einem anderen Server"
+    }
+  },
+  "planDocs": {
+    "title": "Dokumente zum Plan",
+    "intro": "Hier liegen die Dokumente der Buchungen und was Mitplanende für den Plan hochgeladen haben. Weitere Dokumente der Reise sehen nur die Besitzerin oder der Besitzer.",
+    "none": "Noch keine Dokumente.",
+    "uploadedBy": "hochgeladen von {{name}}",
+    "onBooking": "an einer Buchung",
+    "upload": "Dokument hochladen"
   }
 }

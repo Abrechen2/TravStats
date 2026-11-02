@@ -27,6 +27,7 @@ import { useCollab } from "./useCollab";
 import { PlanMembersDialog } from "./PlanMembersDialog";
 import { MemberNoteCard, MemberNotices } from "./MemberPanels";
 import { PlanHandover } from "./PlanHandover";
+import { PlanDocumentsPanel } from "./PlanDocumentsPanel";
 
 export const PLAN_SECTIONS = [
   "overview",
@@ -42,8 +43,19 @@ export const PLAN_SECTIONS = [
 
 /** The strip shows five places; the rest are reached from the overview, the header or a finding. */
 const STRIP_SECTIONS = ["overview", "workspace", "import", "packing", "budget"];
+/** What a guest is not offered: the parsers and the owner's logbook acts. */
+const GUEST_HIDDEN = ["import", "ai", "handover", "actual"];
 
-export default function PlanContent({ tripId, section }: { tripId: string; section: string }) {
+export default function PlanContent({
+  tripId,
+  section,
+  guest = false,
+}: {
+  tripId: string;
+  section: string;
+  /** A person from another server (spec §6.5): the owner's acts and the parsers are not theirs. */
+  guest?: boolean;
+}) {
   const { t } = useTranslation("travplan"),
     { plan, setPlan, loading, busy, error, setError, refresh, mutate, message } = usePlan(tripId),
     [editor, setEditor] = useState<EditorState | null>(null),
@@ -64,6 +76,8 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     setSuggestions([]);
   }, [tripId]);
   useEffect(() => {
+    // A guest has no account here: the booking pickers get no logbook documents.
+    if (guest) return;
     let live = true;
     documentsApi
       .listForEntry({ type: "trip", id: tripId })
@@ -74,7 +88,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     return () => {
       live = false;
     };
-  }, [tripId, plan?.revision]);
+  }, [tripId, plan?.revision, guest]);
   useEffect(() => {
     if (plan && day === null && plan.state.startDay) setDay(plan.state.startDay);
   }, [plan?.state.startDay]);
@@ -84,25 +98,27 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
       <>
         {error && <PlanNotice tone="bad">{error}</PlanNotice>}
         <PlanActions>
-          <Button
-            onClick={() =>
-              void travplanApi
-                .create(t("newTrip"), {}, tripId)
-                .then((p) => {
-                  setPlan(p);
-                  setError("");
-                })
-                .catch(onError)
-            }
-          >
-            {t("connect")}
-          </Button>
+          {!guest && (
+            <Button
+              onClick={() =>
+                void travplanApi
+                  .create(t("newTrip"), {}, tripId)
+                  .then((p) => {
+                    setPlan(p);
+                    setError("");
+                  })
+                  .catch(onError)
+              }
+            >
+              {t("connect")}
+            </Button>
+          )}
           <Button onClick={() => void refresh()}>{t("refresh")}</Button>
         </PlanActions>
       </>
     );
   const state = plan.state,
-    prefix = "/plan/" + tripId;
+    prefix = (guest ? "/guest/plan/" : "/plan/") + tripId;
   function edit(key: PlanCollection, row?: object, extras?: Partial<EditorState>) {
     setEditor({
       title: t(row ? "edit" : "add"),
@@ -168,7 +184,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
           .join(" · ")}
         actions={
           <>
-            <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>
+            {!guest && <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>}
             <PlanMenu>
               <Button
                 onClick={() =>
@@ -184,14 +200,16 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
               <Button disabled={busy} onClick={() => void refresh()}>
                 {t("refresh")}
               </Button>
-              <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>
-              <Button onClick={() => setMembers(true)}>
-                {t("members.open", {
-                  count: collab?.members.filter((m) => m.status === "active").length ?? 1,
-                })}
-              </Button>
+              {!guest && <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>}
+              {!guest && (
+                <Button onClick={() => setMembers(true)}>
+                  {t("members.open", {
+                    count: collab?.members.filter((m) => m.status === "active").length ?? 1,
+                  })}
+                </Button>
+              )}
               {/* The owner's alone (D3): a co-planner is not offered what the server refuses. */}
-              {(plan.self?.isOwner ?? true) && (
+              {!guest && (plan.self?.isOwner ?? true) && (
                 <Button variant="danger" onClick={() => setDeleting(true)}>
                   {t("deletePlan.open")}
                 </Button>
@@ -205,13 +223,13 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
         className="flex overflow-x-auto"
         style={{ gap: "var(--ts-space-sm)", paddingBottom: "var(--ts-space-md)" }}
       >
-        {(STRIP_SECTIONS.includes(section) ? STRIP_SECTIONS : [...STRIP_SECTIONS, section]).map(
-          (s) => (
+        {(STRIP_SECTIONS.includes(section) ? STRIP_SECTIONS : [...STRIP_SECTIONS, section])
+          .filter((s) => !guest || !GUEST_HIDDEN.includes(s))
+          .map((s) => (
             <PlanLink key={s} variant="tab" to={prefix + "/" + s} current={s === section}>
               {t(s === "workspace" && state.shape === "route" ? "sections.route" : "sections." + s)}
             </PlanLink>
-          )
-        )}
+          ))}
       </nav>
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
       <UndoToast
@@ -232,13 +250,16 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
       <MemberNotices collab={collab} onRead={() => void markRead()} />
       {section === "overview" && <OverviewSection ctx={ctx} />}
       {section === "overview" && (
+        <PlanDocumentsPanel tripId={tripId} guest={guest} revision={plan.revision} />
+      )}
+      {section === "overview" && (
         <MemberNoteCard
           plan={plan}
           busy={busy}
           save={(text) => mutate({ type: "member_note", text })}
         />
       )}
-      {members && collab && (
+      {!guest && members && collab && (
         <PlanMembersDialog
           tripId={tripId}
           collab={collab}
@@ -249,12 +270,14 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
       )}
       {section === "workspace" &&
         (state.shape === "route" ? <RouteSection ctx={ctx} /> : <WorkspaceSection ctx={ctx} />)}
-      {section === "import" && <ImportSection ctx={ctx} />}
+      {section === "import" && !guest && <ImportSection ctx={ctx} />}
       {section === "transfer" && <TransferSection ctx={ctx} />}
-      {section === "ai" && <PlanAI key={tripId} plan={plan} mutate={mutate} onError={onError} />}
+      {section === "ai" && !guest && (
+        <PlanAI key={tripId} plan={plan} mutate={mutate} onError={onError} />
+      )}
       {section === "packing" && <PackingSection ctx={ctx} />}
       {section === "budget" && <BudgetSection ctx={ctx} />}
-      {section === "handover" && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
+      {section === "handover" && !guest && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
       {deleting && (
         <PlanDeleteDialog
           tripId={tripId}
@@ -263,7 +286,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
           onDeleted={() => navigate("/plan")}
         />
       )}
-      {section === "actual" && <PlanActualPanel ctx={ctx} />}
+      {section === "actual" && !guest && <PlanActualPanel ctx={ctx} />}
       {editor && (
         <PlanEditor
           key={editor.value.id ? String(editor.value.id) : "settings"}

@@ -14,7 +14,8 @@ import { hasAcceptedConsent } from "../sharing/consent";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { shareTripWithUser } from "../sharing/shareTrip";
 import { assertOwner, planAccess, selfOf } from "./access";
-import type { PlanAccess } from "./access";
+import type { PlanAccess, PlanActor } from "./access";
+import { endGuestAccess } from "./guests/sessions";
 import type { PlanCollab, PlanMember, PlanMemberShare, PlanNotice } from "./types";
 
 /** Active plus invited members besides the owner; the state's per-member arrays are sized to it. */
@@ -50,8 +51,8 @@ export async function activeMemberIds(
   return new Set(rows.map((r) => r.id));
 }
 
-export async function collab(userId: string, tripId: string): Promise<PlanCollab> {
-  const access = await planAccess(userId, tripId);
+export async function collab(actor: PlanActor, tripId: string): Promise<PlanCollab> {
+  const access = await planAccess(actor, tripId);
   const rows = await prisma.travelPlanMember.findMany({
     where: {
       planId: access.row.id,
@@ -80,8 +81,8 @@ export async function collab(userId: string, tripId: string): Promise<PlanCollab
   };
 }
 
-export async function markNoticesRead(userId: string, tripId: string): Promise<{ read: number }> {
-  const access = await planAccess(userId, tripId);
+export async function markNoticesRead(actor: PlanActor, tripId: string): Promise<{ read: number }> {
+  const access = await planAccess(actor, tripId);
   const done = await prisma.travelPlanNotice.updateMany({
     where: { recipientId: access.member.id, readAt: null },
     data: { readAt: new Date() },
@@ -248,6 +249,16 @@ export async function revokeMember(
 ): Promise<{ revoked: true }> {
   const access = await planAccess(ownerId, tripId);
   assertOwner(access);
+  // A guest from another server: every credential and open invitation dies with the member.
+  const remote = await prisma.travelPlanMember.findFirst({
+    where: { id: memberId, planId: access.row.id, kind: "remote" },
+    select: { id: true },
+  });
+  if (remote) {
+    if (!(await endGuestAccess([remote.id])))
+      throw new AppError("Member not found", 404, "PLAN_MEMBER_NOT_FOUND");
+    return { revoked: true };
+  }
   const done = await prisma.travelPlanMember.updateMany({
     where: {
       id: memberId,

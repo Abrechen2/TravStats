@@ -281,6 +281,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",
+  travelPlanMembers:
+    "who may work on a plan (co-planners and guests, forgejo#404): access bookkeeping of the host, not the member's own data",
   pendingFlightUpdates: "transient queue of suggested flight changes",
   clientWriteRefs:
     "transport bookkeeping: the outbox's idempotency keys (forgejo#283), pruned after 90 days",

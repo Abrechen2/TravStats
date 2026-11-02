@@ -4347,6 +4347,7 @@ model Document {
   flight             Flight?             @relation(fields: [flightId], references: [id], onDelete: Cascade)
   cruise             Cruise?             @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
   lodgingStay        LodgingStay?        @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  planDocument       TravelPlanDocument?
   trip               Trip?               @relation(fields: [tripId], references: [id], onDelete: Cascade)
   placeVisit         PlaceVisit?         @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
   railJourney        RailJourney?        @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
@@ -5823,13 +5824,14 @@ model TravelPlan {
   proposals TravelPlanProposal[]
   members   TravelPlanMember[]
   notices   TravelPlanNotice[]
+  documents TravelPlanDocument[]
 
   @@map("travel_plans")
 }
 
 /// Who may work on a plan (spec 2026-10-17 §6.1). `owner` is the trip's owner, one row per plan,
 /// kept in step lazily (`services/travplan/access.ts`). `local` is an account on this server;
-/// `remote` (a guest from another server, §6.5) has its columns here but no endpoint yet.
+/// `remote` is a guest from another server (§6.5): it works through `ts_guest` sessions only.
 /// Rows are never deleted when someone leaves: past mutations name their `actor`.
 model TravelPlanMember {
   id            String    @id @default(uuid())
@@ -5850,9 +5852,13 @@ model TravelPlanMember {
   /// When the linked copy of the trip reached this member's logbook (handover, §6.4).
   sharedAt      DateTime? @map("shared_at")
 
-  plan    TravelPlan         @relation(fields: [planId], references: [id], onDelete: Cascade)
-  user    User?              @relation("TravelPlanMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-  notices TravelPlanNotice[]
+  plan      TravelPlan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user      User?                    @relation("TravelPlanMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  notices   TravelPlanNotice[]
+  invites   TravelPlanGuestInvite[]
+  joins     TravelPlanGuestJoin[]
+  sessions  TravelPlanGuestSession[]
+  documents TravelPlanDocument[]
 
   @@unique([planId, userId])
   @@unique([planId, remoteOrigin, remoteSubject])
@@ -6764,4 +6770,80 @@ model MailIntakeMessage {
   @@unique([sourceId, messageId, userId])
   @@index([userId, status])
   @@map("mail_intake_messages")
+}
+
+/// A remote guest's invitation (spec 2026-10-17 §6.5 step 1): 32 random bytes, only the hash is
+/// stored, single use, seven days. It proves the holder of the link may start a join.
+model TravelPlanGuestInvite {
+  id         String    @id @default(uuid())
+  memberId   String    @map("member_id")
+  secretHash String    @map("secret_hash")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  member TravelPlanMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  joins  TravelPlanGuestJoin[]
+
+  @@index([memberId])
+  @@map("travel_plan_guest_invites")
+}
+
+/// One browser's attempt to join (§6.5 steps 2-4). The nonce is bound to the browser by an
+/// HttpOnly cookie whose hash is kept here; a used row is the replay table.
+model TravelPlanGuestJoin {
+  id          String    @id @default(uuid())
+  inviteId    String    @map("invite_id")
+  memberId    String    @map("member_id")
+  nonce       String    @unique
+  browserHash String    @map("browser_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  invite TravelPlanGuestInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  member TravelPlanMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("travel_plan_guest_joins")
+}
+
+/// A guest's credential, scoped to ONE plan: `session` (the `ts_guest` cookie) or `pat` (the
+/// `ts_gpat_` bearer for the phone). Only the hash is stored; `peerFingerprint` is the pin of
+/// the guest's server at the time, so a re-pinned key ends the session without anybody looking.
+model TravelPlanGuestSession {
+  id              String   @id @default(uuid())
+  memberId        String   @map("member_id")
+  planId          String   @map("plan_id")
+  /// session | pat
+  kind            String
+  tokenHash       String   @unique @map("token_hash")
+  peerFingerprint String   @map("peer_fingerprint")
+  expiresAt       DateTime @map("expires_at")
+  lastUsedAt      DateTime @default(now()) @map("last_used_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  member TravelPlanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([expiresAt])
+  @@map("travel_plan_guest_sessions")
+}
+
+/// A document a member put on the plan's trip (spec §6.8, D6). A member reads only the documents
+/// in this table plus those attached to plan bookings; the owner's other documents stay hidden.
+model TravelPlanDocument {
+  id                 String   @id @default(uuid())
+  planId             String   @map("plan_id")
+  documentId         String   @unique @map("document_id")
+  uploadedByMemberId String   @map("uploaded_by_member_id")
+  bookingId          String?  @map("booking_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  plan     TravelPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  document Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploader TravelPlanMember @relation(fields: [uploadedByMemberId], references: [id], onDelete: Cascade)
+
+  @@index([planId, uploadedByMemberId])
+  @@map("travel_plan_documents")
 }

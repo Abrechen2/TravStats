@@ -12,7 +12,7 @@ import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
 import { newTripColor } from "../trip/newTripColor";
 import { adoptExisting } from "./existing";
-import { ensureOwnerMember, planAccess, selfOf, type PlanAccess } from "./access";
+import { ensureOwnerMember, planAccess, selfOf, type PlanAccess, type PlanActor } from "./access";
 import {
   applyMemberNote,
   authorizeOperation,
@@ -128,8 +128,8 @@ export async function ownedPlan(userId: string, tripId: string) {
   if (!plan) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
   return plan;
 }
-export async function readPlan(userId: string, tripId: string): Promise<PlanView> {
-  const access = await planAccess(userId, tripId);
+export async function readPlan(actor: PlanActor, tripId: string): Promise<PlanView> {
+  const access = await planAccess(actor, tripId);
   const row = access.row;
   return viewFor(row, row.trip.name, access, await lastMutationOf(row.id, row.revision));
 }
@@ -289,11 +289,11 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
  * redoing it (and without the redone work changing the payload hash).
  */
 export async function findReceipt(
-  userId: string,
+  actor: PlanActor,
   tripId: string,
   clientRef: string
 ): Promise<PlanView | null> {
-  const access = await planAccess(userId, tripId);
+  const access = await planAccess(actor, tripId);
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: access.row.id, clientRef } },
   });
@@ -304,13 +304,13 @@ export async function findReceipt(
   return receipt.result as unknown as PlanView;
 }
 export async function writePlan(
-  actorUserId: string,
+  actor0: PlanActor,
   tripId: string,
   body: PlanWrite
 ): Promise<PlanView> {
   await assertEnabled();
   const payloadHash = hash(body);
-  const access = await planAccess(actorUserId, tripId);
+  const access = await planAccess(actor0, tripId);
   const owned = access.row;
   // Everything below that touches the logbook (documents, executions, handovers) acts on the
   // OWNER's account, whoever writes: a co-planner confirms nothing there (spec §6.1).
@@ -370,6 +370,16 @@ export async function writePlan(
         include: { trip: { select: { name: true } } },
       });
       if (!row) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
+      // Access is checked once more where the write happens: a member removed while this request
+      // was running (a guest above all) must not land a change after their removal committed.
+      if (!access.isOwner) {
+        // FOR SHARE: a removal (an UPDATE of this row) waits until this write has committed, so
+        // it cannot slip in between the check and the commit.
+        const stillIn = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM travel_plan_members
+          WHERE id = ${access.member.id} AND plan_id = ${row.id} AND status = 'active' FOR SHARE`;
+        if (!stillIn.length) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
+      }
       if (row.revision !== body.baseRevision)
         throw new AppError(
           "Plan has changed; refresh before applying this edit",
@@ -468,6 +478,24 @@ export async function writePlan(
       if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024)
         throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
       const documentIds = [...new Set(next.bookings.flatMap((b) => b.documentIds))];
+      // A member attaches only what the plan already shows them: its booking documents and the
+      // ones members uploaded for it. A private document of the owner's trip is not theirs to
+      // attach, and attaching it would make it visible to them (spec D6).
+      if (!access.isOwner) {
+        const shown = new Set(before.bookings.flatMap((b) => b.documentIds));
+        const added = documentIds.filter((id) => !shown.has(id));
+        if (
+          added.length &&
+          (await tx.travelPlanDocument.count({
+            where: { planId: row.id, documentId: { in: added } },
+          })) !== added.length
+        )
+          throw new AppError(
+            "A document does not belong to this plan",
+            404,
+            "PLAN_DOCUMENT_NOT_FOUND"
+          );
+      }
       if (
         documentIds.length &&
         (await tx.document.count({ where: { id: { in: documentIds }, userId, tripId } })) !==

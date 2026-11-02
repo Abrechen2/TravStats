@@ -584,3 +584,56 @@ decision and break clients that send `auto`. What was missing was the TravPlan s
 - Remote guests (step 6) and the `.travstats` export on leaving (§6.6, guests only).
 - `GET …/plan/actual` (plan versus the owner's track) stays owner-only: it reads the owner's
   location history.
+
+## 14. As built — guests (step 6, forgejo#404, branch `fix/travplan-guests-404`)
+
+Threat model and revocation table: `docs/features/travplan-guests.md`. Beta key `travPlanGuests`
+(web: the invite part of the members dialog; the server is gated by `travPlan` and the pin).
+
+- **Tables** (`20261102140000_travplan_guests`): `travel_plan_guest_invites` (hash, 7 days, single
+  use), `travel_plan_guest_joins` (nonce + browser hash, 10 min, single use: the replay table),
+  `travel_plan_guest_sessions` (`session`|`pat`, hash, issuer-pin fingerprint),
+  `travel_plan_documents` (D6). The `remote` member row is the one from step 5.
+- **Access**: `planAccess(actor, tripId)` now takes a `PlanActor = userId | {guest:{memberId,planId}}`;
+  every plan service accepts it. A guest resolves only against `kind=remote, status=active` of THEIR
+  plan, so removal bites inside a running request.
+- **Flow code**: `services/travplan/guests/` — `vouch.ts` (format, vectors), `issue.ts` (guest's own
+  server), `invites.ts` (host), `sessions.ts` (credentials, revocation, restore), `peers.ts` (pin).
+- **Divergences from the draft**: the guest UI lives at `/guest/plan/<tripId>` (not `/plan/<tripId>`,
+  which is the logged-in user's route and sits behind the login); the cookie path is
+  `/api/v1/guest` only (a cookie has one path); removing a guest releases `remote_subject`, so a
+  re-invitation can bring the same person back; restore revokes remote members (re-invite) instead of
+  a "suspended" status the vocabulary does not have.
+- **Reused**: the pin is `comparison_peers` (enabled + verified, key fingerprint); the server picker
+  is `GET /sharing/remote/servers`; no new peer-protocol action exists, the host never calls the guest.
+
+### Contract for the Companion (additive; minimum server version: the one carrying this section)
+
+Guest calls need `Authorization: Bearer ts_gpat_…` (no marker header). Bare responses, errors
+`{error, code}`.
+
+| Call | Notes |
+|---|---|
+| QR content | `travstats://guest?host=<origin>&plan=<planId>&token=<ts_gpat_…>` (proposed; the web shows it, the app confirms) |
+| `GET /api/v1/guest/session` | `{planId, tripId, planName, memberId, displayName, origin, credential}` |
+| `GET /api/v1/guest/plans/:planId` | the plan view as for a member; `ETag` = `"<revision>-<memberId>"`, `If-None-Match` → 304 |
+| `POST …/mutations`, `…/forecast`, `…/stations/:id/climate`, `…/stages/:id/route`, `…/placeholder-matches` | same bodies as `/trips/:tripId/plan/…`; `X-TravPlan-Client` as before |
+| `GET …/collab`, `POST …/notices/read`, `GET …/packing-suggestions`, `GET …/locations`, `GET …/places` | as the member routes |
+| `GET/POST …/documents`, `GET …/documents/:id/file` | plan documents (multipart field `file`, ≤ 20 MB, ≤ 50 per member) |
+| `POST /api/v1/guest/leave`, `POST …/logout` | end membership / this token |
+
+Codes the app must word: `PLAN_GUEST_REQUIRED|EXPIRED|REVOKED` (401: clear the token and say the
+access ended), `PLAN_GUEST_RATE_LIMITED` (429), `PLAN_OWNER_ONLY` (403), `PLAN_DOCUMENT_LIMIT|
+DUPLICATE|TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover or `actual`.
+
+### D6 and D5
+
+- **D6 built** for local co-planners and guests: `GET/POST /trips/:tripId/plan/documents` and
+  `…/documents/:id/file`; members read only plan bookings' documents and ones uploaded for the plan,
+  labelled with the uploader; the same bytes as an owner-private document answer 409
+  `PLAN_DOCUMENT_DUPLICATE` instead of exposing it. Attaching an uploaded document to a booking in
+  the web is not wired (the picker still lists the owner's logbook documents only).
+- **D5 / §6.8 NOT built, open**: the roadtrip as a `SHARE_TYPES` entry (stations, legs, ferry links) and
+  exchange format v4 are a package of their own (adapter, fact whitelist, `propagateWrite` call
+  sites, importer). Until then the co-planner's linked copy carries the trip's logbook entries, not
+  the route, and a guest has no "Reise übernehmen" download (§6.7) or leaving export (§6.6).

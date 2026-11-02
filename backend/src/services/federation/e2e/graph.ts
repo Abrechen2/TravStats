@@ -185,6 +185,8 @@ export const NON_TRAVEL_RELATIONS = [
   "placeCaptures",
   // Per-day AI/weather limits are operational counters, not shared travel data.
   "travelPlanUsage",
+  // Who may work on a plan (forgejo#404): access bookkeeping, never published to a friend.
+  "travelPlanMembers",
   "twoFactorRecoveryCodes",
   "webauthnCredentials",
   // Last connectivity verdict per external service (forgejo#392): bookkeeping, not travel data.

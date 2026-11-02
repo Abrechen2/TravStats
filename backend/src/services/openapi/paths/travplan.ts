@@ -10,7 +10,7 @@ import {
 import { errorContent } from "./shared";
 const uuid = z.string().uuid(),
   params = z.object({ tripId: uuid });
-const result = registry.register(
+export const result = registry.register(
   "TravelPlan",
   z.object({
     id: uuid,
@@ -430,7 +430,7 @@ const self = z.object({
   kind: z.enum(["owner", "local", "remote"]),
   isOwner: z.boolean(),
 });
-const member = z.object({
+export const member = z.object({
   id: uuid,
   kind: z.enum(["owner", "local", "remote"]),
   displayName: z.string(),
