@@ -13,12 +13,24 @@ export interface RemotePersonView {
   username: string;
   displayName: string;
   consent: ConsentStatus;
+  /** What the caller lets this person see of their statistics (simplified setup 2026-11-02). */
+  statsLevel: "off" | "overview" | "full";
+  /**
+   * The caller's leaderboard switch for this person: `unavailable` for a pairing made with an
+   * invitation code (it has no leaderboard pairing), else `off` or `on`.
+   */
+  leaderboard: "unavailable" | "off" | "on";
   createdAt: string;
+  /** Set on the answer of a lookup only: the leaderboard could not be paired, and why. */
+  leaderboardIssue?: "channel-mismatch";
 }
 
 const PAIR_INCLUDE = (userId: string) => ({
   consentsRequested: { where: { targetId: userId }, select: { status: true } },
   consentsTargeted: { where: { requesterId: userId }, select: { status: true } },
+  leaderboardRemote: {
+    select: { consents: { where: { ownerId: userId }, select: { status: true } } },
+  },
 });
 
 type PairRow = {
@@ -27,9 +39,13 @@ type PairRow = {
   username: string;
   displayName: string;
   createdAt: Date;
+  statsLevel: string;
   consentsRequested: { status: string }[];
   consentsTargeted: { status: string }[];
+  leaderboardRemote: { consents: { status: string }[] } | null;
 };
+
+const STATS_LEVELS = new Set(["off", "overview", "full"]);
 
 export function remotePersonView(row: PairRow): RemotePersonView {
   const consent = [...row.consentsRequested, ...row.consentsTargeted][0];
@@ -41,6 +57,13 @@ export function remotePersonView(row: PairRow): RemotePersonView {
     // A pairing always carries its consent (both are written in one transaction); a row
     // without one reads as withdrawn rather than as a yes nobody gave.
     consent: consent ? consentStatusSchema.parse(consent.status) : "withdrawn",
+    // The database holds the closed vocabulary (CHECK); anything else reads as off.
+    statsLevel: STATS_LEVELS.has(row.statsLevel) ? (row.statsLevel as "off") : "off",
+    leaderboard: !row.leaderboardRemote
+      ? "unavailable"
+      : row.leaderboardRemote.consents.some((c) => c.status === "accepted")
+        ? "on"
+        : "off",
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -36,4 +36,16 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_NOTHING_TO_CONFIRM"
   | "SHARE_REMOTE_NOT_MEMBER"
   | "SHARE_REMOTE_IS_HOME"
-  | "SHARE_REMOTE_ROSTER_NOT_FOUND";
+  | "SHARE_REMOTE_ROSTER_NOT_FOUND"
+  /**
+   * The simplified setup (2026-11-02, forgejo#301). `_PERSON_UNKNOWN`: the other server has no
+   * findable user of that name — nothing says whether the name exists or the person opted out;
+   * `_LOOKUP_LIMITED`: that server's lookup budget for this one is spent; `_STATS_NOT_SHARED`: the
+   * person shows no statistics (at this level) to the caller; `_LEADERBOARD_UNAVAILABLE`: the
+   * pairing was made with an invitation code and has no leaderboard pairing.
+   */
+  | "SHARE_REMOTE_PERSON_UNKNOWN"
+  | "SHARE_REMOTE_LOOKUP_LIMITED"
+  | "SHARE_REMOTE_STATS_NOT_SHARED"
+  | "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE"
+  | "SHARE_REMOTE_SERVER_NOT_CONNECTED";

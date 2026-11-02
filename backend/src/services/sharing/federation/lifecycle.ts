@@ -28,6 +28,7 @@
 import { prisma, type DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { requireTripFederation } from "./access";
+import { endShowing } from "./remoteStats";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
 import { remoteShareError } from "./errors";
@@ -159,6 +160,8 @@ async function revokePairing(
   notify: boolean
 ): Promise<void> {
   const now = new Date();
+  // Statistics and the leaderboard end with the pairing, on every path that revokes it.
+  await endShowing(tx, pairing.id);
   await tx.shareConsent.updateMany({
     where: {
       status: { in: ["pending", "accepted"] },

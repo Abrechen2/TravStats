@@ -640,7 +640,17 @@
       "notMember": "You do not (or no longer) share this trip with anyone on another server.",
       "isHome": "This trip's home is your server – offer it directly from here.",
       "rosterNotFound": "That person is not (or no longer) on the trip.",
-      "withdrawFailed": "The consent could not be withdrawn."
+      "withdrawFailed": "The consent could not be withdrawn.",
+      "personUnknown": "{{origin}} has no findable person with that username. Either the name is wrong, or the person has not made themselves findable for connected servers.",
+      "lookupLimited": "{{origin}} is not answering more lookups from your server right now. Please try again later.",
+      "statsNotShared": "This person does not show you their statistics, or not to that extent.",
+      "leaderboardUnavailable": "This connection was made with an invitation code and has no leaderboard. Find the person through the connected server to get one.",
+      "serverNotConnected": "That server is not connected.",
+      "findFailed": "The search failed.",
+      "findableFailed": "The setting could not be saved.",
+      "levelFailed": "The level could not be saved.",
+      "leaderboardFailed": "The switch could not be saved.",
+      "statsFailed": "The statistics could not be loaded."
     },
     "trip": {
       "title": "Travellers on other servers",
@@ -735,6 +745,19 @@
         "note": "Message (optional)",
         "submit": "Send request",
         "sent": "Request sent: {{origin}} decides whether {{name}} is offered the trip."
+      },
+      "otherServer": {
+        "title": "On another server",
+        "pick": "Server",
+        "username": "Person's username",
+        "submit": "Offer trip",
+        "noServers": "Your admin has not connected a server yet.",
+        "warnTitle": "Please note",
+        "warnStored": "The trip is stored on the other server and can be read there by its admin.",
+        "warnEdits": "Edits go both ways: what is changed there changes your trip too.",
+        "warnPrivate": "Private notes, costs and documents stay with you.",
+        "warnRecall": "What has been sent cannot be recalled.",
+        "warnAccept": "The person accepts the offer in their inbox – nothing arrives before."
       }
     },
     "offers": {
@@ -769,6 +792,64 @@
         "loadFailed": "The offered trips could not be loaded.",
         "acceptFailed": "The trip could not be accepted.",
         "declineFailed": "The offer could not be declined."
+      }
+    },
+    "connected": {
+      "title": "People on connected servers",
+      "hint": "Servers your admin trusts need no invitation codes: you look the person up by username. They appear only if they made themselves findable for connected servers.",
+      "findable": {
+        "label": "Findable by connected servers",
+        "sub": "Off: nobody on a connected server can find you. On: you can be found by username and offered trips – you decide on every offer yourself, and whoever finds you sees nothing of your statistics until you allow it below."
+      },
+      "find": {
+        "title": "Find a person",
+        "server": "Server",
+        "noServers": "Your admin has not connected a server yet.",
+        "username": "Username",
+        "submit": "Find",
+        "done": "{{name}} (@{{username}}) on {{origin}} is connected. Nothing is shared yet – set that below.",
+        "leaderboardMismatch": "The leaderboard could not be paired with that server (the channels differ) and stays off."
+      },
+      "none": "Nobody connected yet.",
+      "row": "{{name}} (@{{username}}) on {{origin}}",
+      "leaderboard": {
+        "label": "Show me on their leaderboard",
+        "sub": "This person sees my totals on their leaderboard.",
+        "unavailable": "No leaderboard – this connection came from an invitation code."
+      },
+      "stats": {
+        "label": "My statistics for this person",
+        "off": "Off",
+        "overview": "Overview",
+        "full": "Full",
+        "hintOverview": "Overview: totals and year values, no single entries.",
+        "hintFull": "Full: the whole statistics page with the entries behind it – without private notes, costs and documents.",
+        "view": "View statistics",
+        "close": "Close",
+        "year": "Year",
+        "allTime": "All time",
+        "load": "Load",
+        "entries": "Entries",
+        "entity": "Type",
+        "more": "Load more",
+        "empty": "No entries.",
+        "of": "{{shown}} of {{total}}",
+        "level": {
+          "overview": "This person shows you their overview.",
+          "full": "This person shows you their full statistics."
+        },
+        "entities": {
+          "flight": "Flights",
+          "lodgingStay": "Stays",
+          "cruise": "Cruises",
+          "rail": "Rail journeys",
+          "bus": "Bus journeys",
+          "ferry": "Ferries",
+          "rental": "Rentals"
+        },
+        "metric": "Figure",
+        "value": "Value",
+        "unknown": "unknown"
       }
     }
   },

@@ -28,8 +28,54 @@ export interface RemotePerson {
   username: string;
   displayName: string;
   consent: ShareConsent["status"];
+  /** What the caller lets this person see of their statistics (default off). */
+  statsLevel: RemoteStatsLevel;
+  /** The caller's leaderboard switch; `unavailable` for a pairing made with an invitation code. */
+  leaderboard: "unavailable" | "off" | "on";
   createdAt: string;
+  /** Only on the answer of a lookup: the leaderboard could not be paired. */
+  leaderboardIssue?: "channel-mismatch";
 }
+
+/** Mirrors `STATS_LEVELS` in `backend/src/schemas/tripSharePeer.ts`. */
+export type RemoteStatsLevel = "off" | "overview" | "full";
+
+export interface RemoteServer {
+  origin: string;
+}
+
+/** A person's totals on another server (the leaderboard's snapshot shape) and the level shown. */
+export interface RemoteOverview {
+  level: "overview" | "full";
+  snapshot: { year: number | null; domains: string[]; metrics: Record<string, number | null> };
+}
+
+export interface RemoteEntry {
+  entity: string;
+  shareKey: string;
+  facts: Record<string, unknown>;
+}
+
+export interface RemoteEntriesPage {
+  entity: string;
+  total: number;
+  offset: number;
+  entries: RemoteEntry[];
+}
+
+/** The entry types a "Voll" statistics read pages through. */
+export const REMOTE_STATS_ENTITIES = [
+  "flight",
+  "lodgingStay",
+  "cruise",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+] as const;
+
+/** Offering a trip: a paired person, or a findable one on a connected server by name. */
+export type OfferTarget = { remoteId: string } | { origin: string; username: string };
 
 /** Redeeming a code: the person, and `alreadyConnected` when this account redeemed it before. */
 export interface ClaimedPerson extends RemotePerson {

@@ -4,6 +4,11 @@ import type {
   AddRequestBody,
   ClaimedPerson,
   CreatedRemoteInvite,
+  OfferTarget,
+  RemoteEntriesPage,
+  RemoteOverview,
+  RemoteServer,
+  RemoteStatsLevel,
   ReceivedOffer,
   RemoteInvite,
   RemoteMember,
@@ -42,12 +47,51 @@ export const sharingRemoteApi = {
   tripSharing: async (tripId: string): Promise<TripRemoteSharing> =>
     (await api.get<Envelope<TripRemoteSharing>>(`${BASE}/trips/${encodeURIComponent(tripId)}`)).data
       .data,
-  offerTrip: async (tripId: string, remoteId: string): Promise<RemoteMember> =>
+  offerTrip: async (tripId: string, target: string | OfferTarget): Promise<RemoteMember> =>
     (
       await api.post<Envelope<RemoteMember>>(
         `${BASE}/trips/${encodeURIComponent(tripId)}/offers`,
-        { remoteId },
+        typeof target === "string" ? { remoteId: target } : target,
         ACROSS
+      )
+    ).data.data,
+  // The simplified setup (2026-11-02, forgejo#301).
+  getFindable: async (): Promise<boolean> =>
+    (await api.get<Envelope<{ findable: boolean }>>(`${BASE}/findable`)).data.data.findable,
+  setFindable: async (findable: boolean): Promise<boolean> =>
+    (await api.put<Envelope<{ findable: boolean }>>(`${BASE}/findable`, { findable })).data.data
+      .findable,
+  listServers: async (): Promise<RemoteServer[]> =>
+    (await api.get<Envelope<RemoteServer[]>>(`${BASE}/servers`)).data.data,
+  findPerson: async (origin: string, username: string): Promise<RemotePerson> =>
+    (await api.post<Envelope<RemotePerson>>(`${BASE}/people/find`, { origin, username }, ACROSS))
+      .data.data,
+  setStatsLevel: async (id: string, level: RemoteStatsLevel): Promise<RemotePerson> =>
+    (
+      await api.put<Envelope<RemotePerson>>(
+        `${BASE}/people/${encodeURIComponent(id)}/stats-level`,
+        { level }
+      )
+    ).data.data,
+  setLeaderboard: async (id: string, on: boolean): Promise<RemotePerson> =>
+    (
+      await api.put<Envelope<RemotePerson>>(
+        `${BASE}/people/${encodeURIComponent(id)}/leaderboard`,
+        { on }
+      )
+    ).data.data,
+  personStats: async (id: string, year: number | null): Promise<RemoteOverview> =>
+    (
+      await api.get<Envelope<RemoteOverview>>(`${BASE}/people/${encodeURIComponent(id)}/stats`, {
+        params: year === null ? {} : { year },
+        ...ACROSS,
+      })
+    ).data.data,
+  personEntries: async (id: string, entity: string, offset: number): Promise<RemoteEntriesPage> =>
+    (
+      await api.get<Envelope<RemoteEntriesPage>>(
+        `${BASE}/people/${encodeURIComponent(id)}/stats/entries`,
+        { params: { entity, offset }, ...ACROSS }
       )
     ).data.data,
   createTripInvite: async (tripId: string): Promise<CreatedRemoteInvite> =>

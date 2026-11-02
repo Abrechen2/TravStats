@@ -28,6 +28,7 @@ vi.mock("../../../lib/api/sharingRemote", () => ({
     status: vi.fn(),
     tripSharing: vi.fn(),
     offerTrip: vi.fn(),
+    listServers: vi.fn().mockResolvedValue([]),
     createTripInvite: vi.fn(),
     decideRosterPerson: vi.fn(),
     reconfirm: vi.fn(),

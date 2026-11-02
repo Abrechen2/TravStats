@@ -16,6 +16,15 @@ import {
   receivedOfferSchema,
   remoteClaimBodySchema,
   remoteClaimResultSchema,
+  remoteEntriesPageSchema,
+  remoteEntriesQuerySchema,
+  remoteFindableSchema,
+  remoteFindBodySchema,
+  remoteLeaderboardBodySchema,
+  remoteOverviewSchema,
+  remoteServerSchema,
+  remoteStatsLevelBodySchema,
+  remoteStatsQuerySchema,
   remoteInviteSchema,
   remoteMemberSchema,
   remoteOfferBodySchema,
@@ -118,12 +127,128 @@ registry.registerPath({
   },
 });
 
-const tripParams = z.object({ tripId: z.string().uuid() });
-const offerParams = z.object({ id: z.string().uuid() });
 const peerFailures = {
   403: err("`SHARE_REMOTE_PEER_NOT_ADMITTED`: this server's admin has not admitted that server"),
   502: err("`SHARE_REMOTE_UNREACHABLE`: the other server did not answer usably"),
 };
+
+const personParams = z.object({ id: z.string().uuid() });
+const personNotFound = err("`SHARE_REMOTE_PERSON_NOT_FOUND`, or `SHARE_REMOTE_DISABLED`");
+const jsonBody = (schema: z.ZodTypeAny) => ({ content: { "application/json": { schema } } });
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/findable",
+  summary: "Whether users of connected servers can find the caller",
+  description: "Default off: nobody appears in another server's lookup without saying yes.",
+  tags,
+  responses: { 200: ok("The caller's setting", remoteFindableSchema), 404: disabled },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/sharing/remote/findable",
+  summary: "Opt in or out of being found by users of connected servers",
+  description:
+    "Being findable is the caller's standing yes to receive trip offers from people on connected servers (each offer still waits for their answer in the inbox). Switching off stops new lookups from finding the caller; existing pairings stay until withdrawn.",
+  tags,
+  request: { body: jsonBody(remoteFindableSchema) },
+  responses: { 200: ok("The new setting", remoteFindableSchema), 404: disabled },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/servers",
+  summary: "The connected servers people can be looked up on",
+  description:
+    "The servers this server's admin pinned and enabled and a ping reached (server-level trust). No invitation code is needed for them.",
+  tags,
+  responses: { 200: ok("Connected servers", z.array(remoteServerSchema)), 404: disabled },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/remote/people/find",
+  summary: "Find a person on a connected server and pair with them",
+  description:
+    "Looks the username up among the users of that server who opted in to being found; one answer covers an unknown name and a person who is not findable (`SHARE_REMOTE_PERSON_UNKNOWN`), so the lookup cannot enumerate users. Limited to 30 an hour per user, and per peer on the other server (`SHARE_REMOTE_LOOKUP_LIMITED`). On success the trip pairing and the leaderboard pairing exist; nothing is shared yet.",
+  tags,
+  request: { body: jsonBody(remoteFindBodySchema) },
+  responses: {
+    201: ok("The person, with their switches off", remotePersonSchema),
+    404: err("`SHARE_REMOTE_PERSON_UNKNOWN`, or `SHARE_REMOTE_DISABLED`"),
+    409: err("`SHARE_REMOTE_PEER_DISABLED` or `SHARE_REMOTE_PEER_OUTDATED`"),
+    429: err("`SHARE_REMOTE_LOOKUP_LIMITED` or `RATE_LIMITED`"),
+    ...peerFailures,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/sharing/remote/people/{id}/stats-level",
+  summary: "What one person on another server may see of the caller's statistics",
+  description:
+    "`off`; `overview` (totals and year values, no entries); `full` (the figures and the entries behind them as fact lists — never private notes, costs or documents). Withdrawing the person sets it back to off.",
+  tags,
+  request: { params: personParams, body: jsonBody(remoteStatsLevelBodySchema) },
+  responses: { 200: ok("The person", remotePersonSchema), 404: personNotFound },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/sharing/remote/people/{id}/leaderboard",
+  summary: "Show the caller on one remote person's leaderboard",
+  description:
+    "The existing leaderboard consent for this person: on shares the totals, off withdraws them.",
+  tags,
+  request: { params: personParams, body: jsonBody(remoteLeaderboardBodySchema) },
+  responses: {
+    200: ok("The person", remotePersonSchema),
+    404: personNotFound,
+    409: err(
+      "`SHARE_REMOTE_LEADERBOARD_UNAVAILABLE`: the pairing was made with an invitation code"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/people/{id}/stats",
+  summary: "The statistics overview a person on another server shows the caller",
+  description:
+    "Totals for every group, lifetime or for `year`. Entries are a separate read (`/stats/entries`).",
+  tags,
+  request: { params: personParams, query: remoteStatsQuerySchema },
+  responses: {
+    200: ok("The totals and the level the person shows", remoteOverviewSchema),
+    403: err(
+      "`SHARE_REMOTE_STATS_NOT_SHARED` (one answer for every cause), or `SHARE_REMOTE_PEER_NOT_ADMITTED`"
+    ),
+    404: personNotFound,
+    409: err("`SHARE_REMOTE_PEER_DISABLED` or `SHARE_REMOTE_PEER_OUTDATED`"),
+    502: err("`SHARE_REMOTE_UNREACHABLE`"),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/remote/people/{id}/stats/entries",
+  summary: "A page of the entries behind a remote person's statistics",
+  description:
+    "Only when the person shows the full level. 25 entries a page of one type, fact lists only.",
+  tags,
+  request: { params: personParams, query: remoteEntriesQuerySchema },
+  responses: {
+    200: ok("One page", remoteEntriesPageSchema),
+    403: err("`SHARE_REMOTE_STATS_NOT_SHARED`, or `SHARE_REMOTE_PEER_NOT_ADMITTED`"),
+    404: personNotFound,
+    409: err("`SHARE_REMOTE_PEER_DISABLED` or `SHARE_REMOTE_PEER_OUTDATED`"),
+    502: err("`SHARE_REMOTE_UNREACHABLE`"),
+  },
+});
+
+const tripParams = z.object({ tripId: z.string().uuid() });
+const offerParams = z.object({ id: z.string().uuid() });
 
 registry.registerPath({
   method: "get",

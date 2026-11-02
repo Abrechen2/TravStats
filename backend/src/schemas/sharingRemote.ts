@@ -40,7 +40,21 @@ export const remotePersonSchema = z.strictObject({
   username: z.string(),
   displayName: z.string(),
   consent: z.enum(CONSENT_STATUSES),
+  statsLevel: z
+    .enum(["off", "overview", "full"])
+    .describe("What the caller lets this person see of their statistics (default off)"),
+  leaderboard: z
+    .enum(["unavailable", "off", "on"])
+    .describe(
+      "The caller's leaderboard switch for this person; `unavailable` for a pairing made with an invitation code"
+    ),
   createdAt: instant,
+  leaderboardIssue: z
+    .literal("channel-mismatch")
+    .optional()
+    .describe(
+      "Only on the answer of `people/find`: the two servers name the leaderboard pairing differently, so it was left unlinked (`leaderboard: unavailable`)"
+    ),
 });
 
 /**
@@ -79,7 +93,60 @@ export type RosterConsentStatus = (typeof ROSTER_CONSENT_STATUSES)[number];
 /** F-S4c: offering a trip from its page, and answering an offer. */
 export const remoteTripIdSchema = z.string().uuid();
 export const remoteOfferIdSchema = z.string().uuid();
-export const remoteOfferBodySchema = z.strictObject({ remoteId: z.string().uuid() });
+/**
+ * A paired person (`remoteId`), or — since the simplified setup (2026-11-02) — a findable person
+ * on a connected server, named by server and username: the pairing is made on the way.
+ */
+export const remoteOfferBodySchema = z.union([
+  z.strictObject({ remoteId: z.string().uuid() }),
+  z.strictObject({
+    origin: peerOrigin,
+    username: z.string().trim().min(1).max(80),
+  }),
+]);
+
+/** Simplified setup (2026-11-02, forgejo#301): finding people on connected servers. */
+export const remoteFindBodySchema = z.strictObject({
+  origin: peerOrigin.describe("A connected (admitted) server"),
+  username: z.string().trim().min(1).max(80),
+});
+export const remoteFindableSchema = z.strictObject({
+  findable: z.boolean().describe("Whether users of connected servers can find the caller"),
+});
+export const remoteServerSchema = z.strictObject({
+  origin: z.string().describe("An admitted, verified server"),
+});
+export const remoteStatsLevelBodySchema = z.strictObject({
+  level: z.enum(["off", "overview", "full"]),
+});
+export const remoteLeaderboardBodySchema = z.strictObject({ on: z.boolean() });
+export const remoteStatsQuerySchema = z.strictObject({
+  year: z.coerce.number().int().min(1900).max(2200).optional(),
+});
+export const remoteEntriesQuerySchema = z.strictObject({
+  entity: z.enum(SHARE_ENTITIES.filter((e) => e !== "stop") as [string, ...string[]]),
+  offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
+});
+export const remoteOverviewSchema = z.strictObject({
+  level: z.enum(["overview", "full"]).describe("The level the other person shows the caller"),
+  snapshot: z
+    .record(z.string(), z.unknown())
+    .describe("The leaderboard's totals shape (`schemas/comparison.ts`), every group"),
+});
+export const remoteEntriesPageSchema = z.strictObject({
+  entity: z.string(),
+  total: z.number().int(),
+  offset: z.number().int(),
+  entries: z.array(
+    z.strictObject({
+      entity: z.string(),
+      shareKey: z.string().describe("Random per read; not an identifier"),
+      facts: z
+        .record(z.string(), z.unknown())
+        .describe("Fact lists only — never notes, costs or documents"),
+    })
+  ),
+});
 
 export const remoteMemberSchema = z.strictObject({
   id: z.string().uuid(),

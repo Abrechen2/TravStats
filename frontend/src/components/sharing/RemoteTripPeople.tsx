@@ -18,6 +18,7 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
 import RemoteAddRequest from "./RemoteAddRequest";
+import RemoteOtherServerOffer from "./RemoteOtherServerOffer";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 
@@ -134,6 +135,16 @@ export default function RemoteTripPeople({
       await sharingRemoteApi.offerTrip(tripId, remoteId);
       setNotice(t(`${NS}.offered`, { name, origin }));
     }, `${NS}.errors.offerFailed`);
+
+  const offerByName = async (origin: string, username: string): Promise<boolean> => {
+    let ok = false;
+    await run(async () => {
+      const member = await sharingRemoteApi.offerTrip(tripId, { origin, username });
+      setNotice(t(`${NS}.offered`, { name: member.displayName, origin: member.origin }));
+      ok = true;
+    }, `${NS}.errors.offerFailed`);
+    return ok;
+  };
 
   const createCode = (): void =>
     void run(async () => {
@@ -287,6 +298,7 @@ export default function RemoteTripPeople({
               ))}
             </ul>
           )}
+          <RemoteOtherServerOffer busy={busy} onOffer={offerByName} />
           <div>
             <Button disabled={busy} onClick={createCode}>
               {t(`${NS}.createCode`)}
