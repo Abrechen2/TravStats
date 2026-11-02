@@ -105,39 +105,50 @@ export async function uploadPlanDocument(
     );
   if (bookingId && !parseState(access.row.state).bookings.some((b) => b.id === bookingId))
     throw new AppError("Booking not found", 404, "PLAN_ITEM_NOT_FOUND");
-  // The same bytes already on the owner's account stay the owner's: keeping them again would
-  // file an unfiled private document onto this trip (createDocument promotes it) or reveal one.
-  const known = await prisma.document.findFirst({
-    where: { userId: access.ownerId, sha256: sha256Hex(file.buffer) },
-    select: { id: true, planDocument: { select: { planId: true } } },
+  // Only this plan's own documents count as a repeat. Bytes equal to one of the owner's private
+  // documents are stored as a separate plan document, answered exactly like a new file, so an
+  // upload never tells a member which files the owner holds.
+  const sha256 = sha256Hex(file.buffer);
+  const repeat = await prisma.travelPlanDocument.findFirst({
+    where: { planId: access.row.id, document: { sha256 } },
+    select: { documentId: true },
   });
-  if (known) {
-    if (known.planDocument?.planId !== access.row.id)
-      throw new AppError(
-        "This file is already in the owner's trip",
-        409,
-        "PLAN_DOCUMENT_DUPLICATE"
-      );
-    const again = (await listPlanDocuments(actor, tripId)).find((d) => d.id === known.id);
+  if (repeat) {
+    const again = (await listPlanDocuments(actor, tripId)).find((d) => d.id === repeat.documentId);
     if (again) return again;
   }
-  const { document, created } = await createDocument({
-    userId: access.ownerId,
-    buffer: file.buffer,
-    originalName: file.originalname,
-    declaredMime: file.mimetype,
-    source: "upload",
-    entry: { type: "trip", id: tripId },
+  const template = await prisma.document.findFirst({
+    where: { userId: access.ownerId, sha256 },
+    select: { storedName: true, mimetype: true, sizeBytes: true, pageCount: true, format: true },
   });
-  if (!created) {
-    // The same bytes are already on the owner's trip. Only if a member already put them on the
-    // plan is this a repeat; otherwise it is the owner's private document and stays private.
-    const existing = await prisma.travelPlanDocument.findUnique({
-      where: { documentId: document.id },
-    });
-    if (!existing || existing.planId !== access.row.id)
-      throw new AppError("This file is already on the trip", 409, "PLAN_DOCUMENT_DUPLICATE");
-  } else {
+  // A separate row over the same stored file (files are named by content and shared by rows);
+  // nothing the owner's row parsed or filed travels with it.
+  const document = template
+    ? await prisma.document.create({
+        data: {
+          userId: access.ownerId,
+          tripId,
+          storedName: template.storedName,
+          originalName: file.originalname.slice(0, 200),
+          mimetype: template.mimetype,
+          sizeBytes: template.sizeBytes,
+          sha256,
+          pageCount: template.pageCount,
+          format: template.format,
+          source: "upload",
+        },
+      })
+    : (
+        await createDocument({
+          userId: access.ownerId,
+          buffer: file.buffer,
+          originalName: file.originalname,
+          declaredMime: file.mimetype,
+          source: "upload",
+          entry: { type: "trip", id: tripId },
+        })
+      ).document;
+  {
     try {
       // The plan row is locked for the count and the insert, so fifty means fifty.
       await prisma.$transaction(async (tx) => {

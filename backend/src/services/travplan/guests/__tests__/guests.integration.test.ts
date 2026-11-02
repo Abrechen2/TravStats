@@ -695,7 +695,7 @@ describe("TravPlan plan documents (D6)", () => {
     );
   });
 
-  it("refuses the same bytes as the owner's private document instead of exposing it", async () => {
+  it("answers bytes equal to a private owner document exactly like a new file, and exposes nothing", async () => {
     const plan = await newPlan();
     const guest = await joinGuest(plan);
     const bytes = text("same");
@@ -704,12 +704,26 @@ describe("TravPlan plan documents (D6)", () => {
       .set("Cookie", userCookie(owner))
       .attach("file", bytes, { filename: "own.txt", contentType: "text/plain" });
     expect(mine.status).toBe(201);
-    // The owner's upload belongs to the plan table too; a different owner file is not shown below.
+    // Now it is the owner's private document: no plan row.
     await prisma.travelPlanDocument.deleteMany({ where: { documentId: mine.body.id } });
-    const again = await upload(plan.planId, guest, "copy.txt", bytes);
-    expect([again.status, again.body.code]).toEqual([409, "PLAN_DOCUMENT_DUPLICATE"]);
+    const fresh = await upload(plan.planId, guest, "new.txt");
+    const same = await upload(plan.planId, guest, "copy.txt", bytes);
+    expect(same.status).toBe(fresh.status);
+    expect(Object.keys(same.body).sort()).toEqual(Object.keys(fresh.body).sort());
+    expect(same.body.id).not.toBe(mine.body.id);
+    expect(same.body.uploadedBy).toMatchObject({ memberId: guest.memberId });
     const list = await asGuest("get", `/plans/${plan.planId}/documents`, { cookie: guest.cookie });
-    expect(list.body.documents).toEqual([]);
+    expect(list.body.documents.map((d: { id: string }) => d.id).sort()).toEqual(
+      [fresh.body.id, same.body.id].sort()
+    );
+    // The owner's own row is untouched and still hidden from the guest.
+    const hidden = await asGuest("get", `/plans/${plan.planId}/documents/${mine.body.id}/file`, {
+      cookie: guest.cookie,
+    });
+    expect(hidden.status).toBe(404);
+    // A real repeat by the same member is answered with their existing document.
+    const repeat = await upload(plan.planId, guest, "copy.txt", bytes);
+    expect(repeat.body.id).toBe(same.body.id);
   });
 
   it("stops a guest at fifty documents on one plan", async () => {

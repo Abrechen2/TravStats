@@ -115,7 +115,7 @@ reg(
 reg(
   "post",
   "/trips/{tripId}/plan/documents",
-  "Upload a document for the plan (multipart field `file`, optional `bookingId`). At most 20 MB and 50 documents per member; the same bytes as one of the owner's private documents answer 409 PLAN_DOCUMENT_DUPLICATE.",
+  "Upload a document for the plan (multipart field `file`, optional `bookingId`). At most 20 MB and 50 documents per member. The same bytes as one of the owner's private documents are stored as a separate plan document, answered exactly like a new file.",
   documentDto,
   { status: 201, params: tripId, body: z.object({ bookingId: uuid.optional() }) }
 );
