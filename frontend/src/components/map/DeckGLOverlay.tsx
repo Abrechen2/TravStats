@@ -10,6 +10,7 @@
 // `lib/maplibreTransformBridge.ts` for what it restores, why we are not on
 // deck.gl 9.4's own `@deck.gl/maplibre` yet, and when to delete it.
 
+import { useEffect } from "react";
 import { useControl, useMap } from "react-map-gl/maplibre";
 import { MapboxOverlay, type MapboxOverlayProps } from "@deck.gl/mapbox";
 import type { Layer, LightingEffect, PickingInfo } from "@deck.gl/core";
@@ -42,6 +43,12 @@ interface DeckOverlayProps {
    * reach the map's guard themselves.
    */
   onClick?: (info: PickingInfo) => void;
+  /**
+   * Handed the overlay once it exists, so a right-click (a DOM event, not a
+   * deck pick) can ask deck WHAT is under the cursor — the cruise route
+   * editor names the leg the user aimed at that way. Pass a stable callback.
+   */
+  onReady?: (overlay: MapboxOverlay) => void;
 }
 
 export function DeckGLOverlay({
@@ -50,6 +57,7 @@ export function DeckGLOverlay({
   getTooltip,
   onHover,
   onClick,
+  onReady,
 }: DeckOverlayProps): null {
   const { current: map } = useMap();
   // Issue #247: the pointer must say what is clickable. deck.gl's own
@@ -79,5 +87,8 @@ export function DeckGLOverlay({
   // — MapboxOverlay caches the constructor's getTooltip otherwise. `onHover`
   // rides along for the same reason.
   overlay.setProps(overlayProps);
+  useEffect(() => {
+    onReady?.(overlay);
+  }, [overlay, onReady]);
   return null;
 }

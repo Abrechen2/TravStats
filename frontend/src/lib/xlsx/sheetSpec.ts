@@ -8,9 +8,8 @@
  * halves, writer and reader, described in ONE place per sheet so they cannot
  * drift into disagreeing about a column.
  *
- * The pre-existing single-sheet flight exporter (`lib/xlsxRoundTrip.ts`) set
- * this contract; this generalises it rather than replacing it, so the flight
- * sheet keeps the exact shape and id semantics it already had.
+ * The flight sheet keeps the shape and id semantics of the single-sheet flight
+ * exporter this replaced (removed in forgejo#386).
  */
 
 /** How a value is written into a cell — drives both format and parsing. */
