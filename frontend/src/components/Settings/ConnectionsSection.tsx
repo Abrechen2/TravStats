@@ -20,6 +20,7 @@ import { Field, Input, Select, Switch } from "../ui/Field";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ConnectionSwitchesForm, { theirsSummary } from "./ConnectionSwitchesForm";
 import RemotePersonStats from "./RemotePersonStats";
+import RemotePlanInvitations from "../sharing/RemotePlanInvitations";
 
 const NS = "sharing:remote.connections";
 
@@ -223,6 +224,8 @@ export default function ConnectionsSection(): JSX.Element | null {
           </p>
         )}
         {notice && <p role="status">{notice}</p>}
+
+        <RemotePlanInvitations />
 
         {waiting.length > 0 && (
           <div className="flex flex-col gap-2">

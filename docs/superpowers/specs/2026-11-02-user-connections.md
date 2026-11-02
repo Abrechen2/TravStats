@@ -196,8 +196,8 @@ content moves into §9 here).
 | Phase | Side      | Content                                                                                                                                                                                                                                   | State                                                    |
 | ----- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | S1    | Server    | connection record + migration (`reconfirm`), wire kinds §3, user API §5, findable = requests only, inbox counts, web: Einstellungen → Teilen → „Verbindungen" (request with switches, confirm with switches, change, end) and inbox items | built on `fix/user-connections-s1` (see _S1 — as built_) |
-| S2    | Server    | plans over the connection §4 (host checks + member proxy + API), web: remote plans in the plan list and the plan screens through an API adapter; owner "Mitplaner hinzufügen" lists active connections with plans on                      | open                                                     |
-| S3    | Server    | remove the guest door §7; admin QR + `POST /admin/federation/peers` §6                                                                                                                                                                    | open                                                     |
+| S2    | Server    | plans over the connection §4 (host checks + member proxy + API), web: remote plans in the plan list and the plan screens through an API adapter; owner "Mitplaner hinzufügen" lists active connections with plans on                      | built on `fix/remote-plans-s2` (see _S2/S3 — as built_) |
+| S3    | Server    | remove the guest door §7 (built with S2); admin QR + `POST /admin/federation/peers` §6                                                                                                                                                    | guest door removed on `fix/remote-plans-s2`; QR open    |
 | C1    | Companion | connections screen (request, confirm with switches, change, end) + inbox items                                                                                                                                                            | open                                                     |
 | C2    | Companion | remote plans through the own server's `/remote-plans` API (offline queue keeps `clientRef`)                                                                                                                                               | open                                                     |
 | C3    | Companion | admin: scan server QR, show fingerprint, pin                                                                                                                                                                                              | open                                                     |
@@ -214,6 +214,30 @@ Minimum server version for C1–C3: the 2.8.0 RC that ships S1–S3 (planned rc.
 - Version skew: a peer without §3 gets no connection request (feature flag `connections` in the ping);
   the UI says the other server must update.
 - Restore of a backup: connections restore as `reconfirm`.
+- A replaced pin key is a new party: connections with it go back to `reconfirm` and their plan memberships
+  end; a blocked server is refused on every call by the pin check.
+- Large bodies (a plan document as base64) are read only from an admitted origin; an unauthenticated sender
+  gets the ordinary cap.
+
+Threat-model points carried over from the guest door (`docs/features/travplan-guests.md`, removed) that still
+hold for a remote member:
+
+- *Principal isolation.* A remote member is never a user of the host: the actor is built from the signed channel
+  only, `planAccess` resolves it against ONE plan and the member row's and connection's current state, and the
+  plan service refuses owner-only acts (`PLAN_OWNER_ONLY`). There is no route for deleting a plan or managing
+  members, and no body field names a member or role.
+- *What a member may do* equals what a local editor may do; weather, routing and search are not proxied and
+  would count against the owner's limits if they were.
+- *Documents.* A member sees only documents on the plan's bookings and ones members uploaded for the plan; the
+  owner's other documents answer as not found. Files reach the member as attachments with `nosniff` and
+  `Content-Security-Policy: sandbox`, never rendered as a page from the member's origin.
+- *Export.* Scoped to the roadtrip, stays and crossings the plan names; no booking, PNR, price, document, photo,
+  journal or companion.
+- *Trust in the other admin.* The host trusts the member's server's statement of who its user is, through the
+  connection both people confirmed; a malicious admin of that server can act as ITS OWN users only. The owner sees
+  the member's display name and can remove them at once.
+- *Limits.* 120 writes and 600 reads a minute per member, at most 50 documents per member per plan, at most 10
+  non-owner members per plan; rate limits are in-process (single instance), as elsewhere.
 
 ## S1 — as built (2026-11-02)
 
@@ -256,6 +280,84 @@ Deviations and decisions the spec did not fix:
 - **Inbox.** Requests and `reconfirm` pairings are listed at the top of the Verbindungen section and
   counted in the badge; the old „Personen auf verbundenen Servern" section is that view now.
 
+## S2 / S3 (guest door removed) — as built (2026-11-02)
+
+**Wire.** Peer kinds, all in `schemas/tripSharePlans.ts`, all addressed `from` (sender's own channel) /
+`to` (receiver's channel) like `stats-read`, advertised as ping feature `plans`:
+`plan-invite {planId, tripId, tripTitle, ownerDisplayName}` (host to member), `plan-join`, `plan-decline`,
+`plan-leave {planId}` (member to host), and the proxied `plan-read {ifNoneMatch?}`, `plan-mutate {body}`
+(the ordinary `writeSchema`, validated by the host), `plan-collab`, `plan-notices-read`, `plan-doc-list`,
+`plan-doc-get {documentId}`, `plan-doc-put {name, mimetype, bookingId?, dataBase64}`, `plan-export`.
+Every answer is a `plan-reply`: `ok {etag?, notModified?, data?}`, `file {filename, contentType, dataBase64}`,
+`notShared`, `notFound`, or `error {httpStatus, code?, field?, extra?, message}` (the plan's own refusal,
+e.g. 409 `PLAN_REVISION_CONFLICT`, 403 `PLAN_OWNER_ONLY`, 429 `REMOTE_PLAN_RATE_LIMITED`).
+
+**Host checks, in this order, on every call** (`plans/hostServe.ts`): peer pinned+enabled+verified, channel
+pair resolves to a connection of this server, connection `active` with `share_plans` on both sides, an
+`active` remote member bound to that connection AND that plan with role `editor`, the member's allowance
+(120 writes / 600 reads a minute, in-process, per member), then the plan service (whose `planAccess` asks
+member and connection again). Any miss in the first five is the single answer `notShared`. A plan deleted,
+a member removed, a connection ended and a switch off are indistinguishable to the member.
+
+**Member side.** Table `remote_plan_memberships` (invitation and pointer, never the plan), API
+`/api/v1/remote-plans` (enveloped; `routes/remotePlans.ts`). The host's `notShared` ends the pointer here
+(`state = ended`); the owner re-inviting restores it (a repeated invite to an active member is a resend, not
+a duplicate). Accept sends `plan-join` first and counts only once the host took it; decline and leave act here
+first and tell the host through the retried outbox. The read cache lives in process for 5 s per
+(user, connection, plan); a write caches its answer under the host's ETag.
+
+**Outbox.** `connection_announcements` carries `connect-decline`, `connect-revoke`, `connect-settings` (a newer
+settings message supersedes an older queued one), `plan-decline` and `plan-leave`: tried once at once, then
+every pass of the trip-share delivery scheduler with the outbox's backoff (1 min, 5 min, 30 min, 2 h, 12 h, then
+daily); dropped after 14 days. The message id is the row id on every attempt. Restore deletes the queue.
+
+**Deviations and decisions.**
+- *Document limit is 10 MB, not 20.* `PLAN_DOCUMENT_MAX_BYTES = min(20 MB, DOCUMENT_MAX_BYTES)` and the
+  largest per-format limit is 10 MB; the wire budget (28 MB of base64) is ready for 20.
+- *Large bodies.* The signed envelope's body cap rose from 8 MB to 30 MB. A request above the ordinary peer
+  cap (`MAX_BODY`, 1 MB) is read only from an origin that is pinned, enabled and verified: the sender names itself
+  in `X-TravStats-Peer-Origin`, `middleware/peerBody.ts` checks that before choosing the 32 MB parser, and the
+  route checks the envelope's origin again. Document transfers get a 120 s exchange budget.
+- *Not proxied:* forecast, station climate, stage routing, place and location search, placeholder matching,
+  packing suggestions, AI proposals, handover and actual-versus-plan. They were on the guest door but are not in
+  §4's kind list; the web adapter refuses them (`REMOTE_PLAN_ROUTE_REFUSED`) and the screens hide import, AI,
+  handover and actual. They can be added as kinds when wanted.
+- *Re-pin and block.* A replaced key sends every connection with that origin to `reconfirm` and ends the plan
+  memberships on both sides (`holdConnectionsOfOrigin`); a blocked or disabled server is refused by the per-call
+  peer check, nothing else is touched, so re-enabling it brings the plans back.
+- *Revoke cascade* (`endPlanMembershipsOfConnection`) runs on both servers: host members `revoked`, member
+  pointers `ended`. Restore ends all remote members and pointers.
+- *Guest door removed* (§7): beta key `travPlanGuests`, `routes/guest.ts`, `guestAuth`, the vouch page, guest
+  mode, the guest invite UI, the four guest tables (existing remote members are revoked, not deleted, so notices
+  and documents keep their author), `PLAN_GUEST_*` codes, the OpenAPI guest paths and `docs/features/travplan-guests.md`.
+- Admin QR + `POST /admin/federation/peers` (§6, S3's other half) is not part of this package.
+
+### Contract for the Companion (C2)
+
+Minimum server: the build that ships S2 (feature `plans` in the ping). All paths below `/api/v1`, cookie or
+PAT of the member's own account; envelope `{success: true, data}`; errors `{error, code, ...}`.
+
+| Call | Answer (`data`) |
+| --- | --- |
+| `GET /remote-plans` | `[{connectionId, origin, planId, tripId, title, ownerDisplayName, role: "editor", state: "invited" \| "active"}]` |
+| `POST /remote-plans/:connectionId/:planId/accept` | the summary, `state: "active"`; 503 keeps the invitation |
+| `POST .../decline` · `POST .../leave` | `{declined: true}` · `{left: true}` |
+| `GET .../:planId` (+ `If-None-Match`) | the owner route's plan view; `ETag` header = `"<revision>-<memberId>"`; 304 without a body |
+| `POST .../mutations` | body `{clientRef, baseRevision, operation}` as the owner route; answer is the plan view; replaying a `clientRef` returns the stored receipt; 409 `PLAN_REVISION_CONFLICT` |
+| `GET .../collab` · `POST .../notices/read` | as the owner routes |
+| `GET .../documents` · `POST .../documents` (multipart `file`, `bookingId?`) | `{documents: [...]}` with `url`; `201` document with `url` (at most 10 MB, 50 per member) |
+| `GET .../documents/:documentId/file` | the bytes, attachment |
+| `GET .../export` | the `.travstats` zip |
+
+Errors: `REMOTE_PLAN_UNREACHABLE` 503 (`origin` in the body: keep the queue and the cache, retry the same
+`clientRef`), `REMOTE_PLAN_NOT_SHARED` 403 (drop the cache and the queue; the plan leaves the list),
+`REMOTE_PLAN_NOT_FOUND` 404 (same), `REMOTE_PLAN_RATE_LIMITED` 429; the plan's own refusals keep their codes.
+Not available on this door: forecast, climate, routing, place and location search, proposals, handover.
+`GET /sharing/inbox/count` gains `planInvites` (inside `count`).
+Owner side (for the web; the Companion owner UI may follow): `GET /trips/:id/plan/members/connections` →
+`{connections: [{connectionId, displayName, username, origin, member}]}`, and
+`POST /trips/:id/plan/members {connectionId}` (or `{username}` for a person on this server).
+
 ## Open for Companion
 
-- (none yet)
+- C2 may start against the contract above.

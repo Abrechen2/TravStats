@@ -167,10 +167,6 @@
           "travTrack": {
             "name": "TravTrack (own location history)",
             "what": "An own location history on this server: positions come from the Companion app, GPX files, OwnTracks, Overland and a Dawarich import, flights and trips included, with privacy zones and delete by time span. Also needs the TravTrack switch under Instance."
-          },
-          "travPlanGuests": {
-            "name": "TravPlan guests from other servers",
-            "what": "People on connected TravStats servers co-plan a trip by invitation, through this server's web UI and with an access of their own that reaches only that plan."
           }
         }
       },

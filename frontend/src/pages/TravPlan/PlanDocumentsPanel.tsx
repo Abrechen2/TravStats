@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card, Input, SectionLabel } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { planDocumentsApi, type PlanDocument } from "../../lib/api/travplanGuests";
-import { guestErrorKey } from "../TravPlanGuest/guestErrors";
+import { planDocumentsApi, type PlanDocument } from "../../lib/api/planDocuments";
+import { remotePlanErrorKey } from "./remotePlanErrors";
 import { PlanNotice, PlanRow, PlanGrow, PlanStack } from "./planLayout";
 
 const size = (bytes: number) =>
@@ -11,33 +11,26 @@ const size = (bytes: number) =>
 /**
  * The documents the plan shows its members (spec D6): the ones on its bookings and the ones any
  * member put there for the plan, each labelled with who uploaded it. The server decides what is
- * listed; a co-planner or guest never sees the owner's other documents.
+ * listed; a co-planner or a member from another server never sees the owner's other documents.
  */
-export function PlanDocumentsPanel({
-  tripId,
-  guest,
-  revision,
-}: {
-  tripId: string;
-  guest: boolean;
-  revision: number;
-}) {
+export function PlanDocumentsPanel({ tripId, revision }: { tripId: string; revision: number }) {
   const { t } = useTranslation("travplan");
   const [documents, setDocuments] = useState<PlanDocument[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fail = useCallback(
-    (cause: unknown) => setError(t(guestErrorKey(cause), { defaultValue: t("errors.unknown") })),
+    (cause: unknown) =>
+      setError(t(remotePlanErrorKey(cause), { defaultValue: t("errors.unknown") })),
     [t]
   );
   const load = useCallback(async () => {
     try {
-      setDocuments(await planDocumentsApi.list(tripId, guest));
+      setDocuments(await planDocumentsApi.list(tripId));
       setError("");
     } catch (cause) {
       fail(cause);
     }
-  }, [tripId, guest, fail]);
+  }, [tripId, fail]);
   useEffect(() => {
     void load();
   }, [load, revision]);
@@ -45,7 +38,7 @@ export function PlanDocumentsPanel({
     setBusy(true);
     setError("");
     try {
-      await planDocumentsApi.upload(tripId, file, guest);
+      await planDocumentsApi.upload(tripId, file);
       await load();
     } catch (cause) {
       fail(cause);

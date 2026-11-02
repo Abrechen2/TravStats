@@ -1,6 +1,6 @@
 import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
-import { guestHttp, isGuestMode } from "./guestHttp";
+import { isRemotePlanMode, remotePlanHttp } from "./remotePlans";
 import { apiErrorMachineCode } from "../apiError";
 import type {
   PlanCollab,
@@ -40,6 +40,15 @@ export interface PlanInvitation {
   planName: string;
   ownerName: string;
   createdAt: string;
+}
+/** `GET /trips/:tripId/plan/members/connections`: a connection that can be invited into the plan. */
+export interface PlanConnectionOption {
+  connectionId: string;
+  displayName: string;
+  username: string;
+  origin: string;
+  /** Already invited or on the plan. */
+  member: boolean;
 }
 /** `GET /trips/:tripId/plan/actual` — plan versus actual (TravTrack plan L5). Read-only. */
 export type PlanStationStatus = "visited" | "shifted" | "skipped" | "unknown";
@@ -99,8 +108,11 @@ export interface PlanDeletePreview {
   keeps: { stations: number; confirmedItems: number };
   tripIsEmptyShell: boolean;
 }
-/** Guest mode sends the plan's calls through the guest door (`guestHttp.ts`). */
-const http = () => (isGuestMode() ? guestHttp : api);
+/**
+ * While a plan on another server is open, the plan's calls go through the remote door
+ * (`remotePlans.ts`): this server proxies them to the host.
+ */
+const http = () => (isRemotePlanMode() ? remotePlanHttp : api);
 export const travplanApi = {
   places: async (q: string, language: "de" | "en", kind: "any" | "port" = "any") =>
     (await http().get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
@@ -163,6 +175,15 @@ export const travplanApi = {
     (await http().post<{ read: number }>("/trips/" + id + "/plan/notices/read")).data,
   invite: async (id: string, username: string) =>
     (await http().post<PlanMember>("/trips/" + id + "/plan/members", { username })).data,
+  /** Owner: connected people on other servers who can be invited (plans on at both sides). */
+  inviteConnections: async (id: string) =>
+    (
+      await http().get<{ connections: PlanConnectionOption[] }>(
+        "/trips/" + id + "/plan/members/connections"
+      )
+    ).data.connections,
+  inviteConnection: async (id: string, connectionId: string) =>
+    (await http().post<PlanMember>("/trips/" + id + "/plan/members", { connectionId })).data,
   removeMember: async (id: string, memberId: string) =>
     (await http().delete<{ revoked: true }>("/trips/" + id + "/plan/members/" + memberId)).data,
   shareWithMember: async (id: string, memberId: string) =>
@@ -188,7 +209,7 @@ export const travplanApi = {
     ).data,
   propose: async (id: string, request: string) =>
     (
-      await (isGuestMode() ? guestHttp : parserApi).post<PlanProposal>(
+      await (isRemotePlanMode() ? remotePlanHttp : parserApi).post<PlanProposal>(
         "/trips/" + id + "/plan/proposals",
         { request }
       )

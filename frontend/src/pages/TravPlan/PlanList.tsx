@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import { travplanApi, type PlanInvitation, type PlanSummary } from "../../lib/api/travplan";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { remotePlanPath, remotePlansApi, type RemotePlanSummary } from "../../lib/api/remotePlans";
+import RemotePlanInvitations from "../../components/sharing/RemotePlanInvitations";
 import { PlanCreate } from "./PlanCreate";
 import { shortDay } from "./route/RouteTimeline";
 import {
@@ -25,6 +27,8 @@ export function PlanList() {
     [enabled, setEnabled] = useState<boolean | null>(null),
     [error, setError] = useState(""),
     [invitations, setInvitations] = useState<PlanInvitation[]>([]),
+    [remote, setRemote] = useState<RemotePlanSummary[]>([]),
+    [remoteFailed, setRemoteFailed] = useState(false),
     [create, setCreate] = useState(false);
   async function answer(invitation: PlanInvitation, accept: boolean) {
     try {
@@ -35,6 +39,21 @@ export function PlanList() {
       setError(t("errors." + apiErrorMachineCode(cause), { defaultValue: t("errors.unknown") }));
     }
   }
+  // Plans on other servers come from this server's own pointer table; a host that is offline does
+  // not stop the list (nothing is fetched from it here), and a failure is named, never an empty list.
+  const loadRemote = useCallback(async () => {
+    try {
+      const all = await remotePlansApi.list();
+      setRemote(all.filter((p) => p.state === "active"));
+      setRemoteFailed(false);
+    } catch (cause) {
+      if (apiErrorMachineCode(cause) === "SHARE_REMOTE_DISABLED") setRemote([]);
+      else setRemoteFailed(true);
+    }
+  }, []);
+  useEffect(() => {
+    void loadRemote();
+  }, [loadRemote]);
   useEffect(() => {
     let live = true;
     Promise.all([travplanApi.list(), travplanApi.capabilities(), travplanApi.invitations()])
@@ -78,7 +97,22 @@ export function PlanList() {
           <Button onClick={() => void answer(i, false)}>{t("members.decline")}</Button>
         </PlanNotice>
       ))}
+      <RemotePlanInvitations onChange={() => void loadRemote()} />
+      {remoteFailed && <PlanNotice tone="bad">{t("remote.listFailed")}</PlanNotice>}
       <PlanGrid>
+        {remote.map((p) => (
+          <HeroCard key={p.connectionId + "/" + p.planId}>
+            <PlanStack>
+              <h2 className="t-card-title">{p.title}</h2>
+              <p className="t-caption">
+                {t("remote.from", { owner: p.ownerDisplayName, server: new URL(p.origin).host })}
+              </p>
+              <div>
+                <PlanLink to={remotePlanPath(p) + "/overview"}>{t("continue")}</PlanLink>
+              </div>
+            </PlanStack>
+          </HeroCard>
+        ))}
         {plans.map((p) => (
           <HeroCard key={p.id}>
             <PlanStack>
@@ -107,7 +141,7 @@ export function PlanList() {
           </HeroCard>
         ))}
       </PlanGrid>
-      {!plans.length && enabled && (
+      {!plans.length && !remote.length && enabled && (
         <EmptyState
           title={t("empty")}
           action={

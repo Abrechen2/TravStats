@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { authApi, passkeyApi, setupApi } from "../lib/api";
-import { postLoginTarget } from "../lib/postLoginReturn";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
@@ -122,7 +121,7 @@ export default function LoginPage(): JSX.Element {
       const response = await startAuthentication({ optionsJSON: options });
       const result = await passkeyApi.loginVerify(response);
       setAuth(result.user);
-      navigate(postLoginTarget());
+      navigate("/");
     } catch (err) {
       // Cancelling the OS or password-manager dialog is a normal user action.
       if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "AbortError")) {
@@ -153,7 +152,7 @@ export default function LoginPage(): JSX.Element {
         navigate("/change-password", { state: { requiresChange: true } });
       } else if ("user" in result) {
         setAuth(result.user);
-        navigate(postLoginTarget());
+        navigate("/");
       }
     } catch (err: unknown) {
       // Never the server's own `error` string: it is English prose meant for a

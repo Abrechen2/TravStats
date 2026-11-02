@@ -4,11 +4,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanCollab, type PlanMember } from "../../lib/api/travplan";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { PlanActions, PlanGrow, PlanNotice, PlanRow } from "./planLayout";
-import { PlanGuestInvite } from "./PlanGuestInvite";
+import { PlanRemoteInvite } from "./PlanRemoteInvite";
 
 /**
- * Who plans together (spec §6.1, §6.4). The owner invites a person on this server by username and
- * removes them again; a member sees the roster and can leave. Every refusal is worded from its
+ * Who plans together (spec §6.1, §6.4). The owner invites a person on this server by username, or a connected
+ * person on another server, and removes them again; a member sees the roster and can leave. Every refusal is worded from its
  * machine code - the sharing-consent ones say whose answer is missing - and none is swallowed.
  */
 export function PlanMembersDialog({
@@ -58,7 +58,7 @@ export function PlanMembersDialog({
             {m.username && <span className="t-caption"> @{m.username}</span>}
             <p className="t-caption">
               {m.kind === "owner" ? t("members.owner") : status(m)}
-              {m.kind === "remote" && <> · {t("guests.member.remote")}</>}
+              {m.kind === "remote" && <> · {t("remote.member")}</>}
               {owner && m.status === "active" && m.kind === "local" && (
                 <> · {m.shared ? t("members.shared") : t("members.notShared")}</>
               )}
@@ -122,7 +122,7 @@ export function PlanMembersDialog({
           </PlanActions>
         </form>
       )}
-      {owner && <PlanGuestInvite tripId={tripId} onChanged={onChanged} />}
+      {owner && <PlanRemoteInvite tripId={tripId} onChanged={onChanged} />}
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
       {info && <PlanNotice>{info}</PlanNotice>}
       <PlanActions>

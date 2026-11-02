@@ -14,6 +14,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: { language: "de" },
   }),
 }));
+vi.mock("../../sharing/RemotePlanInvitations", () => ({ default: () => null }));
 vi.mock("../../../lib/api/sharingRemote", () => ({
   sharingRemoteApi: {
     status: vi.fn(),

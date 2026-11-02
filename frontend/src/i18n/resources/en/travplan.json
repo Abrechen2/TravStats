@@ -166,24 +166,16 @@
     "SHARE_CONSENT_REQUIRED": "This person has not (or no longer) allowed sharing with you.",
     "SHARE_GROUP_CONSENT_REQUIRED": "Not everyone on this trip has agreed to sharing with this person.",
     "PLAN_SHARE_FAILED": "The trip could not be shared.",
-    "PLAN_GUEST_REQUIRED": "You are not signed in as a guest here. Open the invitation link again.",
-    "PLAN_GUEST_EXPIRED": "Your guest session has expired. Ask the plan's owner for a new invitation link.",
-    "PLAN_GUEST_REVOKED": "Your access to this plan has ended, or the server you were invited through is no longer admitted here.",
-    "PLAN_GUEST_INVITE_INVALID": "This invitation link is not valid (any more). It has expired, been used or been withdrawn. Ask for a new one.",
-    "PLAN_GUEST_JOIN_NOT_STARTED": "The join was not started in this browser. Open the invitation link again and stay in the same browser.",
-    "PLAN_GUEST_VOUCH_INVALID": "Your server's confirmation was refused (invalid, expired or already used). Open the invitation link again.",
-    "PLAN_GUEST_PEER_NOT_ADMITTED": "The admin has not admitted that server (pinned and verified). Without that nobody from there can plan along.",
-    "PLAN_GUEST_HOST_NOT_ADMITTED": "Your admin has not admitted the server that invited you, so your server confirms nothing for it.",
-    "PLAN_GUEST_FEDERATION_OFF": "Connections to other servers are switched off on this server.",
-    "PLAN_GUEST_LIMIT": "Too many guests are already invited on this server (at most 20).",
-    "PLAN_GUEST_RATE_LIMITED": "Too many requests in a short time. Wait a moment.",
-    "PLAN_GUEST_CSRF": "This request did not come from the TravStats page and was refused. Reload the page.",
-    "PLAN_GUEST_CLAIM_INVALID": "This pairing code is not valid (any more). It has expired or was already used. Create a new one in the browser.",
-    "PLAN_GUEST_PAT_LIMIT": "You already have five phone tokens. Sign out to make room.",
     "PLAN_DOCUMENT_LIMIT": "You have already uploaded 50 documents for this plan.",
     "PLAN_DOCUMENT_DUPLICATE": "This file is already in the owner's trip and is not added a second time.",
     "PLAN_DOCUMENT_TOO_LARGE": "The file is larger than 20 MB.",
-    "network": "The server does not answer. Check your connection and try again."
+    "network": "The server does not answer. Check your connection and try again.",
+    "REMOTE_PLAN_UNREACHABLE": "The server of this plan is not answering right now. Your changes are kept; try again later.",
+    "REMOTE_PLAN_NOT_SHARED": "This plan is no longer shared with you.",
+    "REMOTE_PLAN_NOT_FOUND": "You do not have this plan (any more).",
+    "REMOTE_PLAN_RATE_LIMITED": "Too many requests in a short time. Please wait a moment.",
+    "REMOTE_PLAN_ROUTE_REFUSED": "That is not possible on a plan on another server.",
+    "SHARE_REMOTE_DISABLED": "Sharing across servers is switched off on this server."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -687,55 +679,6 @@
     "disabled": "The language model is switched off on this server; only clearly labelled facts were looked for.",
     "unreachable": "The language model is unreachable; only clearly labelled facts were looked for."
   },
-  "guests": {
-    "join": {
-      "title": "Invitation to plan together",
-      "intro": "You were invited to plan a trip together on this server. Your own TravStats server confirms who you are.",
-      "privacy": "Your server does not see the plan: it only confirms your name. The plan stays on this server.",
-      "confirm": "Confirm with your TravStats server",
-      "incomplete": "The link is incomplete. Copy it again in full, everything after the #.",
-      "working": "Setting up your access …",
-      "failedTitle": "Cannot join",
-      "toLogin": "Go to sign-in"
-    },
-    "vouch": {
-      "title": "Confirm for planning",
-      "question": "Confirm to {{host}} as {{name}}?",
-      "privacy": "{{host}} learns only your display name and an identifier that is unique to that server. It gets neither your password nor your data, and this server does not see the plan.",
-      "confirm": "Confirm",
-      "cancel": "Cancel",
-      "invalid": "This link is incomplete or not valid."
-    },
-    "banner": "You are planning as guest {{name}} on {{host}}. You see this plan only.",
-    "leave": "Leave plan",
-    "export": "Save the trip as a file",
-    "exportHint": "The .travstats file holds this trip's route and its confirmed entries, without the host's notes, prices, photos and documents. You can import it on your own TravStats server.",
-    "exportFailed": "The file could not be created. Please try again.",
-    "phone": {
-      "open": "Pair phone",
-      "hint": "Scan the code in the TravStats app. It works for this plan only and can be redeemed once.",
-      "expires": "The code is valid for about {{minutes}} more minutes. After that, tap \"Pair phone\" again."
-    },
-    "ended": {
-      "title": "Your access has ended",
-      "body": "You can no longer open this plan.",
-      "toLogin": "Go to sign-in"
-    },
-    "invite": {
-      "title": "Guest from another server",
-      "intro": "Invite a person from a connected server. They confirm themselves through their own server and then work on the plan here. Their server does not see the plan.",
-      "noServers": "No connected server is admitted. The admin sets this up under Settings → Instance.",
-      "server": "Server",
-      "username": "Username there (display only)",
-      "send": "Create invitation link",
-      "linkOnce": "Link for {{name}}. It is valid for seven days, once, and shown only now. Send it by any channel you like.",
-      "link": "Invitation link",
-      "copy": "Copy link"
-    },
-    "member": {
-      "remote": "Guest from another server"
-    }
-  },
   "planDocs": {
     "title": "Plan documents",
     "intro": "These are the documents on the bookings and what co-planners uploaded for the plan. The trip's other documents are visible to the owner only.",
@@ -743,5 +686,42 @@
     "uploadedBy": "uploaded by {{name}}",
     "onBooking": "on a booking",
     "upload": "Upload document"
+  },
+  "remote": {
+    "member": "From another server",
+    "from": "from {{owner}} · {{server}}",
+    "banner": "You are planning on {{owner}}'s plan on {{server}}. Your own server passes every change on to it.",
+    "invitation": "{{owner}} on {{server}} invites you to plan “{{plan}}” together.",
+    "invitations": {
+      "title": "Invitations to plans on other servers",
+      "loadFailed": "The invitations could not be loaded."
+    },
+    "listFailed": "The plans from other servers could not be loaded.",
+    "leave": "Leave plan",
+    "export": "Save the trip as a file",
+    "exportHint": "The .travstats file holds the route and the confirmed entries of this trip, without the host's notes, prices, photos and documents. You can import it on your own TravStats server.",
+    "exportFailed": "The file could not be created. Please try again.",
+    "unreachableTitle": "The server of this plan is not answering",
+    "ended": {
+      "title": "This plan is no longer shared",
+      "body": "You can no longer open it. The connection or the invitation was ended, or the plan was deleted.",
+      "toList": "To the plans"
+    },
+    "invite": {
+      "title": "Co-planner on another server",
+      "intro": "Invite a person you are connected with. Both sides must have “Share plans” switched on in the connection (Settings → Sharing → Connections). The person works on the plan through their own server, which sees the plan as it passes it on.",
+      "none": "No connection with plans switched on. Connect with the person under Settings → Sharing → Connections and switch on “Share plans”.",
+      "send": "Invite {{name}}",
+      "already": "Invited",
+      "sent": "Invitation sent to {{name}}.",
+      "errors": {
+        "SHARE_REMOTE_CONNECTION_STATE": "Plans are not switched on on both sides of this connection.",
+        "SHARE_REMOTE_UNREACHABLE": "The person's server is not answering. The invitation was not sent.",
+        "SHARE_REMOTE_PEER_OUTDATED": "The person's server needs an update first.",
+        "SHARE_REMOTE_PEER_NOT_ADMITTED": "The admin has not admitted that server.",
+        "PLAN_MEMBER_LIMIT": "The plan already has as many co-planners as it may have.",
+        "unknown": "The invitation could not be sent."
+      }
+    }
   }
 }

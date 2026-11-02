@@ -7,12 +7,18 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   capabilities: vi.fn(),
   invitations: vi.fn().mockResolvedValue([]),
+  remote: vi.fn().mockResolvedValue([]),
   t: (key: string, opts?: Record<string, unknown>) =>
     opts ? `${key}:${Object.values(opts).join(",")}` : key,
 }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: mocks.t, i18n: { language: "de" } }),
 }));
+vi.mock("../../../lib/api/remotePlans", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/remotePlans")>()),
+  remotePlansApi: { list: mocks.remote },
+}));
+vi.mock("../../../components/sharing/RemotePlanInvitations", () => ({ default: () => null }));
 vi.mock("../../../lib/api/travplan", () => ({
   travplanApi: {
     list: mocks.list,
@@ -48,5 +54,56 @@ describe("plan list card counts", () => {
     );
     expect(await screen.findByText("listCountsRoute:5,4")).toBeInTheDocument();
     expect(screen.getByText("listCountsStay:7,2")).toBeInTheDocument();
+  });
+
+  it("lists a plan on another server by whose it is and where, linking to the remote address", async () => {
+    mocks.capabilities.mockResolvedValue({ enabled: true });
+    mocks.list.mockResolvedValue([]);
+    mocks.remote.mockResolvedValueOnce([
+      {
+        connectionId: "c1",
+        origin: "https://far.example.org",
+        planId: "p9",
+        tripId: "t9",
+        title: "Madeira",
+        ownerDisplayName: "Ben",
+        role: "editor",
+        state: "active",
+      },
+      {
+        connectionId: "c1",
+        origin: "https://far.example.org",
+        planId: "p8",
+        tripId: "t8",
+        title: "Only invited",
+        ownerDisplayName: "Ben",
+        role: "editor",
+        state: "invited",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <PlanList />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("Madeira")).toBeInTheDocument();
+    expect(screen.getByText("remote.from:Ben,far.example.org")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "continue" })).toHaveAttribute(
+      "href",
+      "/plan/remote/c1/p9/overview"
+    );
+    expect(screen.queryByText("Only invited")).not.toBeInTheDocument();
+  });
+
+  it("names a failed load of the remote plans instead of showing an empty list", async () => {
+    mocks.capabilities.mockResolvedValue({ enabled: true });
+    mocks.list.mockResolvedValue([]);
+    mocks.remote.mockRejectedValueOnce(new Error("down"));
+    render(
+      <MemoryRouter>
+        <PlanList />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("remote.listFailed")).toBeInTheDocument();
   });
 });
