@@ -12,7 +12,7 @@ export type ConnectionFileApiErrorCode =
   | "COMPARISON_CONNECTION_FILE_TOO_LARGE"
   /** JSON that is not a connection file of a known format and version. */
   | "COMPARISON_CONNECTION_FILE_FORMAT"
-  /** The address is not an https origin without port, path or credentials. */
+  /** The address is not an https origin without port, path or credentials (LAN servers need FEDERATION_PRIVATE_PEERS). */
   | "COMPARISON_CONNECTION_FILE_ORIGIN"
   /** Not an Ed25519 public key — including a private key, which is refused outright. */
   | "COMPARISON_CONNECTION_FILE_KEY"

@@ -19,6 +19,24 @@ The `FEDERATION_*` environment variables are no longer read. An install that sti
 them has them copied into these settings once, on the first start of this version (only where
 the settings are still empty).
 
+### Servers on one LAN: `FEDERATION_PRIVATE_PEERS`
+
+By default a peer is a public `https://host` origin (no port) reached only at public addresses.
+An operator whose servers share a network opts in with an environment variable (deployment
+setting, like a port; honoured in production too), a comma-separated CIDR list:
+
+```
+FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8
+```
+
+With it set, a peer origin (connection file, QR, admin pin, envelope) and this server's own
+origin may be `http://192.168.178.187:3010`: http and explicit ports are allowed, an IP literal
+must lie in a listed range, and a DNS name must resolve only to listed or public addresses.
+Plain http is used only when every answer is in a listed range; a name with a public answer
+needs https. Loopback, link-local (169.254.169.254 included), unspecified and multicast stay
+refused even if a CIDR covers them. An invalid entry is ignored with a boot warning; the list is
+logged once. Signatures, key pinning, nonces and admission are unchanged. Unset = no change.
+
 Generate the server's Ed25519 private key on the target host with `openssl genpkey -algorithm
 ED25519`, writing it to the absolute configured path with mode 0600, outside uploads/database
 backups. Never print, share or commit it. Deployment and any restart require the owner's

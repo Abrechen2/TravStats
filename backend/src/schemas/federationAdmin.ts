@@ -1,12 +1,13 @@
 import { z } from "./zod";
 import { origin } from "../services/federation/contract";
+import { peerOriginRule } from "../services/federation/peerAddressPolicy";
 
-/** A peer address: https, no port, path or credentials, never the "local" placeholder. */
+/** A peer address: https without port by default (LAN opt-in: `FEDERATION_PRIVATE_PEERS`), never "local". */
 export const httpsOriginSchema = z
   .string()
   .max(250)
   .refine((v) => v !== "local" && origin.safeParse(v).success, {
-    message: "An https origin without port, path or credentials",
+    error: () => peerOriginRule(),
   });
 
 export const federationSettingsSchema = z.strictObject({

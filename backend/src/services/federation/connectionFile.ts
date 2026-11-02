@@ -192,7 +192,10 @@ export function readConnectionFile(buffer: Buffer): ConnectionValues {
 /** The checks every carrier (file, QR) shares: https origin, Ed25519 key, matching fingerprint. */
 function validateValues(origin: string, rawKey: string, fingerprint: string): ConnectionValues {
   if (!httpsOriginSchema.safeParse(origin).success)
-    throw refuse("COMPARISON_CONNECTION_FILE_ORIGIN", "The address is not an https origin");
+    throw refuse(
+      "COMPARISON_CONNECTION_FILE_ORIGIN",
+      "The address is not an https origin (LAN servers: see FEDERATION_PRIVATE_PEERS)"
+    );
   const publicKey = parsePeerPublicKey(rawKey);
   if (!publicKey) throw refuse("COMPARISON_CONNECTION_FILE_KEY", "Not an Ed25519 public key");
   if (hash(publicKey) !== fingerprint)

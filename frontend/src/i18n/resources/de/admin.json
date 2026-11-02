@@ -869,7 +869,7 @@
       "COMPARISON_CONNECTION_FILE_UNREADABLE": "Diese Datei ist keine lesbare Verbindungsdatei. Nimm die ZIP-Datei (oder die JSON-Datei daraus), die der andere Server heruntergeladen hat.",
       "COMPARISON_CONNECTION_FILE_TOO_LARGE": "Die Datei ist zu groß für eine Verbindungsdatei (höchstens 64 KB).",
       "COMPARISON_CONNECTION_FILE_FORMAT": "Das ist keine Verbindungsdatei in einem Format, das dieser Server kennt. Vielleicht ist einer der beiden Server veraltet.",
-      "COMPARISON_CONNECTION_FILE_ORIGIN": "Die Adresse in der Datei ist ungültig: Erlaubt ist nur https, ohne Port, Pfad oder Zugangsdaten.",
+      "COMPARISON_CONNECTION_FILE_ORIGIN": "Die Adresse in der Datei ist ungültig: Erlaubt ist nur https, ohne Port, Pfad oder Zugangsdaten (Server im eigenen Netz: Umgebungsvariable FEDERATION_PRIVATE_PEERS).",
       "COMPARISON_CONNECTION_FILE_KEY": "Der Schlüssel in der Datei ist kein öffentlicher Ed25519-Schlüssel.",
       "COMPARISON_CONNECTION_FILE_FINGERPRINT": "Der Fingerabdruck in der Datei passt nicht zu ihrem Schlüssel. Die Datei ist beschädigt oder verändert – lass sie dir neu schicken.",
       "COMPARISON_CONNECTION_FILE_SELF": "Das ist die Verbindungsdatei dieses Servers selbst. Lies die Datei des anderen Servers ein."
@@ -887,7 +887,7 @@
         "noOrigin": "Es fehlt die öffentliche Adresse dieses Servers, z. B. https://travstats.example.org.",
         "noKey": "Es fehlt der Serverschlüssel. Erzeuge ihn unten.",
         "federationOff": "Server-Verbindungen sind ausgeschaltet. Schalte sie unten ein.",
-        "invalidOrigin": "Die Adresse wird nicht angenommen: Gültig ist nur https:// ohne Port und ohne Pfad."
+        "invalidOrigin": "Die Adresse wird nicht angenommen: Gültig ist nur https:// ohne Port und ohne Pfad (Server im eigenen Netz: Umgebungsvariable FEDERATION_PRIVATE_PEERS)."
       },
       "switch": {
         "title": "Schalter „Reisen mit anderen Servern teilen“ ist an",

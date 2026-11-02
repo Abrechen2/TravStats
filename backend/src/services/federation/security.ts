@@ -1,4 +1,5 @@
-import { BlockList, isIP } from "net";
+import { isIP } from "net";
+import http from "http";
 import { lookup } from "dns/promises";
 import https from "https";
 import type { ComparisonPeer } from "../../prisma";
@@ -16,44 +17,18 @@ import {
 } from "./envelope";
 
 import { refused, hash, PeerRefusal } from "./refusal";
+import {
+  bareHost,
+  listedPrivateAddress,
+  peerAddressAllowed,
+  publicAddress,
+} from "./peerAddressPolicy";
 export { refused, hash, PeerRefusal, type PeerRefusalKind } from "./refusal";
 import { sign } from "crypto";
 import { loadIdentity, type Identity } from "./identity";
 export { loadIdentity } from "./identity";
 export { envelope, verifyEnvelope } from "./envelope";
-const blocked = new BlockList();
-for (const [ip, bits] of [
-  ["0.0.0.0", 8],
-  ["10.0.0.0", 8],
-  ["100.64.0.0", 10],
-  ["127.0.0.0", 8],
-  ["169.254.0.0", 16],
-  ["172.16.0.0", 12],
-  ["192.0.0.0", 24],
-  ["192.0.2.0", 24],
-  ["192.168.0.0", 16],
-  ["198.18.0.0", 15],
-  ["198.51.100.0", 24],
-  ["203.0.113.0", 24],
-  ["224.0.0.0", 4],
-  ["240.0.0.0", 4],
-] as const)
-  blocked.addSubnet(ip, bits, "ipv4");
-const global6 = new BlockList();
-global6.addSubnet("2000::", 3, "ipv6");
-for (const [ip, bits] of [
-  ["2001::", 23],
-  ["2001:db8::", 32],
-  ["2002::", 16],
-  ["3fff::", 20],
-] as const)
-  blocked.addSubnet(ip, bits, "ipv6");
-export function publicAddress(address: string): boolean {
-  const family = isIP(address);
-  return family === 4
-    ? !blocked.check(address, "ipv4")
-    : family === 6 && global6.check(address, "ipv6") && !blocked.check(address, "ipv6");
-}
+export { publicAddress };
 /**
  * How one protocol talks to a peer over the shared egress (spec 2026-10-20 §4): its route, its
  * size budgets, the envelope it signs and the envelopes it reads back. One implementation of
@@ -117,26 +92,35 @@ export async function exchange(
   body: object,
   transport: PeerTransport = COMPARISON_TRANSPORT
 ): Promise<unknown> {
-  originSchema.parse(remoteOrigin);
+  // A stored peer the policy no longer admits (the LAN opt-in was switched off) is a refusal.
+  if (!originSchema.safeParse(remoteOrigin).success) throw refused();
   const local = await loadIdentity();
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: remoteOrigin } });
   if (!peer?.enabled) throw refused("unknown-peer");
   if (remoteOrigin === local.origin) throw refused();
   if (!peer.verifiedAt && !transport.beforeVerification(body)) throw refused("unverified-peer");
   const url = new URL(remoteOrigin);
-  if (isIP(url.hostname)) throw refused();
-  // A name that does not resolve is the network's failure, not this server's (F-S4d leftover):
-  // left raw, it would read as a local error to a caller that tells the two apart.
-  const answers = await lookup(url.hostname, { all: true }).catch(() => {
-    throw refused("unreachable");
-  });
-  if (!answers.length || !answers.every((a) => publicAddress(a.address)))
+  const host = bareHost(url.hostname);
+  // Today's rule: an IP literal is a peer only inside a range the operator listed.
+  if (isIP(host) && !listedPrivateAddress(host)) throw refused();
+  const answers: { address: string; family: number }[] = isIP(host)
+    ? // An IP literal is its own answer: the policy decides, there is nothing to resolve.
+      [{ address: host, family: isIP(host) }]
+    : // A name that does not resolve is the network's failure, not this server's (F-S4d leftover):
+      // left raw, it would read as a local error to a caller that tells the two apart.
+      await lookup(host, { all: true }).catch(() => {
+        throw refused("unreachable");
+      });
+  // Every answer must be public or in a listed range; plain http only where NONE is public.
+  if (!answers.length || !answers.every((a) => peerAddressAllowed(a.address)))
+    throw refused("private-address");
+  if (url.protocol === "http:" && !answers.every((a) => listedPrivateAddress(a.address)))
     throw refused("private-address");
   const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
   const raw = await postToFirstReachable(
-    url.hostname,
+    url,
     ipv4First(answers),
     bytes,
     transport,
@@ -168,7 +152,7 @@ export function ipv4First<T extends { family: number }>(answers: readonly T[]): 
  * moves on to the next address; a reply, a refusal or the spent budget ends the exchange.
  */
 async function postToFirstReachable(
-  hostname: string,
+  url: URL,
   addresses: readonly { address: string; family: number }[],
   bytes: Buffer,
   transport: PeerTransport,
@@ -179,7 +163,7 @@ async function postToFirstReachable(
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
     try {
-      return await postPinned(hostname, pinned, bytes, transport, remaining, preAuth);
+      return await postPinned(url, pinned, bytes, transport, remaining, preAuth);
     } catch (error) {
       // Anything but a PeerRefusal is a connection that never came up; the next address may answer.
       if (error instanceof PeerRefusal) throw error;
@@ -189,7 +173,7 @@ async function postToFirstReachable(
 }
 
 function postPinned(
-  hostname: string,
+  url: URL,
   pinned: { address: string; family: number },
   bytes: Buffer,
   transport: PeerTransport,
@@ -198,10 +182,13 @@ function postPinned(
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     let connected = false;
+    const secure = url.protocol === "https:";
+    const hostname = bareHost(url.hostname);
     const options: https.RequestOptions & { autoSelectFamily: boolean } = {
       hostname,
-      servername: hostname,
-      port: 443,
+      // SNI is for names only; a certificate for an IP literal is matched on its IP SAN.
+      ...(secure && !isIP(hostname) ? { servername: hostname } : {}),
+      port: url.port ? Number(url.port) : secure ? 443 : 80,
       path: transport.path,
       method: "POST",
       agent: false,
@@ -225,7 +212,7 @@ function postPinned(
         [PEER_PREAUTH_HEADER]: preAuth,
       },
     };
-    const request = https.request(options, (response) => {
+    const request = (secure ? https : http).request(options, (response) => {
       if (response.statusCode !== 200) {
         response.resume();
         reject(refused(response.statusCode === 404 ? "remote-absent" : "remote-refused"));
