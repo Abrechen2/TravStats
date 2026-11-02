@@ -3,7 +3,8 @@ import { Router, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
-import { findReceipt, ownedPlan, writePlan } from "../../services/travplan/store";
+import { findReceipt, writePlan } from "../../services/travplan/store";
+import { accessiblePlan } from "../../services/travplan/access";
 import { routeStage } from "../../services/travplan/stageRouting";
 import { bookingSchema } from "../../services/travplan/schema";
 import { matchPlaceholders } from "../../services/travplan/placeholders";
@@ -58,7 +59,7 @@ router.post(
   authenticate,
   route(async (req, res) => {
     const body = z.object({ booking: bookingSchema }).strict().parse(req.body);
-    const plan = await ownedPlan(req.userId!, uuid.parse(req.params.tripId));
+    const plan = await accessiblePlan(req.userId!, uuid.parse(req.params.tripId));
     res.json({ matches: matchPlaceholders(body.booking, parseState(plan.state)) });
   })
 );
@@ -82,7 +83,7 @@ router.post(
       res.json(replayed);
       return;
     }
-    const plan = await ownedPlan(req.userId!, tripId);
+    const plan = await accessiblePlan(req.userId!, tripId);
     // Routed outside the write transaction: a provider call must not hold it open.
     const metrics = await routeStage(req.userId!, parseState(plan.state), stageId);
     res.json(

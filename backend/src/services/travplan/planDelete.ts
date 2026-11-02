@@ -8,7 +8,7 @@
  * A plan is not travel evidence, so deleting one can never remove evidence.
  */
 import { prisma } from "../../db";
-import { ownedPlan } from "./store";
+import { assertOwner, planAccess } from "./access";
 import { parseState } from "./upgrade";
 import { NOT_PLAN_SHELL } from "./planShell";
 import logger from "../../utils/logger";
@@ -38,7 +38,9 @@ export async function previewPlanDelete(
   userId: string,
   tripId: string
 ): Promise<PlanDeletePreview> {
-  const plan = await ownedPlan(userId, tripId);
+  const access = await planAccess(userId, tripId);
+  assertOwner(access);
+  const plan = access.row;
   const state = parseState(plan.state);
   const [receipts, proposals, notShell] = await Promise.all([
     prisma.travelPlanMutation.count({ where: { planId: plan.id } }),
@@ -68,7 +70,10 @@ export async function previewPlanDelete(
 }
 
 export async function deletePlan(userId: string, tripId: string): Promise<void> {
-  const plan = await ownedPlan(userId, tripId);
+  const access = await planAccess(userId, tripId);
+  // A co-planner may do everything but this (owner decision D3): a refusal, not a 404.
+  assertOwner(access);
+  const plan = access.row;
   // Scoped to the account as well: a foreign key proves the row exists, not whose it is.
   await prisma.travelPlan.deleteMany({ where: { id: plan.id, trip: { userId } } });
   logger.info({ operation: "travplan.delete", tripId }, "plan deleted");

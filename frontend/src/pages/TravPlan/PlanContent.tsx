@@ -23,6 +23,9 @@ import { shortDay } from "./route/RouteTimeline";
 import { PlanDeleteDialog } from "./PlanDeleteDialog";
 import { PlanMenu } from "./PlanMenu";
 import { UndoToast } from "./UndoToast";
+import { useCollab } from "./useCollab";
+import { PlanMembersDialog } from "./PlanMembersDialog";
+import { MemberNoteCard, MemberNotices } from "./MemberPanels";
 import { PlanHandover } from "./PlanHandover";
 
 export const PLAN_SECTIONS = [
@@ -50,8 +53,10 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     [suggestions, setSuggestions] = useState<string[]>([]),
     [documents, setDocuments] = useState<TravelDocument[]>([]),
     [deleting, setDeleting] = useState(false),
+    [members, setMembers] = useState(false),
     navigate = useNavigate();
   const onError = useCallback((e: unknown) => setError(message(e)), [message, setError]);
+  const { collab, reload, markRead } = useCollab(tripId, plan?.revision ?? 0, onError);
   useEffect(() => {
     setEditor(null);
     setQuery("");
@@ -148,6 +153,7 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
     setWeatherBusy,
     suggestions,
     setSuggestions,
+    members: collab?.members ?? [],
   };
   return (
     <>
@@ -179,9 +185,17 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
                 {t("refresh")}
               </Button>
               <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>
-              <Button variant="danger" onClick={() => setDeleting(true)}>
-                {t("deletePlan.open")}
+              <Button onClick={() => setMembers(true)}>
+                {t("members.open", {
+                  count: collab?.members.filter((m) => m.status === "active").length ?? 1,
+                })}
               </Button>
+              {/* The owner's alone (D3): a co-planner is not offered what the server refuses. */}
+              {(plan.self?.isOwner ?? true) && (
+                <Button variant="danger" onClick={() => setDeleting(true)}>
+                  {t("deletePlan.open")}
+                </Button>
+              )}
             </PlanMenu>
           </>
         }
@@ -205,7 +219,34 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
         busy={busy}
         onUndo={(mutationId) => void mutate({ type: "undo", mutationId })}
       />
+      {plan.memberShares?.some((m) => !m.ok) && (
+        <PlanNotice tone="bad">
+          {t("members.shareFailed", {
+            names: plan.memberShares
+              .filter((m) => !m.ok)
+              .map((m) => m.displayName || t("members.everyone"))
+              .join(", "),
+          })}
+        </PlanNotice>
+      )}
+      <MemberNotices collab={collab} onRead={() => void markRead()} />
       {section === "overview" && <OverviewSection ctx={ctx} />}
+      {section === "overview" && (
+        <MemberNoteCard
+          plan={plan}
+          busy={busy}
+          save={(text) => mutate({ type: "member_note", text })}
+        />
+      )}
+      {members && collab && (
+        <PlanMembersDialog
+          tripId={tripId}
+          collab={collab}
+          onClose={() => setMembers(false)}
+          onChanged={reload}
+          onLeft={() => navigate("/plan")}
+        />
+      )}
       {section === "workspace" &&
         (state.shape === "route" ? <RouteSection ctx={ctx} /> : <WorkspaceSection ctx={ctx} />)}
       {section === "import" && <ImportSection ctx={ctx} />}

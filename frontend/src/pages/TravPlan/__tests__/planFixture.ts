@@ -31,6 +31,7 @@ export function planFixture(tripId = "trip-one", revision = 1): PlanView {
       packing: [],
       tasks: [],
       costs: [],
+      memberNotes: [],
       decisions: [],
       forecast: null,
       stations: [],

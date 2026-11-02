@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { travplanApi, type PlanOperation, type PlanView } from "../../lib/api/travplan";
 import { useTranslation } from "../../hooks/useTranslation";
+/** How often a visible plan page looks for other members' changes. */
+export const POLL_MS = 30_000;
 export function usePlan(tripId: string | undefined) {
   const [plan, setPlan] = useState<PlanView | null>(null),
     [loading, setLoading] = useState(true),
@@ -21,6 +23,7 @@ export function usePlan(tripId: string | undefined) {
     },
     [t]
   );
+  const gone = useRef(false);
   const refresh = useCallback(async () => {
     if (!tripId) {
       setLoading(false);
@@ -74,6 +77,10 @@ export function usePlan(tripId: string | undefined) {
               if (request === generation.current) {
                 planRef.current = fresh;
                 setPlan(fresh);
+                // Somebody else changed the plan meanwhile: say who. The form keeps the edit.
+                const by = fresh.lastMutation?.actor;
+                if (by && by.memberId !== current.self?.memberId)
+                  setError(t("conflictBy", { name: by.displayName }));
               }
             } catch {
               /* Keep the last readable state. */
@@ -86,7 +93,48 @@ export function usePlan(tripId: string | undefined) {
         if (mounted.current) setBusy(false);
       }
     },
-    [plan, message]
+    [plan, message, t]
   );
+  // Other members write to the same plan: look again on focus and every 30 s while visible
+  // (ETag = revision, 304 when unchanged). Never while a write of our own is in flight.
+  useEffect(() => {
+    if (!tripId) return;
+    gone.current = false;
+    const tick = async () => {
+      const held = planRef.current,
+        request = generation.current;
+      if (!held || gone.current || pending.current || document.visibilityState !== "visible")
+        return;
+      try {
+        const next = await travplanApi.poll(held);
+        if (
+          next &&
+          mounted.current &&
+          request === generation.current &&
+          !pending.current &&
+          planRef.current === held
+        ) {
+          planRef.current = next;
+          setPlan(next);
+        }
+      } catch (cause) {
+        const status = (cause as { response?: { status?: number } }).response?.status;
+        // Deleted, removed or consent withdrawn: say so once and stop asking. A network blip
+        // keeps the last readable plan and tries again at the next tick.
+        if (status === 404 || status === 403) {
+          gone.current = true;
+          if (mounted.current && request === generation.current) setError(message(cause));
+        }
+      }
+    };
+    const timer = window.setInterval(() => void tick(), POLL_MS);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [tripId, message]);
   return { plan, setPlan, loading, busy, error, setError, refresh, mutate, message };
 }

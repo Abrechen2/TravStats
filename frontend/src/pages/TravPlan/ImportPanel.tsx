@@ -10,7 +10,10 @@ import {
 } from "../../lib/api/travplan";
 import { PlaceholderMatchDialog } from "./PlaceholderMatchDialog";
 import { bookingDrafts } from "./bookingDrafts";
-import { Button, Card, Field, Input, TextArea } from "../../components/ui";
+import { ferryCandidates } from "./ferryDrafts";
+import { ferryApi } from "../../lib/api/ferry";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { Button, Card, Field, Input, Select, TextArea } from "../../components/ui";
 import { PlanActions, PlanCardHead, PlanGrow, PlanRow } from "./planLayout";
 import { PlanCheck } from "./PlanParts";
 
@@ -30,8 +33,14 @@ export default function ImportPanel({
   busy?: boolean;
   onError: (error: unknown) => void;
 }) {
-  const { t } = useTranslation("travplan");
-  const [useAI, setUseAI] = useState(false);
+  const { t } = useTranslation("travplan"),
+    { isEnabled } = useEnabledDomains();
+  const [useAI, setUseAI] = useState(false),
+    // Detection never answers "ferry" (it is read only on request, the ferry-ticket rule), so a ferry
+    // booking is chosen here. Only offered where the account has the ferry domain.
+    [reading, setReading] = useState<"auto" | "ferry">("auto"),
+    [readNote, setReadNote] = useState("");
+  const domain = reading === "ferry" && isEnabled("ferry") ? "ferry" : "auto";
   const [text, setText] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [retain, setRetain] = useState(false),
@@ -74,13 +83,29 @@ export default function ImportPanel({
         headers: { "X-TravPlan-Trip": plan.tripId, "X-TravPlan-AI": String(useAI) },
       };
       let result: unknown;
-      if (file) {
+      setReadNote("");
+      const pastedText = file
+        ? file.name.toLowerCase().endsWith(".txt")
+          ? await file.text()
+          : ""
+        : text;
+      if (domain === "ferry" && pastedText.trim()) {
+        // Templates first, then labelled facts and the verified model: the ticket preview.
+        const preview = await ferryApi.ticketPreview({ text: pastedText }, options.headers);
+        if (!preview.crossings.length)
+          setReadNote(
+            t("ferryNone." + (preview.reason ?? "nothing"), {
+              defaultValue: t("ferryNone.nothing"),
+            })
+          );
+        result = ferryCandidates(preview);
+      } else if (file) {
         if (file.size > MAX_FILE_BYTES) throw new Error("File too large");
         if (file.name.toLowerCase().endsWith(".txt")) {
           result = (
             await parserApi.post(
               "/parse-email",
-              { emailContent: await file.text(), domain: "auto" },
+              { emailContent: await file.text(), domain },
               options
             )
           ).data;
@@ -91,19 +116,27 @@ export default function ImportPanel({
             reader.onload = () => resolve(String(reader.result).split(",")[1]);
             reader.readAsDataURL(file);
           });
-          result = (
-            await parserApi.post("/parse-pdf", { pdfBase64: base64, domain: "auto" }, options)
-          ).data;
+          result = (await parserApi.post("/parse-pdf", { pdfBase64: base64, domain }, options))
+            .data;
         } else {
           const form = new FormData();
           form.append("email", file);
-          form.append("domain", "auto");
+          form.append("domain", domain);
           result = (await parserApi.post("/parse-email-file", form, options)).data;
         }
       } else
-        result = (
-          await parserApi.post("/parse-email", { emailContent: text, domain: "auto" }, options)
-        ).data;
+        result = (await parserApi.post("/parse-email", { emailContent: text, domain }, options))
+          .data;
+      if (domain === "ferry" && !(result as { candidates?: unknown[] }).candidates) {
+        const body = result as { tickets?: unknown[]; fallbackCode?: string };
+        if (!body.tickets?.length)
+          setReadNote(
+            t("ferryNone." + (body.fallbackCode ?? "nothing"), {
+              defaultValue: t("ferryNone.nothing"),
+            })
+          );
+        result = ferryCandidates(body);
+      }
       const candidates = bookingDrafts(result, plan);
       if (retain && file && candidates.length) {
         const doc = await documentsApi.upload({
@@ -123,6 +156,21 @@ export default function ImportPanel({
   return (
     <Card>
       <PlanCardHead title={t("parse")} />
+      {isEnabled("ferry") && (
+        <Field label={t("readAs")} htmlFor={uid + "-reading"}>
+          <Select
+            id={uid + "-reading"}
+            value={reading}
+            onChange={(e) => {
+              setReading(e.target.value === "ferry" ? "ferry" : "auto");
+              setDrafts(null);
+            }}
+          >
+            <option value="auto">{t("readAuto")}</option>
+            <option value="ferry">{t("readFerry")}</option>
+          </Select>
+        </Field>
+      )}
       <Field label={t("paste")} htmlFor={uid + "-paste"}>
         <TextArea
           id={uid + "-paste"}
@@ -164,7 +212,7 @@ export default function ImportPanel({
       {drafts && (
         <div>
           {!drafts.length ? (
-            <p className="t-body">{t("noCandidates")}</p>
+            <p className="t-body">{readNote || t("noCandidates")}</p>
           ) : (
             drafts.map((b, i) => (
               <PlanRow key={b.id}>

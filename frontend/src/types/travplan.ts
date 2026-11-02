@@ -100,6 +100,12 @@ export interface PlanPacking {
   scope: "personal" | "shared";
   note: string;
   manual: boolean;
+  /** Personal: whose it is (null = the owner's). Shared: who brings it (null = nobody yet). */
+  ownerMemberId: string | null;
+}
+export interface PlanMemberNote {
+  memberId: string;
+  text: string;
 }
 export interface PlanTask {
   id: string;
@@ -114,6 +120,8 @@ export interface PlanCost {
   currency: string;
   paid: number;
   kind: "estimate" | "booked";
+  /** Members the cost is split between; empty = not split. */
+  splitMemberIds: string[];
 }
 export interface PlanDecision {
   id: string;
@@ -241,6 +249,7 @@ export interface PlanState {
   packing: PlanPacking[];
   tasks: PlanTask[];
   costs: PlanCost[];
+  memberNotes: PlanMemberNote[];
   decisions: PlanDecision[];
   forecast: PlanForecast | null;
   stations: PlanStation[];
@@ -318,6 +327,56 @@ export interface PlanView {
   schedule?: RouteSchedule;
   variants?: VariantComparison[];
   lastMutationId?: string;
+  /** Who made the latest change (spec §6.3). Absent on a plan nobody but its owner has edited. */
+  lastMutation?: PlanLastMutation;
+  /** The principal this view was drawn for; personal parts of other members are left out. */
+  self?: PlanSelf;
+  /** Set on the answer to a handover: how each member's linked copy went (spec §6.4). */
+  memberShares?: PlanMemberShare[];
+}
+export interface PlanSelf {
+  memberId: string;
+  kind: "owner" | "local" | "remote";
+  isOwner: boolean;
+}
+export interface PlanLastMutation {
+  id: string;
+  actor: { memberId: string; displayName: string } | null;
+  createdAt: string;
+  /** `<operation type>` or `<operation type>:<collection>`; the client words it. */
+  summary: string;
+}
+export interface PlanMemberShare {
+  memberId: string;
+  displayName: string;
+  ok: boolean;
+  /** Machine code of the refusal when `ok` is false. */
+  code?: string;
+}
+export interface PlanMember {
+  id: string;
+  kind: "owner" | "local" | "remote";
+  displayName: string;
+  username: string | null;
+  role: "owner" | "editor";
+  status: "invited" | "active" | "left" | "revoked";
+  createdAt: string;
+  /** When the invitation was answered; null while open. */
+  decidedAt: string | null;
+  /** True once the linked copy of the trip reached this member's logbook. */
+  shared: boolean;
+}
+export interface PlanNotice {
+  id: string;
+  actorName: string;
+  summary: string;
+  createdAt: string;
+}
+/** `GET /trips/:tripId/plan/collab`. */
+export interface PlanCollab {
+  self: PlanSelf;
+  members: PlanMember[];
+  notices: PlanNotice[];
 }
 export type PlanCollection =
   | "items"
@@ -385,6 +444,7 @@ export type PlanOperation =
       duration: number | null;
     }
   | { type: "handover" }
+  | { type: "member_note"; text: string }
   | { type: "station_handover"; stationId: string }
   | { type: "station_withdraw"; stationId: string }
   | { type: "execution"; id: string; execution: PlanItem["execution"] }
@@ -424,4 +484,8 @@ export interface PlanSummary {
   /** Route plans only; 0 on a stay plan. */
   stationsCount: number;
   stagesCount: number;
+  /** The caller's part: absent = the owner (an older server). */
+  role?: "owner" | "editor";
+  /** Display name of the owner when the plan is somebody else's. */
+  ownerName?: string | null;
 }

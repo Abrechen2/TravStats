@@ -129,19 +129,30 @@ export async function shareTrip(
   tripId: string,
   companionId: string
 ): Promise<ShareResult> {
+  const companion = await prisma.companion.findFirst({ where: { id: companionId, userId } });
+  if (!companion) throw new AppError("Companion not found", 404, "COMPANION_NOT_FOUND");
+  if (!companion.linkedUserId) {
+    throw new AppError(
+      "This companion is not linked to an account",
+      409,
+      "SHARE_COMPANION_NOT_LINKED"
+    );
+  }
+  return shareTripWithUser(userId, tripId, companion.linkedUserId);
+}
+
+/**
+ * The share itself, for a recipient already known as an account: a linked companion
+ * (`shareTrip`) or a co-planner of a TravPlan (forgejo#404, spec §6.4).
+ */
+export async function shareTripWithUser(
+  userId: string,
+  tripId: string,
+  recipientId: string
+): Promise<ShareResult> {
   return prisma.$transaction(
     async (tx) => {
       const trip = await ownTrip(tx, userId, tripId);
-      const companion = await tx.companion.findFirst({ where: { id: companionId, userId } });
-      if (!companion) throw new AppError("Companion not found", 404, "COMPANION_NOT_FOUND");
-      const recipientId = companion.linkedUserId;
-      if (!recipientId) {
-        throw new AppError(
-          "This companion is not linked to an account",
-          409,
-          "SHARE_COMPANION_NOT_LINKED"
-        );
-      }
       // Same answer as `requestConsent` gives for a deactivated account.
       const recipient = await tx.user.findFirst({
         where: { id: recipientId, isActive: true },

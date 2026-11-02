@@ -142,11 +142,20 @@ export function newEntry(
         scope: "personal",
         note: "",
         manual: true,
+        ownerMemberId: null,
       };
     case "tasks":
       return { ...common, title: "", due: null, done: false };
     case "costs":
-      return { ...common, title: "", amount: null, currency, paid: 0, kind: "estimate" };
+      return {
+        ...common,
+        title: "",
+        amount: null,
+        currency,
+        paid: 0,
+        kind: "estimate",
+        splitMemberIds: [],
+      };
     case "stations":
     case "stages":
       // Route editing lands with the route UI; the stay editor never creates these.

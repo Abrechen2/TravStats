@@ -503,3 +503,84 @@ model), CHANGELOG via `/deploy` only.
 
 Component structure, file split (≤800 lines), exact copy (DE first, EN mirror), map styling,
 polling interval tuning, routing batching, quota numbers within the stated bounds.
+
+## 13. As built — steps 5 and 7 (forgejo#404, branch `fix/travplan-members-404`)
+
+### Step 5 — members on the same server (§6.1–6.4, 6.6)
+
+- **Tables** (`20261102103126_travplan_members`): `travel_plan_members` (the §6.1 shape, plus
+  `shared_at`; closed vocabularies as CHECKs; unique `(plan, user)` and `(plan, remote origin,
+  remote subject)` so a remote guest, §6.5, fits without a migration), `travel_plan_notices`,
+  and `actor_member_id` + `summary` on `travel_plan_mutations`. The migration backfills the
+  owner as the first member of every existing plan; `ensureOwnerMember` covers any plan created
+  between deploy and backfill. Rows are never deleted on leaving or revocation: past changes keep
+  their author's name. `kind: "remote"` rows are never resolved to access.
+- **Access** (`services/travplan/access.ts`): `planAccess(user, trip)` is the one door. Owner, or
+  an `active` local member whose consent pair with the owner still stands in BOTH directions
+  (withdrawing it ends access at once, 403 `PLAN_MEMBER_CONSENT_WITHDRAWN`). Anybody else gets the
+  404 of a plan that does not exist. Owner-only acts raise 403 `PLAN_OWNER_ONLY` (not a 404): delete
+  and its preview, invite/remove/share, AI proposal generation and rejection, the AI policy.
+- **What an editor may not do** (`privacy.ts`, D3): `delete_plan`, member management, `settings.ai`
+  changes and every operation that writes the OWNER's logbook: `handover`, `station_handover`,
+  `station_withdraw`, `link_actual`, `refresh_existing`, confirming an item (or touching an item
+  already confirmed) and undoing a mutation of those kinds. Everything below `writePlan`
+  (documents, executions, handover, anchors) acts on the owner's account whoever writes.
+- **Personal parts** (§6.2): `packing[].ownerMemberId` (personal: whose, null = the owner's;
+  shared: who brings it), `memberNotes[]` (new operation `member_note`), `costs[].splitMemberIds`.
+  All additive with defaults, so v2 JSON on disk and the Companion's existing writes stay valid.
+  The view is drawn per principal (`visibleState`): another member's personal item and note are
+  not in the response, findings and budget are computed from the filtered state, and an operation
+  that reaches a foreign personal item answers 404 `PLAN_ITEM_NOT_FOUND`. A personal item is
+  stamped with its writer server-side; a shared item's `ownerMemberId` and a cost split must name
+  active members (400 `PLAN_MEMBER_UNKNOWN`).
+- **Attribution and notices** (§6.3): receipts carry `actorMemberId` and a `summary`
+  (`<type>[:<collection>]`); the view carries `lastMutation {id, actor, createdAt, summary}` and
+  `self`. A receipt holds the view drawn for its writer, so a replay by another member is a 409
+  `PLAN_IDEMPOTENCY_CONFLICT`. Each accepted mutation creates one `travel_plan_notices` row per
+  other active member (own table, not the sharing inbox: that inbox is typed for logbook entries);
+  `GET /trips/:id/plan/collab` returns roster, `self` and unread notices, `POST …/notices/read`
+  clears them. Undo stays latest-only and any member's. The web names the other author on a
+  `PLAN_REVISION_CONFLICT` ("Anna hat den Plan inzwischen geändert") and keeps the form input.
+- **Polling**: `GET /trips/:id/plan` sends `ETag: "<revision>-<memberId>"`; the web sends it back
+  as `If-None-Match` on focus and every 30 s while visible (304 = unchanged, no body). A 404/403 on
+  a poll is shown once and ends polling.
+- **Invite, join, leave** (§6.4, 6.6): `POST /trips/:id/plan/members {username}` needs the consent
+  accepted both ways and names whose answer is missing (`PLAN_MEMBER_CONSENT_MINE` / `_THEIRS`);
+  at most ten non-owner members. The invitee answers at `POST /travplan/invitations/:memberId/
+  accept|decline` (listed at `GET /travplan/invitations` and on the plan list). `DELETE
+  …/members/:id` removes or withdraws, `POST …/plan/leave` leaves; the owner deletes instead.
+  Deleting the plan cascades the member rows; a member's next load is 404 and the web says the plan
+  is gone or their access ended. Linked copies already in members' logbooks stay theirs.
+- **Linked copy at handover**: after a `handover` or `station_handover` by the owner, every active
+  member receives the trip through `shareTripWithUser` (extracted from `shareTrip`; the companion
+  lookup stays in `shareTrip`). The answer carries `memberShares[] {memberId, ok, code?}`; a failed
+  copy is named with its code, and the owner can retry per member (`POST …/members/:id/share`).
+- **Web**: "Mitplaner" dialog, notices banner, own-note card on the overview, "who brings it"
+  select on shared packing, invitations on the plan list, delete hidden for co-planners.
+
+### Step 7 — ferry booking → TravPlan
+
+Most of §7 existed before this step (forgejo#309): `ferry` is a parse target read by the
+`ferry` templates (`tickets`), and `POST /ferry/ticket-preview` is the labelled-facts + verified
+LLM reader behind them. Detection deliberately never answers `ferry` (`EXPLICIT_ONLY_TARGETS`), so
+the `SIGNALS.ferry` / `FerryBody { crossings }` shape in §7 was NOT built: it would reverse that
+decision and break clients that send `auto`. What was missing was the TravPlan side:
+
+- The import panel offers "Lesen als: Fährbuchung" when the account has the ferry domain. Pasted
+  or `.txt` text goes to the ticket preview (templates, then labels, then the model); a PDF or mail
+  file goes through the parse pipeline with `domain: "ferry"`. `pages/TravPlan/ferryDrafts.ts` maps
+  either answer to one `kind:"ferry"` candidate per crossing (the ticket's total price only on a
+  single crossing), which then runs the normal review and placeholder matching (§5.2).
+- The plan's AI policy now also governs `/ferry/ticket-preview` when the request names the plan
+  (`X-TravPlan-Trip`); a reading that finds nothing says why (`ferryNone.*`) instead of "0 results".
+- Not built: operator templates (they need real samples, §7 last bullet) and the Companion's
+  `ParseDomain` (step 8).
+
+### Left for later steps / open
+
+- Editors uploading documents to the plan's trip (§6.1, D6) and the plan-documents list.
+- Roadtrip as a shareable type for local members (D5, §6.8): the linked copy carries the trip's
+  logbook entries, not the route or stations.
+- Remote guests (step 6) and the `.travstats` export on leaving (§6.6, guests only).
+- `GET …/plan/actual` (plan versus the owner's track) stays owner-only: it reads the owner's
+  location history.

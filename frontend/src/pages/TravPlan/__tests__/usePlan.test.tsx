@@ -3,14 +3,20 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { PlanView } from "../../../lib/api/travplan";
 import { usePlan } from "../usePlan";
 import { planFixture, deferred } from "./planFixture";
-const mocks = vi.hoisted(() => ({ get: vi.fn(), write: vi.fn(), t: (key: string) => key }));
+const mocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  write: vi.fn(),
+  poll: vi.fn(),
+  t: (key: string) => key,
+}));
 vi.mock("../../../lib/api/travplan", () => ({
-  travplanApi: { get: mocks.get, write: mocks.write },
+  travplanApi: { get: mocks.get, write: mocks.write, poll: mocks.poll },
 }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
 beforeEach(() => {
   mocks.get.mockReset();
   mocks.write.mockReset();
+  mocks.poll.mockReset();
 });
 describe("travel-plan request lifecycle", () => {
   it("does not replace the next trip with a late response for the previous one", async () => {
@@ -103,5 +109,58 @@ describe("travel-plan request lifecycle", () => {
     unmount();
     pending.resolve(planFixture("trip-one", 2));
     expect(await write).toBe(false);
+  });
+  it("names the member who changed the plan meanwhile instead of a bare conflict", async () => {
+    const plan = { ...planFixture(), self: { memberId: "me", kind: "owner", isOwner: true } };
+    const fresh = {
+      ...planFixture("trip-one", 3),
+      lastMutation: {
+        id: "m1",
+        actor: { memberId: "anna", displayName: "Anna" },
+        createdAt: "2026-11-02T10:00:00.000Z",
+        summary: "upsert:ideas",
+      },
+    };
+    mocks.get.mockResolvedValueOnce(plan).mockResolvedValueOnce(fresh);
+    mocks.write.mockRejectedValue({
+      response: { status: 409, data: { code: "PLAN_REVISION_CONFLICT" } },
+    });
+    const { result } = renderHook(() => usePlan("trip-one"));
+    await waitFor(() => expect(result.current.plan).toEqual(plan));
+    await act(async () => {
+      expect(await result.current.mutate({ type: "handover" })).toBe(false);
+    });
+    expect(result.current.error).toBe("conflictBy");
+    expect(result.current.plan).toEqual(fresh);
+  });
+  it("picks up another member's change on focus and says so when the plan is gone", async () => {
+    const plan = planFixture();
+    const theirs = planFixture("trip-one", 2);
+    mocks.get.mockResolvedValue(plan);
+    mocks.poll.mockResolvedValueOnce(theirs).mockResolvedValueOnce(null);
+    const { result } = renderHook(() => usePlan("trip-one"));
+    await waitFor(() => expect(result.current.plan).toEqual(plan));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.plan).toEqual(theirs));
+    // 304: nothing changed, nothing replaced.
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(result.current.plan).toBe(theirs);
+    mocks.poll.mockRejectedValueOnce({
+      response: { status: 404, data: { code: "PLAN_NOT_FOUND" } },
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.error).toBe("errors.PLAN_NOT_FOUND"));
+    // It stops asking once told.
+    const calls = mocks.poll.mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(mocks.poll.mock.calls.length).toBe(calls);
   });
 });

@@ -12,6 +12,9 @@ vi.mock("../../../components/ui/AppShell", () => ({
 }));
 vi.mock("../../../lib/api/documents", () => ({ documentsApi: { listForEntry: mocks.documents } }));
 vi.mock("../ImportPanel", () => ({ default: () => null }));
+vi.mock("../useCollab", () => ({
+  useCollab: () => ({ collab: null, reload: vi.fn(), markRead: vi.fn() }),
+}));
 vi.mock("../usePlan", () => ({
   usePlan: (tripId: string) => ({
     plan: planFixture(tripId),
