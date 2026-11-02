@@ -125,7 +125,9 @@ describe("admin step-up on the federation pin calls", () => {
 
   it("refuses a wrong TOTP with ADMIN_STEP_UP_FAILED and accepts the right one", async () => {
     const auth = await mint(tfaId, "write");
-    const wrong = await post(PEERS, auth, { qr: qr(), password: PASSWORD, totp: "000000" });
+    const valid = generateSync({ secret: tfaSecret });
+    const bad = valid === "000000" ? "000001" : "000000";
+    const wrong = await post(PEERS, auth, { qr: qr(), password: PASSWORD, totp: bad });
     expect(wrong.status).toBe(403);
     expect(wrong.body.code).toBe("ADMIN_STEP_UP_FAILED");
     const ok = await post(PEERS, auth, {

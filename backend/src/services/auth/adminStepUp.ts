@@ -52,6 +52,13 @@ function countFailure(userId: string, now = Date.now()): void {
   logger.warn({ operation: "admin_step_up_failed", userId, attempts: failures.get(userId)?.count });
 }
 
+function refundAttempt(userId: string): void {
+  const entry = failures.get(userId);
+  if (!entry) return;
+  if (entry.count <= 1) failures.delete(userId);
+  else entry.count -= 1;
+}
+
 const failed = () => new AppError("Step-up refused", 403, "ADMIN_STEP_UP_FAILED");
 
 async function passwordMatches(password: string, hash: string): Promise<boolean> {
@@ -90,21 +97,19 @@ async function verifyStepUp(req: AuthRequest, fields: { password: string; totp?:
   if (isLocked(userId)) {
     throw new AppError("Too many step-up attempts, try again later", 429, "ADMIN_STEP_UP_LOCKED");
   }
-  if (!(await passwordMatches(fields.password, user.passwordHash))) {
-    countFailure(userId);
-    throw failed();
-  }
+  // Reserve the attempt BEFORE the slow bcrypt compare: parallel requests would otherwise all
+  // pass `isLocked` and only then be counted. Success clears it; a missing TOTP refunds it.
+  countFailure(userId);
+  if (!(await passwordMatches(fields.password, user.passwordHash))) throw failed();
   if (user.twoFactorEnabledAt) {
     if (!fields.totp) {
+      refundAttempt(userId);
       throw new AppError("A second-factor code is required", 403, "ADMIN_STEP_UP_TOTP_REQUIRED");
     }
     const ok = user.twoFactorSecret
       ? verifyCode(decryptSecret(user.twoFactorSecret), fields.totp)
       : false;
-    if (!ok) {
-      countFailure(userId);
-      throw failed();
-    }
+    if (!ok) throw failed();
   }
   failures.delete(userId);
 }
