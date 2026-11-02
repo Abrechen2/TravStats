@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
+import MailIntakeAdminCard from "../../components/MailIntake/MailIntakeAdminCard";
 import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import ServicesPage from "../../components/Services/ServicesPage";
@@ -72,7 +73,12 @@ export default function AdminSectionSwitch({
 }): JSX.Element | null {
   switch (section) {
     case "instance":
-      return <ServerGeneral />;
+      return (
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+          <ServerGeneral />
+          <MailIntakeAdminCard />
+        </div>
+      );
     case "travTrack":
       return <ServerOffers />;
     case "parsers":

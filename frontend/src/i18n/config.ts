@@ -48,6 +48,7 @@ import enDataQuality from "./resources/en/dataQuality.json";
 import enSharing from "./resources/en/sharing.json";
 import enEvidence from "./resources/en/evidence.json";
 import enDocuments from "./resources/en/documents.json";
+import enMailIntake from "./resources/en/mailIntake.json";
 import enRoadtrips from "./resources/en/roadtrips.json";
 import enOpenData from "./resources/en/openData.json";
 import enExternalServices from "./resources/en/externalServices.json";
@@ -95,6 +96,7 @@ import deDataQuality from "./resources/de/dataQuality.json";
 import deSharing from "./resources/de/sharing.json";
 import deEvidence from "./resources/de/evidence.json";
 import deDocuments from "./resources/de/documents.json";
+import deMailIntake from "./resources/de/mailIntake.json";
 import deRoadtrips from "./resources/de/roadtrips.json";
 import deOpenData from "./resources/de/openData.json";
 import deExternalServices from "./resources/de/externalServices.json";
@@ -164,6 +166,7 @@ const resources = {
     sharing: enSharing,
     evidence: enEvidence,
     documents: enDocuments,
+    mailIntake: enMailIntake,
     roadtrips: enRoadtrips,
     openData: enOpenData,
     externalServices: enExternalServices,
@@ -214,6 +217,7 @@ const resources = {
     sharing: deSharing,
     evidence: deEvidence,
     documents: deDocuments,
+    mailIntake: deMailIntake,
     roadtrips: deRoadtrips,
     openData: deOpenData,
     externalServices: deExternalServices,
@@ -273,6 +277,7 @@ i18n.use(initReactI18next).init({
     "sharing",
     "evidence",
     "documents",
+    "mailIntake",
     "roadtrips",
     "openData",
     "externalServices",

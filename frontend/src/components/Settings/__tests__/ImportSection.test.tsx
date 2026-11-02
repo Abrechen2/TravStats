@@ -3,6 +3,8 @@ import { render as rtlRender, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 
+// The mail-intake card loads its own settings; it has its own tests.
+vi.mock("../../MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));

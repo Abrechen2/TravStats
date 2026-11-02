@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { mailIntakeHandoffOf } from "../inbox/mailIntakeHandoff";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -77,6 +78,16 @@ export function DashboardLayout({
     setHandedOver(null);
     setAddingDomainState(domain);
   };
+  // A booking mail the inbox hands over (forgejo#313): open its domain's dialog with the
+  // mail already dropped in, then clear the router state so a reload does not reopen it.
+  const location = useLocation();
+  useEffect(() => {
+    const handoff = mailIntakeHandoffOf(location.state);
+    if (!handoff) return;
+    setAddingDomainState(handoff.domain as AddableDomain);
+    setHandedOver(handoff.document);
+    navigate(location.pathname + location.search, { replace: true, state: null });
+  }, [location.state]);
   const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
     // A package tour is imported on the trips page and a place document in
     // the place import; neither is in `openableImports`, so no dialog here

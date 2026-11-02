@@ -46,6 +46,10 @@ vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
 // Its own list on mount; it has its own tests.
+// The mail-intake cards load their own list; they have their own tests.
+vi.mock("../../components/inbox/MailIntakeSection", () => ({
+  default: () => null,
+}));
 vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
   default: () => <div data-testid="unfiled-documents-stub" />,
 }));

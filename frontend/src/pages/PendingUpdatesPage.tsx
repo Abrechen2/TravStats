@@ -32,6 +32,7 @@ import InboxWorkspace, { type InboxCount } from "../components/inbox/workspace/I
 import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
+import MailIntakeSection from "../components/inbox/MailIntakeSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 
 type PageTab = "inbox" | "sharing";
@@ -109,6 +110,7 @@ export default function PendingUpdatesPage(): JSX.Element {
         {/* Lockouts and uploads with retention deadlines precede record questions. */}
         <div hidden={tab !== "inbox"}>
           <PasswordResetRequestsSection />
+          <MailIntakeSection />
           <UnfiledDocumentsSection />
           <PlaceCapturesSection />
           <InboxWorkspace
