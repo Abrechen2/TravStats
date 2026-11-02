@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { type MapRef } from "react-map-gl/maplibre";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
 import { DeckGLOverlay } from "../map/DeckGLOverlay";
-import { PathLayer } from "@deck.gl/layers";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Cruise } from "../../types";
@@ -13,14 +12,14 @@ import {
   type CruiseRouteFeatureCollection,
   type RouteOverrideKey,
 } from "../../lib/api/cruise";
-import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruiseArcsLayer";
-import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
-import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseColor";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useCruiseRouteGeometry } from "../../hooks/useCruiseRouteGeometry";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { RouteEditorActions, BAR_BUTTON } from "./RouteEditorActions";
+import { buildRouteContextMenu } from "./routeContextMenu";
+import { buildCruiseRouteLayers, cruiseBboxPoints } from "./routeMapLayers";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
 import { MapContextMenu, type MapMenuEntry } from "./MapContextMenu";
 import {
@@ -42,12 +41,6 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "./routeEditorState";
-
-/** The detail map shows ONE cruise — always in that cruise's own hue. */
-const DETAIL_MAP_COLOR_CONFIG: CruiseColorConfig = {
-  mode: "perCruise",
-  colors: DEFAULT_CRUISE_COLORS,
-};
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -391,83 +384,23 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     (event: React.MouseEvent): void => {
       if (!editMode) return;
       event.preventDefault();
-      const { clientX, clientY } = event;
-
-      const handleIndex = handleIndexAt(clientX, clientY);
-      if (handleIndex !== null && editorState) {
-        const many = editorState.selected.filter((i) => !isEndpoint(editorState, i));
-        setMenu({
-          x: clientX,
-          y: clientY,
-          title: t("cruise:routeEditor.handle", { index: handleIndex + 1 }),
-          entries: [
-            {
-              label: t("cruise:routeEditor.menu.removeHandle"),
-              disabled: isEndpoint(editorState, handleIndex),
-              onSelect: () => onEditorRemove(handleIndex),
-            },
-            {
-              label: t("cruise:routeEditor.menu.removeSelected", { count: many.length }),
-              disabled: many.length < 2,
-              onSelect: onEditorRemoveSelected,
-            },
-            { label: null },
-            {
-              label: t("cruise:routeEditor.menu.clearSelection"),
-              disabled: editorState.selected.length === 0,
-              onSelect: () => setEditorState((prev) => (prev ? clearSelection(prev) : prev)),
-            },
-          ],
-        });
-        return;
-      }
-
-      const leg = legAt(clientX, clientY);
-      if (leg) {
-        const isOpen = editing?.fromPortId === leg.fromPortId && editing?.toPortId === leg.toPortId;
-        setMenu({
-          x: clientX,
-          y: clientY,
-          title: isOpen
-            ? t("cruise:routeEditor.menu.openLeg")
-            : t("cruise:routeEditor.menu.otherLeg"),
-          entries: isOpen
-            ? [
-                {
-                  label: t("cruise:routeEditor.menu.simplify"),
-                  disabled: !editorState || editorState.waypoints.length <= 3,
-                  onSelect: onEditorSimplify,
-                },
-                { label: null },
-                { label: t("cruise:routeEditor.menu.closeLeg"), onSelect: closeLegOnly },
-              ]
-            : [
-                {
-                  label: t("cruise:routeEditor.menu.editThisLeg"),
-                  onSelect: () => void enterLeg(leg.fromPortId, leg.toPortId),
-                },
-              ],
-        });
-        return;
-      }
-
-      setMenu({
-        x: clientX,
-        y: clientY,
-        title: t("cruise:routeEditor.menu.map"),
-        entries: [
-          {
-            label: t("cruise:routeEditor.menu.clearSelection"),
-            disabled: !editorState || editorState.selected.length === 0,
-            onSelect: () => setEditorState((prev) => (prev ? clearSelection(prev) : prev)),
-          },
-          {
-            label: t("cruise:routeEditor.menu.closeLeg"),
-            disabled: !editing,
-            onSelect: closeLegOnly,
-          },
-        ],
-      });
+      setMenu(
+        buildRouteContextMenu({
+          clientX: event.clientX,
+          clientY: event.clientY,
+          t,
+          editing,
+          editorState,
+          setEditorState,
+          handleIndexAt,
+          legAt,
+          onEditorRemove,
+          onEditorRemoveSelected,
+          onEditorSimplify,
+          enterLeg,
+          closeLegOnly,
+        })
+      );
     },
     [
       editMode,
@@ -633,85 +566,21 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     };
   }, [editMode, onCancel]);
 
-  const layers: Layer[] = useMemo(() => {
-    // The cruise DETAIL map, not a dashboard view: it shows exactly one cruise,
-    // so it always paints that cruise's own hue. It has no control panel and
-    // deliberately does not follow the dashboard's cruise colour mode — a
-    // per-cruise page showing the cruise's own colour needs no user setting.
-    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, {
-      zoom,
-      colorConfig: DETAIL_MAP_COLOR_CONFIG,
-    });
-    const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap, null, {
-      zoom,
-      colorConfig: DETAIL_MAP_COLOR_CONFIG,
-    });
-    // Detail map for ONE cruise, possibly still just booked — it must show
-    // every stop as a pin regardless of status (Finding 1 of the
-    // status-blind-counts review: the default "visits" scope drops every
-    // stop for a scheduled/in-progress/cancelled cruise and the layer
-    // returns null, leaving the itinerary preview blank).
-    const portsLayers = createCruisePortsLayer([cruise], zoom, { scope: "itinerary" });
+  const layers: Layer[] = useMemo(
+    () =>
+      buildCruiseRouteLayers({
+        cruise,
+        geometryMap,
+        zoom,
+        hasEditingLeg: editing !== null,
+        editorState,
+        onEditorInsert,
+        clickBelongsToAnotherLeg,
+      }),
+    [cruise, geometryMap, zoom, editing, editorState, onEditorInsert, clickBelongsToAnotherLeg]
+  );
 
-    // The straight guide between handles, one path per segment so a click
-    // resolves directly to the segment index insertWaypoint wants. The
-    // drawn route is a spline THROUGH the handles and bows away from this
-    // straight line — without the guide, a click on the curve could not say
-    // which two handles it belongs between.
-    const guideLayer =
-      editing && editorState
-        ? new PathLayer<{ path: LonLat[]; segment: number }>({
-            id: "route-editor-guide",
-            data: editorState.waypoints.slice(0, -1).map((p, i) => ({
-              path: [p, editorState.waypoints[i + 1]],
-              segment: i,
-            })),
-            getPath: (d) => d.path,
-            getColor: [168, 19, 90, 140],
-            getWidth: 2,
-            widthUnits: "pixels",
-            pickable: true,
-            // One path per segment is the point: deck.gl hands back the
-            // index of the datum that was clicked, which IS the segment
-            // index the state reducer wants. Hit-testing a single
-            // multi-segment path would not tell us which stretch was hit.
-            onClick: (info: PickingInfo<{ path: LonLat[]; segment: number }>): boolean => {
-              if (info.index >= 0 && info.coordinate) {
-                // Defer when the user was aiming at a different leg: returning
-                // false lets the pick fall through to the root handler, which
-                // switches. Swallowing it here is what silently edited the
-                // wrong leg.
-                if (clickBelongsToAnotherLeg(info.x, info.y)) return false;
-                onEditorInsert(info.index, [info.coordinate[0], info.coordinate[1]]);
-                return true;
-              }
-              return false;
-            },
-          })
-        : null;
-
-    return [
-      ...(arcsLayer !== null ? [arcsLayer] : []),
-      ...(arrowsLayer !== null ? [arrowsLayer] : []),
-      ...(portsLayers ?? []),
-      ...(guideLayer !== null ? [guideLayer] : []),
-    ];
-  }, [cruise, geometryMap, zoom, editing, editorState, onEditorInsert, clickBelongsToAnotherLeg]);
-
-  const bboxPoints: Array<[number, number]> = useMemo(() => {
-    const pts: Array<[number, number]> = [];
-    if (cruise.departurePort) pts.push([cruise.departurePort.lon, cruise.departurePort.lat]);
-    if (cruise.arrivalPort) pts.push([cruise.arrivalPort.lon, cruise.arrivalPort.lat]);
-    for (const stop of cruise.stops) {
-      if (stop.port) pts.push([stop.port.lon, stop.port.lat]);
-    }
-    if (geometry) {
-      for (const feat of geometry.features) {
-        for (const c of feat.geometry.coordinates) pts.push(c);
-      }
-    }
-    return pts;
-  }, [cruise.departurePort, cruise.arrivalPort, cruise.stops, geometry]);
+  const bboxPoints = useMemo(() => cruiseBboxPoints(cruise, geometry), [cruise, geometry]);
 
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;
@@ -734,8 +603,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     didFit.current = true;
   }, [mapLoaded, bboxPoints, editMode]);
 
-  const barButton =
-    "rounded-md border border-border px-2 py-1 text-xs text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50";
+  const barButton = BAR_BUTTON;
 
   /**
    * The map itself, rendered EITHER in the page card as a preview OR inside
@@ -819,98 +687,27 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     </div>
   );
 
-  /** The dialog's action row: what can be done to the leg under the cursor. */
   const editorActions = (
-    <>
-      {!editing && (
-        <span className="mr-auto text-sm text-(--text-muted)">
-          {t("cruise:routeEditor.pickLeg")}
-        </span>
-      )}
-      {saveError && (
-        <span className="mr-auto text-sm text-(--danger)">
-          {t("cruise:routeEditor.saveFailed")}
-        </span>
-      )}
-      {editMode && (
-        <div className="flex" role="group" aria-label={t("cruise:routeEditor.tool")}>
-          <button
-            type="button"
-            aria-pressed={tool === "pan"}
-            className={`${barButton} rounded-r-none ${tool === "pan" ? "border-(--accent) text-(--accent)" : ""}`}
-            onClick={(): void => setTool("pan")}
-          >
-            {t("cruise:routeEditor.toolPan")}
-          </button>
-          <button
-            type="button"
-            aria-pressed={tool === "select"}
-            disabled={!editing}
-            className={`${barButton} -ml-px rounded-l-none ${tool === "select" ? "border-(--accent) text-(--accent)" : ""}`}
-            onClick={(): void => setTool("select")}
-          >
-            {t("cruise:routeEditor.toolSelect")}
-          </button>
-        </div>
-      )}
-      {editing && editorState && (
-        <>
-          <button
-            type="button"
-            className={barButton}
-            disabled={editorState.history.length === 0}
-            onClick={onEditorUndo}
-          >
-            {t("cruise:routeEditor.undo")}
-          </button>
-          <button
-            type="button"
-            className={barButton}
-            disabled={editorState.future.length === 0}
-            onClick={onEditorRedo}
-          >
-            {t("cruise:routeEditor.redo")}
-          </button>
-          {editedLegKeys.has(`${editing.fromPortId}:${editing.toPortId}`) && (
-            <button type="button" className={barButton} onClick={(): void => void onReset()}>
-              {t("cruise:routeEditor.reset")}
-            </button>
-          )}
-          <button
-            type="button"
-            className={barButton}
-            disabled={editorState.waypoints.length <= 3}
-            onClick={onEditorSimplify}
-          >
-            {t("cruise:routeEditor.simplify")}
-          </button>
-          <button
-            type="button"
-            className={barButton}
-            disabled={editorState.selected.filter((i) => !isEndpoint(editorState, i)).length === 0}
-            onClick={onEditorRemoveSelected}
-          >
-            {t("cruise:routeEditor.removeSelected", {
-              count: editorState.selected.filter((i) => !isEndpoint(editorState, i)).length,
-            })}
-          </button>
-          <button
-            type="button"
-            className={barButton}
-            disabled={!isDirty(editorState)}
-            onClick={(): void => void onSave()}
-          >
-            {t("cruise:routeEditor.save")}
-          </button>
-          <button type="button" className={barButton} onClick={closeLegOnly}>
-            {t("cruise:routeEditor.closeLeg")}
-          </button>
-        </>
-      )}
-      <button type="button" className={barButton} onClick={onCancel}>
-        {t("cruise:routeEditor.cancel")}
-      </button>
-    </>
+    <RouteEditorActions
+      t={t}
+      editing={editing}
+      editMode={editMode}
+      saveError={saveError}
+      tool={tool}
+      setTool={setTool}
+      editorState={editorState}
+      legIsEdited={
+        editing !== null && editedLegKeys.has(`${editing.fromPortId}:${editing.toPortId}`)
+      }
+      onEditorUndo={onEditorUndo}
+      onEditorRedo={onEditorRedo}
+      onReset={onReset}
+      onEditorSimplify={onEditorSimplify}
+      onEditorRemoveSelected={onEditorRemoveSelected}
+      onSave={onSave}
+      closeLegOnly={closeLegOnly}
+      onCancel={onCancel}
+    />
   );
 
   return (
