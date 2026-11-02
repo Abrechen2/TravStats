@@ -1,8 +1,7 @@
 /**
  * Turn sheet specs plus data into one .xlsx, and read one back.
  *
- * exceljs is imported dynamically, the way `xlsxRoundTrip.ts` already does it,
- * so ~900 kB of spreadsheet machinery stays out of the bundle until someone
+ * exceljs is imported dynamically, so ~900 kB of spreadsheet machinery stays out of the bundle until someone
  * actually exports.
  */
 

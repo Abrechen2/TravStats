@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { idsInLocalYear } from "../services/transport/localYear";
 import { propagateDelete, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
 
@@ -38,10 +39,6 @@ import { rentalListSummary } from "../shared/listSummary";
 export { RENTAL_INCLUDE };
 
 const DEFAULT_LIMIT = 100;
-
-/** The farthest a station clock runs from UTC: UTC+14 ahead, UTC−12 behind. */
-const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
-const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
 
 const router = Router();
 router.use(authenticate);
@@ -92,20 +89,18 @@ async function assertRoadtripOwned(
  * The rentals picked up in `year` on their pickup station's calendar. The
  * year is derived per row, so it cannot be one SQL range: the widest UTC
  * window any zone could put in that year is read, the rule picks the rows
- * (rail's `idsDepartingInYear`).
+ * (`services/transport/localYear`).
  */
 async function idsPickedUpInYear(userId: string, year: number): Promise<string[]> {
-  const candidates = await prisma.rentalBooking.findMany({
-    where: {
-      userId,
-      pickupTime: {
-        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
-        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
-      },
-    },
-    select: { id: true, pickupTime: true, pickupTimezone: true },
-  });
-  return candidates.filter((r) => rentalYear(r) === year).map((r) => r.id);
+  return idsInLocalYear(
+    year,
+    (window) =>
+      prisma.rentalBooking.findMany({
+        where: { userId, pickupTime: window },
+        select: { id: true, pickupTime: true, pickupTimezone: true },
+      }),
+    (r) => rentalYear(r)
+  );
 }
 
 const SEARCH_FIELDS = [

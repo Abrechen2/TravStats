@@ -1,10 +1,9 @@
 /**
  * The Excel export, reachable.
  *
- * There has been a working flight exporter in `lib/xlsxRoundTrip.ts` since
- * long before this — tested, and with no caller anywhere in the app, so from
- * the outside TravStats simply had no Excel export. This section is what makes
- * the capability exist for a user.
+ * An earlier flight exporter had no caller anywhere in the app, so from the
+ * outside TravStats simply had no Excel export. This section is what makes the
+ * capability exist for a user.
  *
  * The data is fetched here, on the click, rather than held in a store: an
  * export is rare, and pre-loading every cruise, property and place on the

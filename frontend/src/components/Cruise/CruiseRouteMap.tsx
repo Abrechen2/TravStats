@@ -3,7 +3,7 @@ import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { type MapRef } from "react-map-gl/maplibre";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
-import { DeckGLOverlay } from "./CruiseRouteDeckOverlay";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { PathLayer } from "@deck.gl/layers";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
