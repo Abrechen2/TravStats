@@ -196,3 +196,20 @@ describe("while cross-server sharing is off", () => {
     expect(res.body.data.planInvites).toBe(0);
   });
 });
+
+it("answers REMOTE_PLAN_ROUTE_REFUSED, not a bare 404, on forecast, climate, packing suggestions and proposals", async () => {
+  const { connection, membership } = await seed("active");
+  const base = `/api/v1/remote-plans/${connection.id}/${membership.planId}`;
+  const calls = [
+    request(app).post(`${base}/forecast`).send({}),
+    request(app).post(`${base}/stations/${randomUUID()}/climate`).send({}),
+    request(app).get(`${base}/packing-suggestions`),
+    request(app).get(`${base}/proposals`),
+    request(app).post(`${base}/proposals`).send({}),
+  ];
+  for (const call of calls) {
+    const res = await call.set(as(anna));
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("REMOTE_PLAN_ROUTE_REFUSED");
+  }
+});

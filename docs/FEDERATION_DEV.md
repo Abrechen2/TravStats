@@ -70,3 +70,5 @@ It found the Node 22 DNS callback issue now fixed in `exchange()`. See
 [FEDERATION_E2E.md](FEDERATION_E2E.md#validation-in-this-task) for measured checks and remaining
 limits. The UI additionally provides local QR-image fingerprint verification and an owner-only
 sharing overview. No deployment to an existing instance follows from these test results.
+
+A dev server without `SECRETS_DIR` tries to write its encryption key to `/app/data/secrets`; set `SECRETS_DIR`, otherwise the federation key no longer decrypts after a restart.

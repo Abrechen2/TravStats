@@ -316,6 +316,25 @@ describe("old messages about an old invitation", () => {
   });
 });
 
+describe("inviting over a connection that was confirmed again", () => {
+  it("a re-invite after a reconfirm resets the old active member to invited and never hands it back as active", async () => {
+    const c = await setup();
+    const first = await memberOf(c);
+    expect(first.status).toBe("active");
+    // The connection went through reconfirm and was confirmed again after the member joined; the
+    // old member row (still "active" because the host never ended it) belongs to the old generation.
+    await a.prisma.remoteShareAccount.update({
+      where: { id: c.onFrom },
+      data: { confirmedAt: new Date(Date.now() + 5000) },
+    });
+    const again = await a.plansHost.inviteRemoteMember(c.anna, c.tripId, c.onFrom);
+    expect(again.status).toBe("invited");
+    expect((await memberOf(c)).status).toBe("invited");
+    expect((await memberOf(c)).invitedAt.getTime()).toBeGreaterThan(first.invitedAt.getTime());
+    expect((await b.plansMember.listRemotePlans(c.ben)).map((p) => p.state)).toEqual(["invited"]);
+  });
+});
+
 describe("planning switched off on the host", () => {
   it("closes the door for a remote member like it closes every plan endpoint", async () => {
     const c = await setup();

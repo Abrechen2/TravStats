@@ -109,10 +109,18 @@ export async function inviteRemoteMember(
     // Inviting someone already invited or on the plan sends the invitation again and changes
     // nothing here: it is how a pointer the member's server dropped (a refusal while a switch was
     // off) is restored, and a repeated click is harmless.
-    if (existing && (existing.status === "invited" || existing.status === "active"))
+    // Not a row from before the connection was last confirmed: that one belongs to an earlier
+    // generation of the connection and must be reset below, never handed back as it was.
+    const current = !existing || !account.confirmedAt || existing.invitedAt >= account.confirmedAt;
+    if (existing && current && (existing.status === "invited" || existing.status === "active"))
       return { row: existing, fresh: false };
     const open = await tx.travelPlanMember.count({
-      where: { planId, kind: { not: "owner" }, status: { in: ["invited", "active"] } },
+      where: {
+        planId,
+        kind: { not: "owner" },
+        status: { in: ["invited", "active"] },
+        ...(existing ? { id: { not: existing.id } } : {}),
+      },
     });
     if (open >= MAX_PLAN_MEMBERS) throw new AppError("Too many members", 409, "PLAN_MEMBER_LIMIT");
     const data = {

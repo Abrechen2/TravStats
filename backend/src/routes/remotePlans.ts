@@ -83,6 +83,23 @@ const ok = (res: Response, data: unknown, status = 200) => {
 const fileUrl = (connectionId: string, planId: string, id: string) =>
   `/api/v1/remote-plans/${connectionId}/${planId}/documents/${id}/file`;
 
+/**
+ * What this door does not carry (spec 2026-11-02 §4: forecast, station climate, packing
+ * suggestions, AI proposals): answered with its own code, not a bare 404 that a client would read
+ * as "the plan is gone" (`REMOTE_PLAN_NOT_FOUND` ends the plan on the client).
+ */
+const refused: RequestHandler = (_req, res) => {
+  res.status(404).json({
+    error: "Not available for a plan on another server",
+    code: "REMOTE_PLAN_ROUTE_REFUSED",
+  });
+};
+router.all("/:connectionId/:planId/forecast", refused);
+router.all("/:connectionId/:planId/packing-suggestions", refused);
+router.all("/:connectionId/:planId/proposals", refused);
+router.all("/:connectionId/:planId/proposals/:proposalId", refused);
+router.all("/:connectionId/:planId/stations/:stationId/climate", refused);
+
 router.get(
   "/",
   route(async (req, res) => {
