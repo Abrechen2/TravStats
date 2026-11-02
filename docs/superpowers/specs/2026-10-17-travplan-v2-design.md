@@ -624,14 +624,14 @@ Guest calls need `Authorization: Bearer ts_gpat_…` (no marker header). Bare re
 
 Codes the app must word: `PLAN_GUEST_REQUIRED|EXPIRED|REVOKED` (401: clear the token and say the
 access ended), `PLAN_GUEST_RATE_LIMITED` (429), `PLAN_OWNER_ONLY` (403), `PLAN_DOCUMENT_LIMIT|
-DUPLICATE|TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover or `actual`.
+TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover or `actual`.
 
 ### D6 and D5
 
 - **D6 built** for local co-planners and guests: `GET/POST /trips/:tripId/plan/documents` and
   `…/documents/:id/file`; members read only plan bookings' documents and ones uploaded for the plan,
-  labelled with the uploader; the same bytes as an owner-private document answer 409
-  `PLAN_DOCUMENT_DUPLICATE` instead of exposing it. Attaching an uploaded document to a booking in
+  labelled with the uploader; the same bytes as an owner-private document are stored as a separate plan
+  document and answered like a new file (no duplicate error, so uploads never reveal what the owner holds). Attaching an uploaded document to a booking in
   the web is not wired (the picker still lists the owner's logbook documents only).
 - **D5 / §6.8 NOT built, open**: the roadtrip as a `SHARE_TYPES` entry (stations, legs, ferry links) and
   exchange format v4 are a package of their own (adapter, fact whitelist, `propagateWrite` call
