@@ -27,6 +27,8 @@ import { setTripFlags } from "../../services/sharing/federation/__tests__/instan
 import { BODY_BUDGET, MAX_BODY, MAX_LARGE_BODY } from "../../services/sharing/federation/transport";
 import { ENTRY_SHAPES } from "../../services/sharing/federation/wire/shapes";
 import { MAX_ENTRIES_PER_MESSAGE } from "../../schemas/tripSharePeer";
+import { peerBodyParser } from "../../middleware/peerBody";
+import { PEER_PREAUTH_HEADER, preAuthBytes } from "../../services/federation/security";
 import tripSharePeer from "../tripSharePeer";
 import comparisonPeer from "../comparisonPeer";
 
@@ -241,6 +243,59 @@ it("reads a body above the ordinary cap only from an admitted origin, and refuse
     expect.objectContaining({ kind: "packet-too-large" }),
     expect.any(String)
   );
+});
+
+describe("the body parser before the signature", () => {
+  // The route's own parser caps at 1 MB here; only the peer parser may read more.
+  const capped = express();
+  capped.use("/x", peerBodyParser, express.json({ limit: "1mb" }), (req, res) => {
+    res.json({ bytes: JSON.stringify(req.body).length });
+  });
+  const big = JSON.stringify({ pad: "x".repeat(2 * 1024 * 1024) });
+  const header = (
+    over: { origin?: string; length?: number; time?: number; key?: typeof remote } = {}
+  ) => {
+    const time = over.time ?? Date.now();
+    const bytes = preAuthBytes(
+      over.origin ?? REMOTE,
+      LOCAL,
+      time,
+      over.length ?? Buffer.byteLength(big)
+    );
+    return `${over.origin ?? REMOTE} ${time} ${sign(null, bytes, (over.key ?? remote).privateKey).toString("base64")}`;
+  };
+  const post = (value?: string) => {
+    const r = request(capped).post("/x").set("Content-Type", "application/json");
+    return (value ? r.set(PEER_PREAUTH_HEADER, value) : r).send(big);
+  };
+  beforeEach(() =>
+    prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: new Date() } })
+  );
+  afterEach(() =>
+    prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } })
+  );
+
+  it("reads a large body from an admitted peer that proves itself in the header", async () => {
+    expect((await post(header())).status).toBe(200);
+  });
+
+  it.each([
+    ["no header", () => undefined],
+    ["a header signed by another key", () => header({ key: generateKeyPairSync("ed25519") })],
+    ["a header for another length", () => header({ length: 10 })],
+    ["a header older than the window", () => header({ time: Date.now() - 5 * 60_000 })],
+    [
+      "an origin nobody admitted",
+      () => header({ origin: "https://stranger.trip-peer-route.test" }),
+    ],
+  ])("does not read a large body for %s", async (_name, make) => {
+    expect((await post(make())).status).toBe(413);
+  });
+
+  it("does not read it from a peer the admin has not verified", async () => {
+    await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } });
+    expect((await post(header())).status).toBe(413);
+  });
 });
 
 it.each([

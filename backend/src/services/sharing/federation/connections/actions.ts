@@ -30,7 +30,7 @@ import {
   unreachable,
 } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
-import { announce } from "./announcements";
+import { deliverAnnouncement, enqueueAnnouncement } from "./announcements";
 import { activateConnection, applyLeaderboardSwitch, reconcileLeaderboard } from "./activate";
 import { columnsOf } from "./switches";
 import { connectionView, readConnection, type ConnectionView } from "./view";
@@ -236,11 +236,19 @@ export async function declineConnection(userId: string, id: string): Promise<Con
   const row = await own(userId, id);
   if (row.state !== "pending_in") throw wrongState(userId, row.origin);
   const generation = row.generation + 1;
-  await prisma.remoteShareAccount.update({
-    where: { id },
-    data: { state: "declined", generation, endedAt: new Date(), endedByMe: true },
+  // The change and its announcement are one write; the send follows the commit.
+  const queued = await prisma.$transaction(async (tx) => {
+    await tx.remoteShareAccount.update({
+      where: { id },
+      data: { state: "declined", generation, endedAt: new Date(), endedByMe: true },
+    });
+    return enqueueAnnouncement(tx, row, "connect-decline", {
+      from: row.localChannel,
+      to: row.channel,
+      generation,
+    });
   });
-  await announce(row, "connect-decline", { from: row.localChannel, to: row.channel, generation });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }
 
@@ -261,21 +269,24 @@ export async function updateConnectionSwitches(
       { userId, origin: row.origin }
     );
   const generation = row.generation + 1;
-  const changed = await prisma.remoteShareAccount.updateMany({
-    where: { id, state: "active", generation: row.generation },
-    data: { ...columnsOf(switches), generation },
+  const queued = await prisma.$transaction(async (tx) => {
+    const changed = await tx.remoteShareAccount.updateMany({
+      where: { id, state: "active", generation: row.generation },
+      data: { ...columnsOf(switches), generation },
+    });
+    if (changed.count !== 1) throw wrongState(userId, row.origin);
+    return enqueueAnnouncement(tx, row, "connect-settings", {
+      from: row.localChannel,
+      to: row.channel,
+      generation,
+      switches,
+    });
   });
-  if (changed.count !== 1) throw wrongState(userId, row.origin);
   // After the switch is stored: the consent follows it, and a revoke that lands meanwhile is
   // re-checked (`applyLeaderboardSwitch`).
   if (switches.leaderboard !== row.shareLeaderboard)
     await applyLeaderboardSwitch(userId, row.id, switches.leaderboard);
-  await announce(row, "connect-settings", {
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-    switches,
-  });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }
 
@@ -291,16 +302,21 @@ export async function endConnection(userId: string, id: string): Promise<Connect
   if (!["active", "reconfirm", "pending_out"].includes(row.state))
     throw wrongState(userId, row.origin);
   const generation = row.generation + 1;
-  await prisma.$transaction(
+  const queued = await prisma.$transaction(
     async (tx) => {
       await revokePairing(tx, row, true, false);
       await tx.remoteShareAccount.update({
         where: { id },
         data: { generation, endedByMe: true },
       });
+      return enqueueAnnouncement(tx, row, "connect-revoke", {
+        from: row.localChannel,
+        to: row.channel,
+        generation,
+      });
     },
     { timeout: 30_000 }
   );
-  await announce(row, "connect-revoke", { from: row.localChannel, to: row.channel, generation });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }

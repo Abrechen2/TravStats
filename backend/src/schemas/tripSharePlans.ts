@@ -29,11 +29,21 @@ export const planInviteSchema = z.strictObject({
   tripId: uuid,
   tripTitle: z.string().trim().min(1).max(200),
   ownerDisplayName: z.string().trim().min(1).max(160),
+  /** The host's stamp of this invitation; every message about it names it back. */
+  invitedAt: instant,
 });
 const onPlan = { ...address, planId: uuid };
-export const planJoinSchema = z.strictObject({ kind: z.literal("plan-join"), ...onPlan });
-export const planDeclineSchema = z.strictObject({ kind: z.literal("plan-decline"), ...onPlan });
-export const planLeaveSchema = z.strictObject({ kind: z.literal("plan-leave"), ...onPlan });
+/**
+ * The answers name the invitation they answer (`invitedAt`), so a delayed decline or leave of an
+ * old invitation cannot end a newer one the same person was invited to meanwhile.
+ */
+const onInvitation = { ...onPlan, invitedAt: instant };
+export const planJoinSchema = z.strictObject({ kind: z.literal("plan-join"), ...onInvitation });
+export const planDeclineSchema = z.strictObject({
+  kind: z.literal("plan-decline"),
+  ...onInvitation,
+});
+export const planLeaveSchema = z.strictObject({ kind: z.literal("plan-leave"), ...onInvitation });
 export const planReadSchema = z.strictObject({
   kind: z.literal("plan-read"),
   ...onPlan,

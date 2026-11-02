@@ -22,24 +22,29 @@ export async function servePlanInvite(origin: string, body: PlanInvite): Promise
   const existing = await prisma.remotePlanMembership.findUnique({
     where: { connectionId_planId: { connectionId: account.id, planId: body.planId } },
   });
-  if (existing?.state === "active" || existing?.state === "invited") {
-    // The same plan invited again (a title changed, a lost answer): the pointer is refreshed.
+  const stamp = new Date(body.invitedAt);
+  const sameInvitation = existing?.hostInvitedAt?.getTime() === stamp.getTime();
+  if ((existing?.state === "active" || existing?.state === "invited") && sameInvitation) {
+    // The same invitation again (a title changed, a lost answer): the pointer is refreshed.
     await prisma.remotePlanMembership.update({
       where: { id: existing.id },
       data: { title: body.tripTitle, ownerDisplayName: body.ownerDisplayName, tripId: body.tripId },
     });
     return ok;
   }
+  // A NEW invitation to a plan already held (the host removed this person and invited them again)
+  // replaces the old pointer: it is an invitation to answer, with the join the host is waiting for.
   const open = await prisma.remotePlanMembership.count({
     where: { userId: account.userId, state: "invited" },
   });
-  if (open >= MAX_OPEN_INVITES) return notShared;
+  if (open >= MAX_OPEN_INVITES && existing?.state !== "invited") return notShared;
   const data = {
     userId: account.userId,
     tripId: body.tripId,
     title: body.tripTitle,
     ownerDisplayName: body.ownerDisplayName,
     role: "editor",
+    hostInvitedAt: stamp,
     state: "invited",
     invitedAt: new Date(),
     joinedAt: null,

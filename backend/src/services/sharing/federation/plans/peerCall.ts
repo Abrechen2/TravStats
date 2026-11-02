@@ -4,7 +4,11 @@
  * `PlanPeerUnreachable`; a failure of this server's own code or database is passed on as itself.
  */
 import { exchange, type PeerTransport } from "../../../federation/security";
-import { planReplySchema, type PlanPacket, type PlanReply } from "../../../../schemas/tripSharePlans";
+import {
+  planReplySchema,
+  type PlanPacket,
+  type PlanReply,
+} from "../../../../schemas/tripSharePlans";
 import { LOCAL_ERROR, kindOf } from "../peerCheck";
 import { PLAN_TRANSPORT } from "../transport";
 

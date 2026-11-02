@@ -20,7 +20,8 @@ export function takeRemoteCall(memberId: string, write: boolean, now = Date.now(
   }
   recent.push(now);
   hits.set(key, recent);
-  if (hits.size > 5_000) for (const [k, v] of hits) if (!v.some((t) => now - t < WINDOW_MS)) hits.delete(k);
+  if (hits.size > 5_000)
+    for (const [k, v] of hits) if (!v.some((t) => now - t < WINDOW_MS)) hits.delete(k);
   return true;
 }
 

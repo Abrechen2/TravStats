@@ -269,6 +269,70 @@ describe("inviting, accepting and working on a plan on another server", () => {
   });
 });
 
+describe("old messages about an old invitation", () => {
+  it("a leave delayed past a new invitation does not end the new membership", async () => {
+    const c = await setup();
+    setOffline(A, true);
+    await b.plansMember.leaveRemotePlan(c.ben, c.onTo, c.planId);
+    setOffline(A, false);
+    // The host, who never heard of the leave, removes Ben and invites him again; he joins anew.
+    const first = await memberOf(c);
+    await a.prisma.travelPlanMember.update({
+      where: { id: first.id },
+      data: { status: "revoked" },
+    });
+    await a.plansHost.inviteRemoteMember(c.anna, c.tripId, c.onFrom);
+    await b.plansMember.acceptRemotePlan(c.ben, c.onTo, c.planId);
+    expect((await memberOf(c)).status).toBe("active");
+    // Now the old leave is delivered.
+    await b.announcements.runAnnouncements(new Date(Date.now() + 3_600_000));
+    expect(await b.prisma.connectionAnnouncement.count()).toBe(0);
+    expect((await memberOf(c)).status).toBe("active");
+    expect((await readView(c)).data.revision).toBeGreaterThan(0);
+  });
+
+  it("a decline after a join whose answer was lost still ends the host's active member", async () => {
+    const c = await setup({ accept: false });
+    // The host took the join, the answer never came back: the pointer is still an invitation.
+    await a.prisma.travelPlanMember.update({
+      where: { id: (await memberOf(c)).id },
+      data: { status: "active" },
+    });
+    await b.plansMember.declineRemotePlan(c.ben, c.onTo, c.planId);
+    expect((await memberOf(c)).status).toBe("left");
+  });
+
+  it("an invitation that replaces a removed one is an invitation again, not a stale active pointer", async () => {
+    const c = await setup();
+    const first = await memberOf(c);
+    await a.prisma.travelPlanMember.update({
+      where: { id: first.id },
+      data: { status: "revoked" },
+    });
+    await a.plansHost.inviteRemoteMember(c.anna, c.tripId, c.onFrom);
+    expect((await b.plansMember.listRemotePlans(c.ben)).map((p) => p.state)).toEqual(["invited"]);
+    await b.plansMember.acceptRemotePlan(c.ben, c.onTo, c.planId);
+    expect((await readView(c)).data.revision).toBeGreaterThan(0);
+  });
+});
+
+describe("planning switched off on the host", () => {
+  it("closes the door for a remote member like it closes every plan endpoint", async () => {
+    const c = await setup();
+    await a.prisma.travelPlanConfig.update({ where: { id: "default" }, data: { enabled: false } });
+    try {
+      await expectCode(b.plansMember.readRemotePlan(c.ben, c.onTo, c.planId), "PLAN_DISABLED");
+      await expectCode(b.plansMember.exportRemotePlan(c.ben, c.onTo, c.planId), "PLAN_DISABLED");
+      await expectCode(
+        b.plansMember.listRemotePlanDocuments(c.ben, c.onTo, c.planId),
+        "PLAN_DISABLED"
+      );
+    } finally {
+      await a.prisma.travelPlanConfig.update({ where: { id: "default" }, data: { enabled: true } });
+    }
+  });
+});
+
 describe("access ends on the next call", () => {
   it("revoking the connection ends the member's access, and the plan leaves his list", async () => {
     const c = await setup();

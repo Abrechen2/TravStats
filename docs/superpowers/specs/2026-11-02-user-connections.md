@@ -315,9 +315,18 @@ daily); dropped after 14 days. The message id is the row id on every attempt. Re
 - *Document limit is 10 MB, not 20.* `PLAN_DOCUMENT_MAX_BYTES = min(20 MB, DOCUMENT_MAX_BYTES)` and the
   largest per-format limit is 10 MB; the wire budget (28 MB of base64) is ready for 20.
 - *Large bodies.* The signed envelope's body cap rose from 8 MB to 30 MB. A request above the ordinary peer
-  cap (`MAX_BODY`, 1 MB) is read only from an origin that is pinned, enabled and verified: the sender names itself
-  in `X-TravStats-Peer-Origin`, `middleware/peerBody.ts` checks that before choosing the 32 MB parser, and the
-  route checks the envelope's origin again. Document transfers get a 120 s exchange budget.
+  cap (`MAX_BODY`, 1 MB) is read only from a sender that PROVES itself before the body: the request header
+  `X-TravStats-Peer-Preauth: <origin> <time> <signature>` is a signature by the pinned key over origin,
+  destination, time (60 s window) and the exact `Content-Length` (`middleware/peerBody.ts` chooses the 32 MB
+  parser only then; the route checks the envelope's origin again). A forged header proves nothing. Document
+  transfers get a 120 s exchange budget.
+- *Answers name their invitation.* `plan-invite` carries the host's `invitedAt`; `plan-join`, `-decline` and
+  `-leave` name it back, so a delayed message about an old invitation cannot end a newer one. Decline and leave
+  end an `invited` OR `active` member of that invitation (a join whose answer was lost, then a decline).
+- *Announcements are written in the change's transaction* (`enqueueAnnouncement`) and sent after the commit; a
+  crash cannot lose one. Messages the other server never took are dropped after 14 days with a warning; that side
+  refuses on its own and learns from the next message.
+- *Planning off on the host* (`assertTravPlanOffered`, `assertEnabled`) closes the proxied calls too.
 - *Not proxied:* forecast, station climate, stage routing, place and location search, placeholder matching,
   packing suggestions, AI proposals, handover and actual-versus-plan. They were on the guest door but are not in
   §4's kind list; the web adapter refuses them (`REMOTE_PLAN_ROUTE_REFUSED`) and the screens hide import, AI,

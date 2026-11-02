@@ -11,7 +11,7 @@
  * After 14 days of failing the row is dropped: the other side refuses on its own and learns from
  * the next message it does get.
  */
-import { prisma } from "../../../../db";
+import { prisma, type DbTransaction } from "../../../../db";
 import type { Prisma } from "../../../../prisma";
 import logger from "../../../../utils/logger";
 import { connectReplySchema, type TripSharePacket } from "../../../../schemas/tripSharePeer";
@@ -78,19 +78,19 @@ async function attempt(row: Prisma.ConnectionAnnouncementGetPayload<object>): Pr
 }
 
 /**
- * Keep an announcement and try it once right away. A newer settings message supersedes an older
- * one for the same connection (only the last generation matters).
+ * Write an announcement as part of the transaction of the change it announces (so the two stand or
+ * fall together). A newer settings message supersedes an older queued one for the same
+ * connection - only the last generation matters. Returns the row's id for `deliverAnnouncement`.
  */
-export async function announce(
+export async function enqueueAnnouncement(
+  tx: Pick<DbTransaction, "connectionAnnouncement">,
   connection: { id: string; origin: string },
   kind: AnnouncementKind,
   payload: Payload
-): Promise<void> {
+): Promise<string> {
   if (kind === "connect-settings")
-    await prisma.connectionAnnouncement.deleteMany({
-      where: { connectionId: connection.id, kind },
-    });
-  const row = await prisma.connectionAnnouncement.create({
+    await tx.connectionAnnouncement.deleteMany({ where: { connectionId: connection.id, kind } });
+  const row = await tx.connectionAnnouncement.create({
     data: {
       connectionId: connection.id,
       peerOrigin: connection.origin,
@@ -98,11 +98,27 @@ export async function announce(
       payload: payload as Prisma.InputJsonValue,
     },
   });
+  return row.id;
+}
+
+/** After the transaction committed: try the row once at once; a miss stays queued for the scheduler. */
+export async function deliverAnnouncement(id: string): Promise<void> {
+  const row = await prisma.connectionAnnouncement.findUnique({ where: { id } });
+  if (!row) return;
   if (!(await attempt(row)))
     logger.warn(
-      { operation: "connection_announce_failed", kind, origin: connection.origin },
+      { operation: "connection_announce_failed", kind: row.kind, origin: row.peerOrigin },
       "The other server did not get a connection message; it is kept and retried"
     );
+}
+
+/** `enqueueAnnouncement` and `deliverAnnouncement` for a change that has no transaction of its own. */
+export async function announce(
+  connection: { id: string; origin: string },
+  kind: AnnouncementKind,
+  payload: Payload
+): Promise<void> {
+  await deliverAnnouncement(await enqueueAnnouncement(prisma, connection, kind, payload));
 }
 
 export interface AnnouncementRun {
@@ -119,6 +135,11 @@ export async function runAnnouncements(now = new Date()): Promise<AnnouncementRu
     where: { createdAt: { lt: new Date(now.getTime() - UNREACHABLE_AFTER_MS) } },
   });
   run.dropped = stale.count;
+  if (stale.count > 0)
+    logger.warn(
+      { operation: "connection_announce_dropped", count: stale.count },
+      "Connection messages the other server never took were dropped after 14 days; it refuses on its own and learns from the next message it receives"
+    );
   const due = await prisma.connectionAnnouncement.findMany({
     where: { nextAttemptAt: { lte: now } },
     orderBy: { createdAt: "asc" },

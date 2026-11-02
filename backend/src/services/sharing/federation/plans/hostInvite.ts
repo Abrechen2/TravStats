@@ -150,6 +150,7 @@ export async function inviteRemoteMember(
       tripId,
       tripTitle: access.row.trip.name.slice(0, 200) || "Plan",
       ownerDisplayName: toPerson(owner).displayName.slice(0, 160),
+      invitedAt: member.invitedAt.toISOString(),
     });
     if (reply.status !== "ok") {
       await withdraw();

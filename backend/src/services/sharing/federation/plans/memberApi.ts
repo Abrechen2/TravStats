@@ -18,7 +18,7 @@ import type { PlanPacket, PlanReply } from "../../../../schemas/tripSharePlans";
 import { PLAN_DOCUMENT_MAX_BYTES } from "../../../travplan/planDocuments";
 import { requireTripFederation } from "../access";
 import { connectionAllowsPlans } from "../connections/switches";
-import { announce } from "../connections/announcements";
+import { deliverAnnouncement, enqueueAnnouncement } from "../connections/announcements";
 import {
   PLAN_DOWNLOAD_TRANSPORT,
   PLAN_TRANSPORT,
@@ -351,6 +351,10 @@ export async function exportRemotePlan(
 
 // ---------------------------------------------------------------------- the invitation
 
+/** The host's stamp of the invitation a message answers (rows from before the stamp name the epoch). */
+const stampOf = (m: Pick<Membership, "hostInvitedAt">): string =>
+  (m.hostInvitedAt ?? new Date(0)).toISOString();
+
 /**
  * Accept: the host must take the join before it counts here, so a plan never shows as joined that
  * the host does not know. A miss changes nothing and can be tried again; `notShared` ends it.
@@ -362,7 +366,12 @@ export async function acceptRemotePlan(
 ): Promise<RemotePlanSummary> {
   const ctx = await contextOf(userId, connectionId, planId, ["invited", "active"]);
   if (ctx.membership.state === "invited") {
-    await ask(ctx, (a) => ({ kind: "plan-join", ...header(), ...a }));
+    await ask(ctx, (a) => ({
+      kind: "plan-join",
+      ...header(),
+      ...a,
+      invitedAt: stampOf(ctx.membership),
+    }));
     await prisma.remotePlanMembership.updateMany({
       where: { id: ctx.membership.id, state: "invited" },
       data: { state: "active", joinedAt: new Date() },
@@ -389,14 +398,25 @@ async function endAndTell(
     include: { connection: true },
   });
   if (!membership) throw notFound();
-  const ended = await prisma.remotePlanMembership.updateMany({
-    where: { id: membership.id, state: from },
-    data: { state: to, endedAt: new Date() },
+  const { connection: account } = membership;
+  // The state change and the message that must follow it are ONE write: a crash between them
+  // cannot leave the host believing the person is still on the plan.
+  const queued = await prisma.$transaction(async (tx) => {
+    const ended = await tx.remotePlanMembership.updateMany({
+      where: { id: membership.id, state: from },
+      data: { state: to, endedAt: new Date() },
+    });
+    if (ended.count !== 1) return null;
+    return enqueueAnnouncement(tx, account, kind, {
+      from: account.localChannel,
+      to: account.channel,
+      planId,
+      invitedAt: stampOf(membership),
+    });
   });
   forgetPlan(userId, connectionId, planId);
-  if (ended.count !== 1) throw notFound();
-  const { connection: account } = membership;
-  await announce(account, kind, { from: account.localChannel, to: account.channel, planId });
+  if (!queued) throw notFound();
+  await deliverAnnouncement(queued);
 }
 
 export const declineRemotePlan = (userId: string, connectionId: string, planId: string) =>

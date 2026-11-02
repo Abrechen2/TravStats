@@ -32,7 +32,8 @@ import {
   readPlanDocument,
   uploadPlanDocument,
 } from "../../../travplan/planDocuments";
-import { readPlan, writePlan } from "../../../travplan/store";
+import { assertTravPlanOffered } from "../../../travplan/availability";
+import { assertEnabled, readPlan, writePlan } from "../../../travplan/store";
 import { writeSchema } from "../../../travplan/schema";
 import type { RemoteActor } from "../../../travplan/access";
 import { planAccess } from "../../../travplan/access";
@@ -40,11 +41,7 @@ import { documentPath } from "../../../documents/documentStore";
 import { collectTrip } from "../../../trip/exchange/collect";
 import { scopeFileForRemoteMember } from "../../../trip/exchange/memberScope";
 import { TRIP_FILE_EXTENSION } from "../../../trip/exchange/format";
-import {
-  buildManifest,
-  presentFiles,
-  writeTripArchive,
-} from "../../../trip/exchange/writeArchive";
+import { buildManifest, presentFiles, writeTripArchive } from "../../../trip/exchange/writeArchive";
 import { connectionAllowsPlans } from "../connections/switches";
 import { takeRemoteCall } from "./rateLimit";
 import { planEtag } from "./shared";
@@ -78,17 +75,17 @@ async function peerAdmitted(origin: string): Promise<boolean> {
 }
 
 /** The connection of a message, if the peer and connection still allow plans. */
-async function liveConnection(
-  origin: string,
-  from: string,
-  to: string
-): Promise<Account | null> {
+async function liveConnection(origin: string, from: string, to: string): Promise<Account | null> {
   if (!(await peerAdmitted(origin))) return null;
   const account = await connectionOf(origin, from, to);
   return account && connectionAllowsPlans(account) ? account : null;
 }
 
 // ------------------------------------------------------------------ join / decline / leave
+
+/** Does this message answer the member's CURRENT invitation? An older one's answer changes nothing. */
+const sameInvitation = (member: { invitedAt: Date }, stamp: string): boolean =>
+  member.invitedAt.getTime() === new Date(stamp).getTime();
 
 /** Answer to an invitation: the invited member becomes active. A repeat is the same answer. */
 export async function servePlanJoin(origin: string, body: PlanJoin): Promise<PlanReply> {
@@ -97,38 +94,39 @@ export async function servePlanJoin(origin: string, body: PlanJoin): Promise<Pla
   const member = await prisma.travelPlanMember.findFirst({
     where: { planId: body.planId, kind: "remote", connectionId: account.id },
   });
-  if (!member) return NOT_SHARED;
+  if (!member || !sameInvitation(member, body.invitedAt)) return NOT_SHARED;
   if (member.status === "active") return ok();
   if (member.status !== "invited") return NOT_SHARED;
   const joined = await prisma.travelPlanMember.updateMany({
-    where: { id: member.id, status: "invited" },
+    where: { id: member.id, status: "invited", invitedAt: member.invitedAt },
     data: { status: "active", joinedAt: new Date() },
   });
   return joined.count === 1 ? ok() : NOT_SHARED;
 }
 
-/** Ending a membership is accepted even when the connection has since gone: it only ends access. */
-async function endMembership(
-  origin: string,
-  from: string,
-  to: string,
-  planId: string,
-  wasStatus: "invited" | "active"
-): Promise<PlanReply> {
-  const account = await connectionOf(origin, from, to);
+/**
+ * The member's own end of it (decline, or leave - also after a join whose answer was lost): ends the
+ * invited or active member of THAT invitation. Accepted even when the connection has since gone, as
+ * it only ends access; a repeat, or the answer to an older invitation, finds nothing and says the same.
+ */
+async function endMembership(origin: string, body: PlanDecline | PlanLeave): Promise<PlanReply> {
+  const account = await connectionOf(origin, body.from, body.to);
   if (!account) return NOT_SHARED;
-  // A repeat finds nothing to end and says the same.
   await prisma.travelPlanMember.updateMany({
-    where: { planId, kind: "remote", connectionId: account.id, status: wasStatus },
+    where: {
+      planId: body.planId,
+      kind: "remote",
+      connectionId: account.id,
+      status: { in: ["invited", "active"] },
+      invitedAt: new Date(body.invitedAt),
+    },
     data: { status: "left", revokedAt: new Date() },
   });
   return ok();
 }
 
-export const servePlanDecline = (origin: string, body: PlanDecline) =>
-  endMembership(origin, body.from, body.to, body.planId, "invited");
-export const servePlanLeave = (origin: string, body: PlanLeave) =>
-  endMembership(origin, body.from, body.to, body.planId, "active");
+export const servePlanDecline = (origin: string, body: PlanDecline) => endMembership(origin, body);
+export const servePlanLeave = (origin: string, body: PlanLeave) => endMembership(origin, body);
 
 // -------------------------------------------------------------------------- proxied calls
 
@@ -159,7 +157,11 @@ async function guard(origin: string, body: PlanProxyPacket): Promise<Guarded | n
   };
 }
 
-const WRITES = new Set<PlanProxyPacket["kind"]>(["plan-mutate", "plan-doc-put", "plan-notices-read"]);
+const WRITES = new Set<PlanProxyPacket["kind"]>([
+  "plan-mutate",
+  "plan-doc-put",
+  "plan-notices-read",
+]);
 
 /** The plan's own refusal, passed on with its machine code; a refusal of access is `notShared`. */
 function failureReply(error: unknown): PlanReply {
@@ -191,6 +193,14 @@ function failureReply(error: unknown): PlanReply {
 export async function servePlanProxy(origin: string, body: PlanProxyPacket): Promise<PlanReply> {
   const guarded = await guard(origin, body);
   if (!guarded) return NOT_SHARED;
+  // Planning switched off on this server (the instance's switch, the beta gate) closes this door
+  // as it closes every plan endpoint; a member sees the plan's own refusal.
+  try {
+    await assertTravPlanOffered();
+    await assertEnabled();
+  } catch (error) {
+    return failureReply(error);
+  }
   if (!takeRemoteCall(guarded.memberId, WRITES.has(body.kind)))
     return {
       kind: "plan-reply",

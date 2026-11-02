@@ -6838,6 +6838,9 @@ model RemotePlanMembership {
   ownerDisplayName String    @map("owner_display_name")
   /// editor
   role             String    @default("editor")
+  /// The host's `invitedAt` of this invitation: every later message about it names it, so a delayed
+  /// leave or decline of an old invitation cannot end a newer one.
+  hostInvitedAt    DateTime? @map("host_invited_at")
   /// invited | active | declined | left | ended (CHECK remote_plan_memberships_state_check)
   state            String    @default("invited")
   invitedAt        DateTime  @default(now()) @map("invited_at")
