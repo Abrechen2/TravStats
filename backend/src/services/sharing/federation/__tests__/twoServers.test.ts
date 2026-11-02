@@ -140,7 +140,7 @@ describe("cross-purpose over the wire", () => {
   it("trip-share messages reach A's trip route and read its versions", async () => {
     await expect(b.transport.tripShareExchange(A, ping())).resolves.toEqual({
       tripShare: [1],
-      features: ["resync", "entries-up", "nudge", "directory", "stats"],
+      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections"],
     });
   });
 

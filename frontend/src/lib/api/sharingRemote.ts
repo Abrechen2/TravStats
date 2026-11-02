@@ -63,9 +63,6 @@ export const sharingRemoteApi = {
       .findable,
   listServers: async (): Promise<RemoteServer[]> =>
     (await api.get<Envelope<RemoteServer[]>>(`${BASE}/servers`)).data.data,
-  findPerson: async (origin: string, username: string): Promise<RemotePerson> =>
-    (await api.post<Envelope<RemotePerson>>(`${BASE}/people/find`, { origin, username }, ACROSS))
-      .data.data,
   setStatsLevel: async (id: string, level: RemoteStatsLevel): Promise<RemotePerson> =>
     (
       await api.put<Envelope<RemotePerson>>(

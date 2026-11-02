@@ -41,6 +41,13 @@ import { serveEntriesUp } from "../services/sharing/federation/entriesUp";
 import { serveNudge } from "../services/sharing/federation/nudge";
 import { serveDirectoryPair } from "../services/sharing/federation/directory";
 import { serveStatsRead } from "../services/sharing/federation/remoteStats";
+import {
+  serveConnectAccept,
+  serveConnectDecline,
+  serveConnectRequest,
+  serveConnectRevoke,
+  serveConnectSettings,
+} from "../services/sharing/federation/connections/serve";
 import { servedFeatures } from "../services/sharing/federation/peerFeatures";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
@@ -94,6 +101,16 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveDirectoryPair(origin, body);
     case "stats-read":
       return serveStatsRead(origin, body);
+    case "connect-request":
+      return serveConnectRequest(origin, body, local);
+    case "connect-accept":
+      return serveConnectAccept(origin, body);
+    case "connect-decline":
+      return serveConnectDecline(origin, body);
+    case "connect-revoke":
+      return serveConnectRevoke(origin, body);
+    case "connect-settings":
+      return serveConnectSettings(origin, body);
   }
 }
 

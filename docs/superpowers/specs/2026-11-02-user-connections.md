@@ -105,19 +105,24 @@ geteilt"), `REMOTE_PLAN_NOT_FOUND` (404).
 
 | Call | Body | Answer |
 |---|---|---|
-| `GET /sharing/connections` | | `[connection]` — `{id, origin, username, displayName, state, mine:{plans, stats, achievements, leaderboard, tripOffers}, theirs:{…}, requestedAt, confirmedAt}` |
+| `GET /sharing/connections` | | `[connection]` — `{id, origin, username, displayName, state, mine:{plans, stats, achievements, leaderboard, tripOffers}, theirs:{…}, requestedAt, confirmedAt, revokedAt}`. For `pending_in`, `theirs` carries the switches the asker announced in `connect-request`, so the confirm dialog shows what the person gets before they set their own |
 | `POST /sharing/connections` | `{origin, username, switches}` | connection `pending_out` (201); the answer never says whether the person exists |
 | `POST /sharing/connections/:id/accept` | `{switches}` | `active` |
 | `POST /sharing/connections/:id/decline` | | `declined` |
 | `PUT /sharing/connections/:id/switches` | `{switches}` | connection |
-| `DELETE /sharing/connections/:id` | | `revoked` |
+| `DELETE /sharing/connections/:id` | | `revoked` (a `pending_out` request is taken back, a `pending_in` one is declined) |
 
 `switches = {plans: bool, stats: "off"|"overview"|"full", achievements: bool, leaderboard: bool,
-tripOffers: bool}`. The old `/sharing/remote/people*` calls stay as read aliases for one release
-(Companion contract of 2026-11-02 is still served).
+tripOffers: bool}`. The old `/sharing/remote/people*` reads stay as aliases for one release (Companion contract of
+2026-11-02 is still served), and `GET /sharing/remote/servers` and `GET|PUT /sharing/remote/findable`
+stay full routes — the request form needs the server list. `POST /sharing/remote/people/find` is gone
+(use `POST /sharing/connections`); `PUT /people/:id/stats-level` and `/leaderboard` now go through the
+connection's switch call and announce the change.
 
-Inbox: `GET /sharing/inbox/count` gains `connectionRequests` and `planInvites` (additive, counted in
-`count`, like `remoteOffers`).
+Inbox: `GET /sharing/inbox/count` gains `connectionRequests` (S1: `pending_in` requests and `reconfirm`
+pairings; additive, counted in `count`, like `remoteOffers`) and, from S2, `planInvites`.
+New error codes: `SHARE_REMOTE_CONNECTION_EXISTS` (409), `SHARE_REMOTE_CONNECTION_STATE` (409),
+`SHARE_REMOTE_CONNECTION_REQUIRED` (409: offering or reading statistics needs an active connection).
 
 ## 6. Admin pairing by QR (Companion)
 
@@ -138,7 +143,7 @@ content moves into §9 here).
 
 | Phase | Side | Content | State |
 |---|---|---|---|
-| S1 | Server | connection record + migration (`reconfirm`), wire kinds §3, user API §5, findable = requests only, inbox counts, web: Einstellungen → Teilen → „Verbindungen" (request with switches, confirm with switches, change, end) and inbox items | open |
+| S1 | Server | connection record + migration (`reconfirm`), wire kinds §3, user API §5, findable = requests only, inbox counts, web: Einstellungen → Teilen → „Verbindungen" (request with switches, confirm with switches, change, end) and inbox items | built on `fix/user-connections-s1` (see *S1 — as built*) |
 | S2 | Server | plans over the connection §4 (host checks + member proxy + API), web: remote plans in the plan list and the plan screens through an API adapter; owner "Mitplaner hinzufügen" lists active connections with plans on | open |
 | S3 | Server | remove the guest door §7; admin QR + `POST /admin/federation/peers` §6 | open |
 | C1 | Companion | connections screen (request, confirm with switches, change, end) + inbox items | open |
@@ -157,6 +162,47 @@ Minimum server version for C1–C3: the 2.8.0 RC that ships S1–S3 (planned rc.
 - Version skew: a peer without §3 gets no connection request (feature flag `connections` in the ping);
   the UI says the other server must update.
 - Restore of a backup: connections restore as `reconfirm`.
+
+## S1 — as built (2026-11-02)
+
+Deviations and decisions the spec did not fix:
+
+- **Wire bodies.** `connect-request` carries `channel` (the asker's own name), `leaderboardChannel`,
+  `generation`, `toUsername`, `fromUsername`, `fromDisplayName`, `switches`. The other four address a
+  row by `from` (sender's channel) and `to` (receiver's channel, as in `offer`); `connect-accept` also
+  carries the accepter's `username`, `displayName` and `leaderboardChannel`, because the asker holds a
+  placeholder for the other side's channel until it is answered. A request taken back (`pending_out`
+  → `connect-revoke`) is found by the asker's channel.
+- **Generation is per sender.** `generation` is the sender's own counter; the receiver keeps the highest
+  it accepted (`peer_generation`) and applies only a newer one. Extra columns beyond §2: `peer_generation`,
+  `share_leaderboard` (the switch, so a pending choice has a home), `peer_leaderboard_channel`,
+  `ended_by_me` (only a decline *this* side made blocks the person for 30 days).
+- **Crossing requests.** Two people asking each other at once: the server with the greater origin gives
+  way (its own request becomes the one to answer), so exactly one request survives.
+- **Send order.** Asking and confirming send first and fail as themselves (a request nobody got is taken
+  back); declining, changing a switch and ending act locally first and announce once, best effort — what
+  this side gives must stop at once. A missed announcement is logged; there is no retry queue yet (S2/S3
+  may add one). The other side then refuses on its own, and learns on its next message.
+- **Invitation-code pairings** made after this change are `active` (a code is an explicit bilateral act);
+  the issuer's `remote_switches` starts with `tripOffers: true`, the claimant's `share_trip_offers` true.
+  Only pairings that existed at migration time are `reconfirm`.
+- **Gates.** `switches.ts`: a new offer needs `active` and the receiver's `tripOffers`; a statistics read
+  needs `active` and a level above off; `reconfirm` grants nothing new. Achievements: the switch is
+  stored and announced, nothing reads it yet. Leaderboard: the switch drives the existing
+  `LeaderboardConsent`.
+- **`directory-pair`** answers `paired: false` to everything (budget kept); `findRemotePerson` and
+  `POST /sharing/remote/people/find` are removed. Offering by name needs an active connection
+  (`SHARE_REMOTE_CONNECTION_REQUIRED`).
+- **Restore** turns `active`/`pending_*` connections into `reconfirm` and bumps `generation` by 1000 so
+  the request that confirms again is not read as an old one; an `active` connection asked again waits
+  for its person (`pending_in`).
+- **Revoke cascade** is `revokePairing` (statistics, leaderboard, consents, memberships, queued
+  messages, pending offers), which now also sets `state = revoked`, clears the switches, and calls
+  `endPlanMembershipsOfConnection` (`connections/hooks.ts`) — S2 fills that hook.
+- **API field** `revokedAt` (not `endedAt`): the OpenAPI time-shape ratchet already baselines `endedAt`
+  for tracks.
+- **Inbox.** Requests and `reconfirm` pairings are listed at the top of the Verbindungen section and
+  counted in the badge; the old „Personen auf verbundenen Servern" section is that view now.
 
 ## Open for Companion
 

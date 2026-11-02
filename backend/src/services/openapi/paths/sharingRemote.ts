@@ -19,7 +19,6 @@ import {
   remoteEntriesPageSchema,
   remoteEntriesQuerySchema,
   remoteFindableSchema,
-  remoteFindBodySchema,
   remoteLeaderboardBodySchema,
   remoteOverviewSchema,
   remoteServerSchema,
@@ -150,7 +149,7 @@ registry.registerPath({
   path: "/sharing/remote/findable",
   summary: "Opt in or out of being found by users of connected servers",
   description:
-    "Being findable is the caller's standing yes to receive trip offers from people on connected servers (each offer still waits for their answer in the inbox). Switching off stops new lookups from finding the caller; existing pairings stay until withdrawn.",
+    "Being findable only lets people on connected servers send the caller a connection request (`POST /sharing/connections`); it never creates a connection. Switching off stops new lookups from finding the caller; existing pairings stay until withdrawn.",
   tags,
   request: { body: jsonBody(remoteFindableSchema) },
   responses: { 200: ok("The new setting", remoteFindableSchema), 404: disabled },
@@ -164,23 +163,6 @@ registry.registerPath({
     "The servers this server's admin pinned and enabled and a ping reached (server-level trust). No invitation code is needed for them.",
   tags,
   responses: { 200: ok("Connected servers", z.array(remoteServerSchema)), 404: disabled },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/sharing/remote/people/find",
-  summary: "Find a person on a connected server and pair with them",
-  description:
-    "Looks the username up among the users of that server who opted in to being found; one answer covers an unknown name and a person who is not findable (`SHARE_REMOTE_PERSON_UNKNOWN`), so the lookup cannot enumerate users. Limited to 30 an hour per user, and per peer on the other server (`SHARE_REMOTE_LOOKUP_LIMITED`). On success the trip pairing and the leaderboard pairing exist; nothing is shared yet.",
-  tags,
-  request: { body: jsonBody(remoteFindBodySchema) },
-  responses: {
-    201: ok("The person, with their switches off", remotePersonSchema),
-    404: err("`SHARE_REMOTE_PERSON_UNKNOWN`, or `SHARE_REMOTE_DISABLED`"),
-    409: err("`SHARE_REMOTE_PEER_DISABLED` or `SHARE_REMOTE_PEER_OUTDATED`"),
-    429: err("`SHARE_REMOTE_LOOKUP_LIMITED` or `RATE_LIMITED`"),
-    ...peerFailures,
-  },
 });
 
 registry.registerPath({

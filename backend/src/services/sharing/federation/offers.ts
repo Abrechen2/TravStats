@@ -12,6 +12,7 @@ import { prisma } from "../../../db";
 import { acceptedParties } from "../members";
 import type { OfferAnswer, TripShareAck } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
+import { mayOfferTo } from "./connections/switches";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
 import { queueRoster } from "./roster";
@@ -37,6 +38,16 @@ async function consentingPairing(userId: string, remoteId: string) {
   const remote = await prisma.remoteShareAccount.findFirst({ where: { id: remoteId, userId } });
   if (!remote)
     throw remoteShareError("SHARE_REMOTE_PERSON_NOT_FOUND", 404, "No such person", { userId });
+  // A new offer starts only on an active connection whose person accepts offers; a pairing from
+  // before connections (`reconfirm`) keeps the trips it has and offers nothing new.
+  if (!mayOfferTo(remote))
+    throw remoteShareError(
+      "SHARE_REMOTE_CONNECTION_REQUIRED",
+      409,
+      "Connect with that person first",
+      { userId, origin: remote.origin },
+      { origin: remote.origin }
+    );
   const accepted = await acceptedParties(prisma, { kind: "user", id: userId }, [
     { kind: "remote", id: remote.id },
   ]);

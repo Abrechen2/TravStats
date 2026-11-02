@@ -34,6 +34,9 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_LOOKUP_LIMITED: "sharing:remote.errors.lookupLimited",
   SHARE_REMOTE_STATS_NOT_SHARED: "sharing:remote.errors.statsNotShared",
   SHARE_REMOTE_LEADERBOARD_UNAVAILABLE: "sharing:remote.errors.leaderboardUnavailable",
+  SHARE_REMOTE_CONNECTION_EXISTS: "sharing:remote.errors.connectionExists",
+  SHARE_REMOTE_CONNECTION_STATE: "sharing:remote.errors.connectionState",
+  SHARE_REMOTE_CONNECTION_REQUIRED: "sharing:remote.errors.connectionRequired",
   SHARE_REMOTE_SERVER_NOT_CONNECTED: "sharing:remote.errors.serverNotConnected",
   TRIP_NOT_FOUND: "sharing:remote.errors.tripNotFound",
 };

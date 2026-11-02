@@ -64,6 +64,8 @@ async function recordPairing(
           username: answer.username,
           displayName: answer.displayName,
           claimedCodeHash,
+          // The claimant's yes: the issuer may offer trips into this account.
+          shareTripOffers: true,
         },
       });
       // The claimant's yes: the issuer may share trips into this account.

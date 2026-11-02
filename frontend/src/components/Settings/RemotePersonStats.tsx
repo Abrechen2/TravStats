@@ -32,7 +32,11 @@ const shown = (facts: Record<string, unknown>): string =>
  * or one year) and, if they show the full level, the entries behind them page by page. A refusal
  * is its own sentence — "not shared" is never drawn as an empty page.
  */
-export default function RemotePersonStats({ person }: { person: RemotePerson }): JSX.Element {
+export default function RemotePersonStats({
+  person,
+}: {
+  person: Pick<RemotePerson, "id">;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["sharing", "comparison"]);
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
   const [year, setYear] = useState("");

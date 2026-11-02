@@ -48,4 +48,11 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_LOOKUP_LIMITED"
   | "SHARE_REMOTE_STATS_NOT_SHARED"
   | "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE"
+  /**
+   * User connections (2026-11-02): a connection with that person exists already / is not in a
+   * state the action needs / is required for what was asked (offering, reading) and is not active.
+   */
+  | "SHARE_REMOTE_CONNECTION_EXISTS"
+  | "SHARE_REMOTE_CONNECTION_STATE"
+  | "SHARE_REMOTE_CONNECTION_REQUIRED"
   | "SHARE_REMOTE_SERVER_NOT_CONNECTED";

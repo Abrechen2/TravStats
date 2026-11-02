@@ -657,7 +657,15 @@
       "findableFailed": "The setting could not be saved.",
       "levelFailed": "The level could not be saved.",
       "leaderboardFailed": "The switch could not be saved.",
-      "statsFailed": "The statistics could not be loaded."
+      "statsFailed": "The statistics could not be loaded.",
+      "connectionExists": "There is a connection or an open request with this person already.",
+      "connectionState": "That is not possible for this connection right now – it has changed meanwhile. Reload the page.",
+      "connectionRequired": "That needs a confirmed connection – and the person must have allowed it.",
+      "requestFailed": "The request could not be sent.",
+      "confirmFailed": "The confirmation could not be sent. Nothing changed.",
+      "switchesFailed": "The settings could not be saved.",
+      "declineFailed": "The request could not be declined.",
+      "endFailed": "The connection could not be ended."
     },
     "trip": {
       "title": "Travellers on other servers",
@@ -804,28 +812,6 @@
       }
     },
     "connected": {
-      "title": "People on connected servers",
-      "hint": "Servers your admin trusts need no invitation codes: you look the person up by username. They appear only if they made themselves findable for connected servers.",
-      "findable": {
-        "label": "Findable by connected servers",
-        "sub": "Off: nobody on a connected server can find you. On: you can be found by username and offered trips – you decide on every offer yourself, and whoever finds you sees nothing of your statistics until you allow it below."
-      },
-      "find": {
-        "title": "Find a person",
-        "server": "Server",
-        "noServers": "Your admin has not connected a server yet.",
-        "username": "Username",
-        "submit": "Find",
-        "done": "{{name}} (@{{username}}) on {{origin}} is connected. Nothing is shared yet – set that below.",
-        "leaderboardMismatch": "The leaderboard could not be paired with that server (the channels differ) and stays off."
-      },
-      "none": "Nobody connected yet.",
-      "row": "{{name}} (@{{username}}) on {{origin}}",
-      "leaderboard": {
-        "label": "Show me on their leaderboard",
-        "sub": "This person sees my totals on their leaderboard.",
-        "unavailable": "No leaderboard – this connection came from an invitation code."
-      },
       "stats": {
         "label": "My statistics for this person",
         "off": "Off",
@@ -859,6 +845,92 @@
         "metric": "Figure",
         "value": "Value",
         "unknown": "unknown"
+      }
+    },
+    "connections": {
+      "title": "Connections",
+      "hint": "The admins of both servers have connected them. You connect with a person on a connected server once – after both of you confirmed, each side shares exactly what it sets. Switches only apply in your direction and all start off.",
+      "findable": {
+        "label": "Findable by connected servers",
+        "sub": "Off: nobody on a connected server can send you a connection request. On: you can be asked by username – you decide on every request yourself, and nothing is shared until you confirm."
+      },
+      "request": {
+        "title": "Request a connection",
+        "server": "Server",
+        "noServers": "Your admin has not connected a server yet.",
+        "username": "Username",
+        "switchesHint": "This is what you give the person once they confirm. You can change it later.",
+        "submit": "Request",
+        "sent": "The request to @{{username}} on {{origin}} is on its way. Neither side tells you whether the person exists or is findable – once they confirm, they appear here as connected."
+      },
+      "waiting": {
+        "title": "Waiting for your answer",
+        "asks": "Wants to connect and gives you: {{gives}}",
+        "reconfirm": "This connection existed before connections. Trips already shared keep running; anything new starts only after both of you confirmed once.",
+        "confirm": "Confirm …",
+        "decline": "Decline"
+      },
+      "confirm": {
+        "title": "Confirm connection",
+        "theirs": "This person gives you: {{gives}}",
+        "mine": "Set what you give this person. Everything starts off.",
+        "submit": "Confirm"
+      },
+      "changeDialog": {
+        "title": "What you share",
+        "submit": "Save"
+      },
+      "row": "{{name}} (@{{username}}) on {{origin}}",
+      "none": "No connections yet.",
+      "theirs": "Shares with you: {{gives}}",
+      "theirsNothing": "nothing",
+      "state": {
+        "pending_out": "Waiting for the person to confirm.",
+        "pending_in": "Wants to connect.",
+        "active": "Connected",
+        "declined": "Declined",
+        "revoked": "Ended",
+        "reconfirm": "Needs confirming"
+      },
+      "change": "Change settings",
+      "withdraw": "Withdraw request",
+      "end": {
+        "action": "End",
+        "title": "End connection?",
+        "message": "What {{name}} sees of you ends at once: statistics, leaderboard, open trip offers and plans. Trips already shared keep their linked copies."
+      },
+      "cancel": "Cancel",
+      "close": "Close",
+      "switches": {
+        "plans": {
+          "label": "Share plans",
+          "sub": "You may invite this person to your travel plans and accept theirs.",
+          "short": "plans"
+        },
+        "stats": {
+          "label": "My statistics",
+          "off": "Off",
+          "overview": "Overview",
+          "full": "Full",
+          "short": "statistics",
+          "hintOverview": "Overview: totals and yearly figures, no individual entries.",
+          "hintFull": "Full: the whole statistics with the entries behind them – without private notes, costs and documents."
+        },
+        "achievements": {
+          "label": "Show achievements",
+          "sub": "This person sees your achievements.",
+          "short": "achievements"
+        },
+        "leaderboard": {
+          "label": "Show in my leaderboard",
+          "sub": "This person sees your totals in their leaderboard.",
+          "short": "leaderboard"
+        },
+        "tripOffers": {
+          "label": "Accept trip offers",
+          "sub": "This person may offer you trips – you decide on every offer yourself.",
+          "short": "trip offers"
+        }
       }
     }
   },

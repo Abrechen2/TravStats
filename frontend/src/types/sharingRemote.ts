@@ -176,3 +176,41 @@ export interface ReceivedOffer {
   counts: OfferCounts;
   offeredAt: string;
 }
+
+// ---------------------------------------------------------------- user connections (2026-11-02)
+
+/** Mirrors `connectionSwitchesSchema` in `backend/src/schemas/tripSharePeer.ts`. */
+export interface ConnectionSwitches {
+  plans: boolean;
+  stats: RemoteStatsLevel;
+  achievements: boolean;
+  leaderboard: boolean;
+  tripOffers: boolean;
+}
+
+export const NO_SWITCHES: ConnectionSwitches = {
+  plans: false,
+  stats: "off",
+  achievements: false,
+  leaderboard: false,
+  tripOffers: false,
+};
+
+/** Mirrors `CONNECTION_STATE_VALUES` in `backend/src/schemas/sharingConnections.ts`. */
+export type ConnectionState =
+  "pending_out" | "pending_in" | "active" | "declined" | "revoked" | "reconfirm";
+
+export interface Connection {
+  id: string;
+  origin: string;
+  username: string;
+  displayName: string;
+  state: ConnectionState;
+  /** What the caller gives this person. */
+  mine: ConnectionSwitches;
+  /** What the other side announced it gives the caller (for `pending_in`, the asker's choice). */
+  theirs: ConnectionSwitches;
+  requestedAt: string | null;
+  confirmedAt: string | null;
+  revokedAt: string | null;
+}

@@ -164,6 +164,7 @@ import companionRoutes from "./companions";
 import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import sharingRemoteRoutes from "./sharingRemote";
+import sharingConnectionsRoutes from "./sharingConnections";
 import shareLinkRoutes from "./shareLinks";
 import passportOverrideRoutes from "./passportOverrides";
 import publicShareLinkRoutes from "./publicShareLinks";
@@ -581,6 +582,12 @@ export const apiMounts: ApiMount[] = [
   // People on other servers (spec 2026-10-20 F-S4b). BEFORE `/sharing`, whose router would
   // otherwise authenticate the request first and then fall through to this one.
   { id: "sharingRemote", base: "/api/v1/sharing/remote", router: sharingRemoteRoutes },
+  // User connections (spec 2026-11-02 §5): also before `/sharing`.
+  {
+    id: "sharingConnections",
+    base: "/api/v1/sharing/connections",
+    router: sharingConnectionsRoutes,
+  },
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
   // Public share links (forgejo#281): the owner's list/preview/create/revoke,
   // and the unauthenticated side a link's page asks with its token.

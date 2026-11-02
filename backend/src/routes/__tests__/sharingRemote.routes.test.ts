@@ -254,16 +254,6 @@ describe("the simplified setup (forgejo#301)", () => {
     ).toBe("off");
   });
 
-  it("names an unadmitted server when looking someone up on it", async () => {
-    const origin = "https://never-pinned.sharing-remote-route.test";
-    const res = await request(app)
-      .post("/api/v1/sharing/remote/people/find")
-      .set(as(anna))
-      .send({ origin, username: "ben" });
-    expect(res.status).toBe(403);
-    expect(res.body).toMatchObject({ code: "SHARE_REMOTE_PEER_NOT_ADMITTED", origin });
-  });
-
   it("answers a statistics read of an unadmitted server with its own reason", async () => {
     const res = await request(app)
       .get(`/api/v1/sharing/remote/people/${far.id}/stats`)
@@ -306,7 +296,6 @@ describe("while the feature is off", () => {
     ["get", "/people"],
     ["get", "/findable"],
     ["get", "/servers"],
-    ["post", "/people/find"],
     ["delete", "/invites/00000000-0000-4000-8000-000000000000"],
   ] as const)("refuses %s %s with SHARE_REMOTE_DISABLED", async (method, path) => {
     const res = await request(app)[method](`/api/v1/sharing/remote${path}`).set(as(anna));

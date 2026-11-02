@@ -4,6 +4,7 @@
  * offer in the claim reply; who receives a member's changes on other servers follows the same
  * consent rule as locally (`receivingRemotes`); a restore suspends every membership.
  */
+import { ALL_OFF } from "../connections/switches";
 import { randomUUID } from "crypto";
 import { prisma } from "../../../../db";
 import type { InviteClaim } from "../../../../schemas/tripSharePeer";
@@ -52,6 +53,8 @@ async function pairing(userId: string, status = "accepted") {
       localChannel: randomUUID(),
       username: "ben",
       displayName: "Ben",
+      // Ben said yes to receiving offers (the connection's switch).
+      remoteSwitches: { ...ALL_OFF, tripOffers: true },
     },
   });
   await prisma.shareConsent.create({

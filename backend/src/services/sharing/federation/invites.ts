@@ -24,6 +24,7 @@ import type {
 import logger from "../../../utils/logger";
 import { AppError } from "../../../middleware/errorHandler";
 import { requireTripFederation } from "./access";
+import { ALL_OFF } from "./connections/switches";
 import { remoteShareError } from "./errors";
 import { formatTripInviteCode } from "./inviteCode";
 import { buildOfferBody, ensureFederatedGroup, ownTripFor, requireHome } from "./offerBuild";
@@ -211,6 +212,8 @@ export async function serveInviteClaim(
         localChannel,
         username: body.username,
         displayName: body.displayName,
+        // The claimant said yes to receiving offers: this account may offer trips to them.
+        remoteSwitches: { ...ALL_OFF, tripOffers: true },
       },
     });
     await tx.shareConsent.create({

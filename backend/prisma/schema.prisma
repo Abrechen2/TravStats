@@ -5009,27 +5009,50 @@ model ShareConsent {
 /// not trip consent. Neither channel is an id of the other server: both are random handshake
 /// entropy, so a remote id can never resolve to a local user or trip.
 model RemoteShareAccount {
-  id                  String   @id @default(uuid())
+  id                     String    @id @default(uuid())
   /// The local side of the pairing.
-  userId              String   @map("user_id")
-  origin              String
+  userId                 String    @map("user_id")
+  origin                 String
   /// How the other server names its user in this pairing (minted there).
-  channel             String
+  channel                String
   /// How this server names `userId` towards that server (minted here).
-  localChannel        String   @map("local_channel")
-  username            String
-  displayName         String   @map("display_name")
+  localChannel           String    @map("local_channel")
+  username               String
+  displayName            String    @map("display_name")
   /// SHA-256 of the invitation secret this side redeemed to make the pairing (null when the other
   /// side redeemed ours, or before 2026-10-21): a retry of the same code that the issuer answers
   /// "used" is recognised as already connected instead of failing.
-  claimedCodeHash     String?  @map("claimed_code_hash")
+  claimedCodeHash        String?   @map("claimed_code_hash")
   /// What `userId` lets this person see of their statistics: off | overview | full (CHECK
   /// remote_share_accounts_stats_level_check, simplified setup 2026-11-02). Default off.
-  statsLevel          String   @default("off") @map("stats_level")
+  statsLevel             String    @default("off") @map("stats_level")
   /// The leaderboard pairing made together with this one when the person was found through the
   /// connected server (null for a pairing made by an invitation code).
-  leaderboardRemoteId String?  @unique @map("leaderboard_remote_id")
-  createdAt           DateTime @default(now()) @map("created_at")
+  leaderboardRemoteId    String?   @unique @map("leaderboard_remote_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  /// The user connection (spec 2026-11-02): pending_out | pending_in | active | declined | revoked |
+  /// reconfirm (CHECK remote_share_accounts_state_check). Pairings that existed before the
+  /// connection model migrated to reconfirm: trips already shared keep working, nothing new starts.
+  state                  String    @default("active")
+  /// This side's counter, bumped on every state or switch change it announces.
+  generation             Int       @default(0)
+  /// The highest generation accepted from the other side; an equal or older message is stale.
+  peerGeneration         Int       @default(0) @map("peer_generation")
+  /// What this side gives (directional, all default off); stats_level is the statistics switch.
+  sharePlans             Boolean   @default(false) @map("share_plans")
+  shareAchievements      Boolean   @default(false) @map("share_achievements")
+  shareLeaderboard       Boolean   @default(false) @map("share_leaderboard")
+  shareTripOffers        Boolean   @default(false) @map("share_trip_offers")
+  /// The other side's switches as last announced (read-only display and the sender-side gate).
+  remoteSwitches         Json      @default("{}") @map("remote_switches")
+  /// The leaderboard channel a pending request proposed; used when the request is accepted.
+  peerLeaderboardChannel String?   @map("peer_leaderboard_channel")
+  requestedAt            DateTime? @map("requested_at")
+  confirmedAt            DateTime? @map("confirmed_at")
+  endedAt                DateTime? @map("ended_at")
+  /// Whether this side ended it (declined, revoked, cancelled): only a decline this side made
+  /// blocks the person's next request for 30 days.
+  endedByMe              Boolean   @default(false) @map("ended_by_me")
 
   leaderboardRemote LeaderboardRemote?      @relation(fields: [leaderboardRemoteId], references: [id], onDelete: SetNull)
   user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)

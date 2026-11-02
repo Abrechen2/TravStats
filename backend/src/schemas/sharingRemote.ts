@@ -105,11 +105,7 @@ export const remoteOfferBodySchema = z.union([
   }),
 ]);
 
-/** Simplified setup (2026-11-02, forgejo#301): finding people on connected servers. */
-export const remoteFindBodySchema = z.strictObject({
-  origin: peerOrigin.describe("A connected (admitted) server"),
-  username: z.string().trim().min(1).max(80),
-});
+/** Simplified setup (2026-11-02, forgejo#301): being found by people on connected servers. */
 export const remoteFindableSchema = z.strictObject({
   findable: z.boolean().describe("Whether users of connected servers can find the caller"),
 });
