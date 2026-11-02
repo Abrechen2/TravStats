@@ -21,6 +21,20 @@ export const peerPinSchema = z.strictObject({
   enabled: z.boolean(),
 });
 
+/**
+ * `POST /peers` from the Companion (spec 2026-11-02 §6): the scanned QR payload (string or
+ * object) or the connection file as base64. Both go through the same validation as the
+ * explicit-values form; `enabled` defaults to true.
+ */
+export const peerPinFromQrSchema = z.strictObject({
+  qr: z.union([z.string().max(2048), z.record(z.string(), z.unknown())]),
+  enabled: z.boolean().default(true),
+});
+export const peerPinFromFileSchema = z.strictObject({
+  connectionFile: z.string().max(100_000),
+  enabled: z.boolean().default(true),
+});
+
 export const peerOriginSchema = z.strictObject({ origin: httpsOriginSchema });
 
 /** Trip sharing across servers (spec 2026-10-20 F8): the admin's own switch, default off. */
