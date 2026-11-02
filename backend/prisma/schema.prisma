@@ -2365,6 +2365,10 @@ model TripRoute {
   /// it has a point, so no zone can be resolved at write time; the instant is
   /// derived from the place when needed, never stored beside this.
   tourStartMinute           Int?      @map("tour_start_minute")
+  /// Trip sharing (forgejo#404): the same key on every member's copy of a
+  /// ROADTRIP. Null for a tour (never shared) and for a roadtrip outside a
+  /// shared trip. Unique per owner, like the other shareable tables.
+  shareKey                  String?   @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2379,6 +2383,7 @@ model TripRoute {
   /// Rental cars this roadtrip was driven in (rental spec §7.2).
   rentals    RentalBooking[]
 
+  @@unique([userId, shareKey])
   @@index([userId, kind])
   @@index([tripId])
   @@index([anchorStopId])

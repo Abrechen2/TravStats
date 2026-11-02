@@ -11,6 +11,7 @@ import { errorHandler } from "../../../../middleware/errorHandler";
 import { hash } from "../../../federation/refusal";
 import { bookingSchema } from "../../schema";
 import { signVouch, vouchSubject } from "../vouch";
+import { readTripArchive } from "../../../trip/exchange/readArchive";
 import { endAllGuestsAfterRestore, endGuestsOfOrigin } from "../sessions";
 
 jest.mock("../../availability", () => ({
@@ -867,5 +868,116 @@ describe("TravPlan plan documents (D6)", () => {
     expect(list.body.documents).toEqual([
       expect.objectContaining({ id: doc.id, attached: true, uploadedBy: null }),
     ]);
+  });
+
+  const exportOf = (planId: string, cookie: string) =>
+    request(app)
+      .get(`/api/v1/guest/plans/${planId}/export`)
+      .set("Cookie", "ts_guest=" + cookie)
+      .set("X-TravStats-Guest", "1")
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
+        res.on("end", () => done(null, Buffer.concat(chunks)));
+      });
+
+  it("gives a guest the trip's roadtrip as a version 4 file, without the owner's private fields", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const route = await prisma.tripRoute.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        kind: "roadtrip",
+        name: "Inselrunde",
+        mode: "road",
+        notes: "PRIVATE-ROUTE-NOTE",
+      },
+    });
+    await prisma.tripStop.create({
+      data: {
+        routeId: route.id,
+        routeOrderIdx: 0,
+        title: "Funchal",
+        lat: 32.65,
+        lon: -16.9,
+        notes: "PRIVATE-STOP-NOTE",
+      },
+    });
+    // An unrelated flight of the owner's on the same trip, with a booking and a price.
+    const booking = await prisma.booking.create({
+      data: { userId: owner, tripId: plan.tripId, pnr: "PNR-SECRET", price: 4321, currency: "EUR" },
+    });
+    await prisma.flight.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        bookingId: booking.id,
+        flightNumber: "XY999",
+        airline: "Secret Air",
+        depIata: "FRA",
+        depLat: 50,
+        depLon: 8,
+        arrIata: "FNC",
+        arrLat: 32.7,
+        arrLon: -16.7,
+        departureTime: new Date("2027-03-10T08:00:00Z"),
+        arrivalTime: new Date("2027-03-10T12:00:00Z"),
+        price: 1234.5,
+        bookingReference: "BOOKREF-SECRET",
+        seatNumber: "12A",
+      },
+    });
+    await prisma.tripJournalEntry.create({
+      data: { tripId: plan.tripId, date: new Date(), body: "PRIVATE-JOURNAL" },
+    });
+    const res = await exportOf(plan.planId, guest.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-disposition"]).toContain(".travstats");
+    const archive = readTripArchive(res.body as Buffer);
+    expect(archive.manifest.formatVersion).toBe(4);
+    expect(archive.file.roadtrips.map((r) => r.name)).toEqual(["Inselrunde"]);
+    expect(archive.file.roadtrips[0].stations.map((s) => s.title)).toEqual(["Funchal"]);
+    expect(JSON.stringify(archive.file)).not.toContain("PRIVATE");
+    // Nothing of the unrelated flight or its booking reaches the guest.
+    expect(archive.file.flights).toEqual([]);
+    expect(archive.file.bookings).toEqual([]);
+    const text = JSON.stringify(archive.file);
+    for (const secret of [
+      "PNR-SECRET",
+      "BOOKREF-SECRET",
+      "XY999",
+      "Secret Air",
+      "4321",
+      "1234.5",
+      "12A",
+    ])
+      expect(text).not.toContain(secret);
+  });
+
+  it("gives a revoked guest no file, whether the credential is gone or only the membership ended", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    // Membership ended while the credential is still around (a request racing the revocation).
+    await prisma.travelPlanMember.update({
+      where: { id: guest.memberId },
+      data: { status: "revoked" },
+    });
+    // The guest door answers an ended access with its one code (401 PLAN_GUEST_REQUIRED), as for the plan itself.
+    expect((await exportOf(plan.planId, guest.cookie)).status).toBe(401);
+    // The owner's removal also deletes the credential.
+    const second = await joinGuest(plan, { username: "second", who: other });
+    await call("delete", `/trips/${plan.tripId}/plan/members/${second.memberId}`, owner);
+    expect((await exportOf(plan.planId, second.cookie)).status).toBe(401);
+  });
+
+  it("refuses the export to a credential of another plan, and once the guest has left", async () => {
+    const plan = await newPlan();
+    const other = await newPlan();
+    const guest = await joinGuest(plan);
+    expect((await exportOf(other.planId, guest.cookie)).status).toBe(404);
+    expect((await asGuest("post", "/leave", { cookie: guest.cookie })).status).toBe(200);
+    expect((await exportOf(plan.planId, guest.cookie)).status).toBeGreaterThanOrEqual(401);
   });
 });

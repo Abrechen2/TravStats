@@ -7,7 +7,9 @@ import type { DomainKey } from "../../shared/domains";
  * the `.travstats` kinds, the coverage guard and the inbox labels.
  *
  * Order is copy order. Stops come last: a stop resolves the entry it wraps by
- * share key in the recipient's account, so that entry must exist first.
+ * share key in the recipient's account, so that entry must exist first. A
+ * roadtrip sits just before them for the same reason: its stations name a stay
+ * and its legs a ferry crossing, both resolved by share key.
  *
  * `shareTypes.test.ts` holds this list against the database (every table with
  * a `share_key` column), against `DOMAIN_KEYS` and against the inbox labels.
@@ -20,6 +22,7 @@ export const SHARE_ENTITIES = [
   "bus",
   "ferry",
   "rental",
+  "roadtrip",
   "stop",
 ] as const;
 export type ShareEntity = (typeof SHARE_ENTITIES)[number];
@@ -33,11 +36,12 @@ export type ShareDelegate =
   | "busJourney"
   | "ferryJourney"
   | "rentalBooking"
+  | "tripRoute"
   | "tripStop";
 
 /** The entry kinds of a `.travstats` file (`trip/exchange/format.ts`). */
 export type ExchangeKind =
-  "flight" | "stay" | "cruise" | "rail" | "bus" | "ferry" | "rental" | "stop";
+  "flight" | "stay" | "cruise" | "rail" | "bus" | "ferry" | "rental" | "roadtrip" | "stop";
 
 export interface ShareTypeMeta {
   /** The domain whose entries these are; null for a timeline stop, which belongs to no domain. */
@@ -101,6 +105,13 @@ export const SHARE_TYPES = {
     countKey: "rentals",
     exchangeKind: "rental",
   },
+  roadtrip: {
+    domain: "roadtrip",
+    delegate: "tripRoute",
+    table: "trip_routes",
+    countKey: "roadtrips",
+    exchangeKind: "roadtrip",
+  },
   stop: {
     domain: null,
     delegate: "tripStop",
@@ -128,7 +139,7 @@ export const DOMAIN_SHARING: Readonly<Record<DomainKey, ShareEntity | { notShare
   cruise: "cruise",
   lodging: "lodgingStay",
   poi: { notShared: "A place visit is the visitor's own; owner decision 2 keeps it private." },
-  roadtrip: { notShared: "Roadtrips and their stations are not shared (S1 scope, 2026-10-09)." },
+  roadtrip: "roadtrip",
   rail: "rail",
   rental: "rental",
   bus: "bus",

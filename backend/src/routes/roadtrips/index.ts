@@ -12,6 +12,7 @@ import {
   stationCountries,
   toStationDto,
 } from "../../services/roadtrip/roadtripSummary";
+import { propagateWrite } from "../../services/sharing/propagate";
 import { resolveTrip } from "../trips/resolveTrip";
 import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
@@ -100,6 +101,7 @@ router.post(
         },
         include: ROUTE_SELECT,
       });
+      await propagateWrite(prisma, userId, "roadtrip", route.id);
       logger.info({ operation: "roadtrip.create", routeId: route.id, tripId: tripId ?? null });
       res.status(201).json({ roadtrip: toDto(route) });
     } catch (error) {

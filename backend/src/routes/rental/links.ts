@@ -1,3 +1,4 @@
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 
@@ -65,7 +66,7 @@ router.post("/:id/roadtrip", async (req: AuthRequest, res: Response, next: NextF
     const { routeId } = parsed.data;
 
     if (routeId === null) {
-      // share-exempt: roadtrip link — private (no roadtrip is shared)
+      // share-exempt: roadtrip link — private (the link is not a fact of the rental)
       const row = await prisma.rentalBooking.update({
         where: { id: rental.id },
         data: { routeId: null },
@@ -84,8 +85,9 @@ router.post("/:id/roadtrip", async (req: AuthRequest, res: Response, next: NextF
     }
     // An empty vehicle name takes the booked group; a name the user wrote stays.
     const name = rental.vehicleClass ?? rental.vehicleExample;
+    const roadtripBefore = await shareSnapshot(prisma, "roadtrip", route.id);
     const [row] = await prisma.$transaction([
-      // share-exempt: roadtrip link — private (no roadtrip is shared)
+      // share-exempt: roadtrip link — private (the link is not a fact of the rental)
       prisma.rentalBooking.update({
         where: { id: rental.id },
         data: { routeId },
@@ -95,6 +97,7 @@ router.post("/:id/roadtrip", async (req: AuthRequest, res: Response, next: NextF
         ? []
         : [prisma.tripRoute.update({ where: { id: route.id }, data: { vehicleName: name } })]),
     ]);
+    await propagateWrite(prisma, userId, "roadtrip", route.id, roadtripBefore);
     res.json({
       success: true,
       data: withRentalReadFields(row),

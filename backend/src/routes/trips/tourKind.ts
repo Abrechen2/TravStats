@@ -4,6 +4,12 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { kindSwitchSchema } from "../../schemas/roadtrip";
 import logger from "../../utils/logger";
+import {
+  propagateDelete,
+  propagateWrite,
+  shareSnapshot,
+  SHARE_TX_TIMEOUT_MS,
+} from "../../services/sharing/propagate";
 import { resolveRoute, toDto, ROUTE_SELECT } from "./tourRoutes";
 
 /**
@@ -32,23 +38,38 @@ router.patch(
       const routeId = await resolveRoute(userId, undefined, req.params.routeId);
       const body = kindSwitchSchema.parse(req.body);
 
-      const route = await prisma.tripRoute.update({
-        where: { id: routeId },
-        data:
-          body.kind === "tour"
-            ? {
-                kind: "tour",
-                activity: body.activity ?? undefined,
-                kindAssignedAutomatically: false,
-              }
-            : {
-                kind: "roadtrip",
-                vehicle: body.vehicle ?? undefined,
-                anchorStopId: null,
-                kindAssignedAutomatically: false,
-              },
-        include: ROUTE_SELECT,
-      });
+      // A roadtrip is shared with the trip's members, a tour never: the switch can make one.
+      const route = await prisma.$transaction(
+        async (tx) => {
+          const before = await shareSnapshot(tx, "roadtrip", routeId);
+          const updated = await tx.tripRoute.update({
+            where: { id: routeId },
+            data:
+              body.kind === "tour"
+                ? {
+                    kind: "tour",
+                    activity: body.activity ?? undefined,
+                    kindAssignedAutomatically: false,
+                  }
+                : {
+                    kind: "roadtrip",
+                    vehicle: body.vehicle ?? undefined,
+                    anchorStopId: null,
+                    kindAssignedAutomatically: false,
+                  },
+            include: ROUTE_SELECT,
+          });
+          if (body.kind === "tour" && before?.shareKey) {
+            // A tour is never shared: the members keep their copies and are told.
+            await tx.tripRoute.update({ where: { id: routeId }, data: { shareKey: null } });
+            await propagateDelete(tx, userId, before);
+          } else {
+            await propagateWrite(tx, userId, "roadtrip", routeId, before);
+          }
+          return updated;
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
 
       logger.info({ operation: "tour.kind.switch", routeId, kind: body.kind });
       res.json({ route: toDto(route) });
@@ -67,6 +88,7 @@ router.post(
     try {
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, undefined, req.params.routeId);
+      // share-exempt: a review flag on the row, not a fact
       const route = await prisma.tripRoute.update({
         where: { id: routeId },
         data: { kindAssignedAutomatically: false },

@@ -118,21 +118,22 @@ async function ensureRoadtrip(
     select: { orderIdx: true },
   });
   const vehicle = state.vehicle?.kind;
-  return (
-    await tx.tripRoute.create({
-      data: {
-        userId,
-        tripId,
-        kind: "roadtrip",
-        name,
-        mode: "road",
-        vehicle:
-          vehicle && (ROADTRIP_VEHICLES as readonly string[]).includes(vehicle) ? vehicle : null,
-        orderIdx: last ? last.orderIdx + 1 : 0,
-      },
-      select: { id: true },
-    })
-  ).id;
+  const created = await tx.tripRoute.create({
+    data: {
+      userId,
+      tripId,
+      kind: "roadtrip",
+      name,
+      mode: "road",
+      vehicle:
+        vehicle && (ROADTRIP_VEHICLES as readonly string[]).includes(vehicle) ? vehicle : null,
+      orderIdx: last ? last.orderIdx + 1 : 0,
+    },
+    select: { id: true },
+  });
+  // The plan's roadtrip reaches the trip's members with the first station (forgejo#404).
+  await propagateWrite(tx, userId, "roadtrip", created.id);
+  return created.id;
 }
 
 /** The booked night as a lodging + stay, or null when the station has none the plan can vouch for. */
@@ -473,6 +474,7 @@ async function writeFerry(
       ...(linkable ? { roadtripLegId: legRow.id, roadtripLegBefore: snapshotOf(legRow) } : {}),
     },
   });
+  const routeBefore = linkable ? await shareSnapshot(tx, "roadtrip", legRow.routeId) : null;
   if (linkable)
     await tx.tripRouteLeg.update({
       where: { id: legRow.id },
@@ -486,6 +488,7 @@ async function writeFerry(
       },
     });
   await propagateWrite(tx, userId, "ferry", created.id);
+  if (linkable) await propagateWrite(tx, userId, "roadtrip", legRow.routeId, routeBefore);
   const persisted = await tx.ferryJourney.findUniqueOrThrow({
     where: { id: created.id },
     select: { updatedAt: true },

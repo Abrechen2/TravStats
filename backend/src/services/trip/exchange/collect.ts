@@ -103,6 +103,14 @@ async function loadTrip(userId: string, tripId: string) {
       // Tour and roadtrip stations belong to their route, which this file does
       // not carry; mirrored entries (`sourceId`) are written as the entry itself.
       stops: { where: { routeId: null, sourceId: null }, orderBy: { orderIdx: "asc" } },
+      routes: {
+        where: { kind: "roadtrip" },
+        orderBy: { orderIdx: "asc" },
+        include: {
+          stops: { where: { routeOrderIdx: { not: null } }, orderBy: { routeOrderIdx: "asc" } },
+          legs: { include: { ferryJourney: { select: { id: true } } } },
+        },
+      },
       journalEntries: { orderBy: { date: "asc" } },
       photos: { where: { immichAlbumLinkId: null }, orderBy: { sortIdx: "asc" } },
     },
@@ -560,6 +568,7 @@ export async function collectTrip(
     places: [],
     visits,
     stops: [],
+    roadtrips: [],
     documents: [],
     photos: [],
   };
@@ -588,6 +597,12 @@ export async function collectTrip(
           : null,
       ...(priv ? { private: { notes: s.notes } } : {}),
     };
+  });
+  file.roadtrips = collectRoadtrips(trip, priv, {
+    roadtrip: keyer("ro"),
+    station: keyer("rs"),
+    stay: stayKey,
+    ferry: ferryKey,
   });
   file.places = [...places.values()];
   if (priv) {
@@ -630,6 +645,78 @@ export async function collectTrip(
     });
   }
   return { tripName: trip.name, file, files };
+}
+
+type Keyer = (id: string) => string;
+
+/** The roadtrips of the trip with their stations, legs and ferry links; keys are file-local. */
+function collectRoadtrips(
+  trip: LoadedTrip,
+  priv: boolean,
+  keys: { roadtrip: Keyer; station: Keyer; stay: Keyer; ferry: Keyer }
+): TripFile["roadtrips"] {
+  const ferryIds = new Set(trip.ferryJourneys.map((f) => f.id));
+  return trip.routes.map((r) => {
+    const stationIds = new Set(r.stops.map((s) => s.id));
+    return {
+      key: keys.roadtrip(r.id),
+      name: r.name,
+      mode: r.mode,
+      orderIdx: r.orderIdx,
+      vehicle: r.vehicle,
+      vehicleName: r.vehicleName,
+      stations: r.stops.map((s) => ({
+        key: keys.station(s.id),
+        routeOrderIdx: s.routeOrderIdx ?? 0,
+        orderIdx: s.orderIdx,
+        domain: s.domain,
+        title: s.title,
+        description: s.description,
+        startDate: iso(s.startDate),
+        endDate: iso(s.endDate),
+        startUtc: iso(s.startUtc),
+        endUtc: iso(s.endUtc),
+        stopZone: s.stopZone,
+        precision: s.precision,
+        lat: s.lat,
+        lon: s.lon,
+        overnight: s.overnight,
+        viaPoint: s.viaPoint,
+        countryVisitKind: s.countryVisitKind,
+        stayKey:
+          s.lodgingStayId && trip.lodgingStays.some((st) => st.id === s.lodgingStayId)
+            ? keys.stay(s.lodgingStayId)
+            : null,
+        ...(priv ? { private: { notes: s.notes } } : {}),
+      })),
+      legs: r.legs
+        .filter((l) => stationIds.has(l.fromStopId) && stationIds.has(l.toStopId))
+        .map((l) => ({
+          fromKey: keys.station(l.fromStopId),
+          toKey: keys.station(l.toStopId),
+          // A crossing that is not on this trip cannot be named in the file.
+          ferryKey:
+            l.ferryJourney && ferryIds.has(l.ferryJourney.id)
+              ? keys.ferry(l.ferryJourney.id)
+              : null,
+          distanceKm: l.distanceKm,
+          source: l.source,
+          mode: l.mode,
+          confidence: l.confidence,
+          waypoints: l.waypoints as TripFile["roadtrips"][number]["legs"][number]["waypoints"],
+          drivingMinutes: l.drivingMinutes,
+        })),
+      ...(priv
+        ? {
+            private: {
+              notes: r.notes,
+              startOdometerKm: r.startOdometerKm,
+              endOdometerKm: r.endOdometerKm,
+            },
+          }
+        : {}),
+    };
+  });
 }
 
 async function collectDocuments(

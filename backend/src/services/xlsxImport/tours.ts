@@ -169,6 +169,7 @@ export async function importTours(sheet: IncomingSheet, ctx: Ctx): Promise<Sheet
         out.push({ row: rowNo, action: "skip", id: target.id, label, message, ...extra });
         continue;
       }
+      // share-exempt: tour sheet — only roadtrips are shared
       if (!ctx.dryRun) await prisma.tripRoute.update({ where: { id: target.id }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       out.push({ row: rowNo, action: "update", id: target.id, label, message, ...extra });
@@ -210,6 +211,7 @@ async function createTour(
     orderBy: { orderIdx: "desc" },
     select: { orderIdx: true },
   });
+  // share-exempt: tour sheet — only roadtrips are shared
   const created = await prisma.tripRoute.create({
     data: {
       userId,

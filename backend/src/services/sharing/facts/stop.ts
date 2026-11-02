@@ -5,7 +5,7 @@ import { pickFacts } from "./pick";
  * A timeline stop's facts: what and where it is, and when, as stored with
  * its zone (ADR 0002). Private: notes. Not copied at all: the roadtrip
  * membership (`routeId`, `routeOrderIdx`, `overnight`, `viaPoint`) — a
- * roadtrip is not part of S1 — and `placeId`, which names a place of the
+ * roadtrip's stations are facts of the roadtrip (`facts/roadtrip.ts`) — and `placeId`, which names a place of the
  * sharer's own. `sourceId`/`lodgingStayId` point at the sharer's rows and are
  * re-pointed by the caller at the recipient's copies.
  */

@@ -286,6 +286,7 @@ async function createTour(userId: string, raw: unknown, claim: ClaimClientRef) {
   });
 
   const route = await prisma.$transaction(async (tx) => {
+    // share-exempt: a standalone or trip tour — only roadtrips are shared
     const created = await tx.tripRoute.create({
       data: {
         userId,

@@ -579,8 +579,7 @@ decision and break clients that send `auto`. What was missing was the TravPlan s
 ### Left for later steps / open
 
 - Editors uploading documents to the plan's trip (§6.1, D6) and the plan-documents list.
-- Roadtrip as a shareable type for local members (D5, §6.8): the linked copy carries the trip's
-  logbook entries, not the route or stations.
+- ~~Roadtrip as a shareable type for local members (D5, §6.8)~~ — built, see §15.
 - Remote guests (step 6) and the `.travstats` export on leaving (§6.6, guests only).
 - `GET …/plan/actual` (plan versus the owner's track) stays owner-only: it reads the owner's
   location history.
@@ -633,7 +632,41 @@ TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover or `actual`
   labelled with the uploader; the same bytes as an owner-private document are stored as a separate plan
   document and answered like a new file (no duplicate error, so uploads never reveal what the owner holds). Attaching an uploaded document to a booking in
   the web is not wired (the picker still lists the owner's logbook documents only).
-- **D5 / §6.8 NOT built, open**: the roadtrip as a `SHARE_TYPES` entry (stations, legs, ferry links) and
+- **D5 / §6.8 (built later, see §15)** — as it stood at this step: the roadtrip as a `SHARE_TYPES` entry (stations, legs, ferry links) and
   exchange format v4 are a package of their own (adapter, fact whitelist, `propagateWrite` call
   sites, importer). Until then the co-planner's linked copy carries the trip's logbook entries, not
   the route, and a guest has no "Reise übernehmen" download (§6.7) or leaving export (§6.6).
+
+## 15. As built — roadtrips as a shareable type, format v4, guest file (D5, §6.7, §6.8; forgejo#404, branch `fix/roadtrip-share-404`)
+
+- **Registry**: `roadtrip` joins `SHARE_ENTITIES` (before `stop`), table `trip_routes`, new column `share_key`
+  (`@@unique([userId, shareKey])`, migration `20261102100000_roadtrip_share_key`, which also widens
+  `share_notices_entity_type_check`). Only `kind = "roadtrip"` is keyed; a tour sits in the same table and is
+  `excluded` / filtered out in `keyOps`. `DOMAIN_SHARING.roadtrip = "roadtrip"`; `DERIVE.roadtrip` is a no-op.
+  Not a stats entity (`STATS_ENTITIES`) and not something a timeline stop may wrap (`REF_DELEGATES`, wire `entryRef`).
+- **Facts** (`facts/roadtrip.ts`): route `name mode orderIdx vehicle vehicleName`; station
+  `routeOrderIdx orderIdx domain title description startDate endDate lat lon startUtc endUtc stopZone precision overnight viaPoint countryVisitKind`
+  plus `lodgingStayRef` (by the stay's share key, resolved per account); leg `distanceKm source mode confidence waypoints drivingMinutes`
+  plus `fromKey/toKey` (station keys) and `ferryKey` (the linked crossing's share key). Private, never copied: notes (route and
+  station), tags, colour, odometer, expenses, tracks, `placeId`, `anchorStopId`.
+- **Adapter** (`adapters/roadtrip.ts`): stations and legs are two pseudo-facts (`stations`, `routeLegs`; `legs` is the cruise
+  label). Stations match by their own `shareKey`, assigned the first time a roadtrip of a shared trip is read; legs by their
+  endpoint pair, upserted so a recipient's ferry link and ids survive. A station the sender drops is deleted from a copy unless its
+  member wrote a note on it; then it stays, loses the sender's key and is appended. A ferry link resolves to the member's own copy of
+  the crossing by key; no copy of the crossing means no link, not an error. All write paths of the route propagate (`replaceStationsIn`,
+  companion append/remove, leg PUT/DELETE, routing, ferry link/sync, rental vehicle name, kind switch, delete, handover, suggestion accept,
+  xlsx via `propagateBulk`); tour-only writers carry `// share-exempt`.
+- **Wire**: `ROADTRIP_SHAPE` with nested station and leg shapes; fact fields classified in `fieldInventory.json` (`TripRoute.shareKey` excluded).
+- **Exchange format v4** (`trip.json` gains `roadtrips[]`): `tripFileVersionFor` stamps 4 only when the trip holds a roadtrip, so v3
+  readers still take every other file; a v4 file is refused by name by a v3 reader (`TRIP_FILE_VERSION_UNSUPPORTED`). A private export adds
+  route notes, odometer readings and station notes. Importing into a shared trip propagates the roadtrip to the members; a roadtrip of the
+  same name on the target trip is skipped as a duplicate.
+- **§6.6/§6.7 guest file**: `GET /api/v1/guest/plans/:planId/export` returns a **guest-scoped** v4 `.travstats`
+  (`scopeFileForGuest`): the plan trip's roadtrip(s) with stations and legs, plus only the stays and crossings those name.
+  No other entry, no `bookings` (PNR, price), no booking link or `externalRef`, no journal, notes, documents or photos.
+  One endpoint serves "Reise übernehmen" and the leaving export. Web: "Reise als Datei sichern" in guest mode. A revoked guest
+  gets the door's 401 `PLAN_GUEST_REQUIRED` like for every other guest route (not 404). Deviations from §6.7: no journal, and no
+  separate "owner confirms" switch.
+- **Local members and remote guests**: both receive the route on handover through the propagation of the handover's own writes
+  (`ensureRoadtrip`, `replaceStationsIn`, ferry link).
+

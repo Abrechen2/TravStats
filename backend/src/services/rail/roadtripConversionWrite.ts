@@ -1,5 +1,5 @@
 import { prisma } from "../../db";
-import { propagateWrites } from "../sharing/propagate";
+import { propagateDelete, propagateWrites, shareSnapshot } from "../sharing/propagate";
 import { handExpensesToTrips, standaloneExpenseCount } from "../expenses/sectionRemoval";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
@@ -252,7 +252,13 @@ export async function convertRoadtripToRail(
       });
       await tx.tripStop.updateMany({
         where: { routeId: section.id, tripId: { not: null } },
-        data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
+        data: {
+          routeId: null,
+          routeOrderIdx: null,
+          lodgingStayId: null,
+          overnight: false,
+          shareKey: null,
+        },
       });
       // Back on the timeline of a shared trip, a stop is shared like any other.
       await propagateWrites(
@@ -262,7 +268,9 @@ export async function convertRoadtripToRail(
         returned.map((r) => r.id)
       );
       await handExpensesToTrips(tx, [section.id]);
+      const roadtripGone = await shareSnapshot(tx, "roadtrip", section.id);
       await tx.tripRoute.delete({ where: { id: section.id } });
+      await propagateDelete(tx, userId, roadtripGone);
     }
     return count;
   });

@@ -57,6 +57,8 @@ export function delegateOf(c: DbTransaction, delegate: ShareDelegate): KeyedDele
       return c.ferryJourney as unknown as KeyedDelegate;
     case "rentalBooking":
       return c.rentalBooking as unknown as KeyedDelegate;
+    case "tripRoute":
+      return c.tripRoute as unknown as KeyedDelegate;
     case "tripStop":
       return c.tripStop as unknown as KeyedDelegate;
     default: {
@@ -69,8 +71,16 @@ export function delegateOf(c: DbTransaction, delegate: ShareDelegate): KeyedDele
 export const keyedDelegate = (c: DbTransaction, entity: ShareEntity): KeyedDelegate =>
   delegateOf(c, SHARE_TYPES[entity].delegate);
 
-/** Only timeline stops are keyed — roadtrip stations and route corrections are not shared. */
+/**
+ * Only timeline stops are keyed here — a roadtrip's stations and route corrections travel inside
+ * their roadtrip (`adapters/roadtrip.ts`), each keyed when the roadtrip is read.
+ */
 const TIMELINE_STOP = { routeId: null, viaPoint: false } as const;
+
+/** Only a roadtrip is shared; a tour sits in the same table and stays private. */
+const ROADTRIP_ONLY = { kind: "roadtrip" } as const;
+const onlyShareable = (entity: ShareEntity): Where =>
+  entity === "stop" ? TIMELINE_STOP : entity === "roadtrip" ? ROADTRIP_ONLY : {};
 
 /** The owner's rows of `entity` filed on `tripId` (every stop of the trip for `stop`). */
 function ownedOnTrip(entity: ShareEntity, ownerId: string, tripId: string): Where {
@@ -79,7 +89,7 @@ function ownedOnTrip(entity: ShareEntity, ownerId: string, tripId: string): Wher
 
 /** Every delegate a timeline stop may wrap (`sourceId` / `lodgingStayId`). */
 export const REF_DELEGATES: readonly ShareDelegate[] = SHARE_ENTITIES.filter(
-  (e) => e !== "stop"
+  (e) => e !== "stop" && e !== "roadtrip"
 ).map((e) => SHARE_TYPES[e].delegate);
 
 /** Key the unkeyed rows of one type on the owner's trip; one uuid per row. */
@@ -93,7 +103,7 @@ export async function assignKeysFor(
   const rows = await delegate.findMany({
     where: {
       ...ownedOnTrip(entity, ownerId, tripId),
-      ...(entity === "stop" ? TIMELINE_STOP : {}),
+      ...onlyShareable(entity),
       shareKey: null,
     },
     select: { id: true, shareKey: true },
@@ -148,7 +158,7 @@ export async function keyedIdsOnTrip(
   const rows = await keyedDelegate(c, entity).findMany({
     where: {
       ...ownedOnTrip(entity, ownerId, tripId),
-      ...(entity === "stop" ? TIMELINE_STOP : {}),
+      ...onlyShareable(entity),
       shareKey: { not: null },
     },
     select: { id: true, shareKey: true },
@@ -187,6 +197,7 @@ export async function sharedIdsOf(
   const rows = await keyedDelegate(c, entity).findMany({
     where: {
       ...owned,
+      ...(entity === "roadtrip" ? ROADTRIP_ONLY : {}),
       OR: [{ shareKey: { not: null } }, { trip: { shareGroupId: { not: null } } }],
     },
     select: { id: true, shareKey: true },

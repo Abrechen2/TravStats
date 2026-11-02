@@ -310,6 +310,15 @@ reg(
 );
 reg(
   "get",
+  "/guest/plans/{planId}/export",
+  "The plan's trip as a `.travstats` file (format version 4 when it holds a roadtrip): the route and the " +
+    "confirmed entries in their public half — no journal, notes, prices, photos or documents. For the " +
+    "guest's own logbook and as the file to take along before leaving.",
+  z.string().describe("The ZIP"),
+  { guest: true, params: planId }
+);
+reg(
+  "get",
   "/guest/plans/{planId}/documents",
   "The plan's documents this guest may see.",
   planDocuments,

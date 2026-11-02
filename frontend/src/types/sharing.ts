@@ -91,6 +91,7 @@ export interface ShareCounts {
   busJourneys: number;
   ferryJourneys: number;
   rentals: number;
+  roadtrips: number;
   stops: number;
 }
 
@@ -109,7 +110,16 @@ export type ShareNoticeKind =
 
 /** The entry types a notice may name (S2); `trip` for shared/left. */
 export type ShareEntityType =
-  "trip" | "flight" | "lodgingStay" | "cruise" | "rail" | "bus" | "ferry" | "rental" | "stop";
+  | "trip"
+  | "flight"
+  | "lodgingStay"
+  | "cruise"
+  | "rail"
+  | "bus"
+  | "ferry"
+  | "rental"
+  | "roadtrip"
+  | "stop";
 
 /**
  * One side of a changed fact, already in the API's time shapes (ADR 0002 D3):

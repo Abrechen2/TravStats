@@ -17,7 +17,14 @@ import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
 import { DETACH_STATION_PHOTOS, planStationPhotoMove } from "../../services/trips/photoStation";
-import { propagateWrites, shareSnapshots } from "../../services/sharing/propagate";
+import {
+  propagateDelete,
+  propagateWrite,
+  propagateWrites,
+  shareSnapshot,
+  shareSnapshots,
+  SHARE_TX_TIMEOUT_MS,
+} from "../../services/sharing/propagate";
 import logger from "../../utils/logger";
 
 /**
@@ -280,6 +287,7 @@ router.post(
         select: { orderIdx: true },
       });
 
+      // share-exempt: a section made here is a tour (the column default); only roadtrips are shared
       const route = await prisma.tripRoute.create({
         data: {
           userId,
@@ -325,15 +333,20 @@ router.patch(
 
       // The photos come off their stations in the same transaction as the
       // move: a move that failed must not leave them unlinked.
-      const [route, detachedStationPhotos] = await prisma.$transaction(async (tx) => {
-        const detached = detach ? await detach(tx) : 0;
-        const updated = await tx.tripRoute.update({
-          where: { id: routeId },
-          data: { ...body, ...day },
-          include: ROUTE_SELECT,
-        });
-        return [updated, detached] as const;
-      });
+      const [route, detachedStationPhotos] = await prisma.$transaction(
+        async (tx) => {
+          const detached = detach ? await detach(tx) : 0;
+          const before = await shareSnapshot(tx, "roadtrip", routeId);
+          const updated = await tx.tripRoute.update({
+            where: { id: routeId },
+            data: { ...body, ...day },
+            include: ROUTE_SELECT,
+          });
+          await propagateWrite(tx, userId, "roadtrip", routeId, before);
+          return [updated, detached] as const;
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
       res.json({ route: toDto(route), detachedStationPhotos });
     } catch (error) {
       next(error);
@@ -392,12 +405,20 @@ router.delete(
           })
         ).map((s) => s.id);
         const before = await shareSnapshots(tx, "stop", released);
+        const roadtripGone = await shareSnapshot(tx, "roadtrip", routeId);
         await tx.tripStop.updateMany({
           where: { routeId, tripId: { not: null } },
-          data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
+          data: {
+            routeId: null,
+            routeOrderIdx: null,
+            lodgingStayId: null,
+            overnight: false,
+            shareKey: null,
+          },
         });
         await tx.tripRoute.delete({ where: { id: routeId } });
         await propagateWrites(tx, userId, "stop", released, before);
+        await propagateDelete(tx, userId, roadtripGone);
       });
 
       logger.info({ operation: "tour.route.delete", routeId });
@@ -574,6 +595,7 @@ router.put(
 
       const createdLegs = await prisma.$transaction(
         async (tx) => {
+          const roadtripBefore = await shareSnapshot(tx, "roadtrip", routeId);
           const members = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
           // Release first: `@@unique([routeId, routeOrderIdx])` would
           // collide with the old numbering otherwise.
@@ -613,7 +635,9 @@ router.put(
             where: { id: routeId },
             select: { mode: true },
           });
-          return recomputeLegs(tx, routeId, route.mode, ordered);
+          const legs = await recomputeLegs(tx, routeId, route.mode, ordered);
+          await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
+          return legs;
         },
         // Default interactive-transaction timeout is 5000ms. At the
         // 512-stop cap this loop is up to 512 awaited updates; comfortably

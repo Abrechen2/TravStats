@@ -67,6 +67,15 @@ export const travplanGuestsApi = {
   // The guest.
   session: async () => (await guestHttp.get<GuestSessionInfo>("/guest/session")).data,
   logout: async () => (await guestHttp.post<{ loggedOut: true }>("/guest/logout")).data,
+  /** The plan's trip as a `.travstats` file (spec §6.6, §6.7); read-only on the host. */
+  exportTrip: async (planId: string): Promise<{ blob: Blob; filename: string }> => {
+    const res = await guestHttp.get<Blob>("/guest/plans/" + planId + "/export", {
+      responseType: "blob",
+      timeout: 5 * 60 * 1000,
+    });
+    const match = /filename="([^"]+)"/.exec(String(res.headers["content-disposition"] ?? ""));
+    return { blob: res.data, filename: match?.[1] ?? "reise.travstats" };
+  },
   leave: async () => (await guestHttp.post<{ left: true }>("/guest/leave")).data,
   phoneToken: async (planId: string) =>
     (await guestHttp.post<{ token: string; expiresAt: string }>("/guest/plans/" + planId + "/pat"))

@@ -23,6 +23,9 @@ import type {
   LodgingStayFactField,
   RailFactField,
   RentalFactField,
+  RoadtripFactField,
+  RoadtripLegFactField,
+  RoadtripStationFactField,
   StopFactField,
   TripFactField,
 } from "../../facts";
@@ -39,6 +42,7 @@ export const CATALOGUE_REFS = {
   bus: {},
   ferry: {},
   rental: { pickupAirportId: "pickupAirport", returnAirportId: "returnAirport" },
+  roadtrip: {},
   stop: {},
 } as const satisfies Readonly<Record<ShareEntity, Readonly<Record<string, string>>>>;
 export const CRUISE_STOP_REFS = { portId: "port" } as const;
@@ -57,6 +61,7 @@ export const PSEUDO_FACTS = {
   bus: [],
   ferry: [],
   rental: [],
+  roadtrip: ["stations", "routeLegs"],
   stop: ["sourceRef", "lodgingStayRef"],
 } as const satisfies Readonly<Record<ShareEntity, readonly string[]>>;
 
@@ -76,7 +81,12 @@ export const airportRef = z.strictObject({
 });
 /** The entry a timeline stop wraps, by its share key; resolved like locally (stops come last). */
 export const entryRef = z.strictObject({
-  entity: z.enum(SHARE_ENTITIES.filter((e) => e !== "stop") as [ShareEntity, ...ShareEntity[]]),
+  entity: z.enum(
+    SHARE_ENTITIES.filter((e) => e !== "stop" && e !== "roadtrip") as [
+      ShareEntity,
+      ...ShareEntity[],
+    ]
+  ),
   shareKey: z.string().uuid(),
 });
 export type StationRef = z.infer<typeof stationRef>;
@@ -363,6 +373,51 @@ export const STOP_SHAPE = {
   lodgingStayRef: optEntry,
 } as const satisfies Shape<StopFactField | "sourceRef" | "lodgingStayRef">;
 
+const uuid = C.readOnly(z.string().uuid());
+
+export const ROADTRIP_STATION_SHAPE = {
+  key: uuid,
+  routeOrderIdx: C.int,
+  orderIdx: C.int,
+  domain: C.optText(40),
+  title: C.text(300),
+  description: C.optText(5_000),
+  startDate: C.optInstant,
+  endDate: C.optInstant,
+  lat: C.optLatitude,
+  lon: C.optLongitude,
+  startUtc: C.optInstant,
+  endUtc: C.optInstant,
+  stopZone: C.timeZone,
+  precision: C.optText(40),
+  overnight: C.bool,
+  viaPoint: C.bool,
+  countryVisitKind: C.text(40),
+  lodgingStayRef: optEntry,
+} as const satisfies Shape<RoadtripStationFactField | "key" | "lodgingStayRef">;
+
+export const ROADTRIP_LEG_SHAPE = {
+  fromKey: uuid,
+  toKey: uuid,
+  ferryKey: C.readOnly(z.string().uuid().nullable()),
+  distanceKm: C.num,
+  source: C.text(40),
+  mode: C.text(40),
+  confidence: C.text(40),
+  waypoints: C.geometry,
+  drivingMinutes: C.optInt,
+} as const satisfies Shape<RoadtripLegFactField | "fromKey" | "toKey" | "ferryKey">;
+
+export const ROADTRIP_SHAPE = {
+  name: C.name(300),
+  mode: C.text(40),
+  orderIdx: C.int,
+  vehicle: C.optText(40),
+  vehicleName: C.optText(200),
+  stations: C.list(C.object(ROADTRIP_STATION_SHAPE), 400),
+  routeLegs: C.list(C.object(ROADTRIP_LEG_SHAPE), 800),
+} as const satisfies Shape<RoadtripFactField | "stations" | "routeLegs">;
+
 /** The trip's own facts, as an offer carries them (`TRIP_FACT_FIELDS`). */
 export const TRIP_SHAPE = {
   name: C.name(200),
@@ -389,6 +444,7 @@ export const ENTRY_SHAPES: Readonly<Record<ShareEntity, Readonly<Record<string, 
   bus: BUS_SHAPE,
   ferry: FERRY_SHAPE,
   rental: RENTAL_SHAPE,
+  roadtrip: ROADTRIP_SHAPE,
   stop: STOP_SHAPE,
 };
 

@@ -136,7 +136,13 @@ export async function pruneRoutes(
     await handExpensesToTrips(tx, ids);
     await tx.tripStop.updateMany({
       where: { routeId: { in: ids }, tripId: { not: null } },
-      data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
+      data: {
+        routeId: null,
+        routeOrderIdx: null,
+        lodgingStayId: null,
+        overnight: false,
+        shareKey: null,
+      },
     });
     await tx.tripRoute.deleteMany({ where: { id: { in: ids } } });
   });

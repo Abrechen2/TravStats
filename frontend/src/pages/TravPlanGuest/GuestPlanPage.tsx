@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { Button, Card, EmptyState } from "../../components/ui";
 import { useTranslation } from "../../hooks/useTranslation";
+import { downloadBlob } from "../../lib/export";
 import { GUEST_ENDED_EVENT, setGuestSession } from "../../lib/api/guestHttp";
 import { travplanGuestsApi, type GuestSessionInfo } from "../../lib/api/travplanGuests";
 import PlanContent, { PLAN_SECTIONS } from "../TravPlan/PlanContent";
@@ -62,6 +63,18 @@ export default function GuestPlanPage() {
       setError(t(guestErrorKey(cause), { defaultValue: t("errors.unknown") }));
     }
   }, [navigate, t]);
+  const saveTrip = useCallback(
+    async (planId: string) => {
+      try {
+        const file = await travplanGuestsApi.exportTrip(planId);
+        downloadBlob(file.blob, file.filename);
+        setError("");
+      } catch (cause) {
+        setError(t(guestErrorKey(cause), { defaultValue: t("guests.exportFailed") }));
+      }
+    },
+    [t]
+  );
   if (ended)
     return (
       <GuestFrame>
@@ -105,6 +118,7 @@ export default function GuestPlanPage() {
               {t("guests.phone.open")}
             </Button>
           )}
+          <Button onClick={() => void saveTrip(info.planId)}>{t("guests.export")}</Button>
           <Button variant="danger" onClick={() => void leave()}>
             {t("guests.leave")}
           </Button>
@@ -115,6 +129,7 @@ export default function GuestPlanPage() {
             <p className="t-caption">{t("guests.phone.hint")}</p>
           </div>
         )}
+        <p className="t-caption">{t("guests.exportHint")}</p>
         {error && <PlanNotice tone="bad">{error}</PlanNotice>}
       </Card>
       <PlanContent

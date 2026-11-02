@@ -229,6 +229,7 @@
     "bus": "die Busfahrt",
     "ferry": "die Fährfahrt",
     "rental": "den Mietwagen",
+    "roadtrip": "den Roadtrip",
     "stop": "den Stopp"
   },
   "values": {
@@ -315,6 +316,12 @@
     "endZone": "Zeitzone Ende",
     "stops": "Hafenstopps",
     "legs": "Seestrecken",
+    "name": "Name",
+    "mode": "Fortbewegung",
+    "vehicle": "Fahrzeug",
+    "vehicleName": "Fahrzeugname",
+    "stations": "Stationen",
+    "routeLegs": "Streckenabschnitte",
     "operator": "Betreiber",
     "trainCategory": "Zuggattung",
     "trainNumber": "Zugnummer",
@@ -780,6 +787,8 @@
         "ferryJourneys_other": "{{count}} Fährfahrten",
         "rentals_one": "{{count}} Mietwagen",
         "rentals_other": "{{count}} Mietwagen",
+        "roadtrips_one": "{{count}} Roadtrip",
+        "roadtrips_other": "{{count}} Roadtrips",
         "stops_one": "{{count}} Station",
         "stops_other": "{{count}} Stationen"
       },

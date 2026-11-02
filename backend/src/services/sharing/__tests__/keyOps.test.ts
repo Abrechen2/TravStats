@@ -55,7 +55,7 @@ describe("key operations over every registered type", () => {
     bus: await prisma.busJourney.create({ data: ride(tripId) }),
     ferry: await prisma.ferryJourney.create({ data: ride(tripId) }),
   });
-  /** A roadtrip station and a route correction: on the trip, never keyed (S1 copies no roadtrip). */
+  /** A roadtrip with a station and a route correction: the roadtrip is keyed, its stations ride in it (keyed when it is read). */
   const addStations = async (tripId: string) => {
     const route = await prisma.tripRoute.create({
       data: { userId: anna.id, tripId, name: "Südschweden", mode: "car", kind: "roadtrip" },
@@ -120,6 +120,15 @@ describe("key operations over every registered type", () => {
   it("finds a user's rows on a shared trip for the bulk sync", async () => {
     const full = await makeFullTrip(anna);
     await addRides(full.trip.id);
+    await prisma.tripRoute.create({
+      data: {
+        userId: anna.id,
+        tripId: full.trip.id,
+        name: "Südschweden",
+        mode: "car",
+        kind: "roadtrip",
+      },
+    });
     const group = await prisma.tripShareGroup.create({ data: { createdById: anna.id } });
     await prisma.trip.update({ where: { id: full.trip.id }, data: { shareGroupId: group.id } });
     for (const entity of SHARE_ENTITIES) {

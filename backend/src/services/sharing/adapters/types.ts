@@ -27,8 +27,9 @@ export interface SharedRow {
    */
   zones: Record<string, string | null>;
   /**
-   * Never keyed on its own: a roadtrip station or route correction (S1
-   * copies no roadtrip). Already keyed, it is still kept in step.
+   * Never keyed on its own: a tour, or a stop that is a roadtrip station or
+   * route correction (those travel inside their roadtrip). Already keyed, it is
+   * still kept in step.
    */
   excluded?: boolean;
 }

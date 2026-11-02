@@ -96,6 +96,8 @@ export const DERIVE: Readonly<Record<ShareEntity, DeriveCopy>> = {
     const status = deriveRentalStatus({ ...r, current: r.status });
     if (status !== r.status) await c.rentalBooking.update({ where: { id }, data: { status } });
   },
+  // A roadtrip caches no status: its trip is re-derived by the caller.
+  async roadtrip() {},
   // A timeline stop caches nothing.
   async stop() {},
 };

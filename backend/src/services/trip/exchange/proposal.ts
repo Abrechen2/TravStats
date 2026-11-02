@@ -275,6 +275,30 @@ async function proposeEntries(
       day,
     });
   }
+  for (const r of file.roadtrips) {
+    // A roadtrip of the same name on the trip is the one already imported.
+    const named = tripId
+      ? await prisma.tripRoute.findMany({
+          where: { tripId, userId, kind: "roadtrip", name: r.name },
+          select: {
+            id: true,
+            stops: { orderBy: { routeOrderIdx: "asc" }, select: { title: true } },
+          },
+        })
+      : [];
+    // Same name AND same stations: a different route with the same name is a new one.
+    const titles = r.stations.map((s) => s.title).join("\u0000");
+    const same = named.find((n) => n.stops.map((s) => s.title).join("\u0000") === titles) ?? null;
+    entries.push({
+      key: r.key,
+      kind: "roadtrip",
+      ...(same
+        ? { action: "skip" as const, id: same.id, reason: "duplicate" as const }
+        : { action: "create" as const, id: null }),
+      label: r.name,
+      day: r.stations.map((s) => s.startDate?.slice(0, 10) ?? null).find((d) => d !== null) ?? null,
+    });
+  }
   const placeName = new Map(file.places.map((p) => [p.key, p.name]));
   for (const v of file.visits) {
     const day = visitDay(v);

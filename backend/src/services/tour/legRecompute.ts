@@ -49,6 +49,7 @@ export async function recomputeLegs(
   );
 
   if (plan.deleteIds.length > 0) {
+    // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
     await tx.tripRouteLeg.deleteMany({ where: { id: { in: plan.deleteIds } } });
   }
 
@@ -89,6 +90,7 @@ export async function recomputeLegs(
     };
   });
   if (rows.length > 0) {
+    // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
     await tx.tripRouteLeg.createMany({ data: rows });
   }
   return plan.create;
@@ -132,6 +134,7 @@ export async function refreshLegsForMovedStop(tx: Tx, stopId: string): Promise<v
   for (const leg of legs) {
     if (leg.source !== "straight") {
       // Drawn by hand: keep it, but stop calling it trustworthy.
+      // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
       await tx.tripRouteLeg.update({
         where: { id: leg.id },
         data: { confidence: "low" },
@@ -154,6 +157,7 @@ export async function refreshLegsForMovedStop(tx: Tx, stopId: string): Promise<v
       continue;
     }
 
+    // share-exempt: leg bookkeeping inside a roadtrip write; the caller propagates the roadtrip
     await tx.tripRouteLeg.update({
       where: { id: leg.id },
       data: {
