@@ -86,7 +86,7 @@ CREATE UNIQUE INDEX "mail_intake_senders_user_id_address_key" ON "mail_intake_se
 CREATE INDEX "mail_intake_messages_user_id_status_idx" ON "mail_intake_messages"("user_id", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "mail_intake_messages_source_id_message_id_key" ON "mail_intake_messages"("source_id", "message_id");
+CREATE UNIQUE INDEX "mail_intake_messages_source_id_message_id_user_id_key" ON "mail_intake_messages"("source_id", "message_id", "user_id");
 
 -- AddForeignKey
 ALTER TABLE "mail_intake_sources" ADD CONSTRAINT "mail_intake_sources_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

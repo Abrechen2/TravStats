@@ -94,6 +94,17 @@ describe("IDLE watchers", () => {
     expect(box.watchers).toHaveLength(0);
   });
 
+  it("closes a running watcher once its source is switched off or the admin disables the service", async () => {
+    const box = new WatchingMailbox();
+    await mk();
+    await ensureWatchers(box);
+    expect(activeWatcherCount()).toBe(1);
+    await updatePolicy((p) => ({ ...p, disabled: [...p.disabled, "mailIntake"] }));
+    await ensureWatchers(box);
+    expect(box.watchers[0].signal.aborted).toBe(true);
+    expect(activeWatcherCount()).toBe(0);
+  });
+
   it("aborts its connections on stop", async () => {
     const box = new WatchingMailbox();
     await mk();

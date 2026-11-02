@@ -87,13 +87,26 @@ export async function runSource(
   fetcher: MailFetcher = imapFetcher
 ): Promise<RunResult> {
   const empty: RunResult = { ran: false, seen: 0, proposed: 0 };
+  // Taken before the first await: two callers (poll, IDLE, "check now") must not both enter.
   if (running.has(sourceId)) return { ...empty, skipped: "running" };
+  running.add(sourceId);
+  try {
+    return await runLocked(sourceId, fetcher, empty);
+  } finally {
+    running.delete(sourceId);
+  }
+}
+
+async function runLocked(
+  sourceId: string,
+  fetcher: MailFetcher,
+  empty: RunResult
+): Promise<RunResult> {
   const source = await prisma.mailIntakeSource.findUnique({ where: { id: sourceId } });
   if (!source) return { ...empty, skipped: "missing" };
   if (!source.enabled) return { ...empty, skipped: "disabled" };
   if (await isServiceOff(source)) return { ...empty, skipped: "service_off" };
 
-  running.add(sourceId);
   const startedAt = new Date();
   const result: RunResult = { ran: true, seen: 0, proposed: 0 };
   try {
@@ -129,14 +142,11 @@ export async function runSource(
         }
         await session.markProcessed(item.uid);
         lastUid = item.uid;
-        await prisma.mailIntakeSource.update({
-          where: { id: source.id },
-          data: { lastUid, uidValidity: session.uidValidity },
-        });
+        await saveCursor(source, { lastUid, uidValidity: session.uidValidity });
       }
-      await prisma.mailIntakeSource.update({
-        where: { id: source.id },
-        data: { uidValidity: session.uidValidity, ...(restart ? { lastUid } : {}) },
+      await saveCursor(source, {
+        uidValidity: session.uidValidity,
+        ...(restart ? { lastUid } : {}),
       });
     });
     await prisma.mailIntakeSource.update({
@@ -151,10 +161,28 @@ export async function runSource(
       where: { id: source.id },
       data: { lastRunAt: startedAt, lastError: kind, lastErrorAt: new Date() },
     });
-  } finally {
-    running.delete(sourceId);
   }
   return result;
+}
+
+/**
+ * Writes the scan position only while the source still points at the mailbox
+ * that was read: an owner who changed host, user or folder mid-run reset the
+ * cursor on purpose, and the old mailbox's UIDs must not overwrite it.
+ */
+async function saveCursor(
+  source: SourceRow,
+  data: { lastUid?: number; uidValidity: string }
+): Promise<void> {
+  await prisma.mailIntakeSource.updateMany({
+    where: {
+      id: source.id,
+      host: source.host,
+      username: source.username,
+      folder: source.folder,
+    },
+    data,
+  });
 }
 
 async function recordTooLarge(
@@ -163,16 +191,16 @@ async function recordTooLarge(
   uid: number,
   uidValidity: string
 ): Promise<void> {
-  await prisma.mailIntakeMessage.upsert({
-    where: { sourceId_messageId: { sourceId, messageId: `uid:${uidValidity}:${uid}` } },
-    create: {
-      sourceId,
-      userId,
-      messageId: `uid:${uidValidity}:${uid}`,
-      uid,
-      status: "failed",
-      reason: "mail_too_large",
-    },
-    update: {},
+  const messageId = `uid:${uidValidity}:${uid}`;
+  const existing = await prisma.mailIntakeMessage.findFirst({
+    where: { sourceId, messageId, userId },
+    select: { id: true },
+  });
+  if (existing) return;
+  // On the instance mailbox the recipient is unknown (the mail was not opened), so the
+  // row has no owner: it shows only in the admin's logs, not in anyone's inbox.
+  logger.warn({ operation: "mail_intake_mail_too_large", sourceId, uid, owned: userId !== null });
+  await prisma.mailIntakeMessage.create({
+    data: { sourceId, userId, messageId, uid, status: "failed", reason: "mail_too_large" },
   });
 }

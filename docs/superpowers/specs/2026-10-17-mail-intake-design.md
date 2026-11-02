@@ -179,7 +179,7 @@ or forbid for accounts like any other.
 | 3 | Pipeline: Document, parse, classify, proposal | built |
 | 4 | Settings + admin UI, inbox card, DE/EN | built |
 | 5 | Security: allowed senders, Authentication-Results, token revoke | built |
-| 6 | Browser check (golden path, failures reaching the inbox) | open |
+| 6 | Browser check (golden path, failures reaching the inbox) | open (not done by the builder) |
 
 ### Deviations from the sketch above, as built
 
@@ -194,6 +194,12 @@ or forbid for accounts like any other.
   downloading.
 - A mail rejected for an unknown sender is not stored; "allow this sender" takes effect for the
   next forward.
+- Not behind a beta key: the service is off per mailbox until its owner switches it on, and the admin can
+  switch the whole service off (catalogue id `mailIntake`).
+- "Übernehmen" hands the original mail to the existing import dialog; filing that original with the created
+  entry is not automatic yet. A proposal for a package, place, bus or ferry only offers "Mail ansehen".
+- Certificates are always verified: a mail server with a self-signed certificate cannot be used.
+- A mail over the size cap on the instance mailbox has no known owner (it is not opened) and is only logged.
 
 ## 10. Build order once decided
 

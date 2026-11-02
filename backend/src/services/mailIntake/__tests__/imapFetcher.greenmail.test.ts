@@ -171,7 +171,7 @@ suite("IMAP fetcher against GreenMail", () => {
         deliveredTo: `trips+${token}@example.org`,
         from: "me@gmail.example",
         messageId: "<fw@x>",
-        authResults: "mx.example.org; dmarc=pass",
+        authResults: "mx.example.org; dmarc=pass header.from=gmail.example",
       })
     );
     const source = await mkSource();

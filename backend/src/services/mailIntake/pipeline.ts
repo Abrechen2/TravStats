@@ -6,7 +6,7 @@
  * nowhere. Nothing here creates an entry: a proposal becomes one only when the
  * user confirms it (decision 2).
  */
-import type { Prisma } from "../../prisma";
+import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { extractEmailFromFile } from "../emailExtractor";
 import { parseDocument, type ParsedDocumentBody } from "../parsing/parseDocument";
@@ -96,28 +96,32 @@ async function record(
   messageId: string,
   result: Recorded
 ): Promise<MailOutcome> {
-  try {
+  const data = {
+    uid: input.uid,
+    receivedAt: headers?.sentAt ?? input.internalDate,
+    fromAddress: headers?.from ?? null,
+    subject: headers?.subject ?? null,
+    documentId: result.documentId ?? null,
+    status: result.status,
+    reason: result.reason ?? null,
+    domain: result.domain ?? null,
+    summary: result.summary ?? Prisma.JsonNull,
+    authResult: headers?.dmarc ?? null,
+    dismissedAt: null,
+  };
+  // The key is (source, Message-ID, user): the same forwarded mail reaching two
+  // accounts is two mails, and a rejected one that arrives again (the sender has
+  // been allowed since) replaces its rejection instead of being swallowed by it.
+  const existing = await prisma.mailIntakeMessage.findFirst({
+    where: { sourceId: source.id, messageId, userId: result.userId },
+    select: { id: true },
+  });
+  if (existing) {
+    await prisma.mailIntakeMessage.update({ where: { id: existing.id }, data });
+  } else {
     await prisma.mailIntakeMessage.create({
-      data: {
-        sourceId: source.id,
-        userId: result.userId,
-        messageId,
-        uid: input.uid,
-        receivedAt: headers?.sentAt ?? input.internalDate,
-        fromAddress: headers?.from ?? null,
-        subject: headers?.subject ?? null,
-        documentId: result.documentId ?? null,
-        status: result.status,
-        reason: result.reason ?? null,
-        domain: result.domain ?? null,
-        ...(result.summary ? { summary: result.summary } : {}),
-        authResult: headers?.dmarc ?? null,
-      },
+      data: { ...data, sourceId: source.id, userId: result.userId, messageId },
     });
-  } catch (error) {
-    // A parallel run recorded the same mail first: idempotent, not an error.
-    if ((error as { code?: string }).code === "P2002") return { status: "skipped", reason: null };
-    throw error;
   }
   return { status: result.status, reason: result.reason ?? null };
 }
@@ -173,13 +177,17 @@ export async function processMail(source: SourceRef, input: MailInput): Promise<
   }
   const messageId = headers.messageId ?? syntheticMessageId(input);
 
-  const seen = await prisma.mailIntakeMessage.findUnique({
-    where: { sourceId_messageId: { sourceId: source.id, messageId } },
-    select: { id: true },
-  });
-  if (seen) return { status: "skipped", reason: null };
-
   const verdict = await authorise(source, headers);
+  const seen = await prisma.mailIntakeMessage.findFirst({
+    where: { sourceId: source.id, messageId, userId: verdict.userId },
+    select: { status: true },
+  });
+  // A mail already taken is skipped. A mail that was only REJECTED is judged again:
+  // the sender may have been allowed since, and a forward that keeps its Message-ID
+  // must not be silenced by its own earlier rejection.
+  if (seen && (seen.status !== "rejected" || "reason" in verdict)) {
+    return { status: "skipped", reason: null };
+  }
   if ("reason" in verdict) {
     // Rejected mail is logged and never parsed or stored (spec §4/§5).
     return record(source, input, headers, messageId, {
@@ -224,7 +232,15 @@ export async function processMail(source: SourceRef, input: MailInput): Promise<
       userId,
     });
   }
-  if (!created) {
+  const prior = created
+    ? null
+    : await prisma.mailIntakeMessage.findFirst({
+        where: { documentId, userId },
+        select: { id: true },
+      });
+  // Same bytes already kept AND already recorded: a duplicate. Kept but never recorded
+  // (a crash between the two) is parsed now, not hidden behind a "duplicate".
+  if (prior) {
     return record(source, input, headers, messageId, {
       status: "duplicate",
       userId,

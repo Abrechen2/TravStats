@@ -228,10 +228,12 @@ describe("mail intake run (forgejo#313)", () => {
       // a re-delivered copy under a new Message-ID header still hashes differently, so
       // simulate identical bytes by reusing the stored document's content.
       const doc = await prisma.document.findFirstOrThrow({ where: { userId } });
-      await prisma.mailIntakeMessage.deleteMany({});
+      // The first delivery stays recorded under another id; the same bytes arrive again.
+      await prisma.mailIntakeMessage.updateMany({ data: { messageId: "<recorded-earlier@x>" } });
       await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
       await runSource(personalId, box);
-      const [row] = await messages();
+      const rows = await messages();
+      const row = rows.find((r) => r.messageId !== "<recorded-earlier@x>")!;
       expect(row).toMatchObject({ status: "duplicate", documentId: doc.id });
     });
 
@@ -241,6 +243,49 @@ describe("mail intake run (forgejo#313)", () => {
       const result = await runSource(personalId, box);
       expect(result.error).toBeUndefined();
       expect(await messages()).toHaveLength(1);
+    });
+  });
+
+  describe("review findings", () => {
+    it("a kept mail whose outcome was never recorded (a crash in between) is parsed, not hidden as a duplicate", async () => {
+      const raw = buildMail({ messageId: "<crash@x>" });
+      box.add({ uid: 1, raw });
+      await runSource(personalId, box);
+      // Simulate the crash: the document is there, the outcome row is not.
+      await prisma.mailIntakeMessage.deleteMany({});
+      await prisma.mailIntakeSource.update({ where: { id: personalId }, data: { lastUid: 0 } });
+      parseDocument.mockClear();
+      await runSource(personalId, box);
+      expect((await messages())[0]).toMatchObject({ status: "proposed" });
+      expect(parseDocument).toHaveBeenCalledTimes(1);
+      expect(await prisma.document.count({ where: { userId } })).toBe(1);
+    });
+
+    it("two callers at once: one runs, the other is told a run is in progress", async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<c@x>" }) });
+      const [a, b] = await Promise.all([runSource(personalId, box), runSource(personalId, box)]);
+      expect([a.skipped ?? null, b.skipped ?? null].sort()).toEqual([null, "running"]);
+      expect(await messages()).toHaveLength(1);
+    });
+
+    it("a source re-pointed to another mailbox during a run keeps its reset cursor", async () => {
+      box.add({ uid: 7, raw: buildMail({ messageId: "<x@x>" }) });
+      const original = box.withFolder.bind(box);
+      box.withFolder = (async (conn: never, run: never) =>
+        original(conn, (async (session: { fetchSource: (...a: never[]) => unknown }) => {
+          const fetchSource = session.fetchSource.bind(session);
+          session.fetchSource = (async (...args: never[]) => {
+            await prisma.mailIntakeSource.update({
+              where: { id: personalId },
+              data: { host: "other.example.org", lastUid: 0, uidValidity: null },
+            });
+            return fetchSource(...args);
+          }) as never;
+          return (run as (s: unknown) => unknown)(session);
+        }) as never)) as never;
+      await runSource(personalId, box);
+      const row = await prisma.mailIntakeSource.findUniqueOrThrow({ where: { id: personalId } });
+      expect(row).toMatchObject({ host: "other.example.org", lastUid: 0, uidValidity: null });
     });
   });
 
@@ -618,6 +663,42 @@ describe("mail intake run (forgejo#313)", () => {
       box.add({ uid: 1, raw });
       await runSource(instanceId, box);
       expect((await messages())[0].reason).toBe("dmarc_failed");
+    });
+
+    it("a rejected mail that arrives again with the SAME Message-ID, after the sender was allowed, is taken", async () => {
+      const raw = forwarded({ messageId: "<same-id@x>" });
+      box.add({ uid: 1, raw });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("sender_not_allowed");
+
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 2, raw });
+      await runSource(instanceId, box);
+      const rows = await messages();
+      expect(rows).toHaveLength(1); // the rejection was replaced, not duplicated
+      expect(rows[0]).toMatchObject({ status: "proposed", uid: 2 });
+    });
+
+    it("the same Message-ID forwarded by two accounts is two mails, not one", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      await prisma.mailIntakeSender.create({
+        data: { userId: otherUserId, address: "me@gmail.example" },
+      });
+      const otherToken = await rotateToken(otherUserId);
+      box.add({ uid: 1, raw: forwarded({ messageId: "<shared@x>" }) });
+      box.add({
+        uid: 2,
+        raw: forwarded({
+          messageId: "<shared@x>",
+          deliveredTo: `trips+${otherToken}@example.org`,
+          body: "other copy",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((r) => [r.userId, r.status])).toEqual([
+        [userId, "proposed"],
+        [otherUserId, "proposed"],
+      ]);
     });
 
     it("a revoked token stops working at once", async () => {

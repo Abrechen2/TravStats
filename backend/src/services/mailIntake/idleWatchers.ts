@@ -23,6 +23,11 @@ export function activeWatcherCount(): number {
 
 export async function ensureWatchers(fetcher: MailFetcher = imapFetcher): Promise<void> {
   const sources = await prisma.mailIntakeSource.findMany({ where: { enabled: true } });
+  // A watcher outlives a switch: close the ones whose source is gone, off, or whose
+  // service the admin has switched off since, so no authenticated connection lingers.
+  const usable = new Set<string>();
+  for (const source of sources) if (!(await isServiceOff(source))) usable.add(source.id);
+  for (const id of [...active.keys()]) if (!usable.has(id)) stopWatcher(id);
   for (const source of sources) {
     if (active.has(source.id) || active.size >= MAX_WATCHERS) continue;
     if (await isServiceOff(source)) continue;

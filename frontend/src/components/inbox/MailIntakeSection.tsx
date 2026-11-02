@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { api } from "../../lib/api/client";
+import { API_URL, api } from "../../lib/api/client";
 import { logger } from "../../lib/logger";
 import { formatDate } from "../../lib/displayFormat";
 import { mailIntakeApi, type MailInbox, type MailInboxItem } from "../../lib/api/mailIntake";
@@ -136,6 +136,18 @@ export default function MailIntakeSection(): JSX.Element | null {
                 <button type="button" className="btn-primary" onClick={() => void review(item)}>
                   {t("mailIntake:inbox.review")}
                 </button>
+              )}
+              {item.status === "proposed" && !openableDomain(item.domain) && item.documentId && (
+                // Package, place, bus and ferry readings have no dialog to take the mail:
+                // show the original so the booking can be entered by hand.
+                <a
+                  href={`${API_URL}/api/v1/documents/${item.documentId}/file?view=text`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--ts-accent)", textDecoration: "underline" }}
+                >
+                  {t("mailIntake:inbox.openMail")}
+                </a>
               )}
               {item.reason === "sender_not_allowed" && item.from && (
                 <button

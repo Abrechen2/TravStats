@@ -6691,7 +6691,7 @@ model MailIntakeMessage {
   user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   document Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
-  @@unique([sourceId, messageId])
+  @@unique([sourceId, messageId, userId])
   @@index([userId, status])
   @@map("mail_intake_messages")
 }

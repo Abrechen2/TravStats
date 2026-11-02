@@ -93,7 +93,8 @@
     "rejectedTitle": "Mail abgelehnt",
     "failedTitle": "Mail nicht gelesen",
     "nothingTitle": "Nichts erkannt",
-    "sourceProblem": "Dein Mail-Ordner konnte nicht gelesen werden:"
+    "sourceProblem": "Dein Mail-Ordner konnte nicht gelesen werden:",
+    "openMail": "Mail ansehen"
   },
   "reasons": {
     "mail_too_large": "Die Mail ist zu groß (mehr als 2 MB).",

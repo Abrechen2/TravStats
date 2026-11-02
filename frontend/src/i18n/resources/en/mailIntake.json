@@ -93,7 +93,8 @@
     "rejectedTitle": "Mail rejected",
     "failedTitle": "Mail not read",
     "nothingTitle": "Nothing recognised",
-    "sourceProblem": "Your mail folder could not be read:"
+    "sourceProblem": "Your mail folder could not be read:",
+    "openMail": "View mail"
   },
   "reasons": {
     "mail_too_large": "The mail is too large (over 2 MB).",
