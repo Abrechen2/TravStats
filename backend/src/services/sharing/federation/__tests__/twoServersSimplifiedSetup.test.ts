@@ -459,6 +459,8 @@ describe("a trip offered to a person on a connected server", () => {
     expect(member).toMatchObject({ state: "invited", origin: B });
     const offers = await b.offerInbox.listReceivedOffers(ben);
     expect(offers).toHaveLength(1);
+    // The inbox badge counts exactly the offers the list shows (forgejo#404 contract).
+    expect(await b.offerInbox.countReceivedOffers(ben)).toBe(1);
     // Nothing is in Ben's account before he answers.
     expect(await b.prisma.trip.count({ where: { userId: ben } })).toBe(0);
   });
@@ -472,5 +474,6 @@ describe("a trip offered to a person on a connected server", () => {
       "SHARE_REMOTE_PERSON_UNKNOWN"
     );
     expect(await b.offerInbox.listReceivedOffers(ben)).toHaveLength(0);
+    expect(await b.offerInbox.countReceivedOffers(ben)).toBe(0);
   });
 });

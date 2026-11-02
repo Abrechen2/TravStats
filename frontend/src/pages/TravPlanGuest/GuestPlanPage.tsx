@@ -11,9 +11,19 @@ import { PlanActions, PlanNotice } from "../TravPlan/planLayout";
 import { GuestFrame } from "./GuestFrame";
 import { guestErrorKey } from "./guestErrors";
 
-/** What the Companion reads from the QR: the host, the one plan and its phone token. */
-export const phonePayload = (host: string, planId: string, token: string): string =>
-  "travstats://guest?" + new URLSearchParams({ host, plan: planId, token }).toString();
+/**
+ * What the Companion scans in-app (it is no URL, so the OS opens nothing and a screenshot holds
+ * only a code that works once, for five minutes): the host, the one plan and a claim code.
+ */
+export const phonePayload = (
+  host: string,
+  planId: string,
+  code: string,
+  hostName: string
+): string => JSON.stringify({ v: 1, k: "guest", u: host, p: planId, c: code, n: hostName });
+
+const minutesLeft = (expiresAt: string, now = Date.now()): number =>
+  Math.max(1, Math.ceil((new Date(expiresAt).getTime() - now) / 60_000));
 
 /**
  * Guest mode (spec 2026-10-17 §6.5 step 5): the host's own plan screens for a person from another
@@ -26,7 +36,7 @@ export default function GuestPlanPage() {
   const navigate = useNavigate();
   const [info, setInfo] = useState<GuestSessionInfo | null>(null);
   const [ended, setEnded] = useState<string | null>(null);
-  const [phone, setPhone] = useState<string | null>(null);
+  const [phone, setPhone] = useState<{ payload: string; expiresAt: string } | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
     let live = true;
@@ -106,9 +116,17 @@ export default function GuestPlanPage() {
             <Button
               onClick={() =>
                 void travplanGuestsApi
-                  .phoneToken(info.planId)
-                  .then((pat) =>
-                    setPhone(phonePayload(window.location.origin, info.planId, pat.token))
+                  .pairingCode(info.planId)
+                  .then((claim) =>
+                    setPhone({
+                      payload: phonePayload(
+                        window.location.origin,
+                        info.planId,
+                        claim.code,
+                        info.hostName
+                      ),
+                      expiresAt: claim.expiresAt,
+                    })
                   )
                   .catch((cause: unknown) =>
                     setError(t(guestErrorKey(cause), { defaultValue: t("errors.unknown") }))
@@ -125,8 +143,11 @@ export default function GuestPlanPage() {
         </PlanActions>
         {phone && (
           <div>
-            <QRCodeSVG value={phone} size={192} />
+            <QRCodeSVG value={phone.payload} size={192} />
             <p className="t-caption">{t("guests.phone.hint")}</p>
+            <p className="t-caption">
+              {t("guests.phone.expires", { minutes: minutesLeft(phone.expiresAt) })}
+            </p>
           </div>
         )}
         <p className="t-caption">{t("guests.exportHint")}</p>

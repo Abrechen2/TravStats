@@ -33,6 +33,8 @@ export interface GuestPrincipal {
   credentialId: string;
   kind: "session" | "pat";
   origin: string;
+  /** When this credential lapses (a session's is the slid date). */
+  expiresAt: Date;
   /** Set when this request slid the session's expiry: the cookie is re-sent with it. */
   renewedUntil?: Date;
 }
@@ -88,7 +90,12 @@ async function mintPat(
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM travel_plan_members WHERE id = ${input.memberId} FOR UPDATE`;
     const open = await tx.travelPlanGuestSession.count({
-      where: { memberId: input.memberId, kind: "pat", expiresAt: { gt: new Date() } },
+      where: {
+        memberId: input.memberId,
+        kind: "pat",
+        expiresAt: { gt: new Date() },
+        revokedAt: null,
+      },
     });
     if (open >= MAX_PATS_PER_MEMBER)
       throw new AppError("Too many phone tokens", 409, "PLAN_GUEST_PAT_LIMIT");
@@ -123,6 +130,8 @@ export async function authenticateCredential(
     },
   });
   if (!row || row.kind !== kind) throw refuse("PLAN_GUEST_REQUIRED");
+  // Ended by the owner or by the guest: a tombstone, so the app can say "removed", not "sign in".
+  if (row.revokedAt) throw refuse("PLAN_GUEST_REVOKED");
   // Federation switched off ends guest access like an unpinned server does.
   try {
     await guestIdentity();
@@ -157,6 +166,7 @@ export async function authenticateCredential(
     credentialId: row.id,
     kind,
     origin: member.remoteOrigin,
+    expiresAt: renewedUntil ?? row.expiresAt,
     renewedUntil,
   };
 }
@@ -175,8 +185,16 @@ export async function endGuestAccess(
   status: "revoked" | "left" = "revoked"
 ): Promise<number> {
   if (!memberIds.length) return 0;
-  const [, , members] = await prisma.$transaction([
-    prisma.travelPlanGuestSession.deleteMany({ where: { memberId: { in: memberIds } } }),
+  const now = new Date();
+  const [, , , members] = await prisma.$transaction([
+    // Tombstones, not deletions: the credential keeps answering PLAN_GUEST_REVOKED until it would
+    // have expired (the sweep removes it then). It can never be valid again, because the door
+    // checks `revokedAt` before anything else.
+    prisma.travelPlanGuestSession.updateMany({
+      where: { memberId: { in: memberIds }, revokedAt: null },
+      data: { revokedAt: now },
+    }),
+    prisma.travelPlanGuestClaim.deleteMany({ where: { memberId: { in: memberIds } } }),
     prisma.travelPlanGuestInvite.deleteMany({ where: { memberId: { in: memberIds } } }),
     prisma.travelPlanMember.updateMany({
       where: { id: { in: memberIds }, kind: "remote", status: { in: ["invited", "active"] } },
@@ -201,16 +219,17 @@ export async function endGuestsOfOrigin(origin: string | null): Promise<number> 
 
 /** A sweep for expired credentials, joins and invitations; called by the cron job. */
 export async function sweepGuestRows(now = new Date()): Promise<number> {
-  const [a, b, c] = await prisma.$transaction([
+  const [a, b, c, d] = await prisma.$transaction([
     prisma.travelPlanGuestSession.deleteMany({ where: { expiresAt: { lt: now } } }),
     prisma.travelPlanGuestJoin.deleteMany({ where: { expiresAt: { lt: now } } }),
+    prisma.travelPlanGuestClaim.deleteMany({ where: { expiresAt: { lt: now } } }),
     prisma.travelPlanGuestInvite.deleteMany({
       where: {
         OR: [{ expiresAt: { lt: new Date(now.getTime() - DAY_MS) } }, { usedAt: { not: null } }],
       },
     }),
   ]);
-  return a.count + b.count + c.count;
+  return a.count + b.count + c.count + d.count;
 }
 
 export { requireVerifiedPeer };
@@ -224,6 +243,7 @@ export async function endAllGuestsAfterRestore(): Promise<void> {
   await endGuestsOfOrigin(null);
   await prisma.$transaction([
     prisma.travelPlanGuestSession.deleteMany(),
+    prisma.travelPlanGuestClaim.deleteMany(),
     prisma.travelPlanGuestJoin.deleteMany(),
     prisma.travelPlanGuestInvite.deleteMany(),
   ]);

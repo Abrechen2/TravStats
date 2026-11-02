@@ -24,6 +24,7 @@ import {
 } from "../../../schemas/tripSharePeer";
 import { z } from "../../../schemas/zod";
 import { requireTripFederation } from "./access";
+import { tripFederationAvailability } from "./availability";
 import { remoteShareError } from "./errors";
 import { refusedThere } from "./offers";
 import { rejectWith, sendOnStream, serveOnce, takeSeq } from "./streams";
@@ -138,6 +139,15 @@ export async function listReceivedOffers(userId: string): Promise<ReceivedOfferV
     orderBy: { stateSince: "desc" },
   });
   return rows.map(offerView);
+}
+
+/**
+ * How many offers `listReceivedOffers` would list; 0 while trip sharing across servers is off,
+ * because the list is refused then and the badge must not count what the person cannot open.
+ */
+export async function countReceivedOffers(userId: string): Promise<number> {
+  if (!(await tripFederationAvailability()).available) return 0;
+  return prisma.tripShareRemoteMember.count({ where: OPEN(userId) });
 }
 
 async function openOffer(userId: string, id: string) {

@@ -356,11 +356,9 @@ describe("TravPlan remote guests", () => {
     expect(removed.body).toEqual({ revoked: true });
     for (const cred of [{ cookie: guest.cookie }, { pat: pat.body.token }]) {
       const after = await asGuest("get", `/plans/${plan.planId}`, cred);
-      expect([after.status, after.body.code]).toEqual([401, "PLAN_GUEST_REQUIRED"]);
+      // A removed guest hears "revoked", not "sign in" (the credential is a tombstone).
+      expect([after.status, after.body.code]).toEqual([401, "PLAN_GUEST_REVOKED"]);
     }
-    expect(await prisma.travelPlanGuestSession.count({ where: { memberId: guest.memberId } })).toBe(
-      0
-    );
     // Their past change would keep their name; the pseudonym is released for a later invitation.
     expect(
       await prisma.travelPlanMember.findUniqueOrThrow({ where: { id: guest.memberId } })
@@ -645,6 +643,171 @@ describe("TravPlan remote guests", () => {
     await prisma.travelPlanMember.deleteMany({
       where: { planId: filler.planId, displayName: "filler" },
     });
+  });
+});
+
+describe("TravPlan guest pairing by claim code (forgejo#404)", () => {
+  const code = (plan: { planId: string }, cookie: string) =>
+    asGuest("post", `/plans/${plan.planId}/pat/code`, { cookie });
+  const claim = (planId: string, value: unknown) =>
+    request(app).post(`/api/v1/guest/plans/${planId}/pat/claim`).send({ code: value });
+
+  it("trades a minted code once for a phone token that opens the plan", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const minted = await code(plan, guest.cookie);
+    expect(minted.status).toBe(201);
+    expect(minted.body.code).toMatch(/^[A-Z2-9]{10}$/);
+    const ttl = new Date(minted.body.expiresAt).getTime() - Date.now();
+    expect(ttl).toBeGreaterThan(4 * 60_000);
+    expect(ttl).toBeLessThanOrEqual(5 * 60_000);
+    // Only the hash is stored.
+    expect(JSON.stringify(await prisma.travelPlanGuestClaim.findMany())).not.toContain(
+      minted.body.code
+    );
+    const claimed = await claim(plan.planId, minted.body.code);
+    expect(claimed.status).toBe(201);
+    expect(claimed.body.token).toMatch(/^ts_gpat_/);
+    expect(
+      (await asGuest("get", `/plans/${plan.planId}`, { pat: claimed.body.token })).status
+    ).toBe(200);
+  });
+
+  it("refuses a used code, an expired code, another plan's code and a wrong code with ONE answer", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const otherPlan = await newPlan();
+    const used = (await code(plan, guest.cookie)).body.code as string;
+    expect((await claim(plan.planId, used)).status).toBe(201);
+    const expired = (await code(plan, guest.cookie)).body.code as string;
+    await prisma.travelPlanGuestClaim.updateMany({
+      where: { usedAt: null },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const fresh = (await code(plan, guest.cookie)).body.code as string;
+    const answers = [
+      await claim(plan.planId, used),
+      await claim(plan.planId, expired),
+      await claim(otherPlan.planId, fresh),
+      await claim(plan.planId, "ZZZZZZZZZZ"),
+      await claim(plan.planId, 42),
+      await claim("not-a-uuid", fresh),
+    ];
+    for (const a of answers)
+      expect([a.status, a.body.code]).toEqual([400, "PLAN_GUEST_CLAIM_INVALID"]);
+    expect(new Set(answers.map((a) => a.body.error)).size).toBe(1);
+    // The failed attempt with the wrong plan did not burn the code.
+    expect((await claim(plan.planId, fresh)).status).toBe(201);
+  });
+
+  it("lets a code be redeemed only once under a race", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    const results = await Promise.all([1, 2, 3].map(() => claim(plan.planId, c)));
+    expect(results.filter((r) => r.status === 201)).toHaveLength(1);
+  });
+
+  it("will not mint a code from a phone token", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    const pat = (await claim(plan.planId, c)).body.token as string;
+    const refused = await asGuest("post", `/plans/${plan.planId}/pat/code`, { pat });
+    expect([refused.status, refused.body.code]).toEqual([403, "PLAN_GUEST_REQUIRED"]);
+    const noCred = await request(app).post(`/api/v1/guest/plans/${plan.planId}/pat/code`);
+    expect(noCred.status).toBe(401);
+  });
+
+  it("refuses the code of a guest who was removed in the meantime", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    await call("delete", `/trips/${plan.tripId}/plan/members/${guest.memberId}`, owner);
+    expect((await claim(plan.planId, c)).body.code).toBe("PLAN_GUEST_CLAIM_INVALID");
+  });
+
+  it("keeps the code when the phone token could not be issued (token limit)", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    for (let n = 0; n < 5; n++) {
+      const c = (await code(plan, guest.cookie)).body.code as string;
+      expect((await claim(plan.planId, c)).status).toBe(201);
+    }
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    expect((await claim(plan.planId, c)).body.code).toBe("PLAN_GUEST_PAT_LIMIT");
+    await prisma.travelPlanGuestSession.deleteMany({
+      where: { memberId: guest.memberId, kind: "pat" },
+    });
+    expect((await claim(plan.planId, c)).status).toBe(201);
+  });
+
+  it("retires an earlier unused code when a new one is minted", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const first = (await code(plan, guest.cookie)).body.code as string;
+    const second = (await code(plan, guest.cookie)).body.code as string;
+    expect((await claim(plan.planId, first)).status).toBe(400);
+    expect((await claim(plan.planId, second)).status).toBe(201);
+  });
+
+  it("tells a revoked guest from an expired one, with distinct code and text", async () => {
+    const plan = await newPlan();
+    const expiring = await joinGuest(plan);
+    await prisma.travelPlanGuestSession.updateMany({
+      where: { memberId: expiring.memberId },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const expired = await asGuest("get", `/plans/${plan.planId}`, { cookie: expiring.cookie });
+    const removed = await joinGuest(plan, { username: "second", who: other });
+    await call("delete", `/trips/${plan.tripId}/plan/members/${removed.memberId}`, owner);
+    const revoked = await asGuest("get", `/plans/${plan.planId}`, { cookie: removed.cookie });
+    expect([expired.status, expired.body.code]).toEqual([401, "PLAN_GUEST_EXPIRED"]);
+    expect([revoked.status, revoked.body.code]).toEqual([401, "PLAN_GUEST_REVOKED"]);
+    expect(expired.body.error).not.toBe(revoked.body.error);
+  });
+
+  it("reports host, owner, plan and the credential's expiry on the session", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const session = await asGuest("get", "/session", { cookie: guest.cookie });
+    expect(session.body).toMatchObject({
+      planName: "Guest trip",
+      hostName: expect.any(String),
+      ownerName: expect.stringContaining("guests-test-0"),
+      credential: "session",
+    });
+    expect(new Date(session.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    const c = (await code(plan, guest.cookie)).body.code as string;
+    const pat = await claim(plan.planId, c);
+    const asPhone = await asGuest("get", "/session", { pat: pat.body.token });
+    expect(asPhone.body.expiresAt).toBe(pat.body.expiresAt);
+  });
+
+  it("replays a guest mutation with the same clientRef instead of applying it twice", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const read = await asGuest("get", `/plans/${plan.planId}`, { cookie: guest.cookie });
+    const body = {
+      clientRef: randomUUID(),
+      baseRevision: read.body.revision,
+      operation: idea("Once"),
+    };
+    const first = await asGuest(
+      "post",
+      `/plans/${plan.planId}/mutations`,
+      { cookie: guest.cookie },
+      body
+    );
+    const again = await asGuest(
+      "post",
+      `/plans/${plan.planId}/mutations`,
+      { cookie: guest.cookie },
+      body
+    );
+    expect([first.status, again.status]).toEqual([200, 200]);
+    expect(again.body.revision).toBe(first.body.revision);
+    expect(again.body.state.ideas).toHaveLength(1);
   });
 });
 

@@ -613,16 +613,21 @@ Guest calls need `Authorization: Bearer ts_gpat_…` (no marker header). Bare re
 
 | Call | Notes |
 |---|---|
-| QR content | `travstats://guest?host=<origin>&plan=<planId>&token=<ts_gpat_…>` (proposed; the web shows it, the app confirms) |
-| `GET /api/v1/guest/session` | `{planId, tripId, planName, memberId, displayName, origin, credential}` |
+| QR content | JSON read in-app (no URL): `{"v":1,"k":"guest","u":<host origin>,"p":<planId>,"c":<claim code>,"n":<host display name>}`. Supersedes the `travstats://guest?…&token=` form, which put a live credential through the OS URL handler |
+| `POST /api/v1/guest/plans/:planId/pat/claim` | no credential; body `{code}` → 201 `{token:"ts_gpat_…", expiresAt}` (token lives 90 days). Any bad code: 400 `PLAN_GUEST_CLAIM_INVALID`; 429 `PLAN_GUEST_RATE_LIMITED`; 409 `PLAN_GUEST_PAT_LIMIT` |
+| `POST /api/v1/guest/plans/:planId/pat/code` | browser session only (web) → 201 `{code, expiresAt}` (5 min, single use) |
+| `GET /api/v1/guest/session` | `{planId, tripId, planName, hostName, ownerName (nullable), expiresAt (of this credential), memberId, displayName, origin, credential}` |
+| `POST …/mutations` | idempotent on the body's `clientRef` (a replay returns the stored result), as for the owner |
+| `GET /api/v1/sharing/inbox/count` | `{count, remoteOffers}`; `count` already includes `remoteOffers` (open remote trip offers, 0 while cross-server trip sharing is off) |
 | `GET /api/v1/guest/plans/:planId` | the plan view as for a member; `ETag` = `"<revision>-<memberId>"`, `If-None-Match` → 304 |
 | `POST …/mutations`, `…/forecast`, `…/stations/:id/climate`, `…/stages/:id/route`, `…/placeholder-matches` | same bodies as `/trips/:tripId/plan/…`; `X-TravPlan-Client` as before |
 | `GET …/collab`, `POST …/notices/read`, `GET …/packing-suggestions`, `GET …/locations`, `GET …/places` | as the member routes |
 | `GET/POST …/documents`, `GET …/documents/:id/file` | plan documents (multipart field `file`, ≤ 20 MB, ≤ 50 per member) |
 | `POST /api/v1/guest/leave`, `POST …/logout` | end membership / this token |
 
-Codes the app must word: `PLAN_GUEST_REQUIRED|EXPIRED|REVOKED` (401: clear the token and say the
-access ended), `PLAN_GUEST_RATE_LIMITED` (429), `PLAN_OWNER_ONLY` (403), `PLAN_DOCUMENT_LIMIT|
+Codes the app must word: `PLAN_GUEST_REQUIRED` (401: sign in again), `PLAN_GUEST_EXPIRED` (401: the
+token lapsed, pair again), `PLAN_GUEST_REVOKED` (401: access was ended, say so and clear the token),
+`PLAN_GUEST_CLAIM_INVALID` (400), `PLAN_GUEST_RATE_LIMITED` (429), `PLAN_OWNER_ONLY` (403), `PLAN_DOCUMENT_LIMIT|
 TOO_LARGE|NOT_FOUND`. A guest has no AI proposals, imports, handover or `actual`.
 
 ### D6 and D5

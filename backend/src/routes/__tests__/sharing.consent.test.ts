@@ -52,6 +52,8 @@ describe("sharing — consent lifecycle", () => {
       .set("Cookie", ben.cookie)
       .expect(200);
     expect(count.body.data.count).toBe(1);
+    // Additive: open remote offers are inside `count` and named on their own (0 without any).
+    expect(count.body.data.remoteOffers).toBe(0);
 
     const accepted = await request(app)
       .post(`/api/v1/sharing/consents/${asked.body.data.id}/accept`)

@@ -101,6 +101,20 @@ export const joinLimiter = rateLimit({
   handler: tooMany("join attempts"),
 });
 
+/**
+ * Redeeming a claim code needs no credential, so it is the one place a code can be guessed:
+ * few attempts per address (masked to /56 for IPv6). 30^10 codes live five minutes each.
+ */
+export const claimLimiter = rateLimit({
+  windowMs: 10 * 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => `claim:${req.ip ? ipKeyGenerator(req.ip) : "unknown"}`,
+  skip: skipOutsideProduction,
+  handler: tooMany("pairing attempts"),
+});
+
 export const assertPathPlan =
   (param = "planId"): RequestHandler =>
   (req: GuestRequest, _res, next) => {

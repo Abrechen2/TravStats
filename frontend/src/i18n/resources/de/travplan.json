@@ -178,6 +178,7 @@
     "PLAN_GUEST_LIMIT": "Auf diesem Server sind schon zu viele Gäste eingeladen (höchstens 20).",
     "PLAN_GUEST_RATE_LIMITED": "Zu viele Anfragen in kurzer Zeit. Warte einen Moment.",
     "PLAN_GUEST_CSRF": "Diese Anfrage kam nicht aus der TravStats-Seite und wurde abgelehnt. Lade die Seite neu.",
+    "PLAN_GUEST_CLAIM_INVALID": "Dieser Kopplungscode gilt nicht (mehr). Er ist abgelaufen oder schon benutzt. Erzeuge im Browser einen neuen.",
     "PLAN_GUEST_PAT_LIMIT": "Du hast schon fünf Telefon-Zugänge. Melde dich ab, um Platz zu schaffen.",
     "PLAN_DOCUMENT_LIMIT": "Du hast schon 50 Dokumente für diesen Plan hochgeladen.",
     "PLAN_DOCUMENT_DUPLICATE": "Diese Datei liegt schon in der Reise der Besitzerin oder des Besitzers und wird nicht noch einmal hinzugefügt.",
@@ -712,7 +713,8 @@
     "exportFailed": "Die Datei konnte nicht erstellt werden. Bitte erneut versuchen.",
     "phone": {
       "open": "Telefon koppeln",
-      "hint": "Scanne den Code mit der TravStats-App. Er gilt nur für diesen Plan und wird nur einmal angezeigt."
+      "hint": "Scanne den Code in der TravStats-App. Er gilt nur für diesen Plan und lässt sich nur einmal einlösen.",
+      "expires": "Der Code gilt noch etwa {{minutes}} Minuten. Danach tippst du erneut auf „Telefon koppeln“."
     },
     "ended": {
       "title": "Dein Zugang ist beendet",
