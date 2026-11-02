@@ -241,6 +241,13 @@ export const NON_TRAVEL_RELATIONS = [
   // Where a merged-away trip went (forgejo#316): server bookkeeping for the
   // Companion's uploads, not travel data.
   "mergedTripRedirects",
+  // Mail intake (forgejo#303/#313): mailbox connections, the forwarding
+  // address, allowed senders and the pickup queue. Configuration and
+  // transient intake state; an imported mail travels as its Document.
+  "mailIntakeAddress",
+  "mailIntakeSources",
+  "mailIntakeSenders",
+  "mailIntakeMessages",
   // TravTrack, the own location history (TravTrack plan, phase 2): private to its
   // owner like the trip recording — never part of a comparison or a federation
   // publication. A shared trip carries at most the owner's route snapshot (T7).

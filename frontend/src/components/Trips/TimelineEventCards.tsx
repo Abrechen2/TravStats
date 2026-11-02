@@ -30,7 +30,7 @@ export function dotColor(ev: TimelineEvent): string {
     case "flight":
       return "var(--domain-flight, var(--accent))";
     case "cruise":
-      return "var(--domain-cruise, #6fa0d6)";
+      return "var(--domain-cruise)";
     case "rail":
       return "var(--domain-rail)";
     case "ferry":
@@ -42,14 +42,14 @@ export function dotColor(ev: TimelineEvent): string {
       return "var(--ts-domain-rental)";
     case "stop":
     case "place-visit":
-      return "var(--domain-poi, #5ec2b2)";
+      return "var(--domain-poi)";
     case "journal":
-      return "#60a5fa";
+      return "var(--ts-info)";
     case "note":
       return "var(--text-muted)";
     case "lodging-checkin":
     case "lodging-checkout":
-      return "var(--domain-lodging, #d4778f)";
+      return "var(--domain-lodging)";
   }
 }
 
@@ -207,7 +207,7 @@ export function CruiseCard({
     <ExpandableEventCard
       icon="⚓"
       bg="rgba(111,160,214,0.15)"
-      iconColor="var(--domain-cruise, #6fa0d6)"
+      iconColor="var(--domain-cruise)"
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
@@ -274,7 +274,7 @@ export function CruiseCard({
 /**
  * Renders one half (check-in OR check-out) of a linked LodgingStay as a
  * timeline entry. Uses the lodging domain colour (`DOMAINS.lodging.color`,
- * `#d4778f` via the `--domain-lodging` CSS var) and the hotel icon, and
+ * the `--domain-lodging` CSS var) and the hotel icon, and
  * clicking it navigates to that hotel's own detail page — the whole point
  * being that a hotel linked to a trip is no longer a dead end.
  */
@@ -302,7 +302,7 @@ export function LodgingCheckCard({
       <EventCard
         icon="🏨"
         bg="rgba(212,119,143,0.15)"
-        iconColor="var(--domain-lodging, #d4778f)"
+        iconColor="var(--domain-lodging)"
         title={title}
         subtitle={
           showHint ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
@@ -334,7 +334,7 @@ export function StopCard({
     <EventCard
       icon={icon}
       bg="rgba(94,194,178,0.15)"
-      iconColor="var(--domain-poi, #5ec2b2)"
+      iconColor="var(--domain-poi)"
       title={s.title}
       subtitle={subtitle}
       meta={s.notes ?? undefined}
@@ -360,7 +360,7 @@ export function PlaceVisitCard({
     <EventCard
       icon={PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other}
       bg="rgba(94,194,178,0.15)"
-      iconColor="var(--domain-poi, #5ec2b2)"
+      iconColor="var(--domain-poi)"
       title={place.name}
       subtitle={placeSubtitle(place) || null}
       meta={visit.notes ?? undefined}

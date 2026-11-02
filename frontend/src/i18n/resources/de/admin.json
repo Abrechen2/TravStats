@@ -167,6 +167,10 @@
           "travTrack": {
             "name": "TravTrack (eigener Standortverlauf)",
             "what": "Ein eigener Standortverlauf auf diesem Server: Positionen kommen von der Companion-App, aus GPX-Dateien, von OwnTracks und Overland sowie aus einem Dawarich-Import, Flüge und Reisen eingeschlossen, mit Privatzonen und Löschen nach Zeitraum. Braucht zusätzlich den TravTrack-Schalter unter Instanz."
+          },
+          "travPlanGuests": {
+            "name": "TravPlan-Gäste von anderen Servern",
+            "what": "Personen auf verbundenen TravStats-Servern planen per Einladung an einem Reiseplan mit, über die Weboberfläche dieses Servers und mit eigenem Zugang nur für diesen Plan."
           }
         }
       },

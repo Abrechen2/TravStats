@@ -69,6 +69,11 @@ const files = sourceFiles(SRC_ROOT).map((file) => ({
 const NO_DOCUMENT_CALLERS = new Set([
   // Key check for the legacy per-user OpenAI key: sends the literal "test".
   "services/apiKeyTester.ts",
+  // The mail-intake inbox route and its OpenAPI paths: `/mail-intake/messages`
+  // is a TravStats path, not Anthropic's endpoint; the parse they start runs
+  // through the provider.
+  "routes/mailIntake.ts",
+  "services/openapi/paths/mailIntake.ts",
 ]);
 
 const callers = files
