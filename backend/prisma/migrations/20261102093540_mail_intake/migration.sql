@@ -7,6 +7,7 @@ CREATE TABLE "mail_intake_sources" (
     "port" INTEGER NOT NULL,
     "tls_mode" TEXT NOT NULL DEFAULT 'tls',
     "username" TEXT NOT NULL,
+    "address" TEXT,
     "password_encrypted" TEXT,
     "folder" TEXT NOT NULL DEFAULT 'INBOX',
     "enabled" BOOLEAN NOT NULL DEFAULT false,

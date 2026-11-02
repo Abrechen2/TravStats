@@ -2,6 +2,7 @@ import type { RemoteShareApiErrorCode } from "./remoteShareErrorCodes";
 import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
 import type { ExternalServiceApiErrorCode } from "./externalServiceErrorCodes";
+import type { MailIntakeApiErrorCode } from "./mailIntakeErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
@@ -268,6 +269,7 @@ export type ApiErrorCode =
   | "TRACK_FILE_MISSING" // flight track file upload (forgejo#312): the request carried no file
   | CompanionApiErrorCode
   | ExternalServiceApiErrorCode // companions: rename, merge, delete; external services
+  | MailIntakeApiErrorCode // mail intake (forgejo#313)
   /** Tour track upload: a recording without timestamps cannot be placed in time. */
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */

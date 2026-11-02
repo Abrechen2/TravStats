@@ -598,6 +598,17 @@
       "quotaLine": "–",
       "adminPurpose": "Backups und Exporte der Instanz auf eine Freigabe; Konten dürfen eigene Ziele"
     },
+    "mailIntake": {
+      "name": "Buchungsmails einlesen",
+      "purpose": "Buchungsmails aus einem Postfach als Vorschläge im Posteingang",
+      "why": "Holt Buchungsbestätigungen per IMAP aus einem Mail-Ordner oder über die Weiterleitungsadresse der Instanz, damit sie nicht von Hand eingefügt werden müssen.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Nichts verlässt den Server außer der Anmeldung am eigenen Mail-Server. Ist ein KI-Anbieter in der Cloud freigegeben, liest dieser auch die Mails.",
+      "getKeyUrl": "https://travstats.de/docs/",
+      "getKeyLabel": "Anleitung",
+      "quotaLine": "–"
+    },
     "smtp": {
       "name": "E-Mail (SMTP)",
       "purpose": "Einladungen, Passwort-Reset, Hinweise",

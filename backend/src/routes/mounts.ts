@@ -53,6 +53,7 @@ import loginBackgroundRoutes from "./loginBackgrounds";
 import achievementRoutes from "./achievements";
 import evidenceRoutes from "./evidence";
 import settingsRoutes from "./settings";
+import mailIntakeRoutes from "./mailIntake";
 import analyticsRoutes from "./analytics";
 import uploadsRoutes from "./uploads";
 import emailParseRoutes from "./emailParse";
@@ -339,6 +340,8 @@ export const apiMounts: ApiMount[] = [
   // a resolver (task-3-brief.md); every metric/ranking request 404s until then.
   { id: "evidence", base: "/api/v1/evidence", router: evidenceRoutes },
   { id: "settings", base: "/api/v1/settings", router: settingsRoutes },
+  // Booking mails picked up from a mailbox (forgejo#313); every route authenticates itself.
+  { id: "mailIntake", base: "/api/v1/mail-intake", router: mailIntakeRoutes },
   { id: "analytics", base: "/api/v1/analytics", router: analyticsRoutes },
   { id: "uploads", base: "/api/v1/uploads", router: uploadsRoutes },
   { id: "emailParse", base: "/api/v1", router: emailParseRoutes },

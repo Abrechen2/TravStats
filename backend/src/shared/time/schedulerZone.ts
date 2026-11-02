@@ -28,6 +28,7 @@ export type SchedulerJob =
   | "flightUpdate"
   | "historicalEnrichment"
   | "logRetention"
+  | "mailIntake"
   | "photoJourneyScan"
   | "dawarichStayScan"
   | "placeAddressBackfill"

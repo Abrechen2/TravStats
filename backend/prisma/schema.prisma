@@ -6603,6 +6603,10 @@ model MailIntakeSource {
   /// tls | starttls | none. `none` is accepted for the instance mailbox only.
   tlsMode           String    @default("tls") @map("tls_mode")
   username          String
+  /// The instance mailbox's own address, the base of the plus-addresses
+  /// (`trips@example.org` → `trips+token@example.org`); a login name is not
+  /// always an address. Null for a personal folder.
+  address           String?
   /// AES-256-GCM like every other stored secret; null after a restore, when
   /// the user has to enter it again (spec §9 decision 4).
   passwordEncrypted String?   @map("password_encrypted")

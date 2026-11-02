@@ -162,7 +162,7 @@ same mailbox for a fraction of the effort. OAuth stays an idea in forgejo#303.
    confirms.
 3. **Processed mail:** flagged `\Seen` plus the keyword `$TravStats`; never moved, never deleted.
 4. **Backup of IMAP passwords:** not kept. A restore clears every stored password and switches
-   the source off with the reason `credentials_lost`; the user enters the password again.
+   the source off with the reason `credentials_missing`; the user enters the password again.
 5. **Webhook (mode C):** not in the first cut.
 6. **Polling:** every 5 minutes, plus IMAP IDLE where the server supports it.
 
