@@ -657,7 +657,15 @@
       "findableFailed": "Die Einstellung konnte nicht gespeichert werden.",
       "levelFailed": "Die Stufe konnte nicht gespeichert werden.",
       "leaderboardFailed": "Der Schalter konnte nicht gespeichert werden.",
-      "statsFailed": "Die Statistik konnte nicht geladen werden."
+      "statsFailed": "Die Statistik konnte nicht geladen werden.",
+      "connectionExists": "Mit dieser Person gibt es schon eine Verbindung oder eine offene Anfrage.",
+      "connectionState": "Das geht bei dieser Verbindung gerade nicht – sie hat sich inzwischen geändert. Lade die Seite neu.",
+      "connectionRequired": "Dafür braucht ihr eine bestätigte Verbindung – und die Person muss es erlaubt haben.",
+      "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
+      "confirmFailed": "Die Bestätigung konnte nicht gesendet werden. Es hat sich nichts geändert.",
+      "switchesFailed": "Die Einstellungen konnten nicht gespeichert werden.",
+      "declineFailed": "Die Anfrage konnte nicht abgelehnt werden.",
+      "endFailed": "Die Verbindung konnte nicht beendet werden."
     },
     "trip": {
       "title": "Reisende auf anderen Servern",
@@ -804,28 +812,6 @@
       }
     },
     "connected": {
-      "title": "Personen auf verbundenen Servern",
-      "hint": "Server, denen dein Admin vertraut, brauchen keine Einladungscodes: Du suchst die Person über ihren Benutzernamen. Die Person erscheint nur, wenn sie sich für verbundene Server auffindbar gemacht hat.",
-      "findable": {
-        "label": "Für verbundene Server auffindbar",
-        "sub": "Aus: Niemand auf einem verbundenen Server kann dich finden. An: Man findet dich über deinen Benutzernamen und kann dir Reisen anbieten – du entscheidest bei jedem Angebot selbst, und wer dich sieht, sieht von deiner Statistik erst etwas, wenn du es unten erlaubst."
-      },
-      "find": {
-        "title": "Person suchen",
-        "server": "Server",
-        "noServers": "Dein Admin hat noch keinen Server verbunden.",
-        "username": "Benutzername",
-        "submit": "Suchen",
-        "done": "{{name}} (@{{username}}) auf {{origin}} ist verbunden. Es wird noch nichts geteilt – das stellst du unten ein.",
-        "leaderboardMismatch": "Die Rangliste konnte mit diesem Server nicht verbunden werden (die Kanäle stimmen nicht überein) und bleibt aus."
-      },
-      "none": "Noch niemand verbunden.",
-      "row": "{{name}} (@{{username}}) auf {{origin}}",
-      "leaderboard": {
-        "label": "In meiner Rangliste zeigen",
-        "sub": "Diese Person sieht meine Summen in ihrer Rangliste.",
-        "unavailable": "Keine Rangliste – diese Verbindung kam über einen Einladungscode."
-      },
       "stats": {
         "label": "Meine Statistik für diese Person",
         "off": "Aus",
@@ -859,6 +845,92 @@
         "metric": "Kennzahl",
         "value": "Wert",
         "unknown": "unbekannt"
+      }
+    },
+    "connections": {
+      "title": "Verbindungen",
+      "hint": "Die Admins beider Server haben sich verbunden. Mit einer Person auf einem verbundenen Server verbindest du dich einmal – nach der Bestätigung beider teilt jede Seite genau das, was sie einstellt. Schalter gelten nur in deine Richtung und sind zu Beginn alle aus.",
+      "findable": {
+        "label": "Für verbundene Server auffindbar",
+        "sub": "Aus: Niemand auf einem verbundenen Server kann dir eine Verbindungsanfrage schicken. An: Man kann dich über deinen Benutzernamen anfragen – du entscheidest bei jeder Anfrage selbst, und es wird erst etwas geteilt, wenn du bestätigt hast."
+      },
+      "request": {
+        "title": "Verbindung anfragen",
+        "server": "Server",
+        "noServers": "Dein Admin hat noch keinen Server verbunden.",
+        "username": "Benutzername",
+        "switchesHint": "Das gibst du der Person, sobald sie bestätigt. Du kannst es später ändern.",
+        "submit": "Anfragen",
+        "sent": "Die Anfrage an @{{username}} auf {{origin}} ist unterwegs. Ob die Person existiert oder auffindbar ist, verrät dir keine Seite – sobald sie bestätigt, erscheint sie hier als verbunden."
+      },
+      "waiting": {
+        "title": "Wartet auf deine Antwort",
+        "asks": "Möchte sich verbinden und gibt dir: {{gives}}",
+        "reconfirm": "Diese Verbindung bestand schon vor den Verbindungen. Die bereits geteilten Reisen laufen weiter, Neues beginnt erst, wenn ihr beide einmal bestätigt habt.",
+        "confirm": "Bestätigen …",
+        "decline": "Ablehnen"
+      },
+      "confirm": {
+        "title": "Verbindung bestätigen",
+        "theirs": "Diese Person gibt dir: {{gives}}",
+        "mine": "Stelle ein, was du dieser Person gibst. Alles ist zu Beginn aus.",
+        "submit": "Bestätigen"
+      },
+      "changeDialog": {
+        "title": "Was du teilst",
+        "submit": "Speichern"
+      },
+      "row": "{{name}} (@{{username}}) auf {{origin}}",
+      "none": "Noch keine Verbindungen.",
+      "theirs": "Teilt mit dir: {{gives}}",
+      "theirsNothing": "nichts",
+      "state": {
+        "pending_out": "Wartet auf die Bestätigung der Person.",
+        "pending_in": "Möchte sich verbinden.",
+        "active": "Verbunden",
+        "declined": "Abgelehnt",
+        "revoked": "Beendet",
+        "reconfirm": "Muss bestätigt werden"
+      },
+      "change": "Einstellungen ändern",
+      "withdraw": "Anfrage zurückziehen",
+      "end": {
+        "action": "Beenden",
+        "title": "Verbindung beenden?",
+        "message": "Was {{name}} bisher von dir sieht, endet sofort: Statistik, Rangliste, offene Reiseangebote und Pläne. Bereits geteilte Reisen behalten ihre verknüpften Kopien."
+      },
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "switches": {
+        "plans": {
+          "label": "Pläne teilen",
+          "sub": "Du darfst diese Person in deine Reisepläne einladen und ihre annehmen.",
+          "short": "Pläne"
+        },
+        "stats": {
+          "label": "Meine Statistik",
+          "off": "Aus",
+          "overview": "Übersicht",
+          "full": "Voll",
+          "short": "Statistik",
+          "hintOverview": "Übersicht: Summen und Jahreswerte, keine einzelnen Einträge.",
+          "hintFull": "Voll: die ganze Statistik samt den Einträgen dahinter – ohne private Notizen, Kosten und Dokumente."
+        },
+        "achievements": {
+          "label": "Erfolge zeigen",
+          "sub": "Diese Person sieht deine Erfolge.",
+          "short": "Erfolge"
+        },
+        "leaderboard": {
+          "label": "In meiner Rangliste zeigen",
+          "sub": "Diese Person sieht deine Summen in ihrer Rangliste.",
+          "short": "Rangliste"
+        },
+        "tripOffers": {
+          "label": "Reiseangebote annehmen",
+          "sub": "Diese Person darf dir Reisen anbieten – du entscheidest bei jedem Angebot selbst.",
+          "short": "Reiseangebote"
+        }
       }
     }
   },

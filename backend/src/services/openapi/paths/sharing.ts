@@ -363,8 +363,12 @@ registry.registerPath({
   tags,
   responses: {
     200: ok(
-      "The inbox badge's share. `count` includes `remoteOffers` (the offers GET /sharing/remote/offers lists; 0 while cross-server trip sharing is off).",
-      z.object({ count: z.number().int(), remoteOffers: z.number().int() })
+      "The inbox badge's share. `count` includes `remoteOffers` (the offers GET /sharing/remote/offers lists) and `connectionRequests` (requests to connect from people on other servers, plus pairings from before connections that wait to be confirmed; GET /sharing/connections lists them). Both are 0 while cross-server trip sharing is off.",
+      z.object({
+        count: z.number().int(),
+        remoteOffers: z.number().int(),
+        connectionRequests: z.number().int(),
+      })
     ),
   },
 });

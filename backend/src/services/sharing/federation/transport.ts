@@ -37,6 +37,12 @@ export const BODY_BUDGET = {
   // Simplified setup (2026-11-02): a lookup and a statistics read are short requests.
   "directory-pair": 8_192,
   "stats-read": 8_192,
+  // User connections (2026-11-02): short control messages.
+  "connect-request": 8_192,
+  "connect-accept": 8_192,
+  "connect-decline": 8_192,
+  "connect-revoke": 8_192,
+  "connect-settings": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
 export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
 

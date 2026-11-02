@@ -25,6 +25,14 @@ export async function suspendTripFederationAfterRestore(): Promise<void> {
     // What a pairing showed (statistics level, leaderboard totals) is held with it: the clone
     // shows nothing until each consent is confirmed again and the level set anew.
     prisma.remoteShareAccount.updateMany({ data: { statsLevel: "off" } }),
+    // A connection must be confirmed again by both sides (spec 2026-11-02 §9): the trips already
+    // shared are held by the memberships above, nothing new starts before.
+    prisma.remoteShareAccount.updateMany({
+      where: { state: { in: ["active", "pending_in", "pending_out"] } },
+      // The generation jumps past anything the other side may have seen since the dump, so the
+      // request that confirms the connection again is not read as an old one.
+      data: { state: "reconfirm", shareLeaderboard: false, generation: { increment: 1000 } },
+    }),
     prisma.leaderboardConsent.updateMany({
       where: { status: "accepted", remote: { sharePairing: { isNot: null } } },
       data: { status: "withdrawn", decidedAt: now },

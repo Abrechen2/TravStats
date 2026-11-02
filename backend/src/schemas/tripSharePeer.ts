@@ -42,6 +42,8 @@ export const TRIP_SHARE_FEATURES = [
   // the statistics they chose to show.
   "directory",
   "stats",
+  // User connections (2026-11-02): connect-request / -accept / -decline / -revoke / -settings.
+  "connections",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
@@ -154,6 +156,81 @@ export const statsReplySchema = z.union([
     entries: z.array(wireEntrySchema).max(STATS_PAGE_SIZE),
   }),
 ]);
+/**
+ * User connections (spec 2026-11-02 §3), the second layer above the admins' key exchange: one
+ * person asks another to connect, each side states what *it* gives (`switches`, directional), and
+ * the other confirms. `generation` is the sender's own counter; the receiver takes a message only
+ * when it is newer than the last it accepted from that side, so a repeat or an overtaken message
+ * changes nothing. Every connection message is answered `{received:true}` whatever happened — the
+ * answer is no oracle for who exists, is findable or has blocked whom.
+ */
+export const connectionSwitchesSchema = z.strictObject({
+  plans: z.boolean(),
+  stats: z.enum(STATS_LEVELS),
+  achievements: z.boolean(),
+  leaderboard: z.boolean(),
+  tripOffers: z.boolean(),
+});
+export type ConnectionSwitches = z.infer<typeof connectionSwitchesSchema>;
+const generation = z.number().int().positive().max(2_147_483_647);
+
+/**
+ * `channel` is the name the asker's server mints for its user in this connection (never an account
+ * id); a pairing that existed before names its known channel. `leaderboardChannel` is the one both
+ * servers will use should the leaderboard switch be on.
+ */
+export const connectRequestSchema = z.strictObject({
+  kind: z.literal("connect-request"),
+  ...header,
+  channel: uuid,
+  leaderboardChannel: uuid,
+  generation,
+  toUsername: username,
+  fromUsername: username,
+  fromDisplayName: displayName,
+  switches: connectionSwitchesSchema,
+});
+/** `from` is the accepting side's own channel (minted there), `to` the asker's `channel`. */
+export const connectAcceptSchema = z.strictObject({
+  kind: z.literal("connect-accept"),
+  ...header,
+  from: uuid,
+  to: uuid,
+  generation,
+  username,
+  displayName,
+  leaderboardChannel: uuid,
+  switches: connectionSwitchesSchema,
+});
+export const connectDeclineSchema = z.strictObject({
+  kind: z.literal("connect-decline"),
+  ...header,
+  from: uuid,
+  to: uuid,
+  generation,
+});
+export const connectRevokeSchema = z.strictObject({
+  kind: z.literal("connect-revoke"),
+  ...header,
+  from: uuid,
+  to: uuid,
+  generation,
+});
+export const connectSettingsSchema = z.strictObject({
+  kind: z.literal("connect-settings"),
+  ...header,
+  from: uuid,
+  to: uuid,
+  generation,
+  switches: connectionSwitchesSchema,
+});
+export const connectReplySchema = z.strictObject({ received: z.literal(true) });
+export type ConnectRequest = z.infer<typeof connectRequestSchema>;
+export type ConnectAccept = z.infer<typeof connectAcceptSchema>;
+export type ConnectDecline = z.infer<typeof connectDeclineSchema>;
+export type ConnectRevoke = z.infer<typeof connectRevokeSchema>;
+export type ConnectSettings = z.infer<typeof connectSettingsSchema>;
+
 export type DirectoryPair = z.infer<typeof directoryPairSchema>;
 export type DirectoryPairReply = z.infer<typeof directoryPairReplySchema>;
 export type StatsRead = z.infer<typeof statsReadSchema>;
@@ -422,6 +499,11 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   nudgeSchema,
   directoryPairSchema,
   statsReadSchema,
+  connectRequestSchema,
+  connectAcceptSchema,
+  connectDeclineSchema,
+  connectRevokeSchema,
+  connectSettingsSchema,
 ]);
 
 /** The group messages; a header of one of these is answered `schema` when the body fails. */

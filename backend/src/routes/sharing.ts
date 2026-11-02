@@ -16,6 +16,7 @@ import {
   withdrawConsent,
 } from "../services/sharing/consent";
 import { countReceivedOffers } from "../services/sharing/federation/offerInbox";
+import { countConnectionRequests } from "../services/sharing/federation/connections/view";
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
 import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
@@ -193,11 +194,15 @@ router.get(
   handle(async (req, res) => {
     // `remoteOffers` is already inside `count`; it is named so a client that counted them itself
     // can stop (its presence is the signal).
-    const [local, remoteOffers] = await Promise.all([
+    const [local, remoteOffers, connectionRequests] = await Promise.all([
       inboxCount(req.userId!),
       countReceivedOffers(req.userId!),
+      countConnectionRequests(req.userId!),
     ]);
-    res.json({ success: true, data: { count: local + remoteOffers, remoteOffers } });
+    res.json({
+      success: true,
+      data: { count: local + remoteOffers + connectionRequests, remoteOffers, connectionRequests },
+    });
   })
 );
 

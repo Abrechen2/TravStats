@@ -24,6 +24,7 @@ import {
 } from "../../../schemas/tripSharePeer";
 import { z } from "../../../schemas/zod";
 import { requireTripFederation } from "./access";
+import { mayReceiveOfferFrom } from "./connections/switches";
 import { tripFederationAvailability } from "./availability";
 import { remoteShareError } from "./errors";
 import { refusedThere } from "./offers";
@@ -56,6 +57,8 @@ export async function applyOffer(
     where: { origin, channel: offer.from, localChannel: offer.to },
   });
   if (!remote) throw rejectWith("not-member");
+  // Offers are taken on an active connection whose person accepts them (spec 2026-11-02).
+  if (!mayReceiveOfferFrom(remote)) throw rejectWith("consent");
   const consenting = await acceptedParties(tx, { kind: "user", id: remote.userId }, [
     { kind: "remote", id: remote.id },
   ]);

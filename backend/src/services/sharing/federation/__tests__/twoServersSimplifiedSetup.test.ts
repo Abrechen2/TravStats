@@ -1,11 +1,12 @@
 /**
  * The simplified federation setup (owner direction 2026-10-26, forgejo#301) across two servers:
- * server-level trust instead of per-person codes — a findable person is looked up and paired, the
- * leaderboard and statistics switches default off, and every refusal has its own reason.
+ * server-level trust instead of per-person codes — since 2026-11-02 a findable person is asked for
+ * a connection and confirms it (`twoServersConnections.test.ts` covers the handshake); this file
+ * keeps what a connection then carries: the leaderboard and statistics switches, what ends with
+ * it, and offers by name.
  */
-import { randomUUID } from "crypto";
 import { serveAggregate } from "../../../comparison/peerActions";
-import { A, B, pin, servers, user, useTwoServers, type Server } from "./twoServerHarness";
+import { A, B, connect, pin, servers, user, useTwoServers, type Server } from "./twoServerHarness";
 import { addFlight } from "./sharedTripFixtures";
 
 useTwoServers();
@@ -25,156 +26,14 @@ async function usernameOf(s: Server, userId: string): Promise<string> {
   return (await s.prisma.user.findUniqueOrThrow({ where: { id: userId } })).username;
 }
 
-/** Anna on A, a findable Ben on B, found by Anna. */
+/** Anna on A asks a findable Ben on B, who confirms with every switch off (Ben accepts offers). */
 async function annaFindsBen() {
   const anna = await user(a, "Anna");
   const ben = await user(b, "Ben");
-  await makeFindable(b, ben);
-  const person = await a.directory.findRemotePerson(anna, B, await usernameOf(b, ben));
+  const { onFrom } = await connect(a, anna, b, ben, { target: { tripOffers: true } });
+  const person = { id: onFrom, username: await usernameOf(b, ben) };
   return { anna, ben, person };
 }
-
-describe("finding a person on a connected server", () => {
-  it("pairs both sides without a code: trip pairing, offer consents and a leaderboard pairing, everything off", async () => {
-    const { anna, ben, person } = await annaFindsBen();
-    expect(person).toMatchObject({
-      origin: B,
-      displayName: "Ben",
-      consent: "accepted",
-      statsLevel: "off",
-      leaderboard: "off",
-    });
-    const onA = await a.prisma.remoteShareAccount.findFirstOrThrow({
-      where: { userId: anna, origin: B },
-      include: { leaderboardRemote: true, consentsTargeted: true },
-    });
-    const onB = await b.prisma.remoteShareAccount.findFirstOrThrow({
-      where: { userId: ben, origin: A },
-      include: { leaderboardRemote: true, consentsRequested: true },
-    });
-    expect(onA).toMatchObject({ channel: onB.localChannel, localChannel: onB.channel });
-    expect(onA.leaderboardRemote?.channel).toBe(onB.leaderboardRemote?.channel);
-    expect(onA.consentsTargeted[0]).toMatchObject({ requesterId: anna, status: "accepted" });
-    expect(onB.consentsRequested[0]).toMatchObject({ targetId: ben, status: "accepted" });
-    // Nothing is shared by pairing: no leaderboard consent on either side, statistics off.
-    expect(await a.prisma.leaderboardConsent.count({ where: { ownerId: anna } })).toBe(0);
-    expect(await b.prisma.leaderboardConsent.count({ where: { ownerId: ben } })).toBe(0);
-    expect(onB.statsLevel).toBe("off");
-  });
-
-  it("answers an unknown name and a person who is not findable alike, and writes nothing", async () => {
-    const anna = await user(a, "Anna");
-    const ben = await user(b, "Ben"); // findable stays at its default: off
-    const quiet = await a.directory
-      .findRemotePerson(anna, B, await usernameOf(b, ben))
-      .catch((e: unknown) => e);
-    const unknown = await a.directory
-      .findRemotePerson(anna, B, "nobody-by-that-name")
-      .catch((e: unknown) => e);
-    for (const error of [quiet, unknown])
-      expect(error).toMatchObject({ code: "SHARE_REMOTE_PERSON_UNKNOWN" });
-    expect((quiet as Error).message).toBe((unknown as Error).message);
-    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(0);
-    expect(await a.prisma.remoteShareAccount.count({ where: { userId: anna } })).toBe(0);
-  });
-
-  it("a deactivated person is not found even when they opted in", async () => {
-    const anna = await user(a, "Anna");
-    const ben = await user(b, "Ben");
-    await makeFindable(b, ben);
-    await b.prisma.user.update({ where: { id: ben }, data: { isActive: false } });
-    await expectRefusal(
-      a.directory.findRemotePerson(anna, B, await usernameOf(b, ben)),
-      "SHARE_REMOTE_PERSON_UNKNOWN"
-    );
-  });
-
-  it("refuses a server this server's admin has not admitted, naming it", async () => {
-    const anna = await user(a, "Anna");
-    await a.prisma.comparisonPeer.deleteMany({ where: { origin: B } });
-    await expect(a.directory.findRemotePerson(anna, B, "ben")).rejects.toMatchObject({
-      code: "SHARE_REMOTE_PEER_NOT_ADMITTED",
-      extra: { origin: B },
-    });
-    await pin(a, b); // put back for the other tests of this file
-  });
-
-  it("is refused by the other server when its admin has not admitted this one", async () => {
-    const anna = await user(a, "Anna");
-    const ben = await user(b, "Ben");
-    await makeFindable(b, ben);
-    await b.prisma.comparisonPeer.deleteMany({ where: { origin: A } });
-    await expectRefusal(
-      a.directory.findRemotePerson(anna, B, await usernameOf(b, ben)),
-      "SHARE_REMOTE_UNREACHABLE"
-    );
-    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(0);
-    await pin(b, a);
-  });
-
-  it("is limited per peer: guessing names runs into its own reason", async () => {
-    const anna = await user(a, "Anna");
-    for (let i = 0; i < b.directory.DIRECTORY_LOOKUPS_PER_HOUR; i++)
-      expect(b.directory.takeDirectoryLookup(A)).toBe(true);
-    await expectRefusal(
-      a.directory.findRemotePerson(anna, B, "anyone"),
-      "SHARE_REMOTE_LOOKUP_LIMITED"
-    );
-  });
-
-  it("does not revive a consent the person withdrew: the lookup answers like an unknown name", async () => {
-    const { anna, ben, person } = await annaFindsBen();
-    const onB = await b.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: ben } });
-    await b.lifecycle.withdrawRemoteConsent(ben, onB.id);
-    await expectRefusal(
-      a.directory.findRemotePerson(anna, B, person.username),
-      "SHARE_REMOTE_PERSON_UNKNOWN"
-    );
-    expect(
-      (await b.prisma.shareConsent.findFirstOrThrow({ where: { targetId: ben } })).status
-    ).toBe("withdrawn");
-  });
-
-  it("a second lookup reuses the pairing instead of making another", async () => {
-    const { anna, ben, person } = await annaFindsBen();
-    const again = await a.directory.findRemotePerson(anna, B, person.username);
-    expect(again.id).toBe(person.id);
-    expect(await a.prisma.remoteShareAccount.count({ where: { userId: anna } })).toBe(1);
-    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
-    expect(await b.prisma.leaderboardRemote.count({ where: { userId: ben } })).toBe(1);
-  });
-
-  it("when both look each other up, one pairing results on each side", async () => {
-    const { anna, ben } = await annaFindsBen();
-    await makeFindable(a, anna);
-    const back = await b.directory.findRemotePerson(ben, A, await usernameOf(a, anna));
-    expect(back.origin).toBe(A);
-    expect(await a.prisma.remoteShareAccount.count({ where: { userId: anna } })).toBe(1);
-    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
-    const onA = await a.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: anna } });
-    const onB = await b.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: ben } });
-    expect(onA.channel).toBe(onB.localChannel);
-    expect(onA.localChannel).toBe(onB.channel);
-  });
-});
-
-describe("a person the user withdrew from", () => {
-  it("does not come back by asking again with a fresh channel, and nothing is created", async () => {
-    const { anna, ben, person } = await annaFindsBen();
-    const benRow = await b.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: ben } });
-    await b.lifecycle.withdrawRemoteConsent(ben, benRow.id);
-    // Anna's server lost its pairing (a restore): it asks with a brand-new channel.
-    await a.prisma.remoteShareAccount.deleteMany({ where: { userId: anna } });
-    await expectRefusal(
-      a.directory.findRemotePerson(anna, B, person.username),
-      "SHARE_REMOTE_PERSON_UNKNOWN"
-    );
-    expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
-    expect(
-      await b.prisma.shareConsent.count({ where: { targetId: ben, status: "accepted" } })
-    ).toBe(0);
-  });
-});
 
 describe("what a pairing showed ends with the pairing", () => {
   /** Ben shows Anna his totals and his full statistics. */
@@ -220,62 +79,6 @@ describe("what a pairing showed ends with the pairing", () => {
     expect(
       (await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: benRow.id } })).statsLevel
     ).toBe("off");
-  });
-});
-
-describe("a leaderboard channel mismatch", () => {
-  it("is shown: the switch is not operable and the answer carries the reason", async () => {
-    const { anna, person } = await annaFindsBen();
-    const onA = await a.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: anna } });
-    // The two servers now name the leaderboard pairing differently.
-    await a.prisma.leaderboardRemote.update({
-      where: { id: onA.leaderboardRemoteId! },
-      data: { channel: randomUUID() },
-    });
-    const again = await a.directory.findRemotePerson(anna, B, person.username);
-    expect(again).toMatchObject({
-      leaderboard: "unavailable",
-      leaderboardIssue: "channel-mismatch",
-    });
-    await expectRefusal(
-      a.remoteStats.setRemoteLeaderboard(anna, person.id, true),
-      "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE"
-    );
-    expect(
-      await a.prisma.leaderboardConsent.count({ where: { ownerId: anna, status: "accepted" } })
-    ).toBe(0);
-  });
-});
-
-describe("a reused or renamed username", () => {
-  it("never inherits the old person's pairing, level or leaderboard consent", async () => {
-    const { anna, ben } = await annaFindsBen();
-    const benRowOfAnna = await b.prisma.remoteShareAccount.findFirstOrThrow({
-      where: { userId: ben, origin: A },
-    });
-    await b.remoteStats.setStatsLevel(ben, benRowOfAnna.id, "full");
-    await b.remoteStats.setRemoteLeaderboard(ben, benRowOfAnna.id, true);
-    // Anna's account is renamed; a new person on A takes the old name and looks Ben up.
-    const oldName = await usernameOf(a, anna);
-    await a.prisma.user.update({ where: { id: anna }, data: { username: `${oldName}-old` } });
-    const dora = await user(a, "Dora");
-    await a.prisma.user.update({ where: { id: dora }, data: { username: oldName } });
-    await a.directory.findRemotePerson(dora, B, await usernameOf(b, ben));
-    const rows = await b.prisma.remoteShareAccount.findMany({ where: { userId: ben, origin: A } });
-    expect(rows).toHaveLength(2);
-    const fresh = rows.find((r) => r.id !== benRowOfAnna.id)!;
-    expect(fresh.statsLevel).toBe("off");
-    expect(fresh.channel).not.toBe(benRowOfAnna.channel);
-    expect(fresh.localChannel).not.toBe(benRowOfAnna.localChannel);
-    expect(fresh.leaderboardRemoteId).not.toBe(benRowOfAnna.leaderboardRemoteId);
-    expect(
-      await b.prisma.leaderboardConsent.count({ where: { remoteId: fresh.leaderboardRemoteId! } })
-    ).toBe(0);
-    // The old pairing is untouched.
-    expect(
-      (await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: benRowOfAnna.id } }))
-        .statsLevel
-    ).toBe("full");
   });
 });
 
@@ -421,7 +224,12 @@ describe("the statistics level of one remote person", () => {
     await a.remoteStats.setStatsLevel(anna, annaPairing.id, "full");
     // As after a restore (consent back to pending) or a revoke from the other side.
     await a.prisma.shareConsent.updateMany({
-      where: { requesterId: anna, remoteTargetId: annaPairing.id },
+      where: {
+        OR: [
+          { requesterId: anna, remoteTargetId: annaPairing.id },
+          { remoteRequesterId: annaPairing.id, targetId: anna },
+        ],
+      },
       data: { status: "pending" },
     });
     await expectRefusal(
@@ -446,10 +254,8 @@ describe("the statistics level of one remote person", () => {
 });
 
 describe("a trip offered to a person on a connected server", () => {
-  it("looks the person up, offers the trip, and the person answers in their inbox", async () => {
-    const anna = await user(a, "Anna");
-    const ben = await user(b, "Ben");
-    await makeFindable(b, ben);
+  it("offers the trip by name to a connected person, who answers in their inbox", async () => {
+    const { anna, ben } = await annaFindsBen();
     const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
     await addFlight(a, anna, trip.id);
     const member = await a.offerByName.offerTripTo(anna, trip.id, {
@@ -465,13 +271,14 @@ describe("a trip offered to a person on a connected server", () => {
     expect(await b.prisma.trip.count({ where: { userId: ben } })).toBe(0);
   });
 
-  it("a person who is not findable is refused with the lookup's reason, and no offer leaves", async () => {
+  it("a person without a confirmed connection is refused with its own reason, and no offer leaves", async () => {
     const anna = await user(a, "Anna");
     const ben = await user(b, "Ben");
+    await makeFindable(b, ben);
     const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
     await expectRefusal(
       a.offerByName.offerTripTo(anna, trip.id, { origin: B, username: await usernameOf(b, ben) }),
-      "SHARE_REMOTE_PERSON_UNKNOWN"
+      "SHARE_REMOTE_CONNECTION_REQUIRED"
     );
     expect(await b.offerInbox.listReceivedOffers(ben)).toHaveLength(0);
     expect(await b.offerInbox.countReceivedOffers(ben)).toBe(0);

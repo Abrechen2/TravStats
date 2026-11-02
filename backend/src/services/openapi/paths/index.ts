@@ -36,6 +36,7 @@ import "./operators";
 import "./mapDetails";
 import "./companions";
 import "./sharingRemote";
+import "./sharingConnections";
 import "./airports";
 import "./stats";
 import "./statsNoOwnClient";

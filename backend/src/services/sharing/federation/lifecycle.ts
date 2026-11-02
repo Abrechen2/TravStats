@@ -29,6 +29,7 @@ import { prisma, type DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import { requireTripFederation } from "./access";
 import { endShowing } from "./remoteStats";
+import { endPlanMembershipsOfConnection } from "./connections/hooks";
 import { kickDelivery } from "./deliveryKick";
 import { queueEntries } from "./entries";
 import { remoteShareError } from "./errors";
@@ -153,7 +154,7 @@ export const serveLeave = (origin: string, message: LeaveMessage): Promise<TripS
  * copy of each such trip leaves its group (the receiver detaches, §7) unless another of their
  * pairings still carries it; at the home, the others get the new roster.
  */
-async function revokePairing(
+export async function revokePairing(
   tx: DbTransaction,
   pairing: { id: string; userId: string; displayName: string; origin: string },
   tell: boolean,
@@ -162,6 +163,20 @@ async function revokePairing(
   const now = new Date();
   // Statistics and the leaderboard end with the pairing, on every path that revokes it.
   await endShowing(tx, pairing.id);
+  // The connection ends with it (spec 2026-11-02 §3): every switch off, the other side's cleared.
+  await tx.remoteShareAccount.update({
+    where: { id: pairing.id },
+    data: {
+      state: "revoked",
+      endedAt: now,
+      sharePlans: false,
+      shareAchievements: false,
+      shareLeaderboard: false,
+      shareTripOffers: false,
+      remoteSwitches: {},
+    },
+  });
+  await endPlanMembershipsOfConnection(tx, pairing);
   await tx.shareConsent.updateMany({
     where: {
       status: { in: ["pending", "accepted"] },

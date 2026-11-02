@@ -52,6 +52,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   "summaryGeneratedAt",
   // Trip sharing: when a consent was answered, a notice read or undone.
   "decidedAt",
+  // A user connection (2026-11-02): when it was asked for and confirmed.
+  "requestedAt",
+  "confirmedAt",
   "readAt",
   "undoneAt",
   // A scheduled job's own clock: when the nightly photo scan last ran for an

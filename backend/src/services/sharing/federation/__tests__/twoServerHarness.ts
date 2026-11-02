@@ -55,6 +55,10 @@ import * as peerFeaturesModule from "../peerFeatures";
 import * as directoryModule from "../directory";
 import * as offerByNameModule from "../offerByName";
 import * as remoteStatsModule from "../remoteStats";
+import * as connectionActionsModule from "../connections/actions";
+import * as connectionServeModule from "../connections/serve";
+import * as connectionViewModule from "../connections/view";
+import type { ConnectionSwitches } from "../../../../schemas/tripSharePeer";
 import { resetIdentityCache } from "../../../federation/identity";
 import { encryptApiKey } from "../../../../utils/encryption";
 import { preparePeerDatabase } from "./peerDatabase";
@@ -96,6 +100,9 @@ export interface Server {
   directory: typeof directoryModule;
   offerByName: typeof offerByNameModule;
   remoteStats: typeof remoteStatsModule;
+  connections: typeof connectionActionsModule;
+  connectionServe: typeof connectionServeModule;
+  connectionView: typeof connectionViewModule;
   resetIdentity: () => void;
   encrypt: (value: string) => string | null;
   app: express.Express;
@@ -140,6 +147,9 @@ const serverA = (): Server => ({
   directory: directoryModule,
   offerByName: offerByNameModule,
   remoteStats: remoteStatsModule,
+  connections: connectionActionsModule,
+  connectionServe: connectionServeModule,
+  connectionView: connectionViewModule,
   resetIdentity: resetIdentityCache,
   encrypt: encryptApiKey,
   app: peerApp(tripSharePeerRouter, comparisonPeerRouter),
@@ -185,6 +195,9 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         directory: require("../directory"),
         offerByName: require("../offerByName"),
         remoteStats: require("../remoteStats"),
+        connections: require("../connections/actions"),
+        connectionServe: require("../connections/serve"),
+        connectionView: require("../connections/view"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,
         encrypt: require("../../../../utils/encryption").encryptApiKey,
         app: peerApp(
@@ -257,6 +270,41 @@ export async function pin(
     update: row,
   });
 }
+/** Everything off: what a connection starts from. */
+export const OFF: ConnectionSwitches = {
+  plans: false,
+  stats: "off",
+  achievements: false,
+  leaderboard: false,
+  tripOffers: false,
+};
+
+/**
+ * Connect two people through the real request and confirmation (spec 2026-11-02): `asker` on
+ * server `from` asks `target` on `to` (who opted in to being found), `target` confirms. Returns
+ * both sides' connection ids.
+ */
+export async function connect(
+  from: Server,
+  asker: string,
+  to: Server,
+  target: string,
+  switches: { asker?: Partial<ConnectionSwitches>; target?: Partial<ConnectionSwitches> } = {}
+): Promise<{ onFrom: string; onTo: string }> {
+  await to.prisma.user.update({ where: { id: target }, data: { federationFindable: true } });
+  const username = (await to.prisma.user.findUniqueOrThrow({ where: { id: target } })).username;
+  const asked = await from.connections.requestConnection(asker, {
+    origin: to.origin,
+    username,
+    switches: { ...OFF, ...switches.asker },
+  });
+  const incoming = await to.prisma.remoteShareAccount.findFirstOrThrow({
+    where: { userId: target, origin: from.origin, state: "pending_in" },
+  });
+  await to.connections.acceptConnection(target, incoming.id, { ...OFF, ...switches.target });
+  return { onFrom: asked.id, onTo: incoming.id };
+}
+
 export async function user(s: Server, firstName: string): Promise<string> {
   const u = await s.prisma.user.create({
     data: { username: `two-${randomUUID().slice(0, 8)}`, passwordHash: "test-only", firstName },

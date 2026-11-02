@@ -23,7 +23,6 @@ import {
   declineOffer,
   listReceivedOffers,
 } from "../services/sharing/federation/offerInbox";
-import { findRemotePerson } from "../services/sharing/federation/directory";
 import {
   getFindable,
   readRemoteEntries,
@@ -46,7 +45,6 @@ import {
   remoteClaimBodySchema,
   remoteEntriesQuerySchema,
   remoteFindableSchema,
-  remoteFindBodySchema,
   remoteLeaderboardBodySchema,
   remoteStatsLevelBodySchema,
   remoteStatsQuerySchema,
@@ -213,17 +211,6 @@ router.get(
   "/servers",
   handle(async (_req, res) => {
     res.json({ success: true, data: await listConnectedServers() });
-  })
-);
-
-router.post(
-  "/people/find",
-  remoteLookupLimiter,
-  handle(async (req, res) => {
-    const { origin, username } = remoteFindBodySchema.parse(req.body ?? {});
-    res
-      .status(201)
-      .json({ success: true, data: await findRemotePerson(req.userId!, origin, username) });
   })
 );
 

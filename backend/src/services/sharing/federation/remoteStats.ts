@@ -27,13 +27,14 @@ import {
   buildOverviewSnapshot,
   type LeaderboardSnapshot,
   parseOverviewSnapshot,
-  setLeaderboardConsent,
   withdrawLeaderboardConsent,
 } from "../../federation/leaderboardBridge";
 import { ADAPTERS } from "../adapters";
 import { SHARE_ENTITIES, SHARE_TYPES, type ShareEntity } from "../shareTypes";
 import { loadVisibleDomains } from "../../domainVisibility";
 import { requireTripFederation } from "./access";
+import { mayServeStats, mineOf } from "./connections/switches";
+import { updateConnectionSwitches } from "./connections/actions";
 import { remoteShareError } from "./errors";
 import { peerSupports } from "./peerFeatures";
 import {
@@ -107,10 +108,8 @@ export async function setStatsLevel(
 ): Promise<RemotePersonView> {
   await requireTripFederation(userId);
   const pairing = await ownPairing(userId, remoteId, level !== "off");
-  await prisma.remoteShareAccount.update({
-    where: { id: pairing.id },
-    data: { statsLevel: level },
-  });
+  // Through the connection's own switch call, so the other side is told (spec 2026-11-02 §5).
+  await updateConnectionSwitches(userId, remoteId, { ...mineOf(pairing), stats: level });
   return readRemotePerson(userId, remoteId);
 }
 
@@ -134,7 +133,7 @@ export async function setRemoteLeaderboard(
       "That pairing has no leaderboard",
       { userId, origin: pairing.origin }
     );
-  await setLeaderboardConsent(userId, lbId, on);
+  await updateConnectionSwitches(userId, remoteId, { ...mineOf(pairing), leaderboard: on });
   return readRemotePerson(userId, remoteId);
 }
 
@@ -199,7 +198,8 @@ export async function serveStatsRead(origin: string, body: StatsRead): Promise<S
     where: { origin, channel: body.from, localChannel: body.to },
     include: { user: { select: { isActive: true } } },
   });
-  if (!pairing?.user.isActive || pairing.statsLevel === "off") return NOT_SHARED;
+  // Served on an active connection whose owner set a level above off (spec 2026-11-02).
+  if (!pairing?.user.isActive || !mayServeStats(pairing)) return NOT_SHARED;
   // The level is a grant on a live pairing: withdrawn, revoked or held after a restore shows nothing.
   if (!(await consentAccepted(pairing.userId, pairing.id))) return NOT_SHARED;
   const level = pairing.statsLevel as StatsLevel;
@@ -240,6 +240,15 @@ async function ask(
 ): Promise<StatsReply> {
   await requireTripFederation(userId);
   const pairing = await ownPairing(userId, remoteId);
+  // Reading someone's statistics needs a confirmed connection (spec 2026-11-02).
+  if (pairing.state !== "active")
+    throw remoteShareError(
+      "SHARE_REMOTE_CONNECTION_REQUIRED",
+      409,
+      "Connect with that person first",
+      { userId, origin: pairing.origin },
+      { origin: pairing.origin }
+    );
   await requireAdmitted(userId, pairing.origin);
   await requireTripSharePeer(userId, pairing.origin);
   if (!(await peerSupports(pairing.origin, "stats").catch(() => false)))
