@@ -37,8 +37,11 @@ import {
 import { describeRoutingAvailability } from "../services/tour/routing/resolveProvider";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import { busYear } from "../shared/busCounting";
-import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { resolveCompanions } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { idsInLocalYear } from "../services/transport/localYear";
+import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
+import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
@@ -93,24 +96,17 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
-const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
-
 /** The rides that left in `year` on their departure terminal's calendar — `busYear`'s rule, per row. */
 async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
-  const candidates = await prisma.busJourney.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
-        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
-      },
-    },
-    select: { id: true, departureTime: true, depTimezone: true },
-  });
-  return candidates
-    .filter((r) => busYear({ ...r, arrivalTime: null, arrTimezone: null }) === year)
-    .map((r) => r.id);
+  return idsInLocalYear(
+    year,
+    (window) =>
+      prisma.busJourney.findMany({
+        where: { userId, departureTime: window },
+        select: { id: true, departureTime: true, depTimezone: true },
+      }),
+    (r) => busYear({ ...r, arrivalTime: null, arrTimezone: null })
+  );
 }
 
 export async function buildBusWhere(
@@ -319,15 +315,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
         companions: companions.map((c) => c.displayName),
       },
     });
-    if (companions.length > 0) {
-      await tx.busJourneyCompanion.createMany({
-        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-          ...row,
-          busJourneyId: created.id,
-        })),
-        skipDuplicates: true,
-      });
-    }
+    await linkCompanions(tx.busJourneyCompanion, "busJourneyId", created.id, companions);
     await propagateWrite(tx, userId, "bus", created.id);
     await claim(tx, created.id);
     // Filed inside the create, so a failure rolls the ride and its claim back
@@ -362,36 +350,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       input.companions !== undefined
         ? await resolveCompanions(userId, input.companions)
         : undefined;
-    // Recomputed only when an input it depends on moved — from the merged
-    // state, so a currency-only PATCH still converts the unchanged price.
-    const fxInputsChanged =
-      input.price !== undefined ||
-      input.currency !== undefined ||
-      state.departureTime.getTime() !== existing.departureTime.getTime();
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: input.price !== undefined ? input.price : existing.price,
-            currency: input.currency ?? existing.currency,
-            date: state.departureTime,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
+    const fxColumns = await fxColumnsOnEdit(userId, input, existing, state.departureTime);
 
     const ride = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "bus", existing.id);
       if (resolved !== undefined) {
-        await tx.busJourneyCompanion.deleteMany({ where: { busJourneyId: existing.id } });
-        if (resolved.length > 0) {
-          await tx.busJourneyCompanion.createMany({
-            data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-              ...row,
-              busJourneyId: existing.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        await replaceCompanionLinks(tx.busJourneyCompanion, "busJourneyId", existing.id, resolved);
       }
       await tx.busJourney.update({
         where: { id: existing.id },

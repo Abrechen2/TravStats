@@ -35,8 +35,11 @@ import { resolveStationInput, withStationShortCodes } from "../services/rail/rai
 import { bindConnection } from "../services/rail/railConnection";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import { railYear } from "../shared/railCounting";
-import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { resolveCompanions } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { idsInLocalYear } from "../services/transport/localYear";
+import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
+import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
@@ -166,8 +169,6 @@ const requireUser = (req: AuthRequest): string => {
 };
 
 /** The farthest a station clock runs from UTC: UTC+14 ahead, UTC−12 behind. */
-const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
-const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
 
 /**
  * The rides that left in `year` on their departure station's calendar
@@ -179,19 +180,15 @@ const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
  * clocks only), the rule picks the rows, and the list query takes their ids.
  */
 async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
-  const candidates = await prisma.railJourney.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
-        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
-      },
-    },
-    select: { id: true, departureTime: true, depTimezone: true },
-  });
-  return candidates
-    .filter((r) => railYear({ ...r, arrivalTime: null, arrTimezone: null }) === year)
-    .map((r) => r.id);
+  return idsInLocalYear(
+    year,
+    (window) =>
+      prisma.railJourney.findMany({
+        where: { userId, departureTime: window },
+        select: { id: true, departureTime: true, depTimezone: true },
+      }),
+    (r) => railYear({ ...r, arrivalTime: null, arrTimezone: null })
+  );
 }
 
 /**
@@ -422,15 +419,7 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
         companions: companions.map((c) => c.displayName),
       },
     });
-    if (companions.length > 0) {
-      await tx.railJourneyCompanion.createMany({
-        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-          ...row,
-          railJourneyId: created.id,
-        })),
-        skipDuplicates: true,
-      });
-    }
+    await linkCompanions(tx.railJourneyCompanion, "railJourneyId", created.id, companions);
     await propagateWrite(tx, userId, "rail", created.id);
     await claim(tx, created.id);
     // Filed inside the create: filed after the commit, a failure left the ride
@@ -547,36 +536,17 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       input.companions === undefined
         ? undefined
         : await resolveCompanions(userId, input.companions);
-    // Recomputed only when an input it depends on moved — from the merged
-    // state, so a currency-only PATCH still converts the unchanged price.
-    const fxInputsChanged =
-      input.price !== undefined ||
-      input.currency !== undefined ||
-      state.departureTime.getTime() !== existing.departureTime.getTime();
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: input.price !== undefined ? input.price : existing.price,
-            currency: input.currency ?? existing.currency,
-            date: state.departureTime,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
+    const fxColumns = await fxColumnsOnEdit(userId, input, existing, state.departureTime);
 
     const journey = await prisma.$transaction(async (tx) => {
       const before = await shareSnapshot(tx, "rail", existing.id);
       if (resolved !== undefined) {
-        await tx.railJourneyCompanion.deleteMany({ where: { railJourneyId: existing.id } });
-        if (resolved.length > 0) {
-          await tx.railJourneyCompanion.createMany({
-            data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-              ...row,
-              railJourneyId: existing.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        await replaceCompanionLinks(
+          tx.railJourneyCompanion,
+          "railJourneyId",
+          existing.id,
+          resolved
+        );
       }
       await tx.railJourney.update({
         where: { id: existing.id },

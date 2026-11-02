@@ -35,8 +35,11 @@ import {
   SHARE_TX_TIMEOUT_MS,
 } from "../services/sharing/propagate";
 import { ferryYear } from "../shared/ferryCounting";
-import { resolveCompanions, linkRowsFor } from "../services/companionService";
+import { resolveCompanions } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { idsInLocalYear } from "../services/transport/localYear";
+import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
+import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { linkDocumentsInTx, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
@@ -116,23 +119,16 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
-const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
-
 async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
-  const candidates = await prisma.ferryJourney.findMany({
-    where: {
-      userId,
-      departureTime: {
-        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
-        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
-      },
-    },
-    select: { id: true, departureTime: true, depTimezone: true },
-  });
-  return candidates
-    .filter((r) => ferryYear({ ...r, arrivalTime: null, arrTimezone: null }) === year)
-    .map((r) => r.id);
+  return idsInLocalYear(
+    year,
+    (window) =>
+      prisma.ferryJourney.findMany({
+        where: { userId, departureTime: window },
+        select: { id: true, departureTime: true, depTimezone: true },
+      }),
+    (r) => ferryYear({ ...r, arrivalTime: null, arrTimezone: null })
+  );
 }
 
 export async function buildFerryWhere(
@@ -299,15 +295,7 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
           companions: companions.map((c) => c.displayName),
         },
       });
-      if (companions.length > 0) {
-        await tx.ferryJourneyCompanion.createMany({
-          data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-            ...row,
-            ferryJourneyId: created.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
+      await linkCompanions(tx.ferryJourneyCompanion, "ferryJourneyId", created.id, companions);
       await claim(tx, created.id);
       // On a shared trip: copied to the other members (design 2026-10-09).
       await propagateWrite(tx, userId, "ferry", created.id);
@@ -366,22 +354,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       input.companions !== undefined
         ? await resolveCompanions(userId, input.companions)
         : undefined;
-    // Recomputed only when an input it depends on moved — from the merged
-    // state, so a currency-only PATCH still converts the unchanged price.
-    const fxInputsChanged =
-      input.price !== undefined ||
-      input.currency !== undefined ||
-      state.departureTime.getTime() !== existing.departureTime.getTime();
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: input.price !== undefined ? input.price : existing.price,
-            currency: input.currency ?? existing.currency,
-            date: state.departureTime,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
+    const fxColumns = await fxColumnsOnEdit(userId, input, existing, state.departureTime);
 
     let ride;
     try {
@@ -395,16 +368,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           });
           if (claimed.count !== 1) throw new FerryVersionMoved();
           if (resolved !== undefined) {
-            await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
-            if (resolved.length > 0) {
-              await tx.ferryJourneyCompanion.createMany({
-                data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-                  ...row,
-                  ferryJourneyId: existing.id,
-                })),
-                skipDuplicates: true,
-              });
-            }
+            await replaceCompanionLinks(
+              tx.ferryJourneyCompanion,
+              "ferryJourneyId",
+              existing.id,
+              resolved
+            );
           }
           await tx.ferryJourney.update({
             where: { id: existing.id },
