@@ -96,11 +96,13 @@ export const ferryApi = {
     ).data.data;
   },
   async ticketPreview(
-    input: { text: string } | { documentId: string }
+    input: { text: string } | { documentId: string },
+    headers?: Record<string, string>
   ): Promise<FerryTicketPreview> {
     return (
       await api.post<Envelope<FerryTicketPreview>>("/ferry/ticket-preview", input, {
         timeout: 180000,
+        ...(headers ? { headers } : {}),
       })
     ).data.data;
   },

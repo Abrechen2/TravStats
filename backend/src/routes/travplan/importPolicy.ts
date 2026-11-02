@@ -1,16 +1,19 @@
 import type { NextFunction, Response } from "express";
 import { z } from "zod";
 import { authenticate, type AuthRequest } from "../../middleware/auth";
-import {
-  assertEnabled,
-  ownedPlan,
-  reserveUsage,
-  configuration,
-} from "../../services/travplan/store";
+import { assertEnabled, reserveUsage, configuration } from "../../services/travplan/store";
+import { accessiblePlan } from "../../services/travplan/access";
 import { parseState } from "../../services/travplan/upgrade";
 import { assertTravPlanForUser, assertTravPlanOffered } from "../../services/travplan/availability";
 import { withLlmRequestPolicy } from "../../services/llm/requestPolicy";
-const inputs = new Set(["/parse-email", "/parse-email-file", "/parse-pdf", "/parse-image"]);
+const inputs = new Set([
+  "/parse-email",
+  "/parse-email-file",
+  "/parse-pdf",
+  "/parse-image",
+  // A ferry ticket read from text (forgejo#404): its labelled reader and model obey the plan too.
+  "/ferry/ticket-preview",
+]);
 /** The existing parser pipeline reads under this trip's explicit request policy. */
 export function planningImportPolicy(req: AuthRequest, res: Response, next: NextFunction) {
   const trip = req.get("X-TravPlan-Trip");
@@ -21,7 +24,7 @@ export function planningImportPolicy(req: AuthRequest, res: Response, next: Next
       await assertTravPlanOffered();
       await assertEnabled();
       await assertTravPlanForUser(req.userId!);
-      const plan = await ownedPlan(req.userId!, z.string().uuid().parse(trip));
+      const plan = await accessiblePlan(req.userId!, z.string().uuid().parse(trip));
       const state = parseState(plan.state);
       const policy = req.get("X-TravPlan-AI") === "true" ? state.ai.policy : "disabled";
       if (policy !== "disabled")
