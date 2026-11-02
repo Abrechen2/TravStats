@@ -290,6 +290,7 @@ router.post(
       // Fetch first: a failed Strava call must not leave an empty tour behind.
       const fetched = await fetchActivityTrack(token, activityId);
       const mapped = activityFromSportType(fetched.sportType);
+      // share-exempt: a Strava import is a tour — only roadtrips are shared
       const route = await prisma.tripRoute.create({
         data: {
           userId,
@@ -305,6 +306,7 @@ router.post(
         const track = await importInto(route.id, activityId, fetched);
         res.status(201).json({ routeId: route.id, track });
       } catch (error) {
+        // share-exempt: a Strava import is a tour — only roadtrips are shared
         await prisma.tripRoute.delete({ where: { id: route.id } });
         throw error;
       }

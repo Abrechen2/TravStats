@@ -121,7 +121,9 @@ const ENTITY_OF_DELEGATE = new Map<ShareDelegate, ShareEntity>(
 function entryRef(ref: unknown): EntryWireRef | null {
   const r = ref as EntryRef | null;
   const entity = r ? ENTITY_OF_DELEGATE.get(r.table) : undefined;
-  return r && entity && entity !== "stop" ? { entity, shareKey: r.key } : null;
+  return r && entity && entity !== "stop" && entity !== "roadtrip"
+    ? { entity, shareKey: r.key }
+    : null;
 }
 
 /** The facts with every catalogue id replaced by its reference. */
@@ -157,6 +159,14 @@ function withRefs(entity: ShareEntity, f: Facts, cat: Catalogue): Facts {
       const house = f.lodging as Facts;
       return { ...f, lodging: { ...house, chain: lookup(cat.chains, house.catalogueChainId) } };
     }
+    case "roadtrip":
+      return {
+        ...f,
+        stations: (f.stations as Facts[]).map((s) => ({
+          ...s,
+          lodgingStayRef: entryRef(s.lodgingStayRef),
+        })),
+      };
     case "stop":
       return { ...f, sourceRef: entryRef(f.sourceRef), lodgingStayRef: entryRef(f.lodgingStayRef) };
     default:

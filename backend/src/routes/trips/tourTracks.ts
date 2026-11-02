@@ -304,6 +304,7 @@ router.post(
       // The Companion made the tour under the same generated name; it follows
       // the track unless the user has renamed it since.
       if (workoutName && file.track.name)
+        // share-exempt: renames a tour after a recording — only roadtrips are shared
         await prisma.tripRoute.updateMany({
           where: { id: routeId, name: file.track.name },
           data: { name: workoutName },

@@ -109,7 +109,7 @@
     "personal": "notes tags",
     "photos": "",
     "documents": "",
-    "excluded": "userId"
+    "excluded": "userId shareKey"
   },
   "TripRouteLeg": {
     "details": "id routeId fromStopId toStopId distanceKm source mode confidence drivingMinutes computedAt updatedAt",

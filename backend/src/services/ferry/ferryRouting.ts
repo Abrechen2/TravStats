@@ -56,6 +56,8 @@ export async function syncFerryLeg(
         { lat: ferry.depLat, lon: ferry.depLon },
         { lat: ferry.arrLat, lon: ferry.arrLon }
       );
+  // The leg's sea line and length are facts of its roadtrip: every member's copy gets them.
+  const routeBefore = await shareSnapshot(tx, "roadtrip", leg.routeId);
   const written = await tx.tripRouteLeg.updateMany({
     where: { id: leg.id, updatedAt: leg.updatedAt, mode: "ferry", source: leg.source },
     data: {
@@ -67,6 +69,7 @@ export async function syncFerryLeg(
     },
   });
   if (written.count !== 1) throw new AppError("Sea leg changed elsewhere", 409, "VERSION_CONFLICT");
+  await propagateWrite(tx, ferry.userId, "roadtrip", leg.routeId, routeBefore);
 }
 
 /**

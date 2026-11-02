@@ -642,18 +642,25 @@ router.delete(
       // tour left without them would be a route pointing at nothing. The
       // same rule decides whether a route may change trip (tourRoutes.ts).
       await prisma.$transaction(async (tx) => {
+        // A shared trip leaves its group first — before its roadtrips leave the trip, or their
+        // keys would outlive the group: the others keep their copies and are told (design
+        // 2026-10-09, decision 5).
+        await detachTrip(tx, userId, existing);
         const roadtrips = await tx.tripRoute.findMany({
           where: { tripId: existing.id, kind: "roadtrip" },
           select: { id: true },
         });
         const ids = roadtrips.map((r) => r.id);
         if (ids.length > 0) {
+          // share-exempt: detachTrip above already cleared the keys and told the members
           await tx.tripStop.updateMany({
             where: { routeId: { in: ids }, tripId: existing.id },
             data: { tripId: null, domain: "roadtrip" },
           });
+          // share-exempt: detachTrip above already cleared the keys and told the members
           await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
         }
+        // share-exempt: day tours are never shared
         await tx.tripRoute.updateMany({
           where: {
             tripId: existing.id,
@@ -662,9 +669,6 @@ router.delete(
           },
           data: { tripId: null },
         });
-        // A shared trip leaves its group first: the others keep their copies
-        // and are told (design 2026-10-09, decision 5).
-        await detachTrip(tx, userId, existing);
         await tx.trip.delete({ where: { id: existing.id } });
       });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");

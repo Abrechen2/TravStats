@@ -4,7 +4,12 @@ import { prisma, type DbTransaction } from "../../db";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { z } from "../../schemas/zod";
-import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
+import {
+  propagateWrite,
+  propagateWrites,
+  shareSnapshot,
+  shareSnapshots,
+} from "../../services/sharing/propagate";
 import { recomputeTripStatus } from "../../services/tripStatusService";
 import { syncFerryLeg } from "../../services/ferry/ferryRouting";
 import logger from "../../utils/logger";
@@ -82,6 +87,7 @@ export async function restoreLeg(tx: Tx, legId: string, stored: unknown): Promis
     return;
   }
   const before = parsed.data;
+  // share-exempt: unlink bookkeeping on a leg; the caller propagates the roadtrip
   await tx.tripRouteLeg.updateMany({
     // "routed" is what a computed sea route writes (syncFerryLeg); a drawn or
     // recorded line is the user's own and is kept.
@@ -117,13 +123,26 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
       if (!ferry) throw new AppError("Crossing not found", 404);
       const before = await shareSnapshot(tx, "ferry", ferry.id);
       const previousLegId = ferry.roadtripLegId;
+      // The roadtrips the link touches: a leg's crossing travels with its roadtrip.
+      const routeIdOf = async (legId: string | null) =>
+        legId
+          ? ((await tx.tripRouteLeg.findUnique({ where: { id: legId }, select: { routeId: true } }))
+              ?.routeId ?? null)
+          : null;
+      const previousRouteId = await routeIdOf(previousLegId);
       if (!parsed.data.legId) {
+        const routesBefore = await shareSnapshots(
+          tx,
+          "roadtrip",
+          previousRouteId ? [previousRouteId] : []
+        );
         if (previousLegId) await restoreLeg(tx, previousLegId, ferry.roadtripLegBefore);
         await tx.ferryJourney.update({
           where: { id: ferry.id },
           data: { roadtripLegId: null, roadtripLegBefore: Prisma.DbNull },
         });
         await propagateWrite(tx, req.userId!, "ferry", ferry.id, before);
+        await propagateWrites(tx, req.userId!, "roadtrip", [...routesBefore.keys()], routesBefore);
         return { tripId: ferry.tripId };
       }
       const leg = await tx.tripRouteLeg.findFirst({
@@ -135,6 +154,9 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
         throw new AppError("Leg already has a crossing", 409);
       if (ferry.tripId && ferry.tripId !== leg.route.tripId)
         throw new AppError("Crossing and roadtrip must belong to the same trip", 409);
+      const routesBefore = await shareSnapshots(tx, "roadtrip", [
+        ...new Set([leg.routeId, previousRouteId].filter((id): id is string => id !== null)),
+      ]);
       const relinkSame = previousLegId === leg.id;
       if (previousLegId && !relinkSame)
         await restoreLeg(tx, previousLegId, ferry.roadtripLegBefore);
@@ -171,6 +193,7 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
       // shared trip copies it. The leg itself is no fact: a link on a crossing
       // already filed there propagates nothing.
       await propagateWrite(tx, req.userId!, "ferry", ferry.id, before);
+      await propagateWrites(tx, req.userId!, "roadtrip", [...routesBefore.keys()], routesBefore);
       return { tripId: leg.route.tripId };
     });
     if (result.tripId) await recomputeTripStatus(result.tripId);

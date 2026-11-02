@@ -109,6 +109,7 @@ export async function prefillTourDateFromTrack(
 ): Promise<void> {
   const day = recordedDay(track.startedAt, track.geometry);
   if (!day) return;
+  // share-exempt: a day tour's date — only roadtrips are shared
   await prisma.tripRoute.updateMany({
     where: { id: routeId, kind: "tour", tourDate: null },
     data: { tourDate: dayColumn(day) },

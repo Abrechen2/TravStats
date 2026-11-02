@@ -3,7 +3,12 @@ import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
 import { lockRoute } from "./lockRoute";
-import { propagateWrites, shareSnapshots } from "../sharing/propagate";
+import {
+  propagateWrite,
+  propagateWrites,
+  shareSnapshot,
+  shareSnapshots,
+} from "../sharing/propagate";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import {
@@ -190,12 +195,13 @@ export async function appendStation(
       // Read again under the route lock: a full-list write may have changed
       // the stations since the resend check above (review M1).
       await lockRoute(tx, routeId);
+      const roadtripBefore = await shareSnapshot(tx, "roadtrip", routeId);
       const current = await tx.tripStop.findMany({
         where: { routeId },
         orderBy: { routeOrderIdx: "asc" },
         select: { id: true, lat: true, lon: true, routeOrderIdx: true },
       });
-      // share-exempt: a roadtrip's own station sits on no trip — never shared
+      // share-exempt: the station is a part of its roadtrip, propagated below as one
       const station = await tx.tripStop.create({
         data: {
           tripId: null,
@@ -224,7 +230,9 @@ export async function appendStation(
         ...current.map((s) => ({ id: s.id, lat: s.lat, lon: s.lon })),
         station,
       ];
-      return { stationId: station.id, newLegs: await recomputeLegs(tx, routeId, mode, ordered) };
+      const newLegs = await recomputeLegs(tx, routeId, mode, ordered);
+      await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
+      return { stationId: station.id, newLegs };
     },
     { timeout: 20_000 }
   );
@@ -273,6 +281,7 @@ export async function removeStation(
       // before (review M1): a station the web added meanwhile would otherwise
       // be left without a position.
       await lockRoute(tx, routeId);
+      const roadtripBefore = await shareSnapshot(tx, "roadtrip", routeId);
       const rest = (
         await tx.tripStop.findMany({
           where: { routeId },
@@ -285,7 +294,13 @@ export async function removeStation(
       if (released) {
         await tx.tripStop.update({
           where: { id: stationId },
-          data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
+          data: {
+            routeId: null,
+            routeOrderIdx: null,
+            lodgingStayId: null,
+            overnight: false,
+            shareKey: null,
+          },
         });
       } else {
         await tx.tripStop.delete({ where: { id: stationId } });
@@ -297,7 +312,9 @@ export async function removeStation(
         await tx.tripStop.update({ where: { id: s.id }, data: { routeOrderIdx: index } });
       }
       if (released) await propagateWrites(tx, userId, "stop", [stationId], before);
-      return recomputeLegs(tx, routeId, mode, rest);
+      const legs = await recomputeLegs(tx, routeId, mode, rest);
+      await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
+      return legs;
     },
     { timeout: 20_000 }
   );

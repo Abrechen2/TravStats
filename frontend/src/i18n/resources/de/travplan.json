@@ -707,6 +707,9 @@
     },
     "banner": "Du planst als Gast {{name}} auf {{host}} mit. Du siehst nur diesen Plan.",
     "leave": "Plan verlassen",
+    "export": "Reise als Datei sichern",
+    "exportHint": "Die .travstats-Datei enthält die Route und die bestätigten Einträge dieser Reise, ohne Notizen, Preise, Fotos und Dokumente des Gastgebers. Du kannst sie auf deinem eigenen TravStats-Server importieren.",
+    "exportFailed": "Die Datei konnte nicht erstellt werden. Bitte erneut versuchen.",
     "phone": {
       "open": "Telefon koppeln",
       "hint": "Scanne den Code mit der TravStats-App. Er gilt nur für diesen Plan und wird nur einmal angezeigt."

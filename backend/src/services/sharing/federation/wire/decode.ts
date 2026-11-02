@@ -37,6 +37,7 @@ const PASSTHROUGH: Readonly<Record<ShareEntity, readonly string[]>> = {
   bus: RAIL_PASSTHROUGH,
   ferry: RAIL_PASSTHROUGH,
   rental: RENTAL_PASSTHROUGH,
+  roadtrip: [],
   stop: [],
 };
 
@@ -202,6 +203,12 @@ const DECODERS: Readonly<
   rental: {
     pickupAirport: ["pickupAirportId", (v, r) => r.airport(v as AirportRef | null)],
     returnAirport: ["returnAirportId", (v, r) => r.airport(v as AirportRef | null)],
+  },
+  roadtrip: {
+    stations: [
+      "stations",
+      (v) => (v as Facts[]).map((s) => ({ ...s, lodgingStayRef: localRef(s.lodgingStayRef) })),
+    ],
   },
   stop: {
     sourceRef: ["sourceRef", (v) => localRef(v)],

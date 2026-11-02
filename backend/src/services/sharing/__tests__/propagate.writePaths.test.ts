@@ -28,6 +28,8 @@ const TABLES = [
   "lodging",
   "cruiseStop",
   "cruiseLeg",
+  // A roadtrip's legs travel with the roadtrip (forgejo#404).
+  "tripRouteLeg",
 ];
 const WRITE = new RegExp(
   `\\.(${TABLES.join("|")})\\s*\\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\\(`,
@@ -47,6 +49,7 @@ const FILE_EXEMPT: Record<string, string> = {
   "services/sharing/adapters/lodgingStay.ts": "propagation writes (the copies)",
   "services/sharing/adapters/cruise.ts": "propagation writes (the copies)",
   "services/sharing/adapters/stop.ts": "propagation writes (the copies)",
+  "services/sharing/adapters/roadtrip.ts": "propagation writes (the copies)",
   "services/sharing/deriveCopy.ts": "a copy's derived status, written by propagation",
   "index.ts": "boot-time aircraft-name normalisation, applied to every account",
   "services/statusSweep.ts": "status sweep, runs over every account's rows",
@@ -72,6 +75,7 @@ const FILE_EXEMPT: Record<string, string> = {
   "services/xlsxImport/lodging.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/prune.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/routeLists.ts": "xlsx run, propagated by importSheets.ts",
+  "services/xlsxImport/roadtrips.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/companionLinks.ts": "companions — private",
   "services/tour/replaceTourPoints.ts": "tour points — not shared",
 };

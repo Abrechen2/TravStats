@@ -30,16 +30,18 @@ export const TRIP_FILE_FORMAT = "travstats-trip";
  * (`tripFileVersionFor`), so an importer that predates a key refuses the file
  * by name ("format version 3 is not supported", 422) instead of importing the
  * trip without those journeys — and a trip without them stays readable by
- * every older importer.
+ * every older importer. Version 4 added `roadtrips` (forgejo#404, spec §6.8).
  */
-export const TRIP_FILE_VERSION = 3;
-/** What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`) and 3. */
-export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3] as const;
+export const TRIP_FILE_VERSION = 4;
+/** What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`), 3 (no `roadtrips`) and 4. */
+export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4] as const;
 
 export function tripFileVersionFor(file: {
   bus?: readonly unknown[];
   ferry?: readonly unknown[];
-}): 1 | 2 | 3 {
+  roadtrips?: readonly unknown[];
+}): 1 | 2 | 3 | 4 {
+  if ((file.roadtrips?.length ?? 0) > 0) return 4;
   if ((file.ferry?.length ?? 0) > 0) return 3;
   return (file.bus?.length ?? 0) > 0 ? 2 : 1;
 }
@@ -92,7 +94,7 @@ export const manifestHeadSchema = z.object({
 
 export const manifestSchema = manifestHeadSchema
   .extend({
-    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
     appVersion: str(200),
     exportedAt: z.iso.datetime({ offset: true }),
     options: exportOptionsSchema,
@@ -540,6 +542,75 @@ const stopSchema = z
   })
   .strict();
 
+/**
+ * A roadtrip: the route section, its stations and the legs between them
+ * (forgejo#404). Stations and legs reference each other by file-local keys; a
+ * leg names the crossing linked to it by the ferry's key (`ferryKey`), the one
+ * link `ferry` itself does not carry. Private: notes, odometer readings; the
+ * expenses and recorded tracks never leave the account.
+ */
+const roadtripStationSchema = z
+  .object({
+    key,
+    routeOrderIdx: z.number().int().min(0).max(100_000),
+    orderIdx: z.number().int().min(0).max(100_000),
+    domain: optStr(200),
+    title: str(300),
+    description: optStr(5000),
+    startDate: instant,
+    endDate: instant,
+    startUtc: instant,
+    endUtc: instant,
+    stopZone: zone,
+    precision: optStr(200),
+    lat: lat.nullable(),
+    lon: lon.nullable(),
+    overnight: z.boolean(),
+    viaPoint: z.boolean(),
+    countryVisitKind: str(40),
+    stayKey: key.nullable(),
+    private: z
+      .object({ notes: optStr(10_000) })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const roadtripLegSchema = z
+  .object({
+    fromKey: key,
+    toKey: key,
+    ferryKey: key.nullable(),
+    distanceKm: z.number().min(0).max(1_000_000),
+    source: str(40),
+    mode: str(40),
+    confidence: str(40),
+    waypoints: z.json().nullable(),
+    drivingMinutes: z.number().int().min(0).max(10_000_000).nullable(),
+  })
+  .strict();
+
+const roadtripSchema = z
+  .object({
+    key,
+    name: str(300).min(1),
+    mode: str(40),
+    orderIdx: z.number().int().min(0).max(100_000),
+    vehicle: optStr(40),
+    vehicleName: optStr(200),
+    stations: z.array(roadtripStationSchema).max(400),
+    legs: z.array(roadtripLegSchema).max(800),
+    private: z
+      .object({
+        notes: optStr(50_000),
+        startOdometerKm: z.number().int().nullable(),
+        endOdometerKm: z.number().int().nullable(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 const journalSchema = z
   .object({
     date: z.iso.datetime({ offset: true }),
@@ -602,6 +673,8 @@ export const tripFileSchema = z
     places: z.array(placeSchema).max(1000),
     visits: z.array(visitSchema).max(2000),
     stops: z.array(stopSchema).max(1000),
+    /** Absent before version 4. */
+    roadtrips: z.array(roadtripSchema).max(20).default([]),
     journal: z.array(journalSchema).max(2000).optional(),
     documents: z.array(documentSchema).max(500),
     photos: z.array(photoSchema).max(1500),
@@ -642,6 +715,18 @@ export const tripFileSchema = z
       list.forEach((e, i) => dangling([name, i, "bookingKey"], e.bookingKey, bookings));
     }
     file.visits.forEach((v, i) => dangling(["visits", i, "placeKey"], v.placeKey, places));
+    const ferries = keysOf(file.ferry);
+    file.roadtrips.forEach((r, ri) => {
+      const stations = keysOf(r.stations);
+      r.stations.forEach((st, i) =>
+        dangling(["roadtrips", ri, "stations", i, "stayKey"], st.stayKey, stays)
+      );
+      r.legs.forEach((l, i) => {
+        dangling(["roadtrips", ri, "legs", i, "fromKey"], l.fromKey, stations);
+        dangling(["roadtrips", ri, "legs", i, "toKey"], l.toKey, stations);
+        dangling(["roadtrips", ri, "legs", i, "ferryKey"], l.ferryKey, ferries);
+      });
+    });
     file.stops.forEach((s, i) => {
       dangling(["stops", i, "placeKey"], s.placeKey, places);
       dangling(["stops", i, "stayKey"], s.stayKey, stays);
@@ -665,4 +750,5 @@ export type TripFileRental = TripFile["rentals"][number];
 export type TripFilePlace = TripFile["places"][number];
 export type TripFileVisit = TripFile["visits"][number];
 export type TripFileStop = TripFile["stops"][number];
+export type TripFileRoadtrip = TripFile["roadtrips"][number];
 export type TripFilePortRef = PortRef;

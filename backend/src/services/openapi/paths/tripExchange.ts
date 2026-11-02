@@ -97,7 +97,7 @@ const failures = {
   422: {
     description:
       "`TRIP_FILE_INVALID` (not a ZIP, no manifest/trip.json, or a schema failure — `issues` " +
-      "names the paths), `TRIP_FILE_VERSION_UNSUPPORTED` (`formatVersion`, `supported`; versions 1–3 are read), or " +
+      "names the paths), `TRIP_FILE_VERSION_UNSUPPORTED` (`formatVersion`, `supported`; versions 1–4 are read), or " +
       "`TRIP_FILE_UNSAFE_PATH` (an entry names a path outside the archive)",
     content: errorContent,
   },
@@ -109,7 +109,7 @@ registry.registerPath({
   path: "/trips/{id}/export",
   summary: "Export one trip as a .travstats file",
   description:
-    "A ZIP holding `manifest.json` (format `travstats-trip`, `formatVersion` 1, 2 when the trip holds bus rides, or 3 when it holds ferry crossings — the lowest version that carries the trip, so an older importer refuses such a file by name; this server reads all three, app version, " +
+    "A ZIP holding `manifest.json` (format `travstats-trip`, `formatVersion` 1, 2 when the trip holds bus rides, 3 when it holds ferry crossings, or 4 when it holds roadtrips — the lowest version that carries the trip, so an older importer refuses such a file by name; this server reads all four, app version, " +
     "export time, options) and `trip.json` (the trip, bookings with their total, flights, stays " +
     "with their lodging, cruises with stops, rail rides, bus rides (`bus`; absent in a version-1 file), ferry crossings (`ferry`; absent before version 3 — the vehicle on board and the roadtrip leg are never written), rentals, stops, place visits with their " +
     "places). Times are written as stored: instant, zone and calendar day. Private fields (seat, " +

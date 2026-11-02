@@ -11,6 +11,7 @@ import { errorHandler } from "../../../../middleware/errorHandler";
 import { hash } from "../../../federation/refusal";
 import { bookingSchema } from "../../schema";
 import { signVouch, vouchSubject } from "../vouch";
+import { readTripArchive } from "../../../trip/exchange/readArchive";
 import { endAllGuestsAfterRestore, endGuestsOfOrigin } from "../sessions";
 
 jest.mock("../../availability", () => ({
@@ -835,5 +836,62 @@ describe("TravPlan plan documents (D6)", () => {
     expect(list.body.documents).toEqual([
       expect.objectContaining({ id: doc.id, attached: true, uploadedBy: null }),
     ]);
+  });
+
+  const exportOf = (planId: string, cookie: string) =>
+    request(app)
+      .get(`/api/v1/guest/plans/${planId}/export`)
+      .set("Cookie", "ts_guest=" + cookie)
+      .set("X-TravStats-Guest", "1")
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
+        res.on("end", () => done(null, Buffer.concat(chunks)));
+      });
+
+  it("gives a guest the trip's roadtrip as a version 4 file, without the owner's private fields", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const route = await prisma.tripRoute.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        kind: "roadtrip",
+        name: "Inselrunde",
+        mode: "road",
+        notes: "PRIVATE-ROUTE-NOTE",
+      },
+    });
+    await prisma.tripStop.create({
+      data: {
+        routeId: route.id,
+        routeOrderIdx: 0,
+        title: "Funchal",
+        lat: 32.65,
+        lon: -16.9,
+        notes: "PRIVATE-STOP-NOTE",
+      },
+    });
+    await prisma.tripJournalEntry.create({
+      data: { tripId: plan.tripId, date: new Date(), body: "PRIVATE-JOURNAL" },
+    });
+    const res = await exportOf(plan.planId, guest.cookie);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-disposition"]).toContain(".travstats");
+    const archive = readTripArchive(res.body as Buffer);
+    expect(archive.manifest.formatVersion).toBe(4);
+    expect(archive.file.roadtrips.map((r) => r.name)).toEqual(["Inselrunde"]);
+    expect(archive.file.roadtrips[0].stations.map((s) => s.title)).toEqual(["Funchal"]);
+    expect(JSON.stringify(archive.file)).not.toContain("PRIVATE");
+  });
+
+  it("refuses the export to a credential of another plan, and once the guest has left", async () => {
+    const plan = await newPlan();
+    const other = await newPlan();
+    const guest = await joinGuest(plan);
+    expect((await exportOf(other.planId, guest.cookie)).status).toBe(404);
+    expect((await asGuest("post", "/leave", { cookie: guest.cookie })).status).toBe(200);
+    expect((await exportOf(plan.planId, guest.cookie)).status).toBeGreaterThanOrEqual(401);
   });
 });

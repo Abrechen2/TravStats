@@ -45,6 +45,7 @@ import {
 } from "./commitRows";
 import type { EntityKind, TripFile } from "./format";
 import { buildTripFileProposal, journalIdentity } from "./proposal";
+import { writeRoadtrips } from "./commitRoadtrips";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import type { TripArchive } from "./readArchive";
 import type { TripFileChoices, TripFileEntryProposal, TripFileProposal } from "./types";
@@ -140,7 +141,7 @@ function removePhotos(written: WrittenPhoto[]): void {
 /** A lodging this commit created, for the next stay of the file to find. */
 type CreatedHouse = HouseIdentity & { id: string };
 
-type IdMaps = Record<EntityKind | "booking" | "place" | "stop", Map<string, string>>;
+type IdMaps = Record<EntityKind | "booking" | "place" | "stop" | "roadtrip", Map<string, string>>;
 
 async function attach(
   tx: DbTransaction,
@@ -265,6 +266,7 @@ async function writeAll(
     booking: new Map(),
     place: new Map(),
     stop: new Map(),
+    roadtrip: new Map(),
   };
   const tripId =
     proposal.trip.id ??
@@ -307,7 +309,7 @@ async function writeAll(
   const bookingOf = (key: string | null) => (key ? (ids.booking.get(key) ?? null) : null);
   const lodgingCreated: CreatedHouse[] = [];
   for (const entry of proposal.entries) {
-    if (entry.kind === "stop") continue;
+    if (entry.kind === "stop" || entry.kind === "roadtrip") continue;
     const map = ids[entry.kind];
     if (entry.action === "skip") {
       if (entry.id) map.set(entry.key, entry.id);
@@ -363,6 +365,19 @@ async function writeAll(
       select: { id: true },
     });
     ids.stop.set(entry.key, created.id);
+  }
+
+  // Roadtrips last of the entries: they link the stays and crossings written above.
+  const newRoadtrips = file.roadtrips.filter((r) =>
+    proposal.entries.some((e) => e.kind === "roadtrip" && e.key === r.key && e.action === "create")
+  );
+  for (const [key, id] of await writeRoadtrips(tx, userId, tripId, newRoadtrips, ids)) {
+    ids.roadtrip.set(key, id);
+  }
+  for (const entry of proposal.entries) {
+    if (entry.kind === "roadtrip" && entry.action !== "create" && entry.id) {
+      ids.roadtrip.set(entry.key, entry.id);
+    }
   }
 
   await writeJournal(tx, tripId, file, proposal.trip.id !== null);

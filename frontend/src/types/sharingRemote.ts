@@ -163,7 +163,10 @@ export type OfferCounts = Record<
   | "rentals"
   | "stops",
   number
->;
+> & {
+  /** Absent in an offer from a server that predates shared roadtrips (forgejo#404). */
+  roadtrips?: number;
+};
 
 export interface ReceivedOffer {
   id: string;

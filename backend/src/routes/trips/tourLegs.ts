@@ -15,6 +15,11 @@ import { isCoordinatePolyline, readStoredTrack } from "../../services/trackCover
 import { tourLegVerdict } from "../../services/trackCoverage/legCoverage";
 import { applyLegToll, touchesToll } from "../../services/expenses/legToll";
 import { toExpenseDto } from "../../services/expenses/expenseDto";
+import {
+  propagateWrite,
+  shareSnapshot,
+  SHARE_TX_TIMEOUT_MS,
+} from "../../services/sharing/propagate";
 
 /**
  * Tour route leg overrides — split out of `tourRoutes.ts`, which was
@@ -155,6 +160,7 @@ router.put(
           );
         }
 
+        const roadtripBefore = await shareSnapshot(prisma, "roadtrip", routeId);
         const updatedFromTrack = await prisma.tripRouteLeg.update({
           where: { id: leg.id },
           data: {
@@ -168,6 +174,7 @@ router.put(
           },
         });
 
+        await propagateWrite(prisma, userId, "roadtrip", routeId, roadtripBefore);
         logger.info({
           operation: "tour.leg.override",
           legId: updatedFromTrack.id,
@@ -198,49 +205,56 @@ router.put(
 
       // The leg and its toll expense change together or not at all: a toll
       // refused (409, several on the leg) must not leave the line changed.
-      const { updated, toll } = await prisma.$transaction(async (tx) => {
-        const updatedLeg = await tx.tripRouteLeg.update({
-          where: { id: leg.id },
-          data: {
-            source: body.source,
-            mode: body.mode ?? leg.mode,
-            // A line the user drew is the best information available; a chord
-            // is a placeholder.
-            confidence: body.source === "drawn" ? "high" : "low",
-            waypoints:
-              waypoints === null ? Prisma.DbNull : (waypoints as unknown as Prisma.InputJsonValue),
-            // `drivingMinutes` is `.nullable().optional()` in `legOverrideSchema`
-            // — a client may send an explicit `null` to CLEAR it. `body.x ?? leg.x`
-            // cannot tell "absent" from "present and null" apart (both are
-            // nullish), so it would silently keep the old value on a clear
-            // request. Zod omits an absent optional key entirely, so `in` is the
-            // reliable discriminator.
-            drivingMinutes:
-              "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
-            distanceKm: legDistanceKm({
+      const { updated, toll } = await prisma.$transaction(
+        async (tx) => {
+          const roadtripBefore = await shareSnapshot(tx, "roadtrip", routeId);
+          const updatedLeg = await tx.tripRouteLeg.update({
+            where: { id: leg.id },
+            data: {
               source: body.source,
-              from: fromCoord,
-              to: toCoord,
-              waypoints,
-            }),
-          },
-        });
-        // `tollCost` / `currency` live on the leg's toll EXPENSE since
-        // forgejo#140; see `applyLegToll` for the exact mapping.
-        const legToll = touchesToll(body)
-          ? await applyLegToll(
-              tx,
-              {
-                userId,
-                routeId,
-                fromStopId: req.params.fromStopId,
-                toStopId: req.params.toStopId,
-              },
-              body
-            )
-          : undefined;
-        return { updated: updatedLeg, toll: legToll };
-      });
+              mode: body.mode ?? leg.mode,
+              // A line the user drew is the best information available; a chord
+              // is a placeholder.
+              confidence: body.source === "drawn" ? "high" : "low",
+              waypoints:
+                waypoints === null
+                  ? Prisma.DbNull
+                  : (waypoints as unknown as Prisma.InputJsonValue),
+              // `drivingMinutes` is `.nullable().optional()` in `legOverrideSchema`
+              // — a client may send an explicit `null` to CLEAR it. `body.x ?? leg.x`
+              // cannot tell "absent" from "present and null" apart (both are
+              // nullish), so it would silently keep the old value on a clear
+              // request. Zod omits an absent optional key entirely, so `in` is the
+              // reliable discriminator.
+              drivingMinutes:
+                "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
+              distanceKm: legDistanceKm({
+                source: body.source,
+                from: fromCoord,
+                to: toCoord,
+                waypoints,
+              }),
+            },
+          });
+          // `tollCost` / `currency` live on the leg's toll EXPENSE since
+          // forgejo#140; see `applyLegToll` for the exact mapping.
+          const legToll = touchesToll(body)
+            ? await applyLegToll(
+                tx,
+                {
+                  userId,
+                  routeId,
+                  fromStopId: req.params.fromStopId,
+                  toStopId: req.params.toStopId,
+                },
+                body
+              )
+            : undefined;
+          await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
+          return { updated: updatedLeg, toll: legToll };
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
 
       logger.info({ operation: "tour.leg.override", legId: updated.id, source: updated.source });
       res.json({
@@ -271,6 +285,7 @@ router.delete(
       const fromCoord = requireCoords(leg.fromStop, "from");
       const toCoord = requireCoords(leg.toStop, "to");
 
+      const roadtripBefore = await shareSnapshot(prisma, "roadtrip", routeId);
       await prisma.tripRouteLeg.update({
         where: { id: leg.id },
         data: {
@@ -284,6 +299,7 @@ router.delete(
           }),
         },
       });
+      await propagateWrite(prisma, userId, "roadtrip", routeId, roadtripBefore);
 
       res.status(204).send();
     } catch (error) {

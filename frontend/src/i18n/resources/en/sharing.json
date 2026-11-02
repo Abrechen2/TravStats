@@ -229,6 +229,7 @@
     "bus": "the bus ride",
     "ferry": "the ferry crossing",
     "rental": "the rental car",
+    "roadtrip": "the roadtrip",
     "stop": "the stop"
   },
   "values": {
@@ -315,6 +316,12 @@
     "endZone": "End time zone",
     "stops": "Port calls",
     "legs": "Sea legs",
+    "name": "Name",
+    "mode": "Mode of travel",
+    "vehicle": "Vehicle",
+    "vehicleName": "Vehicle name",
+    "stations": "Stations",
+    "routeLegs": "Route legs",
     "operator": "Operator",
     "trainCategory": "Train category",
     "trainNumber": "Train number",
@@ -780,6 +787,8 @@
         "ferryJourneys_other": "{{count}} ferry crossings",
         "rentals_one": "{{count}} rental",
         "rentals_other": "{{count}} rentals",
+        "roadtrips_one": "{{count}} roadtrip",
+        "roadtrips_other": "{{count}} roadtrips",
         "stops_one": "{{count}} stop",
         "stops_other": "{{count}} stops"
       },

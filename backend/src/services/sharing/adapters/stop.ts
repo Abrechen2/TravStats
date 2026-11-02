@@ -19,7 +19,7 @@ export interface EntryRef {
 }
 
 /** id → reference by share key, for every id that names a keyed entry. */
-async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, EntryRef>> {
+export async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, EntryRef>> {
   const out = new Map<string, EntryRef>();
   if (ids.length === 0) return out;
   for (const table of REF_DELEGATES) {
@@ -33,7 +33,7 @@ async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, Entr
 }
 
 /** The id of `userId`'s own copy behind `ref`, or null. */
-async function resolveRef(
+export async function resolveRef(
   c: DbTransaction,
   ref: EntryRef | null | undefined,
   userId: string

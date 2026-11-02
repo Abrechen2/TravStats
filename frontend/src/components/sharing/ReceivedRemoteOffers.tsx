@@ -18,6 +18,7 @@ const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
   "busJourneys",
   "ferryJourneys",
   "rentals",
+  "roadtrips",
   "stops",
 ];
 
@@ -83,8 +84,8 @@ export default function ReceivedRemoteOffers({ refresh = 0 }: Props): JSX.Elemen
   };
 
   const counts = (c: OfferCounts): string =>
-    COUNT_ORDER.filter((k) => c[k] > 0)
-      .map((k) => t(`${NS}.count.${k}`, { count: c[k] }))
+    COUNT_ORDER.filter((k) => (c[k] ?? 0) > 0)
+      .map((k) => t(`${NS}.count.${k}`, { count: c[k] ?? 0 }))
       .join(", ");
 
   if (!loadFailed && (offers?.length ?? 0) === 0 && !accepted && !declined && !failure) return null;

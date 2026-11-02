@@ -33,6 +33,15 @@ import { searchPlaces } from "../services/travplan/placeSearch";
 import { routeStage } from "../services/travplan/stageRouting";
 import { matchPlaceholders } from "../services/travplan/placeholders";
 import { bookingSchema } from "../services/travplan/schema";
+import { collectTrip } from "../services/trip/exchange/collect";
+import {
+  buildManifest,
+  presentFiles,
+  writeTripArchive,
+} from "../services/trip/exchange/writeArchive";
+import { TRIP_FILE_EXTENSION } from "../services/trip/exchange/format";
+import { fileSlug } from "./trips/tripExchange";
+import logger from "../utils/logger";
 import { accessiblePlan, planAccess, type GuestActor } from "../services/travplan/access";
 import {
   listPlanDocuments,
@@ -291,6 +300,41 @@ router.get(
       .parse(req.query);
     const access = await planAccess(actorOf(req), trip(req));
     res.json(await searchPlaces(access.ownerId, q.q, q.language, q.kind));
+  })
+);
+
+// ---- The trip as a file (spec §6.6 leaving, §6.7 the guest's own logbook copy) ----------------
+/**
+ * The plan's trip as a `.travstats` file: what the handover wrote to the owner's logbook — the
+ * roadtrip with its stations, legs and ferry links (format version 4), stays and crossings — in
+ * its public half. Documents, photos, the journal, notes, prices and companions are the owner's
+ * and are not in it (`private: false`). Planned but not yet confirmed stations live in the plan,
+ * not in the trip, so they are not in the file either; the guest imports it on their own server
+ * with the ordinary single-trip import. Read-only: it changes nothing on this server.
+ */
+router.get(
+  "/plans/:planId/export",
+  route(async (req, res) => {
+    const { ownerId } = await planAccess(actorOf(req), trip(req));
+    const options = { documents: false, photos: false, private: false };
+    const collected = presentFiles(await collectTrip(ownerId, trip(req), options));
+    const now = new Date();
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileSlug(collected.tripName)}-${now.toISOString().slice(0, 10)}${TRIP_FILE_EXTENSION}"`
+    );
+    try {
+      await writeTripArchive(collected, buildManifest(options, now, collected.file), res);
+    } catch (error) {
+      if (res.headersSent) {
+        logger.error({ operation: "guest_trip_export_stream_failed", err: error });
+        res.destroy(error instanceof Error ? error : undefined);
+        return;
+      }
+      throw error;
+    }
+    logger.info({ operation: "guest_trip_export", planId: req.guest!.planId });
   })
 );
 

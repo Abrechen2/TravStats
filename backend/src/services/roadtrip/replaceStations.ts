@@ -9,7 +9,12 @@ import { STATION_DTO_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
 import { stationTimeColumns } from "../timeModel/tripColumns";
 import { lockRoute } from "./lockRoute";
-import { propagateWrites, shareSnapshots } from "../sharing/propagate";
+import {
+  propagateWrite,
+  propagateWrites,
+  shareSnapshot,
+  shareSnapshots,
+} from "../sharing/propagate";
 
 export type Station = StationsInput["stations"][number];
 
@@ -187,6 +192,8 @@ export async function replaceStationsIn(
     await tx.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { mode: true } })
   ).mode;
   await lockRoute(tx, routeId);
+  // The route and its stations are one shared fact set (forgejo#404).
+  const roadtripBefore = await shareSnapshot(tx, "roadtrip", routeId);
   const existing = await tx.tripStop.findMany({
     where: { routeId },
     select: EXISTING_SELECT,
@@ -306,12 +313,15 @@ export async function replaceStationsIn(
       overnight: false,
       viaPoint: false,
       placeId: null,
+      // Back on the timeline it is shared as a stop, new to the members: not under a station key.
+      shareKey: null,
     },
   });
   await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
   await propagateWrites(tx, userId, "stop", timelineIds, before);
 
   const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
+  await propagateWrite(tx, userId, "roadtrip", routeId, roadtripBefore);
 
   return {
     createdLegs,

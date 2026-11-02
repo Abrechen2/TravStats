@@ -221,7 +221,8 @@ export async function importTrackArchive(
       createdTour = true;
       route = dryRun
         ? { id: `${PENDING}${file.name}`, name: create.name }
-        : await prisma.tripRoute.create({
+        : // share-exempt: an archive import makes tours — only roadtrips are shared
+          await prisma.tripRoute.create({
             data: {
               userId,
               name: create.name.slice(0, 200),

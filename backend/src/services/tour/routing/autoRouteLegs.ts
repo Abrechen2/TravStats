@@ -5,6 +5,7 @@ import { Prisma } from "../../../prisma";
 import { ACCEPTED_LEG_SOURCES } from "../../../schemas/tour";
 import type { LegPair } from "../../../shared/tour/legPlan";
 import logger from "../../../utils/logger";
+import { propagateWrite, shareSnapshot } from "../../sharing/propagate";
 import { LEG_MODES, type LegMode } from "../tourDistance";
 import { providerCallGate } from "./providerBudget";
 import { resolveRouteProvider } from "./resolveProvider";
@@ -35,7 +36,20 @@ function routedLegData(routed: RoutedLeg) {
 
 /** Persist one leg's routing outcome. Shared by the routing endpoints and the automatic pass. */
 export async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
+  const owner = await legOwner(legId);
+  const before = owner && (await shareSnapshot(prisma, "roadtrip", owner.routeId));
   await prisma.tripRouteLeg.update({ where: { id: legId }, data: routedLegData(routed) });
+  // A routed leg's line and length are facts of its roadtrip (forgejo#404).
+  if (owner) await propagateWrite(prisma, owner.userId, "roadtrip", owner.routeId, before);
+}
+
+/** The route a leg belongs to and that route's owner. */
+async function legOwner(legId: string): Promise<{ routeId: string; userId: string } | null> {
+  const leg = await prisma.tripRouteLeg.findUnique({
+    where: { id: legId },
+    select: { routeId: true, route: { select: { userId: true } } },
+  });
+  return leg ? { routeId: leg.routeId, userId: leg.route.userId } : null;
 }
 
 /**
@@ -49,10 +63,15 @@ export async function applyRoutedLegIfStillStraight(
   readAt: Date,
   routed: RoutedLeg
 ): Promise<boolean> {
+  const owner = await legOwner(legId);
+  const before = owner && (await shareSnapshot(prisma, "roadtrip", owner.routeId));
   const { count } = await prisma.tripRouteLeg.updateMany({
     where: { id: legId, source: "straight", updatedAt: readAt },
     data: routedLegData(routed),
   });
+  if (count === 1 && owner) {
+    await propagateWrite(prisma, owner.userId, "roadtrip", owner.routeId, before);
+  }
   return count === 1;
 }
 
