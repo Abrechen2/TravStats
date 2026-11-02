@@ -33,7 +33,9 @@ const signedFields = {
   destination: origin,
   nonce: z.string().regex(/^[a-f0-9]{64}$/),
   time: z.number().int(),
-  body: z.string().max(8_000_000),
+  // The widest any protocol sends (a plan document as base64, trip-share); each route holds its own
+  // kinds to their budgets before and after the signature (`BODY_BUDGET`, the comparison route's 8 KB).
+  body: z.string().max(30_000_000),
   signature: z.string().max(100),
 };
 export const envelopeV1 = z.strictObject(signedFields);

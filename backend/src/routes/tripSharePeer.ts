@@ -48,6 +48,13 @@ import {
   serveConnectRevoke,
   serveConnectSettings,
 } from "../services/sharing/federation/connections/serve";
+import {
+  servePlanDecline,
+  servePlanJoin,
+  servePlanLeave,
+  servePlanProxy,
+} from "../services/sharing/federation/plans/hostServe";
+import { servePlanInvite } from "../services/sharing/federation/plans/memberServe";
 import { servedFeatures } from "../services/sharing/federation/peerFeatures";
 import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
 import {
@@ -111,6 +118,23 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveConnectRevoke(origin, body);
     case "connect-settings":
       return serveConnectSettings(origin, body);
+    case "plan-invite":
+      return servePlanInvite(origin, body);
+    case "plan-join":
+      return servePlanJoin(origin, body);
+    case "plan-decline":
+      return servePlanDecline(origin, body);
+    case "plan-leave":
+      return servePlanLeave(origin, body);
+    case "plan-read":
+    case "plan-mutate":
+    case "plan-collab":
+    case "plan-notices-read":
+    case "plan-doc-list":
+    case "plan-doc-get":
+    case "plan-doc-put":
+    case "plan-export":
+      return servePlanProxy(origin, body);
   }
 }
 

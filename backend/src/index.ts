@@ -156,6 +156,10 @@ app.use("/api/", limiter);
 // (middleware/ingestBody.ts), so the 10 MB parser below never sees them.
 app.use(TRAVTRACK_INGEST_PATH, ingestRawBody);
 
+// A signed peer message may carry a plan document (20 MB as base64): the route has its own cap, and
+// the route itself holds every kind to its own budget after the signature is checked.
+app.use("/api/v1/trip-share-peer", express.json({ limit: FILE_LIMITS.PEER_BODY_MAX_SIZE }));
+
 // Body parsing with increased limits for email imports
 app.use(express.json({ limit: FILE_LIMITS.JSON_BODY_MAX_SIZE }));
 app.use(express.urlencoded({ extended: true, limit: FILE_LIMITS.URLENCODED_BODY_MAX_SIZE }));

@@ -12,7 +12,7 @@ import {
   assertEnabled,
 } from "./store";
 import { forecastSchema } from "./schema";
-import { isGuest, planAccess, type PlanAccess, type PlanActor } from "./access";
+import { isRemote, planAccess, type PlanAccess, type PlanActor } from "./access";
 import { recordNotices } from "./members";
 import { parseState } from "./upgrade";
 import type { PlanState, PlanView } from "./types";
@@ -70,7 +70,7 @@ export async function refreshForecast(
   )
     return readPlan(actor, tripId);
   await reserveUsage(
-    isGuest(actor) ? access.ownerId : actor,
+    isRemote(actor) ? access.ownerId : actor,
     "weather",
     (await configuration()).weatherDailyLimit
   );

@@ -34,7 +34,6 @@ import {
 } from "../../services/federation/connectionFile";
 import { parsePeerPublicKey } from "../../services/federation/peerKey";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
-import { endGuestsOfOrigin } from "../../services/travplan/guests/sessions";
 import {
   federationSettingsSchema,
   peerOriginSchema,
@@ -199,9 +198,6 @@ async function pin(
   // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
   if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
   else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
-  // Guests of a plan who came in through that server lose their access with its pin (forgejo#404).
-  if (previous && (previous.publicKey !== pem || !body.enabled))
-    await endGuestsOfOrigin(body.origin);
   const full = await state();
   // `peer` and `computedFingerprint` serve the Companion (spec 2026-11-02 §6): the fingerprint
   // is the one THIS server hashed from the key, to show beside the one printed in the QR.
@@ -364,7 +360,6 @@ router.post(
       data: { enabled: false, verifiedAt: null },
     });
     await holdPeerMemberships(origin, "peer-blocked");
-    await endGuestsOfOrigin(origin);
     res.json({ suspended: true });
   })
 );

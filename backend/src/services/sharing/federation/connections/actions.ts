@@ -6,12 +6,12 @@
  * changes nothing until the other server has it, and a request that failed to send stays as a
  * pending row (the answer may be what was lost) that can be sent again or taken back. Declining, changing a switch and ending act on this server FIRST: what
  * this side gives must stop at once whether or not the other server answers. The announcement
- * follows once, best effort; a missed one is logged, and the next change carries a newer generation.
+ * follows through a persisted outbox (`announcements.ts`): tried once at once, then retried with
+ * a backoff until the other server has it.
  */
 import { randomUUID } from "crypto";
 import { prisma } from "../../../../db";
 import { Prisma } from "../../../../prisma";
-import logger from "../../../../utils/logger";
 import { PERSON_SELECT, toPerson } from "../../people";
 import {
   connectReplySchema,
@@ -30,6 +30,7 @@ import {
   unreachable,
 } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
+import { announce } from "./announcements";
 import { activateConnection, applyLeaderboardSwitch, reconcileLeaderboard } from "./activate";
 import { columnsOf } from "./switches";
 import { connectionView, readConnection, type ConnectionView } from "./view";
@@ -59,18 +60,6 @@ async function send(userId: string, origin: string, body: TripSharePacket): Prom
   } catch (error) {
     const kind = kindOf(error);
     throw kind === LOCAL_ERROR ? error : unreachable(userId, origin, kind);
-  }
-}
-
-/** The announcement of something already done here: tried once, a miss is logged. */
-async function announce(row: Account, body: TripSharePacket): Promise<void> {
-  try {
-    await send(row.userId, row.origin, body);
-  } catch (err) {
-    logger.warn(
-      { operation: "connection_announce_failed", userId: row.userId, origin: row.origin, err },
-      "The other server did not get a connection message; it learns from the next one"
-    );
   }
 }
 
@@ -251,13 +240,7 @@ export async function declineConnection(userId: string, id: string): Promise<Con
     where: { id },
     data: { state: "declined", generation, endedAt: new Date(), endedByMe: true },
   });
-  await announce(row, {
-    kind: "connect-decline",
-    ...messageHeader(),
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-  });
+  await announce(row, "connect-decline", { from: row.localChannel, to: row.channel, generation });
   return readConnection(userId, id);
 }
 
@@ -287,9 +270,7 @@ export async function updateConnectionSwitches(
   // re-checked (`applyLeaderboardSwitch`).
   if (switches.leaderboard !== row.shareLeaderboard)
     await applyLeaderboardSwitch(userId, row.id, switches.leaderboard);
-  await announce(row, {
-    kind: "connect-settings",
-    ...messageHeader(),
+  await announce(row, "connect-settings", {
     from: row.localChannel,
     to: row.channel,
     generation,
@@ -320,12 +301,6 @@ export async function endConnection(userId: string, id: string): Promise<Connect
     },
     { timeout: 30_000 }
   );
-  await announce(row, {
-    kind: "connect-revoke",
-    ...messageHeader(),
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-  });
+  await announce(row, "connect-revoke", { from: row.localChannel, to: row.channel, generation });
   return readConnection(userId, id);
 }

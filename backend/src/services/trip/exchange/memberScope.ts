@@ -8,7 +8,7 @@ import type { TripFile } from "./format";
  * booking reference, no price and no cost reaches a guest, because the `bookings` list is empty
  * and a kept entry carries no `bookingKey`, `externalRef` or `private` part.
  */
-export function scopeFileForGuest(file: TripFile): TripFile {
+export function scopeFileForRemoteMember(file: TripFile): TripFile {
   const stayKeys = new Set(
     file.roadtrips.flatMap((r) => r.stations.flatMap((s) => (s.stayKey ? [s.stayKey] : [])))
   );

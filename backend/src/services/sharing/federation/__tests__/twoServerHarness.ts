@@ -58,6 +58,10 @@ import * as remoteStatsModule from "../remoteStats";
 import * as connectionActionsModule from "../connections/actions";
 import * as connectionServeModule from "../connections/serve";
 import * as connectionViewModule from "../connections/view";
+import * as plansHostInviteModule from "../plans/hostInvite";
+import * as plansMemberApiModule from "../plans/memberApi";
+import * as plansRateLimitModule from "../plans/rateLimit";
+import * as announcementsModule from "../connections/announcements";
 import type { ConnectionSwitches } from "../../../../schemas/tripSharePeer";
 import { resetIdentityCache } from "../../../federation/identity";
 import { encryptApiKey } from "../../../../utils/encryption";
@@ -103,6 +107,10 @@ export interface Server {
   connections: typeof connectionActionsModule;
   connectionServe: typeof connectionServeModule;
   connectionView: typeof connectionViewModule;
+  plansHost: typeof plansHostInviteModule;
+  plansMember: typeof plansMemberApiModule;
+  plansRateLimit: typeof plansRateLimitModule;
+  announcements: typeof announcementsModule;
   resetIdentity: () => void;
   encrypt: (value: string) => string | null;
   app: express.Express;
@@ -110,7 +118,7 @@ export interface Server {
 
 function peerApp(trip: express.Router, comparison: express.Router): express.Express {
   const app = express();
-  app.use(express.json({ limit: "4mb" }));
+  app.use(express.json({ limit: "32mb" }));
   app.use("/api/v1/trip-share-peer", trip);
   app.use("/api/v1/comparison-peer", comparison);
   return app;
@@ -150,6 +158,10 @@ const serverA = (): Server => ({
   connections: connectionActionsModule,
   connectionServe: connectionServeModule,
   connectionView: connectionViewModule,
+  plansHost: plansHostInviteModule,
+  plansMember: plansMemberApiModule,
+  plansRateLimit: plansRateLimitModule,
+  announcements: announcementsModule,
   resetIdentity: resetIdentityCache,
   encrypt: encryptApiKey,
   app: peerApp(tripSharePeerRouter, comparisonPeerRouter),
@@ -198,6 +210,10 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         connections: require("../connections/actions"),
         connectionServe: require("../connections/serve"),
         connectionView: require("../connections/view"),
+        plansHost: require("../plans/hostInvite"),
+        plansMember: require("../plans/memberApi"),
+        plansRateLimit: require("../plans/rateLimit"),
+        announcements: require("../connections/announcements"),
         resetIdentity: require("../../../federation/identity").resetIdentityCache,
         encrypt: require("../../../../utils/encryption").encryptApiKey,
         app: peerApp(

@@ -68,6 +68,8 @@ export interface PeerTransport {
   sendPurpose?: EnvelopePurpose;
   /** Which reply envelopes count as an answer. */
   accepts: Acceptance;
+  /** Overall time for the exchange; defaults to `EXCHANGE_BUDGET_MS`. A file transfer needs more. */
+  budgetMs?: number;
   /** Whether `body` may reach an admitted peer no ping has verified yet (only a ping may). */
   beforeVerification: (body: object) => boolean;
 }
@@ -153,7 +155,7 @@ async function postToFirstReachable(
   bytes: Buffer,
   transport: PeerTransport
 ): Promise<Buffer> {
-  const deadline = Date.now() + EXCHANGE_BUDGET_MS;
+  const deadline = Date.now() + (transport.budgetMs ?? EXCHANGE_BUDGET_MS);
   for (const pinned of addresses) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;

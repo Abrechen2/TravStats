@@ -15,7 +15,6 @@ import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { shareTripWithUser } from "../sharing/shareTrip";
 import { assertOwner, planAccess, selfOf } from "./access";
 import type { PlanAccess, PlanActor } from "./access";
-import { endGuestAccess } from "./guests/sessions";
 import type { PlanCollab, PlanMember, PlanMemberShare, PlanNotice } from "./types";
 
 /** Active plus invited members besides the owner; the state's per-member arrays are sized to it. */
@@ -249,16 +248,6 @@ export async function revokeMember(
 ): Promise<{ revoked: true }> {
   const access = await planAccess(ownerId, tripId);
   assertOwner(access);
-  // A guest from another server: every credential and open invitation dies with the member.
-  const remote = await prisma.travelPlanMember.findFirst({
-    where: { id: memberId, planId: access.row.id, kind: "remote" },
-    select: { id: true },
-  });
-  if (remote) {
-    if (!(await endGuestAccess([remote.id])))
-      throw new AppError("Member not found", 404, "PLAN_MEMBER_NOT_FOUND");
-    return { revoked: true };
-  }
   const done = await prisma.travelPlanMember.updateMany({
     where: {
       id: memberId,

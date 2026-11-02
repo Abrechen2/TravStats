@@ -108,7 +108,8 @@ import "./dawarichStayIdentity";
 import "./locationSuggestions";
 
 import "./travplan";
-import "./travplanGuests";
+import "./travplanDocuments";
+import "./remotePlans";
 import "./travtrack";
 import "./travtrackDay";
 import "./travtrackDiagnostics";

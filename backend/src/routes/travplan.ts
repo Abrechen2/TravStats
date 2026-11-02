@@ -29,7 +29,7 @@ import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievements
 import { planningImportPolicy } from "./travplan/importPolicy";
 import routeEndpoints from "./travplan/routeEndpoints";
 import memberEndpoints from "./travplan/memberEndpoints";
-import guestEndpoints from "./travplan/guestEndpoints";
+import documentEndpoints from "./travplan/documentEndpoints";
 import {
   assertTravPlanForUser,
   assertTravPlanOffered,
@@ -94,7 +94,7 @@ router.use("/travplan", (req: AuthRequest, res, next) => {
 router.use("/trips/:tripId/plan", userGate);
 router.use(routeEndpoints);
 router.use(memberEndpoints);
-router.use(guestEndpoints);
+router.use(documentEndpoints);
 const tripId = (req: AuthRequest) => uuid.parse(req.params.tripId);
 router.get(
   "/travplan/config",

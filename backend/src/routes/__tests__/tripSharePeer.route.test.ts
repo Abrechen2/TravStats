@@ -37,7 +37,7 @@ const local = generateKeyPairSync("ed25519");
 const localPublic = local.publicKey.export({ type: "spki", format: "pem" }).toString();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "trip-peer-route-"));
 const app = express();
-app.use(express.json({ limit: "4mb" }));
+app.use(express.json({ limit: "32mb" }));
 app.use("/api/v1/trip-share-peer", tripSharePeer);
 app.use("/api/v1/comparison-peer", comparisonPeer);
 
@@ -140,7 +140,7 @@ describe("ping", () => {
     expect(reply.nonce).toBe(packet.nonce);
     expect(JSON.parse(reply.body)).toEqual({
       tripShare: [1],
-      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections"],
+      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections", "plans"],
     });
   });
 });
