@@ -56,7 +56,8 @@ import {
 } from "../services/sharing/federation/plans/hostServe";
 import { servePlanInvite } from "../services/sharing/federation/plans/memberServe";
 import { servedFeatures } from "../services/sharing/federation/peerFeatures";
-import { BODY_BUDGET, MAX_BODY } from "../services/sharing/federation/transport";
+import { largeBodyAllowed } from "../middleware/peerBody";
+import { BODY_BUDGET, MAX_BODY, MAX_LARGE_BODY } from "../services/sharing/federation/transport";
 import {
   GROUP_KINDS,
   TRIP_SHARE_PURPOSE,
@@ -194,7 +195,13 @@ router.post("/", async (req, res) => {
       typeof raw !== "object" ||
       !("body" in raw) ||
       typeof raw.body !== "string" ||
-      raw.body.length > MAX_BODY
+      raw.body.length > MAX_LARGE_BODY
+    )
+      throw refused("packet-too-large");
+    // Above the ordinary cap only an admitted origin is read at all (a document travels as base64).
+    if (
+      raw.body.length > MAX_BODY &&
+      !(await largeBodyAllowed((raw as { origin?: unknown }).origin))
     )
       throw refused("packet-too-large");
     const { message, peer, local } = await authenticatePeer(raw, TRIP_SHARE_ACCEPTS);

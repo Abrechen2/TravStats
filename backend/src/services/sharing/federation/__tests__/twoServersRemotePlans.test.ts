@@ -14,6 +14,7 @@ import {
   useTwoServers,
   type Server,
 } from "./twoServerHarness";
+import { holdConnectionsOfOrigin } from "../connections/hooks";
 import { createPlan, readPlan } from "../../../travplan/store";
 import { PLAN_TRANSPORT, messageHeader } from "../transport";
 
@@ -334,6 +335,41 @@ describe("access ends on the next call", () => {
       "REMOTE_PLAN_NOT_SHARED"
     );
     expect(await b.plansMember.listRemotePlans(c.ben)).toEqual([]);
+  });
+
+  it("a replaced key ends the member's access for good: re-verifying the new key brings nothing back", async () => {
+    const c = await setup();
+    await readView(c);
+    await holdConnectionsOfOrigin(b.origin);
+    expect((await memberOf(c)).status).toBe("revoked");
+    expect(
+      (await a.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: c.onFrom } })).state
+    ).toBe("reconfirm");
+    // The pin is verified again (the admin confirmed the new key): the host still refuses.
+    b.plansMember.resetRemotePlanCache();
+    await expectCode(
+      b.plansMember.readRemotePlan(c.ben, c.onTo, c.planId),
+      "REMOTE_PLAN_NOT_SHARED"
+    );
+    const stillThere = (await a.plansHost.eligiblePlanConnections(c.anna, c.tripId)).length;
+    expect(stillThere).toBe(0);
+  });
+
+  it("a blocked peer is refused by the host guard itself, with the connection and the member left untouched", async () => {
+    const c = await setup();
+    await a.prisma.comparisonPeer.update({ where: { origin: b.origin }, data: { enabled: false } });
+    const { servePlanProxy } = await import("../plans/hostServe");
+    const row = await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: c.onTo } });
+    const reply = await servePlanProxy(b.origin, {
+      kind: "plan-read",
+      ...messageHeader(),
+      from: row.localChannel,
+      to: row.channel,
+      planId: c.planId,
+    });
+    expect(reply).toEqual({ kind: "plan-reply", status: "notShared" });
+    expect((await memberOf(c)).status).toBe("active");
+    await a.prisma.comparisonPeer.update({ where: { origin: b.origin }, data: { enabled: true } });
   });
 
   it("an admin disabling the pin makes the host unreachable, not a data loss: the queue stays and it works again", async () => {

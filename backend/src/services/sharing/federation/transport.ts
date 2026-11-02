@@ -59,7 +59,17 @@ export const BODY_BUDGET = {
   "plan-doc-put": PLAN_DOC_BASE64_MAX + 4_096,
   "plan-export": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
-export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
+/**
+ * The most any request may carry BEFORE its sender is known to be an admitted peer: control
+ * messages and `entries`. `plan-doc-put` (a document as base64) is the one kind above it; it is
+ * read only from a pinned, enabled and verified origin (`middleware/peerBody.ts`, the route).
+ */
+export const MAX_BODY = Math.max(
+  ...Object.entries(BODY_BUDGET)
+    .filter(([kind]) => kind !== "plan-doc-put")
+    .map(([, budget]) => budget)
+);
+export const MAX_LARGE_BODY = BODY_BUDGET["plan-doc-put"];
 
 /** What a signed envelope adds around its body (keys, origin, nonce, signature): generous. */
 const ENVELOPE_OVERHEAD = 4_096;

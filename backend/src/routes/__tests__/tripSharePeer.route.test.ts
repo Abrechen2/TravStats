@@ -24,7 +24,7 @@ import {
   type EnvelopePurpose,
 } from "../../services/federation/envelope";
 import { setTripFlags } from "../../services/sharing/federation/__tests__/instanceFlags";
-import { BODY_BUDGET, MAX_BODY } from "../../services/sharing/federation/transport";
+import { BODY_BUDGET, MAX_BODY, MAX_LARGE_BODY } from "../../services/sharing/federation/transport";
 import { ENTRY_SHAPES } from "../../services/sharing/federation/wire/shapes";
 import { MAX_ENTRIES_PER_MESSAGE } from "../../schemas/tripSharePeer";
 import tripSharePeer from "../tripSharePeer";
@@ -205,7 +205,7 @@ it("refuses a non-ping message from an admitted but unverified peer and keeps no
 
 it("refuses a packet above the largest budget before checking its signature", async () => {
   const packet = signed(
-    JSON.stringify({ kind: "entries", pad: "x".repeat(MAX_BODY) }),
+    JSON.stringify({ kind: "plan-doc-put", pad: "x".repeat(MAX_LARGE_BODY) }),
     "trip-share/1"
   );
   const res = await request(app)
@@ -213,6 +213,34 @@ it("refuses a packet above the largest budget before checking its signature", as
     .send({ ...packet, signature: "not-a-signature" });
   expect(res.status).toBe(403);
   refusedAs("packet-too-large", "trip_share_peer_refused");
+});
+
+it("reads a body above the ordinary cap only from an admitted origin, and refuses a stranger's before parsing it", async () => {
+  const body = JSON.stringify({ kind: "plan-doc-put", pad: "x".repeat(MAX_BODY + 10) });
+  const stranger = {
+    ...signed(body, "trip-share/1"),
+    origin: "https://stranger.trip-peer-route.test",
+  };
+  const res = await request(app).post("/api/v1/trip-share-peer").send(stranger);
+  expect(res.status).toBe(403);
+  refusedAs("packet-too-large", "trip_share_peer_refused");
+  expect(await nonceRow(stranger)).toBeNull();
+  // The admitted origin passes the size gate (its body then fails on the budget of its kind).
+  warn.mockClear();
+  const admitted = signed(body, "trip-share/1");
+  await prisma.comparisonPeer.update({
+    where: { origin: REMOTE },
+    data: { verifiedAt: new Date() },
+  });
+  try {
+    await request(app).post("/api/v1/trip-share-peer").send(admitted);
+  } finally {
+    await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } });
+  }
+  expect(warn).not.toHaveBeenCalledWith(
+    expect.objectContaining({ kind: "packet-too-large" }),
+    expect.any(String)
+  );
 });
 
 it.each([

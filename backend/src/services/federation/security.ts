@@ -58,6 +58,8 @@ export function publicAddress(address: string): boolean {
  * size budgets, the envelope it signs and the envelopes it reads back. One implementation of
  * DNS pinning, address checks and timeouts, two budgets.
  */
+export const PEER_ORIGIN_HEADER = "X-TravStats-Peer-Origin";
+
 export interface PeerTransport {
   path: string;
   /** Bytes of the signed request, envelope included. */
@@ -123,7 +125,7 @@ export async function exchange(
   const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
-  const raw = await postToFirstReachable(url.hostname, ipv4First(answers), bytes, transport);
+  const raw = await postToFirstReachable(url.hostname, ipv4First(answers), bytes, transport, local.origin);
   const received = verifyEnvelope(
     JSON.parse(raw.toString()),
     peer.publicKey,
@@ -153,14 +155,15 @@ async function postToFirstReachable(
   hostname: string,
   addresses: readonly { address: string; family: number }[],
   bytes: Buffer,
-  transport: PeerTransport
+  transport: PeerTransport,
+  senderOrigin: string
 ): Promise<Buffer> {
   const deadline = Date.now() + (transport.budgetMs ?? EXCHANGE_BUDGET_MS);
   for (const pinned of addresses) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
     try {
-      return await postPinned(hostname, pinned, bytes, transport, remaining);
+      return await postPinned(hostname, pinned, bytes, transport, remaining, senderOrigin);
     } catch (error) {
       // Anything but a PeerRefusal is a connection that never came up; the next address may answer.
       if (error instanceof PeerRefusal) throw error;
@@ -174,7 +177,8 @@ function postPinned(
   pinned: { address: string; family: number },
   bytes: Buffer,
   transport: PeerTransport,
-  budgetMs: number
+  budgetMs: number,
+  senderOrigin: string
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     let connected = false;
@@ -196,7 +200,13 @@ function postPinned(
         _options: unknown,
         cb: (err: null, address: string, family: number) => void
       ) => process.nextTick(cb, null, pinned.address, pinned.family)) as never,
-      headers: { "Content-Type": "application/json", "Content-Length": bytes.length },
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": bytes.length,
+        // Says who is sending before the body is read, so the receiver can allow a large body
+        // (a plan document) to admitted peers only. The signature still decides who it IS.
+        [PEER_ORIGIN_HEADER]: senderOrigin,
+      },
     };
     const request = https.request(options, (response) => {
       if (response.statusCode !== 200) {

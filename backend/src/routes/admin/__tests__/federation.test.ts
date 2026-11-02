@@ -206,6 +206,47 @@ describe("trips shared through a peer pause when the admin blocks it or pins a n
     }
   });
 
+  it("a new key sends the connections with that server back to reconfirm and ends the plans that rode on them", async () => {
+    const pem = pemOf();
+    await pinPeer(pem);
+    const { user } = await sharedWithPeer();
+    try {
+      const account = await prisma.remoteShareAccount.findFirstOrThrow({
+        where: { userId: user.id, origin: PEER },
+      });
+      await prisma.remoteShareAccount.update({
+        where: { id: account.id },
+        data: { state: "active", sharePlans: true },
+      });
+      const membership = await prisma.remotePlanMembership.create({
+        data: {
+          userId: user.id,
+          connectionId: account.id,
+          planId: crypto.randomUUID(),
+          tripId: crypto.randomUUID(),
+          title: "Madeira",
+          ownerDisplayName: "Far",
+          state: "active",
+        },
+      });
+      // The same key again changes nothing; a new one ends the plan and holds the connection.
+      expect((await pinPeer(pem)).status).toBe(200);
+      expect(
+        (await prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: account.id } })).state
+      ).toBe("active");
+      expect((await pinPeer(pemOf())).status).toBe(200);
+      expect(
+        (await prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: account.id } })).state
+      ).toBe("reconfirm");
+      expect(
+        (await prisma.remotePlanMembership.findUniqueOrThrow({ where: { id: membership.id } }))
+          .state
+      ).toBe("ended");
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
+
   it("suspending the peer holds them as blocked", async () => {
     await pinPeer(pemOf());
     const { user, member } = await sharedWithPeer();
