@@ -11,6 +11,7 @@ import {
   peerPinFromFileSchema,
   peerPinFromQrSchema,
   peerPinSchema,
+  adminStepUpFieldsSchema,
 } from "../../../schemas/federationAdmin";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
@@ -99,17 +100,26 @@ registry.registerPath({
   path: "/admin/federation/peers",
   summary: "Pin another server: explicit values, a scanned QR, or a connection file",
   description:
-    "Admin only; a PAT needs scope `admin`. Three body shapes: `{origin, publicKey, fingerprint, " +
+    "Admin only; a PAT needs scope `admin`, or scope `write` (a paired Companion) plus the admin's " +
+    "step-up in the body: any shape below with `password` and, when the account has two-factor, " +
+    "`totp` (also accepted on `/peers/verify` and `/peers/suspend`, and on no other admin route). " +
+    "A passkey-only admin has no usable password and pins from the web. Three body shapes: `{origin, publicKey, fingerprint, " +
     "enabled}` (the web form), `{qr, enabled?}` (the scanned payload `{v:1,k:'server',u,key,fp}` " +
     "as string or object) or `{connectionFile, enabled?}` (the file, base64). All are validated " +
     "alike; the pin stays unverified until `POST /admin/federation/peers/verify`. " +
-    "Refusals: `COMPARISON_PEER_KEY_INVALID` (400), `COMPARISON_CONNECTION_FILE_*` (413/422).",
+    "Refusals: `COMPARISON_PEER_KEY_INVALID` (400), `COMPARISON_CONNECTION_FILE_*` (413/422); " +
+    "step-up: `ADMIN_STEP_UP_TOTP_REQUIRED`, `ADMIN_STEP_UP_FAILED` (403), `ADMIN_STEP_UP_LOCKED` (429).",
   tags,
   request: {
     body: {
       content: {
         "application/json": {
-          schema: z.union([peerPinSchema, peerPinFromQrSchema, peerPinFromFileSchema]),
+          schema: z.union([
+            peerPinSchema,
+            peerPinFromQrSchema,
+            peerPinFromFileSchema,
+            peerPinFromQrSchema.extend(adminStepUpFieldsSchema.shape),
+          ]),
         },
       },
       required: true,
@@ -124,8 +134,16 @@ registry.registerPath({
       description: "Invalid key, mismatching fingerprint, or this server",
       content: errorContent,
     },
+    403: {
+      description:
+        "Not an admin, or step-up refused: `ADMIN_STEP_UP_TOTP_REQUIRED`, `ADMIN_STEP_UP_FAILED`",
+      content: errorContent,
+    },
     413: { description: "Payload too large", content: errorContent },
     422: { description: "Unreadable or malformed QR / file", content: errorContent },
-    429: { description: "Rate limited", content: errorContent },
+    429: {
+      description: "Rate limited, or step-up locked (`ADMIN_STEP_UP_LOCKED`)",
+      content: errorContent,
+    },
   },
 });

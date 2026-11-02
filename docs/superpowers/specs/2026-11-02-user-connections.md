@@ -9,21 +9,21 @@ sich mit dem User zu verbinden; nach Bestätigung beider können sie festlegen w
 bzw. vor dem Bestätigen der User-Verbindung. Das wären dann Schalter wie Pläne teilbar machen, Stats
 voll oder einfach, Erfolge, und was sonst geht." — „ja bau das so".
 
-Second opinion: Codex, 2026-11-02 (same direction; its cautions are under *Risks*).
+Second opinion: Codex, 2026-11-02 (same direction; its cautions are under _Risks_).
 
 Supersedes: the guest door of `docs/features/travplan-guests.md` (vouch, guest session, guest PAT,
 guest QR, claim code — beta key `travPlanGuests`, never released beyond the RC server) and the
-"pairing without confirmation" part of `2026-10-20-federated-trip-sharing-design.md` → *As built —
-simplified setup* (`directory-pair` turns a findable person into an accepted pairing on the asker's
+"pairing without confirmation" part of `2026-10-20-federated-trip-sharing-design.md` → _As built —
+simplified setup_ (`directory-pair` turns a findable person into an accepted pairing on the asker's
 word alone).
 
 ## 1. The model
 
-| Layer | Who | Once | What it unlocks |
-|---|---|---|---|
-| Server ↔ server | the two admins | pin each other's key (connection file + fingerprint), unchanged. The Companion may carry the connection file by QR — **the only QR in federation** | users of both servers may *ask* each other for a connection |
-| User ↔ user | the two people | A asks, B confirms; each sets their switches before confirming | exactly what each side switched on, nothing else |
-| Per resource | the owner of a plan / trip | invite a connected person | that one plan / trip |
+| Layer           | Who                        | Once                                                                                                                                               | What it unlocks                                             |
+| --------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Server ↔ server | the two admins             | pin each other's key (connection file + fingerprint), unchanged. The Companion may carry the connection file by QR — **the only QR in federation** | users of both servers may _ask_ each other for a connection |
+| User ↔ user     | the two people             | A asks, B confirms; each sets their switches before confirming                                                                                     | exactly what each side switched on, nothing else            |
+| Per resource    | the owner of a plan / trip | invite a connected person                                                                                                                          | that one plan / trip                                        |
 
 A connection is **eligibility**, never blanket access: a plan is still shared plan by plan.
 
@@ -32,39 +32,39 @@ A connection is **eligibility**, never blanket access: a plan is still shared pl
 `remote_share_accounts` evolves into the connection (one row per side, as today; the pair is linked by
 `origin` + the two channels):
 
-| Column | Meaning |
-|---|---|
-| `state` | `pending_out` (I asked) · `pending_in` (they asked) · `active` · `declined` · `revoked` · `reconfirm` (pairing made before this change) — CHECK |
-| `generation` | int, bumped on every state or switch change; a message carrying an older generation is refused as stale |
-| `share_plans` | bool — I may invite this person into my plans and accept theirs |
-| `stats_level` | `off · overview · full` — exists |
-| `share_achievements` | bool — they see my achievements |
-| leaderboard | the existing `LeaderboardConsent` via `leaderboard_remote_id` — exists |
-| `share_trip_offers` | bool — they may offer me trips (inbox) |
-| `remote_switches` | JSON, the other side's switches as last announced (read-only display: "teilt mit dir: …") |
-| `requested_at`, `confirmed_at`, `ended_at` | timestamps |
+| Column                                     | Meaning                                                                                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                                    | `pending_out` (I asked) · `pending_in` (they asked) · `active` · `declined` · `revoked` · `reconfirm` (pairing made before this change) — CHECK |
+| `generation`                               | int, bumped on every state or switch change; a message carrying an older generation is refused as stale                                         |
+| `share_plans`                              | bool — I may invite this person into my plans and accept theirs                                                                                 |
+| `stats_level`                              | `off · overview · full` — exists                                                                                                                |
+| `share_achievements`                       | bool — they see my achievements                                                                                                                 |
+| leaderboard                                | the existing `LeaderboardConsent` via `leaderboard_remote_id` — exists                                                                          |
+| `share_trip_offers`                        | bool — they may offer me trips (inbox)                                                                                                          |
+| `remote_switches`                          | JSON, the other side's switches as last announced (read-only display: "teilt mit dir: …")                                                       |
+| `requested_at`, `confirmed_at`, `ended_at` | timestamps                                                                                                                                      |
 
-All switches default **off** and are **directional**: each side decides what *it* gives. Features that
+All switches default **off** and are **directional**: each side decides what _it_ gives. Features that
 need both (plans) require both sides' switch on.
 
 `users.federation_findable` stays and means only "people on connected servers may send me a
 connection request". It never creates a connection.
 
 **Existing pairings** (invitation codes and `directory-pair`) migrate to `state = reconfirm`: they
-keep the trips already shared with them working (no data breaks), but no *new* feature starts on them
+keep the trips already shared with them working (no data breaks), but no _new_ feature starts on them
 until both sides confirm once. The inbox shows each as "Verbindung bestätigen".
 
 ## 3. Wire (purpose `trip-share/1`, signed, existing replay/pin checks)
 
 New peer kinds, each idempotent on `(origin, channel, generation)`:
 
-| Kind | Body | Effect on the receiver |
-|---|---|---|
-| `connect-request` | `{fromUsername, fromDisplayName, toUsername, channel, switches}` | row `pending_in` + inbox item; the answer is `{received:true}` for every case (unknown, not findable, blocked, limit) — no oracle |
-| `connect-accept` | `{channel, generation, switches}` | `pending_out` → `active` |
-| `connect-decline` | `{channel}` | → `declined`; a new request from the same person is silently dropped for 30 days |
-| `connect-revoke` | `{channel, generation}` | → `revoked`; cascades: plan memberships of that person end, stats/leaderboard/achievement reads refuse, pending offers withdrawn. Trips already shared keep the linked copies (same rule as today's revoke) |
-| `connect-settings` | `{channel, generation, switches}` | updates `remote_switches`; switching *off* takes effect on the sender's side immediately (the sender enforces its own switches) |
+| Kind               | Body                                                             | Effect on the receiver                                                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `connect-request`  | `{fromUsername, fromDisplayName, toUsername, channel, switches}` | row `pending_in` + inbox item; the answer is `{received:true}` for every case (unknown, not findable, blocked, limit) — no oracle                                                                           |
+| `connect-accept`   | `{channel, generation, switches}`                                | `pending_out` → `active`                                                                                                                                                                                    |
+| `connect-decline`  | `{channel}`                                                      | → `declined`; a new request from the same person is silently dropped for 30 days                                                                                                                            |
+| `connect-revoke`   | `{channel, generation}`                                          | → `revoked`; cascades: plan memberships of that person end, stats/leaderboard/achievement reads refuse, pending offers withdrawn. Trips already shared keep the linked copies (same rule as today's revoke) |
+| `connect-settings` | `{channel, generation, switches}`                                | updates `remote_switches`; switching _off_ takes effect on the sender's side immediately (the sender enforces its own switches)                                                                             |
 
 Lookups keep their budgets (30/h per user, 60/h per peer). `directory-pair` stays readable for old
 peers for one release and answers `paired:false` from servers that have this change.
@@ -89,13 +89,13 @@ The owner's server stays authoritative for the plan; the member works **on their
   (accepted: own server).
 - Member-facing API on the member's own server (enveloped, for web and Companion):
 
-| Call | Answer |
-|---|---|
-| `GET /api/v1/remote-plans` | `[{connectionId, origin, planId, tripId, title, ownerDisplayName, role, state}]` |
-| `GET /api/v1/remote-plans/:connectionId/:planId` | the same plan view the owner route returns |
-| `POST …/mutations` | same body + `clientRef`; same answers and conflict 409 |
-| `GET …/collab` · `POST …/notices/read` · `GET|POST …/documents` · `GET …/documents/:id/file` · `GET …/export` | as the owner routes |
-| `POST …/leave` | ends the membership |
+| Call                                             | Answer                                                                           |
+| ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `GET /api/v1/remote-plans`                       | `[{connectionId, origin, planId, tripId, title, ownerDisplayName, role, state}]` |
+| `GET /api/v1/remote-plans/:connectionId/:planId` | the same plan view the owner route returns                                       |
+| `POST …/mutations`                               | same body + `clientRef`; same answers and conflict 409                           |
+| `GET …/collab` · `POST …/notices/read` · `GET    | POST …/documents`·`GET …/documents/:id/file`·`GET …/export`                      | as the owner routes |
+| `POST …/leave`                                   | ends the membership                                                              |
 
 Companion needs (2026-11-02), part of S2:
 
@@ -116,14 +116,14 @@ geteilt"), `REMOTE_PLAN_NOT_FOUND` (404).
 
 ## 5. User API (own server, enveloped, `SHARE_REMOTE_DISABLED` 404 while federation is off)
 
-| Call | Body | Answer |
-|---|---|---|
-| `GET /sharing/connections` | | `[connection]` — `{id, origin, username, displayName, state, mine:{plans, stats, achievements, leaderboard, tripOffers}, theirs:{…}, requestedAt, confirmedAt, revokedAt}`. For `pending_in`, `theirs` carries the switches the asker announced in `connect-request`, so the confirm dialog shows what the person gets before they set their own |
-| `POST /sharing/connections` | `{origin, username, switches}` | connection `pending_out` (201); the answer never says whether the person exists |
-| `POST /sharing/connections/:id/accept` | `{switches}` | `active` |
-| `POST /sharing/connections/:id/decline` | | `declined` |
-| `PUT /sharing/connections/:id/switches` | `{switches}` | connection |
-| `DELETE /sharing/connections/:id` | | `revoked` (a `pending_out` request is taken back, a `pending_in` one is declined) |
+| Call                                    | Body                           | Answer                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /sharing/connections`              |                                | `[connection]` — `{id, origin, username, displayName, state, mine:{plans, stats, achievements, leaderboard, tripOffers}, theirs:{…}, requestedAt, confirmedAt, revokedAt}`. For `pending_in`, `theirs` carries the switches the asker announced in `connect-request`, so the confirm dialog shows what the person gets before they set their own |
+| `POST /sharing/connections`             | `{origin, username, switches}` | connection `pending_out` (201); the answer never says whether the person exists                                                                                                                                                                                                                                                                  |
+| `POST /sharing/connections/:id/accept`  | `{switches}`                   | `active`                                                                                                                                                                                                                                                                                                                                         |
+| `POST /sharing/connections/:id/decline` |                                | `declined`                                                                                                                                                                                                                                                                                                                                       |
+| `PUT /sharing/connections/:id/switches` | `{switches}`                   | connection                                                                                                                                                                                                                                                                                                                                       |
+| `DELETE /sharing/connections/:id`       |                                | `revoked` (a `pending_out` request is taken back, a `pending_in` one is declined)                                                                                                                                                                                                                                                                |
 
 `switches = {plans: bool, stats: "off"|"overview"|"full", achievements: bool, leaderboard: bool,
 tripOffers: bool}`. The old `/sharing/remote/people*` reads stay as aliases for one release (Companion contract of
@@ -147,16 +147,30 @@ asks the admin to confirm it with the other admin. No user-level QR exists.
 
 ### Companion contract
 
-Auth: an admin user's browser session, or a PAT of an admin user with scope `admin` (a `write` PAT
-is refused 403 `API token lacks admin scope`; a `read` PAT 403; a non-admin 403). Base `/api/v1`.
+Auth: an admin user's browser session, or a PAT of an admin user with scope `admin`. A paired
+Companion holds only a `write` PAT (`routes/pairing.ts`), so no standing admin token lives on a
+phone: for **exactly** `POST /admin/federation/peers`, `/peers/verify` and `/peers/suspend` a
+`write` PAT is accepted when the user is an admin AND the body adds **step-up** fields
+`{"password": "<admin password>", "totp"?: "<6 digits>"}` (`totp` required when the account has
+two-factor). Every call proves it again; nothing is remembered. Any other admin route refuses a
+`write` PAT as before (403 `API token lacks admin scope`), a `read` PAT 403, a non-admin 403 (also
+with a password, and without being told whether the password was right). Base `/api/v1`.
 
-| Call | Body | Answer |
-|---|---|---|
-| `POST /admin/federation/peers` | `{"qr": <payload string or object>, "enabled"?: true}` | 200 federation state + `peer` + `computedFingerprint` |
-| same | `{"connectionFile": <base64 of the ZIP or JSON>, "enabled"?: true}` | same |
-| same | `{origin, publicKey, fingerprint, enabled}` (existing web form) | same |
-| `POST /admin/federation/peers/verify` | `{"origin": "<u>"}` | 200 `{verified: true}`; 502 `COMPARISON_PEER_UNREACHABLE` |
-| `POST /admin/federation/peers/suspend` | `{"origin"}` | 200 `{suspended: true}` |
+Step-up refusals (body `{code, error}`): 403 `ADMIN_STEP_UP_TOTP_REQUIRED` (two-factor on, no
+`totp`; checked after the password); 403 `ADMIN_STEP_UP_FAILED` (wrong password or `totp`, or an
+account with no usable password); 429 `ADMIN_STEP_UP_LOCKED` (5 wrong attempts per account in 15
+minutes; the login's address limiter `authLimiter` applies on top, and the route's 20/min limit on
+the pin). A passkey-only admin has no password to prove and pins from the web. The fields are
+stripped before the strict body schemas run; they are never logged. Step-up fields sent with a
+session or an `admin` PAT are rejected as unknown keys (400), as before.
+
+| Call                                   | Body                                                                | Answer                                                    |
+| -------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `POST /admin/federation/peers`         | `{"qr": <payload string or object>, "enabled"?: true}`              | 200 federation state + `peer` + `computedFingerprint`     |
+| same                                   | `{"connectionFile": <base64 of the ZIP or JSON>, "enabled"?: true}` | same                                                      |
+| same                                   | `{origin, publicKey, fingerprint, enabled}` (existing web form)     | same                                                      |
+| `POST /admin/federation/peers/verify`  | `{"origin": "<u>"}`                                                 | 200 `{verified: true}`; 502 `COMPARISON_PEER_UNREACHABLE` |
+| `POST /admin/federation/peers/suspend` | `{"origin"}`                                                        | 200 `{suspended: true}`                                   |
 
 - `peer` = `{origin, fingerprint, enabled, verifiedAt: null, leaderboardVersions}`. A new pin is
   **unverified** (`verifiedAt: null`); re-pinning resets it. `computedFingerprint` is the SHA-256
@@ -179,14 +193,14 @@ content moves into §9 here).
 
 ## 8. Phases
 
-| Phase | Side | Content | State |
-|---|---|---|---|
-| S1 | Server | connection record + migration (`reconfirm`), wire kinds §3, user API §5, findable = requests only, inbox counts, web: Einstellungen → Teilen → „Verbindungen" (request with switches, confirm with switches, change, end) and inbox items | built on `fix/user-connections-s1` (see *S1 — as built*) |
-| S2 | Server | plans over the connection §4 (host checks + member proxy + API), web: remote plans in the plan list and the plan screens through an API adapter; owner "Mitplaner hinzufügen" lists active connections with plans on | open |
-| S3 | Server | remove the guest door §7; admin QR + `POST /admin/federation/peers` §6 | open |
-| C1 | Companion | connections screen (request, confirm with switches, change, end) + inbox items | open |
-| C2 | Companion | remote plans through the own server's `/remote-plans` API (offline queue keeps `clientRef`) | open |
-| C3 | Companion | admin: scan server QR, show fingerprint, pin | open |
+| Phase | Side      | Content                                                                                                                                                                                                                                   | State                                                    |
+| ----- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| S1    | Server    | connection record + migration (`reconfirm`), wire kinds §3, user API §5, findable = requests only, inbox counts, web: Einstellungen → Teilen → „Verbindungen" (request with switches, confirm with switches, change, end) and inbox items | built on `fix/user-connections-s1` (see _S1 — as built_) |
+| S2    | Server    | plans over the connection §4 (host checks + member proxy + API), web: remote plans in the plan list and the plan screens through an API adapter; owner "Mitplaner hinzufügen" lists active connections with plans on                      | open                                                     |
+| S3    | Server    | remove the guest door §7; admin QR + `POST /admin/federation/peers` §6                                                                                                                                                                    | open                                                     |
+| C1    | Companion | connections screen (request, confirm with switches, change, end) + inbox items                                                                                                                                                            | open                                                     |
+| C2    | Companion | remote plans through the own server's `/remote-plans` API (offline queue keeps `clientRef`)                                                                                                                                               | open                                                     |
+| C3    | Companion | admin: scan server QR, show fingerprint, pin                                                                                                                                                                                              | open                                                     |
 
 Minimum server version for C1–C3: the 2.8.0 RC that ships S1–S3 (planned rc.15).
 
@@ -214,7 +228,7 @@ Deviations and decisions the spec did not fix:
 - **Generation is per sender.** `generation` is the sender's own counter; the receiver keeps the highest
   it accepted (`peer_generation`) and applies only a newer one. Extra columns beyond §2: `peer_generation`,
   `share_leaderboard` (the switch, so a pending choice has a home), `peer_leaderboard_channel`,
-  `ended_by_me` (only a decline *this* side made blocks the person for 30 days).
+  `ended_by_me` (only a decline _this_ side made blocks the person for 30 days).
 - **Crossing requests.** Two people asking each other at once: the server with the greater origin gives
   way (its own request becomes the one to answer), so exactly one request survives.
 - **Send order.** Asking and confirming send first and fail as themselves (a request nobody got is taken

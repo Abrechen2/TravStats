@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { authenticate, requireAdmin, requireWriteScope } from "../../middleware/auth";
+import {
+  authenticate,
+  requireAdmin,
+  requireWriteScope,
+  type AuthRequest,
+} from "../../middleware/auth";
+import { adminStepUpGate } from "../../services/auth/adminStepUp";
 import systemRouter from "./system";
 import usersRouter from "./users";
 import invitationsRouter from "./invitations";
@@ -42,7 +48,13 @@ const router = Router();
 // guard is method-aware, so admin GETs still pass for read tokens that
 // might be issued at that intermediate level.
 router.use(authenticate);
-router.use(requireAdmin);
+// A paired Companion holds a write-scope token. For three federation pin calls it may re-prove
+// the admin's password (+ TOTP) in the body instead; see services/auth/adminStepUp.ts. The gate
+// is path-scoped, so no other admin route ever accepts a step-up.
+router.use(adminStepUpGate);
+router.use((req: AuthRequest, res, next) =>
+  req.adminStepUpVerified ? next() : requireAdmin(req, res, next)
+);
 router.use(requireWriteScope);
 
 // Mount sub-routers

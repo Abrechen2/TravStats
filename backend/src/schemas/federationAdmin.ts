@@ -79,3 +79,13 @@ export const connectionFileInspectionSchema = z.object({
     .describe("The server is already pinned; `sameKey` false means the file replaces its key"),
 });
 export type ConnectionFileInspection = z.infer<typeof connectionFileInspectionSchema>;
+
+/**
+ * The step-up fields a Companion's write-scope token adds to the pin, verify and suspend calls
+ * (spec 2026-11-02 §6). Documentation only: `adminStepUpGate` reads and strips them before the
+ * routes' strict schemas run.
+ */
+export const adminStepUpFieldsSchema = z.object({
+  password: z.string().min(1).max(1024),
+  totp: z.string().optional(),
+});
