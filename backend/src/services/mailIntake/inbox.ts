@@ -22,6 +22,7 @@ const NOTED_REJECTIONS: MessageReason[] = [
   "sender_not_allowed",
   "dmarc_failed",
   "dmarc_unverified",
+  "from_invalid",
 ];
 
 function foundOf(summary: unknown): number | null {

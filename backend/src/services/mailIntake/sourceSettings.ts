@@ -147,6 +147,12 @@ export async function saveSource(userId: string | null, input: SourceInput): Pro
     tlsMode: input.tlsMode,
     username: input.username,
     address: userId ? null : (input.address ?? null),
+    // undefined keeps the stored id, an explicit null clears it.
+    authservId: userId
+      ? null
+      : input.authservId === undefined
+        ? (existing?.authservId ?? null)
+        : input.authservId || null,
     folder: input.folder,
     passwordEncrypted,
     enabled,

@@ -141,6 +141,7 @@ async function authorise(
   }
   // Only the From address DMARC vouched for may authorise. Sender, Return-Path and
   // X-Original-Sender are written by whoever sends the mail and prove nothing.
+  if (!headers.from) return { userId, reason: "from_invalid" };
   const allowed = headers.from
     ? await prisma.mailIntakeSender.findFirst({
         where: { userId, address: headers.from },

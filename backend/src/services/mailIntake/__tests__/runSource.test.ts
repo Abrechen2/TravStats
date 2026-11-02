@@ -506,6 +506,54 @@ describe("mail intake run (forgejo#313)", () => {
       }
     );
 
+    it("a From that is not exactly one mailbox is refused as from_invalid, whatever it contains", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const dmarc = "mx.example.org; dmarc=pass header.from=gmail.example";
+      box.add({
+        uid: 1,
+        raw: forwarded({
+          from: "me@gmail.example, mallory@evil.example",
+          authResults: dmarc,
+          messageId: "<l@x>",
+        }),
+      });
+      box.add({
+        uid: 2,
+        raw: forwarded({
+          from: "mallory@evil.example",
+          extraHeaders: ["From: me@gmail.example"],
+          authResults: dmarc,
+          messageId: "<d@x>",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((r) => r.reason)).toEqual(["from_invalid", "from_invalid"]);
+      expect(parseDocument).not.toHaveBeenCalled();
+    });
+
+    it("an allowed address in the DISPLAY NAME does not authorise the real sender", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({
+        uid: 1,
+        raw: forwarded({
+          from: '"me@gmail.example" <mallory@evil.example>',
+          authResults: "mx.example.org; dmarc=pass header.from=evil.example",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages())[0]).toMatchObject({
+        reason: "sender_not_allowed",
+        fromAddress: "mallory@evil.example",
+      });
+    });
+
+    it("a dmarc=pass that names no header.from does not count", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 1, raw: forwarded({ authResults: "mx.example.org; dmarc=pass" }) });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("dmarc_unverified");
+    });
+
     it("an allowed From without a DMARC pass is not authorised (dmarc_unverified), also with no verdict at all", async () => {
       await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
       box.add({ uid: 1, raw: forwarded({ authResults: undefined, messageId: "<n1@x>" }) });

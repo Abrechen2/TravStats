@@ -27,6 +27,7 @@ export const MESSAGE_REASONS = [
   "sender_not_allowed",
   "dmarc_failed",
   "dmarc_unverified",
+  "from_invalid",
   "unreadable_mail",
   "nothing_found",
   "parser_timeout",

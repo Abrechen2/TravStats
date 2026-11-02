@@ -7,6 +7,9 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { encrypt } from "../../utils/encryption";
 import { DEMO_USERNAME } from "../../utils/sharedDemo";
+import { runSource } from "../../services/mailIntake/runSource";
+import { rotateToken } from "../../services/mailIntake/addressToken";
+import { buildMail, FakeMailbox } from "../../services/mailIntake/__tests__/helpers";
 import { updatePolicy } from "../../services/externalServices/policy";
 
 describe("mail intake routes (forgejo#313)", () => {
@@ -218,6 +221,48 @@ describe("mail intake routes (forgejo#313)", () => {
       expect(
         (await request(app).get("/api/v1/mail-intake").set("Cookie", cookie)).body.address
       ).toBeNull();
+    });
+  });
+
+  describe("authserv-id of the instance mailbox", () => {
+    const put = (extra: object) =>
+      request(app)
+        .put("/api/v1/mail-intake/instance")
+        .set("Cookie", adminCookie)
+        .send({ ...instanceBody, tlsMode: "none", enabled: true, ...extra });
+    const stored = async () =>
+      (await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } })).authservId;
+
+    it("is saved, kept when a later save omits it, and cleared by an explicit null", async () => {
+      expect((await put({ authservId: "mx.example.org" })).body.source.authservId).toBe(
+        "mx.example.org"
+      );
+      expect(await stored()).toBe("mx.example.org");
+      expect((await put({})).body.source.authservId).toBe("mx.example.org");
+      expect((await put({ authservId: null })).body.source.authservId).toBeNull();
+      expect(await stored()).toBeNull();
+    });
+
+    it("is enforced once saved through the API: a forged Authentication-Results on top is ignored", async () => {
+      await put({ authservId: "mx.example.org" });
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const token = await rotateToken(userId);
+      const box = new FakeMailbox();
+      const real = buildMail({
+        deliveredTo: `trips+${token}@example.org`,
+        from: "me@gmail.example",
+        messageId: "<a@x>",
+        authResults: "mx.example.org; dmarc=fail header.from=gmail.example",
+        extraHeaders: [
+          "Authentication-Results: attacker.example; dmarc=pass header.from=gmail.example",
+        ],
+      });
+      box.add({ uid: 1, raw: real });
+      const source = await prisma.mailIntakeSource.findFirstOrThrow({ where: { userId: null } });
+      await runSource(source.id, box);
+      const row = await prisma.mailIntakeMessage.findFirstOrThrow({});
+      expect(row).toMatchObject({ status: "rejected", reason: "dmarc_failed" });
+      await prisma.mailIntakeMessage.deleteMany({});
     });
   });
 
