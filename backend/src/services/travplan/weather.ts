@@ -12,7 +12,7 @@ import {
   assertEnabled,
 } from "./store";
 import { forecastSchema } from "./schema";
-import { planAccess, type PlanAccess } from "./access";
+import { isGuest, planAccess, type PlanAccess, type PlanActor } from "./access";
 import { recordNotices } from "./members";
 import { parseState } from "./upgrade";
 import type { PlanState, PlanView } from "./types";
@@ -28,12 +28,12 @@ const responseSchema = z.object({
   }),
 });
 export async function refreshForecast(
-  userId: string,
+  actor: PlanActor,
   tripId: string,
   request: { clientRef: string; baseRevision: number }
 ): Promise<PlanView> {
   await assertEnabled();
-  const access = await planAccess(userId, tripId),
+  const access = await planAccess(actor, tripId),
     row = access.row,
     state = parseState(row.state),
     payloadHash = hash({ type: "forecast", ...request });
@@ -68,8 +68,12 @@ export async function refreshForecast(
     state.forecast.longitude === state.longitude &&
     Date.now() - Date.parse(state.forecast.fetchedAt) < 3600000
   )
-    return readPlan(userId, tripId);
-  await reserveUsage(userId, "weather", (await configuration()).weatherDailyLimit);
+    return readPlan(actor, tripId);
+  await reserveUsage(
+    isGuest(actor) ? access.ownerId : actor,
+    "weather",
+    (await configuration()).weatherDailyLimit
+  );
   const query = new URLSearchParams({
     latitude: String(state.latitude),
     longitude: String(state.longitude),

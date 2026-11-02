@@ -8,7 +8,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { fetchOpenData, isOpenDataEnabled } from "../openData/http";
 import { configuration, reserveUsage, hash, assertEnabled } from "./store";
 import { commitWeather } from "./weather";
-import { planAccess } from "./access";
+import { isGuest, planAccess, type PlanActor } from "./access";
 import { parseState } from "./upgrade";
 import { scheduleRoute } from "./routeSchedule";
 import { stationWeatherSchema } from "./schema";
@@ -134,14 +134,14 @@ function windowDays(arrive: string, nights: number): string[] {
 }
 
 export async function refreshStationClimate(
-  userId: string,
+  actor: PlanActor,
   tripId: string,
   stationId: string,
   request: { clientRef: string; baseRevision: number },
   now: Date = new Date()
 ): Promise<PlanView> {
   await assertEnabled();
-  const access = await planAccess(userId, tripId),
+  const access = await planAccess(actor, tripId),
     row = access.row,
     state = parseState(row.state),
     payloadHash = hash({ type: "climate", stationId, ...request });
@@ -172,7 +172,11 @@ export async function refreshStationClimate(
       "PLAN_WEATHER_DISABLED"
     );
   const got = await climateTable(station.place.lat, station.place.lon, now, async () =>
-    reserveUsage(userId, "weather", (await configuration()).weatherDailyLimit)
+    reserveUsage(
+      isGuest(actor) ? access.ownerId : actor,
+      "weather",
+      (await configuration()).weatherDailyLimit
+    )
   );
   if ("failure" in got)
     throw new AppError(

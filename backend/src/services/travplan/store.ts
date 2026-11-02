@@ -12,7 +12,7 @@ import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
 import { newTripColor } from "../trip/newTripColor";
 import { adoptExisting } from "./existing";
-import { ensureOwnerMember, planAccess, selfOf, type PlanAccess } from "./access";
+import { ensureOwnerMember, planAccess, selfOf, type PlanAccess, type PlanActor } from "./access";
 import {
   applyMemberNote,
   authorizeOperation,
@@ -128,8 +128,8 @@ export async function ownedPlan(userId: string, tripId: string) {
   if (!plan) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
   return plan;
 }
-export async function readPlan(userId: string, tripId: string): Promise<PlanView> {
-  const access = await planAccess(userId, tripId);
+export async function readPlan(actor: PlanActor, tripId: string): Promise<PlanView> {
+  const access = await planAccess(actor, tripId);
   const row = access.row;
   return viewFor(row, row.trip.name, access, await lastMutationOf(row.id, row.revision));
 }
@@ -289,11 +289,11 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
  * redoing it (and without the redone work changing the payload hash).
  */
 export async function findReceipt(
-  userId: string,
+  actor: PlanActor,
   tripId: string,
   clientRef: string
 ): Promise<PlanView | null> {
-  const access = await planAccess(userId, tripId);
+  const access = await planAccess(actor, tripId);
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: access.row.id, clientRef } },
   });
@@ -304,13 +304,13 @@ export async function findReceipt(
   return receipt.result as unknown as PlanView;
 }
 export async function writePlan(
-  actorUserId: string,
+  actor0: PlanActor,
   tripId: string,
   body: PlanWrite
 ): Promise<PlanView> {
   await assertEnabled();
   const payloadHash = hash(body);
-  const access = await planAccess(actorUserId, tripId);
+  const access = await planAccess(actor0, tripId);
   const owned = access.row;
   // Everything below that touches the logbook (documents, executions, handovers) acts on the
   // OWNER's account, whoever writes: a co-planner confirms nothing there (spec §6.1).
