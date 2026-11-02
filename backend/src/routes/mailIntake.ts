@@ -19,12 +19,14 @@ import {
   instanceSourceBodySchema,
   personalSourceBodySchema,
   senderBodySchema,
+  fileOriginalBodySchema,
 } from "../schemas/mailIntake";
 import { prisma } from "../db";
 import {
   allowSenderOf,
   buildInbox,
   dismissMessage,
+  fileOriginalWithEntry,
   retryMessage,
 } from "../services/mailIntake/inbox";
 import { runSource } from "../services/mailIntake/runSource";
@@ -170,6 +172,19 @@ router.post(
   wrap(async (req, res) => {
     await retryMessage(req.userId!, idParamsSchema.parse(req.params).id);
     res.json({ ok: true });
+  })
+);
+
+router.post(
+  "/messages/:id/file-original",
+  wrap(async (req, res) => {
+    const { openedAt } = fileOriginalBodySchema.parse(req.body);
+    const entry = await fileOriginalWithEntry(
+      req.userId!,
+      idParamsSchema.parse(req.params).id,
+      new Date(openedAt)
+    );
+    res.json({ entry });
   })
 );
 

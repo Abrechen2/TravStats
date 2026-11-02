@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useLocation, useNavigate } from "react-router-dom";
-import { mailIntakeHandoffOf } from "../inbox/mailIntakeHandoff";
+import { mailIntakeHandoffOf, type MailIntakeHandoff } from "../inbox/mailIntakeHandoff";
+import { mailIntakeApi } from "../../lib/api/mailIntake";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -81,9 +82,27 @@ export function DashboardLayout({
   // A booking mail the inbox hands over (forgejo#313): open its domain's dialog with the
   // mail already dropped in, then clear the router state so a reload does not reopen it.
   const location = useLocation();
+  const pendingMail = useRef<MailIntakeHandoff | null>(null);
+  /**
+   * After the user saved what the handed-over mail produced: file the original with the
+   * new entry (owner rule: always attach the original). A failure is said, not swallowed —
+   * the entry exists either way and the mail stays in the inbox to be filed by hand.
+   */
+  const fileMailOriginal = async (): Promise<void> => {
+    const pending = pendingMail.current;
+    if (!pending) return;
+    pendingMail.current = null;
+    try {
+      await mailIntakeApi.fileOriginal(pending.messageId, pending.openedAt);
+    } catch (error) {
+      logger.error("Failed to file the original mail with the new entry", error);
+      addToast("error", t("dashboard:mailOriginalNotFiled"));
+    }
+  };
   useEffect(() => {
     const handoff = mailIntakeHandoffOf(location.state);
     if (!handoff) return;
+    pendingMail.current = handoff;
     setAddingDomainState(handoff.domain as AddableDomain);
     setHandedOver(handoff.document);
     navigate(location.pathname + location.search, { replace: true, state: null });
@@ -237,6 +256,7 @@ export function DashboardLayout({
   ): Promise<Flight> => {
     try {
       const created = await flightsApi.create(flight, opts);
+      await fileMailOriginal();
       addToast("success", t("flights:table.toast.updated"));
       setAddingDomain(null);
       onDataChanged?.();
@@ -375,7 +395,10 @@ export function DashboardLayout({
       <DomainImportPanel
         open={addingDomain === "cruise"}
         onClose={() => setAddingDomain(null)}
-        onItemsCreated={() => onDataChanged?.()}
+        onItemsCreated={async () => {
+          await fileMailOriginal();
+          await onDataChanged?.();
+        }}
         adapter={cruiseAdapter}
         initialDocument={addingDomain === "cruise" ? handedOver : null}
         onOpenOtherImport={openOtherImport}
@@ -387,7 +410,10 @@ export function DashboardLayout({
       <DomainImportPanel
         open={addingDomain === "lodging"}
         onClose={() => setAddingDomain(null)}
-        onItemsCreated={() => onDataChanged?.()}
+        onItemsCreated={async () => {
+          await fileMailOriginal();
+          await onDataChanged?.();
+        }}
         adapter={lodgingAdapter}
         initialDocument={addingDomain === "lodging" ? handedOver : null}
         onOpenOtherImport={openOtherImport}
@@ -402,7 +428,10 @@ export function DashboardLayout({
       <DomainImportPanel
         open={addingDomain === "rail"}
         onClose={() => setAddingDomain(null)}
-        onItemsCreated={() => onDataChanged?.()}
+        onItemsCreated={async () => {
+          await fileMailOriginal();
+          await onDataChanged?.();
+        }}
         adapter={railAdapter}
         initialDocument={addingDomain === "rail" ? handedOver : null}
         onOpenOtherImport={openOtherImport}
@@ -411,7 +440,10 @@ export function DashboardLayout({
       <DomainImportPanel
         open={addingDomain === "rental"}
         onClose={() => setAddingDomain(null)}
-        onItemsCreated={() => onDataChanged?.()}
+        onItemsCreated={async () => {
+          await fileMailOriginal();
+          await onDataChanged?.();
+        }}
         adapter={rentalAdapter}
         initialDocument={addingDomain === "rental" ? handedOver : null}
         onOpenOtherImport={openOtherImport}

@@ -70,6 +70,9 @@ describe("MailIntakeSection (forgejo#313)", () => {
       expect(api.get).toHaveBeenCalledWith("/documents/d1/file", { responseType: "blob" })
     );
     await waitFor(() => expect(mailIntakeHandoffOf(seenState)?.domain).toBe("flight"));
+    // The handoff names the proposal and when it was opened, so the original can be filed later.
+    expect(mailIntakeHandoffOf(seenState)).toMatchObject({ messageId: "m1" });
+    expect(Number.isNaN(Date.parse(mailIntakeHandoffOf(seenState)!.openedAt))).toBe(false);
   });
 
   it("a rejected mail says why in words, never as a raw code, and can allow the sender", async () => {
@@ -129,17 +132,32 @@ describe("mailIntakeHandoffOf", () => {
     const file = new File(["x"], "mail.eml");
     expect(
       mailIntakeHandoffOf({
-        mailIntakeHandoff: { domain: "rail", document: { kind: "file", file } },
+        mailIntakeHandoff: {
+          messageId: "m1",
+          openedAt: "2026-11-02T10:00:00Z",
+          domain: "rail",
+          document: { kind: "file", file },
+        },
       })?.domain
     ).toBe("rail");
     expect(
       mailIntakeHandoffOf({
-        mailIntakeHandoff: { domain: "bus", document: { kind: "file", file } },
+        mailIntakeHandoff: {
+          messageId: "m1",
+          openedAt: "2026-11-02T10:00:00Z",
+          domain: "bus",
+          document: { kind: "file", file },
+        },
       })
     ).toBeNull();
     expect(
       mailIntakeHandoffOf({
-        mailIntakeHandoff: { domain: "flight", document: { kind: "text", text: "x" } },
+        mailIntakeHandoff: {
+          messageId: "m1",
+          openedAt: "2026-11-02T10:00:00Z",
+          domain: "flight",
+          document: { kind: "text", text: "x" },
+        },
       })
     ).toBeNull();
     expect(mailIntakeHandoffOf(null)).toBeNull();

@@ -57,7 +57,12 @@ export default function MailIntakeSection(): JSX.Element | null {
         responseType: "blob",
       });
       const file = new File([data], "mail.eml", { type: "message/rfc822" });
-      const handoff: MailIntakeHandoff = { domain, document: { kind: "file", file } };
+      const handoff: MailIntakeHandoff = {
+        messageId: item.id,
+        openedAt: new Date().toISOString(),
+        domain,
+        document: { kind: "file", file },
+      };
       navigate("/dashboard", { state: { mailIntakeHandoff: handoff } });
     } catch (error) {
       logger.error("Failed to open the mail for the import", error);

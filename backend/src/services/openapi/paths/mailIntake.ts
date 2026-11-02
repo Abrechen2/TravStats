@@ -5,6 +5,8 @@
 import { registry } from "../registry";
 import {
   addressResponseSchema,
+  fileOriginalBodySchema,
+  fileOriginalResultSchema,
   idParamsSchema,
   inboxSchema,
   instanceSourceBodySchema,
@@ -146,6 +148,16 @@ op(
   "Uses the kept original.",
   okSchema,
   undefined,
+  true
+);
+op(
+  "post",
+  "/messages/{id}/file-original",
+  "File the proposal's original mail with the entry created from it",
+  "Links the kept .eml to the first entry of the proposal's domain created since `openedAt` " +
+    "(never before the mail arrived). `entry: null` when none was created; the card then stays.",
+  fileOriginalResultSchema,
+  fileOriginalBodySchema,
   true
 );
 op(

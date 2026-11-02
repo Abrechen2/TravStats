@@ -141,6 +141,12 @@ export const mailIntakeApi = {
   retry: async (id: string): Promise<void> => {
     await api.post(`${base}/messages/${id}/retry`);
   },
+  /** Files the proposal's original mail with the entry created from it since `openedAt`. */
+  fileOriginal: async (
+    id: string,
+    openedAt: string
+  ): Promise<{ entry: { type: string; id: string } | null }> =>
+    (await api.post(`${base}/messages/${id}/file-original`, { openedAt })).data,
   allowSender: async (id: string): Promise<void> => {
     await api.post(`${base}/messages/${id}/allow-sender`);
   },

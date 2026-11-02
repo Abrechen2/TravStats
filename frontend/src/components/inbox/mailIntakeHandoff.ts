@@ -7,6 +7,10 @@ import type { ImportDocument } from "../import/documentHandoff";
  * `DashboardLayout` opens the dialog with the mail already dropped into it.
  */
 export interface MailIntakeHandoff {
+  /** The proposal, so the original mail can be filed with what the user creates from it. */
+  messageId: string;
+  /** When the user opened it; entries created from then on came from this mail. */
+  openedAt: string;
   domain: ParseDomain;
   document: ImportDocument;
 }
@@ -21,10 +25,19 @@ export function openableDomain(domain: string | null): ParseDomain | null {
 export function mailIntakeHandoffOf(state: unknown): MailIntakeHandoff | null {
   const handoff = (state as { mailIntakeHandoff?: unknown } | null)?.mailIntakeHandoff;
   if (typeof handoff !== "object" || handoff === null) return null;
-  const { domain, document } = handoff as { domain?: unknown; document?: unknown };
+  const { domain, document, messageId, openedAt } = handoff as {
+    domain?: unknown;
+    document?: unknown;
+    messageId?: unknown;
+    openedAt?: unknown;
+  };
   const target = openableDomain(typeof domain === "string" ? domain : null);
   const file = (document as { kind?: unknown; file?: unknown } | null)?.file;
-  return target && (document as { kind?: unknown }).kind === "file" && file instanceof File
-    ? { domain: target, document: document as ImportDocument }
+  return target &&
+    typeof messageId === "string" &&
+    typeof openedAt === "string" &&
+    (document as { kind?: unknown }).kind === "file" &&
+    file instanceof File
+    ? { messageId, openedAt, domain: target, document: document as ImportDocument }
     : null;
 }

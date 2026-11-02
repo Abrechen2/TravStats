@@ -9,7 +9,13 @@ import { documentPath } from "../../documents/documentStore";
 import fs from "fs";
 import dns from "dns";
 import { runSource } from "../runSource";
-import { retryMessage, buildInbox, allowSenderOf, dismissMessage } from "../inbox";
+import {
+  retryMessage,
+  buildInbox,
+  allowSenderOf,
+  dismissMessage,
+  fileOriginalWithEntry,
+} from "../inbox";
 import { rotateToken } from "../addressToken";
 import { scrubMailCredentialsAfterRestore } from "../afterRestore";
 import { buildMail, FakeMailbox } from "./helpers";
@@ -775,6 +781,76 @@ describe("mail intake run (forgejo#313)", () => {
       });
       expect((await buildInbox(userId)).items).toHaveLength(0);
       await prisma.flight.delete({ where: { id: flight.id } });
+    });
+  });
+
+  describe("the original mail ends up on the entry created from the proposal", () => {
+    const flightData = (over: object = {}) => ({
+      userId,
+      depIata: "FRA",
+      depLat: 50,
+      depLon: 8,
+      arrIata: "JFK",
+      arrLat: 40,
+      arrLon: -73,
+      departureTime: new Date("2026-11-12T08:00:00Z"),
+      status: "scheduled",
+      ...over,
+    });
+    const proposal = async () => {
+      box.add({ uid: 1, raw: buildMail({ messageId: "<imp@x>" }) });
+      await runSource(personalId, box);
+      return (await messages())[0];
+    };
+
+    it("imports a proposal and the .eml Document is linked to the new flight", async () => {
+      const row = await proposal();
+      const openedAt = new Date();
+      const flight = await prisma.flight.create({ data: flightData() });
+
+      const filed = await fileOriginalWithEntry(userId, row.id, openedAt);
+
+      expect(filed).toEqual({ type: "flight", id: flight.id });
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: row.documentId! } });
+      expect(doc).toMatchObject({
+        flightId: flight.id,
+        format: "eml",
+        source: "mail",
+        unlinkedAt: null,
+      });
+      expect(doc.linkedAt).not.toBeNull();
+      // filed: the card is gone and the sweep will never delete it
+      expect((await buildInbox(userId)).items).toHaveLength(0);
+      await prisma.flight.delete({ where: { id: flight.id } });
+    });
+
+    it("files nothing when the user saved nothing, and keeps the card", async () => {
+      const row = await proposal();
+      expect(await fileOriginalWithEntry(userId, row.id, new Date())).toBeNull();
+      const doc = await prisma.document.findUniqueOrThrow({ where: { id: row.documentId! } });
+      expect(doc.flightId).toBeNull();
+      expect((await buildInbox(userId)).items).toHaveLength(1);
+    });
+
+    it("never files the mail with an entry that existed before the proposal arrived", async () => {
+      const old = await prisma.flight.create({ data: flightData() });
+      const row = await proposal();
+      expect(await fileOriginalWithEntry(userId, row.id, new Date(0))).toBeNull();
+      await prisma.flight.delete({ where: { id: old.id } });
+    });
+
+    it("another account's entry is never a candidate", async () => {
+      const row = await proposal();
+      const foreign = await prisma.flight.create({ data: flightData({ userId: otherUserId }) });
+      expect(await fileOriginalWithEntry(userId, row.id, new Date(0))).toBeNull();
+      await prisma.flight.delete({ where: { id: foreign.id } });
+    });
+
+    it("refuses a mail that is not the caller's", async () => {
+      const row = await proposal();
+      await expect(fileOriginalWithEntry(otherUserId, row.id, new Date())).rejects.toMatchObject({
+        statusCode: 404,
+      });
     });
   });
 

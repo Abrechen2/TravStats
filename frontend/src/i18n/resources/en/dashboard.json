@@ -461,5 +461,6 @@
       "tour": "Tours",
       "trip": "Trips"
     }
-  }
+  },
+  "mailOriginalNotFiled": "The entry was created, but the original mail could not be filed with it. It stays in the inbox."
 }

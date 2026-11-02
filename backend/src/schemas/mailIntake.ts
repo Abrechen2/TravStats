@@ -107,3 +107,12 @@ export const inboxSchema = z.object({
 
 export const okSchema = z.object({ ok: z.literal(true) });
 export const addressResponseSchema = z.object({ address: z.string().nullable() });
+
+export const fileOriginalBodySchema = z.strictObject({
+  /** When the user opened the proposal; entries created from then on are the ones it produced. */
+  openedAt: z.string().datetime(),
+});
+
+export const fileOriginalResultSchema = z.object({
+  entry: z.object({ type: z.string(), id: z.string() }).nullable(),
+});

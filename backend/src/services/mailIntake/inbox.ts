@@ -10,7 +10,7 @@ import fsp from "fs/promises";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { documentPath } from "../documents/documentStore";
-import { unfiledDeletesAt } from "../documents/documentService";
+import { linkDocuments, unfiledDeletesAt } from "../documents/documentService";
 import { SOURCE_ERROR_KINDS, type MessageReason, type SourceErrorKind } from "./errors";
 import { addSender } from "./sourceSettings";
 import { classifyKept } from "./pipeline";
@@ -118,4 +118,81 @@ export async function retryMessage(userId: string, id: string): Promise<void> {
       dismissedAt: null,
     },
   });
+}
+
+/** Where each parsed domain's entries live, newest first by creation time. */
+const ENTRY_LOOKUP = {
+  flight: (userId: string, since: Date) =>
+    prisma.flight.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+  cruise: (userId: string, since: Date) =>
+    prisma.cruise.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+  lodging: (userId: string, since: Date) =>
+    prisma.lodgingStay.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+  rail: (userId: string, since: Date) =>
+    prisma.railJourney.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+  rental: (userId: string, since: Date) =>
+    prisma.rentalBooking.findFirst({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }),
+} as const;
+const ENTRY_TYPE = {
+  flight: "flight",
+  cruise: "cruise",
+  lodging: "lodgingStay",
+  rail: "railJourney",
+  rental: "rentalBooking",
+} as const;
+
+/**
+ * Files the proposal's original mail with the entry the user created from it
+ * (owner rule: always attach the original). The import dialogs create entries
+ * through domain-specific routes that do not hand an id back, so the entry is
+ * found as the first of the proposal's domain the account created since the
+ * user opened the proposal — never before the mail itself arrived. Filing uses
+ * the ordinary Document linking (`linkDocuments`), so the .eml ends up on the
+ * flight, cruise, stay, ride or rental like any other kept original. A document
+ * belongs to one entry: with several entries from one mail it goes to the first.
+ *
+ * Returns the entry it was filed with, or null when none was created (the card
+ * stays — nothing was lost, the user may not have saved).
+ */
+export async function fileOriginalWithEntry(
+  userId: string,
+  id: string,
+  openedAt: Date
+): Promise<{ type: string; id: string } | null> {
+  const row = await ownMessage(userId, id);
+  const domain = row.domain as keyof typeof ENTRY_LOOKUP | null;
+  if (!row.documentId || !domain || !(domain in ENTRY_LOOKUP)) {
+    throw new AppError(
+      "This proposal has no entry to file the mail with",
+      409,
+      "MAIL_DOCUMENT_GONE"
+    );
+  }
+  const since = new Date(Math.max(openedAt.getTime(), row.createdAt.getTime()));
+  const entry = await ENTRY_LOOKUP[domain](userId, since);
+  if (!entry) return null;
+  const ref = { type: ENTRY_TYPE[domain], id: entry.id };
+  await linkDocuments(userId, [row.documentId], ref);
+  await prisma.mailIntakeMessage.update({ where: { id }, data: { dismissedAt: new Date() } });
+  return ref;
 }
