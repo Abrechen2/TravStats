@@ -220,6 +220,11 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   remoteShareAccounts:
     "trip-sharing pairings with people on other servers, bound to server keys; re-made by a new invitation",
   tripShareInvites: "single-use credentials",
+  mailIntakeSources: "mailbox connections carrying an encrypted password; re-entered after restore",
+  mailIntakeSenders:
+    "the allowed-sender list of the forwarding address, mailbox configuration rather than travel records",
+  mailIntakeMessages:
+    "the pickup queue of fetched mails; each original is exported as its Document, the proposal itself is transient",
   externalServiceTests:
     "last connection-test verdicts of this instance's services; re-measured by the next test",
   reminderClaims:
