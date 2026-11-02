@@ -1102,3 +1102,8 @@ fix this and is a protocol change. (2) "Voll" serves the figures and the entries
 lists, not a replica of the owner's whole statistics page (routes, airports, map): the web shows
 totals and an entry list. (3) Per-person levels apply to pairings made through the directory for the
 leaderboard; code pairings have the statistics level but no leaderboard.
+(4) A lost reply to `directory-pair` can leave a duplicate pairing on the answering server (the asker
+only stores its side after the reply); retries then count toward the 200-pairing limit. Accepted for
+now. (5) Revoke (either side), withdrawal and a restore now withdraw the pairing's leaderboard consent
+and reset its statistics level; a leaderboard-channel mismatch unlinks the leaderboard and
+`people/find` answers `leaderboardIssue: "channel-mismatch"` (later reads: `leaderboard: unavailable`).

@@ -33,6 +33,8 @@ export interface RemotePerson {
   /** The caller's leaderboard switch; `unavailable` for a pairing made with an invitation code. */
   leaderboard: "unavailable" | "off" | "on";
   createdAt: string;
+  /** Only on the answer of a lookup: the leaderboard could not be paired. */
+  leaderboardIssue?: "channel-mismatch";
 }
 
 /** Mirrors `STATS_LEVELS` in `backend/src/schemas/tripSharePeer.ts`. */

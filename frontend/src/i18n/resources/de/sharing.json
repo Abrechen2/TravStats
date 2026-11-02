@@ -807,7 +807,8 @@
         "noServers": "Dein Admin hat noch keinen Server verbunden.",
         "username": "Benutzername",
         "submit": "Suchen",
-        "done": "{{name}} (@{{username}}) auf {{origin}} ist verbunden. Es wird noch nichts geteilt – das stellst du unten ein."
+        "done": "{{name}} (@{{username}}) auf {{origin}} ist verbunden. Es wird noch nichts geteilt – das stellst du unten ein.",
+        "leaderboardMismatch": "Die Rangliste konnte mit diesem Server nicht verbunden werden (die Kanäle stimmen nicht überein) und bleibt aus."
       },
       "none": "Noch niemand verbunden.",
       "row": "{{name}} (@{{username}}) auf {{origin}}",

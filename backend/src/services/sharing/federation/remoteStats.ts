@@ -136,11 +136,13 @@ export async function setRemoteLeaderboard(
   return readRemotePerson(userId, remoteId);
 }
 
-/** Ending a pairing ends what was shown through it (fail closed): called by the withdrawal. */
-export async function endShowing(
-  tx: Pick<DbTransaction, "remoteShareAccount" | "leaderboardConsent">,
-  pairing: { id: string; userId: string; leaderboardRemoteId: string | null }
-): Promise<void> {
+/**
+ * Ending a pairing ends what was shown through it, whoever ended it (a local withdrawal, the other
+ * server's revoke): statistics back to off, the leaderboard consent withdrawn.
+ */
+export async function endShowing(tx: DbTransaction, pairingId: string): Promise<void> {
+  const pairing = await tx.remoteShareAccount.findUnique({ where: { id: pairingId } });
+  if (!pairing) return;
   await tx.remoteShareAccount.update({ where: { id: pairing.id }, data: { statsLevel: "off" } });
   if (pairing.leaderboardRemoteId)
     await withdrawLeaderboardConsent(tx, pairing.userId, pairing.leaderboardRemoteId);

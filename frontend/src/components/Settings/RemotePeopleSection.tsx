@@ -89,13 +89,12 @@ export default function RemotePeopleSection(): JSX.Element | null {
       const person = await sharingRemoteApi.findPerson(origin, name);
       setPeople((list) => [person, ...list.filter((p) => p.id !== person.id)]);
       setUsername("");
-      setNotice(
-        t(`${NS}.find.done`, {
-          name: person.displayName,
-          username: person.username,
-          origin: person.origin,
-        })
-      );
+      const done = t(`${NS}.find.done`, {
+        name: person.displayName,
+        username: person.username,
+        origin: person.origin,
+      });
+      setNotice(person.leaderboardIssue ? `${done} ${t(`${NS}.find.leaderboardMismatch`)}` : done);
     }, "sharing:remote.errors.findFailed");
   };
 

@@ -22,6 +22,13 @@ export async function suspendTripFederationAfterRestore(): Promise<void> {
       },
       data: { status: "pending", decidedAt: null },
     }),
+    // What a pairing showed (statistics level, leaderboard totals) is held with it: the clone
+    // shows nothing until each consent is confirmed again and the level set anew.
+    prisma.remoteShareAccount.updateMany({ data: { statsLevel: "off" } }),
+    prisma.leaderboardConsent.updateMany({
+      where: { status: "accepted", remote: { sharePairing: { isNot: null } } },
+      data: { status: "withdrawn", decidedAt: now },
+    }),
     // An offer still open is held apart, so confirming it again re-opens it instead of taking it.
     prisma.tripShareRemoteMember.updateMany({
       where: { state: "invited" },

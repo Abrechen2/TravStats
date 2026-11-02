@@ -22,6 +22,7 @@ import {
   type DirectoryPairReply,
 } from "../../../schemas/tripSharePeer";
 import { requireTripFederation } from "./access";
+import { endShowing } from "./remoteStats";
 import { remoteShareError } from "./errors";
 import { readRemotePerson, type RemotePersonView } from "./remotePeople";
 import { peerSupports } from "./peerFeatures";
@@ -210,7 +211,7 @@ async function recordPairing(
   userId: string,
   origin: string,
   reply: Extract<DirectoryPairReply, { paired: true }>
-): Promise<string> {
+): Promise<{ id: string; leaderboardIssue?: "channel-mismatch" }> {
   return prisma.$transaction(async (tx) => {
     const byChannel = await tx.remoteShareAccount.findUnique({
       where: { origin_channel: { origin, channel: reply.channel } },
@@ -247,12 +248,21 @@ async function recordPairing(
       { username: reply.username, displayName: reply.displayName },
       reply.leaderboardChannel
     );
-    if (linked && linked !== reply.leaderboardChannel)
+    if (linked && linked !== reply.leaderboardChannel) {
+      // The two servers name the leaderboard pairing differently: it would read as a pairing
+      // the other side does not know. Unlink it and withdraw what it showed; the person is told.
       logger.warn(
         { operation: "directory_pair_leaderboard_mismatch", userId, origin },
-        "The leaderboard channels of a pairing differ; the leaderboard stays unavailable for it"
+        "The leaderboard channels of a pairing differ; the leaderboard is unlinked for it"
       );
-    return pairing.id;
+      await endShowing(tx, pairing.id);
+      await tx.remoteShareAccount.update({
+        where: { id: pairing.id },
+        data: { leaderboardRemoteId: null },
+      });
+      return { id: pairing.id, leaderboardIssue: "channel-mismatch" as const };
+    }
+    return { id: pairing.id };
   });
 }
 
@@ -322,6 +332,9 @@ export async function findRemotePerson(
           { userId, origin },
           { origin }
         );
-  const id = await recordPairing(userId, origin, reply);
-  return readRemotePerson(userId, id);
+  const { id, leaderboardIssue } = await recordPairing(userId, origin, reply);
+  return {
+    ...(await readRemotePerson(userId, id)),
+    ...(leaderboardIssue ? { leaderboardIssue } : {}),
+  };
 }

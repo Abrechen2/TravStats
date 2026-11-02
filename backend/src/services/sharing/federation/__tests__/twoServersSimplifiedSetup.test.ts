@@ -3,6 +3,7 @@
  * server-level trust instead of per-person codes — a findable person is looked up and paired, the
  * leaderboard and statistics switches default off, and every refusal has its own reason.
  */
+import { randomUUID } from "crypto";
 import { serveAggregate } from "../../../comparison/peerActions";
 import { A, B, pin, servers, user, useTwoServers, type Server } from "./twoServerHarness";
 import { addFlight } from "./sharedTripFixtures";
@@ -171,6 +172,77 @@ describe("a person the user withdrew from", () => {
     expect(await b.prisma.remoteShareAccount.count({ where: { userId: ben } })).toBe(1);
     expect(
       await b.prisma.shareConsent.count({ where: { targetId: ben, status: "accepted" } })
+    ).toBe(0);
+  });
+});
+
+describe("what a pairing showed ends with the pairing", () => {
+  /** Ben shows Anna his totals and his full statistics. */
+  async function benShowsAnna() {
+    const found = await annaFindsBen();
+    const benRow = await b.prisma.remoteShareAccount.findFirstOrThrow({
+      where: { userId: found.ben, origin: A },
+    });
+    await b.remoteStats.setStatsLevel(found.ben, benRow.id, "full");
+    await b.remoteStats.setRemoteLeaderboard(found.ben, benRow.id, true);
+    const lb = await b.prisma.leaderboardRemote.findFirstOrThrow({ where: { userId: found.ben } });
+    // The served state, read on Ben's server: only an accepted consent is ever served.
+    const asked = async () => ({
+      status: (await b.prisma.leaderboardConsent.findFirstOrThrow({ where: { remoteId: lb.id } }))
+        .status,
+    });
+    return { ...found, benRow, asked };
+  }
+
+  it("an incoming revoke withdraws the leaderboard consent and the level too", async () => {
+    const { anna, ben, person, benRow, asked } = await benShowsAnna();
+    expect((await asked()).status).toBe("accepted");
+    const trip = await a.prisma.trip.create({ data: { userId: anna, name: "Lissabon" } });
+    await addFlight(a, anna, trip.id);
+    await a.offers.offerTrip(anna, trip.id, person.id);
+    const offer = (await b.offerInbox.listReceivedOffers(ben))[0];
+    await b.offerInbox.acceptOffer(ben, offer.id);
+    await a.outbox.runDeliveries();
+    // Anna withdraws; her server revokes at Ben's.
+    await a.lifecycle.withdrawRemoteConsent(anna, person.id);
+    await a.outbox.runDeliveries();
+    expect((await asked()).status).toBe("withdrawn");
+    expect(
+      (await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: benRow.id } })).statsLevel
+    ).toBe("off");
+  });
+
+  it("a restore withdraws the leaderboard consent and resets the level", async () => {
+    const { benRow, asked } = await benShowsAnna();
+    expect((await asked()).status).toBe("accepted");
+    await b.restore.suspendTripFederationAfterRestore();
+    expect((await asked()).status).toBe("withdrawn");
+    expect(
+      (await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: benRow.id } })).statsLevel
+    ).toBe("off");
+  });
+});
+
+describe("a leaderboard channel mismatch", () => {
+  it("is shown: the switch is not operable and the answer carries the reason", async () => {
+    const { anna, person } = await annaFindsBen();
+    const onA = await a.prisma.remoteShareAccount.findFirstOrThrow({ where: { userId: anna } });
+    // The two servers now name the leaderboard pairing differently.
+    await a.prisma.leaderboardRemote.update({
+      where: { id: onA.leaderboardRemoteId! },
+      data: { channel: randomUUID() },
+    });
+    const again = await a.directory.findRemotePerson(anna, B, person.username);
+    expect(again).toMatchObject({
+      leaderboard: "unavailable",
+      leaderboardIssue: "channel-mismatch",
+    });
+    await expectRefusal(
+      a.remoteStats.setRemoteLeaderboard(anna, person.id, true),
+      "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE"
+    );
+    expect(
+      await a.prisma.leaderboardConsent.count({ where: { ownerId: anna, status: "accepted" } })
     ).toBe(0);
   });
 });

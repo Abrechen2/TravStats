@@ -160,6 +160,8 @@ async function revokePairing(
   notify: boolean
 ): Promise<void> {
   const now = new Date();
+  // Statistics and the leaderboard end with the pairing, on every path that revokes it.
+  await endShowing(tx, pairing.id);
   await tx.shareConsent.updateMany({
     where: {
       status: { in: ["pending", "accepted"] },
@@ -212,14 +214,7 @@ export async function withdrawRemoteConsent(
   const pairing = await prisma.remoteShareAccount.findFirst({ where: { id: remoteId, userId } });
   if (!pairing)
     throw remoteShareError("SHARE_REMOTE_PERSON_NOT_FOUND", 404, "No such person", { userId });
-  await prisma.$transaction(
-    async (tx) => {
-      await revokePairing(tx, pairing, true, false);
-      // What was shown to this person (statistics, leaderboard) ends with the pairing.
-      await endShowing(tx, pairing);
-    },
-    { timeout: 30_000 }
-  );
+  await prisma.$transaction((tx) => revokePairing(tx, pairing, true, false), { timeout: 30_000 });
   return readRemotePerson(userId, remoteId);
 }
 

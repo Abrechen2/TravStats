@@ -49,6 +49,12 @@ export const remotePersonSchema = z.strictObject({
       "The caller's leaderboard switch for this person; `unavailable` for a pairing made with an invitation code"
     ),
   createdAt: instant,
+  leaderboardIssue: z
+    .literal("channel-mismatch")
+    .optional()
+    .describe(
+      "Only on the answer of `people/find`: the two servers name the leaderboard pairing differently, so it was left unlinked (`leaderboard: unavailable`)"
+    ),
 });
 
 /**

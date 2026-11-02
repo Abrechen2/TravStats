@@ -21,6 +21,8 @@ export interface RemotePersonView {
    */
   leaderboard: "unavailable" | "off" | "on";
   createdAt: string;
+  /** Set on the answer of a lookup only: the leaderboard could not be paired, and why. */
+  leaderboardIssue?: "channel-mismatch";
 }
 
 const PAIR_INCLUDE = (userId: string) => ({

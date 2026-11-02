@@ -807,7 +807,8 @@
         "noServers": "Your admin has not connected a server yet.",
         "username": "Username",
         "submit": "Find",
-        "done": "{{name}} (@{{username}}) on {{origin}} is connected. Nothing is shared yet – set that below."
+        "done": "{{name}} (@{{username}}) on {{origin}} is connected. Nothing is shared yet – set that below.",
+        "leaderboardMismatch": "The leaderboard could not be paired with that server (the channels differ) and stays off."
       },
       "none": "Nobody connected yet.",
       "row": "{{name}} (@{{username}}) on {{origin}}",
