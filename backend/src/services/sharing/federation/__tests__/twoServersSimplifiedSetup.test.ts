@@ -157,6 +157,38 @@ describe("finding a person on a connected server", () => {
   });
 });
 
+describe("a reused or renamed username", () => {
+  it("never inherits the old person's pairing, level or leaderboard consent", async () => {
+    const { anna, ben } = await annaFindsBen();
+    const benRowOfAnna = await b.prisma.remoteShareAccount.findFirstOrThrow({
+      where: { userId: ben, origin: A },
+    });
+    await b.remoteStats.setStatsLevel(ben, benRowOfAnna.id, "full");
+    await b.remoteStats.setRemoteLeaderboard(ben, benRowOfAnna.id, true);
+    // Anna's account is renamed; a new person on A takes the old name and looks Ben up.
+    const oldName = await usernameOf(a, anna);
+    await a.prisma.user.update({ where: { id: anna }, data: { username: `${oldName}-old` } });
+    const dora = await user(a, "Dora");
+    await a.prisma.user.update({ where: { id: dora }, data: { username: oldName } });
+    await a.directory.findRemotePerson(dora, B, await usernameOf(b, ben));
+    const rows = await b.prisma.remoteShareAccount.findMany({ where: { userId: ben, origin: A } });
+    expect(rows).toHaveLength(2);
+    const fresh = rows.find((r) => r.id !== benRowOfAnna.id)!;
+    expect(fresh.statsLevel).toBe("off");
+    expect(fresh.channel).not.toBe(benRowOfAnna.channel);
+    expect(fresh.localChannel).not.toBe(benRowOfAnna.localChannel);
+    expect(fresh.leaderboardRemoteId).not.toBe(benRowOfAnna.leaderboardRemoteId);
+    expect(
+      await b.prisma.leaderboardConsent.count({ where: { remoteId: fresh.leaderboardRemoteId! } })
+    ).toBe(0);
+    // The old pairing is untouched.
+    expect(
+      (await b.prisma.remoteShareAccount.findUniqueOrThrow({ where: { id: benRowOfAnna.id } }))
+        .statsLevel
+    ).toBe("full");
+  });
+});
+
 describe("the leaderboard switch of one remote person", () => {
   it("shares the totals only while it is on, through the existing leaderboard consent", async () => {
     const { anna, person } = await annaFindsBen();
@@ -246,6 +278,37 @@ describe("the statistics level of one remote person", () => {
     // The key is random per read, never the entry's share key or id.
     const again = await b.remoteStats.readRemoteEntries(ben, benPairing.id, "flight", 0);
     expect(again.entries[0].shareKey).not.toBe(page.entries[0].shareKey);
+  });
+
+  it("a domain the owner hid has no entries to show, and its totals are left out", async () => {
+    const { anna, ben, benPairing, annaPairing } = await annaWithFlight();
+    await a.remoteStats.setStatsLevel(anna, annaPairing.id, "full");
+    expect((await b.remoteStats.readRemoteEntries(ben, benPairing.id, "flight", 0)).total).toBe(1);
+    await a.prisma.userSettings.upsert({
+      where: { userId: anna },
+      create: { userId: anna, data: {}, enabledDomains: ["cruise"] },
+      update: { enabledDomains: ["cruise"] },
+    });
+    await expectRefusal(
+      b.remoteStats.readRemoteEntries(ben, benPairing.id, "flight", 0),
+      "SHARE_REMOTE_STATS_NOT_SHARED"
+    );
+    const overview = await b.remoteStats.readRemoteOverview(ben, benPairing.id, null);
+    expect(overview.snapshot.domains).not.toContain("flight");
+  });
+
+  it("the viewer's own hidden domains are not shown either", async () => {
+    const { anna, ben, benPairing, annaPairing } = await annaWithFlight();
+    await a.remoteStats.setStatsLevel(anna, annaPairing.id, "full");
+    await b.prisma.userSettings.upsert({
+      where: { userId: ben },
+      create: { userId: ben, data: {}, enabledDomains: ["cruise"] },
+      update: { enabledDomains: ["cruise"] },
+    });
+    await expectRefusal(
+      b.remoteStats.readRemoteEntries(ben, benPairing.id, "flight", 0),
+      "SHARE_REMOTE_STATS_NOT_SHARED"
+    );
   });
 
   it("withdrawing the person ends what was shown, at once", async () => {

@@ -134,11 +134,10 @@ export async function serveDirectoryPair(
         );
         throw new Unpaired();
       }
-      const existing =
-        byChannel ??
-        (await tx.remoteShareAccount.findFirst({
-          where: { userId: user.id, origin, username: body.fromUsername },
-        }));
+      // Reused ONLY by the channel the asker already holds. A name proves nothing: a new person
+      // with a reused or renamed username must never inherit an old pairing's channels, level or
+      // leaderboard consent, so they get a pairing of their own and the old one stays apart.
+      const existing = byChannel;
       if (!existing) {
         const held = await tx.remoteShareAccount.count({ where: { userId: user.id } });
         if (held >= DIRECTORY_PAIRING_LIMIT) throw new Unpaired();

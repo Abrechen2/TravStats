@@ -32,6 +32,7 @@ import {
 } from "../../federation/leaderboardBridge";
 import { ADAPTERS } from "../adapters";
 import { SHARE_ENTITIES, SHARE_TYPES, type ShareEntity } from "../shareTypes";
+import { loadVisibleDomains } from "../../domainVisibility";
 import { requireTripFederation } from "./access";
 import { remoteShareError } from "./errors";
 import { peerSupports } from "./peerFeatures";
@@ -187,6 +188,9 @@ export async function serveStatsRead(origin: string, body: StatsRead): Promise<S
   }
   // Entries: only the full level, only a type that has entries of its own.
   if (level !== "full" || !body.entity || !STATS_ENTITIES.includes(body.entity)) return NOT_SHARED;
+  // A domain the owner hid or disabled has no entries to show, whatever the level.
+  const domain = SHARE_TYPES[body.entity].domain;
+  if (!domain || !(await loadVisibleDomains(pairing.userId)).includes(domain)) return NOT_SHARED;
   const page = await entriesPage(pairing.userId, body.entity, body.offset ?? 0);
   return {
     kind: "stats-reply",
@@ -277,6 +281,12 @@ export async function readRemoteEntries(
   entity: ShareEntity,
   offset: number
 ): Promise<RemoteEntriesPage> {
+  // The viewer's own hidden domains are not shown either.
+  const domain = SHARE_TYPES[entity].domain;
+  if (!domain || !(await loadVisibleDomains(userId)).includes(domain))
+    throw remoteShareError("SHARE_REMOTE_STATS_NOT_SHARED", 403, "That domain is hidden here", {
+      userId,
+    });
   const reply = await ask(userId, remoteId, { part: "entries", year: null, entity, offset });
   if (reply.status !== "ok" || reply.part !== "entries" || reply.entity !== entity)
     throw unexpected(userId, remoteId);
