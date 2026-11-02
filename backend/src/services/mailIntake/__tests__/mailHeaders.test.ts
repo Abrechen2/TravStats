@@ -25,6 +25,12 @@ describe("singleAddress — the addr-spec of exactly one mailbox", () => {
     ["no address", "Just A Name"],
     ["an address with a space", "<a b@x.example>"],
     ["empty", ""],
+    ["a second angle-addr after a quoted name", '"a@x.com" <b@y.com> <c@z.com>'],
+    ["an unterminated <", "<a@x.com"],
+    ["text after the closing >", "<a@x.com> b@y.com"],
+    ["a nested <", "Name <a@x.com<b@y.com>>"],
+    ["a quoted string after the >", '<a@x.com> "b@y.com"'],
+    ["a stray >", "a@x.com>"],
   ])("refuses %s", (_name, value) => {
     expect(singleAddress(value)).toBeNull();
   });

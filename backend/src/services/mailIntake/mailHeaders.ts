@@ -26,17 +26,12 @@ const ADDR_SPEC = /^[^\s@<>()[\]",;:\\]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9]
  * a decoded encoded-word could otherwise smuggle `<` and `@` into the name.
  */
 export function singleAddress(value: string): string | null {
-  const addresses: string[] = [];
-  let current = "";
-  let angle: string | null = null;
+  let name = "";
+  let angle = "";
+  // 0 = no angle-addr yet, 1 = inside <…>, 2 = closed. Only one is ever allowed.
+  let state: 0 | 1 | 2 = 0;
   let depth = 0;
   let quoted = false;
-  const flush = (): void => {
-    const candidate = (angle ?? current).trim();
-    if (candidate) addresses.push(candidate);
-    current = "";
-    angle = null;
-  };
   for (let i = 0; i < value.length; i += 1) {
     const ch = value[i];
     if (quoted) {
@@ -50,22 +45,29 @@ export function singleAddress(value: string): string | null {
       else if (ch === ")") depth -= 1;
       continue;
     }
-    if (ch === '"') quoted = true;
-    else if (ch === "(") depth += 1;
-    else if (ch === "<") angle = "";
-    else if (ch === ">") {
-      if (angle === null) return null;
-      continue;
-    } else if (ch === "," || ch === ";" || (ch === ":" && angle === null)) {
+    if (ch === '"') {
+      if (state === 2) return null;
+      quoted = true;
+    } else if (ch === "(") depth += 1;
+    else if (ch === "<") {
+      // A second "<", also inside the first, makes the address ambiguous.
+      if (state !== 0) return null;
+      state = 1;
+    } else if (ch === ">") {
+      if (state !== 1) return null;
+      state = 2;
+    } else if (ch === "," || ch === ";" || (ch === ":" && state === 0)) {
       // A list, or a group ("name: a, b;") — more than one mailbox, or none we can trust.
       return null;
-    } else if (angle !== null) angle += ch;
-    else current += ch;
+    } else if (state === 1) angle += ch;
+    else if (state === 2) {
+      // Anything but whitespace after the closing ">" is a second thing in the header.
+      if (!/\s/.test(ch)) return null;
+    } else name += ch;
   }
-  if (quoted || depth > 0) return null;
-  flush();
-  if (addresses.length !== 1 || !ADDR_SPEC.test(addresses[0])) return null;
-  return addresses[0].toLowerCase();
+  if (quoted || depth > 0 || state === 1) return null;
+  const candidate = (state === 2 ? angle : name).trim();
+  return ADDR_SPEC.test(candidate) ? candidate.toLowerCase() : null;
 }
 
 /** The From address of a raw mail: one From header, one mailbox, else null. */
