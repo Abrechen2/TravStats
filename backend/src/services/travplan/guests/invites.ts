@@ -101,6 +101,8 @@ export async function inviteGuest(
   const planId = access.row.id;
   const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM travel_plans WHERE id = ${planId} FOR UPDATE`;
+    // The host-wide cap spans plans, so it needs a lock wider than the plan row.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('travplan-guest-limit'))`;
     const open = await tx.travelPlanMember.count({
       where: { planId, kind: { not: "owner" }, status: { in: ["invited", "active"] } },
     });
@@ -244,8 +246,12 @@ export async function completeJoin(input: {
   )
     throw invalidVouch("invite-mismatch");
   const now = new Date();
+  let session: { token: string; expiresAt: Date };
   try {
-    await prisma.$transaction(async (tx) => {
+    // Consuming the nonce and the invitation, activating the member and opening the session are
+    // one transaction: a failure leaves the invitation usable, never an active member without
+    // a credential.
+    session = await prisma.$transaction(async (tx) => {
       const nonce = await tx.travelPlanGuestJoin.updateMany({
         where: { id: join.id, usedAt: null },
         data: { usedAt: now },
@@ -265,6 +271,15 @@ export async function completeJoin(input: {
         },
       });
       if (activated.count !== 1) throw invalidInvite();
+      return issueCredential(
+        {
+          memberId: join.memberId,
+          planId: join.member.plan.id,
+          kind: "session",
+          origin: vouch.iss,
+        },
+        tx
+      );
     });
   } catch (error) {
     // The same person already holds an active place on this plan.
@@ -272,12 +287,6 @@ export async function completeJoin(input: {
       throw new AppError("This person is already on the plan", 409, "PLAN_MEMBER_DUPLICATE");
     throw error;
   }
-  const session = await issueCredential({
-    memberId: join.memberId,
-    planId: join.member.plan.id,
-    kind: "session",
-    origin: vouch.iss,
-  });
   return {
     token: session.token,
     expiresAt: session.expiresAt,

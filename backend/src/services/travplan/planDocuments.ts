@@ -7,7 +7,8 @@
  */
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { createDocument } from "../documents/documentService";
+import { createDocument, deleteDocument } from "../documents/documentService";
+import { sha256Hex } from "../documents/documentStore";
 import { DOCUMENT_MAX_BYTES } from "../documents/documentFormats";
 import { planAccess, type PlanActor } from "./access";
 import { parseState } from "./upgrade";
@@ -104,11 +105,22 @@ export async function uploadPlanDocument(
     );
   if (bookingId && !parseState(access.row.state).bookings.some((b) => b.id === bookingId))
     throw new AppError("Booking not found", 404, "PLAN_ITEM_NOT_FOUND");
-  const mine = await prisma.travelPlanDocument.count({
-    where: { planId: access.row.id, uploadedByMemberId: access.member.id },
+  // The same bytes already on the owner's account stay the owner's: keeping them again would
+  // file an unfiled private document onto this trip (createDocument promotes it) or reveal one.
+  const known = await prisma.document.findFirst({
+    where: { userId: access.ownerId, sha256: sha256Hex(file.buffer) },
+    select: { id: true, planDocument: { select: { planId: true } } },
   });
-  if (mine >= PLAN_DOCUMENTS_PER_MEMBER)
-    throw new AppError("Too many documents from you on this plan", 409, "PLAN_DOCUMENT_LIMIT");
+  if (known) {
+    if (known.planDocument?.planId !== access.row.id)
+      throw new AppError(
+        "This file is already in the owner's trip",
+        409,
+        "PLAN_DOCUMENT_DUPLICATE"
+      );
+    const again = (await listPlanDocuments(actor, tripId)).find((d) => d.id === known.id);
+    if (again) return again;
+  }
   const { document, created } = await createDocument({
     userId: access.ownerId,
     buffer: file.buffer,
@@ -126,14 +138,38 @@ export async function uploadPlanDocument(
     if (!existing || existing.planId !== access.row.id)
       throw new AppError("This file is already on the trip", 409, "PLAN_DOCUMENT_DUPLICATE");
   } else {
-    await prisma.travelPlanDocument.create({
-      data: {
-        planId: access.row.id,
-        documentId: document.id,
-        uploadedByMemberId: access.member.id,
-        bookingId: bookingId ?? null,
-      },
-    });
+    try {
+      // The plan row is locked for the count and the insert, so fifty means fifty.
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM travel_plans WHERE id = ${access.row.id} FOR UPDATE`;
+        // Still a member, and a removal waits for this insert (FOR SHARE on the member row).
+        const present = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM travel_plan_members
+          WHERE id = ${access.member.id} AND status = 'active' FOR SHARE`;
+        if (!present.length) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
+        const mine = await tx.travelPlanDocument.count({
+          where: { planId: access.row.id, uploadedByMemberId: access.member.id },
+        });
+        if (mine >= PLAN_DOCUMENTS_PER_MEMBER)
+          throw new AppError(
+            "Too many documents from you on this plan",
+            409,
+            "PLAN_DOCUMENT_LIMIT"
+          );
+        await tx.travelPlanDocument.create({
+          data: {
+            planId: access.row.id,
+            documentId: document.id,
+            uploadedByMemberId: access.member.id,
+            bookingId: bookingId ?? null,
+          },
+        });
+      });
+    } catch (error) {
+      // An upload that cannot be shown must not stay behind: a retry would meet its own bytes.
+      await deleteDocument(access.ownerId, document.id).catch(() => undefined);
+      throw error;
+    }
   }
   const list = await listPlanDocuments(actor, tripId);
   const dto = list.find((d) => d.id === document.id);

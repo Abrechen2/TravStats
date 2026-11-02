@@ -10,7 +10,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
-import { requireVerifiedPeer, pinFingerprint } from "./peers";
+import type { DbTransaction } from "../../../db";
+import { requireVerifiedPeer, pinFingerprint, guestIdentity } from "./peers";
 
 export const SESSION_DAYS = 30;
 export const PAT_DAYS = 90;
@@ -32,6 +33,8 @@ export interface GuestPrincipal {
   credentialId: string;
   kind: "session" | "pat";
   origin: string;
+  /** Set when this request slid the session's expiry: the cookie is re-sent with it. */
+  renewedUntil?: Date;
 }
 
 const refuse = (code: "PLAN_GUEST_REQUIRED" | "PLAN_GUEST_EXPIRED" | "PLAN_GUEST_REVOKED") =>
@@ -45,28 +48,24 @@ const refuse = (code: "PLAN_GUEST_REQUIRED" | "PLAN_GUEST_EXPIRED" | "PLAN_GUEST
     code
   );
 
-export async function issueCredential(input: {
-  memberId: string;
-  planId: string;
-  kind: "session" | "pat";
-  origin: string;
-}): Promise<{ token: string; expiresAt: Date }> {
+type Client = Pick<DbTransaction, "travelPlanGuestSession" | "$queryRaw">;
+export async function issueCredential(
+  input: {
+    memberId: string;
+    planId: string;
+    kind: "session" | "pat";
+    origin: string;
+  },
+  client: Client = prisma
+): Promise<{ token: string; expiresAt: Date }> {
   const fingerprint = await pinFingerprint(input.origin);
   if (!fingerprint)
     throw new AppError("That server is not admitted", 403, "PLAN_GUEST_PEER_NOT_ADMITTED");
-  if (input.kind === "pat") {
-    const open = await prisma.travelPlanGuestSession.count({
-      where: { memberId: input.memberId, kind: "pat", expiresAt: { gt: new Date() } },
-    });
-    if (open >= MAX_PATS_PER_MEMBER)
-      throw new AppError("Too many phone tokens", 409, "PLAN_GUEST_PAT_LIMIT");
-  }
+  if (input.kind === "pat") return mintPat(input, fingerprint);
   const raw = randomBytes(32).toString("base64url");
-  const token = input.kind === "pat" ? PAT_PREFIX + raw : raw;
-  const expiresAt = new Date(
-    Date.now() + (input.kind === "pat" ? PAT_DAYS : SESSION_DAYS) * DAY_MS
-  );
-  await prisma.travelPlanGuestSession.create({
+  const token = raw;
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * DAY_MS);
+  await client.travelPlanGuestSession.create({
     data: {
       memberId: input.memberId,
       planId: input.planId,
@@ -75,6 +74,34 @@ export async function issueCredential(input: {
       peerFingerprint: fingerprint,
       expiresAt,
     },
+  });
+  return { token, expiresAt };
+}
+
+/** Phone tokens: the member row is locked for the count and the insert, so five means five. */
+async function mintPat(
+  input: { memberId: string; planId: string },
+  fingerprint: string
+): Promise<{ token: string; expiresAt: Date }> {
+  const token = PAT_PREFIX + randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + PAT_DAYS * DAY_MS);
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM travel_plan_members WHERE id = ${input.memberId} FOR UPDATE`;
+    const open = await tx.travelPlanGuestSession.count({
+      where: { memberId: input.memberId, kind: "pat", expiresAt: { gt: new Date() } },
+    });
+    if (open >= MAX_PATS_PER_MEMBER)
+      throw new AppError("Too many phone tokens", 409, "PLAN_GUEST_PAT_LIMIT");
+    await tx.travelPlanGuestSession.create({
+      data: {
+        memberId: input.memberId,
+        planId: input.planId,
+        kind: "pat",
+        tokenHash: hashToken(token),
+        peerFingerprint: fingerprint,
+        expiresAt,
+      },
+    });
   });
   return { token, expiresAt };
 }
@@ -96,6 +123,12 @@ export async function authenticateCredential(
     },
   });
   if (!row || row.kind !== kind) throw refuse("PLAN_GUEST_REQUIRED");
+  // Federation switched off ends guest access like an unpinned server does.
+  try {
+    await guestIdentity();
+  } catch {
+    throw refuse("PLAN_GUEST_REVOKED");
+  }
   if (row.expiresAt.getTime() <= Date.now()) throw refuse("PLAN_GUEST_EXPIRED");
   const member = row.member;
   if (
@@ -108,13 +141,12 @@ export async function authenticateCredential(
   // The guest's server must still be the one we pinned, under the key it had.
   if ((await pinFingerprint(member.remoteOrigin)) !== row.peerFingerprint)
     throw refuse("PLAN_GUEST_REVOKED");
+  let renewedUntil: Date | undefined;
   if (Date.now() - row.lastUsedAt.getTime() > SLIDE_AFTER_MS) {
+    renewedUntil = kind === "session" ? new Date(Date.now() + SESSION_DAYS * DAY_MS) : undefined;
     await prisma.travelPlanGuestSession.update({
       where: { id: row.id },
-      data: {
-        lastUsedAt: new Date(),
-        ...(kind === "session" ? { expiresAt: new Date(Date.now() + SESSION_DAYS * DAY_MS) } : {}),
-      },
+      data: { lastUsedAt: new Date(), ...(renewedUntil ? { expiresAt: renewedUntil } : {}) },
     });
   }
   return {
@@ -125,6 +157,7 @@ export async function authenticateCredential(
     credentialId: row.id,
     kind,
     origin: member.remoteOrigin,
+    renewedUntil,
   };
 }
 

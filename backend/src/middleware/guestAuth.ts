@@ -9,6 +9,7 @@ import type { Request, RequestHandler, Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { AppError } from "./errorHandler";
 import { skipOutsideProduction } from "./rateLimit";
+import { getCookieSecure } from "../utils/session";
 import {
   GUEST_COOKIE,
   PAT_PREFIX,
@@ -26,7 +27,7 @@ export interface GuestRequest extends Request {
 export const GUEST_CSRF_HEADER = "x-travstats-guest";
 const SAFE = new Set(["GET", "HEAD", "OPTIONS"]);
 
-export const authenticateGuest: RequestHandler = (req: GuestRequest, _res, next) => {
+export const authenticateGuest: RequestHandler = (req: GuestRequest, res, next) => {
   void (async () => {
     // The guest door is closed while planning is off, like every plan endpoint.
     await assertTravPlanOffered();
@@ -46,6 +47,16 @@ export const authenticateGuest: RequestHandler = (req: GuestRequest, _res, next)
         throw new AppError("Guest request is missing its marker header", 403, "PLAN_GUEST_CSRF");
     }
     req.guest = principal;
+    // The server slid the session's expiry; the browser's cookie must follow or it lapses on
+    // the original date while the member is still active.
+    if (principal.renewedUntil)
+      res.cookie(GUEST_COOKIE, req.cookies?.[GUEST_COOKIE], {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/api/v1/guest",
+        secure: getCookieSecure(req),
+        expires: principal.renewedUntil,
+      });
   })().then(() => next(), next);
 };
 

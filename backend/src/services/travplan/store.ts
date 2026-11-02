@@ -370,6 +370,16 @@ export async function writePlan(
         include: { trip: { select: { name: true } } },
       });
       if (!row) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
+      // Access is checked once more where the write happens: a member removed while this request
+      // was running (a guest above all) must not land a change after their removal committed.
+      if (!access.isOwner) {
+        // FOR SHARE: a removal (an UPDATE of this row) waits until this write has committed, so
+        // it cannot slip in between the check and the commit.
+        const stillIn = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM travel_plan_members
+          WHERE id = ${access.member.id} AND plan_id = ${row.id} AND status = 'active' FOR SHARE`;
+        if (!stillIn.length) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
+      }
       if (row.revision !== body.baseRevision)
         throw new AppError(
           "Plan has changed; refresh before applying this edit",
@@ -468,6 +478,24 @@ export async function writePlan(
       if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024)
         throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
       const documentIds = [...new Set(next.bookings.flatMap((b) => b.documentIds))];
+      // A member attaches only what the plan already shows them: its booking documents and the
+      // ones members uploaded for it. A private document of the owner's trip is not theirs to
+      // attach, and attaching it would make it visible to them (spec D6).
+      if (!access.isOwner) {
+        const shown = new Set(before.bookings.flatMap((b) => b.documentIds));
+        const added = documentIds.filter((id) => !shown.has(id));
+        if (
+          added.length &&
+          (await tx.travelPlanDocument.count({
+            where: { planId: row.id, documentId: { in: added } },
+          })) !== added.length
+        )
+          throw new AppError(
+            "A document does not belong to this plan",
+            404,
+            "PLAN_DOCUMENT_NOT_FOUND"
+          );
+      }
       if (
         documentIds.length &&
         (await tx.document.count({ where: { id: { in: documentIds }, userId, tripId } })) !==

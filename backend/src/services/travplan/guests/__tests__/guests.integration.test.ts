@@ -32,10 +32,11 @@ const pair = () => {
 };
 const hostKeys = pair();
 const guestKeys = pair();
-const mockState: { current: "host" | "guest" } = { current: "host" };
+const mockState: { current: "host" | "guest" | "off" } = { current: "host" };
 jest.mock("../../../federation/identity", () => ({
   loadIdentity: async () => {
     const which = mockState.current;
+    if (which === "off") throw new Error("federation-off");
     const keys = which === "host" ? hostKeys : guestKeys;
     return {
       origin: which === "host" ? HOST : GUEST_SERVER,
@@ -193,6 +194,10 @@ beforeAll(async () => {
       create: { origin, publicKey: keys.publicKey, enabled: true, verifiedAt: new Date() },
       update: { publicKey: keys.publicKey, enabled: true, verifiedAt: new Date() },
     });
+});
+// The host-wide cap counts every remote member in the database, so each test starts without any.
+beforeEach(async () => {
+  await prisma.travelPlanMember.deleteMany({ where: { kind: "remote" } });
 });
 afterAll(async () => {
   await prisma.$disconnect();
@@ -526,6 +531,90 @@ describe("TravPlan remote guests", () => {
     );
     expect(r.body.code).toBe("PLAN_WEATHER_LOCATION");
     expect(await prisma.travelPlanUsage.count({ where: { userId: guestUser } })).toBe(0);
+  });
+
+  it("does not let a guest attach a private document of the owner's trip to a booking", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    const secret = await prisma.document.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        storedName: "private-" + randomUUID() + ".txt",
+        mimetype: "text/plain",
+        sizeBytes: 3,
+        sha256: hash(randomUUID()),
+        format: "text",
+      },
+    });
+    const booking = bookingSchema.parse({
+      id: randomUUID(),
+      kind: "hotel",
+      title: "Hotel",
+      reference: null,
+      provider: "",
+      day: null,
+      endDay: null,
+      time: null,
+      timezone: null,
+      amount: null,
+      paid: 0,
+      currency: "EUR",
+      place: "",
+      documentIds: [secret.id],
+      source: "",
+      details: {},
+    });
+    const r = await asGuest(
+      "post",
+      `/plans/${plan.planId}/mutations`,
+      { cookie: guest.cookie },
+      {
+        clientRef: randomUUID(),
+        baseRevision: plan.revision,
+        operation: { type: "upsert", collection: "bookings", value: booking },
+      }
+    );
+    expect([r.status, r.body.code]).toEqual([404, "PLAN_DOCUMENT_NOT_FOUND"]);
+    const hidden = await asGuest("get", `/plans/${plan.planId}/documents/${secret.id}/file`, {
+      cookie: guest.cookie,
+    });
+    expect(hidden.status).toBe(404);
+  });
+
+  it("ends a guest's access when federation is switched off, and mints at most five phone tokens", async () => {
+    const plan = await newPlan();
+    const guest = await joinGuest(plan);
+    for (let n = 0; n < 5; n++)
+      expect(
+        (await asGuest("post", `/plans/${plan.planId}/pat`, { cookie: guest.cookie })).status
+      ).toBe(201);
+    const sixth = await asGuest("post", `/plans/${plan.planId}/pat`, { cookie: guest.cookie });
+    expect([sixth.status, sixth.body.code]).toEqual([409, "PLAN_GUEST_PAT_LIMIT"]);
+    mockState.current = "off";
+    const off = await asGuest("get", `/plans/${plan.planId}`, { cookie: guest.cookie });
+    mockState.current = "host";
+    expect([off.status, off.body.code]).toEqual([401, "PLAN_GUEST_REVOKED"]);
+  });
+
+  it("opens no session for a join whose credential cannot be issued, and leaves the invitation usable", async () => {
+    const plan = await newPlan();
+    const s = await startOnly(plan);
+    const vouched = await vouchAs(guestUser, s.inviteId, s.nonce);
+    // The guest's server is unpinned between the vouch and the callback.
+    await prisma.comparisonPeer.update({
+      where: { origin: GUEST_SERVER },
+      data: { enabled: false },
+    });
+    const refused = await complete(vouchOf(vouched.body.redirectUrl), s.joinCookie);
+    await prisma.comparisonPeer.update({
+      where: { origin: GUEST_SERVER },
+      data: { enabled: true },
+    });
+    expect(refused.status).toBe(403);
+    const member = await prisma.travelPlanMember.findUniqueOrThrow({ where: { id: s.memberId } });
+    expect(member.status).toBe("invited");
+    expect((await complete(vouchOf(vouched.body.redirectUrl), s.joinCookie)).status).toBe(201);
   });
 
   it("caps the guests of one host at twenty", async () => {
