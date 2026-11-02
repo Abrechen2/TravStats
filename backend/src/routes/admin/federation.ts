@@ -13,7 +13,7 @@ import { Router, type Response, type NextFunction } from "express";
 import { generateKeyPairSync } from "crypto";
 import multer, { MulterError } from "multer";
 import { prisma } from "../../db";
-import { peerPinLimiter } from "../../middleware/rateLimit";
+import { peerPinLimiter } from "../../middleware/peerPinLimiter";
 import type { AuthRequest } from "../../middleware/auth";
 import logger from "../../utils/logger";
 import { encryptApiKey } from "../../utils/encryption";
