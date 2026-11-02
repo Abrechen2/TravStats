@@ -37,6 +37,7 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   travPlan: [/TravPlan/, /TravPlan/],
   federatedTripSharing: [/Reisen über Server|anderen Servern teilen/i, /across servers/i],
   travTrack: [/TravTrack/, /TravTrack/],
+  travPlanGuests: [/Gästen anderer Server/, /guests from other servers/],
 };
 const keys = Object.keys(KEYWORDS) as (keyof typeof BETA_FEATURES)[];
 

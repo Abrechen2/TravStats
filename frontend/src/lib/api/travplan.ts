@@ -1,5 +1,6 @@
 import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
+import { guestHttp, isGuestMode } from "./guestHttp";
 import { apiErrorMachineCode } from "../apiError";
 import type {
   PlanCollab,
@@ -98,31 +99,33 @@ export interface PlanDeletePreview {
   keeps: { stations: number; confirmedItems: number };
   tripIsEmptyShell: boolean;
 }
+/** Guest mode sends the plan's calls through the guest door (`guestHttp.ts`). */
+const http = () => (isGuestMode() ? guestHttp : api);
 export const travplanApi = {
   places: async (q: string, language: "de" | "en", kind: "any" | "port" = "any") =>
-    (await api.get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
+    (await http().get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
   deletePreview: async (tripId: string) =>
-    (await api.get<PlanDeletePreview>("/trips/" + tripId + "/plan/delete-preview")).data,
+    (await http().get<PlanDeletePreview>("/trips/" + tripId + "/plan/delete-preview")).data,
   deletePlan: async (tripId: string) =>
-    (await api.delete<{ deleted: true }>("/trips/" + tripId + "/plan")).data,
+    (await http().delete<{ deleted: true }>("/trips/" + tripId + "/plan")).data,
   /** Routes one stage on the server; a failed router keeps the stored figures. */
   routeStage: async (plan: PlanView, stageId: string) =>
     (
-      await api.post<PlanView>("/trips/" + plan.tripId + "/plan/stages/" + stageId + "/route", {
+      await http().post<PlanView>("/trips/" + plan.tripId + "/plan/stages/" + stageId + "/route", {
         baseRevision: plan.revision,
         clientRef: newPlanId(),
       })
     ).data,
   placeholderMatches: async (tripId: string, booking: Record<string, unknown>) =>
     (
-      await api.post<{ matches: PlaceholderMatch[] }>(
+      await http().post<{ matches: PlaceholderMatch[] }>(
         "/trips/" + tripId + "/plan/placeholder-matches",
         { booking }
       )
     ).data.matches,
   locations: async (q: string, language: "de" | "en") =>
     (
-      await api.get<{
+      await http().get<{
         locations: {
           id: number;
           name: string;
@@ -133,71 +136,79 @@ export const travplanApi = {
         }[];
       }>("/travplan/locations", { params: { q, language } })
     ).data.locations,
-  capabilities: async () => (await api.get<PlanCapabilities>("/travplan/capabilities")).data,
-  config: async () => (await api.get<PlanConfig>("/travplan/config")).data,
+  capabilities: async () => (await http().get<PlanCapabilities>("/travplan/capabilities")).data,
+  config: async () => (await http().get<PlanConfig>("/travplan/config")).data,
   /** Any subset: the admin switch saves `{enabled}` alone and keeps the limits. */
   setConfig: async (config: Partial<PlanConfig>) =>
-    (await api.patch<PlanConfig>("/travplan/config", config)).data,
-  list: async () => (await api.get<{ plans: PlanSummary[] }>("/travplan/plans")).data.plans,
+    (await http().patch<PlanConfig>("/travplan/config", config)).data,
+  list: async () => (await http().get<{ plans: PlanSummary[] }>("/travplan/plans")).data.plans,
   create: async (
     name: string,
     settings: Partial<PlanState>,
     tripId?: string,
     clientRef = newPlanId()
-  ) => (await api.post<PlanView>("/travplan/plans", { name, settings, tripId, clientRef })).data,
-  get: async (id: string) => (await api.get<PlanView>("/trips/" + id + "/plan")).data,
+  ) => (await http().post<PlanView>("/travplan/plans", { name, settings, tripId, clientRef })).data,
+  get: async (id: string) => (await http().get<PlanView>("/trips/" + id + "/plan")).data,
   /** The polling read: null while nothing changed (304 against the held revision). */
   poll: async (held: PlanView) => {
-    const res = await api.get<PlanView>("/trips/" + held.tripId + "/plan", {
+    const res = await http().get<PlanView>("/trips/" + held.tripId + "/plan", {
       headers: { "If-None-Match": '"' + held.revision + "-" + (held.self?.memberId ?? "") + '"' },
       validateStatus: (status) => status === 200 || status === 304,
     });
     return res.status === 304 ? null : res.data;
   },
-  collab: async (id: string) => (await api.get<PlanCollab>("/trips/" + id + "/plan/collab")).data,
+  collab: async (id: string) =>
+    (await http().get<PlanCollab>("/trips/" + id + "/plan/collab")).data,
   readNotices: async (id: string) =>
-    (await api.post<{ read: number }>("/trips/" + id + "/plan/notices/read")).data,
+    (await http().post<{ read: number }>("/trips/" + id + "/plan/notices/read")).data,
   invite: async (id: string, username: string) =>
-    (await api.post<PlanMember>("/trips/" + id + "/plan/members", { username })).data,
+    (await http().post<PlanMember>("/trips/" + id + "/plan/members", { username })).data,
   removeMember: async (id: string, memberId: string) =>
-    (await api.delete<{ revoked: true }>("/trips/" + id + "/plan/members/" + memberId)).data,
+    (await http().delete<{ revoked: true }>("/trips/" + id + "/plan/members/" + memberId)).data,
   shareWithMember: async (id: string, memberId: string) =>
-    (await api.post<PlanMemberShare>("/trips/" + id + "/plan/members/" + memberId + "/share")).data,
+    (await http().post<PlanMemberShare>("/trips/" + id + "/plan/members/" + memberId + "/share"))
+      .data,
   leave: async (id: string) =>
-    (await api.post<{ left: true }>("/trips/" + id + "/plan/leave")).data,
+    (await http().post<{ left: true }>("/trips/" + id + "/plan/leave")).data,
   invitations: async () =>
-    (await api.get<{ invitations: PlanInvitation[] }>("/travplan/invitations")).data.invitations,
+    (await http().get<{ invitations: PlanInvitation[] }>("/travplan/invitations")).data.invitations,
   answerInvitation: async (memberId: string, answer: "accept" | "decline") =>
     (
-      await api.post<{ status: "active" | "left" }>(
+      await http().post<{ status: "active" | "left" }>(
         "/travplan/invitations/" + memberId + "/" + answer
       )
     ).data,
   write: async (plan: PlanView, operation: PlanOperation, clientRef = newPlanId()) =>
     (
-      await api.post<PlanView>("/trips/" + plan.tripId + "/plan/mutations", {
+      await http().post<PlanView>("/trips/" + plan.tripId + "/plan/mutations", {
         baseRevision: plan.revision,
         clientRef,
         operation,
       })
     ).data,
   propose: async (id: string, request: string) =>
-    (await parserApi.post<PlanProposal>("/trips/" + id + "/plan/proposals", { request })).data,
+    (
+      await (isGuestMode() ? guestHttp : parserApi).post<PlanProposal>(
+        "/trips/" + id + "/plan/proposals",
+        { request }
+      )
+    ).data,
   proposals: async (id: string) =>
-    (await api.get<{ proposals: PlanProposal[] }>("/trips/" + id + "/plan/proposals")).data
+    (await http().get<{ proposals: PlanProposal[] }>("/trips/" + id + "/plan/proposals")).data
       .proposals,
   reject: async (id: string, proposalId: string) =>
-    (await api.delete("/trips/" + id + "/plan/proposals/" + proposalId)).data,
+    (await http().delete("/trips/" + id + "/plan/proposals/" + proposalId)).data,
   forecast: async (plan: PlanView) =>
     (
-      await api.post<PlanView>("/trips/" + plan.tripId + "/plan/forecast", {
+      await http().post<PlanView>("/trips/" + plan.tripId + "/plan/forecast", {
         baseRevision: plan.revision,
         clientRef: newPlanId(),
       })
     ).data,
-  actual: async (id: string) => (await api.get<PlanActual>("/trips/" + id + "/plan/actual")).data,
+  actual: async (id: string) =>
+    (await http().get<PlanActual>("/trips/" + id + "/plan/actual")).data,
   packingSuggestions: async (id: string) =>
-    (await api.get<{ suggestions: string[] }>("/trips/" + id + "/plan/packing-suggestions")).data
+    (await http().get<{ suggestions: string[] }>("/trips/" + id + "/plan/packing-suggestions")).data
       .suggestions,
 };
 

@@ -137,7 +137,7 @@
     "PLAN_TOO_LARGE": "The plan is too large to save. Remove entries or ideas you no longer need, then try again.",
     "PLAN_ITEM_NOT_FOUND": "This entry no longer exists – it was probably deleted in the meantime. Reload the page to see the current version.",
     "PLAN_PROPOSAL_NOT_FOUND": "This proposal no longer exists. Generate a new one if you need it.",
-    "PLAN_DOCUMENT_NOT_FOUND": "A linked document does not belong to this trip (any more). Remove it from the booking and save again.",
+    "PLAN_DOCUMENT_NOT_FOUND": "That document does not exist or is not part of the plan.",
     "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later.",
     "PLAN_INVALID_NIGHT": "This kind of night does not fit how you arrive.",
     "PLAN_SHAPE_IN_USE": "The plan has stations; remove them before it becomes a single-destination plan again.",
@@ -165,7 +165,24 @@
     "SHARE_USER_NOT_FOUND": "This person's account is no longer active.",
     "SHARE_CONSENT_REQUIRED": "This person has not (or no longer) allowed sharing with you.",
     "SHARE_GROUP_CONSENT_REQUIRED": "Not everyone on this trip has agreed to sharing with this person.",
-    "PLAN_SHARE_FAILED": "The trip could not be shared."
+    "PLAN_SHARE_FAILED": "The trip could not be shared.",
+    "PLAN_GUEST_REQUIRED": "You are not signed in as a guest here. Open the invitation link again.",
+    "PLAN_GUEST_EXPIRED": "Your guest session has expired. Ask the plan's owner for a new invitation link.",
+    "PLAN_GUEST_REVOKED": "Your access to this plan has ended, or the server you were invited through is no longer admitted here.",
+    "PLAN_GUEST_INVITE_INVALID": "This invitation link is not valid (any more). It has expired, been used or been withdrawn. Ask for a new one.",
+    "PLAN_GUEST_JOIN_NOT_STARTED": "The join was not started in this browser. Open the invitation link again and stay in the same browser.",
+    "PLAN_GUEST_VOUCH_INVALID": "Your server's confirmation was refused (invalid, expired or already used). Open the invitation link again.",
+    "PLAN_GUEST_PEER_NOT_ADMITTED": "The admin has not admitted that server (pinned and verified). Without that nobody from there can plan along.",
+    "PLAN_GUEST_HOST_NOT_ADMITTED": "Your admin has not admitted the server that invited you, so your server confirms nothing for it.",
+    "PLAN_GUEST_FEDERATION_OFF": "Connections to other servers are switched off on this server.",
+    "PLAN_GUEST_LIMIT": "Too many guests are already invited on this server (at most 20).",
+    "PLAN_GUEST_RATE_LIMITED": "Too many requests in a short time. Wait a moment.",
+    "PLAN_GUEST_CSRF": "This request did not come from the TravStats page and was refused. Reload the page.",
+    "PLAN_GUEST_PAT_LIMIT": "You already have five phone tokens. Sign out to make room.",
+    "PLAN_DOCUMENT_LIMIT": "You have already uploaded 50 documents for this plan.",
+    "PLAN_DOCUMENT_DUPLICATE": "This file is already in the owner's trip and is not added a second time.",
+    "PLAN_DOCUMENT_TOO_LARGE": "The file is larger than 20 MB.",
+    "network": "The server does not answer. Check your connection and try again."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -668,5 +685,58 @@
     "noText": "The file holds no readable text.",
     "disabled": "The language model is switched off on this server; only clearly labelled facts were looked for.",
     "unreachable": "The language model is unreachable; only clearly labelled facts were looked for."
+  },
+  "guests": {
+    "join": {
+      "title": "Invitation to plan together",
+      "intro": "You were invited to plan a trip together on this server. Your own TravStats server confirms who you are.",
+      "privacy": "Your server does not see the plan: it only confirms your name. The plan stays on this server.",
+      "confirm": "Confirm with your TravStats server",
+      "incomplete": "The link is incomplete. Copy it again in full, everything after the #.",
+      "working": "Setting up your access …",
+      "failedTitle": "Cannot join",
+      "toLogin": "Go to sign-in"
+    },
+    "vouch": {
+      "title": "Confirm for planning",
+      "question": "Confirm to {{host}} as {{name}}?",
+      "privacy": "{{host}} learns only your display name and an identifier that is unique to that server. It gets neither your password nor your data, and this server does not see the plan.",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "invalid": "This link is incomplete or not valid."
+    },
+    "banner": "You are planning as guest {{name}} on {{host}}. You see this plan only.",
+    "leave": "Leave plan",
+    "phone": {
+      "open": "Pair phone",
+      "hint": "Scan the code with the TravStats app. It works for this plan only and is shown once."
+    },
+    "ended": {
+      "title": "Your access has ended",
+      "body": "You can no longer open this plan.",
+      "toLogin": "Go to sign-in"
+    },
+    "invite": {
+      "title": "Guest from another server",
+      "intro": "Invite a person from a connected server. They confirm themselves through their own server and then work on the plan here. Their server does not see the plan.",
+      "noServers": "No connected server is admitted. The admin sets this up under Settings → Instance.",
+      "server": "Server",
+      "username": "Username there (display only)",
+      "send": "Create invitation link",
+      "linkOnce": "Link for {{name}}. It is valid for seven days, once, and shown only now. Send it by any channel you like.",
+      "link": "Invitation link",
+      "copy": "Copy link"
+    },
+    "member": {
+      "remote": "Guest from another server"
+    }
+  },
+  "planDocs": {
+    "title": "Plan documents",
+    "intro": "These are the documents on the bookings and what co-planners uploaded for the plan. The trip's other documents are visible to the owner only.",
+    "none": "No documents yet.",
+    "uploadedBy": "uploaded by {{name}}",
+    "onBooking": "on a booking",
+    "upload": "Upload document"
   }
 }

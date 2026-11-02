@@ -131,6 +131,21 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
+   * Guests from other servers on a TravPlan plan (forgejo#404, spec 2026-10-17 §6.5). Gated at
+   * ONE place: the "Gast von einem anderen Server" part of the members dialog
+   * (`PlanGuestInvite`). The SERVER asks only the `travPlan` switch (it has one instance-wide
+   * flag), so the guest door is closed whenever planning is, and every other condition is
+   * enforced per request: the guest's server must be pinned, enabled and verified.
+   */
+  travPlanGuests: Object.freeze({
+    why: "A person on another server edits a plan through the host's own web UI with a credential of their own. The threat model (docs/features/travplan-guests.md) is written and every refusal is tested in-process, but nobody has reviewed it, and nothing has crossed between two real servers: the vouch redirect, the cookies behind two real proxies and the pin lifecycle are only exercised against in-process peers.",
+    returnsWhen:
+      "The owner has reviewed the threat model, invited a person on a second real server, walked the join, an edit from each side, a removal and an unpinned server on the RC, and accepts it for release.",
+    issue: "forgejo#404",
+    reason: "beta",
+  }),
+
+  /**
    * Recorded tracks on a cruise (2.7, board item `cruise-tracks`): a GPS
    * recording replaces a leg's computed sea route on the map and in the
    * statistics. Gated at ONE place, the "Aufgezeichnete Spuren" section of

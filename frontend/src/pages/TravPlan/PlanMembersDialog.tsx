@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanCollab, type PlanMember } from "../../lib/api/travplan";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { PlanActions, PlanGrow, PlanNotice, PlanRow } from "./planLayout";
+import { PlanGuestInvite } from "./PlanGuestInvite";
 
 /**
  * Who plans together (spec §6.1, §6.4). The owner invites a person on this server by username and
@@ -57,6 +58,7 @@ export function PlanMembersDialog({
             {m.username && <span className="t-caption"> @{m.username}</span>}
             <p className="t-caption">
               {m.kind === "owner" ? t("members.owner") : status(m)}
+              {m.kind === "remote" && <> · {t("guests.member.remote")}</>}
               {owner && m.status === "active" && m.kind === "local" && (
                 <> · {m.shared ? t("members.shared") : t("members.notShared")}</>
               )}
@@ -120,6 +122,7 @@ export function PlanMembersDialog({
           </PlanActions>
         </form>
       )}
+      {owner && <PlanGuestInvite tripId={tripId} onChanged={onChanged} />}
       {error && <PlanNotice tone="bad">{error}</PlanNotice>}
       {info && <PlanNotice>{info}</PlanNotice>}
       <PlanActions>
