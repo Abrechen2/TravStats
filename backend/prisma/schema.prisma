@@ -5054,13 +5054,18 @@ model RemoteShareAccount {
   /// blocks the person's next request for 30 days.
   endedByMe              Boolean   @default(false) @map("ended_by_me")
 
-  leaderboardRemote LeaderboardRemote?      @relation(fields: [leaderboardRemoteId], references: [id], onDelete: SetNull)
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consentsRequested ShareConsent[]          @relation("ShareConsentRemoteRequester")
-  consentsTargeted  ShareConsent[]          @relation("ShareConsentRemoteTarget")
+  leaderboardRemote LeaderboardRemote?       @relation(fields: [leaderboardRemoteId], references: [id], onDelete: SetNull)
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentsRequested ShareConsent[]           @relation("ShareConsentRemoteRequester")
+  consentsTargeted  ShareConsent[]           @relation("ShareConsentRemoteTarget")
   memberships       TripShareRemoteMember[]
   /// Notices about a change this person made on their server (F-S4d).
-  noticesActed      ShareNotice[]           @relation("ShareNoticeRemoteActor")
+  noticesActed      ShareNotice[]            @relation("ShareNoticeRemoteActor")
+  /// Plan members on this server bound to this connection (host side) and the plans this person
+  /// invited me to (member side), plus connection messages still waiting to be delivered.
+  planMembers       TravelPlanMember[]       @relation("TravelPlanMemberConnection")
+  remotePlans       RemotePlanMembership[]
+  announcements     ConnectionAnnouncement[]
 
   @@unique([origin, channel])
   @@unique([origin, localChannel])
@@ -5862,35 +5867,35 @@ model TravelPlan {
 /// `remote` is a guest from another server (§6.5): it works through `ts_guest` sessions only.
 /// Rows are never deleted when someone leaves: past mutations name their `actor`.
 model TravelPlanMember {
-  id            String    @id @default(uuid())
-  planId        String    @map("plan_id")
+  id           String    @id @default(uuid())
+  planId       String    @map("plan_id")
   /// owner | local | remote
-  kind          String
-  userId        String?   @map("user_id")
-  remoteOrigin  String?   @map("remote_origin")
-  remoteSubject String?   @map("remote_subject")
-  displayName   String    @map("display_name")
+  kind         String
+  userId       String?   @map("user_id")
+  remoteOrigin String?   @map("remote_origin")
+  /// A remote member is bound to the HOST user's side of a user connection (spec 2026-11-02 §4):
+  /// the signed channel resolves to this row, never to a name the peer sends.
+  connectionId String?   @map("connection_id")
+  displayName  String    @map("display_name")
   /// owner | editor
-  role          String    @default("editor")
+  role         String    @default("editor")
   /// invited | active | left | revoked
-  status        String    @default("invited")
-  invitedAt     DateTime  @default(now()) @map("invited_at")
-  joinedAt      DateTime? @map("joined_at")
-  revokedAt     DateTime? @map("revoked_at")
+  status       String    @default("invited")
+  invitedAt    DateTime  @default(now()) @map("invited_at")
+  joinedAt     DateTime? @map("joined_at")
+  revokedAt    DateTime? @map("revoked_at")
   /// When the linked copy of the trip reached this member's logbook (handover, §6.4).
-  sharedAt      DateTime? @map("shared_at")
+  sharedAt     DateTime? @map("shared_at")
 
-  plan      TravelPlan               @relation(fields: [planId], references: [id], onDelete: Cascade)
-  user      User?                    @relation("TravelPlanMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-  notices   TravelPlanNotice[]
-  invites   TravelPlanGuestInvite[]
-  joins     TravelPlanGuestJoin[]
-  sessions  TravelPlanGuestSession[]
-  claims    TravelPlanGuestClaim[]
-  documents TravelPlanDocument[]
+  plan       TravelPlan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user       User?                @relation("TravelPlanMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  connection RemoteShareAccount?  @relation("TravelPlanMemberConnection", fields: [connectionId], references: [id], onDelete: SetNull)
+  notices    TravelPlanNotice[]
+  documents  TravelPlanDocument[]
 
   @@unique([planId, userId])
-  @@unique([planId, remoteOrigin, remoteSubject])
+  @@unique([planId, connectionId])
+  @@index([connectionId])
   @@index([userId, status])
   @@map("travel_plan_members")
 }
@@ -6801,85 +6806,6 @@ model MailIntakeMessage {
   @@map("mail_intake_messages")
 }
 
-/// A remote guest's invitation (spec 2026-10-17 §6.5 step 1): 32 random bytes, only the hash is
-/// stored, single use, seven days. It proves the holder of the link may start a join.
-model TravelPlanGuestInvite {
-  id         String    @id @default(uuid())
-  memberId   String    @map("member_id")
-  secretHash String    @map("secret_hash")
-  expiresAt  DateTime  @map("expires_at")
-  usedAt     DateTime? @map("used_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
-
-  member TravelPlanMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  joins  TravelPlanGuestJoin[]
-
-  @@index([memberId])
-  @@map("travel_plan_guest_invites")
-}
-
-/// One browser's attempt to join (§6.5 steps 2-4). The nonce is bound to the browser by an
-/// HttpOnly cookie whose hash is kept here; a used row is the replay table.
-model TravelPlanGuestJoin {
-  id          String    @id @default(uuid())
-  inviteId    String    @map("invite_id")
-  memberId    String    @map("member_id")
-  nonce       String    @unique
-  browserHash String    @map("browser_hash")
-  expiresAt   DateTime  @map("expires_at")
-  usedAt      DateTime? @map("used_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-
-  invite TravelPlanGuestInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  member TravelPlanMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@index([expiresAt])
-  @@map("travel_plan_guest_joins")
-}
-
-/// A guest's credential, scoped to ONE plan: `session` (the `ts_guest` cookie) or `pat` (the
-/// `ts_gpat_` bearer for the phone). Only the hash is stored; `peerFingerprint` is the pin of
-/// the guest's server at the time, so a re-pinned key ends the session without anybody looking.
-model TravelPlanGuestSession {
-  id              String    @id @default(uuid())
-  memberId        String    @map("member_id")
-  planId          String    @map("plan_id")
-  /// session | pat
-  kind            String
-  tokenHash       String    @unique @map("token_hash")
-  peerFingerprint String    @map("peer_fingerprint")
-  expiresAt       DateTime  @map("expires_at")
-  lastUsedAt      DateTime  @default(now()) @map("last_used_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  /// Set when the owner ended the guest's access (or the guest left): the row stays until it would
-  /// have expired so the door can answer "revoked" instead of "never heard of it".
-  revokedAt       DateTime? @map("revoked_at")
-
-  member TravelPlanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@index([memberId])
-  @@index([expiresAt])
-  @@map("travel_plan_guest_sessions")
-}
-
-/// A one-time claim code a browser guest session mints so the Companion can pair by scanning a QR
-/// (forgejo#404): short-lived, single use, only the hash is stored. Redeeming it yields a `pat`.
-model TravelPlanGuestClaim {
-  id        String    @id @default(uuid())
-  memberId  String    @map("member_id")
-  planId    String    @map("plan_id")
-  codeHash  String    @unique @map("code_hash")
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  member TravelPlanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@index([memberId])
-  @@index([expiresAt])
-  @@map("travel_plan_guest_claims")
-}
-
 /// A document a member put on the plan's trip (spec §6.8, D6). A member reads only the documents
 /// in this table plus those attached to plan bookings; the owner's other documents stay hidden.
 model TravelPlanDocument {
@@ -6896,4 +6822,58 @@ model TravelPlanDocument {
 
   @@index([planId, uploadedByMemberId])
   @@map("travel_plan_documents")
+}
+
+/// A plan on another server that its owner invited me to (spec 2026-11-02 §4, member side). The
+/// plan itself stays on the host; this row is only the invitation and the pointer. `connectionId`
+/// is MY side of the connection (its `channel` is how the host names the owner).
+model RemotePlanMembership {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  connectionId     String    @map("connection_id")
+  /// The plan and its trip on the host server.
+  planId           String    @map("plan_id")
+  tripId           String    @map("trip_id")
+  title            String
+  ownerDisplayName String    @map("owner_display_name")
+  /// editor
+  role             String    @default("editor")
+  /// The host's `invitedAt` of this invitation: every later message about it names it, so a delayed
+  /// leave or decline of an old invitation cannot end a newer one.
+  hostInvitedAt    DateTime? @map("host_invited_at")
+  /// invited | active | declined | left | ended (CHECK remote_plan_memberships_state_check)
+  state            String    @default("invited")
+  invitedAt        DateTime  @default(now()) @map("invited_at")
+  joinedAt         DateTime? @map("joined_at")
+  endedAt          DateTime? @map("ended_at")
+
+  connection RemoteShareAccount @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, planId])
+  @@index([userId, state])
+  @@map("remote_plan_memberships")
+}
+
+/// A connection message about something already done on this side (a revoke, a switch change, a
+/// declined request, a left plan) that did not reach the other server: kept and retried with a
+/// backoff until it does (spec 2026-11-02 S1 open point). The message id is the row's id on every
+/// attempt, so a lost answer is not applied twice. Deleted once acknowledged or no longer needed.
+model ConnectionAnnouncement {
+  id            String   @id @default(uuid())
+  connectionId  String   @map("connection_id")
+  peerOrigin    String   @map("peer_origin")
+  /// The wire kind (connect-decline | connect-revoke | connect-settings | plan-decline | plan-leave).
+  kind          String
+  /// The message without its header.
+  payload       Json
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at")
+  lastError     String?  @map("last_error")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  connection RemoteShareAccount @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([nextAttemptAt])
+  @@index([connectionId])
+  @@map("connection_announcements")
 }

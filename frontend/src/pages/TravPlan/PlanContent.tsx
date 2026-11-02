@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanCollection, type PlanState } from "../../lib/api/travplan";
+import { getRemotePlanSource, remotePlanPath } from "../../lib/api/remotePlans";
 import { documentsApi, type TravelDocument } from "../../lib/api/documents";
 import { logger } from "../../lib/logger";
 import { Button, EmptyState, PageHeader, SectionLabel } from "../../components/ui";
@@ -43,18 +44,18 @@ export const PLAN_SECTIONS = [
 
 /** The strip shows five places; the rest are reached from the overview, the header or a finding. */
 const STRIP_SECTIONS = ["overview", "workspace", "import", "packing", "budget"];
-/** What a guest is not offered: the parsers and the owner's logbook acts. */
-const GUEST_HIDDEN = ["import", "ai", "handover", "actual"];
+/** What a member from another server is not offered: the parsers and the owner's logbook acts. */
+const REMOTE_HIDDEN = ["import", "ai", "handover", "actual"];
 
 export default function PlanContent({
   tripId,
   section,
-  guest = false,
+  remote = false,
 }: {
   tripId: string;
   section: string;
-  /** A person from another server (spec §6.5): the owner's acts and the parsers are not theirs. */
-  guest?: boolean;
+  /** A member on another server's plan (spec 2026-11-02 §4): the owner's acts and the parsers are not theirs. */
+  remote?: boolean;
 }) {
   const { t } = useTranslation("travplan"),
     { plan, setPlan, loading, busy, error, setError, refresh, mutate, message } = usePlan(tripId),
@@ -76,8 +77,8 @@ export default function PlanContent({
     setSuggestions([]);
   }, [tripId]);
   useEffect(() => {
-    // A guest has no account here: the booking pickers get no logbook documents.
-    if (guest) return;
+    // The trip is the host's: the booking pickers get no documents of this account.
+    if (remote) return;
     let live = true;
     documentsApi
       .listForEntry({ type: "trip", id: tripId })
@@ -88,7 +89,7 @@ export default function PlanContent({
     return () => {
       live = false;
     };
-  }, [tripId, plan?.revision, guest]);
+  }, [tripId, plan?.revision, remote]);
   useEffect(() => {
     if (plan && day === null && plan.state.startDay) setDay(plan.state.startDay);
   }, [plan?.state.startDay]);
@@ -98,7 +99,7 @@ export default function PlanContent({
       <>
         {error && <PlanNotice tone="bad">{error}</PlanNotice>}
         <PlanActions>
-          {!guest && (
+          {!remote && (
             <Button
               onClick={() =>
                 void travplanApi
@@ -118,7 +119,7 @@ export default function PlanContent({
       </>
     );
   const state = plan.state,
-    prefix = (guest ? "/guest/plan/" : "/plan/") + tripId;
+    prefix = remote ? remotePlanPath(getRemotePlanSource()!) : "/plan/" + tripId;
   function edit(key: PlanCollection, row?: object, extras?: Partial<EditorState>) {
     setEditor({
       title: t(row ? "edit" : "add"),
@@ -184,7 +185,7 @@ export default function PlanContent({
           .join(" · ")}
         actions={
           <>
-            {!guest && <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>}
+            {!remote && <PlanLink to={prefix + "/ai"}>{t("sections.ai")}</PlanLink>}
             <PlanMenu>
               <Button
                 onClick={() =>
@@ -200,8 +201,8 @@ export default function PlanContent({
               <Button disabled={busy} onClick={() => void refresh()}>
                 {t("refresh")}
               </Button>
-              {!guest && <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>}
-              {!guest && (
+              {!remote && <PlanLink to={"/trips/" + tripId}>{t("statsMode")}</PlanLink>}
+              {!remote && (
                 <Button onClick={() => setMembers(true)}>
                   {t("members.open", {
                     count: collab?.members.filter((m) => m.status === "active").length ?? 1,
@@ -209,7 +210,7 @@ export default function PlanContent({
                 </Button>
               )}
               {/* The owner's alone (D3): a co-planner is not offered what the server refuses. */}
-              {!guest && (plan.self?.isOwner ?? true) && (
+              {!remote && (plan.self?.isOwner ?? true) && (
                 <Button variant="danger" onClick={() => setDeleting(true)}>
                   {t("deletePlan.open")}
                 </Button>
@@ -224,7 +225,7 @@ export default function PlanContent({
         style={{ gap: "var(--ts-space-sm)", paddingBottom: "var(--ts-space-md)" }}
       >
         {(STRIP_SECTIONS.includes(section) ? STRIP_SECTIONS : [...STRIP_SECTIONS, section])
-          .filter((s) => !guest || !GUEST_HIDDEN.includes(s))
+          .filter((s) => !remote || !REMOTE_HIDDEN.includes(s))
           .map((s) => (
             <PlanLink key={s} variant="tab" to={prefix + "/" + s} current={s === section}>
               {t(s === "workspace" && state.shape === "route" ? "sections.route" : "sections." + s)}
@@ -249,9 +250,7 @@ export default function PlanContent({
       )}
       <MemberNotices collab={collab} onRead={() => void markRead()} />
       {section === "overview" && <OverviewSection ctx={ctx} />}
-      {section === "overview" && (
-        <PlanDocumentsPanel tripId={tripId} guest={guest} revision={plan.revision} />
-      )}
+      {section === "overview" && <PlanDocumentsPanel tripId={tripId} revision={plan.revision} />}
       {section === "overview" && (
         <MemberNoteCard
           plan={plan}
@@ -259,7 +258,7 @@ export default function PlanContent({
           save={(text) => mutate({ type: "member_note", text })}
         />
       )}
-      {!guest && members && collab && (
+      {!remote && members && collab && (
         <PlanMembersDialog
           tripId={tripId}
           collab={collab}
@@ -270,14 +269,16 @@ export default function PlanContent({
       )}
       {section === "workspace" &&
         (state.shape === "route" ? <RouteSection ctx={ctx} /> : <WorkspaceSection ctx={ctx} />)}
-      {section === "import" && !guest && <ImportSection ctx={ctx} />}
+      {section === "import" && !remote && <ImportSection ctx={ctx} />}
       {section === "transfer" && <TransferSection ctx={ctx} />}
-      {section === "ai" && !guest && (
+      {section === "ai" && !remote && (
         <PlanAI key={tripId} plan={plan} mutate={mutate} onError={onError} />
       )}
       {section === "packing" && <PackingSection ctx={ctx} />}
       {section === "budget" && <BudgetSection ctx={ctx} />}
-      {section === "handover" && !guest && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
+      {section === "handover" && !remote && (
+        <PlanHandover plan={plan} busy={busy} mutate={mutate} />
+      )}
       {deleting && (
         <PlanDeleteDialog
           tripId={tripId}
@@ -286,7 +287,7 @@ export default function PlanContent({
           onDeleted={() => navigate("/plan")}
         />
       )}
-      {section === "actual" && !guest && <PlanActualPanel ctx={ctx} />}
+      {section === "actual" && !remote && <PlanActualPanel ctx={ctx} />}
       {editor && (
         <PlanEditor
           key={editor.value.id ? String(editor.value.id) : "settings"}

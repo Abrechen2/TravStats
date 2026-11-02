@@ -136,6 +136,7 @@ if (corsOrigin) {
 
 import { RATE_LIMITS, FILE_LIMITS } from "./config/constants";
 import { skipGlobalRateLimit } from "./middleware/rateLimit";
+import { peerBodyParser } from "./middleware/peerBody";
 import { ingestRawBody, TRAVTRACK_INGEST_PATH } from "./middleware/ingestBody";
 
 // Rate limiting. `skipGlobalRateLimit` (middleware/rateLimit.ts) says who is
@@ -155,6 +156,10 @@ app.use("/api/", limiter);
 // OwnTracks and Overland bodies are read by their own capped reader first
 // (middleware/ingestBody.ts), so the 10 MB parser below never sees them.
 app.use(TRAVTRACK_INGEST_PATH, ingestRawBody);
+
+// A signed peer message may carry a plan document as base64: only an admitted peer may send a body
+// above the ordinary cap (middleware/peerBody.ts); every kind keeps its budget after the signature.
+app.use("/api/v1/trip-share-peer", peerBodyParser);
 
 // Body parsing with increased limits for email imports
 app.use(express.json({ limit: FILE_LIMITS.JSON_BODY_MAX_SIZE }));

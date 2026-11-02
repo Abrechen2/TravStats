@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { exchange, type PeerTransport } from "../../federation/security";
 import { TRIP_SHARE_ACCEPTS } from "../../federation/envelope";
 import { TRIP_SHARE_PURPOSE, type TripSharePacket } from "../../../schemas/tripSharePeer";
+import { PLAN_DOC_BASE64_MAX } from "../../../schemas/tripSharePlans";
 
 /**
  * Body budgets per message kind (spec §4), checked by the peer route on the signed body string
@@ -43,13 +44,41 @@ export const BODY_BUDGET = {
   "connect-decline": 8_192,
   "connect-revoke": 8_192,
   "connect-settings": 8_192,
+  // Plans over a connection (2026-11-02 §4): short control messages; a write is one plan
+  // operation; a document travels as base64 (20 MB of bytes plus the envelope's quoting).
+  "plan-invite": 8_192,
+  "plan-join": 8_192,
+  "plan-decline": 8_192,
+  "plan-leave": 8_192,
+  "plan-read": 8_192,
+  "plan-mutate": 524_288,
+  "plan-collab": 8_192,
+  "plan-notices-read": 8_192,
+  "plan-doc-list": 8_192,
+  "plan-doc-get": 8_192,
+  "plan-doc-put": PLAN_DOC_BASE64_MAX + 4_096,
+  "plan-export": 8_192,
 } as const satisfies Readonly<Record<TripSharePacket["kind"], number>>;
-export const MAX_BODY = Math.max(...Object.values(BODY_BUDGET));
+/**
+ * The most any request may carry BEFORE its sender is known to be an admitted peer: control
+ * messages and `entries`. `plan-doc-put` (a document as base64) is the one kind above it; it is
+ * read only from a pinned, enabled and verified origin (`middleware/peerBody.ts`, the route).
+ */
+export const MAX_BODY = Math.max(
+  ...Object.entries(BODY_BUDGET)
+    .filter(([kind]) => kind !== "plan-doc-put")
+    .map(([, budget]) => budget)
+);
+export const MAX_LARGE_BODY = BODY_BUDGET["plan-doc-put"];
 
 /** What a signed envelope adds around its body (keys, origin, nonce, signature): generous. */
 const ENVELOPE_OVERHEAD = 4_096;
 
-const transport = (maxRequest: number, maxReply: number): PeerTransport => ({
+/** One overall budget for a document transfer, where the ordinary 10 s is too short for 20 MB. */
+const PLAN_FILE_BUDGET_MS = 120_000;
+
+const transport = (maxRequest: number, maxReply: number, budgetMs?: number): PeerTransport => ({
+  ...(budgetMs ? { budgetMs } : {}),
   path: "/api/v1/trip-share-peer",
   maxRequest,
   maxReply,
@@ -90,6 +119,24 @@ export const PROPAGATION_TRANSPORT: PeerTransport = transport(
 export const STATS_TRANSPORT: PeerTransport = transport(
   BODY_BUDGET["stats-read"] + ENVELOPE_OVERHEAD,
   BODY_BUDGET.entries + ENVELOPE_OVERHEAD
+);
+
+/** A plan call (spec 2026-11-02 §4): a short request, a plan view of up to a few MB back. */
+export const PLAN_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["plan-mutate"] + ENVELOPE_OVERHEAD,
+  4_194_304
+);
+/** A document up (20 MB as base64): a long request, a few bytes back, a budget that fits a slow line. */
+export const PLAN_UPLOAD_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["plan-doc-put"] + ENVELOPE_OVERHEAD,
+  65_536,
+  PLAN_FILE_BUDGET_MS
+);
+/** A document or the trip file down: a short request, up to 20 MB as base64 back. */
+export const PLAN_DOWNLOAD_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["plan-doc-get"] + ENVELOPE_OVERHEAD,
+  PLAN_DOC_BASE64_MAX + ENVELOPE_OVERHEAD,
+  PLAN_FILE_BUDGET_MS
 );
 
 /** The header every message carries. */

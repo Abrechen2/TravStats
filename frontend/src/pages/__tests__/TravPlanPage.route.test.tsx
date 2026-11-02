@@ -12,6 +12,10 @@ const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
 const listPlans = vi.fn();
 const planConfig = vi.fn();
 const capabilities = vi.fn();
+vi.mock("../../lib/api/remotePlans", async (original) => ({
+  ...(await original<typeof import("../../lib/api/remotePlans")>()),
+  remotePlansApi: { list: vi.fn().mockResolvedValue([]) },
+}));
 vi.mock("../../lib/api/travplan", () => ({
   travplanApi: {
     list: (...a: unknown[]) => listPlans(...a),

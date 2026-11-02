@@ -10,6 +10,7 @@
  */
 import logger from "../utils/logger";
 import { onDeliveryKick } from "../services/sharing/federation/deliveryKick";
+import { runAnnouncements } from "../services/sharing/federation/connections/announcements";
 import { runDeliveries } from "../services/sharing/federation/outbox";
 
 const INTERVAL_MS = 30_000;
@@ -19,6 +20,9 @@ let interval: NodeJS.Timeout | null = null;
 let kick: NodeJS.Timeout | null = null;
 
 function pass(): void {
+  runAnnouncements().catch((error: unknown) =>
+    logger.warn({ operation: "connection_announce_error", error }, "Announcement delivery failed")
+  );
   runDeliveries().catch((error: unknown) =>
     logger.warn({ operation: "trip_share_delivery_error", error }, "Trip-share delivery failed")
   );

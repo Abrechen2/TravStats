@@ -8,7 +8,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { fetchOpenData, isOpenDataEnabled } from "../openData/http";
 import { configuration, reserveUsage, hash, assertEnabled } from "./store";
 import { commitWeather } from "./weather";
-import { isGuest, planAccess, type PlanActor } from "./access";
+import { isRemote, planAccess, type PlanActor } from "./access";
 import { parseState } from "./upgrade";
 import { scheduleRoute } from "./routeSchedule";
 import { stationWeatherSchema } from "./schema";
@@ -173,7 +173,7 @@ export async function refreshStationClimate(
     );
   const got = await climateTable(station.place.lat, station.place.lon, now, async () =>
     reserveUsage(
-      isGuest(actor) ? access.ownerId : actor,
+      isRemote(actor) ? access.ownerId : actor,
       "weather",
       (await configuration()).weatherDailyLimit
     )

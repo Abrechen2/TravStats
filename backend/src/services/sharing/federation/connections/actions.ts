@@ -6,12 +6,12 @@
  * changes nothing until the other server has it, and a request that failed to send stays as a
  * pending row (the answer may be what was lost) that can be sent again or taken back. Declining, changing a switch and ending act on this server FIRST: what
  * this side gives must stop at once whether or not the other server answers. The announcement
- * follows once, best effort; a missed one is logged, and the next change carries a newer generation.
+ * follows through a persisted outbox (`announcements.ts`): tried once at once, then retried with
+ * a backoff until the other server has it.
  */
 import { randomUUID } from "crypto";
 import { prisma } from "../../../../db";
 import { Prisma } from "../../../../prisma";
-import logger from "../../../../utils/logger";
 import { PERSON_SELECT, toPerson } from "../../people";
 import {
   connectReplySchema,
@@ -30,6 +30,7 @@ import {
   unreachable,
 } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
+import { deliverAnnouncement, enqueueAnnouncement } from "./announcements";
 import { activateConnection, applyLeaderboardSwitch, reconcileLeaderboard } from "./activate";
 import { columnsOf } from "./switches";
 import { connectionView, readConnection, type ConnectionView } from "./view";
@@ -59,18 +60,6 @@ async function send(userId: string, origin: string, body: TripSharePacket): Prom
   } catch (error) {
     const kind = kindOf(error);
     throw kind === LOCAL_ERROR ? error : unreachable(userId, origin, kind);
-  }
-}
-
-/** The announcement of something already done here: tried once, a miss is logged. */
-async function announce(row: Account, body: TripSharePacket): Promise<void> {
-  try {
-    await send(row.userId, row.origin, body);
-  } catch (err) {
-    logger.warn(
-      { operation: "connection_announce_failed", userId: row.userId, origin: row.origin, err },
-      "The other server did not get a connection message; it learns from the next one"
-    );
   }
 }
 
@@ -247,17 +236,19 @@ export async function declineConnection(userId: string, id: string): Promise<Con
   const row = await own(userId, id);
   if (row.state !== "pending_in") throw wrongState(userId, row.origin);
   const generation = row.generation + 1;
-  await prisma.remoteShareAccount.update({
-    where: { id },
-    data: { state: "declined", generation, endedAt: new Date(), endedByMe: true },
+  // The change and its announcement are one write; the send follows the commit.
+  const queued = await prisma.$transaction(async (tx) => {
+    await tx.remoteShareAccount.update({
+      where: { id },
+      data: { state: "declined", generation, endedAt: new Date(), endedByMe: true },
+    });
+    return enqueueAnnouncement(tx, row, "connect-decline", {
+      from: row.localChannel,
+      to: row.channel,
+      generation,
+    });
   });
-  await announce(row, {
-    kind: "connect-decline",
-    ...messageHeader(),
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-  });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }
 
@@ -278,23 +269,24 @@ export async function updateConnectionSwitches(
       { userId, origin: row.origin }
     );
   const generation = row.generation + 1;
-  const changed = await prisma.remoteShareAccount.updateMany({
-    where: { id, state: "active", generation: row.generation },
-    data: { ...columnsOf(switches), generation },
+  const queued = await prisma.$transaction(async (tx) => {
+    const changed = await tx.remoteShareAccount.updateMany({
+      where: { id, state: "active", generation: row.generation },
+      data: { ...columnsOf(switches), generation },
+    });
+    if (changed.count !== 1) throw wrongState(userId, row.origin);
+    return enqueueAnnouncement(tx, row, "connect-settings", {
+      from: row.localChannel,
+      to: row.channel,
+      generation,
+      switches,
+    });
   });
-  if (changed.count !== 1) throw wrongState(userId, row.origin);
   // After the switch is stored: the consent follows it, and a revoke that lands meanwhile is
   // re-checked (`applyLeaderboardSwitch`).
   if (switches.leaderboard !== row.shareLeaderboard)
     await applyLeaderboardSwitch(userId, row.id, switches.leaderboard);
-  await announce(row, {
-    kind: "connect-settings",
-    ...messageHeader(),
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-    switches,
-  });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }
 
@@ -310,22 +302,21 @@ export async function endConnection(userId: string, id: string): Promise<Connect
   if (!["active", "reconfirm", "pending_out"].includes(row.state))
     throw wrongState(userId, row.origin);
   const generation = row.generation + 1;
-  await prisma.$transaction(
+  const queued = await prisma.$transaction(
     async (tx) => {
       await revokePairing(tx, row, true, false);
       await tx.remoteShareAccount.update({
         where: { id },
         data: { generation, endedByMe: true },
       });
+      return enqueueAnnouncement(tx, row, "connect-revoke", {
+        from: row.localChannel,
+        to: row.channel,
+        generation,
+      });
     },
     { timeout: 30_000 }
   );
-  await announce(row, {
-    kind: "connect-revoke",
-    ...messageHeader(),
-    from: row.localChannel,
-    to: row.channel,
-    generation,
-  });
+  await deliverAnnouncement(queued);
   return readConnection(userId, id);
 }

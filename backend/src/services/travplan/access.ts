@@ -6,16 +6,19 @@
  * directions. A person who is neither gets the same 404 as a plan that does not exist, so a
  * trip id never confirms that somebody has planned on it.
  *
- * A remote guest (§6.5) is not a user: it arrives as a `GuestActor` that the guest router built
- * from a verified `ts_guest` credential. It is resolved against ONE plan - the one its credential
- * names - and against its member row's current status, so a removal takes effect inside a
- * request already running. A `kind: "remote"` row is never reachable through a user id.
+ * A remote member (spec 2026-11-02 §4) is not a user of this server: it arrives as a `RemoteActor`
+ * that the peer handler built from a signed message - the channel resolved to a connection, the
+ * connection to a member row. It is resolved against ONE plan and against its member row's
+ * current status AND its connection's current state and switches, so a removal, a revoked
+ * connection or a switch turned off takes effect inside a request already running. A
+ * `kind: "remote"` row is never reachable through a user id.
  */
 import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { hasAcceptedConsent } from "../sharing/consent";
 import { toPerson, PERSON_SELECT } from "../sharing/people";
+import { connectionAllowsPlans } from "../sharing/federation/connections/switches";
 import type { PlanSelf } from "./types";
 
 type Client = Pick<DbTransaction, "travelPlanMember" | "user">;
@@ -66,18 +69,18 @@ export async function ensureOwnerMember(
   }
 }
 
-/** A guest from another server, as the guest router hands it to the plan services. */
-export interface GuestActor {
-  guest: { memberId: string; planId: string };
+/** A member from another server, as the peer handler hands it to the plan services. */
+export interface RemoteActor {
+  remote: { memberId: string; planId: string };
 }
-/** Whoever acts on a plan: an account on this server (its id) or a remote guest. */
-export type PlanActor = string | GuestActor;
+/** Whoever acts on a plan: an account on this server (its id) or a remote member. */
+export type PlanActor = string | RemoteActor;
 
-export const isGuest = (actor: PlanActor): actor is GuestActor => typeof actor !== "string";
+export const isRemote = (actor: PlanActor): actor is RemoteActor => typeof actor !== "string";
 
-/** The account that pays for quota and owns the records an act touches: the owner for a guest. */
+/** The account that pays for quota and owns the records an act touches: the owner for a remote member. */
 export async function quotaUserOf(actor: PlanActor, tripId: string): Promise<string> {
-  if (!isGuest(actor)) return actor;
+  if (!isRemote(actor)) return actor;
   return (await planAccess(actor, tripId)).ownerId;
 }
 
@@ -88,19 +91,22 @@ export async function planAccess(actor: PlanActor, tripId: string) {
   });
   if (!row) throw notFound();
   const ownerId = row.trip.userId;
-  if (isGuest(actor)) {
-    // One plan only: a credential for another plan is not a credential for this one.
-    if (actor.guest.planId !== row.id) throw notFound();
-    const guest = await prisma.travelPlanMember.findFirst({
-      where: { id: actor.guest.memberId, planId: row.id, kind: "remote", status: "active" },
-      select: { id: true, displayName: true },
+  if (isRemote(actor)) {
+    // One plan only: a member of another plan is not a member of this one.
+    if (actor.remote.planId !== row.id) throw notFound();
+    const remote = await prisma.travelPlanMember.findFirst({
+      where: { id: actor.remote.memberId, planId: row.id, kind: "remote", status: "active" },
+      select: { id: true, displayName: true, connection: true },
     });
-    if (!guest) throw notFound();
+    if (!remote) throw notFound();
+    // Not a one-time gate either: the connection must still be active with plans on both sides.
+    if (!remote.connection || !connectionAllowsPlans(remote.connection))
+      throw new AppError("Plan sharing with that person ended", 403, "REMOTE_PLAN_NOT_SHARED");
     return {
       row,
       ownerId,
       isOwner: false as const,
-      member: { id: guest.id, kind: "remote" as const, displayName: guest.displayName },
+      member: { id: remote.id, kind: "remote" as const, displayName: remote.displayName },
     };
   }
   const userId = actor;

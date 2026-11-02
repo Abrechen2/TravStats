@@ -2,6 +2,7 @@ import { useParams, useLocation } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import { PlanList, PlanAdmin } from "./TravPlan/PlanList";
 import PlanContent, { PLAN_SECTIONS } from "./TravPlan/PlanContent";
+import RemotePlanScreen from "./TravPlan/RemotePlanScreen";
 
 /**
  * TravPlan, the planning mode. It lives inside the app's own shell and header:
@@ -10,12 +11,14 @@ import PlanContent, { PLAN_SECTIONS } from "./TravPlan/PlanContent";
  * of its own.
  */
 export default function TravPlanPage() {
-  const { tripId, section = "overview" } = useParams(),
+  const { tripId, connectionId, section = "overview" } = useParams(),
     location = useLocation();
   return (
     <AppShell width="list">
       {location.pathname === "/plan/admin" ? (
         <PlanAdmin />
+      ) : connectionId ? (
+        <RemotePlanScreen key={connectionId} />
       ) : tripId ? (
         <PlanContent
           key={tripId}

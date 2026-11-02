@@ -17,6 +17,7 @@
  * no private half on this wire at all (owner decision O1, 2026-10-20).
  */
 import { z } from "./zod";
+import { PLAN_PACKETS } from "./tripSharePlans";
 import { origin as peerOrigin } from "../services/federation/envelope";
 import { SHARE_ENTITIES, SHARE_TYPES } from "../services/sharing/shareTypes";
 import {
@@ -44,6 +45,8 @@ export const TRIP_SHARE_FEATURES = [
   "stats",
   // User connections (2026-11-02): connect-request / -accept / -decline / -revoke / -settings.
   "connections",
+  // Plans over a connection (2026-11-02 §4): plan-invite / -join / -decline / -leave and the proxied calls.
+  "plans",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
@@ -504,6 +507,7 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   connectDeclineSchema,
   connectRevokeSchema,
   connectSettingsSchema,
+  ...PLAN_PACKETS,
 ]);
 
 /** The group messages; a header of one of these is answered `schema` when the body fails. */

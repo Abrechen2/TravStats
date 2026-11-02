@@ -55,7 +55,6 @@ const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
-import { postLoginTarget } from "./lib/postLoginReturn";
 import { trackRoutes } from "./pages/Track/trackRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
@@ -241,7 +240,7 @@ function AppContent() {
               {trackRoutes(isAuthenticated)}
               <Route
                 path="/login"
-                element={isAuthenticated ? <Navigate to={postLoginTarget()} /> : <LoginPage />}
+                element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
               />
               <Route
                 path="/register"

@@ -68,3 +68,11 @@ export const mayReceiveOfferFrom = (row: Gated): boolean =>
 /** The person's statistics read is served: connected, and this side's level is above off. */
 export const mayServeStats = (row: Gated): boolean =>
   row.state === "active" && row.statsLevel !== "off";
+
+/**
+ * Plans over the connection (spec 2026-11-02 §4): the connection is active and BOTH sides have
+ * plans switched on. Asked on every call, so a switch turned off or a revoked connection ends
+ * access on the next one. `row` is this server's side of the connection.
+ */
+export const connectionAllowsPlans = (row: Gated & { sharePlans: boolean }): boolean =>
+  row.state === "active" && row.sharePlans && theirsOf(row).plans;

@@ -52,5 +52,16 @@ export async function suspendTripFederationAfterRestore(): Promise<void> {
       data: { state: "suspended", stateReason: "restore", stateSince: now },
     }),
     prisma.tripShareOutbox.deleteMany({}),
+    // Plans over a connection end with the restore (spec 2026-11-02 §9): the connections are held
+    // for confirmation, and an invitation or membership made by the dump's server is not this one's.
+    prisma.travelPlanMember.updateMany({
+      where: { kind: "remote", status: { in: ["invited", "active"] } },
+      data: { status: "revoked", revokedAt: now },
+    }),
+    prisma.remotePlanMembership.updateMany({
+      where: { state: { in: ["invited", "active"] } },
+      data: { state: "ended", endedAt: now },
+    }),
+    prisma.connectionAnnouncement.deleteMany({}),
   ]);
 }

@@ -74,7 +74,7 @@ import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
 import travplanRoutes from "./travplan";
-import guestRoutes from "./guest";
+import remotePlansRoutes from "./remotePlans";
 import travtrackRoutes from "./travtrack";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
@@ -209,9 +209,9 @@ export const apiMounts: ApiMount[] = [
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },
-  // Remote guests of a plan (forgejo#404): their own door, never the user's. Mounted before the
-  // `/api/v1` routers so no router-wide `authenticate` can see a guest path.
-  { id: "guest", base: "/api/v1/guest", router: guestRoutes },
+  // Plans on another server, through the member's own account and a user connection (spec
+  // 2026-11-02 §4): every route authenticates as the member's own user.
+  { id: "remote-plans", base: "/api/v1/remote-plans", router: remotePlansRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },
   // TravTrack, the own location history (TravTrack plan, phase 2): every path is
   // `/travtrack/...`, each route carries its own authentication and gate tier.

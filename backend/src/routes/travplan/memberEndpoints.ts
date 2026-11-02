@@ -14,6 +14,11 @@ import {
   shareWithMemberFor,
 } from "../../services/travplan/members";
 
+import {
+  eligiblePlanConnections,
+  inviteRemoteMember,
+} from "../../services/sharing/federation/plans/hostInvite";
+
 const router = Router();
 const uuid = z.string().uuid();
 const route =
@@ -45,11 +50,30 @@ router.post(
   "/trips/:tripId/plan/members",
   ...write,
   route(async (req, res) => {
+    // A person on this server by name, or a connected person on another server by connection
+    // (spec 2026-11-02 §4); never both.
     const body = z
-      .object({ username: z.string().trim().min(1).max(100) })
-      .strict()
+      .union([
+        z.object({ username: z.string().trim().min(1).max(100) }).strict(),
+        z.object({ connectionId: uuid }).strict(),
+      ])
       .parse(req.body);
-    res.status(201).json(await inviteLocalMember(req.userId!, trip(req), body.username));
+    res
+      .status(201)
+      .json(
+        "connectionId" in body
+          ? await inviteRemoteMember(req.userId!, trip(req), body.connectionId)
+          : await inviteLocalMember(req.userId!, trip(req), body.username)
+      );
+  })
+);
+
+// Owner: the connections that can be invited into this plan ("Mitplaner hinzufügen").
+router.get(
+  "/trips/:tripId/plan/members/connections",
+  authenticate,
+  route(async (req, res) => {
+    res.json({ connections: await eligiblePlanConnections(req.userId!, trip(req)) });
   })
 );
 

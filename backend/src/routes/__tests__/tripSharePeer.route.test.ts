@@ -24,9 +24,11 @@ import {
   type EnvelopePurpose,
 } from "../../services/federation/envelope";
 import { setTripFlags } from "../../services/sharing/federation/__tests__/instanceFlags";
-import { BODY_BUDGET, MAX_BODY } from "../../services/sharing/federation/transport";
+import { BODY_BUDGET, MAX_BODY, MAX_LARGE_BODY } from "../../services/sharing/federation/transport";
 import { ENTRY_SHAPES } from "../../services/sharing/federation/wire/shapes";
 import { MAX_ENTRIES_PER_MESSAGE } from "../../schemas/tripSharePeer";
+import { peerBodyParser } from "../../middleware/peerBody";
+import { PEER_PREAUTH_HEADER, preAuthBytes } from "../../services/federation/security";
 import tripSharePeer from "../tripSharePeer";
 import comparisonPeer from "../comparisonPeer";
 
@@ -37,7 +39,7 @@ const local = generateKeyPairSync("ed25519");
 const localPublic = local.publicKey.export({ type: "spki", format: "pem" }).toString();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "trip-peer-route-"));
 const app = express();
-app.use(express.json({ limit: "4mb" }));
+app.use(express.json({ limit: "32mb" }));
 app.use("/api/v1/trip-share-peer", tripSharePeer);
 app.use("/api/v1/comparison-peer", comparisonPeer);
 
@@ -140,7 +142,7 @@ describe("ping", () => {
     expect(reply.nonce).toBe(packet.nonce);
     expect(JSON.parse(reply.body)).toEqual({
       tripShare: [1],
-      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections"],
+      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections", "plans"],
     });
   });
 });
@@ -205,7 +207,7 @@ it("refuses a non-ping message from an admitted but unverified peer and keeps no
 
 it("refuses a packet above the largest budget before checking its signature", async () => {
   const packet = signed(
-    JSON.stringify({ kind: "entries", pad: "x".repeat(MAX_BODY) }),
+    JSON.stringify({ kind: "plan-doc-put", pad: "x".repeat(MAX_LARGE_BODY) }),
     "trip-share/1"
   );
   const res = await request(app)
@@ -213,6 +215,87 @@ it("refuses a packet above the largest budget before checking its signature", as
     .send({ ...packet, signature: "not-a-signature" });
   expect(res.status).toBe(403);
   refusedAs("packet-too-large", "trip_share_peer_refused");
+});
+
+it("reads a body above the ordinary cap only from an admitted origin, and refuses a stranger's before parsing it", async () => {
+  const body = JSON.stringify({ kind: "plan-doc-put", pad: "x".repeat(MAX_BODY + 10) });
+  const stranger = {
+    ...signed(body, "trip-share/1"),
+    origin: "https://stranger.trip-peer-route.test",
+  };
+  const res = await request(app).post("/api/v1/trip-share-peer").send(stranger);
+  expect(res.status).toBe(403);
+  refusedAs("packet-too-large", "trip_share_peer_refused");
+  expect(await nonceRow(stranger)).toBeNull();
+  // The admitted origin passes the size gate (its body then fails on the budget of its kind).
+  warn.mockClear();
+  const admitted = signed(body, "trip-share/1");
+  await prisma.comparisonPeer.update({
+    where: { origin: REMOTE },
+    data: { verifiedAt: new Date() },
+  });
+  try {
+    await request(app).post("/api/v1/trip-share-peer").send(admitted);
+  } finally {
+    await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } });
+  }
+  expect(warn).not.toHaveBeenCalledWith(
+    expect.objectContaining({ kind: "packet-too-large" }),
+    expect.any(String)
+  );
+});
+
+describe("the body parser before the signature", () => {
+  // The route's own parser caps at 1 MB here; only the peer parser may read more.
+  const capped = express();
+  capped.use("/x", peerBodyParser, express.json({ limit: "1mb" }), (req, res) => {
+    res.json({ bytes: JSON.stringify(req.body).length });
+  });
+  const big = JSON.stringify({ pad: "x".repeat(2 * 1024 * 1024) });
+  const header = (
+    over: { origin?: string; length?: number; time?: number; key?: typeof remote } = {}
+  ) => {
+    const time = over.time ?? Date.now();
+    const bytes = preAuthBytes(
+      over.origin ?? REMOTE,
+      LOCAL,
+      time,
+      over.length ?? Buffer.byteLength(big)
+    );
+    return `${over.origin ?? REMOTE} ${time} ${sign(null, bytes, (over.key ?? remote).privateKey).toString("base64")}`;
+  };
+  const post = (value?: string) => {
+    const r = request(capped).post("/x").set("Content-Type", "application/json");
+    return (value ? r.set(PEER_PREAUTH_HEADER, value) : r).send(big);
+  };
+  beforeEach(() =>
+    prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: new Date() } })
+  );
+  afterEach(() =>
+    prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } })
+  );
+
+  it("reads a large body from an admitted peer that proves itself in the header", async () => {
+    expect((await post(header())).status).toBe(200);
+  });
+
+  it.each([
+    ["no header", () => undefined],
+    ["a header signed by another key", () => header({ key: generateKeyPairSync("ed25519") })],
+    ["a header for another length", () => header({ length: 10 })],
+    ["a header older than the window", () => header({ time: Date.now() - 5 * 60_000 })],
+    [
+      "an origin nobody admitted",
+      () => header({ origin: "https://stranger.trip-peer-route.test" }),
+    ],
+  ])("does not read a large body for %s", async (_name, make) => {
+    expect((await post(make())).status).toBe(413);
+  });
+
+  it("does not read it from a peer the admin has not verified", async () => {
+    await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { verifiedAt: null } });
+    expect((await post(header())).status).toBe(413);
+  });
 });
 
 it.each([

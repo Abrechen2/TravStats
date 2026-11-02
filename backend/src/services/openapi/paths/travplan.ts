@@ -503,9 +503,28 @@ registerMember(
 registerMember(
   "post",
   "/trips/{tripId}/plan/members",
-  "Owner: invite an account on this server by username. Needs the sharing consent accepted in both directions (403 PLAN_MEMBER_CONSENT_MINE / PLAN_MEMBER_CONSENT_THEIRS names whose answer is missing).",
+  "Owner: invite an account on this server by `username` (needs the sharing consent accepted in both directions: 403 PLAN_MEMBER_CONSENT_MINE / PLAN_MEMBER_CONSENT_THEIRS names whose answer is missing), or a connected person on another server by `connectionId` (an active connection with plans switched on at both sides; 409 SHARE_REMOTE_CONNECTION_STATE otherwise, 502 SHARE_REMOTE_UNREACHABLE when their server does not answer). Send one of the two.",
   member,
-  { status: 201, body: z.object({ username: z.string() }) }
+  {
+    status: 201,
+    body: z.union([z.object({ username: z.string() }), z.object({ connectionId: uuid })]),
+  }
+);
+registerMember(
+  "get",
+  "/trips/{tripId}/plan/members/connections",
+  "Owner: the active connections that can be invited into this plan (plans switched on at both sides), `member: true` for one already invited or on the plan.",
+  z.object({
+    connections: z.array(
+      z.object({
+        connectionId: uuid,
+        displayName: z.string(),
+        username: z.string(),
+        origin: z.string(),
+        member: z.boolean(),
+      })
+    ),
+  })
 );
 registerMember(
   "delete",

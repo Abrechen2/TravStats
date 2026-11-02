@@ -17,6 +17,7 @@ import {
 
 import { refused, hash, PeerRefusal } from "./refusal";
 export { refused, hash, PeerRefusal, type PeerRefusalKind } from "./refusal";
+import { sign } from "crypto";
 import { loadIdentity, type Identity } from "./identity";
 export { loadIdentity } from "./identity";
 export { envelope, verifyEnvelope } from "./envelope";
@@ -58,6 +59,17 @@ export function publicAddress(address: string): boolean {
  * size budgets, the envelope it signs and the envelopes it reads back. One implementation of
  * DNS pinning, address checks and timeouts, two budgets.
  */
+export const PEER_PREAUTH_HEADER = "X-TravStats-Peer-Preauth";
+const PREAUTH_DOMAIN = "travstats-peer-preauth/1";
+export const preAuthBytes = (origin: string, destination: string, time: number, length: number) =>
+  Buffer.from(`${PREAUTH_DOMAIN}\n${origin}\n${destination}\n${time}\n${length}`);
+
+/** `<origin> <time> <signature>`: the signature covers sender, receiver, time and the exact request length. */
+function preAuthHeader(local: Identity, destination: string, length: number): string {
+  const time = Date.now();
+  return `${local.origin} ${time} ${sign(null, preAuthBytes(local.origin, destination, time, length), local.key).toString("base64")}`;
+}
+
 export interface PeerTransport {
   path: string;
   /** Bytes of the signed request, envelope included. */
@@ -68,6 +80,8 @@ export interface PeerTransport {
   sendPurpose?: EnvelopePurpose;
   /** Which reply envelopes count as an answer. */
   accepts: Acceptance;
+  /** Overall time for the exchange; defaults to `EXCHANGE_BUDGET_MS`. A file transfer needs more. */
+  budgetMs?: number;
   /** Whether `body` may reach an admitted peer no ping has verified yet (only a ping may). */
   beforeVerification: (body: object) => boolean;
 }
@@ -121,7 +135,13 @@ export async function exchange(
   const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
-  const raw = await postToFirstReachable(url.hostname, ipv4First(answers), bytes, transport);
+  const raw = await postToFirstReachable(
+    url.hostname,
+    ipv4First(answers),
+    bytes,
+    transport,
+    preAuthHeader(local, remoteOrigin, bytes.length)
+  );
   const received = verifyEnvelope(
     JSON.parse(raw.toString()),
     peer.publicKey,
@@ -151,14 +171,15 @@ async function postToFirstReachable(
   hostname: string,
   addresses: readonly { address: string; family: number }[],
   bytes: Buffer,
-  transport: PeerTransport
+  transport: PeerTransport,
+  preAuth: string
 ): Promise<Buffer> {
-  const deadline = Date.now() + EXCHANGE_BUDGET_MS;
+  const deadline = Date.now() + (transport.budgetMs ?? EXCHANGE_BUDGET_MS);
   for (const pinned of addresses) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
     try {
-      return await postPinned(hostname, pinned, bytes, transport, remaining);
+      return await postPinned(hostname, pinned, bytes, transport, remaining, preAuth);
     } catch (error) {
       // Anything but a PeerRefusal is a connection that never came up; the next address may answer.
       if (error instanceof PeerRefusal) throw error;
@@ -172,7 +193,8 @@ function postPinned(
   pinned: { address: string; family: number },
   bytes: Buffer,
   transport: PeerTransport,
-  budgetMs: number
+  budgetMs: number,
+  preAuth: string
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     let connected = false;
@@ -194,7 +216,14 @@ function postPinned(
         _options: unknown,
         cb: (err: null, address: string, family: number) => void
       ) => process.nextTick(cb, null, pinned.address, pinned.family)) as never,
-      headers: { "Content-Type": "application/json", "Content-Length": bytes.length },
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": bytes.length,
+        // Proves who is sending BEFORE the body is read, so the receiver can allow a large body
+        // (a plan document) to admitted peers only: a signature over origin, destination, time and
+        // length, checked against the pinned key (`middleware/peerBody.ts`).
+        [PEER_PREAUTH_HEADER]: preAuth,
+      },
     };
     const request = https.request(options, (response) => {
       if (response.statusCode !== 200) {

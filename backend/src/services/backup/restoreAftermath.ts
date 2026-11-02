@@ -1,6 +1,5 @@
 import { scrubMailCredentialsAfterRestore } from "../mailIntake/afterRestore";
 import { suspendComparisonAfterRestore } from "../federation/restore";
-import { endAllGuestsAfterRestore } from "../travplan/guests/sessions";
 import { suspendTripFederationAfterRestore } from "../sharing/federation/restore";
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
@@ -211,7 +210,6 @@ function settlingSteps(
   const steps: Array<[string, () => Promise<unknown>]> = [
     ["suspend_comparison", () => suspendComparisonAfterRestore()],
     ["suspend_trip_federation", () => suspendTripFederationAfterRestore()],
-    ["end_plan_guests", () => endAllGuestsAfterRestore()],
     ["instance_identity", () => restoreInstanceIdentity(identityBefore)],
     ["sync_history", () => resetSyncHistory(reason)],
     ["share_links", () => deleteAllShareLinks(reason)],

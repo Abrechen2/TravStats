@@ -60,6 +60,8 @@ export const FILE_LIMITS = {
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: "10mb",
+  /** Trip-share peer messages: a plan document as base64 is the largest (spec 2026-11-02 §4). */
+  PEER_BODY_MAX_SIZE: "32mb",
   URLENCODED_BODY_MAX_SIZE: "10mb",
 
   // Text processing limits
