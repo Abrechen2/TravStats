@@ -344,6 +344,24 @@ describe("the statistics level of one remote person", () => {
     expect(row.statsLevel).toBe("off");
   });
 
+  it("a pairing whose consent is not a yes shows nothing, whatever level it still holds", async () => {
+    const { anna, ben, benPairing, annaPairing } = await annaWithFlight();
+    await a.remoteStats.setStatsLevel(anna, annaPairing.id, "full");
+    // As after a restore (consent back to pending) or a revoke from the other side.
+    await a.prisma.shareConsent.updateMany({
+      where: { requesterId: anna, remoteTargetId: annaPairing.id },
+      data: { status: "pending" },
+    });
+    await expectRefusal(
+      b.remoteStats.readRemoteOverview(ben, benPairing.id, null),
+      "SHARE_REMOTE_STATS_NOT_SHARED"
+    );
+    await expectRefusal(
+      a.remoteStats.setStatsLevel(anna, annaPairing.id, "overview"),
+      "SHARE_REMOTE_CONSENT_MISSING"
+    );
+  });
+
   it("an unpinned server cannot read: the peer is refused before any pairing is looked at", async () => {
     const { ben, benPairing } = await annaWithFlight();
     await b.prisma.comparisonPeer.deleteMany({ where: { origin: A } });

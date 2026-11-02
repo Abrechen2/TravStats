@@ -70,10 +70,31 @@ export async function setFindable(userId: string, findable: boolean): Promise<bo
   return findable;
 }
 
-async function ownPairing(userId: string, remoteId: string) {
+/** The pairing's consent, either direction, is a yes (withdrawn, declined, pending after a restore: no). */
+const consentAccepted = async (userId: string, remoteId: string): Promise<boolean> =>
+  (await prisma.shareConsent.count({
+    where: {
+      status: "accepted",
+      OR: [
+        { requesterId: userId, remoteTargetId: remoteId },
+        { remoteRequesterId: remoteId, targetId: userId },
+      ],
+    },
+  })) > 0;
+
+async function ownPairing(userId: string, remoteId: string, mustBeLive = false) {
   const pairing = await prisma.remoteShareAccount.findFirst({ where: { id: remoteId, userId } });
   if (!pairing)
     throw remoteShareError("SHARE_REMOTE_PERSON_NOT_FOUND", 404, "No such person", { userId });
+  // A switch on a pairing that is withdrawn (here or there) or held after a restore stays off.
+  if (mustBeLive && !(await consentAccepted(userId, remoteId)))
+    throw remoteShareError(
+      "SHARE_REMOTE_CONSENT_MISSING",
+      409,
+      "No accepted consent with that person",
+      { userId, origin: pairing.origin },
+      { origin: pairing.origin }
+    );
   return pairing;
 }
 
@@ -83,7 +104,7 @@ export async function setStatsLevel(
   level: StatsLevel
 ): Promise<RemotePersonView> {
   await requireTripFederation(userId);
-  const pairing = await ownPairing(userId, remoteId);
+  const pairing = await ownPairing(userId, remoteId, level !== "off");
   await prisma.remoteShareAccount.update({
     where: { id: pairing.id },
     data: { statsLevel: level },
@@ -102,7 +123,7 @@ export async function setRemoteLeaderboard(
   on: boolean
 ): Promise<RemotePersonView> {
   await requireTripFederation(userId);
-  const pairing = await ownPairing(userId, remoteId);
+  const pairing = await ownPairing(userId, remoteId, on);
   const lbId = pairing.leaderboardRemoteId;
   if (!lbId)
     throw remoteShareError(
@@ -175,6 +196,8 @@ export async function serveStatsRead(origin: string, body: StatsRead): Promise<S
     include: { user: { select: { isActive: true } } },
   });
   if (!pairing?.user.isActive || pairing.statsLevel === "off") return NOT_SHARED;
+  // The level is a grant on a live pairing: withdrawn, revoked or held after a restore shows nothing.
+  if (!(await consentAccepted(pairing.userId, pairing.id))) return NOT_SHARED;
   const level = pairing.statsLevel as StatsLevel;
   if (body.part === "overview") {
     const snapshot = await buildOverviewSnapshot(pairing.userId, body.year);

@@ -280,6 +280,7 @@ router.get(
 router.post(
   "/trips/:tripId/offers",
   remoteInviteLimiter,
+  remoteLookupLimiter,
   handle(async (req, res) => {
     const tripId = remoteTripIdSchema.parse(req.params.tripId);
     const body = remoteOfferBodySchema.parse(req.body ?? {});
