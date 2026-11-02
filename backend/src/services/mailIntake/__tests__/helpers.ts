@@ -17,8 +17,11 @@ export function buildMail(opts: {
   authResults?: string;
   body?: string;
   date?: string;
+  /** Raw header lines added at the top, as written upstream (e.g. a forged Sender). */
+  extraHeaders?: string[];
 }): Buffer {
   const lines = [
+    ...(opts.extraHeaders ?? []),
     ...(opts.authResults ? [`Authentication-Results: ${opts.authResults}`] : []),
     ...(opts.deliveredTo ? [`Delivered-To: ${opts.deliveredTo}`] : []),
     `From: ${opts.from ?? "Airline <noreply@airline.example>"}`,
@@ -68,9 +71,12 @@ export class FakeMailbox implements MailFetcher {
           .map((m) => ({ uid: m.uid, size: m.size ?? m.raw.length }))
           .sort((a, b) => a.uid - b.uid);
       },
-      async fetchSource(uid) {
+      async fetchSource(uid, maxBytes) {
         const mail = box.mails.find((m) => m.uid === uid);
-        return mail ? { raw: mail.raw, internalDate: new Date("2026-11-02T09:01:00Z") } : null;
+        if (!mail) return null;
+        // Like the real client: the cap is applied to the bytes, whatever the listing said.
+        if (mail.raw.length > maxBytes) return { tooLarge: true as const };
+        return { raw: mail.raw, internalDate: new Date("2026-11-02T09:01:00Z") };
       },
       async markProcessed(uid) {
         if (box.refuseFlags) return false;

@@ -9,7 +9,7 @@ import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { classifyImapError } from "./errors";
 import { imapFetcher, type MailFetcher } from "./mailFetcher";
-import { connectionOf, isServiceOff, runSource } from "./runSource";
+import { guardedConnection, isServiceOff, runSource } from "./runSource";
 
 /** One IDLE connection per source; this caps the sockets a large instance opens. */
 export const MAX_WATCHERS = 10;
@@ -28,7 +28,7 @@ export async function ensureWatchers(fetcher: MailFetcher = imapFetcher): Promis
     if (await isServiceOff(source)) continue;
     let connection;
     try {
-      connection = connectionOf(source);
+      connection = await guardedConnection(source);
     } catch {
       continue; // the poll records why this source cannot run
     }

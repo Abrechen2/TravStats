@@ -6607,6 +6607,10 @@ model MailIntakeSource {
   /// (`trips@example.org` → `trips+token@example.org`); a login name is not
   /// always an address. Null for a personal folder.
   address           String?
+  /// The authserv-id of the receiving provider ("mx.example.org"). When set,
+  /// only an Authentication-Results header carrying it is believed; unset, the
+  /// topmost one is (the provider prepends its own).
+  authservId        String?   @map("authserv_id")
   /// AES-256-GCM like every other stored secret; null after a restore, when
   /// the user has to enter it again (spec §9 decision 4).
   passwordEncrypted String?   @map("password_encrypted")

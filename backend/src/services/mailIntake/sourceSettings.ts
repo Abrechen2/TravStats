@@ -16,7 +16,8 @@ import {
 } from "./errors";
 import { addressFor, currentToken, revokeToken, rotateToken } from "./addressToken";
 import { imapFetcher, type MailFetcher } from "./mailFetcher";
-import { connectionOf } from "./runSource";
+import { guardedConnection, reportedKind } from "./runSource";
+import { resolvePublicHost } from "./hostPolicy";
 import { stopWatcher } from "./idleWatchers";
 
 type SourceRow = NonNullable<Awaited<ReturnType<typeof prisma.mailIntakeSource.findUnique>>>;
@@ -27,6 +28,7 @@ export interface SourceView {
   tlsMode: "tls" | "starttls" | "none";
   username: string;
   address: string | null;
+  authservId: string | null;
   folder: string;
   enabled: boolean;
   hasPassword: boolean;
@@ -51,6 +53,7 @@ export function viewOf(source: SourceRow): SourceView {
     tlsMode: source.tlsMode as SourceView["tlsMode"],
     username: source.username,
     address: source.address,
+    authservId: source.authservId,
     folder: source.folder,
     enabled: source.enabled,
     hasPassword: !!source.passwordEncrypted,
@@ -103,6 +106,7 @@ interface SourceInput {
   tlsMode: "tls" | "starttls" | "none";
   username: string;
   address?: string;
+  authservId?: string | null;
   password?: string;
   folder: string;
   enabled?: boolean;
@@ -115,6 +119,17 @@ export async function saveSource(userId: string | null, input: SourceInput): Pro
     : await instanceSource();
   if (!existing && !input.password) {
     throw new AppError("A password is required for a new mailbox", 400, "VALIDATION_FAILED");
+  }
+  // A personal host must resolve to public addresses only (SSRF); re-checked on every connect.
+  if (userId) {
+    try {
+      await resolvePublicHost(input.host);
+    } catch (error) {
+      if (error instanceof MailIntakeError && error.kind === "blocked_host") {
+        throw new AppError("This host is not a public address", 400, "MAIL_HOST_BLOCKED");
+      }
+      // Unresolvable now: saved anyway, the next test says `unreachable`.
+    }
   }
   const passwordEncrypted = input.password
     ? encrypt(input.password)
@@ -167,13 +182,11 @@ export async function testSource(
   if (!source) throw new AppError("No mailbox is set up", 404, "MAIL_SOURCE_NOT_FOUND");
   try {
     // Opens the folder and nothing else; reads and changes no mail.
-    await fetcher.withFolder(connectionOf(source), async () => undefined);
+    await fetcher.withFolder(await guardedConnection(source), async () => undefined);
     return { ok: true, error: null };
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof MailIntakeError ? error.kind : classifyImapError(error),
-    };
+    const kind = error instanceof MailIntakeError ? error.kind : classifyImapError(error);
+    return { ok: false, error: reportedKind(source, kind) };
   }
 }
 

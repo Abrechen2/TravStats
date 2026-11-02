@@ -14,6 +14,8 @@ export const SOURCE_ERROR_KINDS = [
   "folder_missing",
   "credentials_missing",
   "plain_not_allowed",
+  "blocked_host",
+  "unreachable",
   "protocol_error",
 ] as const;
 export type SourceErrorKind = (typeof SOURCE_ERROR_KINDS)[number];
@@ -24,6 +26,7 @@ export const MESSAGE_REASONS = [
   "unknown_token",
   "sender_not_allowed",
   "dmarc_failed",
+  "dmarc_unverified",
   "unreadable_mail",
   "nothing_found",
   "parser_timeout",
@@ -90,4 +93,24 @@ export function classifyImapError(error: unknown): SourceErrorKind {
   if (/command failed/i.test(message) && /login|auth|credentials/i.test(`${response} ${message}`))
     return "auth_failed";
   return "protocol_error";
+}
+
+/**
+ * A personal folder's host is typed by an account on a multi-user instance, so
+ * a failure must not tell it which port of which machine answered: every way of
+ * not reaching an IMAP server collapses to `unreachable`. What stays distinct
+ * (`auth_failed`, `folder_missing`) needs a real IMAP server to have answered,
+ * and `blocked_host` is decided from the address alone, before any connection.
+ */
+export function collapseForPersonal(kind: SourceErrorKind): SourceErrorKind {
+  switch (kind) {
+    case "connection_refused":
+    case "host_not_found":
+    case "timeout":
+    case "tls_error":
+    case "protocol_error":
+      return "unreachable";
+    default:
+      return kind;
+  }
 }

@@ -7,6 +7,7 @@ import { updatePolicy } from "../../externalServices/policy";
 import { sweepDocuments } from "../../documents/documentService";
 import { documentPath } from "../../documents/documentStore";
 import fs from "fs";
+import dns from "dns";
 import { runSource } from "../runSource";
 import { retryMessage, buildInbox, allowSenderOf, dismissMessage } from "../inbox";
 import { rotateToken } from "../addressToken";
@@ -52,7 +53,14 @@ describe("mail intake run (forgejo#313)", () => {
       },
     });
 
+  let lookup: jest.SpiedFunction<typeof dns.promises.lookup>;
+  const resolveTo = (address: string) =>
+    lookup.mockImplementation((async () => [
+      { address, family: address.includes(":") ? 6 : 4 },
+    ]) as never);
+
   beforeAll(async () => {
+    lookup = jest.spyOn(dns.promises, "lookup");
     const passwordHash = await hashPassword("password123");
     userId = (await prisma.user.create({ data: { username: `${prefix}-a`, passwordHash } })).id;
     otherUserId = (await prisma.user.create({ data: { username: `${prefix}-b`, passwordHash } }))
@@ -60,6 +68,7 @@ describe("mail intake run (forgejo#313)", () => {
   });
 
   beforeEach(async () => {
+    resolveTo("93.184.216.34"); // every test host is "public" unless a test says otherwise
     parseDocument.mockReset();
     parseDocument.mockImplementation(found);
     await prisma.mailIntakeMessage.deleteMany({});
@@ -73,6 +82,7 @@ describe("mail intake run (forgejo#313)", () => {
   });
 
   afterAll(async () => {
+    lookup.mockRestore();
     await prisma.document.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
   });
@@ -147,6 +157,24 @@ describe("mail intake run (forgejo#313)", () => {
       expect((await buildInbox(userId)).items.map((i) => i.reason)).toEqual(["mail_too_large"]);
     });
 
+    it("enforces the cap on the bytes received, not on the size the server reported", async () => {
+      // The listing claims 1 KB; the mail is 3 MB.
+      box.add({
+        uid: 1,
+        raw: buildMail({ messageId: "<liar@x>", body: "x".repeat(3 * 1024 * 1024) }),
+        size: 1024,
+      });
+      await runSource(personalId, box);
+      const [message] = await messages();
+      expect(message).toMatchObject({
+        status: "failed",
+        reason: "mail_too_large",
+        documentId: null,
+      });
+      expect(parseDocument).not.toHaveBeenCalled();
+      expect(await prisma.document.count({ where: { userId } })).toBe(0);
+    });
+
     it("a mail the parser finds nothing in stays an unfiled document with the reason", async () => {
       parseDocument.mockImplementation(() => nothing());
       box.add({ uid: 1, raw: buildMail({ subject: "Newsletter" }) });
@@ -217,15 +245,8 @@ describe("mail intake run (forgejo#313)", () => {
   });
 
   describe("failures reach the user as themselves", () => {
-    it.each([
-      "connection_refused",
-      "host_not_found",
-      "timeout",
-      "tls_error",
-      "auth_failed",
-      "folder_missing",
-    ] as const)(
-      "%s is stored on the source with its time, and cleared by the next good run",
+    it.each(["auth_failed", "folder_missing"] as const)(
+      "%s keeps its own reason (a real IMAP server answered), is stored with its time and cleared by the next good run",
       async (kind) => {
         box.failWith = kind;
         const bad = await runSource(personalId, box);
@@ -244,6 +265,79 @@ describe("mail intake run (forgejo#313)", () => {
         expect(ok.lastOkAt).not.toBeNull();
       }
     );
+
+    it.each([
+      "connection_refused",
+      "host_not_found",
+      "timeout",
+      "tls_error",
+      "protocol_error",
+    ] as const)(
+      "a personal folder's %s is reported as unreachable — no port-scan oracle",
+      async (kind) => {
+        box.failWith = kind;
+        expect((await runSource(personalId, box)).error).toBe("unreachable");
+      }
+    );
+
+    it("the admin's instance mailbox keeps the precise kind (LAN diagnosis)", async () => {
+      await prisma.mailIntakeSource.delete({ where: { id: personalId } });
+      const instance = await mkSource({
+        kind: "instance_mailbox",
+        userId: null,
+        address: "t@example.org",
+      });
+      box.failWith = "connection_refused";
+      expect((await runSource(instance.id, box)).error).toBe("connection_refused");
+    });
+
+    it.each(["127.0.0.1", "10.0.0.5", "192.168.1.9", "169.254.169.254", "::1", "64:ff9b::7f00:1"])(
+      "a personal host resolving to %s is refused before any connection (SSRF)",
+      async (address) => {
+        resolveTo(address);
+        const result = await runSource(personalId, box);
+        expect(result.error).toBe("blocked_host");
+        expect(box.connections).toHaveLength(0);
+      }
+    );
+
+    it("re-checks on every connect: a host that was public at save and private later is refused (DNS rebinding)", async () => {
+      resolveTo("93.184.216.34");
+      expect((await runSource(personalId, box)).error).toBeUndefined();
+      resolveTo("10.0.0.5");
+      expect((await runSource(personalId, box)).error).toBe("blocked_host");
+      expect(box.connections).toHaveLength(1);
+    });
+
+    it("connects to the address it checked, not to a second lookup", async () => {
+      resolveTo("93.184.216.34");
+      await runSource(personalId, box);
+      expect(box.connections[0]).toMatchObject({
+        host: "imap.example.org",
+        connectHost: "93.184.216.34",
+      });
+    });
+
+    it("one blocked address among several is enough to refuse the host", async () => {
+      lookup.mockImplementation((async () => [
+        { address: "93.184.216.34", family: 4 },
+        { address: "10.0.0.5", family: 4 },
+      ]) as never);
+      expect((await runSource(personalId, box)).error).toBe("blocked_host");
+    });
+
+    it("the instance mailbox may sit on the LAN", async () => {
+      await prisma.mailIntakeSource.delete({ where: { id: personalId } });
+      const instance = await mkSource({
+        kind: "instance_mailbox",
+        userId: null,
+        address: "t@example.org",
+      });
+      resolveTo("192.168.1.9");
+      const result = await runSource(instance.id, box);
+      expect(result.error).toBeUndefined();
+      expect(box.connections).toHaveLength(1);
+    });
 
     it("a source without a password says credentials_missing instead of trying", async () => {
       await prisma.mailIntakeSource.update({
@@ -379,6 +473,98 @@ describe("mail intake run (forgejo#313)", () => {
           .replace(
             "Subject:",
             "Authentication-Results: forged.example; dmarc=pass header.from=gmail.example\r\nSubject:"
+          )
+      );
+      box.add({ uid: 1, raw });
+      await runSource(instanceId, box);
+      expect((await messages())[0].reason).toBe("dmarc_failed");
+    });
+
+    it.each([
+      ["Sender", "Sender: me@gmail.example"],
+      ["Return-Path", "Return-Path: <me@gmail.example>"],
+      ["X-Original-Sender", "X-Original-Sender: me@gmail.example"],
+    ])(
+      "a forged %s naming an allowed address does not authorise a mail from someone else",
+      async (_name, header) => {
+        await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+        box.add({
+          uid: 1,
+          raw: forwarded({
+            from: "Mallory <mallory@evil.example>",
+            extraHeaders: [header],
+            authResults: "mx.example.org; dmarc=pass header.from=evil.example",
+          }),
+        });
+        await runSource(instanceId, box);
+        expect((await messages())[0]).toMatchObject({
+          status: "rejected",
+          reason: "sender_not_allowed",
+          fromAddress: "mallory@evil.example",
+        });
+        expect(parseDocument).not.toHaveBeenCalled();
+      }
+    );
+
+    it("an allowed From without a DMARC pass is not authorised (dmarc_unverified), also with no verdict at all", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      box.add({ uid: 1, raw: forwarded({ authResults: undefined, messageId: "<n1@x>" }) });
+      box.add({
+        uid: 2,
+        raw: forwarded({ authResults: "mx.example.org; spf=pass; dkim=pass", messageId: "<n2@x>" }),
+      });
+      box.add({
+        uid: 3,
+        raw: forwarded({
+          authResults: "mx.example.org; dmarc=pass header.from=other.example",
+          messageId: "<n3@x>",
+        }),
+      });
+      await runSource(instanceId, box);
+      expect((await messages()).map((m) => m.reason)).toEqual([
+        "dmarc_unverified",
+        "dmarc_unverified",
+        "dmarc_unverified",
+      ]);
+      expect(parseDocument).not.toHaveBeenCalled();
+    });
+
+    it("with an authserv-id configured, only that provider's verdict counts — even a forged one on top is ignored", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      await prisma.mailIntakeSource.update({
+        where: { id: instanceId },
+        data: { authservId: "mx.example.org" },
+      });
+      // forged "pass" on top, the real provider's "fail" below it
+      const forged = Buffer.from(
+        "Authentication-Results: attacker.example; dmarc=pass header.from=gmail.example\r\n" +
+          forwarded({
+            authResults: "mx.example.org; dmarc=fail header.from=gmail.example",
+          }).toString("utf8")
+      );
+      box.add({ uid: 1, raw: forged });
+      // the real provider's pass, with a forged fail on top, is accepted
+      box.add({
+        uid: 2,
+        raw: Buffer.from(
+          "Authentication-Results: attacker.example; dmarc=fail header.from=gmail.example\r\n" +
+            forwarded({ messageId: "<ok@x>" }).toString("utf8")
+        ),
+      });
+      await runSource(instanceId, box);
+      const rows = await messages();
+      expect(rows[0]).toMatchObject({ status: "rejected", reason: "dmarc_failed" });
+      expect(rows[1]).toMatchObject({ status: "proposed" });
+    });
+
+    it("with no authserv-id configured a forged header below the provider's does not override it", async () => {
+      await prisma.mailIntakeSender.create({ data: { userId, address: "me@gmail.example" } });
+      const raw = Buffer.from(
+        forwarded({ authResults: "mx.example.org; dmarc=fail header.from=gmail.example" })
+          .toString("utf8")
+          .replace(
+            "Subject:",
+            "Authentication-Results: forged; dmarc=pass header.from=gmail.example\r\nSubject:"
           )
       );
       box.add({ uid: 1, raw });

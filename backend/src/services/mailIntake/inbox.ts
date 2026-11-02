@@ -18,7 +18,11 @@ import { classifyKept } from "./pipeline";
 const LIMIT = 50;
 const ACTIONABLE = ["proposed", "rejected", "failed", "nothing"] as const;
 /** Rejections worth a card: the user can act on them. The rest only sit in the audit. */
-const NOTED_REJECTIONS: MessageReason[] = ["sender_not_allowed", "dmarc_failed"];
+const NOTED_REJECTIONS: MessageReason[] = [
+  "sender_not_allowed",
+  "dmarc_failed",
+  "dmarc_unverified",
+];
 
 function foundOf(summary: unknown): number | null {
   const found = (summary as { found?: unknown } | null)?.found;

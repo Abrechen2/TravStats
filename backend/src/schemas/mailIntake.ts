@@ -28,6 +28,8 @@ export const instanceSourceBodySchema = z.strictObject({
   tlsMode: z.enum(["tls", "starttls", "none"]),
   username: z.string().trim().min(1).max(320),
   address: z.string().trim().email().max(320),
+  /** The receiving provider's authserv-id; set, only its Authentication-Results is believed. */
+  authservId: z.string().trim().max(253).nullable().optional(),
   password: z.string().min(1).max(500).optional(),
   folder: folder.default("INBOX"),
   enabled: z.boolean().optional(),
@@ -45,6 +47,7 @@ export const sourceViewSchema = z.object({
   tlsMode: z.enum(["tls", "starttls", "none"]),
   username: z.string(),
   address: z.string().nullable(),
+  authservId: z.string().nullable(),
   folder: z.string(),
   enabled: z.boolean(),
   hasPassword: z.boolean(),

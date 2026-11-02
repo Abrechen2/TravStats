@@ -7,10 +7,16 @@
 import { prisma } from "../../db";
 import { decrypt } from "../../utils/encryption";
 import logger from "../../utils/logger";
-import { exceededLimit } from "../documents/documentFormats";
+import { DOCUMENT_SIZE_LIMITS } from "../documents/documentFormats";
 import { connectionGate, loadPolicy } from "../externalServices/policy";
 import { MAIL_INTAKE_SERVICE_ID, MAX_MAILS_PER_RUN } from "./constants";
-import { MailIntakeError, classifyImapError, type SourceErrorKind } from "./errors";
+import {
+  MailIntakeError,
+  classifyImapError,
+  collapseForPersonal,
+  type SourceErrorKind,
+} from "./errors";
+import { pinPublic } from "./hostPolicy";
 import { imapFetcher, type MailFetcher, type MailboxConnection, type TlsMode } from "./mailFetcher";
 import { processMail } from "./pipeline";
 
@@ -50,6 +56,23 @@ export function connectionOf(source: SourceRow): MailboxConnection {
   };
 }
 
+/**
+ * The connection a run may open: decrypted, and for a personal folder checked
+ * against the public-address policy and pinned to the checked address.
+ */
+export async function guardedConnection(source: SourceRow): Promise<MailboxConnection> {
+  const connection = connectionOf(source);
+  return source.kind === "imap_folder" ? pinPublic(connection) : connection;
+}
+
+/** The kind a failure is reported as: a personal folder's are collapsed (no port-scan oracle). */
+export function reportedKind(
+  source: Pick<SourceRow, "kind">,
+  kind: SourceErrorKind
+): SourceErrorKind {
+  return source.kind === "imap_folder" ? collapseForPersonal(kind) : kind;
+}
+
 /** True when the admin or the owner has the feature off for this source. */
 export async function isServiceOff(source: Pick<SourceRow, "userId">): Promise<boolean> {
   if (source.userId) {
@@ -74,7 +97,7 @@ export async function runSource(
   const startedAt = new Date();
   const result: RunResult = { ran: true, seen: 0, proposed: 0 };
   try {
-    const connection = connectionOf(source);
+    const connection = await guardedConnection(source);
     await fetcher.withFolder(connection, async (session) => {
       // A changed UIDVALIDITY makes every stored UID meaningless: start over.
       // The Message-ID key keeps the rescan from creating anything twice.
@@ -84,17 +107,25 @@ export async function runSource(
 
       for (const item of fresh) {
         result.seen += 1;
-        if (exceededLimit("eml", item.size) !== null) {
+        // The listing's size is a hint only: the cap is enforced while downloading.
+        const limit = DOCUMENT_SIZE_LIMITS.eml;
+        const fetched =
+          item.size > limit
+            ? { tooLarge: true as const }
+            : await session.fetchSource(item.uid, limit);
+        if (fetched && "tooLarge" in fetched) {
           await recordTooLarge(source.id, source.userId, item.uid, session.uidValidity);
-        } else {
-          const fetched = await session.fetchSource(item.uid);
-          if (fetched) {
-            const outcome = await processMail(
-              { id: source.id, userId: source.userId, kind: source.kind },
-              { uid: item.uid, uidValidity: session.uidValidity, ...fetched }
-            );
-            if (outcome.status === "proposed") result.proposed += 1;
-          }
+        } else if (fetched) {
+          const outcome = await processMail(
+            {
+              id: source.id,
+              userId: source.userId,
+              kind: source.kind,
+              authservId: source.authservId,
+            },
+            { uid: item.uid, uidValidity: session.uidValidity, ...fetched }
+          );
+          if (outcome.status === "proposed") result.proposed += 1;
         }
         await session.markProcessed(item.uid);
         lastUid = item.uid;
@@ -113,7 +144,7 @@ export async function runSource(
       data: { lastRunAt: startedAt, lastOkAt: new Date(), lastError: null, lastErrorAt: null },
     });
   } catch (error) {
-    const kind = classifyImapError(error);
+    const kind = reportedKind(source, classifyImapError(error));
     result.error = kind;
     logger.warn({ operation: "mail_intake_run_failed", sourceId, kind, err: error });
     await prisma.mailIntakeSource.update({

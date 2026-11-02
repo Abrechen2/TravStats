@@ -26,6 +26,7 @@ export interface SourceRef {
   id: string;
   userId: string | null;
   kind: string;
+  authservId?: string | null;
 }
 
 export interface MailInput {
@@ -138,13 +139,17 @@ async function authorise(
   if ((await filterConnectionAllowed(MAIL_INTAKE_SERVICE_ID, [userId])).length === 0) {
     return { userId, reason: "service_off" };
   }
-  const allowed = await prisma.mailIntakeSender.findMany({
-    where: { userId, address: { in: headers.senderCandidates } },
-    select: { id: true },
-    take: 1,
-  });
-  if (allowed.length === 0) return { userId, reason: "sender_not_allowed" };
+  // Only the From address DMARC vouched for may authorise. Sender, Return-Path and
+  // X-Original-Sender are written by whoever sends the mail and prove nothing.
+  const allowed = headers.from
+    ? await prisma.mailIntakeSender.findFirst({
+        where: { userId, address: headers.from },
+        select: { id: true },
+      })
+    : null;
+  if (!allowed) return { userId, reason: "sender_not_allowed" };
   if (headers.dmarc === "fail") return { userId, reason: "dmarc_failed" };
+  if (headers.dmarc !== "pass") return { userId, reason: "dmarc_unverified" };
   return { userId };
 }
 
@@ -156,7 +161,7 @@ function failureReason(error: unknown): MessageReason {
 export async function processMail(source: SourceRef, input: MailInput): Promise<MailOutcome> {
   let headers: MailHeaders;
   try {
-    headers = readHeaders(input.raw);
+    headers = readHeaders(input.raw, source.authservId ?? null);
   } catch (error) {
     logger.warn({ operation: "mail_intake_unreadable", uid: input.uid, err: error });
     return record(source, input, null, syntheticMessageId(input), {

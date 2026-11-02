@@ -187,6 +187,11 @@ or forbid for accounts like any other.
   address again (a hash alone could only show it once).
 - Plain IMAP (`tlsMode: none`) is accepted for the instance mailbox only, which the admin sets
   up; a personal folder needs TLS or STARTTLS.
+- Mode B authorises only the `From` address that DMARC aligned (`dmarc=pass`); `Sender`, `Return-Path` and
+  `X-Original-Sender` never authorise. An instance mailbox may pin the receiving provider's authserv-id.
+- A personal host must resolve to public addresses only (checked on save and on every connect, pinned to
+  the checked address); its connection failures collapse to `unreachable`. The size cap is enforced while
+  downloading.
 - A mail rejected for an unknown sender is not stored; "allow this sender" takes effect for the
   next forward.
 

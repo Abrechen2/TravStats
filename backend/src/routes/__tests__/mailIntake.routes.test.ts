@@ -5,6 +5,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { encrypt } from "../../utils/encryption";
 import { DEMO_USERNAME } from "../../utils/sharedDemo";
 import { updatePolicy } from "../../services/externalServices/policy";
 
@@ -17,7 +18,7 @@ describe("mail intake routes (forgejo#313)", () => {
   let demoCookie: string;
 
   const body = {
-    host: "imap.example.org",
+    host: "93.184.216.34",
     port: 993,
     tlsMode: "tls",
     username: "me@example.org",
@@ -127,14 +128,38 @@ describe("mail intake routes (forgejo#313)", () => {
     );
   });
 
-  it("a test of an unreachable server reports its kind instead of failing silently", async () => {
-    await request(app)
-      .put("/api/v1/mail-intake/source")
-      .set("Cookie", cookie)
-      .send({ ...body, host: "127.0.0.1", port: 1 });
+  it.each(["127.0.0.1", "10.1.2.3", "192.168.0.10", "169.254.169.254", "localhost"])(
+    "refuses to save a personal host that resolves to a private address (%s) — no SSRF, no port scan",
+    async (host) => {
+      const res = await request(app)
+        .put("/api/v1/mail-intake/source")
+        .set("Cookie", cookie)
+        .send({ ...body, host });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("MAIL_HOST_BLOCKED");
+      expect(await prisma.mailIntakeSource.count()).toBe(0);
+    }
+  );
+
+  it("a connection test to a blocked host answers blocked_host without connecting; the admin's mailbox is not restricted", async () => {
+    await prisma.mailIntakeSource.create({
+      data: {
+        kind: "imap_folder",
+        userId,
+        host: "10.0.0.5",
+        port: 993,
+        username: "u",
+        folder: "F",
+        passwordEncrypted: encrypt("pw"),
+      },
+    });
     const res = await request(app).post("/api/v1/mail-intake/source/test").set("Cookie", cookie);
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: false, error: "connection_refused" });
+    expect(res.body).toEqual({ ok: false, error: "blocked_host" });
+    const saved = await request(app)
+      .put("/api/v1/mail-intake/instance")
+      .set("Cookie", adminCookie)
+      .send({ ...instanceBody, host: "192.168.1.9", tlsMode: "none" });
+    expect(saved.status).toBe(200);
   });
 
   it("run-now without a mailbox is a 404, not an empty success", async () => {

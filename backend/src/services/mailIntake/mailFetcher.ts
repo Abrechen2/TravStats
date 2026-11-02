@@ -23,6 +23,8 @@ export interface MailboxConnection {
   username: string;
   password: string;
   folder: string;
+  /** Connect here instead of resolving `host` again (a checked, pinned address). */
+  connectHost?: string;
 }
 
 export interface MailSession {
@@ -30,7 +32,15 @@ export interface MailSession {
   readonly uidValidity: string;
   /** UIDs above `afterUid`, ascending, with their sizes. */
   listNew(afterUid: number): Promise<Array<{ uid: number; size: number }>>;
-  fetchSource(uid: number): Promise<{ raw: Buffer; internalDate: Date | null } | null>;
+  /**
+   * The raw mail, read with the cap enforced DURING the download: the size a
+   * server reports in a listing is only a hint. Past `maxBytes` the download is
+   * abandoned and `tooLarge` answers.
+   */
+  fetchSource(
+    uid: number,
+    maxBytes: number
+  ): Promise<{ raw: Buffer; internalDate: Date | null } | { tooLarge: true } | null>;
   /** Best effort: flags `\Seen` and `$TravStats`. Returns false when the server refused. */
   markProcessed(uid: number): Promise<boolean>;
 }
@@ -53,8 +63,13 @@ const SOCKET_TIMEOUT_MS = 60_000;
 
 function clientFor(connection: MailboxConnection): ImapFlow {
   const client = new ImapFlow({
-    host: connection.host,
+    host: connection.connectHost ?? connection.host,
     port: connection.port,
+    // The certificate is checked against the name the user typed, also when the
+    // socket goes to the address we resolved and checked ourselves.
+    tls: { servername: connection.host } as unknown as ConstructorParameters<
+      typeof ImapFlow
+    >[0]["tls"],
     secure: connection.tlsMode === "tls",
     doSTARTTLS:
       connection.tlsMode === "starttls" ? true : connection.tlsMode === "none" ? false : undefined,
@@ -103,16 +118,28 @@ export const imapFetcher: MailFetcher = {
                 .sort((a, b) => a.uid - b.uid)
             );
           },
-          async fetchSource(uid) {
-            const message = await client.fetchOne(
-              String(uid),
-              { source: true, internalDate: true },
-              { uid: true }
-            );
-            if (!message || !message.source) return null;
-            const date = message.internalDate ? new Date(message.internalDate) : null;
+          async fetchSource(uid, maxBytes) {
+            const meta = await client.fetchOne(String(uid), { internalDate: true }, { uid: true });
+            if (!meta) return null;
+            // One byte more than the cap: seeing it proves the mail is over.
+            const download = await client.download(String(uid), undefined, {
+              uid: true,
+              maxBytes: maxBytes + 1,
+            });
+            const chunks: Buffer[] = [];
+            let total = 0;
+            for await (const chunk of download.content) {
+              const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+              total += buffer.length;
+              if (total > maxBytes) {
+                download.content.destroy();
+                return { tooLarge: true as const };
+              }
+              chunks.push(buffer);
+            }
+            const date = meta.internalDate ? new Date(meta.internalDate) : null;
             return {
-              raw: message.source,
+              raw: Buffer.concat(chunks),
               internalDate: date && !Number.isNaN(date.getTime()) ? date : null,
             };
           },
