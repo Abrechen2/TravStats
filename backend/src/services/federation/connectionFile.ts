@@ -186,11 +186,64 @@ export function readConnectionFile(buffer: Buffer): ConnectionValues {
         ? `Format ${head.data.format} version ${head.data.version} is not a supported connection file`
         : "Not a connection file"
     );
-  if (!httpsOriginSchema.safeParse(file.data.origin).success)
+  return validateValues(file.data.origin, file.data.publicKey, file.data.fingerprint);
+}
+
+/** The checks every carrier (file, QR) shares: https origin, Ed25519 key, matching fingerprint. */
+function validateValues(origin: string, rawKey: string, fingerprint: string): ConnectionValues {
+  if (!httpsOriginSchema.safeParse(origin).success)
     throw refuse("COMPARISON_CONNECTION_FILE_ORIGIN", "The address is not an https origin");
-  const publicKey = parsePeerPublicKey(file.data.publicKey);
+  const publicKey = parsePeerPublicKey(rawKey);
   if (!publicKey) throw refuse("COMPARISON_CONNECTION_FILE_KEY", "Not an Ed25519 public key");
-  if (hash(publicKey) !== file.data.fingerprint)
+  if (hash(publicKey) !== fingerprint)
     throw refuse("COMPARISON_CONNECTION_FILE_FINGERPRINT", "Fingerprint does not match the key");
-  return { origin: file.data.origin, publicKey, fingerprint: file.data.fingerprint };
+  return { origin, publicKey, fingerprint };
+}
+
+/** The QR the Admin → Instanz page shows (spec 2026-11-02 §6): the file's three values, no secret. */
+export interface ServerQrPayload {
+  v: 1;
+  k: "server";
+  u: string;
+  key: string;
+  fp: string;
+}
+
+/** Compact JSON string for the QR; `readServerQrPayload` is its inverse. */
+export function buildServerQrPayload(values: ConnectionValues): string {
+  const payload: ServerQrPayload = {
+    v: 1,
+    k: "server",
+    u: values.origin,
+    key: values.publicKey,
+    fp: values.fingerprint,
+  };
+  return JSON.stringify(payload);
+}
+
+const QR_MAX_BYTES = 2 * 1024;
+const qrSchema = z.strictObject({
+  v: z.literal(1),
+  k: z.literal("server"),
+  u: z.string().max(250),
+  key: z.string().min(40).max(500),
+  fp: z.string().regex(/^[a-f0-9]{64}$/),
+});
+
+/** Validates a scanned QR (JSON string or already-parsed object) with the connection file's checks. */
+export function readServerQrPayload(input: unknown): ConnectionValues {
+  let raw = input;
+  if (typeof input === "string") {
+    if (input.length > QR_MAX_BYTES)
+      throw refuse("COMPARISON_CONNECTION_FILE_TOO_LARGE", "The QR payload is too large", 413);
+    try {
+      raw = JSON.parse(input);
+    } catch {
+      throw refuse("COMPARISON_CONNECTION_FILE_UNREADABLE", "The QR payload is not JSON");
+    }
+  }
+  const parsed = qrSchema.safeParse(raw);
+  if (!parsed.success)
+    throw refuse("COMPARISON_CONNECTION_FILE_FORMAT", "Not a TravStats server QR");
+  return validateValues(parsed.data.u, parsed.data.key, parsed.data.fp);
 }

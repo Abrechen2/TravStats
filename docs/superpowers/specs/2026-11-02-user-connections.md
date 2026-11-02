@@ -121,11 +121,36 @@ Inbox: `GET /sharing/inbox/count` gains `connectionRequests` and `planInvites` (
 
 ## 6. Admin pairing by QR (Companion)
 
-Admin → Instanz shows the connection file as a QR (`{"v":1,"k":"server","u":<origin>,"key":<public
-key>,"fp":<fingerprint>}`, the data the connection file already carries). An admin's Companion scans
-the other server's QR and calls `POST /api/v1/admin/federation/peers {connectionFile}` on its own
-server (admin session; same validation as the upload). The fingerprint is still compared: the app
-shows it and asks the admin to confirm it with the other admin. No user-level QR exists.
+**As built (fix/admin-server-qr).** Admin → Instanz shows the connection file as a QR
+(`{"v":1,"k":"server","u":<origin>,"key":<SPKI PEM>,"fp":<sha-256 hex>}` — the file's three values,
+no secret; hidden while the address field has unsaved edits). An admin's Companion scans the other
+server's QR and pins it on its own server. The fingerprint is still compared: the app shows it and
+asks the admin to confirm it with the other admin. No user-level QR exists.
+
+### Companion contract
+
+Auth: an admin user's browser session, or a PAT of an admin user with scope `admin` (a `write` PAT
+is refused 403 `API token lacks admin scope`; a `read` PAT 403; a non-admin 403). Base `/api/v1`.
+
+| Call | Body | Answer |
+|---|---|---|
+| `POST /admin/federation/peers` | `{"qr": <payload string or object>, "enabled"?: true}` | 200 federation state + `peer` + `computedFingerprint` |
+| same | `{"connectionFile": <base64 of the ZIP or JSON>, "enabled"?: true}` | same |
+| same | `{origin, publicKey, fingerprint, enabled}` (existing web form) | same |
+| `POST /admin/federation/peers/verify` | `{"origin": "<u>"}` | 200 `{verified: true}`; 502 `COMPARISON_PEER_UNREACHABLE` |
+| `POST /admin/federation/peers/suspend` | `{"origin"}` | 200 `{suspended: true}` |
+
+- `peer` = `{origin, fingerprint, enabled, verifiedAt: null, leaderboardVersions}`. A new pin is
+  **unverified** (`verifiedAt: null`); re-pinning resets it. `computedFingerprint` is the SHA-256
+  THIS server computed from the key; the app shows it beside the QR's `fp` and the admin compares
+  both with the other admin. Verify (ping over the signed channel) is what sets `verifiedAt`.
+- Errors (body `{code, error}`): 400 `COMPARISON_PEER_KEY_INVALID` (not Ed25519, fingerprint
+  mismatch, this server itself); 413 `COMPARISON_CONNECTION_FILE_TOO_LARGE`; 422
+  `COMPARISON_CONNECTION_FILE_UNREADABLE` (QR not JSON, no entry), `_FORMAT` (wrong `v`/`k`/shape,
+  extra keys), `_ORIGIN` (not an https origin), `_KEY`, `_FINGERPRINT` (forged `fp`); 400 zod
+  validation for a body of none of the three shapes; 429 over 20 pins/minute/user.
+- Minimum server version: the build carrying this change; older servers lack `qr`/`connectionFile`
+  and `computedFingerprint` (the explicit-values form works everywhere).
 
 ## 7. What is removed
 

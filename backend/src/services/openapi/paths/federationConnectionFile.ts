@@ -6,7 +6,12 @@
 
 import { z } from "zod";
 
-import { connectionFileInspectionSchema } from "../../../schemas/federationAdmin";
+import {
+  connectionFileInspectionSchema,
+  peerPinFromFileSchema,
+  peerPinFromQrSchema,
+  peerPinSchema,
+} from "../../../schemas/federationAdmin";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 
@@ -69,5 +74,58 @@ registry.registerPath({
         "Unreadable, wrong format, bad address or key, fingerprint mismatch, this server",
       content: errorContent,
     },
+  },
+});
+
+const pinned = z
+  .object({
+    peer: z
+      .object({
+        origin: z.string(),
+        fingerprint: z.string(),
+        enabled: z.boolean(),
+        verifiedAt: z.string().nullable().describe("Null until `POST /peers/verify` succeeds"),
+      })
+      .nullable(),
+    computedFingerprint: z
+      .string()
+      .describe("SHA-256 the server computed from the key; show it beside the QR's `fp`"),
+  })
+  .passthrough()
+  .describe("The federation state plus `peer` and `computedFingerprint`");
+
+registry.registerPath({
+  method: "post",
+  path: "/admin/federation/peers",
+  summary: "Pin another server: explicit values, a scanned QR, or a connection file",
+  description:
+    "Admin only; a PAT needs scope `admin`. Three body shapes: `{origin, publicKey, fingerprint, " +
+    "enabled}` (the web form), `{qr, enabled?}` (the scanned payload `{v:1,k:'server',u,key,fp}` " +
+    "as string or object) or `{connectionFile, enabled?}` (the file, base64). All are validated " +
+    "alike; the pin stays unverified until `POST /admin/federation/peers/verify`. " +
+    "Refusals: `COMPARISON_PEER_KEY_INVALID` (400), `COMPARISON_CONNECTION_FILE_*` (413/422).",
+  tags,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.union([peerPinSchema, peerPinFromQrSchema, peerPinFromFileSchema]),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: "Pinned (unverified)",
+      content: { "application/json": { schema: pinned } },
+    },
+    400: {
+      description: "Invalid key, mismatching fingerprint, or this server",
+      content: errorContent,
+    },
+    413: { description: "Payload too large", content: errorContent },
+    422: { description: "Unreadable or malformed QR / file", content: errorContent },
+    429: { description: "Rate limited", content: errorContent },
   },
 });

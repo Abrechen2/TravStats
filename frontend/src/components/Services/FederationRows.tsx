@@ -18,7 +18,7 @@ import {
   SwitchControl,
 } from "../ui/settings";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
-import { ConnectionFileDownload } from "../Admin/FederationConnectionFile";
+import { ConnectionFileDownload, ConnectionQr } from "../Admin/FederationConnectionFile";
 import FederationPeerForm, { type PeerValues } from "../Admin/FederationPeerForm";
 import FederationSetupChecklist, { CONTROL } from "../Admin/FederationSetupChecklist";
 import { useLoaded } from "./useLoaded";
@@ -213,6 +213,14 @@ export default function FederationRows(): JSX.Element | null {
                 disabled={busy}
                 stale={!readOnly && origin !== null && origin !== state.origin}
                 onError={setErrorKey}
+              />
+            ) : null}
+            {state.origin && state.publicKey ? (
+              <ConnectionQr
+                origin={state.origin}
+                publicKey={state.publicKey}
+                fingerprint={state.fingerprint}
+                stale={!readOnly && origin !== null && origin !== state.origin}
               />
             ) : null}
           </div>

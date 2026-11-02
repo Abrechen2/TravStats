@@ -5,13 +5,15 @@
  * The peer routes moved here unchanged from the comparison router, where any admin
  * reached them through a user page.
  *
- * No rate limiter, like every route here (see `admin/index.ts`): all are admin-only and
+ * `POST /peers` carries its own limiter (a PAT-driven Companion reaches it); the rest have none, like
+ * every route here (see `admin/index.ts`): all are admin-only and
  * cheap; the connection-file upload is capped at 64 KB and inflates one bounded entry.
  */
 import { Router, type Response, type NextFunction } from "express";
 import { generateKeyPairSync } from "crypto";
 import multer, { MulterError } from "multer";
 import { prisma } from "../../db";
+import { peerPinLimiter } from "../../middleware/rateLimit";
 import type { AuthRequest } from "../../middleware/auth";
 import logger from "../../utils/logger";
 import { encryptApiKey } from "../../utils/encryption";
@@ -28,6 +30,7 @@ import {
   connectionFileName,
   CONNECTION_FILE_MAX_BYTES,
   readConnectionFile,
+  readServerQrPayload,
 } from "../../services/federation/connectionFile";
 import { parsePeerPublicKey } from "../../services/federation/peerKey";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
@@ -35,6 +38,8 @@ import { endGuestsOfOrigin } from "../../services/travplan/guests/sessions";
 import {
   federationSettingsSchema,
   peerOriginSchema,
+  peerPinFromFileSchema,
+  peerPinFromQrSchema,
   peerPinSchema,
   pingReplySchema,
   tripSharingSwitchSchema,
@@ -152,51 +157,83 @@ router.post(
   })
 );
 
+/** What the pin route answers: the federation state plus the peer exactly as the server stored it. */
+async function pin(
+  body: { origin: string; publicKey: string; fingerprint: string; enabled: boolean },
+  res: Response
+): Promise<void> {
+  const own = await currentIdentity();
+  if (own && body.origin === own.origin)
+    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
+  const pem = parsePeerPublicKey(body.publicKey);
+  if (!pem)
+    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
+      origin: body.origin,
+    });
+  if (hash(pem) !== body.fingerprint)
+    throw comparisonError(
+      "COMPARISON_PEER_KEY_INVALID",
+      400,
+      "Fingerprint does not match the key",
+      {
+        origin: body.origin,
+      }
+    );
+  const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
+  if (previous && previous.publicKey !== pem) {
+    // A replaced key ends every E2E friendship through it, exactly as before the move.
+    // Leaderboard friendships (LeaderboardRemote) deliberately survive (controller ruling):
+    // they are addressed by origin + channel, not by the key, and nothing flows over them
+    // until the admin re-verifies the new pin (verifiedAt is reset below).
+    await prisma.comparisonLink.updateMany({
+      where: { origin: body.origin },
+      data: { revoked: true },
+    });
+  }
+  await prisma.comparisonPeer.upsert({
+    where: { origin: body.origin },
+    create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
+    update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
+  });
+  // Trips shared across servers through it pause until each person confirms them again
+  // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
+  if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
+  else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
+  // Guests of a plan who came in through that server lose their access with its pin (forgejo#404).
+  if (previous && (previous.publicKey !== pem || !body.enabled))
+    await endGuestsOfOrigin(body.origin);
+  const full = await state();
+  // `peer` and `computedFingerprint` serve the Companion (spec 2026-11-02 §6): the fingerprint
+  // is the one THIS server hashed from the key, to show beside the one printed in the QR.
+  res.json({
+    ...full,
+    peer: full.peers.find((p) => p.origin === body.origin) ?? null,
+    computedFingerprint: hash(pem),
+  });
+}
+
+/**
+ * Pins a peer from explicit values (the web form), a scanned QR payload `{qr}` or a connection
+ * file as base64 `{connectionFile}` (the Companion). All three are validated alike; a pin is
+ * unverified (`verifiedAt: null`) until `POST /peers/verify` succeeds.
+ */
 router.post(
   "/peers",
+  peerPinLimiter,
   handle(async (req, res) => {
-    const body = peerPinSchema.parse(req.body);
-    const own = await currentIdentity();
-    if (own && body.origin === own.origin)
-      throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
-    const pem = parsePeerPublicKey(body.publicKey);
-    if (!pem)
-      throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
-        origin: body.origin,
-      });
-    if (hash(pem) !== body.fingerprint)
-      throw comparisonError(
-        "COMPARISON_PEER_KEY_INVALID",
-        400,
-        "Fingerprint does not match the key",
-        {
-          origin: body.origin,
-        }
-      );
-    const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
-    if (previous && previous.publicKey !== pem) {
-      // A replaced key ends every E2E friendship through it, exactly as before the move.
-      // Leaderboard friendships (LeaderboardRemote) deliberately survive (controller ruling):
-      // they are addressed by origin + channel, not by the key, and nothing flows over them
-      // until the admin re-verifies the new pin (verifiedAt is reset below).
-      await prisma.comparisonLink.updateMany({
-        where: { origin: body.origin },
-        data: { revoked: true },
-      });
+    const raw: unknown = req.body;
+    if (raw && typeof raw === "object" && "qr" in raw) {
+      const { qr, enabled } = peerPinFromQrSchema.parse(raw);
+      await pin({ ...readServerQrPayload(qr), enabled }, res);
+      return;
     }
-    await prisma.comparisonPeer.upsert({
-      where: { origin: body.origin },
-      create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
-      update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
-    });
-    // Trips shared across servers through it pause until each person confirms them again
-    // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
-    if (previous && previous.publicKey !== pem) await holdPeerMemberships(body.origin, "repinned");
-    else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
-    // Guests of a plan who came in through that server lose their access with its pin (forgejo#404).
-    if (previous && (previous.publicKey !== pem || !body.enabled))
-      await endGuestsOfOrigin(body.origin);
-    res.json(await state());
+    if (raw && typeof raw === "object" && "connectionFile" in raw) {
+      const { connectionFile, enabled } = peerPinFromFileSchema.parse(raw);
+      const bytes = Buffer.from(connectionFile, "base64");
+      await pin({ ...readConnectionFile(bytes), enabled }, res);
+      return;
+    }
+    await pin(peerPinSchema.parse(raw), res);
   })
 );
 

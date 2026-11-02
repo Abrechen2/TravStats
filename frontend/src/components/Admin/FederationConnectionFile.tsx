@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import type { JSX } from "react";
 import {
   federationAdminApi,
@@ -100,6 +101,40 @@ export function ConnectionFileImport(props: {
         {t(`${NS}.importFile`)}
       </Button>
       <p className="t-caption">{t(`${NS}.importHint`)}</p>
+    </div>
+  );
+}
+
+/** The QR payload (spec 2026-11-02 §6): the connection file's three values, nothing secret. */
+export function serverQrPayload(v: { origin: string; publicKey: string; fingerprint: string }) {
+  return JSON.stringify({ v: 1, k: "server", u: v.origin, key: v.publicKey, fp: v.fingerprint });
+}
+
+/** The own connection file as a QR for the other admin's Companion. */
+export function ConnectionQr(props: {
+  origin: string;
+  publicKey: string;
+  fingerprint: string;
+  stale: boolean;
+}): JSX.Element {
+  const { t } = useTranslation(["admin"]);
+  return (
+    <div>
+      <p className="t-caption">{t(`${NS}.qrTitle`)}</p>
+      {props.stale ? (
+        <p className="t-caption">{t(`${NS}.downloadOriginPending`)}</p>
+      ) : (
+        <div style={{ background: "#fff", padding: 12, display: "inline-block" }}>
+          <QRCodeSVG
+            value={serverQrPayload(props)}
+            size={192}
+            level="M"
+            data-testid="server-qr"
+            aria-label={t(`${NS}.qrAlt`)}
+          />
+        </div>
+      )}
+      <p className="t-caption">{t(`${NS}.qrHint`)}</p>
     </div>
   );
 }
