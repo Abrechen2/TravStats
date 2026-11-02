@@ -72,6 +72,7 @@
     "geo-tz": "^8.1.8",
     "heic-convert": "^2.1.0",
     "helmet": "^8.3.0",
+    "imapflow": "^1.0.198",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.3.0",
     "node-cache": "^5.1.2",
