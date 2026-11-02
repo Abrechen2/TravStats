@@ -117,37 +117,17 @@ export async function uploadPlanDocument(
     const again = (await listPlanDocuments(actor, tripId)).find((d) => d.id === repeat.documentId);
     if (again) return again;
   }
-  const template = await prisma.document.findFirst({
-    where: { userId: access.ownerId, sha256 },
-    select: { storedName: true, mimetype: true, sizeBytes: true, pageCount: true, format: true },
+  // All of createDocument's checks run, then a row of the uploader's own: its name, declared type
+  // and detected format, over the stored file the owner's row may already share.
+  const { document } = await createDocument({
+    userId: access.ownerId,
+    buffer: file.buffer,
+    originalName: file.originalname,
+    declaredMime: file.mimetype,
+    source: "upload",
+    entry: { type: "trip", id: tripId },
+    separateRow: true,
   });
-  // A separate row over the same stored file (files are named by content and shared by rows);
-  // nothing the owner's row parsed or filed travels with it.
-  const document = template
-    ? await prisma.document.create({
-        data: {
-          userId: access.ownerId,
-          tripId,
-          storedName: template.storedName,
-          originalName: file.originalname.slice(0, 200),
-          mimetype: template.mimetype,
-          sizeBytes: template.sizeBytes,
-          sha256,
-          pageCount: template.pageCount,
-          format: template.format,
-          source: "upload",
-        },
-      })
-    : (
-        await createDocument({
-          userId: access.ownerId,
-          buffer: file.buffer,
-          originalName: file.originalname,
-          declaredMime: file.mimetype,
-          source: "upload",
-          entry: { type: "trip", id: tripId },
-        })
-      ).document;
   {
     try {
       // The plan row is locked for the count and the insert, so fifty means fifty.

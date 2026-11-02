@@ -267,6 +267,13 @@ export interface CreateDocumentInput {
   entry?: EntryRef | null;
   /** A rental's evidence category (forgejo#239); only with a rentalBooking entry. */
   rentalCategory?: RentalDocumentCategory | null;
+  /**
+   * Always write a row of its own, even when the same bytes are already filed (or unfiled) on the
+   * account. Every check above still runs; the stored file is shared by content name, so only the
+   * row is new. A plan upload uses it so that an upload never behaves differently, or fails
+   * differently, because the owner happens to hold the same file.
+   */
+  separateRow?: boolean;
 }
 
 export interface CreateDocumentResult {
@@ -334,9 +341,11 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   const sha256 = sha256Hex(input.buffer);
 
   // Idempotency: the same bytes for the same target are the same document.
-  const sameTarget = await prisma.document.findFirst({
-    where: { userId: input.userId, sha256, ...(entry ? ownerWhere(entry) : NO_OWNER) },
-  });
+  const sameTarget = input.separateRow
+    ? null
+    : await prisma.document.findFirst({
+        where: { userId: input.userId, sha256, ...(entry ? ownerWhere(entry) : NO_OWNER) },
+      });
   if (sameTarget) {
     // The same file sent again for the same rental under a category: a still
     // uncategorised copy takes it (review, minor 4). One already filed under
@@ -354,7 +363,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
 
   // A retried offline send may arrive with a target after the first attempt
   // went up unfiled: file that one rather than keeping two copies.
-  if (entry) {
+  if (entry && !input.separateRow) {
     const unfiled = await prisma.document.findFirst({
       where: { userId: input.userId, sha256, ...NO_OWNER },
     });

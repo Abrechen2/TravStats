@@ -721,6 +721,24 @@ describe("TravPlan plan documents (D6)", () => {
       cookie: guest.cookie,
     });
     expect(hidden.status).toBe(404);
+    // A wrong declared type gets the same answer whether or not the owner holds those bytes.
+    const wrong = (planId: string, buf: Buffer) =>
+      request(app)
+        .post(`/api/v1/guest/plans/${planId}/documents`)
+        .set("Cookie", "ts_guest=" + guest.cookie)
+        .set("X-TravStats-Guest", "1")
+        .field("format", "pdf")
+        .attach("file", buf, { filename: "x.exe", contentType: "application/x-msdownload" });
+    const held = text("held");
+    const heldOwn = await request(app)
+      .post(`/api/v1/trips/${plan.tripId}/plan/documents`)
+      .set("Cookie", userCookie(owner))
+      .attach("file", held, { filename: "held.txt", contentType: "text/plain" });
+    await prisma.travelPlanDocument.deleteMany({ where: { documentId: heldOwn.body.id } });
+    const wrongNew = await wrong(plan.planId, text("fresh"));
+    const wrongSame = await wrong(plan.planId, held);
+    expect(wrongSame.status).toBe(wrongNew.status);
+    expect(wrongSame.body).toEqual(wrongNew.body);
     // A real repeat by the same member is answered with their existing document.
     const repeat = await upload(plan.planId, guest, "copy.txt", bytes);
     expect(repeat.body.id).toBe(same.body.id);
