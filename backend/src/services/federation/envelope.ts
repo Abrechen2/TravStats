@@ -11,19 +11,12 @@
 import { createPublicKey, randomBytes, sign, verify, type KeyObject } from "crypto";
 import { z } from "zod";
 import { refused } from "./refusal";
+import { peerOriginAcceptable } from "./peerAddressPolicy";
 
 export const origin = z
   .string()
   .max(250)
-  .refine((v) => {
-    if (v === "local") return true;
-    try {
-      const u = new URL(v);
-      return u.protocol === "https:" && u.origin === v && !u.username && !u.password && !u.port;
-    } catch {
-      return false;
-    }
-  });
+  .refine((v) => v === "local" || peerOriginAcceptable(v));
 
 export const ENVELOPE_PURPOSES = ["comparison/1", "trip-share/1"] as const;
 export type EnvelopePurpose = (typeof ENVELOPE_PURPOSES)[number];

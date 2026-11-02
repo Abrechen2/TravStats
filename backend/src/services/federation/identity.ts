@@ -3,6 +3,7 @@ import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { decryptApiKey } from "../../utils/encryption";
 import { hash, refused } from "./refusal";
+import { origin as originSchema } from "./envelope";
 
 export type IdentitySource = "settings";
 export interface Identity {
@@ -45,6 +46,15 @@ export async function loadIdentity(): Promise<Identity> {
   });
   if (!row?.federationEnabled || !row.federationOrigin || !row.federationPrivateKey)
     throw refused("federation-off");
+  // The own origin obeys the same policy as a peer's: an http LAN address saved while
+  // FEDERATION_PRIVATE_PEERS was set reads as "federation off" once it is removed.
+  if (!originSchema.safeParse(row.federationOrigin).success) {
+    logger.warn(
+      { origin: row.federationOrigin },
+      "Federation origin is not allowed by the peer address policy (FEDERATION_PRIVATE_PEERS)"
+    );
+    throw refused("federation-off");
+  }
   const config = `settings|${row.federationOrigin}|${hash(row.federationPrivateKey)}`;
   if (cached?.config === config) return cached.value;
   const pem = decryptApiKey(row.federationPrivateKey);
