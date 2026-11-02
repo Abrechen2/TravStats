@@ -435,4 +435,113 @@ describe("TravPlan co-planners on the same server", () => {
       await prisma.user.update({ where: { id: editor }, data: { isActive: true } });
     }
   });
+
+  describe("undo", () => {
+    const idea = (title: string) => ({
+      type: "upsert",
+      collection: "ideas",
+      value: {
+        id: randomUUID(),
+        title,
+        category: "",
+        priority: "optional",
+        note: "",
+        itemId: null,
+      },
+    });
+    const undo = (tripId: string, revision: number, mutationId: string, who: string) =>
+      write(tripId, revision, { type: "undo", mutationId }, who);
+    async function joined() {
+      await consent(owner, editor);
+      await consent(editor, owner);
+      const plan = await newPlan();
+      await join(plan.tripId);
+      return plan;
+    }
+    const setBefore = async (
+      mutationId: string,
+      edit: (state: Record<string, unknown>) => void
+    ) => {
+      const row = await prisma.travelPlanMutation.findUniqueOrThrow({ where: { id: mutationId } });
+      const before = row.before as unknown as { state: Record<string, unknown> };
+      edit(before.state);
+      await prisma.travelPlanMutation.update({
+        where: { id: mutationId },
+        data: { before: before as never },
+      });
+    };
+
+    it("refuses a co-planner's undo of somebody else's change, and the owner may still undo it", async () => {
+      const plan = await joined();
+      const made = await write(plan.tripId, plan.revision, idea("Owner idea"), owner);
+      const refused = await undo(plan.tripId, made.body.revision, made.body.lastMutationId, editor);
+      expect([refused.status, refused.body.code]).toEqual([403, "PLAN_OWNER_ONLY"]);
+      expect(
+        (await undo(plan.tripId, made.body.revision, made.body.lastMutationId, owner)).status
+      ).toBe(200);
+    });
+
+    it("fails closed on a receipt that names no author or no operation", async () => {
+      const plan = await joined();
+      const made = await write(plan.tripId, plan.revision, idea("Mine"), editor);
+      await prisma.travelPlanMutation.update({
+        where: { id: made.body.lastMutationId },
+        data: { summary: "", actorMemberId: null },
+      });
+      const refused = await undo(plan.tripId, made.body.revision, made.body.lastMutationId, editor);
+      expect([refused.status, refused.body.code]).toEqual([403, "PLAN_OWNER_ONLY"]);
+    });
+
+    it("keeps the AI policy as it is now when a co-planner undoes their own change", async () => {
+      const plan = await joined();
+      const ai = { type: "settings", values: { ai: { enabled: true, policy: "local_only" } } };
+      const aiOn = await write(plan.tripId, plan.revision, ai, owner);
+      const mine = await write(plan.tripId, aiOn.body.revision, idea("Mine"), editor);
+      await setBefore(mine.body.lastMutationId, (state) => {
+        state.ai = { enabled: true, policy: "cloud_allowed" };
+      });
+      const done = await undo(plan.tripId, mine.body.revision, mine.body.lastMutationId, editor);
+      expect(done.status).toBe(200);
+      expect(done.body.state.ai).toEqual({ enabled: true, policy: "local_only" });
+    });
+
+    it("never takes another member's personal packing or note from the snapshot", async () => {
+      const plan = await joined();
+      const personal = packing("Owner passport", "personal");
+      const added = await write(plan.tripId, plan.revision, personal, owner);
+      const noted = await write(
+        plan.tripId,
+        added.body.revision,
+        { type: "member_note", text: "Owner secret" },
+        owner
+      );
+      const mine = await write(plan.tripId, noted.body.revision, idea("Mine"), editor);
+      // A snapshot that lacks the owner's private parts, as an old one would.
+      await setBefore(mine.body.lastMutationId, (state) => {
+        state.packing = [];
+        state.memberNotes = [];
+      });
+      const done = await undo(plan.tripId, mine.body.revision, mine.body.lastMutationId, editor);
+      expect(done.status).toBe(200);
+      const stored = await prisma.travelPlan.findFirstOrThrow({ where: { tripId: plan.tripId } });
+      const state = stored.state as unknown as {
+        packing: { label: string }[];
+        memberNotes: { text: string }[];
+      };
+      expect(state.packing.map((p) => p.label)).toEqual(["Owner passport"]);
+      expect(state.memberNotes.map((n) => n.text)).toEqual(["Owner secret"]);
+      // ... and the editor's response does not show them.
+      expect(done.body.state.packing).toEqual([]);
+    });
+
+    it("refuses a co-planner's undo that would change an execution", async () => {
+      const plan = await joined();
+      const mine = await write(plan.tripId, plan.revision, idea("Mine"), editor);
+      await setBefore(mine.body.lastMutationId, (state) => {
+        state.handoverRevision = 7;
+      });
+      const refused = await undo(plan.tripId, mine.body.revision, mine.body.lastMutationId, editor);
+      expect([refused.status, refused.body.code]).toEqual([403, "PLAN_OWNER_ONLY"]);
+    });
+  });
 });

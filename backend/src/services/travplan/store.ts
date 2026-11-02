@@ -12,11 +12,11 @@ import { applyOperation, applyProposal } from "./operations";
 import { mirrorEmptyTrip } from "./metadata";
 import { newTripColor } from "../trip/newTripColor";
 import { adoptExisting } from "./existing";
-import { ensureOwnerMember, planAccess, selfOf, assertOwner, type PlanAccess } from "./access";
+import { ensureOwnerMember, planAccess, selfOf, type PlanAccess } from "./access";
 import {
   applyMemberNote,
   authorizeOperation,
-  isLogbookSummary,
+  constrainUndo,
   summaryOf,
   visibleState,
 } from "./privacy";
@@ -151,7 +151,12 @@ export async function listPlans(userId: string): Promise<PlanSummary[]> {
     FROM travel_plans p JOIN trips t ON t.id=p.trip_id JOIN users o ON o.id=t.user_id
     WHERE t.user_id=${userId} OR EXISTS (
       SELECT 1 FROM travel_plan_members m
-      WHERE m.plan_id=p.id AND m.user_id=${userId} AND m.kind='local' AND m.status='active')
+      WHERE m.plan_id=p.id AND m.user_id=${userId} AND m.kind='local' AND m.status='active'
+        -- The same rule as planAccess: the consent pair must still stand in both directions.
+        AND EXISTS (SELECT 1 FROM share_consents c WHERE c.requester_id=t.user_id
+          AND c.target_id=${userId} AND c.status='accepted')
+        AND EXISTS (SELECT 1 FROM share_consents c WHERE c.requester_id=${userId}
+          AND c.target_id=t.user_id AND c.status='accepted'))
     ORDER BY p.updated_at DESC LIMIT 500
   `;
 }
@@ -387,9 +392,8 @@ export async function writePlan(
         if (!change)
           throw new AppError("Only the latest change can be undone", 409, "PLAN_UNDO_STALE");
         // Undoing a confirmation or a handover would delete or write the owner's logbook records.
-        if (!actor.isOwner && isLogbookSummary(change.summary)) assertOwner(access);
         const saved = change.before as unknown as { state: PlanState; name: string };
-        next = parseState(saved.state);
+        next = constrainUndo(before, parseState(saved.state), actor, change);
         name = saved.name;
         // Records in the logbook are not part of the plan's undo: withdraw the station instead.
         if (canonical(next.stationLinks) !== canonical(before.stationLinks))
@@ -530,7 +534,8 @@ export async function writePlan(
     if (operation.type === "handover" || operation.type === "station_handover") {
       const shares: PlanMemberShare[] = await shareWithAllMembers(access, tripId).catch((error) => {
         logger.warn({ operation: "travplan.shareMembers", error: String(error) }, "share failed");
-        return [];
+        // The handover is committed; say that no copy was made rather than report nothing.
+        return [{ memberId: "", displayName: "", ok: false, code: "PLAN_SHARE_FAILED" }];
       });
       if (shares.length) return { ...committed, memberShares: shares };
     }

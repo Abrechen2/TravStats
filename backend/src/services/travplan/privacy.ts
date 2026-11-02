@@ -103,6 +103,45 @@ export function authorizeOperation(
   return operation;
 }
 
+/**
+ * An undo restores a snapshot, so it is cut down to what the actor could have done by hand:
+ *  - every member's own personal parts stay as they are NOW (packing items and notes of members
+ *    other than the actor are taken from the current state, never from the snapshot);
+ *  - a co-planner may undo only their own change, and a receipt that names no author or no known
+ *    operation is refused (fail closed), because it cannot be shown to be theirs;
+ *  - a co-planner's undo keeps the owner-only fields (AI policy) as they are now and may not
+ *    change anything the logbook reads (executions, handover mark).
+ */
+export function constrainUndo(
+  current: PlanState,
+  restored: PlanState,
+  actor: Actor,
+  change: { actorMemberId: string | null; summary: string }
+): PlanState {
+  const merged: PlanState = {
+    ...restored,
+    packing: [
+      ...restored.packing.filter((p) => p.scope === "shared" || isMine(p, actor)),
+      ...current.packing.filter((p) => p.scope === "personal" && !isMine(p, actor)),
+    ],
+    memberNotes: [
+      ...restored.memberNotes.filter((n) => n.memberId === actor.memberId),
+      ...current.memberNotes.filter((n) => n.memberId !== actor.memberId),
+    ],
+  };
+  if (actor.isOwner) return merged;
+  if (!change.actorMemberId || change.actorMemberId !== actor.memberId || !change.summary)
+    throw ownerOnly();
+  if (isLogbookSummary(change.summary)) throw ownerOnly();
+  const logbook = (st: PlanState) =>
+    canonical({
+      handoverRevision: st.handoverRevision,
+      executions: st.items.map((i) => [i.id, i.execution]),
+    });
+  if (logbook(current) !== logbook(merged)) throw ownerOnly();
+  return { ...merged, ai: current.ai };
+}
+
 /** Sets (or, for empty text, clears) the actor's own note. */
 export function applyMemberNote(state: PlanState, memberId: string, text: string): PlanState {
   const others = state.memberNotes.filter((n) => n.memberId !== memberId);

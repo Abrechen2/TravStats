@@ -164,7 +164,8 @@
     "PLAN_OWNER_CANNOT_LEAVE": "As the owner you delete the plan instead of leaving it.",
     "SHARE_USER_NOT_FOUND": "This person's account is no longer active.",
     "SHARE_CONSENT_REQUIRED": "This person has not (or no longer) allowed sharing with you.",
-    "SHARE_GROUP_CONSENT_REQUIRED": "Not everyone on this trip has agreed to sharing with this person."
+    "SHARE_GROUP_CONSENT_REQUIRED": "Not everyone on this trip has agreed to sharing with this person.",
+    "PLAN_SHARE_FAILED": "The trip could not be shared."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -652,7 +653,9 @@
     "noteTitle": "My note",
     "noteHint": "Only you see this note - the other co-planners do not.",
     "brings": "Who brings it?",
-    "bringsNobody": "Nobody yet"
+    "bringsNobody": "Nobody yet",
+    "shareFailed": "The linked copy of the trip could not be given to {{names}}. You can retry in the co-planners dialog.",
+    "everyone": "everyone"
   },
   "conflictBy": "{{name}} has changed the plan in the meantime. Your input is still there - check the current state and save again.",
   "readAs": "Read as",

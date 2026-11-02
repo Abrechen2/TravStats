@@ -164,7 +164,8 @@
     "PLAN_OWNER_CANNOT_LEAVE": "Als Besitzer:in löschst du den Plan, statt ihn zu verlassen.",
     "SHARE_USER_NOT_FOUND": "Das Konto dieser Person ist nicht mehr aktiv.",
     "SHARE_CONSENT_REQUIRED": "Diese Person hat das Teilen mit dir nicht (mehr) zugelassen.",
-    "SHARE_GROUP_CONSENT_REQUIRED": "Nicht alle Beteiligten dieser Reise haben dem Teilen mit dieser Person zugestimmt."
+    "SHARE_GROUP_CONSENT_REQUIRED": "Nicht alle Beteiligten dieser Reise haben dem Teilen mit dieser Person zugestimmt.",
+    "PLAN_SHARE_FAILED": "Die Reise konnte nicht geteilt werden."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -652,7 +653,9 @@
     "noteTitle": "Meine Notiz",
     "noteHint": "Nur du siehst diese Notiz, auch die anderen Mitplaner nicht.",
     "brings": "Wer bringt es mit?",
-    "bringsNobody": "Noch niemand"
+    "bringsNobody": "Noch niemand",
+    "shareFailed": "Die verknüpfte Kopie der Reise konnte nicht an {{names}} gehen. Im Mitplaner-Dialog kannst du es erneut versuchen.",
+    "everyone": "alle"
   },
   "conflictBy": "{{name}} hat den Plan inzwischen geändert. Deine Eingabe ist noch da – prüfe den aktuellen Stand und speichere erneut.",
   "readAs": "Lesen als",

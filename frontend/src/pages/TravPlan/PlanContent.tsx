@@ -219,6 +219,16 @@ export default function PlanContent({ tripId, section }: { tripId: string; secti
         busy={busy}
         onUndo={(mutationId) => void mutate({ type: "undo", mutationId })}
       />
+      {plan.memberShares?.some((m) => !m.ok) && (
+        <PlanNotice tone="bad">
+          {t("members.shareFailed", {
+            names: plan.memberShares
+              .filter((m) => !m.ok)
+              .map((m) => m.displayName || t("members.everyone"))
+              .join(", "),
+          })}
+        </PlanNotice>
+      )}
       <MemberNotices collab={collab} onRead={() => void markRead()} />
       {section === "overview" && <OverviewSection ctx={ctx} />}
       {section === "overview" && (

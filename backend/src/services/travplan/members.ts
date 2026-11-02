@@ -150,10 +150,6 @@ export async function inviteLocalMember(
   });
   if (existing && (existing.status === "invited" || existing.status === "active"))
     throw new AppError("Already invited", 409, "PLAN_MEMBER_DUPLICATE");
-  const open = await prisma.travelPlanMember.count({
-    where: { planId, kind: { not: "owner" }, status: { in: ["invited", "active"] } },
-  });
-  if (open >= MAX_PLAN_MEMBERS) throw new AppError("Too many members", 409, "PLAN_MEMBER_LIMIT");
   const data = {
     displayName: toPerson(invitee).displayName,
     status: "invited",
@@ -162,11 +158,20 @@ export async function inviteLocalMember(
     revokedAt: null,
     sharedAt: null,
   };
-  const row = existing
-    ? await prisma.travelPlanMember.update({ where: { id: existing.id }, data })
-    : await prisma.travelPlanMember.create({
-        data: { ...data, planId, kind: "local", userId: invitee.id, role: "editor" },
-      });
+  // The plan row is locked for the count and the insert: two invitations at once cannot both
+  // find room for the last place.
+  const row = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM travel_plans WHERE id = ${planId} FOR UPDATE`;
+    const open = await tx.travelPlanMember.count({
+      where: { planId, kind: { not: "owner" }, status: { in: ["invited", "active"] } },
+    });
+    if (open >= MAX_PLAN_MEMBERS) throw new AppError("Too many members", 409, "PLAN_MEMBER_LIMIT");
+    return existing
+      ? tx.travelPlanMember.update({ where: { id: existing.id }, data })
+      : tx.travelPlanMember.create({
+          data: { ...data, planId, kind: "local", userId: invitee.id, role: "editor" },
+        });
+  });
   return toMember(row, invitee.username, true);
 }
 
@@ -226,10 +231,12 @@ export async function respondToInvitation(
       403,
       "PLAN_MEMBER_CONSENT_WITHDRAWN"
     );
-  await prisma.travelPlanMember.update({
-    where: { id: row.id },
+  // Only an invitation that is still open: the owner may have withdrawn it meanwhile.
+  const joined = await prisma.travelPlanMember.updateMany({
+    where: { id: row.id, status: "invited" },
     data: { status: "active", joinedAt: new Date() },
   });
+  if (joined.count !== 1) throw new AppError("Invitation not found", 404, "PLAN_MEMBER_NOT_FOUND");
   return { status: "active" };
 }
 
