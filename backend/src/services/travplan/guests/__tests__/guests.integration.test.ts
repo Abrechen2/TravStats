@@ -935,9 +935,9 @@ describe("TravPlan plan documents (D6)", () => {
     // The guest door answers an ended access with its one code (401 PLAN_GUEST_REQUIRED), as for the plan itself.
     expect((await exportOf(plan.planId, guest.cookie)).status).toBe(401);
     // The owner's removal also deletes the credential.
-    const other = await joinGuest(plan, { username: "second" });
-    await call("delete", `/trips/${plan.tripId}/plan/members/${other.memberId}`, owner);
-    expect((await exportOf(plan.planId, other.cookie)).status).toBe(401);
+    const second = await joinGuest(plan, { username: "second", who: other });
+    await call("delete", `/trips/${plan.tripId}/plan/members/${second.memberId}`, owner);
+    expect((await exportOf(plan.planId, second.cookie)).status).toBe(401);
   });
 
   it("refuses the export to a credential of another plan, and once the guest has left", async () => {
