@@ -699,7 +699,7 @@
     "listFailed": "Die Pläne von anderen Servern konnten nicht geladen werden.",
     "leave": "Plan verlassen",
     "export": "Reise als Datei sichern",
-    "exportHint": "Die .travstats-Datei enthält die Route und die bestätigten Einträge dieser Reise, ohne Notizen, Preise, Fotos und Dokumente des Gastgebers. Du kannst sie auf deinem eigenen TravStats-Server importieren.",
+    "exportHint": "Die .travstats-Datei enthält die Route und die bestätigten Einträge dieser Reise, ohne Notizen, Preise, Fotos und Dokumente der Besitzerin oder des Besitzers des Plans. Du kannst sie auf deinem eigenen TravStats-Server importieren.",
     "exportFailed": "Die Datei konnte nicht erstellt werden. Bitte erneut versuchen.",
     "unreachableTitle": "Der Server dieses Plans antwortet nicht",
     "ended": {

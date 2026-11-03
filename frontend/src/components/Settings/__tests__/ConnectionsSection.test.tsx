@@ -195,7 +195,7 @@ describe("Verbindungen", () => {
     await userEvent.click(within(row).getByText(`${KEY}.end.action`));
     expect(api.end).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("dialog");
-    await userEvent.click(within(dialog).getByText(`${KEY}.end.action`));
+    await userEvent.click(within(dialog).getByText(/settingsRows:dialogs\.connectionend\.confirm/));
     await waitFor(() => expect(api.end).toHaveBeenCalledWith("c1"));
     await screen.findByText(`${KEY}.state.revoked`);
   });

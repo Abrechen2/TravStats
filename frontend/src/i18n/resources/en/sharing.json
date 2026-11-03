@@ -875,7 +875,7 @@
       "waiting": {
         "title": "Waiting for your answer",
         "asks": "Wants to connect and gives you: {{gives}}",
-        "reconfirm": "This connection existed before connections. Trips already shared keep running; anything new starts only after both of you confirmed once.",
+        "reconfirm": "This pairing predates the introduction of connections. Trips already shared keep running; anything new starts only after both of you confirmed once.",
         "confirm": "Confirm …",
         "decline": "Decline"
       },
@@ -904,9 +904,7 @@
       "change": "Change settings",
       "withdraw": "Withdraw request",
       "end": {
-        "action": "End",
-        "title": "End connection?",
-        "message": "What {{name}} sees of you ends at once: statistics, leaderboard, open trip offers and plans. Trips already shared keep their linked copies."
+        "action": "End"
       },
       "cancel": "Cancel",
       "close": "Close",

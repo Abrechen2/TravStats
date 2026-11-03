@@ -252,6 +252,13 @@
       "confirm": "Beenden",
       "amount": "Alle Reisen, die du mit dieser Person teilst"
     },
+    "connectionend": {
+      "title": "Verbindung beenden?",
+      "affects": "{{name}}",
+      "amount": "Statistik, Rangliste, offene Reiseangebote und Pläne, die diese Person von dir sieht",
+      "after": "Was die Person bisher von dir sieht, endet sofort. Bereits geteilte Reisen behalten ihre verknüpften Kopien.",
+      "confirm": "Beenden"
+    },
     "merge": {
       "title": "{{from}} in {{to}} aufgehen lassen?",
       "affects": "{{from}}",

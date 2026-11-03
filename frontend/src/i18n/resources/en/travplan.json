@@ -699,7 +699,7 @@
     "listFailed": "The plans from other servers could not be loaded.",
     "leave": "Leave plan",
     "export": "Save the trip as a file",
-    "exportHint": "The .travstats file holds the route and the confirmed entries of this trip, without the host's notes, prices, photos and documents. You can import it on your own TravStats server.",
+    "exportHint": "The .travstats file holds the route and the confirmed entries of this trip, without the plan owner's notes, prices, photos and documents. You can import it on your own TravStats server.",
     "exportFailed": "The file could not be created. Please try again.",
     "unreachableTitle": "The server of this plan is not answering",
     "ended": {

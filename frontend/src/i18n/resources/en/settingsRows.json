@@ -252,6 +252,13 @@
       "confirm": "Stop",
       "amount": "All trips you share with this person"
     },
+    "connectionend": {
+      "title": "End this connection?",
+      "affects": "{{name}}",
+      "amount": "The statistics, leaderboard, open trip offers and plans this person sees of you",
+      "after": "What the person has seen of you so far ends immediately. Trips already shared keep their linked copies.",
+      "confirm": "End"
+    },
     "merge": {
       "title": "Merge {{from}} into {{to}}?",
       "affects": "{{from}}",
