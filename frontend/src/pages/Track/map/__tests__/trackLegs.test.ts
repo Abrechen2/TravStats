@@ -15,7 +15,7 @@ describe("totalsFromAggregates", () => {
     ]);
     expect(out.distanceM).toBe(15_000);
     expect(out.movingMs).toBe(5_400_000);
-    expect(out.avgKmh).toBeCloseTo(10);
+    expect(out.avgKmh).toBe(1); // the drawing's moving-distance ratio, not distance over moving time
     expect(out.maxKmh).toBeCloseTo(90);
     expect(out.points).toBe(9);
   });

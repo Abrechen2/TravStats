@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { apiErrorMachineCode } from "../../../lib/apiError";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import {
   PICKABLE_MODES,
@@ -54,6 +55,8 @@ export default function TrackLegCard({
       useToastStore
         .getState()
         .addToast("error", t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }), 8000);
+      // The leg is gone (re-derived after late points): read the day so the stale one goes.
+      if (apiErrorMachineCode(err) === "TRAVTRACK_LEG_NOT_FOUND") await onChanged().catch(() => {});
       setBusy(false);
       return;
     }

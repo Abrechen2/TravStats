@@ -212,10 +212,10 @@ function anchorLayer(id: string, anchors: readonly MapAnchor[]): Layer {
 }
 
 export function buildTrackLayers(input: TrackLayerInput): Layer[] {
-  const dim = (input.selection?.length ?? 0) > 0;
+  const on = input.layers;
+  const dim = on.routes && (input.selection?.length ?? 0) > 0;
   // The picked leg stands out by the others stepping back, not by hiding them.
   const alpha = Math.round(input.opacity * 255 * (dim ? 0.3 : 1));
-  const on = input.layers;
   const out: Layer[] = [];
   // Under everything else: a country is the ground the line runs on.
   if (on.countries && input.countries.length > 0) {

@@ -61,7 +61,9 @@ export function totalsFromAggregates(
     ...base,
     distanceM,
     movingMs,
-    avgKmh: movingMs !== null && movingMs > 0 ? (distanceM / movingMs) * 1000 * MPS_TO_KMH : null,
+    // The aggregates carry no moving distance: the drawing's ratio (moving distance over moving
+    // time) stays the average, and goes unknown with the moving time.
+    avgKmh: movingMs === null ? null : base.avgKmh,
     maxKmh: speeds.length > 0 ? Math.max(...speeds) * MPS_TO_KMH : null,
   };
 }

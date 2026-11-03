@@ -56,6 +56,7 @@ type Loaded = Extract<DayResult, { kind: "loaded" }>;
 const NO_STRETCHES: TrackPoint[][] = [];
 const NO_SHAPES: Feature<Geometry>[] = [];
 const NO_LINES: LonLat[][] = [];
+const NO_LEG_LINES: MapLegLine[] = [];
 
 /** A flight named only by its id (a link): the panel reads its label from the server. */
 const flightById = (id: string): SelectedFlight => ({ id, label: "", href: `/flights/${id}` });
@@ -216,9 +217,12 @@ export default function TrackMapView(): JSX.Element {
   }, [pick, loaded]);
   // A pick the day no longer holds (re-derived after late points) is no pick.
   const activePick = resolved ? pick : null;
+  // The leg is cut from the whole stretches: while the replay runs it would show what the replay has not reached.
+  const replaying = replay.t !== null;
   const selectedLines = useMemo(
-    () => (resolved?.kind === "leg" ? legLines(resolved.day, resolved.leg) : NO_LINES),
-    [resolved]
+    () =>
+      resolved?.kind === "leg" && !replaying ? legLines(resolved.day, resolved.leg) : NO_LINES,
+    [resolved, replaying]
   );
   const stopList = useMemo<MapStop[]>(
     () =>
@@ -346,7 +350,7 @@ export default function TrackMapView(): JSX.Element {
                   frameLines={framed}
                   highlight={highlight}
                   selection={selectedLines}
-                  legLines={legLineList}
+                  legLines={replaying ? NO_LEG_LINES : legLineList}
                   onLeg={onLeg}
                   stops={stopList}
                   onStop={onStop}

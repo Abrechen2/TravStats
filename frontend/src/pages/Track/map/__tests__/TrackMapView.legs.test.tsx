@@ -284,6 +284,19 @@ describe("TrackMapView legs", () => {
     expect(api.day).toHaveBeenCalledTimes(1);
   });
 
+  it("a leg that no longer exists (404) is toasted and the day is read again so the stale leg goes", async () => {
+    legsApi.setMode.mockRejectedValue({
+      response: { status: 404, data: { code: "TRAVTRACK_LEG_NOT_FOUND" } },
+    });
+    renderDay();
+    await screen.findByTestId("map-stub");
+    fireEvent.click(screen.getByTestId("track-leg-row"));
+    api.day.mockImplementation(async () => dayWith([], [stop()]));
+    fireEvent.click(screen.getByRole("button", { name: "track:legs.mode.bus" }));
+    await waitFor(() => expect(screen.queryByTestId("track-leg-card")).not.toBeInTheDocument());
+    expect(useToastStore.getState().toasts[0].message).toContain("track:errors.legGone");
+  });
+
   it("the stop card shows span and stay status; an open stay is reviewed or declined from it", async () => {
     staysApi.reject.mockResolvedValue(undefined);
     renderDay();
