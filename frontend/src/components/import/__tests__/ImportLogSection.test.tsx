@@ -89,6 +89,7 @@ function renderList(
 describe("ImportLogSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it("renders rows from the fetched batches — source, fileName, date, created counts", async () => {
@@ -431,6 +432,86 @@ describe("ImportLogSection", () => {
         screen.getByText("lodging:import.batches.confirmMessage(count:5)")
       ).toBeInTheDocument();
       expect(screen.queryByText(/settings:import\.log\.confirm\.message/)).not.toBeInTheDocument();
+    });
+  });
+  describe("table parity with the domain lists (import-log-table)", () => {
+    const rowIds = (): string[] =>
+      screen.getAllByTestId(/^batch-row-/).map((r) => r.getAttribute("data-testid") ?? "");
+
+    it("is a sortable table: newest first by default, a header click re-sorts and flips", async () => {
+      vi.mocked(listImportBatches).mockResolvedValue([csvBatch, emailBatch, flightBatch]);
+      renderList();
+      await screen.findByText(/places\.csv/);
+      // Default: date, newest first (flight 08-01, csv 07-01, email 06-15).
+      expect(rowIds()).toEqual(["batch-row-batch-3", "batch-row-batch-1", "batch-row-batch-2"]);
+
+      // Contents sorts by what a revert would delete: flights 160 > 5 > 2.
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "settings:import.log.sortBy(col:settings:import.log.columns.contents)",
+        })
+      );
+      expect(rowIds()).toEqual(["batch-row-batch-3", "batch-row-batch-1", "batch-row-batch-2"]);
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "settings:import.log.sortBy(col:settings:import.log.columns.contents)",
+        })
+      );
+      expect(rowIds()).toEqual(["batch-row-batch-2", "batch-row-batch-1", "batch-row-batch-3"]);
+
+      // Date again: first click on a non-active column starts descending, the
+      // second flips to oldest first.
+      const dateSort = screen.getByRole("button", {
+        name: "settings:import.log.sortBy(col:settings:import.log.columns.date)",
+      });
+      await userEvent.click(dateSort);
+      await userEvent.click(dateSort);
+      expect(rowIds()).toEqual(["batch-row-batch-2", "batch-row-batch-1", "batch-row-batch-3"]);
+    });
+
+    it("remembers the sort across a reload", async () => {
+      vi.mocked(listImportBatches).mockResolvedValue([csvBatch, emailBatch]);
+      const first = renderList();
+      await screen.findByText(/places\.csv/);
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "settings:import.log.sortBy(col:settings:import.log.columns.source)",
+        })
+      );
+      first.unmount();
+      renderList();
+      await screen.findByText(/places\.csv/);
+      // source ascending: csv before email.
+      expect(rowIds()).toEqual(["batch-row-batch-1", "batch-row-batch-2"]);
+    });
+
+    it("lets a column be hidden through the column picker, but never the source or the actions", async () => {
+      vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
+      renderList();
+      await screen.findByText(/places\.csv/);
+      expect(screen.getByText("common:domain.lodging")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText(/common:table\.columns/));
+      expect(screen.getByTestId("column-toggle-source")).toBeDisabled();
+      expect(screen.getByTestId("column-toggle-actions")).toBeDisabled();
+      await userEvent.click(screen.getByTestId("column-toggle-area"));
+
+      expect(screen.queryByText("common:domain.lodging")).toBeNull();
+      // The row actions survive the hidden column.
+      expect(screen.getByTestId("batch-revert-batch-1")).toBeInTheDocument();
+    });
+
+    it("pages the log like the other lists", async () => {
+      const many: ImportBatchSummary[] = Array.from({ length: 60 }, (_, i) => ({
+        ...csvBatch,
+        id: `many-${String(i).padStart(2, "0")}`,
+        fileName: `f${i}.csv`,
+        createdAt: new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString(),
+      }));
+      vi.mocked(listImportBatches).mockResolvedValue(many);
+      renderList();
+      await screen.findAllByTestId(/^batch-row-/);
+      expect(rowIds()).toHaveLength(50);
     });
   });
 });

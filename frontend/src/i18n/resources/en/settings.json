@@ -622,7 +622,16 @@
     "openHub": "Import",
     "log": {
       "title": "Import log",
-      "scopeHint": "Every list import as a whole — newest first. Revertible as long as the entries still come from that import.",
+      "scopeHint": "Every list import as a whole. Revertible as long as the entries still come from that import.",
+      "columns": {
+        "area": "Area",
+        "source": "Source",
+        "date": "Date",
+        "contents": "Contents",
+        "actions": "Actions"
+      },
+      "sortBy": "Sort by {{col}}",
+      "sortedBy": "Sorted by {{col}}, {{dir}}",
       "counts": {
         "flights": "{{count}} flights",
         "flights_one": "{{count}} flight",

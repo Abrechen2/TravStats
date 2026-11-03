@@ -1,6 +1,15 @@
 import Modal from "../Modal";
-import { useCallback, useEffect, useState } from "react";
-import type { JSX } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import type { JSX, ReactNode } from "react";
+import { Table, TableRow, type TableColumn } from "../ui/Table";
+import { useTableHints } from "../ui/useTableHints";
+import { ColumnPicker } from "../table/ColumnPicker";
+import { SortableHeader } from "../table/SortableHeader";
+import TablePagination from "../table/TablePagination";
+import { RowActionButton, RowActions } from "../table/RowActionButton";
+import { useColumnPrefs } from "../table/useColumnPrefs";
+import { useSortPrefs } from "../table/useSortPrefs";
+import { usePagination } from "../table/usePagination";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
@@ -40,6 +49,52 @@ interface Props {
  */
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+type LogColumnId = "area" | "source" | "date" | "contents" | "actions";
+const COLUMN_IDS: readonly LogColumnId[] = ["area", "source", "date", "contents", "actions"];
+const ALWAYS_VISIBLE: readonly LogColumnId[] = ["source", "actions"];
+const SORTABLE: readonly LogColumnId[] = ["area", "source", "date", "contents"];
+const COLUMN_LAYOUT: Record<
+  LogColumnId,
+  Pick<TableColumn, "min" | "grow" | "priority" | "onNarrow" | "align">
+> = {
+  area: { min: 120, priority: 2, onNarrow: "mark" },
+  source: { min: 200, grow: 2, onNarrow: "title" },
+  date: { min: 110, priority: 2 },
+  contents: { min: 200, grow: 1, priority: 3 },
+  actions: { min: 150, align: "end", onNarrow: "trailing" },
+};
+
+/**
+ * Client-side sort over the runs already loaded. Ties keep the server's
+ * newest-first order (Array.prototype.sort is stable).
+ */
+function sortBatches(
+  batches: readonly ImportBatchSummary[],
+  by: LogColumnId,
+  order: "asc" | "desc",
+  t: Translate
+): ImportBatchSummary[] {
+  const key = (b: ImportBatchSummary): string | number => {
+    switch (by) {
+      case "area":
+        return t(`common:${DOMAINS[b.domain].i18nKey}`);
+      case "source":
+        return `${t(`lodging:import.batches.source.${b.source}`)} ${b.fileName ?? ""}`;
+      case "contents":
+        return revertCount(b);
+      default:
+        return Date.parse(b.createdAt);
+    }
+  };
+  const dir = order === "asc" ? 1 : -1;
+  return [...batches].sort((x, y) => {
+    const a = key(x);
+    const b = key(y);
+    if (typeof a === "number" && typeof b === "number") return (a - b) * dir;
+    return String(a).localeCompare(String(b)) * dir;
+  });
+}
 
 /**
  * What a batch produced, in the words of its own area. A stay import made
@@ -200,6 +255,161 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
     [addToast, load, onReverted, t]
   );
 
+  const columnPrefs = useColumnPrefs("import-log", ALWAYS_VISIBLE);
+  const tableHints = useTableHints();
+  const { sortBy, sortOrder, setSort } = useSortPrefs<LogColumnId>(
+    "import-log",
+    "date",
+    "desc",
+    SORTABLE
+  );
+  const handleSort = useCallback(
+    (column: LogColumnId): void => {
+      if (sortBy === column) setSort(column, sortOrder === "asc" ? "desc" : "asc");
+      else setSort(column, column === "date" || column === "contents" ? "desc" : "asc");
+    },
+    [sortBy, sortOrder, setSort]
+  );
+  const sorted = useMemo(
+    () => sortBatches(batches, sortBy, sortOrder, t),
+    [batches, sortBy, sortOrder, t]
+  );
+  const pagination = usePagination(sorted, "import-log");
+
+  const columns = useMemo<TableColumn[]>(
+    () =>
+      COLUMN_IDS.filter((id) => columnPrefs.isVisible(id)).map((id) => {
+        const layout = COLUMN_LAYOUT[id];
+        const label = t(`settings:import.log.columns.${id}`);
+        return {
+          key: id,
+          ...layout,
+          label: SORTABLE.includes(id) ? (
+            <SortableHeader
+              column={id}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              ariaLabel={t("settings:import.log.sortBy", { col: label })}
+            >
+              {label}
+            </SortableHeader>
+          ) : (
+            label
+          ),
+        };
+      }),
+    [columnPrefs, t, sortBy, sortOrder, handleSort]
+  );
+  const pickable = useMemo(
+    () =>
+      COLUMN_IDS.map((id) => ({
+        id,
+        label: t(`settings:import.log.columns.${id}`),
+        always: ALWAYS_VISIBLE.includes(id),
+      })),
+    [t]
+  );
+
+  const renderCell = (id: LogColumnId, batch: ImportBatchSummary): ReactNode => {
+    switch (id) {
+      case "area":
+        // Which area this run landed in. Never left implicit: an unlabelled
+        // log reads as if it covered everything.
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: colorOf(batch.domain) }}
+            />
+            {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
+          </span>
+        );
+      case "source":
+        return (
+          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+            <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
+            {batch.fileName && <span> · {batch.fileName}</span>}
+          </span>
+        );
+      case "date":
+        return <span className="text-sm">{formatDate(batch.createdAt)}</span>;
+      case "contents":
+        return <span className="text-sm">{describeCounts(batch, t)}</span>;
+      case "actions":
+        return (
+          <RowActions>
+            <button
+              type="button"
+              data-testid={`batch-items-toggle-${batch.id}`}
+              aria-expanded={expandedId === batch.id}
+              aria-controls={`batch-items-${batch.id}`}
+              onClick={() => void toggleItems(batch.id)}
+              className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-base)] pointer-coarse:min-h-(--ts-size-touch-min)"
+            >
+              <span aria-hidden="true">{expandedId === batch.id ? "▾" : "▸"}</span>{" "}
+              {t("settings:import.log.items.toggle")}
+            </button>
+            <RowActionButton
+              icon="delete"
+              testId={`batch-revert-${batch.id}`}
+              label={t("lodging:import.batches.revert")}
+              onClick={() => setConfirmingId(batch.id)}
+            />
+          </RowActions>
+        );
+    }
+  };
+
+  /** The rows one run created, under its table row — loading, failure and empty each say so. */
+  const renderItems = (batchId: string): JSX.Element => {
+    const loaded = itemsByBatch[batchId];
+    return (
+      <div id={`batch-items-${batchId}`} className="border-t border-[var(--ts-border)] px-4 py-2">
+        {itemsLoading === batchId ? (
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("settings:import.log.items.loading")}
+          </p>
+        ) : itemsError[batchId] ? (
+          <p role="alert" className="text-xs text-[var(--danger)]">
+            {t("settings:import.log.items.error")}
+          </p>
+        ) : (loaded?.items.length ?? 0) === 0 ? (
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("settings:import.log.items.empty")}
+          </p>
+        ) : (
+          <>
+            <ul className="flex flex-col gap-1">
+              {loaded!.items.map((item) => (
+                <li
+                  key={`${item.kind}-${item.id}`}
+                  className="flex items-baseline justify-between gap-3 text-xs"
+                >
+                  <span style={{ color: "var(--text-primary)" }}>{item.label}</span>
+                  <span style={{ color: "var(--text-muted)" }}>
+                    {[item.detail, item.date ? formatDate(item.date) : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {loaded!.truncated && (
+              <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                {t("settings:import.log.items.truncated", {
+                  shown: loaded!.items.length,
+                  total: loaded!.total,
+                })}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   const confirmingBatch = batches.find((b) => b.id === confirmingId) ?? null;
 
   return (
@@ -231,108 +441,34 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
           {t("lodging:import.batches.empty")}
         </p>
       ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {batches.map((batch) => (
-            <li
-              key={batch.id}
-              className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div
-                    className="flex items-center gap-2 font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {/* Which area this run landed in. Never left implicit: an
-                      unlabelled log reads as if it covered everything. */}
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                      <span
-                        aria-hidden="true"
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: colorOf(batch.domain) }}
-                      />
-                      {t(`common:${DOMAINS[batch.domain].i18nKey}`)}
-                    </span>
-                    <span>{t(`lodging:import.batches.source.${batch.source}`)}</span>
-                    {batch.fileName && <span> · {batch.fileName}</span>}
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    <span>{formatDate(batch.createdAt)}</span>
-                    {" · "}
-                    <span>{describeCounts(batch, t)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    data-testid={`batch-items-toggle-${batch.id}`}
-                    aria-expanded={expandedId === batch.id}
-                    aria-controls={`batch-items-${batch.id}`}
-                    onClick={() => void toggleItems(batch.id)}
-                    className="whitespace-nowrap rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
-                  >
-                    <span aria-hidden="true">{expandedId === batch.id ? "▾" : "▸"}</span>{" "}
-                    {t("settings:import.log.items.toggle")}
-                  </button>
-                  <button
-                    type="button"
-                    data-testid={`batch-revert-${batch.id}`}
-                    onClick={() => setConfirmingId(batch.id)}
-                    className="whitespace-nowrap rounded-md border border-[var(--danger)]/50 px-2 py-1 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10"
-                  >
-                    {t("lodging:import.batches.revert")}
-                  </button>
-                </div>
-              </div>
-              {expandedId === batch.id && (
-                <div
-                  id={`batch-items-${batch.id}`}
-                  className="mt-2 border-t border-[var(--color-border)] pt-2"
-                >
-                  {itemsLoading === batch.id ? (
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:import.log.items.loading")}
-                    </p>
-                  ) : itemsError[batch.id] ? (
-                    <p role="alert" className="text-xs text-[var(--danger)]">
-                      {t("settings:import.log.items.error")}
-                    </p>
-                  ) : (itemsByBatch[batch.id]?.items.length ?? 0) === 0 ? (
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:import.log.items.empty")}
-                    </p>
-                  ) : (
-                    <>
-                      <ul className="flex flex-col gap-1">
-                        {itemsByBatch[batch.id]!.items.map((item) => (
-                          <li
-                            key={`${item.kind}-${item.id}`}
-                            className="flex items-baseline justify-between gap-3 text-xs"
-                          >
-                            <span style={{ color: "var(--text-primary)" }}>{item.label}</span>
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {[item.detail, item.date ? formatDate(item.date) : null]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                      {itemsByBatch[batch.id]!.truncated && (
-                        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                          {t("settings:import.log.items.truncated", {
-                            shown: itemsByBatch[batch.id]!.items.length,
-                            total: itemsByBatch[batch.id]!.total,
-                          })}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="mt-3 flex justify-end">
+            <ColumnPicker columns={pickable} prefs={columnPrefs} />
+          </div>
+          <div className="mt-2">
+            <TablePagination {...pagination} placement="top" />
+            <Table columns={columns} label={t("settings:import.log.title")} {...tableHints}>
+              {pagination.paged.map((batch) => (
+                <Fragment key={batch.id}>
+                  <TableRow
+                    testId={`batch-row-${batch.id}`}
+                    columns={columns}
+                    narrowSubtitle={`${formatDate(batch.createdAt)} · ${describeCounts(batch, t)}`}
+                    cells={columns.map((column) => renderCell(column.key as LogColumnId, batch))}
+                  />
+                  {expandedId === batch.id && renderItems(batch.id)}
+                </Fragment>
+              ))}
+            </Table>
+            <TablePagination {...pagination} />
+            <p className="mt-2 px-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("settings:import.log.sortedBy", {
+                col: t(`settings:import.log.columns.${sortBy}`),
+                dir: t(sortOrder === "asc" ? "common:sort.ascending" : "common:sort.descending"),
+              })}
+            </p>
+          </div>
+        </>
       )}
 
       <Modal
