@@ -754,7 +754,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Playwright
-        run: npx playwright test --project=chromium --reporter=line
+        run: npx playwright test --project=chromium --reporter=line --grep-invert "accessibility ratchet"
+
+      # The accessibility ratchet (e2e/a11y.baseline.json): its own step so a
+      # new axe violation reads as itself and not as one more red e2e case.
+      - name: Accessibility ratchet (axe)
+        run: npx playwright test a11y.ratchet --project=chromium --reporter=line
 
       - name: Upload report and backend log
         if: failure()

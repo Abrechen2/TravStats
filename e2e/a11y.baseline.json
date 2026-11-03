@@ -1,0 +1,99 @@
+{
+  "/bus": {
+    "label-content-name-mismatch": 2
+  },
+  "/cruises": {
+    "label-content-name-mismatch": 2
+  },
+  "/cruises/:id": {
+    "label-content-name-mismatch": 2
+  },
+  "/dashboard": {
+    "label-content-name-mismatch": 2
+  },
+  "/flights": {
+    "label-content-name-mismatch": 2
+  },
+  "/flights/:id": {
+    "label-content-name-mismatch": 2
+  },
+  "/lodging": {
+    "label-content-name-mismatch": 2
+  },
+  "/notes": {
+    "label-content-name-mismatch": 2
+  },
+  "/places": {
+    "label-content-name-mismatch": 2
+  },
+  "/rail": {
+    "label-content-name-mismatch": 2
+  },
+  "/rentals": {
+    "label-content-name-mismatch": 2
+  },
+  "/roadtrips": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/about": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/account": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/data": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/data?section=import": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/display": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/domains": {
+    "color-contrast": 6,
+    "label-content-name-mismatch": 2
+  },
+  "/settings/location": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/notifications": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/services": {
+    "label-content-name-mismatch": 2
+  },
+  "/settings/sharing": {
+    "label-content-name-mismatch": 2
+  },
+  "/stats": {
+    "label-content-name-mismatch": 2
+  },
+  "/stats?tab=flight": {
+    "label-content-name-mismatch": 2
+  },
+  "/tours": {
+    "label-content-name-mismatch": 2
+  },
+  "/track": {
+    "label-content-name-mismatch": 2
+  },
+  "/track/explored": {
+    "label-content-name-mismatch": 2
+  },
+  "/track/imports": {
+    "label-content-name-mismatch": 2
+  },
+  "/track/months": {
+    "label-content-name-mismatch": 2
+  },
+  "/track/stays": {
+    "label-content-name-mismatch": 2
+  },
+  "/trips": {
+    "label-content-name-mismatch": 2
+  },
+  "/trips/:id": {
+    "label-content-name-mismatch": 2
+  }
+}
