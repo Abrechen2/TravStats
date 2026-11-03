@@ -84,7 +84,9 @@
     "network": "Der Server ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
     "generic": "Das hat nicht geklappt. Versuche es erneut.",
     "rangeTooLong": "Ein Zeitraum auf der Karte umfasst höchstens 400 Tage. Wähle einen kürzeren.",
-    "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht."
+    "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht.",
+    "legInvalid": "Diese Etappe lässt sich so nicht ändern.",
+    "legGone": "Diese Etappe gibt es nicht mehr – die Ansicht wird neu berechnet."
   },
   "settings": {
     "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
@@ -428,7 +430,18 @@
       "delete": "Punkt löschen",
       "deleting": "Wird gelöscht …",
       "deleteConfirm": "Diese eine Position endgültig löschen? Auch ein erneuter Import derselben Datei bringt sie nicht zurück.",
-      "deleted": "Die Position ist gelöscht."
+      "deleted": "Die Position ist gelöscht.",
+      "speed": "Tempo",
+      "altitude": "Höhe",
+      "motion": "Bewegung",
+      "motionClass": {
+        "walking": "Gehen",
+        "running": "Laufen",
+        "cycling": "Radfahren",
+        "automotive": "Fahrzeug",
+        "stationary": "Stillstand",
+        "unknown": "Unbekannt"
+      }
     },
     "totals": {
       "title": "Zusammenfassung",
@@ -441,7 +454,8 @@
       "kmh": "{{kmh}} km/h",
       "minutes": "{{m}} min",
       "hours": "{{h}} h {{m}} min",
-      "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h."
+      "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h.",
+      "maxSpeed": "Höchstes Tempo"
     },
     "quietDays": "Ohne Aufzeichnung und ohne Eintrag: {{days}}",
     "rangeLoading": "Wird in Teilen geladen … {{parts}} Teile, {{percent}} %",
@@ -636,5 +650,51 @@
     },
     "pairing": "Noch keine Companion gekoppelt: Unter Einstellungen → Konto → Geräte zeigt TravStats einen QR-Code, den du mit der App scannst.",
     "pairingAction": "Gerät koppeln"
+  },
+  "legs": {
+    "title": "Etappen",
+    "cardTitle": "Etappe",
+    "wholeDay": "Ganzer Tag",
+    "underMinute": "< 1 min",
+    "metres": "{{m}} m",
+    "uncertain": "{{mode}} (unsicher)",
+    "modeGroup": "Fortbewegungsart",
+    "modeFailed": "Die Änderung wurde nicht gespeichert. {{reason}}",
+    "reloadFailed": "Gespeichert, aber die Ansicht konnte nicht neu geladen werden. Lade die Seite neu.",
+    "openEntry": "Logbuch-Eintrag öffnen",
+    "mode": {
+      "walk": "Zu Fuß",
+      "run": "Laufen",
+      "cycle": "Rad",
+      "car": "Auto",
+      "bus": "Bus",
+      "train": "Bahn",
+      "boat": "Boot",
+      "flight": "Flug",
+      "unknown": "Unbekannt",
+      "auto": "Automatisch"
+    },
+    "source": {
+      "auto": "erkannt",
+      "entry": "aus dem Logbuch",
+      "manual": "von dir"
+    },
+    "figure": {
+      "distance": "Strecke",
+      "duration": "Dauer",
+      "moving": "In Bewegung",
+      "avgSpeed": "Ø Tempo",
+      "maxSpeed": "Höchstes Tempo",
+      "ascent": "Aufstieg",
+      "descent": "Abstieg"
+    }
+  },
+  "stop": {
+    "title": "Aufenthalt",
+    "row": "Aufenthalt",
+    "noStay": "Kein Aufenthaltsvorschlag dazu.",
+    "stateOther": "Aufenthalt",
+    "reject": "Ablehnen",
+    "rejecting": "Wird abgelehnt …"
   }
 }

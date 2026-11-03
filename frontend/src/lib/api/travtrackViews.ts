@@ -1,5 +1,6 @@
 import { API_URL, api } from "./client";
 import type { DaySpan, InstantSpan, TrackPoint } from "./travtrack";
+import type { TravTrackAggregates, TravTrackPointDetail } from "./travtrackLegs";
 
 /**
  * The Track area's further views (TravTrack plan T5.3): a range of the map
@@ -17,6 +18,10 @@ export interface TravTrackRange {
   segments: TrackPoint[][];
   /** The stored point of each vertex, aligned with `segments` (for `deletePoint`). */
   pointIds: string[][];
+  /** Aligned with `segments`; absent on an older server. */
+  pointDetails?: TravTrackPointDetail[][];
+  /** Totals from the stored points, per part; absent on an older server. */
+  aggregates?: TravTrackAggregates;
   pointCount: number;
   readCount: number;
   simplified: boolean;

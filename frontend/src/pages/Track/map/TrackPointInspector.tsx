@@ -7,6 +7,7 @@ import { trackErrorKey } from "../../../lib/api/travtrack";
 import { travTrackViewsApi } from "../../../lib/api/travtrackViews";
 import { formatDate, formatTime } from "../../../lib/displayFormat";
 import { logger } from "../../../lib/logger";
+import { DASH, makeNumber } from "./trackLegFormat";
 import { TRACK_COLOR, type MapPoint } from "./trackMapLayers";
 
 const buttonStyle = {
@@ -21,10 +22,12 @@ const buttonStyle = {
 
 /**
  * One clicked position (TravTrack plan T5.2, T5.3): its time on the profile's
- * clock, its coordinates and accuracy, and „Punkt löschen" — exactly this
- * stored point, after a confirmation, final (no source brings it back). The
- * reads carry no speed or altitude, so none is shown — a missing value is left
- * out, not drawn as 0. A failed delete says why and keeps the point.
+ * clock, its coordinates and accuracy, the phone's speed, altitude and motion
+ * where the read carries them (spec 2026-11-03-travtrack-legs; a reading the
+ * phone did not give is a dash, never 0, and an older server's read shows none
+ * of the three), and „Punkt löschen" — exactly this stored point, after a
+ * confirmation, final (no source brings it back). A failed delete says why and
+ * keeps the point.
  */
 export default function TrackPointInspector({
   point,
@@ -35,12 +38,14 @@ export default function TrackPointInspector({
   onClose: () => void;
   onDeleted: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["track", "common"]);
+  const { t, i18n } = useTranslation(["track", "common"]);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [ms, lat, lon, accuracy] = point.point;
   const pointId = point.id;
+  const detail = point.detail ?? null;
+  const number = makeNumber(i18n.language);
 
   const remove = async () => {
     if (!pointId) return;
@@ -90,6 +95,36 @@ export default function TrackPointInspector({
           ? t("track:map.point.accuracyUnknown")
           : t("track:map.point.accuracy", { m: Math.round(accuracy) })}
       </span>
+      {detail && (
+        <dl className="grid grid-cols-3 gap-2" data-testid="track-point-details">
+          <div data-detail="speed">
+            <dt className="t-caption">{t("track:map.point.speed")}</dt>
+            <dd className="tabular-nums">
+              {detail.speedMps === null
+                ? DASH
+                : t("track:map.totals.kmh", { kmh: number(detail.speedMps * 3.6, 0) })}
+            </dd>
+          </div>
+          <div data-detail="altitude">
+            <dt className="t-caption">{t("track:map.point.altitude")}</dt>
+            <dd className="tabular-nums">
+              {detail.altitudeM === null
+                ? DASH
+                : t("track:legs.metres", { m: number(detail.altitudeM, 0) })}
+            </dd>
+          </div>
+          <div data-detail="motion">
+            <dt className="t-caption">{t("track:map.point.motion")}</dt>
+            <dd>
+              {detail.motion === null
+                ? DASH
+                : t(`track:map.point.motionClass.${detail.motion}`, {
+                    defaultValue: t("track:map.point.motionClass.unknown"),
+                  })}
+            </dd>
+          </div>
+        </dl>
+      )}
       {failure && (
         <span className="t-caption" role="alert" style={{ color: token("bad") }}>
           {t(failure)}

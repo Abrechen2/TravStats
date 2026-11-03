@@ -11,6 +11,8 @@ import type { TravTrackFlightPanel, TravTrackPhoto } from "../../../lib/api/trav
 import { todayIn } from "../../../shared/time/clock";
 import TrackDeleteDialog from "../TrackDeleteDialog";
 import TrackExportDialog from "../TrackExportDialog";
+import TrackLegCard from "./TrackLegCard";
+import TrackStopCard from "./TrackStopCard";
 import TrackFlightPanel, { type SelectedFlight } from "../flight/TrackFlightPanel";
 import TrackPhotoNotice from "../photos/TrackPhotoNotice";
 import TrackPhotoThumb from "../photos/TrackPhotoThumb";
@@ -27,7 +29,8 @@ import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
 import TrackReplayBar from "./TrackReplayBar";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
-import { mapAnchors, type MapPoint } from "./trackMapLayers";
+import { legFrame, legLines, totalsFromAggregates, type TrackSelection } from "./trackLegs";
+import { mapAnchors, type MapLegLine, type MapPoint, type MapStop } from "./trackMapLayers";
 import { useTrackMapPrefs } from "./trackMapPrefs";
 import { panelStyle } from "./trackMapStyle";
 import type { DayResult } from "./trackRange";
@@ -53,6 +56,7 @@ type Loaded = Extract<DayResult, { kind: "loaded" }>;
 const NO_STRETCHES: TrackPoint[][] = [];
 const NO_SHAPES: Feature<Geometry>[] = [];
 const NO_LINES: LonLat[][] = [];
+const NO_LEG_LINES: MapLegLine[] = [];
 
 /** A flight named only by its id (a link): the panel reads its label from the server. */
 const flightById = (id: string): SelectedFlight => ({ id, label: "", href: `/flights/${id}` });
@@ -95,6 +99,7 @@ export default function TrackMapView(): JSX.Element {
   const [dialog, setDialog] = useState<"export" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapPoint | null>(null);
+  const [pick, setPick] = useState<TrackSelection | null>(null);
   const [photo, setPhoto] = useState<TravTrackPhoto | null>(null);
   const [flight, setFlightState] = useState<SelectedFlight | null>(() =>
     flightParam ? flightById(flightParam) : null
@@ -132,6 +137,7 @@ export default function TrackMapView(): JSX.Element {
   const go = (next: TrackSpan) => {
     setNotice(null);
     setSelected(null);
+    setPick(null);
     setPhoto(null);
     setFlight(null);
     navigate(spanPath(next, today));
@@ -169,15 +175,81 @@ export default function TrackMapView(): JSX.Element {
   const points = useMemo<MapPoint[]>(
     () =>
       source.segments.flatMap((segment, i) =>
-        segment.map((point, j) => ({ point, zone, id: source.ids[i]?.[j] ?? null }))
+        segment.map((point, j) => ({
+          point,
+          zone,
+          id: source.ids[i]?.[j] ?? null,
+          detail: source.details[i]?.[j] ?? null,
+        }))
       ),
     [source, zone]
   );
   const anchors = useMemo(() => loaded.flatMap((r) => mapAnchors(r.day.context, t)), [loaded, t]);
   const totals = useMemo(
-    () => rangeTotals(shown, [{ pointCount: source.positions, coverage: source.coverage }]),
-    [shown, source]
+    () =>
+      totalsFromAggregates(
+        rangeTotals(shown, [{ pointCount: source.positions, coverage: source.coverage }]),
+        data.range?.parts ?? []
+      ),
+    [shown, source, data.range]
   );
+
+  // Legs and stops of the loaded days (a long span has none): clicking one selects it on map and list.
+  const legLineList = useMemo<MapLegLine[]>(
+    () =>
+      loaded.flatMap((r) =>
+        (r.day.legs ?? []).flatMap((leg) =>
+          legLines(r.day, leg).map((path) => ({ id: leg.id, date: r.date, path }))
+        )
+      ),
+    [loaded]
+  );
+  const resolved = useMemo(() => {
+    if (!pick) return null;
+    const day = loaded.find((r) => r.date === pick.date)?.day;
+    if (!day) return null;
+    if (pick.kind === "leg") {
+      const leg = day.legs?.find((l) => l.id === pick.id);
+      return leg ? ({ kind: "leg", day, leg } as const) : null;
+    }
+    const stop = day.stops?.find((s) => s.fromMs === pick.fromMs);
+    return stop ? ({ kind: "stop", day, stop } as const) : null;
+  }, [pick, loaded]);
+  // A pick the day no longer holds (re-derived after late points) is no pick.
+  const activePick = resolved ? pick : null;
+  // The leg is cut from the whole stretches: while the replay runs it would show what the replay has not reached.
+  const replaying = replay.t !== null;
+  const selectedLines = useMemo(
+    () =>
+      resolved?.kind === "leg" && !replaying ? legLines(resolved.day, resolved.leg) : NO_LINES,
+    [resolved, replaying]
+  );
+  const stopList = useMemo<MapStop[]>(
+    () =>
+      loaded.flatMap((r) =>
+        (r.day.stops ?? []).map((s) => ({
+          date: r.date,
+          fromMs: s.fromMs,
+          lat: s.anchor.lat,
+          lon: s.anchor.lon,
+          selected: pick?.kind === "stop" && pick.date === r.date && pick.fromMs === s.fromMs,
+          stay: s.stayRef?.status ?? null,
+        }))
+      ),
+    [loaded, pick]
+  );
+  const onLeg = useCallback(
+    (leg: MapLegLine) => setPick({ kind: "leg", date: leg.date, id: leg.id }),
+    []
+  );
+  const onStop = useCallback(
+    (stop: MapStop) => setPick({ kind: "stop", date: stop.date, fromMs: stop.fromMs }),
+    []
+  );
+  const entryHref =
+    resolved?.kind === "leg" && resolved.leg.entryRef
+      ? (resolved.day.context.find((c) => c.id === resolved.leg.entryRef?.id)?.href ?? null)
+      : null;
 
   const photoWindow = useMemo(
     () =>
@@ -205,7 +277,13 @@ export default function TrackMapView(): JSX.Element {
   const reload = () => setGeneration((g) => g + 1);
   const flightTrack = useFlightTrack(flight ? seriesWindow(flightPanel) : null, generation);
   const highlight = flightTrack.kind === "loaded" ? flightTrack.lines : NO_LINES;
-  const framed = highlight.length > 0 ? highlight : frameLines;
+  const legFramed = resolved?.kind === "leg" ? legFrame(resolved.day, resolved.leg) : null;
+  const framed = legFramed ?? (highlight.length > 0 ? highlight : frameLines);
+  const refit = legFramed
+    ? `leg:${resolved?.kind === "leg" ? resolved.leg.id : ""}`
+    : highlight.length > 0
+      ? `flight:${flight?.id ?? ""}`
+      : "day";
 
   return (
     <div className="flex flex-col gap-4">
@@ -265,12 +343,17 @@ export default function TrackMapView(): JSX.Element {
               <WebGLGuard>
                 <TrackRangeMap
                   key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
-                  refit={highlight.length > 0 ? `flight:${flight?.id ?? ""}` : "day"}
+                  refit={refit}
                   layers={prefs.layers}
                   color={prefs.color}
                   opacity={prefs.opacity}
                   frameLines={framed}
                   highlight={highlight}
+                  selection={selectedLines}
+                  legLines={replaying ? NO_LEG_LINES : legLineList}
+                  onLeg={onLeg}
+                  stops={stopList}
+                  onStop={onStop}
                   lines={lines}
                   segments={drawn}
                   points={points}
@@ -294,6 +377,26 @@ export default function TrackMapView(): JSX.Element {
                     reload();
                   }}
                 />
+              )}
+              {resolved && (
+                <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2 }}>
+                  {resolved.kind === "leg" ? (
+                    <TrackLegCard
+                      leg={resolved.leg}
+                      zone={resolved.day.zone}
+                      entryHref={entryHref}
+                      onClose={() => setPick(null)}
+                      onChanged={() => data.refresh(resolved.day.date)}
+                    />
+                  ) : (
+                    <TrackStopCard
+                      stop={resolved.stop}
+                      zone={resolved.day.zone}
+                      onClose={() => setPick(null)}
+                      onChanged={() => data.refresh(resolved.day.date)}
+                    />
+                  )}
+                </div>
               )}
               {photo && photos.kind === "loaded" && (
                 <div
@@ -392,6 +495,8 @@ export default function TrackMapView(): JSX.Element {
           long={long}
           flightId={flight?.id ?? null}
           onFlight={setFlight}
+          selection={activePick}
+          onSelect={setPick}
         />
       </div>
 

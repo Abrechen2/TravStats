@@ -203,4 +203,29 @@ describe("buildTrackLayers opacity with stable data (forgejo#351)", () => {
       ).updateTriggers.getColor;
     expect(triggers(0.4)).not.toEqual(triggers(0.9));
   });
+
+  it("a picked leg is drawn wide over a faded line; unpicked, nothing is faded or added", () => {
+    const plain = buildTrackLayers(input());
+    expect(plain.map((l) => l.id)).not.toContain("track-leg-selected");
+    const route = (layers: ReturnType<typeof buildTrackLayers>) =>
+      layers.find((l) => l.id === "track-route-speed") as unknown as {
+        props: { updateTriggers: { getColor: number[] } };
+      };
+    const picked = buildTrackLayers(input({ selection: [[[13.4, 52.5]]] }));
+    expect(picked.map((l) => l.id)).toContain("track-leg-selected");
+    expect(route(picked).props.updateTriggers.getColor[0]).toBeLessThan(
+      route(plain).props.updateTriggers.getColor[0]
+    );
+  });
+
+  it("stops are markers on the visits switch; leg lines are pickable only with a handler", () => {
+    const stops = [{ date: "d", fromMs: 1, lat: 1, lon: 1, selected: false, stay: null }];
+    const legLines = [{ id: "a", date: "d", path: [[1, 1]] as [number, number][] }];
+    expect(ids(input({ stops, legLines }))).not.toContain("track-leg-pick");
+    expect(ids(input({ stops, legLines, onLeg: vi.fn() }))).toContain("track-leg-pick");
+    expect(ids(input({ stops }))).toContain("track-stops");
+    const off = input({ stops });
+    off.layers = { ...off.layers, visits: false };
+    expect(ids(off)).not.toContain("track-stops");
+  });
 });

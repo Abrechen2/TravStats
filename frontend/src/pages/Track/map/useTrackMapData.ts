@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { TrackPoint } from "../../../lib/api/travtrack";
+import type { TravTrackPointDetail } from "../../../lib/api/travtrackLegs";
 import type { TravTrackRange } from "../../../lib/api/travtrackViews";
 import type { DayResult } from "./trackRange";
 import { rangeDays } from "./trackRange";
@@ -21,6 +22,8 @@ export interface TrackMapSource {
   segments: TrackPoint[][];
   /** Aligned with `segments`; null where an older server named no point. */
   ids: (string | null)[][];
+  /** Aligned with `segments`; null where an older server sent none. */
+  details: (TravTrackPointDetail | null)[][];
   /** Positions behind the drawing (a simplified range draws fewer). */
   positions: number;
   coverage: Loaded["day"]["coverage"];
@@ -33,6 +36,11 @@ export function sourceOfDays(loaded: readonly Loaded[]): TrackMapSource {
     ids: loaded.flatMap(
       (r) => r.day.pointIds ?? r.day.segments.map((s) => s.map((): string | null => null))
     ),
+    details: loaded.flatMap(
+      (r) =>
+        r.day.pointDetails ??
+        r.day.segments.map((s) => s.map((): TravTrackPointDetail | null => null))
+    ),
     positions: loaded.reduce((n, r) => n + r.day.pointCount, 0),
     coverage: loaded.flatMap((r) => r.day.coverage),
   };
@@ -43,6 +51,9 @@ export function sourceOfParts(parts: readonly TravTrackRange[]): TrackMapSource 
   return {
     segments: parts.flatMap((p) => p.segments),
     ids: parts.flatMap((p) => p.pointIds),
+    details: parts.flatMap(
+      (p) => p.pointDetails ?? p.segments.map((s) => s.map((): TravTrackPointDetail | null => null))
+    ),
     positions: parts.reduce((n, p) => n + p.readCount, 0),
     coverage: [],
   };

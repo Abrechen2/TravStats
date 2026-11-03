@@ -1,5 +1,6 @@
 import { api } from "./client";
 import { apiErrorMachineCode } from "../apiError";
+import type { TravTrackLeg, TravTrackPointDetail, TravTrackStop } from "./travtrackLegs";
 
 /**
  * TravTrack, the own location history (TravTrack plan, phase 2): what it does
@@ -103,6 +104,11 @@ export interface TravTrackDay {
   context: TravTrackDayEntry[];
   pointCount: number;
   truncated: boolean;
+  /** Journeys and dwells (spec 2026-11-03-travtrack-legs); absent on an older server. */
+  legs?: TravTrackLeg[];
+  stops?: TravTrackStop[];
+  /** Speed, altitude and motion of each vertex, aligned with `segments`; absent on an older server. */
+  pointDetails?: TravTrackPointDetail[][];
 }
 
 export type TravTrackExportFormat = "gpx" | "json";
@@ -316,6 +322,10 @@ export function trackErrorKey(err: unknown): string {
       return "track:errors.rangeTooLong";
     case "TRAVTRACK_POINT_NOT_FOUND":
       return "track:errors.pointGone";
+    case "TRAVTRACK_LEG_INVALID":
+      return "track:errors.legInvalid";
+    case "TRAVTRACK_LEG_NOT_FOUND":
+      return "track:errors.legGone";
     case "TRAVTRACK_EXPLORED_ZOOM_IN":
       return "track:explored.zoomIn";
     case "TRAVTRACK_EXPLORED_UNAVAILABLE":

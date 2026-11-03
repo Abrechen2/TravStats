@@ -6,6 +6,8 @@ import type { TravTrackDay } from "../../lib/api/travtrack";
 import { contextLabel } from "./trackContextLabel";
 import { pillStyle } from "./map/trackMapStyle";
 import type { SelectedFlight } from "./flight/TrackFlightPanel";
+import TrackLegList from "./TrackLegList";
+import type { TrackSelection } from "./map/trackLegs";
 
 /**
  * The day as the logbook tells it (TravTrack plan T6, every domain since
@@ -21,9 +23,18 @@ interface Props {
   /** A logbook flight picked for the flight panel (T5.3); absent, no flight is pickable. */
   onFlight?: (flight: SelectedFlight) => void;
   selectedFlightId?: string | null;
+  /** Legs and stops are listed (and selectable) only where the page can show them on a map. */
+  selection?: TrackSelection | null;
+  onSelect?: (selection: TrackSelection | null) => void;
 }
 
-export default function TrackTimeline({ day, onFlight, selectedFlightId }: Props): JSX.Element {
+export default function TrackTimeline({
+  day,
+  onFlight,
+  selectedFlightId,
+  selection = null,
+  onSelect,
+}: Props): JSX.Element {
   const { t } = useTranslation(["track"]);
   const clock = (ms: number) => formatTime(ms, { timeZone: day.zone });
   // A span running to the end of the day ends at 24:00, not at the next day's 00:00.
@@ -69,6 +80,16 @@ export default function TrackTimeline({ day, onFlight, selectedFlightId }: Props
             );
           })}
         </ol>
+      )}
+      {onSelect && ((day.legs?.length ?? 0) > 0 || (day.stops?.length ?? 0) > 0) && (
+        <TrackLegList
+          date={day.date}
+          zone={day.zone}
+          legs={day.legs ?? []}
+          stops={day.stops ?? []}
+          selection={selection}
+          onSelect={onSelect}
+        />
       )}
     </section>
   );

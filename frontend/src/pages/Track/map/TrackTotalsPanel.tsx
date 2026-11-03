@@ -13,11 +13,13 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
   const { t, i18n } = useTranslation(["track"]);
   const number = (value: number, digits: number) =>
     new Intl.NumberFormat(i18n.language, { maximumFractionDigits: digits }).format(value);
-  const minutes = Math.round(totals.movingMs / 60_000);
+  const minutes = totals.movingMs === null ? null : Math.round(totals.movingMs / 60_000);
   const duration =
-    minutes >= 60
-      ? t("track:map.totals.hours", { h: Math.floor(minutes / 60), m: minutes % 60 })
-      : t("track:map.totals.minutes", { m: minutes });
+    minutes === null
+      ? "—"
+      : minutes >= 60
+        ? t("track:map.totals.hours", { h: Math.floor(minutes / 60), m: minutes % 60 })
+        : t("track:map.totals.minutes", { m: minutes });
   const rows: Array<[string, string]> = [
     ["distance", t("track:map.totals.km", { km: number(totals.distanceM / 1000, 1) })],
     ["moving", duration],
@@ -25,6 +27,17 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
       "avgSpeed",
       totals.avgKmh === null ? "—" : t("track:map.totals.kmh", { kmh: number(totals.avgKmh, 0) }),
     ],
+    // Only with the server's aggregates; the drawing alone cannot tell the fastest reading.
+    ...(totals.maxKmh === undefined
+      ? []
+      : [
+          [
+            "maxSpeed",
+            totals.maxKmh === null
+              ? "—"
+              : t("track:map.totals.kmh", { kmh: number(totals.maxKmh, 0) }),
+          ] as [string, string],
+        ]),
     ["points", number(totals.points, 0)],
     ["coverage", totals.coverage === null ? "—" : `${number(totals.coverage * 100, 0)} %`],
   ];

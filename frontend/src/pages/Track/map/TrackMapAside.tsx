@@ -4,6 +4,7 @@ import { formatDayLong } from "../../../shared/time/calendar";
 import TrackCoverageBar from "../TrackCoverageBar";
 import TrackTimeline from "../TrackTimeline";
 import type { SelectedFlight } from "../flight/TrackFlightPanel";
+import type { TrackSelection } from "./trackLegs";
 import TrackTotalsPanel from "./TrackTotalsPanel";
 import type { RangeTotals } from "./trackGeometry";
 import { panelStyle } from "./trackMapStyle";
@@ -25,6 +26,8 @@ export default function TrackMapAside({
   long,
   flightId,
   onFlight,
+  selection,
+  onSelect,
 }: {
   span: TrackSpan;
   totals: RangeTotals;
@@ -32,6 +35,8 @@ export default function TrackMapAside({
   long: boolean;
   flightId: string | null;
   onFlight: (flight: SelectedFlight) => void;
+  selection: TrackSelection | null;
+  onSelect: (selection: TrackSelection | null) => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
   const multi = span.kind !== "day";
@@ -62,7 +67,13 @@ export default function TrackMapAside({
         <section key={r.date} className="flex flex-col gap-3" style={panelStyle}>
           {multi && <h2 className="t-card-title">{formatDayLong(r.date, i18n.language)}</h2>}
           <TrackCoverageBar coverage={r.day.coverage} zone={r.day.zone} />
-          <TrackTimeline day={r.day} onFlight={onFlight} selectedFlightId={flightId} />
+          <TrackTimeline
+            day={r.day}
+            onFlight={onFlight}
+            selectedFlightId={flightId}
+            selection={selection}
+            onSelect={onSelect}
+          />
         </section>
       ))}
     </aside>
