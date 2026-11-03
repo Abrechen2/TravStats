@@ -277,8 +277,9 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
     __resetOperatorMarkCachesForTests();
     use(() => json({}, 503));
     expect((await resolveOperatorMark("ferry", "Stena Line"))?.credit?.qid).toBe("Q833903");
+    // Up to 10 s: the refresh is a background write, and 2 s was not enough on a loaded runner.
     let after = { ...meta, lastAttemptAt: old };
-    for (let i = 0; i < 40 && !(after.lastAttemptAt > old); i++) {
+    for (let i = 0; i < 200 && !(after.lastAttemptAt > old); i++) {
       await new Promise((r) => setTimeout(r, 50));
       after = JSON.parse(await fs.readFile(metaFile, "utf-8")) as {
         fetchedAt: number;

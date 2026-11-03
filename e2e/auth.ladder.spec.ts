@@ -244,9 +244,27 @@ test.describe("passkey", () => {
     await confirmProfileZone(page);
 
     await page.goto("/settings?section=security");
-    await page.getByRole("button", { name: /Passkey hinzufügen|Add passkey/i }).click();
-    await page.fill("input#passkey-name", "E2E virtual authenticator");
-    await page.getByRole("button", { name: /^Anlegen$|^Create$|^Add$/i }).click();
+    // The row's button reads just "Hinzufügen" / "Add" since the settings rebuild,
+    // so it is found in the sign-in region ("Anmeldung") next to the Passkeys row.
+    await page
+      .getByRole("region", { name: /^(Anmeldung|Sign-in|Sign in)$/ })
+      .getByRole("button", { name: /^(Hinzufügen|Add)$/ })
+      .click();
+    // The form also asks for the account password now, to confirm.
+    await page
+      .getByLabel(/Name für diesen Passkey|Name for this passkey/i)
+      .fill("E2E virtual authenticator");
+    await page
+      .getByLabel(/Dein Passwort, zur Bestätigung|Your password, to confirm/i)
+      .fill(account!.password);
+    const create = page.getByRole("button", { name: /^Anlegen$|^Create$|^Add$/i });
+    await create.click();
+    // A two-factor account is asked for a code, and the field only appears with
+    // that answer; the second press carries it.
+    await page
+      .getByLabel(/Code aus der Authenticator-App|Code from the authenticator app/i)
+      .fill(await freshTotp(account!.totpSecret!));
+    await create.click();
     await expect(page.getByText("E2E virtual authenticator")).toBeVisible({ timeout: 15_000 });
 
     // Leave, with nothing but the authenticator.

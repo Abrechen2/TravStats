@@ -1,6 +1,13 @@
 import { expect, afterAll, afterEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
+
+// findBy*/waitFor give up after 1 s by default, while a test itself gets 5 s. Under a
+// loaded parallel run (SettingsPage, FlightReviewModal: heavy trees whose lazy
+// sections import on first render) the first render alone can exceed 1 s, so a
+// correct page failed with "Unable to find" and passed alone. The window now
+// matches the test timeout; a missing element still fails, only later.
+configure({ asyncUtilTimeout: 4000 });
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
@@ -175,6 +182,21 @@ afterAll(() => {
     );
   }
 });
+
+/**
+ * jsdom has no canvas: `HTMLCanvasElement.prototype.getContext` is a
+ * "not implemented" stub that reports through the virtual console and ended
+ * every run with "1 unhandled error". `null` is what a browser answers when it
+ * cannot give a context, so code under test takes its existing no-canvas path.
+ * A test that needs a context spies on `getContext` itself, which replaces this.
+ */
+if (typeof HTMLCanvasElement !== "undefined") {
+  Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => null),
+  });
+}
 
 // Cleanup after each test
 afterEach(() => {
