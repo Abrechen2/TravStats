@@ -444,9 +444,9 @@ export const SERVICES: readonly ServiceDef[] = [
     recommended: "free",
     fields: [
       admin("primarySource", "select", "fxPrimarySource", false, [...FX_SOURCE_IDS]),
-      admin("primaryUrl", "url", "fxPrimaryCustomUrl", true),
+      admin("primaryUrl", "url", "fxPrimaryCustomUrl"),
       admin("fallbackSource", "select", "fxFallbackSource", false, [...FX_FALLBACK_IDS]),
-      admin("fallbackUrl", "url", "fxFallbackCustomUrl", true),
+      admin("fallbackUrl", "url", "fxFallbackCustomUrl"),
       admin("cdnFallback", "switch", "fxCdnFallbackEnabled"),
     ],
   }),

@@ -5,7 +5,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { CATEGORY_ORDER } from "../types";
-import { SERVICES } from "../catalogue";
+import { SERVICES, getService } from "../catalogue";
 
 const schema = readFileSync(join(__dirname, "../../../../prisma/schema.prisma"), "utf8");
 const adminBlock = schema.slice(
@@ -114,5 +114,14 @@ describe("external services catalogue", () => {
     for (const [id, key] of standard)
       expect([id, key, expertOf(id, key)]).toEqual([id, key, false]);
     for (const [id, key] of expert) expect([id, key, expertOf(id, key)]).toEqual([id, key, true]);
+  });
+});
+
+describe("fx source picker", () => {
+  it("shows the custom address fields in standard mode, since standard mode offers the custom choice", () => {
+    const fx = getService("fx");
+    for (const key of ["primaryUrl", "fallbackUrl"]) {
+      expect(fx?.fields.find((f) => f.key === key)?.expert).toBe(false);
+    }
   });
 });
