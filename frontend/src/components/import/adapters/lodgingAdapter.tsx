@@ -146,6 +146,7 @@ function LodgingReviewSlot({
     // cancel/commit), so the fetch-once-on-mount behaviour this effect
     // implements must not re-run just because the parent handed down a new
     // function identity on some unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch-once-on-mount per parse (see above)
   }, [parseResult]);
 
   if (!rows || !summary || !parsed) return null;

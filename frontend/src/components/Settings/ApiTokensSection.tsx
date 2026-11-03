@@ -91,6 +91,7 @@ export default function ApiTokensSection(): JSX.Element {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t is intentionally left out: a reload per render would never settle in tests, and the error text is fixed at fail time
   }, []);
 
   useEffect(() => {

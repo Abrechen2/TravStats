@@ -29,6 +29,7 @@ export function useFlatMapMoveTracking({
     if (!anchor) return;
     const pt = map.project(anchor);
     setPinnedPos({ x: pt.x, y: pt.y });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mapRef is a ref and setPinnedPos a state setter, both stable; pinned is read through pinnedRef
   }, []);
 
   // `recomputeAllPositions` is wired into a rAF on every move, so it must stay
@@ -42,6 +43,7 @@ export function useFlatMapMoveTracking({
       return;
     }
     recomputeAllPositions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setPinnedPos is a state setter, stable
   }, [pinned, recomputeAllPositions]);
 
   const moveRafRef = useRef<number | null>(null);
@@ -60,6 +62,7 @@ export function useFlatMapMoveTracking({
         setZoom((prev) => (prev === snapped ? prev : snapped));
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mapRef is a ref and setZoom a state setter, both stable
   }, [recomputeAllPositions]);
 
   useEffect(() => {

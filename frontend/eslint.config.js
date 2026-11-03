@@ -73,11 +73,10 @@ export default [
     rules: {
       "react/react-in-jsx-scope": "off",
       "react-hooks/rules-of-hooks": "error",
-      // exhaustive-deps clashes with the "load once on mount" pattern used
-      // in many places (loaders, refresh callbacks). rules-of-hooks (the
-      // real bug detector) stays on as an error. Revisit if we migrate
-      // loaders to react-query or SWR.
-      "react-hooks/exhaustive-deps": "off",
+      // On since the stale-memo audit. A deliberate omission (mount-only effect,
+      // stable ref, "load once" loader) carries its own
+      // `eslint-disable-next-line react-hooks/exhaustive-deps -- <reason>`.
+      "react-hooks/exhaustive-deps": "error",
       "@typescript-eslint/no-unused-vars": unusedVarsRule,
       "no-unused-vars": "off",
       // The browser's own confirm box speaks the browser's language and says "no"

@@ -49,6 +49,7 @@ export default function PeopleSection({
       { key: "shares", label: tr("people.shares"), min: 120, priority: 2, onNarrow: "hide" },
       { key: "actions", label: "", min: 200, priority: 1, align: "end", onNarrow: "trailing" },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tr is re-created per render and only wraps t, which is listed
     [t]
   );
 

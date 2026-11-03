@@ -96,6 +96,7 @@ export default function WebdavSyncRow({
       setRowError(errorText(err));
       throw err;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- errorText only maps an error code to copy at failure time; re-creating send per render would churn its consumers
   }, []);
 
   const enabled = useSettingWrite<boolean>("data.webdav.enabled", status?.enabled ?? false, (v) =>

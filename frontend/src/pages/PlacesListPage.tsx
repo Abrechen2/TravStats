@@ -263,6 +263,7 @@ export default function PlacesListPage(): JSX.Element {
     });
     const dir = sortOrder === "asc" ? 1 : -1;
     return [...out].sort((a, b) => compareRows(a, b, sortBy, i18n.language, t) * dir);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t follows i18n.language, which is listed
   }, [rows, search, category, country, visited, listMembers, sortBy, sortOrder, i18n.language]);
   // Pages over the already filtered+sorted set — the summary strip and the
   // filter option lists above keep reading `filtered`/`rows`, never this.

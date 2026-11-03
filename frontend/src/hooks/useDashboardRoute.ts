@@ -218,6 +218,7 @@ export function useDashboardRoute(): DashboardRouteState {
   // projection ("journey"), which is the whole reason it exists.
   const projection = useMemo<MapProjectionChoice>(
     () => projectionOfMode(mode) ?? readLastProjection() ?? "globe",
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tab re-reads the stored projection, which the memo reads from storage rather than state
     [tab, mode]
   );
 

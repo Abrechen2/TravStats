@@ -44,6 +44,7 @@ export function useTranslation(namespace?: string | string[]): {
       return translationRef.current.t(key, options);
     },
     // `language` is intentional (see above)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- language is the deliberate re-identity (see above)
     [language]
   );
 

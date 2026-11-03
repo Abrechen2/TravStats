@@ -117,6 +117,7 @@ function ExtractValuesDialog({
     return (): void => controller.abort();
     // `current` is read once, when the proposal arrives — a later keystroke in
     // the form must not re-run a minute of parsing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- current is read once when the proposal arrives (see above)
   }, [documentId, domain, flightNumber, trainNumber, departureDate]);
 
   const values = phase.kind === "result" ? phase.result.values : null;

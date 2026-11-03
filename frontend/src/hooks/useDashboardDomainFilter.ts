@@ -91,6 +91,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       return;
     }
     enterLink(parseDomainsParam(domainsParam) ?? new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the param's own value (see above)
   }, [domainsParam]);
 
   const setVisible = useDashboardDomainFilterStore((s) => s.setVisible);
@@ -108,9 +109,13 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
    * all. `TAB_MODE_REGISTRY` keys them by tab, so the tab has to move.
    */
   const routeDomain = tab !== "all" && isFilterDomainKey(tab) ? tab : null;
-  const effectiveHidden = routeDomain
-    ? new Set(FILTER_DOMAIN_ORDER.filter((k) => k !== routeDomain))
-    : (linkHidden ?? hidden);
+  const effectiveHidden = useMemo(
+    () =>
+      routeDomain
+        ? new Set(FILTER_DOMAIN_ORDER.filter((k) => k !== routeDomain))
+        : (linkHidden ?? hidden),
+    [routeDomain, linkHidden, hidden]
+  );
 
   const rows = useMemo<DomainFilterRow[]>(() => {
     const available: Record<FilterDomainKey, boolean> = {

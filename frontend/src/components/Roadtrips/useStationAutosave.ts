@@ -351,6 +351,7 @@ export function useStationAutosave({
     keepLocally();
     setStatus(restored.every(isSavable) ? "pending" : "waiting");
     schedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restores a draft once on mount; the callbacks are only called, never watched
   }, []);
 
   // Leaving the page with a change still waiting for its pause sends it. If

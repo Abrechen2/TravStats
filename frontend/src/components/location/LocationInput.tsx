@@ -249,7 +249,7 @@ export function LocationInput({
       }
       applySelection({ lat, lon });
     },
-    [applySelection]
+    [applySelection, onValidityChange]
   );
 
   const handleModalConfirm = useCallback(

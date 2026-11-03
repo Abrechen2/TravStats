@@ -27,6 +27,7 @@ vi.mock("react-map-gl/maplibre", async () => {
     useEffect(() => {
       if (onLoad) pendingLoads.push(onLoad);
       // mount only
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- stub registers the load callback once on mount, on purpose
     }, []);
     return <div data-testid="map-instance">{children}</div>;
   };

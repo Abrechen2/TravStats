@@ -52,6 +52,7 @@ export function useEntrySuggestions<T>(
       active = false;
     };
     // `load` and `empty` are module-level; the request follows the settled query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load and empty are module-level (see above)
   }, [enabled, key]);
 
   return state;

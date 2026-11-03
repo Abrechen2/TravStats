@@ -53,6 +53,7 @@ export function useGroupSave<T extends Record<string, unknown>>({
   // The server's value moved while the user is not editing: follow it.
   const savedKey = stableSnapshot(saved);
   const wasKey = useRef(savedKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the effect follows the server value by its stable key; draft/saved are read at that moment
   useEffect(() => {
     if (savedKey === wasKey.current) return;
     const untouched = stableSnapshot(draft) === stableSnapshot(baseline.current);

@@ -69,6 +69,7 @@ export function useStayDatesFromTrip({
     if (next.checkIn !== checkIn) callbacks.current.onCheckInChange(next.checkIn);
     if (next.checkOut !== checkOut) callbacks.current.onCheckOutChange(next.checkOut);
     // The dates are read, not watched: a keystroke must not re-run the fill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the dates are read, not watched (see above)
   }, [start, end]);
 
   const offerCheckIn = start !== null && checkIn === "" ? start : null;

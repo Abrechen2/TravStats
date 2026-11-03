@@ -63,10 +63,15 @@ export default function AchievementPopup({
 
   const currentAchievement = achievements[currentIndex];
 
+  // The 8 s timer must run the CURRENT handler: `achievements` can grow while
+  // a popup is open, and a handler captured at schedule time would still see
+  // the old length (and close instead of showing the new one).
+  const handleNextRef = useRef<() => void>(() => undefined);
+
   useEffect(() => {
     // Auto-close after 8 seconds
     const timer = setTimeout(() => {
-      handleNext();
+      handleNextRef.current();
     }, 8000);
     timeoutRefs.current.push(timer);
 
@@ -92,6 +97,7 @@ export default function AchievementPopup({
       timeoutRefs.current.push(timer);
     }
   };
+  handleNextRef.current = handleNext;
 
   const handleClose = () => {
     setIsExiting(true);

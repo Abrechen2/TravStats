@@ -54,6 +54,7 @@ export function useGlobalSearch(rawQuery: string): { state: SearchState; retry: 
       });
     return () => controller.abort();
     // `enabled` is represented by `domainsKey`; spreading it would re-fire on identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- enabled is represented by domainsKey and toursVisible follows it; neither should re-fire on identity
   }, [query, domainsKey, attempt]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);

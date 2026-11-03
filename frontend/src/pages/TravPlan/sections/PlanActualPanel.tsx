@@ -67,6 +67,7 @@ export function PlanActualPanel({ ctx }: { ctx: PlanCtx }) {
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the fetch follows key and reloads; onError is called, not watched
   }, [key, reloads]);
 
   if (state.stations.length === 0)

@@ -242,6 +242,7 @@ export default function SpreadsheetSection({
         setImportStatus("failed");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- i18n is read only for the language of the export labels at call time; the instance is stable
     [t, mode, railVisible, busVisible, ferryVisible, rentalVisible]
   );
 

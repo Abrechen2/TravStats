@@ -157,6 +157,7 @@ export function useFlightForm(
     if (status === "historical") return;
     // Both `YYYY-MM-DD`: before today in the profile zone (Q1) is flown.
     if (departureDate) setStatus(departureDate < todayIn(todayZoneNow()) ? "flown" : "scheduled");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- status is read, not watched: only a date change re-derives it
   }, [departureDate]);
 
   // Clear error when step changes — unless the transition itself carries a

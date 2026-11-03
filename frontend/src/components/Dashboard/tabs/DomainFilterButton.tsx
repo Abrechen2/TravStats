@@ -51,6 +51,7 @@ export function DomainFilterButton({
   // switch flipping mid-session, must not steal focus back).
   useEffect(() => {
     if (open) setAutoFocusKey(filter.rows[0]?.key ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rows are read once per open, so a later row change cannot steal focus
   }, [open]);
 
   // Outside click closes the desktop dropdown (the sheet uses its own
@@ -67,6 +68,7 @@ export function DomainFilterButton({
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- close only calls the parent setter and refocuses a ref; the listener follows open/phone
   }, [open, phone]);
 
   const buttonLabel = t("dashboard:domainFilter.button.label", {

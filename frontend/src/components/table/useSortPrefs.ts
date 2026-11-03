@@ -72,6 +72,7 @@ export function useSortPrefs<K extends string>(
     seenEpoch.current = syncEpoch;
     setState(resolve());
     // `resolve` reads tableKey (listed) and the caller's module-constant defaults.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resolve reads tableKey (listed) and module-constant defaults (see above)
   }, [syncEpoch, tableKey]);
 
   const setSort = useCallback(

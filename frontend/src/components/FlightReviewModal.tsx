@@ -170,6 +170,7 @@ export default function FlightReviewModal({
         lookupAirports(initialData.departureCode, initialData.arrivalCode);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lookupAirports is re-created per render; the lookup follows the loaded flight
   }, [initialData, flightIndex]); // Also depend on flightIndex to ensure update when switching flights
 
   // Format datetime for datetime-local input
@@ -209,15 +210,13 @@ export default function FlightReviewModal({
 
   // Retry airport lookup when codes change
   useEffect(() => {
-    if (departureCode && !departureAirport) {
-      lookupAirports(departureCode, undefined);
-    }
+    if (departureCode && !departureAirport) lookupAirports(departureCode, undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-lookup only when the code changes; the airport is read, not watched
   }, [departureCode]);
 
   useEffect(() => {
-    if (arrivalCode && !arrivalAirport) {
-      lookupAirports(undefined, arrivalCode);
-    }
+    if (arrivalCode && !arrivalAirport) lookupAirports(undefined, arrivalCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-lookup only when the code changes; the airport is read, not watched
   }, [arrivalCode]);
 
   // Auto-derive airline from flight number prefix when airline field is empty
@@ -226,6 +225,7 @@ export default function FlightReviewModal({
       const derived = getAirlineFromFlightNumber(flightNumber);
       if (derived) setAirline(derived);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- derive only when the flight number changes; a cleared airline must not refill
   }, [flightNumber]);
 
   // The user-visible, saved fields (forgejo#248). Two of them are filled by

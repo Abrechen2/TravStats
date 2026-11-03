@@ -47,6 +47,7 @@ export function useRecordedFlightPaths(flights: GeoJSONFeature[]): GeoJSONFeatur
       cancelled = true;
     };
     // The fetch belongs to the gate alone; `t` and `addToast` do not re-ask.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the fetch follows the gate alone (see above)
   }, [enabled]);
 
   return useMemo(

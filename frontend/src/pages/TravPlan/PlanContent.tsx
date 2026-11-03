@@ -92,6 +92,7 @@ export default function PlanContent({
   }, [tripId, plan?.revision, remote]);
   useEffect(() => {
     if (plan && day === null && plan.state.startDay) setDay(plan.state.startDay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- day/plan are read when the plan's start day first arrives
   }, [plan?.state.startDay]);
   if (loading && !plan) return <EmptyState kind="pending" title={t("loading")} />;
   if (!plan)

@@ -82,6 +82,7 @@ vi.mock("react-map-gl/maplibre", () => {
     React.useEffect(() => {
       mapGlOnLoadRef.current = props.onLoad ?? null;
       props.onLoad?.();
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- the mock reports load once, on mount
     }, []);
     return React.createElement("div", { "data-testid": "fake-maplibre-map" }, props.children);
   });

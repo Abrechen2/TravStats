@@ -30,6 +30,7 @@ export default function AirportSeedingModal({
       const interval = setInterval(fetchStatus, 2000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the poll follows isOpen; fetchStatus only calls stable state setters
   }, [isOpen]);
 
   const fetchStatus = async () => {

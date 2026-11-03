@@ -31,6 +31,7 @@ export function useSuggestedPrefill(
     written.current = next || null;
     onChange(next);
     // `value` is read, not watched: a keystroke must not re-run the fill.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- value is read, not watched (see above)
   }, [suggestion]);
 
   return Boolean(value) && value === written.current;

@@ -159,6 +159,7 @@ export function CruiseReimportCompare({
   const nothingToAsk = loaded.status === "ready" && loaded.changes.length === 0;
   useEffect(() => {
     if (nothingToAsk) advance("unchanged");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires when the stored cruise settles as unchanged; advance is read fresh at that render
   }, [nothingToAsk, loaded]);
 
   if (!conflict || nothingToAsk) return null;

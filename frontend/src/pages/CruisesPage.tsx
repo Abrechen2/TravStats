@@ -145,14 +145,17 @@ export default function CruisesPage(): JSX.Element {
   );
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
-  const handleSort = (col: CruiseSortField): void => {
-    if (col === sortBy) {
-      setSort(col, sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      // date/price/ports default to desc (biggest/newest first); text asc.
-      setSort(col, col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
-    }
-  };
+  const handleSort = useCallback(
+    (col: CruiseSortField): void => {
+      if (col === sortBy) {
+        setSort(col, sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        // date/price/ports default to desc (biggest/newest first); text asc.
+        setSort(col, col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
+      }
+    },
+    [sortBy, sortOrder, setSort]
+  );
 
   const confirmDelete = async (): Promise<void> => {
     if (!cruiseToDelete) return;

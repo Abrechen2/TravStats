@@ -167,6 +167,7 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setCounts is a Zustand action, stable; the load follows the listed gates
   }, [
     isEnabled,
     placesVisible,

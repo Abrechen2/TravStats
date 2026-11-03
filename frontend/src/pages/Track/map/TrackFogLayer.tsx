@@ -86,6 +86,7 @@ export default function TrackFogLayer({
     return () => {
       map.off("moveend", settle);
       if (timer.current) clearTimeout(timer.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- request is a generation counter; the cleanup must bump its current value
       request.current++;
     };
   }, [current, load]);

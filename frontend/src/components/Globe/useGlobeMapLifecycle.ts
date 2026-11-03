@@ -75,6 +75,7 @@ export function useGlobeMapLifecycle({
     // Now that globe projection is engaged, mount the deck.gl overlay.
     // Constructor will detect globe mode and compile globe-aware shaders.
     setMapReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mapRef is a ref object, stable for the component's life
   }, []);
 
   // Track map zoom as React state — only used to drive `altitudeFactor`,

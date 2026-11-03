@@ -85,6 +85,7 @@ export default function LeaderboardPage(): JSX.Element {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- query is derived from year and board, which are listed
   }, [year, board, version]);
 
   // A group that was deleted (here or by a reload) leaves the filter, rather than filtering

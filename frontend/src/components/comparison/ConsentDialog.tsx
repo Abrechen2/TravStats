@@ -122,6 +122,7 @@ export default function ConsentDialog({
       alive = false;
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tr is re-created per render; the preview follows the listed inputs
   }, [open, scope, scopeKey, valid]);
 
   const confirm = async (): Promise<void> => {
