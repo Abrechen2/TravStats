@@ -15,7 +15,8 @@ describe("totalsFromAggregates", () => {
     ]);
     expect(out.distanceM).toBe(15_000);
     expect(out.movingMs).toBe(5_400_000);
-    expect(out.avgKmh).toBe(1); // the drawing's moving-distance ratio, not distance over moving time
+    // 15 km over 1.5 h: one basis with the distance and moving time, not the drawing's ratio.
+    expect(out.avgKmh).toBeCloseTo(10);
     expect(out.maxKmh).toBeCloseTo(90);
     expect(out.points).toBe(9);
   });

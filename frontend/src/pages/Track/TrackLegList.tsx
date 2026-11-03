@@ -3,8 +3,7 @@ import { alpha, token } from "../../components/ui/tokens";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TravTrackLeg, TravTrackStop } from "../../lib/api/travtrackLegs";
-import { formatTime } from "../../lib/displayFormat";
-import { durationText, legModeLabel, makeNumber } from "./map/trackLegFormat";
+import { durationText, legModeLabel, makeNumber, spanText } from "./map/trackLegFormat";
 import type { TrackSelection } from "./map/trackLegs";
 import { TRACK_COLOR } from "./map/trackMapLayers";
 
@@ -31,7 +30,6 @@ export default function TrackLegList({
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
   const number = makeNumber(i18n.language);
-  const clock = (ms: number) => formatTime(ms, { timeZone: zone });
   const rows = [
     ...legs.map((leg) => ({ kind: "leg" as const, at: leg.fromMs, leg })),
     ...stops.map((stop) => ({ kind: "stop" as const, at: stop.fromMs, stop })),
@@ -78,12 +76,9 @@ export default function TrackLegList({
                   style={rowStyle(on)}
                 >
                   <span className="t-caption tabular-nums">
-                    {t("track:timeline.span", {
-                      from: clock(row.stop.fromMs),
-                      to: clock(row.stop.untilMs),
-                    })}
+                    {spanText(row.stop.fromMs, row.stop.untilMs, zone, t)}
                   </span>
-                  <span>{t("track:stop.row")}</span>
+                  <span>{t(row.stop.stayRef ? "track:stop.rowStay" : "track:stop.row")}</span>
                   <span className="t-caption">
                     {durationText(row.stop.untilMs - row.stop.fromMs, t)}
                   </span>
@@ -104,7 +99,7 @@ export default function TrackLegList({
                 style={rowStyle(on)}
               >
                 <span className="t-caption tabular-nums">
-                  {t("track:timeline.span", { from: clock(leg.fromMs), to: clock(leg.untilMs) })}
+                  {spanText(leg.fromMs, leg.untilMs, zone, t)}
                 </span>
                 <span style={{ fontWeight: 600 }}>{legModeLabel(leg, t)}</span>
                 <span className="tabular-nums">

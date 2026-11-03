@@ -3,6 +3,7 @@ import type { Feature, Geometry } from "geojson";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { token } from "../../../components/ui/tokens";
+import { tokenRgb, type Rgb } from "./trackTokenRgb";
 import type { TrackPoint, TravTrackDayEntry } from "../../../lib/api/travtrack";
 import type { TravTrackPointDetail } from "../../../lib/api/travtrackLegs";
 import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
@@ -211,6 +212,18 @@ function anchorLayer(id: string, anchors: readonly MapAnchor[]): Layer {
   });
 }
 
+/** A stop's outline: its stay's status colour, the track's own where it has no stay. */
+export function stopOutlineOf(c: { warn: Rgb; good: Rgb; muted: Rgb }) {
+  return (stay: string | null): Rgb =>
+    stay === null
+      ? TRACK_RGB
+      : stay === "pending"
+        ? c.warn
+        : stay === "accepted"
+          ? c.good
+          : c.muted;
+}
+
 export function buildTrackLayers(input: TrackLayerInput): Layer[] {
   const on = input.layers;
   const dim = on.routes && (input.selection?.length ?? 0) > 0;
@@ -323,6 +336,13 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
   }
   if (on.visits && input.stops && input.stops.length > 0) {
     const onStop = input.onStop;
+    // The same status colours the stays list draws: pending warn, accepted good, other muted.
+    const surface = tokenRgb("surface");
+    const stopOutline = stopOutlineOf({
+      warn: tokenRgb("warn"),
+      good: tokenRgb("good"),
+      muted: tokenRgb("muted"),
+    });
     out.push(
       new ScatterplotLayer<MapStop>({
         id: "track-stops",
@@ -332,8 +352,8 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         radiusUnits: "pixels",
         stroked: true,
         filled: true,
-        getFillColor: (s) => (s.selected ? [...HIGHLIGHT_RGB, 255] : [11, 13, 16, 255]),
-        getLineColor: (s) => (s.stay === "pending" ? [...PHOTO_RGB, 255] : [...TRACK_RGB, 255]),
+        getFillColor: (s) => (s.selected ? [...HIGHLIGHT_RGB, 255] : [...surface, 255]),
+        getLineColor: (s) => [...stopOutline(s.stay), 255],
         lineWidthUnits: "pixels",
         getLineWidth: 3,
         updateTriggers: { getFillColor: [input.stops], getLineColor: [input.stops] },

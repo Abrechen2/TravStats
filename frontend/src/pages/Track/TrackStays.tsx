@@ -21,6 +21,12 @@ const PAGE = 50;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The inbox card of a stay still to be answered (the same link the day's timeline carries). */
+/** The status's colour: pending warn, accepted good, anything else muted. */
+export function stayStatusColor(status: string | undefined): string {
+  if (status === "pending") return token("warn");
+  return status === "accepted" ? token("good") : token("muted");
+}
+
 export const stayInboxHref = (id: string): string =>
   `/pending-updates?view=list&item=${encodeURIComponent(`dawarich:${id}`)}`;
 
@@ -182,12 +188,7 @@ function StayRow({ stay }: { stay: TravTrackStay }): JSX.Element {
     from: formatTime(start, opts),
     to: formatTime(end, opts),
   });
-  const colour =
-    stay.status === "pending"
-      ? token("warn")
-      : stay.status === "accepted"
-        ? token("good")
-        : token("muted");
+  const colour = stayStatusColor(stay.status);
   return (
     <li
       className="flex flex-wrap items-center gap-3"

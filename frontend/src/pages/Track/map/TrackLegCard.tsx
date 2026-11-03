@@ -12,10 +12,9 @@ import {
   type PickableMode,
   type TravTrackLeg,
 } from "../../../lib/api/travtrackLegs";
-import { formatTime } from "../../../lib/displayFormat";
 import { logger } from "../../../lib/logger";
 import { useToastStore } from "../../../store/toastStore";
-import { legFigures, legModeLabel, makeNumber } from "./trackLegFormat";
+import { legFigures, legModeLabel, makeNumber, spanText } from "./trackLegFormat";
 import { panelStyle, pillStyle } from "./trackMapStyle";
 
 /**
@@ -44,7 +43,6 @@ export default function TrackLegCard({
   const coarse = useCoarsePointer();
   const [busy, setBusy] = useState(false);
   const number = makeNumber(i18n.language);
-  const clock = (ms: number) => formatTime(ms, { timeZone: zone });
 
   const choose = async (mode: PickableMode | null) => {
     setBusy(true);
@@ -83,9 +81,7 @@ export default function TrackLegCard({
         <h3 className="t-card-title" data-testid="track-leg-mode">
           {legModeLabel(leg, t)}
         </h3>
-        <span className="t-caption tabular-nums">
-          {t("track:timeline.span", { from: clock(leg.fromMs), to: clock(leg.untilMs) })}
-        </span>
+        <span className="t-caption tabular-nums">{spanText(leg.fromMs, leg.untilMs, zone, t)}</span>
       </div>
       <p className="t-caption" data-testid="track-leg-source">
         {t(`track:legs.source.${leg.modeSource}`)}

@@ -7,10 +7,9 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import type { TravTrackStop } from "../../../lib/api/travtrackLegs";
-import { formatTime } from "../../../lib/displayFormat";
 import { logger } from "../../../lib/logger";
-import { stayInboxHref } from "../TrackStays";
-import { durationText } from "./trackLegFormat";
+import { stayInboxHref, stayStatusColor } from "../TrackStays";
+import { durationText, spanText } from "./trackLegFormat";
 import { panelStyle, pillStyle } from "./trackMapStyle";
 
 /**
@@ -36,7 +35,6 @@ export default function TrackStopCard({
   const coarse = useCoarsePointer();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const clock = (ms: number) => formatTime(ms, { timeZone: zone });
   const stay = stop.stayRef;
 
   const decline = async () => {
@@ -62,22 +60,27 @@ export default function TrackStopCard({
   };
 
   const status = stay?.status;
+  const title = t(stay ? "track:stop.titleStay" : "track:stop.title");
   return (
     <div
       role="dialog"
-      aria-label={t("track:stop.title")}
+      aria-label={title}
       data-testid="track-stop-card"
       className="flex flex-col gap-2"
       style={{ ...panelStyle, padding: 14, width: 320, maxWidth: "100%" }}
     >
-      <h3 className="t-card-title">{t("track:stop.title")}</h3>
+      <h3 className="t-card-title">{title}</h3>
       <p className="t-body tabular-nums" data-testid="track-stop-span">
-        {t("track:timeline.span", { from: clock(stop.fromMs), to: clock(stop.untilMs) })}
+        {spanText(stop.fromMs, stop.untilMs, zone, t)}
         {" · "}
         {durationText(stop.untilMs - stop.fromMs, t)}
       </p>
       {stay ? (
-        <p className="t-caption" data-testid="track-stop-status" style={{ fontWeight: 600 }}>
+        <p
+          className="t-caption"
+          data-testid="track-stop-status"
+          style={{ fontWeight: 600, color: stayStatusColor(status) }}
+        >
           {t(`track:stays.state.${status}`, { defaultValue: t("track:stop.stateOther") })}
         </p>
       ) : (
