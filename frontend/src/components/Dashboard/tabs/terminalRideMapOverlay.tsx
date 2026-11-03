@@ -205,7 +205,8 @@ export function useDashboardRides<R extends TerminalRideLine>(
     return () => {
       cancelled = true;
     };
-    // `load` is a module-level api method; the fetch follows the gate, the year and a retry.
+    // `load` is a module-level api method and `what` only names the log line; the fetch follows the gate, the year and a retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [enabled, year, attempt]);
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
   return { rides, loading, failed, reload };

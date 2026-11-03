@@ -319,6 +319,7 @@ export function useSettingsPage() {
       enrichmentConfirmed.current = historicalEnrichmentSettings;
     }
     // Only a fresh load re-bases the confirmed objects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a fresh load re-bases the confirmed objects
   }, [serverSettingsLoad]);
 
   const queueSave = <T>(task: () => Promise<T>): Promise<T> => {

@@ -86,6 +86,7 @@ export function StationPicker({
     if (value.lat === null) return;
     setQuery(value.name);
     if (value.stationId !== null) setMode("catalogue");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the position, not the name (see above)
   }, [value.lat, value.lon, value.stationId]);
 
   const showingPick = value.lat !== null && query === value.name;

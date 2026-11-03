@@ -44,6 +44,7 @@ export default function AirportSeedingBanner({
   useEffect(() => {
     // Initial fetch
     fetchStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial fetch on mount; fetchStatus only calls stable state setters
   }, []);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function AirportSeedingBanner({
         clearInterval(intervalId);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the poll follows isPolling; fetchStatus only calls stable state setters
   }, [isPolling]);
 
   // Don't show banner if not seeding or already completed

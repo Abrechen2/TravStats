@@ -103,6 +103,7 @@ export function ColumnMappingWizard<F extends string>({
       if (csvHeaders.includes(header)) merged[key] = header;
     }
     return merged;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the JSON signatures stand for fields/csvHeaders/initialMapping so a new array of the same content does not reset the mapping
   }, [fieldsSignature, headerSignature, initialMappingSignature]);
 
   const [mapping, setMapping] = useState<Partial<Record<F, string>>>(initial);

@@ -119,6 +119,7 @@ export default function TripDetailPage(): JSX.Element {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load follows the trip id; it only calls stable setters and navigate
   }, [id]);
   // `?edit=1` — the inbox asking for the trip's own days (timeFlagLinks.ts).
   useEditDeepLink(EDIT_PARAM.edit, trip !== null, () => setEditing(true));

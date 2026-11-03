@@ -75,6 +75,7 @@ vi.mock("react-map-gl/maplibre", () => {
     ref: React.Ref<unknown>
   ) {
     React.useImperativeHandle(ref, () => ({ getMap: () => fakeMap }), []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the mock reports load once, on mount
     React.useEffect(() => props.onLoad?.(), []);
     return React.createElement("div", { "data-testid": "fake-map" }, props.children);
   });

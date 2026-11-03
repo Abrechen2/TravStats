@@ -197,6 +197,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     // callbacks, and re-running this probe on its identity change would
     // needlessly re-fire getImportJob. The probe is a mount-time concern keyed
     // only on which album this section renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startPolling/stopPolling are intentionally omitted (see above)
   }, [tripId, album.id, album.mode]);
 
   const handleResync = async (): Promise<void> => {

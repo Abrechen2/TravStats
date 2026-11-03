@@ -91,6 +91,7 @@ function RentalReviewSlot({
     onEmpty(t(rentalEmptyParseKey(parsed?.fallbackCode)));
     onCancel();
     // One parse, one slot: re-running on a new callback identity would toast twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one parse, one slot (see above)
   }, [parseResult]);
 
   if (!candidate) return null;

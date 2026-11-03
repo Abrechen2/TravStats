@@ -255,6 +255,7 @@ export default function TripRouteEditorPage(): JSX.Element {
               },
             })),
           },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the ids (see above); a same-id track update must not rebuild the line
     [recordedKey, route?.mode]
   );
   const tourGeometries = useMemo(() => {
@@ -267,6 +268,7 @@ export default function TripRouteEditorPage(): JSX.Element {
         ? [{ routeId: `${route.id}:tracks`, name: route.name, geometry: recordingGeometry, rgb }]
         : []),
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- route fields are listed individually on purpose
   }, [geometry, recordingGeometry, route?.id, route?.name, route?.kind, roadtripHex]);
 
   /**

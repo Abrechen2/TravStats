@@ -106,6 +106,7 @@ export function DashboardLayout({
     setAddingDomainState(handoff.domain as AddableDomain);
     setHandedOver(handoff.document);
     navigate(location.pathname + location.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- consumes the handoff once per location.state; pathname/search are read at that moment
   }, [location.state]);
   const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
     // A package tour is imported on the trips page and a place document in

@@ -77,6 +77,7 @@ export function useCruiseGeometry(
     };
     // `t`/`addToast` are deliberately left out: a language switch must not
     // refetch every route, and the toast store's action is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t/addToast are left out on purpose (see above)
   }, [cruises]);
 
   return cruiseGeometry;

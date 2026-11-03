@@ -109,6 +109,7 @@ function RailReviewSlot({
     );
     onCancel();
     // One parse, one slot: re-running on a new callback identity would toast twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one parse, one slot (see above)
   }, [parseResult]);
 
   if (!booking || booking.legs.length === 0) return null;

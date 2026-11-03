@@ -50,6 +50,7 @@ export default function InboxHistory({ source }: { source: HistorySource }) {
     }
     // Keyed on the language, not on `t`: the test helper hands out a new `t`
     // per render, and a reload per render would never settle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t is keyed on the language (see above)
   }, [source, i18n.language]);
 
   useEffect(() => {

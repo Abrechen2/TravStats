@@ -166,6 +166,7 @@ export default function Filters({
     }
 
     onFilterChange(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onFilterChange is a parent callback; depending on it would re-emit on every parent render
   }, [
     yearFilter,
     monthFilter,

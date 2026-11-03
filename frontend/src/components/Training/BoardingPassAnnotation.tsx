@@ -135,6 +135,7 @@ export default function BoardingPassAnnotation({
     };
 
     loadTrainingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per training item; t and drawCanvas are called, not watched
   }, [trainingDataId]);
 
   const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -390,6 +391,7 @@ export default function BoardingPassAnnotation({
 
   useEffect(() => {
     drawCanvas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- redraws on the listed drawing state; drawCanvas is re-created per render and reads that state
   }, [boundingBoxes, currentBox, image, selectedBoxIndex]);
 
   const handleAddTag = () => {

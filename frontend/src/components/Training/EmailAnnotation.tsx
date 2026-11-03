@@ -168,6 +168,7 @@ export default function EmailAnnotation({
     };
 
     loadTrainingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per training item; t and showFiltered are read at that moment
   }, [trainingDataId]);
 
   // Update displayed text when filter toggle changes

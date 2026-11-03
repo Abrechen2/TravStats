@@ -211,6 +211,7 @@ export default function LodgingListPage(): JSX.Element {
             ),
         };
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSort reads sortBy/sortOrder, which are listed, and a stable store setter
     [columnPrefs, t, sortBy, sortOrder]
   );
 

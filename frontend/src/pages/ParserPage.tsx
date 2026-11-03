@@ -101,6 +101,7 @@ export default function ParserPage(): JSX.Element {
     setActiveTab("annotate");
     navigate(location.pathname, { replace: true, state: null });
     void startHandedOver(document_);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- consumes the handoff once per location.state (guarded by handedOver)
   }, [location.state]);
 
   /**

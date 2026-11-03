@@ -295,6 +295,7 @@ export default function GlobeView({
   );
   const resilientStyle = useResilientStyle(currentStyle.id);
   // Basemap choice persists via the shared appearance blob across 2D ↔ 3D.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- setStyleId is a state setter, stable
   const onStyleChange = useCallback((next: StyleId) => setStyleId(next), []);
   const { mapReady, mapZoom, onMapLoad } = useGlobeMapLifecycle({
     mapRef,

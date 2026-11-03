@@ -36,6 +36,7 @@ export default function OllamaRows({ service }: { service: AdminService }): JSX.
   useEffect(() => {
     if (!url) return;
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the model list follows the url; load only calls stable setters
   }, [url]);
 
   if (!expert || !url) return null;

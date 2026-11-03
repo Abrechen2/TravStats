@@ -54,6 +54,7 @@ export function useNativeGlobe(opts: Options): NativeGlobeApi {
 
   // Every field is a dependency: the builder is pure, and its cache keeps the
   // unchanged sources from being rebuilt.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the dependency list is every field of input by design (see above)
   const spec = useMemo(() => buildNativeGlobe(input, cache.current), Object.values(input));
   const specRef = useRef(spec);
   specRef.current = spec;

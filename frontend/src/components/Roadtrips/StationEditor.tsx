@@ -246,6 +246,7 @@ export default function StationEditor({
     if (started.current || start === "plain") return;
     started.current = true;
     insertAt(drafts.length, start === "today" ? { startDate: today } : undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount (guarded by started); later drafts must not re-insert
   }, []);
 
   // The undo window is the hold's: when it closes, the held change goes out.

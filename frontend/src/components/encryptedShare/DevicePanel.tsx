@@ -48,6 +48,7 @@ export default function DevicePanel({
   };
   useEffect(() => {
     void refresh().catch(() => setError(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh follows the account; it only calls stable setters
   }, [account]); // device identities are account-scoped
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);

@@ -94,6 +94,7 @@ export default function ShareLinkDialog({
       alive = false;
     };
     // `selectionKey` stands for `fields`: a new array with the same members is no new question.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectionKey stands for fields (see above)
   }, [open, status, kind, targetId, selectionKey, created]);
 
   const toggle = (field: string, on: boolean): void =>

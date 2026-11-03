@@ -611,8 +611,7 @@ export default function TripMap({
     if (bboxPoints.length === 0) return;
     fitTrip(projection, 0);
     didFit.current = true;
-    // `projection` is read, not depended on: this runs once, on load, when it
-    // is still "mercator". The switch does its own fit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `projection` is read, not depended on: runs once on load, while still "mercator"; the switch does its own fit
   }, [mapLoaded, bboxPoints, fitTrip]);
 
   // A new basemap resets MapLibre's projection and sky. Restore both before

@@ -50,6 +50,7 @@ export function usePlan(tripId: string | undefined) {
     void refresh();
     return () => {
       mounted.current = false;
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- generation is a counter; the cleanup must bump its current value
       generation.current++;
     };
   }, [refresh]);
@@ -93,7 +94,7 @@ export function usePlan(tripId: string | undefined) {
         if (mounted.current) setBusy(false);
       }
     },
-    [plan, message, t]
+    [message, t]
   );
   // Other members write to the same plan: look again on focus and every 30 s while visible
   // (ETag = revision, 304 when unchanged). Never while a write of our own is in flight.

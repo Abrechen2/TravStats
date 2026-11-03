@@ -106,6 +106,7 @@ export function useRangeRead(
     start({ fromDay, toDay }, null, []);
     // Unmount or another span: the running read stops before its next request.
     return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- run is a generation counter; the cleanup must bump its current value
       run.current++;
     };
   }, [key, generation, start]);

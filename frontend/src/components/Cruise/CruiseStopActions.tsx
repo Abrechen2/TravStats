@@ -85,6 +85,7 @@ export function CruiseStopActions({
       reopenedRef.current = false;
       document.getElementById(removeId)?.focus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focus moves only when the question opens or closes; removeId is a stable id
   }, [confirming]);
 
   const up = moveStop(stops, index, -1);
