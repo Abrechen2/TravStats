@@ -41,7 +41,7 @@ export default function RemotePersonAchievements({
 
   if (failure)
     return (
-      <p className="t-caption" role="alert" data-testid="remote-achievements-error">
+      <p role="alert" style={{ color: "var(--ts-warn)" }} data-testid="remote-achievements-error">
         {t(failure.key, { origin: failure.origin })}
       </p>
     );

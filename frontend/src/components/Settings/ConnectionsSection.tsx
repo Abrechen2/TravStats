@@ -14,10 +14,12 @@ import {
 } from "../../types/sharingRemote";
 import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSharingCopy";
 import Button from "../ui/Button";
-import ConfirmModal from "../ui/ConfirmModal";
 import Dialog from "../ui/Dialog";
-import { Field, Input, Select, Switch } from "../ui/Field";
+import { Field, Input, Select } from "../ui/Field";
+import { ConfirmDialog, SettingItem, SwitchControl } from "../ui/settings";
+import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import { useDialogCopy } from "./rowCopy";
 import ConnectionSwitchesForm, { theirsSummary } from "./ConnectionSwitchesForm";
 import RemotePersonStats from "./RemotePersonStats";
 import RemotePersonAchievements from "./RemotePersonAchievements";
@@ -36,6 +38,7 @@ type Editing = { connection: Connection; mode: "confirm" | "change" };
  */
 export default function ConnectionsSection(): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
+  const dialog = useDialogCopy();
   const [status, setStatus] = useState<RemoteSharingStatus | null>(null);
   const [findable, setFindable] = useState(false);
   const [servers, setServers] = useState<RemoteServer[]>([]);
@@ -164,62 +167,72 @@ export default function ConnectionsSection(): JSX.Element | null {
       <SectionTitle title={t(`${NS}.title`)} />
       <div className="flex flex-col gap-4 text-sm">
         <p className="t-caption">{t(`${NS}.hint`)}</p>
-        <Switch
-          id="remote-findable"
-          label={t(`${NS}.findable.label`)}
-          sub={t(`${NS}.findable.sub`)}
-          checked={findable}
-          disabled={busy}
-          onChange={(next) =>
-            void run(async () => {
-              setFindable(await sharingRemoteApi.setFindable(next));
-            }, "sharing:remote.errors.findableFailed")
-          }
-        />
-        <form onSubmit={ask} className="flex flex-col gap-3">
-          <span className="font-semibold">{t(`${NS}.request.title`)}</span>
-          {servers.length === 0 ? (
-            <p className="t-caption">{t(`${NS}.request.noServers`)}</p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-end gap-2">
-                <Field label={t(`${NS}.request.server`)} htmlFor="connection-server">
-                  <Select
-                    id="connection-server"
-                    value={origin}
-                    onChange={(e) => setOrigin(e.target.value)}
-                  >
-                    {servers.map((s) => (
-                      <option key={s.origin} value={s.origin}>
-                        {s.origin}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label={t(`${NS}.request.username`)} htmlFor="connection-username">
-                  <Input
-                    id="connection-username"
-                    value={username}
-                    autoComplete="off"
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                </Field>
-              </div>
-              <p className="t-caption">{t(`${NS}.request.switchesHint`)}</p>
-              <ConnectionSwitchesForm
-                idPrefix="connection-request"
-                value={requestSwitches}
-                onChange={setRequestSwitches}
-                disabled={busy}
+        <SettingRows>
+          <SettingItem
+            title={t(`${NS}.findable.label`)}
+            sub={t(`${NS}.findable.sub`)}
+            control={
+              <SwitchControl
+                checked={findable}
+                onChange={(next) => {
+                  if (busy) return;
+                  void run(async () => {
+                    setFindable(await sharingRemoteApi.setFindable(next));
+                  }, "sharing:remote.errors.findableFailed");
+                }}
               />
-              <div>
-                <Button type="submit" variant="primary" disabled={busy || username.trim() === ""}>
-                  {t(`${NS}.request.submit`)}
-                </Button>
-              </div>
-            </>
-          )}
-        </form>
+            }
+          />
+          <SettingItem title={t(`${NS}.request.title`)}>
+            <form onSubmit={ask} className="flex flex-col gap-3">
+              {servers.length === 0 ? (
+                <p className="t-caption">{t(`${NS}.request.noServers`)}</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <Field label={t(`${NS}.request.server`)} htmlFor="connection-server">
+                      <Select
+                        id="connection-server"
+                        value={origin}
+                        onChange={(e) => setOrigin(e.target.value)}
+                      >
+                        {servers.map((s) => (
+                          <option key={s.origin} value={s.origin}>
+                            {s.origin}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label={t(`${NS}.request.username`)} htmlFor="connection-username">
+                      <Input
+                        id="connection-username"
+                        value={username}
+                        autoComplete="off"
+                        onChange={(e) => setUsername(e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <p className="t-caption">{t(`${NS}.request.switchesHint`)}</p>
+                  <ConnectionSwitchesForm
+                    idPrefix="connection-request"
+                    value={requestSwitches}
+                    onChange={setRequestSwitches}
+                    disabled={busy}
+                  />
+                  <div>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={busy || username.trim() === ""}
+                    >
+                      {t(`${NS}.request.submit`)}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </form>
+          </SettingItem>
+        </SettingRows>
         {failure && !editing && !ending && (
           <p role="alert" style={{ color: "var(--ts-warn)" }}>
             {t(failure.key, { origin: failure.origin })}
@@ -350,16 +363,16 @@ export default function ConnectionsSection(): JSX.Element | null {
         )}
       </Dialog>
 
-      <ConfirmModal
-        isOpen={ending !== null}
-        onClose={() => setEnding(null)}
-        onConfirm={end}
-        title={t(`${NS}.end.title`)}
-        message={ending ? t(`${NS}.end.message`, { name: ending.displayName }) : ""}
-        confirmText={t(`${NS}.end.action`)}
-        cancelText={t(`${NS}.cancel`)}
-        isLoading={busy}
-      />
+      {ending && (
+        <ConfirmDialog
+          open
+          {...dialog("connectionend", { name: ending.displayName })}
+          cancelLabel={t(`${NS}.cancel`)}
+          busy={busy}
+          onConfirm={end}
+          onCancel={() => setEnding(null)}
+        />
+      )}
     </SectionCard>
   );
 }

@@ -875,7 +875,7 @@
       "waiting": {
         "title": "Wartet auf deine Antwort",
         "asks": "Möchte sich verbinden und gibt dir: {{gives}}",
-        "reconfirm": "Diese Verbindung bestand schon vor den Verbindungen. Die bereits geteilten Reisen laufen weiter, Neues beginnt erst, wenn ihr beide einmal bestätigt habt.",
+        "reconfirm": "Diese Kopplung bestand bereits vor der Einführung von Verbindungen. Die bereits geteilten Reisen laufen weiter, Neues beginnt erst, wenn ihr beide einmal bestätigt habt.",
         "confirm": "Bestätigen …",
         "decline": "Ablehnen"
       },
@@ -904,9 +904,7 @@
       "change": "Einstellungen ändern",
       "withdraw": "Anfrage zurückziehen",
       "end": {
-        "action": "Beenden",
-        "title": "Verbindung beenden?",
-        "message": "Was {{name}} bisher von dir sieht, endet sofort: Statistik, Rangliste, offene Reiseangebote und Pläne. Bereits geteilte Reisen behalten ihre verknüpften Kopien."
+        "action": "Beenden"
       },
       "cancel": "Abbrechen",
       "close": "Schließen",

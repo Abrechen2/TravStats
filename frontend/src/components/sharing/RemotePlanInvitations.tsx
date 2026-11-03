@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import { remotePlansApi, type RemotePlanSummary } from "../../lib/api/remotePlans";
+import { PlanNotice } from "../../pages/TravPlan/planLayout";
 import Button from "../ui/Button";
 
 /**
@@ -59,9 +60,9 @@ export default function RemotePlanInvitations({
     }
   };
   return (
-    <section aria-label={t("travplan:remote.invitations.title")} className="flex flex-col gap-2">
+    <section aria-label={t("travplan:remote.invitations.title")}>
       {invitations.map((p) => (
-        <div key={`${p.connectionId}/${p.planId}`} className="flex flex-col gap-2">
+        <PlanNotice key={`${p.connectionId}/${p.planId}`}>
           <p>
             {t("travplan:remote.invitation", {
               owner: p.ownerDisplayName,
@@ -69,21 +70,15 @@ export default function RemotePlanInvitations({
               server: new URL(p.origin).host,
             })}
           </p>
-          <div className="flex gap-2">
-            <Button variant="primary" disabled={busy !== null} onClick={() => void answer(p, true)}>
-              {t("travplan:members.accept")}
-            </Button>
-            <Button disabled={busy !== null} onClick={() => void answer(p, false)}>
-              {t("travplan:members.decline")}
-            </Button>
-          </div>
-        </div>
+          <Button variant="primary" disabled={busy !== null} onClick={() => void answer(p, true)}>
+            {t("travplan:members.accept")}
+          </Button>{" "}
+          <Button disabled={busy !== null} onClick={() => void answer(p, false)}>
+            {t("travplan:members.decline")}
+          </Button>
+        </PlanNotice>
       ))}
-      {error && (
-        <p role="alert" className="t-caption">
-          {error}
-        </p>
-      )}
+      {error && <PlanNotice tone="bad">{error}</PlanNotice>}
     </section>
   );
 }
