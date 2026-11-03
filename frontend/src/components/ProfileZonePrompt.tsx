@@ -95,7 +95,7 @@ export default function ProfileZonePrompt({
     return deferred ? (
       <div
         role="status"
-        className="fixed bottom-4 left-4 z-40 max-w-sm rounded-lg p-3 text-sm shadow-lg"
+        className="fixed bottom-4 right-4 z-40 max-w-sm rounded-lg p-3 text-sm shadow-lg"
         style={{
           background: "var(--bg-surface)",
           border: "1px solid var(--color-border)",

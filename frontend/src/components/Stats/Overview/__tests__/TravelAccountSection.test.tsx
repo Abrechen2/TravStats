@@ -196,4 +196,35 @@ describe("TravelAccountSection", () => {
       expect(screen.getByText("stats:travelAccount.tripsCoveredDesc")).toBeTruthy();
     });
   });
+
+  it("draws the roadtrip expenses per year and per currency, never summed across currencies", async () => {
+    getTravelAccount.mockResolvedValue(
+      response({
+        expenses: {
+          count: 3,
+          totalByCurrency: { EUR: 120, USD: 80 },
+          years: [{ year: "2025", count: 3, byCurrency: { EUR: 120, USD: 80 } }],
+          undatedByCurrency: {},
+        },
+      })
+    );
+    render(withRouter());
+    const block = await screen.findByTestId("travel-account-expenses");
+    expect(block.textContent).toMatch(/120/);
+    expect(block.textContent).toMatch(/80/);
+    expect(block.textContent).not.toMatch(/200/);
+    expect(block.textContent).toContain("€");
+    expect(block.textContent).toContain("$");
+  });
+
+  it("draws no expenses block when the server sends none or there are none", async () => {
+    getTravelAccount.mockResolvedValue(
+      response({
+        expenses: { count: 0, totalByCurrency: {}, years: [], undatedByCurrency: {} },
+      })
+    );
+    render(withRouter());
+    await screen.findByText("stats:travelAccount.unassignedNights");
+    expect(screen.queryByTestId("travel-account-expenses")).toBeNull();
+  });
 });

@@ -6,6 +6,7 @@ import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
 import DualFigureCard from "../DualFigureCard";
+import TravelAccountExpenses from "./TravelAccountExpenses";
 import CountingHelp from "../counting/CountingHelp";
 import { useDomainVisible } from "../../../hooks/useDomainVisible";
 
@@ -91,7 +92,7 @@ export default function TravelAccountSection(): JSX.Element | null {
   // as if they were affected.
   if (failed || data === null || data.account.years.length === 0) return null;
 
-  const { account, trips } = data;
+  const { account, trips, expenses } = data;
   // The night help names only the buckets this reader sees, in the server's
   // precedence order (`NIGHT_PRECEDENCE`: sea, hotel, rail, bus, air).
   const label = (key: BucketKey): string => t(`stats:travelAccount.${key}`);
@@ -223,6 +224,7 @@ export default function TravelAccountSection(): JSX.Element | null {
           }}
         />
       </div>
+      <TravelAccountExpenses expenses={expenses} />
       <CountingHelp
         testId="travel-account-help"
         entries={[

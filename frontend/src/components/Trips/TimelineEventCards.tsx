@@ -165,7 +165,7 @@ export function FlightCard({
   return (
     <ExpandableEventCard
       icon="✈"
-      bg="rgba(240,169,71,0.15)"
+      bg="var(--domain-flight-soft)"
       iconColor="var(--domain-flight, var(--accent))"
       title={ev.title}
       subtitle={ev.subtitle}
@@ -206,7 +206,7 @@ export function CruiseCard({
   return (
     <ExpandableEventCard
       icon="⚓"
-      bg="rgba(111,160,214,0.15)"
+      bg="var(--domain-cruise-soft)"
       iconColor="var(--domain-cruise)"
       title={ev.title}
       subtitle={ev.subtitle}
@@ -301,7 +301,7 @@ export function LodgingCheckCard({
     <Link to={`/lodging/${stay.lodgingId}`} className="block">
       <EventCard
         icon="🏨"
-        bg="rgba(212,119,143,0.15)"
+        bg="var(--domain-lodging-soft)"
         iconColor="var(--domain-lodging)"
         title={title}
         subtitle={
@@ -333,7 +333,7 @@ export function StopCard({
   return (
     <EventCard
       icon={icon}
-      bg="rgba(94,194,178,0.15)"
+      bg="var(--domain-poi-soft)"
       iconColor="var(--domain-poi)"
       title={s.title}
       subtitle={subtitle}
@@ -359,7 +359,7 @@ export function PlaceVisitCard({
   return (
     <EventCard
       icon={PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other}
-      bg="rgba(94,194,178,0.15)"
+      bg="var(--domain-poi-soft)"
       iconColor="var(--domain-poi)"
       title={place.name}
       subtitle={placeSubtitle(place) || null}
