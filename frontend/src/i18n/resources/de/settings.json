@@ -622,7 +622,16 @@
     "openHub": "Importieren",
     "log": {
       "title": "Import-Logbuch",
-      "scopeHint": "Jeder Listen-Import als Ganzes — neueste zuerst. Rücknehmbar, solange die Einträge noch aus diesem Import stammen.",
+      "scopeHint": "Jeder Listen-Import als Ganzes. Rücknehmbar, solange die Einträge noch aus diesem Import stammen.",
+      "columns": {
+        "area": "Bereich",
+        "source": "Quelle",
+        "date": "Datum",
+        "contents": "Inhalt",
+        "actions": "Aktionen"
+      },
+      "sortBy": "Nach {{col}} sortieren",
+      "sortedBy": "Sortiert nach {{col}}, {{dir}}",
       "counts": {
         "flights": "{{count}} Flüge",
         "flights_one": "{{count}} Flug",
