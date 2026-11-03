@@ -4,6 +4,7 @@ import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { token } from "../../../components/ui/tokens";
 import type { TrackPoint, TravTrackDayEntry } from "../../../lib/api/travtrack";
+import type { TravTrackPointDetail } from "../../../lib/api/travtrackLegs";
 import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { contextLabel } from "../trackContextLabel";
 import { lonLat, speedColor, speedPieces, type LonLat, type SpeedPiece } from "./trackGeometry";
@@ -68,9 +69,29 @@ export function mapAnchors(context: readonly TravTrackDayEntry[], t: Translate):
 /** A fix as the points layer and the inspector know it. */
 export interface MapPoint {
   point: TrackPoint;
+  /** The phone's speed, altitude and motion at this vertex; absent on an older server. */
+  detail?: TravTrackPointDetail | null;
   zone: string;
   /** The stored point behind the vertex (for „Punkt löschen"); null from an older server. */
   id: string | null;
+}
+
+/** One leg's stretch for picking: a click on its line selects the leg. */
+export interface MapLegLine {
+  id: string;
+  date: string;
+  path: LonLat[];
+}
+
+/** A dwell between legs, drawn as a marker that opens its card. */
+export interface MapStop {
+  date: string;
+  fromMs: number;
+  lat: number;
+  lon: number;
+  selected: boolean;
+  /** The stay's status when the server tied one to the stop. */
+  stay: string | null;
 }
 
 export interface TrackLayerInput {
@@ -92,6 +113,13 @@ export interface TrackLayerInput {
   countries: readonly Feature<Geometry>[];
   /** The open flight panel's whole flight, drawn over the span's line; empty without one. */
   highlight?: readonly LonLat[][];
+  /** The picked leg's stretches: drawn wide over the line, the rest fades. */
+  selection?: readonly LonLat[][];
+  /** Every leg's stretches, pickable (clear but present); omitted, no line is clickable. */
+  legLines?: readonly MapLegLine[];
+  onLeg?: (leg: MapLegLine) => void;
+  stops?: readonly MapStop[];
+  onStop?: (stop: MapStop) => void;
 }
 
 /** The open flight's line: bright, over the span's line, never joined across its own breaks. */
@@ -184,7 +212,9 @@ function anchorLayer(id: string, anchors: readonly MapAnchor[]): Layer {
 }
 
 export function buildTrackLayers(input: TrackLayerInput): Layer[] {
-  const alpha = Math.round(input.opacity * 255);
+  const dim = (input.selection?.length ?? 0) > 0;
+  // The picked leg stands out by the others stepping back, not by hiding them.
+  const alpha = Math.round(input.opacity * 255 * (dim ? 0.3 : 1));
   const on = input.layers;
   const out: Layer[] = [];
   // Under everything else: a country is the ground the line runs on.
@@ -232,6 +262,40 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
       })
     );
   }
+  if (dim) {
+    out.push(
+      new PathLayer<LonLat[]>({
+        id: "track-leg-selected",
+        data: input.selection as LonLat[][],
+        getPath: (d) => d,
+        getColor: [...HIGHLIGHT_RGB, 255],
+        getWidth: 8,
+        widthUnits: "pixels",
+        capRounded: true,
+        jointRounded: true,
+        pickable: false,
+      })
+    );
+  }
+  if (on.routes && input.legLines && input.legLines.length > 0 && input.onLeg) {
+    const onLeg = input.onLeg;
+    out.push(
+      new PathLayer<MapLegLine>({
+        id: "track-leg-pick",
+        data: input.legLines as MapLegLine[],
+        getPath: (d) => d.path,
+        // Alpha 1, not 0: a fully clear stroke is not offered to picking.
+        getColor: [0, 0, 0, 1],
+        getWidth: 16,
+        widthUnits: "pixels",
+        pickable: true,
+        onClick: (info: PickingInfo<MapLegLine>) => {
+          if (info.object) onLeg(info.object);
+          return true;
+        },
+      })
+    );
+  }
   if (on.points) {
     out.push(
       new ScatterplotLayer<MapPoint>({
@@ -256,6 +320,30 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
   }
   if (on.visits) {
     out.push(anchorLayer("track-visits", visitAnchorsOf(input.anchors)));
+  }
+  if (on.visits && input.stops && input.stops.length > 0) {
+    const onStop = input.onStop;
+    out.push(
+      new ScatterplotLayer<MapStop>({
+        id: "track-stops",
+        data: input.stops as MapStop[],
+        getPosition: (s) => [s.lon, s.lat],
+        getRadius: 9,
+        radiusUnits: "pixels",
+        stroked: true,
+        filled: true,
+        getFillColor: (s) => (s.selected ? [...HIGHLIGHT_RGB, 255] : [11, 13, 16, 255]),
+        getLineColor: (s) => (s.stay === "pending" ? [...PHOTO_RGB, 255] : [...TRACK_RGB, 255]),
+        lineWidthUnits: "pixels",
+        getLineWidth: 3,
+        updateTriggers: { getFillColor: [input.stops], getLineColor: [input.stops] },
+        pickable: true,
+        onClick: (info: PickingInfo<MapStop>) => {
+          if (info.object && onStop) onStop(info.object);
+          return true;
+        },
+      })
+    );
   }
   if (on.entries) {
     out.push(anchorLayer("track-entries", entryAnchorsOf(input.anchors)));

@@ -106,9 +106,12 @@ export const MOVING_KMH = 3;
 export interface RangeTotals {
   /** Metres, summed inside stretches only. */
   distanceM: number;
-  movingMs: number;
+  /** Null only when the server's aggregates could not tell it (never a 0 for "unknown"). */
+  movingMs: number | null;
   /** km/h over the moving time; null when nothing moved (an average over nothing is no 0). */
   avgKmh: number | null;
+  /** Fastest reading, km/h; present only with the server's aggregates. */
+  maxKmh?: number | null;
   points: number;
   /** 0..1 of the shown span that was recorded; null when no coverage is known. */
   coverage: number | null;

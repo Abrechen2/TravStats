@@ -84,7 +84,9 @@
     "network": "The server cannot be reached right now. Try again in a moment.",
     "generic": "That did not work. Try again.",
     "rangeTooLong": "A range on the map covers at most 400 days. Pick a shorter one.",
-    "pointGone": "This position no longer exists – it has already been deleted."
+    "pointGone": "This position no longer exists – it has already been deleted.",
+    "legInvalid": "This leg cannot be changed like that.",
+    "legGone": "This leg no longer exists – the view is being recalculated."
   },
   "settings": {
     "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
@@ -428,7 +430,18 @@
       "delete": "Delete point",
       "deleting": "Deleting …",
       "deleteConfirm": "Delete this one position for good? Importing the same file again will not bring it back.",
-      "deleted": "The position is deleted."
+      "deleted": "The position is deleted.",
+      "speed": "Speed",
+      "altitude": "Altitude",
+      "motion": "Motion",
+      "motionClass": {
+        "walking": "Walking",
+        "running": "Running",
+        "cycling": "Cycling",
+        "automotive": "Vehicle",
+        "stationary": "Stationary",
+        "unknown": "Unknown"
+      }
     },
     "totals": {
       "title": "Summary",
@@ -441,7 +454,8 @@
       "kmh": "{{kmh}} km/h",
       "minutes": "{{m}} min",
       "hours": "{{h}} h {{m}} min",
-      "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h."
+      "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h.",
+      "maxSpeed": "Top speed"
     },
     "quietDays": "Nothing recorded and no entry: {{days}}",
     "rangeLoading": "Loading in parts … {{parts}} parts, {{percent}} %",
@@ -636,5 +650,51 @@
     },
     "pairing": "No Companion paired yet: under Settings → Account → Devices TravStats shows a QR code you scan with the app.",
     "pairingAction": "Pair a device"
+  },
+  "legs": {
+    "title": "Legs",
+    "cardTitle": "Leg",
+    "wholeDay": "Whole day",
+    "underMinute": "< 1 min",
+    "metres": "{{m}} m",
+    "uncertain": "{{mode}} (uncertain)",
+    "modeGroup": "Mode of travel",
+    "modeFailed": "The change was not saved. {{reason}}",
+    "reloadFailed": "Saved, but the view could not be reloaded. Reload the page.",
+    "openEntry": "Open logbook entry",
+    "mode": {
+      "walk": "Walk",
+      "run": "Run",
+      "cycle": "Cycle",
+      "car": "Car",
+      "bus": "Bus",
+      "train": "Train",
+      "boat": "Boat",
+      "flight": "Flight",
+      "unknown": "Unknown",
+      "auto": "Automatic"
+    },
+    "source": {
+      "auto": "detected",
+      "entry": "from the logbook",
+      "manual": "set by you"
+    },
+    "figure": {
+      "distance": "Distance",
+      "duration": "Duration",
+      "moving": "Moving",
+      "avgSpeed": "Avg speed",
+      "maxSpeed": "Top speed",
+      "ascent": "Ascent",
+      "descent": "Descent"
+    }
+  },
+  "stop": {
+    "title": "Stay",
+    "row": "Stay",
+    "noStay": "No stay suggestion for this stop.",
+    "stateOther": "Stay",
+    "reject": "Decline",
+    "rejecting": "Declining …"
   }
 }
