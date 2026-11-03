@@ -1,3 +1,4 @@
+import type { FlightWindow } from "../locationEvidence/anomaly";
 import type { StoredPoint } from "../tripRecording/segments";
 import { STEP_MAX_MS, topSpeedOf } from "./everyday/fold";
 import { groundSteps, inFlightBy } from "./months/values";
@@ -26,9 +27,10 @@ export type RangeAggregates = {
 
 export function rangeAggregates(
   stretches: readonly StoredPoint[][],
-  rowOf: (point: StoredPoint) => SafePointRow | undefined
+  rowOf: (point: StoredPoint) => SafePointRow | undefined,
+  flights: readonly FlightWindow[] = []
 ): RangeAggregates {
-  const inFlight = inFlightBy([], (p) => rowOf(p)?.purpose === "flight");
+  const inFlight = inFlightBy(flights, (p) => rowOf(p)?.purpose === "flight");
   let distance = 0;
   let movingMs = 0;
   let measured = false;

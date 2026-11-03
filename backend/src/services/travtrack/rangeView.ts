@@ -1,3 +1,4 @@
+import { ENTRY_WINDOW_ADAPTERS } from "../locationEvidence/journeys/entryWindows";
 import { simplifyDegrees } from "../schematicRouter";
 import { privacySafeStretches } from "../tripRecording/privacySafe";
 import type { StoredPoint } from "../tripRecording/segments";
@@ -90,6 +91,13 @@ export function simplifyStretchesWithin(
   return { lines: kept, simplified: true, omitted: out.length - kept.length };
 }
 
+/** The flights of the span, so aggregates leave the air out as the monthly figures do. */
+async function flightWindows(userId: string, window: Span): Promise<Array<[number, number]>> {
+  const adapter = ENTRY_WINDOW_ADAPTERS.flight;
+  if ("none" in adapter) return [];
+  return (await adapter.read(userId, window)).map((w): [number, number] => [w.fromMs, w.untilMs]);
+}
+
 export async function travTrackRange(
   userId: string,
   window: Span,
@@ -111,7 +119,7 @@ export async function travTrackRange(
     segments,
     pointIds,
     pointDetails: pointDetailsOf(segments, read.rowOf),
-    aggregates: rangeAggregates(read.segments, read.rowOf),
+    aggregates: rangeAggregates(read.segments, read.rowOf, await flightWindows(userId, window)),
     pointCount: vertexCount(segments),
     readCount: vertexCount(read.segments),
     simplified: fitted.simplified,

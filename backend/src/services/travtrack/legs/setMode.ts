@@ -28,7 +28,11 @@ async function legsAround(userId: string, span: LegSpan): Promise<Leg[]> {
   const { zone } = await profileZoneOf(userId);
   const first = localDay(new Date(span.fromMs), zone);
   const last = localDay(new Date(span.untilMs - 1), zone);
-  const days = first === last ? [first] : [first, last];
+  const days = [first];
+  for (let d = first; d !== last && days.length < 4;) {
+    d = dayAfter(d);
+    days.push(d);
+  }
   const legs: Leg[] = [];
   for (const day of days) {
     const window = {
@@ -54,9 +58,27 @@ export async function setLegMode(
   mode: LegMode | null
 ): Promise<Leg> {
   if (mode === null) {
-    await prisma.travTrackLegMode.deleteMany({
-      where: { userId, fromMs: BigInt(span.fromMs), untilMs: BigInt(span.untilMs) },
+    // Every correction that holds a leg under the span goes, not only the one with
+    // these exact bounds: a late point may have shifted the leg since it was set.
+    const hit = under(await legsAround(userId, span), span);
+    const stored = await prisma.travTrackLegMode.findMany({
+      where: {
+        userId,
+        fromMs: { lt: BigInt(span.untilMs) },
+        untilMs: { gt: BigInt(span.fromMs) },
+      },
+      select: { id: true, fromMs: true, untilMs: true },
     });
+    const drop = stored
+      .filter(
+        (r) =>
+          (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
+          hit.some(
+            (l) => overlapShare(l, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5
+          )
+      )
+      .map((r) => r.id);
+    await prisma.travTrackLegMode.deleteMany({ where: { userId, id: { in: drop } } });
   } else {
     const hit = under(await legsAround(userId, span), span);
     if (hit.length === 0) throw notFound();

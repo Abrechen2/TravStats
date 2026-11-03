@@ -140,7 +140,7 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
         const points = segment.slice(piece.from, piece.to + 1);
         const span = { fromMs: points[0][0], untilMs: points[points.length - 1][0] };
         if (span.untilMs <= span.fromMs) continue;
-        const figures = legFigures(points, read.rowOf, inFlight);
+        const figures = legFigures(points, read.rowOf, inFlight, piece.mode !== "flight");
         if (figures.distanceM < MIN_LEG_M) continue;
         const manual = overrideFor(span, inputs.overrides);
         legs.push({

@@ -1,5 +1,6 @@
 import type { StoredPoint } from "../../tripRecording/segments";
 import { distanceM } from "../classify";
+import { MAX_SPEED_MPS } from "../everyday/plausible";
 import { smoothedAltitudes, STEP_MAX_MS, topSpeedOf } from "../everyday/fold";
 import type { InFlight } from "../months/values";
 import type { SafePointRow } from "../readSafe";
@@ -42,7 +43,9 @@ function climb(heights: readonly number[]): { up: number; down: number } | null 
 export function legFigures(
   points: readonly StoredPoint[],
   rowOf: RowOf,
-  inFlight: InFlight
+  inFlight: InFlight,
+  /** False for a flight, whose pace is above any ground cap. */
+  groundOnly = true
 ): LegFigures {
   let distance = 0;
   let movingMs = 0;
@@ -52,8 +55,10 @@ export function legFigures(
     const [a, b] = [points[k - 1], points[k]];
     if (isBadVertex(a) || isBadVertex(b)) continue;
     const step = distanceM({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] });
-    distance += step;
     const dt = b[0] - a[0];
+    // A jump no ground vehicle makes is a GPS glitch, not distance (everyday rule).
+    if (groundOnly && dt > 0 && step / (dt / 1000) > MAX_SPEED_MPS) continue;
+    distance += step;
     if (dt <= 0 || dt > STEP_MAX_MS) continue;
     measured = true;
     if (step / (dt / 1000) >= STILL_MPS) {

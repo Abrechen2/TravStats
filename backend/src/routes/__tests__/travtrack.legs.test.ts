@@ -262,14 +262,9 @@ describe("TravTrack — legs, stops and the mode correction", () => {
       expect(shown).toMatchObject({ mode: "cycle", modeSource: "manual" });
       const reset = await putMode({ fromMs: leg.fromMs, untilMs: leg.untilMs, mode: null });
       expect(reset.status).toBe(200);
-      // The widened span is a different row and still holds.
-      expect(reset.body.mode).toBe("cycle");
-      const reset2 = await putMode({
-        fromMs: leg.fromMs - 20_000,
-        untilMs: leg.untilMs + 20_000,
-        mode: null,
-      });
-      expect(reset2.body).toMatchObject({ mode: "walk", modeSource: "auto" });
+      // The shifted row covered the leg too: a reset takes every correction that holds it.
+      expect(reset.body).toMatchObject({ mode: "walk", modeSource: "auto" });
+      expect(await prisma.travTrackLegMode.count({ where: { userId } })).toBe(0);
     });
 
     it("covers a leg only by more than half of it", async () => {
