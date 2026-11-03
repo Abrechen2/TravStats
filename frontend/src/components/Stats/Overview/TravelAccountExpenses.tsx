@@ -1,21 +1,12 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { formatCurrency } from "../../../lib/units";
+import { formatAmounts } from "../../Roadtrips/RoadtripCostsSection";
 import type { ExpenseAccount } from "../../../types/travelAccount";
 
-/** One line per currency, largest first. Never summed: 300 USD and 300 EUR are not 600 of anything. */
+/** Same reading as the roadtrip cost panel: by currency code, joined with "+", never summed. */
 function ByCurrency({ amounts }: { amounts: Record<string, number> }): JSX.Element {
-  const entries = Object.entries(amounts).sort(([, a], [, b]) => b - a);
-  return (
-    <span>
-      {entries.map(([currency, value], i) => (
-        <span key={currency}>
-          {i > 0 && " · "}
-          {formatCurrency(value, currency)}
-        </span>
-      ))}
-    </span>
-  );
+  const { i18n } = useTranslation(["stats"]);
+  return <span>{formatAmounts(amounts, i18n.language)}</span>;
 }
 
 /**

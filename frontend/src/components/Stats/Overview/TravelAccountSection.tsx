@@ -96,6 +96,9 @@ export default function TravelAccountSection(): JSX.Element | null {
   if (data.account.years.length === 0) {
     return data.expenses && data.expenses.count > 0 ? (
       <section className="mt-8">
+        <h2 className="mb-2 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+          {t("stats:travelAccount.title")}
+        </h2>
         <TravelAccountExpenses expenses={data.expenses} />
       </section>
     ) : null;
