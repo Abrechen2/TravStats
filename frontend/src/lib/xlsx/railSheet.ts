@@ -32,6 +32,11 @@ function stationClockCell(value: TimeValue | null): Date | null {
   return wall ? new Date(`${wall}:00.000Z`) : null;
 }
 
+/** A ride logged without a time is a calendar day, not midnight. */
+function dayOrTime(value: TimeValue | null): "date" | "datetime" {
+  return value?.precision === "day" ? "date" : "datetime";
+}
+
 export function railSheet(t: T): SheetSpec<RailJourney> {
   const text = (
     key: string,
@@ -77,6 +82,7 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
         key: "departureTime",
         header: t("xlsx:columns.departureLocal"),
         kind: "datetime",
+        cellKind: (r) => dayOrTime(railDeparture(r)),
         width: 18,
         value: (r) => stationClockCell(railDeparture(r)),
       },
@@ -84,6 +90,7 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
         key: "arrivalTime",
         header: t("xlsx:columns.arrivalLocal"),
         kind: "datetime",
+        cellKind: (r) => dayOrTime(railArrival(r)),
         width: 18,
         value: (r) => stationClockCell(railArrival(r)),
       },
