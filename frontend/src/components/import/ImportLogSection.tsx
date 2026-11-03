@@ -61,7 +61,7 @@ const COLUMN_LAYOUT: Record<
   area: { min: 120, priority: 2, onNarrow: "mark" },
   source: { min: 200, grow: 2, onNarrow: "title" },
   date: { min: 110, priority: 2 },
-  contents: { min: 200, grow: 1, priority: 3, onNarrow: "subtitle" },
+  contents: { min: 200, grow: 1, priority: 3 },
   actions: { min: 150, align: "end", onNarrow: "trailing" },
 };
 
@@ -453,6 +453,7 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
                   <TableRow
                     testId={`batch-row-${batch.id}`}
                     columns={columns}
+                    narrowSubtitle={`${formatDate(batch.createdAt)} · ${describeCounts(batch, t)}`}
                     cells={columns.map((column) => renderCell(column.key as LogColumnId, batch))}
                   />
                   {expandedId === batch.id && renderItems(batch.id)}
