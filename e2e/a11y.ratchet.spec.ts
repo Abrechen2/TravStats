@@ -68,16 +68,18 @@ const STATIC_ROUTES = [
 ];
 
 /** A detail page needs a record id: take the first one the account holds. */
-async function firstId(page: Page, endpoint: string): Promise<string | null> {
+async function firstId(page: Page, endpoint: string): Promise<string> {
   const res = await page.request.get(`/api/v1/${endpoint}`);
-  if (!res.ok()) return null;
+  expect(res.ok(), `GET /api/v1/${endpoint} answered ${res.status()}`).toBe(true);
   const body = (await res.json()) as unknown;
   // Bare array, `{data: []}` or a named list such as `{trips: []}`.
   const rows = Array.isArray(body)
     ? body
     : Object.values((body ?? {}) as Record<string, unknown>).find(Array.isArray);
   const first = Array.isArray(rows) ? (rows[0] as { id?: string | number } | undefined) : undefined;
-  return first?.id != null ? String(first.id) : null;
+  // A seeded account holds one of each; a silent skip would drop the page from the guard.
+  expect(first?.id, `the e2e account holds no record at ${endpoint}`).toBeDefined();
+  return String(first!.id);
 }
 
 async function settle(page: Page): Promise<void> {
@@ -139,6 +141,9 @@ test.describe("accessibility ratchet", () => {
   async function check(page: Page, url: string, route = url): Promise<void> {
     await page.goto(url);
     await expect(page).not.toHaveURL(/\/login/);
+    // Not redirected elsewhere, and the app shell has rendered.
+    expect(new URL(page.url()).pathname).toBe(new URL(url, "http://x").pathname);
+    await expect(page.getByRole("button", { name: /Account menu|Konto-Menü/ })).toBeVisible();
     await settle(page);
     const found = await scan(page);
     measured[route] = found;
@@ -173,7 +178,6 @@ test.describe("accessibility ratchet", () => {
     test(`${label} detail page`, async ({ page }) => {
       await page.goto("/dashboard");
       const id = await firstId(page, endpoint);
-      test.skip(id === null, `the e2e account holds no ${label}`);
       // Keyed without the id, which differs per database.
       const route = `${prefix}:id`;
       await check(page, `${prefix}${id}`, route);
