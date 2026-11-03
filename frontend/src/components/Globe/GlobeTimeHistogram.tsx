@@ -399,7 +399,6 @@ export const GlobeTimeHistogram = ({
                 opacity: handleGhost && !scrubbing ? 0.5 : 1,
               }}
               title={t("map:globe.timeSlider.scrubHint")}
-              aria-label={t("map:globe.timeSlider.scrubHint")}
             >
               {/* the line */}
               <div
