@@ -1,6 +1,7 @@
 import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
 import { dayContext, type DayContextEntry } from "./dayContext";
+import { travTrackLegs, type Leg, type Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
 
@@ -16,6 +17,11 @@ import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
  *     `phonePaused` (the phone reported it could not record), `deleted` (the
  *     owner deleted it) or `noData`. A privacy zone is never a state of its
  *     own: an hour inside one reads like any hour without a fix.
+ *   - `legs` and `stops` — the day as journeys and dwells (`legs/`, spec
+ *     2026-11-03-travtrack-legs), cut from the same privacy-safe segments;
+ *     `ranges` index into `segments`.
+ *   - `pointDetails` — the phone's speed, altitude and movement class of each
+ *     vertex, aligned with `segments`, for the inspector.
  *   - `context` — what TravStats knows of the day, labelled from its own
  *     records (`dayContext.ts`, plan E10): every domain's entries, the trips,
  *     the time at home, the open TravTrack questions and the moving
@@ -26,6 +32,29 @@ export const DAY_POINT_CAP = 50_000;
 
 export type CoverageState = "recorded" | "noData" | "deleted" | "phonePaused";
 export type DayCoverage = Array<Span & { state: CoverageState }>;
+export type PointDetail = {
+  speedMps: number | null;
+  altitudeM: number | null;
+  motion: string | null;
+};
+
+/** The readings of every vertex of `segments`, aligned with them. */
+export function pointDetailsOf(
+  segments: readonly StoredPoint[][],
+  rowOf: SafeSpan["rowOf"]
+): PointDetail[][] {
+  return segments.map((s) =>
+    s.map((p) => {
+      const row = rowOf(p);
+      return {
+        speedMps: row?.speedMps ?? null,
+        altitudeM: row?.altitudeM ?? null,
+        motion: row?.motion ?? null,
+      };
+    })
+  );
+}
+
 export type DayContext = DayContextEntry[];
 
 export type TravTrackDay = {
@@ -34,8 +63,12 @@ export type TravTrackDay = {
   segments: StoredPoint[][];
   /** The stored point of each vertex, aligned with `segments` (plan T5.3): what a single delete names. */
   pointIds: string[][];
+  /** The phone's own readings of each vertex, aligned with `segments` (null where it gave none). */
+  pointDetails: PointDetail[][];
   coverage: DayCoverage;
   context: DayContext;
+  legs: Leg[];
+  stops: Stop[];
   pointCount: number;
   /** More points than one day answer carries; the rest is not shown. */
   truncated: boolean;
@@ -88,14 +121,20 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
   const read = await readSafeTravTrack(userId, window, DAY_POINT_CAP);
-  const context = await dayContext(userId, window, read);
+  const [context, { legs, stops }] = await Promise.all([
+    dayContext(userId, window, read),
+    travTrackLegs(userId, window, read),
+  ]);
   return {
     date,
     zone,
     segments: read.segments,
     pointIds: read.segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? "")),
+    pointDetails: pointDetailsOf(read.segments, read.rowOf),
     coverage: coverageOf(window, read),
     context,
+    legs,
+    stops,
     pointCount: read.segments.reduce((n, s) => n + s.length, 0),
     truncated: read.next !== null,
   };

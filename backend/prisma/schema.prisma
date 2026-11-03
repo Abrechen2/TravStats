@@ -186,6 +186,7 @@ model User {
   travTrackZoneTombstones    TravTrackZoneTombstone[]
   travTrackDeletedPoints     TravTrackDeletedPoint[]
   travTrackGaps              TravTrackGap[]
+  travTrackLegModes          TravTrackLegMode[]
   travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
   travTrackDiagnosticUploads TravTrackDiagnosticUpload[]
   travTrackShareSnapshots    TravTrackShareSnapshot[]
@@ -6171,6 +6172,26 @@ model TravTrackGap {
   @@unique([userId, deviceId, fromAt, reason])
   @@index([userId, fromAt])
   @@map("travtrack_gaps")
+}
+
+/// The owner's correction of a leg's mode (spec 2026-11-03-travtrack-legs):
+/// bound to a time span, never to points or to a derived leg's id, so it
+/// survives a small re-derivation. A point or range delete leaves it alone.
+/// Epoch milliseconds, like the legs the Companion reads.
+model TravTrackLegMode {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  fromMs    BigInt   @map("from_ms")
+  untilMs   BigInt   @map("until_ms")
+  /// walk | run | cycle | car | bus | train | boat | flight | unknown
+  mode      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fromMs, untilMs])
+  @@map("travtrack_leg_modes")
 }
 
 /// One entry of a phone's TravTrack diagnostics log (spec

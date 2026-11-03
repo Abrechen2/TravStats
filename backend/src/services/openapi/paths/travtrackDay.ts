@@ -5,6 +5,7 @@ import { errorContent } from "./shared";
 import { travTrackDayQuerySchema, travTrackExportQuerySchema } from "../../../schemas/travtrack";
 import { GAP_REASONS } from "../../travtrack/limits";
 import { DOMAIN_KEYS } from "../../../shared/domains";
+import { legSchema, pointDetailSchema, stopSchema } from "./travtrackLegs";
 
 /**
  * TravTrack's day view and export (TravTrack plan T6). Beside `travtrack.ts`,
@@ -34,6 +35,15 @@ const day = z.object({
       "The stored point of each vertex, aligned with `segments` — what " +
         "`DELETE /travtrack/points/{id}` names"
     ),
+  pointDetails: z
+    .array(z.array(pointDetailSchema))
+    .describe(
+      "The phone's speed, altitude and movement class of each vertex, aligned with `segments`"
+    ),
+  legs: z
+    .array(legSchema)
+    .describe("The day's journeys, ordered by `fromMs`, from the privacy-safe segments only"),
+  stops: z.array(stopSchema).describe("The dwells between legs; never one inside a privacy zone"),
   coverage: z
     .array(
       z.object({

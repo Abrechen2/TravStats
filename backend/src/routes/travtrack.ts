@@ -20,6 +20,7 @@ import dayRoutes from "./travtrack/day";
 import diagnosticsRoutes from "./travtrack/diagnostics";
 import exploredRoutes from "./travtrack/explored";
 import exportRoutes from "./travtrack/export";
+import legRoutes from "./travtrack/legs";
 import importRoutes from "./travtrack/imports";
 import monthRoutes from "./travtrack/months";
 import ingestSourceRoutes from "./travtrack/ingestSources";
@@ -112,6 +113,7 @@ router.patch(
 router.use(pointRoutes);
 router.use(zoneRoutes);
 router.use(dayRoutes);
+router.use(legRoutes);
 router.use(exportRoutes);
 router.use(exploredRoutes);
 router.use(monthRoutes);
