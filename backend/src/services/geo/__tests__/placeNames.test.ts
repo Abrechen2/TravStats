@@ -30,6 +30,24 @@ describe("place names for a traveller (forgejo#199)", () => {
     expect(merged[0]).toMatchObject({ name: "Gyeongbokgung Palace", localName: "경복궁" });
   });
 
+  it("cuts the Latin head off an OSM name that lists several scripts (Imlil appeared twice)", () => {
+    const merged = mergePlaceNames(
+      [hit("osm:node/9", "Imlil")],
+      [hit("osm:node/9", "Imlil")],
+      [hit("osm:node/9", "Imlil ⵉⵎⵍⵉⵍ إمليل")]
+    );
+    expect(merged[0]).toMatchObject({ name: "Imlil", localName: "ⵉⵎⵍⵉⵍ إمليل" });
+  });
+
+  it("keeps a brand-plus-branch local name whole when its Latin head is not the name", () => {
+    const merged = mergePlaceNames(
+      [hit("osm:node/8", "Samcheong CU")],
+      [hit("osm:node/8", "Samcheong CU")],
+      [hit("osm:node/8", "CU 삼청점")]
+    );
+    expect(merged[0]).toMatchObject({ localName: "CU 삼청점" });
+  });
+
   it("keeps a Latin name in the requested language and adds the local one", () => {
     const merged = mergePlaceNames(
       [hit("osm:way/3", "Seoul-Bahnhof")],

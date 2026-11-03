@@ -1,4 +1,5 @@
 import { hasNonLatinScript } from "../../shared/geo/latinScript";
+import { splitGluedName } from "./gluedPlaceName";
 import type { PlaceResult } from "./photon";
 
 /**
@@ -154,7 +155,17 @@ export function mergePlaceNames(
     // Without a default-name answer, the name we replaced IS the local one.
     const localCandidate =
       localByRef.get(hit.externalRef) ?? (name !== hit.name ? hit.name : undefined);
-    const localName = localCandidate && localCandidate !== name ? localCandidate : undefined;
+    // OSM often lists a place under several scripts in ONE name tag ("Imlil ⵉⵎⵍⵉⵍ
+    // إمليل"); the Latin head would show the traveller's name twice, so only the
+    // part in the other script is the sign's name (audit-local-name-latin-prefix).
+    const split = localCandidate ? splitGluedName(localCandidate) : null;
+    // Only a head that repeats the name is a duplicate: "CU 삼청점" is one name
+    // (brand + branch), and cutting it is the bug 0888349d5 fixed.
+    const cut =
+      split && split.name.localeCompare(name, undefined, { sensitivity: "accent" }) === 0
+        ? split.localName
+        : localCandidate;
+    const localName = cut && cut !== name ? cut : undefined;
     return { ...hit, name, ...(localName ? { localName } : {}) };
   });
 }

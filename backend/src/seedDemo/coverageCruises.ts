@@ -556,6 +556,20 @@ export async function loadPools(): Promise<{
   return { ships, ports };
 }
 
+/** How many calendar years the finished cruises are spread over, ending last year. */
+const HISTORY_YEARS = 9;
+
+/**
+ * The year the idx-th template's finished cruise sails in: spread over the
+ * HISTORY_YEARS before the run's own year, so the history stays as long, and as
+ * past, as it was the day the seed was written (it was a fixed 2017–2025,
+ * which ages into a gap before "today"). Never the current year, whose later
+ * months a random month could put in the future.
+ */
+export function historyYear(idx: number, count: number, now: Date): number {
+  return now.getUTCFullYear() - HISTORY_YEARS + Math.floor((idx / count) * HISTORY_YEARS);
+}
+
 export async function seedCruises(
   userId: string,
   ships: Map<string, ShipRow>,
@@ -584,8 +598,7 @@ export async function seedCruises(
     else status = "historical";
 
     // distribute across years
-    const yearOffset = Math.floor((idx / CRUISE_TEMPLATES.length) * 9);
-    const yearBase = 2017 + yearOffset;
+    const yearBase = historyYear(idx, CRUISE_TEMPLATES.length, now);
     let startBase: Date;
     if (status === "scheduled") {
       startBase = new Date(now.getTime() + (30 + r(200)) * 24 * 60 * 60 * 1000);
