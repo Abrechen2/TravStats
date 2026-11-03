@@ -287,10 +287,17 @@ const calendar = z.object({
         day: z.string().describe("`YYYY-MM-DD`, a UTC day"),
         kmGround: z.number(),
         recorded: z.literal(true),
+        trip: z
+          .boolean()
+          .describe("A trip of the account spans this day (first to last, inclusive)"),
+        flight: z
+          .boolean()
+          .describe("A flight that is not cancelled was in the air on this UTC day"),
       })
     )
     .describe(
-      "Days with a privacy-safe vertex; a day absent from a settled month was not recorded"
+      "Days with a privacy-safe vertex; a day absent from a settled month was not recorded. " +
+        "The trip and flight flags are carried by these days only"
     ),
   pending: z.array(z.string()).describe("`YYYY-MM` still being prepared: days may change"),
   unavailable: z

@@ -65,6 +65,8 @@ describe("TravTrack — stays and calendar", () => {
     await prisma.userSettings.deleteMany({ where });
     await prisma.travTrackMonthValue.deleteMany({ where });
     await prisma.travTrackDirtyDay.deleteMany({ where });
+    await prisma.trip.deleteMany({ where });
+    await prisma.flight.deleteMany({ where });
   });
 
   afterAll(async () => {
@@ -170,11 +172,76 @@ describe("TravTrack — stays and calendar", () => {
       expect(res.body).toEqual({
         year: 2026,
         days: [
-          { day: "2026-03-04", kmGround: 7.3, recorded: true },
-          { day: "2026-03-05", kmGround: 0, recorded: true },
+          { day: "2026-03-04", kmGround: 7.3, recorded: true, trip: false, flight: false },
+          { day: "2026-03-05", kmGround: 0, recorded: true, trip: false, flight: false },
         ],
         pending: [],
         unavailable: [],
+      });
+    });
+
+    it("flags the days a trip spans and a flight was in the air, and no others", async () => {
+      await month(userId, "2026-07-01", {
+        "2026-07-01": 1,
+        "2026-07-02": 2,
+        "2026-07-03": 3,
+        "2026-07-04": 4,
+      });
+      await prisma.trip.create({
+        data: {
+          userId,
+          name: "Calendar flags trip",
+          startDate: utcMidnight("2026-07-02"),
+          endDate: utcMidnight("2026-07-03"),
+        },
+      });
+      await prisma.trip.create({
+        data: { userId: otherId, name: "Other's trip", startDate: utcMidnight("2026-07-04") },
+      });
+      await prisma.flight.create({
+        data: {
+          userId,
+          depIata: "ICN",
+          arrIata: "CJU",
+          depLat: 37.469,
+          depLon: 126.451,
+          arrLat: 33.511,
+          arrLon: 126.493,
+          flightNumber: "XX1",
+          departureTime: new Date("2026-07-03T22:00:00Z"),
+          arrivalTime: new Date("2026-07-04T06:00:00Z"),
+          status: "flown",
+        },
+      });
+      await prisma.flight.create({
+        data: {
+          userId,
+          depIata: "ICN",
+          arrIata: "CJU",
+          depLat: 37.469,
+          depLon: 126.451,
+          arrLat: 33.511,
+          arrLon: 126.493,
+          flightNumber: "XX2",
+          departureTime: new Date("2026-07-01T10:00:00Z"),
+          arrivalTime: new Date("2026-07-01T12:00:00Z"),
+          status: "cancelled",
+        },
+      });
+
+      const res = await get("calendar", { year: "2026" });
+
+      const flags = Object.fromEntries(
+        res.body.days.map((d: { day: string; trip: boolean; flight: boolean }) => [
+          d.day,
+          [d.trip, d.flight],
+        ])
+      );
+      expect(flags).toEqual({
+        "2026-07-01": [false, false],
+        "2026-07-02": [true, false],
+        "2026-07-03": [true, true],
+        "2026-07-04": [false, true],
       });
     });
 
