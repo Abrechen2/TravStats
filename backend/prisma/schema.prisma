@@ -1324,6 +1324,14 @@ model AdminSettings {
   // self-hoster gets to decide whether their instance talks to jsDelivr at all.
   fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
 
+  // FX: where the ECB reference rates come from (GitHub #391). Source ids are
+  // "frankfurter" | "allratestoday" | "custom"; the fallback also knows "none".
+  // The custom URL columns are only read while their source is "custom".
+  fxPrimarySource     String  @default("frankfurter") @map("fx_primary_source")
+  fxPrimaryCustomUrl  String? @map("fx_primary_custom_url")
+  fxFallbackSource    String  @default("none") @map("fx_fallback_source")
+  fxFallbackCustomUrl String? @map("fx_fallback_custom_url")
+
   // Which reader gets the first look at a booking document, in EVERY domain:
   // "template_first" or "llm_first". Owner decision 2026-09-17, after the
   // paths were measured against the sample corpus: the template chain read

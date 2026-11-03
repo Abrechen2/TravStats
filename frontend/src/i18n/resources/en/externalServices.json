@@ -318,6 +318,12 @@
     },
     "openData": {
       "marketOverpassUrl": "Overpass address for markets"
+    },
+    "fx": {
+      "primarySource": "Rate source",
+      "primaryUrl": "Address of the custom rate source",
+      "fallbackSource": "Second rate source",
+      "fallbackUrl": "Address of the second rate source"
     }
   },
   "services": {
@@ -698,6 +704,19 @@
         "personal_feeder": "Personal with feeder",
         "custom": "Custom budget"
       }
+    },
+    "fx": {
+      "primarySource": {
+        "frankfurter": "Frankfurter",
+        "allratestoday": "AllRatesToday",
+        "custom": "Custom address"
+      },
+      "fallbackSource": {
+        "none": "None",
+        "frankfurter": "Frankfurter",
+        "allratestoday": "AllRatesToday",
+        "custom": "Custom address"
+      }
     }
   },
   "legacy": {
@@ -712,5 +731,14 @@
     },
     "loadFailed": "The status could not be loaded.",
     "parserNote": "How imported bookings are processed is still set here."
+  },
+  "fieldNotes": {
+    "fx": {
+      "allratestoday": {
+        "text": "Free, no key needed. If you show rates publicly, the provider asks for a link back.",
+        "linkLabel": "allratestoday.com",
+        "linkUrl": "https://allratestoday.com"
+      }
+    }
   }
 }

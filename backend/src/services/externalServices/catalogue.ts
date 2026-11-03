@@ -9,6 +9,7 @@
  * the info rows) lives in the frontend locale files under
  * `externalServices:services.<id>.*` — the API never carries prose.
  */
+import { FX_FALLBACK_IDS, FX_SOURCE_IDS } from "../fx/fxSources";
 import type {
   CategoryId,
   EnabledBinding,
@@ -441,7 +442,13 @@ export const SERVICES: readonly ServiceDef[] = [
     // and that stays its own switch (the Parser page's "fxCdnFallbackEnabled").
     alwaysOn: true,
     recommended: "free",
-    fields: [admin("cdnFallback", "switch", "fxCdnFallbackEnabled")],
+    fields: [
+      admin("primarySource", "select", "fxPrimarySource", false, [...FX_SOURCE_IDS]),
+      admin("primaryUrl", "url", "fxPrimaryCustomUrl", true),
+      admin("fallbackSource", "select", "fxFallbackSource", false, [...FX_FALLBACK_IDS]),
+      admin("fallbackUrl", "url", "fxFallbackCustomUrl", true),
+      admin("cdnFallback", "switch", "fxCdnFallbackEnabled"),
+    ],
   }),
 
   // ---- sync & mail -------------------------------------------------------------------

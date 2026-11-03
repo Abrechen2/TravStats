@@ -43,6 +43,28 @@ function turnsOnCloudAi(service: ServiceDef, body: AdminUpdateBody): boolean {
   return body.enabled === true;
 }
 
+/**
+ * "Custom" without an address would save fine and then silently fall back to
+ * the default source — a choice that does nothing. Judge the row as it would
+ * read AFTER this write (the write may carry only one of the two fields).
+ */
+function assertFxCustomSourcesHaveUrls(
+  write: Record<string, unknown>,
+  current: Record<string, unknown> | null
+): void {
+  const after = (column: string, fallback: unknown): unknown =>
+    column in write ? write[column] : (current?.[column] ?? fallback);
+  const pairs = [
+    ["fxPrimarySource", "fxPrimaryCustomUrl", "primaryUrl", "frankfurter"],
+    ["fxFallbackSource", "fxFallbackCustomUrl", "fallbackUrl", "none"],
+  ] as const;
+  for (const [sourceCol, urlCol, fieldKey, def] of pairs) {
+    if (after(sourceCol, def) === "custom" && !after(urlCol, null)) {
+      throw new AppError("A custom source needs an address", 400, "VALIDATION_FAILED", fieldKey);
+    }
+  }
+}
+
 export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promise<void> {
   const service = getService(id);
   if (!service) throw new AppError("Unknown external service", 404, "SERVICE_NOT_FOUND");
@@ -57,6 +79,8 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     string,
     unknown
   > | null;
+
+  if (id === "fx") assertFxCustomSourcesHaveUrls(adminData, current);
 
   if (body.allowAccountKeys !== undefined) {
     if (service.level !== "instanceAndAccount" || service.connection) {

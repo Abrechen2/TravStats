@@ -24,7 +24,12 @@ const BASE_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api";
 const rateCache = new Map<string, number>();
 
 /** Units of `to` per 1 `from` on `date` (YYYY-MM-DD). null on any miss. */
-export async function getCdnRate(from: string, to: string, date: string): Promise<FxRate | null> {
+export async function getCdnRate(
+  from: string,
+  to: string,
+  date: string,
+  timeoutMs?: number
+): Promise<FxRate | null> {
   if (from === to) return { rate: 1, source: "cdn" };
   const key = `${date}:${from}:${to}`;
   const cached = rateCache.get(key);
@@ -33,7 +38,10 @@ export async function getCdnRate(from: string, to: string, date: string): Promis
   const lowerFrom = from.toLowerCase();
   const lowerTo = to.toLowerCase();
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}@${date}/v1/currencies/${lowerFrom}.json`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}@${date}/v1/currencies/${lowerFrom}.json`,
+      timeoutMs
+    );
     if (!res.ok) {
       // A 404 is the ordinary answer for a date before the dataset begins or a
       // code it does not carry — an expected miss, not an incident. Logging it

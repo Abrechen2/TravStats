@@ -1,7 +1,7 @@
 import logger from "../../utils/logger";
+import { FRANKFURTER_URL } from "./fxSources";
 import { fetchWithTimeout, isSettledRateDate, isUsableRate } from "./fxGuards";
 
-const BASE_URL = "https://api.frankfurter.dev/v1";
 // Cache one rate per (from,to,date) for the process lifetime. Historical ECB
 // rates never change, so an unbounded map keyed by the tuple is safe and small
 // — but only for SETTLED days. Today's rate is still moving (the ECB publishes
@@ -22,14 +22,22 @@ export interface FxRate {
 }
 
 /** Units of `to` per 1 `from` on `date` (YYYY-MM-DD). null on any failure. */
-export async function getRate(from: string, to: string, date: string): Promise<FxRate | null> {
+export async function getRate(
+  from: string,
+  to: string,
+  date: string,
+  baseUrl: string = FRANKFURTER_URL,
+  timeoutMs?: number
+): Promise<FxRate | null> {
   if (from === to) return { rate: 1, source: "ecb" };
-  const key = `${date}:${from}:${to}`;
+  // The base URL is part of the key: a custom mirror must not be answered from
+  // (or poison) another source's cache.
+  const key = `${baseUrl}:${date}:${from}:${to}`;
   const cached = rateCache.get(key);
   if (cached !== undefined) return { rate: cached, source: "ecb" };
   try {
-    const url = `${BASE_URL}/${date}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-    const res = await fetchWithTimeout(url);
+    const url = `${baseUrl}/${date}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    const res = await fetchWithTimeout(url, timeoutMs);
     if (!res.ok) {
       logger.warn({ from, to, date, status: res.status }, "FX rate lookup non-OK");
       return null;

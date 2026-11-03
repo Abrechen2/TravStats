@@ -66,14 +66,14 @@ describe("FX CDN fallback switch", () => {
       .set("Cookie", adminCookie)
       .send({ fxCdnFallbackEnabled: false });
     expect(res.status).toBe(200);
-    expect(await getAdminFxSettings()).toEqual({ cdnFallbackEnabled: false });
+    expect(await getAdminFxSettings()).toMatchObject({ cdnFallbackEnabled: false });
 
     const back = await request(app)
       .put("/api/v1/admin/parser-settings")
       .set("Cookie", adminCookie)
       .send({ fxCdnFallbackEnabled: true });
     expect(back.status).toBe(200);
-    expect(await getAdminFxSettings()).toEqual({ cdnFallbackEnabled: true });
+    expect(await getAdminFxSettings()).toMatchObject({ cdnFallbackEnabled: true });
   });
 
   it("refuses a non-admin", async () => {
