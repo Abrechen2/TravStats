@@ -85,7 +85,7 @@ span, not to points).
 | W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | open    |
 | W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | open    |
 | W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | open    |
-| C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)      | open    |
+| C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)      | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops |
 | C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | open    |
 | C3    | Companion | stay review from the map marker, point popup, stay filter                                                                       | open    |
 
@@ -103,4 +103,4 @@ S1 and C1 do not wait for it.
 
 ## Open for Companion
 
-- C1 can start now on the existing contract.
+- C1 done (2026-11-03). C2 waits for S1 and the owner's OK on the mock-up https://claude.ai/artifact/DG9TL4F9sbF4xQEsRyJVS8.
