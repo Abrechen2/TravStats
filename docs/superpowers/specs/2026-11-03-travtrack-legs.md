@@ -65,7 +65,7 @@ The point details the inspector reads gain nullable `speedMps`, `altitudeM`, `mo
 (already loaded in `readSafe.ts`).
 
 `PUT /api/v1/travtrack/legs/mode` `{ fromMs, untilMs, mode }` stores a correction;
-`mode: null` resets to automatic. Answers the recomputed `Leg`. A correction applies to every
+`mode: null` resets to automatic. Answers the recomputed `Leg`, bare (the travtrack routers are the bare family, ADR 0001). A correction applies to every
 derived leg it covers by more than half its duration, so it survives a small re-derivation.
 Errors: 400 `TRAVTRACK_LEG_INVALID` (span or mode), 404 `TRAVTRACK_LEG_NOT_FOUND` (no leg
 under the span). Minimum server: the 2.8.0 RC that ships S1.
