@@ -72,7 +72,7 @@ export async function buildTravTrackDataExport(
 ) {
   const points = new LazyArray(() => iterateTravTrackPoints(userId, page));
   const where = { userId };
-  const [zones, zoneTombstones, deletedRanges, deletedPoints, gaps] = await Promise.all([
+  const [zones, zoneTombstones, deletedRanges, deletedPoints, gaps, legModes] = await Promise.all([
     prisma.travTrackPrivacyZone.findMany({
       where,
       orderBy: { createdAt: "asc" },
@@ -97,8 +97,19 @@ export async function buildTravTrackDataExport(
       orderBy: { fromAt: "asc" },
       select: { deviceId: true, fromAt: true, toAt: true, reason: true },
     }),
+    // The owner's leg mode corrections (spec 2026-11-03-travtrack-legs): epoch ms as strings,
+    // like `seq`, because the columns are 64-bit.
+    prisma.travTrackLegMode
+      .findMany({
+        where,
+        orderBy: { fromMs: "asc" },
+        select: { fromMs: true, untilMs: true, mode: true, createdAt: true, updatedAt: true },
+      })
+      .then((rows) =>
+        rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
+      ),
   ]);
-  return { points, zones, zoneTombstones, deletedRanges, deletedPoints, gaps };
+  return { points, zones, zoneTombstones, deletedRanges, deletedPoints, gaps, legModes };
 }
 
 /** Each user record with its `travtrack` section, one user at a time. */

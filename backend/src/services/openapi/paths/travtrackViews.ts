@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
+import { aggregatesSchema, pointDetailSchema } from "./travtrackLegs";
 import { travTrackMonthsQuerySchema } from "../../../schemas/travtrack";
 import {
   travTrackPhotoFileQuerySchema,
@@ -36,6 +37,14 @@ const range = z.object({
   pointIds: z
     .array(z.array(z.string()))
     .describe("The stored point of each vertex, aligned with `segments`"),
+  pointDetails: z
+    .array(z.array(pointDetailSchema))
+    .describe(
+      "The phone's speed, altitude and movement class of each vertex, aligned with `segments`"
+    ),
+  aggregates: aggregatesSchema.describe(
+    "Of this part, from the stored privacy-safe points — not from the simplified drawing"
+  ),
   pointCount: z.number().int().describe("Vertices given"),
   readCount: z.number().int().describe("Privacy-safe vertices this part read, before simplifying"),
   simplified: z.boolean().describe("Vertices were dropped to fit 10 000 per part"),

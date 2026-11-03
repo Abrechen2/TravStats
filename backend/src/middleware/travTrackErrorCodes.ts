@@ -25,4 +25,6 @@ export type TravTrackApiErrorCode =
   | "TRAVTRACK_RANGE_TOO_LONG" // a range read covers at most 400 days (400)
   | "TRAVTRACK_POINT_NOT_FOUND" // no such point of this account (404)
   | "TRAVTRACK_FLIGHT_NOT_FOUND" // no such flight of this account (404)
-  | "TRAVTRACK_PHOTO_WINDOW_TOO_LONG"; // a photo window covers at most 7 days (400)
+  | "TRAVTRACK_PHOTO_WINDOW_TOO_LONG" // a photo window covers at most 7 days (400)
+  | "TRAVTRACK_LEG_INVALID" // a leg mode correction names a bad span or mode (400)
+  | "TRAVTRACK_LEG_NOT_FOUND"; // no leg lies under the corrected span (404)

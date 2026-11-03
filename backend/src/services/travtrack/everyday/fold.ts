@@ -83,7 +83,7 @@ function usable(
 }
 
 /** The highest believable speed of a stretch that survives the spike rule. */
-function topSpeedOf(
+export function topSpeedOf(
   stretch: readonly StoredPoint[],
   rowOf: RowOf,
   inFlight: InFlight
@@ -129,12 +129,17 @@ const median = (values: number[]): number => {
   return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-/** The highest median-smoothed altitude of a stretch, or null with fewer than three believable fixes. */
-function highestOf(
+/**
+ * The believable altitudes of a stretch, each median-smoothed over five
+ * consecutive fixes (at least three in the window); fixes with too few
+ * neighbours are left out. Shared by the highest point here and by a leg's
+ * ascent and descent (`legs/figures.ts`).
+ */
+export function smoothedAltitudes(
   stretch: readonly StoredPoint[],
   rowOf: RowOf,
   inFlight: InFlight
-): { m: number; atMs: number } | null {
+): Array<{ m: number; atMs: number }> {
   const alts: { m: number; atMs: number }[] = [];
   for (const p of stretch) {
     const row = rowOf(p);
@@ -142,13 +147,25 @@ function highestOf(
     const m = plausibleAltitudeM(row);
     if (m !== null) alts.push({ m, atMs: p[0] });
   }
-  let best: { m: number; atMs: number } | null = null;
+  const out: Array<{ m: number; atMs: number }> = [];
   const half = Math.floor(MEDIAN_WINDOW / 2);
   for (let i = 0; i < alts.length; i++) {
     const window = alts.slice(Math.max(0, i - half), i + half + 1);
     if (window.length < MEDIAN_MIN) continue;
-    const m = median(window.map((a) => a.m));
-    if (best === null || m > best.m) best = { m, atMs: alts[i].atMs };
+    out.push({ m: median(window.map((a) => a.m)), atMs: alts[i].atMs });
+  }
+  return out;
+}
+
+/** The highest median-smoothed altitude of a stretch, or null with fewer than three believable fixes. */
+function highestOf(
+  stretch: readonly StoredPoint[],
+  rowOf: RowOf,
+  inFlight: InFlight
+): { m: number; atMs: number } | null {
+  let best: { m: number; atMs: number } | null = null;
+  for (const a of smoothedAltitudes(stretch, rowOf, inFlight)) {
+    if (best === null || a.m > best.m) best = a;
   }
   return best;
 }

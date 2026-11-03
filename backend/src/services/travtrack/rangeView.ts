@@ -1,6 +1,8 @@
 import { simplifyDegrees } from "../schematicRouter";
 import { privacySafeStretches } from "../tripRecording/privacySafe";
 import type { StoredPoint } from "../tripRecording/segments";
+import { pointDetailsOf, type PointDetail } from "./dayView";
+import { rangeAggregates, type RangeAggregates } from "./rangeAggregates";
 import { formatSafeCursor, readSafeTravTrack, type SafeCursor, type Span } from "./readSafe";
 
 /**
@@ -33,6 +35,10 @@ export type TravTrackRange = {
   segments: StoredPoint[][];
   /** The stored point of each vertex, aligned with `segments`. */
   pointIds: string[][];
+  /** The phone's readings of each vertex, aligned with `segments` (null where it gave none). */
+  pointDetails: PointDetail[][];
+  /** Of this part, from the stored points — not from the simplified drawing (`rangeAggregates.ts`). */
+  aggregates: RangeAggregates;
   /** Vertices given. */
   pointCount: number;
   /** Privacy-safe vertices this part read, before simplifying. */
@@ -104,6 +110,8 @@ export async function travTrackRange(
     to: new Date(window.untilMs).toISOString(),
     segments,
     pointIds,
+    pointDetails: pointDetailsOf(segments, read.rowOf),
+    aggregates: rangeAggregates(read.segments, read.rowOf),
     pointCount: vertexCount(segments),
     readCount: vertexCount(read.segments),
     simplified: fitted.simplified,
