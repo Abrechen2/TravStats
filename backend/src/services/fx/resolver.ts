@@ -4,6 +4,7 @@ import logger from "../../utils/logger";
 import { getCdnRate } from "./currencyApiCdn";
 import { getRate, type FxRate, type RateSource } from "./frankfurter";
 import { FX_CHAIN_BUDGET_MS } from "./fxGuards";
+import { FRANKFURTER_URL } from "./fxSources";
 
 // Re-exported so a consumer of the CHAIN never has to reach past it into one
 // individual provider just to name the type of its answer.
@@ -30,24 +31,41 @@ export async function resolveRate(from: string, to: string, date: string): Promi
   const deadline = Date.now() + FX_CHAIN_BUDGET_MS;
   const budgetSpent = (): boolean => Date.now() >= deadline;
 
+  let settings: Awaited<ReturnType<typeof getAdminFxSettings>> | null = null;
   try {
-    const ecb = await getRate(from, to, date);
-    if (ecb) return ecb;
+    settings = (await getAdminFxSettings()) ?? null;
   } catch (error) {
-    // `getRate` documents itself as never throwing, but that promise lives in
-    // another module — a broken provider must not take the chain down with it.
-    logger.warn({ error, from, to, date }, "ECB FX lookup threw");
+    logger.warn({ error }, "FX settings unreadable — assuming the defaults");
+  }
+
+  // The ECB sources: the chosen primary, then the optional fallback, and only
+  // when the first fails (timeout, non-OK, unusable). Both report "ecb" — the
+  // data is the ECB's whichever mirror served it. An unreadable settings row
+  // means the default source and no fallback.
+  const ecbUrls = [settings?.primaryUrl ?? FRANKFURTER_URL];
+  if (settings?.fallbackUrl && settings.fallbackUrl !== ecbUrls[0]) {
+    ecbUrls.push(settings.fallbackUrl);
+  }
+  for (const [index, baseUrl] of ecbUrls.entries()) {
+    if (index > 0 && budgetSpent()) {
+      logger.warn({ from, to, date }, "FX chain budget spent before the fallback ECB source");
+      return null;
+    }
+    try {
+      const ecb = await getRate(from, to, date, baseUrl);
+      if (ecb) return ecb;
+    } catch (error) {
+      // `getRate` documents itself as never throwing, but that promise lives in
+      // another module — a broken provider must not take the chain down with it.
+      logger.warn({ error, from, to, date }, "ECB FX lookup threw");
+    }
   }
 
   if (budgetSpent()) {
-    logger.warn({ from, to, date }, "FX chain budget spent after the ECB provider");
+    logger.warn({ from, to, date }, "FX chain budget spent after the ECB providers");
     return null;
   }
 
-  const settings = await getAdminFxSettings().catch((error) => {
-    logger.warn({ error }, "FX settings unreadable — assuming the column default");
-    return null;
-  });
   // An unreadable settings row falls back to ON, matching the column's own
   // default: a database hiccup should not silently narrow what can be
   // converted, which would look to the user like currencies going missing.

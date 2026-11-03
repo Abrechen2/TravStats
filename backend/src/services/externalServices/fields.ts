@@ -14,6 +14,7 @@ import { checkLlmBaseUrl } from "../llm/llmEndpoint";
 import { normalizeDawarichBaseUrl } from "../dawarich/errors";
 import { normalizeImmichBaseUrl } from "../immich/types";
 import { normalizeRelayUrl } from "../../schemas/pushAdmin";
+import { normalizeFxCustomUrl } from "../fx/fxSources";
 import type { FieldDef, ServiceDef } from "./types";
 
 export type FieldValue = string | number | boolean | null;
@@ -104,6 +105,13 @@ function normalizeUrl(service: ServiceDef, field: FieldDef, raw: string): string
     const relay = normalizeRelayUrl(raw);
     if (!relay) throw bad("Must be an https URL (plain http only for localhost)", field.key);
     return relay;
+  }
+  if (field.column === "fxPrimaryCustomUrl" || field.column === "fxFallbackCustomUrl") {
+    const url = normalizeFxCustomUrl(raw);
+    if (!url) {
+      throw bad("Must be an http(s) address without credentials, query or fragment", field.key);
+    }
+    return url;
   }
   if (field.column === "ownGeoUrl") {
     try {

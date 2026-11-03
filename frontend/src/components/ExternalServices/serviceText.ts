@@ -39,6 +39,22 @@ export function optionLabel(t: TFn, serviceId: string, fieldKey: string, option:
   return t(`${NS}:fieldOptions.${serviceId}.${fieldKey}.${option}`, { defaultValue: option });
 }
 
+/**
+ * A note (with an outbound link) that belongs to one chosen option, e.g. the
+ * attribution request of a free rate provider. null when the option has none.
+ */
+export function optionNote(
+  t: TFn,
+  serviceId: string,
+  option: string
+): { text: string; label: string; url: string } | null {
+  const base = `${NS}:fieldNotes.${serviceId}.${option}`;
+  const text = t(`${base}.text`, { defaultValue: MISSING });
+  const url = t(`${base}.linkUrl`, { defaultValue: MISSING });
+  if (text === MISSING || url === MISSING) return null;
+  return { text, url, label: t(`${base}.linkLabel`, { defaultValue: url }) };
+}
+
 /** The reason a test failed, in words: a known code is translated, anything else is shown as sent. */
 export function testReasonText(t: TFn, reason: string | null): string {
   if (!reason) return t(`${NS}:test.noReason`);

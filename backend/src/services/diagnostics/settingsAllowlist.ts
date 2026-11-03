@@ -1,4 +1,5 @@
 import { COUNTRY_TIERS } from "../../shared/countryEvidence";
+import { FX_FALLBACK_IDS, FX_SOURCE_IDS } from "../fx/fxSources";
 import { LOG_LEVELS } from "../../shared/logContract";
 import { ROUTING_PROVIDER_IDS } from "../tour/routing/types";
 
@@ -37,6 +38,8 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   shareLinksEnabled: bool,
   llmEnabled: bool,
   fxCdnFallbackEnabled: bool,
+  fxPrimarySource: oneOf(FX_SOURCE_IDS),
+  fxFallbackSource: oneOf(FX_FALLBACK_IDS),
   railTransitousEnabled: bool,
   railDbRestEnabled: bool,
   adsbLolEnabled: bool,

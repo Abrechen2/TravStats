@@ -318,6 +318,12 @@
     },
     "openData": {
       "marketOverpassUrl": "Overpass-Adresse für Märkte"
+    },
+    "fx": {
+      "primarySource": "Kursquelle",
+      "primaryUrl": "Adresse der eigenen Kursquelle",
+      "fallbackSource": "Zweite Kursquelle",
+      "fallbackUrl": "Adresse der zweiten Kursquelle"
     }
   },
   "services": {
@@ -698,6 +704,19 @@
         "personal_feeder": "Personal mit Feeder",
         "custom": "Eigenes Budget"
       }
+    },
+    "fx": {
+      "primarySource": {
+        "frankfurter": "Frankfurter",
+        "allratestoday": "AllRatesToday",
+        "custom": "Eigene Adresse"
+      },
+      "fallbackSource": {
+        "none": "Keine",
+        "frankfurter": "Frankfurter",
+        "allratestoday": "AllRatesToday",
+        "custom": "Eigene Adresse"
+      }
     }
   },
   "legacy": {
@@ -712,5 +731,14 @@
     },
     "loadFailed": "Der Status konnte nicht geladen werden.",
     "parserNote": "Wie importierte Buchungen verarbeitet werden, stellst du weiterhin hier ein."
+  },
+  "fieldNotes": {
+    "fx": {
+      "allratestoday": {
+        "text": "Kostenlos ohne Schlüssel. Werden Kurse öffentlich angezeigt, verlangt der Anbieter einen Link.",
+        "linkLabel": "allratestoday.com",
+        "linkUrl": "https://allratestoday.com"
+      }
+    }
   }
 }

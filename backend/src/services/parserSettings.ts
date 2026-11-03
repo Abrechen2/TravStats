@@ -2,6 +2,7 @@
  * Helper functions for loading and decrypting parser settings
  */
 
+import { FRANKFURTER_URL, fxSourceUrl } from "./fx/fxSources";
 import { prisma } from "../db";
 import { decryptApiKey } from "../utils/encryption";
 
@@ -181,6 +182,10 @@ export async function getParserConfigWithSettings(
 
 export interface AdminFxSettings {
   cdnFallbackEnabled: boolean;
+  /** Base URL of the primary ECB source (never null: unusable choices fall back to Frankfurter). */
+  primaryUrl: string;
+  /** Base URL of the optional second ECB source, or null for none. */
+  fallbackUrl: string | null;
 }
 
 /**
@@ -194,7 +199,26 @@ export interface AdminFxSettings {
 export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
-    select: { fxCdnFallbackEnabled: true },
+    select: {
+      fxCdnFallbackEnabled: true,
+      fxPrimarySource: true,
+      fxPrimaryCustomUrl: true,
+      fxFallbackSource: true,
+      fxFallbackCustomUrl: true,
+    },
   });
-  return { cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true };
+  return {
+    cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true,
+    // A primary that cannot be resolved (custom without a valid URL) reads as
+    // the default rather than as "no ECB at all".
+    primaryUrl:
+      fxSourceUrl({
+        source: settings?.fxPrimarySource,
+        customUrl: settings?.fxPrimaryCustomUrl,
+      }) ?? FRANKFURTER_URL,
+    fallbackUrl: fxSourceUrl({
+      source: settings?.fxFallbackSource,
+      customUrl: settings?.fxFallbackCustomUrl,
+    }),
+  };
 }

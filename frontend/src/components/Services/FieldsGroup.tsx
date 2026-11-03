@@ -4,6 +4,7 @@ import Button from "../ui/Button";
 import {
   ActionControl,
   ChoiceControl,
+  Dependency,
   ErrorLine,
   GroupStateMark,
   InputControl,
@@ -13,7 +14,7 @@ import {
   useGroupSave,
 } from "../ui/settings";
 import type { ServiceField } from "../../lib/api/externalServices";
-import { fieldLabel, optionLabel } from "../ExternalServices/serviceText";
+import { fieldLabel, optionLabel, optionNote } from "../ExternalServices/serviceText";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
 import type { RowLock } from "./useLockFor";
 
@@ -172,22 +173,37 @@ export default function FieldsGroup({
           );
         }
         if (f.kind === "select" && f.options && f.options.length > 0) {
+          const note = optionNote(t, serviceId, String(value ?? ""));
           return (
-            <SettingItem
-              key={f.key}
-              {...common}
-              control={
-                <ChoiceControl<string>
-                  label={titleOf(f)}
-                  value={String(value ?? "")}
-                  options={f.options.map((o) => ({
-                    value: o,
-                    label: optionLabel(t, serviceId, f.key, o),
-                  }))}
-                  onChange={(next) => group.edit({ [f.key]: next })}
+            <div key={f.key} className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              <SettingItem
+                {...common}
+                control={
+                  <ChoiceControl<string>
+                    label={titleOf(f)}
+                    value={String(value ?? "")}
+                    options={f.options.map((o) => ({
+                      value: o,
+                      label: optionLabel(t, serviceId, f.key, o),
+                    }))}
+                    onChange={(next) => group.edit({ [f.key]: next })}
+                  />
+                }
+              />
+              {note ? (
+                <Dependency
+                  id={`${id}-${f.key}-note`}
+                  reason={
+                    <>
+                      {note.text}{" "}
+                      <a href={note.url} target="_blank" rel="noopener noreferrer">
+                        {note.label}
+                      </a>
+                    </>
+                  }
                 />
-              }
-            />
+              ) : null}
+            </div>
           );
         }
         return (

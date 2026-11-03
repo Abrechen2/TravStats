@@ -23,8 +23,9 @@ describe("resolveRate", () => {
     const r = await resolveRate("NOK", "EUR", "2024-09-17");
     expect(r).toEqual({ rate: 0.085, source: "ecb" });
     expect(cdn).not.toHaveBeenCalled();
-    // The switch is not even consulted for a query the ECB answered.
-    expect(settings).not.toHaveBeenCalled();
+    // The chosen source is read first (#391), but the CDN switch plays no part
+    // for a query the ECB answered.
+    expect(cdn).not.toHaveBeenCalled();
   });
 
   it("falls to the CDN only when the ECB has nothing AND the switch is on", async () => {
@@ -121,6 +122,68 @@ describe("convertToBase", () => {
     ecb.mockResolvedValue({ rate: 1, source: "ecb" });
     const out = await convertToBase(100, "USD", "EUR", new Date("2024-08-20T23:30:00.000Z"));
     expect(out?.rateDate).toBe("2024-08-20");
-    expect(ecb).toHaveBeenCalledWith("USD", "EUR", "2024-08-20");
+    expect(ecb).toHaveBeenCalledWith("USD", "EUR", "2024-08-20", "https://api.frankfurter.dev/v1");
+  });
+});
+
+describe("resolveRate with a chosen ECB source (#391)", () => {
+  const ecb = getRate as jest.MockedFunction<typeof getRate>;
+  const cdn = getCdnRate as jest.MockedFunction<typeof getCdnRate>;
+  const settings = getAdminFxSettings as jest.MockedFunction<typeof getAdminFxSettings>;
+  const P = "https://primary.example/v1";
+  const F = "https://fallback.example/v1";
+
+  beforeEach(() => {
+    ecb.mockReset();
+    cdn.mockReset();
+    settings.mockReset();
+  });
+
+  it("asks the chosen primary first and stops there when it answers", async () => {
+    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    ecb.mockResolvedValue({ rate: 0.9, source: "ecb" });
+    expect(await resolveRate("USD", "EUR", "2024-01-02")).toEqual({ rate: 0.9, source: "ecb" });
+    expect(ecb).toHaveBeenCalledTimes(1);
+    expect(ecb).toHaveBeenCalledWith("USD", "EUR", "2024-01-02", P);
+    expect(cdn).not.toHaveBeenCalled();
+  });
+
+  it("tries the fallback source only after the primary failed, and still reports ecb", async () => {
+    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    ecb.mockRejectedValueOnce(new Error("timeout"));
+    ecb.mockResolvedValueOnce({ rate: 0.8, source: "ecb" });
+    expect(await resolveRate("USD", "EUR", "2024-01-02")).toEqual({ rate: 0.8, source: "ecb" });
+    expect(ecb.mock.calls.map((c) => c[3])).toEqual([P, F]);
+    expect(cdn).not.toHaveBeenCalled();
+  });
+
+  it("goes primary -> fallback -> CDN when both ECB sources fail", async () => {
+    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    ecb.mockResolvedValue(null);
+    cdn.mockResolvedValue({ rate: 0.0195, source: "cdn" });
+    expect(await resolveRate("EGP", "EUR", "2024-01-02")).toEqual({ rate: 0.0195, source: "cdn" });
+    expect(ecb.mock.calls.map((c) => c[3])).toEqual([P, F]);
+    expect(cdn).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes one ECB request when no fallback is chosen", async () => {
+    settings.mockResolvedValue({ cdnFallbackEnabled: false, primaryUrl: P, fallbackUrl: null });
+    ecb.mockResolvedValue(null);
+    expect(await resolveRate("USD", "EUR", "2024-01-02")).toBeNull();
+    expect(ecb).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask the same source twice when fallback equals primary", async () => {
+    settings.mockResolvedValue({ cdnFallbackEnabled: false, primaryUrl: P, fallbackUrl: P });
+    ecb.mockResolvedValue(null);
+    await resolveRate("USD", "EUR", "2024-01-02");
+    expect(ecb).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the default Frankfurter source when the settings are unreadable", async () => {
+    settings.mockRejectedValue(new Error("db down"));
+    ecb.mockResolvedValue({ rate: 1.1, source: "ecb" });
+    await resolveRate("USD", "EUR", "2024-01-02");
+    expect(ecb).toHaveBeenCalledWith("USD", "EUR", "2024-01-02", "https://api.frankfurter.dev/v1");
   });
 });
