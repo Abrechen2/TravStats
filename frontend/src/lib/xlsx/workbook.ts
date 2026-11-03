@@ -129,11 +129,11 @@ export async function buildWorkbook(sheets: AnySheetData[]): Promise<import("exc
     ws.columns = columns.map((c) => ({ width: c.width ?? 16 }));
 
     for (const row of rows) {
-      const values = columns.map((c) => toCell(c.kind, c.value(row)));
+      const values = columns.map((c) => toCell(c.cellKind?.(row) ?? c.kind, c.value(row)));
       const added = ws.addRow(values);
       columns.forEach((c, i) => {
         const cell = added.getCell(i + 1);
-        const fmt = numberFormatFor(c.kind);
+        const fmt = numberFormatFor(c.cellKind?.(row) ?? c.kind);
         if (fmt) cell.numFmt = fmt;
         if (c.locked) {
           cell.font = { color: { argb: LOCKED_FONT } };

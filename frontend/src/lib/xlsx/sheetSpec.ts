@@ -21,6 +21,12 @@ export interface ColumnSpec<T> {
   /** Human column heading, already translated. */
   header: string;
   kind: CellKind;
+  /**
+   * Overrides `kind` for one record, so a column of datetimes can hold a
+   * date-only value as a date cell (a ride logged without a time must not
+   * show as 00:00).
+   */
+  cellKind?: (row: T) => CellKind;
   /** Column width in Excel character units. */
   width?: number;
   /** Pull the cell value out of one record. Return null for an empty cell. */

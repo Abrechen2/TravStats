@@ -632,7 +632,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     if (matchesAircraftBucket(flight.aircraft, JUMBO_SUBSTRINGS)) stats.jumboCount++;
 
     // Airline alliance + low-cost
-    const alliance = airlineAllianceOf(flight.airline);
+    // Resolved on the flight's own day: an ended membership (Asiana, from
+    // 2026-12-17) must not erase the Star Alliance flights flown before it.
+    const alliance = airlineAllianceOf(flight.airline, flight.departureTime ?? new Date());
     if (alliance) stats.airlineAlliances.add(alliance);
     if (isLowCostCarrier(flight.airline)) stats.lowcostCount++;
 

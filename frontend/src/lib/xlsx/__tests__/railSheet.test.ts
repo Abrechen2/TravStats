@@ -114,3 +114,30 @@ describe("rail sheet", () => {
     expect(keys).not.toContain("rail");
   });
 });
+
+describe("rail sheet, date-only ride", () => {
+  it("writes a ride without a time as a date cell, not as 00:00", async () => {
+    const day = (local: string, zone: string) => ({
+      utc: `${local}T00:00:00.000Z`,
+      zone,
+      offset: "+01:00",
+      local: `${local}T00:00:00`,
+      precision: "day",
+      zoneSource: "stored",
+    });
+    const flexible = ride({
+      times: {
+        departure: day("2026-03-04", "Europe/Vienna"),
+        arrival: day("2026-03-04", "Europe/Zurich"),
+      },
+    } as Partial<RailJourney>);
+    const wb = await buildWorkbook(buildSheets(t, { rail: [flexible, ride()] }));
+    const ws = wb.worksheets[0];
+    const headers = (ws.getRow(2).values as unknown[]).map(String);
+    const col = headers.indexOf("xlsx:columns.departureLocal");
+    const dateOnly = ws.getRow(3).getCell(col);
+    const timed = ws.getRow(4).getCell(col);
+    expect(dateOnly.numFmt).toBe("yyyy-mm-dd");
+    expect(timed.numFmt).toBe("yyyy-mm-dd hh:mm");
+  });
+});

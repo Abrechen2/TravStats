@@ -1,5 +1,5 @@
 import { airlineAllianceOf } from "../achievementData";
-import { ALLIANCE_IDS, ALLIANCE_MEMBERS } from "../../data/airlineAlliances";
+import { ALLIANCE_IDS, allianceMembersAt } from "../../data/airlineAlliances";
 
 /**
  * forgejo#133: the achievement and the loyalty pickers read ONE membership
@@ -35,8 +35,27 @@ describe("airlineAllianceOf reads the shared membership list", () => {
   });
 
   it("lists every designator exactly once, in one alliance", () => {
-    const all = ALLIANCE_IDS.flatMap((id) => ALLIANCE_MEMBERS[id]);
+    const all = ALLIANCE_IDS.flatMap((id) => allianceMembersAt()[id]);
     expect(new Set(all).size).toBe(all.length);
     for (const code of all) expect(code).toMatch(/^[A-Z0-9]{2}$/);
+  });
+});
+
+describe("a membership with an end date resolves itself", () => {
+  const before = new Date("2026-12-16T23:59:59Z");
+  const on = new Date("2026-12-17T00:00:00Z");
+
+  it("Asiana is Star until 16.12.2026 and in no alliance from 17.12.2026", () => {
+    expect(airlineAllianceOf("OZ", before)).toBe("star");
+    expect(airlineAllianceOf("OZ", on)).toBeNull();
+  });
+
+  it("a flight flown while Asiana was a member still counts after it left", () => {
+    expect(airlineAllianceOf("OZ", new Date("2025-06-01T10:00:00Z"))).toBe("star");
+  });
+
+  it("the picker list drops Asiana from Star on the end day", () => {
+    expect(allianceMembersAt(before).star).toContain("OZ");
+    expect(allianceMembersAt(on).star).not.toContain("OZ");
   });
 });
