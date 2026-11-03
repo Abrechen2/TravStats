@@ -17,6 +17,20 @@ describe("frankfurter FX", () => {
     expect(rate?.rate).toBeCloseTo(1.0106, 4);
   });
 
+  // api.frankfurter.app now answers 301 to .dev/v1; fetch follows it, but a
+  // redirect is one more hop to fail and the old host is going away.
+  it("asks api.frankfurter.dev/v1 directly, never the redirecting .app host", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ rates: { USD: 1.08 } }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await getRate("EUR", "USD", "2024-03-01");
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://api.frankfurter.dev/v1/2024-03-01?from=EUR&to=USD"
+    );
+  });
+
   it("short-circuits an identical pair with no network call", async () => {
     global.fetch = jest.fn() as unknown as typeof fetch;
     expect(await getRate("EUR", "EUR", "2024-05-13")).toEqual({ rate: 1, source: "ecb" });

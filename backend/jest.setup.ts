@@ -52,5 +52,13 @@ globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestIni
   if (/^https?:\/\/([a-z0-9-]+\.)*overpass-api\.de\//i.test(url)) {
     throw new TypeError("fetch failed: Overpass is not reachable from tests");
   }
+  // The same for the two FX providers: a test that forgets to stub the resolver
+  // would otherwise ask the real ECB / CDN, and go red or slow whenever they do.
+  // A refused fetch is what the FX chain sees as "provider down" (null rate).
+  if (
+    /^https?:\/\/(api\.frankfurter\.(app|dev)|cdn\.jsdelivr\.net\/npm\/@fawazahmed0)/i.test(url)
+  ) {
+    throw new TypeError("fetch failed: the FX providers are not reachable from tests");
+  }
   return realFetch(input, init);
 }) as typeof fetch;

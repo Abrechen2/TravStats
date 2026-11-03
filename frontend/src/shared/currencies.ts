@@ -182,7 +182,7 @@ export function minorUnits(code: string): number {
 
 /**
  * The 30 currencies Frankfurter (ECB reference rates) serves — verified live
- * 2026-08-13 against https://api.frankfurter.app/currencies.
+ * 2026-08-13 against https://api.frankfurter.dev/v1/currencies.
  *
  * NOT a validation list. It seeds the "Häufig" group for a fresh account and
  * gates the FX BASE currency, which must be something every amount can be

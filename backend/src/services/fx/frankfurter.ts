@@ -1,7 +1,7 @@
 import logger from "../../utils/logger";
 import { fetchWithTimeout, isSettledRateDate, isUsableRate } from "./fxGuards";
 
-const BASE_URL = "https://api.frankfurter.app";
+const BASE_URL = "https://api.frankfurter.dev/v1";
 // Cache one rate per (from,to,date) for the process lifetime. Historical ECB
 // rates never change, so an unbounded map keyed by the tuple is safe and small
 // — but only for SETTLED days. Today's rate is still moving (the ECB publishes

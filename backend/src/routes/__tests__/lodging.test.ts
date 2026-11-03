@@ -271,6 +271,8 @@ describe("Lodging API", () => {
     });
 
     it("never matches the /:id route — 'fx-preview' is not treated as a lodging id", async () => {
+      // Stubbed: unmocked, this reached the live Frankfurter API from CI.
+      jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
       const res = await request(app)
         .get("/api/v1/lodging/fx-preview")
         .query({ amount: 100, from: "USD", date: "2026-01-01" })
