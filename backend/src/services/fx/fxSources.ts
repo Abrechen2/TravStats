@@ -26,9 +26,13 @@ export interface FxSourceChoice {
  * case (same stance as the Immich and LLM base URLs).
  */
 export function normalizeFxCustomUrl(raw: string): string | null {
+  const text = raw.trim();
+  // A bare trailing "?" or "#" leaves URL.search/hash empty but would swallow
+  // the date path appended later.
+  if (/[?#]/.test(text)) return null;
   let parsed: URL;
   try {
-    parsed = new URL(raw.trim());
+    parsed = new URL(text);
   } catch {
     return null;
   }

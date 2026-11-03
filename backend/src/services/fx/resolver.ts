@@ -3,7 +3,7 @@ import { minorUnits } from "../../shared/currencies";
 import logger from "../../utils/logger";
 import { getCdnRate } from "./currencyApiCdn";
 import { getRate, type FxRate, type RateSource } from "./frankfurter";
-import { FX_CHAIN_BUDGET_MS } from "./fxGuards";
+import { FX_CHAIN_BUDGET_MS, FX_PROVIDER_TIMEOUT_MS } from "./fxGuards";
 import { FRANKFURTER_URL } from "./fxSources";
 
 // Re-exported so a consumer of the CHAIN never has to reach past it into one
@@ -30,6 +30,10 @@ export async function resolveRate(from: string, to: string, date: string): Promi
   // caller already renders (AUD-065).
   const deadline = Date.now() + FX_CHAIN_BUDGET_MS;
   const budgetSpent = (): boolean => Date.now() >= deadline;
+  // A provider never gets more than what is left of the chain's budget: with a
+  // second ECB source the serial timeouts would otherwise add past it.
+  const timeLeft = (): number =>
+    Math.max(1, Math.min(FX_PROVIDER_TIMEOUT_MS, deadline - Date.now()));
 
   let settings: Awaited<ReturnType<typeof getAdminFxSettings>> | null = null;
   try {
@@ -52,7 +56,7 @@ export async function resolveRate(from: string, to: string, date: string): Promi
       return null;
     }
     try {
-      const ecb = await getRate(from, to, date, baseUrl);
+      const ecb = await getRate(from, to, date, baseUrl, timeLeft());
       if (ecb) return ecb;
     } catch (error) {
       // `getRate` documents itself as never throwing, but that promise lives in
@@ -77,7 +81,7 @@ export async function resolveRate(from: string, to: string, date: string): Promi
   }
 
   try {
-    return await getCdnRate(from, to, date);
+    return await getCdnRate(from, to, date, timeLeft());
   } catch (error) {
     logger.warn({ error, from, to, date }, "CDN FX lookup threw");
     return null;

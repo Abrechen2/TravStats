@@ -26,7 +26,8 @@ export async function getRate(
   from: string,
   to: string,
   date: string,
-  baseUrl: string = FRANKFURTER_URL
+  baseUrl: string = FRANKFURTER_URL,
+  timeoutMs?: number
 ): Promise<FxRate | null> {
   if (from === to) return { rate: 1, source: "ecb" };
   // The base URL is part of the key: a custom mirror must not be answered from
@@ -36,7 +37,7 @@ export async function getRate(
   if (cached !== undefined) return { rate: cached, source: "ecb" };
   try {
     const url = `${baseUrl}/${date}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithTimeout(url, timeoutMs);
     if (!res.ok) {
       logger.warn({ from, to, date, status: res.status }, "FX rate lookup non-OK");
       return null;

@@ -20,6 +20,8 @@ describe("custom FX source URL validation (#391)", () => {
     "https://user@fx.example.org",
     "https://fx.example.org/v1?key=1",
     "https://fx.example.org/v1#x",
+    "https://fx.example.org/v1?",
+    "https://fx.example.org/v1#",
   ])("rejects %s", (raw) => {
     expect(normalizeFxCustomUrl(raw)).toBeNull();
   });
