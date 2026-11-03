@@ -10,7 +10,7 @@
 
 import {
   ALLIANCE_IDS,
-  ALLIANCE_MEMBERS,
+  allianceMembersAt,
   allianceOfIata,
   type AllianceId,
 } from "../data/airlineAlliances";
@@ -262,17 +262,27 @@ const ALLIANCE_NAME_TO_IATA: Readonly<Record<string, string>> = {
  * the Flight.airline field (display name or IATA code). Derived — every
  * member's code, plus the display names above resolved through it.
  */
-export const AIRLINE_ALLIANCES: Readonly<Record<string, AllianceId>> = Object.freeze({
-  ...Object.fromEntries(
-    ALLIANCE_IDS.flatMap((id) => ALLIANCE_MEMBERS[id].map((code) => [code, id] as const))
-  ),
-  ...Object.fromEntries(
-    Object.entries(ALLIANCE_NAME_TO_IATA).flatMap(([name, code]) => {
-      const alliance = allianceOfIata(code);
-      return alliance ? [[name, alliance] as const] : [];
-    })
-  ),
-});
+export function airlineAlliancesAt(now: Date = new Date()): Readonly<Record<string, AllianceId>> {
+  const day = now.toISOString().slice(0, 10);
+  const cached = alliancesByDay.get(day);
+  if (cached) return cached;
+  const members = allianceMembersAt(now);
+  const built: Readonly<Record<string, AllianceId>> = Object.freeze({
+    ...Object.fromEntries(
+      ALLIANCE_IDS.flatMap((id) => members[id].map((code) => [code, id] as const))
+    ),
+    ...Object.fromEntries(
+      Object.entries(ALLIANCE_NAME_TO_IATA).flatMap(([name, code]) => {
+        const alliance = allianceOfIata(code, now);
+        return alliance ? [[name, alliance] as const] : [];
+      })
+    ),
+  });
+  alliancesByDay.clear(); // one day is live at a time
+  alliancesByDay.set(day, built);
+  return built;
+}
+const alliancesByDay = new Map<string, Readonly<Record<string, AllianceId>>>();
 
 /** Low-cost carriers (used by LOWCOST_CHAMPION). */
 export const LOW_COST_CARRIERS: ReadonlySet<string> = new Set([
@@ -329,10 +339,14 @@ export function matchesAircraftBucket(
 }
 
 /** Normalize an airline free-text / code to the alliance map key style. */
-export function airlineAllianceOf(airline: string | null): "star" | "skyteam" | "oneworld" | null {
+export function airlineAllianceOf(
+  airline: string | null,
+  now: Date = new Date()
+): "star" | "skyteam" | "oneworld" | null {
   if (!airline) return null;
   const up = airline.toUpperCase().trim();
-  return AIRLINE_ALLIANCES[up] ?? AIRLINE_ALLIANCES[up.replace(/AIRLINES?$/, "").trim()] ?? null;
+  const map = airlineAlliancesAt(now);
+  return map[up] ?? map[up.replace(/AIRLINES?$/, "").trim()] ?? null;
 }
 
 /** Whether the airline is a low-cost carrier. */

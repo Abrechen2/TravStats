@@ -24,8 +24,14 @@
  *   - Oman Air (WY): oneworld since 30.06.2025.
  *   - Hawaiian Airlines (HA): oneworld since 23.04.2026, under Alaska Air Group.
  *   - NOT yet listed: Philippine Airlines (PR), invited to oneworld 06/2026 but
- *     not a member; Asiana (OZ) stays in Star until its integration into
- *     Korean Air (announced for 17.12.2026) — revisit then.
+ *     not a member.
+ *   - Asiana (OZ) leaves Star Alliance on 17.12.2026 (integration into Korean
+ *     Air). Its entry carries `until: "2026-12-17"`, the first day it is no
+ *     longer a member, so the list resolves itself on that date.
+ *
+ * An entry is a bare designator, or `{ code, until }` for a membership with a
+ * known end. `until` is a UTC calendar day and EXCLUSIVE. Every reader asks
+ * for the list AT a moment (`allianceMembersAt`), never for a frozen constant.
  */
 
 export const ALLIANCE_IDS = ["star", "skyteam", "oneworld"] as const;
@@ -34,7 +40,10 @@ export type AllianceId = (typeof ALLIANCE_IDS)[number];
 /** The date the membership below was last checked against its sources. */
 export const ALLIANCE_MEMBERSHIP_AS_OF = "2026-09-26";
 
-export const ALLIANCE_MEMBERS: Readonly<Record<AllianceId, readonly string[]>> = {
+/** A designator, or a designator whose membership ends (exclusive UTC day). */
+export type MemberEntry = string | { code: string; until: string };
+
+const MEMBER_ENTRIES: Readonly<Record<AllianceId, readonly MemberEntry[]>> = {
   star: [
     "A3", // Aegean Airlines
     "AC", // Air Canada
@@ -42,7 +51,7 @@ export const ALLIANCE_MEMBERS: Readonly<Record<AllianceId, readonly string[]>> =
     "AI", // Air India
     "NZ", // Air New Zealand
     "NH", // All Nippon Airways
-    "OZ", // Asiana Airlines
+    { code: "OZ", until: "2026-12-17" }, // Asiana Airlines
     "OS", // Austrian Airlines
     "AV", // Avianca
     "SN", // Brussels Airlines
@@ -103,12 +112,21 @@ export const ALLIANCE_MEMBERS: Readonly<Record<AllianceId, readonly string[]>> =
   ],
 };
 
-/** IATA designator -> alliance, derived once from the list above. */
-const ALLIANCE_BY_IATA: ReadonlyMap<string, AllianceId> = new Map(
-  ALLIANCE_IDS.flatMap((id) => ALLIANCE_MEMBERS[id].map((code) => [code, id] as const))
-);
+const isMemberAt = (entry: MemberEntry, day: string): boolean =>
+  typeof entry === "string" || day < entry.until;
+const codeOf = (entry: MemberEntry): string => (typeof entry === "string" ? entry : entry.code);
 
-/** The alliance an IATA airline designator belongs to, or null. */
-export function allianceOfIata(code: string): AllianceId | null {
-  return ALLIANCE_BY_IATA.get(code.trim().toUpperCase()) ?? null;
+/** The full members of each alliance at `now` (an ended membership is gone). */
+export function allianceMembersAt(now: Date = new Date()): Record<AllianceId, string[]> {
+  const day = now.toISOString().slice(0, 10);
+  const at = (id: AllianceId): string[] =>
+    MEMBER_ENTRIES[id].filter((e) => isMemberAt(e, day)).map(codeOf);
+  return { star: at("star"), skyteam: at("skyteam"), oneworld: at("oneworld") };
+}
+
+/** The alliance an IATA airline designator belongs to at `now`, or null. */
+export function allianceOfIata(code: string, now: Date = new Date()): AllianceId | null {
+  const up = code.trim().toUpperCase();
+  const members = allianceMembersAt(now);
+  return ALLIANCE_IDS.find((id) => members[id].includes(up)) ?? null;
 }

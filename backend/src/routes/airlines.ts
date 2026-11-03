@@ -9,7 +9,7 @@ import {
   preloadAirlineCatalog,
 } from "../services/airlineCatalogCache";
 import logger from "../utils/logger";
-import { ALLIANCE_MEMBERS, ALLIANCE_MEMBERSHIP_AS_OF } from "../data/airlineAlliances";
+import { allianceMembersAt, ALLIANCE_MEMBERSHIP_AS_OF } from "../data/airlineAlliances";
 
 // No rate limiter: an authenticated typeahead over an in-process catalog cache
 // (`airlineCatalogCache`) plus a one-row insert — the search does not even
@@ -78,7 +78,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // fail but the request itself. `asOf` says when the membership was last
 // checked, because alliances do change members.
 router.get("/alliances", (_req: AuthRequest, res: Response) => {
-  res.json({ success: true, data: ALLIANCE_MEMBERS, asOf: ALLIANCE_MEMBERSHIP_AS_OF });
+  res.json({ success: true, data: allianceMembersAt(), asOf: ALLIANCE_MEMBERSHIP_AS_OF });
 });
 
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
