@@ -90,7 +90,16 @@ export default function TravelAccountSection(): JSX.Element | null {
   // A failed sub-section renders nothing rather than an error card: the rest of
   // the overview is still correct, and a red box next to correct figures reads
   // as if they were affected.
-  if (failed || data === null || data.account.years.length === 0) return null;
+  if (failed || data === null) return null;
+  // Expenses do not depend on overnight records: with none of those, the
+  // costs still show on their own.
+  if (data.account.years.length === 0) {
+    return data.expenses && data.expenses.count > 0 ? (
+      <section className="mt-8">
+        <TravelAccountExpenses expenses={data.expenses} />
+      </section>
+    ) : null;
+  }
 
   const { account, trips, expenses } = data;
   // The night help names only the buckets this reader sees, in the server's

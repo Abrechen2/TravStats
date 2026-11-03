@@ -227,4 +227,20 @@ describe("TravelAccountSection", () => {
     await screen.findByText("stats:travelAccount.unassignedNights");
     expect(screen.queryByTestId("travel-account-expenses")).toBeNull();
   });
+
+  it("still draws the expenses when no overnight record exists", async () => {
+    const base = response();
+    getTravelAccount.mockResolvedValue({
+      ...base,
+      account: { years: [], contestedNights: 0 },
+      expenses: {
+        count: 1,
+        totalByCurrency: { EUR: 40 },
+        years: [{ year: "2025", count: 1, byCurrency: { EUR: 40 } }],
+        undatedByCurrency: {},
+      },
+    });
+    render(withRouter());
+    expect(await screen.findByTestId("travel-account-expenses")).toBeTruthy();
+  });
 });
