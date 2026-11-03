@@ -142,7 +142,16 @@ describe("ping", () => {
     expect(reply.nonce).toBe(packet.nonce);
     expect(JSON.parse(reply.body)).toEqual({
       tripShare: [1],
-      features: ["resync", "entries-up", "nudge", "directory", "stats", "connections", "plans"],
+      features: [
+        "resync",
+        "entries-up",
+        "nudge",
+        "directory",
+        "stats",
+        "connections",
+        "plans",
+        "achievements",
+      ],
     });
   });
 });

@@ -38,6 +38,7 @@ export const BODY_BUDGET = {
   // Simplified setup (2026-11-02): a lookup and a statistics read are short requests.
   "directory-pair": 8_192,
   "stats-read": 8_192,
+  "achievements-read": 8_192,
   // User connections (2026-11-02): short control messages.
   "connect-request": 8_192,
   "connect-accept": 8_192,
@@ -118,6 +119,12 @@ export const PROPAGATION_TRANSPORT: PeerTransport = transport(
  */
 export const STATS_TRANSPORT: PeerTransport = transport(
   BODY_BUDGET["stats-read"] + ENVELOPE_OVERHEAD,
+  BODY_BUDGET.entries + ENVELOPE_OVERHEAD
+);
+
+/** An achievements read (2026-11-03): a short request, a list of earned badges back (under 1 MB). */
+export const ACHIEVEMENTS_TRANSPORT: PeerTransport = transport(
+  BODY_BUDGET["achievements-read"] + ENVELOPE_OVERHEAD,
   BODY_BUDGET.entries + ENVELOPE_OVERHEAD
 );
 

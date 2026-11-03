@@ -106,8 +106,10 @@ async function applyRequest(origin: string, body: ConnectRequest, localOrigin: s
       }));
     if (!user?.isActive) return;
     if (byChannel && byChannel.user.username !== body.toUsername) return;
-    // Findable means "may receive requests"; a pairing from before connections keeps asking.
-    if (!user.federationFindable && byChannel?.state !== "reconfirm") return;
+    // Findable means "may receive requests" from strangers; a person who already holds a connection
+    // with us (one from before connections, or one sent back to reconfirm) keeps being able to ask.
+    if (!user.federationFindable && !["reconfirm", "active"].includes(byChannel?.state ?? ""))
+      return;
     const existing = byChannel as Account | null;
     if (existing) {
       if (!fresh(existing, body.generation)) return;

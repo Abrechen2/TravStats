@@ -47,6 +47,8 @@ export type RemoteShareApiErrorCode =
   | "SHARE_REMOTE_PERSON_UNKNOWN"
   | "SHARE_REMOTE_LOOKUP_LIMITED"
   | "SHARE_REMOTE_STATS_NOT_SHARED"
+  /** The person shows no achievements to the caller (switch off, or not an active connection). */
+  | "SHARE_REMOTE_ACHIEVEMENTS_NOT_SHARED"
   | "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE"
   /**
    * User connections (2026-11-02): a connection with that person exists already / is not in a

@@ -651,6 +651,7 @@
       "personUnknown": "{{origin}} has no findable person with that username. Either the name is wrong, or the person has not made themselves findable for connected servers.",
       "lookupLimited": "{{origin}} is not answering more lookups from your server right now. Please try again later.",
       "statsNotShared": "This person does not show you their statistics, or not to that extent.",
+      "achievementsNotShared": "This person does not show you their achievements (any more).",
       "leaderboardUnavailable": "This connection was made with an invitation code and has no leaderboard. Find the person through the connected server to get one.",
       "serverNotConnected": "That server is not connected.",
       "findFailed": "The search failed.",
@@ -850,6 +851,14 @@
     "connections": {
       "title": "Connections",
       "hint": "The admins of both servers have connected them. You connect with a person on a connected server once – after both of you confirmed, each side shares exactly what it sets. Switches only apply in your direction and all start off.",
+      "achievements": {
+        "view": "View achievements",
+        "close": "Close achievements",
+        "loading": "Loading …",
+        "summary": "{{unlocked}} of {{total}} achievements · {{points}} points",
+        "none": "This person has not earned any achievement yet.",
+        "failed": "The achievements could not be loaded."
+      },
       "findable": {
         "label": "Findable by connected servers",
         "sub": "Off: nobody on a connected server can send you a connection request. On: you can be asked by username – you decide on every request yourself, and nothing is shared until you confirm."

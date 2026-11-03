@@ -651,6 +651,7 @@
       "personUnknown": "Auf {{origin}} gibt es keine auffindbare Person mit diesem Benutzernamen. Entweder stimmt der Name nicht, oder die Person hat sich nicht für Verbundene Server sichtbar gemacht.",
       "lookupLimited": "{{origin}} beantwortet gerade keine weiteren Suchanfragen von deinem Server. Versuch es später noch einmal.",
       "statsNotShared": "Diese Person zeigt dir ihre Statistik nicht – oder nicht in diesem Umfang.",
+      "achievementsNotShared": "Diese Person zeigt dir ihre Erfolge nicht (mehr).",
       "leaderboardUnavailable": "Diese Verbindung wurde mit einem Einladungscode gemacht und hat keine Rangliste. Such die Person über den verbundenen Server, um sie zu bekommen.",
       "serverNotConnected": "Dieser Server ist nicht verbunden.",
       "findFailed": "Die Suche ist fehlgeschlagen.",
@@ -850,6 +851,14 @@
     "connections": {
       "title": "Verbindungen",
       "hint": "Die Admins beider Server haben sich verbunden. Mit einer Person auf einem verbundenen Server verbindest du dich einmal – nach der Bestätigung beider teilt jede Seite genau das, was sie einstellt. Schalter gelten nur in deine Richtung und sind zu Beginn alle aus.",
+      "achievements": {
+        "view": "Erfolge ansehen",
+        "close": "Erfolge schließen",
+        "loading": "Lädt …",
+        "summary": "{{unlocked}} von {{total}} Erfolgen · {{points}} Punkte",
+        "none": "Diese Person hat noch keinen Erfolg erreicht.",
+        "failed": "Die Erfolge konnten nicht geladen werden."
+      },
       "findable": {
         "label": "Für verbundene Server auffindbar",
         "sub": "Aus: Niemand auf einem verbundenen Server kann dir eine Verbindungsanfrage schicken. An: Man kann dich über deinen Benutzernamen anfragen – du entscheidest bei jeder Anfrage selbst, und es wird erst etwas geteilt, wenn du bestätigt hast."

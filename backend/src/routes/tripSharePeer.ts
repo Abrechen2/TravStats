@@ -41,6 +41,7 @@ import { serveEntriesUp } from "../services/sharing/federation/entriesUp";
 import { serveNudge } from "../services/sharing/federation/nudge";
 import { serveDirectoryPair } from "../services/sharing/federation/directory";
 import { serveStatsRead } from "../services/sharing/federation/remoteStats";
+import { serveAchievementsRead } from "../services/sharing/federation/remoteAchievements";
 import {
   serveConnectAccept,
   serveConnectDecline,
@@ -109,6 +110,8 @@ function serve(origin: string, local: string, body: TripSharePacket): Promise<un
       return serveDirectoryPair(origin, body);
     case "stats-read":
       return serveStatsRead(origin, body);
+    case "achievements-read":
+      return serveAchievementsRead(origin, body);
     case "connect-request":
       return serveConnectRequest(origin, body, local);
     case "connect-accept":

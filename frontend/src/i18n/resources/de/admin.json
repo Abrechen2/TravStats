@@ -846,7 +846,7 @@
     "showPublicKey": "Öffentlichen Schlüssel als Text anzeigen",
     "qrTitle": "Per QR koppeln",
     "qrAlt": "QR-Code der Verbindungsdatei",
-    "qrHint": "Scanne den Code mit der Companion-App des anderen Admins. Vergleiche danach den Fingerabdruck oben mit dem Admin des anderen Servers, bevor du den Server bestätigst. Der Code enthält kein Geheimnis.",
+    "qrHint": "Scanne den Code mit der Companion-App des anderen Admins. Vergleiche danach den Fingerabdruck oben mit dem Admin des anderen Servers, bevor du den Server bestätigst. Der Code enthält kein Geheimnis und läuft nicht ab. Er gilt nur für den gespeicherten Schlüssel und die gespeicherte Adresse: Nach einem Schlüsselwechsel oder einer neuen Adresse muss der andere Admin ihn neu scannen.",
     "downloadFile": "Verbindungsdatei herunterladen",
     "downloadHint": "Schick sie dem Admin des anderen Servers. Die Datei enthält kein Geheimnis.",
     "downloadOriginPending": "Speichere zuerst die geänderte Adresse – die Datei nennt die gespeicherte.",

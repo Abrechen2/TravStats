@@ -69,6 +69,16 @@ async function holdConnections(where: Prisma.RemoteShareAccountWhereInput): Prom
 }
 
 /**
+ * An announcement of a changed switch never reached the other server in 14 days: the two sides no
+ * longer agree on what is shared, and nothing tells the person. The connection goes back to
+ * `reconfirm` (spec 2026-11-02 §2) - it shows as "confirm again" in the inbox, and confirming once
+ * more carries both sides' current switches. An ended connection is left alone.
+ */
+export async function holdConnectionsById(ids: readonly string[]): Promise<void> {
+  if (ids.length > 0) await holdConnections({ id: { in: [...ids] } });
+}
+
+/**
  * A server's key was replaced (admin re-pin): a new key is a new party until someone says
  * otherwise. Every connection with that origin goes back to `reconfirm` - no plan, statistics or
  * offer flows over it until both people confirm again - and the plan memberships that rode on it
