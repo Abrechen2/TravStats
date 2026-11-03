@@ -51,6 +51,11 @@ const NEXT_FLIGHT_SELECT = {
   tripId: true,
 } as const;
 
+/** Largest gap between a fake-UTC wall clock and its real instant, with margin. */
+const FAKE_UTC_SKEW_MS = 16 * 60 * 60 * 1000;
+/** Rows read per request; far more than can sit inside the skew window. */
+const CANDIDATE_LIMIT = 50;
+
 export const nextFlightHandler = async (
   req: AuthRequest,
   res: Response,
@@ -58,24 +63,38 @@ export const nextFlightHandler = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const row = await prisma.flight.findFirst({
+    // The stored departureTime is not always an instant: a LEGACY_FAKE_UTC row
+    // holds the airport's wall clock posing as UTC, up to ~14 h away from the
+    // real moment. Comparing it with `now` flipped a west-of-UTC flight early
+    // or late, so the DB filter is widened by that skew and the real instant
+    // (`times.departure.utc`, the same reading every client gets) decides.
+    const now = Date.now();
+    const candidates = await prisma.flight.findMany({
       where: {
         userId,
         status: { not: "cancelled" },
-        departureTime: { gte: new Date() },
+        departureTime: { gte: new Date(now - FAKE_UTC_SKEW_MS) },
       },
       orderBy: [{ departureTime: "asc" }, { id: "asc" }],
+      take: CANDIDATE_LIMIT,
       select: NEXT_FLIGHT_SELECT,
     });
+    const enrichedAll = await enrichFlightsForClients(candidates);
+    const upcoming = enrichedAll
+      .map((f, i) => ({
+        row: candidates[i],
+        enriched: f,
+        at: f.times.departure ? Date.parse(f.times.departure.utc) : NaN,
+      }))
+      .filter((c) => Number.isFinite(c.at) && c.at >= now)
+      .sort((a, b) => a.at - b.at || (a.row.id < b.row.id ? -1 : 1));
+    const best = upcoming[0];
 
-    if (!row) {
+    if (!best) {
       res.json({ flight: null });
       return;
     }
-
-    // The one enrichment every client-bound flight goes through: the stored
-    // zone first, the catalogue's for a row written before zones were stored.
-    const [enriched] = await enrichFlightsForClients([row]);
+    const { row, enriched } = best;
 
     // City/country of both ends in one batched lookup, same source the map
     // overlays use, so the block can read "München → New York".

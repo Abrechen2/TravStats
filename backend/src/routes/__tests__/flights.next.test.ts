@@ -125,6 +125,40 @@ describe("GET /flights/next", () => {
     expect(nextFlightResponse.safeParse(res.body).success).toBe(true);
   });
 
+  it("does not offer an east-of-UTC fake-UTC flight that already left (wall clock still ahead of now)", async () => {
+    // Stored wall clock is 1 h in the future as "UTC", but Singapore is 8 h
+    // ahead of UTC: the real instant was 7 h ago and the flight has left.
+    const wall = new Date(Date.now() + 1 * HOUR);
+    await prisma.flight.create({
+      data: mk(0, {
+        depIata: "SIN",
+        arrIata: "MUC",
+        departureTime: wall,
+        arrivalTime: null,
+        depTimeSemantics: "LEGACY_FAKE_UTC",
+      }),
+    });
+    await prisma.flight.create({ data: mk(5 * 24 * HOUR, { arrIata: "AMS" }) });
+    const res = await request(app).get("/api/v1/flights/next").set("Cookie", cookie);
+    expect(res.body.flight.arrIata).toBe("AMS");
+  });
+
+  it("still offers a west-of-UTC fake-UTC flight whose wall clock is behind now but instant is ahead", async () => {
+    // Wall clock 2 h ago as "UTC"; JFK is 4-5 h behind UTC so the real instant is 2-3 h ahead.
+    const wall = new Date(Date.now() - 2 * HOUR);
+    await prisma.flight.create({
+      data: mk(0, {
+        depIata: "JFK",
+        arrIata: "MUC",
+        departureTime: wall,
+        arrivalTime: null,
+        depTimeSemantics: "LEGACY_FAKE_UTC",
+      }),
+    });
+    const res = await request(app).get("/api/v1/flights/next").set("Cookie", cookie);
+    expect(res.body.flight?.arrIata).toBe("MUC");
+  });
+
   it("requires a session", async () => {
     expect((await request(app).get("/api/v1/flights/next")).status).toBe(401);
   });
