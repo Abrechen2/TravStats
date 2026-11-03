@@ -144,6 +144,7 @@
     "travtrack/export.ts",
     "travtrack/gate.ts",
     "travtrack/imports.ts",
+    "travtrack/legs.ts",
     "travtrack/ingestSources.ts",
     "travtrack/ingestTokens.ts",
     "travtrack/months.ts",
