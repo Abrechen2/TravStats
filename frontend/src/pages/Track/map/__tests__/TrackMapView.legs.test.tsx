@@ -54,6 +54,9 @@ vi.mock("../TrackRangeMap", () => ({
         <button type="button" onClick={() => onStop(stops[0])}>
           pick-stop
         </button>
+        <button type="button" onClick={() => onStop(stops[1])}>
+          pick-second-stop
+        </button>
         <button
           type="button"
           onClick={() =>
@@ -320,6 +323,32 @@ describe("TrackMapView legs", () => {
       )
     );
     expect(screen.queryByTestId("track-stop-reject")).not.toBeInTheDocument();
+  });
+
+  it("a failed decline of one stop does not carry its error over to the next stop picked", async () => {
+    staysApi.reject.mockRejectedValue({ response: { status: 500, data: {} } });
+    api.day.mockImplementation(async () =>
+      dayWith(
+        [leg()],
+        [
+          stop(),
+          stop({
+            fromMs: T0 + 120 * MIN,
+            untilMs: T0 + 150 * MIN,
+            stayRef: { id: "stay-2", status: "pending" },
+          }),
+        ]
+      )
+    );
+    renderDay();
+    await screen.findByTestId("map-stub");
+    fireEvent.click(screen.getByRole("button", { name: "pick-stop" }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("track-stop-reject"));
+    });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "pick-second-stop" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("a failed decline says why and keeps the stay open", async () => {

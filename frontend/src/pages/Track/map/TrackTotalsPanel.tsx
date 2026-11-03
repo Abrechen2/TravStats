@@ -1,12 +1,13 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { RangeTotals } from "./trackGeometry";
+import { DASH } from "./trackLegFormat";
 import { panelStyle } from "./trackMapStyle";
 
 /**
  * The shown span in numbers (TravTrack plan T5.2): distance summed inside the
  * stretches only, time moving, average speed over that time, positions and
- * how much of the span was recorded. A value that cannot be told reads "—",
+ * how much of the span was recorded. A value that cannot be told reads "–",
  * never 0.
  */
 export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): JSX.Element {
@@ -16,7 +17,7 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
   const minutes = totals.movingMs === null ? null : Math.round(totals.movingMs / 60_000);
   const duration =
     minutes === null
-      ? "—"
+      ? DASH
       : minutes >= 60
         ? t("track:map.totals.hours", { h: Math.floor(minutes / 60), m: minutes % 60 })
         : t("track:map.totals.minutes", { m: minutes });
@@ -25,7 +26,7 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
     ["moving", duration],
     [
       "avgSpeed",
-      totals.avgKmh === null ? "—" : t("track:map.totals.kmh", { kmh: number(totals.avgKmh, 0) }),
+      totals.avgKmh === null ? DASH : t("track:map.totals.kmh", { kmh: number(totals.avgKmh, 0) }),
     ],
     // Only with the server's aggregates; the drawing alone cannot tell the fastest reading.
     ...(totals.maxKmh === undefined
@@ -34,12 +35,12 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
           [
             "maxSpeed",
             totals.maxKmh === null
-              ? "—"
+              ? DASH
               : t("track:map.totals.kmh", { kmh: number(totals.maxKmh, 0) }),
           ] as [string, string],
         ]),
     ["points", number(totals.points, 0)],
-    ["coverage", totals.coverage === null ? "—" : `${number(totals.coverage * 100, 0)} %`],
+    ["coverage", totals.coverage === null ? DASH : `${number(totals.coverage * 100, 0)} %`],
   ];
   return (
     <section style={panelStyle} aria-label={t("track:map.totals.title")}>

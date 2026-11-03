@@ -658,7 +658,7 @@
     "underMinute": "< 1 min",
     "metres": "{{m}} m",
     "uncertain": "{{mode}} (unsicher)",
-    "modeGroup": "Fortbewegungsart",
+    "modeGroup": "Verkehrsmittel",
     "modeFailed": "Die Änderung wurde nicht gespeichert. {{reason}}",
     "reloadFailed": "Gespeichert, aber die Ansicht konnte nicht neu geladen werden. Lade die Seite neu.",
     "openEntry": "Logbuch-Eintrag öffnen",
@@ -690,8 +690,10 @@
     }
   },
   "stop": {
-    "title": "Aufenthalt",
-    "row": "Aufenthalt",
+    "title": "Stopp",
+    "titleStay": "Aufenthalt",
+    "row": "Stopp",
+    "rowStay": "Aufenthalt",
     "noStay": "Kein Aufenthaltsvorschlag dazu.",
     "stateOther": "Aufenthalt",
     "reject": "Ablehnen",

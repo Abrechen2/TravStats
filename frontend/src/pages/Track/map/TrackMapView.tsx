@@ -390,6 +390,7 @@ export default function TrackMapView(): JSX.Element {
                     />
                   ) : (
                     <TrackStopCard
+                      key={`${resolved.day.date}-${resolved.stop.fromMs}`}
                       stop={resolved.stop}
                       zone={resolved.day.zone}
                       onClose={() => setPick(null)}

@@ -1,4 +1,6 @@
+import { formatTime } from "../../../lib/displayFormat";
 import type { TravTrackLeg } from "../../../lib/api/travtrackLegs";
+import { localDay } from "../../../shared/time";
 
 /**
  * How a leg's figures are worded (spec 2026-11-03-travtrack-legs, W1). A figure
@@ -53,4 +55,17 @@ export function legModeLabel(leg: TravTrackLeg, t: Translate): string {
   return leg.modeSource === "auto" && leg.confidence === "low"
     ? t("track:legs.uncertain", { mode: name })
     : name;
+}
+
+/**
+ * "09:10 – 24:00": a span running to the end of its day ends at 24:00 like the
+ * logbook timeline says, not at the next day's 00:00. The end is the day's
+ * edge when the zone's calendar day turns over exactly there.
+ */
+export function spanText(fromMs: number, untilMs: number, zone: string, t: Translate): string {
+  const endsDay = localDay(untilMs - 1, zone) !== localDay(untilMs, zone);
+  return t("track:timeline.span", {
+    from: formatTime(fromMs, { timeZone: zone }),
+    to: endsDay ? t("track:timeline.endOfDay") : formatTime(untilMs, { timeZone: zone }),
+  });
 }

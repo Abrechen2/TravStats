@@ -107,3 +107,21 @@ describe("deriveLegs — broad entries (roadtrip, rental)", () => {
     expect(legs[0].mode).toBe("walk");
   });
 });
+
+describe("deriveLegs — a manual mode decides the figures", () => {
+  it("a leg corrected to flight keeps the distance and time of its fast step (flight rules, no ground-speed cap)", () => {
+    const pts = [
+      { min: 0, m: 0, speed: 2, motion: null },
+      { min: 1, m: 111, speed: 2, motion: null },
+      { min: 2, m: 111 + 12_120, speed: 200, motion: null },
+    ];
+    const run = (
+      overrides: Array<{ fromMs: number; untilMs: number; mode: "flight"; updatedAtMs: number }>
+    ) => deriveLegs(span(pts), { windows: [], overrides, stays: [] }).legs;
+    const manual = run([{ fromMs: T0, untilMs: T0 + 2 * MIN, mode: "flight", updatedAtMs: 1 }]);
+    expect(manual).toHaveLength(1);
+    expect(manual[0]).toMatchObject({ mode: "flight", modeSource: "manual" });
+    expect(manual[0].distanceM).toBeGreaterThan(12_000);
+    expect(manual[0].movingMs).toBeGreaterThan(0);
+  });
+});
