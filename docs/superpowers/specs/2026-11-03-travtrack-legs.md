@@ -61,8 +61,8 @@ The range views (`GET /travtrack/range…`, `rangeView.ts`) gain
 `aggregates: { distanceM, movingMs: number|null, maxSpeedMps: number|null }`, computed from
 the stored (privacy-safe) points, NOT from the simplified drawing geometry.
 
-The point details the inspector reads gain nullable `speedMps`, `altitudeM`, `motion`
-(already loaded in `readSafe.ts`).
+`/day` and the range views gain `pointDetails: Array<Array<{speedMps, altitudeM, motion}>>` (each
+nullable), aligned with `segments` vertex by vertex (as built in S1).
 
 `PUT /api/v1/travtrack/legs/mode` `{ fromMs, untilMs, mode }` stores a correction;
 `mode: null` resets to automatic. Answers the recomputed `Leg`, bare (the travtrack routers are the bare family, ADR 0001). A correction applies to every
@@ -81,7 +81,7 @@ span, not to points).
 
 | Phase | Side      | Content                                                                                                                         | Status  |
 | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| S1    | Server    | legs + stops on `/day`, range aggregates, point speed/altitude/motion, mode corrections (table, route, export, account delete) | open    |
+| S1    | Server    | legs + stops on `/day`, range aggregates, point speed/altitude/motion, mode corrections (table, route, export, account delete) | done — feat/travtrack-legs 7493f1bc2, migration 20261103181313_travtrack_leg_modes |
 | W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | open    |
 | W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | open    |
 | W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | open    |
@@ -104,3 +104,10 @@ S1 and C1 do not wait for it.
 ## Open for Companion
 
 - C1 done (2026-11-03). C2 waits for S1 and the owner's OK on the mock-up https://claude.ai/artifact/DG9TL4F9sbF4xQEsRyJVS8.
+
+
+## As built — S1 (2026-11-03)
+
+- A rental or roadtrip window does not cut legs; it sets the mode only where auto does not clearly say walk/run/cycle.
+- `PUT /travtrack/legs/mode` also accepts `mode: "unknown"`; limiter 60/min. A reset (`mode: null`) whose span no longer covers a leg deletes the correction and answers 404 `TRAVTRACK_LEG_NOT_FOUND`.
+- `stayRef` is filled only while stay suggestions are on. Range aggregates are per cursor part, exclude flight windows, and cap glitch jumps.
