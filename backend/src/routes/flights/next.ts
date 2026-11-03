@@ -54,7 +54,7 @@ const NEXT_FLIGHT_SELECT = {
 /** Largest gap between a fake-UTC wall clock and its real instant, with margin. */
 const FAKE_UTC_SKEW_MS = 16 * 60 * 60 * 1000;
 /** Rows read per request; far more than can sit inside the skew window. */
-const CANDIDATE_LIMIT = 50;
+const CANDIDATE_LIMIT = 200;
 
 export const nextFlightHandler = async (
   req: AuthRequest,

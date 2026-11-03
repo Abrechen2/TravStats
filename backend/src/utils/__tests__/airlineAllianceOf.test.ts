@@ -50,6 +50,10 @@ describe("a membership with an end date resolves itself", () => {
     expect(airlineAllianceOf("OZ", on)).toBeNull();
   });
 
+  it("a flight flown while Asiana was a member still counts after it left", () => {
+    expect(airlineAllianceOf("OZ", new Date("2025-06-01T10:00:00Z"))).toBe("star");
+  });
+
   it("the picker list drops Asiana from Star on the end day", () => {
     expect(allianceMembersAt(before).star).toContain("OZ");
     expect(allianceMembersAt(on).star).not.toContain("OZ");
