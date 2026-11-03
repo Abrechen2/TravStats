@@ -306,4 +306,9 @@ describe("TourTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /dashboard:tourTab\.listTitle/ }));
     expect(screen.getByTestId("map-empty-overlay").style.left).toBe("0px");
   });
+
+  it("shows a tour count of 0 in the list header when the settled list is empty", () => {
+    renderTab();
+    expect(screen.getByTestId("tour-list-count")).toHaveTextContent("0");
+  });
 });

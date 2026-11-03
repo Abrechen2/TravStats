@@ -133,6 +133,15 @@ describe("ProfileZonePrompt", () => {
     expect(screen.getByText("Deine Zeitzone")).toBeInTheDocument();
   });
 
+  it("the UTC note sits bottom right, so it never covers the left sidebar or settings menu", () => {
+    useProfileZoneStore.getState().noteRemote({ display: {} });
+    prompt();
+    fireEvent.click(screen.getByRole("button", { name: "Später" }));
+    const note = screen.getByRole("status");
+    expect(note.className).toContain("right-4");
+    expect(note.className).not.toContain("left-4");
+  });
+
   it("a deferral in this session is remembered across a remount", () => {
     window.sessionStorage.setItem(`${PROFILE_ZONE_DEFER_KEY_PREFIX}u1`, "1");
     useProfileZoneStore.getState().noteRemote({ display: {} });

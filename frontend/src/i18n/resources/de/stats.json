@@ -906,6 +906,13 @@
     "avgTripDaysDesc": "Längste Reise: {{count}} Tage",
     "avgTripDaysDesc_one": "Längste Reise: {{count}} Tag",
     "avgTripDaysDesc_other": "Längste Reise: {{count}} Tage",
+    "expenses": {
+      "title": "Nebenkosten unterwegs",
+      "desc_one": "{{count}} Ausgabe auf Reisen (Fähre, Maut, Stellplatz, Sprit) — je Währung, nie über Währungen addiert.",
+      "desc_other": "{{count}} Ausgaben auf Reisen (Fähre, Maut, Stellplatz, Sprit) — je Währung, nie über Währungen addiert.",
+      "undated": "Ohne Datum",
+      "total": "Gesamt"
+    },
     "journalEntries": "Tagebucheinträge",
     "noMoods": "Noch keine Stimmung erfasst",
     "helpWithBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",

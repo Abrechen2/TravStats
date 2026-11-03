@@ -202,7 +202,19 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
               borderBottom: "1px solid var(--color-border)",
             }}
           >
-            <strong>{listTitle}</strong>
+            <strong>
+              {listTitle}
+              {/* Settled only: a zero beside a loading or failed list would be
+                  the lie the comment on `isEmpty` warns about. */}
+              {!dashboardTours.toursLoading && !dashboardTours.toursLoadError && (
+                <span
+                  data-testid="tour-list-count"
+                  style={{ marginLeft: 8, color: "var(--text-muted)", fontWeight: 400 }}
+                >
+                  {dashboardTours.tours.length}
+                </span>
+              )}
+            </strong>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
