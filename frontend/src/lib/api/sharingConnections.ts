@@ -1,6 +1,6 @@
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
-import type { Connection, ConnectionSwitches } from "../../types/sharingRemote";
+import type { Connection, ConnectionSwitches, RemoteAchievements } from "../../types/sharingRemote";
 
 /**
  * User connections across servers (`/api/v1/sharing/connections`, spec 2026-11-02 §5). Enveloped.
@@ -30,6 +30,9 @@ export const sharingConnectionsApi = {
       .data,
   setSwitches: async (id: string, switches: ConnectionSwitches): Promise<Connection> =>
     (await api.put<Envelope<Connection>>(`${BASE}/${enc(id)}/switches`, { switches }, ACROSS)).data
+      .data,
+  achievements: async (id: string): Promise<RemoteAchievements> =>
+    (await api.get<Envelope<RemoteAchievements>>(`${BASE}/${enc(id)}/achievements`, ACROSS)).data
       .data,
   end: async (id: string): Promise<Connection> =>
     (await api.delete<Envelope<Connection>>(`${BASE}/${enc(id)}`, ACROSS)).data.data,

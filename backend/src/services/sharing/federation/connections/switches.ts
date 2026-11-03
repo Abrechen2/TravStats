@@ -76,3 +76,8 @@ export const mayServeStats = (row: Gated): boolean =>
  */
 export const connectionAllowsPlans = (row: Gated & { sharePlans: boolean }): boolean =>
   row.state === "active" && row.sharePlans && theirsOf(row).plans;
+
+/** The person's achievements read is served: connected, and this side's achievements switch is on. */
+export const mayServeAchievements = (
+  row: Pick<SwitchColumns, "shareAchievements"> & { state: string }
+): boolean => row.state === "active" && row.shareAchievements;

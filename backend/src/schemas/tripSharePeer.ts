@@ -47,6 +47,8 @@ export const TRIP_SHARE_FEATURES = [
   "connections",
   // Plans over a connection (2026-11-02 §4): plan-invite / -join / -decline / -leave and the proxied calls.
   "plans",
+  // Achievements over a connection (2026-11-03): achievements-read, gated by the `achievements` switch.
+  "achievements",
 ] as const;
 export type TripShareFeature = (typeof TRIP_SHARE_FEATURES)[number];
 
@@ -159,6 +161,53 @@ export const statsReplySchema = z.union([
     entries: z.array(wireEntrySchema).max(STATS_PAGE_SIZE),
   }),
 ]);
+/**
+ * A connected person's server reads the achievements this person chose to show it (the
+ * `achievements` switch of the connection, spec 2026-11-02 §2): the badges earned and the totals,
+ * never a record. `from` is the asker's channel for the person, `to` the one of the person asked.
+ */
+export const achievementsReadSchema = z.strictObject({
+  kind: z.literal("achievements-read"),
+  ...header,
+  from: uuid,
+  to: uuid,
+});
+
+/** More than the catalogue ever holds; a bound for the reply, not a page size. */
+export const MAX_REMOTE_BADGES = 1000;
+
+export const remoteBadgeSchema = z.strictObject({
+  code: z.string().max(80),
+  name: z.string().max(200),
+  description: z.string().max(500),
+  category: z.string().max(40),
+  domain: z.string().max(40),
+  tier: z.string().max(20),
+  icon: z.string().max(80),
+  points: z.number().int().min(0),
+  /** First time the requirement was met; null for a badge held without a recorded date. */
+  unlockedAt: instant.nullable(),
+});
+
+/** Refusals read alike for every cause, as for statistics: nothing tells a stranger what exists. */
+export const achievementsReplySchema = z.union([
+  z.strictObject({ kind: z.literal("achievements-reply"), status: z.literal("notShared") }),
+  z.strictObject({
+    kind: z.literal("achievements-reply"),
+    status: z.literal("ok"),
+    summary: z.strictObject({
+      totalAchievements: z.number().int().min(0),
+      unlockedAchievements: z.number().int().min(0),
+      totalPoints: z.number().int().min(0),
+      rank: z.string().max(40),
+    }),
+    earned: z.array(remoteBadgeSchema).max(MAX_REMOTE_BADGES),
+  }),
+]);
+export type AchievementsRead = z.infer<typeof achievementsReadSchema>;
+export type AchievementsReply = z.infer<typeof achievementsReplySchema>;
+export type RemoteBadge = z.infer<typeof remoteBadgeSchema>;
+
 /**
  * User connections (spec 2026-11-02 §3), the second layer above the admins' key exchange: one
  * person asks another to connect, each side states what *it* gives (`switches`, directional), and
@@ -502,6 +551,7 @@ export const tripSharePacket = z.discriminatedUnion("kind", [
   nudgeSchema,
   directoryPairSchema,
   statsReadSchema,
+  achievementsReadSchema,
   connectRequestSchema,
   connectAcceptSchema,
   connectDeclineSchema,

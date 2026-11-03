@@ -33,6 +33,7 @@ const CODES: Readonly<Record<string, string>> = {
   SHARE_REMOTE_PERSON_UNKNOWN: "sharing:remote.errors.personUnknown",
   SHARE_REMOTE_LOOKUP_LIMITED: "sharing:remote.errors.lookupLimited",
   SHARE_REMOTE_STATS_NOT_SHARED: "sharing:remote.errors.statsNotShared",
+  SHARE_REMOTE_ACHIEVEMENTS_NOT_SHARED: "sharing:remote.errors.achievementsNotShared",
   SHARE_REMOTE_LEADERBOARD_UNAVAILABLE: "sharing:remote.errors.leaderboardUnavailable",
   SHARE_REMOTE_CONNECTION_EXISTS: "sharing:remote.errors.connectionExists",
   SHARE_REMOTE_CONNECTION_STATE: "sharing:remote.errors.connectionState",

@@ -33,3 +33,23 @@ describe("ConnectionQr", () => {
     expect(screen.queryByTestId("server-qr")).toBeNull();
   });
 });
+
+describe("ConnectionQr validity statement", () => {
+  it("says the code does not expire and is tied to the saved key and address (the server enforces no time limit, only the pinned key)", async () => {
+    const de = (await import("../../../i18n/resources/de/admin.json")).default as unknown;
+    const en = (await import("../../../i18n/resources/en/admin.json")).default as unknown;
+    const find = (o: unknown): string | undefined => {
+      if (!o || typeof o !== "object") return undefined;
+      const r = o as Record<string, unknown>;
+      if (typeof r.qrHint === "string") return r.qrHint;
+      for (const v of Object.values(r)) {
+        const hit = find(v);
+        if (hit) return hit;
+      }
+      return undefined;
+    };
+    expect(find(de)).toMatch(/läuft nicht ab/);
+    expect(find(de)).toMatch(/Schlüssel/);
+    expect(find(en)).toMatch(/does not expire/);
+  });
+});

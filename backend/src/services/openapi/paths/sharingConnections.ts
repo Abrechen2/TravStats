@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
+import { achievementsReplySchema } from "../../../schemas/tripSharePeer";
 import {
   connectionAcceptBodySchema,
   connectionRequestBodySchema,
@@ -117,5 +118,29 @@ registry.registerPath({
     200: ok("The connection, `revoked`", connectionSchema),
     404: notFound,
     409: wrongState,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/sharing/connections/{id}/achievements",
+  summary: "The achievements a connected person shows the caller",
+  description:
+    "Needs an `active` connection whose other side has switched `achievements` on. Answers the earned badges (the set that person's own achievements page lists, with their domain visibility applied) and the totals - no progress figures and no records. `unlockedAt` is the first time the requirement was met, or null. Asks the other server (feature `achievements` in the ping); limited to 120 an hour per user.",
+  tags,
+  request: { params: idParams },
+  responses: {
+    200: ok(
+      "Totals and earned badges",
+      achievementsReplySchema.options[1].omit({ kind: true, status: true })
+    ),
+    403: err(
+      "`SHARE_REMOTE_ACHIEVEMENTS_NOT_SHARED` (one answer for every cause), or `SHARE_REMOTE_PEER_NOT_ADMITTED`"
+    ),
+    404: notFound,
+    409: err(
+      "`SHARE_REMOTE_CONNECTION_REQUIRED` (not active), `SHARE_REMOTE_PEER_DISABLED` or `SHARE_REMOTE_PEER_OUTDATED`"
+    ),
+    502: err("`SHARE_REMOTE_UNREACHABLE`"),
   },
 });

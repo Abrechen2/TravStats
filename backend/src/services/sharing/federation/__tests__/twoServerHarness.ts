@@ -56,6 +56,7 @@ import * as peerFeaturesModule from "../peerFeatures";
 import * as directoryModule from "../directory";
 import * as offerByNameModule from "../offerByName";
 import * as remoteStatsModule from "../remoteStats";
+import * as remoteAchievementsModule from "../remoteAchievements";
 import * as connectionActionsModule from "../connections/actions";
 import * as connectionServeModule from "../connections/serve";
 import * as connectionViewModule from "../connections/view";
@@ -105,6 +106,7 @@ export interface Server {
   directory: typeof directoryModule;
   offerByName: typeof offerByNameModule;
   remoteStats: typeof remoteStatsModule;
+  remoteAchievements: typeof remoteAchievementsModule;
   connections: typeof connectionActionsModule;
   connectionServe: typeof connectionServeModule;
   connectionView: typeof connectionViewModule;
@@ -163,6 +165,7 @@ const serverA = (): Server => ({
   directory: directoryModule,
   offerByName: offerByNameModule,
   remoteStats: remoteStatsModule,
+  remoteAchievements: remoteAchievementsModule,
   connections: connectionActionsModule,
   connectionServe: connectionServeModule,
   connectionView: connectionViewModule,
@@ -215,6 +218,7 @@ function isolatedServer(origin: string, databaseUrl: string): Server {
         directory: require("../directory"),
         offerByName: require("../offerByName"),
         remoteStats: require("../remoteStats"),
+        remoteAchievements: require("../remoteAchievements"),
         connections: require("../connections/actions"),
         connectionServe: require("../connections/serve"),
         connectionView: require("../connections/view"),

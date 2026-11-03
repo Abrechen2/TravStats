@@ -66,6 +66,9 @@ New peer kinds, each idempotent on `(origin, channel, generation)`:
 | `connect-revoke`   | `{channel, generation}`                                          | → `revoked`; cascades: plan memberships of that person end, stats/leaderboard/achievement reads refuse, pending offers withdrawn. Trips already shared keep the linked copies (same rule as today's revoke) |
 | `connect-settings` | `{channel, generation, switches}`                                | updates `remote_switches`; switching _off_ takes effect on the sender's side immediately (the sender enforces its own switches)                                                                             |
 
+`achievements-read {from, to}` (feature `achievements` in the ping) is the one read that is not a state change: see
+"Achievements over a connection" in the as-built notes below.
+
 Lookups keep their budgets (30/h per user, 60/h per peer). `directory-pair` stays readable for old
 peers for one release and answers `paired:false` from servers that have this change.
 
@@ -123,6 +126,7 @@ geteilt"), `REMOTE_PLAN_NOT_FOUND` (404).
 | `POST /sharing/connections/:id/accept`  | `{switches}`                   | `active`                                                                                                                                                                                                                                                                                                                                         |
 | `POST /sharing/connections/:id/decline` |                                | `declined`                                                                                                                                                                                                                                                                                                                                       |
 | `PUT /sharing/connections/:id/switches` | `{switches}`                   | connection                                                                                                                                                                                                                                                                                                                                       |
+| `GET /sharing/connections/:id/achievements` |                            | `{summary: {totalAchievements, unlockedAchievements, totalPoints, rank}, earned: [badge]}` with `badge = {code, name, description, category, domain, tier, icon, points, unlockedAt: ISO instant \| null}`; `earned` is at most 1000 long. Errors: 403 `SHARE_REMOTE_ACHIEVEMENTS_NOT_SHARED` (one answer for switch off, not active, person gone), 404 `SHARE_REMOTE_PERSON_NOT_FOUND`, 409 `SHARE_REMOTE_CONNECTION_REQUIRED` (not `active` here) / `SHARE_REMOTE_PEER_OUTDATED` / `SHARE_REMOTE_PEER_DISABLED`, 502 `SHARE_REMOTE_UNREACHABLE` |
 | `DELETE /sharing/connections/:id`       |                                | `revoked` (a `pending_out` request is taken back, a `pending_in` one is declined)                                                                                                                                                                                                                                                                |
 
 `switches = {plans: bool, stats: "off"|"overview"|"full", achievements: bool, leaderboard: bool,
@@ -263,8 +267,8 @@ Deviations and decisions the spec did not fix:
   the issuer's `remote_switches` starts with `tripOffers: true`, the claimant's `share_trip_offers` true.
   Only pairings that existed at migration time are `reconfirm`.
 - **Gates.** `switches.ts`: a new offer needs `active` and the receiver's `tripOffers`; a statistics read
-  needs `active` and a level above off; `reconfirm` grants nothing new. Achievements: the switch is
-  stored and announced, nothing reads it yet. Leaderboard: the switch drives the existing
+  needs `active` and a level above off; `reconfirm` grants nothing new. Achievements: the switch is read -
+  see "Achievements over a connection" below. Leaderboard: the switch drives the existing
   `LeaderboardConsent`.
 - **`directory-pair`** answers `paired: false` to everything (budget kept); `findRemotePerson` and
   `POST /sharing/remote/people/find` are removed. Offering by name needs an active connection
@@ -326,6 +330,13 @@ daily); dropped after 14 days. The message id is the row id on every attempt. Re
 - *Announcements are written in the change's transaction* (`enqueueAnnouncement`) and sent after the commit; a
   crash cannot lose one. Messages the other server never took are dropped after 14 days with a warning; that side
   refuses on its own and learns from the next message.
+- *A dropped `connect-settings` is no longer silent.* After 14 days the row is still deleted, but the connection
+  it belonged to (if it is still `active`/`pending_*`) goes back to `reconfirm` (`holdConnectionsById`, same effect
+  as a re-pin: statistics and leaderboard off, plan memberships on it end), so the two sides cannot stay out of step
+  unseen; confirming once more carries both sides' current switches. A dropped `connect-revoke`, `connect-decline`,
+  `plan-decline` or `plan-leave` changes nothing here: the connection or membership is already ended on this side and
+  the other side refuses on its own. The peer's screen may keep showing such a connection as active until its next
+  read is refused - accepted, no schema change.
 - *Planning off on the host* (`assertTravPlanOffered`, `assertEnabled`) closes the proxied calls too.
 - *Not proxied:* forecast, station climate, stage routing, place and location search, placeholder matching,
   packing suggestions, AI proposals, handover and actual-versus-plan. They were on the guest door but are not in
@@ -366,6 +377,31 @@ Not available on this door: forecast, climate, routing, place and location searc
 Owner side (for the web; the Companion owner UI may follow): `GET /trips/:id/plan/members/connections` →
 `{connections: [{connectionId, displayName, username, origin, member}]}`, and
 `POST /trips/:id/plan/members {connectionId}` (or `{username}` for a person on this server).
+
+## Achievements over a connection - as built (2026-11-03)
+
+Meaning of `share_achievements`: the connected person may see this account's **earned badges and the totals**
+the own achievements page shows (same visibility rule: a hidden domain's badge is neither listed nor counted; only
+held badges, `progress >= requirement`; retired definitions that are held are listed, like on the own page, but not
+counted in `unlockedAchievements`). No progress figures of unearned badges, no records, no evidence.
+
+- *Wire.* `achievements-read {from, to}` (signed `trip-share/1`, 8 KiB request budget, reply up to the
+  `entries` budget), answered `achievements-reply`: `{status: "notShared"}` for every refusal, or
+  `{status: "ok", summary, earned}`. Ping feature `achievements`; a peer without it is `SHARE_REMOTE_PEER_OUTDATED`.
+- *Gate (`mayServeAchievements`).* The serving side's connection is `active` AND its own `share_achievements` is on,
+  and the owner is an active user; asked on every call, so switching off or ending takes effect on the next read.
+- *API (asking server).* `GET /api/v1/sharing/connections/:id/achievements`, enveloped, same 120/h limiter as the other
+  connection actions. Needs an `active` connection here; the answer is `data = {summary, earned}` (no `kind`/`status`).
+  Companion contract: show the button only when `theirs.achievements` is true; localise badge names by `code`
+  (`achievements:codes.<code>.name`) with the wire `name`/`description` as fallback; `rank` is the slug of
+  `utils/achievementRank`. Minimum server: the build with ping feature `achievements`.
+- *Web.* Settings -> Teilen -> Verbindungen: "Erfolge ansehen" on an active connection whose `theirs.achievements` is on.
+
+## Admin QR validity
+
+The QR in Admin -> Instanz carries only the connection file's values; it has no time component, so the server
+never expires it. What it is bound to is the pinned key and address: after a key change or a new address the old
+code is refused by the fingerprint check. The text now says exactly that (it used to stay silent on validity).
 
 ## Open for Companion
 

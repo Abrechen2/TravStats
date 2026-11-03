@@ -12,6 +12,7 @@ import {
   requestConnection,
   updateConnectionSwitches,
 } from "../services/sharing/federation/connections/actions";
+import { readRemoteAchievements } from "../services/sharing/federation/remoteAchievements";
 import { listConnections } from "../services/sharing/federation/connections/view";
 import {
   connectionAcceptBodySchema,
@@ -76,6 +77,15 @@ router.get(
   "/",
   handle(async (req, res) => {
     res.json({ success: true, data: await listConnections(req.userId!) });
+  })
+);
+
+router.get(
+  "/:id/achievements",
+  actionLimiter,
+  handle(async (req, res) => {
+    const id = connectionIdSchema.parse(req.params.id);
+    res.json({ success: true, data: await readRemoteAchievements(req.userId!, id) });
   })
 );
 

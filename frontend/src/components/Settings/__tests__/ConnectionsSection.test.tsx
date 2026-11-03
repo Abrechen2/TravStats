@@ -31,6 +31,7 @@ vi.mock("../../../lib/api/sharingConnections", () => ({
     decline: vi.fn(),
     setSwitches: vi.fn(),
     end: vi.fn(),
+    achievements: vi.fn(),
   },
 }));
 const remote = vi.mocked(sharingRemoteApi);
@@ -207,5 +208,45 @@ describe("Verbindungen", () => {
     api.list.mockResolvedValue([connection({ theirs: { ...NO_SWITCHES, stats: "overview" } })]);
     rerender(<ConnectionsSection key="again" />);
     await screen.findByText("sharing:remote.connected.stats.view");
+  });
+
+  it("shows the achievements of a person who switched them on, and says so when they are refused", async () => {
+    api.list.mockResolvedValue([connection({})]);
+    const { rerender } = render(<ConnectionsSection />);
+    await screen.findByTestId("connection");
+    expect(screen.queryByText(`${KEY}.achievements.view`)).toBeNull();
+    api.list.mockResolvedValue([connection({ theirs: { ...NO_SWITCHES, achievements: true } })]);
+    rerender(<ConnectionsSection key="again" />);
+    api.achievements.mockResolvedValue({
+      summary: {
+        totalAchievements: 10,
+        unlockedAchievements: 1,
+        totalPoints: 50,
+        rank: "newcomer",
+      },
+      earned: [
+        {
+          code: "X1",
+          name: "Globetrotter",
+          description: "d",
+          category: "explorer",
+          domain: "shared",
+          tier: "gold",
+          icon: "star",
+          points: 50,
+          unlockedAt: null,
+        },
+      ],
+    });
+    await userEvent.click(await screen.findByText(`${KEY}.achievements.view`));
+    expect(await screen.findByTestId("remote-badge")).toBeTruthy();
+    expect(api.achievements).toHaveBeenCalledWith("c1");
+    // The person turned it off meanwhile: its own sentence, not an empty list.
+    api.achievements.mockRejectedValue(refusal("SHARE_REMOTE_ACHIEVEMENTS_NOT_SHARED"));
+    await userEvent.click(screen.getByText(`${KEY}.achievements.close`));
+    await userEvent.click(screen.getByText(`${KEY}.achievements.view`));
+    expect((await screen.findByTestId("remote-achievements-error")).textContent).toContain(
+      "sharing:remote.errors.achievementsNotShared"
+    );
   });
 });

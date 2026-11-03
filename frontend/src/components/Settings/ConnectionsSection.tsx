@@ -20,6 +20,7 @@ import { Field, Input, Select, Switch } from "../ui/Field";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ConnectionSwitchesForm, { theirsSummary } from "./ConnectionSwitchesForm";
 import RemotePersonStats from "./RemotePersonStats";
+import RemotePersonAchievements from "./RemotePersonAchievements";
 import RemotePlanInvitations from "../sharing/RemotePlanInvitations";
 
 const NS = "sharing:remote.connections";
@@ -46,6 +47,7 @@ export default function ConnectionsSection(): JSX.Element | null {
   const [draft, setDraft] = useState<ConnectionSwitches>(NO_SWITCHES);
   const [ending, setEnding] = useState<Connection | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [viewingAchievements, setViewingAchievements] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<RemoteSharingError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -280,11 +282,21 @@ export default function ConnectionsSection(): JSX.Element | null {
                           : t("sharing:remote.connected.stats.view")}
                       </Button>
                     )}
+                    {c.theirs.achievements && (
+                      <Button
+                        onClick={() => setViewingAchievements((id) => (id === c.id ? null : c.id))}
+                      >
+                        {viewingAchievements === c.id
+                          ? t(`${NS}.achievements.close`)
+                          : t(`${NS}.achievements.view`)}
+                      </Button>
+                    )}
                     <Button disabled={busy} onClick={() => setEnding(c)}>
                       {t(`${NS}.end.action`)}
                     </Button>
                   </div>
                   {viewing === c.id && <RemotePersonStats person={c} />}
+                  {viewingAchievements === c.id && <RemotePersonAchievements person={c} />}
                 </>
               )}
               {c.state === "pending_out" && (

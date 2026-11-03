@@ -9,7 +9,8 @@
  * 30 min, 2 h, 12 h, then daily). Every receiver treats these as idempotent - a connection
  * message by its generation, a plan message by the member's state - so a repeat changes nothing.
  * After 14 days of failing the row is dropped: the other side refuses on its own and learns from
- * the next message it does get.
+ * the next message it does get. A dropped `connect-settings` is the one loss that stays silent
+ * (the two sides disagree on what is shared), so its connection goes back to `reconfirm`.
  */
 import { prisma, type DbTransaction } from "../../../../db";
 import type { Prisma } from "../../../../prisma";
@@ -20,6 +21,7 @@ import { tripFederationAvailability } from "../availability";
 import { UNREACHABLE_AFTER_MS, backoffAfter } from "../outbox";
 import { LOCAL_ERROR, kindOf } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
+import { holdConnectionsById } from "./hooks";
 
 export const ANNOUNCEMENT_KINDS = [
   "connect-decline",
@@ -131,15 +133,38 @@ export interface AnnouncementRun {
 export async function runAnnouncements(now = new Date()): Promise<AnnouncementRun> {
   const run: AnnouncementRun = { sent: 0, failed: 0, dropped: 0 };
   if (!(await tripFederationAvailability()).available) return run;
-  const stale = await prisma.connectionAnnouncement.deleteMany({
-    where: { createdAt: { lt: new Date(now.getTime() - UNREACHABLE_AFTER_MS) } },
+  const cutoff = { createdAt: { lt: new Date(now.getTime() - UNREACHABLE_AFTER_MS) } };
+  const stale = await prisma.connectionAnnouncement.findMany({
+    where: cutoff,
+    select: { id: true, kind: true, connectionId: true },
   });
-  run.dropped = stale.count;
-  if (stale.count > 0)
+  if (stale.length > 0) {
+    // A revoke or decline already happened here and the other side refuses on its own; a switch
+    // it never heard of leaves the two sides disagreeing silently, so that connection is held
+    // for a new confirmation instead. The hold comes BEFORE the delete (a crash in between
+    // repeats the pass, the hold is idempotent) and re-reads the rows: one superseded or
+    // delivered meanwhile no longer counts.
+    const settings = stale.filter((r) => r.kind === "connect-settings").map((r) => r.id);
+    const unheard = [
+      ...new Set(
+        (
+          await prisma.connectionAnnouncement.findMany({
+            where: { id: { in: settings } },
+            select: { connectionId: true },
+          })
+        ).map((r) => r.connectionId)
+      ),
+    ];
+    await holdConnectionsById(unheard);
+    const gone = await prisma.connectionAnnouncement.deleteMany({
+      where: { id: { in: stale.map((r) => r.id) } },
+    });
+    run.dropped = gone.count;
     logger.warn(
-      { operation: "connection_announce_dropped", count: stale.count },
-      "Connection messages the other server never took were dropped after 14 days; it refuses on its own and learns from the next message it receives"
+      { operation: "connection_announce_dropped", count: gone.count, reconfirm: unheard.length },
+      "Connection messages the other server never took were dropped after 14 days; connections with an unheard switch change are back to reconfirm"
     );
+  }
   const due = await prisma.connectionAnnouncement.findMany({
     where: { nextAttemptAt: { lte: now } },
     orderBy: { createdAt: "asc" },

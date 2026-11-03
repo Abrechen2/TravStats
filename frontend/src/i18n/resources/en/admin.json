@@ -846,7 +846,7 @@
     "showPublicKey": "Show public key as text",
     "qrTitle": "Pair by QR",
     "qrAlt": "Connection file QR code",
-    "qrHint": "Scan the code with the other admin's Companion app. Then compare the fingerprint above with the other server's admin before confirming the server. The code contains no secret.",
+    "qrHint": "Scan the code with the other admin's Companion app. Then compare the fingerprint above with the other server's admin before confirming the server. The code contains no secret and does not expire. It is only good for the saved key and the saved address: after a key change or a new address, the other admin has to scan it again.",
     "downloadFile": "Download connection file",
     "downloadHint": "Send it to the other server's admin. It contains no secret.",
     "downloadOriginPending": "Save the changed address first – the file names the saved one.",

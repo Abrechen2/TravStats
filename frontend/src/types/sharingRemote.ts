@@ -50,6 +50,30 @@ export interface RemoteOverview {
   snapshot: { year: number | null; domains: string[]; metrics: Record<string, number | null> };
 }
 
+/** One badge a connected person has earned (GET /sharing/connections/:id/achievements). */
+export interface RemoteBadge {
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  domain: string;
+  tier: string;
+  icon: string;
+  points: number;
+  unlockedAt: string | null;
+}
+
+/** The achievements a connected person shows: totals and the earned badges, no records. */
+export interface RemoteAchievements {
+  summary: {
+    totalAchievements: number;
+    unlockedAchievements: number;
+    totalPoints: number;
+    rank: string;
+  };
+  earned: RemoteBadge[];
+}
+
 export interface RemoteEntry {
   entity: string;
   shareKey: string;
