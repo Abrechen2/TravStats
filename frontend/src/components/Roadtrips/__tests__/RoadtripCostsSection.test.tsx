@@ -156,13 +156,14 @@ describe("RoadtripCostsSection", () => {
       target: { value: "2026-07-15" },
     });
     // A route correction is no place to pay at: it is not offered.
-    const stationSelect = screen.getByLabelText("roadtrips:costs.dialog.station");
+    const stationSelect = screen.getByLabelText("roadtrips:costs.dialog.stationOrLeg");
     expect(Array.from((stationSelect as HTMLSelectElement).options).map((o) => o.value)).toEqual([
       "",
-      "hirtshals",
-      "lom",
+      "s:hirtshals",
+      "s:lom",
+      "l:hirtshals:lom",
     ]);
-    fireEvent.change(stationSelect, { target: { value: "lom" } });
+    fireEvent.change(stationSelect, { target: { value: "s:lom" } });
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
 
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
@@ -257,6 +258,49 @@ describe("RoadtripCostsSection", () => {
     expect(screen.queryByTestId("save-blocked-hint")).not.toBeInTheDocument();
   });
 
+  it("pins a new toll to the leg between two stations (the web dialog had a station choice only)", async () => {
+    const onChanged = renderSection();
+    await openDialog("roadtrips:costs.add");
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "9" },
+    });
+    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.stationOrLeg"), {
+      target: { value: "l:hirtshals:lom" },
+    });
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(vi.mocked(expensesApi.createForRoadtrip).mock.calls[0][1]).toMatchObject({
+      stopId: null,
+      legFromStopId: "hirtshals",
+      legToStopId: "lom",
+    });
+  });
+
+  it("moves a toll from its leg to a station, and clears the leg when none is chosen", async () => {
+    const toll = expense({
+      id: "toll",
+      kind: "toll",
+      legFromStopId: "hirtshals",
+      legToStopId: "lom",
+    });
+    renderSection([toll], { ...NO_COSTS, total: { EUR: 10 } });
+    await openDialog("roadtrips:costs.kind.toll");
+    const select = screen.getByLabelText("roadtrips:costs.dialog.stationOrLeg");
+    expect((select as HTMLSelectElement).value).toBe("l:hirtshals:lom");
+    fireEvent.change(select, { target: { value: "" } });
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    await waitFor(() => expect(expensesApi.updateForRoadtrip).toHaveBeenCalled());
+    expect(
+      vi.mocked(expensesApi.updateForRoadtrip).mock.calls[
+        vi.mocked(expensesApi.updateForRoadtrip).mock.calls.length - 1
+      ]?.[2]
+    ).toMatchObject({
+      stopId: null,
+      legFromStopId: null,
+      legToStopId: null,
+    });
+  });
+
   it("keeps a toll's leg when the edit names no station", async () => {
     const toll = expense({
       id: "toll",
@@ -267,7 +311,9 @@ describe("RoadtripCostsSection", () => {
     });
     const onChanged = renderSection([toll], { ...NO_COSTS, total: { EUR: 12.5 } });
     await openDialog("roadtrips:costs.kind.toll");
-    expect(screen.getByText("roadtrips:costs.dialog.keepLeg:Hirtshals>Lom")).toBeTruthy();
+    expect(
+      (screen.getByLabelText("roadtrips:costs.dialog.stationOrLeg") as HTMLSelectElement).value
+    ).toBe("l:hirtshals:lom");
     fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "14" },
     });
@@ -288,8 +334,8 @@ describe("RoadtripCostsSection", () => {
       total: { EUR: 10 },
     });
     await openDialog(/roadtrips:costs.kind.fuel/);
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.station"), {
-      target: { value: "lom" },
+    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.stationOrLeg"), {
+      target: { value: "s:lom" },
     });
     fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.note"), {
       target: { value: "Diesel, voll" },

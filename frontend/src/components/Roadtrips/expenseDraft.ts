@@ -27,6 +27,9 @@ export interface ExpenseDraft {
   currency: string;
   date: string;
   stopId: string;
+  /** The way between two stations; both set, or both empty. Never together with `stopId`. */
+  legFromStopId: string;
+  legToStopId: string;
   note: string;
   payerMode: PayerMode;
   payerCompanionId: string;
@@ -58,6 +61,8 @@ export function expenseDraft(expense: TripExpense | null, defaultCurrency: strin
     currency: expense?.currency ?? defaultCurrency,
     date: expense?.date ?? "",
     stopId: expense?.stopId ?? "",
+    legFromStopId: expense?.legFromStopId ?? "",
+    legToStopId: expense?.legToStopId ?? "",
     note: expense?.note ?? "",
     payerMode: !expense?.payer ? "none" : expense.payer.companionId ? "companion" : "name",
     payerCompanionId: expense?.payer?.companionId ?? "",
@@ -124,10 +129,12 @@ export function createBody(draft: ExpenseDraft, context: ExpenseWriteContext): E
     currency: draft.currency,
     date: draft.date === "" ? null : draft.date,
     note: draft.note.trim() === "" ? null : draft.note.trim(),
-    // A station replaces a leg; no station keeps whatever leg it had.
+    // A station or a leg, never both; neither clears the pin.
     ...(draft.stopId !== ""
       ? { stopId: draft.stopId, legFromStopId: null, legToStopId: null }
-      : { stopId: null }),
+      : draft.legFromStopId !== "" && draft.legToStopId !== ""
+        ? { stopId: null, legFromStopId: draft.legFromStopId, legToStopId: draft.legToStopId }
+        : { stopId: null, legFromStopId: null, legToStopId: null }),
     ...(payer !== null ? { payer } : {}),
     ...(fx !== undefined ? { fx } : {}),
   };
@@ -155,12 +162,14 @@ export function editPatch(
   if (draft.currency !== initial.currency) patch.currency = full.currency;
   if (draft.date !== initial.date) patch.date = full.date;
   if (draft.note.trim() !== initial.note.trim()) patch.note = full.note;
-  if (draft.stopId !== initial.stopId) {
+  if (
+    draft.stopId !== initial.stopId ||
+    draft.legFromStopId !== initial.legFromStopId ||
+    draft.legToStopId !== initial.legToStopId
+  ) {
     patch.stopId = full.stopId;
-    if (draft.stopId !== "") {
-      patch.legFromStopId = null;
-      patch.legToStopId = null;
-    }
+    patch.legFromStopId = full.legFromStopId;
+    patch.legToStopId = full.legToStopId;
   }
   const payer = payerBody(draft);
   if (JSON.stringify(payer) !== JSON.stringify(payerBody(initial))) patch.payer = payer;

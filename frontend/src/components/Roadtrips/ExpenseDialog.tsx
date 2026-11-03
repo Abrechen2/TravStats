@@ -52,9 +52,8 @@ const HINT_ID = "expense-save-blocked";
 
 /**
  * Record or change one roadtrip expense (forgejo#140): what for, how much, in
- * which currency, on which day, at which station. The web pins to a station or
- * to nothing; an expense the server holds on a leg (a toll the old leg field
- * carried) keeps its leg unless the reader picks a station instead.
+ * which currency, on which day, at which station or on which way between two
+ * stations (a toll). It pins to a station, to a leg or to nothing, never two.
  *
  * Pattern (forgejo#245): "disabled save + `SaveBlockedHint`" — the amount is
  * the one field that can be missing; kind and currency always hold a value.
@@ -120,7 +119,31 @@ export default function ExpenseDialog({
   // Closing after a receipt changed reloads the list, so its indicator is true.
   const close = (): void => (documentsChanged.current ? onSaved() : onClose());
 
-  const onLeg = expense !== null && expense.legFromStopId !== null && draft.stopId === "";
+  // The ways between consecutive stations, plus a stored leg that is none of
+  // them (it ran to a route correction) so opening an old cost never loses it.
+  const legs = pinnable.slice(1).map((s, i) => ({ from: pinnable[i].id, to: s.id }));
+  if (
+    initial.legFromStopId !== "" &&
+    !legs.some((l) => l.from === initial.legFromStopId && l.to === initial.legToStopId)
+  ) {
+    legs.push({ from: initial.legFromStopId, to: initial.legToStopId });
+  }
+  const pinValue =
+    draft.stopId !== ""
+      ? `s:${draft.stopId}`
+      : draft.legFromStopId !== ""
+        ? `l:${draft.legFromStopId}:${draft.legToStopId}`
+        : "";
+  const setPin = (value: string): void => {
+    const [kind, a = "", b = ""] = value.split(":");
+    merge(
+      kind === "s"
+        ? { stopId: a, legFromStopId: "", legToStopId: "" }
+        : kind === "l"
+          ? { stopId: "", legFromStopId: a, legToStopId: b }
+          : { stopId: "", legFromStopId: "", legToStopId: "" }
+    );
+  };
   const amount = parseAmount(draft.amount);
   const amountInvalid = draft.amount.trim() !== "" && amount === null;
   const missing: MissingStep[] =
@@ -310,25 +333,25 @@ export default function ExpenseDialog({
             onChange={(e) => set("date", e.target.value)}
           />
         </Field>
-        <Field label={t("roadtrips:costs.dialog.station")} htmlFor="expense-station">
-          <Select
-            id="expense-station"
-            value={draft.stopId}
-            onChange={(e) => set("stopId", e.target.value)}
-          >
-            <option value="">
-              {onLeg
-                ? t("roadtrips:costs.dialog.keepLeg", {
-                    from: titleOf(expense?.legFromStopId ?? null),
-                    to: titleOf(expense?.legToStopId ?? null),
-                  })
-                : t("roadtrips:costs.dialog.stationNone")}
-            </option>
-            {pinnable.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
+        <Field label={t("roadtrips:costs.dialog.stationOrLeg")} htmlFor="expense-station">
+          <Select id="expense-station" value={pinValue} onChange={(e) => setPin(e.target.value)}>
+            <option value="">{t("roadtrips:costs.dialog.stationNone")}</option>
+            <optgroup label={t("roadtrips:costs.dialog.groupStations")}>
+              {pinnable.map((s) => (
+                <option key={s.id} value={`s:${s.id}`}>
+                  {s.title}
+                </option>
+              ))}
+            </optgroup>
+            {legs.length > 0 && (
+              <optgroup label={t("roadtrips:costs.dialog.groupLegs")}>
+                {legs.map((l) => (
+                  <option key={`${l.from}:${l.to}`} value={`l:${l.from}:${l.to}`}>
+                    {titleOf(l.from)} → {titleOf(l.to)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </Select>
         </Field>
         <ExpensePayerField
