@@ -191,8 +191,8 @@ describe("TravTrack — stays and calendar", () => {
         data: {
           userId,
           name: "Calendar flags trip",
-          startDate: utcMidnight("2026-07-02"),
-          endDate: utcMidnight("2026-07-03"),
+          startDate: new Date("2026-07-02T18:00:00Z"),
+          endDate: new Date("2026-07-03T09:00:00Z"),
         },
       });
       await prisma.trip.create({

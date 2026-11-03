@@ -99,7 +99,9 @@ async function tripAndFlightDays(userId: string, from: Date, until: Date) {
     const start = t.startDay ?? t.startDate;
     if (!start) continue;
     const end = t.endDay ?? t.endDate ?? start;
-    addSpan(tripDays, start, end < start ? start : end, 3660, lo, hi);
+    const first = startOfUtcDay(start);
+    const last = startOfUtcDay(end);
+    addSpan(tripDays, first, last < first ? first : last, 3660, lo, hi);
   }
   const flightDays = new Set<string>();
   for (const f of flights) {

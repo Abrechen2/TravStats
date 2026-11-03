@@ -158,9 +158,13 @@ export function mergePlaceNames(
     // OSM often lists a place under several scripts in ONE name tag ("Imlil ⵉⵎⵍⵉⵍ
     // إمليل"); the Latin head would show the traveller's name twice, so only the
     // part in the other script is the sign's name (audit-local-name-latin-prefix).
-    const cut = localCandidate
-      ? (splitGluedName(localCandidate)?.localName ?? localCandidate)
-      : undefined;
+    const split = localCandidate ? splitGluedName(localCandidate) : null;
+    // Only a head that repeats the name is a duplicate: "CU 삼청점" is one name
+    // (brand + branch), and cutting it is the bug 0888349d5 fixed.
+    const cut =
+      split && split.name.localeCompare(name, undefined, { sensitivity: "accent" }) === 0
+        ? split.localName
+        : localCandidate;
     const localName = cut && cut !== name ? cut : undefined;
     return { ...hit, name, ...(localName ? { localName } : {}) };
   });
