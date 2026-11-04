@@ -138,10 +138,21 @@ describe("deriveLegs — speed-profile fallback when no point carries motion", (
     expect(run(read(rep(15, 6.9)))[0].mode).toBe("cycle");
   });
 
-  it("car edge: under two minutes at 12 m/s or more is not enough", () => {
+  it("car edge: fewer than three fast fixes is a spike, three are a drive", () => {
     expect(CAR_FAST_MIN_MS).toBe(2 * MIN);
-    expect(run(read([...rep(20, 4.2), ...rep(1, 27)]))[0].mode).toBe("unknown");
-    expect(run(read([...rep(20, 4.2), ...rep(2, 27)]))[0].mode).toBe("car");
+    expect(run(read([...rep(20, 4.2), ...rep(2, 27)]))[0].mode).toBe("unknown");
+    expect(run(read([...rep(20, 4.2), ...rep(3, 27)]))[0].mode).toBe("car");
+  });
+
+  it("a long walk followed by a longer drive is unknown, not a car for the whole stretch", () => {
+    expect(run(read([...rep(10, 1.4), ...rep(11, 15)]))[0].mode).toBe("unknown");
+  });
+
+  it("one sparse step at driving pace among slow fixes is a spike, not a car", () => {
+    // One 27 m/s step among twenty at town pace.
+    const steps = rep(20, 4.2);
+    steps[10] = { mps: 27 };
+    expect(run(read(steps))[0].mode).toBe("unknown");
   });
 
   it("motion-carrying legs are unchanged: a corroborated walk stays high confidence", () => {

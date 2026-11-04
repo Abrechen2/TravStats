@@ -45,10 +45,14 @@ export const CYCLE_MAX_MPS = 13;
 
 /**
  * Car: a bike does not hold 43 km/h for two minutes, a car in a town does. The
- * median is only a floor (creeping traffic is a car day too); the evidence is
+ * median is only a floor (creeping traffic is a car day too) and the lower
+ * quartile keeps a walk-then-drive stretch out; the evidence is
  * the time spent at or above `CAR_FAST_MPS`, which one GPS spike cannot supply.
  */
+export const CAR_P25_MIN_MPS = 2.5;
 export const CAR_P50_MIN_MPS = 3;
+/** Fast time must come from several fixes: one long sparse step is a spike, not a drive. */
+export const CAR_FAST_MIN_STEPS = 3;
 export const CAR_FAST_MPS = 12;
 export const CAR_FAST_MIN_MS = 2 * 60_000;
 
@@ -105,15 +109,22 @@ export function modeFromSpeed(
   const metres = steps.reduce((s, x) => s + x.mps * (x.ms / 1000), 0);
   if (movingMs < SPEED_MIN_MOVING_MS || metres < SPEED_MIN_DISTANCE_M) return null;
   const sorted = [...steps].sort((x, y) => x.mps - y.mps);
+  const p25 = quantile(sorted, movingMs, 0.25);
   const p50 = quantile(sorted, movingMs, 0.5);
   const p95 = quantile(sorted, movingMs, 0.95);
   const max = sorted[sorted.length - 1].mps;
-  const fastMs = steps.filter((x) => x.mps >= CAR_FAST_MPS).reduce((t, x) => t + x.ms, 0);
+  const fast = steps.filter((x) => x.mps >= CAR_FAST_MPS);
+  const fastMs = fast.reduce((t, x) => t + x.ms, 0);
   if (within(p50, WALK_P50_MPS) && p95 <= WALK_P95_MAX_MPS && max <= WALK_MAX_MPS)
     return { mode: "walk", confidence: "low" };
   if (within(p50, CYCLE_P50_MPS) && p95 <= CYCLE_P95_MAX_MPS && max <= CYCLE_MAX_MPS)
     return { mode: "cycle", confidence: "low" };
-  if (p50 >= CAR_P50_MIN_MPS && fastMs >= CAR_FAST_MIN_MS)
+  if (
+    p25 >= CAR_P25_MIN_MPS &&
+    p50 >= CAR_P50_MIN_MPS &&
+    fast.length >= CAR_FAST_MIN_STEPS &&
+    fastMs >= CAR_FAST_MIN_MS
+  )
     return { mode: "car", confidence: "low" };
   return null;
 }
