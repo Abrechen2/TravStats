@@ -5,7 +5,9 @@ import {
   type IdentityShape,
   type StayIdentity,
 } from "../../dawarich/stays/identity";
+import { REVERSE_CANDIDATE_POOL } from "../../geo/photon";
 import { readSuggestionSwitches } from "../../settings/suggestionSwitches";
+import { rankStopCandidates, STOP_LOOKUP_RADIUS_KM } from "./candidateRanking";
 
 /**
  * What a TravTrack stop probably was (spec 2026-11-03-travtrack-legs, "As
@@ -16,7 +18,14 @@ import { readSuggestionSwitches } from "../../settings/suggestionSwitches";
  */
 
 export const KNOWN_PLACE_M = 100;
-const STOP_SHAPE: IdentityShape = { fetch: 20, radiusKm: 0.1, nearestFirst: true, name: "stop" };
+// fetch = Photon's whole reverse pool: the geocoder's importance cut would otherwise drop
+// an office (ranked low) before the stop's own ranking ever saw it.
+const STOP_SHAPE: IdentityShape = {
+  fetch: REVERSE_CANDIDATE_POOL,
+  radiusKm: STOP_LOOKUP_RADIUS_KM,
+  arrange: rankStopCandidates,
+  name: "stop",
+};
 
 export type KnownPlace = {
   name: string;

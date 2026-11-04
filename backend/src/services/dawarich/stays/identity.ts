@@ -3,7 +3,7 @@ import { AppError } from "../../../middleware/errorHandler";
 import { haversineKm } from "../../../shared/geo/haversine";
 import logger from "../../../utils/logger";
 import { reverseGeocodeDetailed } from "../../geo/nominatim";
-import { reversePlacesDetailed } from "../../geo/photon";
+import { reversePlacesDetailed, type PlaceResult } from "../../geo/photon";
 import { createImmichClient } from "../../immich/immichClient";
 import { getImmichConnection } from "../../immich/immichResolver";
 import { ImmichError } from "../../immich/types";
@@ -125,15 +125,14 @@ export interface IdentityShape {
   /** Hits fetched from the geocoder before any cut. */
   fetch: number;
   radiusKm: number;
-  /** Re-order the hits by distance before the card's cut. */
-  nearestFirst: boolean;
+  /** Filters and orders the hits before the card's cut; absent keeps the geocoder's order. */
+  arrange?: (hits: PlaceResult[], origin: { lat: number; lon: number }) => PlaceResult[];
   /** Part of the cache key. */
   name: string;
 }
 export const STAY_SHAPE: IdentityShape = {
   fetch: STAY_CANDIDATE_LIMIT,
   radiusKm: STAY_CANDIDATE_RADIUS_KM,
-  nearestFirst: false,
   name: "stay",
 };
 
@@ -148,12 +147,7 @@ async function computeView(
     reversePlacesDetailed(stay.lat, stay.lon, { limit: shape.fetch, radiusKm: shape.radiusKm }),
     photosOf(userId, stay, immichEvidence),
   ]);
-  const places = shape.nearestFirst
-    ? {
-        ...found,
-        results: [...found.results].sort((a, b) => haversineKm(stay, a) - haversineKm(stay, b)),
-      }
-    : found;
+  const places = shape.arrange ? { ...found, results: shape.arrange(found.results, stay) } : found;
   return combineStayIdentity({ point: stay, geocode, places, photos });
 }
 

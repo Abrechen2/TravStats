@@ -169,7 +169,7 @@ describe("TravTrack — stop places", () => {
         results: [
           { name: "Old Church", lat: LAT0 + 90 / M, lon: LON0, type: "worship" },
           { name: "Ionity", lat: LAT0 + 30 / M, lon: LON0, type: "charging_station" },
-          { name: "Lidl", lat: LAT0 + 10 / M, lon: LON0, type: "shopping" },
+          { name: "Lidl", lat: LAT0 + 10 / M, lon: LON0, type: "supermarket" },
         ],
       });
       const res = await getPlace(q);
@@ -184,8 +184,22 @@ describe("TravTrack — stop places", () => {
       expect(places).toHaveBeenCalledWith(
         LAT0,
         LON0,
-        expect.objectContaining({ radiusKm: 0.1, limit: 20 })
+        expect.objectContaining({ radiusKm: 0.2, limit: 50 })
       );
+    });
+
+    it("offers the charger, not the street or the vending machine beside it", async () => {
+      places.mockResolvedValue({
+        degraded: false,
+        results: [
+          { name: "Steinhaldenstrasse", lat: LAT0 + 9 / M, lon: LON0, type: "tertiary" },
+          { name: "Snacks Drinks 24/7", lat: LAT0 + 12 / M, lon: LON0, type: "vending_machine" },
+          { name: "Supercharger", lat: LAT0 + 31 / M, lon: LON0, type: "charging_station" },
+        ],
+      });
+      const res = await getPlace(q);
+      expect(res.body.probable).toMatchObject({ name: "Supercharger", source: "nearbyPlace" });
+      expect(res.body.candidates.map((c: { name: string }) => c.name)).toEqual(["Supercharger"]);
     });
 
     it("prefers the owner's own place within 100 m over a geocoder candidate", async () => {
