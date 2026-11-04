@@ -183,8 +183,8 @@ describe("TravTrack — legs, stops and the mode correction", () => {
     expect(legs[0].ascentM).toBeGreaterThan(0);
     expect(legs[2].ascentM).toBeNull();
     expect(legs[2].descentM).toBeNull();
-    // The unknown leg's fixes carry no speed: no top speed, but time and pace follow the fixes.
-    expect(legs[3].maxSpeedMps).toBeNull();
+    // The unknown leg's fixes carry no speed: top speed and pace follow the fixes' deltas.
+    expect(legs[3].maxSpeedMps).toBeCloseTo(3.5, 0);
     expect(legs[3].avgSpeedMps).toBeCloseTo(3.5, 0);
     expect(legs[0].maxSpeedMps).toBeCloseTo(1.4, 1);
   });

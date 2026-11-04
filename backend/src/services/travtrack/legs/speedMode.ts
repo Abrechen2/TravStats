@@ -1,10 +1,8 @@
 import type { StoredPoint } from "../../tripRecording/segments";
-import { distanceM } from "../classify";
-import { MAX_SPEED_MPS, motionClassOf, plausibleSpeedMps } from "../everyday/plausible";
-import { STEP_MAX_MS } from "../everyday/fold";
+import { motionClassOf, plausibleSpeedMps } from "../everyday/plausible";
 import type { SafePointRow } from "../readSafe";
 import { STILL_MPS } from "./autoMode";
-import { isBadVertex } from "./stops";
+import { speedWindows } from "./windowSpeed";
 import type { LegMode } from "./types";
 
 /**
@@ -36,21 +34,35 @@ export const SPEED_MIN_DISTANCE_M = 300;
 /** Walk: 2–8 km/h typical; brisk 6.5 km/h = 1.8 m/s. Nothing above a stride. */
 export const WALK_P50_MPS = { min: 0.6, max: 2.2 } as const;
 export const WALK_P95_MAX_MPS = 3.3;
-export const WALK_MAX_MPS = 6;
+/** Checked against p99, not the maximum: a walk with a few glitches stays a walk. */
+export const WALK_P99_MAX_MPS = 6;
 
 /** Cycle: 12–30 km/h typical. p95 under 10.5 m/s (38 km/h) keeps it apart from traffic. */
 export const CYCLE_P50_MPS = { min: 3.5, max: 7 } as const;
 export const CYCLE_P95_MAX_MPS = 10.5;
-export const CYCLE_MAX_MPS = 13;
+export const CYCLE_P99_MAX_MPS = 13;
 
 /**
  * Car: a bike does not hold 43 km/h for two minutes, a car in a town does. The
- * median is only a floor (creeping traffic is a car day too) and the lower
- * quartile keeps a walk-then-drive stretch out; the evidence is
- * the time spent at or above `CAR_FAST_MPS`, which one GPS spike cannot supply.
+ * median is only a floor (creeping traffic is a car day too) and a long
+ * slow run keeps a walk-then-drive stretch out; the evidence is the time spent at or above `CAR_FAST_MPS`, which one GPS spike cannot supply.
  */
-export const CAR_P25_MIN_MPS = 2.5;
-export const CAR_P50_MIN_MPS = 3;
+export const CAR_P50_MIN_MPS = 1.8;
+/** A median this high is steady traffic on its own; below it (stop-and-go) the fast share must carry the verdict. */
+export const CAR_P50_STEADY_MPS = 3;
+export const CAR_FAST_MIN_SHARE = 0.2;
+/**
+ * City traffic idles at lights (measured p25 1.2, p50 2.1 m/s over windows on a
+ * real car drive), so only a low p50 floor. What keeps walk-then-drive out is
+ * that a walk is ONE long steady stretch at foot pace while traffic's slow
+ * time is broken by stops and surges: an unbroken run of windows between
+ * `CAR_FOOT_MIN_MPS` and `CAR_FOOT_MAX_MPS` longer than `CAR_FOOT_RUN_MAX_MS`
+ * is a person on foot. (A stop breaks the run: the real drive's longest
+ * foot-pace run was under seven minutes, inside half an hour of crawling.)
+ */
+export const CAR_FOOT_MIN_MPS = 0.6;
+export const CAR_FOOT_MAX_MPS = 2.5;
+export const CAR_FOOT_RUN_MAX_MS = 8 * 60_000;
 /** Fast time must come from several fixes: one long sparse step is a spike, not a drive. */
 export const CAR_FAST_MIN_STEPS = 3;
 export const CAR_FAST_MPS = 12;
@@ -68,22 +80,32 @@ export function hasUsableMotion(points: readonly StoredPoint[], rowOf: RowOf): b
 
 type MovingStep = { mps: number; ms: number };
 
-/** The moving steps with a believable speed: the fix's own where it agrees with the deltas, else the deltas'. */
-function movingSteps(points: readonly StoredPoint[], rowOf: RowOf): MovingStep[] | null {
-  const out: MovingStep[] = [];
-  for (let k = 1; k < points.length; k++) {
-    const [a, b] = [points[k - 1], points[k]];
-    const row = rowOf(b);
-    if (row?.purpose === "flight" || rowOf(a)?.purpose === "flight") return null;
-    const dt = b[0] - a[0];
-    if (dt <= 0 || dt > STEP_MAX_MS || isBadVertex(a) || isBadVertex(b)) continue;
-    const v = distanceM({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) / (dt / 1000);
-    if (v > MAX_SPEED_MPS || v < STILL_MPS) continue;
+/**
+ * The moving windows with a believable speed, plus the longest unbroken run
+ * (ms) of windows at foot pace. A
+ * single-step window (sparse fixes) takes the fix's own speed where it agrees
+ * with the deltas; a window over several dense fixes uses its displacement
+ * only, because reported speeds of 1 Hz fixes inside their own error circle
+ * are as noisy as the deltas.
+ */
+function movingSteps(
+  points: readonly StoredPoint[],
+  rowOf: RowOf
+): { steps: MovingStep[]; footRunMs: number } | null {
+  for (let k = 0; k < points.length; k++) if (rowOf(points[k])?.purpose === "flight") return null;
+  const steps: MovingStep[] = [];
+  let footRunMs = 0;
+  let run = 0;
+  for (const w of speedWindows(points)) {
+    run = w.mps >= CAR_FOOT_MIN_MPS && w.mps <= CAR_FOOT_MAX_MPS ? run + w.ms : 0;
+    footRunMs = Math.max(footRunMs, run);
+    if (w.mps < STILL_MPS) continue;
+    const row = w.single ? rowOf(w.single) : undefined;
     const reported = row ? plausibleSpeedMps(row) : null;
-    const agrees = reported !== null && Math.abs(reported - v) <= Math.max(2, 0.5 * v);
-    out.push({ mps: agrees ? reported : v, ms: dt });
+    const agrees = reported !== null && Math.abs(reported - w.mps) <= Math.max(2, 0.5 * w.mps);
+    steps.push({ mps: agrees ? reported : w.mps, ms: w.ms });
   }
-  return out;
+  return { steps, footRunMs };
 }
 
 /** Time-weighted quantile of already sorted steps. */
@@ -103,27 +125,29 @@ export function modeFromSpeed(
   points: readonly StoredPoint[],
   rowOf: RowOf
 ): { mode: LegMode; confidence: "low" } | null {
-  const steps = movingSteps(points, rowOf);
-  if (!steps || steps.length < SPEED_MIN_STEPS) return null;
+  const profile = movingSteps(points, rowOf);
+  if (!profile) return null;
+  const { steps, footRunMs } = profile;
+  if (steps.length < SPEED_MIN_STEPS) return null;
   const movingMs = steps.reduce((s, x) => s + x.ms, 0);
   const metres = steps.reduce((s, x) => s + x.mps * (x.ms / 1000), 0);
   if (movingMs < SPEED_MIN_MOVING_MS || metres < SPEED_MIN_DISTANCE_M) return null;
   const sorted = [...steps].sort((x, y) => x.mps - y.mps);
-  const p25 = quantile(sorted, movingMs, 0.25);
   const p50 = quantile(sorted, movingMs, 0.5);
   const p95 = quantile(sorted, movingMs, 0.95);
-  const max = sorted[sorted.length - 1].mps;
+  const p99 = quantile(sorted, movingMs, 0.99);
   const fast = steps.filter((x) => x.mps >= CAR_FAST_MPS);
   const fastMs = fast.reduce((t, x) => t + x.ms, 0);
-  if (within(p50, WALK_P50_MPS) && p95 <= WALK_P95_MAX_MPS && max <= WALK_MAX_MPS)
+  if (within(p50, WALK_P50_MPS) && p95 <= WALK_P95_MAX_MPS && p99 <= WALK_P99_MAX_MPS)
     return { mode: "walk", confidence: "low" };
-  if (within(p50, CYCLE_P50_MPS) && p95 <= CYCLE_P95_MAX_MPS && max <= CYCLE_MAX_MPS)
+  if (within(p50, CYCLE_P50_MPS) && p95 <= CYCLE_P95_MAX_MPS && p99 <= CYCLE_P99_MAX_MPS)
     return { mode: "cycle", confidence: "low" };
   if (
-    p25 >= CAR_P25_MIN_MPS &&
     p50 >= CAR_P50_MIN_MPS &&
+    (p50 >= CAR_P50_STEADY_MPS || fastMs >= CAR_FAST_MIN_SHARE * movingMs) &&
     fast.length >= CAR_FAST_MIN_STEPS &&
-    fastMs >= CAR_FAST_MIN_MS
+    fastMs >= CAR_FAST_MIN_MS &&
+    footRunMs <= CAR_FOOT_RUN_MAX_MS
   )
     return { mode: "car", confidence: "low" };
   return null;

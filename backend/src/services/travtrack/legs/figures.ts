@@ -5,6 +5,7 @@ import { smoothedAltitudes, STEP_MAX_MS, topSpeedOf } from "../everyday/fold";
 import type { InFlight } from "../months/values";
 import type { SafePointRow } from "../readSafe";
 import { STILL_MPS } from "./autoMode";
+import { topWindowSpeedMps } from "./windowSpeed";
 import { isBadVertex } from "./stops";
 import type { Leg } from "./types";
 
@@ -82,7 +83,9 @@ export function legFigures(
     distanceM: Math.round(distance),
     movingMs: measured ? movingMs : null,
     avgSpeedMps: measured && movingMs > 0 ? movingM / (movingMs / 1000) : null,
-    maxSpeedMps: topSpeedOf(points, rowOf, inFlight)?.mps ?? null,
+    // No reported speed (GPX, Companion without speed): the glitch-safe window speeds.
+    maxSpeedMps:
+      topSpeedOf(points, rowOf, inFlight)?.mps ?? (groundOnly ? topWindowSpeedMps(points) : null),
     ascentM: moved ? Math.round(moved.up) : null,
     descentM: moved ? Math.round(moved.down) : null,
     bounds: box,

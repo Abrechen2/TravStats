@@ -79,15 +79,15 @@ span, not to points).
 
 ## 4. Phases
 
-| Phase | Side      | Content                                                                                                                         | Status  |
-| ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| S1    | Server    | legs + stops on `/day`, range aggregates, point speed/altitude/motion, mode corrections (table, route, export, account delete) | done — feat/travtrack-legs 7493f1bc2, migration 20261103181313_travtrack_leg_modes |
-| W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | done — rc.20 |
-| W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | done — rc.20 |
-| W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | done — fix/travtrack-w3 6d8aa52a4 |
-| C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)      | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops |
-| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | done — companion#118 (feat/travtrack-legs 0a3d91eb); Xiaomi run on rc.21 passed; iOS in the combined build |
-| C3    | Companion | stay review from the map marker, point popup, stay filter                                                                       | open    |
+| Phase | Side      | Content                                                                                                                          | Status                                                                                                     |
+| ----- | --------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| S1    | Server    | legs + stops on `/day`, range aggregates, point speed/altitude/motion, mode corrections (table, route, export, account delete)   | done — feat/travtrack-legs 7493f1bc2, migration 20261103181313_travtrack_leg_modes                         |
+| W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | done — rc.20                                                                                               |
+| W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker     | done — rc.20                                                                                               |
+| W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | done — fix/travtrack-w3 6d8aa52a4                                                                          |
+| C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)       | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops                               |
+| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                  | done — companion#118 (feat/travtrack-legs 0a3d91eb); Xiaomi run on rc.21 passed; iOS in the combined build |
+| C3    | Companion | stay review from the map marker, point popup, stay filter                                                                        | open                                                                                                       |
 
 UI shape (W1, C1/C2): a clickable mock-up is shown to the owner before W1 and C2 start;
 S1 and C1 do not wait for it.
@@ -105,7 +105,6 @@ S1 and C1 do not wait for it.
 
 - C1 done (2026-11-03). C2 waits for S1 and the owner's OK on the mock-up https://claude.ai/artifact/DG9TL4F9sbF4xQEsRyJVS8.
 
-
 ## As built — S1 (2026-11-03)
 
 - A rental or roadtrip window does not cut legs; it sets the mode only where auto does not clearly say walk/run/cycle.
@@ -117,9 +116,11 @@ S1 and C1 do not wait for it.
 Owner decision 2026-11-04; server only, contract unchanged (`modeSource: "auto"`, `confidence: "low"`).
 
 - `legs/speedMode.ts`. Applies only to an auto stretch the motion path left `unknown` AND whose points carry no usable motion class (walking/running/cycling/automotive). A stretch where the phone spoke and failed corroboration stays `unknown`. Motion, entry and manual precedence are untouched; a roadtrip/rental window still wins over a low-confidence fallback (it yields only to a high-confidence walk/run/cycle).
-- Profile: time-weighted percentiles of the moving steps (>= 0.3 m/s) after the glitch caps (bad fix, gap > 15 min, jump > 500 km/h). A step uses the fix's `speedMps` when plausible and consistent with the deltas, else the deltas (GPX has no speed).
-- Abstains below 5 moving steps, 3 min moving time or 300 m moved.
-- walk: p50 0.6–2.2 m/s, p95 <= 3.3, max <= 6. cycle: p50 3.5–7, p95 <= 10.5, max <= 13. car: p25 >= 2.5, p50 >= 3 and >= 3 fixes (>= 2 min) at >= 12 m/s. Anything else, including a mixed walk-then-drive stretch, is `unknown`. `run`, train, bus, boat and flight are never derived from speed (a jog overlaps slow cycling; the rest come from entries or corrections).
+- Profile (calibrated 2026-11-04 against a real ~1 Hz iPhone day, no motion): the unit is a WINDOW, not a step (`legs/windowSpeed.ts`). A window runs from one good fix to the first later fix that is >= 30 s away and has moved >= 2x the worse accuracy of its ends (a window that stays small closes at 90 s); its speed is displacement over time, so jitter cancels and a 1 s glitch is diluted. A step that is itself >= 30 s (sparse fixes) is its own window and may use the fix's `speedMps` where plausible and consistent with the deltas. Bad fixes are skipped, a gap > 15 min restarts the window, a window > 500 km/h is dropped. The profile is the time-weighted percentiles of the moving windows (>= 0.3 m/s).
+- Abstains below 5 moving windows, 3 min moving time or 300 m moved.
+- walk: p50 0.6-2.2 m/s, p95 <= 3.3, p99 <= 6 (percentile, not max: isolated glitches are tolerated). cycle: p50 3.5-7, p95 <= 10.5, p99 <= 13. car: >= 3 windows (>= 2 min) at >= 12 m/s, p50 >= 1.8, and either p50 >= 3 or the fast time is >= 20 % of the moving time (stop-and-go traffic has a low median), and no unbroken run of windows at foot pace (0.6-2.5 m/s) longer than 8 min (a walk is one steady stretch; traffic's slow time is broken by stops). There is no p25 floor any more: a real city drive measured p25 1.2 m/s. Anything else, including a mixed walk-then-drive stretch, is `unknown`. `run`, train, bus, boat and flight are never derived from speed (a jog overlaps slow cycling; the rest come from entries or corrections).
+- Measured (6 legs of that day): the 19.6 km / 65 min drive in city traffic is `car`, the 2.2 km / 40 min walk at ~20 m accuracy is `walk`, the walk+drive leg and the car-or-cycle ambiguous leg stay `unknown`, short legs abstain.
+- Leg `maxSpeedMps`: the fix-reported top speed (everyday spike rule) where there is one, else the fastest window speed (glitch-safe), so GPX and speed-less days no longer show `null`.
 - Not split: one stretch gets one speed verdict, so a walk followed by a drive without a stop in between stays `unknown` until the user corrects it.
 
 ## As built — motion from the app (2026-11-04)
