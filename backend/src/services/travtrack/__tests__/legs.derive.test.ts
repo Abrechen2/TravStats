@@ -89,8 +89,9 @@ describe("deriveLegs — broad entries (roadtrip, rental)", () => {
     expect(legs[0]).toMatchObject({ mode: "car", modeSource: "entry" });
   });
 
-  it("without any entry, the same unclassed movement stays unknown, with low confidence", () => {
-    const { legs } = deriveLegs(span(line(11, 15, null)), {
+  it("without any entry, movement whose speed profile is ambiguous stays unknown, with low confidence", () => {
+    // 14 km/h for ten minutes: neither a walk nor clearly a bike or a car.
+    const { legs } = deriveLegs(span(line(11, 2.5, null)), {
       windows: [],
       overrides: [],
       stays: [],
