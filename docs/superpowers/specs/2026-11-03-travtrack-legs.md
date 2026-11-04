@@ -86,7 +86,7 @@ span, not to points).
 | W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | done — rc.20 |
 | W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | done — fix/travtrack-w3 6d8aa52a4 |
 | C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)      | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops |
-| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | built — companion feat/travtrack-legs; device run on CT107 open |
+| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | done — companion feat/travtrack-legs 0a3d91eb; Xiaomi run on rc.21 passed |
 | C3    | Companion | stay review from the map marker, point popup, stay filter                                                                       | open    |
 
 UI shape (W1, C1/C2): a clickable mock-up is shown to the owner before W1 and C2 start;
