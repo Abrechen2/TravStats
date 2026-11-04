@@ -310,6 +310,7 @@
     "zones": "Privacy zones are shown as explored.",
     "zoomIn": "There are too many explored squares here for one view. Zoom in closer.",
     "unavailable": "The explored map is not available for privacy zones this large.",
+    "partial": "Not every place service was reachable – the list may be incomplete.",
     "preparing": "The explored map is being prepared. Check back in a few minutes."
   },
   "months": {

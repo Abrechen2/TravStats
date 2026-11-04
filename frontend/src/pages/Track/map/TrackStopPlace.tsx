@@ -95,7 +95,10 @@ export default function TrackStopPlace({
       onChanged?.();
     } catch (err: unknown) {
       logger.warn("TravTrack stop place could not be stored", err);
-      setFailure(trackErrorKey(err));
+      const key = trackErrorKey(err);
+      setFailure(key);
+      // The stop is gone (the points changed): read the day again, as the leg editor does.
+      if (key === "track:errors.stopGone") onChanged?.();
     } finally {
       setBusy(false);
     }
@@ -105,6 +108,20 @@ export default function TrackStopPlace({
   const identity = lookup.state === "ready" ? lookup.identity : null;
   const probable = identity?.probable ?? null;
   const known = identity?.known[0];
+  // The owner's own places first (all of them, not only the probable one), then the geocoder's.
+  const options = identity
+    ? [
+        ...identity.known.map((k) => ({
+          name: k.name,
+          lat: k.lat,
+          lon: k.lon,
+          distanceM: k.distanceM,
+        })),
+        ...identity.candidates.filter(
+          (c) => !identity.known.some((k) => k.name.toLowerCase() === c.name.toLowerCase())
+        ),
+      ]
+    : [];
   const candidatePlace = (c: { name: string; lat: number; lon: number }) => ({
     name: c.name,
     lat: c.lat,
@@ -183,10 +200,10 @@ export default function TrackStopPlace({
         )}
         {probable && down && (
           <p className="t-caption" data-testid="track-stop-place-degraded">
-            {t("track:stop.place.unavailable")}
+            {t("track:stop.place.partial")}
           </p>
         )}
-        {identity.candidates.length > 0 && (
+        {options.length > 0 && (
           <>
             <button
               type="button"
@@ -200,7 +217,7 @@ export default function TrackStopPlace({
             </button>
             {others && (
               <ul className="flex flex-col gap-1" data-testid="track-stop-place-candidates">
-                {identity.candidates.map((c) => (
+                {options.map((c) => (
                   <li key={`${c.name}-${c.lat}-${c.lon}`} className="flex items-center gap-2">
                     <span className="t-caption flex-1">
                       {c.name} · {t("track:stop.place.distance", { m: c.distanceM })}
