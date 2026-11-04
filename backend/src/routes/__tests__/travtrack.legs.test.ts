@@ -68,7 +68,14 @@ function day(): { fixes: Fix[]; trainEndLat: number; standLat: number } {
   }
   const unknown: Fix[] = [];
   for (let m = 71; m <= 80; m++) {
-    unknown.push({ min: m, lat: standLat + ((m - 70) * 210) / M_PER_DEG, lon: LON0 });
+    // The phone says walking at 3.5 m/s: motion that speed does not corroborate. Without any
+    // motion the speed fallback would read this pace as cycling (low confidence).
+    unknown.push({
+      min: m,
+      lat: standLat + ((m - 70) * 210) / M_PER_DEG,
+      lon: LON0,
+      motion: "walking",
+    });
   }
   return { fixes: [...w1, ...train, ...w2, ...stand, ...unknown], trainEndLat, standLat };
 }
