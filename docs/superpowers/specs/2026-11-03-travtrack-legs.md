@@ -82,11 +82,11 @@ span, not to points).
 | Phase | Side      | Content                                                                                                                         | Status  |
 | ----- | --------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | S1    | Server    | legs + stops on `/day`, range aggregates, point speed/altitude/motion, mode corrections (table, route, export, account delete) | done — feat/travtrack-legs 7493f1bc2, migration 20261103181313_travtrack_leg_modes |
-| W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | open    |
-| W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | open    |
-| W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | open    |
+| W1    | Web       | leg list in the day timeline + leg card; map ↔ timeline selection (highlight, fit bounds); stop card with stay review on the map | done — rc.20 |
+| W2    | Web       | correct a leg's mode inline / reset; point popup speed+altitude; map stay search + status chips; calendar in the date picker    | done — rc.20 |
+| W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | done — fix/travtrack-w3 6d8aa52a4 |
 | C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)      | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops |
-| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | open    |
+| C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                 | built — companion feat/travtrack-legs; device run on CT107 open |
 | C3    | Companion | stay review from the map marker, point popup, stay filter                                                                       | open    |
 
 UI shape (W1, C1/C2): a clickable mock-up is shown to the owner before W1 and C2 start;
@@ -121,3 +121,12 @@ Owner decision 2026-11-04; server only, contract unchanged (`modeSource: "auto"`
 - Abstains below 5 moving steps, 3 min moving time or 300 m moved.
 - walk: p50 0.6–2.2 m/s, p95 <= 3.3, max <= 6. cycle: p50 3.5–7, p95 <= 10.5, max <= 13. car: p25 >= 2.5, p50 >= 3 and >= 3 fixes (>= 2 min) at >= 12 m/s. Anything else, including a mixed walk-then-drive stretch, is `unknown`. `run`, train, bus, boat and flight are never derived from speed (a jog overlaps slow cycling; the rest come from entries or corrections).
 - Not split: one stretch gets one speed verdict, so a walk followed by a drive without a stop in between stays `unknown` until the user corrects it.
+
+## As built — motion from the app (2026-11-04)
+
+- The Companion sends `motion` on each uploaded point (companion feat/travtrack-legs 3fe5cb5f),
+  behind the "Bewegungsart erkennen" switch, off until the user grants the motion permission.
+  iOS fills it from CMMotionActivity history (up to 7 days back), Android from Activity
+  Transition updates logged since the switch was turned on. Only the six server values are sent.
+- With motion present, auto legs are corroborated by it; the speed fallback covers points without
+  it (older days, imports, the switch off).
