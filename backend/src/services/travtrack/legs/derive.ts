@@ -7,6 +7,7 @@ import type { SafeSpan } from "../readSafe";
 import { classRuns, modeOfSteps, settleStill, stepClass } from "./autoMode";
 import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
+import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { findDwells, movingRuns } from "./stops";
 import type { Leg, LegMode, LegOverride, Stop, StayCandidate } from "./types";
 
@@ -70,7 +71,14 @@ function piecesOfRun(
     const sub = segment.slice(cut.from, cut.to + 1);
     const classes = settleStill(sub.slice(1).map((p, i) => stepClass(sub[i], p, read.rowOf)));
     return classRuns(sub, cut.from, classes).map((r): Piece => {
-      const auto = modeOfSteps(sub, cut.from, classes, r.from, r.to);
+      const fromMotion = modeOfSteps(sub, cut.from, classes, r.from, r.to);
+      const runPoints = segment.slice(r.from, r.to + 2);
+      // No motion class anywhere (the Companion sends none): fall back to the speed profile.
+      const fromSpeed =
+        fromMotion.mode === "unknown" && !hasUsableMotion(runPoints, read.rowOf)
+          ? modeFromSpeed(runPoints, read.rowOf)
+          : null;
+      const auto = fromSpeed ?? fromMotion;
       const mid = (segment[r.from][0] + segment[r.to + 1][0]) / 2;
       const wide = tightestWindow(mid, broad);
       // A rental or roadtrip window spans days of walking too: it names the

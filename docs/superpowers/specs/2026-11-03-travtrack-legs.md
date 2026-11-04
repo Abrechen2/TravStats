@@ -111,3 +111,13 @@ S1 and C1 do not wait for it.
 - A rental or roadtrip window does not cut legs; it sets the mode only where auto does not clearly say walk/run/cycle.
 - `PUT /travtrack/legs/mode` also accepts `mode: "unknown"`; limiter 60/min. A reset (`mode: null`) whose span no longer covers a leg deletes the correction and answers 404 `TRAVTRACK_LEG_NOT_FOUND`.
 - `stayRef` is filled only while stay suggestions are on. Range aggregates are per cursor part, exclude flight windows, and cap glitch jumps.
+
+## As built — speed fallback (2026-11-04)
+
+Owner decision 2026-11-04; server only, contract unchanged (`modeSource: "auto"`, `confidence: "low"`).
+
+- `legs/speedMode.ts`. Applies only to an auto stretch the motion path left `unknown` AND whose points carry no usable motion class (walking/running/cycling/automotive). A stretch where the phone spoke and failed corroboration stays `unknown`. Motion, entry and manual precedence are untouched; a roadtrip/rental window still wins over a low-confidence fallback (it yields only to a high-confidence walk/run/cycle).
+- Profile: time-weighted percentiles of the moving steps (>= 0.3 m/s) after the glitch caps (bad fix, gap > 15 min, jump > 500 km/h). A step uses the fix's `speedMps` when plausible and consistent with the deltas, else the deltas (GPX has no speed).
+- Abstains below 5 moving steps, 3 min moving time or 300 m moved.
+- walk: p50 0.6–2.2 m/s, p95 <= 3.3, max <= 6. cycle: p50 3.5–7, p95 <= 10.5, max <= 13. car: p50 >= 3 and >= 2 min at >= 12 m/s. Anything else, including a mixed walk-then-drive stretch, is `unknown`. `run`, train, bus, boat and flight are never derived from speed (a jog overlaps slow cycling; the rest come from entries or corrections).
+- Not split: one stretch gets one speed verdict, so a walk followed by a drive without a stop in between stays `unknown` until the user corrects it.
