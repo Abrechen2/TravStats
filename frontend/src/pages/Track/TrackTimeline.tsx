@@ -26,6 +26,7 @@ interface Props {
   /** Legs and stops are listed (and selectable) only where the page can show them on a map. */
   selection?: TrackSelection | null;
   onSelect?: (selection: TrackSelection | null) => void;
+  onStopPlaceChanged?: () => void;
 }
 
 export default function TrackTimeline({
@@ -34,6 +35,7 @@ export default function TrackTimeline({
   selectedFlightId,
   selection = null,
   onSelect,
+  onStopPlaceChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["track"]);
   const clock = (ms: number) => formatTime(ms, { timeZone: day.zone });
@@ -89,6 +91,7 @@ export default function TrackTimeline({
           stops={day.stops ?? []}
           selection={selection}
           onSelect={onSelect}
+          onStopPlaceChanged={onStopPlaceChanged}
         />
       )}
     </section>

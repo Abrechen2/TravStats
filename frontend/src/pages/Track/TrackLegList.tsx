@@ -3,6 +3,7 @@ import { alpha, token } from "../../components/ui/tokens";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TravTrackLeg, TravTrackStop } from "../../lib/api/travtrackLegs";
+import TrackStopPlace from "./map/TrackStopPlace";
 import { durationText, legModeLabel, makeNumber, spanText } from "./map/trackLegFormat";
 import type { TrackSelection } from "./map/trackLegs";
 import { TRACK_COLOR } from "./map/trackMapLayers";
@@ -19,6 +20,7 @@ export default function TrackLegList({
   stops,
   selection,
   onSelect,
+  onStopPlaceChanged,
 }: {
   date: string;
   zone: string;
@@ -26,6 +28,8 @@ export default function TrackLegList({
   stops: readonly TravTrackStop[];
   selection: TrackSelection | null;
   onSelect: (selection: TrackSelection | null) => void;
+  /** A stop was named or un-named: read the day again. */
+  onStopPlaceChanged?: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
@@ -83,6 +87,9 @@ export default function TrackLegList({
                     {durationText(row.stop.untilMs - row.stop.fromMs, t)}
                   </span>
                 </button>
+                <div style={{ padding: "0 8px 4px" }}>
+                  <TrackStopPlace stop={row.stop} onChanged={onStopPlaceChanged} />
+                </div>
               </li>
             );
           }

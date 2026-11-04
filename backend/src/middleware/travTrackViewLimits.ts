@@ -30,6 +30,8 @@ export const travTrackViewLimiter = perMinute(120);
 export const travTrackPhotoSearchLimiter = perMinute(30);
 export const travTrackPointDeleteLimiter = perMinute(60);
 export const travTrackLegModeLimiter = perMinute(60);
+/** A stop's place lookup reaches two public geocoders: as many as the stay cards, 60 a minute. */
+export const travTrackStopPlaceLimiter = perMinute(60);
 
 export const travTrackDiagnosticsLimiter = rateLimit({
   windowMs: 15 * 60_000,

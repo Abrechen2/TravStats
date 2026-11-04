@@ -86,7 +86,9 @@
     "rangeTooLong": "A range on the map covers at most 400 days. Pick a shorter one.",
     "pointGone": "This position no longer exists – it has already been deleted.",
     "legInvalid": "This leg cannot be changed like that.",
-    "legGone": "This leg no longer exists – the view is being recalculated."
+    "legGone": "This leg no longer exists – the view is being recalculated.",
+    "stopInvalid": "This stop cannot be named like that.",
+    "stopGone": "This stop no longer exists – the view is being recalculated."
   },
   "settings": {
     "tripsNoResidence": "TravTrack recognises trips only once your home is confirmed: it measures the distance from where you live. Confirm it under Settings → Home.",
@@ -712,6 +714,23 @@
     "noStay": "No stay suggestion for this stop.",
     "stateOther": "Stay",
     "reject": "Decline",
-    "rejecting": "Declining …"
+    "rejecting": "Declining …",
+    "place": {
+      "loading": "Looking up the place …",
+      "probable": "Probably: {{name}}",
+      "known": "Your place",
+      "accept": "Accept",
+      "accepting": "Saving …",
+      "others": "Other suggestions",
+      "hideOthers": "Hide suggestions",
+      "remove": "Remove name",
+      "accepted": "{{name}}",
+      "distance": "{{m}} m away",
+      "none": "No name found.",
+      "unavailable": "The place lookup is not reachable right now – no suggestion possible.",
+      "failed": "The suggestion could not be loaded.",
+      "retry": "Try again",
+      "address": "Address"
+    }
   }
 }

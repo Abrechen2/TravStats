@@ -28,6 +28,7 @@ export default function TrackMapAside({
   onFlight,
   selection,
   onSelect,
+  onStopPlaceChanged,
 }: {
   span: TrackSpan;
   totals: RangeTotals;
@@ -36,6 +37,8 @@ export default function TrackMapAside({
   flightId: string | null;
   onFlight: (flight: SelectedFlight) => void;
   selection: TrackSelection | null;
+  /** A stop of this day was named or un-named: read that day again. */
+  onStopPlaceChanged?: (date: string) => void;
   onSelect: (selection: TrackSelection | null) => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
@@ -73,6 +76,7 @@ export default function TrackMapAside({
             selectedFlightId={flightId}
             selection={selection}
             onSelect={onSelect}
+            onStopPlaceChanged={() => onStopPlaceChanged?.(r.date)}
           />
         </section>
       ))}

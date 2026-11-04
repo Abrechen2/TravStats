@@ -5,6 +5,7 @@ import { authApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useDashboardCountsStore } from "./dashboardCountsStore";
 import { forgetQuotaRefusals } from "../lib/bulkRefreshRefusal";
+import { clearStopIdentityCache } from "../lib/travtrackStopIdentity";
 import { clearAllStationDrafts } from "../lib/roadtrip/stationDraftStore";
 import { clearBahnHandoff } from "../lib/rail/bahnHandoff";
 
@@ -64,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
           // navigation: a 403 the server gave THIS account must not follow
           // the next one into the same tab (review, 2026-09-19).
           forgetQuotaRefusals();
+          clearStopIdentityCache();
           set({ user: null });
         },
         logout: async (options = {}) => {
@@ -76,6 +78,7 @@ export const useAuthStore = create<AuthState>()(
             // Clear local user state regardless of API result
             useDashboardCountsStore.getState().reset();
             forgetQuotaRefusals();
+            clearStopIdentityCache();
             if (!options.keepLocalDrafts) {
               clearAllStationDrafts();
               // A bahn.de ride waiting for a re-login is this user's too.

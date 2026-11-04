@@ -149,6 +149,7 @@
     "travtrack/ingestTokens.ts",
     "travtrack/months.ts",
     "travtrack/photos.ts",
+    "travtrack/stopPlaces.ts",
     "travtrack/pointEntries.ts",
     "travtrack/points.ts",
     "travtrack/shareSnapshot.ts",

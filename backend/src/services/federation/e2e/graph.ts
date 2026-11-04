@@ -260,6 +260,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackZoneTombstones",
   "travTrackGaps",
   "travTrackLegModes",
+  "travTrackStopPlaces",
   // The phone's diagnostics log (spec 2026-10-29): owner only, never published.
   "travTrackDiagnosticEvents",
   "travTrackDiagnosticUploads",

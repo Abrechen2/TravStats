@@ -187,6 +187,7 @@ model User {
   travTrackDeletedPoints     TravTrackDeletedPoint[]
   travTrackGaps              TravTrackGap[]
   travTrackLegModes          TravTrackLegMode[]
+  travTrackStopPlaces        TravTrackStopPlace[]
   travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
   travTrackDiagnosticUploads TravTrackDiagnosticUpload[]
   travTrackShareSnapshots    TravTrackShareSnapshot[]
@@ -6192,6 +6193,29 @@ model TravTrackLegMode {
 
   @@unique([userId, fromMs, untilMs])
   @@map("travtrack_leg_modes")
+}
+
+/// The name the owner accepted for a stop of the day view (spec
+/// 2026-11-03-travtrack-legs, "As built — stop places"). Bound to the stop's
+/// time span, like TravTrackLegMode, never to points or to a derived stop: it
+/// applies to every stop it covers by more than half, so a late point does not
+/// lose it. `lat`/`lon` are where the named place lies, not the stop's anchor.
+/// Epoch milliseconds, like the stops the Companion reads.
+model TravTrackStopPlace {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  fromMs    BigInt   @map("from_ms")
+  untilMs   BigInt   @map("until_ms")
+  name      String
+  lat       Float?
+  lon       Float?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fromMs, untilMs])
+  @@map("travtrack_stop_places")
 }
 
 /// One entry of a phone's TravTrack diagnostics log (spec

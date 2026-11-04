@@ -131,3 +131,43 @@ Owner decision 2026-11-04; server only, contract unchanged (`modeSource: "auto"`
   Transition updates logged since the switch was turned on. Only the six server values are sent.
 - With motion present, auto legs are corroborated by it; the speed fallback covers points without
   it (older days, imports, the switch off).
+
+## As built — stop places (2026-11-04)
+
+Contract changes are additive. The real day behind it (owner, 4 Nov, iPhone ~1 Hz): two cell/Wi-Fi
+fallback fixes of 1907 m and 2662 m accuracy drew 1.3–1.5 km spikes, a 57 m wander in a hotel at
+night became a 144 m "unknown" leg that split one overnight stop, and four of six stops had no name.
+
+- **Drawn spikes.** `isBadFix` rejects only an accuracy above 10 km (the evidence pipeline's bound),
+  so a 1.9 km fix was never "bad". `legs/stops.ts` `isBadVertex` now also rejects an accuracy above
+  `MAX_DRAWN_ACCURACY_M` = 1000 m, and `drawnFixes.ts` `withoutBadVertices` drops such vertices from
+  the stretches of `/travtrack/day` (before legs/stops are derived, so `ranges`, `pointIds` and
+  `pointDetails` stay aligned) and of the range view. Storage and export keep the raw points.
+  Range `aggregates` are still computed from the raw stored points.
+- **Wander merge.** `findDwells` joins two dwells whose anchors are < `WANDER_M` (100 m) apart when
+  no good fix between them strays ≥ 100 m from the first anchor: one stop, no leg. A real 300 m
+  walk away and back stays two stops.
+- **`Stop.place`** (additive): `{name, lat, lon, source: "accepted"} | null` — the name the owner
+  accepted. Stored in `travtrack_stop_places` (`from_ms`, `until_ms`, `name`, `lat?`, `lon?`; unique
+  per user and span; migration `…_travtrack_stop_places`), bound to a span like `travtrack_leg_modes`,
+  applied to every derived stop it covers by more than half. It is in the account export
+  (`travtrack.stopPlaces`, epoch ms as strings). The day does NOT call a geocoder: unaccepted stops
+  carry `place: null`; there is no `suggested` source.
+- **`GET /travtrack/stops/place?lat&lon&fromMs&untilMs`** (bare, tier `on`, 60/min per user, 400
+  `TRAVTRACK_STOP_INVALID`): `{lat, lon, probable: {name, source: known|nearbyPlace|address|photos,
+  photoSupported}|null, known: [{name, kind: place|lodging, distanceM, lat, lon}], address,
+  geocoder, candidates[≤5, nearest first], candidatesState, photos}`. Reuses the Dawarich stay
+  identity lookup (`stayIdentityView`) with a stop shape: radius 100 m, 20 hits fetched then sorted by
+  distance (importance ranking would put a church 90 m away above the Lidl the phone stood in; no
+  type is filtered, so supermarkets and charging stations are candidates). The owner's own
+  places/lodgings within 100 m come first (`known`, `probable.source = "known"`). A geocoder failure
+  is `geocoder` / `candidatesState` = `degraded` with a 200, never an empty success.
+- **`PUT /travtrack/stops/place`** `{fromMs, untilMs, place: {name, lat?, lon?} | null}` → the
+  recomputed stop. `null` removes the name. 404 `TRAVTRACK_STOP_NOT_FOUND` when no stop lies under
+  the span (nothing stored), 400 `TRAVTRACK_STOP_INVALID`.
+- **Web.** Every stop row of the day list (and the stop card) shows the accepted name, or — fetched
+  lazily when the row is on screen, cached per stop — the probable place with "Übernehmen" and
+  "Andere Vorschläge" (each candidate acceptable). A failed request, an unreachable geocoder and
+  "no name found" are three different messages.
+- The stay-suggestions switch is not consulted for this lookup (it names TravTrack stops, not
+  Dawarich stays); only the Immich-evidence switch is read.

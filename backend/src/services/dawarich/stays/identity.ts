@@ -115,19 +115,45 @@ function complete(view: StayIdentityView): boolean {
   );
 }
 
+/**
+ * How candidates are searched. A stay is found by a detector and ranked by how
+ * notable a place is; a TravTrack STOP is where a phone stood, so the nearest
+ * named place is the likelier answer than a sight 200 m away — a Lidl or a
+ * charger ranks low by importance but is exactly where the phone was.
+ */
+export interface IdentityShape {
+  /** Hits fetched from the geocoder before any cut. */
+  fetch: number;
+  radiusKm: number;
+  /** Re-order the hits by distance before the card's cut. */
+  nearestFirst: boolean;
+  /** Part of the cache key. */
+  name: string;
+}
+export const STAY_SHAPE: IdentityShape = {
+  fetch: STAY_CANDIDATE_LIMIT,
+  radiusKm: STAY_CANDIDATE_RADIUS_KM,
+  nearestFirst: false,
+  name: "stay",
+};
+
 async function computeView(
   userId: string,
   stay: StayAnchor,
-  immichEvidence: boolean
+  immichEvidence: boolean,
+  shape: IdentityShape
 ): Promise<StayIdentityView> {
-  const [geocode, places, photos] = await Promise.all([
+  const [geocode, found, photos] = await Promise.all([
     reverseGeocodeDetailed(stay.lat, stay.lon),
-    reversePlacesDetailed(stay.lat, stay.lon, {
-      limit: STAY_CANDIDATE_LIMIT,
-      radiusKm: STAY_CANDIDATE_RADIUS_KM,
-    }),
+    reversePlacesDetailed(stay.lat, stay.lon, { limit: shape.fetch, radiusKm: shape.radiusKm }),
     photosOf(userId, stay, immichEvidence),
   ]);
+  const places = shape.nearestFirst
+    ? {
+        ...found,
+        results: [...found.results].sort((a, b) => haversineKm(stay, a) - haversineKm(stay, b)),
+      }
+    : found;
   return combineStayIdentity({ point: stay, geocode, places, photos });
 }
 
@@ -135,15 +161,16 @@ async function computeView(
 export async function stayIdentityView(
   userId: string,
   stay: StayAnchor,
-  immichEvidence: boolean
+  immichEvidence: boolean,
+  shape: IdentityShape = STAY_SHAPE
 ): Promise<StayIdentityView> {
   // The position is part of the key: a corrected stay is a different question.
-  const key = JSON.stringify([userId, stay.id, stay.lat, stay.lon, immichEvidence]);
+  const key = JSON.stringify([userId, stay.id, stay.lat, stay.lon, immichEvidence, shape.name]);
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.view;
   const pending = inFlight.get(key);
   if (pending) return pending;
-  const promise = computeView(userId, stay, immichEvidence)
+  const promise = computeView(userId, stay, immichEvidence, shape)
     .then((view) => {
       if (complete(view)) {
         if (cache.size >= STAY_IDENTITY_CACHE_MAX) {

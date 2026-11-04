@@ -11,7 +11,11 @@ const api = vi.hoisted(() => ({
   summary: vi.fn(),
   lastSeen: vi.fn(),
 }));
-const legsApi = vi.hoisted(() => ({ setMode: vi.fn() }));
+const legsApi = vi.hoisted(() => ({
+  setMode: vi.fn(),
+  stopIdentity: vi.fn(() => new Promise(() => {})),
+  setStopPlace: vi.fn(),
+}));
 const staysApi = vi.hoisted(() => ({ reject: vi.fn() }));
 vi.mock("../../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrack")>()),

@@ -12,7 +12,11 @@ const api = vi.hoisted(() => ({
   summary: vi.fn(),
   lastSeen: vi.fn(),
 }));
-const legsApi = vi.hoisted(() => ({ setMode: vi.fn() }));
+const legsApi = vi.hoisted(() => ({
+  setMode: vi.fn(),
+  stopIdentity: vi.fn(),
+  setStopPlace: vi.fn(),
+}));
 const staysApi = vi.hoisted(() => ({ reject: vi.fn() }));
 vi.mock("../../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrack")>()),
@@ -75,6 +79,7 @@ vi.mock("../TrackRangeMap", () => ({
 }));
 
 import TrackMapView from "../TrackMapView";
+import { clearStopIdentityCache } from "../../../../lib/travtrackStopIdentity";
 
 /**
  * W1/W2 of the legs plan: a leg row or its line selects the leg and fits the
@@ -112,6 +117,7 @@ const stop = (over: Partial<TravTrackStop> = {}): TravTrackStop => ({
   untilMs: T0 + 70 * MIN,
   anchor: { lat: 52.51, lon: 13.41 },
   stayRef: { id: "stay-1", status: "pending" },
+  place: null,
   ...over,
 });
 
@@ -150,6 +156,9 @@ describe("TrackMapView legs", () => {
     );
     api.day.mockImplementation(async () => dayWith([leg()], [stop()]));
     api.lastSeen.mockResolvedValue(null);
+    // These tests are about legs: the stop lookup stays pending (its own suite is TrackStopPlace.test).
+    legsApi.stopIdentity.mockReturnValue(new Promise(() => {}));
+    clearStopIdentityCache();
     window.localStorage.clear();
     useToastStore.setState({ toasts: [] });
     mapProps.last = null;

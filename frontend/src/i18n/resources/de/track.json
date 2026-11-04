@@ -86,7 +86,9 @@
     "rangeTooLong": "Ein Zeitraum auf der Karte umfasst höchstens 400 Tage. Wähle einen kürzeren.",
     "pointGone": "Diese Position gibt es nicht mehr – sie wurde schon gelöscht.",
     "legInvalid": "Diese Etappe lässt sich so nicht ändern.",
-    "legGone": "Diese Etappe gibt es nicht mehr – die Ansicht wird neu berechnet."
+    "legGone": "Diese Etappe gibt es nicht mehr – die Ansicht wird neu berechnet.",
+    "stopInvalid": "Dieser Stopp lässt sich so nicht benennen.",
+    "stopGone": "Diesen Stopp gibt es nicht mehr – die Ansicht wird neu berechnet."
   },
   "settings": {
     "tripsNoResidence": "Reisen erkennt TravTrack erst, wenn dein Wohnort bestätigt ist: Gemessen wird der Abstand zu deinem Zuhause. Bestätige ihn unter Einstellungen → Zuhause.",
@@ -712,6 +714,23 @@
     "noStay": "Kein Aufenthaltsvorschlag dazu.",
     "stateOther": "Aufenthalt",
     "reject": "Ablehnen",
-    "rejecting": "Wird abgelehnt …"
+    "rejecting": "Wird abgelehnt …",
+    "place": {
+      "loading": "Ort wird gesucht …",
+      "probable": "Vermutlich: {{name}}",
+      "known": "Dein Ort",
+      "accept": "Übernehmen",
+      "accepting": "Wird übernommen …",
+      "others": "Andere Vorschläge",
+      "hideOthers": "Vorschläge ausblenden",
+      "remove": "Namen entfernen",
+      "accepted": "{{name}}",
+      "distance": "{{m}} m entfernt",
+      "none": "Kein Name gefunden.",
+      "unavailable": "Der Ortsdienst ist gerade nicht erreichbar – kein Vorschlag möglich.",
+      "failed": "Der Vorschlag konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "address": "Adresse"
+    }
   }
 }

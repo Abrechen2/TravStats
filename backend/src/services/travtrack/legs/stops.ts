@@ -10,8 +10,27 @@ import { STEP_M, STOP_MS } from "../dayMovement";
  * neither breaks nor ends a dwell.
  */
 
+/**
+ * A fix this coarse is a cell or Wi-Fi fallback, not a position: one of 1.9 km
+ * and one of 2.7 km each put a day's line 1.3-1.5 km off while the phone lay
+ * still. `isBadFix` (10 km) is the evidence pipeline's bound; a line drawn for
+ * a person needs a tighter one.
+ */
+export const MAX_DRAWN_ACCURACY_M = 1000;
+
 export const isBadVertex = (p: StoredPoint): boolean =>
-  isBadFix({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] });
+  isBadFix({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] }) ||
+  (p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M);
+
+/**
+ * A wander inside one place: two dwells whose anchors lie closer than this,
+ * with nothing in between straying further, are one stop. A phone on a hotel
+ * night table wandered 57 m at ~5 m accuracy and came back; that is not a
+ * leg. Equal to `MIN_LEG_M` — a stretch that short is no leg anyway.
+ */
+export const WANDER_M = 100;
+
+const at = (p: StoredPoint) => ({ lat: p[1], lon: p[2] });
 
 /** A dwell as vertex indices into one segment, inclusive. */
 export type Dwell = { from: number; to: number };
@@ -39,7 +58,28 @@ export function findDwells(segment: readonly StoredPoint[]): Dwell[] {
     if (segment[j][0] - segment[i][0] >= STOP_MS) out.push({ from: i, to: j });
     i = j + 1;
   }
+  return mergeWanders(segment, out);
+}
+
+/** Dwells of one place broken only by a short wander, joined into one. */
+function mergeWanders(segment: readonly StoredPoint[], dwells: readonly Dwell[]): Dwell[] {
+  const out: Dwell[] = [];
+  for (const d of dwells) {
+    const prev = out[out.length - 1];
+    if (prev && sameSpot(segment, prev, d)) out[out.length - 1] = { from: prev.from, to: d.to };
+    else out.push({ ...d });
+  }
   return out;
+}
+
+function sameSpot(segment: readonly StoredPoint[], a: Dwell, b: Dwell): boolean {
+  const anchor = at(segment[a.from]);
+  if (distanceM(anchor, at(segment[b.from])) >= WANDER_M) return false;
+  for (let k = a.to; k <= b.from; k++) {
+    if (isBadVertex(segment[k])) continue;
+    if (distanceM(anchor, at(segment[k])) >= WANDER_M) return false;
+  }
+  return true;
 }
 
 /**
