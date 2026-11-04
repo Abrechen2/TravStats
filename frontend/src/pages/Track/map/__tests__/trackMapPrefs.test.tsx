@@ -16,7 +16,7 @@ import {
 } from "../../../../lib/webPrefs/trackMap";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "de" } }),
 }));
 
 const trackSection = WEB_PREF_SECTIONS.find((s) => s.name === "trackMap")!;

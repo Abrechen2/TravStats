@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TravTrackRange } from "../../../../lib/api/travtrackViews";
 import type { RangeTotals } from "../trackGeometry";
-import { totalsFromAggregates } from "../trackLegs";
+import { legFitPadding, totalsFromAggregates } from "../trackLegs";
 
 const base: RangeTotals = { distanceM: 1, movingMs: 1, avgKmh: 1, points: 9, coverage: 0.5 };
 const part = (aggregates?: TravTrackRange["aggregates"]): TravTrackRange =>
@@ -36,5 +36,13 @@ describe("totalsFromAggregates", () => {
       totalsFromAggregates(base, [part({ distanceM: 1, movingMs: 1, maxSpeedMps: 1 }), part()])
     ).toBe(base);
     expect(totalsFromAggregates(base, [])).toBe(base);
+  });
+});
+
+describe("legFitPadding", () => {
+  it("keeps a leg above the phone card's measured height, not a fixed guess", () => {
+    expect(legFitPadding(true, 520).bottom).toBe(12 + 520 + 24);
+    expect(legFitPadding(true).bottom).toBeGreaterThan(12 + 300 + 24);
+    expect(legFitPadding(false, 520).bottom).toBe(40);
   });
 });

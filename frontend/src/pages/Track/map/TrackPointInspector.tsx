@@ -81,7 +81,8 @@ export default function TrackPointInspector({
         display: "flex",
         flexDirection: "column",
         gap: 6,
-        zIndex: 2,
+        // Above the leg card (z 2): on a narrow screen both sit over the same map area.
+        zIndex: 3,
       }}
     >
       <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>

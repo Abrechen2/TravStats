@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { TravTrackDay } from "../../../../lib/api/travtrack";
 import type { TravTrackLeg } from "../../../../lib/api/travtrackLegs";
@@ -211,5 +211,31 @@ describe("TrackMapView W3", () => {
     fireEvent.click(screen.getByRole("button", { name: "pick-line" }));
     const padding = mapProps.last?.fitPadding as { left: number; bottom: number };
     expect(padding.left).toBeGreaterThanOrEqual(320 + 12);
+  });
+
+  it("'Ganzer Tag' after 'play this leg' returns the replay and scrubber to the whole day", async () => {
+    await pickLeg();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("track-leg-replay"));
+    });
+    expect(screen.getByLabelText("track:map.replay.scrub")).toHaveAttribute(
+      "max",
+      String(T0 + 10 * MIN)
+    );
+    fireEvent.click(within(screen.getByTestId("track-leg-card")).getByText("track:legs.wholeDay"));
+    expect(screen.getByLabelText("track:map.replay.scrub")).toHaveAttribute(
+      "max",
+      String(T0 + 30 * MIN)
+    );
+    expect(times("segments")).toHaveLength(5);
+  });
+
+  it("the point inspector stacks above the leg card", async () => {
+    await pickLeg();
+    fireEvent.click(screen.getByTestId("track-leg-points"));
+    fireEvent.click(screen.getByRole("button", { name: "pick-point" }));
+    const z = (el: HTMLElement | null) => Number(el?.style.zIndex);
+    const card = screen.getByTestId("track-leg-card").parentElement;
+    expect(z(screen.getByTestId("track-point-inspector"))).toBeGreaterThan(z(card));
   });
 });

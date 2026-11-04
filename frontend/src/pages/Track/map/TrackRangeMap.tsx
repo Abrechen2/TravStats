@@ -93,12 +93,14 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   const follow = props.follow;
   const refit = props.refit ?? "";
   const fitPadding = props.fitPadding;
-  const fitted = useRef(refit);
+  // A new padding (the phone breakpoint crossed, the card measured taller) frames again too.
+  const fitKey = `${refit}|${fitPadding ? JSON.stringify(fitPadding) : ""}`;
+  const fitted = useRef(fitKey);
   useEffect(() => {
-    if (!mapLoaded || !bounds || refit === fitted.current) return;
-    fitted.current = refit;
+    if (!mapLoaded || !bounds || fitKey === fitted.current) return;
+    fitted.current = fitKey;
     mapRef.current?.fitBounds(bounds, { padding: fitPadding ?? FRAME_PADDING, duration: 600 });
-  }, [refit, bounds, mapLoaded, fitPadding]);
+  }, [fitKey, bounds, mapLoaded, fitPadding]);
 
   // The camera moves only when the newest fix moved: a poll with the same answer leaves the reader's view.
   const followed = useRef<string | null>(null);
