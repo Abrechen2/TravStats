@@ -29,7 +29,13 @@ import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
 import TrackReplayBar from "./TrackReplayBar";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
-import { legFrame, legLines, totalsFromAggregates, type TrackSelection } from "./trackLegs";
+import {
+  legFitPadding,
+  legFrame,
+  legLines,
+  totalsFromAggregates,
+  type TrackSelection,
+} from "./trackLegs";
 import { mapAnchors, type MapLegLine, type MapPoint, type MapStop } from "./trackMapLayers";
 import { useTrackMapPrefs } from "./trackMapPrefs";
 import { panelStyle } from "./trackMapStyle";
@@ -43,7 +49,8 @@ import {
   stepSpan,
   type TrackSpan,
 } from "./trackSpan";
-import { clipSegments, replayPositions } from "./trackReplay";
+import { clipSegments, cutToWindow, replayPositions, type ReplaySpan } from "./trackReplay";
+import { filterByAccuracy, speedStopsFor } from "./trackSpeedScale";
 import { useFlightTrack } from "./useFlightTrack";
 import { useLiveFollow } from "./useLiveFollow";
 import { useReplay } from "./useReplay";
@@ -57,6 +64,7 @@ const NO_STRETCHES: TrackPoint[][] = [];
 const NO_SHAPES: Feature<Geometry>[] = [];
 const NO_LINES: LonLat[][] = [];
 const NO_LEG_LINES: MapLegLine[] = [];
+const NO_POINTS: MapPoint[] = [];
 
 /** A flight named only by its id (a link): the panel reads its label from the server. */
 const flightById = (id: string): SelectedFlight => ({ id, label: "", href: `/flights/${id}` });
@@ -101,6 +109,11 @@ export default function TrackMapView(): JSX.Element {
   const [selected, setSelected] = useState<MapPoint | null>(null);
   const [pick, setPick] = useState<TrackSelection | null>(null);
   const [photo, setPhoto] = useState<TravTrackPhoto | null>(null);
+  // "Play this leg": the replay is limited to this window until it is reset.
+  const [replayWindow, setReplayWindow] = useState<ReplaySpan | null>(null);
+  // "Show its points": the leg (date + id) whose vertices are drawn as markers.
+  const [replayRequest, setReplayRequest] = useState(0);
+  const [pointsOf, setPointsOf] = useState<string | null>(null);
   const [flight, setFlightState] = useState<SelectedFlight | null>(() =>
     flightParam ? flightById(flightParam) : null
   );
@@ -140,8 +153,16 @@ export default function TrackMapView(): JSX.Element {
     setPick(null);
     setPhoto(null);
     setFlight(null);
+    setReplayWindow(null);
+    setPointsOf(null);
     navigate(spanPath(next, today));
   };
+
+  // Back/forward changes the span without `go`: a leg window of another day plays nothing.
+  useEffect(() => {
+    setReplayWindow(null);
+    setPointsOf(null);
+  }, [span.fromDay, span.toDay]);
 
   useEffect(() => {
     if (!prefs.layers.fog) setFog({ kind: "idle" });
@@ -161,16 +182,28 @@ export default function TrackMapView(): JSX.Element {
       ),
     [source.segments, prefs.splitMinutes]
   );
-  const replay = useReplay(short ? shown : NO_STRETCHES);
+  const replayed = useMemo(
+    () => (replayWindow ? cutToWindow(shown, replayWindow) : shown),
+    [shown, replayWindow]
+  );
+  const replay = useReplay(short ? replayed : NO_STRETCHES, replayRequest);
   const drawn = useMemo(
-    () => (replay.t === null ? shown : clipSegments(shown, replay.t)),
-    [shown, replay.t]
+    () => (replay.t === null ? shown : clipSegments(replayed, replay.t)),
+    [shown, replayed, replay.t]
+  );
+  const resetReplay = useCallback(() => {
+    setReplayWindow(null);
+    replay.reset();
+  }, [replay]);
+  const speedStops = useMemo(
+    () => speedStopsFor(prefs.speedScale, shown),
+    [prefs.speedScale, shown]
   );
   const frameLines = useMemo(() => toLines(shown), [shown]);
   const lines = useMemo(() => toLines(drawn), [drawn]);
   const head = useMemo(
-    () => (replay.t === null ? [] : replayPositions(shown, replay.t)),
-    [shown, replay.t]
+    () => (replay.t === null ? [] : replayPositions(replayed, replay.t)),
+    [replayed, replay.t]
   );
   const points = useMemo<MapPoint[]>(
     () =>
@@ -183,6 +216,10 @@ export default function TrackMapView(): JSX.Element {
         }))
       ),
     [source, zone]
+  );
+  const visiblePoints = useMemo(
+    () => filterByAccuracy(points, prefs.maxAccuracyM),
+    [points, prefs.maxAccuracyM]
   );
   const anchors = useMemo(() => loaded.flatMap((r) => mapAnchors(r.day.context, t)), [loaded, t]);
   const totals = useMemo(
@@ -223,6 +260,32 @@ export default function TrackMapView(): JSX.Element {
     () =>
       resolved?.kind === "leg" && !replaying ? legLines(resolved.day, resolved.leg) : NO_LINES,
     [resolved, replaying]
+  );
+  const legKey = resolved?.kind === "leg" ? `${resolved.day.date}|${resolved.leg.id}` : null;
+  // The leg's own vertices, from the day's stretches its ranges index.
+  const legPoints = useMemo<readonly MapPoint[]>(() => {
+    if (resolved?.kind !== "leg" || legKey !== pointsOf) return NO_POINTS;
+    const { day, leg } = resolved;
+    return filterByAccuracy(
+      leg.ranges.flatMap((range) =>
+        (day.segments[range.segment] ?? []).slice(range.from, range.to + 1).map((point, i) => ({
+          point,
+          zone: day.zone,
+          id: day.pointIds?.[range.segment]?.[range.from + i] ?? null,
+          detail: day.pointDetails?.[range.segment]?.[range.from + i] ?? null,
+        }))
+      ),
+      prefs.maxAccuracyM
+    );
+  }, [resolved, legKey, pointsOf, prefs.maxAccuracyM]);
+  const legReplayable = useMemo(
+    () =>
+      short &&
+      resolved?.kind === "leg" &&
+      cutToWindow(shown, { fromMs: resolved.leg.fromMs, untilMs: resolved.leg.untilMs }).some(
+        (s) => s.length > 1
+      ),
+    [short, resolved, shown]
   );
   const stopList = useMemo<MapStop[]>(
     () =>
@@ -279,6 +342,7 @@ export default function TrackMapView(): JSX.Element {
   const highlight = flightTrack.kind === "loaded" ? flightTrack.lines : NO_LINES;
   const legFramed = resolved?.kind === "leg" ? legFrame(resolved.day, resolved.leg) : null;
   const framed = legFramed ?? (highlight.length > 0 ? highlight : frameLines);
+  const fitPadding = useMemo(() => legFitPadding(phone), [phone]);
   const refit = legFramed
     ? `leg:${resolved?.kind === "leg" ? resolved.leg.id : ""}`
     : highlight.length > 0
@@ -328,6 +392,7 @@ export default function TrackMapView(): JSX.Element {
             prefs={prefs}
             onChange={setPrefs}
             long={long}
+            speedStops={speedStops}
             saveFailed={prefsSaveFailed}
           />
         )}
@@ -344,6 +409,7 @@ export default function TrackMapView(): JSX.Element {
                 <TrackRangeMap
                   key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
                   refit={refit}
+                  fitPadding={legFramed ? fitPadding : undefined}
                   layers={prefs.layers}
                   color={prefs.color}
                   opacity={prefs.opacity}
@@ -356,7 +422,9 @@ export default function TrackMapView(): JSX.Element {
                   onStop={onStop}
                   lines={lines}
                   segments={drawn}
-                  points={points}
+                  points={visiblePoints}
+                  speedStops={speedStops}
+                  legPoints={legPoints}
                   anchors={anchors}
                   replay={head}
                   onPoint={onPoint}
@@ -387,6 +455,19 @@ export default function TrackMapView(): JSX.Element {
                       entryHref={entryHref}
                       onClose={() => setPick(null)}
                       onChanged={() => data.refresh(resolved.day.date)}
+                      onReplay={
+                        legReplayable
+                          ? () => {
+                              setReplayWindow({
+                                fromMs: resolved.leg.fromMs,
+                                untilMs: resolved.leg.untilMs,
+                              });
+                              setReplayRequest((n) => n + 1);
+                            }
+                          : null
+                      }
+                      pointsShown={legKey === pointsOf}
+                      onTogglePoints={() => setPointsOf(legKey === pointsOf ? null : legKey)}
                     />
                   ) : (
                     <TrackStopCard
@@ -416,7 +497,11 @@ export default function TrackMapView(): JSX.Element {
             </div>
           )}
           {!loading && totals.points > 0 && short && (
-            <TrackReplayBar replay={replay} zone={zone} multiDay={span.kind !== "day"} />
+            <TrackReplayBar
+              replay={{ ...replay, reset: resetReplay }}
+              zone={zone}
+              multiDay={span.kind !== "day"}
+            />
           )}
           {!short && totals.points > 0 && (
             <p className="t-caption" data-testid="track-replay-limit">
@@ -482,6 +567,7 @@ export default function TrackMapView(): JSX.Element {
                 prefs={prefs}
                 onChange={setPrefs}
                 long={long}
+                speedStops={speedStops}
                 fill
                 saveFailed={prefsSaveFailed}
               />

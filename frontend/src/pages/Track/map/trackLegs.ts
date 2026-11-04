@@ -67,3 +67,27 @@ export function totalsFromAggregates(
     maxKmh: speeds.length > 0 ? Math.max(...speeds) * MPS_TO_KMH : null,
   };
 }
+
+/** The leg card's footprint on the map (TrackMapView): left 12px, bottom 12px, 320px wide. */
+export const LEG_CARD_WIDTH = 320;
+const CARD_MARGIN = 12;
+const FRAME_MARGIN = 24;
+/** Roughly the card's height, for the phone where it covers the lower part of the map. */
+const CARD_HEIGHT = 300;
+
+/**
+ * Fit padding that keeps a picked leg beside the card rather than under it:
+ * the card's width on the left, and on a phone — where the card is as wide as
+ * the map — its height at the bottom instead.
+ */
+export function legFitPadding(phone: boolean): {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+} {
+  const base = { top: 40, right: FRAME_MARGIN, bottom: 40, left: FRAME_MARGIN };
+  return phone
+    ? { ...base, bottom: CARD_MARGIN + CARD_HEIGHT + FRAME_MARGIN }
+    : { ...base, left: CARD_MARGIN + LEG_CARD_WIDTH + FRAME_MARGIN };
+}

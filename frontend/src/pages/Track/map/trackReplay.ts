@@ -98,3 +98,14 @@ export function clipSegments(segments: readonly TrackPoint[][], t: number): Trac
     return [line];
   });
 }
+
+/**
+ * The stretches cut to one leg's time window (both ends inclusive): a leg's
+ * replay plays the leg and nothing around it. A stretch keeps only the
+ * fixes inside; one left without any is dropped.
+ */
+export function cutToWindow(segments: readonly TrackPoint[][], window: ReplaySpan): TrackPoint[][] {
+  return segments
+    .map((s) => s.filter((p) => p[0] >= window.fromMs && p[0] <= window.untilMs))
+    .filter((s) => s.length > 0);
+}

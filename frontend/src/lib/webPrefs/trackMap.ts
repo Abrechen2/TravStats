@@ -29,12 +29,24 @@ export type RouteColorMode = "speed" | "plain";
 export const SPLIT_OPTIONS = [null, 5, 15, 30, 120, 360] as const;
 export type SplitMinutes = (typeof SPLIT_OPTIONS)[number];
 
+/** The speed colouring's scale: the fixed ramp, one for a way of travelling, or one fitted to the shown track. */
+export const SPEED_SCALES = ["default", "walk", "cycle", "car", "auto"] as const;
+export type SpeedScale = (typeof SPEED_SCALES)[number];
+
+/** Accuracy limits in metres for the points layer; null shows every point. */
+export const ACCURACY_OPTIONS = [null, 20, 50, 100, 200] as const;
+export type MaxAccuracyM = (typeof ACCURACY_OPTIONS)[number];
+
 export interface TrackMapPrefs {
   layers: Record<TrackLayer, boolean>;
   color: RouteColorMode;
   /** 0.2 … 1 */
   opacity: number;
   splitMinutes: SplitMinutes;
+  /** Which ramp the speed colouring and its legend use. */
+  speedScale: SpeedScale;
+  /** Points reporting a worse accuracy than this are not drawn as points; null keeps all. */
+  maxAccuracyM: MaxAccuracyM;
 }
 
 export const DEFAULT_PREFS: TrackMapPrefs = {
@@ -51,6 +63,8 @@ export const DEFAULT_PREFS: TrackMapPrefs = {
   color: "speed",
   opacity: 0.85,
   splitMinutes: null,
+  speedScale: "default",
+  maxAccuracyM: null,
 };
 
 /** The local cache of the account's `trackMap` section. */
@@ -85,11 +99,19 @@ export function parsePrefs(raw: string | null): TrackMapPrefs {
   const split = (SPLIT_OPTIONS as readonly unknown[]).includes(v.splitMinutes)
     ? (v.splitMinutes as SplitMinutes)
     : DEFAULT_PREFS.splitMinutes;
+  const speedScale = (SPEED_SCALES as readonly unknown[]).includes(v.speedScale)
+    ? (v.speedScale as SpeedScale)
+    : DEFAULT_PREFS.speedScale;
+  const maxAccuracyM = (ACCURACY_OPTIONS as readonly unknown[]).includes(v.maxAccuracyM)
+    ? (v.maxAccuracyM as MaxAccuracyM)
+    : DEFAULT_PREFS.maxAccuracyM;
   return {
     layers,
     color: v.color === "plain" || v.color === "speed" ? v.color : DEFAULT_PREFS.color,
     opacity,
     splitMinutes: split,
+    speedScale,
+    maxAccuracyM,
   };
 }
 

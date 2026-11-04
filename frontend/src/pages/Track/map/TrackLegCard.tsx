@@ -30,6 +30,9 @@ export default function TrackLegCard({
   entryHref,
   onClose,
   onChanged,
+  onReplay,
+  pointsShown,
+  onTogglePoints,
 }: {
   leg: TravTrackLeg;
   zone: string;
@@ -38,6 +41,11 @@ export default function TrackLegCard({
   onClose: () => void;
   /** Reads the day again after a saved correction. */
   onChanged: () => Promise<void>;
+  /** Starts the replay limited to this leg; null where there is nothing to replay (or no replay at this span). */
+  onReplay: (() => void) | null;
+  /** Whether the leg's vertices are drawn as markers. */
+  pointsShown: boolean;
+  onTogglePoints: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
@@ -129,6 +137,27 @@ export default function TrackLegCard({
           style={pillStyle(!manual, coarse ? 44 : 36)}
         >
           {t("track:legs.mode.auto")}
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {onReplay && (
+          <button
+            type="button"
+            data-testid="track-leg-replay"
+            onClick={onReplay}
+            style={pillStyle(false, coarse ? 44 : 36)}
+          >
+            {t("track:legs.replay")}
+          </button>
+        )}
+        <button
+          type="button"
+          data-testid="track-leg-points"
+          aria-pressed={pointsShown}
+          onClick={onTogglePoints}
+          style={pillStyle(pointsShown, coarse ? 44 : 36)}
+        >
+          {t(pointsShown ? "track:legs.hidePoints" : "track:legs.showPoints")}
         </button>
       </div>
       <button

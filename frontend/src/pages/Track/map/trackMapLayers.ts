@@ -8,6 +8,7 @@ import type { TrackPoint, TravTrackDayEntry } from "../../../lib/api/travtrack";
 import type { TravTrackPointDetail } from "../../../lib/api/travtrackLegs";
 import type { TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { contextLabel } from "../trackContextLabel";
+import type { SpeedStop } from "./trackSpeedScale";
 import { lonLat, speedColor, speedPieces, type LonLat, type SpeedPiece } from "./trackGeometry";
 import type { RouteColorMode, TrackLayer } from "./trackMapPrefs";
 
@@ -121,6 +122,10 @@ export interface TrackLayerInput {
   onLeg?: (leg: MapLegLine) => void;
   stops?: readonly MapStop[];
   onStop?: (stop: MapStop) => void;
+  /** The speed ramp's stops; omitted, the default ramp. */
+  speedStops?: readonly SpeedStop[];
+  /** The picked leg's vertices, drawn whatever the points layer says; empty draws nothing. */
+  legPoints?: readonly MapPoint[];
 }
 
 /** The open flight's line: bright, over the span's line, never joined across its own breaks. */
@@ -171,9 +176,9 @@ function routeLayer(input: TrackLayerInput, alpha: number): Layer {
       id: "track-route-speed",
       data: speedPiecesOf(input.segments),
       getPath: (d) => d.path,
-      getColor: (d) => [...speedColor(d.kmh), alpha],
-      // The accessor reads `alpha`, and the data is now stable across ticks.
-      updateTriggers: { getColor: [alpha] },
+      getColor: (d) => [...speedColor(d.kmh, input.speedStops), alpha],
+      // The accessor reads `alpha` and the ramp, and the data is stable across ticks.
+      updateTriggers: { getColor: [alpha, input.speedStops] },
       getWidth: 4,
       widthUnits: "pixels",
       widthMinPixels: 2,
@@ -323,6 +328,28 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
         getLineColor: [11, 13, 16, 255],
         lineWidthUnits: "pixels",
         getLineWidth: 1,
+        pickable: true,
+        onClick: (info: PickingInfo<MapPoint>) => {
+          if (info.object) input.onPoint(info.object);
+          return true;
+        },
+      })
+    );
+  }
+  if (input.legPoints && input.legPoints.length > 0) {
+    out.push(
+      new ScatterplotLayer<MapPoint>({
+        id: "track-leg-points",
+        data: input.legPoints as MapPoint[],
+        getPosition: (d) => lonLat(d.point),
+        getRadius: 5,
+        radiusUnits: "pixels",
+        radiusMinPixels: 4,
+        stroked: true,
+        getFillColor: [...HIGHLIGHT_RGB, 255],
+        getLineColor: [...TRACK_RGB, 255],
+        lineWidthUnits: "pixels",
+        getLineWidth: 2,
         pickable: true,
         onClick: (info: PickingInfo<MapPoint>) => {
           if (info.object) input.onPoint(info.object);

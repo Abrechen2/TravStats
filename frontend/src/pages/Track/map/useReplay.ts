@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrackPoint } from "../../../lib/api/travtrack";
 import {
   advanceReplay,
@@ -24,8 +24,13 @@ export interface Replay {
   reset: () => void;
 }
 
-/** Plays the shown stretches through, jumping every gap (`advanceReplay`). */
-export function useReplay(segments: readonly TrackPoint[][]): Replay {
+/**
+ * Plays the shown stretches through, jumping every gap (`advanceReplay`).
+ * A new `autoplayRequest` (a counter the caller bumps) starts the next new set
+ * of stretches playing at once, once; a later refresh of the same stretches
+ * resets as ever and never restarts a paused replay.
+ */
+export function useReplay(segments: readonly TrackPoint[][], autoplayRequest = 0): Replay {
   const spans = useMemo(() => replaySpans(segments), [segments]);
   const [t, setT] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -37,7 +42,16 @@ export function useReplay(segments: readonly TrackPoint[][]): Replay {
   }, []);
 
   // New stretches (another range, a refreshed day): the old clock means nothing there.
-  useEffect(reset, [spans, reset]);
+  const served = useRef(0);
+  useEffect(() => {
+    if (autoplayRequest !== served.current && spans.length > 0) {
+      served.current = autoplayRequest;
+      setT(spans[0].fromMs);
+      setPlaying(true);
+    } else reset();
+    // `autoplayRequest` alone must not restart a running replay.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spans, reset]);
 
   useEffect(() => {
     if (!playing) return;
