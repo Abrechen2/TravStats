@@ -57,4 +57,11 @@ describe("rankStopCandidates", () => {
       "Near shop",
     ]);
   });
+
+  it("lists a far office after a near shop so it cannot crowd the short list", () => {
+    expect(rank([hit("Tower", "office", 160), hit("Kiosk", "shop", 10)])).toEqual([
+      "Kiosk",
+      "Tower",
+    ]);
+  });
 });

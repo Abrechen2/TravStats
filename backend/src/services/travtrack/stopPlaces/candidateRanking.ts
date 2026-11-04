@@ -134,6 +134,14 @@ export function rankStopCandidates(
         !(type !== undefined && (isRoad(type) || FURNITURE_TYPES.has(type))) &&
         (metres <= STOP_NEAR_M || (type !== undefined && FAR_DESTINATION_TYPES.has(type)))
     )
-    .sort((a, b) => weightOf(b.type) - weightOf(a.type) || a.metres - b.metres || a.index - b.index)
+    .sort(
+      (a, b) =>
+        // The far ring is listed after the near one: it must not crowd a near hit out of the
+        // card's short list, nor become the probable place (which is capped near the stop).
+        Number(a.metres > STOP_NEAR_M) - Number(b.metres > STOP_NEAR_M) ||
+        weightOf(b.type) - weightOf(a.type) ||
+        a.metres - b.metres ||
+        a.index - b.index
+    )
     .map(({ place }) => place);
 }
