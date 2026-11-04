@@ -310,6 +310,7 @@
     "zones": "Privatzonen werden als erkundet gezeigt.",
     "zoomIn": "Hier liegen zu viele erkundete Felder für eine Ansicht. Zoom näher heran.",
     "unavailable": "Die Erkundet-Karte ist für so große Privatzonen nicht verfügbar.",
+    "partial": "Nicht alle Ortsdienste waren erreichbar – die Liste kann unvollständig sein.",
     "preparing": "Die Erkundet-Karte wird gerade vorbereitet. Schau in ein paar Minuten wieder vorbei."
   },
   "months": {

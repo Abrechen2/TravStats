@@ -17,7 +17,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import TrackLegList from "../TrackLegList";
-import { clearStopIdentityCache } from "../../../lib/travtrackStopIdentity";
+import { clearStopIdentityCache, loadStopIdentity } from "../../../lib/travtrackStopIdentity";
 
 /**
  * A stop row names its place: the probable one with "accept" and "other
@@ -133,5 +133,75 @@ describe("TrackStopPlace in the stop row", () => {
     fireEvent.click(await screen.findByTestId("track-stop-place-accept"));
     expect(await screen.findByRole("alert")).toHaveTextContent("track:errors.generic");
     expect(screen.getByTestId("track-stop-place-probable")).toBeInTheDocument();
+  });
+});
+
+describe("TrackStopPlace — review fixes", () => {
+  beforeEach(() => {
+    legsApi.stopIdentity.mockReset();
+    legsApi.setStopPlace.mockReset();
+    clearStopIdentityCache();
+  });
+
+  it("an answer still in flight when the account signs out is not kept for the next account", async () => {
+    let resolve!: (i: TravTrackStopIdentity) => void;
+    legsApi.stopIdentity.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+    const first = loadStopIdentity(stop());
+    clearStopIdentityCache();
+    resolve(identity());
+    await first;
+    legsApi.stopIdentity.mockResolvedValueOnce(identity({ probable: null }));
+    expect((await loadStopIdentity(stop())).probable).toBeNull();
+    expect(legsApi.stopIdentity).toHaveBeenCalledTimes(2);
+  });
+
+  it("'Andere Vorschläge' lists every known place of the owner, then the geocoder's", async () => {
+    legsApi.stopIdentity.mockResolvedValue(
+      identity({
+        probable: { name: "Home", source: "known", photoSupported: false },
+        known: [
+          { name: "Home", kind: "place", distanceM: 5, lat: 52.5, lon: 13.4 },
+          { name: "Garage", kind: "place", distanceM: 30, lat: 52.5, lon: 13.4 },
+        ],
+      })
+    );
+    renderList(stop());
+    fireEvent.click(await screen.findByTestId("track-stop-place-others"));
+    const text = screen.getByTestId("track-stop-place-candidates").textContent ?? "";
+    expect(text.indexOf("Home")).toBeLessThan(text.indexOf("Garage"));
+    expect(text.indexOf("Garage")).toBeLessThan(text.indexOf("Lidl"));
+  });
+
+  it("a stop that no longer exists (404) reads the day again", async () => {
+    legsApi.stopIdentity.mockResolvedValue(identity());
+    legsApi.setStopPlace.mockRejectedValue({
+      response: { status: 404, data: { code: "TRAVTRACK_STOP_NOT_FOUND" } },
+    });
+    const onChanged = vi.fn();
+    render(
+      <MemoryRouter>
+        <TrackLegList
+          date="2026-10-25"
+          zone="UTC"
+          legs={[]}
+          stops={[stop()]}
+          selection={null}
+          onSelect={() => {}}
+          onStopPlaceChanged={onChanged}
+        />
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByTestId("track-stop-place-accept"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(screen.getByRole("alert")).toHaveTextContent("track:errors.stopGone");
+  });
+
+  it("a partly failed lookup says so, not 'no suggestion possible' beside an accept button", async () => {
+    legsApi.stopIdentity.mockResolvedValue(identity({ candidatesState: "degraded" }));
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-degraded")).toHaveTextContent(
+      "track:stop.place.partial"
+    );
+    expect(screen.getByTestId("track-stop-place-accept")).toBeInTheDocument();
   });
 });

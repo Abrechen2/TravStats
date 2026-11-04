@@ -15,7 +15,11 @@ const cache = new Map<string, TravTrackStopIdentity>();
 const inFlight = new Map<string, Promise<TravTrackStopIdentity>>();
 const keyOf = (s: TravTrackStop) => `${s.fromMs}-${s.untilMs}-${s.anchor.lat}-${s.anchor.lon}`;
 
+/** Bumped on every clear: an answer that was asked for before it is not kept after it. */
+let generation = 0;
+
 export function clearStopIdentityCache(): void {
+  generation += 1;
   cache.clear();
   inFlight.clear();
 }
@@ -27,16 +31,23 @@ export function loadStopIdentity(stop: TravTrackStop): Promise<TravTrackStopIden
   if (hit) return Promise.resolve(hit);
   const pending = inFlight.get(key);
   if (pending) return pending;
+  const asked = generation;
   const promise = travTrackLegsApi
     .stopIdentity(stop)
     .then((identity) => {
       // A degraded answer is not kept: asking again retries.
-      if (identity.geocoder !== "degraded" && identity.candidatesState !== "degraded") {
+      if (
+        asked === generation &&
+        identity.geocoder !== "degraded" &&
+        identity.candidatesState !== "degraded"
+      ) {
         cache.set(key, identity);
       }
       return identity;
     })
-    .finally(() => inFlight.delete(key));
+    .finally(() => {
+      if (inFlight.get(key) === promise) inFlight.delete(key);
+    });
   inFlight.set(key, promise);
   return promise;
 }
