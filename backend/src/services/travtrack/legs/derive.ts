@@ -9,7 +9,15 @@ import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { findDwells, movingRuns } from "./stops";
-import type { Leg, LegMode, LegOverride, Stop, StayCandidate } from "./types";
+import type {
+  Leg,
+  LegMode,
+  LegOverride,
+  Stop,
+  StayCandidate,
+  StopPlace,
+  StopPlaceRow,
+} from "./types";
 
 /** A stretch shorter than this along its way is a shuffle between two stops, no leg. */
 export const MIN_LEG_M = 100;
@@ -19,6 +27,8 @@ export type LegInputs = {
   windows: readonly EntryWindow[];
   overrides: readonly LegOverride[];
   stays: readonly StayCandidate[];
+  /** Names the owner accepted for stops; optional so the pure derivation needs none. */
+  places?: readonly StopPlaceRow[];
 };
 
 type Piece = {
@@ -127,6 +137,20 @@ function stayFor(span: { fromMs: number; untilMs: number }, stays: readonly Stay
   return best ? { id: best.id, status: best.status } : null;
 }
 
+/** The newest accepted name whose span covers the stop by more than half. */
+function placeFor(
+  span: { fromMs: number; untilMs: number },
+  places: readonly StopPlaceRow[]
+): StopPlace | null {
+  const best = places
+    .filter((p) => overlapShare(span, p) > 0.5)
+    .reduce<StopPlaceRow | null>(
+      (b, p) => (b === null || p.updatedAtMs > b.updatedAtMs ? p : b),
+      null
+    );
+  return best ? { name: best.name, lat: best.lat, lon: best.lon, source: "accepted" } : null;
+}
+
 export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; stops: Stop[] } {
   const flights = inputs.windows
     .filter((w) => w.domain === "flight")
@@ -141,7 +165,12 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
       // Segments are privacy-cut, so this is a second lock, not the first.
       if (inPrivacyZone(anchor, read.circles)) continue;
       const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
-      stops.push({ ...span, anchor, stayRef: stayFor(span, inputs.stays) });
+      stops.push({
+        ...span,
+        anchor,
+        stayRef: stayFor(span, inputs.stays),
+        place: placeFor(span, inputs.places ?? []),
+      });
     }
     for (const run of movingRuns(segment.length, dwells)) {
       for (const piece of piecesOfRun(segment, run, inputs.windows, read)) {

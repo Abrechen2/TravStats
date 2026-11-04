@@ -326,6 +326,10 @@ export function trackErrorKey(err: unknown): string {
       return "track:errors.legInvalid";
     case "TRAVTRACK_LEG_NOT_FOUND":
       return "track:errors.legGone";
+    case "TRAVTRACK_STOP_INVALID":
+      return "track:errors.stopInvalid";
+    case "TRAVTRACK_STOP_NOT_FOUND":
+      return "track:errors.stopGone";
     case "TRAVTRACK_EXPLORED_ZOOM_IN":
       return "track:explored.zoomIn";
     case "TRAVTRACK_EXPLORED_UNAVAILABLE":

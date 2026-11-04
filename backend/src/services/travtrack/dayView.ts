@@ -1,5 +1,6 @@
 import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
+import { withoutBadVertices } from "./drawnFixes";
 import { dayContext, type DayContextEntry } from "./dayContext";
 import { travTrackLegs, type Leg, type Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
@@ -120,7 +121,9 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     fromMs: midnightOf(date, zone).getTime(),
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
-  const read = await readSafeTravTrack(userId, window, DAY_POINT_CAP);
+  const raw = await readSafeTravTrack(userId, window, DAY_POINT_CAP);
+  // Bad fixes are not drawn, nor do they shape legs and stops (`drawnFixes.ts`).
+  const read = withoutBadVertices(raw);
   const [context, { legs, stops }] = await Promise.all([
     dayContext(userId, window, read),
     travTrackLegs(userId, window, read),
@@ -136,6 +139,6 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     legs,
     stops,
     pointCount: read.segments.reduce((n, s) => n + s.length, 0),
-    truncated: read.next !== null,
+    truncated: raw.next !== null,
   };
 }

@@ -42,6 +42,47 @@ export interface TravTrackStop {
   anchor: { lat: number; lon: number };
   /** An existing stay suggestion / lodging; null when none (or suggestions are off). */
   stayRef: { id: string; status: string } | null;
+  /** The name the owner accepted for this stop; null until then. */
+  place: { name: string; lat: number | null; lon: number | null; source: "accepted" } | null;
+}
+
+export interface TravTrackStopCandidate {
+  name: string;
+  type: string | null;
+  address: string | null;
+  city: string | null;
+  lat: number;
+  lon: number;
+  distanceM: number;
+}
+
+export type LookupState = "ok" | "empty" | "degraded";
+
+/** What a stop probably was (`GET /travtrack/stops/place`). `degraded` is a failed lookup, not "nothing there". */
+export interface TravTrackStopIdentity {
+  lat: number;
+  lon: number;
+  probable: {
+    name: string;
+    source: "known" | "nearbyPlace" | "address" | "photos";
+    photoSupported: boolean;
+  } | null;
+  known: Array<{
+    name: string;
+    kind: "place" | "lodging";
+    distanceM: number;
+    lat: number;
+    lon: number;
+  }>;
+  geocoder: LookupState;
+  candidates: TravTrackStopCandidate[];
+  candidatesState: LookupState;
+}
+
+export interface AcceptedStopPlace {
+  name: string;
+  lat?: number | null;
+  lon?: number | null;
 }
 
 /** The phone's own readings of one vertex; each is null where it gave none. */
@@ -65,4 +106,22 @@ export const travTrackLegsApi = {
     mode: PickableMode | null
   ): Promise<TravTrackLeg> =>
     (await api.put<TravTrackLeg>("/travtrack/legs/mode", { ...span, mode })).data,
+  /** What a stop probably was; asked per visible stop. */
+  stopIdentity: async (stop: TravTrackStop): Promise<TravTrackStopIdentity> =>
+    (
+      await api.get<TravTrackStopIdentity>("/travtrack/stops/place", {
+        params: {
+          lat: stop.anchor.lat,
+          lon: stop.anchor.lon,
+          fromMs: stop.fromMs,
+          untilMs: stop.untilMs,
+        },
+      })
+    ).data,
+  /** Stores the accepted name (`null` removes it). Answers the recomputed stop. */
+  setStopPlace: async (
+    span: { fromMs: number; untilMs: number },
+    place: AcceptedStopPlace | null
+  ): Promise<TravTrackStop> =>
+    (await api.put<TravTrackStop>("/travtrack/stops/place", { ...span, place })).data,
 };

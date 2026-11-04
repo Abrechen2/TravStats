@@ -48,6 +48,15 @@ export const stopSchema = z.object({
     .object({ id: z.string(), status: z.string() })
     .nullable()
     .describe("A TravTrack stay question this dwell belongs to, if any"),
+  place: z
+    .object({
+      name: z.string(),
+      lat: z.number().nullable().describe("Where the named place lies"),
+      lon: z.number().nullable(),
+      source: z.literal("accepted").describe("The owner accepted this name for the stop"),
+    })
+    .nullable()
+    .describe("The name the owner accepted for this stop (`PUT /travtrack/stops/place`)"),
 });
 
 export const pointDetailSchema = z.object({
@@ -89,5 +98,125 @@ registry.registerPath({
       content: errorContent,
     },
     404: { description: "TRAVTRACK_LEG_NOT_FOUND: no leg under the span", content: errorContent },
+  },
+});
+
+const candidate = z.object({
+  name: z.string(),
+  type: z.string().nullable().describe("Picker category, e.g. `shopping`"),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  lat: z.number(),
+  lon: z.number(),
+  distanceM: z.number().int(),
+  photoCount: z.number().int().nullable().describe("Null without photo evidence"),
+});
+const geocoderState = z
+  .enum(["ok", "empty", "degraded"])
+  .describe("`degraded`: the geocoder FAILED, which is not the same as `empty` (no match)");
+
+export const stopIdentitySchema = z.object({
+  lat: z.number(),
+  lon: z.number(),
+  probable: z
+    .object({
+      name: z.string(),
+      source: z.enum(["known", "nearbyPlace", "address", "photos"]),
+      photoSupported: z.boolean(),
+    })
+    .nullable()
+    .describe("`known`: one of the owner's own places or lodgings within 100 m"),
+  known: z
+    .array(
+      z.object({
+        name: z.string(),
+        kind: z.enum(["place", "lodging"]),
+        distanceM: z.number().int(),
+        lat: z.number(),
+        lon: z.number(),
+      })
+    )
+    .describe("The owner's own places and lodgings within 100 m, nearest first"),
+  address: z
+    .object({
+      address: z.string().nullable(),
+      city: z.string().nullable(),
+      country: z.string().nullable(),
+    })
+    .nullable(),
+  geocoder: geocoderState,
+  candidates: z.array(candidate).describe("Up to five named places within 100 m, nearest first"),
+  candidatesState: geocoderState,
+  photos: z.object({
+    state: z.string().describe("off, notConfigured, ok, or the Immich failure kind"),
+    count: z.number().int(),
+    cities: z.array(z.object({ name: z.string(), count: z.number().int() })),
+    truncated: z.boolean(),
+  }),
+});
+
+const stopPlaceBody = z.object({
+  fromMs: z.number().int().describe("Start of the stop, epoch milliseconds"),
+  untilMs: z.number().int().describe("End of the stop; at most two days after the start"),
+  place: z
+    .object({
+      name: z.string(),
+      lat: z.number().nullable().optional(),
+      lon: z.number().nullable().optional(),
+    })
+    .nullable()
+    .describe("The accepted place; null removes the name"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/travtrack/stops/place",
+  summary: "What a stop probably was",
+  description:
+    "The owner's own places and lodgings within 100 m first, then the nearest named places " +
+    "(supermarkets and charging stations included), the address and, when switched on, the " +
+    "photos of the stop. Asked per visible stop. A geocoder failure answers 200 with " +
+    "`geocoder` / `candidatesState` = `degraded`, never an empty success. Only while TravTrack is on.",
+  tags: ["TravTrack"],
+  request: {
+    query: z.object({
+      lat: z.number().describe("The stop's anchor latitude"),
+      lon: z.number().describe("The stop's anchor longitude"),
+      fromMs: z.number().int(),
+      untilMs: z.number().int(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "The stop's identity",
+      content: { "application/json": { schema: stopIdentitySchema } },
+    },
+    400: { description: "TRAVTRACK_STOP_INVALID: a bad position or span", content: errorContent },
+    401: { description: "Not signed in", content: errorContent },
+    403: { description: "TRAVTRACK_DISABLED", content: errorContent },
+    429: { description: "Too many lookups", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/travtrack/stops/place",
+  summary: "Accept a name for a stop, or remove it",
+  description:
+    "Bound to the span, not to a stop: it applies to every derived stop it covers by more " +
+    "than half. Answers the recomputed stop, bare. Only while TravTrack is on.",
+  tags: ["TravTrack"],
+  request: { body: { content: { "application/json": { schema: stopPlaceBody } } } },
+  responses: {
+    200: {
+      description: "The recomputed stop",
+      content: { "application/json": { schema: stopSchema } },
+    },
+    400: { description: "TRAVTRACK_STOP_INVALID: a bad span or name", content: errorContent },
+    403: {
+      description: "TRAVTRACK_DISABLED, a read-only token, or the demo",
+      content: errorContent,
+    },
+    404: { description: "TRAVTRACK_STOP_NOT_FOUND: no stop under the span", content: errorContent },
   },
 });

@@ -47,6 +47,26 @@ export type Stop = {
   untilMs: number;
   anchor: { lat: number; lon: number };
   stayRef: { id: string; status: string } | null;
+  /** The name the owner accepted for this stop (spec "As built — stop places"); null until then. */
+  place: StopPlace | null;
+};
+
+export type StopPlace = {
+  name: string;
+  /** Where the named place lies; null when the owner named it without a position. */
+  lat: number | null;
+  lon: number | null;
+  source: "accepted";
+};
+
+/** A stored acceptance, bound to a span of time. */
+export type StopPlaceRow = {
+  fromMs: number;
+  untilMs: number;
+  name: string;
+  lat: number | null;
+  lon: number | null;
+  updatedAtMs: number;
 };
 
 /** A stored mode correction, bound to a span of time. */

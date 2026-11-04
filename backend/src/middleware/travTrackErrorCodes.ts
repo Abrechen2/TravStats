@@ -27,4 +27,6 @@ export type TravTrackApiErrorCode =
   | "TRAVTRACK_FLIGHT_NOT_FOUND" // no such flight of this account (404)
   | "TRAVTRACK_PHOTO_WINDOW_TOO_LONG" // a photo window covers at most 7 days (400)
   | "TRAVTRACK_LEG_INVALID" // a leg mode correction names a bad span or mode (400)
-  | "TRAVTRACK_LEG_NOT_FOUND"; // no leg lies under the corrected span (404)
+  | "TRAVTRACK_LEG_NOT_FOUND" // no leg lies under the corrected span (404)
+  | "TRAVTRACK_STOP_INVALID" // a stop place request names a bad span, position or name (400)
+  | "TRAVTRACK_STOP_NOT_FOUND"; // no stop lies under the span (404)

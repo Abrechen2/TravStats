@@ -1,0 +1,137 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { TravTrackStop, TravTrackStopIdentity } from "../../../lib/api/travtrackLegs";
+
+const legsApi = vi.hoisted(() => ({ stopIdentity: vi.fn(), setStopPlace: vi.fn() }));
+vi.mock("../../../lib/api/travtrackLegs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api/travtrackLegs")>()),
+  travTrackLegsApi: legsApi,
+}));
+vi.mock("../../../hooks/useTranslation", () => ({
+  useTranslation: () => ({
+    t: (key: string, o?: Record<string, unknown>) =>
+      o && Object.keys(o).length > 0 ? `${key} ${JSON.stringify(o)}` : key,
+    i18n: { language: "de" },
+  }),
+}));
+
+import TrackLegList from "../TrackLegList";
+import { clearStopIdentityCache } from "../../../lib/travtrackStopIdentity";
+
+/**
+ * A stop row names its place: the probable one with "accept" and "other
+ * suggestions", the accepted one from the server, and a failed lookup as itself.
+ */
+
+const stop = (over: Partial<TravTrackStop> = {}): TravTrackStop => ({
+  fromMs: 1_000_000,
+  untilMs: 1_000_000 + 40 * 60_000,
+  anchor: { lat: 52.5, lon: 13.4 },
+  stayRef: null,
+  place: null,
+  ...over,
+});
+
+const identity = (over: Partial<TravTrackStopIdentity> = {}): TravTrackStopIdentity => ({
+  lat: 52.5,
+  lon: 13.4,
+  probable: { name: "Lidl", source: "nearbyPlace", photoSupported: false },
+  known: [],
+  geocoder: "ok",
+  candidates: [
+    {
+      name: "Lidl",
+      type: "shopping",
+      address: null,
+      city: null,
+      lat: 52.5,
+      lon: 13.4,
+      distanceM: 8,
+    },
+    { name: "Ionity", type: "x", address: null, city: null, lat: 52.5, lon: 13.4, distanceM: 40 },
+  ],
+  candidatesState: "ok",
+  ...over,
+});
+
+const renderList = (s: TravTrackStop) =>
+  render(
+    <MemoryRouter>
+      <TrackLegList
+        date="2026-10-25"
+        zone="UTC"
+        legs={[]}
+        stops={[s]}
+        selection={null}
+        onSelect={() => {}}
+      />
+    </MemoryRouter>
+  );
+
+describe("TrackStopPlace in the stop row", () => {
+  beforeEach(() => {
+    legsApi.stopIdentity.mockReset();
+    legsApi.setStopPlace.mockReset();
+    clearStopIdentityCache();
+  });
+
+  it("shows the probable place, lists other suggestions and stores an accepted one", async () => {
+    legsApi.stopIdentity.mockResolvedValue(identity());
+    legsApi.setStopPlace.mockResolvedValue(
+      stop({ place: { name: "Ionity", lat: 52.5, lon: 13.4, source: "accepted" } })
+    );
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-probable")).toHaveTextContent("Lidl");
+    fireEvent.click(screen.getByTestId("track-stop-place-others"));
+    const buttons = screen.getAllByTestId("track-stop-place-candidate-accept");
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[1]);
+    await waitFor(() =>
+      expect(legsApi.setStopPlace).toHaveBeenCalledWith(
+        { fromMs: 1_000_000, untilMs: 1_000_000 + 40 * 60_000 },
+        { name: "Ionity", lat: 52.5, lon: 13.4 }
+      )
+    );
+    expect(await screen.findByTestId("track-stop-place-name")).toHaveTextContent("Ionity");
+  });
+
+  it("shows the name the server already holds without asking a geocoder", () => {
+    renderList(stop({ place: { name: "Hotel Adlon", lat: null, lon: null, source: "accepted" } }));
+    expect(screen.getByTestId("track-stop-place-name")).toHaveTextContent("Hotel Adlon");
+    expect(legsApi.stopIdentity).not.toHaveBeenCalled();
+  });
+
+  it("says the lookup failed (and offers a retry) instead of showing no suggestion", async () => {
+    legsApi.stopIdentity.mockRejectedValueOnce({ response: { status: 500, data: {} } });
+    legsApi.stopIdentity.mockResolvedValueOnce(identity());
+    renderList(stop());
+    expect(await screen.findByText("track:stop.place.failed")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("track:stop.place.retry"));
+    expect(await screen.findByTestId("track-stop-place-probable")).toBeInTheDocument();
+  });
+
+  it("says the geocoder was unreachable rather than 'no name found'", async () => {
+    legsApi.stopIdentity.mockResolvedValue(
+      identity({
+        probable: null,
+        candidates: [],
+        geocoder: "degraded",
+        candidatesState: "degraded",
+      })
+    );
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-none")).toHaveTextContent(
+      "track:stop.place.unavailable"
+    );
+  });
+
+  it("shows why a name could not be saved and keeps the suggestion", async () => {
+    legsApi.stopIdentity.mockResolvedValue(identity());
+    legsApi.setStopPlace.mockRejectedValue({ response: { status: 500, data: {} } });
+    renderList(stop());
+    fireEvent.click(await screen.findByTestId("track-stop-place-accept"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("track:errors.generic");
+    expect(screen.getByTestId("track-stop-place-probable")).toBeInTheDocument();
+  });
+});

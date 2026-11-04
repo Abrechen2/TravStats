@@ -6,8 +6,9 @@ import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import { dayAfter, midnightOf } from "../range";
 import { readSafeTravTrack } from "../readSafe";
 import { DAY_POINT_CAP } from "../dayView";
+import { withoutBadVertices } from "../drawnFixes";
 import { travTrackLegs } from "./index";
-import type { Leg, LegMode } from "./types";
+import type { Leg, LegMode, Stop } from "./types";
 
 /**
  * `PUT /travtrack/legs/mode` (spec 2026-11-03-travtrack-legs, §2/§3): store
@@ -25,6 +26,14 @@ export type LegSpan = { fromMs: number; untilMs: number };
 
 /** The legs derived on the profile days the span touches — as `GET /travtrack/day` shows them. */
 async function legsAround(userId: string, span: LegSpan): Promise<Leg[]> {
+  return (await derivedAround(userId, span)).legs;
+}
+
+/** Legs and stops of the profile days the span touches, exactly as the day view derives them. */
+export async function derivedAround(
+  userId: string,
+  span: LegSpan
+): Promise<{ legs: Leg[]; stops: Stop[] }> {
   const { zone } = await profileZoneOf(userId);
   const first = localDay(new Date(span.fromMs), zone);
   const last = localDay(new Date(span.untilMs - 1), zone);
@@ -34,15 +43,18 @@ async function legsAround(userId: string, span: LegSpan): Promise<Leg[]> {
     days.push(d);
   }
   const legs: Leg[] = [];
+  const stops: Stop[] = [];
   for (const day of days) {
     const window = {
       fromMs: midnightOf(day, zone).getTime(),
       untilMs: midnightOf(dayAfter(day), zone).getTime(),
     };
-    const read = await readSafeTravTrack(userId, window, DAY_POINT_CAP);
-    legs.push(...(await travTrackLegs(userId, window, read)).legs);
+    const read = withoutBadVertices(await readSafeTravTrack(userId, window, DAY_POINT_CAP));
+    const derived = await travTrackLegs(userId, window, read);
+    legs.push(...derived.legs);
+    stops.push(...derived.stops);
   }
-  return legs;
+  return { legs, stops };
 }
 
 /** The leg the correction mostly lies on (it applies to every leg it covers by more than half). */

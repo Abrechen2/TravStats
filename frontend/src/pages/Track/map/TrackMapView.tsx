@@ -607,6 +607,7 @@ export default function TrackMapView(): JSX.Element {
           onFlight={setFlight}
           selection={activePick}
           onSelect={setPick}
+          onStopPlaceChanged={(date) => void data.refresh(date)}
         />
       </div>
 

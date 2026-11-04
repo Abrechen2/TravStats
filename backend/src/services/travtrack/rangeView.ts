@@ -2,6 +2,7 @@ import { ENTRY_WINDOW_ADAPTERS } from "../locationEvidence/journeys/entryWindows
 import { simplifyDegrees } from "../schematicRouter";
 import { privacySafeStretches } from "../tripRecording/privacySafe";
 import type { StoredPoint } from "../tripRecording/segments";
+import { withoutBadVertices } from "./drawnFixes";
 import { pointDetailsOf, type PointDetail } from "./dayView";
 import { rangeAggregates, type RangeAggregates } from "./rangeAggregates";
 import { formatSafeCursor, readSafeTravTrack, type SafeCursor, type Span } from "./readSafe";
@@ -105,7 +106,10 @@ export async function travTrackRange(
   caps: { read?: number; vertices?: number } = {}
 ): Promise<TravTrackRange> {
   const read = await readSafeTravTrack(userId, window, caps.read ?? RANGE_READ_CAP, after);
-  const fitted = simplifyStretchesWithin(read.segments, caps.vertices ?? RANGE_VERTEX_CAP);
+  const fitted = simplifyStretchesWithin(
+    withoutBadVertices(read).segments,
+    caps.vertices ?? RANGE_VERTEX_CAP
+  );
   // The check that counts: on the geometry as it leaves.
   const segments = privacySafeStretches(fitted.lines, read.circles).filter((s) => s.length > 0);
   const pointIds = segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? ""));
