@@ -4,8 +4,11 @@ import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { SPEED_STOPS } from "./trackGeometry";
 import {
+  ACCURACY_OPTIONS,
+  SPEED_SCALES,
   SPLIT_OPTIONS,
   TRACK_LAYERS,
+  type MaxAccuracyM,
   type RouteColorMode,
   type SplitMinutes,
   type TrackMapPrefs,
@@ -30,6 +33,7 @@ export default function TrackLayersPanel({
   long = false,
   fill = false,
   saveFailed = false,
+  speedStops = SPEED_STOPS,
 }: {
   prefs: TrackMapPrefs;
   onChange: (patch: Partial<TrackMapPrefs>) => void;
@@ -39,6 +43,8 @@ export default function TrackLayersPanel({
   fill?: boolean;
   /** The last choice did not reach storage: say so, without blocking anything. */
   saveFailed?: boolean;
+  /** The ramp's stops for the chosen scale; the legend follows them. */
+  speedStops?: ReadonlyArray<{ kmh: number }>;
 }): JSX.Element {
   const { t } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
@@ -86,19 +92,41 @@ export default function TrackLayersPanel({
           ))}
         </div>
         {prefs.color === "speed" && (
-          <div className="flex flex-col gap-1" data-testid="track-speed-legend">
-            <div aria-hidden style={{ height: 8, borderRadius: 999, background: RAMP }} />
+          <div className="flex flex-col gap-2">
             <div
-              className="flex justify-between t-caption"
-              style={{ fontFamily: "var(--ts-font-mono)", fontSize: 11 }}
+              role="radiogroup"
+              aria-label={t("track:map.route.scale.title")}
+              className="flex flex-wrap gap-2"
+              data-testid="track-speed-scale"
             >
-              {SPEED_STOPS.map((s, i) => (
-                <span key={s.kmh}>
-                  {i === SPEED_STOPS.length - 1
-                    ? t("track:map.route.kmhMax", { kmh: s.kmh })
-                    : s.kmh}
-                </span>
+              {SPEED_SCALES.map((scale) => (
+                <button
+                  key={scale}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.speedScale === scale}
+                  data-scale={scale}
+                  onClick={() => onChange({ speedScale: scale })}
+                  style={pillStyle(prefs.speedScale === scale, rowMin)}
+                >
+                  {t(`track:map.route.scale.${scale}`)}
+                </button>
               ))}
+            </div>
+            <div className="flex flex-col gap-1" data-testid="track-speed-legend">
+              <div aria-hidden style={{ height: 8, borderRadius: 999, background: RAMP }} />
+              <div
+                className="flex justify-between t-caption"
+                style={{ fontFamily: "var(--ts-font-mono)", fontSize: 11 }}
+              >
+                {speedStops.map((s, i) => (
+                  <span key={i}>
+                    {i === speedStops.length - 1
+                      ? t("track:map.route.kmhMax", { kmh: s.kmh })
+                      : s.kmh}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -142,6 +170,37 @@ export default function TrackLayersPanel({
               </option>
             ))}
           </select>
+        </label>
+        <label className="flex flex-col gap-1 t-caption">
+          {t("track:map.route.accuracy")}
+          <select
+            data-testid="track-accuracy-filter"
+            value={prefs.maxAccuracyM === null ? "" : String(prefs.maxAccuracyM)}
+            onChange={(e) =>
+              onChange({
+                maxAccuracyM: (e.target.value === ""
+                  ? null
+                  : Number(e.target.value)) as MaxAccuracyM,
+              })
+            }
+            style={{
+              minHeight: rowMin,
+              borderRadius: 8,
+              padding: "0 8px",
+              background: "var(--ts-surface2)",
+              color: "var(--ts-text)",
+              border: "1px solid var(--ts-border-input)",
+            }}
+          >
+            {ACCURACY_OPTIONS.map((m) => (
+              <option key={m ?? "all"} value={m === null ? "" : String(m)}>
+                {m === null
+                  ? t("track:map.route.accuracyAll")
+                  : t("track:map.route.accuracyMax", { m })}
+              </option>
+            ))}
+          </select>
+          <span>{t("track:map.route.accuracyHint")}</span>
         </label>
         <span className="t-caption">{t("track:map.route.alwaysCut")}</span>
         {saveFailed && (

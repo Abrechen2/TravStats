@@ -86,15 +86,18 @@ export const SPEED_STOPS: ReadonlyArray<{ kmh: number; rgb: Rgb }> = [
 ];
 
 /** A colour on the legend's ramp; an unknown speed is the ramp's grey. */
-export function speedColor(kmh: number | null): Rgb {
+export function speedColor(
+  kmh: number | null,
+  stops: ReadonlyArray<{ kmh: number; rgb: Rgb }> = SPEED_STOPS
+): Rgb {
   if (kmh === null) return [148, 163, 184];
-  const first = SPEED_STOPS[0];
-  const last = SPEED_STOPS[SPEED_STOPS.length - 1];
+  const first = stops[0];
+  const last = stops[stops.length - 1];
   if (kmh <= first.kmh) return first.rgb;
   if (kmh >= last.kmh) return last.rgb;
-  const upper = SPEED_STOPS.findIndex((s) => s.kmh >= kmh);
-  const a = SPEED_STOPS[upper - 1];
-  const b = SPEED_STOPS[upper];
+  const upper = stops.findIndex((s) => s.kmh >= kmh);
+  const a = stops[upper - 1];
+  const b = stops[upper];
   const f = (kmh - a.kmh) / (b.kmh - a.kmh);
   const mix = (x: number, y: number) => Math.round(x + (y - x) * f);
   return [mix(a.rgb[0], b.rgb[0]), mix(a.rgb[1], b.rgb[1]), mix(a.rgb[2], b.rgb[2])];

@@ -24,8 +24,12 @@ export interface Replay {
   reset: () => void;
 }
 
-/** Plays the shown stretches through, jumping every gap (`advanceReplay`). */
-export function useReplay(segments: readonly TrackPoint[][]): Replay {
+/**
+ * Plays the shown stretches through, jumping every gap (`advanceReplay`).
+ * With `autoplay` a new set of stretches starts playing at once instead of
+ * waiting at the start: that is how "play this leg" begins.
+ */
+export function useReplay(segments: readonly TrackPoint[][], autoplay = false): Replay {
   const spans = useMemo(() => replaySpans(segments), [segments]);
   const [t, setT] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -37,7 +41,14 @@ export function useReplay(segments: readonly TrackPoint[][]): Replay {
   }, []);
 
   // New stretches (another range, a refreshed day): the old clock means nothing there.
-  useEffect(reset, [spans, reset]);
+  useEffect(() => {
+    if (autoplay && spans.length > 0) {
+      setT(spans[0].fromMs);
+      setPlaying(true);
+    } else reset();
+    // `autoplay` alone must not restart a running replay.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spans, reset]);
 
   useEffect(() => {
     if (!playing) return;

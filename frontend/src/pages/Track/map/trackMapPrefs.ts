@@ -10,9 +10,13 @@ import { loadTrackPrefs, saveTrackPrefs, type TrackMapPrefs } from "../../../lib
 export {
   DEFAULT_PREFS,
   PREFS_KEY,
+  ACCURACY_OPTIONS,
+  SPEED_SCALES,
   SPLIT_OPTIONS,
   TRACK_LAYERS,
   parsePrefs,
+  type MaxAccuracyM,
+  type SpeedScale,
   type RouteColorMode,
   type SplitMinutes,
   type TrackLayer,

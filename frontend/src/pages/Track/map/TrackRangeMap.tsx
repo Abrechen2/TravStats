@@ -23,6 +23,8 @@ export interface TrackRangeMapProps extends Omit<TrackLayerInput, "lines"> {
    * line — would stay away (found in a browser look, 2026-10-26).
    */
   refit?: string;
+  /** The padding the refit leaves around the lines; omitted, the default frame. */
+  fitPadding?: typeof FRAME_PADDING;
   onFogStatus: (status: FogStatus) => void;
 }
 
@@ -40,7 +42,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   const bounds = useMemo(() => linesBounds(props.frameLines), [props.frameLines]);
   const { layers, color, opacity, lines, segments, points, anchors, replay, onPoint } = props;
   const { photos, onPhoto, countries, highlight } = props;
-  const { selection, legLines, onLeg, stops, onStop } = props;
+  const { selection, legLines, onLeg, stops, onStop, speedStops, legPoints } = props;
   const deckLayers = useMemo(
     () =>
       buildTrackLayers({
@@ -62,6 +64,8 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         onLeg,
         stops,
         onStop,
+        speedStops,
+        legPoints,
       }),
     [
       layers,
@@ -82,16 +86,19 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
       onLeg,
       stops,
       onStop,
+      speedStops,
+      legPoints,
     ]
   );
   const follow = props.follow;
   const refit = props.refit ?? "";
+  const fitPadding = props.fitPadding;
   const fitted = useRef(refit);
   useEffect(() => {
     if (!mapLoaded || !bounds || refit === fitted.current) return;
     fitted.current = refit;
-    mapRef.current?.fitBounds(bounds, { padding: FRAME_PADDING, duration: 600 });
-  }, [refit, bounds, mapLoaded]);
+    mapRef.current?.fitBounds(bounds, { padding: fitPadding ?? FRAME_PADDING, duration: 600 });
+  }, [refit, bounds, mapLoaded, fitPadding]);
 
   // The camera moves only when the newest fix moved: a poll with the same answer leaves the reader's view.
   const followed = useRef<string | null>(null);

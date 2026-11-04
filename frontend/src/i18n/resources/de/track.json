@@ -411,7 +411,19 @@
       "splitHours_one": "{{count}} Stunde",
       "splitHours_other": "{{count}} Stunden",
       "notRemembered": "Konnte diese Wahl nicht merken – sie gilt nur, bis du die Seite verlässt.",
-      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden."
+      "alwaysCut": "Private Zonen, gelöschte Zeiträume, Pausen und Flugmodus-Lücken trennen immer, egal was hier steht. Hier lässt sich nur weiter trennen, nie verbinden.",
+      "scale": {
+        "title": "Tempo-Skala",
+        "default": "Standard",
+        "walk": "Zu Fuß",
+        "cycle": "Rad",
+        "car": "Auto",
+        "auto": "Auto-Skala"
+      },
+      "accuracy": "Punkte nach Genauigkeit",
+      "accuracyAll": "Alle Punkte",
+      "accuracyMax": "Nur besser als {{m}} m",
+      "accuracyHint": "Gilt für Punkte und Heatmap, nicht für die Linie. Punkte ohne gemeldete Genauigkeit bleiben sichtbar."
     },
     "replay": {
       "play": "Wiedergabe starten",
@@ -675,9 +687,9 @@
       "auto": "Automatisch"
     },
     "source": {
-      "auto": "erkannt",
+      "auto": "automatisch erkannt",
       "entry": "aus dem Logbuch",
-      "manual": "von dir"
+      "manual": "von dir festgelegt"
     },
     "figure": {
       "distance": "Strecke",
@@ -687,7 +699,10 @@
       "maxSpeed": "Höchstes Tempo",
       "ascent": "Aufstieg",
       "descent": "Abstieg"
-    }
+    },
+    "replay": "Diese Etappe abspielen",
+    "showPoints": "Punkte zeigen",
+    "hidePoints": "Punkte ausblenden"
   },
   "stop": {
     "title": "Stopp",
