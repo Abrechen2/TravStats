@@ -112,6 +112,7 @@ export default function TrackMapView(): JSX.Element {
   // "Play this leg": the replay is limited to this window until it is reset.
   const [replayWindow, setReplayWindow] = useState<ReplaySpan | null>(null);
   // "Show its points": the leg (date + id) whose vertices are drawn as markers.
+  const [replayRequest, setReplayRequest] = useState(0);
   const [pointsOf, setPointsOf] = useState<string | null>(null);
   const [flight, setFlightState] = useState<SelectedFlight | null>(() =>
     flightParam ? flightById(flightParam) : null
@@ -157,6 +158,12 @@ export default function TrackMapView(): JSX.Element {
     navigate(spanPath(next, today));
   };
 
+  // Back/forward changes the span without `go`: a leg window of another day plays nothing.
+  useEffect(() => {
+    setReplayWindow(null);
+    setPointsOf(null);
+  }, [span.fromDay, span.toDay]);
+
   useEffect(() => {
     if (!prefs.layers.fog) setFog({ kind: "idle" });
   }, [prefs.layers.fog]);
@@ -179,7 +186,7 @@ export default function TrackMapView(): JSX.Element {
     () => (replayWindow ? cutToWindow(shown, replayWindow) : shown),
     [shown, replayWindow]
   );
-  const replay = useReplay(short ? replayed : NO_STRETCHES, replayWindow !== null);
+  const replay = useReplay(short ? replayed : NO_STRETCHES, replayRequest);
   const drawn = useMemo(
     () => (replay.t === null ? shown : clipSegments(replayed, replay.t)),
     [shown, replayed, replay.t]
@@ -450,11 +457,13 @@ export default function TrackMapView(): JSX.Element {
                       onChanged={() => data.refresh(resolved.day.date)}
                       onReplay={
                         legReplayable
-                          ? () =>
+                          ? () => {
                               setReplayWindow({
                                 fromMs: resolved.leg.fromMs,
                                 untilMs: resolved.leg.untilMs,
-                              })
+                              });
+                              setReplayRequest((n) => n + 1);
+                            }
                           : null
                       }
                       pointsShown={legKey === pointsOf}
