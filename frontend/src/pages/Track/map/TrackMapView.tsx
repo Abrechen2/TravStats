@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
@@ -342,7 +342,23 @@ export default function TrackMapView(): JSX.Element {
   const highlight = flightTrack.kind === "loaded" ? flightTrack.lines : NO_LINES;
   const legFramed = resolved?.kind === "leg" ? legFrame(resolved.day, resolved.leg) : null;
   const framed = legFramed ?? (highlight.length > 0 ? highlight : frameLines);
-  const fitPadding = useMemo(() => legFitPadding(phone), [phone]);
+  // The card's real height (figure rows, wrapped mode controls) sets the phone's bottom padding.
+  const [cardHeight, setCardHeight] = useState<number | undefined>(undefined);
+  const cardBox = useRef<HTMLDivElement | null>(null);
+  const cardShown = resolved !== null;
+  useEffect(() => {
+    const el = cardBox.current;
+    if (!el || !cardShown || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      if (h > 0) setCardHeight(h);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [cardShown]);
+  const fitPadding = useMemo(() => legFitPadding(phone, cardHeight), [phone, cardHeight]);
   const refit = legFramed
     ? `leg:${resolved?.kind === "leg" ? resolved.leg.id : ""}`
     : highlight.length > 0
@@ -447,13 +463,20 @@ export default function TrackMapView(): JSX.Element {
                 />
               )}
               {resolved && (
-                <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2 }}>
+                <div
+                  ref={cardBox}
+                  style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2 }}
+                >
                   {resolved.kind === "leg" ? (
                     <TrackLegCard
                       leg={resolved.leg}
                       zone={resolved.day.zone}
                       entryHref={entryHref}
-                      onClose={() => setPick(null)}
+                      onClose={() => {
+                        setPick(null);
+                        // "Ganzer Tag" also ends a "play this leg" window.
+                        if (replayWindow) resetReplay();
+                      }}
                       onChanged={() => data.refresh(resolved.day.date)}
                       onReplay={
                         legReplayable

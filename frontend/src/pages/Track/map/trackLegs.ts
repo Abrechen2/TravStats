@@ -72,15 +72,18 @@ export function totalsFromAggregates(
 export const LEG_CARD_WIDTH = 320;
 const CARD_MARGIN = 12;
 const FRAME_MARGIN = 24;
-/** Roughly the card's height, for the phone where it covers the lower part of the map. */
-const CARD_HEIGHT = 300;
+/** Fallback until the card has been measured (four figure rows plus wrapped mode controls). */
+export const LEG_CARD_HEIGHT_FALLBACK = 420;
 
 /**
  * Fit padding that keeps a picked leg beside the card rather than under it:
  * the card's width on the left, and on a phone — where the card is as wide as
- * the map — its height at the bottom instead.
+ * the map — its measured height at the bottom instead.
  */
-export function legFitPadding(phone: boolean): {
+export function legFitPadding(
+  phone: boolean,
+  cardHeight: number = LEG_CARD_HEIGHT_FALLBACK
+): {
   top: number;
   right: number;
   bottom: number;
@@ -88,6 +91,6 @@ export function legFitPadding(phone: boolean): {
 } {
   const base = { top: 40, right: FRAME_MARGIN, bottom: 40, left: FRAME_MARGIN };
   return phone
-    ? { ...base, bottom: CARD_MARGIN + CARD_HEIGHT + FRAME_MARGIN }
+    ? { ...base, bottom: CARD_MARGIN + cardHeight + FRAME_MARGIN }
     : { ...base, left: CARD_MARGIN + LEG_CARD_WIDTH + FRAME_MARGIN };
 }

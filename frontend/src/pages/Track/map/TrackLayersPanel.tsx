@@ -13,6 +13,7 @@ import {
   type SplitMinutes,
   type TrackMapPrefs,
 } from "./trackMapPrefs";
+import { makeNumber } from "./trackLegFormat";
 import { panelStyle, pillStyle } from "./trackMapStyle";
 
 const rgb = (c: readonly number[]) => `rgb(${c.join(", ")})`;
@@ -46,7 +47,8 @@ export default function TrackLayersPanel({
   /** The ramp's stops for the chosen scale; the legend follows them. */
   speedStops?: ReadonlyArray<{ kmh: number }>;
 }): JSX.Element {
-  const { t } = useTranslation(["track"]);
+  const { t, i18n } = useTranslation(["track"]);
+  const number = makeNumber(i18n.language);
   const coarse = useCoarsePointer();
   const rowMin = coarse ? 44 : 40;
   return (
@@ -122,8 +124,8 @@ export default function TrackLayersPanel({
                 {speedStops.map((s, i) => (
                   <span key={i}>
                     {i === speedStops.length - 1
-                      ? t("track:map.route.kmhMax", { kmh: s.kmh })
-                      : s.kmh}
+                      ? t("track:map.route.kmhMax", { kmh: number(s.kmh, 1) })
+                      : number(s.kmh, 1)}
                   </span>
                 ))}
               </div>
