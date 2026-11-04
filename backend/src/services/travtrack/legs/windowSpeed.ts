@@ -20,6 +20,11 @@ import { isBadVertex } from "./stops";
 export const WINDOW_MS = 30_000;
 export const WINDOW_MAX_MS = 90_000;
 export const WINDOW_ACCURACY_FACTOR = 2;
+/** A trailing remainder shorter than this is too small to carry a speed. */
+const MIN_TAIL_MS = 10_000;
+
+const jumpMps = (a: StoredPoint, b: StoredPoint) =>
+  distanceM({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) / ((b[0] - a[0]) / 1000);
 
 export type SpeedWindow = {
   mps: number;
@@ -40,6 +45,10 @@ export function speedWindows(points: readonly StoredPoint[]): SpeedWindow[] {
   let prev: StoredPoint | null = null;
   points.forEach((p, i) => {
     if (isBadVertex(p)) return;
+    // An isolated jump (a fix that no ground vehicle reaches from the last kept one) is left out,
+    // so it can neither end a window nor anchor the next.
+    if (prev && p[0] > prev[0] && p[0] - prev[0] <= STEP_MAX_MS && jumpMps(prev, p) > MAX_SPEED_MPS)
+      return;
     if (prev && (p[0] - prev[0] > STEP_MAX_MS || p[0] <= prev[0])) anchor = null;
     // A step that spans a window on its own is a sparse fix, judged alone: merging it with
     // its neighbour would blur a stop into a walking pace.
@@ -63,6 +72,14 @@ export function speedWindows(points: readonly StoredPoint[]): SpeedWindow[] {
     anchor = p;
     anchorIdx = i;
   });
+  // The unfinished tail counts when it moved beyond its own noise: sparse data must not lose it.
+  if (anchor && prev && prev[0] - anchor[0] >= MIN_TAIL_MS) {
+    const metres = distanceM({ lat: anchor[1], lon: anchor[2] }, { lat: prev[1], lon: prev[2] });
+    const ms = prev[0] - anchor[0];
+    const noise = WINDOW_ACCURACY_FACTOR * Math.max(anchor[3] ?? 0, prev[3] ?? 0);
+    if (metres >= noise && metres / (ms / 1000) <= MAX_SPEED_MPS)
+      out.push({ mps: metres / (ms / 1000), ms, single: null });
+  }
   return out;
 }
 

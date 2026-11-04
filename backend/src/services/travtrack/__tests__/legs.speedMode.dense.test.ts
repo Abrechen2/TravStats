@@ -129,3 +129,23 @@ describe("speedWindows", () => {
     expect(topWindowSpeedMps(pts)).toBe(0);
   });
 });
+
+describe("speedWindows — review findings", () => {
+  const at = (s: number, northM: number): StoredPoint => [
+    T0 + s * 1000,
+    37.5 + northM / M_PER_DEG,
+    127,
+    5,
+  ];
+
+  it("a single 1 km position error inside a 1 Hz walk does not make a 34 m/s window", () => {
+    const pts = Array.from({ length: 70 }, (_, s) => at(s, s * 1.2 + (s === 30 ? 1000 : 0)));
+    expect(topWindowSpeedMps(pts)!).toBeLessThan(3);
+  });
+
+  it("a three-minute ride sampled every 20 s keeps its trailing movement", () => {
+    const pts = Array.from({ length: 10 }, (_, k) => at(k * 20, k * 20 * 5));
+    const total = speedWindows(pts).reduce((t, w) => t + w.ms, 0);
+    expect(total).toBe(180_000);
+  });
+});
