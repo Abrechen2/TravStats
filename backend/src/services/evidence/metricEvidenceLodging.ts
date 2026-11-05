@@ -1,3 +1,4 @@
+import { prisma } from "../../db";
 import { isPerfectStay, storedRatingsOf } from "../../shared/ratingDerivation";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
@@ -56,6 +57,8 @@ export interface ScopedLodging {
   /** Lodging id → the state of each of its stays, for `classifyLodging`. */
   statesByLodgingId: Map<string, LodgingCountState[]>;
   baseCurrency: string;
+  /** Own rating category id -> name (deleted ones too: a stay may still carry them). */
+  ownCategoryNames: Map<string, string>;
 }
 
 /** One stay with everything a measure reads, resolved once. */
@@ -97,6 +100,10 @@ export async function loadScoped(
   const year = readYearScope(scope, key);
   const data = await loadLodgingStatsData(userId, year);
   const stays = data.rows.map(viewOf);
+  const ownCategories = await prisma.lodgingRatingCategory.findMany({
+    where: { userId },
+    select: { id: true, name: true },
+  });
   const statesByLodgingId = new Map<string, LodgingCountState[]>();
   for (const stay of stays) {
     const bucket = statesByLodgingId.get(stay.data.lodgingId);
@@ -109,6 +116,7 @@ export async function loadScoped(
     houses: data.houses,
     statesByLodgingId,
     baseCurrency: data.baseCurrency,
+    ownCategoryNames: new Map(ownCategories.map((c) => [c.id, c.name])),
   };
 }
 

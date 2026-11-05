@@ -39,7 +39,12 @@ export interface DomainSummary {
    *  item labels are data — airline and chain names — and stay untranslated. */
   topItems?: {
     titleKey: string;
-    items: Array<{ label: string; value: number }>;
+    items: Array<{
+      label: string;
+      value: number;
+      /** The label is the user's own text (an own category name): shown as written, never looked up as a key. */
+      plain?: boolean;
+    }>;
     /**
      * Set when the labels are CODES rather than names — place categories
      * ("viewpoint") — so the card translates them under this key prefix.

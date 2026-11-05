@@ -331,6 +331,7 @@
       "title": "Vorschau ({{count}} Zeilen)",
       "title_one": "Vorschau ({{count}} Zeile)",
       "title_other": "Vorschau ({{count}} Zeilen)",
+      "unmappedRatings": "Diese Spalten gehören zu Bewertungskategorien, die es in deinem Konto nicht gibt, und werden nicht importiert: {{columns}}. Lege die Kategorie unter Einstellungen an und importiere erneut.",
       "commit": "Auswahl importieren",
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",

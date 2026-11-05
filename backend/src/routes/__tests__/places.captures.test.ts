@@ -135,6 +135,28 @@ describe("place captures", () => {
     expect(visit.visitedAtUtc?.toISOString()).toBe("2026-10-04T05:30:00.000Z");
   });
 
+  it("resolve accepts the caller's own category, and refuses an unknown or another user's with PLACE_CATEGORY_UNKNOWN", async () => {
+    await prisma.placeCategoryDef.create({ data: { userId, name: "Schwimmbad" } });
+    await prisma.placeCategoryDef.create({ data: { userId: otherId, name: "Fremd" } });
+    try {
+      const own = (await create().expect(201)).body.data;
+      const ok = await resolve(own.id, { name: "Bad", category: "Schwimmbad" }).expect(200);
+      const place = await prisma.place.findFirst({ where: { id: ok.body.data.placeId } });
+      expect(place?.category).toBe("Schwimmbad");
+
+      const second = (await create().expect(201)).body.data;
+      const unknown = await resolve(second.id, { name: "X", category: "Nope" }).expect(400);
+      expect(unknown.body.code).toBe("PLACE_CATEGORY_UNKNOWN");
+      const foreign = await resolve(second.id, { name: "X", category: "Fremd" }).expect(400);
+      expect(foreign.body.code).toBe("PLACE_CATEGORY_UNKNOWN");
+      // The refused answers left the capture open.
+      const still = await prisma.placeCapture.findFirst({ where: { id: second.id } });
+      expect(still?.status).toBe("open");
+    } finally {
+      await prisma.placeCategoryDef.deleteMany({ where: { userId: { in: [userId, otherId] } } });
+    }
+  });
+
   it("resolve with an owned placeId reuses it and adds the visit; a foreign placeId is refused", async () => {
     const existing = await prisma.place.create({
       data: { userId, name: "Bestand", lat: 1, lon: 2, category: "other" },

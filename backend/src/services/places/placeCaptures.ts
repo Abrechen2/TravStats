@@ -8,6 +8,7 @@ import { visitPromotesPlace } from "../../shared/placeCounting";
 import { completeAddressFromCoordinates } from "../geo/nominatim";
 import { visitTimeColumns } from "../../routes/places/visitTime";
 import { tripForVisitDay } from "./visitTrip";
+import { assertPlaceCategoryAllowed } from "./placeCategoryDefs";
 import type { CreateCaptureInput, ResolveCaptureInput } from "../../schemas/placeCapture";
 
 /**
@@ -113,6 +114,8 @@ export async function resolveCapture(
 ): Promise<PlaceCapture> {
   const capture = await ownedCapture(userId, id);
   if (capture.status !== "open") throw alreadyResolved();
+  // Built-in or one of the caller's own - never an arbitrary string.
+  if (input.category !== undefined) await assertPlaceCategoryAllowed(userId, input.category);
 
   const chosen = input.placeId
     ? await prisma.place.findFirst({ where: { id: input.placeId, userId } })

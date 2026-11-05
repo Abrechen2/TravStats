@@ -2,7 +2,9 @@ import http from "http";
 import type { AddressInfo } from "net";
 import {
   LODGING_CSV_FIELDS,
+  ratingFieldForName,
   suggestLodgingCsvMapping,
+  suggestLodgingCsvMappingDetailed,
 } from "../services/lodging/mappingSuggestion";
 
 jest.mock("../services/parserSettings", () => ({
@@ -349,5 +351,47 @@ describe("suggestLodgingCsvMapping", () => {
         await server.close();
       }
     });
+  });
+});
+
+describe("rating category columns in the mapping suggestion", () => {
+  const own = [{ key: "custom:abc", name: "Aussicht" }];
+
+  it("maps a name to a built-in key or an own category, case-insensitively", () => {
+    expect(ratingFieldForName("Bed", own)).toBe("rating:bed");
+    expect(ratingFieldForName("WIFI", own)).toBe("rating:wifi");
+    expect(ratingFieldForName("aussicht", own)).toBe("rating:custom:abc");
+    expect(ratingFieldForName("Room", own)).toBe("ratingRoom");
+    expect(ratingFieldForName("Service", own)).toBe("ratingService");
+    expect(ratingFieldForName("Pool", own)).toBeNull();
+  });
+
+  it("keeps a named category and reports an unknown one instead of creating it", async () => {
+    const server = await createMockOllamaServer((req, res) => {
+      respondJson(
+        res,
+        200,
+        ollamaEnvelope(
+          JSON.stringify({
+            mapping: {
+              name: "Hotel",
+              "rating:aussicht": "Anreise",
+              "rating:Pool": "Abreise",
+            },
+          })
+        )
+      );
+    });
+    try {
+      const out = await suggestLodgingCsvMappingDetailed(HEADERS, SAMPLE_ROWS, {
+        url: server.url,
+        model: "mock",
+        ownCategories: own,
+      });
+      expect(out.mapping).toEqual({ name: "Hotel", "rating:custom:abc": "Anreise" });
+      expect(out.unmappedRatings).toEqual([{ name: "Pool", header: "Abreise" }]);
+    } finally {
+      await server.close();
+    }
   });
 });

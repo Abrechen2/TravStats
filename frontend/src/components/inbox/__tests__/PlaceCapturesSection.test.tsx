@@ -14,6 +14,13 @@ vi.mock("../../../lib/api/placeCaptures", () => ({
   placeCapturesApi: { listOpen: vi.fn(), resolve: vi.fn(), dismiss: vi.fn() },
 }));
 
+vi.mock("../../../hooks/usePlaceCategories", () => ({
+  usePlaceCategories: () => ({
+    customs: [{ id: "pc-1", name: "Aus.sicht", icon: null }],
+    reload: vi.fn(),
+  }),
+}));
+
 const capture = (over: Partial<PlaceCapture> = {}): PlaceCapture => ({
   id: "cap-1",
   clientId: "c-1",
@@ -82,6 +89,25 @@ describe("PlaceCapturesSection", () => {
       })
     );
     await waitFor(() => expect(screen.queryByText("Café am Fluss")).not.toBeInTheDocument());
+  });
+
+  it("offers the user's own categories when naming a capture and sends the name as written", async () => {
+    vi.mocked(placeCapturesApi.listOpen)
+      .mockResolvedValueOnce([capture()])
+      .mockResolvedValueOnce([]);
+    vi.mocked(placeCapturesApi.resolve).mockResolvedValue(capture({ status: "resolved" }));
+    render(<PlaceCapturesSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "dataQuality:placeCaptures.name" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Hof Café" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "Aus.sicht" } });
+    expect(screen.getByRole("option", { name: "Aus.sicht" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "dataQuality:placeCaptures.save" }));
+    await waitFor(() =>
+      expect(placeCapturesApi.resolve).toHaveBeenCalledWith("cap-1", {
+        name: "Hof Café",
+        category: "Aus.sicht",
+      })
+    );
   });
 
   it("keeps the row and shows the reason when naming fails", async () => {

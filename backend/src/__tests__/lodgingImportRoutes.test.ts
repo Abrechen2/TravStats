@@ -30,7 +30,13 @@ jest.mock("../services/lodging/geocodeBackfill", () => ({
 
 jest.mock("../services/lodging/mappingSuggestion", () => {
   const actual = jest.requireActual("../services/lodging/mappingSuggestion");
-  return { ...actual, suggestLodgingCsvMapping: jest.fn(async () => ({ name: "Hotel" })) };
+  return {
+    ...actual,
+    suggestLodgingCsvMappingDetailed: jest.fn(async () => ({
+      mapping: { name: "Hotel" },
+      unmappedRatings: [{ name: "Pool", header: "Anreise" }],
+    })),
+  };
 });
 
 describe("/api/v1/lodging-import", () => {
@@ -182,6 +188,8 @@ describe("/api/v1/lodging-import", () => {
       });
     expect(res.status).toBe(200);
     expect(res.body.data.mapping).toEqual({ name: "Hotel" });
+    // Rating columns for a category the account lacks come back as a report.
+    expect(res.body.data.unmappedRatings).toEqual([{ name: "Pool", header: "Anreise" }]);
   });
 
   // ---- Cross-user isolation (IDOR) ----

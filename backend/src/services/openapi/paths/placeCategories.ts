@@ -33,6 +33,7 @@ registry.registerPath({
   summary: "Add an own place category",
   description:
     "409 `PLACE_CATEGORY_BUILT_IN` when a built-in category already has the name, " +
+    "`PLACE_CATEGORY_RESERVED` for a name the category filter owns (`all`), " +
     "`PLACE_CATEGORY_EXISTS` for a repeat. 400 `PLACE_CATEGORY_LIMIT` past 50.",
   tags: tag,
   request: { body: { content: { "application/json": { schema: createPlaceCategorySchema } } } },

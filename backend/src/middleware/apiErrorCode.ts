@@ -114,6 +114,7 @@ export type ApiErrorCode =
    *  programme is gone instead of showing an unfiltered or empty page. */
   | "LOYALTY_MEMBERSHIP_NOT_FOUND"
   | "PLACE_CATEGORY_BUILT_IN"
+  | "PLACE_CATEGORY_RESERVED"
   | "PLACE_CATEGORY_EXISTS"
   | "PLACE_CATEGORY_LIMIT"
   | "PLACE_CATEGORY_NOT_FOUND"

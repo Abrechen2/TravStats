@@ -13,7 +13,7 @@ vi.mock("../../../lib/api/lodgingImport", () => ({
     skipped: 0,
     failed: [],
   })),
-  suggestLodgingCsvMapping: vi.fn(async () => ({})),
+  suggestLodgingCsvMappingDetailed: vi.fn(async () => ({ mapping: {}, unmappedRatings: [] })),
 }));
 
 describe("useLodgingImportAdapter", () => {

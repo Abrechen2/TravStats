@@ -161,6 +161,7 @@ export function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
     stay.ratingBreakfast == null &&
     stay.ratingService == null &&
     stay.ratingOverall == null &&
+    Object.values(stay.ratings ?? {}).every((v) => v == null) &&
     stay.bookingReference == null &&
     stay.externalRef == null &&
     stay.notes == null

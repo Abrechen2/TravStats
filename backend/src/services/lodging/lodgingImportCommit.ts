@@ -17,7 +17,7 @@ import type {
   StayCandidateFields,
 } from "../../schemas/lodgingImport";
 import { normalizeLodgingName } from "./lodgingImportPreview";
-import { mergeRatings, ratingColumns } from "./stayRatings";
+import { assertRatingKeysValid, mergeRatings, ratingColumns } from "./stayRatings";
 import { minorUnits } from "../../shared/currencies";
 import { findOrCreateOwnChain, findVisibleChainByName } from "./chainScope";
 import { stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
@@ -437,6 +437,11 @@ export async function commitLodgingImport(
   fileName: string | null,
   rows: CommitRowInput[]
 ): Promise<CommitResult> {
+  // Before anything is written: a category key that is not the caller's own
+  // refuses the request instead of half-importing it.
+  const sentRatings: Record<string, number | null> = {};
+  for (const row of rows) Object.assign(sentRatings, row.stay?.ratings);
+  await assertRatingKeysValid(userId, sentRatings);
   const batch = await prisma.importBatch.create({
     data: { userId, domain: "lodging", source, fileName },
   });

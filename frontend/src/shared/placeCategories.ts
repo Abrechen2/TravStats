@@ -100,6 +100,19 @@ const BUILT_IN_CATEGORY_LABELS = [
   "other",
 ];
 
+/**
+ * Values the places list's category filter owns. A custom category with one of
+ * these names would be indistinguishable from the filter's own option ("all" =
+ * no filter), so such a name is refused. Mirrored on both sides.
+ */
+export const PLACE_CATEGORY_FILTER_ALL = "all";
+export const RESERVED_PLACE_CATEGORY_NAMES: readonly string[] = [PLACE_CATEGORY_FILTER_ALL];
+
+/** Whether a custom category name is a value the category filter reserves. */
+export function isReservedPlaceCategoryName(name: string): boolean {
+  return RESERVED_PLACE_CATEGORY_NAMES.includes(name.trim().toLowerCase());
+}
+
 /** Whether a custom category name collides with a built-in one. */
 export function collidesWithBuiltInCategory(name: string): boolean {
   const folded = name.trim().toLowerCase();

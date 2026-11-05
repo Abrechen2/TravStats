@@ -60,6 +60,7 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
       setError(
         saveErrorMessage(err, t, "places:customCategories.errors.generic", {
           PLACE_CATEGORY_BUILT_IN: "places:customCategories.errors.builtIn",
+          PLACE_CATEGORY_RESERVED: "places:customCategories.errors.reserved",
           PLACE_CATEGORY_EXISTS: "places:customCategories.errors.exists",
           PLACE_CATEGORY_LIMIT: "places:customCategories.errors.limit",
         })

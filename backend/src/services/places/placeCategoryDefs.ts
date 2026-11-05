@@ -4,6 +4,7 @@ import { Prisma } from "../../prisma";
 import {
   PLACE_CATEGORY_MAX_PER_USER,
   collidesWithBuiltInCategory,
+  isReservedPlaceCategoryName,
   isPlaceCategory,
 } from "../../shared/placeCategories";
 
@@ -38,13 +39,25 @@ export async function createPlaceCategoryDef(
   if (collidesWithBuiltInCategory(input.name)) {
     throw new AppError("A built-in category already has this name", 409, "PLACE_CATEGORY_BUILT_IN");
   }
-  const count = await prisma.placeCategoryDef.count({ where: { userId } });
-  if (count >= PLACE_CATEGORY_MAX_PER_USER) {
-    throw new AppError("Too many place categories", 400, "PLACE_CATEGORY_LIMIT");
+  if (isReservedPlaceCategoryName(input.name)) {
+    throw new AppError(
+      "This name is reserved for the category filter",
+      409,
+      "PLACE_CATEGORY_RESERVED"
+    );
   }
   try {
-    return await prisma.placeCategoryDef.create({
-      data: { userId, name: input.name, icon: input.icon ?? null },
+    // The count and the insert are one critical section per user: two creates
+    // arriving together would otherwise both read 49 and both write the 50th.
+    return await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('place_categories'), hashtext(${userId}))`;
+      const count = await tx.placeCategoryDef.count({ where: { userId } });
+      if (count >= PLACE_CATEGORY_MAX_PER_USER) {
+        throw new AppError("Too many place categories", 400, "PLACE_CATEGORY_LIMIT");
+      }
+      return tx.placeCategoryDef.create({
+        data: { userId, name: input.name, icon: input.icon ?? null },
+      });
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

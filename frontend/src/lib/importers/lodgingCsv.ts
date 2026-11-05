@@ -49,7 +49,25 @@ export const LODGING_CSV_FIELDS = [
   "notes",
 ] as const;
 export type LodgingCsvField = (typeof LODGING_CSV_FIELDS)[number];
-export type LodgingCsvMapping = Partial<Record<LodgingCsvField, string>>;
+/**
+ * A mapping key is a fixed field, or `rating:<category key>` for a rating
+ * category without a column of its own (built-in `bed` ... `quiet`, own
+ * `custom:<id>`). The three legacy categories keep their fixed fields.
+ */
+export type LodgingMappingKey = LodgingCsvField | `rating:${string}`;
+export type LodgingCsvMapping = Partial<Record<LodgingMappingKey, string>>;
+
+export const RATING_FIELD_PREFIX = "rating:";
+
+/** A rating category the account can map a column to, beyond the legacy three. */
+export interface RatingColumnTarget {
+  /** Key on a stay's `ratings` map: `bed`, `custom:<id>`. */
+  key: string;
+  /** Already-translated name (built-in) or the user's own text. */
+  label: string;
+}
+
+const isRatingKey = (key: string): key is `rating:${string}` => key.startsWith(RATING_FIELD_PREFIX);
 
 /**
  * German first — both real source files (the owner's places export and
@@ -114,15 +132,37 @@ export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
 /** `name` is the only required column: every shape needs something to key on. */
 const REQUIRED_FIELDS: LodgingCsvField[] = ["name"];
 
+/**
+ * The wizard compares headers with everything but a-z and 0-9 stripped. A name
+ * that loses letters to that ("景色" becomes "") would match any header that is
+ * just the prefix, or every other such name - so it gets no aliases and the
+ * user maps its column by hand.
+ */
+function aliasesForCategoryLabel(label: string): string[] {
+  const letters = label.replace(/[^\p{L}\p{N}]/gu, "");
+  const kept = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (letters.length === 0 || kept.length !== letters.length) return [];
+  return [label, `bew ${label}`, `bewertung ${label}`, `rating ${label}`, `${label} bewertung`];
+}
+
 export function buildLodgingMappingFields(
-  label: (field: LodgingCsvField) => string
-): MappingFieldSpec<LodgingCsvField>[] {
-  return LODGING_CSV_FIELDS.map((field) => ({
+  label: (field: LodgingCsvField) => string,
+  ratingTargets: readonly RatingColumnTarget[] = []
+): MappingFieldSpec<LodgingMappingKey>[] {
+  const fixed: MappingFieldSpec<LodgingMappingKey>[] = LODGING_CSV_FIELDS.map((field) => ({
     key: field,
     label: label(field),
     required: REQUIRED_FIELDS.includes(field),
     aliases: LODGING_FIELD_ALIASES[field],
   }));
+  // A column named after a category (case-insensitive, via the wizard's
+  // normalisation), with or without "Bewertung"/"Bew."/"rating" in front.
+  const categories = ratingTargets.map((target) => ({
+    key: `${RATING_FIELD_PREFIX}${target.key}` as const,
+    label: target.label,
+    aliases: aliasesForCategoryLabel(target.label),
+  }));
+  return [...fixed, ...categories];
 }
 
 const LODGING_ONLY: LodgingCsvField[] = [
@@ -163,7 +203,9 @@ export type LodgingCsvShape = "places" | "stays" | "both";
  */
 export function detectCsvShape(mapping: LodgingCsvMapping): LodgingCsvShape {
   const hasLodging = LODGING_ONLY.some((f) => !!mapping[f]);
-  const hasStay = STAY_ONLY.some((f) => !!mapping[f]);
+  const hasStay =
+    STAY_ONLY.some((f) => !!mapping[f]) ||
+    Object.entries(mapping).some(([key, header]) => isRatingKey(key) && !!header);
   if (hasLodging && hasStay) return "both";
   if (hasStay) return "stays";
   return "places";
@@ -608,6 +650,16 @@ function buildStayFields(
     ...rangedCellError("overall rating", cell(record, m.ratingOverall), ratingOverallCell)
   );
 
+  // One entry per mapped category column; an empty cell is simply absent.
+  const ratings: Record<string, number> = {};
+  for (const [key, header] of Object.entries(m)) {
+    if (!isRatingKey(key) || !header) continue;
+    const categoryKey = key.slice(RATING_FIELD_PREFIX.length);
+    const categoryCell = toRating(cell(record, header));
+    errors.push(...rangedCellError(`${categoryKey} rating`, cell(record, header), categoryCell));
+    if (categoryCell.value !== null) ratings[categoryKey] = categoryCell.value;
+  }
+
   return {
     fields: {
       checkIn,
@@ -625,6 +677,7 @@ function buildStayFields(
       // overall from the components and only keeps this for a stay that
       // carries none (shared/ratingDerivation.ts).
       ratingOverall: ratingOverallCell.value,
+      ...(Object.keys(ratings).length > 0 ? { ratings } : {}),
       bookingReference: cell(record, m.bookingReference) || null,
       // A CSV row never carries a booking-confirmation externalRef — that only
       // arrives via the email/PDF parser.

@@ -55,6 +55,29 @@ describe("evidenceText against the real resources", () => {
     expect(composeI18nText(AIRPORT_SUBTITLE, translate)).toBe("BCN → MUC · arrival");
   });
 
+  it("a lodging rating subtitle lists the categories the stay carries, own ones by name", async () => {
+    const subtitle = {
+      key: "evidence.subtitle.ratings",
+      values: {
+        overall: 4,
+        "r.room": 5,
+        "r.bed": 2,
+        "r.custom:x": 5,
+        "n.custom:x": "Aussicht (Balkon)",
+      },
+    };
+    await i18n.changeLanguage("de");
+    expect(composeI18nText(subtitle, translate)).toBe(
+      "Gesamt 4 · Zimmer 5 · Bett 2 · Aussicht (Balkon) 5"
+    );
+    await i18n.changeLanguage("en");
+    expect(composeI18nText({ ...subtitle }, translate)).toBe(
+      "Overall 4 · Zimmer 5 · Bett 2 · Aussicht (Balkon) 5"
+        .replace("Zimmer", "Room")
+        .replace("Bett", "Bed")
+    );
+  });
+
   // Acceptance D8 (2026-09-26): one rail ride read "1 Fahrten".
   it("says one ride in the singular and two in the plural, in both locales", async () => {
     const rides = (value: number): EvidenceMeasure =>

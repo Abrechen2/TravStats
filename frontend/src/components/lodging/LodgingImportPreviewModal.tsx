@@ -29,6 +29,8 @@ export interface LodgingImportPreviewModalProps {
    * this said "Bitte prüfe und entscheide" over rows already decided.
    */
   summary: LodgingImportSummary;
+  /** CSV rating columns whose category name this account does not have: listed, not imported. */
+  unmappedRatings?: { name: string; header: string }[];
   /**
    * Called with the user's final decisions. Rows the user left as
    * `needs_input` are excluded. NOTE: this modal never sees the commit
@@ -81,6 +83,7 @@ function skippedRow(sourceRowIndex: number): LodgingImportCommitRow {
  */
 export function LodgingImportPreviewModal({
   rows,
+  unmappedRatings = [],
   onCommit,
   onCancel,
 }: LodgingImportPreviewModalProps): JSX.Element {
@@ -304,6 +307,13 @@ export function LodgingImportPreviewModal({
       {counts.blocked > 0 && (
         <p data-testid="lodging-import-blocked-hint" className="mb-3 text-xs text-amber-300/90">
           {t("lodging:import.preview.blockedHint", { count: counts.blocked })}
+        </p>
+      )}
+      {unmappedRatings.length > 0 && (
+        <p data-testid="lodging-import-unmapped-ratings" className="mb-3 text-xs text-amber-300/90">
+          {t("lodging:import.preview.unmappedRatings", {
+            columns: unmappedRatings.map((u) => `${u.header} (${u.name})`).join(", "),
+          })}
         </p>
       )}
       {pricesWithoutCurrency > 0 && (

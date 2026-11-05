@@ -59,6 +59,26 @@ describe("own place categories", () => {
     await cat("Freizeitpark", "💥").expect(400);
   });
 
+  it("refuses a name the category filter reserves, whatever its case, with a stable code", async () => {
+    for (const name of ["all", "ALL", " All "]) {
+      const res = await cat(name).expect(409);
+      expect(res.body.code).toBe("PLACE_CATEGORY_RESERVED");
+    }
+  });
+
+  it("holds the 50-category cap when creates arrive together", async () => {
+    await prisma.placeCategoryDef.createMany({
+      data: Array.from({ length: 45 }, (_, i) => ({ userId, name: `Vorhanden ${i}` })),
+    });
+    const results = await Promise.all(
+      Array.from({ length: 12 }, (_, i) => cat(`Gleichzeitig ${i}`))
+    );
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses.filter((s) => s === 201)).toHaveLength(5);
+    expect(statuses.filter((s) => s === 400)).toHaveLength(7);
+    expect(await prisma.placeCategoryDef.count({ where: { userId } })).toBe(50);
+  });
+
   it("lets a place carry an own category but refuses an unknown name and another user's", async () => {
     await cat("Freizeitpark", "🎢").expect(201);
     const ok = await place({ name: "Europa-Park", category: "Freizeitpark" }).expect(201);

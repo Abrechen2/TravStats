@@ -17,7 +17,9 @@ import {
   revertLodgingImportBatch,
 } from "../services/lodging/lodgingImportBatches";
 import { backfillLodgingLocations } from "../services/lodging/geocodeBackfill";
-import { suggestLodgingCsvMapping } from "../services/lodging/mappingSuggestion";
+import { suggestLodgingCsvMappingDetailed } from "../services/lodging/mappingSuggestion";
+import { prisma } from "../db";
+import { customCategoryKey } from "../shared/ratingCategories";
 import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
 
 // Mounted at /api/v1/lodging-import — deliberately NOT under
@@ -161,10 +163,16 @@ router.post(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
       // Never throws — `{}` means "use your heuristic".
-      const mapping = await suggestLodgingCsvMapping(parsed.data.headers, parsed.data.sampleRows, {
-        userId,
+      const own = await prisma.lodgingRatingCategory.findMany({
+        where: { userId, deletedAt: null },
+        select: { id: true, name: true },
       });
-      res.json({ success: true, data: { mapping } });
+      const { mapping, unmappedRatings } = await suggestLodgingCsvMappingDetailed(
+        parsed.data.headers,
+        parsed.data.sampleRows,
+        { userId, ownCategories: own.map((c) => ({ key: customCategoryKey(c.id), name: c.name })) }
+      );
+      res.json({ success: true, data: { mapping, unmappedRatings } });
     } catch (err) {
       next(err);
     }

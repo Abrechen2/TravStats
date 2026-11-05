@@ -39,7 +39,7 @@ import type { PlaceList } from "../types/placeList";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
-import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { PLACE_CATEGORIES, PLACE_CATEGORY_FILTER_ALL } from "../shared/placeCategories";
 import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { classifyPlace } from "../shared/placeCounting";
@@ -167,7 +167,7 @@ export default function PlacesListPage(): JSX.Element {
   const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("all");
+  const [category, setCategory] = useState<CategoryFilter>(PLACE_CATEGORY_FILTER_ALL);
   const [country, setCountry] = useState<CountryFilter>("all");
   /** Which list a place must belong to. "all" = every place. A filter, not
    *  a mode: it changes WHICH rows are shown, never what one means. */
@@ -246,7 +246,7 @@ export default function PlacesListPage(): JSX.Element {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const out = rows.filter((p) => {
-      if (category !== "all" && p.category !== category) return false;
+      if (category !== PLACE_CATEGORY_FILTER_ALL && p.category !== category) return false;
       if (country !== "all" && p.isoCountryCode !== country) return false;
       if (listMembers && !listMembers.has(p.id)) return false;
       if (visited !== "all") {
@@ -322,7 +322,7 @@ export default function PlacesListPage(): JSX.Element {
 
   const hasActiveFilter =
     search.trim() !== "" ||
-    category !== "all" ||
+    category !== PLACE_CATEGORY_FILTER_ALL ||
     country !== "all" ||
     listId !== "all" ||
     visited !== "all";
@@ -358,7 +358,7 @@ export default function PlacesListPage(): JSX.Element {
 
   const resetFilters = useCallback((): void => {
     setSearch("");
-    setCategory("all");
+    setCategory(PLACE_CATEGORY_FILTER_ALL);
     setCountry("all");
     setListId("all");
     setVisited("all");
@@ -513,7 +513,9 @@ export default function PlacesListPage(): JSX.Element {
                   value={category}
                   onChange={(e) => setCategory(e.target.value as CategoryFilter)}
                 >
-                  <option value="all">{t("places:filter.allCategories")}</option>
+                  <option value={PLACE_CATEGORY_FILTER_ALL}>
+                    {t("places:filter.allCategories")}
+                  </option>
                   {PLACE_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
                       {placeCategoryLabel(t, c)}
@@ -560,7 +562,9 @@ export default function PlacesListPage(): JSX.Element {
               </FilterField>
             </>
           }
-          extraActiveCount={(category !== "all" ? 1 : 0) + (country !== "all" ? 1 : 0)}
+          extraActiveCount={
+            (category !== PLACE_CATEGORY_FILTER_ALL ? 1 : 0) + (country !== "all" ? 1 : 0)
+          }
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
           resultLabel={

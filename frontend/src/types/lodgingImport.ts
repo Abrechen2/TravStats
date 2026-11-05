@@ -58,6 +58,8 @@ export interface StayCandidateFields {
   ratingService?: number | null;
   /** Sent as the source gave it; the backend re-derives it from the components. */
   ratingOverall?: number | null;
+  /** Every other category a CSV column was mapped to: built-in key or `custom:<id>`. */
+  ratings?: Record<string, number | null>;
   bookingReference?: string | null;
   /** "booking:<confirmation number>" — see LodgingStay.externalRef. */
   externalRef?: string | null;
