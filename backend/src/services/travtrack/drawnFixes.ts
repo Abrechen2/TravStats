@@ -1,7 +1,5 @@
 import { privacySafeStretches } from "../tripRecording/privacySafe";
-import type { StoredPoint } from "../tripRecording/segments";
-import { isBadFix } from "../locationEvidence/anomaly";
-import { MAX_DRAWN_ACCURACY_M } from "./legs/stops";
+import { badVertexIn } from "./legs/stops";
 import type { SafeSpan } from "./readSafe";
 
 /**
@@ -21,14 +19,14 @@ import type { SafeSpan } from "./readSafe";
 export function withoutBadVertices<T extends Pick<SafeSpan, "segments" | "circles">>(read: T): T {
   // Dropping a vertex makes a chord the raw points never had, and one may cross a zone:
   // the privacy cut is applied once more on the result (as the range view does).
-  const valid = read.segments.map((s): StoredPoint[] =>
-    s.filter((p) => !isBadFix({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] }))
-  );
-  const isCoarse = (p: StoredPoint) => p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M;
   // Per stretch, not per read: a range read spans days, and a coarse-only day must not
-  // vanish because another day in the same read has a fine fix.
+  // vanish because another day in the same read has a fine fix. The verdict is
+  // `badVertexIn`, the same one dwell detection uses.
   const segments = privacySafeStretches(
-    valid.map((s) => (s.some((p) => !isCoarse(p)) ? s.filter((p) => !isCoarse(p)) : s)),
+    read.segments.map((s) => {
+      const bad = badVertexIn(s);
+      return s.filter((p) => !bad(p));
+    }),
     read.circles
   ).filter((s) => s.length > 0);
   return { ...read, segments };
