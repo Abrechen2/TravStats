@@ -235,6 +235,73 @@ describe("flights that are train or bus rides", () => {
     expect(await prisma.railJourney.count({ where: { userId } })).toBe(1);
   });
 
+  it("carries taxes and fees into the ride's total instead of dropping them", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({
+      where: { id: train.id },
+      data: { price: 100, taxes: 12, fees: 3, currency: "EUR" },
+    });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+    const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
+    expect(ride.price).toBe(115);
+    expect(ride.notes).toContain("Taxes 12.00");
+    expect(ride.notes).toContain("Fees 3.00");
+  });
+
+  it("refuses instead of truncating a value longer than the ride's column", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({
+      where: { id: train.id },
+      data: { bookingReference: "R".repeat(41) },
+    });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: "invalidAction", reason: "valueTooLong" });
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+  });
+
+  it("keeps a date-only arrival as that day instead of dropping it", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({
+      where: { id: train.id },
+      data: { arrPrecision: "day", arrivalTime: new Date("2026-09-10T12:00:00Z") },
+    });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+    const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
+    expect(ride.arrivalTime).not.toBeNull();
+    expect(ride.arrPrecision).toBe("day");
+  });
+
+  it("upserts companions inside the transaction: preparing writes none, a rollback leaves none", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({ where: { id: train.id }, data: { companions: ["Anna"] } });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+
+    const prepared = await prepareSurfaceConversion(row);
+    expect(await prisma.companion.count({ where: { userId } })).toBe(0);
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await prepared.commit(tx);
+        throw new Error("boom");
+      })
+    ).rejects.toThrow("boom");
+    expect(await prisma.companion.count({ where: { userId } })).toBe(0);
+
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+    expect(await prisma.companion.count({ where: { userId } })).toBe(1);
+    const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
+    expect(ride.companions).toEqual(["Anna"]);
+  });
+
   it("files a bus ride for a BUS flight", async () => {
     const { train } = await seed(userId);
     await prisma.flight.update({ where: { id: train.id }, data: { aircraft: "BUS" } });

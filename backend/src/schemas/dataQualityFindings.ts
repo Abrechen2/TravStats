@@ -56,6 +56,8 @@ export const INVALID_ACTION_REASONS = [
   "noPosition",
   /** `convert`: the flight has no certain departure time. */
   "noTime",
+  /** `convert`: a value (seat, booking reference, operator, number) is longer than the ride's column. */
+  "valueTooLong",
 ] as const;
 export type InvalidActionReason = (typeof INVALID_ACTION_REASONS)[number];
 

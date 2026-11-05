@@ -37,7 +37,11 @@ import {
 import { describeRoutingAvailability } from "../services/tour/routing/resolveProvider";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import { busYear } from "../shared/busCounting";
-import { resolveCompanions } from "../services/companionService";
+import {
+  planCompanions,
+  resolveCompanions,
+  upsertPlannedCompanions,
+} from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { idsInLocalYear } from "../services/transport/localYear";
 import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
@@ -313,7 +317,7 @@ export async function prepareBusRide(userId: string, body: unknown): Promise<Pre
   const line = await fetchBusLine(userId, merged);
   const edit: BusLineEdit = { kind: "fetched", line };
   const state = withRoutedDistance(merged, null, edit);
-  const companions = await resolveCompanions(userId, input.companions ?? []);
+  const plannedCompanions = planCompanions(input.companions ?? []);
   const fxColumns = await fxColumnsFor(
     { amount: input.price, currency: input.currency, date: state.departureTime },
     await getBaseCurrency(userId)
@@ -327,9 +331,11 @@ export async function prepareBusRide(userId: string, body: unknown): Promise<Pre
         ...busGeometryColumns(line),
         ...fxColumns,
         userId,
-        companions: companions.map((c) => c.displayName),
+        companions: plannedCompanions.map((c) => c.displayName),
       },
     });
+    // Upserted here, inside the transaction: the preparation above writes nothing.
+    const companions = await upsertPlannedCompanions(tx, userId, plannedCompanions);
     await linkCompanions(tx.busJourneyCompanion, "busJourneyId", created.id, companions);
     await propagateWrite(tx, userId, "bus", created.id);
     await claim(tx, created.id);

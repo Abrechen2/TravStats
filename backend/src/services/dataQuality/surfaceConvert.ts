@@ -2,6 +2,7 @@ import type { DbTransaction } from "../../db";
 import { prisma } from "../../db";
 import { Prisma, type DataQualityFlag } from "../../prisma";
 import { surfaceSegmentDetailsSchema } from "../../schemas/dataQualityRecordChecks";
+import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { prepareBusRide } from "../../routes/bus";
 import { prepareRailRide } from "../../routes/rail";
@@ -38,6 +39,20 @@ export interface PreparedConversion {
 }
 
 const clean = (value: string | null | undefined): string | null => value?.trim() || null;
+
+/**
+ * A value that must arrive whole. The ride's columns are shorter than the
+ * flight's; cutting a booking reference or a seat would store something that
+ * is no longer the value, so a value that does not fit refuses the conversion
+ * (`valueTooLong`) and the flight stays as it is.
+ */
+function whole(value: string | null | undefined, max: number): string | null {
+  const text = clean(value);
+  if (text !== null && text.length > max) {
+    throw new FindingActionError("invalidAction", "valueTooLong");
+  }
+  return text;
+}
 
 /** A flight end with no coordinates is stored at 0/0 — never a position. */
 const hasPosition = (lat: number, lon: number): boolean => !(lat === 0 && lon === 0);
@@ -104,19 +119,58 @@ export async function prepareSurfaceConversion(flag: DataQualityFlag): Promise<P
       ? null
       : "later";
   const departureLocal = instantToWallClock(record.departureAt, depZone);
-  const arrivalLocal = record.arrivalAt ? instantToWallClock(record.arrivalAt, arrZone) : null;
+  // A date-only arrival (precision "day") names a day, not an instant:
+  // it travels as that day, which the ride's time model keeps at day precision.
+  const arrivalDay =
+    flight.arrivalTime && flight.arrPrecision === "day"
+      ? localWallClockOf(
+          flight.arrivalTime,
+          arrZone,
+          flight.arrTimeSemantics as FlightTimeSemantics,
+          flight.arrPrecision
+        ).date
+      : null;
+  const arrivalLocal =
+    arrivalDay ?? (record.arrivalAt ? instantToWallClock(record.arrivalAt, arrZone) : null);
+  // A ride has one cost: the total. A flight keeps taxes and fees beside the
+  // fare; they are added into the ride's price (the flight's own FX total is
+  // the same sum) and named in the notes, so no amount is lost.
+  const taxes = flight.taxes ?? 0;
+  const fees = flight.fees ?? 0;
+  const price =
+    flight.price === null && taxes === 0 && fees === 0
+      ? null
+      : Math.round(((flight.price ?? 0) + taxes + fees) * 100) / 100;
+  const extras = [
+    taxes > 0 ? `Taxes ${taxes.toFixed(2)}` : null,
+    fees > 0 ? `Fees ${fees.toFixed(2)}` : null,
+  ].filter((part): part is string => part !== null);
+  const notes =
+    extras.length === 0
+      ? (flight.notes ?? null)
+      : [
+          flight.notes,
+          `${extras.join(", ")} ${flight.currency ?? ""} (included in the price)`.replace(
+            /\s+\(/,
+            " ("
+          ),
+        ]
+          .filter(Boolean)
+          .join("\n");
   const shared = {
-    operator: clean(flight.operatingAirline)?.slice(0, 100) ?? null,
+    operator: whole(flight.operatingAirline, 100),
     departureLocal,
     arrivalLocal,
     departureFold: foldOf(departureLocal, depZone, record.departureAt),
     arrivalFold:
-      arrivalLocal && record.arrivalAt ? foldOf(arrivalLocal, arrZone, record.arrivalAt) : null,
-    seat: clean(flight.seatNumber)?.slice(0, 20) ?? null,
-    bookingReference: clean(flight.bookingReference)?.slice(0, 40) ?? null,
-    price: flight.price ?? null,
-    ...(flight.price !== null && flight.currency ? { currency: flight.currency } : {}),
-    notes: flight.notes ?? null,
+      arrivalLocal && !arrivalDay && record.arrivalAt
+        ? foldOf(arrivalLocal, arrZone, record.arrivalAt)
+        : null,
+    seat: whole(flight.seatNumber, 20),
+    bookingReference: whole(flight.bookingReference, 40),
+    price,
+    ...(price !== null && flight.currency ? { currency: flight.currency } : {}),
+    notes,
     tags: flight.tags,
     companions: flight.companions,
     tripId: flight.tripId,
@@ -126,13 +180,13 @@ export async function prepareSurfaceConversion(flag: DataQualityFlag): Promise<P
     mode === "rail"
       ? {
           ...shared,
-          trainNumber: clean(flight.flightNumber)?.slice(0, 20) ?? null,
+          trainNumber: whole(flight.flightNumber, 20),
           departureStation,
           arrivalStation,
         }
       : {
           ...shared,
-          lineName: clean(flight.flightNumber)?.slice(0, 40) ?? null,
+          lineName: whole(flight.flightNumber, 40),
           rideKind: "intercity",
           departureStation,
           arrivalStation,

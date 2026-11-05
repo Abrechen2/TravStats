@@ -35,7 +35,11 @@ import { resolveStationInput, withStationShortCodes } from "../services/rail/rai
 import { bindConnection } from "../services/rail/railConnection";
 import { restatusTrips } from "../services/trip/restatusTrips";
 import { railYear } from "../shared/railCounting";
-import { resolveCompanions } from "../services/companionService";
+import {
+  planCompanions,
+  resolveCompanions,
+  upsertPlannedCompanions,
+} from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { idsInLocalYear } from "../services/transport/localYear";
 import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
@@ -444,7 +448,7 @@ export async function prepareRailRide(
     transitMode: input.transitMode,
   });
   const state = withTracedDistance(merged, geo.geometry && tracedLengthKm(geo.geometry));
-  const companions = await resolveCompanions(userId, input.companions ?? []);
+  const plannedCompanions = planCompanions(input.companions ?? []);
   const fxColumns = await fxColumnsFor(
     { amount: input.price, currency: input.currency, date: state.departureTime },
     await getBaseCurrency(userId)
@@ -485,9 +489,11 @@ export async function prepareRailRide(
           tripId: input.tripId !== undefined ? input.tripId : link.tripId,
         }),
         userId,
-        companions: companions.map((c) => c.displayName),
+        companions: plannedCompanions.map((c) => c.displayName),
       },
     });
+    // Upserted here, inside the transaction: the preparation above writes nothing.
+    const companions = await upsertPlannedCompanions(tx, userId, plannedCompanions);
     await linkCompanions(tx.railJourneyCompanion, "railJourneyId", created.id, companions);
     await propagateWrite(tx, userId, "rail", created.id);
     await claim(tx, created.id);
