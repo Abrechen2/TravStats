@@ -8,7 +8,7 @@
       "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     },
     "flightTime": {
-      "unit": "Zähleinheit: Minuten in der Luft, angezeigt in Stunden; die Summe über alle gezählten Flüge. Wo keine Uhrzeiten vorliegen, wird die Dauer aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten für Rollen, Steig- und Sinkflug. Die Fußnote nennt, wie viele Stunden und Flüge geschätzt sind.",
+      "unit": "Zähleinheit: Minuten Flugzeit (Abflug bis Ankunft), angezeigt in Stunden; die Summe über alle gezählten Flüge. Wo keine Uhrzeiten vorliegen, wird die Dauer aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten für Rollen, Steig- und Sinkflug. Die Fußnote nennt, wie viele Stunden und Flüge geschätzt sind.",
       "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter. Gemessen wird zwischen echten Abflug- und Ankunftszeitpunkten, die Zeitzonen beider Flughäfen sind dabei berücksichtigt.",
       "source": "Geflogene und nachgetragene Flüge: die vom Server zeitzonenrichtig berechnete Flugdauer, sonst Abflug- und Ankunftszeit, sonst die Koordinaten beider Flughäfen.",
       "coverage": "Gemessen wird nur bei Flügen mit echten Uhrzeiten an beiden Enden; ein Flug, der nur ein Datum trägt, liefert eine Schätzung. Trägst du die Uhrzeiten nach, wird aus der Schätzung eine Messung.",
@@ -45,7 +45,7 @@
       "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Abflugdatum. Ein Flug mit gleichem Start- und Zielflughafen trägt 0 km bei."
     },
     "flightTime": {
-      "unit": "Zähleinheit: Minuten in der Luft, angezeigt in Stunden; die Summe über die Flüge des Jahres. Fehlen echte Uhrzeiten, wird aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten.",
+      "unit": "Zähleinheit: Minuten Flugzeit (Abflug bis Ankunft), angezeigt in Stunden; die Summe über die Flüge des Jahres. Fehlen echte Uhrzeiten, wird aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten.",
       "time": "Das Jahr ist das des Abflugtags am Abflughafen. Gemessen wird zwischen den Zeitpunkten von Abflug und Ankunft, zeitzonenrichtig über beide Flughäfen.",
       "source": "Geflogene und nachgetragene Flüge: gespeicherte oder aus den Uhrzeiten berechnete Dauer, sonst die Koordinaten beider Flughäfen.",
       "coverage": "Gemessen wird nur bei geflogenen Flügen mit echten Uhrzeiten. Nachgetragene Flüge gehen hier immer als Schätzung ein, weil ihre Uhrzeiten oft Platzhalter sind.",

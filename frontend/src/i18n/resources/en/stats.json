@@ -102,7 +102,7 @@
         "exclusions": "Detours and holding patterns are not included – the straight line is a lower bound. Scheduled and cancelled flights do not count."
       },
       "flightTime": {
-        "unit": "Hours in the air, summed over the flights.",
+        "unit": "Flight time in hours (departure to arrival), summed over the flights.",
         "time": "The flight's day on the departure airport's calendar. “Last 12 months”: the twelve whole months up to and including the current one, against the twelve before; “Year”: the calendar year against the whole previous year; “All”: no comparison.",
         "source": "Measured from departure and arrival time where a flown flight carries both; otherwise estimated from the distance – the same rule as the overview.",
         "coverage": "A flight without clock times counts with an estimate, not with 0. Tap the number to see the flights with their duration.",
@@ -789,7 +789,7 @@
     "distanceTraveled": "Distance flown",
     "totalFlights": "Flights",
     "totalDistance": "Total Distance",
-    "totalFlightTime": "Hours in the Air",
+    "totalFlightTime": "Flight Hours",
     "yearsActive": "Years Logged",
     "topAirline": "Favourite Airline",
     "favoriteRoute": "Most Flown Route",
@@ -1359,6 +1359,27 @@
         "source": "The calls of sailed cruises (completed or recorded afterwards) with their excursion note – at an unrecognised port too.",
         "coverage": "Without one, the cruise reads “no excursions documented” – which does not mean there were none. Tap the number for the list.",
         "exclusions": "Sea days, booked and cancelled cruises do not count."
+      },
+      "airborne": {
+        "unit": "Counting unit: minutes between wheels-off and wheels-on, shown as a duration; the sum over every flight that carries both times. This is not the overview's flight time, which measures gate to gate.",
+        "time": "All years together, regardless of the year filter.",
+        "source": "Take-off and touchdown times supplied by the data service (AeroDataBox). Flown and logged flights.",
+        "coverage": "Only flights with both times are included; the line says how many of all counted flights the sum comes from. Nothing is extrapolated and no block time is substituted.",
+        "exclusions": "Not included: flights without a take-off or touchdown time, flights whose touchdown precedes take-off, scheduled and cancelled flights."
+      },
+      "overflown": {
+        "unit": "Counting unit: one country on the recorded flight path; each country counts once, however often you flew over it.",
+        "time": "All years together, regardless of the year filter.",
+        "source": "The countries the data service stored for the flight path. Flown and logged flights.",
+        "coverage": "Only flights with a stored path carry countries; the line says how many. Departure and arrival countries are included when the service listed them – this is not a list of countries merely flown over.",
+        "exclusions": "Not included: flights with no stored path countries, scheduled and cancelled flights."
+      },
+      "codeshare": {
+        "unit": "Counting unit: a flight the data service marks as a codeshare, against all flights where it says either way. Below it, the airlines that actually operated those flights.",
+        "time": "All years together, regardless of the year filter.",
+        "source": "The codeshare flag and the operating airline from the data service. Flown and logged flights.",
+        "coverage": "For flights with no flag it is unknown whether they were codeshares – they are in neither numerator nor denominator. A codeshare with no named operator counts but is not listed.",
+        "exclusions": "Not included: flights with no codeshare flag, scheduled and cancelled flights."
       }
     },
     "cruise": {
@@ -1439,6 +1460,25 @@
         "onFootRecorded": "{{km}} on foot, recorded",
         "recorded": "{{km}} recorded",
         "planned": "{{km}} planned (no recording)"
+      }
+    },
+    "recorded": {
+      "title": "From the flight data",
+      "coverage": "from {{flights}} of {{of}} flights",
+      "coverageKnown": "known for {{known}} of {{of}} flights",
+      "airborne": {
+        "label": "Time in the air"
+      },
+      "overflown": {
+        "label": "Countries on the flight path",
+        "count_one": "{{count}} country",
+        "count_other": "{{count}} countries"
+      },
+      "codeshare": {
+        "label": "Codeshare",
+        "share_one": "{{count}} of {{known}} flights ({{pct}}) were codeshares",
+        "share_other": "{{count}} of {{known}} flights ({{pct}}) were codeshares",
+        "operators": "Actually flown with:"
       }
     }
   },

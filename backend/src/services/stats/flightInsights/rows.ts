@@ -43,6 +43,15 @@ export interface FlightInsightRow {
   /** Read by the year story's fun facts (`calculateFunStats`), nothing else here. */
   airline: string | null;
   seatClass: string | null;
+  /** The carrier that flew it when the ticket sold another's flight number; null when unrecorded. */
+  operatingAirline: string | null;
+  /** Null = the provider never said (not the same as "not a codeshare"). */
+  isCodeshare: boolean | null;
+  /** Countries on the flight path as the enrichment recorded them; empty = never recorded. */
+  overflownCountries: string[];
+  /** Wheels-off / wheels-on (AeroDataBox runway times); null unless the provider gave them. */
+  runwayDepartureTime: Date | null;
+  runwayArrivalTime: Date | null;
   arrivalTime: Date | null;
   createdAt: Date;
   bookingId: string | null;
@@ -97,6 +106,9 @@ const FLIGHT_INSIGHT_SELECT = {
   status: true,
   airline: true,
   seatClass: true,
+  operatingAirline: true,
+  isCodeshare: true,
+  overflownCountries: true,
   createdAt: true,
   bookingId: true,
   depIata: true,
@@ -139,6 +151,11 @@ export type FlightInsightSource = FlightTimeColumns & {
   depLon: number;
   arrLat: number;
   arrLon: number;
+  // Optional: callers with a narrower select (the badge checks) omit them, and
+  // an omitted field reads as "not recorded" — never as a recorded zero.
+  operatingAirline?: string | null;
+  isCodeshare?: boolean | null;
+  overflownCountries?: readonly string[] | null;
 };
 
 export async function loadFlightInsightRows(userId: string): Promise<FlightInsightRow[]> {
@@ -180,6 +197,11 @@ export async function toFlightInsightRows(
       status: f.status,
       airline: f.airline,
       seatClass: f.seatClass,
+      operatingAirline: f.operatingAirline ?? null,
+      isCodeshare: f.isCodeshare ?? null,
+      overflownCountries: [...(f.overflownCountries ?? [])],
+      runwayDepartureTime: f.runwayDepartureTime ?? null,
+      runwayArrivalTime: f.runwayArrivalTime ?? null,
       arrivalTime: f.arrivalTime,
       createdAt: f.createdAt,
       bookingId: f.bookingId,

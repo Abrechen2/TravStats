@@ -110,6 +110,54 @@ export const flightYearStorySchema = z.object({
   transfers: z.object({ count: z.number().int(), shortestMinutes: z.number().int().nullable() }),
 });
 
+const coverageOf = {
+  flights: z.number().int().openapi({ description: "Counted flights that carry the field." }),
+  of: z.number().int().openapi({ description: "Counted flights in all." }),
+};
+
+export const recordedFieldsSchema = z
+  .object({
+    airborne: z
+      .object({
+        minutes: z.number().int(),
+        ...coverageOf,
+      })
+      .nullable()
+      .openapi({
+        description:
+          "Wheels-off to wheels-on, summed over the counted flights with both runway times. " +
+          "Not block time, and never extrapolated. Null when no counted flight carries both.",
+      }),
+    overflown: z
+      .object({
+        countries: z.array(z.string()),
+        ...coverageOf,
+      })
+      .nullable()
+      .openapi({
+        description:
+          "Distinct countries on the flight path as the enrichment recorded them (endpoint " +
+          "countries included when the provider listed them). Null when no counted flight has any.",
+      }),
+    codeshare: z
+      .object({
+        codeshare: z.number().int(),
+        known: z.number().int().openapi({
+          description: "Counted flights whose provider said codeshare or not.",
+        }),
+        of: coverageOf.of,
+        operators: z.array(z.object({ name: z.string(), flights: z.number().int() })).openapi({
+          description:
+            "Operating carriers of the codeshare flights that name one, most flights first.",
+        }),
+      })
+      .nullable()
+      .openapi({ description: "Null when no counted flight says whether it is a codeshare." }),
+  })
+  .openapi({ description: "Fields only enriched flights carry; each with its own coverage." });
+
+export type RecordedFields = z.infer<typeof recordedFieldsSchema>;
+
 export const flightInsightsSchema = z.object({
   history: z.object({
     firstYear: z.number().int().nullable(),
@@ -162,6 +210,7 @@ export const flightInsightsSchema = z.object({
       notFlown: z.number().int(),
     }),
   }),
+  recorded: recordedFieldsSchema,
   story: flightYearStorySchema.nullable(),
 });
 

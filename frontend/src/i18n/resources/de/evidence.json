@@ -464,5 +464,8 @@
   "evidence.metric.co2FerryKg": "CO₂ Fähre (Schätzung)",
   "evidence.metric.co2CruiseKg": "CO₂ Kreuzfahrt (Schätzung, Untergrenze)",
   "evidence.metric.co2RentalKg": "CO₂ Mietwagen (Schätzung)",
-  "evidence.metric.co2SavedVsFlightKg": "CO₂ gespart gegenüber dem Flug (Schätzung)"
+  "evidence.metric.co2SavedVsFlightKg": "CO₂ gespart gegenüber dem Flug (Schätzung)",
+  "evidence.metric.flightAirborneMinutes": "Zeit in der Luft (Abheben bis Aufsetzen)",
+  "evidence.metric.flightOverflownCountriesCount": "Länder auf der Flugstrecke",
+  "evidence.metric.flightCodeshareCount": "Codeshare-Flüge"
 }

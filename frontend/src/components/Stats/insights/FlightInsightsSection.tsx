@@ -8,6 +8,7 @@ import { statsApi } from "../../../lib/api";
 import type { Flight } from "../../../types";
 import FlightYearStoryCard from "./FlightYearStoryCard";
 import FlightDiscoveryTable from "./FlightDiscoveryTable";
+import FlightRecordedFieldsBlock from "./FlightRecordedFieldsBlock";
 import FlightReunionsBlock from "./FlightReunionsBlock";
 import FlightTransfersBlock from "./FlightTransfersBlock";
 import { airportNamer } from "./insightFormat";
@@ -100,6 +101,13 @@ export default function FlightInsightsSection({
             <FlightYearStoryCard story={insights.story} year={year} nameOf={nameOf} />
             <FlightTransfersBlock transfers={insights.transfers} nameOf={nameOf} />
           </div>
+          {(insights.recorded.airborne ||
+            insights.recorded.overflown ||
+            insights.recorded.codeshare) && (
+            <div className="mt-6">
+              <FlightRecordedFieldsBlock recorded={insights.recorded} />
+            </div>
+          )}
           <FlightDiscoveryTable years={insights.years} />
           <FlightReunionsBlock
             reunions={insights.reunions}

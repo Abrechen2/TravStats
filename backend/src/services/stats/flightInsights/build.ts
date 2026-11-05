@@ -11,6 +11,7 @@ import { calculateFunStats } from "../../../utils/stats/funStats";
 import type { FlightData } from "../../../utils/stats/types";
 import { airportVisits, airportsByYear, longestReunions, quartersByAirportYear } from "./airports";
 import { connectionFlights, connectionsByYear } from "./connections";
+import { foldRecordedFields } from "./recordedFields";
 import { type FlightInsightRow, isCountedRow } from "./rows";
 import { buildYearStory, type YearFigures } from "./story";
 import { foldTransfers, shortestAndLongest, transfersByYear } from "./transfers";
@@ -152,6 +153,7 @@ export async function buildFlightInsights(
       .filter((q) => q.quarters === 4)
       .map(({ airport, year, visits: quarters }) => ({ airport, year, visits: quarters })),
     transfers: { years: transferYears, ...shortestAndLongest(transfers), coverage },
+    recorded: foldRecordedFields(rows),
     story,
   };
 }
