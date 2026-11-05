@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
 
-import { prisma } from "../db";
+import { prisma, type DbTransaction } from "../db";
 import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { railRouteLimiter } from "../middleware/railRouteLimiter";
@@ -44,7 +44,6 @@ import { fileReceipts, takeDocumentIds } from "../services/documents/documentSer
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { findRailAndFlyFlight } from "../services/rail/railAndFly";
 import {
-  recordingVersion,
   createOnce,
   takeClientRef,
   type ClaimClientRef,
@@ -402,21 +401,7 @@ export function createRailRideOnce(
     clientRef,
     kind: "rail",
     payload: body,
-    create: (claim) =>
-      createRailRide(
-        userId,
-        body,
-        options.recordVersion
-          ? recordingVersion(claim, userId, async (tx, id) => {
-              const row = await tx.railJourney.findUnique({
-                where: { id },
-                select: { updatedAt: true },
-              });
-              return row?.updatedAt ?? null;
-            })
-          : claim,
-        options
-      ),
+    create: (claim) => createRailRide(userId, body, claim, options),
     replay: (id) => replayRailRide(userId, id),
   });
 }
@@ -424,16 +409,27 @@ export function createRailRideOnce(
 interface CreateRailRideOptions {
   /** A ride made FROM a flight (the inbox's convert answer) is not a Rail&Fly ticket. */
   skipRailAndFly?: boolean;
-  /** Record the ride's version on its idempotency key, atomically with the create. */
-  recordVersion?: boolean;
 }
 
-async function createRailRide(
+/**
+ * A rail ride ready to be written: everything slow or external (station
+ * resolution, geometry, FX, validation, the Rail&Fly match) is done, and
+ * `write` is the database part only, to run inside the caller's transaction.
+ */
+export interface PreparedRailRide {
+  write: (tx: DbTransaction, claim?: ClaimClientRef) => Promise<RailRideRow>;
+  result: (journey: RailRideRow) => {
+    data: ReturnType<typeof withRailSource>;
+    meta: { geometry: ReturnType<typeof reportOf> };
+  };
+}
+type RailRideRow = Prisma.RailJourneyGetPayload<{ include: typeof RAIL_INCLUDE }>;
+
+export async function prepareRailRide(
   userId: string,
   body: unknown,
-  claim: ClaimClientRef,
   options: CreateRailRideOptions = {}
-) {
+): Promise<PreparedRailRide> {
   refuseStrayFold(body);
   const parsed = createRailJourneySchema.safeParse(body);
   if (!parsed.success) throw invalidInput(parsed.error);
@@ -476,7 +472,7 @@ async function createRailRide(
         })
       : null;
 
-  const journey = await prisma.$transaction(async (tx) => {
+  const write = async (tx: DbTransaction, claim: ClaimClientRef = async () => {}) => {
     // Bound inside the transaction, so a failed create leaves the previous
     // leg without the booking it was given for this one.
     const link = connectsFrom ? await bindConnection(tx, userId, connectsFrom) : null;
@@ -508,13 +504,29 @@ async function createRailRide(
       where: { id: created.id },
       include: RAIL_INCLUDE,
     });
-  });
-
-  logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-  return {
-    data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
-    meta: { geometry: reportOf(geo) },
   };
+
+  return {
+    write,
+    result: (journey) => {
+      logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
+      return {
+        data: withRailSource(withStationShortCodes(withRailCo2(withRailTimes(journey)))),
+        meta: { geometry: reportOf(geo) },
+      };
+    },
+  };
+}
+
+async function createRailRide(
+  userId: string,
+  body: unknown,
+  claim: ClaimClientRef,
+  options: CreateRailRideOptions = {}
+) {
+  const prepared = await prepareRailRide(userId, body, options);
+  const journey = await prisma.$transaction((tx) => prepared.write(tx, claim));
+  return prepared.result(journey);
 }
 
 /**

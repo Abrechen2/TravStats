@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import type { z } from "zod";
 
-import { prisma } from "../db";
+import { prisma, type DbTransaction } from "../db";
 import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { busCreationLimiter } from "../middleware/rateLimit";
@@ -45,7 +45,6 @@ import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import {
-  recordingVersion,
   createOnce,
   takeClientRef,
   type ClaimClientRef,
@@ -272,31 +271,13 @@ router.post(
 );
 
 /** The create behind POST /bus, callable from a service (see `createRailRideOnce`). */
-export function createBusRideOnce(
-  userId: string,
-  body: unknown,
-  clientRef: string | null,
-  options: { recordVersion?: boolean } = {}
-) {
+export function createBusRideOnce(userId: string, body: unknown, clientRef: string | null) {
   return createOnce({
     userId,
     clientRef,
     kind: "bus",
     payload: body,
-    create: (claim) =>
-      createBusRide(
-        userId,
-        body,
-        options.recordVersion
-          ? recordingVersion(claim, userId, async (tx, id) => {
-              const row = await tx.busJourney.findUnique({
-                where: { id },
-                select: { updatedAt: true },
-              });
-              return row?.updatedAt ?? null;
-            })
-          : claim
-      ),
+    create: (claim) => createBusRide(userId, body, claim),
     replay: async (id) => {
       const ride = await prisma.busJourney.findFirst({
         where: { id, userId },
@@ -312,7 +293,17 @@ export function createBusRideOnce(
   });
 }
 
-async function createBusRide(userId: string, body: unknown, claim: ClaimClientRef) {
+/** A bus ride ready to be written: the slow work is done; see `PreparedRailRide`. */
+export interface PreparedBusRide {
+  write: (tx: DbTransaction, claim?: ClaimClientRef) => Promise<BusRideRow>;
+  result: (ride: BusRideRow) => {
+    ride: ReturnType<typeof withBusCo2>;
+    report: ReturnType<typeof busGeometryReport>;
+  };
+}
+type BusRideRow = Prisma.BusJourneyGetPayload<{ include: typeof BUS_INCLUDE }>;
+
+export async function prepareBusRide(userId: string, body: unknown): Promise<PreparedBusRide> {
   refuseStrayFold(body);
   const parsed = createBusJourneySchema.safeParse(body);
   if (!parsed.success) throw invalidInput(parsed.error);
@@ -332,7 +323,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
     await getBaseCurrency(userId)
   );
 
-  const ride = await prisma.$transaction(async (tx) => {
+  const write = async (tx: DbTransaction, claim: ClaimClientRef = async () => {}) => {
     const created = await tx.busJourney.create({
       data: {
         ...plainColumns(input),
@@ -351,10 +342,21 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
     await fileReceipts(tx, userId, documentIds, { type: "busJourney", id: created.id });
     await restatusTrips([created.tripId], tx);
     return tx.busJourney.findUniqueOrThrow({ where: { id: created.id }, include: BUS_INCLUDE });
-  });
+  };
 
-  logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
-  return { ride: withBusCo2(withBusTimes(ride)), report: busGeometryReport(edit, "straight") };
+  return {
+    write,
+    result: (ride) => {
+      logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
+      return { ride: withBusCo2(withBusTimes(ride)), report: busGeometryReport(edit, "straight") };
+    },
+  };
+}
+
+async function createBusRide(userId: string, body: unknown, claim: ClaimClientRef) {
+  const prepared = await prepareBusRide(userId, body);
+  const ride = await prisma.$transaction((tx) => prepared.write(tx, claim));
+  return prepared.result(ride);
 }
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {

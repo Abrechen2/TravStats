@@ -11,7 +11,7 @@ import { duplicateCandidateDetailsSchema } from "../../schemas/dataQualityRecord
 import { duplicateEvidence, findingActionsOf } from "./findingEvidence";
 import { mergeDuplicates } from "./duplicateMerge";
 import { applyFerryLink, undoFerryLink } from "./ferryLink";
-import { convertSurfaceFlight, removeConvertedFlight } from "./surfaceConvert";
+import { prepareSurfaceConversion } from "./surfaceConvert";
 import { FindingActionError } from "./findingErrors";
 import { lockDuplicateAnswers } from "./duplicateAnswers";
 import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
@@ -249,10 +249,11 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
  * twice.
  */
 async function convert(flag: DataQualityFlag, now: Date): Promise<void> {
-  const conversion = await convertSurfaceFlight(flag);
+  // The slow work first, outside the transaction (see `surfaceConvert.ts`).
+  const prepared = await prepareSurfaceConversion(flag);
   await prisma.$transaction(
     async (tx) => {
-      await removeConvertedFlight(tx, flag, conversion);
+      const conversion = await prepared.commit(tx);
       const updated = await tx.dataQualityFlag.updateMany({
         where: asRead(flag),
         data: {
@@ -272,6 +273,8 @@ async function convert(flag: DataQualityFlag, now: Date): Promise<void> {
           ...NEXT_REVISION,
         },
       });
+      // A second submit finds the flag already answered: the whole answer,
+      // ride included, rolls back.
       if (updated.count === 0) throw new FindingActionError("staleFinding");
     },
     { timeout: SHARE_TX_TIMEOUT_MS }

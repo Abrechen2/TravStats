@@ -3,11 +3,10 @@ import { prisma } from "../../db";
 import { Prisma, type DataQualityFlag } from "../../prisma";
 import { surfaceSegmentDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { zoneOf } from "../../shared/time/zoneOf";
-import { payloadHash } from "../sync/clientRef";
-import { createBusRideOnce } from "../../routes/bus";
-import { createRailRideOnce } from "../../routes/rail";
+import { prepareBusRide } from "../../routes/bus";
+import { prepareRailRide } from "../../routes/rail";
 import { instantToWallClock, wallClockToInstant } from "../rides/rideEnds";
-import { propagateDelete, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
+import { propagateDelete, shareSnapshot } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 import { findSurfaceSegments } from "./checks/surfaceSegment";
 import { FindingActionError } from "./findingErrors";
@@ -17,22 +16,25 @@ import { loadRecordSnapshot } from "./recordGather";
  * `convert` for a `surface_segment` flag: the flight becomes the rail or bus
  * ride it is, and the flight goes (owner ruling 2026-11-05).
  *
- * The ride is filed through the ordinary create (`createRailRideOnce`), under
- * a client reference derived from the flag, so a conversion that dies between
- * the ride and the flight's removal files nothing twice when it is answered
- * again. Both ends must carry a real position and the departure a certain
- * instant: a ride drawn from a flight with no position would sit at 0°/0°,
- * and that refusal is the user's to see (`noPosition` / `noTime`), not a
- * guess. The conversion has no undo — the flight is deleted, as in `merge`.
+ * Everything slow or external (reading the flight, the record check, the
+ * ride's stations, geometry and FX) happens first, outside any transaction, from
+ * ONE read of the flight at version V. Then a single transaction locks the
+ * flight, checks it is still at V (else `staleFinding`, nothing written),
+ * files the ride, moves the originals, deletes the flight — and the caller
+ * resolves the finding in that same transaction. Commit or nothing: a failed
+ * answer leaves the flight and no ride, so a retry needs no memory of the
+ * earlier attempt. Both ends must carry a real position and the departure a
+ * certain instant (`noPosition` / `noTime`). The conversion has no undo.
  */
 
 export interface Conversion {
   rideType: "rail" | "bus";
   rideId: string;
-  /** The flight as it was read; the removal refuses a flight edited since. */
-  flightUpdatedAt: Date;
-  /** The flight's trip, re-derived by the caller after the answer commits. */
-  tripId: string | null;
+}
+
+/** A conversion with the slow work done: `commit` is the database part only. */
+export interface PreparedConversion {
+  commit: (tx: DbTransaction) => Promise<Conversion>;
 }
 
 const clean = (value: string | null | undefined): string | null => value?.trim() || null;
@@ -40,7 +42,7 @@ const clean = (value: string | null | undefined): string | null => value?.trim()
 /** A flight end with no coordinates is stored at 0/0 — never a position. */
 const hasPosition = (lat: number, lon: number): boolean => !(lat === 0 && lon === 0);
 
-export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conversion> {
+export async function prepareSurfaceConversion(flag: DataQualityFlag): Promise<PreparedConversion> {
   const details = surfaceSegmentDetailsSchema.safeParse(flag.details);
   if (!details.success) throw new FindingActionError("staleFinding");
   const { flightId, mode } = details.data;
@@ -120,10 +122,6 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     tripId: flight.tripId,
     bookingId: flight.bookingId,
   };
-  // One key per source flight: a retry after a failed removal finds the ride
-  // already filed instead of filing a second one.
-  const clientRef = `dq-surface:${flightId}`;
-
   const body =
     mode === "rail"
       ? {
@@ -139,135 +137,41 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
           departureStation,
           arrivalStation,
         };
-  // The idempotency record keeps the hash of the body the ride was drawn from,
-  // so "is the flight the way the ride was drawn" is a comparison of content,
-  // not of clocks: an edit during preparation changes the body, whatever the
-  // timestamps say.
-  const hash = payloadHash(body);
+  // All validation, station resolution, geometry and FX run here, outside the
+  // transaction; a refusal leaves everything as it was.
+  const rail =
+    mode === "rail" ? await prepareRailRide(flag.userId, body, { skipRailAndFly: true }) : null;
+  const bus = mode === "bus" ? await prepareBusRide(flag.userId, body) : null;
+  const version = flight.updatedAt;
 
-  const filed = await prisma.clientWriteRef.findFirst({
-    where: { userId: flag.userId, clientRef, kind: mode },
-    select: { entityId: true, payloadHash: true, entityVersion: true },
-  });
-  const earlier = filed
-    ? mode === "rail"
-      ? await prisma.railJourney.findFirst({
-          where: { id: filed.entityId, userId: flag.userId },
-          select: { id: true, updatedAt: true },
-        })
-      : await prisma.busJourney.findFirst({
-          where: { id: filed.entityId, userId: flag.userId },
-          select: { id: true, updatedAt: true },
-        })
-    : null;
-
-  let rideId: string;
-  if (filed && earlier && filed.payloadHash === hash) {
-    // Same flight content: the ride already filed is the ride.
-    rideId = earlier.id;
-  } else {
-    if (filed && earlier) {
-      // The flight changed since the ride was drawn. The ride is replaced only
-      // if nobody touched it: its exact version must be the one recorded right
-      // after filing, checked again inside the delete itself.
-      if (!filed.entityVersion) throw new FindingActionError("staleFinding");
-      await discardStaleRide(flag.userId, mode, {
-        rideId: earlier.id,
-        rideVersion: filed.entityVersion,
-        flightId,
-        flightVersion: flight.updatedAt,
-        clientRef,
-      });
-    }
-    if (mode === "rail") {
-      const { result } = await createRailRideOnce(flag.userId, body, clientRef, {
-        skipRailAndFly: true,
-        recordVersion: true,
-      });
-      rideId = result.data.id;
-    } else {
-      const { result } = await createBusRideOnce(flag.userId, body, clientRef, {
-        recordVersion: true,
-      });
-      rideId = result.ride.id;
-    }
-  }
-  return { rideType: mode, rideId, flightUpdatedAt: flight.updatedAt, tripId: flight.tripId };
-}
-
-/**
- * Takes back a ride an earlier attempt filed, with its idempotency key — and
- * only that exact ride: the delete names the version recorded after filing, and
- * the flight is held at the version this attempt read. Either mismatch deletes
- * nothing and refuses.
- */
-async function discardStaleRide(
-  userId: string,
-  mode: "rail" | "bus",
-  input: {
-    rideId: string;
-    rideVersion: Date;
-    flightId: string;
-    flightVersion: Date;
-    clientRef: string;
-  }
-): Promise<void> {
-  await prisma.$transaction(
-    async (tx) => {
-      await tx.$queryRaw(
-        Prisma.sql`SELECT id FROM "flights" WHERE id = ${input.flightId} FOR UPDATE`
-      );
-      const flightNow = await tx.flight.findFirst({
-        where: { id: input.flightId, userId, updatedAt: input.flightVersion },
+  return {
+    commit: async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM "flights" WHERE id = ${flightId} FOR UPDATE`);
+      const current = await tx.flight.findFirst({
+        where: { id: flightId, userId: flag.userId, updatedAt: version },
         select: { id: true },
       });
-      if (!flightNow) throw new FindingActionError("staleFinding");
-      const gone = await shareSnapshot(tx, mode, input.rideId);
-      const where = { id: input.rideId, userId, updatedAt: input.rideVersion };
-      const removed =
-        mode === "rail"
-          ? await tx.railJourney.deleteMany({ where })
-          : await tx.busJourney.deleteMany({ where });
-      if (removed.count === 0) throw new FindingActionError("staleFinding");
-      await propagateDelete(tx, userId, gone);
-      await tx.clientWriteRef.deleteMany({ where: { userId, clientRef: input.clientRef } });
-    },
-    { timeout: SHARE_TX_TIMEOUT_MS }
-  );
-}
+      // Edited, converted or deleted since it was read: nothing is written.
+      if (!current) throw new FindingActionError("staleFinding");
 
-/** The flight's removal, inside the answer's transaction — the same writes as DELETE /flights/:id. */
-export async function removeConvertedFlight(
-  tx: DbTransaction,
-  flag: DataQualityFlag,
-  conversion: Conversion
-): Promise<void> {
-  const { flightId } = surfaceSegmentDetailsSchema.parse(flag.details);
-  await tx.$queryRaw(Prisma.sql`SELECT id FROM "flights" WHERE id = ${flightId} FOR UPDATE`);
-  // Edited since the ride was drawn from it: the ride would not carry the edit.
-  const current = await tx.flight.findFirst({
-    where: { id: flightId, userId: flag.userId },
-    select: { updatedAt: true },
-  });
-  if (!current || current.updatedAt.getTime() !== conversion.flightUpdatedAt.getTime()) {
-    throw new FindingActionError("staleFinding");
-  }
-  // The originals filed with the flight (tickets, receipts) go with the entry:
-  // deleting the flight would delete them.
-  await tx.document.updateMany({
-    where: { flightId },
-    data:
-      conversion.rideType === "rail"
-        ? { flightId: null, railJourneyId: conversion.rideId }
-        : { flightId: null, busJourneyId: conversion.rideId },
-  });
-  const gone = await shareSnapshot(tx, "flight", flightId);
-  // Conditional on the exact version the ride was drawn from.
-  const removed = await tx.flight.deleteMany({
-    where: { id: flightId, userId: flag.userId, updatedAt: conversion.flightUpdatedAt },
-  });
-  if (removed.count === 0) throw new FindingActionError("staleFinding");
-  await propagateDelete(tx, flag.userId, gone);
-  // The flight stretched its trip's span; the ride that replaces it may not.
-  await restatusTrips([conversion.tripId], tx);
+      const rideId = rail ? (await rail.write(tx)).id : (await bus!.write(tx)).id;
+      // The originals filed with the flight (tickets, receipts) go with the
+      // entry: deleting the flight would delete them.
+      await tx.document.updateMany({
+        where: { flightId },
+        data: rail
+          ? { flightId: null, railJourneyId: rideId }
+          : { flightId: null, busJourneyId: rideId },
+      });
+      const gone = await shareSnapshot(tx, "flight", flightId);
+      const removed = await tx.flight.deleteMany({
+        where: { id: flightId, userId: flag.userId, updatedAt: version },
+      });
+      if (removed.count === 0) throw new FindingActionError("staleFinding");
+      await propagateDelete(tx, flag.userId, gone);
+      // The flight stretched its trip's span; the ride that replaces it may not.
+      await restatusTrips([flight.tripId], tx);
+      return { rideType: mode, rideId };
+    },
+  };
 }

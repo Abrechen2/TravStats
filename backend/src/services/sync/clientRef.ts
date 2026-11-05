@@ -167,28 +167,6 @@ export interface CreateOnceInput<R> {
   replay: (entityId: string) => Promise<R | null>;
 }
 
-/**
- * A claim that also records the created row's `updatedAt` on the key, inside
- * the create's own transaction — the version a caller later compares to tell an
- * untouched row from an edited one (the inbox's convert).
- */
-export function recordingVersion(
-  claim: ClaimClientRef,
-  userId: string,
-  read: (tx: DbTransaction, id: string) => Promise<Date | null>
-): ClaimClientRef {
-  return async (tx, entityId) => {
-    await claim(tx, entityId);
-    const version = await read(tx, entityId);
-    if (version) {
-      await tx.clientWriteRef.updateMany({
-        where: { userId, entityId },
-        data: { entityVersion: version },
-      });
-    }
-  };
-}
-
 /** Runs a create at most once per (user, clientRef). `created` false = a repeat, answer 200. */
 export async function createOnce<R>(
   input: CreateOnceInput<R>

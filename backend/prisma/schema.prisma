@@ -394,22 +394,19 @@ model PushDelivery {
 /// Transport bookkeeping, not travel data: pruned after
 /// `CLIENT_REF_RETENTION_DAYS` by the sync retention job, never exported.
 model ClientWriteRef {
-  id            String    @id @default(uuid())
-  userId        String    @map("user_id")
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientRef     String    @map("client_ref") @db.VarChar(64)
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientRef   String   @map("client_ref") @db.VarChar(64)
   /// Which create the key was spent on: "rail" | "bus" | "expense" | "tour" | "note".
-  kind          String
+  kind        String
   /// The created row. No foreign key: the kinds live in different tables, and
   /// a row deleted since is answered 410, not resurrected (clientRef.ts).
-  entityId      String    @map("entity_id")
+  entityId    String   @map("entity_id")
   /// sha256 of the request body (minus `clientRef`), canonical key order —
   /// a repeat with a different body is refused, never silently answered.
-  payloadHash   String    @map("payload_hash") @db.Char(64)
-  /// The created row's `updatedAt` right after the create, for a caller that must
-  /// tell an untouched row from an edited one (the inbox's convert). Null: not recorded.
-  entityVersion DateTime? @map("entity_version")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  payloadHash String   @map("payload_hash") @db.Char(64)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@unique([userId, clientRef])
   @@index([createdAt])

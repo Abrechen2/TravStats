@@ -26,7 +26,7 @@ import dataQualityFlagsRouter from "../../../routes/dataQualityFlags";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { runDataQualityChecks } from "../runner";
 import { listFlags } from "../flagService";
-import { convertSurfaceFlight } from "../surfaceConvert";
+import { prepareSurfaceConversion } from "../surfaceConvert";
 
 const NOW = new Date("2026-10-10T12:00:00Z");
 
@@ -184,53 +184,55 @@ describe("flights that are train or bus rides", () => {
     expect(kept).toMatchObject({ flightId: null, railJourneyId: ride.id });
   });
 
-  it("is idempotent: a retry reuses the ride when the flight is unchanged", async () => {
+  it("a concurrent edit between reading and committing is a 409 with nothing written", async () => {
     const { train } = await seed(userId);
     await runDataQualityChecks(userId, NOW);
     const [flag] = await surfaceFlags(userId);
     const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
 
-    const first = await convertSurfaceFlight(row);
-    const second = await convertSurfaceFlight(row);
-    expect(second.rideId).toBe(first.rideId);
+    const prepared = await prepareSurfaceConversion(row);
+    await prisma.flight.update({ where: { id: train.id }, data: { notes: "edited meanwhile" } });
+    await expect(prisma.$transaction((tx) => prepared.commit(tx))).rejects.toMatchObject({
+      code: "staleFinding",
+    });
+
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+    expect((await prisma.flight.findUniqueOrThrow({ where: { id: train.id } })).notes).toBe(
+      "edited meanwhile"
+    );
+    // The retry is a fresh read: it carries the edit.
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+    const rides = await prisma.railJourney.findMany({ where: { userId } });
+    expect(rides.map((r) => r.notes)).toEqual(["edited meanwhile"]);
+  });
+
+  it("a failure after the ride was written rolls everything back: flight kept, no ride", async () => {
+    const { train } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+
+    const prepared = await prepareSurfaceConversion(row);
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await prepared.commit(tx);
+        throw new Error("boom after commit step");
+      })
+    ).rejects.toThrow("boom");
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
+  });
+
+  it("a double submit files one ride", async () => {
+    await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const [a, b] = await Promise.all([
+      post(`/${flag.id}/resolve`, { action: "convert" }),
+      post(`/${flag.id}/resolve`, { action: "convert" }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
     expect(await prisma.railJourney.count({ where: { userId } })).toBe(1);
-    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
-  });
-
-  it("a retry after the flight was edited carries the edit: one ride, drawn from the current flight", async () => {
-    const { train } = await seed(userId);
-    await runDataQualityChecks(userId, NOW);
-    const [flag] = await surfaceFlags(userId);
-    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
-
-    await convertSurfaceFlight(row); // filed, removal "failed"
-    await prisma.flight.update({ where: { id: train.id }, data: { notes: "edited after" } });
-    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
-
-    expect(res.status).toBe(200);
-    const rides = await prisma.railJourney.findMany({ where: { userId } });
-    expect(rides).toHaveLength(1);
-    expect(rides[0].notes).toBe("edited after");
-    expect(await prisma.flight.findUnique({ where: { id: train.id } })).toBeNull();
-  });
-
-  it("refuses a retry when the filed ride was edited, even a moment after filing", async () => {
-    const { train } = await seed(userId);
-    await runDataQualityChecks(userId, NOW);
-    const [flag] = await surfaceFlags(userId);
-    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
-
-    const first = await convertSurfaceFlight(row);
-    await prisma.flight.update({ where: { id: train.id }, data: { notes: "flight edit" } });
-    await new Promise((r) => setTimeout(r, 100));
-    await prisma.railJourney.update({ where: { id: first.rideId }, data: { notes: "my ride" } });
-
-    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
-    expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: "staleFinding" });
-    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
-    const rides = await prisma.railJourney.findMany({ where: { userId } });
-    expect(rides.map((r) => r.notes)).toEqual(["my ride"]);
   });
 
   it("files a bus ride for a BUS flight", async () => {
