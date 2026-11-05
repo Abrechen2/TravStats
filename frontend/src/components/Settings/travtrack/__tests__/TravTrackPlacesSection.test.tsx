@@ -217,6 +217,13 @@ describe("Feste Orte", () => {
     expect(screen.queryByRole("button", { name: /places\.remove: Zuhause/ })).toBeNull();
   });
 
+  it("still offers removing a place while TravTrack is off but data is held, and no editing", async () => {
+    caps.current = { version: 1, offered: true, enabled: false, active: false, hasData: true };
+    show();
+    expect(await screen.findByRole("button", { name: /places\.remove: Büro/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "settings:tt.places.add" })).toBeNull();
+  });
+
   it("deletes a place only after the confirmation, and a 404 on it says it is gone", async () => {
     const remove = vi.spyOn(travTrackPlacesApi, "remove").mockRejectedValueOnce(
       Object.assign(new Error("404"), {

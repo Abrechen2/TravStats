@@ -253,4 +253,14 @@ describe("every id the old tables ever held still lands somewhere", () => {
       expect(resolve(`/settings/${removed}`).to, removed).toMatch(/^\/settings\//);
     }
   });
+
+  it("keeps the map's range on the way to the TravTrack settings, and only there", () => {
+    expect(resolve("/settings/travtrack?from=2026-11-01&until=2026-11-04").to).toBe(
+      "/settings/travtrack?from=2026-11-01&until=2026-11-04"
+    );
+    expect(resolve("/settings/location?from=2026-11-01&until=2026-11-04").to).toContain(
+      "from=2026-11-01&until=2026-11-04"
+    );
+    expect(resolve("/settings/display?from=2026-11-01").to).not.toContain("from=");
+  });
 });
