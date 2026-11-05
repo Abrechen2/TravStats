@@ -428,9 +428,9 @@ export default function PlacesListPage(): JSX.Element {
               }))}
               prefs={columnPrefs}
             />
-            {/* The only entry point to lists and checklists. Deliberately here
-                rather than in the nav: a list is a view OF the logbook, so it
-                hangs off the logbook rather than competing with it. */}
+            {/* Also reachable as a logbook tab (LogbookTabs): a list is a view OF
+                the logbook, so it hangs off the logbook, but a button alone was
+                too easy to miss. */}
             {/* The logbook seen from where one stands (forgejo#233). */}
             <Link
               to="/places/nearby"
