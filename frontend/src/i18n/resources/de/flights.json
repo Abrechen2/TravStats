@@ -152,6 +152,7 @@
     "tagsHint": "Enter oder Komma fügt einen Tag hinzu; deine bisherigen Tags werden vorgeschlagen.",
     "loadingScanner": "Scanner wird geladen...",
     "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
+    "noFlightsInText": "Keine Flüge im eingefügten Text gefunden.",
     "departureAirportCode": "Abflughafen (IATA)",
     "arrivalAirportCode": "Ankunftsflughafen (IATA)",
     "duplicate": {

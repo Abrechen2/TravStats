@@ -152,6 +152,7 @@
     "tagsHint": "Enter or a comma adds a tag; your earlier tags are suggested.",
     "loadingScanner": "Loading scanner...",
     "noFlightsInEmail": "No flights found in the email.",
+    "noFlightsInText": "No flights found in the pasted text.",
     "departureAirportCode": "Departure airport (IATA)",
     "arrivalAirportCode": "Arrival airport (IATA)",
     "duplicate": {

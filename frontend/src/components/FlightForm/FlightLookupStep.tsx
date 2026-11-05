@@ -116,7 +116,14 @@ export default function FlightLookupStep({
     }
   };
 
-  const handleEmailResult = (result: ParseEmailResult, fileName?: string | null): void => {
+  const handleEmailResult = (
+    result: ParseEmailResult,
+    fileName?: string | null,
+    document?: ImportDocument
+  ): void => {
+    // Pasted text is neither a mail nor a PDF, so it must not be called one.
+    const noFlightsKey =
+      document?.kind === "text" ? "flights:form.noFlightsInText" : "flights:form.noFlightsInEmail";
     if (
       isCruiseEmailResult(result) ||
       isLodgingEmailResult(result) ||
@@ -125,15 +132,13 @@ export default function FlightLookupStep({
       isPackageEmailResult(result) ||
       isPlaceEmailResult(result)
     ) {
-      setError(t("flights:form.noFlightsInEmail"));
+      setError(t(noFlightsKey));
       return;
     }
     const flights: ParsedBooking[] = result.flights ?? [];
     if (flights.length === 0) {
       // "No flight" is only a finding when every reader was asked.
-      setError(
-        t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
-      );
+      setError(t(result.llmUnreachable ? "flights:form.llmUnreachable" : noFlightsKey));
       return;
     }
     announceProvider(result);
