@@ -169,8 +169,8 @@ One `POST` commits the reviewed proposal atomically:
   into the existing preview/commit — no second pipeline. Refusal (admin switch, demo account,
   consent), unreachable provider, provider error and an unusable answer each come back with a
   code and the reason.
-- **Deferred:** the model reading for mail bodies (`/parse-email`; the PDF/document route
-  covers the drop zone); suspicious-row pre-deselection inside the preview modal (the gate
+- **Deferred:** the model reading for mail bodies (`/parse-email` stays unwired on purpose; the
+  PDF/document route covers the drop zone); suspicious-row pre-deselection inside the preview modal (the gate
   drops instead); `rejectedRows` display for transfers; linking into an existing trip by
   dropdown (the commit already attaches by booking reference / date overlap); template
   authoring from a model reading.
