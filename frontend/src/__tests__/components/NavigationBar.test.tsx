@@ -195,11 +195,12 @@ describe("NavigationBar — round-4 header", () => {
 
   // Owner 2026-09-25: the diagnostic bundle is admins-only on the server, so
   // an ordinary account must not be offered an entry that can only fail.
-  it("offers no diagnostic bug report to an ordinary account", () => {
+  // Owner 2026-11-05: an ordinary account gets the bug report too, scoped to its own data.
+  it("offers the diagnostic bug report to an ordinary account", () => {
     renderNav();
     fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
     expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeTruthy();
   });
 });
 
