@@ -56,8 +56,6 @@ export const INVALID_ACTION_REASONS = [
   "noPosition",
   /** `convert`: the flight has no certain departure time. */
   "noTime",
-  /** `convert`: the ride filed by an earlier attempt was edited since; it is the user's now. */
-  "rideChanged",
 ] as const;
 export type InvalidActionReason = (typeof INVALID_ACTION_REASONS)[number];
 

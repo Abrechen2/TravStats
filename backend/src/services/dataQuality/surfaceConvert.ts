@@ -3,6 +3,7 @@ import { prisma } from "../../db";
 import { Prisma, type DataQualityFlag } from "../../prisma";
 import { surfaceSegmentDetailsSchema } from "../../schemas/dataQualityRecordChecks";
 import { zoneOf } from "../../shared/time/zoneOf";
+import { payloadHash } from "../sync/clientRef";
 import { createBusRideOnce } from "../../routes/bus";
 import { createRailRideOnce } from "../../routes/rail";
 import { instantToWallClock, wallClockToInstant } from "../rides/rideEnds";
@@ -123,76 +124,113 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
   // already filed instead of filing a second one.
   const clientRef = `dq-surface:${flightId}`;
 
-  let rideId: string;
+  const body =
+    mode === "rail"
+      ? {
+          ...shared,
+          trainNumber: clean(flight.flightNumber)?.slice(0, 20) ?? null,
+          departureStation,
+          arrivalStation,
+        }
+      : {
+          ...shared,
+          lineName: clean(flight.flightNumber)?.slice(0, 40) ?? null,
+          rideKind: "intercity",
+          departureStation,
+          arrivalStation,
+        };
+  // The idempotency record keeps the hash of the body the ride was drawn from,
+  // so "is the flight the way the ride was drawn" is a comparison of content,
+  // not of clocks: an edit during preparation changes the body, whatever the
+  // timestamps say.
+  const hash = payloadHash(body);
+
   const filed = await prisma.clientWriteRef.findFirst({
     where: { userId: flag.userId, clientRef, kind: mode },
-    select: { entityId: true },
+    select: { entityId: true, payloadHash: true, entityVersion: true },
   });
-  const alreadyFiled =
-    filed &&
-    (mode === "rail"
-      ? await prisma.railJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } })
-      : await prisma.busJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } }));
-  // A retry reuses the earlier ride only while the flight is as it was when
-  // the ride was drawn. Edited since, the unchanged ride is replaced by one
-  // drawn from the current flight; a ride the user touched is theirs, so the
-  // conversion refuses instead (`rideChanged`).
-  const stale =
-    alreadyFiled && flight.updatedAt.getTime() > alreadyFiled.createdAt.getTime()
-      ? alreadyFiled
-      : null;
-  if (stale) {
-    if (stale.updatedAt.getTime() - stale.createdAt.getTime() > 2000) {
-      throw new FindingActionError("invalidAction", "rideChanged");
-    }
-    await discardStaleRide(flag.userId, mode, stale.id, clientRef);
-  }
-  if (alreadyFiled && !stale) {
-    rideId = alreadyFiled.id;
-  } else if (mode === "rail") {
-    const { result } = await createRailRideOnce(
-      flag.userId,
-      {
-        ...shared,
-        trainNumber: clean(flight.flightNumber)?.slice(0, 20) ?? null,
-        departureStation,
-        arrivalStation,
-      },
-      clientRef,
-      { skipRailAndFly: true }
-    );
-    rideId = result.data.id;
+  const earlier = filed
+    ? mode === "rail"
+      ? await prisma.railJourney.findFirst({
+          where: { id: filed.entityId, userId: flag.userId },
+          select: { id: true, updatedAt: true },
+        })
+      : await prisma.busJourney.findFirst({
+          where: { id: filed.entityId, userId: flag.userId },
+          select: { id: true, updatedAt: true },
+        })
+    : null;
+
+  let rideId: string;
+  if (filed && earlier && filed.payloadHash === hash) {
+    // Same flight content: the ride already filed is the ride.
+    rideId = earlier.id;
   } else {
-    const { result } = await createBusRideOnce(
-      flag.userId,
-      {
-        ...shared,
-        lineName: clean(flight.flightNumber)?.slice(0, 40) ?? null,
-        rideKind: "intercity",
-        departureStation,
-        arrivalStation,
-      },
-      clientRef
-    );
-    rideId = result.ride.id;
+    if (filed && earlier) {
+      // The flight changed since the ride was drawn. The ride is replaced only
+      // if nobody touched it: its exact version must be the one recorded right
+      // after filing, checked again inside the delete itself.
+      if (!filed.entityVersion) throw new FindingActionError("staleFinding");
+      await discardStaleRide(flag.userId, mode, {
+        rideId: earlier.id,
+        rideVersion: filed.entityVersion,
+        flightId,
+        flightVersion: flight.updatedAt,
+        clientRef,
+      });
+    }
+    if (mode === "rail") {
+      const { result } = await createRailRideOnce(flag.userId, body, clientRef, {
+        skipRailAndFly: true,
+        recordVersion: true,
+      });
+      rideId = result.data.id;
+    } else {
+      const { result } = await createBusRideOnce(flag.userId, body, clientRef, {
+        recordVersion: true,
+      });
+      rideId = result.ride.id;
+    }
   }
   return { rideType: mode, rideId, flightUpdatedAt: flight.updatedAt, tripId: flight.tripId };
 }
 
-/** Takes back a ride this conversion filed earlier, with its idempotency key. */
+/**
+ * Takes back a ride an earlier attempt filed, with its idempotency key — and
+ * only that exact ride: the delete names the version recorded after filing, and
+ * the flight is held at the version this attempt read. Either mismatch deletes
+ * nothing and refuses.
+ */
 async function discardStaleRide(
   userId: string,
   mode: "rail" | "bus",
-  rideId: string,
-  clientRef: string
+  input: {
+    rideId: string;
+    rideVersion: Date;
+    flightId: string;
+    flightVersion: Date;
+    clientRef: string;
+  }
 ): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
-      const gone = await shareSnapshot(tx, mode, rideId);
-      if (mode === "rail") await tx.railJourney.deleteMany({ where: { id: rideId, userId } });
-      else await tx.busJourney.deleteMany({ where: { id: rideId, userId } });
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "flights" WHERE id = ${input.flightId} FOR UPDATE`
+      );
+      const flightNow = await tx.flight.findFirst({
+        where: { id: input.flightId, userId, updatedAt: input.flightVersion },
+        select: { id: true },
+      });
+      if (!flightNow) throw new FindingActionError("staleFinding");
+      const gone = await shareSnapshot(tx, mode, input.rideId);
+      const where = { id: input.rideId, userId, updatedAt: input.rideVersion };
+      const removed =
+        mode === "rail"
+          ? await tx.railJourney.deleteMany({ where })
+          : await tx.busJourney.deleteMany({ where });
+      if (removed.count === 0) throw new FindingActionError("staleFinding");
       await propagateDelete(tx, userId, gone);
-      await tx.clientWriteRef.deleteMany({ where: { userId, clientRef } });
+      await tx.clientWriteRef.deleteMany({ where: { userId, clientRef: input.clientRef } });
     },
     { timeout: SHARE_TX_TIMEOUT_MS }
   );
@@ -224,7 +262,10 @@ export async function removeConvertedFlight(
         : { flightId: null, busJourneyId: conversion.rideId },
   });
   const gone = await shareSnapshot(tx, "flight", flightId);
-  const removed = await tx.flight.deleteMany({ where: { id: flightId, userId: flag.userId } });
+  // Conditional on the exact version the ride was drawn from.
+  const removed = await tx.flight.deleteMany({
+    where: { id: flightId, userId: flag.userId, updatedAt: conversion.flightUpdatedAt },
+  });
   if (removed.count === 0) throw new FindingActionError("staleFinding");
   await propagateDelete(tx, flag.userId, gone);
   // The flight stretched its trip's span; the ride that replaces it may not.

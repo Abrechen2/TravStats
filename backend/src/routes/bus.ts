@@ -44,7 +44,12 @@ import { linkCompanions, replaceCompanionLinks } from "../services/transport/com
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
-import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
+import {
+  recordingVersion,
+  createOnce,
+  takeClientRef,
+  type ClaimClientRef,
+} from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import ticketRoutes from "./bus/tickets";
 import { railListSummaryFromGroups } from "../shared/listSummary";
@@ -267,13 +272,31 @@ router.post(
 );
 
 /** The create behind POST /bus, callable from a service (see `createRailRideOnce`). */
-export function createBusRideOnce(userId: string, body: unknown, clientRef: string | null) {
+export function createBusRideOnce(
+  userId: string,
+  body: unknown,
+  clientRef: string | null,
+  options: { recordVersion?: boolean } = {}
+) {
   return createOnce({
     userId,
     clientRef,
     kind: "bus",
     payload: body,
-    create: (claim) => createBusRide(userId, body, claim),
+    create: (claim) =>
+      createBusRide(
+        userId,
+        body,
+        options.recordVersion
+          ? recordingVersion(claim, userId, async (tx, id) => {
+              const row = await tx.busJourney.findUnique({
+                where: { id },
+                select: { updatedAt: true },
+              });
+              return row?.updatedAt ?? null;
+            })
+          : claim
+      ),
     replay: async (id) => {
       const ride = await prisma.busJourney.findFirst({
         where: { id, userId },

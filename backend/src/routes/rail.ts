@@ -43,7 +43,12 @@ import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { findRailAndFlyFlight } from "../services/rail/railAndFly";
-import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
+import {
+  recordingVersion,
+  createOnce,
+  takeClientRef,
+  type ClaimClientRef,
+} from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailCo2 } from "../services/co2/rideDto";
@@ -397,7 +402,21 @@ export function createRailRideOnce(
     clientRef,
     kind: "rail",
     payload: body,
-    create: (claim) => createRailRide(userId, body, claim, options),
+    create: (claim) =>
+      createRailRide(
+        userId,
+        body,
+        options.recordVersion
+          ? recordingVersion(claim, userId, async (tx, id) => {
+              const row = await tx.railJourney.findUnique({
+                where: { id },
+                select: { updatedAt: true },
+              });
+              return row?.updatedAt ?? null;
+            })
+          : claim,
+        options
+      ),
     replay: (id) => replayRailRide(userId, id),
   });
 }
@@ -405,6 +424,8 @@ export function createRailRideOnce(
 interface CreateRailRideOptions {
   /** A ride made FROM a flight (the inbox's convert answer) is not a Rail&Fly ticket. */
   skipRailAndFly?: boolean;
+  /** Record the ride's version on its idempotency key, atomically with the create. */
+  recordVersion?: boolean;
 }
 
 async function createRailRide(
