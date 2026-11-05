@@ -19,7 +19,7 @@
  * database ids: an id means nothing on another server and says more about
  * this one than the file needs to.
  */
-import { MAX_CUSTOM_CATEGORIES, MAX_CUSTOM_CATEGORY_NAME } from "../../../shared/ratingCategories";
+import { MAX_CUSTOM_CATEGORY_NAME, MAX_IMPORT_CATEGORIES } from "../../../shared/ratingCategories";
 import { z } from "zod";
 import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
@@ -215,7 +215,7 @@ const stayPrivate = z
     ratings: z.record(z.string(), z.number().min(0.5).max(5)).optional(),
     ownRatings: z
       .record(z.string().min(1).max(MAX_CUSTOM_CATEGORY_NAME), z.number().min(0.5).max(5))
-      .refine((r) => Object.keys(r).length <= MAX_CUSTOM_CATEGORIES, "Too many own categories")
+      .refine((r) => Object.keys(r).length <= MAX_IMPORT_CATEGORIES, "Too many own categories")
       .optional(),
     pricePerNight: money,
     totalPrice: money,

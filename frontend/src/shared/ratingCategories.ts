@@ -46,6 +46,13 @@ export const MAX_CUSTOM_CATEGORY_NAME = 40;
 export const MAX_CUSTOM_CATEGORIES = 20;
 
 /**
+ * Most live own categories a trip IMPORT may leave an account with (it may go
+ * past the hand-adding limit rather than drop a value). The trip-file schema
+ * allows as many own ratings on a stay as can be stored.
+ */
+export const MAX_IMPORT_CATEGORIES = 100;
+
+/**
  * The three categories that still have their own `lodging_stays` column. The
  * columns stay in place for one release (rollback must not lose a judgement)
  * and are mirrored from the `ratings` map on every write.
