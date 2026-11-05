@@ -194,17 +194,16 @@ function isLineOfUser(entry: LogFileEntry, userId: string): boolean {
 }
 
 async function collectLogs(userId?: string): Promise<DiagnosticLogsData> {
+  const filter = userId ? (entry: LogFileEntry) => isLineOfUser(entry, userId) : undefined;
   const [files, app, errors] = await Promise.all([
     // File names and sizes describe the server's disk, not this account.
     userId ? Promise.resolve([]) : listLogFiles(),
-    readLogWindow("app", APP_WINDOW_MS),
-    readLogWindow("error", ERROR_WINDOW_MS),
+    readLogWindow("app", APP_WINDOW_MS, { filter }),
+    readLogWindow("error", ERROR_WINDOW_MS, { filter }),
   ]);
-  const own = (entries: LogFileEntry[]): LogFileEntry[] =>
-    userId ? entries.filter((entry) => isLineOfUser(entry, userId)) : entries;
   // Newest kept: the lines around the error being reported.
-  const recent = toDiagnosticLogEvents(own(app.entries)).slice(-MAX_EVENTS);
-  const errorEvents = toDiagnosticLogEvents(own(errors.entries)).slice(-MAX_EVENTS);
+  const recent = toDiagnosticLogEvents(app.entries).slice(-MAX_EVENTS);
+  const errorEvents = toDiagnosticLogEvents(errors.entries).slice(-MAX_EVENTS);
   return {
     files: files.map((file) => ({
       stream: file.category,
@@ -214,7 +213,8 @@ async function collectLogs(userId?: string): Promise<DiagnosticLogsData> {
     })),
     recent,
     errors: errorEvents,
-    unreadableFiles: app.unreadableFiles + errors.unreadableFiles,
+    // Which server files could not be read is the server's business, not the account's.
+    unreadableFiles: userId ? 0 : app.unreadableFiles + errors.unreadableFiles,
     truncated:
       app.truncated ||
       errors.truncated ||

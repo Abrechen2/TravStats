@@ -21,6 +21,11 @@ export interface ReadWindowOptions {
   maxEntries?: number;
   /** Approximate — UTF-16 code units of the source lines. */
   maxBytes?: number;
+  /**
+   * Applied BEFORE the caps count a line, so a busy neighbour cannot push the
+   * caller's own lines out of the window.
+   */
+  filter?: (entry: LogFileEntry) => boolean;
 }
 
 export interface LogWindow {
@@ -87,6 +92,7 @@ export async function readLogWindow(
     // Lines are chronological inside a file: walk them from the end.
     for (let i = lines.length - 1; i >= 0; i--) {
       const { entry, size } = lines[i];
+      if (options.filter && !options.filter(entry)) continue;
       if (newestFirst.length >= maxEntries || bytes + size > maxBytes) {
         truncated = true;
         break;
