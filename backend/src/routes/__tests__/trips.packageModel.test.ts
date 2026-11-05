@@ -173,7 +173,7 @@ describe("package document read by the model on request", () => {
     });
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
     expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
-    expect(res.body.issues).toEqual([expect.stringContaining("issuedOn")]);
+    expect(res.body).toMatchObject({ modelReason: "contractRefused", issues: ["issuedOn"] });
   });
 
   it("does not accept a price that is only a digit run inside the stated amount", async () => {
@@ -193,13 +193,17 @@ describe("package document read by the model on request", () => {
     });
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
     expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
-    expect(res.body.issues).toEqual([expect.stringContaining("flights")]);
+    expect(res.body).toMatchObject({ modelReason: "contractRefused", issues: ["flights"] });
   });
 
   it("refuses a document longer than the model is shown, rather than reading part of it", async () => {
     extractTextFromPdf.mockResolvedValue(`${DOC_TEXT}\n${"x ".repeat(9000)}`);
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
-    expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
+    expect(res.body).toMatchObject({
+      package: null,
+      fallbackCode: "modelInvalid",
+      modelReason: "documentTooLong",
+    });
     expect(llmGenerateChain).not.toHaveBeenCalled();
   });
 });
