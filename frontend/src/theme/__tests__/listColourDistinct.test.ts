@@ -17,10 +17,10 @@ const MIN_DISTANCE = 45;
 describe("list colour palette", () => {
   it("keeps the lime list colour clearly apart from the roadtrip/tour moss (was 16 RGB points)", () => {
     expect(distance(tokens.listColor.lime, tokens.domainColor.roadtrip)).toBeGreaterThanOrEqual(
-      MIN_DISTANCE,
+      MIN_DISTANCE
     );
     expect(distance(tokens.listColor.lime, tokens.domainColor.tour)).toBeGreaterThanOrEqual(
-      MIN_DISTANCE,
+      MIN_DISTANCE
     );
   });
 });
