@@ -154,8 +154,11 @@ export default function TravTrackDiagnostics({
     const why = e.stopWhy;
     if (gap.cause === "recorderPaused" && why) {
       const unknown = t(`${NS}.evidence.unknown`);
+      // The app sends its own vocabulary (keep, hold, unknown …); show it in the page's language.
+      const word = (v: string | null | undefined): string =>
+        v == null ? unknown : t(`${NS}.evidence.value.${v}`, { defaultValue: v });
       const yesNo = (v: boolean | string | null | undefined): string =>
-        typeof v === "boolean" ? t(`${NS}.evidence.${v ? "yes" : "no"}`) : (v ?? unknown);
+        typeof v === "boolean" ? t(`${NS}.evidence.${v ? "yes" : "no"}`) : word(v);
       if (why.reason === "plan") {
         parts.push(
           t(`${NS}.evidence.stopPlan`, {
@@ -163,17 +166,17 @@ export default function TravTrackDiagnostics({
               why.foreground === null
                 ? unknown
                 : t(`${NS}.evidence.${why.foreground ? "stopForeground" : "stopBackground"}`),
-            flight: why.flight ?? unknown,
-            trip: why.trip ?? unknown,
-            everyday: why.everyday ?? unknown,
+            flight: word(why.flight),
+            trip: word(why.trip),
+            everyday: word(why.everyday),
             allowed: yesNo(why.allowed),
             enabled: yesNo(why.everydayEnabled),
             armed: yesNo(why.everydayArmed),
-            decision: why.decision ?? unknown,
+            decision: word(why.decision),
           })
         );
       } else if (why.reason) {
-        parts.push(t(`${NS}.evidence.stopOther`, { reason: why.reason }));
+        parts.push(t(`${NS}.evidence.stopOther`, { reason: word(why.reason) }));
       }
     }
     if (e.permission && e.permission !== "always") {

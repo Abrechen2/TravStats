@@ -130,7 +130,16 @@
         "stopBackground": "app in the background",
         "yes": "yes",
         "no": "no",
-        "unknown": "unknown"
+        "unknown": "unknown",
+        "value": {
+          "start": "start",
+          "keep": "keep",
+          "stop": "stop",
+          "allow": "allow",
+          "deny": "deny",
+          "hold": "hold",
+          "unknown": "unknown"
+        }
       },
       "dropReason": {
         "interval": "interval",

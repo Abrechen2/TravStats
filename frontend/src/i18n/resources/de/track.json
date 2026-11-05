@@ -130,7 +130,16 @@
         "stopBackground": "App im Hintergrund",
         "yes": "ja",
         "no": "nein",
-        "unknown": "unbekannt"
+        "unknown": "unbekannt",
+        "value": {
+          "start": "starten",
+          "keep": "beibehalten",
+          "stop": "beenden",
+          "allow": "erlaubt",
+          "deny": "verweigert",
+          "hold": "halten",
+          "unknown": "unbekannt"
+        }
       },
       "dropReason": {
         "interval": "Intervall",
