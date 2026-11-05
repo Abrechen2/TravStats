@@ -150,6 +150,22 @@ export const tripEntriesOutsideDetailsSchema = z.object({
   ),
 });
 
+/**
+ * A flight that is really a train or a bus ride sold inside a flight booking
+ * (Express Rail, AIRail — owner ruling 2026-11-05). Answered with `convert`,
+ * which turns it into a rail or bus ride and removes the flight; `dismiss`
+ * keeps it a flight. Nothing is converted without the user's answer.
+ */
+export const surfaceSegmentDetailsSchema = z.object({
+  flightId: z.string(),
+  mode: z.enum(["rail", "bus"]),
+  /** What made the check say so: the equipment column, the operator, a code that is no airport. */
+  signals: z.array(z.enum(["equipment", "operator", "station"])).min(1),
+  flightNumber: z.string().nullable(),
+  departureCode: z.string().nullable(),
+  arrivalCode: z.string().nullable(),
+});
+
 /** Why a ferry ride is offered to a trip. One rule today. */
 export const FERRY_MATCH_REASONS = [
   /** The crossing's days lie inside exactly one trip's days, and it is on no trip. */

@@ -170,6 +170,10 @@
     "applyWithChange": "Take over up to the change"
   },
   "detail": {
+    "railAndFly": {
+      "title": "Rail&Fly",
+      "flight": "Feeder to flight {{flight}}"
+    },
     "loading": "Loading …",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more).",

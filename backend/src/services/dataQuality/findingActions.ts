@@ -11,6 +11,7 @@ import { duplicateCandidateDetailsSchema } from "../../schemas/dataQualityRecord
 import { duplicateEvidence, findingActionsOf } from "./findingEvidence";
 import { mergeDuplicates } from "./duplicateMerge";
 import { applyFerryLink, undoFerryLink } from "./ferryLink";
+import { convertSurfaceFlight, removeConvertedFlight } from "./surfaceConvert";
 import { FindingActionError } from "./findingErrors";
 import { lockDuplicateAnswers } from "./duplicateAnswers";
 import { SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
@@ -28,6 +29,7 @@ export { FindingActionError };
  * | `keep` (duplicate) | dismissed, with the other flags of the same copies | no | yes |
  * | `merge` (duplicate) | resolved | moves attachments, deletes the other copies | **no** — the app delays the call |
  * | `link` (`ferry_match`) | resolved | puts the ride on the trip | yes, while it is still on that trip |
+ * | `convert` (`surface_segment`) | resolved | files a rail or bus ride, deletes the flight | **no** — the flight is gone |
  *
  * `keep` lands on `dismissed`, not `resolved`: the runner re-opens a resolved
  * flag whose finding still holds, and "these are two entries" is exactly a
@@ -240,6 +242,43 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
 }
 
 /**
+ * `convert`: the flight is a train or bus ride (owner ruling 2026-11-05). The
+ * ride is filed first, under a reference derived from the flag, then the
+ * flight's removal and the answer commit together — an answer that dies in
+ * between leaves a ride AND the open flag, and answering again files nothing
+ * twice.
+ */
+async function convert(flag: DataQualityFlag, now: Date): Promise<void> {
+  const conversion = await convertSurfaceFlight(flag);
+  await prisma.$transaction(
+    async (tx) => {
+      await removeConvertedFlight(tx, flag, conversion.tripId);
+      const updated = await tx.dataQualityFlag.updateMany({
+        where: asRead(flag),
+        data: {
+          // The flag follows the entry, as a merged one follows the kept copy:
+          // the flight is gone, and a flag with no subject would drop out of
+          // the history.
+          entityType: conversion.rideType === "rail" ? "rail_journey" : "bus_journey",
+          entityId: conversion.rideId,
+          status: "resolved",
+          resolvedAt: now,
+          undoUntil: null,
+          resolution: asJson({
+            action: "convert",
+            ...previousOf(flag),
+            converted: { rideType: conversion.rideType, rideId: conversion.rideId },
+          }),
+          ...NEXT_REVISION,
+        },
+      });
+      if (updated.count === 0) throw new FindingActionError("staleFinding");
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}
+
+/**
  * `POST /:id/resolve`. No action is the old answer, "I have corrected the
  * data", and keeps its old reach (any status). An action needs an open flag
  * that offers it.
@@ -263,6 +302,7 @@ export async function resolveFinding(
 
   if (action === "keep") return keep(flag, now);
   if (action === "merge") return merge(flag, body.keptId, now);
+  if (action === "convert") return convert(flag, now);
 
   // `link` — the only other action: put the ride on the trip, in the same
   // transaction as the answer.
@@ -305,7 +345,7 @@ export async function undoFinding(
     throw new FindingActionError("undoExpired");
   }
   const parsed = findingResolutionSchema.safeParse(flag.resolution);
-  if (!parsed.success || parsed.data.action === "merge") {
+  if (!parsed.success || parsed.data.action === "merge" || parsed.data.action === "convert") {
     throw new FindingActionError("undoExpired");
   }
   const resolution = parsed.data;

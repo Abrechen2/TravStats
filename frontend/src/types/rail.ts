@@ -28,6 +28,15 @@ export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
 export interface RailJourney {
   id: string;
   userId: string;
+  /** Rail&Fly: the flight this ticket feeds (owner ruling 2026-11-05); null = none. */
+  railAndFlyFlightId?: string | null;
+  railAndFlyFlight?: {
+    id: string;
+    flightNumber: string | null;
+    depIata: string | null;
+    arrIata: string | null;
+    departureTime: string | null;
+  } | null;
   /** Estimated CO2 (forgejo#395); null where the ride has no known distance. */
   co2?: import("./co2").Co2Estimate | null;
   operator: string | null;
@@ -234,6 +243,8 @@ export interface RailJourneyInput {
   bookingId?: string | null;
   /** Create only: the leg this one continues (a connecting train). */
   connectsFrom?: string;
+  /** Create only: `false` keeps the server from tying the ride to a flight as Rail&Fly. */
+  railAndFly?: false;
   /** The timetable trip a lookup matched; null drops it (and its traced line). */
   lookup?: { provider: RailLookupProvider; ref: string } | null;
 }

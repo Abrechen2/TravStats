@@ -51,6 +51,7 @@ import { describeLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 import { templateRegistry } from "../parsers/templates/registry";
 import { withParseBudget } from "../parsers/templates/v2/budget";
+import { withoutSurfaceSegments } from "./surfaceSegments";
 import { prisma } from "../../db";
 import {
   parsePackageText,
@@ -150,7 +151,14 @@ type LodgingBody = {
   domainMismatch?: DomainMismatch;
 };
 
-type FlightBody = { domain: "flight" } & ParseResult;
+type FlightBody = { domain: "flight" } & ParseResult & {
+    /**
+     * Train and bus segments sold inside the flight booking (Express Rail,
+     * AIRail): not flights, offered to the rail review (owner ruling 2026-11-05).
+     * Absent when the booking holds none.
+     */
+    surfaceBookings?: RailImportCandidate[];
+  };
 
 type RailBody = {
   domain: "rail";
@@ -639,9 +647,15 @@ async function parseAs(
       // The body's "the model could not be asked" no longer qualifies an
       // empty answer — the answer is not empty.
       const { llmUnreachable: _unused, ...rest } = result;
-      return { domain: "flight", ...rest, flights: fromPdf, parserUsed: "regex" };
+      return {
+        domain: "flight",
+        ...(await withoutSurfaceSegments(
+          { ...rest, flights: fromPdf, parserUsed: "regex" as const },
+          input.userId
+        )),
+      };
     }
   }
 
-  return { domain: "flight", ...result };
+  return { domain: "flight", ...(await withoutSurfaceSegments(result, input.userId)) };
 }

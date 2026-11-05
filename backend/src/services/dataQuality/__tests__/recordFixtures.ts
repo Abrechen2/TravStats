@@ -21,6 +21,8 @@ export function flight(over: Partial<FlightRecord> & { id: string }): FlightReco
     lastDay: "2026-03-10",
     flightNumber: "LH400",
     airline: "Lufthansa",
+    aircraft: null,
+    operatingAirline: null,
     specialType: null,
     isCargo: null,
     dep: { iata: "FRA", icao: "EDDF", name: "Frankfurt" },

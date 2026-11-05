@@ -425,6 +425,19 @@ export default function FlightDetailPage(): JSX.Element {
               </Link>
             </DetailSection>
           )}
+          {(flight.railAndFlyRides?.length ?? 0) > 0 && (
+            <DetailSection title={t("flights:detail.railAndFly")}>
+              <ul className="flex flex-col gap-1 text-sm" data-testid="flight-detail-rail-and-fly">
+                {flight.railAndFlyRides?.map((ride) => (
+                  <li key={ride.id}>
+                    <Link to={`/rail/${ride.id}`} style={{ color: "var(--ts-accent)" }}>
+                      {ride.depStationName} → {ride.arrStationName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </DetailSection>
+          )}
           {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}
 
           {/* The recording — the phone's (forgejo#193) or an uploaded file (forgejo#312). */}

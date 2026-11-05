@@ -14,6 +14,7 @@ import { findMissingFlightNumbers } from "./checks/flightNumberMissing";
 import { findUnknownAirports } from "./checks/airportUnknown";
 import { findIncompleteTrips } from "./checks/tripIncomplete";
 import { findFerryMatches } from "./checks/ferryMatch";
+import { findSurfaceSegments } from "./checks/surfaceSegment";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
 import { outgrowsDismissal } from "./dismissalScope";
@@ -117,6 +118,7 @@ export function collectFindings(
     ...findUnknownAirports(snapshot.records),
     ...findIncompleteTrips(snapshot.records, now),
     ...findFerryMatches(snapshot.records),
+    ...findSurfaceSegments(snapshot.records),
   ];
 }
 

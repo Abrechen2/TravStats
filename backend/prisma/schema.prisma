@@ -826,6 +826,8 @@ model Flight {
   user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   importBatch         ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   trip                Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  /// Rail&Fly rides linked to this flight (see RailJourney.railAndFlyFlightId).
+  railAndFlyRides     RailJourney[]         @relation("FlightRailAndFly")
   booking             Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates      PendingFlightUpdate[]
   companionLinks      FlightCompanion[]
@@ -4510,14 +4512,20 @@ model RailJourney {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip           Trip?                  @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking        Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  importBatch    ImportBatch?           @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  depStation     RailStation?           @relation("RailJourneyDepStation", fields: [depStationId], references: [id], onDelete: SetNull)
-  arrStation     RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
-  companionLinks RailJourneyCompanion[]
-  documents      Document[]
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Rail&Fly (owner ruling 2026-11-05): the flight this ride belongs to. Set
+  /// only when a real ticket was imported and a flight of the same trip lies
+  /// within a day and a short distance of its airport end — never suggested
+  /// from the flight booking. SetNull: deleting the flight leaves the ride.
+  railAndFlyFlightId String?                @map("rail_and_fly_flight_id")
+  railAndFlyFlight   Flight?                @relation("FlightRailAndFly", fields: [railAndFlyFlightId], references: [id], onDelete: SetNull)
+  trip               Trip?                  @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking            Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importBatch        ImportBatch?           @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  depStation         RailStation?           @relation("RailJourneyDepStation", fields: [depStationId], references: [id], onDelete: SetNull)
+  arrStation         RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
+  companionLinks     RailJourneyCompanion[]
+  documents          Document[]
 
   @@unique([userId, externalRef])
   @@unique([userId, shareKey])
@@ -4528,6 +4536,7 @@ model RailJourney {
   @@index([importBatchId])
   @@index([depStationId])
   @@index([arrStationId])
+  @@index([railAndFlyFlightId])
   @@map("rail_journeys")
 }
 

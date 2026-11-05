@@ -21,6 +21,8 @@ export type RailParseSource =
   /** A bahn.de share link (forgejo#204) — a timetable connection, not a purchase. */
   | "db-share-link"
   | "ics"
+  /** Train and bus segments sold inside a flight booking (owner ruling 2026-11-05). */
+  | "flight-booking"
   /** One of the user's own workshop templates (forgejo#309). */
   | "workshop"
   | "ollama";

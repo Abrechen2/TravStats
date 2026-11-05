@@ -9,6 +9,8 @@ import type { RailStationDraft } from "./RailStationField";
 import {
   NO_LOCAL_TRANSIT,
   legStart,
+  surfaceLegStart,
+  FLIGHT_BOOKING_SOURCE,
   railTransitModeOf,
   type RailImportDefaults,
 } from "./railImportModes";
@@ -58,7 +60,9 @@ export function rowsFrom(
 ): RailImportRow[] {
   return booking.legs.map((leg) => ({
     leg,
-    ...legStart(leg, defaults),
+    ...(booking.source === FLIGHT_BOOKING_SOURCE
+      ? surfaceLegStart(leg, defaults)
+      : legStart(leg, defaults)),
     departure: stationDraftFrom(leg.departureStation),
     arrival: stationDraftFrom(leg.arrivalStation),
   }));
@@ -127,6 +131,8 @@ export function toImportInput(
     notes: booking.tariff,
     lookup: null,
     transitMode: railTransitModeOf(row.leg),
+    // The ground segments of a flight booking are no separate ticket to tie to a flight.
+    ...(booking.source === FLIGHT_BOOKING_SOURCE ? { railAndFly: false as const } : {}),
   };
 }
 

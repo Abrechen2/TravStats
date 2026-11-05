@@ -45,6 +45,8 @@ export const RECORD_CHECK_KINDS = [
   "trip_entries_outside",
   /** A ferry ride on no trip, inside one trip's days (spec 2026-10-25 C3). */
   "ferry_match",
+  /** A flight that is a train or bus ride sold inside a flight booking (owner ruling 2026-11-05). */
+  "surface_segment",
 ] as const;
 export type RecordCheckKind = (typeof RECORD_CHECK_KINDS)[number];
 
@@ -239,6 +241,16 @@ export interface FerryMatchDetails {
   reason: "insideTripWindow";
 }
 
+/** A stored flight that is really a train or bus ride. Answered with `convert`. */
+export interface SurfaceSegmentDetails {
+  flightId: string;
+  mode: "rail" | "bus";
+  signals: ("equipment" | "operator" | "station")[];
+  flightNumber: string | null;
+  departureCode: string | null;
+  arrivalCode: string | null;
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
@@ -253,6 +265,7 @@ export type DataQualityFlagDetails =
   | TripEndMissingDetails
   | TripEntriesOutsideDetails
   | FerryMatchDetails
+  | SurfaceSegmentDetails
   | TimeQuestionDetails;
 
 /**
@@ -285,7 +298,7 @@ interface DataQualityFlagBase {
 }
 
 /** The kind-specific answers `POST /:id/resolve` takes (`{ action }`). */
-export type FindingAction = "keep" | "merge" | "link";
+export type FindingAction = "keep" | "merge" | "link" | "convert";
 
 /**
  * One flag as the API returns it, with `kind` and `details` tied together.
@@ -330,6 +343,7 @@ export type DataQualityFlag =
   | (DataQualityFlagBase & { kind: "trip_end_missing"; details: TripEndMissingDetails })
   | (DataQualityFlagBase & { kind: "trip_entries_outside"; details: TripEntriesOutsideDetails })
   | (DataQualityFlagBase & { kind: "ferry_match"; details: FerryMatchDetails })
+  | (DataQualityFlagBase & { kind: "surface_segment"; details: SurfaceSegmentDetails })
   | (DataQualityFlagBase & {
       kind: TimeFlagKind;
       details: TimeQuestionDetails;

@@ -460,7 +460,20 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const { id } = req.params;
     const flight = await prisma.flight.findFirst({
       where: { id, userId },
-      include: { trip: { select: { id: true, name: true, color: true } } },
+      include: {
+        trip: { select: { id: true, name: true, color: true } },
+        // The Rail&Fly tickets that feed this flight (owner ruling 2026-11-05).
+        railAndFlyRides: {
+          select: {
+            id: true,
+            depStationName: true,
+            arrStationName: true,
+            departureTime: true,
+            trainNumber: true,
+          },
+          orderBy: { departureTime: "asc" },
+        },
+      },
     });
     if (!flight) {
       throw new AppError("Flight not found", 404);

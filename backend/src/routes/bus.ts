@@ -256,25 +256,7 @@ router.post(
       // An outbox replay carries the key it minted (forgejo#283): a repeat
       // answers the ride the first POST made, 200 instead of 201.
       const { clientRef, rest: body } = takeClientRef(req.body);
-      const { created, result } = await createOnce({
-        userId,
-        clientRef,
-        kind: "bus",
-        payload: body,
-        create: (claim) => createBusRide(userId, body, claim),
-        replay: async (id) => {
-          const ride = await prisma.busJourney.findFirst({
-            where: { id, userId },
-            include: BUS_INCLUDE,
-          });
-          return (
-            ride && {
-              ride: withBusCo2(withBusTimes(ride)),
-              report: busGeometryReport({ kind: "unchanged" }, ride.geometrySource),
-            }
-          );
-        },
-      });
+      const { created, result } = await createBusRideOnce(userId, body, clientRef);
       res
         .status(created ? 201 : 200)
         .json({ success: true, data: result.ride, meta: { geometry: result.report } });
@@ -283,6 +265,29 @@ router.post(
     }
   }
 );
+
+/** The create behind POST /bus, callable from a service (see `createRailRideOnce`). */
+export function createBusRideOnce(userId: string, body: unknown, clientRef: string | null) {
+  return createOnce({
+    userId,
+    clientRef,
+    kind: "bus",
+    payload: body,
+    create: (claim) => createBusRide(userId, body, claim),
+    replay: async (id) => {
+      const ride = await prisma.busJourney.findFirst({
+        where: { id, userId },
+        include: BUS_INCLUDE,
+      });
+      return (
+        ride && {
+          ride: withBusCo2(withBusTimes(ride)),
+          report: busGeometryReport({ kind: "unchanged" }, ride.geometrySource),
+        }
+      );
+    },
+  });
+}
 
 async function createBusRide(userId: string, body: unknown, claim: ClaimClientRef) {
   refuseStrayFold(body);

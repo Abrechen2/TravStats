@@ -54,6 +54,9 @@ export interface FlightRecord extends RecordBase {
   flightNumber: string | null;
   /** The carrier as written — name, else IATA, else ICAO; null when none is named. */
   airline: string | null;
+  /** The equipment column as stored — "TRN" and "BUS" are the ground segments. */
+  aircraft: string | null;
+  operatingAirline: string | null;
   specialType: string | null;
   isCargo: boolean | null;
   dep: FlightEnd;
@@ -212,6 +215,8 @@ async function loadFlights(userId: string, db: RecordDb) {
       airline: true,
       airlineIata: true,
       airlineIcao: true,
+      aircraft: true,
+      operatingAirline: true,
       specialType: true,
       isCargo: true,
       depIata: true,
@@ -263,6 +268,8 @@ function toFlightRecord(row: FlightRow, tzMap: ReadonlyMap<string, string>): Fli
     lastDay: firstDay ? (arrivalDay ?? firstDay) : null,
     flightNumber: text(row.flightNumber),
     airline: text(row.airline) ?? text(row.airlineIata) ?? text(row.airlineIcao),
+    aircraft: text(row.aircraft),
+    operatingAirline: text(row.operatingAirline),
     specialType: row.specialType,
     isCargo: row.isCargo,
     dep: { iata: text(row.depIata), icao: text(row.depIcao), name: text(row.depName) },

@@ -32,6 +32,14 @@ export interface Airport {
 export interface Flight extends FlightProviderData {
   id: string;
   userId: string;
+  /** Rail&Fly tickets that feed this flight (owner ruling 2026-11-05), oldest first. */
+  railAndFlyRides?: {
+    id: string;
+    depStationName: string;
+    arrStationName: string;
+    departureTime: string;
+    trainNumber: string | null;
+  }[];
   airline: string;
   airlineIata?: string;
   airlineIcao?: string;

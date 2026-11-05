@@ -219,6 +219,12 @@ export const createRailJourneySchema = baseRailSchema.extend({
    * sent. Create-only — an existing leg joins a booking through `bookingId`.
    */
   connectsFrom: z.string().uuid().optional(),
+  /**
+   * `false` keeps the server from tying this ride to a flight as Rail&Fly
+   * (owner ruling 2026-11-05). The importer sends it for the ground segments
+   * of a FLIGHT booking, which are no separate ticket. Create-only.
+   */
+  railAndFly: z.literal(false).optional(),
 });
 
 export const updateRailJourneySchema = partialForUpdate(baseRailSchema).refine(

@@ -13,6 +13,7 @@ import {
   chronologyConflictDetailsSchema,
   duplicateCandidateDetailsSchema,
   ferryMatchDetailsSchema,
+  surfaceSegmentDetailsSchema,
   flightNumberMissingDetailsSchema,
   tripEndMissingDetailsSchema,
   tripEntriesOutsideDetailsSchema,
@@ -126,6 +127,11 @@ export const DATA_QUALITY_FLAG_KINDS = [
    * contract's `ferryMatch`). Answered with `link`.
    */
   "ferry_match",
+  /**
+   * A flight that is a train or bus ride sold inside a flight booking (owner
+   * ruling 2026-11-05). Answered with `convert`.
+   */
+  "surface_segment",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -388,6 +394,10 @@ const tripEntriesOutsidePayload = z.object({
   kind: z.literal("trip_entries_outside"),
   details: tripEntriesOutsideDetailsSchema,
 });
+const surfaceSegmentPayload = z.object({
+  kind: z.literal("surface_segment"),
+  details: surfaceSegmentDetailsSchema,
+});
 const ferryMatchPayload = z.object({
   kind: z.literal("ferry_match"),
   details: ferryMatchDetailsSchema,
@@ -416,6 +426,7 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   tripEndMissingPayload,
   tripEntriesOutsidePayload,
   ferryMatchPayload,
+  surfaceSegmentPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -504,6 +515,7 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   view(tripEndMissingPayload, tripEndMissingDetailsSchema),
   view(tripEntriesOutsidePayload, tripEntriesOutsideDetailsSchema),
   view(ferryMatchPayload, ferryMatchDetailsSchema),
+  view(surfaceSegmentPayload, surfaceSegmentDetailsSchema),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

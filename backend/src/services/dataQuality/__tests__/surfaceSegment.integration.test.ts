@@ -1,0 +1,200 @@
+/**
+ * A flight that is a train or bus ride (owner ruling 2026-11-05) against real
+ * Postgres, through the router: raised as a question, never converted silently;
+ * `convert` files the rail/bus ride and removes the flight; `dismiss` keeps it.
+ */
+import { describe, it, expect, beforeEach, afterEach, afterAll, jest } from "@jest/globals";
+import express from "express";
+import request from "supertest";
+
+let mockUserId = "";
+jest.mock("../../../middleware/auth", () => {
+  const actual = jest.requireActual<typeof import("../../../middleware/auth")>(
+    "../../../middleware/auth"
+  );
+  return {
+    ...actual,
+    authenticate: (req: unknown, _res: unknown, next: () => void) => {
+      (req as { userId?: string }).userId = mockUserId;
+      next();
+    },
+  };
+});
+
+import { prisma } from "../../../db";
+import dataQualityFlagsRouter from "../../../routes/dataQualityFlags";
+import { errorHandler } from "../../../middleware/errorHandler";
+import { runDataQualityChecks } from "../runner";
+import { listFlags } from "../flagService";
+
+const NOW = new Date("2026-10-10T12:00:00Z");
+
+function makeApp(): express.Express {
+  const app = express();
+  app.use(express.json());
+  app.use("/api/v1/data-quality-flags", dataQualityFlagsRouter);
+  app.use(errorHandler);
+  return app;
+}
+
+const post = (path: string, body?: object) =>
+  request(makeApp())
+    .post(`/api/v1/data-quality-flags${path}`)
+    .send(body ?? {});
+
+const baseFlight = {
+  airline: "Lufthansa",
+  depIata: "QKL",
+  depName: "Koeln Hbf",
+  depLat: 50.943,
+  depLon: 6.959,
+  arrIata: "FRA",
+  arrName: "Frankfurt Airport",
+  arrLat: 50.033,
+  arrLon: 8.57,
+  departureTime: new Date("2026-09-10T05:12:00Z"),
+  arrivalTime: new Date("2026-09-10T06:20:00Z"),
+  status: "flown",
+};
+
+async function seed(userId: string) {
+  const trip = await prisma.trip.create({
+    data: { userId, name: "NYC", status: "completed" },
+  });
+  const train = await prisma.flight.create({
+    data: {
+      ...baseFlight,
+      userId,
+      flightNumber: "LH8878",
+      aircraft: "TRN",
+      bookingReference: "ABC123",
+      tripId: trip.id,
+    },
+  });
+  const real = await prisma.flight.create({
+    data: {
+      ...baseFlight,
+      userId,
+      flightNumber: "LH400",
+      aircraft: "Boeing 747-8",
+      depIata: "FRA",
+      depName: "Frankfurt Airport",
+      depLat: 50.033,
+      depLon: 8.57,
+      arrIata: "JFK",
+      arrName: "New York JFK",
+      arrLat: 40.64,
+      arrLon: -73.78,
+      tripId: trip.id,
+    },
+  });
+  return { trip, train, real };
+}
+
+async function surfaceFlags(userId: string) {
+  return listFlags(userId, { kind: "surface_segment" });
+}
+
+describe("flights that are train or bus rides", () => {
+  let userId: string;
+
+  beforeEach(async () => {
+    const user = await prisma.user.create({
+      data: {
+        username: `dq-surface-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        passwordHash: "x",
+      },
+    });
+    userId = user.id;
+    mockUserId = userId;
+  });
+
+  afterEach(async () => {
+    await prisma.user.delete({ where: { id: userId } });
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("asks about the TRN flight only, offers convert, and changes nothing by itself", async () => {
+    const { train, real } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const flags = await surfaceFlags(userId);
+
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toMatchObject({
+      entityId: train.id,
+      actions: ["convert"],
+      evidence: { mode: "rail", flightNumber: "LH8878" },
+    });
+    expect(await prisma.flight.count({ where: { userId } })).toBe(2);
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+    expect(flags.some((f) => f.entityId === real.id)).toBe(false);
+  });
+
+  it("convert files a rail ride on the same trip and booking, removes the flight and cannot be undone", async () => {
+    const { train, real, trip } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+
+    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ status: "resolved", undoUntil: null });
+
+    // The flight is gone, so flight figures cannot count it; the real one stays.
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).toBeNull();
+    expect(await prisma.flight.findUnique({ where: { id: real.id } })).not.toBeNull();
+    const rides = await prisma.railJourney.findMany({ where: { userId } });
+    expect(rides).toHaveLength(1);
+    expect(rides[0]).toMatchObject({
+      trainNumber: "LH8878",
+      tripId: trip.id,
+      bookingReference: "ABC123",
+      depStationName: "Koeln Hbf",
+      transitMode: "rail",
+    });
+
+    const undo = await post(`/${flag.id}/undo`);
+    expect(undo.status).toBe(409);
+    expect(undo.body).toEqual({ error: "undoExpired" });
+  });
+
+  it("files a bus ride for a BUS flight", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({ where: { id: train.id }, data: { aircraft: "BUS" } });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+    const rides = await prisma.busJourney.findMany({ where: { userId } });
+    expect(rides).toHaveLength(1);
+    expect(rides[0]).toMatchObject({ lineName: "LH8878", bookingReference: "ABC123" });
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+  });
+
+  it("dismiss keeps the flight a flight, and the question is not asked again", async () => {
+    const { train } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+
+    expect((await post(`/${flag.id}/dismiss`)).status).toBe(200);
+    await runDataQualityChecks(userId, NOW);
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
+    expect(await listFlags(userId, { kind: "surface_segment" })).toHaveLength(0);
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+  });
+
+  it("refuses to convert a flight with no position and says why, keeping the flight", async () => {
+    const { train } = await seed(userId);
+    await prisma.flight.update({ where: { id: train.id }, data: { depLat: 0, depLon: 0 } });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+
+    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: "invalidAction", reason: "noPosition" });
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+  });
+});

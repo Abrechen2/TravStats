@@ -60,6 +60,9 @@ export function flagDay(flag: DataQualityFlag): string | null {
     case "ferry_match":
       // The wall clock at the port, never the UTC instant's date.
       return flag.details.departureTime.local.slice(0, 10);
+    case "surface_segment":
+      // No day of its own on the flag; the card names the flight instead.
+      return null;
     case "stay_dates_reversed":
       return flag.details.stays[0]?.checkIn.slice(0, 10) ?? null;
     default:

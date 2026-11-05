@@ -269,7 +269,7 @@
     "personal": "seat notes tags companions",
     "photos": "",
     "documents": "bookingReference",
-    "excluded": "userId shareKey"
+    "excluded": "userId shareKey railAndFlyFlightId"
   },
   "RailStation": {
     "details": "id name searchName uic dbId shortCode lat lon country timezone parentSourceId isUserAdded",

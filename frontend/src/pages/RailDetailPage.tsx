@@ -366,6 +366,22 @@ export default function RailDetailPage(): JSX.Element {
               </span>
             </DetailSection>
           )}
+          {journey.railAndFlyFlight && (
+            <DetailSection title={t("rail:detail.railAndFly.title")}>
+              <Link
+                to={`/flights/${journey.railAndFlyFlight.id}`}
+                className="text-sm"
+                style={{ color: "var(--ts-accent)" }}
+                data-testid="rail-detail-rail-and-fly"
+              >
+                {t("rail:detail.railAndFly.flight", {
+                  flight:
+                    journey.railAndFlyFlight.flightNumber ??
+                    `${journey.railAndFlyFlight.depIata ?? "?"} → ${journey.railAndFlyFlight.arrIata ?? "?"}`,
+                })}
+              </Link>
+            </DetailSection>
+          )}
           {/* The trip's photos taken on board, as a flight shows them. */}
           {journey.tripId && <TripPhotoWindowStrip entry="rail" id={journey.id} />}
 
