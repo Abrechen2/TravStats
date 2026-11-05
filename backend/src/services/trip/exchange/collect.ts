@@ -5,7 +5,7 @@
  * beside it, so the archive writer streams bytes it never has to look up.
  */
 import { customCategoryKey } from "../../../shared/ratingCategories";
-import { exportedRatings, type OwnCategoryInfo } from "./exportedRatings";
+import { allocateOwnNames, exportedRatings, type OwnCategoryInfo } from "./exportedRatings";
 import { storedRatingsOf } from "../../../shared/ratingDerivation";
 import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../../shared/railCounting";
 import path from "path";
@@ -176,6 +176,8 @@ export async function collectTrip(
         )
       )
     : new Map<string, OwnCategoryInfo>();
+  // One allocation for the whole file: a category has the same name on every stay.
+  const ownCategoryExportNames = allocateOwnNames(ownCategoryNames);
   const bookingKey = keyer("b");
   const flightKey = keyer("f");
   const stayKey = keyer("s");
@@ -320,7 +322,7 @@ export async function collectTrip(
               ratingBreakfast: s.ratingBreakfast,
               ratingService: s.ratingService,
               ratingOverall: s.ratingOverall,
-              ...exportedRatings(storedRatingsOf(s), ownCategoryNames),
+              ...exportedRatings(storedRatingsOf(s), ownCategoryExportNames),
               pricePerNight: s.pricePerNight,
               totalPrice: s.totalPrice,
               currency: s.currency,

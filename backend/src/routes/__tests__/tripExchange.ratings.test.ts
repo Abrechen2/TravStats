@@ -183,4 +183,65 @@ describe("trip export / import — stay rating categories", () => {
     });
     await expect(ensureOwnCategoriesByName(ben.id, ["Neu"])).rejects.toThrow(/too many/i);
   });
+
+  it("gives a deleted category the same exported name on every stay of the file", async () => {
+    // Stay 1 carries the deleted and a live "Aussicht"; stay 2 only the deleted one.
+    await prisma.lodgingRatingCategory.update({
+      where: { id: ownKey.slice("custom:".length) },
+      data: { deletedAt: new Date() },
+    });
+    const live = await prisma.lodgingRatingCategory.create({
+      data: { userId: anna.id, name: "Aussicht" },
+    });
+    const first = await prisma.lodgingStay.findFirstOrThrow({ where: { userId: anna.id } });
+    await prisma.lodgingStay.update({
+      where: { id: first.id },
+      data: { ratings: { room: 4, [ownKey]: 3, [`custom:${live.id}`]: 5 } },
+    });
+    await prisma.lodgingStay.create({
+      data: {
+        userId: anna.id,
+        lodgingId: first.lodgingId,
+        tripId,
+        checkIn: new Date("2026-06-10T15:00:00Z"),
+        checkOut: new Date("2026-06-11T10:00:00Z"),
+        ratings: { [ownKey]: 2 },
+      },
+    });
+    const file = await exportAs("?private=1");
+    const stays = JSON.parse(
+      unpackEntries(file.body as Buffer)
+        .get("trip.json")!
+        .toString()
+    ).stays;
+    const lone = stays.find(
+      (s: { private: { ownRatings?: object } }) =>
+        Object.keys(s.private.ownRatings ?? {}).length === 1
+    );
+    expect(lone.private.ownRatings).toEqual({ "Aussicht (2)": 2 });
+
+    await commitTripFile(ben.id, readTripArchive(file.body as Buffer));
+    const cats = await prisma.lodgingRatingCategory.findMany({ where: { userId: ben.id } });
+    const plain = cats.find((c) => c.name === "Aussicht")!;
+    const twin = cats.find((c) => c.name === "Aussicht (2)")!;
+    const rows = await prisma.lodgingStay.findMany({ where: { userId: ben.id } });
+    const loneStay = rows.find((r) => Object.keys(r.ratings as object).length === 1)!;
+    expect(loneStay.ratings).toEqual({ [`custom:${twin.id}`]: 2 });
+    expect(rows.flatMap((r) => Object.keys(r.ratings as object))).toContain(`custom:${plain.id}`);
+  });
+
+  it("exports and imports a stay with more than 20 own categories", async () => {
+    const created = await Promise.all(
+      Array.from({ length: 25 }, (_, n) =>
+        prisma.lodgingRatingCategory.create({ data: { userId: anna.id, name: `Kat ${n}` } })
+      )
+    );
+    const stay = await prisma.lodgingStay.findFirstOrThrow({ where: { userId: anna.id } });
+    await prisma.lodgingStay.update({
+      where: { id: stay.id },
+      data: { ratings: Object.fromEntries(created.map((c) => [`custom:${c.id}`, 4])) },
+    });
+    await commitTripFile(ben.id, readTripArchive((await exportAs("?private=1")).body as Buffer));
+    expect(Object.keys((await benStay()).ratings as object)).toHaveLength(26); // 25 own + the legacy room value
+  });
 });

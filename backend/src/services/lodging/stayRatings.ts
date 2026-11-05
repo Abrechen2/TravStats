@@ -13,6 +13,7 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import {
   customCategoryId,
+  MAX_IMPORT_CATEGORIES,
   customCategoryKey,
   isBuiltInCategory,
 } from "../../shared/ratingCategories";
@@ -109,7 +110,7 @@ export async function assertRatingKeysValid(
  * carries - and a value must never vanish silently. Past this ceiling the
  * import is REFUSED with a message, not trimmed.
  */
-export const MAX_IMPORT_CATEGORIES = 100;
+export { MAX_IMPORT_CATEGORIES };
 
 /**
  * Own categories by NAME, for a trip file that crosses accounts. A name that
