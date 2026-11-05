@@ -105,8 +105,7 @@ folded: { fixCount: number } | null   // null when the stop was not folded
 
 ### Minimum server version
 
-S1–S3 ship together in one 2.8.0 RC; the coordinator names the exact
-`2.8.0-rc.N` in this section when it is live on CT107. Until then the app
+**2.8.0-rc.25** (live on the RC server since 2026-11-05) carries S1–S3. The app
 treats a 404 on `/travtrack/places` as "server too old" and hides B4.
 
 ## Open for the app
