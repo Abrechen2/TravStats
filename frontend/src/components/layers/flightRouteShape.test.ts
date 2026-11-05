@@ -316,4 +316,18 @@ describe("flat mode — a mixed route still shows flown vs upcoming", () => {
       expect(r.departure).toEqual(arcs[0].departure);
     }
   });
+
+  it("carries flownCount and scheduledCount onto every flat sub-path, so the hover tooltip can tell flown from planned", () => {
+    const { arcs } = buildRouteData(mixed, 1, statusCfg);
+    // Guard the fixture: a route with both counts non-zero, else dropping
+    // them would be indistinguishable from an absent value.
+    expect(arcs[0].flownCount).toBeGreaterThan(0);
+    expect(arcs[0].scheduledCount).toBeGreaterThan(0);
+    const flat = buildFlatRoutes(arcs, statusCfg);
+    expect(flat.length).toBeGreaterThan(1);
+    for (const r of flat) {
+      expect(r.flownCount).toBe(arcs[0].flownCount);
+      expect(r.scheduledCount).toBe(arcs[0].scheduledCount);
+    }
+  });
 });

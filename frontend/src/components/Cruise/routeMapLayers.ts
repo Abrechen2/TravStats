@@ -47,10 +47,9 @@ export function buildCruiseRouteLayers({
     colorConfig: DETAIL_MAP_COLOR_CONFIG,
   });
   // Detail map for ONE cruise, possibly still just booked — it must show
-  // every stop as a pin regardless of status (Finding 1 of the
-  // status-blind-counts review: the default "visits" scope drops every
-  // stop for a scheduled/in-progress/cancelled cruise and the layer
-  // returns null, leaving the itinerary preview blank).
+  // every stop as a pin regardless of status. The default "visits" scope
+  // drops every stop of a scheduled/in-progress/cancelled cruise, so the
+  // layer would return null and the itinerary preview would stay blank.
   const portsLayers = createCruisePortsLayer([cruise], zoom, { scope: "itinerary" });
 
   // The straight guide between handles, one path per segment so a click

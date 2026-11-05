@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeTripInsights, tripDistanceKm } from "../tripInsights";
-import type { Trip } from "../../../types";
+import type { Booking, Trip } from "../../../types";
 import type { TripCostSuperlative } from "../../api/trips";
 
 const noExclusions = { count: 0, reason: "unconvertible" } as const;
@@ -19,13 +19,49 @@ const trip = (over: Partial<Trip>): Trip =>
 
 // MUC -> JFK is ~6,200 km great-circle.
 const muc = { depLat: 48.35, depLon: 11.78, arrLat: 40.64, arrLon: -73.78 };
-const flight = (over: Record<string, unknown> = {}) =>
-  ({ id: "f", depIata: "MUC", arrIata: "JFK", ...muc, ...over }) as never;
+type TripFlight = NonNullable<Trip["flights"]>[number];
+type TripCruise = NonNullable<Trip["cruises"]>[number];
+
+const flight = (over: Partial<TripFlight> = {}): TripFlight => ({
+  id: "f",
+  depIata: "MUC",
+  arrIata: "JFK",
+  ...muc,
+  departureTime: null,
+  arrivalTime: null,
+  depTimezone: null,
+  arrTimezone: null,
+  bookingId: null,
+  airline: "",
+  flightNumber: "",
+  status: "flown",
+  ...over,
+});
+
+const cruise = (over: Partial<TripCruise> = {}): TripCruise => ({
+  id: "c",
+  cruiseLine: null,
+  startDate: null,
+  endDate: null,
+  status: "completed",
+  shipId: null,
+  ...over,
+});
+
+const booking = (over: Partial<Booking> = {}): Booking => ({
+  id: "b",
+  userId: "u",
+  tripId: "t",
+  pnr: null,
+  price: null,
+  currency: null,
+  ...over,
+});
 
 describe("tripInsights", () => {
   it("sums flight great-circle plus cruise legs for distance", () => {
     const km = tripDistanceKm(
-      trip({ flights: [flight()], cruises: [{ id: "c", distanceKm: 1000 } as never] })
+      trip({ flights: [flight()], cruises: [cruise({ distanceKm: 1000 })] })
     );
     expect(km).toBeGreaterThan(7000);
     expect(km).toBeLessThan(7500);
@@ -38,7 +74,7 @@ describe("tripInsights", () => {
         id: "long",
         name: "Long",
         flights: [flight(), flight({ id: "f2" })],
-        bookings: [{ price: 5000, currency: "EUR" }] as never,
+        bookings: [booking({ price: 5000, currency: "EUR" })],
         countries: ["DE"],
       }),
       trip({ id: "wide", name: "Wide", countries: ["DE", "US", "JP", "FR", "IT"] }),
