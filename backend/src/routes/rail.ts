@@ -466,6 +466,7 @@ async function createRailRide(
         ...fxColumns,
         ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
         railAndFlyFlightId,
+        railAndFlyOptOut: Boolean(options.skipRailAndFly) || railAndFly === false,
         ...(link && {
           bookingId: link.bookingId,
           tripId: input.tripId !== undefined ? input.tripId : link.tripId,

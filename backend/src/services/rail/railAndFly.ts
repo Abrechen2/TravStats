@@ -145,6 +145,7 @@ export async function linkRailAndFlyRidesToFlight(
     where: {
       userId,
       railAndFlyFlightId: null,
+      railAndFlyOptOut: false,
       transitMode: "rail",
       status: { not: "cancelled" },
       departureTime: { gte: from, lte: to },

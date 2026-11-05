@@ -152,6 +152,25 @@ describe("Rail&Fly links a ticket to its flight", () => {
     expect(back.body.railAndFlyRides.map((r: { id: string }) => r.id)).toEqual([ride.id]);
   });
 
+  it("honours the opt-out of a flight booking's ground segment from BOTH sides", async () => {
+    const f = await flight();
+    const early = await post(ticket({ railAndFly: false }));
+    expect(early.body.data.railAndFlyFlightId).toBeNull();
+    expect(
+      (await prisma.railJourney.findUniqueOrThrow({ where: { id: early.body.data.id } }))
+        .railAndFlyOptOut
+    ).toBe(true);
+
+    // The flight is saved/edited later: the opted-out ride is still left alone.
+    const put = await request(app)
+      .put(`/api/v1/flights/${f.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "touch" });
+    expect(put.status).toBeLessThan(300);
+    const after = await prisma.railJourney.findUniqueOrThrow({ where: { id: early.body.data.id } });
+    expect(after.railAndFlyFlightId).toBeNull();
+  });
+
   it("leaves the ride when the flight is deleted", async () => {
     const f = await flight();
     const res = await post(ticket());

@@ -184,18 +184,35 @@ describe("flights that are train or bus rides", () => {
     expect(kept).toMatchObject({ flightId: null, railJourneyId: ride.id });
   });
 
-  it("is idempotent: a retry after a failed removal reuses the ride, even if the flight was edited", async () => {
+  it("is idempotent: a retry reuses the ride when the flight is unchanged", async () => {
     const { train } = await seed(userId);
     await runDataQualityChecks(userId, NOW);
     const [flag] = await surfaceFlags(userId);
     const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
 
     const first = await convertSurfaceFlight(row);
-    await prisma.flight.update({ where: { id: train.id }, data: { notes: "edited after" } });
     const second = await convertSurfaceFlight(row);
-
     expect(second.rideId).toBe(first.rideId);
     expect(await prisma.railJourney.count({ where: { userId } })).toBe(1);
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).not.toBeNull();
+  });
+
+  it("a retry after the flight was edited carries the edit: one ride, drawn from the current flight", async () => {
+    const { train } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+
+    await convertSurfaceFlight(row); // filed, removal "failed"
+    await new Promise((r) => setTimeout(r, 2100));
+    await prisma.flight.update({ where: { id: train.id }, data: { notes: "edited after" } });
+    const res = await post(`/${flag.id}/resolve`, { action: "convert" });
+
+    expect(res.status).toBe(200);
+    const rides = await prisma.railJourney.findMany({ where: { userId } });
+    expect(rides).toHaveLength(1);
+    expect(rides[0].notes).toBe("edited after");
+    expect(await prisma.flight.findUnique({ where: { id: train.id } })).toBeNull();
   });
 
   it("files a bus ride for a BUS flight", async () => {

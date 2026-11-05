@@ -6,7 +6,7 @@ import { zoneOf } from "../../shared/time/zoneOf";
 import { createBusRideOnce } from "../../routes/bus";
 import { createRailRideOnce } from "../../routes/rail";
 import { instantToWallClock, wallClockToInstant } from "../rides/rideEnds";
-import { propagateDelete, shareSnapshot } from "../sharing/propagate";
+import { propagateDelete, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 import { findSurfaceSegments } from "./checks/surfaceSegment";
 import { FindingActionError } from "./findingErrors";
@@ -133,7 +133,21 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     (mode === "rail"
       ? await prisma.railJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } })
       : await prisma.busJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } }));
-  if (alreadyFiled) {
+  // A retry reuses the earlier ride only while the flight is as it was when
+  // the ride was drawn. Edited since, the unchanged ride is replaced by one
+  // drawn from the current flight; a ride the user touched is theirs, so the
+  // conversion refuses instead (`rideChanged`).
+  const stale =
+    alreadyFiled && flight.updatedAt.getTime() > alreadyFiled.createdAt.getTime()
+      ? alreadyFiled
+      : null;
+  if (stale) {
+    if (stale.updatedAt.getTime() - stale.createdAt.getTime() > 2000) {
+      throw new FindingActionError("invalidAction", "rideChanged");
+    }
+    await discardStaleRide(flag.userId, mode, stale.id, clientRef);
+  }
+  if (alreadyFiled && !stale) {
     rideId = alreadyFiled.id;
   } else if (mode === "rail") {
     const { result } = await createRailRideOnce(
@@ -163,6 +177,25 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     rideId = result.ride.id;
   }
   return { rideType: mode, rideId, flightUpdatedAt: flight.updatedAt, tripId: flight.tripId };
+}
+
+/** Takes back a ride this conversion filed earlier, with its idempotency key. */
+async function discardStaleRide(
+  userId: string,
+  mode: "rail" | "bus",
+  rideId: string,
+  clientRef: string
+): Promise<void> {
+  await prisma.$transaction(
+    async (tx) => {
+      const gone = await shareSnapshot(tx, mode, rideId);
+      if (mode === "rail") await tx.railJourney.deleteMany({ where: { id: rideId, userId } });
+      else await tx.busJourney.deleteMany({ where: { id: rideId, userId } });
+      await propagateDelete(tx, userId, gone);
+      await tx.clientWriteRef.deleteMany({ where: { userId, clientRef } });
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /** The flight's removal, inside the answer's transaction — the same writes as DELETE /flights/:id. */
