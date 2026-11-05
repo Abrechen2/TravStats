@@ -199,6 +199,18 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
                   {t("stats:seats.unplaced", { count: seatStats.unknownCount })}
                 </EvidenceTrigger>
               )}
+              {/* The flights the figures above cannot speak for: no seat
+                  recorded, or no letter to place. Said out loud so the bars
+                  do not read as the whole logbook; hidden at zero. */}
+              {seatStats.noSeatCount > 0 && (
+                <p
+                  className="text-xs"
+                  data-testid="seats-no-seat"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {t("stats:seats.noSeat", { count: seatStats.noSeatCount })}
+                </p>
+              )}
             </div>
             <Distribution title={t("stats:seats.zoneTitle")} bars={zones} />
             <div className="flex flex-col gap-3">

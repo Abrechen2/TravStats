@@ -818,7 +818,9 @@
     "zoneTitle": "Vorne / Mitte / Hinten",
     "noDataHint": "Sobald deine Flüge eine Sitznummer (etwa 14C) oder eine Sitzklasse tragen, erscheinen hier Fenster, Gang, Reihen und Klassen.",
     "unplaced_one": "{{count}} Sitz lässt sich ohne Kabinenlayout nicht zuordnen",
-    "unplaced_other": "{{count}} Sitze lassen sich ohne Kabinenlayout nicht zuordnen"
+    "unplaced_other": "{{count}} Sitze lassen sich ohne Kabinenlayout nicht zuordnen",
+    "noSeat_one": "{{count}} Flug ohne Sitznummer ist hier nicht enthalten",
+    "noSeat_other": "{{count}} Flüge ohne Sitznummer sind hier nicht enthalten"
   },
   "airlineRanking": {
     "title": "Airline-Treue Ranking",

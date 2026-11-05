@@ -280,6 +280,13 @@
       "coverage": "Nur Flüge mit echter Uhrzeit; ein Eintrag mit nur einem Datum hat keine Stunde.",
       "exclusions": "Nicht enthalten: nachgetragene Flüge (ihre Uhrzeiten sind meist Platzhalter), Flüge ohne Ankunftszeit, Flüge mit nur einem Datum, geplante, stornierte und als Entwurf duplizierte Flüge."
     },
+    "afternoon": {
+      "unit": "Zahl der Flüge, die zwischen 12:00 und 17:59 Uhr abgeflogen sind.",
+      "time": "Die Uhrzeit am Abflughafen, in der Zeitzone, mit der der Flug gespeichert wurde (sonst die des Katalogs). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit.",
+      "coverage": "Nur Flüge mit echter Uhrzeit; ein Eintrag mit nur einem Datum hat keine Stunde.",
+      "exclusions": "Nicht enthalten: nachgetragene Flüge (ihre Uhrzeiten sind meist Platzhalter), Flüge ohne Ankunftszeit, Flüge mit nur einem Datum, geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
     "nightOwl": {
       "unit": "Zahl der Flüge, die am Abend oder in der Nacht abgeflogen sind: von 18:00 bis 5:59 Uhr.",
       "time": "Die Uhrzeit am Abflughafen, in der Zeitzone, mit der der Flug gespeichert wurde (sonst die des Katalogs). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",

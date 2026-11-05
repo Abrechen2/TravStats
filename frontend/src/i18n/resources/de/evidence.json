@@ -148,6 +148,7 @@
   "evidence.metric.scorecardFlightTimeMinutes": "Flugzeit",
   "evidence.metric.timezoneHopperFlightCount": "Berührte Zeitzonen",
   "evidence.metric.earlyBirdFlightCount": "Frühe Abflüge",
+  "evidence.metric.afternoonFlightCount": "Nachmittagsabflüge",
   "evidence.metric.nightOwlFlightCount": "Späte Abflüge",
   "evidence.metric.weekendFlightCount": "Flüge am Wochenende",
   "evidence.metric.shortHaulFlightCount": "Kurzstreckenflüge",
