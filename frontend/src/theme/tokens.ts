@@ -85,7 +85,7 @@ export const tokens = {
     "amberSoft": "#e0b366",
     "coral": "#ef9a86",
     "teal": "#5fb3bf",
-    "lime": "#a8cf76"
+    "lime": "#dcec4f"
   },
   "map": {
     "chrome": "floating",
