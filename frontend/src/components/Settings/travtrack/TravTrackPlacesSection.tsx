@@ -28,6 +28,7 @@ import { useBlockConfirm } from "../useBlockConfirm";
 import { RowFailure, useRowAction } from "../location/useRowAction";
 import PlaceEditor, { type PlaceDraft } from "./PlaceEditor";
 import { hasPosition } from "./PlacesMap";
+import { ZONES_CHANGED } from "./zonesChanged";
 import { PLACE_RGB, rgbCss } from "./placeColors";
 
 const PlacesMap = lazy(() => import("./PlacesMap"));
@@ -93,13 +94,22 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
     void load();
   }, [load]);
   // The map's dashed zones. Their own section reports a failed read; here a missing zone only
-  // leaves the outline off the map.
+  // leaves the outline off the map. The zones section announces its changes, so the map follows.
   useEffect(() => {
-    travTrackApi.zones().then(setZones, (err) => logger.warn("TravTrack places map: zones", err));
+    const read = (): void => {
+      travTrackApi.zones().then(setZones, (err) => logger.warn("TravTrack places map: zones", err));
+    };
+    read();
+    window.addEventListener(ZONES_CHANGED, read);
+    return () => window.removeEventListener(ZONES_CHANGED, read);
   }, []);
 
   const canWrite = !isDemo && caps?.enabled === true;
   const mapped = (data?.places ?? []).filter(hasPosition);
+  // MapLibre fits its bounds once, at mount: new or moved circles need a fresh map.
+  const mapKey = [...mapped, ...zones]
+    .map((c) => `${c.id}:${c.lat},${c.lon},${c.radiusM}`)
+    .join("|");
   const openEditor = (id: string): void => {
     const place = data?.places.find((p) => p.id === id);
     if (!place) return;
@@ -243,6 +253,7 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                 <WebGLGuard>
                   <Suspense fallback={null}>
                     <PlacesMap
+                      key={mapKey}
                       places={mapped}
                       zones={zones}
                       label={t(`${NS}.mapLabel`)}

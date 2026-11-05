@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -133,5 +133,18 @@ describe("placeLayers", () => {
     const ring = circlePath(9, 48, 1000);
     expect(ring[0]).toEqual(ring[ring.length - 1]);
     expect(Math.abs(ring[0][0] - 9)).toBeGreaterThan(0.01);
+  });
+});
+
+describe("Feste Orte map follows the zones section", () => {
+  it("re-reads the zones when one was added or removed elsewhere on the page", async () => {
+    const zones = vi.spyOn(travTrackApi, "zones");
+    show();
+    expect(await screen.findByTestId("places-map")).toHaveTextContent("1 zones");
+    zones.mockResolvedValue([]);
+    act(() => {
+      window.dispatchEvent(new Event("travtrack:zones-changed"));
+    });
+    await waitFor(() => expect(screen.getByTestId("places-map")).toHaveTextContent("0 zones"));
   });
 });

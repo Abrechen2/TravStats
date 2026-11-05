@@ -6,6 +6,7 @@ import { logger } from "../../../lib/logger";
 import { travTrackApi, type PrivacyZone } from "../../../lib/api/travtrack";
 import { SettingRows } from "../../ui/SettingRow";
 import { SectionCard } from "../SettingsShared";
+import { ZONES_CHANGED } from "./zonesChanged";
 import TravTrackZonesRow from "../location/TravTrackZonesRow";
 
 /**
@@ -48,7 +49,10 @@ export default function TravTrackZonesSection(): JSX.Element | null {
           canAdd={caps.enabled && !isDemo}
           canRemove={!isDemo}
           canEdit={caps.enabled && !isDemo}
-          onChanged={load}
+          onChanged={async () => {
+            await load();
+            window.dispatchEvent(new Event(ZONES_CHANGED));
+          }}
         />
       </SettingRows>
     </SectionCard>
