@@ -313,6 +313,26 @@ describe("companions — travelled together", () => {
     expect(find(hal.id).entries).toBe(1);
   });
 
+  it("names a shared trip years before any shared flight as the first journey", async () => {
+    const ivy = await companion(anna.id, "Ivy");
+    const early = await prisma.trip.create({
+      data: {
+        userId: anna.id,
+        name: "Early",
+        startDay: new Date("2020-06-01T00:00:00.000Z"),
+        endDay: new Date("2020-06-05T00:00:00.000Z"),
+        companionLinks: { create: { companionId: ivy.id, position: 0 } },
+      },
+    });
+    await prisma.flightCompanion.create({
+      data: { flightId: full.flight.id, companionId: ivy.id, position: 2 },
+    });
+    const res = await together(anna);
+    const row = res.body.companions.find((c: { id: string }) => c.id === ivy.id);
+    expect(row.firstJourney).toMatchObject({ kind: "trip", id: early.id, day: "2020-06-01" });
+    expect(row.lastJourney).toMatchObject({ kind: "flight", id: full.flight.id });
+  });
+
   it("picks first and last across two domains: a train, then a flight", async () => {
     const gus = await companion(anna.id, "Gus");
     await prisma.railJourneyCompanion.create({

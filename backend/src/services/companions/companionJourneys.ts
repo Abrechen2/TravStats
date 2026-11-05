@@ -16,8 +16,9 @@ export interface CompanionJourney {
 /**
  * The first and last shared journey. A journey is an entry that proves a day;
  * a trip is the umbrella over its flights and rides, so it is named only when
- * the companion has nothing else with a day — otherwise a trip and its first
- * flight would tie on every first day and the trip would always win. Ties on
+ * none of its days is covered by a shared flight or ride — otherwise a trip and
+ * its first flight would tie on that day and the trip would always win, while a
+ * shared trip years before any shared flight must still be the first journey. Ties on
  * the day go to the earlier kind in display order, then the smaller id, so the
  * answer does not depend on load order.
  */
@@ -26,8 +27,8 @@ export function firstAndLastJourney(
   kindOrder: readonly CompanionUseKind[]
 ): { first: CompanionJourney | null; last: CompanionJourney | null } {
   const dated = entries.filter((e) => e.dayKeys.length > 0);
-  const journeys = dated.filter((e) => e.kind !== "trip");
-  const pool = journeys.length > 0 ? journeys : dated;
+  const journeyDays = new Set(dated.filter((e) => e.kind !== "trip").flatMap((e) => e.dayKeys));
+  const pool = dated.filter((e) => e.kind !== "trip" || !e.dayKeys.some((d) => journeyDays.has(d)));
   const rank = (e: TogetherEntry): number => kindOrder.indexOf(e.kind);
   const tie = (a: TogetherEntry, b: TogetherEntry): number =>
     rank(a) - rank(b) || a.entry.id.localeCompare(b.entry.id);

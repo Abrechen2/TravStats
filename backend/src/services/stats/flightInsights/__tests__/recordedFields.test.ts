@@ -48,18 +48,19 @@ describe("foldRecordedFields", () => {
     expect(out).toEqual({ airborne: null, overflown: null, codeshare: null });
   });
 
-  it("counts distinct countries once, case-insensitively, and ignores blanks", () => {
+  it("counts distinct countries once across spellings and codes, and ignores blanks", () => {
     const out = foldRecordedFields([
       row("FRA", "LIS", "2024-01-01T08:00", "2024-01-01T11:00", {
         overflownCountries: ["Germany", "France", " ", "Spain"],
       }),
       row("LIS", "FRA", "2024-01-05T08:00", "2024-01-05T11:00", {
-        overflownCountries: ["germany ", "Portugal"],
+        overflownCountries: ["germany ", "Portugal", "DE", "Deutschland"],
       }),
       row("FRA", "MUC", "2024-01-06T08:00", "2024-01-06T09:00", { overflownCountries: [] }),
     ]);
     expect(out.overflown).toEqual({
-      countries: ["France", "Germany", "Portugal", "Spain"],
+      // "Germany", "germany", "DE" and "Deutschland" are one country, keyed by ISO code.
+      countries: ["DE", "ES", "FR", "PT"],
       flights: 2,
       of: 3,
     });

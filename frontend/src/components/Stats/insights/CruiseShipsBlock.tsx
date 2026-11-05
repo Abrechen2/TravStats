@@ -51,7 +51,7 @@ export default function CruiseShipsBlock({
           <div>
             <dt className="font-medium">
               {t("stats:insights.cruise.ships.averageAge", {
-                years: averageAge.years.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+                years: fmt.num(Math.round(averageAge.years * 10) / 10),
               })}
             </dt>
             <dd style={muted}>

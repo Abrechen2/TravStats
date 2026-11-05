@@ -79,7 +79,7 @@ describe("flight insights: fields only enriched flights carry", () => {
     expect(res.status).toBe(200);
     expect(res.body.recorded).toEqual({
       airborne: { minutes: 150, flights: 1, of: 3 },
-      overflown: { countries: ["France", "Germany"], flights: 2, of: 3 },
+      overflown: { countries: ["DE", "FR"], flights: 2, of: 3 },
       codeshare: { codeshare: 1, known: 1, of: 3, operators: [{ name: "TAP", flights: 1 }] },
     });
   });

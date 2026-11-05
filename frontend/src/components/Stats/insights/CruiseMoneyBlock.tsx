@@ -11,7 +11,7 @@ import type { CruiseInsights } from "../../../types/cruiseInsights";
 /**
  * Cost per sea day, the most expensive cruise and spend per cruise line, all in
  * the account's base currency — a price that cannot reach it is named in the
- * footer, never added. Hidden while no cruise reached the base currency.
+ * footer, never added. Hidden only while no cruise carries a price at all.
  */
 export default function CruiseMoneyBlock({
   money,
@@ -20,7 +20,8 @@ export default function CruiseMoneyBlock({
 }): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
   const fmt = useInsightFormat();
-  if (money.counted === 0) return null;
+  // A block whose only content is "n prices could not be converted" still shows: that is the fact.
+  if (money.counted === 0 && money.excluded === 0) return null;
   const muted = { color: "var(--text-muted)" };
   const cur = (n: number): string => formatCurrency(n, money.currency);
 

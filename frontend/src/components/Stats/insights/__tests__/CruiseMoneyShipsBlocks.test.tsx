@@ -50,11 +50,12 @@ describe("cruise money block", () => {
     expect(screen.getByText(/stats:insights.cruise.money.coverage.*"excluded":"1"/)).toBeTruthy();
   });
 
-  it("is hidden when no price reached the base currency", () => {
+  it("is hidden when no cruise carries a price at all", () => {
     const { container } = wrap(
       <CruiseMoneyBlock
         money={money({
           counted: 0,
+          excluded: 0,
           total: null,
           perSeaDay: null,
           mostExpensive: null,
@@ -63,6 +64,22 @@ describe("cruise money block", () => {
       />
     );
     expect(container.textContent).toBe("");
+  });
+
+  it("still says how many prices could not be converted when none reached the base currency", () => {
+    wrap(
+      <CruiseMoneyBlock
+        money={money({
+          counted: 0,
+          excluded: 2,
+          total: null,
+          perSeaDay: null,
+          mostExpensive: null,
+          perLine: [],
+        })}
+      />
+    );
+    expect(screen.getByText(/stats:insights.cruise.money.coverage.*"excluded":"2"/)).toBeTruthy();
   });
 });
 

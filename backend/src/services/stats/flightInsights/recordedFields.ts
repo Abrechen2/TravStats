@@ -13,6 +13,7 @@
 
 import type { RecordedFields } from "../../../schemas/statsFlightInsights";
 import { type FlightInsightRow, isCountedRow } from "./rows";
+import { resolveCountryCode } from "../../../shared/geo/countryCode";
 
 /** How many operating carriers the codeshare block names. */
 export const OPERATOR_LIST_LENGTH = 5;
@@ -34,15 +35,24 @@ export function airborneMinutesOf(
   return Number.isFinite(ms) && ms > 0 ? ms / MS_PER_MINUTE : null;
 }
 
-/** Display key of a country: trimmed and case-folded, so "germany" and "Germany " are one. */
-export const countryKeyOf = (raw: string): string => raw.trim().toLowerCase();
+/**
+ * Key of a recorded country: its ISO code where the text resolves ("DE",
+ * "Germany", "Deutschland" are one), else the trimmed, case-folded text.
+ */
+export const countryKeyOf = (raw: string): string =>
+  resolveCountryCode(raw) ?? raw.trim().toLowerCase();
 
-/** The distinct countries a row recorded, as first spelled (blank entries dropped). */
+/**
+ * The distinct countries a row recorded: the ISO code where it resolves, so the
+ * web can name it in the reader's language, else the text as first spelled.
+ */
 export function overflownOf(row: Pick<FlightInsightRow, "overflownCountries">): string[] {
   const seen = new Map<string, string>();
   for (const raw of row.overflownCountries) {
-    const key = countryKeyOf(raw);
-    if (key && !seen.has(key)) seen.set(key, raw.trim());
+    const text = raw.trim();
+    if (!text) continue;
+    const key = countryKeyOf(text);
+    if (!seen.has(key)) seen.set(key, resolveCountryCode(text) ?? text);
   }
   return [...seen.values()];
 }

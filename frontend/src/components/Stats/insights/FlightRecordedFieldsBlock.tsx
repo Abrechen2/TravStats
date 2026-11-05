@@ -5,6 +5,7 @@ import EvidenceCount from "./EvidenceCount";
 import { InsightHeading, insightCounting } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { countryName } from "../../../shared/geo/countryCode";
 import type { RecordedFields } from "../../../types/flightInsights";
 
 /**
@@ -18,7 +19,7 @@ export default function FlightRecordedFieldsBlock({
 }: {
   recorded: RecordedFields;
 }): JSX.Element | null {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const fmt = useInsightFormat();
   const muted = { color: "var(--text-muted)" };
   const { airborne, overflown, codeshare } = recorded;
@@ -80,7 +81,7 @@ export default function FlightRecordedFieldsBlock({
                 })}
               </span>
               <p className="mt-1" style={muted}>
-                {overflown.countries.join(", ")}
+                {overflown.countries.map((c) => countryName(c, i18n.language) || c).join(", ")}
               </p>
             </dd>
           </div>
