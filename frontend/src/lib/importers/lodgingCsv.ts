@@ -132,6 +132,19 @@ export const LODGING_FIELD_ALIASES: Record<LodgingCsvField, string[]> = {
 /** `name` is the only required column: every shape needs something to key on. */
 const REQUIRED_FIELDS: LodgingCsvField[] = ["name"];
 
+/**
+ * The wizard compares headers with everything but a-z and 0-9 stripped. A name
+ * that loses letters to that ("景色" becomes "") would match any header that is
+ * just the prefix, or every other such name - so it gets no aliases and the
+ * user maps its column by hand.
+ */
+function aliasesForCategoryLabel(label: string): string[] {
+  const letters = label.replace(/[^\p{L}\p{N}]/gu, "");
+  const kept = label.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (letters.length === 0 || kept.length !== letters.length) return [];
+  return [label, `bew ${label}`, `bewertung ${label}`, `rating ${label}`, `${label} bewertung`];
+}
+
 export function buildLodgingMappingFields(
   label: (field: LodgingCsvField) => string,
   ratingTargets: readonly RatingColumnTarget[] = []
@@ -147,13 +160,7 @@ export function buildLodgingMappingFields(
   const categories = ratingTargets.map((target) => ({
     key: `${RATING_FIELD_PREFIX}${target.key}` as const,
     label: target.label,
-    aliases: [
-      target.label,
-      `bew ${target.label}`,
-      `bewertung ${target.label}`,
-      `rating ${target.label}`,
-      `${target.label} bewertung`,
-    ],
+    aliases: aliasesForCategoryLabel(target.label),
   }));
   return [...fixed, ...categories];
 }

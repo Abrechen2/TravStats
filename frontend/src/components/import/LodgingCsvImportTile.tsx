@@ -97,18 +97,20 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
         // The account's categories: every built-in beyond the legacy three
         // (which keep their own fields) and its live own ones. A failure
         // leaves the fixed fields, which still import.
+        let targets: RatingColumnTarget[] = [];
         try {
           const view = await getRatingCategories();
-          setRatingTargets([
+          targets = [
             ...view.builtIn
               .filter((k) => !LEGACY_RATING_KEYS.includes(k))
               .map((k) => ({ key: k, label: t(`lodging:ratingCategory.${k}`) })),
             ...view.custom.filter((c) => !c.deleted).map((c) => ({ key: c.key, label: c.name })),
-          ]);
+          ];
         } catch (err) {
           logger.warn("LodgingCsvImportTile: rating categories unavailable", err);
-          setRatingTargets([]);
         }
+        setRatingTargets(targets);
+        const visibleCategoryKeys = new Set(targets.map((c) => `rating:${c.key}`));
 
         // Advisory only: the wizard already has its own header heuristic, so
         // a slow or dead LLM costs nothing but this await (the client
@@ -117,7 +119,15 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
           Object.keys(rows[0]),
           rows.slice(0, 3)
         );
-        setSuggested(suggestion.mapping);
+        // A suggested category column the wizard has no field for would be
+        // imported without the user ever seeing it - drop it.
+        setSuggested(
+          Object.fromEntries(
+            Object.entries(suggestion.mapping).filter(
+              ([key]) => !key.startsWith("rating:") || visibleCategoryKeys.has(key)
+            )
+          )
+        );
         setUnmappedRatings(suggestion.unmappedRatings);
       } catch (err) {
         // Never surface the raw parse error — it may be untranslated/

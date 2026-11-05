@@ -618,6 +618,16 @@ describe("rating category columns", () => {
     });
   });
 
+  it("gives a name the wizard's ASCII normalisation would empty no aliases, so it cannot match by accident", () => {
+    const fields = buildLodgingMappingFields((f) => f, [
+      { key: "custom:a", label: "景色" },
+      { key: "custom:b", label: "清潔" },
+    ]);
+    const mapping = autoMapHeaders(fields, ["Name", "Bew", "bewertung"]);
+    expect(mapping["rating:custom:a"]).toBeUndefined();
+    expect(mapping["rating:custom:b"]).toBeUndefined();
+  });
+
   it("imports a category column into the stay's ratings map and makes the file a stays file", () => {
     const mapping: LodgingCsvMapping = {
       name: "Hotel",
