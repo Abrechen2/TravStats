@@ -4551,6 +4551,9 @@ model RailJourney {
   /// within a day and a short distance of its airport end — never suggested
   /// from the flight booking. SetNull: deleting the flight leaves the ride.
   railAndFlyFlightId String?                @map("rail_and_fly_flight_id")
+  /// True for a ride that must never be tied to a flight as Rail&Fly: the
+  /// ground segments of a flight booking (the importer sent `railAndFly: false`).
+  railAndFlyOptOut   Boolean                @default(false) @map("rail_and_fly_opt_out")
   railAndFlyFlight   Flight?                @relation("FlightRailAndFly", fields: [railAndFlyFlightId], references: [id], onDelete: SetNull)
   trip               Trip?                  @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking            Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
