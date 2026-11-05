@@ -1976,7 +1976,9 @@
         "radius": "Radius der Unterkunft in Metern",
         "off": "TravTrack ist auf diesem Server aus.",
         "skipped_one": "{{count}} Buchung ohne Koordinaten wird übersprungen.",
-        "skipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen."
+        "skipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen.",
+        "saving": "Wird gespeichert …",
+        "saveRadius": "Radius speichern"
       }
     },
     "zones": {

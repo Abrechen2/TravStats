@@ -248,6 +248,34 @@ describe("Feste Orte", () => {
     );
   });
 
+  it("saves a changed lodging radius only on its own button, with the switch state unchanged", async () => {
+    const set = vi
+      .spyOn(travTrackPlacesApi, "setLodging")
+      .mockResolvedValue({ enabled: false, radiusM: 300 });
+    show();
+    const input = await screen.findByLabelText(/settings:tt.places.lodging.radius/);
+    await userEvent.clear(input);
+    await userEvent.type(input, "300");
+    expect(set).not.toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole("button", { name: "settings:tt.places.lodging.saveRadius" })
+    );
+    await waitFor(() => expect(set).toHaveBeenCalledWith({ enabled: false, radiusM: 300 }));
+  });
+
+  it("says why an out-of-range lodging radius is not saved", async () => {
+    show();
+    const input = await screen.findByLabelText(/settings:tt.places.lodging.radius/);
+    await userEvent.clear(input);
+    await userEvent.type(input, "9");
+    expect(screen.getAllByText(/settings:tt.places.editor.radiusInvalid/).length).toBeGreaterThan(
+      0
+    );
+    expect(
+      screen.queryByRole("button", { name: "settings:tt.places.lodging.saveRadius" })
+    ).toBeNull();
+  });
+
   it("offers no editing to the demo account or while TravTrack is off", async () => {
     demo.current = true;
     show();

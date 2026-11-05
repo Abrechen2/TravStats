@@ -1976,7 +1976,9 @@
         "radius": "Lodging radius in metres",
         "off": "TravTrack is off on this server.",
         "skipped_one": "{{count}} booking without coordinates is skipped.",
-        "skipped_other": "{{count}} bookings without coordinates are skipped."
+        "skipped_other": "{{count}} bookings without coordinates are skipped.",
+        "saving": "Saving …",
+        "saveRadius": "Save radius"
       }
     },
     "zones": {

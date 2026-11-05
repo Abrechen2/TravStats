@@ -240,21 +240,32 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
             locked={
               isDemo
                 ? { why: "demo", reason: t("settings:blocks.lock.demo") }
-                : caps?.enabled === true
-                  ? undefined
-                  : { why: "dependency", reason: t(`${NS}.lodging.off`) }
+                : caps?.enabled !== true
+                  ? { why: "dependency", reason: t(`${NS}.lodging.off`) }
+                  : lodging.busy
+                    ? { why: "dependency", reason: t(`${NS}.lodging.saving`) }
+                    : undefined
             }
             control={
               <SwitchControl
                 checked={data.lodgingAsPlace.enabled}
                 label={t(`${NS}.lodging.name`)}
-                onChange={(on) => {
-                  if (radiusOk && !lodging.busy) void writeLodging(on, radiusM);
-                }}
+                onChange={(on) => void writeLodging(on, data.lodgingAsPlace.radiusM)}
               />
             }
           >
-            <Field label={t(`${NS}.lodging.radius`)} htmlFor="tt-lodging-radius">
+            <Field
+              label={t(`${NS}.lodging.radius`)}
+              htmlFor="tt-lodging-radius"
+              error={
+                radiusOk
+                  ? undefined
+                  : t(`${NS}.editor.radiusInvalid`, {
+                      min: PLACE_RADIUS_MIN,
+                      max: PLACE_RADIUS_MAX,
+                    })
+              }
+            >
               <Input
                 id="tt-lodging-radius"
                 type="number"
@@ -262,15 +273,20 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                 min={PLACE_RADIUS_MIN}
                 max={PLACE_RADIUS_MAX}
                 value={lodgingRadius}
-                disabled={!canWrite}
+                disabled={!canWrite || lodging.busy}
                 onChange={(e) => setLodgingRadius(e.target.value)}
-                onBlur={() => {
-                  if (canWrite && radiusOk && radiusM !== data.lodgingAsPlace.radiusM) {
-                    void writeLodging(data.lodgingAsPlace.enabled, radiusM);
-                  }
-                }}
               />
             </Field>
+            {canWrite && radiusOk && radiusM !== data.lodgingAsPlace.radiusM ? (
+              <div>
+                <Button
+                  disabled={lodging.busy}
+                  onClick={() => void writeLodging(data.lodgingAsPlace.enabled, radiusM)}
+                >
+                  {t(`${NS}.lodging.saveRadius`)}
+                </Button>
+              </div>
+            ) : null}
             {skipped > 0 ? (
               <p className="t-caption" role="status" style={{ margin: 0 }}>
                 {t(`${NS}.lodging.skipped`, { count: skipped })}

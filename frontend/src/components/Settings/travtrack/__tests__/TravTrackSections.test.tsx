@@ -156,6 +156,16 @@ describe("Aufzeichnung: what is stored", () => {
     expect(navigate).toHaveBeenCalledWith("/settings/account#devices", undefined);
   });
 
+  it("keeps the stored count when last-seen is refused because TravTrack is off", async () => {
+    caps.current = { ...ON, enabled: false, active: false };
+    vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
+    vi.spyOn(travTrackApi, "lastSeen").mockRejectedValue(failure(403));
+    show(<TravTrackRecordingSection />);
+    expect(await screen.findByText(/settings:tt\.recording\.stored\.value/)).toBeInTheDocument();
+    expect(screen.getByText(/phone-1/)).toBeInTheDocument();
+    expect(screen.queryByText("settings:tt.recording.loadError")).toBeNull();
+  });
+
   it("never draws 'nothing stored' for a load that failed; it retries", async () => {
     vi.spyOn(travTrackApi, "summary").mockRejectedValueOnce(failure());
     show(<TravTrackRecordingSection />);

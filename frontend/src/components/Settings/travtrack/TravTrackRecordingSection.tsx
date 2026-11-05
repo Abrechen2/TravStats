@@ -37,13 +37,19 @@ export default function TravTrackRecordingSection(): JSX.Element {
   const shown = caps !== null && (caps.hasData || caps.enabled);
   const load = useCallback(async (): Promise<void> => {
     try {
-      const [s, seen] = await Promise.all([travTrackApi.summary(), travTrackApi.lastSeen()]);
-      setSummary(s);
-      setLastSeen(seen);
+      setSummary(await travTrackApi.summary());
       setLoadFailed(false);
     } catch (err) {
       logger.warn("TravTrack recording: could not load", err);
       setLoadFailed(true);
+    }
+    // Last seen needs TravTrack on; with it off and data held it answers 403,
+    // which must not take the stored count down with it.
+    try {
+      setLastSeen(await travTrackApi.lastSeen());
+    } catch (err) {
+      logger.warn("TravTrack recording: last seen unavailable", err);
+      setLastSeen(null);
     }
   }, []);
   useEffect(() => {
