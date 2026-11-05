@@ -272,7 +272,13 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
         // Manual, then entry, then auto: the figures must follow the mode the leg ends up with.
         const manual = overrideFor(span, inputs.overrides);
         const mode = manual ? manual.mode : piece.mode;
-        const figures = legFigures(points, read.rowOf, inFlight, mode !== "flight", badVertexIn(segment));
+        const figures = legFigures(
+          points,
+          read.rowOf,
+          inFlight,
+          mode !== "flight",
+          badVertexIn(segment)
+        );
         if (figures.distanceM < MIN_LEG_M) continue;
         legs.push({
           id: `${span.fromMs}-${span.untilMs}`,

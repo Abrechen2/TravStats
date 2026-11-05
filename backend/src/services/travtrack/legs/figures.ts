@@ -52,9 +52,7 @@ export function legFigures(
 ): LegFigures {
   // Fixes kept only because the stretch holds nothing finer: the line is real, a speed over
   // fixes a kilometre wide is not (a phone lying still "moves" by its own error), so none is claimed.
-  const coarse = points.some(
-    (p) => !isBad(p) && p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M
-  );
+  const coarse = points.some((p) => !isBad(p) && p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M);
   let distance = 0;
   let movingMs = 0;
   let movingM = 0;
@@ -93,7 +91,8 @@ export function legFigures(
     // No reported speed (GPX, Companion without speed): the glitch-safe window speeds.
     maxSpeedMps: coarse
       ? null
-      : (topSpeedOf(points, rowOf, inFlight)?.mps ?? (groundOnly ? topWindowSpeedMps(points) : null)),
+      : (topSpeedOf(points, rowOf, inFlight)?.mps ??
+        (groundOnly ? topWindowSpeedMps(points) : null)),
     ascentM: moved ? Math.round(moved.up) : null,
     descentM: moved ? Math.round(moved.down) : null,
     bounds: box,
