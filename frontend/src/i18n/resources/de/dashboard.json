@@ -109,6 +109,9 @@
       "chains_one": "Kette",
       "chains_other": "Ketten",
       "spend": "Ausgaben",
+      "staysPlanned": "+ {{count}} vorgemerkt",
+      "nightsUndated_one": "darunter {{count}} Nacht ohne Datum",
+      "nightsUndated_other": "darunter {{count}} Nächte ohne Datum",
       "spendOtherCurrency": "inkl. {{orig}} → {{converted}}",
       "rating": "Ø Bewertung",
       "noRating": "Keine Bewertung"

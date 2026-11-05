@@ -28,6 +28,7 @@ export default function StatsFunSection({ funStats }: StatsFunSectionProps): JSX
   const help = [
     { term: t("stats:fun.timezoneHopper"), helpKey: "flightStatsHelp:fun.timezoneHopper" },
     { term: t("stats:fun.earlyBird"), helpKey: "flightStatsHelp:fun.earlyBird" },
+    { term: t("stats:fun.afternoon"), helpKey: "flightStatsHelp:fun.afternoon" },
     { term: t("stats:fun.nightOwl"), helpKey: "flightStatsHelp:fun.nightOwl" },
     { term: t("stats:fun.weekendWarrior"), helpKey: "flightStatsHelp:fun.weekend" },
     { term: t("stats:fun.loyaltyScore"), helpKey: "flightStatsHelp:fun.loyalty" },
@@ -66,6 +67,17 @@ export default function StatsFunSection({ funStats }: StatsFunSectionProps): JSX
           title={t("stats:fun.earlyBird")}
           value={funStats.earlyBird}
           description={t("stats:fun.earlyBirdDesc", { count: funStats.earlyBird })}
+        />
+        <StatCard
+          evidence={{
+            kind: "metric",
+            key: "afternoonFlightCount",
+            scope: allTime,
+            renderedValue: funStats.afternoon,
+          }}
+          title={t("stats:fun.afternoon")}
+          value={funStats.afternoon}
+          description={t("stats:fun.afternoonDesc", { count: funStats.afternoon })}
         />
         <StatCard
           evidence={{

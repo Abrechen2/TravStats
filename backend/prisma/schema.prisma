@@ -188,6 +188,8 @@ model User {
   travTrackGaps              TravTrackGap[]
   travTrackLegModes          TravTrackLegMode[]
   travTrackStopPlaces        TravTrackStopPlace[]
+  travTrackFixedPlaces       TravTrackFixedPlace[]
+  travTrackPlaceSettings     TravTrackPlaceSettings?
   travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
   travTrackDiagnosticUploads TravTrackDiagnosticUpload[]
   travTrackShareSnapshots    TravTrackShareSnapshot[]
@@ -6216,6 +6218,47 @@ model TravTrackStopPlace {
 
   @@unique([userId, fromMs, untilMs])
   @@map("travtrack_stop_places")
+}
+
+/// A fixed place of the account's TravTrack day (spec
+/// 2026-11-05-travtrack-fixed-places): a circle inside which a run of points
+/// folds into one stop. `home` is never a row here — its point is the home the
+/// server already knows (`deriveHomePlace`); only its radius and window live in
+/// `TravTrackPlaceSettings`. `window` is `{days, from, until}` in the place's
+/// local zone, or null for "always".
+model TravTrackFixedPlace {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  /// "work" | "custom"
+  kind      String
+  lat       Float
+  lon       Float
+  radiusM   Int      @map("radius_m")
+  window    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("travtrack_fixed_places")
+}
+
+/// One row per account: the home entry's radius and window, and the
+/// "hotel while booked" switch with its radius (spec
+/// 2026-11-05-travtrack-fixed-places). No home point is stored here.
+model TravTrackPlaceSettings {
+  userId         String   @id @map("user_id")
+  homeRadiusM    Int      @default(150) @map("home_radius_m")
+  homeWindow     Json?    @map("home_window")
+  lodgingEnabled Boolean  @default(false) @map("lodging_enabled")
+  lodgingRadiusM Int      @default(150) @map("lodging_radius_m")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("travtrack_place_settings")
 }
 
 /// One entry of a phone's TravTrack diagnostics log (spec

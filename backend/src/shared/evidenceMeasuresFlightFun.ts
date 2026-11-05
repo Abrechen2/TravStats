@@ -38,6 +38,14 @@ export const FLIGHT_FUN_MEASURES: Record<string, MeasureSpec> = {
     calculator: FUN_CALCULATOR,
     servedIn: 1,
   },
+  afternoonFlightCount: {
+    aggregation: "sum",
+    unit: "flights",
+    scopes: ["allTime"],
+    surface: "StatsFunSection",
+    calculator: FUN_CALCULATOR,
+    servedIn: 1,
+  },
   nightOwlFlightCount: {
     aggregation: "sum",
     unit: "flights",

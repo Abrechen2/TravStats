@@ -91,6 +91,23 @@ export async function resolveEarlyBirdFlightCount(
   });
 }
 
+export async function resolveAfternoonFlightCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  requireAllTime(scope, "afternoonFlightCount");
+  const rows = await loadClockedFlightRows(userId);
+  return flightSumEvidence({
+    userId,
+    key: "afternoonFlightCount",
+    unit: "flights",
+    scope,
+    page,
+    rows: rows.filter((row) => departureDaypartOf(row) === "afternoon"),
+  });
+}
+
 export async function resolveNightOwlFlightCount(
   userId: string,
   scope: EvidenceScope,

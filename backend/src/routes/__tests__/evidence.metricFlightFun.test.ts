@@ -159,6 +159,16 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab fun family", () => 
     assertSumInvariant(res.body, Math.round);
   });
 
+  it("afternoonFlightCount: the noon Berlin departure, and not the historical row", async () => {
+    const res = await get("afternoonFlightCount");
+    expect(res.status).toBe(200);
+    expect(res.body.measure.value).toBe(1);
+    expect(res.body.entries.map((e: { title: { text: string } }) => e.title.text)).toEqual([
+      "FN300",
+    ]);
+    assertSumInvariant(res.body, Math.round);
+  });
+
   it("nightOwlFlightCount: the 22:00 Berlin departure", async () => {
     const res = await get("nightOwlFlightCount");
     expect(res.status).toBe(200);
@@ -245,13 +255,14 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab fun family", () => 
    * The guard against a wrong population, and the only one there is: the
    * tile's own endpoint, asked in this test, for each of the seven.
    */
-  it("all seven fun measures equal the numbers /stats/fun renders", async () => {
+  it("all eight fun measures equal the numbers /stats/fun renders", async () => {
     const fun = await request(app).get("/api/v1/stats/fun").set("Cookie", userACookie);
     expect(fun.status).toBe(200);
 
     const pairs: Array<[string, number]> = [
       ["timezoneHopperFlightCount", fun.body.timezoneHopper],
       ["earlyBirdFlightCount", fun.body.earlyBird],
+      ["afternoonFlightCount", fun.body.afternoon],
       ["nightOwlFlightCount", fun.body.nightOwl],
       ["weekendFlightCount", fun.body.weekendWarrior],
       ["shortHaulFlightCount", fun.body.shortHaulKing],

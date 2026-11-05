@@ -280,6 +280,13 @@
       "coverage": "Only flights with a real clock time; an entry with only a date has no hour.",
       "exclusions": "Not included: historical flights (their times are usually placeholders), flights without an arrival time, date-only flights, planned, cancelled and duplicated (draft) flights."
     },
+    "afternoon": {
+      "unit": "Number of flights that departed between 12:00 and 17:59.",
+      "time": "The clock at the departure airport, in the zone the flight was stored with (otherwise the catalogue's). Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown flights with departure and arrival times.",
+      "coverage": "Only flights with a real clock time; an entry with only a date has no hour.",
+      "exclusions": "Not included: historical flights (their times are usually placeholders), flights without an arrival time, date-only flights, planned, cancelled and duplicated (draft) flights."
+    },
     "nightOwl": {
       "unit": "Number of flights that departed in the evening or at night: from 18:00 to 5:59.",
       "time": "The clock at the departure airport, in the zone the flight was stored with (otherwise the catalogue's). Your whole logbook – the page's year filter does not apply.",

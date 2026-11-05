@@ -109,6 +109,9 @@
       "chains_one": "Chain",
       "chains_other": "Chains",
       "spend": "Spend",
+      "staysPlanned": "+ {{count}} planned",
+      "nightsUndated_one": "incl. {{count}} night without a date",
+      "nightsUndated_other": "incl. {{count}} nights without a date",
       "spendOtherCurrency": "incl. {{orig}} → {{converted}}",
       "rating": "Avg. rating",
       "noRating": "No rating"

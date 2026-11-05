@@ -26,6 +26,7 @@ import monthRoutes from "./travtrack/months";
 import ingestSourceRoutes from "./travtrack/ingestSources";
 import ingestTokenRoutes from "./travtrack/ingestTokens";
 import photoRoutes from "./travtrack/photos";
+import placeRoutes from "./travtrack/places";
 import pointRoutes from "./travtrack/points";
 import stopPlaceRoutes from "./travtrack/stopPlaces";
 import shareSnapshotRoutes from "./travtrack/shareSnapshot";
@@ -113,6 +114,7 @@ router.patch(
 
 router.use(pointRoutes);
 router.use(zoneRoutes);
+router.use(placeRoutes);
 router.use(dayRoutes);
 router.use(legRoutes);
 router.use(stopPlaceRoutes);

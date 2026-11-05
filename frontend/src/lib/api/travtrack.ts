@@ -172,6 +172,24 @@ function filenameFrom(disposition: unknown, fallback: string): string {
 /** A Web-Mercator tile at zoom 14, `[x, y]` — the explored map's one resolution. */
 export type ExploredCell = [number, number];
 /** A map box in degrees; west > east crosses the antimeridian. */
+/** A fixed place of the account (`GET /travtrack/places`); home's point is null while no home is known. */
+export interface TravTrackFixedPlace {
+  id: string;
+  name: string;
+  kind: "home" | "work" | "custom";
+  lat: number | null;
+  lon: number | null;
+  radiusM: number;
+  window: { days: number[]; from: string; until: string } | null;
+}
+
+export interface TravTrackPlaces {
+  places: TravTrackFixedPlace[];
+  lodgingAsPlace: { enabled: boolean; radiusM: number };
+  /** Current and upcoming bookings without coordinates: they cannot fold. */
+  lodgingSkipped?: number;
+}
+
 export type ExploredBox = { west: number; south: number; east: number; north: number };
 
 export const travTrackApi = {
@@ -192,6 +210,8 @@ export const travTrackApi = {
   deleteZone: async (id: string): Promise<void> => {
     await api.delete(`/travtrack/zones/${encodeURIComponent(id)}`);
   },
+  places: async (): Promise<TravTrackPlaces> =>
+    (await api.get<TravTrackPlaces>("/travtrack/places")).data,
   /** Both days inclusive, on the profile's clock; the count deleted. */
   deleteDays: async (span: DaySpan): Promise<number> =>
     (await api.delete<{ deleted: number }>("/travtrack/points", { params: span })).data.deleted,

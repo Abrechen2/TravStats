@@ -18,6 +18,12 @@ hotel during a booking automatically, adjustable.
   home valid on that day. `/travtrack/places` stores only home's radius and
   window, never a second home point.
 - Additive only: no existing field changes shape.
+- Home is not a privacy zone (owner, 2026-11-05: privacy zones are only places
+  where nothing is recorded). Checked: the server records and shows points at
+  home like anywhere else and creates no zone for it. The one place home is
+  cut is a trip route **shared with someone else** (`shareNarrow.ts`: the
+  recipient never sees the circle around the owner's current or former
+  home) — that is sharing privacy, not recording, and stays.
 
 ## Phases
 

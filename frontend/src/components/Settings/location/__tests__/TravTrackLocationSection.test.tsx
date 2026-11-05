@@ -119,6 +119,10 @@ beforeEach(() => {
   vi.spyOn(dawarichCopyApi, "get").mockResolvedValue({ connection: "none", copy: null });
   vi.spyOn(travTrackApi, "summary").mockResolvedValue(EMPTY);
   vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
+  vi.spyOn(travTrackApi, "places").mockResolvedValue({
+    places: [],
+    lodgingAsPlace: { enabled: false, radiusM: 150 },
+  });
   vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
   vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
   vi.spyOn(travTrackSourcesApi, "list").mockResolvedValue([]);
