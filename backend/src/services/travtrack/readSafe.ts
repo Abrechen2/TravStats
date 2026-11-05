@@ -118,7 +118,7 @@ export async function readSafeTravTrack(
     fromAt: { lt: new Date(window.untilMs) },
     toAt: { gt: new Date(window.fromMs) },
   };
-  const [rows, deletedRows, gapRows, circles] = await Promise.all([
+  const [rows, deletedRows, gapRows, circles, tombstones] = await Promise.all([
     prisma.travTrackPoint.findMany({
       where: { userId, t: range, ...afterWhere },
       orderBy: [{ t: "asc" }, { seq: "asc" }],
@@ -136,6 +136,14 @@ export async function readSafeTravTrack(
       select: { fromAt: true, toAt: true, deviceId: true, reason: true },
     }),
     privacyCirclesFor(userId, window.fromMs),
+    // Points deleted one by one are never read, but the silence they leave must not be bridged.
+    prisma.travTrackDeletedPoint.findMany({
+      where: {
+        userId,
+        tS: { gte: Math.floor(window.fromMs / 1000), lt: Math.ceil(window.untilMs / 1000) },
+      },
+      select: { tS: true },
+    }),
   ]);
   const read = rows.slice(0, cap);
   const next = rows.length > cap ? rows[cap].t : null;
@@ -176,9 +184,10 @@ export async function readSafeTravTrack(
   // Every fix read but not returned (a zone, a chord through one, a lone survivor): the silence
   // it leaves must never be bridged. Fail closed: any reason, any device.
   const kept = new Set(segments.flat());
-  const removedAtMs = [...byDevice.values()].flatMap((pts) =>
-    pts.filter((p) => !kept.has(p)).map((p) => p[0])
-  );
+  const removedAtMs = [
+    ...[...byDevice.values()].flatMap((pts) => pts.filter((p) => !kept.has(p)).map((p) => p[0])),
+    ...tombstones.map((t) => t.tS * 1000),
+  ];
   return {
     segments,
     rowOf: (p) => rowByPoint.get(p),
