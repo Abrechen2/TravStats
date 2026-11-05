@@ -8,7 +8,10 @@ const SPOT = { lat: 47.82673, lon: 12.19074 };
 const M = 111_195;
 const DAY = Date.parse("2026-11-04T23:00:00Z");
 
-function span(fixes: Array<[number, number, number | null]>): SafeSpan {
+function span(
+  fixes: Array<[number, number, number | null]>,
+  device: (t: number) => string = () => "d"
+): SafeSpan {
   const rows = new WeakMap<StoredPoint, SafePointRow>();
   const segment = fixes.map(([t, dN, acc], i): StoredPoint => {
     const p: StoredPoint = [t, SPOT.lat + dN / M, SPOT.lon, acc];
@@ -18,7 +21,7 @@ function span(fixes: Array<[number, number, number | null]>): SafeSpan {
       lat: p[1],
       lon: p[2],
       accuracyM: acc,
-      deviceId: "d",
+      deviceId: device(t),
     } as SafePointRow);
     return p;
   });
@@ -129,10 +132,82 @@ describe("travtrack: a day spent in one spot", () => {
       pts.filter((p) => p[0] > DAY + 12 * 60 * MIN),
     ];
     read.circles = [{ lat: SPOT.lat + 3000 / M, lon: SPOT.lon, radiusM: 100 }];
-    read.cutAtMs = [DAY + 8 * 60 * MIN, DAY + 9 * 60 * MIN];
+    read.removedAtMs = [DAY + 8 * 60 * MIN, DAY + 9 * 60 * MIN];
     const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
     expect(stops).toHaveLength(2);
     expect(stops[0].untilMs).toBeLessThan(DAY + 8 * 60 * MIN);
     expect(stops[1].fromMs).toBeGreaterThan(DAY + 9 * 60 * MIN);
+  });
+
+  it("does not bridge a silence that holds a removed fix, even one outside every zone", () => {
+    const fixes = still(180);
+    const read = span(fixes);
+    read.segments = fixes.map((_, i) => [read.segments[0][i]]);
+    read.removedAtMs = [DAY + 4 * 60 * MIN];
+    const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
+    expect(
+      stops.every((s) => s.untilMs <= DAY + 4 * 60 * MIN || s.fromMs >= DAY + 4 * 60 * MIN)
+    ).toBe(true);
+  });
+
+  it("another device's stop never stretches a bridged stop across this device's pause", () => {
+    const h = (n: number) => DAY + n * 60 * MIN;
+    const d1 = [0, 180, 360, 540].map((m): [number, number, number | null] => [h(m), 0, 8]);
+    const d2 = [150, 165, 180, 195, 210, 225, 240].map((m): [number, number, number | null] => [
+      h(m),
+      0,
+      8,
+    ]);
+    const read = span([...d1, ...d2], (t) => (d1.some((f) => f[0] === t) ? "d1" : "d2"));
+    const all = read.segments[0];
+    const of = (dev: string) => all.filter((p) => read.rowOf(p)?.deviceId === dev);
+    read.segments = [...of("d1").map((p) => [p]), of("d2")];
+    read.paused = [{ fromMs: h(60), untilMs: h(120), deviceId: "d1", reason: "x" }];
+    const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
+    expect(stops.some((s) => s.fromMs < h(120) && s.untilMs > h(60))).toBe(false);
+    expect(stops.some((s) => s.fromMs === h(150) && s.untilMs === h(240))).toBe(true);
+  });
+
+  it("drops an accepted name whose position lies in a privacy zone", () => {
+    const read = span(still(5).filter(([t]) => t < DAY + 60 * MIN));
+    read.circles = [{ lat: SPOT.lat + 300 / M, lon: SPOT.lon, radiusM: 100 }];
+    const { stops } = deriveLegs(read, {
+      windows: [],
+      overrides: [],
+      stays: [],
+      places: [
+        {
+          fromMs: DAY,
+          untilMs: DAY + 60 * MIN,
+          name: "Secret",
+          lat: SPOT.lat + 300 / M,
+          lon: SPOT.lon,
+          updatedAtMs: 1,
+        },
+      ],
+    });
+    expect(stops).toHaveLength(1);
+    expect(stops[0].place).toBeNull();
+  });
+
+  it("drops a name without a position when the stop lies beside a privacy zone", () => {
+    const read = span(still(5).filter(([t]) => t < DAY + 60 * MIN));
+    read.circles = [{ lat: SPOT.lat + 300 / M, lon: SPOT.lon, radiusM: 100 }];
+    const { stops } = deriveLegs(read, {
+      windows: [],
+      overrides: [],
+      stays: [],
+      places: [
+        {
+          fromMs: DAY,
+          untilMs: DAY + 60 * MIN,
+          name: "Secret",
+          lat: null,
+          lon: null,
+          updatedAtMs: 1,
+        },
+      ],
+    });
+    expect(stops[0].place).toBeNull();
   });
 });
