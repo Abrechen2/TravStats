@@ -14,8 +14,10 @@ import { usePackageReviewRenderer } from "./packageAdapter";
 /**
  * Reading a tour operator's travel documents: the drop zone parses as
  * `package` (plan 2026-10-09 P3) with the operator templates from the
- * template repository, and the review is the package proposal. Upload the
- * PDF itself — a mail's PDF attachment is not routed to the reader yet.
+ * template repository, and the review is the package proposal. A PDF no
+ * template recognises can be read by the AI model on an explicit "Mit KI
+ * lesen" step (kept PDFs only; never automatic). The model step is not wired
+ * for mail bodies — upload the PDF itself.
  */
 export const TRIP_DOCUMENT_IMPORT_READY = true;
 

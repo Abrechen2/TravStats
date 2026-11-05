@@ -4,7 +4,7 @@ import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode } from "../../lib/apiError";
-import type { PackageReading } from "../../lib/api/parse";
+import type { PackageReading, ParsePdfPackageResult } from "../../lib/api/parse";
 import {
   tripPackageApi,
   type PackageChoices,
@@ -29,6 +29,8 @@ export interface PackageImportPreviewModalProps {
   documentId: string | null;
   /** The template's operator, for the intro line. */
   issuer: string | null;
+  /** The reading came from the language model, not a template: say so and list what was refused. */
+  readByModel?: { dropped: NonNullable<ParsePdfPackageResult["modelDropped"]> };
   onCancel: () => void;
   onSaved: (result: PackageCommitResult) => void | Promise<void>;
 }
@@ -56,6 +58,7 @@ export function PackageImportPreviewModal({
   reading,
   documentId,
   issuer,
+  readByModel,
   onCancel,
   onSaved,
 }: PackageImportPreviewModalProps): JSX.Element {
@@ -158,6 +161,25 @@ export function PackageImportPreviewModal({
     >
       {issuer && (
         <p className="text-sm text-(--text-muted)">{t("import:package.intro", { issuer })}</p>
+      )}
+      {readByModel && (
+        <div className="text-sm text-(--text-muted)" data-testid="package-model-notice">
+          <p>{t("import:package.model.intro")}</p>
+          {readByModel.dropped.length > 0 && (
+            <div className="mt-2" role="status">
+              <p className="font-medium">
+                {t("import:package.model.dropped", { count: readByModel.dropped.length })}
+              </p>
+              <ul className="list-disc pl-5">
+                {readByModel.dropped.map((row) => (
+                  <li key={`${row.kind}:${row.value}`}>
+                    {t(`import:package.model.droppedKind.${row.kind}`, { value: row.value })}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
       {error && (
         <p role="alert" className="mt-3 font-medium text-(--danger)">

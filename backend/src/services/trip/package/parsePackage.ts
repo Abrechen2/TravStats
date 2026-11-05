@@ -4,9 +4,10 @@
  * The active v2 `package` templates are tried in order; the first whose
  * matcher accepts the document AND whose reading satisfies the contract wins.
  * No operator is compiled in (owner ruling 1, 2026-10-09): without a matching
- * template the answer is an empty reading with a code saying why, never a
- * model's guess at an itinerary — a package spans weeks and a dozen bookings,
- * and a misread one would be a dozen wrong rows.
+ * template the answer is an empty reading with a code saying why. There is no
+ * AUTOMATIC model guess — a package spans weeks and a dozen bookings, and a
+ * misread one would be a dozen wrong rows. A model reading exists only as an
+ * explicit user step on a kept PDF ("Mit KI lesen", `modelReading.ts`).
  *
  * A template that recognises the document but reads values the contract
  * refuses is not passed over in silence: when no other template succeeds,

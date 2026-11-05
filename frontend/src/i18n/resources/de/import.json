@@ -192,6 +192,34 @@
     "empty": {
       "noTemplate": "Für dieses Dokument gibt es noch keine Veranstalter-Vorlage. Es wurde nichts ausgelesen.",
       "invalidReading": "Die Vorlage für {{issuer}} erkennt das Dokument, liest aber unvollständig. Es wurde nichts ausgelesen."
+    },
+    "model": {
+      "title": "Mit KI lesen?",
+      "offer": "Für dieses Dokument gibt es keine Veranstalter-Vorlage. Das KI-Modell kann es trotzdem lesen und daraus eine Reise mit Flügen und Unterkünften vorschlagen. Du prüfst jede Zeile, bevor etwas gespeichert wird; das Original wird an die Reise gehängt.",
+      "read": "Mit KI lesen",
+      "reading": "Wird gelesen …",
+      "intro": "Vom KI-Modell gelesen, nicht von einer Vorlage — prüfe jede Zeile gegen dein Dokument. Nichts wird gespeichert, bevor du übernimmst.",
+      "dropped": "{{count}} Angaben des Modells stehen nicht im Dokument und wurden verworfen:",
+      "droppedKind": {
+        "bookingReference": "Buchungsnummer „{{value}}“",
+        "flight": "Flug {{value}}",
+        "stay": "Unterkunft „{{value}}“",
+        "price": "Preis {{value}}"
+      },
+      "failed": {
+        "modelRefused": "Das KI-Modell darf für dieses Konto nicht verwendet werden. Nichts wurde gelesen.",
+        "modelFailed": "Das KI-Modell hat nicht geantwortet. Nichts wurde gelesen.",
+        "modelInvalid": "Das KI-Modell hat das Dokument nicht als Reise lesen können. Nichts wurde gelesen.",
+        "request": "Die Anfrage ist fehlgeschlagen. Nichts wurde gelesen."
+      },
+      "reason": {
+        "LLM_UNREACHABLE": "Das KI-Modell ist nicht erreichbar. Prüfe die Parser-Einstellungen oder versuche es später erneut. Nichts wurde gelesen.",
+        "PARSE_FAILED": "Das KI-Modell konnte das Dokument nicht lesen. Die Ursache steht im Server-Log. Nichts wurde gelesen.",
+        "disabled_by_admin": "Der Administrator hat das KI-Modell abgeschaltet. Nichts wurde gelesen.",
+        "shared_demo": "Im Demo-Konto ist das KI-Modell nicht verfügbar. Nichts wurde gelesen.",
+        "cloud_not_consented": "Ein Cloud-Anbieter ist eingerichtet, aber noch nicht freigegeben. Nichts wurde gelesen.",
+        "provider_incomplete": "Es ist kein KI-Anbieter eingerichtet. Nichts wurde gelesen."
+      }
     }
   },
   "tripFile": {

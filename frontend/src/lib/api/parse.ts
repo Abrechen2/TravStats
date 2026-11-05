@@ -173,15 +173,25 @@ export interface PackageReading {
 }
 
 /** Why a package document came back empty — worded by the client. */
-export type PackageParseFallbackCode = "noTemplate" | "invalidReading";
+export type PackageParseFallbackCode =
+  | "noTemplate"
+  | "invalidReading"
+  // The model was asked (spec 2026-08-21): refused, failed, or answered unusably.
+  | "modelRefused"
+  | "modelFailed"
+  | "modelInvalid";
 
 interface PackageParseFields {
   domain: "package";
   package: PackageReading | null;
   template: { id: string; version: string; issuer: string } | null;
-  parserUsed: "template" | "none";
+  parserUsed: "template" | "ollama" | "none";
   ollamaAvailable: boolean;
   fallbackCode?: PackageParseFallbackCode;
+  /** Rows of a model reading the truthfulness gate refused. */
+  modelDropped?: Array<{ kind: "bookingReference" | "flight" | "stay" | "price"; value: string }>;
+  /** A model failure's stable code: refusal kind or `LLM_UNREACHABLE` / `PARSE_FAILED`. */
+  modelReason?: string;
   /** English, for the log — never shown. */
   fallbackReason?: string;
   /** The contract paths a recognising template failed. */
@@ -454,6 +464,20 @@ export const parseApi = {
     (pdfBase64: string, domain: "package", options?: ParseOptions): Promise<ParsePdfPackageResult>;
     (pdfBase64: string, domain: "place", options?: ParseOptions): Promise<ParsePdfPlaceResult>;
     (pdfBase64: string, domain: ParseDomain, options?: ParseOptions): Promise<ParsePdfResult>;
+  },
+
+  /**
+   * Reads a kept PDF with the language model — the user's explicit second step
+   * after "no template" (spec 2026-08-21). Failures come back as a body with a
+   * `fallbackCode` and its reason, not as an exception.
+   */
+  readPackageWithModel: async (documentId: string): Promise<ParsePdfPackageResult> => {
+    const { data } = await parserApi.post<ParsePdfPackageResult>("/parse-pdf", {
+      documentId,
+      domain: "package",
+      packageModel: true,
+    });
+    return data;
   },
 
   checkOllamaVision: async (): Promise<ParserCheckResult> => {
