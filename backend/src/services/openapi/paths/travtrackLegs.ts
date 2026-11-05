@@ -53,10 +53,24 @@ export const stopSchema = z.object({
       name: z.string(),
       lat: z.number().nullable().describe("Where the named place lies"),
       lon: z.number().nullable(),
-      source: z.literal("accepted").describe("The owner accepted this name for the stop"),
+      source: z
+        .enum(["accepted", "fixed", "lodging"])
+        .describe(
+          "`accepted`: the owner accepted this name (`PUT /travtrack/stops/place`); `fixed`: a " +
+            "fixed place of the account; `lodging`: a booked lodging. Precedence accepted > fixed > lodging"
+        ),
+      placeId: z.string().optional().describe("`FixedPlace.id` when `source` is `fixed`"),
+      lodgingStayId: z.string().optional().describe("The stay when `source` is `lodging`"),
     })
     .nullable()
-    .describe("The name the owner accepted for this stop (`PUT /travtrack/stops/place`)"),
+    .describe("The name of the stop: the owner's accepted one, else a fixed place or lodging"),
+  folded: z
+    .object({ fixCount: z.number().int() })
+    .nullable()
+    .describe(
+      "Set when the stop is a run of fixes folded into a fixed place or a lodging; the day's " +
+        "`segments` still carry every fix. Null when not folded"
+    ),
 });
 
 export const pointDetailSchema = z.object({

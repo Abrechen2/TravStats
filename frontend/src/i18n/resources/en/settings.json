@@ -1820,6 +1820,37 @@
         "notCreated": "I didn't create the key.",
         "notRevoked": "I didn't revoke the key.",
         "loadError": "I couldn't load the keys."
+      },
+      "places": {
+        "name": "Fixed places",
+        "sub": "Everything inside shows as one point in the day",
+        "help": "Home, work and your own places: positions inside the circle (and the time window, if one is set) appear as one stop in the day. Every position stays stored. Read-only here.",
+        "loadError": "The fixed places could not be loaded.",
+        "none": "No fixed places.",
+        "home": "Home",
+        "homeUnknown": "Home (no residence set yet)",
+        "kind": {
+          "home": "Home",
+          "work": "Work",
+          "custom": "Own place"
+        },
+        "radius": "Radius {{metres}} m",
+        "always": "always",
+        "window": "{{days}}, {{from}}–{{until}}",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
+        },
+        "lodging": "Lodging while booked: {{state}}, radius {{metres}} m",
+        "lodgingOn": "on",
+        "lodgingOff": "off",
+        "lodgingSkipped_one": "{{count}} booking without coordinates is skipped.",
+        "lodgingSkipped_other": "{{count}} bookings without coordinates are skipped."
       }
     },
     "history": {

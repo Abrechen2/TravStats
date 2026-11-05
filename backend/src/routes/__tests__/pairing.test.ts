@@ -140,6 +140,8 @@ describe("Pairing API", () => {
       expect(res.body.token).toMatch(/^ts_pat_/);
       expect(res.body.server).toBeUndefined();
       expect(res.body.user.username).toBe("pairingroute");
+      // The claim answer names the account's id, not only its username (fixed-places S1).
+      expect(res.body.user.id).toBe(userId);
 
       const minted = await prisma.apiToken.findFirst({
         where: { userId, deviceId: "dev-happy", revokedAt: null },

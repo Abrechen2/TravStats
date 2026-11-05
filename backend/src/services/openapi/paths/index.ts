@@ -112,6 +112,7 @@ import "./travplanDocuments";
 import "./remotePlans";
 import "./travtrack";
 import "./travtrackDay";
+import "./travtrackPlaces";
 import "./travtrackLegs";
 import "./travtrackDiagnostics";
 import "./travtrackExplored";
