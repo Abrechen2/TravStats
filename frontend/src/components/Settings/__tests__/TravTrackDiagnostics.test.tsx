@@ -68,6 +68,48 @@ describe("TravTrackDiagnostics", () => {
     expect(api.day).toHaveBeenCalledWith("2026-10-29", undefined);
   });
 
+  it("names a background plan stop and what it stood on", async () => {
+    api.day.mockResolvedValue(
+      day({
+        gaps: [
+          {
+            from: "2026-10-28T13:52:00.000Z",
+            to: "2026-10-28T14:52:00.000Z",
+            minutes: 60,
+            cause: "recorderPaused",
+            evidence: {
+              fixesReceived: 0,
+              fixesKept: 0,
+              dropped: {},
+              uploads: [],
+              permission: "always",
+              recorder: "stop",
+              lifecycle: null,
+              reportedReason: null,
+              autoPause: null,
+              stopWhy: {
+                reason: "plan",
+                flight: "keep",
+                trip: "keep",
+                everyday: "stop",
+                decision: "hold",
+                allowed: false,
+                foreground: false,
+                everydayArmed: true,
+                everydayEnabled: "unknown",
+              },
+            },
+          },
+        ],
+      })
+    );
+    render(<TravTrackDiagnostics today="2026-10-29" canDelete />);
+    await screen.findByText("track:settings.diagnostics.cause.recorderPaused");
+    expect(screen.getByTestId("travtrack-diag-gaps")).toHaveTextContent(
+      "track:settings.diagnostics.evidence.stopPlan"
+    );
+  });
+
   it("says how to switch the log on when the phone sent none", async () => {
     api.day.mockResolvedValue(day({ hasLog: false, fixesPerMinute: [] }));
     render(<TravTrackDiagnostics today="2026-10-29" canDelete />);

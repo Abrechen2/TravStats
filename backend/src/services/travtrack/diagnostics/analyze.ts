@@ -66,6 +66,25 @@ export interface AnalysisInput {
   hasLog: boolean;
 }
 
+/**
+ * What a recorder `stop` stood on, as the phone logged it (Companion
+ * fix/capture-background-stop): the plan's verdict per purpose, the permission
+ * read, whether the app was in the foreground, Alltag's own switch and the
+ * server's decision. Every field is null when an older build did not send it.
+ */
+export interface StopWhy {
+  reason: string | null;
+  flight: string | null;
+  trip: string | null;
+  everyday: string | null;
+  decision: string | null;
+  allowed: boolean | null;
+  foreground: boolean | null;
+  everydayArmed: boolean | null;
+  /** A boolean, or "unknown" when the phone could not read the switch. */
+  everydayEnabled: boolean | string | null;
+}
+
 export interface GapEvidence {
   fixesReceived: number;
   fixesKept: number;
@@ -83,6 +102,11 @@ export interface GapEvidence {
    * `unexplained` — this says whether that pause was possible at all.
    */
   autoPause: boolean | null;
+  /**
+   * Why the recorder stopped, when the last recorder event before the gap ends is a
+   * `stop` that says so; null for an older build or when the recorder was not stopped.
+   */
+  stopWhy: StopWhy | null;
 }
 
 export interface AnalysedGap {
@@ -167,6 +191,32 @@ function autoPauseAt(events: readonly LogEvent[], atMs: number): boolean | null 
   return value;
 }
 
+const str = (e: LogEvent, key: string): string | null => field(e, key);
+const flag = (e: LogEvent, key: string): boolean | null =>
+  typeof e.data[key] === "boolean" ? (e.data[key] as boolean) : null;
+
+/** The `stop` event that ended the recorder before an instant, read as what it stood on. */
+function stopWhyAt(events: readonly LogEvent[], untilMs: number): StopWhy | null {
+  let last: LogEvent | null = null;
+  for (const e of events) {
+    if (e.tMs >= untilMs) break;
+    if (e.kind === "recorder") last = e;
+  }
+  if (!last || field(last, "event") !== "stop") return null;
+  const enabled = last.data.everydayEnabled;
+  return {
+    reason: str(last, "reason"),
+    flight: str(last, "flight"),
+    trip: str(last, "trip"),
+    everyday: str(last, "everyday"),
+    decision: str(last, "decision"),
+    allowed: flag(last, "allowed"),
+    foreground: flag(last, "foreground"),
+    everydayArmed: flag(last, "everydayArmed"),
+    everydayEnabled: typeof enabled === "boolean" || typeof enabled === "string" ? enabled : null,
+  };
+}
+
 const RESUMED = new Set(["start", "resume"]);
 const WOKE = new Set(["launch", "backgroundLaunch", "significantWake"]);
 const ok = (status: number | null): boolean => status !== null && status >= 200 && status < 300;
@@ -220,6 +270,7 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
     lifecycle,
     reportedReason: null,
     autoPause: recorder === null ? null : autoPauseAt(events, part.fromMs),
+    stopWhy: stopWhyAt(events, part.toMs),
   };
 
   const notAlways = (s: string | null) => s !== null && s !== "always";
@@ -241,6 +292,16 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
     return { cause: uploads.length > 0 ? "uploadFailed" : "notUploaded", evidence };
   }
   if (fixesReceived > 0) return { cause: "droppedOnPhone", evidence };
+
+  // A stop INSIDE the gap that nothing resumed (the usual case: the recorder ends right
+  // after the last stored point) — no fix arrived because the recorder was off.
+  const lastRecorder = inside(events, "recorder", part).pop();
+  if (
+    lastRecorder &&
+    (field(lastRecorder, "event") === "stop" || field(lastRecorder, "event") === "pause")
+  ) {
+    return { cause: "recorderPaused", evidence };
+  }
 
   const lifecycleIn = inside(events, "lifecycle", part);
   const lastTerminate = [...lifecycleIn].reverse().find((e) => field(e, "event") === "terminate");

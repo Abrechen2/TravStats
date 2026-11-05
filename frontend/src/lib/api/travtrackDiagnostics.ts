@@ -44,6 +44,18 @@ export interface DiagnosticsGap {
     reportedReason: string | null;
     /** The recorder in force had iOS's automatic pause on; null when unknown. */
     autoPause: boolean | null;
+    /** What the recorder's last stop stood on; absent on older servers, null on older apps. */
+    stopWhy?: {
+      reason: string | null;
+      flight: string | null;
+      trip: string | null;
+      everyday: string | null;
+      decision: string | null;
+      allowed: boolean | null;
+      foreground: boolean | null;
+      everydayArmed: boolean | null;
+      everydayEnabled: boolean | string | null;
+    } | null;
   };
 }
 

@@ -151,6 +151,31 @@ export default function TravTrackDiagnostics({
     if (gap.cause === "unexplained" && e.autoPause === true) {
       parts.push(t(`${NS}.evidence.autoPause`));
     }
+    const why = e.stopWhy;
+    if (gap.cause === "recorderPaused" && why) {
+      const unknown = t(`${NS}.evidence.unknown`);
+      const yesNo = (v: boolean | string | null | undefined): string =>
+        typeof v === "boolean" ? t(`${NS}.evidence.${v ? "yes" : "no"}`) : (v ?? unknown);
+      if (why.reason === "plan") {
+        parts.push(
+          t(`${NS}.evidence.stopPlan`, {
+            where:
+              why.foreground === null
+                ? unknown
+                : t(`${NS}.evidence.${why.foreground ? "stopForeground" : "stopBackground"}`),
+            flight: why.flight ?? unknown,
+            trip: why.trip ?? unknown,
+            everyday: why.everyday ?? unknown,
+            allowed: yesNo(why.allowed),
+            enabled: yesNo(why.everydayEnabled),
+            armed: yesNo(why.everydayArmed),
+            decision: why.decision ?? unknown,
+          })
+        );
+      } else if (why.reason) {
+        parts.push(t(`${NS}.evidence.stopOther`, { reason: why.reason }));
+      }
+    }
     if (e.permission && e.permission !== "always") {
       parts.push(t(`${NS}.evidence.permission`, { status: e.permission }));
     }

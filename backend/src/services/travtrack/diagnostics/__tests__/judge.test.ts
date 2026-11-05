@@ -66,4 +66,21 @@ describe("judgeEvent", () => {
       data: {},
     });
   });
+
+  it("keeps a recorder stop's plan fields whole, and an older stop without them", () => {
+    const stop = {
+      event: "stop",
+      reason: "plan",
+      flight: "keep",
+      trip: "keep",
+      everyday: "stop",
+      allowed: false,
+      foreground: false,
+      everydayEnabled: "unknown",
+      everydayArmed: true,
+      decision: "hold",
+    };
+    expect(at(stop)).toMatchObject({ data: stop });
+    expect(at({ event: "stop", reason: "plan" })).toMatchObject({ data: { reason: "plan" } });
+  });
 });
