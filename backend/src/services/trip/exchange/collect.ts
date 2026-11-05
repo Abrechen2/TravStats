@@ -5,7 +5,7 @@
  * beside it, so the archive writer streams bytes it never has to look up.
  */
 import { customCategoryKey } from "../../../shared/ratingCategories";
-import { exportedRatings } from "./exportedRatings";
+import { exportedRatings, type OwnCategoryInfo } from "./exportedRatings";
 import { storedRatingsOf } from "../../../shared/ratingDerivation";
 import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../../shared/railCounting";
 import path from "path";
@@ -172,10 +172,10 @@ export async function collectTrip(
   const ownCategoryNames = priv
     ? new Map(
         (await prisma.lodgingRatingCategory.findMany({ where: { userId } })).map(
-          (c) => [customCategoryKey(c.id), c.name] as const
+          (c) => [customCategoryKey(c.id), { name: c.name, deleted: c.deletedAt !== null }] as const
         )
       )
-    : new Map<string, string>();
+    : new Map<string, OwnCategoryInfo>();
   const bookingKey = keyer("b");
   const flightKey = keyer("f");
   const stayKey = keyer("s");

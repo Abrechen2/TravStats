@@ -12,8 +12,6 @@ import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import {
-  MAX_CUSTOM_CATEGORIES,
-  MAX_CUSTOM_CATEGORY_NAME,
   customCategoryId,
   customCategoryKey,
   isBuiltInCategory,
@@ -105,12 +103,22 @@ export async function assertRatingKeysValid(
 }
 
 /**
+ * Most own categories a trip IMPORT may leave an account with. The
+ * per-account limit (`MAX_CUSTOM_CATEGORIES`) governs adding by hand; an import
+ * may go past it, because the alternative was dropping a value the file
+ * carries - and a value must never vanish silently. Past this ceiling the
+ * import is REFUSED with a message, not trimmed.
+ */
+export const MAX_IMPORT_CATEGORIES = 100;
+
+/**
  * Own categories by NAME, for a trip file that crosses accounts. A name that
  * matches one of the account's live categories (case-insensitive) is used, a
  * deleted one of that name is revived, otherwise it is created - the same
- * rules as `POST /lodging/rating-categories/custom`, including the per-account
- * limit. A name that cannot be created (limit) is absent from the result, so
- * the caller drops that one value instead of failing the whole import.
+ * rules as `POST /lodging/rating-categories/custom`, except for the limit (see
+ * `MAX_IMPORT_CATEGORIES`). Every name in the result has a key: nothing is
+ * dropped. `mine` is kept current as names are handled, so two spellings that
+ * differ only by case resolve to the SAME category and one revival is one row.
  */
 export async function ensureOwnCategoriesByName(
   userId: string,
@@ -122,16 +130,16 @@ export async function ensureOwnCategoriesByName(
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('lodging_rating_categories'), hashtext(${userId}))`;
     const mine = await tx.lodgingRatingCategory.findMany({ where: { userId } });
-    let live = mine.filter((c) => c.deletedAt === null).length;
     for (const name of wanted) {
-      if (name.length > MAX_CUSTOM_CATEGORY_NAME) continue;
       const same = (c: { name: string }): boolean => c.name.toLowerCase() === name.toLowerCase();
       const liveHit = mine.find((c) => c.deletedAt === null && same(c));
       if (liveHit) {
         out.set(name, customCategoryKey(liveHit.id));
         continue;
       }
-      if (live >= MAX_CUSTOM_CATEGORIES) continue;
+      if (mine.filter((c) => c.deletedAt === null).length >= MAX_IMPORT_CATEGORIES) {
+        throw new AppError("The file carries too many own rating categories", 400);
+      }
       const dead = mine.find((c) => c.deletedAt !== null && same(c));
       const row = dead
         ? await tx.lodgingRatingCategory.update({
@@ -139,7 +147,8 @@ export async function ensureOwnCategoriesByName(
             data: { deletedAt: null, name },
           })
         : await tx.lodgingRatingCategory.create({ data: { userId, name } });
-      live += 1;
+      if (dead) mine[mine.indexOf(dead)] = row;
+      else mine.push(row);
       out.set(name, customCategoryKey(row.id));
     }
   });
