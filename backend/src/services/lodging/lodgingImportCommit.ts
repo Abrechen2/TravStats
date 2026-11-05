@@ -17,7 +17,7 @@ import type {
   StayCandidateFields,
 } from "../../schemas/lodgingImport";
 import { normalizeLodgingName } from "./lodgingImportPreview";
-import { deriveStayOverallRating } from "../../shared/ratingDerivation";
+import { mergeRatings, ratingColumns } from "./stayRatings";
 import { minorUnits } from "../../shared/currencies";
 import { findOrCreateOwnChain, findVisibleChainByName } from "./chainScope";
 import { stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
@@ -332,19 +332,11 @@ async function createStay(
       // nothing is labelled with a currency the source never gave.
       currency: fields.currency ?? undefined,
       ...fx,
-      ratingRoom: fields.ratingRoom ?? null,
-      ratingBreakfast: fields.ratingBreakfast ?? null,
-      ratingService: fields.ratingService ?? null,
       // Derived, exactly as the two stay routes do it — a real sheet scores
       // the parts ("Bew. Zimmer", "Bew. Frühstück") and has no overall column,
       // so taking `fields.ratingOverall` at face value imported every such
       // stay unrated and made each hotel and chain average read "—".
-      ratingOverall: deriveStayOverallRating({
-        room: fields.ratingRoom ?? null,
-        breakfast: fields.ratingBreakfast ?? null,
-        service: fields.ratingService ?? null,
-        current: fields.ratingOverall ?? null,
-      }),
+      ...ratingColumns(mergeRatings({}, fields), fields.ratingOverall ?? null),
       bookingReference: fields.bookingReference ?? null,
       externalRef: fields.externalRef ?? null,
       notes: fields.notes ?? null,

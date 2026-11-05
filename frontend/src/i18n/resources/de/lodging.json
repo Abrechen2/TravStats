@@ -105,7 +105,8 @@
     "deletePhotosNote_one": "Dazu 1 Foto der Unterkunft, das mit gelöscht wird.",
     "deletePhotosNote_other": "Dazu {{count}} Fotos der Unterkunft, die mit gelöscht werden.",
     "survivorTripsUnnamed": "verknüpfte Reisen",
-    "stayDocuments": "Unterlagen · {{period}}"
+    "stayDocuments": "Unterlagen · {{period}}",
+    "noCategoryRatings": "Noch keine Kategorien bewertet"
   },
   "nightPrice": {
     "roomRate": "Zimmer pro Nacht",
@@ -170,7 +171,7 @@
     "programName": "Programmname",
     "membershipNumber": "Mitgliedsnummer",
     "tier": "Status-Stufe",
-    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
+    "ratingOverallDerived": "Ø aus allen bewerteten Kategorien",
     "website": "Webseite",
     "amenitySuggestions": "Deine Ausstattung",
     "removeAmenity": "{{name}} entfernen",
@@ -276,7 +277,25 @@
       "checkIn": "Bitte die Anreise angeben.",
       "checkOut": "Bitte die Abreise angeben.",
       "checkOutBeforeCheckIn": "Die Abreise liegt vor der Anreise."
-    }
+    },
+    "ratingCategoriesManage": "Kategorien verwalten",
+    "ratingCategoriesTitle": "Bewertungskategorien",
+    "ratingCategoriesIntro": "Schalte ein, was du bewerten willst. Schaltest du etwas ab, bleiben bereits vergebene Bewertungen und die Gesamtnote alter Aufenthalte unverändert.",
+    "ratingCategoriesOwn": "Eigene Kategorien",
+    "ratingCategoryName": "Name der neuen Kategorie",
+    "ratingCategoryAdd": "Hinzufügen",
+    "ratingCategoryRename": "Umbenennen",
+    "ratingCategoryDelete": "Löschen",
+    "ratingCategoryDeleteHint": "Bereits vergebene Bewertungen bleiben an den Aufenthalten erhalten.",
+    "ratingCategorySave": "Speichern",
+    "ratingCategoryCancel": "Abbrechen",
+    "ratingCategoryDuplicate": "Diese Kategorie gibt es schon.",
+    "ratingCategoryTooMany": "Du hast die Höchstzahl eigener Kategorien erreicht.",
+    "ratingCategoryFailed": "Die Kategorie konnte nicht gespeichert werden.",
+    "ratingCategoriesDone": "Fertig",
+    "ratingNoCategories": "Keine Bewertungskategorien eingeschaltet.",
+    "ratingRetiredTitle": "Nicht mehr eingeschaltet",
+    "ratingRetiredHint": "Du hast diese Kategorie abgeschaltet, der Aufenthalt trägt aber noch eine Bewertung. Die Bewertung zählt weiter zur Gesamtnote, bis du sie löschst."
   },
   "membership": {
     "title": "Bonusprogramme",
@@ -550,7 +569,8 @@
       "fromStays": "aus {{count}} Aufenthalten",
       "fromStays_one": "aus {{count}} Aufenthalt",
       "fromStays_other": "aus {{count}} Aufenthalten",
-      "bestValue": "Bestes Preis-Leistungs-Verhältnis"
+      "bestValue": "Bestes Preis-Leistungs-Verhältnis",
+      "categoryDesc": "Nur Aufenthalte mit dieser Bewertung"
     },
     "geo": {
       "title": "Wo du geschlafen hast",
@@ -1082,5 +1102,18 @@
     "saveError": "Der Standort konnte nicht gespeichert werden.",
     "saved": "Standort gespeichert",
     "openFor": "Standort ergänzen: {{issue}}"
+  },
+  "ratingCategory": {
+    "room": "Zimmer",
+    "bed": "Bett",
+    "bathroom": "Bad",
+    "cleanliness": "Sauberkeit",
+    "breakfast": "Frühstück",
+    "service": "Service",
+    "location": "Lage",
+    "parking": "Parkplatz",
+    "wifi": "WLAN",
+    "quiet": "Ruhe",
+    "unknown": "Eigene Kategorie"
   }
 }

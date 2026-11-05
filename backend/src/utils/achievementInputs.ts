@@ -361,6 +361,7 @@ export async function computeCoreStats(
       ratingRoom: s.ratingRoom,
       ratingBreakfast: s.ratingBreakfast,
       ratingService: s.ratingService,
+      ratings: s.ratings,
       programName: programme.programName,
       membershipTier: programme.tier,
     };

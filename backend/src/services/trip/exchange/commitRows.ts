@@ -7,6 +7,8 @@
  * zone, the calendar day — never re-derived (ADR 0002). A private field is
  * written only when the file has it; otherwise the column keeps its default.
  */
+import { ensureOwnCategoriesByName, mergeRatings, ratingColumns } from "../../lodging/stayRatings";
+import { isBuiltInCategory } from "../../../shared/ratingCategories";
 import { prisma } from "../../../db";
 import type { Prisma } from "../../../prisma";
 import { resolveCompanions, linkRowsFor } from "../../companionService";
@@ -35,6 +37,36 @@ const date = (iso: string | null): Date | null => (iso ? new Date(iso) : null);
 const calendar = (day: string | null): Date | null =>
   day ? new Date(`${day}T00:00:00.000Z`) : null;
 
+/**
+ * The rating columns of an imported stay: the three legacy values (an older
+ * file has only these), then the additive `ratings` map and the sender's own
+ * categories mapped onto this account's by name. The overall is derived from
+ * the result, with the file's own overall only as the fallback.
+ */
+function importedRatings(
+  p: NonNullable<TripFileStay["private"]>,
+  ctx: ResolvedContext
+): ReturnType<typeof ratingColumns> {
+  const own: Record<string, number> = {};
+  for (const [name, value] of Object.entries(p.ownRatings ?? {})) {
+    const key = ctx.ownRatingKeys.get(name);
+    if (key !== undefined) own[key] = value;
+  }
+  const builtIn = Object.fromEntries(
+    Object.entries(p.ratings ?? {}).filter(([key]) => isBuiltInCategory(key))
+  );
+  const merged = mergeRatings(
+    {},
+    {
+      ratingRoom: p.ratingRoom,
+      ratingBreakfast: p.ratingBreakfast,
+      ratingService: p.ratingService,
+      ratings: { ...builtIn, ...own },
+    }
+  );
+  return ratingColumns(merged, p.ratingOverall);
+}
+
 export const IMPORT_SOURCE = "import";
 
 export interface ResolvedContext {
@@ -48,6 +80,8 @@ export interface ResolvedContext {
   airports: Map<string, number>;
   /** companion display name → companion id (private files only) */
   companions: Map<string, string>;
+  /** own rating category name (as written in the file) → its `custom:<id>` key on this account */
+  ownRatingKeys: Map<string, string>;
   /** entry key (or `b:<key>` for a booking) → FX columns of its own price */
   fx: Map<string, FxColumns>;
 }
@@ -172,7 +206,13 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
     );
   }
 
+  const ownRatingKeys = await ensureOwnCategoriesByName(
+    userId,
+    file.stays.flatMap((s) => Object.keys(s.private?.ownRatings ?? {}))
+  );
+
   return {
+    ownRatingKeys,
     ports: new Map(ports.flatMap((p) => (p.unlocode ? [[p.unlocode, p.id] as const] : []))),
     ships: new Map(ships.flatMap((s) => (s.imo ? [[s.imo, s.id] as const] : []))),
     stations: new Map(stations.flatMap((s) => (s.sourceId ? [[s.sourceId, s.id] as const] : []))),
@@ -343,10 +383,7 @@ export function stayRow(
     ...(p
       ? {
           roomNumber: p.roomNumber,
-          ratingRoom: p.ratingRoom,
-          ratingBreakfast: p.ratingBreakfast,
-          ratingService: p.ratingService,
-          ratingOverall: p.ratingOverall,
+          ...importedRatings(p, ctx),
           pricePerNight: p.pricePerNight,
           totalPrice: p.totalPrice,
           ...(p.currency ? { currency: p.currency } : {}),

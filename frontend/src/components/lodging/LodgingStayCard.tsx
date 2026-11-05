@@ -1,6 +1,8 @@
 import ShareLinkButton from "../shareLinks/ShareLinkButton";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useRatingCategories } from "../../hooks/useRatingCategories";
+import { storedRatingsOf } from "../../shared/ratingDerivation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { formatRatingText, formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
@@ -56,6 +58,7 @@ export function LodgingStayCard({
   membershipSource,
 }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
+  const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
   const deadlineLocale = dateLocaleForLanguage(i18n.language);
@@ -180,18 +183,11 @@ export function LodgingStayCard({
             <b className="text-[var(--text-primary)]">{t(`lodging:board.${stay.board}`)}</b>
           </span>
         )}
-        <span>
-          {t("lodging:field.ratingBreakfast")}:{" "}
-          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingBreakfast)}</b>
-        </span>
-        <span>
-          {t("lodging:field.ratingService")}:{" "}
-          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingService)}</b>
-        </span>
-        <span>
-          {t("lodging:field.ratingRoom")}:{" "}
-          <b className="text-[var(--text-primary)]">{formatRatingText(stay.ratingRoom)}</b>
-        </span>
+        {Object.entries(storedRatingsOf(stay)).map(([key, value]) => (
+          <span key={key} data-testid={`stay-rating-${stay.id}-${key}`}>
+            {labelOf(key)}: <b className="text-[var(--text-primary)]">{formatRatingText(value)}</b>
+          </span>
+        ))}
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

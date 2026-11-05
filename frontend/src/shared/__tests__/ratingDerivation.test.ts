@@ -35,3 +35,17 @@ describe("deriveStayOverallRating", () => {
     ).toBeNull();
   });
 });
+
+describe("deriveStayOverallRating — switchable categories (mirror of the backend table)", () => {
+  it("is the mean of the values the stay HAS, built-in and own alike", () => {
+    expect(deriveStayOverallRating({ ratings: { bed: 5, parking: 4, "custom:x": 3 } })).toBe(4);
+  });
+
+  it("does not depend on which categories are switched on - there is no such input", () => {
+    expect(deriveStayOverallRating({ ratings: { breakfast: 2, room: 4 } })).toBe(3);
+  });
+
+  it("lets a ratings entry win over the same legacy field", () => {
+    expect(deriveStayOverallRating({ room: 1, ratings: { room: 5 } })).toBe(5);
+  });
+});

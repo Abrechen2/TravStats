@@ -11,6 +11,7 @@
  * cannot tell them apart will present the first as if it were the second.
  */
 import { lodgingBaseAmount } from "../../shared/lodgingSpendBase";
+import { storedRatingsOf } from "../../shared/ratingDerivation";
 import type {
   LodgingRatingGroup,
   LodgingRatingStats,
@@ -66,9 +67,7 @@ export function computeRatingStats(
   currentBaseCurrency: string
 ): LodgingRatingStats {
   const overall: Accumulator = { sum: 0, count: 0 };
-  const room: Accumulator = { sum: 0, count: 0 };
-  const breakfast: Accumulator = { sum: 0, count: 0 };
-  const service: Accumulator = { sum: 0, count: 0 };
+  const categories = new Map<string, Accumulator>();
 
   const byChain = new Map<string, Accumulator>();
   const byCountry = new Map<string, Accumulator>();
@@ -79,18 +78,9 @@ export function computeRatingStats(
   let unratedStays = 0;
 
   for (const { stay, nights } of entries) {
-    if (stay.ratingRoom !== null) {
-      room.sum += stay.ratingRoom;
-      room.count += 1;
-    }
-    if (stay.ratingBreakfast !== null) {
-      breakfast.sum += stay.ratingBreakfast;
-      breakfast.count += 1;
-    }
-    if (stay.ratingService !== null) {
-      service.sum += stay.ratingService;
-      service.count += 1;
-    }
+    // Each category has its own denominator: a stay that never rated parking
+    // is not a 0 for parking, it is absent from that average.
+    for (const [key, value] of Object.entries(storedRatingsOf(stay))) addTo(categories, key, value);
 
     if (stay.ratingOverall === null) {
       // Counted on the OVERALL rating alone: that is the one a screen shows,
@@ -125,9 +115,12 @@ export function computeRatingStats(
 
   return {
     avgOverall: mean(overall),
-    avgRoom: mean(room),
-    avgBreakfast: mean(breakfast),
-    avgService: mean(service),
+    avgRoom: mean(categories.get("room") ?? { sum: 0, count: 0 }),
+    avgBreakfast: mean(categories.get("breakfast") ?? { sum: 0, count: 0 }),
+    avgService: mean(categories.get("service") ?? { sum: 0, count: 0 }),
+    byCategory: [...categories.entries()]
+      .map(([key, acc]) => ({ key, avg: mean(acc) ?? 0, count: acc.count }))
+      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)),
     ratedStays: overall.count,
     unratedStays,
     byChain: toGroups(byChain),

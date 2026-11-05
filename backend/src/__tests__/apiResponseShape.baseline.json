@@ -218,6 +218,7 @@
     "lodging/deleteFacts.ts",
     "lodging/entrySuggestions.ts",
     "lodging/photos.ts",
+    "lodging/ratingCategories.ts",
     "lodging/propose.ts",
     "lodging/stayList.ts",
     "lodging/stays.ts",

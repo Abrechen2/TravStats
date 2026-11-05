@@ -9,6 +9,9 @@ import {
   saveErrorKey,
 } from "../../lib/saveErrorMessage";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useRatingCategories } from "../../hooks/useRatingCategories";
+import { ratingFields, ratingsPayload, withRating } from "./ratingFields";
+import { deriveStayOverallRating, storedRatingsOf } from "../../shared/ratingDerivation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
@@ -38,7 +41,6 @@ import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { StayEditorDatesSection } from "./StayEditorDatesSection";
 import { stayDateErrors, stayDraftFields } from "./stayEditorDraft";
 import { derivePricePerNight } from "../../lib/lodgingFormat";
-import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import { deriveStayMembership } from "../../shared/membershipDerivation";
 import { parseDecimalInput } from "../../lib/decimalInput";
@@ -189,9 +191,7 @@ export function StayEditor({
   const [roomCategory, setRoomCategory] = useState<string>(initial.roomCategory);
   const [board, setBoard] = useState<BoardType>(initial.board);
 
-  const [ratingRoom, setRatingRoom] = useState<number | null>(initial.ratingRoom);
-  const [ratingBreakfast, setRatingBreakfast] = useState<number | null>(initial.ratingBreakfast);
-  const [ratingService, setRatingService] = useState<number | null>(initial.ratingService);
+  const [ratings, setRatings] = useState<Record<string, number>>(initial.ratings);
 
   const [totalPrice, setTotalPrice] = useState<string>(initial.totalPrice);
   const [currency, setCurrency] = useState<LodgingCurrency>(initial.currency);
@@ -240,9 +240,7 @@ export function StayEditor({
     roomNumber,
     roomCategory,
     board,
-    ratingRoom,
-    ratingBreakfast,
-    ratingService,
+    ratings,
     totalPrice,
     currency,
     manualFxRate,
@@ -332,12 +330,18 @@ export function StayEditor({
   // `current` carries an overall the stay already has with no components behind
   // it - an import, or a row from before the components existed. Without it,
   // merely opening such a stay and saving would wipe the user's own score.
+  // It sees every value the stay HAS - never the set of switched-on
+  // categories - so switching one off cannot move an old stay's overall.
   const derivedRatingOverall = deriveStayOverallRating({
-    room: ratingRoom,
-    breakfast: ratingBreakfast,
-    service: ratingService,
+    ratings,
     current: stay?.ratingOverall ?? null,
   });
+  const { view: ratingView, labelOf: ratingLabelOf } = useRatingCategories();
+  const { active: activeRatingFields, retired: retiredRatingFields } = ratingFields(
+    ratingView,
+    ratings,
+    ratingLabelOf
+  );
   const derivedPricePerNight = derivePricePerNight(
     Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
     checkIn,
@@ -432,9 +436,9 @@ export function StayEditor({
       // an edit turn an award stay back off) - without this, the four
       // POINTS_PRO_* achievements (Task 11) are permanently unreachable.
       isAwardStay,
-      ratingRoom,
-      ratingBreakfast,
-      ratingService,
+      // A category the stay carried and the user cleared goes as an explicit
+      // null; an absent key would mean "leave it alone" to the server.
+      ratings: ratingsPayload(stay ? storedRatingsOf(stay) : {}, ratings),
       // Same rule as pricePerNight: computed here, stored as before, so
       // every consumer of `ratingOverall` keeps working unchanged.
       ratingOverall: derivedRatingOverall,
@@ -611,24 +615,18 @@ export function StayEditor({
 
         <StayEditorSection title={t("lodging:stayEditor.ratingsSection")}>
           <StayEditorRatingsSection
-            ratings={{
-              ratingRoom,
-              ratingBreakfast,
-              ratingService,
-              ratingOverall: derivedRatingOverall,
-            }}
-            onChange={(patch): void => {
-              if ("ratingRoom" in patch) setRatingRoom(patch.ratingRoom ?? null);
-              if ("ratingBreakfast" in patch) setRatingBreakfast(patch.ratingBreakfast ?? null);
-              if ("ratingService" in patch) setRatingService(patch.ratingService ?? null);
-            }}
+            values={ratings}
+            active={activeRatingFields}
+            retired={retiredRatingFields}
+            overall={derivedRatingOverall}
+            onChange={(key, value) => setRatings((prev) => withRating(prev, key, value))}
             labels={{
-              room: t("lodging:field.ratingRoom"),
-              breakfast: t("lodging:field.ratingBreakfast"),
-              service: t("lodging:field.ratingService"),
               overall: t("lodging:field.ratingOverall"),
+              derivedHint: t("lodging:field.ratingOverallDerived"),
+              none: t("lodging:stayEditor.ratingNoCategories"),
+              retiredTitle: t("lodging:stayEditor.ratingRetiredTitle"),
+              retiredHint: t("lodging:stayEditor.ratingRetiredHint"),
             }}
-            derivedHint={t("lodging:field.ratingOverallDerived")}
           />
         </StayEditorSection>
 

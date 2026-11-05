@@ -1,3 +1,4 @@
+import { isPerfectStay, storedRatingsOf } from "../../shared/ratingDerivation";
 /**
  * Pure statistics rollup for the lodging domain. No I/O, no Prisma.
  *
@@ -161,13 +162,8 @@ export function calculateLodgingStats(
       ratingSum += stay.ratingOverall;
       ratingCount += 1;
       if (stay.ratingOverall <= 2) enduredStays += 1;
-      // All four at 5, none of them blank — see `perfectStays` in types.ts.
-      if (
-        stay.ratingOverall === 5 &&
-        stay.ratingRoom === 5 &&
-        stay.ratingBreakfast === 5 &&
-        stay.ratingService === 5
-      ) {
+      // At least three categories rated, every rated one a 5 — see `perfectStays`.
+      if (isPerfectStay(storedRatingsOf(stay))) {
         perfectStays += 1;
       }
     }

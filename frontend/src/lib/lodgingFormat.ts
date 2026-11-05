@@ -1,4 +1,5 @@
 import { formatCurrency } from "./units";
+import { storedRatingsOf } from "../shared/ratingDerivation";
 import { classifyStay, type LodgingCountState } from "../shared/lodgingCounting";
 import { isUnconvertedSpend, type LodgingStayFx } from "../shared/lodgingSpendBase";
 import type { LodgingType } from "../types/lodging";
@@ -399,6 +400,7 @@ export interface StayCategoryRatings {
   ratingRoom: number | null;
   ratingBreakfast: number | null;
   ratingService: number | null;
+  ratings?: Record<string, number> | null;
 }
 
 export interface CategoryRatingAverages {
@@ -449,4 +451,21 @@ export function countUnconvertedStays(
   baseCurrency: string
 ): number {
   return stays.filter((s) => isUnconvertedSpend(s, baseCurrency)).length;
+}
+
+/**
+ * Per-category averages over every category the stays carry (built-in or own),
+ * each on its own denominator, in first-seen order. Only categories with at
+ * least one value appear - an unrated category is absent, not a dash.
+ */
+export function averageRatingsByKey(
+  stays: readonly StayCategoryRatings[]
+): { key: string; avg: number }[] {
+  const values = new Map<string, number[]>();
+  for (const stay of stays) {
+    for (const [key, value] of Object.entries(storedRatingsOf(stay))) {
+      values.set(key, [...(values.get(key) ?? []), value]);
+    }
+  }
+  return [...values.entries()].map(([key, list]) => ({ key, avg: average(list) ?? 0 }));
 }

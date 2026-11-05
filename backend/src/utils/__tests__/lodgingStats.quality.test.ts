@@ -180,3 +180,41 @@ describe("lodging rating statistics", () => {
     expect(r.ratedStays).toBe(1);
   });
 });
+
+describe("lodging rating statistics — switchable and own categories", () => {
+  it("counts every category that has a rating, each on its own denominator", () => {
+    const r = ratings([
+      stay({ ratingOverall: 4.5, ratings: { bed: 5, parking: 4 } }),
+      stay({ ratingOverall: 3, ratings: { bed: 3, "custom:abc": 3 } }),
+      // Written by a path that only knows the columns: still counted.
+      stay({ ratingOverall: 4, ratingRoom: 4 }),
+    ]);
+    const byKey = Object.fromEntries(r.byCategory.map((c) => [c.key, c]));
+    expect(byKey.bed).toMatchObject({ avg: 4, count: 2 });
+    expect(byKey.parking).toMatchObject({ avg: 4, count: 1 });
+    expect(byKey["custom:abc"]).toMatchObject({ avg: 3, count: 1 });
+    expect(byKey.room).toMatchObject({ avg: 4, count: 1 });
+    expect(byKey.breakfast).toBeUndefined();
+    expect(r.avgRoom).toBe(4);
+  });
+});
+
+describe("achievement 'Nichts zu beanstanden' — new rule", () => {
+  const perfect = (o: Partial<LodgingStayData>) =>
+    calculateLodgingStats([stay({ ratingOverall: 5, ...o })], "EUR", undefined, NOW).perfectStays;
+
+  it("is granted for three or more rated categories, all 5, whichever categories they are", () => {
+    expect(perfect({ ratings: { bed: 5, parking: 5, quiet: 5 } })).toBe(1);
+    expect(perfect({ ratings: { room: 5, bed: 5, parking: 5, "custom:x": 5 } })).toBe(1);
+  });
+
+  it("is not granted for a single 5, or for any rated category below 5", () => {
+    expect(perfect({ ratings: { bed: 5 } })).toBe(0);
+    expect(perfect({ ratings: { bed: 5, parking: 5 } })).toBe(0);
+    expect(perfect({ ratings: { bed: 5, parking: 5, quiet: 4.5 } })).toBe(0);
+  });
+
+  it("still grants what the old rule granted: 5/5/5 in the three legacy columns", () => {
+    expect(perfect({ ratingRoom: 5, ratingBreakfast: 5, ratingService: 5 })).toBe(1);
+  });
+});

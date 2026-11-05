@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-25
 **Rides:** 2.6.0 (branch `feat/lodging-rating-categories`)
-**Status:** DRAFT — three decisions at the end are the owner's, and nothing
-should be built before they are answered
+**Status:** BUILT on `fix/lodging-ratings` (2026-11-05) — see "As built" at the end,
+which supersedes the sections above wherever they disagree
 **Origin:** the owner, 2026-08-24: he does not use *Frühstück*, and wants *Bett*
 and *Parkplatz*. He also decided the shape: **a fixed stock of categories to
 switch on and off, not freely nameable ones.**
@@ -234,3 +234,51 @@ mapped onto the new rows on the way in.
    lodging domain, or does it wait for 2.7.0? It is a schema change plus a
    settings surface, which is not a small addition to a release that is already
    in candidate rounds.
+
+## As built (2026-11-05)
+
+Owner decisions on top of the draft: 24.08. a fixed set the user switches on and
+off (he uses Bett and Parkplatz, not Frühstück); 05.11. **plus** categories the
+user names. The three open points were taken at the spec's own recommendation.
+
+- **Vocabulary:** the ten entries above (`shared/ratingCategories.ts`, mirrored).
+- **Perfect-stay rule:** at least three rated categories and every rated one a 5
+  (`isPerfectStay`). Only ever grants more than the old rule. The DE seed
+  descriptions of PERFECT_STAY_1/10 changed from "in allen vier Bewertungen" to
+  "mindestens drei Bewertungen, alle 5 von 5".
+- **Scope:** rides the current line; the schema change is one additive
+  migration (`20261105182417_lodging_rating_categories`).
+- **Storage differs from the draft:** `lodging_stays.ratings` is a JSONB map
+  `{category: value}`, not a child table. Reason: every existing read path
+  (list, trips, exchange, stats, evidence) already returns the stay row, so a
+  map needs no new join anywhere, and the keys are validated at the boundary
+  (`assertRatingKeysValid`: a built-in key or one of the caller's own
+  categories). The three legacy columns stay and are MIRRORED from the map on
+  every write for one release (rollback loses nothing); `storedRatingsOf` reads
+  the map and fills missing keys from the columns, so a path that still writes
+  only columns loses nothing either. The migration backfills the map from the
+  columns; `migration.lodgingRatingCategories.test.ts` replays it.
+- **Active set:** `UserSettings.lodgingRatingCategories String[]`, default
+  `{room, breakfast, service}`; empty allowed.
+- **The load-bearing rule is kept:** `ratingOverall` is the mean of the values
+  the stay HAS, derived on write; the active set is not an input of the
+  deriver. A value in a switched-off category is shown below the pickers
+  ("Nicht mehr eingeschaltet") with its ×.
+- **Own categories:** per user, table `lodging_rating_categories`; name free
+  text, trimmed, 1-40 characters, unique per user case-insensitively among the
+  live ones, at most 20. Keyed `custom:<uuid>` in the map.
+  **Delete is soft** (`deletedAt`): the values already given stay readable
+  under the old name, keep counting in those stays' overall and in the stats;
+  the category is only no longer offered. Re-adding a deleted name revives it.
+  They are always on (no separate switch): deleting is how one switches an own
+  category off.
+- **API:** `GET/PUT/POST/PATCH/DELETE /lodging/rating-categories[...]`; stays
+  accept and return `ratings`; the legacy field names stay accepted.
+- **Stats:** `LodgingRatingStats.byCategory` (one block per category with at
+  least one rating, own denominator) beside the legacy three averages.
+- **UI:** the draft proposed a settings surface; the lodging settings page no
+  longer exists and the settings registry is pinned to the designer's data, so
+  the manager is a panel in the stay form's ratings section.
+- **Not done:** CSV import mapping/`mappingSuggestion` for the new categories
+  (still the legacy three), the trip-exchange file and shared stays carry only
+  the three legacy values.

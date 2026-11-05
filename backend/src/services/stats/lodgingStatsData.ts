@@ -122,6 +122,7 @@ export async function loadLodgingStatsData(
         ratingRoom: s.ratingRoom,
         ratingBreakfast: s.ratingBreakfast,
         ratingService: s.ratingService,
+        ratings: s.ratings,
         programName: programme.programName,
         programMembershipId: programme.membershipId,
         membershipTier: programme.tier,

@@ -23,13 +23,14 @@ import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepa
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import { useTranslation } from "../hooks/useTranslation";
+import { useRatingCategories } from "../hooks/useRatingCategories";
 import { deleteLodging, deleteStay, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
 import { countedStays, countUnconvertedStays } from "../lib/lodgingFormat";
 import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import {
-  averageRatingsByCategory,
+  averageRatingsByKey,
   formatRatingText,
   hasAnyPrice,
   lodgingTypeIcon,
@@ -68,6 +69,7 @@ export default function LodgingDetailPage(): JSX.Element {
     (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
   const { t } = useTranslation(["lodging", "common", "openData"]);
+  const { labelOf } = useRatingCategories();
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
   // `totalSpendBase` is computed by the backend in the user's actual base
@@ -323,7 +325,7 @@ export default function LodgingDetailPage(): JSX.Element {
     unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
-  const categoryRatings = averageRatingsByCategory(lodging.stays);
+  const categoryRatings = averageRatingsByKey(lodging.stays);
 
   const metaParts: ReactNode[] = [
     addressLine || null,
@@ -558,17 +560,14 @@ export default function LodgingDetailPage(): JSX.Element {
 
           <DetailSection title={t("lodging:detail.avgRating")}>
             <dl className="flex flex-col gap-2 text-sm">
-              {(
-                [
-                  ["ratingRoom", categoryRatings.room],
-                  ["ratingBreakfast", categoryRatings.breakfast],
-                  ["ratingService", categoryRatings.service],
-                ] as const
-              ).map(([key, value]) => (
+              {categoryRatings.length === 0 && (
+                <div className="t-caption">{t("lodging:detail.noCategoryRatings")}</div>
+              )}
+              {categoryRatings.map(({ key, avg }) => (
                 <div key={key} className="flex items-center justify-between gap-3">
-                  <dt className="t-caption">{t(`lodging:field.${key}`)}</dt>
+                  <dt className="t-caption">{labelOf(key)}</dt>
                   <dd>
-                    <StarRating value={value} />
+                    <StarRating value={avg} />
                   </dd>
                 </div>
               ))}

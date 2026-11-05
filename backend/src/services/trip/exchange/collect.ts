@@ -4,6 +4,9 @@
  * 0002) and the private fields only when asked. Returns the files to pack
  * beside it, so the archive writer streams bytes it never has to look up.
  */
+import { customCategoryKey } from "../../../shared/ratingCategories";
+import { exportedRatings } from "./exportedRatings";
+import { storedRatingsOf } from "../../../shared/ratingDerivation";
 import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../../shared/railCounting";
 import path from "path";
 import { prisma } from "../../../db";
@@ -166,6 +169,13 @@ export async function collectTrip(
 ): Promise<CollectedTrip> {
   const trip = await loadTrip(userId, tripId);
   const priv = options.private;
+  const ownCategoryNames = priv
+    ? new Map(
+        (await prisma.lodgingRatingCategory.findMany({ where: { userId } })).map(
+          (c) => [customCategoryKey(c.id), c.name] as const
+        )
+      )
+    : new Map<string, string>();
   const bookingKey = keyer("b");
   const flightKey = keyer("f");
   const stayKey = keyer("s");
@@ -310,6 +320,7 @@ export async function collectTrip(
               ratingBreakfast: s.ratingBreakfast,
               ratingService: s.ratingService,
               ratingOverall: s.ratingOverall,
+              ...exportedRatings(storedRatingsOf(s), ownCategoryNames),
               pricePerNight: s.pricePerNight,
               totalPrice: s.totalPrice,
               currency: s.currency,
