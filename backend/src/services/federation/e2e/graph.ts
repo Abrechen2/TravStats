@@ -185,6 +185,11 @@ export const NON_TRAVEL_RELATIONS = [
   "placeCaptures",
   // Per-day AI/weather limits are operational counters, not shared travel data.
   "travelPlanUsage",
+  // A user's own vocabularies: the names of the lodging rating categories and of the place
+  // categories they defined. Preferences, not travel records; a stay's rating VALUES are
+  // classified as personal on LodgingStay (`ratings`) and travel without the names.
+  "lodgingRatingCategories",
+  "placeCategories",
   // Who may work on a plan (forgejo#404): access bookkeeping, never published to a friend.
   "travelPlanMembers",
   "twoFactorRecoveryCodes",

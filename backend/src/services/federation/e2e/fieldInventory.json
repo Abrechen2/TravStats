@@ -170,7 +170,7 @@
   "LodgingStay": {
     "details": "id lodgingId tripId bookingId checkIn checkOut checkInTime checkOutTime checkInDate checkOutDate checkInAt checkOutAt stayZone datePrecision nights status roomCategory board roomAmenities membershipId membershipOptOut freeCancellationUntil freeCancellationZone freeCancellationOn externalRef createdAt updatedAt",
     "costs": "pricePerNight currency totalPrice totalPriceBase fxRate fxRateDate fxBaseCurrency fxSource isAwardStay paymentDueOn",
-    "personal": "roomNumber ratingRoom ratingBreakfast ratingService ratingOverall companions notes guests",
+    "personal": "roomNumber ratingRoom ratingBreakfast ratingService ratingOverall ratings companions notes guests",
     "photos": "",
     "documents": "bookingReference",
     "excluded": "userId receiptUrl parserTemplate parserConfidence dataSource batchId shareKey"
