@@ -36,12 +36,7 @@ import { useTripMapNative } from "./useTripMapNative";
 import { HoverTooltip } from "../map/cards/HoverTooltip";
 import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
 import { useTripLayers } from "./tripMapExtraLayers";
-import {
-  TRIP_MAP_CHROME,
-  resolveTripFlightColor,
-  resolveTripStopColor,
-  useTripMapColorConfig,
-} from "./tripMapColors";
+import { TRIP_MAP_CHROME, resolveTripStopColor, useTripMapColorConfig } from "./tripMapColors";
 import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
 import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
 import type { MapJourney } from "../map/cards/journeys/journeyTypes";
@@ -51,6 +46,7 @@ import { shareMapLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
 import { buildTripCruisePaths } from "./tripCruisePaths";
+import { buildTripFlightArcs } from "./tripMapFlightArcs";
 import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
 
 const INITIAL_VIEW: MapViewState = {
@@ -88,6 +84,12 @@ interface TripMapProps {
   extraPoints?: readonly LngLat[];
   /** Told each projection switch, so the caller builds its layers' globe variant. */
   onProjectionChange?: (projection: TripProjection) => void;
+  /**
+   * Told where the map was clicked — set only while the caller waits for a
+   * point (the roadtrip editor's "add a station from the map"). The cursor
+   * says so; without it a click does nothing, as before.
+   */
+  onMapClick?: (point: { lat: number; lon: number }) => void;
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -105,6 +107,7 @@ export default function TripMap({
   extraLayers,
   extraPoints = NO_EXTRA_POINTS,
   onProjectionChange,
+  onMapClick,
 }: TripMapProps): JSX.Element {
   const mapStyle = useBasemapStyle();
   const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
@@ -137,29 +140,10 @@ export default function TripMap({
     retry: retryCruiseGeometry,
   } = useTripCruiseGeometry(cruiseIds);
 
-  const flightArcs = useMemo<FlightArc[]>(() => {
-    const out: FlightArc[] = [];
-    for (const f of trip.flights ?? []) {
-      if (
-        f.depLat == null ||
-        f.depLon == null ||
-        f.arrLat == null ||
-        f.arrLon == null ||
-        (f.depLat === 0 && f.depLon === 0) ||
-        (f.arrLat === 0 && f.arrLon === 0)
-      ) {
-        continue;
-      }
-      out.push({
-        flightId: f.id,
-        source: [f.depLon, f.depLat],
-        target: [f.arrLon, f.arrLat],
-        label: `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`,
-        color: resolveTripFlightColor(f, colorConfig.flight),
-      });
-    }
-    return out;
-  }, [trip.flights, colorConfig.flight]);
+  const flightArcs = useMemo<FlightArc[]>(
+    () => buildTripFlightArcs(trip.flights ?? [], colorConfig.flight),
+    [trip.flights, colorConfig.flight]
+  );
 
   const cruisePaths = useMemo<CruisePath[]>(
     () => buildTripCruisePaths(trip.cruises ?? [], cruiseGeometry, colorConfig.cruise),
@@ -701,7 +685,10 @@ export default function TripMap({
         initialViewState={INITIAL_VIEW}
         mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
-        cursor="grab"
+        cursor={onMapClick ? "crosshair" : "grab"}
+        onClick={
+          onMapClick ? (e): void => onMapClick({ lat: e.lngLat.lat, lon: e.lngLat.lng }) : undefined
+        }
         onLoad={(e): void => {
           setMapLoaded(true);
           setZoom(e.target.getZoom());

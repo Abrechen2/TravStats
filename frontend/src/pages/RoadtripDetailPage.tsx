@@ -44,6 +44,8 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
+import { leaveThroughHistory } from "../components/form/unsavedChanges";
+import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
 import { useTodayZone } from "../hooks/useTodayZone";
@@ -104,6 +106,10 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [storedDraft, setStoredDraft] = useState<StoredStationDraft | null>(null);
   const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  /** "Add a station from the map" is armed; the next map click is the point. */
+  const [pickArmed, setPickArmed] = useState(false);
+  const [mapPick, setMapPick] = useState<{ nonce: number; lat: number; lon: number } | null>(null);
   const [askDraftFirst, setAskDraftFirst] = useState(false);
   /** Stations one by one, or the trip read day by day (forgejo#243). */
   const [view, setView] = useState<"stations" | "days">("stations");
@@ -166,6 +172,21 @@ export default function RoadtripDetailPage(): JSX.Element {
   }, [load]);
 
   const onStatus = useCallback((state: EditorSaveState) => setSave(state), []);
+  // Edits the server does not hold: closing the tab asks, and Back asks first.
+  useUnsavedEditsGuard({
+    status: editing ? save.status : null,
+    onAsk: () => setConfirmLeave(true),
+  });
+  // A click nobody consumed must not run again when the editor reopens.
+  useEffect(() => {
+    if (editing) return;
+    setPickArmed(false);
+    setMapPick(null);
+  }, [editing]);
+  const onMapClick = useCallback((point: { lat: number; lon: number }) => {
+    setPickArmed(false);
+    setMapPick((cur) => ({ nonce: (cur?.nonce ?? 0) + 1, ...point }));
+  }, []);
 
   /** Into the editor with the stored draft (the banner's or the question's restore). */
   const restoreStored = (): void => {
@@ -476,6 +497,9 @@ export default function RoadtripDetailPage(): JSX.Element {
               today={today}
               onSaved={() => void load()}
               onStatus={onStatus}
+              routingAvailable={detail.routingAvailable}
+              onLegChanged={() => void load()}
+              mapPick={mapPick}
               onEditLeg={(leg, from, to) => setLegEdit({ leg, from, to })}
             />
           ) : view === "days" ? (
@@ -509,9 +533,26 @@ export default function RoadtripDetailPage(): JSX.Element {
             }}
           >
             <WebGLGuard>
-              <TripMap trip={mapContent} tourGeometries={mapGeometries} extraLayers={highlight} />
+              <TripMap
+                trip={mapContent}
+                tourGeometries={mapGeometries}
+                extraLayers={highlight}
+                onMapClick={editing && pickArmed ? onMapClick : undefined}
+              />
             </WebGLGuard>
           </div>
+          {editing && (
+            <Button
+              variant="secondary"
+              aria-pressed={pickArmed}
+              onClick={() => setPickArmed((on) => !on)}
+            >
+              {t(pickArmed ? "roadtrips:editor.mapAdd.armed" : "roadtrips:editor.mapAdd.arm")}
+            </Button>
+          )}
+          {editing && pickArmed && (
+            <span className="t-caption">{t("roadtrips:editor.mapAdd.hint")}</span>
+          )}
           {!editing && <span className="t-caption">{t("roadtrips:detail.mapHint")}</span>}
         </aside>
       </div>
@@ -607,6 +648,21 @@ export default function RoadtripDetailPage(): JSX.Element {
           title={t("roadtrips:editor.discardConfirm.title")}
           message={t("roadtrips:editor.discardConfirm.message")}
           confirmText={t("roadtrips:editor.discardConfirm.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
+      )}
+
+      {confirmLeave && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setConfirmLeave(false)}
+          onConfirm={() => {
+            setConfirmLeave(false);
+            leaveThroughHistory();
+          }}
+          title={t("roadtrips:editor.leaveGuard.title")}
+          message={t("roadtrips:editor.leaveGuard.message")}
+          confirmText={t("roadtrips:editor.leaveGuard.confirm")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}

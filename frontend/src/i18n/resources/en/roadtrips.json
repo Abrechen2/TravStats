@@ -672,6 +672,33 @@
       "label": "Type of stay",
       "visit": "Overnight stay outside a transit location",
       "transit": "Transit stop only, e.g. a service area"
+    },
+    "nightsTotal_one": "{{count}} night at {{places}} places",
+    "nightsTotal_other": "{{count}} nights at {{places}} places",
+    "nightsApprox": "At least this many – some stations lack dates, or the accommodation is not loaded.",
+    "nightsChip_one": "{{count}} night",
+    "nightsChip_other": "{{count}} nights",
+    "nightsChipApprox_one": "≈ {{count}} night",
+    "nightsChipApprox_other": "≈ {{count}} nights",
+    "mapAdd": {
+      "arm": "Add a station from the map",
+      "armed": "Tap the map … (cancel)",
+      "hint": "Tap the map where the station is. The name is looked up for the point.",
+      "failed": "The name for this point could not be looked up (place search unreachable). The station sits on the point – type its name yourself.",
+      "noName": "There is no named place at this point. The station sits on the point – type its name yourself."
+    },
+    "legMode": {
+      "label": "Leg transport",
+      "road": "Road",
+      "ferry": "Ferry",
+      "protected": "This leg follows a recording or a hand-drawn line – changing its transport opens the leg dialog.",
+      "failed": "The transport could not be saved.",
+      "routeFailed": "Transport saved, but the route could not be recalculated – the leg is now a straight line."
+    },
+    "leaveGuard": {
+      "title": "Unsaved changes",
+      "message": "Some changes are not on the server yet. If you leave the page they stay only in this browser.",
+      "confirm": "Leave page"
     }
   },
   "legDialog": {

@@ -58,6 +58,7 @@ export default function StationEditCard({
   onChange,
   onClose,
   onShift,
+  nightsLabel = null,
 }: {
   station: EditorStation;
   position: number;
@@ -68,6 +69,8 @@ export default function StationEditCard({
   onClose: () => void;
   /** "Ab hier verschieben" — this station and every one after it (forgejo#241). */
   onShift?: () => void;
+  /** The nights this station holds, derived from its dates or stay ("2 Nächte"). */
+  nightsLabel?: string | null;
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
@@ -193,7 +196,11 @@ export default function StationEditCard({
           {station.title.trim() ||
             (kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"))}
         </span>
-        <span className="t-caption">{t("roadtrips:editor.stationOf", { n: position, total })}</span>
+        <span className="t-caption">
+          {[t("roadtrips:editor.stationOf", { n: position, total }), nightsLabel]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
       </div>
 
       <fieldset className="flex flex-col" style={{ gap: 10, border: 0, padding: 0, margin: 0 }}>
