@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useTravTrackCapabilities } from "../../../hooks/useTravTrackVisible";
@@ -11,6 +11,8 @@ import {
   type FixedPlace,
   type FixedPlacesAnswer,
 } from "../../../lib/api/travtrackPlaces";
+import { travTrackApi, type PrivacyZone } from "../../../lib/api/travtrack";
+import WebGLGuard from "../../map/WebGLGuard";
 import Button from "../../ui/Button";
 import { Field, Input } from "../../ui/Field";
 import { SettingRows } from "../../ui/SettingRow";
@@ -25,6 +27,10 @@ import { SectionCard } from "../SettingsShared";
 import { useBlockConfirm } from "../useBlockConfirm";
 import { RowFailure, useRowAction } from "../location/useRowAction";
 import PlaceEditor, { type PlaceDraft } from "./PlaceEditor";
+import { hasPosition } from "./PlacesMap";
+import { PLACE_RGB, rgbCss } from "./placeColors";
+
+const PlacesMap = lazy(() => import("./PlacesMap"));
 
 const NS = "settings:tt.places";
 const HOME_CHANGE_PATH = "/settings/account#home";
@@ -67,6 +73,7 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
   const [data, setData] = useState<FixedPlacesAnswer | null>(null);
   const [editing, setEditing] = useState<FixedPlace | "new" | null>(null);
   const [lodgingRadius, setLodgingRadius] = useState("");
+  const [zones, setZones] = useState<PrivacyZone[]>([]);
   const save = useRowAction((err) => t(`${NS}.errors.${placesFailure(err)}`));
   const remove = useRowAction((err) => t(`${NS}.errors.${placesFailure(err)}`));
   const lodging = useRowAction((err) => t(`${NS}.errors.${placesFailure(err)}`));
@@ -85,8 +92,20 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
   useEffect(() => {
     void load();
   }, [load]);
+  // The map's dashed zones. Their own section reports a failed read; here a missing zone only
+  // leaves the outline off the map.
+  useEffect(() => {
+    travTrackApi.zones().then(setZones, (err) => logger.warn("TravTrack places map: zones", err));
+  }, []);
 
   const canWrite = !isDemo && caps?.enabled === true;
+  const mapped = (data?.places ?? []).filter(hasPosition);
+  const openEditor = (id: string): void => {
+    const place = data?.places.find((p) => p.id === id);
+    if (!place) return;
+    save.clear();
+    setEditing(place);
+  };
 
   const saveDraft = async (draft: PlaceDraft): Promise<void> => {
     const target = editing;
@@ -148,63 +167,89 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
               {t(`${NS}.loading`)}
             </p>
           ) : (
-            <ul className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-              {data?.places.map((place) => (
-                <li key={place.id} data-testid={`place-${place.id}`}>
-                  <div
-                    className="flex items-center justify-between"
-                    style={{ gap: "var(--ts-space-md)" }}
-                  >
-                    <span className="t-body">
-                      {place.kind === "home" ? t(`${NS}.kinds.home`) : place.name}{" "}
-                      <StatusValue>
-                        {place.kind === "home" && place.lat === null
-                          ? t(`${NS}.homeUnknown`)
-                          : `${t(`${NS}.radius`, { metres: place.radiusM })} · ${windowLabel(place)}`}
-                      </StatusValue>
-                    </span>
-                    <span className="flex items-center" style={{ gap: "var(--ts-space-xs)" }}>
-                      {place.kind === "home" ? (
-                        <JumpControl
-                          label={t(`${NS}.changeHome`)}
-                          onJump={() => navigate(HOME_CHANGE_PATH)}
-                        />
-                      ) : null}
-                      {canWrite && !(place.kind === "home" && place.lat === null) ? (
-                        <Button
-                          aria-label={`${t(`${NS}.edit`)}: ${place.name}`}
-                          onClick={() => {
-                            save.clear();
-                            setEditing(place);
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              <ul className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                {data?.places.map((place) => (
+                  <li key={place.id} data-testid={`place-${place.id}`}>
+                    <div
+                      className="flex items-center justify-between"
+                      style={{ gap: "var(--ts-space-md)" }}
+                    >
+                      <span className="t-body">
+                        <span
+                          aria-hidden="true"
+                          data-testid={`place-dot-${place.id}`}
+                          style={{
+                            display: "inline-block",
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            marginRight: 8,
+                            background: rgbCss(PLACE_RGB[place.kind]),
                           }}
-                        >
-                          {t(`${NS}.edit`)}
-                        </Button>
-                      ) : null}
-                      {canWrite && place.kind !== "home" ? (
-                        <Button
-                          disabled={remove.busy}
-                          aria-label={`${t(`${NS}.remove`)}: ${place.name}`}
-                          onClick={() => void removePlace(place)}
-                        >
-                          {t(`${NS}.remove`)}
-                        </Button>
-                      ) : null}
-                    </span>
-                  </div>
-                  {editing !== null && editing !== "new" && editing.id === place.id ? (
-                    <PlaceEditor
-                      place={place}
-                      busy={save.busy}
-                      error={save.error}
-                      onSave={(draft) => void saveDraft(draft)}
-                      onCancel={() => setEditing(null)}
-                      onRetry={save.retry}
+                        />
+                        {place.kind === "home" ? t(`${NS}.kinds.home`) : place.name}{" "}
+                        <StatusValue>
+                          {place.kind === "home" && place.lat === null
+                            ? t(`${NS}.homeUnknown`)
+                            : `${t(`${NS}.radius`, { metres: place.radiusM })} · ${windowLabel(place)}`}
+                        </StatusValue>
+                      </span>
+                      <span className="flex items-center" style={{ gap: "var(--ts-space-xs)" }}>
+                        {place.kind === "home" ? (
+                          <JumpControl
+                            label={t(`${NS}.changeHome`)}
+                            onJump={() => navigate(HOME_CHANGE_PATH)}
+                          />
+                        ) : null}
+                        {canWrite && !(place.kind === "home" && place.lat === null) ? (
+                          <Button
+                            aria-label={`${t(`${NS}.edit`)}: ${place.name}`}
+                            onClick={() => {
+                              save.clear();
+                              setEditing(place);
+                            }}
+                          >
+                            {t(`${NS}.edit`)}
+                          </Button>
+                        ) : null}
+                        {canWrite && place.kind !== "home" ? (
+                          <Button
+                            disabled={remove.busy}
+                            aria-label={`${t(`${NS}.remove`)}: ${place.name}`}
+                            onClick={() => void removePlace(place)}
+                          >
+                            {t(`${NS}.remove`)}
+                          </Button>
+                        ) : null}
+                      </span>
+                    </div>
+                    {editing !== null && editing !== "new" && editing.id === place.id ? (
+                      <PlaceEditor
+                        place={place}
+                        busy={save.busy}
+                        error={save.error}
+                        onSave={(draft) => void saveDraft(draft)}
+                        onCancel={() => setEditing(null)}
+                        onRetry={save.retry}
+                      />
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {mapped.length > 0 ? (
+                <WebGLGuard>
+                  <Suspense fallback={null}>
+                    <PlacesMap
+                      places={mapped}
+                      zones={zones}
+                      label={t(`${NS}.mapLabel`)}
+                      onPick={canWrite ? openEditor : undefined}
                     />
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                  </Suspense>
+                </WebGLGuard>
+              ) : null}
+            </div>
           )}
           <RowFailure error={remove.error} onRetry={remove.retry} />
           {phase === "ok" && canWrite ? (

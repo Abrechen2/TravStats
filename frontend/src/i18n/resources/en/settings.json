@@ -1825,37 +1825,6 @@
         "notCreated": "I didn't create the key.",
         "notRevoked": "I didn't revoke the key.",
         "loadError": "I couldn't load the keys."
-      },
-      "places": {
-        "name": "Fixed places",
-        "sub": "Everything inside shows as one point in the day",
-        "help": "Home, work and your own places: positions inside the circle (and the time window, if one is set) appear as one stop in the day. Every position stays stored. Read-only here.",
-        "loadError": "The fixed places could not be loaded.",
-        "none": "No fixed places.",
-        "home": "Home",
-        "homeUnknown": "Home (no residence set yet)",
-        "kind": {
-          "home": "Home",
-          "work": "Work",
-          "custom": "Own place"
-        },
-        "radius": "Radius {{metres}} m",
-        "always": "always",
-        "window": "{{days}}, {{from}}–{{until}}",
-        "days": {
-          "1": "Mon",
-          "2": "Tue",
-          "3": "Wed",
-          "4": "Thu",
-          "5": "Fri",
-          "6": "Sat",
-          "7": "Sun"
-        },
-        "lodging": "Lodging while booked: {{state}}, radius {{metres}} m",
-        "lodgingOn": "on",
-        "lodgingOff": "off",
-        "lodgingSkipped_one": "{{count}} booking without coordinates is skipped.",
-        "lodgingSkipped_other": "{{count}} bookings without coordinates are skipped."
       }
     },
     "history": {
@@ -1876,35 +1845,6 @@
         "gaps": "What's missing",
         "noConnection": "Your own Dawarich connection is missing."
       },
-      "gpx": {
-        "name": "GPX files",
-        "jump": "To the imports"
-      },
-      "export": {
-        "name": "Export history",
-        "sub": "GPX or JSON",
-        "label": "Export"
-      },
-      "delete": {
-        "name": "Delete days",
-        "help": "Deleted days stay deleted, even if a phone sends them later.",
-        "from": "From",
-        "to": "To",
-        "do": "Delete days",
-        "count": "Counting …",
-        "title": "Delete positions?",
-        "affects": "All stored positions from {{from}} to {{to}}, both days included",
-        "amount_one": "{{count}} position",
-        "amount_other": "{{count}} positions",
-        "after": "The days stay deleted: even a phone that was offline won't bring them back.",
-        "confirm_one": "Delete {{count}} position",
-        "confirm_other": "Delete {{count}} positions",
-        "done_one": "{{count}} position deleted.",
-        "done_other": "{{count}} positions deleted.",
-        "notCounted": "I couldn't count what lies in the period. I deleted nothing.",
-        "notDone": "I deleted nothing.",
-        "invalidRange": "The from date is after the to date."
-      },
       "diag": {
         "name": "Diagnostics",
         "sub": "Why points are missing",
@@ -1915,8 +1855,7 @@
         "deleteAmount": "All days of the last 14",
         "deleteAfter": "Stored positions stay.",
         "deleteDo": "Delete log"
-      },
-      "title": "History"
+      }
     }
   },
   "tt": {
@@ -2010,7 +1949,8 @@
         "skipped_other": "{{count}} bookings without coordinates are skipped.",
         "saving": "Saving …",
         "saveRadius": "Save radius"
-      }
+      },
+      "mapLabel": "Map of the fixed places with their radius; privacy zones dashed red"
     },
     "zones": {
       "title": "Privacy zones",

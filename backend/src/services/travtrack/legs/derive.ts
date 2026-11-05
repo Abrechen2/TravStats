@@ -10,7 +10,14 @@ import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { findFoldRuns, type FoldContext, type FoldRun } from "./fold";
 import { STOP_MS } from "../dayMovement";
-import { findDwells, isBadVertex, movingRuns, type Dwell } from "./stops";
+import {
+  badVertexIn,
+  findDwells,
+  isBadVertex,
+  MAX_DRAWN_ACCURACY_M,
+  movingRuns,
+  type Dwell,
+} from "./stops";
 import type {
   Leg,
   LegMode,
@@ -83,13 +90,20 @@ function piecesOfRun(
       ];
     }
     const sub = segment.slice(cut.from, cut.to + 1);
-    const classes = settleStill(sub.slice(1).map((p, i) => stepClass(sub[i], p, read.rowOf)));
+    // A day recorded only with coarse fixes: its line is drawn, but no motion class or pace can be
+    // read off fixes a kilometre wide, so the mode stays unknown (low) rather than invented.
+    const coarseOnly =
+      segment.some((p) => p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M) &&
+      segment.every(isBadVertex);
+    const classes: LegMode[] = coarseOnly
+      ? sub.slice(1).map(() => "unknown")
+      : settleStill(sub.slice(1).map((p, i) => stepClass(sub[i], p, read.rowOf)));
     return classRuns(sub, cut.from, classes).map((r): Piece => {
       const fromMotion = modeOfSteps(sub, cut.from, classes, r.from, r.to);
       const runPoints = segment.slice(r.from, r.to + 2);
       // No motion class anywhere (the Companion sends none): fall back to the speed profile.
       const fromSpeed =
-        fromMotion.mode === "unknown" && !hasUsableMotion(runPoints, read.rowOf)
+        !coarseOnly && fromMotion.mode === "unknown" && !hasUsableMotion(runPoints, read.rowOf)
           ? modeFromSpeed(runPoints, read.rowOf)
           : null;
       const auto = fromSpeed ?? fromMotion;
@@ -258,7 +272,7 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
         // Manual, then entry, then auto: the figures must follow the mode the leg ends up with.
         const manual = overrideFor(span, inputs.overrides);
         const mode = manual ? manual.mode : piece.mode;
-        const figures = legFigures(points, read.rowOf, inFlight, mode !== "flight");
+        const figures = legFigures(points, read.rowOf, inFlight, mode !== "flight", badVertexIn(segment));
         if (figures.distanceM < MIN_LEG_M) continue;
         legs.push({
           id: `${span.fromMs}-${span.untilMs}`,

@@ -30,6 +30,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 import TravTrackPlacesSection from "../TravTrackPlacesSection";
 import { travTrackPlacesApi, type FixedPlacesAnswer } from "../../../../lib/api/travtrackPlaces";
+import { travTrackApi } from "../../../../lib/api/travtrack";
 import { resetWriteQueue } from "../../../ui/settings/writeQueue";
 
 /**
@@ -76,6 +77,7 @@ beforeEach(() => {
   caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };
   navigate.mockReset();
   vi.spyOn(travTrackPlacesApi, "list").mockResolvedValue(ANSWER);
+  vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
 });
 afterEach(() => {
   cleanup();
@@ -216,13 +218,11 @@ describe("Feste Orte", () => {
   });
 
   it("deletes a place only after the confirmation, and a 404 on it says it is gone", async () => {
-    const remove = vi
-      .spyOn(travTrackPlacesApi, "remove")
-      .mockRejectedValueOnce(
-        Object.assign(new Error("404"), {
-          response: { status: 404, data: { code: "TRAVTRACK_PLACE_NOT_FOUND" } },
-        })
-      );
+    const remove = vi.spyOn(travTrackPlacesApi, "remove").mockRejectedValueOnce(
+      Object.assign(new Error("404"), {
+        response: { status: 404, data: { code: "TRAVTRACK_PLACE_NOT_FOUND" } },
+      })
+    );
     show();
     await userEvent.click(await screen.findByRole("button", { name: /places\.remove: Büro/ }));
     const dialog = await screen.findByRole("dialog");

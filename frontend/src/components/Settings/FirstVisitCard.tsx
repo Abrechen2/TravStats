@@ -52,7 +52,7 @@ function FirstVisit(): JSX.Element | null {
           />
           <JumpControl
             label={t("settings:firstVisit.location")}
-            onJump={() => navigate("/settings/location")}
+            onJump={() => navigate("/settings/travtrack#ttRecording")}
           />
           <ActionControl label={t("settings:firstVisit.hide")} onClick={hide} />
         </div>

@@ -39,7 +39,7 @@ export default function TrackGettingStarted({ active }: { active: boolean }): JS
     {
       key: "companion",
       done: active,
-      to: "/settings/location?section=locationProvider",
+      to: "/settings/travtrack#ttRecording",
     },
     { key: "dawarich", done: false, to: "/track/imports" },
     { key: "gpx", done: false, to: "/track/imports" },
