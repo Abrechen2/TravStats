@@ -357,7 +357,7 @@
   "evidence.metric.recordLongestFlight": "Record: longest flight",
   "evidence.metric.recordShortestFlight": "Record: shortest flight",
   "evidence.metric.recordBusiestDay": "Record: flights of the busiest day",
-  "evidence.metric.recordLongestAloft": "Record: longest time aloft",
+  "evidence.metric.recordLongestAloft": "Record: longest flight time",
   "evidence.metric.recordBiggestDelay": "Record: biggest delay",
   "evidence.metric.recordNorthernmost": "Record: flights at the northernmost point",
   "evidence.metric.recordLongestStreak": "Record: flights of the longest streak",
