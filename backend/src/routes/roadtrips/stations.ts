@@ -7,6 +7,8 @@ import { replaceStations } from "../../services/roadtrip/replaceStations";
 import { toDto, toLegDto } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
+import { stationWeather } from "../../services/roadtrip/stationWeather";
+import { openDataLimiter } from "../../middleware/rateLimit";
 
 const router = Router();
 
@@ -42,6 +44,30 @@ router.put(
         stations: saved.map(toStationDto),
         legs: legs.map(toLegDto),
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /roadtrips/:id/stations/:stationId/weather
+ *
+ * The measured weather of the station's arrival day (Open-Meteo), computed per
+ * request and stored nowhere. Always 200 with an `outcome`: a service failure
+ * (`timeout`, `rateLimited`, `unavailable`) is told apart from an answer about
+ * the day (`noData`, `futureOrToday`) so the page keeps what it already shows.
+ */
+router.get(
+  "/roadtrips/:id/stations/:stationId/weather",
+  authenticate,
+  requireWriteScope,
+  openDataLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const routeId = await resolveRoadtrip(userId, req.params.id);
+      res.json(await stationWeather(userId, routeId, req.params.stationId));
     } catch (error) {
       next(error);
     }

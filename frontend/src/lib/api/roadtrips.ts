@@ -1,4 +1,6 @@
+import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
+import type { WeatherOutcome } from "./openData";
 import type { RouteKind, TourActivity, RoadtripVehicle } from "../../shared/tour/roadtrip";
 import type { TourRoute } from "../../types/tour";
 import type {
@@ -8,6 +10,7 @@ import type {
   RoadtripStation,
   RoadtripSummary,
   StationInput,
+  StationWeather,
 } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
 
@@ -57,6 +60,21 @@ export const roadtripsApi = {
     }>(`/roadtrips/${id}/stations`, {
       stations,
       ...(expectedStationIds ? { expectedStationIds } : {}),
+    });
+    return data;
+  },
+
+  /**
+   * The measured weather of one station's arrival day. Always an answer with
+   * an `outcome`; a thrown error is a transport failure (the caller treats it
+   * as the weather service not answering).
+   */
+  stationWeather: async (
+    id: string,
+    stationId: string
+  ): Promise<{ outcome: WeatherOutcome; weather: StationWeather | null }> => {
+    const { data } = await api.get(`/roadtrips/${id}/stations/${stationId}/weather`, {
+      timeout: API_TIMEOUTS.OPEN_DATA_WEATHER,
     });
     return data;
   },

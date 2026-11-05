@@ -672,6 +672,33 @@
       "label": "Type of stay",
       "visit": "Overnight stay outside a transit location",
       "transit": "Transit stop only, e.g. a service area"
+    },
+    "nightsTotal_one": "{{count}} night at {{places}} places",
+    "nightsTotal_other": "{{count}} nights at {{places}} places",
+    "nightsApprox": "At least this many – some stations lack dates, or the accommodation is not loaded.",
+    "nightsChip_one": "{{count}} night",
+    "nightsChip_other": "{{count}} nights",
+    "nightsChipApprox_one": "≈ {{count}} night",
+    "nightsChipApprox_other": "≈ {{count}} nights",
+    "mapAdd": {
+      "arm": "Add a station from the map",
+      "armed": "Tap the map … (cancel)",
+      "hint": "Tap the map where the station is. The name is looked up for the point.",
+      "failed": "The name for this point could not be looked up (place search unreachable). The station sits on the point – type its name yourself.",
+      "noName": "There is no named place at this point. The station sits on the point – type its name yourself."
+    },
+    "legMode": {
+      "label": "Leg transport",
+      "road": "Road",
+      "ferry": "Ferry",
+      "protected": "This leg follows a recording or a hand-drawn line – changing its transport opens the leg dialog.",
+      "failed": "The transport could not be saved.",
+      "routeFailed": "Transport saved, but the route could not be recalculated – the leg is now a straight line."
+    },
+    "leaveGuard": {
+      "title": "Unsaved changes",
+      "message": "Some changes are not on the server yet. If you leave the page they stay only in this browser.",
+      "confirm": "Leave page"
     }
   },
   "legDialog": {
@@ -1006,5 +1033,75 @@
     "add": "Add tags",
     "edit": "Edit tags",
     "saveFailed": "The tags could not be saved."
-  }
+  },
+  "startFrom": {
+    "legend": "How does the roadtrip start?",
+    "empty": "Empty",
+    "lodging": "From a lodging",
+    "gpx": "From a GPX file",
+    "link": "From a Maps link",
+    "unnamed": "Station {{n}}",
+    "preview": "The roadtrip gets these stations – you can change names and days afterwards:",
+    "roundTrip": "Round trip",
+    "roundTripSub": "The roadtrip ends where it begins: the first station is added again as the last one.",
+    "lodgingSearch": "Search lodgings",
+    "lodgingNone": "No lodging matches.",
+    "lodgingNoCoords": "no location – set one on the lodging first",
+    "lodgingLoadFailed": "Your lodgings could not be loaded.",
+    "retry": "Try again",
+    "gpxChoose": "Choose a GPX file",
+    "gpxFrom": {
+      "route": "{{count}} route points from “{{file}}”",
+      "waypoints": "{{count}} waypoints from “{{file}}”",
+      "track": "Start and end of the recorded track from “{{file}}”"
+    },
+    "gpxError": {
+      "notXml": "The file is not readable XML – it is not a GPX file or it is damaged.",
+      "notGpx": "This is not a GPX file (no <gpx> root element).",
+      "noPoints": "The GPX file holds no route points, no waypoints and no track.",
+      "tooMany": "The GPX file has {{count}} points – a roadtrip holds at most {{max}} stations. Please cut the file down to the stops.",
+      "read": "The file could not be read."
+    },
+    "linkLabel": "Link from Google Maps or Apple Maps",
+    "linkHint": "A route with start, stops and destination – best the long link from the address bar.",
+    "linkRead": "Read link",
+    "linkReading": "Looking up places …",
+    "linkError": {
+      "notALink": "That is not a link. Please paste the whole address (https://…).",
+      "notMaps": "That is not a Google Maps or Apple Maps link.",
+      "shortLink": "Short links (goo.gl, maps.app.goo.gl) cannot be read here. Please open the link and paste the long address from the address bar.",
+      "noWaypoints": "The link contains no place and no route.",
+      "tooMany": "The link has more places than a roadtrip can hold stations.",
+      "notFound": "“{{name}}” was not found. Replace it with coordinates in the link or set the station by hand later.",
+      "unavailable": "The place search did not answer – “{{name}}” could not be looked up. Please try again later."
+    },
+    "afterFailed": "The roadtrip was created, but its stations could not be saved. You will find it in the list and can add the stations on its page."
+  },
+  "campsites": {
+    "search": "Search campsites within {{km}} km",
+    "searching": "Searching OpenStreetMap …",
+    "needPlace": "Set a place for the station first.",
+    "failed": "OpenStreetMap did not answer – whether there are campsites here is open.",
+    "none": "OpenStreetMap knows no campsite within {{km}} km.",
+    "listLabel": "Campsites nearby",
+    "kind": {
+      "camp_site": "Campsite",
+      "caravan_site": "Motorhome pitch"
+    },
+    "distance": "{{km}} km"
+  },
+  "gpx": {
+    "export": "Export GPX",
+    "exporting": "Creating …",
+    "failed": "The route lines could not be loaded – no file was saved. Please try again."
+  },
+  "weather": {
+    "load": "Load weather of the stations",
+    "reload": "Reload weather",
+    "loading": "Fetching weather …",
+    "none": "No station with a place and a past arrival day – there is no measured weather to load.",
+    "noLocation": "Without a place or a date there is no weather.",
+    "hint": "Measured weather of the arrival day (Open-Meteo). Today and coming days can only be loaded afterwards."
+  },
+  "vehicleChangeError": "The vehicle could not be changed."
 }

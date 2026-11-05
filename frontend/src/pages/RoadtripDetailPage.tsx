@@ -1,3 +1,4 @@
+import RoadtripVehicleSelect from "../components/Roadtrips/RoadtripVehicleSelect";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
@@ -24,6 +25,8 @@ import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
 import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
 import DraftFirstDialog from "../components/Roadtrips/DraftFirstDialog";
 import OdometerDialog from "../components/Roadtrips/OdometerDialog";
+import RoadtripWeatherBar from "../components/Roadtrips/RoadtripWeatherBar";
+import { useRoadtripWeather } from "../hooks/useRoadtripWeather";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import RoadtripDayView from "../components/Roadtrips/RoadtripDayView";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
@@ -44,6 +47,9 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
+import { leaveThroughHistory, navigateAfterSave } from "../components/form/unsavedChanges";
+import RoadtripGpxButton from "../components/Roadtrips/RoadtripGpxButton";
+import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
 import { useTodayZone } from "../hooks/useTodayZone";
@@ -72,6 +78,8 @@ type LegEdit = {
  * A local station draft from an earlier visit (forgejo#244) is offered before
  * anything else: the editor would otherwise write the next change over it.
  */
+const NO_STATIONS: RoadtripStation[] = [];
+
 export default function RoadtripDetailPage(): JSX.Element {
   const { id = "" } = useParams<{ id: string }>();
   const [params, setParams] = useSearchParams();
@@ -104,6 +112,12 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [storedDraft, setStoredDraft] = useState<StoredStationDraft | null>(null);
   const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  // The in-app link a click was held back from; null when Back asked.
+  const [leaveLinkTo, setLeaveLinkTo] = useState<string | null>(null);
+  /** "Add a station from the map" is armed; the next map click is the point. */
+  const [pickArmed, setPickArmed] = useState(false);
+  const [mapPick, setMapPick] = useState<{ nonce: number; lat: number; lon: number } | null>(null);
   const [askDraftFirst, setAskDraftFirst] = useState(false);
   /** Stations one by one, or the trip read day by day (forgejo#243). */
   const [view, setView] = useState<"stations" | "days">("stations");
@@ -166,6 +180,28 @@ export default function RoadtripDetailPage(): JSX.Element {
   }, [load]);
 
   const onStatus = useCallback((state: EditorSaveState) => setSave(state), []);
+  // Edits the server does not hold: closing the tab asks, and Back asks first.
+  useUnsavedEditsGuard({
+    status: editing ? save.status : null,
+    onAsk: () => {
+      setLeaveLinkTo(null);
+      setConfirmLeave(true);
+    },
+    onAskLink: (to) => {
+      setLeaveLinkTo(to);
+      setConfirmLeave(true);
+    },
+  });
+  // A click nobody consumed must not run again when the editor reopens.
+  useEffect(() => {
+    if (editing) return;
+    setPickArmed(false);
+    setMapPick(null);
+  }, [editing]);
+  const onMapClick = useCallback((point: { lat: number; lon: number }) => {
+    setPickArmed(false);
+    setMapPick((cur) => ({ nonce: (cur?.nonce ?? 0) + 1, ...point }));
+  }, []);
 
   /** Into the editor with the stored draft (the banner's or the question's restore). */
   const restoreStored = (): void => {
@@ -203,6 +239,7 @@ export default function RoadtripDetailPage(): JSX.Element {
         : [],
     [geometry, detail, id, roadtripColor]
   );
+  const weather = useRoadtripWeather(id, detail?.stations ?? NO_STATIONS, today);
   const selected = detail?.stations.find((s) => s.id === selectedId) ?? null;
   const highlight = useMemo(
     () =>
@@ -351,6 +388,7 @@ export default function RoadtripDetailPage(): JSX.Element {
     <div className="flex flex-wrap" style={{ gap: 8 }}>
       <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
       <Button onClick={() => setOdometerOpen(true)}>{t("roadtrips:odometerDialog.open")}</Button>
+      <RoadtripGpxButton routeId={id} name={r.name} stations={detail.stations} />
       {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
           and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
@@ -402,6 +440,13 @@ export default function RoadtripDetailPage(): JSX.Element {
         <RouteTagsEditor
           route={r}
           tripId={undefined}
+          onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
+        />
+      </div>
+
+      <div style={{ marginTop: "var(--ts-space-md)", maxWidth: 320 }}>
+        <RoadtripVehicleSelect
+          route={r}
           onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
         />
       </div>
@@ -476,6 +521,9 @@ export default function RoadtripDetailPage(): JSX.Element {
               today={today}
               onSaved={() => void load()}
               onStatus={onStatus}
+              routingAvailable={detail.routingAvailable}
+              onLegChanged={() => void load()}
+              mapPick={mapPick}
               onEditLeg={(leg, from, to) => setLegEdit({ leg, from, to })}
             />
           ) : view === "days" ? (
@@ -485,16 +533,25 @@ export default function RoadtripDetailPage(): JSX.Element {
               startDate={detail.startDate}
             />
           ) : (
-            <StationTimeline
-              stations={detail.stations}
-              legs={detail.legs}
-              tours={detail.tours}
-              startDate={detail.startDate}
-              today={today}
-              selectedId={selectedId}
-              onSelect={(s) => setSelectedId((cur) => (cur === s.id ? null : s.id))}
-              onStartTour={(s) => void startTour(s)}
-            />
+            <>
+              <RoadtripWeatherBar
+                eligible={weather.eligible}
+                running={weather.running}
+                asked={weather.asked}
+                onLoad={() => void weather.load()}
+              />
+              <StationTimeline
+                weather={weather.byStation}
+                stations={detail.stations}
+                legs={detail.legs}
+                tours={detail.tours}
+                startDate={detail.startDate}
+                today={today}
+                selectedId={selectedId}
+                onSelect={(s) => setSelectedId((cur) => (cur === s.id ? null : s.id))}
+                onStartTour={(s) => void startTour(s)}
+              />
+            </>
           )}
         </section>
 
@@ -509,9 +566,26 @@ export default function RoadtripDetailPage(): JSX.Element {
             }}
           >
             <WebGLGuard>
-              <TripMap trip={mapContent} tourGeometries={mapGeometries} extraLayers={highlight} />
+              <TripMap
+                trip={mapContent}
+                tourGeometries={mapGeometries}
+                extraLayers={highlight}
+                onMapClick={editing && pickArmed ? onMapClick : undefined}
+              />
             </WebGLGuard>
           </div>
+          {editing && (
+            <Button
+              variant="secondary"
+              aria-pressed={pickArmed}
+              onClick={() => setPickArmed((on) => !on)}
+            >
+              {t(pickArmed ? "roadtrips:editor.mapAdd.armed" : "roadtrips:editor.mapAdd.arm")}
+            </Button>
+          )}
+          {editing && pickArmed && (
+            <span className="t-caption">{t("roadtrips:editor.mapAdd.hint")}</span>
+          )}
           {!editing && <span className="t-caption">{t("roadtrips:detail.mapHint")}</span>}
         </aside>
       </div>
@@ -607,6 +681,23 @@ export default function RoadtripDetailPage(): JSX.Element {
           title={t("roadtrips:editor.discardConfirm.title")}
           message={t("roadtrips:editor.discardConfirm.message")}
           confirmText={t("roadtrips:editor.discardConfirm.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
+      )}
+
+      {confirmLeave && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setConfirmLeave(false)}
+          onConfirm={() => {
+            setConfirmLeave(false);
+            if (leaveLinkTo !== null)
+              void navigateAfterSave((path, o) => navigate(path, o), leaveLinkTo);
+            else leaveThroughHistory();
+          }}
+          title={t("roadtrips:editor.leaveGuard.title")}
+          message={t("roadtrips:editor.leaveGuard.message")}
+          confirmText={t("roadtrips:editor.leaveGuard.confirm")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}

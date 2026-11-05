@@ -14,6 +14,8 @@ import type { RoadtripDayTour, RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
 import { foldViaPoints } from "../../shared/tour/viaPoints";
 import StationMarker from "./StationMarker";
+import StationWeatherLine from "./StationWeatherLine";
+import type { StationWeatherState } from "../../lib/roadtrip/stationWeatherState";
 import { LocalName } from "../places/LocalName";
 
 const CHIP: CSSProperties = {
@@ -78,6 +80,7 @@ export default function StationTimeline({
   onSelect,
   onEditLeg,
   onStartTour,
+  weather,
 }: {
   stations: RoadtripStation[];
   legs: TourLeg[];
@@ -90,6 +93,8 @@ export default function StationTimeline({
   onEditLeg?: (leg: TourLeg, from: RoadtripStation, to: RoadtripStation) => void;
   /** Start a day tour from this station; absent = read-only. */
   onStartTour?: (station: RoadtripStation) => void;
+  /** Measured weather per station id, once the reader has loaded it. */
+  weather?: ReadonlyMap<string, StationWeatherState>;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
@@ -143,6 +148,7 @@ export default function StationTimeline({
         const leg = next ? legFrom.get(s.id) : undefined;
         const ownTours = tours.filter((tour) => tour.anchorStopId === s.id);
         const night = nightText(s);
+        const ownWeather = weather?.get(s.id);
         const selected = s.id === selectedId;
         const cancelled = isStayCancelled(s);
         return (
@@ -226,6 +232,7 @@ export default function StationTimeline({
                     </span>
                   )}
                 </div>
+                {ownWeather && <StationWeatherLine state={ownWeather} />}
                 {(ownTours.length > 0 || onStartTour) && (
                   <div className="flex flex-col" style={{ gap: 6 }}>
                     {ownTours.map((tour) => (

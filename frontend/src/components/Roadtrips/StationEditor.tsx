@@ -6,6 +6,8 @@ import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { roadtripsApi } from "../../lib/api/roadtrips";
+import { reversePlaces } from "../../lib/api/geo";
+import { editorNights } from "../../lib/roadtrip/editorNights";
 import { logger } from "../../lib/logger";
 import { stationAfter, stationWarnings } from "../../lib/roadtrip/roadtripView";
 import {
@@ -27,9 +29,12 @@ import ReorderPreviewDialog from "./ReorderPreviewDialog";
 import ShiftDaysDialog from "./ShiftDaysDialog";
 import StationConflictDialog from "./StationConflictDialog";
 import { FormErrorBanner } from "../form";
+import { Switch } from "../ui/Field";
+import { isRoundTrip } from "../../lib/roadtrip/roundTrip";
 import { isTransientSaveError } from "../../lib/saveErrorMessage";
 import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
+import LegModeChips from "./LegModeChips";
 import StationMarker from "./StationMarker";
 import { useLodgingLibrary } from "./StayPicker";
 import {
@@ -98,6 +103,9 @@ export default function StationEditor({
   onSaved,
   onStatus,
   onEditLeg,
+  routingAvailable = false,
+  onLegChanged,
+  mapPick = null,
   userId = null,
   restore = null,
   onRestoreCancelled,
@@ -121,8 +129,17 @@ export default function StationEditor({
     from: { id: string; title: string },
     to: { id: string; title: string }
   ) => void;
+  /** Whether a routing provider exists — the leg chips re-route a road leg only then. */
+  routingAvailable?: boolean;
+  /** A leg's transport changed on the server: the page reads the roadtrip again. */
+  onLegChanged?: () => void;
+  /**
+   * A point the reader clicked on the map to add a station there. A new
+   * `nonce` is a new click; the editor looks the name up and appends it.
+   */
+  mapPick?: { nonce: number; lat: number; lon: number } | null;
 }): JSX.Element {
-  const { t } = useTranslation(["roadtrips"]);
+  const { t, i18n } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
   const sink = useMemo<StationDraftSink | null>(
     () =>
@@ -187,6 +204,11 @@ export default function StationEditor({
   const [shiftFrom, setShiftFrom] = useState<number | null>(null);
   const lodgings = useLodgingLibrary(true);
   const started = useRef(false);
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
+  const nights = useMemo(() => editorNights(drafts, lodgings), [drafts, lodgings]);
+  /** Why the last map-added station has no name (lookup failed, or nothing is named there). */
+  const [pickProblem, setPickProblem] = useState<"failed" | "noName" | null>(null);
 
   /**
    * A save the server refused because the phone changed the list: read what
@@ -228,16 +250,18 @@ export default function StationEditor({
     [status, local, onStatus, flush, discard, openMerge]
   );
 
-  const insertAt = (index: number, seed?: Partial<EditorStation>): void => {
+  const insertAt = (index: number, seed?: Partial<EditorStation>, isSeed = true): string => {
     const station: EditorStation = {
-      ...stationAfter(drafts[index - 1] ?? null),
+      ...stationAfter(draftsRef.current[index - 1] ?? null),
       ...seed,
       key: newStationKey(),
-      // Not the reader's work until they touch it (review C1).
-      seed: true,
+      // Not the reader's work until they touch it (review C1) — except a
+      // station the reader placed on the map, which is their work at once.
+      seed: isSeed,
     };
     change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
     setOpenKey(station.key);
+    return station.key;
   };
 
   // `?station=neu` / `?station=heute`: the list and the "tonight" button
@@ -249,6 +273,44 @@ export default function StationEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount (guarded by started); later drafts must not re-insert
   }, []);
 
+  // A click on the map: the point becomes a station at the end at once, and a
+  // reverse lookup names it when it answers. A lookup that fails or finds
+  // nothing leaves the station on the point but SAYS so — never a silently
+  // nameless pin. Each click is its own station, so a second click while the
+  // first lookup runs loses nothing; the name only fills a still-empty title.
+  const handledPick = useRef(0);
+  useEffect(() => {
+    if (!mapPick || mapPick.nonce === handledPick.current) return;
+    handledPick.current = mapPick.nonce;
+    const key = insertAt(
+      draftsRef.current.length,
+      { lat: mapPick.lat, lon: mapPick.lon, title: "" },
+      false
+    );
+    void (async () => {
+      let title = "";
+      let problem: "failed" | "noName" | null = null;
+      try {
+        const found = await reversePlaces(mapPick.lat, mapPick.lon, i18n.language);
+        if (found.degraded) problem = "failed";
+        else {
+          title = found.results[0]?.name?.trim() ?? "";
+          if (!title) problem = "noName";
+        }
+      } catch (err) {
+        logger.warn("Looking up the name of a map-picked station failed", err);
+        problem = "failed";
+      }
+      setPickProblem(problem);
+      if (title) {
+        change((prev) =>
+          prev.map((s) => (s.key === key && s.title.trim() === "" ? { ...s, title } : s))
+        );
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one run per click (nonce); handledPick also keeps a StrictMode re-run from adding twice
+  }, [mapPick?.nonce]);
+
   // The undo window is the hold's: when it closes, the held change goes out.
   useEffect(() => {
     if (!undoable) return;
@@ -256,8 +318,10 @@ export default function StationEditor({
     return () => clearTimeout(timer);
   }, [undoable]);
 
-  const update = (key: string, patch: Partial<EditorStation>): void =>
+  const update = (key: string, patch: Partial<EditorStation>): void => {
+    setPickProblem(null);
     change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch, seed: false } : s)));
+  };
 
   /**
    * forgejo#242: a move is asked first — new neighbours, the legs that go and
@@ -377,6 +441,30 @@ export default function StationEditor({
     s.title.trim() ||
     (s.night.kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"));
   const warnings = stationWarnings(drafts);
+  const first = drafts[0];
+  const roundTrip = isRoundTrip(drafts);
+  /** "Rundreise": the first place comes back as the closing station, or goes. */
+  const setRoundTrip = (on: boolean): void => {
+    if (on) {
+      const keep = openKey;
+      insertAt(
+        drafts.length,
+        { title: first.title, lat: first.lat, lon: first.lon, night: { kind: "pass" } },
+        false
+      );
+      // Nothing to edit on it: the card stays shut, like the one already open.
+      setOpenKey(keep);
+    } else {
+      remove(drafts.length - 1);
+    }
+  };
+  const nightsText = (key: string): string | null => {
+    const own = nights.byStation.get(key);
+    if (!own) return null;
+    return t(own.known ? "roadtrips:editor.nightsChip" : "roadtrips:editor.nightsChipApprox", {
+      count: own.nights,
+    });
+  };
 
   return (
     <div className="flex flex-col" style={{ gap: 8 }}>
@@ -401,6 +489,34 @@ export default function StationEditor({
         />
       )}
 
+      {nights.placesSlept > 0 && (
+        <p
+          className="t-caption"
+          data-testid="editor-nights"
+          title={nights.nightsKnown ? undefined : t("roadtrips:editor.nightsApprox")}
+          style={{ fontWeight: 700 }}
+        >
+          {nights.nightsKnown ? "" : "≈ "}
+          {t("roadtrips:editor.nightsTotal", { count: nights.nights, places: nights.placesSlept })}
+        </p>
+      )}
+
+      {first && first.lat !== null && first.lon !== null && (
+        <Switch
+          id="roadtrip-round-trip"
+          checked={roundTrip}
+          onChange={setRoundTrip}
+          label={t("roadtrips:startFrom.roundTrip")}
+          sub={t("roadtrips:startFrom.roundTripSub")}
+        />
+      )}
+
+      {pickProblem && (
+        <p role="alert" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
+          {t(`roadtrips:editor.mapAdd.${pickProblem}`)}
+        </p>
+      )}
+
       {drafts.map((s, index) => {
         const next = drafts[index + 1];
         const leg = next ? legBetween(s, next) : undefined;
@@ -416,6 +532,7 @@ export default function StationEditor({
                 onChange={(patch) => update(s.key, patch)}
                 onClose={() => setOpenKey(null)}
                 onShift={() => setShiftFrom(index)}
+                nightsLabel={nightsText(s.key)}
               />
             ) : (
               <div
@@ -447,6 +564,7 @@ export default function StationEditor({
                     {[
                       t(`roadtrips:editor.choice.${s.night.kind}.label`),
                       s.stayLabel,
+                      nightsText(s.key),
                       // A station day is a calendar day: shown in the user's
                       // date format, read in UTC so it does not shift.
                       s.startDate &&
@@ -506,6 +624,23 @@ export default function StationEditor({
                 </span>{" "}
                 — {t("roadtrips:timeline.legEdit")}
               </button>
+            )}
+            {leg && next && (
+              <LegModeChips
+                routeId={routeId}
+                leg={leg}
+                from={s.id as string}
+                to={next.id as string}
+                routingAvailable={routingAvailable}
+                onOpenDialog={() =>
+                  onEditLeg(
+                    leg,
+                    { id: s.id as string, title: name(s) },
+                    { id: next.id as string, title: name(next) }
+                  )
+                }
+                onChanged={() => onLegChanged?.()}
+              />
             )}
             {next && (
               <button type="button" onClick={() => insertAt(index + 1)} style={DASHED}>

@@ -672,6 +672,33 @@
       "label": "Art des Aufenthalts",
       "visit": "Übernachtung außerhalb eines Transitorts",
       "transit": "Reiner Zwischenstopp, z. B. Raststätte"
+    },
+    "nightsTotal_one": "{{count}} Nacht an {{places}} Orten",
+    "nightsTotal_other": "{{count}} Nächte an {{places}} Orten",
+    "nightsApprox": "Mindestens so viele – bei manchen Stationen fehlen Daten oder die Unterkunft ist nicht geladen.",
+    "nightsChip_one": "{{count}} Nacht",
+    "nightsChip_other": "{{count}} Nächte",
+    "nightsChipApprox_one": "≈ {{count}} Nacht",
+    "nightsChipApprox_other": "≈ {{count}} Nächte",
+    "mapAdd": {
+      "arm": "Station per Karte hinzufügen",
+      "armed": "Auf die Karte tippen … (abbrechen)",
+      "hint": "Tippe auf die Karte, wo die Station liegt. Der Name wird zum Punkt gesucht.",
+      "failed": "Der Name zu diesem Punkt konnte nicht ermittelt werden (Ortssuche nicht erreichbar). Die Station liegt auf dem Punkt – gib den Namen selbst ein.",
+      "noName": "An diesem Punkt gibt es keinen benannten Ort. Die Station liegt auf dem Punkt – gib den Namen selbst ein."
+    },
+    "legMode": {
+      "label": "Verkehrsmittel der Etappe",
+      "road": "Straße",
+      "ferry": "Fähre",
+      "protected": "Diese Etappe folgt einer Aufzeichnung oder gezeichneten Linie – das Verkehrsmittel ändern öffnet den Etappen-Dialog.",
+      "failed": "Das Verkehrsmittel konnte nicht gespeichert werden.",
+      "routeFailed": "Verkehrsmittel gespeichert, aber die Strecke konnte nicht neu berechnet werden – die Etappe ist jetzt eine Luftlinie."
+    },
+    "leaveGuard": {
+      "title": "Nicht gespeicherte Änderungen",
+      "message": "Einige Änderungen sind noch nicht auf dem Server gespeichert. Wenn du die Seite verlässt, bleiben sie nur in diesem Browser.",
+      "confirm": "Seite verlassen"
     }
   },
   "legDialog": {
@@ -1006,5 +1033,75 @@
     "add": "Tags hinzufügen",
     "edit": "Tags bearbeiten",
     "saveFailed": "Die Tags konnten nicht gespeichert werden."
-  }
+  },
+  "startFrom": {
+    "legend": "Wie fängt der Roadtrip an?",
+    "empty": "Leer",
+    "lodging": "Aus einer Unterkunft",
+    "gpx": "Aus GPX-Datei",
+    "link": "Aus Maps-Link",
+    "unnamed": "Station {{n}}",
+    "preview": "Der Roadtrip bekommt diese Stationen – Namen und Tage kannst du danach ändern:",
+    "roundTrip": "Rundreise",
+    "roundTripSub": "Der Roadtrip endet dort, wo er beginnt: die erste Station kommt als letzte noch einmal dazu.",
+    "lodgingSearch": "Unterkunft suchen",
+    "lodgingNone": "Keine Unterkunft passt.",
+    "lodgingNoCoords": "ohne Ort – erst in der Unterkunft einen Ort eintragen",
+    "lodgingLoadFailed": "Deine Unterkünfte konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "gpxChoose": "GPX-Datei wählen",
+    "gpxFrom": {
+      "route": "{{count}} Routenpunkte aus „{{file}}“",
+      "waypoints": "{{count}} Wegpunkte aus „{{file}}“",
+      "track": "Start und Ziel der aufgezeichneten Strecke aus „{{file}}“"
+    },
+    "gpxError": {
+      "notXml": "Die Datei ist kein lesbares XML – es ist keine GPX-Datei oder sie ist beschädigt.",
+      "notGpx": "Das ist keine GPX-Datei (kein <gpx>-Wurzelelement).",
+      "noPoints": "Die GPX-Datei enthält weder Routenpunkte noch Wegpunkte noch eine Strecke.",
+      "tooMany": "Die GPX-Datei hat {{count}} Punkte – ein Roadtrip hat höchstens {{max}} Stationen. Bitte die Datei auf die Haltepunkte kürzen.",
+      "read": "Die Datei konnte nicht gelesen werden."
+    },
+    "linkLabel": "Link aus Google Maps oder Apple Karten",
+    "linkHint": "Eine Route mit Start, Zwischenhalten und Ziel – am besten der lange Link aus der Adresszeile.",
+    "linkRead": "Link lesen",
+    "linkReading": "Orte werden gesucht …",
+    "linkError": {
+      "notALink": "Das ist kein Link. Bitte die ganze Adresse (https://…) einfügen.",
+      "notMaps": "Das ist kein Google-Maps- oder Apple-Karten-Link.",
+      "shortLink": "Kurzlinks (goo.gl, maps.app.goo.gl) lassen sich hier nicht lesen. Bitte den Link öffnen und die lange Adresse aus der Adresszeile einfügen.",
+      "noWaypoints": "Im Link steht kein Ort und keine Route.",
+      "tooMany": "Der Link hat mehr Orte, als ein Roadtrip Stationen haben kann.",
+      "notFound": "„{{name}}“ wurde nicht gefunden. Bitte im Link durch Koordinaten ersetzen oder die Station später von Hand setzen.",
+      "unavailable": "Die Ortssuche hat nicht geantwortet – „{{name}}“ konnte nicht gesucht werden. Bitte später erneut versuchen."
+    },
+    "afterFailed": "Der Roadtrip ist angelegt, aber seine Stationen konnten nicht gespeichert werden. Du findest ihn in der Liste und kannst die Stationen dort auf seiner Seite eintragen."
+  },
+  "campsites": {
+    "search": "Campingplätze im Umkreis von {{km}} km suchen",
+    "searching": "Suche in OpenStreetMap …",
+    "needPlace": "Erst einen Ort für die Station setzen.",
+    "failed": "OpenStreetMap hat nicht geantwortet – ob es hier Campingplätze gibt, ist offen.",
+    "none": "OpenStreetMap kennt im Umkreis von {{km}} km keinen Campingplatz.",
+    "listLabel": "Campingplätze in der Nähe",
+    "kind": {
+      "camp_site": "Campingplatz",
+      "caravan_site": "Stellplatz"
+    },
+    "distance": "{{km}} km"
+  },
+  "gpx": {
+    "export": "GPX exportieren",
+    "exporting": "Wird erstellt …",
+    "failed": "Die Routenlinien konnten nicht geladen werden – es wurde keine Datei gespeichert. Bitte erneut versuchen."
+  },
+  "weather": {
+    "load": "Wetter der Stationen laden",
+    "reload": "Wetter erneut laden",
+    "loading": "Wetter wird geholt …",
+    "none": "Keine Station mit Ort und vergangenem Ankunftstag – es gibt kein gemessenes Wetter zu laden.",
+    "noLocation": "Ohne Ort oder Datum gibt es kein Wetter.",
+    "hint": "Gemessenes Wetter des Ankunftstags (Open-Meteo). Heute und kommende Tage lassen sich erst nachträglich laden."
+  },
+  "vehicleChangeError": "Das Fahrzeug konnte nicht geändert werden."
 }

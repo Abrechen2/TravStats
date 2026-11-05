@@ -144,6 +144,30 @@ describe("StationEditor", () => {
     ]);
   });
 
+  it("closes the loop with the round-trip switch: the first place comes back as the last station, and goes again", async () => {
+    renderEditor();
+    await pause();
+    const toggle = screen.getByRole("switch");
+    expect(toggle).not.toBeChecked();
+
+    fireEvent.click(toggle);
+    await pause();
+    expect(sent()).toEqual([
+      expect.objectContaining({ id: HAMBURG_ID }),
+      expect.objectContaining({
+        title: "Hamburg",
+        lat: 53.55,
+        lon: 9.99,
+        night: { kind: "pass" },
+      }),
+    ]);
+    expect(screen.getByRole("switch")).toBeChecked();
+
+    fireEvent.click(screen.getByRole("switch"));
+    await pause(PAST_HOLD);
+    expect(sent(1)).toEqual([expect.objectContaining({ id: HAMBURG_ID })]);
+  });
+
   it("saves an explicitly marked transit overnight without upgrading it", async () => {
     renderEditor("new");
     fireEvent.change(screen.getByLabelText("roadtrips:editor.countryVisitKind.label"), {
