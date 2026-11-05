@@ -168,4 +168,20 @@ describe("NewRoadtripDialog — start from a lodging, a GPX file or a Maps link"
     expect(onCreated).not.toHaveBeenCalled();
     expect(onReload).toHaveBeenCalled();
   });
+
+  it("forgets the pick when the same source is chosen again, so the list never shows what is not sent", async () => {
+    vi.mocked(listLodgings).mockResolvedValue([
+      { id: "l1", name: "Camping Alpe", city: null, country: null, lat: 46.5, lon: 11.3 },
+    ] as never);
+    await open();
+    await press(screen.getByText("roadtrips:startFrom.lodging"));
+    await press(await screen.findByText("Camping Alpe"));
+    expect(screen.getByText("roadtrips:startFrom.preview")).toBeInTheDocument();
+    await press(screen.getByText("roadtrips:startFrom.lodging"));
+    expect(screen.queryByText("roadtrips:startFrom.preview")).not.toBeInTheDocument();
+    expect(screen.getByText("Camping Alpe").closest("button")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
 });

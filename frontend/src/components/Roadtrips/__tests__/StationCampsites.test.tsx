@@ -83,4 +83,18 @@ describe("StationCampsites — campsites near a station via /nearby/lodging", ()
     rerender(<StationCampsites point={null} onPick={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("drops the answer of a lookup whose point has moved on meanwhile", async () => {
+    let resolveLookup: (v: ReturnType<typeof place>[]) => void = () => {};
+    vi.mocked(openDataApi.nearbyLodgings).mockReturnValue(
+      new Promise((r) => {
+        resolveLookup = r;
+      }) as never
+    );
+    const { rerender } = render(<StationCampsites point={{ lat: 1, lon: 2 }} onPick={vi.fn()} />);
+    await press(screen.getByRole("button"));
+    rerender(<StationCampsites point={{ lat: 5, lon: 6 }} onPick={vi.fn()} />);
+    await act(async () => resolveLookup([place("Camping Alt", "camp_site", 100)]));
+    expect(screen.queryByText("Camping Alt")).toBeNull();
+  });
 });

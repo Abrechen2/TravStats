@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { logger } from "../lib/logger";
 import {
   afterLookup,
+  weatherSig,
   weatherStations,
   type StationWeatherState,
 } from "../lib/roadtrip/stationWeatherState";
@@ -27,11 +28,21 @@ export function useRoadtripWeather(
   eligible: number;
   load: () => Promise<void>;
 } {
-  const [byStation, setByStation] = useState<ReadonlyMap<string, StationWeatherState>>(new Map());
+  const [held, setHeld] = useState<ReadonlyMap<string, StationWeatherState>>(new Map());
   const [running, setRunning] = useState(false);
   const [asked, setAsked] = useState(false);
   const busy = useRef(false);
   const eligible = weatherStations(stations, today);
+  // A measurement belongs to the day and point it was asked for: a station
+  // edited since no longer shows (or keeps) the old one.
+  const byStation = useMemo(() => {
+    const current = new Map<string, StationWeatherState>();
+    for (const s of stations) {
+      const state = held.get(s.id);
+      if (state && state.sig === weatherSig(s)) current.set(s.id, state);
+    }
+    return current;
+  }, [held, stations]);
 
   const load = useCallback(async (): Promise<void> => {
     if (busy.current) return;
@@ -50,12 +61,18 @@ export function useRoadtripWeather(
             ({ outcome, weather } = await roadtripsApi.stationWeather(routeId, station.id));
           } catch (err) {
             logger.warn("Loading a roadtrip station's weather failed", err);
-            outcome = "unavailable";
+            // Our own limiter answers 429 before Open-Meteo is asked at all:
+            // the rest would be refused the same way.
+            outcome =
+              (err as { response?: { status?: number } }).response?.status === 429
+                ? "rateLimited"
+                : "unavailable";
           }
         }
         if (outcome === "rateLimited") limited = true;
-        setByStation((prev) =>
-          new Map(prev).set(station.id, afterLookup(prev.get(station.id), outcome, weather))
+        const sig = weatherSig(station);
+        setHeld((prev) =>
+          new Map(prev).set(station.id, afterLookup(prev.get(station.id), outcome, weather, sig))
         );
         // The switch is off for everyone: no point asking the other stations.
         if (outcome === "disabled") break;

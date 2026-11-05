@@ -53,6 +53,17 @@ describe("roadtrip start from a GPX file", () => {
     });
   });
 
+  it("drops a point with a missing or empty coordinate instead of placing it at 0,0", () => {
+    expect(parseGpxStations(gpx(`<wpt lat="" lon="5"/><wpt lon="5"/>`))).toEqual({
+      ok: false,
+      reason: "noPoints",
+    });
+    const r = parseGpxStations(
+      gpx(`<wpt lat="" lon="5"/><wpt lat="50" lon="8"><name>Ok</name></wpt>`)
+    );
+    expect(r.ok && r.points).toEqual([{ title: "Ok", lat: 50, lon: 8 }]);
+  });
+
   it("refuses a file over the station cap rather than cutting it", () => {
     const many = Array.from(
       { length: MAX_START_STATIONS + 1 },
@@ -108,6 +119,14 @@ describe("roadtrip start from a Google or Apple Maps link", () => {
       ok: true,
       waypoints: [{ title: "Camping Alpe", lat: 46.5, lon: 11.2 }],
     });
+  });
+
+  it("takes a place's own coordinates from data= over the viewport centre in @", () => {
+    expect(
+      parseMapsLink(
+        "https://www.google.com/maps/place/Camping+Alpe/@46.5,11.2,15z/data=!3m1!4b1!4m6!3m5!8m2!3d46.51!4d11.31"
+      )
+    ).toEqual({ ok: true, waypoints: [{ title: "Camping Alpe", lat: 46.51, lon: 11.31 }] });
   });
 
   it("says why a link is no use: not a link, not Maps, a short link, no waypoint", () => {

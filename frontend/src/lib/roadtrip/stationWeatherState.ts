@@ -4,6 +4,8 @@ import { dayKey } from "./roadtripView";
 
 /** What the page knows about one station's weather. */
 export interface StationWeatherState {
+  /** The day and point the lookup was for; a station edited since no longer matches it. */
+  sig?: string;
   /** The last measurement obtained; null if none ever was. */
   weather: StationWeather | null;
   /** Why the latest lookup brought no new weather; null when it did. */
@@ -19,13 +21,19 @@ export interface StationWeatherState {
 export function afterLookup(
   prev: StationWeatherState | undefined,
   outcome: WeatherOutcome,
-  weather: StationWeather | null
+  weather: StationWeather | null,
+  sig?: string
 ): StationWeatherState {
-  if (outcome === "observed" && weather) return { weather, problem: null };
-  if (WEATHER_SERVICE_FAILURES.has(outcome)) {
-    return { weather: prev?.weather ?? null, problem: outcome };
-  }
-  return { weather: null, problem: outcome };
+  if (outcome === "observed" && weather) return { weather, problem: null, sig };
+  // What was held for another day or point is not this station's to keep.
+  const held = prev && prev.sig === sig ? prev.weather : null;
+  if (WEATHER_SERVICE_FAILURES.has(outcome)) return { weather: held, problem: outcome, sig };
+  return { weather: null, problem: outcome, sig };
+}
+
+/** What a lookup depends on: the arrival day and the point. */
+export function weatherSig(s: Pick<RoadtripStation, "startDate" | "lat" | "lon">): string {
+  return `${dayKey(s.startDate) ?? ""}|${s.lat ?? ""}|${s.lon ?? ""}`;
 }
 
 /**

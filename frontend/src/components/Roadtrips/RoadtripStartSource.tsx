@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 
 import Button from "../ui/Button";
@@ -33,8 +33,12 @@ export default function RoadtripStartSource({
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const [mode, setMode] = useState<StartMode>("empty");
+  // Bumped on every choice, the chosen one included: the parent has dropped
+  // its stations, so the source must forget its pick or its file as well.
+  const [round, setRound] = useState(0);
   const pick = (next: StartMode): void => {
     setMode(next);
+    setRound((n) => n + 1);
     onPoints([]);
   };
   return (
@@ -69,9 +73,9 @@ export default function RoadtripStartSource({
           );
         })}
       </div>
-      {mode === "lodging" && <LodgingSource onPoints={onPoints} />}
-      {mode === "gpx" && <GpxSource onPoints={onPoints} />}
-      {mode === "link" && <LinkSource onPoints={onPoints} />}
+      {mode === "lodging" && <LodgingSource key={round} onPoints={onPoints} />}
+      {mode === "gpx" && <GpxSource key={round} onPoints={onPoints} />}
+      {mode === "link" && <LinkSource key={round} onPoints={onPoints} />}
     </fieldset>
   );
 }
@@ -177,15 +181,26 @@ function GpxSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.E
   const { t } = useTranslation(["roadtrips"]);
   const [problem, setProblem] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
+  // A newer choice (or leaving the source) makes an older read's answer stale.
+  const run = useRef(0);
+  useEffect(
+    () => () => {
+      run.current += 1;
+    },
+    []
+  );
 
   const read = async (file: File): Promise<void> => {
+    const mine = ++run.current;
     setProblem(null);
     setSummary(null);
     onPoints([]);
     let text: string;
     try {
       text = await file.text();
+      if (mine !== run.current) return;
     } catch (err) {
+      if (mine !== run.current) return;
       logger.warn("Reading a GPX file for a new roadtrip failed", err);
       setProblem(t("roadtrips:startFrom.gpxError.read"));
       return;
@@ -235,8 +250,16 @@ function LinkSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const run = useRef(0);
+  useEffect(
+    () => () => {
+      run.current += 1;
+    },
+    []
+  );
 
   const read = async (): Promise<void> => {
+    const mine = ++run.current;
     setProblem(null);
     onPoints([]);
     const parsed = parseMapsLink(text);
@@ -247,13 +270,15 @@ function LinkSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.
     setBusy(true);
     try {
       const resolved = await resolveWaypoints(parsed.waypoints, i18n.language);
+      // The link was edited or the source left while the places were looked up.
+      if (mine !== run.current) return;
       if (!resolved.ok) {
         setProblem(t(`roadtrips:startFrom.linkError.${resolved.reason}`, { name: resolved.name }));
         return;
       }
       onPoints(resolved.points);
     } finally {
-      setBusy(false);
+      if (mine === run.current) setBusy(false);
     }
   };
 
@@ -269,6 +294,8 @@ function LinkSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.
           inputMode="url"
           value={text}
           onChange={(e) => {
+            run.current += 1;
+            setBusy(false);
             setText(e.target.value);
             onPoints([]);
           }}

@@ -30,8 +30,15 @@ const validPoint = (lat: number, lon: number): boolean =>
 function pointsOf(doc: Document, tag: string): StartPoint[] {
   const out: StartPoint[] = [];
   for (const el of Array.from(doc.getElementsByTagName(tag))) {
-    const lat = Number(el.getAttribute("lat"));
-    const lon = Number(el.getAttribute("lon"));
+    const rawLat = el.getAttribute("lat");
+    const rawLon = el.getAttribute("lon");
+    // A missing or empty attribute is no coordinate: Number("") is 0, which
+    // would put the station in the Gulf of Guinea instead of dropping it.
+    if (rawLat === null || rawLon === null || rawLat.trim() === "" || rawLon.trim() === "") {
+      continue;
+    }
+    const lat = Number(rawLat);
+    const lon = Number(rawLon);
     if (!validPoint(lat, lon)) continue;
     // Only the point's own <name>, not a child's.
     const nameEl = Array.from(el.children).find((c) => c.tagName === "name");
@@ -195,9 +202,11 @@ export function parseMapsLink(input: string): MapsLinkResult {
     }
   } else {
     waypoints = fromPlace(url);
-    if (waypoints.length === 0) {
-      const exact = fromData(url.pathname + url.search);
-      waypoints = exact.length > 0 ? exact : [];
+    const exact = fromData(url.pathname + url.search);
+    if (waypoints.length === 0) waypoints = exact;
+    else if (exact.length === 1 && "lat" in waypoints[0]) {
+      // `@lat,lon` is the map's viewport centre; `!3d!4d` is the place itself.
+      waypoints = [{ ...waypoints[0], lat: exact[0].lat, lon: exact[0].lon }];
     }
   }
   if (waypoints.length === 0) return { ok: false, reason: "noWaypoints" };

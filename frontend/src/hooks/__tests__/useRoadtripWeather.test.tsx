@@ -81,13 +81,49 @@ describe("useRoadtripWeather", () => {
     vi.mocked(roadtripsApi.stationWeather).mockRejectedValue(new Error("Network Error"));
     const { result } = renderHook(() => useRoadtripWeather("r", [STATIONS[0]], "2026-11-05"));
     await act(async () => result.current.load());
-    expect(result.current.byStation.get("a")).toEqual({ weather: null, problem: "unavailable" });
+    expect(result.current.byStation.get("a")).toMatchObject({
+      weather: null,
+      problem: "unavailable",
+    });
   });
 
   it("stops at the first 'disabled': the instance switch is off for every station", async () => {
-    vi.mocked(roadtripsApi.stationWeather).mockResolvedValue({ outcome: "disabled", weather: null });
+    vi.mocked(roadtripsApi.stationWeather).mockResolvedValue({
+      outcome: "disabled",
+      weather: null,
+    });
     const { result } = renderHook(() => useRoadtripWeather("r", STATIONS, "2026-11-05"));
     await act(async () => result.current.load());
     expect(roadtripsApi.stationWeather).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show or keep a measurement for a station whose day or place was edited since", async () => {
+    const api = vi.mocked(roadtripsApi.stationWeather);
+    api.mockImplementation(async (_r, id) => ({ outcome: "observed", weather: measured(id) }));
+    const { result, rerender } = renderHook(
+      ({ stations }) => useRoadtripWeather("r", stations, "2026-11-05"),
+      { initialProps: { stations: [STATIONS[0]] } }
+    );
+    await act(async () => result.current.load());
+    expect(result.current.byStation.get("a")?.weather).not.toBeNull();
+
+    const moved = [{ ...STATIONS[0], startDate: "2026-07-09T00:00:00.000Z" }];
+    rerender({ stations: moved });
+    expect(result.current.byStation.get("a")).toBeUndefined();
+
+    // A failed reload must not resurrect the old day's value either.
+    api.mockResolvedValueOnce({ outcome: "timeout", weather: null });
+    await act(async () => result.current.load());
+    expect(result.current.byStation.get("a")).toMatchObject({ weather: null, problem: "timeout" });
+  });
+
+  it("stops asking when the app's own limiter answers 429", async () => {
+    vi.mocked(roadtripsApi.stationWeather).mockRejectedValue(
+      Object.assign(new Error("429"), { response: { status: 429 } })
+    );
+    const { result } = renderHook(() => useRoadtripWeather("r", STATIONS, "2026-11-05"));
+    await act(async () => result.current.load());
+    expect(roadtripsApi.stationWeather).toHaveBeenCalledTimes(1);
+    expect(result.current.byStation.get("c")?.problem).toBe("rateLimited");
   });
 });

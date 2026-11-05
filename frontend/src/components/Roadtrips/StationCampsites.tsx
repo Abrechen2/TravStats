@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 
 import Button from "../ui/Button";
@@ -41,17 +41,25 @@ export default function StationCampsites({
   const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
 
   // A list for the old point would offer the wrong valley's campsites.
-  useEffect(() => setLookup({ state: "idle" }), [point?.lat, point?.lon]);
+  // The lookup still running for it is stale too: its answer is dropped.
+  const run = useRef(0);
+  useEffect(() => {
+    run.current += 1;
+    setLookup({ state: "idle" });
+  }, [point?.lat, point?.lon]);
 
   if (!openData) return null;
 
   const search = async (): Promise<void> => {
     if (!point) return;
+    const mine = ++run.current;
     setLookup({ state: "loading" });
     try {
       const places = await openDataApi.nearbyLodgings(point.lat, point.lon, CAMPSITE_RADIUS_KM);
+      if (mine !== run.current) return;
       setLookup({ state: "done", places: places.filter((p) => CAMPSITE_KINDS.has(p.kind)) });
     } catch (err) {
+      if (mine !== run.current) return;
       logger.warn("Campsites near a roadtrip station failed", err);
       const upstream = openDataUpstreamFailure(err);
       setLookup({

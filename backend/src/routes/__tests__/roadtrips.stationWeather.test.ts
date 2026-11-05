@@ -60,7 +60,14 @@ describe("GET /roadtrips/:id/stations/:stationId/weather", () => {
     roadtripId = route.id;
     const stop = (title: string, startDate: Date | null, lat: number | null, order: number) =>
       prisma.tripStop.create({
-        data: { routeId: route.id, title, lat, lon: lat === null ? null : 5.7, startDate, routeOrderIdx: order },
+        data: {
+          routeId: route.id,
+          title,
+          lat,
+          lon: lat === null ? null : 5.7,
+          startDate,
+          routeOrderIdx: order,
+        },
       });
     pastId = (await stop("Stavanger", new Date("2024-07-14T00:00:00Z"), 58.97, 0)).id;
     todayId = (
@@ -93,7 +100,12 @@ describe("GET /roadtrips/:id/stations/:stationId/weather", () => {
     const res = await get(pastId);
     expect(res.status).toBe(200);
     expect(res.body.outcome).toBe("observed");
-    expect(res.body.weather).toMatchObject({ code: 53, tMaxC: 17.7, day: "2024-07-14", lat: 58.97 });
+    expect(res.body.weather).toMatchObject({
+      code: 53,
+      tMaxC: 17.7,
+      day: "2024-07-14",
+      lat: 58.97,
+    });
   });
 
   it.each([
