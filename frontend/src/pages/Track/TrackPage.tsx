@@ -28,8 +28,9 @@ const TAB_BODY: Record<TrackTab, () => JSX.Element> = {
 
 /**
  * `/track` and `/track/:date` — the own location history on the map (TravTrack
- * plan T6, phase 5 board "Track-Karte"): range, layers, replay, totals,
- * export and delete. The other views — explored map (L1), monthly values (L3),
+ * plan T6, phase 5 board "Track-Karte", web redesign 2026-11-05): a full-width
+ * map under a time bar with floating cards for layers, totals, the day's log
+ * and the replay. Export and delete live in the TravTrack settings. The other views — explored map (L1), monthly values (L3),
  * stays and imports (phase 5) — hang off the app header's Track menu. Offered
  * only where `useTravTrackAccess` says so; a refusal on the way (TravTrack
  * switched off meanwhile) shows its own copy, never an empty map.
@@ -46,7 +47,6 @@ export default function TrackPage({ view = "day" }: { view?: TrackView }): JSX.E
       {view === "day" && caps && !caps.hasData ? (
         // Nothing recorded or imported yet: how data comes in, instead of an empty map.
         <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
-          <TrackHeader />
           <TrackGettingStarted active={caps.active} />
         </div>
       ) : view === "day" ? (
@@ -79,11 +79,7 @@ function TrackTabView({ view }: { view: TrackTab }): JSX.Element {
   );
 }
 
+// The map fills the page under the app header: no title, no intro, no padding box.
 function TrackDayView(): JSX.Element {
-  return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-4 p-4">
-      <TrackHeader />
-      <TrackMapView />
-    </div>
-  );
+  return <TrackMapView />;
 }

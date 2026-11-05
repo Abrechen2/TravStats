@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { TravTrackDay } from "../../../../lib/api/travtrack";
 import { setClockForTests } from "../../../../shared/time/clock";
@@ -46,17 +46,18 @@ vi.mock("../TrackRangeMap", () => ({
 }));
 
 const viewport = vi.hoisted(() => ({ phone: true }));
-vi.mock("../../../../hooks/useIsPhoneViewport", () => ({
-  useIsPhoneViewport: () => viewport.phone,
+vi.mock("../useNarrowStage", () => ({
+  useNarrowStage: () => viewport.phone,
 }));
 
 import TrackMapView from "../TrackMapView";
 
 /**
  * Audit 2026-10-26 (F-005): at 390 px the map started at y≈1281, under the
- * layer switches and the route settings. On a phone the map comes straight
- * after the range control, and the settings fold away below it; on a tablet
- * or desktop the panel stays open beside the map.
+ * layer switches and the route settings. Since the web redesign (2026-11-05)
+ * the map fills the page: on a narrow stage the layers and the totals are
+ * folded pills over the map and the day's log is a bottom sheet; on a wide one
+ * the cards are open beside it.
  */
 
 const T0 = Date.parse("2026-10-25T08:00:00Z");
@@ -84,11 +85,7 @@ const renderAt = (path: string) =>
     </MemoryRouter>
   );
 
-/** True when `a` comes before `b` in document order. */
-const precedes = (a: Element, b: Element) =>
-  Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-
-describe("TrackMapView on a phone", () => {
+describe("TrackMapView on a narrow stage", () => {
   beforeEach(() => {
     setClockForTests("2026-10-25T12:00:00Z");
     Object.values(api).forEach((fn) => fn.mockReset());
@@ -101,24 +98,39 @@ describe("TrackMapView on a phone", () => {
     viewport.phone = true;
   });
 
-  it("puts the map before the layer settings and folds them away", async () => {
+  it("folds the layers and the totals to pills and puts the day log in a sheet", async () => {
     viewport.phone = true;
     renderAt("/track/2026-10-25");
-    const map = await screen.findByTestId("map-stub");
-    const layers = screen.getByRole("complementary", { name: "track:map.panel" });
-    expect(precedes(map, layers)).toBe(true);
-    const fold = layers.closest("details");
-    expect(fold).not.toBeNull();
-    expect(fold!.open).toBe(false);
-    expect(fold!.querySelector("summary")).toHaveTextContent("track:map.panel");
+    await screen.findByTestId("map-stub");
+    for (const id of ["track-layers-card", "track-totals-card", "track-day-card"]) {
+      expect(screen.getByTestId(id)).toHaveAttribute("data-collapsed", "true");
+    }
+    expect(screen.getByTestId("track-sheet")).toContainElement(
+      screen.getByTestId("track-day-card")
+    );
+    // A pill opens its card.
+    fireEvent.click(
+      within(screen.getByTestId("track-layers-card")).getByRole("button", {
+        name: /track:map.layers.title/,
+      })
+    );
+    expect(screen.getByTestId("track-layers-card")).toHaveAttribute("data-collapsed", "false");
+    expect(screen.getByRole("complementary", { name: "track:map.panel" })).toBeInTheDocument();
   });
 
-  it("keeps the panel open beside the map on a wider screen", async () => {
+  it("keeps the cards open beside the map on a wider stage", async () => {
     viewport.phone = false;
     renderAt("/track/2026-10-25");
-    const map = await screen.findByTestId("map-stub");
-    const layers = screen.getByRole("complementary", { name: "track:map.panel" });
-    expect(layers.closest("details")).toBeNull();
-    expect(precedes(layers, map)).toBe(true);
+    await screen.findByTestId("map-stub");
+    for (const id of ["track-layers-card", "track-day-card"]) {
+      expect(screen.getByTestId(id)).toHaveAttribute("data-collapsed", "false");
+    }
+    expect(screen.queryByTestId("track-sheet")).not.toBeInTheDocument();
+    // Collapse and expand are the card header's job.
+    const header = within(screen.getByTestId("track-day-card")).getAllByRole("button")[0];
+    fireEvent.click(header);
+    expect(screen.getByTestId("track-day-card")).toHaveAttribute("data-collapsed", "true");
+    fireEvent.click(header);
+    expect(screen.getByTestId("track-day-card")).toHaveAttribute("data-collapsed", "false");
   });
 });

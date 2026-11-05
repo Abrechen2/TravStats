@@ -132,32 +132,18 @@ describe("TrackMapView", () => {
     expect(JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}").layers.heat).toBe(true);
   });
 
-  it("live follow polls last-seen and reads today again", async () => {
-    api.lastSeen.mockResolvedValue({
-      at: "2026-10-25T11:59:00Z",
-      lat: 52.52,
-      lon: 13.42,
-      accuracyM: 5,
-      deviceId: null,
-      deviceLabel: null,
-      origin: "companion",
-    });
-    renderAt("/track");
+  it("offers no live follow, export or delete on the map page — those moved to the settings", async () => {
+    renderAt("/track/2026-10-25");
     await screen.findByTestId("map-stub");
-    expect(api.day).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "track:map.live.off" }));
-    await waitFor(() => expect(api.lastSeen).toHaveBeenCalled());
-    await waitFor(() => expect(api.day).toHaveBeenCalledTimes(2));
-    expect(api.day).toHaveBeenLastCalledWith("2026-10-25");
-    await waitFor(() => expect(mapProps.last?.follow).toEqual([13.42, 52.52]));
-  });
-
-  it("a failed live poll says so", async () => {
-    api.lastSeen.mockRejectedValue(new Error("offline"));
-    renderAt("/track");
-    await screen.findByTestId("map-stub");
-    fireEvent.click(screen.getByRole("button", { name: "track:map.live.off" }));
-    expect(await screen.findByText(/track:map.live.failed.*track:errors.network/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "track:map.live.off" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "track:actions.export" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "track:actions.delete" })).not.toBeInTheDocument();
+    // The gear carries the shown range to the settings page.
+    expect(screen.getByTestId("track-settings-link")).toHaveAttribute(
+      "href",
+      "/settings/travtrack?from=2026-10-25&until=2026-10-25"
+    );
+    expect(mapProps.last?.follow).toBeNull();
   });
 
   it("a clicked point shows time, coordinates and accuracy — no speed it does not have", async () => {

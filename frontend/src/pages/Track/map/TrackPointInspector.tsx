@@ -69,11 +69,6 @@ export default function TrackPointInspector({
       aria-label={t("track:map.point.title")}
       data-testid="track-point-inspector"
       style={{
-        position: "absolute",
-        left: "50%",
-        top: 40,
-        transform: "translateX(-50%)",
-        width: 280,
         background: token("surface2"),
         border: `1px solid ${TRACK_COLOR}`,
         borderRadius: 12,
@@ -81,8 +76,6 @@ export default function TrackPointInspector({
         display: "flex",
         flexDirection: "column",
         gap: 6,
-        // Above the leg card (z 2): on a narrow screen both sit over the same map area.
-        zIndex: 3,
       }}
     >
       <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>

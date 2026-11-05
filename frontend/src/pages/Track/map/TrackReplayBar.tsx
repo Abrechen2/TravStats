@@ -31,7 +31,11 @@ export default function TrackReplayBar({
   return (
     <div
       className="flex flex-wrap items-center gap-3"
-      style={{ ...panelStyle, padding: "10px 14px" }}
+      style={{
+        ...panelStyle,
+        padding: "10px 14px",
+        background: "color-mix(in srgb, var(--ts-surface) 94%, transparent)",
+      }}
       data-testid="track-replay"
     >
       <button

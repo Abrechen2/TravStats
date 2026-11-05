@@ -11,7 +11,7 @@ import { logger } from "../../../lib/logger";
 import { stayInboxHref, stayStatusColor } from "../TrackStays";
 import TrackStopPlace from "./TrackStopPlace";
 import { durationText, spanText } from "./trackLegFormat";
-import { panelStyle, pillStyle } from "./trackMapStyle";
+import { pillStyle } from "./trackMapStyle";
 
 /**
  * One stop (a dwell between legs) opened from its marker: its time span and
@@ -68,7 +68,7 @@ export default function TrackStopCard({
       aria-label={title}
       data-testid="track-stop-card"
       className="flex flex-col gap-2"
-      style={{ ...panelStyle, padding: 14, width: 320, maxWidth: "100%" }}
+      style={{ width: "100%" }}
     >
       <h3 className="t-card-title">{title}</h3>
       <p className="t-body tabular-nums" data-testid="track-stop-span">

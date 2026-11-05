@@ -181,12 +181,15 @@ describe("TrackMapView legs", () => {
       ],
     ]);
     expect(mapProps.last?.selection).toEqual(mapProps.last?.frameLines);
-    expect(screen.getByTestId("track-leg-row")).toHaveAttribute("aria-pressed", "true");
+    // The day card swaps its list for the leg's detail …
     expect(screen.getByTestId("track-leg-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("track-leg-row")).not.toBeInTheDocument();
 
+    // … and „Ganzer Tag" brings the list back.
     fireEvent.click(within(screen.getByTestId("track-leg-card")).getByText("track:legs.wholeDay"));
     expect(mapProps.last?.refit).toBe("day");
     expect(screen.queryByTestId("track-leg-card")).not.toBeInTheDocument();
+    expect(screen.getByTestId("track-leg-row")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("a click on a leg's line on the map selects it as well", async () => {
@@ -194,7 +197,9 @@ describe("TrackMapView legs", () => {
     await screen.findByTestId("map-stub");
     fireEvent.click(screen.getByRole("button", { name: "pick-line" }));
     expect(screen.getByTestId("track-leg-card")).toBeInTheDocument();
-    expect(screen.getByTestId("track-leg-row")).toHaveAttribute("aria-pressed", "true");
+    // The list row of the tapped leg is the pressed one once the day is shown again.
+    fireEvent.click(within(screen.getByTestId("track-leg-card")).getByText("track:legs.wholeDay"));
+    expect(screen.getByTestId("track-leg-row")).toBeInTheDocument();
   });
 
   it("the card shows a dash for a figure the server could not derive, never 0", async () => {

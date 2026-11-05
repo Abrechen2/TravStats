@@ -1,17 +1,39 @@
+import { useState } from "react";
 import type { JSX } from "react";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
+import TrackFloatingCard from "./TrackFloatingCard";
 import type { RangeTotals } from "./trackGeometry";
 import { DASH } from "./trackLegFormat";
-import { panelStyle } from "./trackMapStyle";
+import { pillStyle } from "./trackMapStyle";
+
+/** The three figures the card leads with; the rest sits behind „Alle Werte". */
+const LEAD = ["distance", "moving", "stops"];
 
 /**
- * The shown span in numbers (TravTrack plan T5.2): distance summed inside the
- * stretches only, time moving, average speed over that time, positions and
- * how much of the span was recorded. A value that cannot be told reads "–",
- * never 0.
+ * „Tag in Zahlen" (TravTrack plan T5.2, web redesign 2026-11-05): distance
+ * summed inside the stretches only, time moving and the stops of the loaded
+ * days as the lead; „Alle Werte" opens the rest — average and top speed,
+ * positions and how much of the span was recorded. A value that cannot be
+ * told reads "–", never 0.
  */
-export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): JSX.Element {
+export default function TrackTotalsPanel({
+  totals,
+  stops,
+  multi,
+  collapsed,
+  onToggle,
+}: {
+  totals: RangeTotals;
+  /** Stops of the loaded days; null where the span carries none (a long range). */
+  stops: number | null;
+  multi: boolean;
+  collapsed: boolean;
+  onToggle: () => void;
+}): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
+  const coarse = useCoarsePointer();
+  const [all, setAll] = useState(false);
   const number = (value: number, digits: number) =>
     new Intl.NumberFormat(i18n.language, { maximumFractionDigits: digits }).format(value);
   const minutes = totals.movingMs === null ? null : Math.round(totals.movingMs / 60_000);
@@ -21,9 +43,11 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
       : minutes >= 60
         ? t("track:map.totals.hours", { h: Math.floor(minutes / 60), m: minutes % 60 })
         : t("track:map.totals.minutes", { m: minutes });
+  const km = t("track:map.totals.km", { km: number(totals.distanceM / 1000, 1) });
   const rows: Array<[string, string]> = [
-    ["distance", t("track:map.totals.km", { km: number(totals.distanceM / 1000, 1) })],
+    ["distance", km],
     ["moving", duration],
+    ["stops", stops === null ? DASH : number(stops, 0)],
     [
       "avgSpeed",
       totals.avgKmh === null ? DASH : t("track:map.totals.kmh", { kmh: number(totals.avgKmh, 0) }),
@@ -42,28 +66,40 @@ export default function TrackTotalsPanel({ totals }: { totals: RangeTotals }): J
     ["points", number(totals.points, 0)],
     ["coverage", totals.coverage === null ? DASH : `${number(totals.coverage * 100, 0)} %`],
   ];
+  const shown = all ? rows : rows.filter(([key]) => LEAD.includes(key));
   return (
-    <section style={panelStyle} aria-label={t("track:map.totals.title")}>
-      <h2 className="t-card-title" style={{ marginBottom: 8 }}>
-        {t("track:map.totals.title")}
-      </h2>
-      <dl className="grid grid-cols-2 gap-2" data-testid="track-totals">
-        {rows.map(([key, value]) => (
+    <TrackFloatingCard
+      testId="track-totals-card"
+      title={t(multi ? "track:map.totals.rangeTitle" : "track:map.totals.dayTitle")}
+      summary={km}
+      collapsed={collapsed}
+      onToggle={onToggle}
+      coarse={coarse}
+    >
+      <dl className="grid grid-cols-3 gap-2" data-testid="track-totals">
+        {shown.map(([key, value]) => (
           <div
             key={key}
-            style={{ background: "var(--ts-surface2)", borderRadius: 10, padding: 10 }}
+            style={{ background: "var(--ts-surface2)", borderRadius: 10, padding: 8 }}
             data-total={key}
           >
             <dt className="t-caption">{t(`track:map.totals.${key}`)}</dt>
-            <dd style={{ fontSize: 18, fontWeight: 700 }} className="tabular-nums">
+            <dd style={{ fontSize: 16, fontWeight: 700 }} className="tabular-nums">
               {value}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="t-caption" style={{ marginTop: 8 }}>
-        {t("track:map.totals.note")}
-      </p>
-    </section>
+      {all && <p className="t-caption">{t("track:map.totals.note")}</p>}
+      <button
+        type="button"
+        aria-expanded={all}
+        data-testid="track-totals-all"
+        onClick={() => setAll((open) => !open)}
+        style={{ ...pillStyle(false, coarse ? 44 : 36), alignSelf: "flex-start" }}
+      >
+        {t(all ? "track:map.totals.fewer" : "track:map.totals.all")}
+      </button>
+    </TrackFloatingCard>
   );
 }
