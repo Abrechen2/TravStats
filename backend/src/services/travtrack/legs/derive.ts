@@ -244,6 +244,8 @@ function foldedStop(
 
 /** A privacy zone this close may have cut a visit out of a silence, or a name may point into it. */
 const ZONE_NEAR_M = 500;
+/** A deleted point is stored by its second only: count each removal as a window this long. */
+const REMOVED_WINDOW_MS = 1000;
 
 /** Whether a point lies in a zone or within `ZONE_NEAR_M` of one. */
 function near(
@@ -320,7 +322,8 @@ function bridgedStops(
       chain !== undefined &&
       tail !== undefined &&
       seg[0][0] - tail[0] > RECORDING_GAP_MS &&
-      !(read.removedAtMs ?? []).some((t) => t > tail[0] && t < seg[0][0]) &&
+      // A tombstone keeps only its second, so each removal counts as a one-second window (fail closed).
+      !(read.removedAtMs ?? []).some((t) => t + REMOVED_WINDOW_MS > tail[0] && t < seg[0][0]) &&
       !nearZone(tail) &&
       !nearZone(seg[0]) &&
       !read.deleted.some((b) => b.fromMs < seg[0][0] && b.untilMs > tail[0]) &&

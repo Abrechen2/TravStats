@@ -150,6 +150,18 @@ describe("travtrack: a day spent in one spot", () => {
     ).toBe(true);
   });
 
+  it("a tombstone rounded down to the surviving fix's second still blocks the silence after it", () => {
+    const fixes = still(180);
+    const read = span(fixes);
+    read.segments = fixes.map((_, i) => [read.segments[0][i]]);
+    // A point deleted 300 ms after the fix at 03:00 is stored as 03:00:00 exactly.
+    read.removedAtMs = [DAY + 3 * 60 * MIN];
+    const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
+    expect(
+      stops.every((s) => s.untilMs <= DAY + 3 * 60 * MIN || s.fromMs >= DAY + 6 * 60 * MIN)
+    ).toBe(true);
+  });
+
   it("another device's stop never stretches a bridged stop across this device's pause", () => {
     const h = (n: number) => DAY + n * 60 * MIN;
     const d1 = [0, 180, 360, 540].map((m): [number, number, number | null] => [h(m), 0, 8]);
