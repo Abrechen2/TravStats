@@ -188,6 +188,40 @@ describe("TravTrack — stop places", () => {
       );
     });
 
+    it("honours the stay-suggestions switch: off asks no geocoder, but still names the owner's own place", async () => {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { staySuggestionsEnabled: false },
+      });
+      await prisma.place.create({
+        data: { userId, name: "Home", lat: LAT0 + 20 / M, lon: LON0, category: "other" } as never,
+      });
+      places.mockResolvedValue({
+        degraded: false,
+        results: [{ name: "Lidl", lat: LAT0 + 5 / M, lon: LON0 }],
+      });
+      const res = await getPlace(q);
+      expect(res.status).toBe(200);
+      expect(places).not.toHaveBeenCalled();
+      expect(geocode).not.toHaveBeenCalled();
+      expect(res.body).toMatchObject({
+        lookup: "off",
+        probable: { name: "Home", source: "known" },
+        candidates: [],
+      });
+      expect(res.body.known[0]).toMatchObject({ name: "Home" });
+    });
+
+    it("switch off and no known place within 100 m: no probable, no lookup, says it is off", async () => {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { staySuggestionsEnabled: false },
+      });
+      const res = await getPlace(q);
+      expect(res.body).toMatchObject({ lookup: "off", probable: null, known: [], candidates: [] });
+      expect(places).not.toHaveBeenCalled();
+    });
+
     it("offers the charger, not the street or the vending machine beside it", async () => {
       places.mockResolvedValue({
         degraded: false,

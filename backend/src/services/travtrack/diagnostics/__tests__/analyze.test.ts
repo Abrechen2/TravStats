@@ -115,6 +115,54 @@ describe("analyseGaps", () => {
     expect(theGap(base({ events: later })).evidence.autoPause).toBeNull();
   });
 
+  it("names the plan stop that ended the recorder in the background, with what it stood on", () => {
+    const events = [
+      ev(DAY + 5 * H, "recorder", { event: "start" }),
+      ev(DAY + 7 * H + 2 * M, "recorder", {
+        event: "stop",
+        reason: "plan",
+        flight: "keep",
+        trip: "keep",
+        everyday: "stop",
+        allowed: false,
+        foreground: false,
+        everydayEnabled: "unknown",
+        everydayArmed: true,
+        decision: "hold",
+      }),
+    ];
+    const gap = theGap(base({ events }));
+    expect(gap.cause).toBe("recorderPaused");
+    expect(gap.evidence.stopWhy).toEqual({
+      reason: "plan",
+      flight: "keep",
+      trip: "keep",
+      everyday: "stop",
+      decision: "hold",
+      allowed: false,
+      foreground: false,
+      everydayArmed: true,
+      everydayEnabled: "unknown",
+    });
+  });
+
+  it("a stop long after the silence began does not explain the whole gap", () => {
+    const events = [ev(DAY + 8 * H + 50 * M, "recorder", { event: "stop", reason: "plan" })];
+    expect(theGap(base({ events })).cause).toBe("unexplained");
+  });
+
+  it("reads a stop from an older build (no plan fields) as nulls, and no stop as null", () => {
+    const old = [ev(DAY + 7 * H + 2 * M, "recorder", { event: "stop", reason: "plan" })];
+    expect(theGap(base({ events: old })).evidence.stopWhy).toMatchObject({
+      reason: "plan",
+      allowed: null,
+      foreground: null,
+      everydayEnabled: null,
+    });
+    const started = [ev(DAY + 5 * H, "recorder", { event: "start" })];
+    expect(theGap(base({ events: started })).evidence.stopWhy).toBeNull();
+  });
+
   it("names a terminate with no wake before the gap ends", () => {
     const ended = [ev(DAY + 7 * H + M, "lifecycle", { event: "terminate" })];
     expect(theGap(base({ events: ended })).cause).toBe("appNotRunning");

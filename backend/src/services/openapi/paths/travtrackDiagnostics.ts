@@ -148,6 +148,22 @@ const gap = z.object({
       .boolean()
       .nullable()
       .describe("The recorder in force had iOS's automatic pause on; null when unknown"),
+    stopWhy: z
+      .object({
+        reason: z.string().nullable(),
+        flight: z.string().nullable(),
+        trip: z.string().nullable(),
+        everyday: z.string().nullable(),
+        decision: z.string().nullable(),
+        allowed: z.boolean().nullable(),
+        foreground: z.boolean().nullable(),
+        everydayArmed: z.boolean().nullable(),
+        everydayEnabled: z.union([z.boolean(), z.string()]).nullable(),
+      })
+      .nullable()
+      .describe(
+        "What the recorder's last stop before the gap ended stood on (plan verdicts, permission, foreground, Alltag switch, server decision); null for an older app build or when it was not a stop"
+      ),
   }),
 });
 

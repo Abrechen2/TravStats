@@ -204,4 +204,28 @@ describe("TrackStopPlace — review fixes", () => {
     );
     expect(screen.getByTestId("track-stop-place-accept")).toBeInTheDocument();
   });
+
+  it("with stay suggestions off and no known place it says so, not 'no name found'", async () => {
+    legsApi.stopIdentity.mockResolvedValue(
+      identity({ probable: null, candidates: [], candidatesState: "empty", lookup: "off" })
+    );
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-none")).toHaveTextContent(
+      "track:stop.place.suggestionsOff"
+    );
+  });
+
+  it("with stay suggestions off a known place is still offered to accept", async () => {
+    legsApi.stopIdentity.mockResolvedValue(
+      identity({
+        probable: { name: "Home", source: "known", photoSupported: false },
+        known: [{ name: "Home", kind: "place", distanceM: 20, lat: 52.5, lon: 13.4 }],
+        candidates: [],
+        candidatesState: "empty",
+        lookup: "off",
+      })
+    );
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-accept")).toBeInTheDocument();
+  });
 });

@@ -77,6 +77,8 @@ export interface TravTrackStopIdentity {
   geocoder: LookupState;
   candidates: TravTrackStopCandidate[];
   candidatesState: LookupState;
+  /** `off`: stay suggestions are switched off; only the owner's own places were asked. Absent on older servers. */
+  lookup?: "on" | "off";
 }
 
 export interface AcceptedStopPlace {

@@ -123,7 +123,14 @@
         "upload": "Upload: {{status}}",
         "network": "kein Netz",
         "permission": "Standortzugriff: {{status}}",
-        "autoPause": "iOS durfte die Aufzeichnung automatisch anhalten (Auto-Pause) – das ist hier die wahrscheinlichste Ursache, die App erfährt davon aber nichts"
+        "autoPause": "iOS durfte die Aufzeichnung automatisch anhalten (Auto-Pause) – das ist hier die wahrscheinlichste Ursache, die App erfährt davon aber nichts",
+        "stopPlan": "Die App hat die Aufzeichnung selbst beendet (Plan, {{where}}). Urteile: Flug {{flight}}, Reise {{trip}}, Alltag {{everyday}}. Standortzugriff erlaubt: {{allowed}}, Alltag-Schalter: {{enabled}}, Alltag läuft: {{armed}}, Serverentscheidung: {{decision}}.",
+        "stopOther": "Die Aufzeichnung wurde beendet von: {{reason}}",
+        "stopForeground": "App im Vordergrund",
+        "stopBackground": "App im Hintergrund",
+        "yes": "ja",
+        "no": "nein",
+        "unknown": "unbekannt"
       },
       "dropReason": {
         "interval": "Intervall",
@@ -728,6 +735,7 @@
       "accepted": "{{name}}",
       "distance": "{{m}} m entfernt",
       "none": "Kein Name gefunden.",
+      "suggestionsOff": "Aufenthaltsvorschläge sind in den Einstellungen aus, darum wird nichts im Internet nachgeschlagen.",
       "unavailable": "Der Ortsdienst ist gerade nicht erreichbar – kein Vorschlag möglich.",
       "failed": "Der Vorschlag konnte nicht geladen werden.",
       "retry": "Erneut versuchen",

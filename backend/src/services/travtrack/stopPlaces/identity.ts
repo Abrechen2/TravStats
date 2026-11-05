@@ -43,6 +43,11 @@ export type StopIdentity = Omit<StayIdentity, "probable" | "placeTypeAvailable">
   } | null;
   /** The owner's own places and lodgings near the anchor, nearest first. */
   known: KnownPlace[];
+  /**
+   * `off`: the account's stay-suggestions switch is off, so only `known` was asked and no
+   * geocoder, Immich or photo lookup ran. An older client that ignores it reads an empty answer.
+   */
+  lookup: "on" | "off";
 };
 
 const LAT_DEG = KNOWN_PLACE_M / 111_000;
@@ -86,6 +91,23 @@ export async function stopIdentityFor(
   stop: { lat: number; lon: number; fromMs: number; untilMs: number }
 ): Promise<StopIdentity> {
   const switches = await readSuggestionSwitches(userId);
+  if (!switches.staySuggestionsEnabled) {
+    // The switch stops the WORK (forgejo#306): the owner's own rows are not a suggestion
+    // engine and cost no outbound call, so they still answer; nothing else is asked.
+    const known = await knownNear(userId, stop);
+    return {
+      lat: stop.lat,
+      lon: stop.lon,
+      probable: known[0] ? { name: known[0].name, source: "known", photoSupported: false } : null,
+      address: null,
+      geocoder: "empty",
+      candidates: [],
+      candidatesState: "empty",
+      photos: { state: "off", count: 0, cities: [], truncated: false },
+      known,
+      lookup: "off",
+    };
+  }
   const [known, view] = await Promise.all([
     knownNear(userId, stop),
     stayIdentityView(
@@ -104,5 +126,5 @@ export async function stopIdentityFor(
   const probable: StopIdentity["probable"] = known[0]
     ? { name: known[0].name, source: "known", photoSupported: false }
     : view.probable;
-  return { lat: stop.lat, lon: stop.lon, ...view, probable, known };
+  return { lat: stop.lat, lon: stop.lon, ...view, probable, known, lookup: "on" };
 }
