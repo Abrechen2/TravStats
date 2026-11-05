@@ -153,6 +153,35 @@ export const tripsApi = {
   },
 
   /**
+   * Every trip, a page of 500 (the endpoint's cap) at a time. `getAll` stops at
+   * the cap without saying so; the spreadsheet export needs the whole set.
+   */
+  getEvery: async (): Promise<Trip[]> => {
+    const PAGE = 500;
+    const trips: Trip[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await api.get<{ trips: Trip[]; total?: number }>("/trips", {
+        params: { limit: PAGE, offset },
+      });
+      trips.push(...data.trips);
+      if (data.trips.length < PAGE || trips.length >= (data.total ?? 0)) return trips;
+    }
+  },
+
+  /** Every booking the user owns, trip or none, page by page (spreadsheet export). */
+  listEveryBooking: async (): Promise<Booking[]> => {
+    const PAGE = 500;
+    const bookings: Booking[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await api.get<{ bookings: Booking[]; total: number }>("/trips/bookings", {
+        params: { limit: PAGE, offset },
+      });
+      bookings.push(...data.bookings);
+      if (data.bookings.length < PAGE || bookings.length >= data.total) return bookings;
+    }
+  },
+
+  /**
    * Same list, plus the uncapped cross-trip cost superlative
    * (`mostExpensiveTrip`). A SEPARATE call from `getAll` on purpose: every
    * other caller of `/trips` (StayEditor, PlaceDetailPage, FlightsTablePage,

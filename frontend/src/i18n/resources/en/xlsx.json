@@ -5,7 +5,7 @@
     "running": "Building the file …",
     "failed": "The export failed.",
     "empty": "There is nothing to export.",
-    "description": "The editable Excel spreadsheet contains travel entries from supported areas, including bus journeys – a sheet per area, with an ID column for editing and reimporting. Standalone notes, photos, documents and settings are not included. For a full backup, use the instance backup under Administration → Backups; ask your administrator if you do not have access."
+    "description": "The editable Excel spreadsheet contains travel entries from supported areas, including bus journeys – a sheet per area, with an ID column for editing and reimporting. Trips, bookings, place lists and documents are included as read-only overviews (documents as a list only, without the files). Standalone notes, photos and settings are not included. For a full backup, use the instance backup under Administration → Backups; ask your administrator if you do not have access."
   },
   "sheets": {
     "flights": "Flights",
@@ -24,7 +24,11 @@
     "roadtripExpenses": "Roadtrip costs",
     "rental": "Rental cars",
     "bus": "Bus rides",
-    "ferry": "Ferry crossings"
+    "ferry": "Ferry crossings",
+    "bookings": "Bookings",
+    "placeLists": "Place lists",
+    "placeListEntries": "List entries",
+    "documents": "Documents"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
@@ -42,7 +46,12 @@
     "roadtripExpenses": "One cost per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets — without an ID, the name before it counts. Kind: ferry, toll, pitch, fuel, charging, parking, transport, food, groceries, activity, shopping, fees or other. Amount and currency (an ISO code such as EUR, NOK) are required; amounts in different currencies are never added together. Station OR leg from/to — never both; a station that cannot be found is left out, the cost stays. An empty cell keeps the stored value.",
     "rental": "One row per rental. Do not change the id in column A – it ties the row back to its rental on import; without an id a rental is recognised by provider and booking number (else pickup station and day) instead of duplicated. Times in the station's local time; precision \"day\" means only the day is known. Empty cells stay unknown, never 0. The deposit never counts as a cost.",
     "bus": "One row per bus ride. A row carrying the id of one of your rides changes it; without an id — or with an id from another account — a new one is created, unless one already has the same stops and departure day. Times are in each stop's local time. Every stop needs its latitude and longitude, as there is no stop catalogue. Kind: intercity, shuttle or other; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket. Source: great_circle = straight line, route = routed road, user = per ticket. A routed road stays with the ride as long as its stops do not change; changing a stop returns the straight line, and the road is routed again in the logbook.",
-    "ferry": "One row per ferry crossing. A row carrying the id of one of your crossings changes it; without an id – or with an id from another account – a new one is created, unless one already has the same ports and departure day. Times are in each port's local time. Every port needs its latitude and longitude, as there is no port catalogue. Status: only cancelled is set, the rest follows from the times. The distance is measured again – unless \"Source\" says user, the figure from the ticket. A link to a roadtrip leg is not in the file and stays as it is."
+    "ferry": "One row per ferry crossing. A row carrying the id of one of your crossings changes it; without an id – or with an id from another account – a new one is created, unless one already has the same ports and departure day. Times are in each port's local time. Every port needs its latitude and longitude, as there is no port catalogue. Status: only cancelled is set, the rest follows from the times. The distance is measured again – unless \"Source\" says user, the figure from the ticket. A link to a roadtrip leg is not in the file and stays as it is.",
+    "trips": "One row per trip. Read-only – trips are edited in the app; this sheet is skipped when the file is imported again.",
+    "bookings": "One row per booking (package or combined booking), with or without a trip. Read-only – this sheet is skipped when the file is imported again. Deadlines in local time.",
+    "placeLists": "One row per place list. Read-only – this sheet is skipped when the file is imported again.",
+    "placeListEntries": "One row per place in a list, in list order. Read-only – this sheet is skipped when the file is imported again.",
+    "documents": "One row per stored document – details only (name, kind, size, linked entry), never the file itself. Read-only – this sheet is skipped when the file is imported again."
   },
   "columns": {
     "id": "ID",
@@ -234,7 +243,36 @@
       "cabinType": "Cabin",
       "fareClass": "Fare",
       "ticketReference": "Ticket number"
-    }
+    },
+    "tripOrigin": "Origin",
+    "tripDestination": "Destination",
+    "countries": "Countries",
+    "summary": "Summary",
+    "bookingOperator": "Operator",
+    "travellers": "Travellers",
+    "bookedOn": "Booked on",
+    "freeCancellationLocal": "Free cancellation until (local time)",
+    "freeCancellationZone": "Cancellation deadline time zone",
+    "freeCancellationOn": "Free cancellation until (day)",
+    "paymentDue": "Payment due on",
+    "description": "Description",
+    "color": "Colour",
+    "icon": "Icon",
+    "checklist": "Checklist",
+    "placeCount": "Places",
+    "visitedCount": "Visited",
+    "countryCount": "Countries",
+    "placeList": "List",
+    "position": "Position",
+    "addedOn": "Added on",
+    "documentKind": "Kind",
+    "documentFormat": "Format",
+    "sizeBytes": "Size (bytes)",
+    "issuedOn": "Issued on",
+    "entryType": "Linked to (type)",
+    "entryId": "Linked to (ID)",
+    "documentSource": "Source",
+    "filedOn": "Filed on"
   },
   "import": {
     "title": "Excel import",

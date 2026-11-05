@@ -32,6 +32,19 @@ import {
   type PlaceVisitRow,
 } from "./sheets";
 import { buildWorkbookBlob, sheet, type AnySheetData } from "./workbook";
+import type { Trip } from "../../types";
+import type { Booking } from "../../types/booking";
+import type { PlaceList } from "../../types/placeList";
+import type { TravelDocument } from "../api/documents";
+import {
+  bookingRows,
+  bookingSheet,
+  documentSheet,
+  placeListEntryRows,
+  placeListEntrySheet,
+  placeListSheet,
+  tripSheet,
+} from "./overviewSheets";
 import {
   roadtripRows,
   roadtripSheet,
@@ -60,6 +73,13 @@ export interface ExportInput {
   /** Only passed when the rental domain is visible (the user's choice), forgejo#267. */
   rentals?: readonly RentalBooking[];
   roadtrips?: readonly RoadtripDetail[];
+  /** Read-only overview sheets: not imported back, see `overviewSheets.ts`. */
+  trips?: readonly Trip[];
+  bookings?: readonly Booking[];
+  /** Only passed when the places domain is on; each list carries its entries. */
+  placeLists?: readonly PlaceList[];
+  /** Metadata only, never file bytes. */
+  documents?: readonly TravelDocument[];
   /** Day tours only — a roadtrip is on its own sheet. Each carries its points
    *  when the caller fetched them; without, the points sheet is left out. */
   tours?: readonly TourWithPoints[];
@@ -174,6 +194,20 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
   if (ferry.length > 0) sheets.push(sheet(ferrySheet(t), ferry));
   const rentals = input.rentals ?? [];
   if (rentals.length > 0) sheets.push(sheet(rentalSheet(t), rentals));
+
+  // Overviews last: they describe the logbook, they are not entries to edit.
+  const trips = input.trips ?? [];
+  if (trips.length > 0) sheets.push(sheet(tripSheet(t), trips));
+  const bookings = input.bookings ?? [];
+  if (bookings.length > 0) sheets.push(sheet(bookingSheet(t), bookingRows(bookings, trips)));
+  const placeLists = input.placeLists ?? [];
+  if (placeLists.length > 0) {
+    sheets.push(sheet(placeListSheet(t), placeLists));
+    const entries = placeListEntryRows(placeLists);
+    if (entries.length > 0) sheets.push(sheet(placeListEntrySheet(t), entries));
+  }
+  const documents = input.documents ?? [];
+  if (documents.length > 0) sheets.push(sheet(documentSheet(t), documents));
 
   return sheets;
 }

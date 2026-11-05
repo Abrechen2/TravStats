@@ -11,6 +11,8 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
   documentDtoSchema,
+  documentListQuerySchema,
+  documentListResponseSchema,
   documentLimitsSchema,
   documentUploadFieldsObject,
   extractValuesBodySchema,
@@ -76,6 +78,24 @@ registry.registerPath({
     200: {
       description: "Unfiled documents, newest first, with the TTL they are subject to",
       content: json(envelope(unfiledDocuments)),
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents",
+  summary: "Every document you own, metadata only, paged",
+  description:
+    "Filed or not, oldest first. No file bytes — those are `GET /documents/{id}/file`. `total` " +
+    "is the whole count, so a client walking `limit`/`offset` knows when it has all of them. " +
+    "The spreadsheet export reads this.",
+  tags,
+  request: { query: documentListQuerySchema },
+  responses: {
+    200: {
+      description: "One page of documents and the total",
+      content: json(envelope(documentListResponseSchema)),
     },
   },
 });

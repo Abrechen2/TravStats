@@ -63,6 +63,34 @@ const deleted = { description: "Deleted" };
 const notFound = { description: "Not found", content: errorContent };
 const badInput = { description: "Invalid input", content: errorContent };
 
+const bookingList = z.object({
+  bookings: z.array(booking),
+  total: z.number().int().describe("Every booking the caller owns, not just this page"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/bookings",
+  summary: "List your bookings, paged",
+  description:
+    "Every booking the caller owns, trip or none, oldest first. `total` is the whole count, " +
+    "so a client walking `limit`/`offset` knows when it has all of them. The spreadsheet " +
+    "export reads this.",
+  tags: ["Trips"],
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(500).optional(),
+      offset: z.coerce.number().int().min(0).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "One page of bookings",
+      content: { "application/json": { schema: bookingList } },
+    },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/trips/bookings",

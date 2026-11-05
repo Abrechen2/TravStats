@@ -42,6 +42,13 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: (d: string) => d === "flight" }),
 }));
 
+vi.mock("../../../lib/api/trips", () => ({
+  tripsApi: { getEvery: vi.fn(async () => []), listEveryBooking: vi.fn(async () => []) },
+}));
+vi.mock("../../../lib/api/documents", () => ({
+  documentsApi: { listEvery: vi.fn(async () => []) },
+}));
+vi.mock("../../../lib/api/placeLists", () => ({ listPlaceLists: vi.fn(async () => []) }));
 import SpreadsheetSection from "../SpreadsheetSection";
 
 /** The server: `limit` capped at 500 whatever is asked, `total` the truth. */

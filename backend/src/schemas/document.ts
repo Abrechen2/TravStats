@@ -177,6 +177,17 @@ export const unfiledDocumentsResponseSchema = z.object({
   documents: z.array(unfiledDocumentDtoSchema),
 });
 
+/** `GET /documents` — one page of the caller's own documents. */
+export const documentListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(500),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const documentListResponseSchema = z.object({
+  documents: z.array(documentDtoSchema),
+  total: z.number().int().describe("Every document the caller owns, not just this page"),
+});
+
 export const documentLimitsSchema = z.object(
   Object.fromEntries(DOCUMENT_FORMATS.map((f) => [f, z.number().int()])) as Record<
     (typeof DOCUMENT_FORMATS)[number],
