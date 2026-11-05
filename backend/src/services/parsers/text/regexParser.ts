@@ -60,6 +60,15 @@ export function segmentHasEvidence(f: ParsedBooking): boolean {
 }
 
 /**
+ * Several legs of which some carry no flight number: without a number nothing
+ * ties a route to its time, so the pairing is positional and unreliable. Shared
+ * by {@link documentDefect} and the user-template path in `email.ts`.
+ */
+export function hasRouteOnlyLegsInMultiLegDocument(flights: ParsedBooking[]): boolean {
+  return flights.length > 1 && flights.some((f) => !f.flightNumber);
+}
+
+/**
  * Why a document is declined whole, or null when it stands. For one leg this
  * is just {@link segmentHasEvidence}; the other checks need two legs.
  *
@@ -87,7 +96,7 @@ export function documentDefect(flights: ParsedBooking[]): string | null {
 
   const shapes = new Set(flights.map(routeShape));
   if (shapes.has("complete") && shapes.has("absent")) return "mixed_routed_and_routeless_legs";
-  if (flights.length > 1 && flights.some((f) => !f.flightNumber)) {
+  if (hasRouteOnlyLegsInMultiLegDocument(flights)) {
     return "route_only_legs_in_multi_leg_document";
   }
 
