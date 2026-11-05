@@ -672,6 +672,33 @@
       "label": "Art des Aufenthalts",
       "visit": "Übernachtung außerhalb eines Transitorts",
       "transit": "Reiner Zwischenstopp, z. B. Raststätte"
+    },
+    "nightsTotal_one": "{{count}} Nacht an {{places}} Orten",
+    "nightsTotal_other": "{{count}} Nächte an {{places}} Orten",
+    "nightsApprox": "Mindestens so viele – bei manchen Stationen fehlen Daten oder die Unterkunft ist nicht geladen.",
+    "nightsChip_one": "{{count}} Nacht",
+    "nightsChip_other": "{{count}} Nächte",
+    "nightsChipApprox_one": "≈ {{count}} Nacht",
+    "nightsChipApprox_other": "≈ {{count}} Nächte",
+    "mapAdd": {
+      "arm": "Station per Karte hinzufügen",
+      "armed": "Auf die Karte tippen … (abbrechen)",
+      "hint": "Tippe auf die Karte, wo die Station liegt. Der Name wird zum Punkt gesucht.",
+      "failed": "Der Name zu diesem Punkt konnte nicht ermittelt werden (Ortssuche nicht erreichbar). Die Station liegt auf dem Punkt – gib den Namen selbst ein.",
+      "noName": "An diesem Punkt gibt es keinen benannten Ort. Die Station liegt auf dem Punkt – gib den Namen selbst ein."
+    },
+    "legMode": {
+      "label": "Verkehrsmittel der Etappe",
+      "road": "Straße",
+      "ferry": "Fähre",
+      "protected": "Diese Etappe folgt einer Aufzeichnung oder gezeichneten Linie – das Verkehrsmittel ändern öffnet den Etappen-Dialog.",
+      "failed": "Das Verkehrsmittel konnte nicht gespeichert werden.",
+      "routeFailed": "Verkehrsmittel gespeichert, aber die Strecke konnte nicht neu berechnet werden – die Etappe ist jetzt eine Luftlinie."
+    },
+    "leaveGuard": {
+      "title": "Nicht gespeicherte Änderungen",
+      "message": "Einige Änderungen sind noch nicht auf dem Server gespeichert. Wenn du die Seite verlässt, bleiben sie nur in diesem Browser.",
+      "confirm": "Seite verlassen"
     }
   },
   "legDialog": {
