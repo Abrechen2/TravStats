@@ -93,10 +93,8 @@ A BOOKING object has these fields:
 - type: what KIND of place this is — "hotel", "campsite", "guesthouse",
   "apartment" or "hostel". Judge it from the name and the text (a KOA or
   "Campingplatz" is a campsite, a "Ferienwohnung" an apartment). Default "hotel".
-- chainName: the hotel GROUP behind the brand, if any — "Courtyard by Marriott"
-  -> "Marriott", "Hampton by Hilton" -> "Hilton", "Novotel"/"ibis"/"Mercure" ->
-  "Accor", "Holiday Inn"/"Garner" -> "IHG", "Park Inn" -> "Radisson". null for an
-  independent house.
+- chainName: the hotel GROUP behind the brand, if the text names one, else null.
+  Never guess a group from the house name alone; null for an independent house.
 
 EXAMPLE OUTPUT:
 {"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983","type":"hotel","chainName":null}]}`;
