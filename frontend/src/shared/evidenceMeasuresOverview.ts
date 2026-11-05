@@ -43,4 +43,5 @@ export const OVERVIEW_MEASURES: Record<string, MeasureSpec> = {
   recordLongestRailRide: record("km"),
   recordLongestRental: record("days"),
   recordLongestBusRide: record("km"),
+  recordLongestFerryCrossing: record("km"),
 };

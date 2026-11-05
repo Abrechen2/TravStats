@@ -9,10 +9,11 @@ export type DomainRecordId =
   | "longest-roadtrip"
   | "longest-rail-ride"
   | "longest-rental"
-  | "longest-bus-ride";
+  | "longest-bus-ride"
+  | "longest-ferry-crossing";
 
 export interface DomainRecord {
-  domain: "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "bus";
+  domain: "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "bus" | "ferry";
   /** A slug, not copy. */
   id: DomainRecordId;
   value: number;

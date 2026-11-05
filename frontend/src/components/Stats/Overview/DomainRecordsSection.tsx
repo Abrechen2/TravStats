@@ -34,6 +34,7 @@ const DOMAIN_RECORD_EVIDENCE_KEYS: Record<DomainRecordId, string> = {
   "longest-rail-ride": "recordLongestRailRide",
   "longest-rental": "recordLongestRental",
   "longest-bus-ride": "recordLongestBusRide",
+  "longest-ferry-crossing": "recordLongestFerryCrossing",
 };
 
 export default function DomainRecordsSection(): JSX.Element | null {
