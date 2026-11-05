@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { loadVisibleDomains } from "../domainVisibility";
 import type { CompanionUseKind } from "./companionJoins";
 import { countriesTogether } from "./companionCountries";
+import { firstAndLastJourney, sharedFlightKm, type CompanionJourney } from "./companionJourneys";
 import { daysTogether, loadTogether } from "./companionTogether";
 
 /** One companion's figures on the statistics overview, all time. */
@@ -17,6 +18,11 @@ export interface CompanionTogetherRow {
   /** Countries visited together (the passport's rule); null where nothing could prove one. */
   countries: number | null;
   lastTogether: string | null;
+  /** Kilometres of the shared flights with a known distance; null when none has one. */
+  flightKm: number | null;
+  /** The shared journey that began it / ended the latest; null with no dated entry. */
+  firstJourney: CompanionJourney | null;
+  lastJourney: CompanionJourney | null;
 }
 
 /**
@@ -33,13 +39,17 @@ export async function companionTogetherStats(
     prisma.companion.findMany({ where: { userId }, select: { id: true, displayName: true } }),
   ]);
   const shared = new Map([...byCompanion].filter(([, entries]) => entries.length > 0));
-  const countries = await countriesTogether(userId, shared);
+  const [countries, flightKm] = await Promise.all([
+    countriesTogether(userId, shared),
+    sharedFlightKm(userId, shared),
+  ]);
   const nameOf = new Map(names.map((n) => [n.id, n.displayName]));
   const companions = [...shared].flatMap(([id, entries]) => {
     const name = nameOf.get(id);
     if (name === undefined) return [];
     const days = daysTogether(entries);
     const codes = countries.get(id)?.codes ?? null;
+    const { first, last } = firstAndLastJourney(entries, kinds);
     return [
       {
         id,
@@ -51,6 +61,9 @@ export async function companionTogetherStats(
         days: days.length,
         countries: codes === null ? null : codes.length,
         lastTogether: days.length > 0 ? days[days.length - 1] : null,
+        flightKm: flightKm.get(id) ?? null,
+        firstJourney: first,
+        lastJourney: last,
       },
     ];
   });

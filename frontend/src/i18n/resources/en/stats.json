@@ -1503,6 +1503,20 @@
     "countries_one": "{{value}} country together",
     "countries_other": "{{value}} countries together",
     "countriesUnknown": "Countries: cannot be told from shared trips and rental cars alone",
+    "flightKm": "{{value}} km flown together",
+    "flightKmUnknown": "Flight km: no shared flight with a known distance",
+    "firstJourney": "First journey together",
+    "lastJourney": "Latest journey together",
+    "journeyKind": {
+      "flight": "Flight",
+      "trip": "Trip",
+      "cruise": "Cruise",
+      "lodging": "Stay",
+      "rail": "Train ride",
+      "bus": "Bus ride",
+      "ferry": "Ferry crossing",
+      "rental": "Rental car"
+    },
     "showAll": "Show all {{count}}",
     "showTop": "Show only the first {{count}}",
     "help": {

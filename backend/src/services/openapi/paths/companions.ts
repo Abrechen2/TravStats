@@ -114,6 +114,13 @@ registry.registerPath({
   },
 });
 
+const journey = z.object({
+  day: z.string(),
+  kind: useKind,
+  id: z.string(),
+  href: z.string().nullable(),
+});
+
 registry.registerPath({
   method: "get",
   path: "/companions/together",
@@ -121,7 +128,10 @@ registry.registerPath({
   description:
     "Per companion, all time: shared entries that have happened (per kind), distinct days " +
     "together and countries visited together by the passport's visited rule — `null` where no " +
-    "shared entry could prove a country. Paying an expense is not travelling together.",
+    "shared entry could prove a country. `flightKm` sums the shared flights with a known " +
+    "distance (null when none has one); `firstJourney`/`lastJourney` name the shared entry " +
+    "(not a trip, unless nothing else is dated) that began / ended the latest. Paying an " +
+    "expense is not travelling together.",
   tags: ["Companions"],
   responses: {
     200: {
@@ -139,6 +149,9 @@ registry.registerPath({
                 days: z.number().int(),
                 countries: z.number().int().nullable(),
                 lastTogether: z.string().nullable(),
+                flightKm: z.number().int().nullable(),
+                firstJourney: journey.nullable(),
+                lastJourney: journey.nullable(),
               })
             ),
           }),

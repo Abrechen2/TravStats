@@ -42,6 +42,14 @@ export interface CompanionMergePreview {
   allowed: boolean;
 }
 
+/** A shared entry named by the first / last journey; `href` is the editable record. */
+export interface CompanionJourney {
+  day: string;
+  kind: CompanionUseKind;
+  id: string;
+  href: string | null;
+}
+
 /** One row of "Mit wem unterwegs", all time. */
 export interface CompanionTogether {
   id: string;
@@ -52,6 +60,10 @@ export interface CompanionTogether {
   /** null: no shared entry could prove a country — not zero. */
   countries: number | null;
   lastTogether: string | null;
+  /** Km of the shared flights with a known distance; null when none has one, never 0. */
+  flightKm: number | null;
+  firstJourney: CompanionJourney | null;
+  lastJourney: CompanionJourney | null;
 }
 
 const enc = encodeURIComponent;

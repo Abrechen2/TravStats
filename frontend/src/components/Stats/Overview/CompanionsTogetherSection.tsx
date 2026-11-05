@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import {
   companionsApi,
+  type CompanionJourney,
   type CompanionTogether,
   type CompanionUseKind,
 } from "../../../lib/api/companions";
@@ -199,6 +201,48 @@ function CompanionRow({
           )
         )}
       </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        {row.flightKm === null ? (
+          <span style={{ color: "var(--text-muted)" }}>{t(`${NS}.flightKmUnknown`)}</span>
+        ) : (
+          <span data-testid={`companion-km-${row.id}`}>
+            {t(`${NS}.flightKm`, { value: row.flightKm.toLocaleString(locale) })}
+          </span>
+        )}
+        <JourneyLink label={t(`${NS}.firstJourney`)} journey={row.firstJourney} locale={locale} />
+        <JourneyLink label={t(`${NS}.lastJourney`)} journey={row.lastJourney} locale={locale} />
+      </div>
     </li>
+  );
+}
+
+/** "Erste gemeinsame Reise: 1. Mai 2025 · Flug" — a link to the record that proves it. */
+function JourneyLink({
+  label,
+  journey,
+  locale,
+}: {
+  label: string;
+  journey: CompanionJourney | null;
+  locale: string;
+}): JSX.Element | null {
+  const { t } = useTranslation(["stats"]);
+  if (journey === null) return null;
+  const date = new Date(`${journey.day}T00:00:00Z`).toLocaleDateString(locale, {
+    timeZone: "UTC",
+    dateStyle: "medium",
+  });
+  const text = `${date} · ${t(`${NS}.journeyKind.${journey.kind}`)}`;
+  return (
+    <span data-testid={`journey-${journey.kind}-${journey.id}`}>
+      <span style={{ color: "var(--text-muted)" }}>{label}: </span>
+      {journey.href ? (
+        <Link to={journey.href} className="underline underline-offset-2">
+          {text}
+        </Link>
+      ) : (
+        text
+      )}
+    </span>
   );
 }

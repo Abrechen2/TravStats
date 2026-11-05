@@ -4,6 +4,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
+import { haversineKm } from "../../shared/geo/haversine";
 import { setClockForTests } from "../../shared/time/clock";
 import { makeFullTrip, type TestAccount } from "./sharingFixtures";
 
@@ -256,5 +257,80 @@ describe("companions — travelled together", () => {
     } finally {
       setClockForTests(null);
     }
+  });
+
+  // Extension: shared flight km and the first / last shared journey.
+  it("sums the shared flights' km (stored first, great circle second) and names first and last journey", async () => {
+    const res = await together(anna);
+    const ben = res.body.companions.find((c: { id: string }) => c.id === benId);
+    // 1900 stored on the outbound; the flight home has only coordinates; the planned one is out.
+    const home = haversineKm({ lat: 41.2481, lon: -8.6814 }, { lat: 50.0379, lon: 8.5622 });
+    expect(ben.flightKm).toBe(Math.round(1900 + home));
+    // Journeys are not the umbrella trip: the first is the outbound flight, the last the flight home.
+    expect(ben.firstJourney).toMatchObject({
+      day: "2025-05-01",
+      kind: "flight",
+      id: full.flight.id,
+    });
+    expect(ben.lastJourney).toMatchObject({ day: "2025-05-08", kind: "flight" });
+    expect(ben.lastJourney.id).not.toBe(full.flight.id);
+    expect(ben.lastJourney.href).toEqual(expect.any(String));
+    expect(ben.lastTogether).toBe("2025-05-08");
+  });
+
+  it("answers null, not 0, for km where no shared flight has a distance, and falls back to the trip", async () => {
+    const dana = await companion(anna.id, "Dana");
+    await prisma.tripCompanion.create({
+      data: { tripId: full.trip.id, companionId: dana.id, position: 1 },
+    });
+    // Hal: a flown flight whose airports have no coordinates and no stored distance.
+    const hal = await companion(anna.id, "Hal");
+    const blind = await prisma.flight.create({
+      data: {
+        userId: anna.id,
+        depIata: "XXX",
+        depLat: 0,
+        depLon: 0,
+        arrIata: "YYY",
+        arrLat: 0,
+        arrLon: 0,
+        departureTime: new Date("2025-04-01T08:00:00.000Z"),
+        depTimezone: "UTC",
+        arrTimezone: "UTC",
+        depPrecision: "minute",
+        arrPrecision: "minute",
+        status: "flown",
+      },
+    });
+    await prisma.flightCompanion.create({
+      data: { flightId: blind.id, companionId: hal.id, position: 0 },
+    });
+    const res = await together(anna);
+    const find = (id: string) => res.body.companions.find((c: { id: string }) => c.id === id);
+    expect(find(dana.id).flightKm).toBeNull();
+    expect(find(dana.id).firstJourney).toMatchObject({ kind: "trip", id: full.trip.id });
+    expect(find(hal.id).flightKm).toBeNull();
+    expect(find(hal.id).entries).toBe(1);
+  });
+
+  it("picks first and last across two domains: a train, then a flight", async () => {
+    const gus = await companion(anna.id, "Gus");
+    await prisma.railJourneyCompanion.create({
+      data: { railJourneyId: full.rail.id, companionId: gus.id, position: 1 },
+    });
+    const flightHome = await prisma.flightCompanion.findFirst({
+      where: { companionId: benId, NOT: { flightId: full.flight.id }, flight: { status: "flown" } },
+    });
+    await prisma.flightCompanion.create({
+      data: { flightId: flightHome!.flightId, companionId: gus.id, position: 1 },
+    });
+    const res = await together(anna);
+    const row = res.body.companions.find((c: { id: string }) => c.id === gus.id);
+    expect(row.firstJourney).toMatchObject({ kind: "rail", id: full.rail.id });
+    expect(row.lastJourney).toMatchObject({
+      kind: "flight",
+      id: flightHome!.flightId,
+      day: "2025-05-08",
+    });
   });
 });

@@ -1503,6 +1503,20 @@
     "countries_one": "{{value}} Land zusammen",
     "countries_other": "{{value}} Länder zusammen",
     "countriesUnknown": "Länder: aus gemeinsamen Reisen und Mietwagen allein nicht ableitbar",
+    "flightKm": "{{value}} km gemeinsam geflogen",
+    "flightKmUnknown": "Flugkilometer: keine gemeinsame Strecke mit bekannter Entfernung",
+    "firstJourney": "Erste gemeinsame Reise",
+    "lastJourney": "Letzte gemeinsame Reise",
+    "journeyKind": {
+      "flight": "Flug",
+      "trip": "Reise",
+      "cruise": "Kreuzfahrt",
+      "lodging": "Aufenthalt",
+      "rail": "Zugfahrt",
+      "bus": "Busfahrt",
+      "ferry": "Fährfahrt",
+      "rental": "Mietwagen"
+    },
     "showAll": "Alle {{count}} anzeigen",
     "showTop": "Nur die ersten {{count}} anzeigen",
     "help": {
