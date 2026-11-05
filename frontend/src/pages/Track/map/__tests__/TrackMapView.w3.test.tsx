@@ -252,4 +252,13 @@ describe("TrackMapView W3", () => {
     expect(screen.queryByTestId("track-point-inspector")).not.toBeInTheDocument();
     expect(screen.getByTestId("track-leg-card")).toBeInTheDocument();
   });
+
+  it("picking another leg while a point is open shows the leg, not the stale point", async () => {
+    await pickLeg();
+    fireEvent.click(screen.getByRole("button", { name: "pick-point" }));
+    expect(screen.getByTestId("track-point-inspector")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "pick-line" }));
+    expect(screen.queryByTestId("track-point-inspector")).not.toBeInTheDocument();
+    expect(screen.getByTestId("track-leg-card")).toBeInTheDocument();
+  });
 });

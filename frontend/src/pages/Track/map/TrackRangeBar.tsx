@@ -141,7 +141,7 @@ export default function TrackRangeBar({
         padding: "6px 16px",
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           aria-label={t("track:map.range.previous")}

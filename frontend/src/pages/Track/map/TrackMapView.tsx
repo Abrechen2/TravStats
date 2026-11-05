@@ -302,13 +302,21 @@ export default function TrackMapView(): JSX.Element {
       ),
     [loaded, pick]
   );
+  // Choosing a leg or stop takes the detail slot from an open point or photo.
+  const choose = useCallback((next: TrackSelection | null) => {
+    if (next) {
+      setSelected(null);
+      setPhoto(null);
+    }
+    setPick(next);
+  }, []);
   const onLeg = useCallback(
-    (leg: MapLegLine) => setPick({ kind: "leg", date: leg.date, id: leg.id }),
-    []
+    (leg: MapLegLine) => choose({ kind: "leg", date: leg.date, id: leg.id }),
+    [choose]
   );
   const onStop = useCallback(
-    (stop: MapStop) => setPick({ kind: "stop", date: stop.date, fromMs: stop.fromMs }),
-    []
+    (stop: MapStop) => choose({ kind: "stop", date: stop.date, fromMs: stop.fromMs }),
+    [choose]
   );
   const entryHref =
     resolved?.kind === "leg" && resolved.leg.entryRef
@@ -352,7 +360,7 @@ export default function TrackMapView(): JSX.Element {
           ? "flight"
           : null;
   // Something new selected opens the day card again, even if the reader folded it.
-  const detailKey = `${detail ?? ""}|${legKey ?? ""}|${resolved?.kind === "stop" ? resolved.stop.fromMs : ""}`;
+  const detailKey = `${detail ?? ""}|${selected?.point[0] ?? ""}|${photo?.assetId ?? ""}|${legKey ?? ""}|${resolved?.kind === "stop" ? resolved.stop.fromMs : ""}`;
   useEffect(() => setDayFolded(null), [detailKey]);
   const fitPadding = useMemo(() => stageFitPadding(narrow, detail !== null), [narrow, detail]);
   const refit = legFramed
@@ -446,7 +454,7 @@ export default function TrackMapView(): JSX.Element {
       collapsed={layersFolded ?? narrow}
       onToggle={() => setLayersFolded(!(layersFolded ?? narrow))}
       coarse={coarse}
-      bodyStyle={{ maxHeight: "calc(100dvh - 360px)" }}
+      bodyStyle={{ maxHeight: "calc(100dvh - 440px)" }}
     >
       <TrackLayersPanel
         prefs={prefs}
@@ -466,7 +474,7 @@ export default function TrackMapView(): JSX.Element {
       flightId={flight?.id ?? null}
       onFlight={setFlight}
       selection={activePick}
-      onSelect={setPick}
+      onSelect={choose}
       onStopPlaceChanged={(date) => void data.refresh(date)}
       detail={detailView}
       collapsed={dayFolded ?? (narrow && detail === null)}
@@ -610,7 +618,7 @@ export default function TrackMapView(): JSX.Element {
         </div>
 
         {narrow ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[5] flex flex-col items-center gap-2">
+          <div className="pointer-events-none absolute inset-x-3 bottom-8 z-[5] flex flex-col items-center gap-2">
             <div className="pointer-events-auto flex w-full justify-center">{replayDock}</div>
             <div
               className="pointer-events-auto flex w-full flex-col"
