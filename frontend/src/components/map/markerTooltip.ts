@@ -16,6 +16,7 @@ import {
 import type { JourneyRouteHover, JourneyStopHover } from "./cards/journeys/journeyLayerCards";
 import type { TourCardDatum, TripStopCardDatum } from "./cards/journeys/journeyTypes";
 import { RECORDED_ROUTES_LAYER_ID } from "../layers/recordedFlightPaths";
+import { placeCategoryLabel } from "../../lib/placeCategoryDisplay";
 
 // A flat-map marker sits closer to its neighbours than a globe marker does, so
 // its tooltip wants a slightly smaller flag. That is the ONLY thing this file
@@ -432,7 +433,7 @@ function renderPlaceHtml(d: PlaceDatum, heading: string, t: TFn, locale: string)
   }
 
   const tail: string[] = [];
-  if (d.category) tail.push(t(`places:categories.${d.category}`));
+  if (d.category) tail.push(placeCategoryLabel(t, d.category));
   if (d.visited === false) tail.push(t("places:list.status.wishlist"));
   else if (visits !== null) tail.push(t("places:list.visitsCount", { count: visits }));
 

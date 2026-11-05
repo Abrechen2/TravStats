@@ -1,4 +1,3 @@
-import type { PlaceCategory } from "../../shared/placeCategories";
 import type { Place, PlaceInput } from "../../types/place";
 
 /**
@@ -12,7 +11,7 @@ export interface PlaceFormFields {
   name: string;
   /** The name on the sign, in the place's own script (forgejo#199). */
   localName: string;
-  category: PlaceCategory;
+  category: string;
   lat: number | null;
   lon: number | null;
   address: string;

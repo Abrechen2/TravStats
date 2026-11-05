@@ -34,6 +34,15 @@ vi.mock("../lib/api/entrySuggestions", async (importActual) => {
   };
 });
 
+// Every place glyph asks for the user's own place categories. Same rule as above: a test that
+// draws a place neither reaches the network nor settles a state update outside act(), so the
+// list stays pending and the built-in glyphs show. A test about the categories mocks this module.
+vi.mock("../lib/api/placeCategories", () => ({
+  listPlaceCategories: () => new Promise(() => {}),
+  createPlaceCategory: () => new Promise(() => {}),
+  deletePlaceCategory: () => new Promise(() => {}),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

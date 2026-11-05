@@ -139,6 +139,7 @@ model User {
   loyaltyMemberships        LoyaltyMembership[]
   lodgingChains             LodgingChain[]
   places                    Place[]
+  placeCategories           PlaceCategoryDef[]
   placeExternalRefs         PlaceExternalRef[]
   placeCaptures             PlaceCapture[]
   placeVisits               PlaceVisit[]
@@ -3521,6 +3522,25 @@ model LodgingMembershipLodging {
 /// Per-user, like Lodging: on a shared instance one user's list of McDonald's
 /// is nobody else's business. Curated checklist targets live in their own
 /// global tables and only become a Place once the user ticks them off.
+/// A category a user made for their own places (forgejo: poi-user-defined-categories).
+/// Stored by NAME: `Place.category` is a plain string column, and a place keeps
+/// the custom name as its value, so deleting the category never strands a
+/// place (the delete route folds its places back to "other"). Places are not
+/// shared (`DOMAIN_SHARING.poi`), so the name never has to travel.
+model PlaceCategoryDef {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  /// One of `PLACE_CATEGORY_ICON_CHOICES`; null renders the default pin glyph.
+  icon      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("place_categories")
+}
+
 model Place {
   /// Explicit transit-only location; an airport hotel name alone is not proof.
   countryVisitKind String @default("visit") @map("country_visit_kind")

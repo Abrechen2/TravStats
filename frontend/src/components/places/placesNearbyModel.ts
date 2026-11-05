@@ -1,6 +1,5 @@
 import { calculateDistance } from "../../lib/geo";
 import { classifyPlace, type PlaceCountState } from "../../shared/placeCounting";
-import type { PlaceCategory } from "../../shared/placeCategories";
 import type { Place } from "../../types/place";
 
 /** Where "nearby" is measured from — a lodging, a point on the map, or the device, once. */
@@ -15,7 +14,7 @@ export const DEFAULT_RADIUS_KM = 5;
 
 export interface NearbyFilter {
   radiusKm: number;
-  category: PlaceCategory | "all";
+  category: string;
   /** Which of the three states to show; all three by default. */
   states: ReadonlySet<PlaceCountState>;
 }

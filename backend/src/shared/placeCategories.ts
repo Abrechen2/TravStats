@@ -43,6 +43,72 @@ export const PLACE_CATEGORY_ICONS: Record<PlaceCategory, string> = {
   other: "📍",
 };
 
+/** Longest custom category name. */
+export const PLACE_CATEGORY_NAME_MAX = 40;
+
+/** The most categories one user may define. */
+export const PLACE_CATEGORY_MAX_PER_USER = 50;
+
+/**
+ * Glyphs a custom category may carry — the built-in set plus the few the
+ * request that started this named (Sportstätte, Freizeitpark, Schwimmbad).
+ * A closed list, not free text: the pin and list render the glyph as plain
+ * text, and a picker needs a finite grid.
+ */
+export const PLACE_CATEGORY_ICON_CHOICES = [
+  "📍",
+  "🍟",
+  "🏛",
+  "🌲",
+  "🖼",
+  "🎭",
+  "🛍",
+  "🔭",
+  "⛽",
+  "⚽",
+  "🏊",
+  "🎢",
+  "🏖",
+  "⛪",
+  "🏥",
+  "🎓",
+  "🏨",
+  "🚉",
+  "🎵",
+  "📚",
+] as const;
+
+/** The words the built-in categories answer to in the UI (DE and EN). A custom
+ *  name equal to one of them (or to a key) would be two categories that read
+ *  the same in a filter. */
+const BUILT_IN_CATEGORY_LABELS = [
+  "restaurant",
+  "wahrzeichen",
+  "landmark",
+  "natur",
+  "nature",
+  "museum",
+  "unterhaltung",
+  "entertainment",
+  "einkaufen",
+  "shopping",
+  "aussichtspunkt",
+  "viewpoint",
+  "raststätte/tankstelle",
+  "service area",
+  "sonstiges",
+  "other",
+];
+
+/** Whether a custom category name collides with a built-in one. */
+export function collidesWithBuiltInCategory(name: string): boolean {
+  const folded = name.trim().toLowerCase();
+  return (
+    (PLACE_CATEGORIES as readonly string[]).includes(folded) ||
+    BUILT_IN_CATEGORY_LABELS.includes(folded)
+  );
+}
+
 export function isPlaceCategory(value: unknown): value is PlaceCategory {
   return typeof value === "string" && (PLACE_CATEGORIES as readonly string[]).includes(value);
 }

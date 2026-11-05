@@ -35,6 +35,7 @@ import {
 import { CardFlights } from "./CardFlights";
 import { LocalName } from "../../places/LocalName";
 import { useQuickVisitStore } from "../../../store/quickVisitStore";
+import { placeCategoryLabel } from "../../../lib/placeCategoryDisplay";
 
 export interface BodyCommonProps {
   locale: string;
@@ -236,7 +237,7 @@ export function PlaceBody({
   return (
     <>
       <LocalName value={data.localName} block className="mb-1" testId="pinned-place-local-name" />
-      {data.category && <SubHeading>{t(`places:categories.${data.category}`)}</SubHeading>}
+      {data.category && <SubHeading>{placeCategoryLabel(t, data.category)}</SubHeading>}
       <Place city={data.city} country={resolveCountryCode(data.country)} locale={locale} />
       {/* A wishlist entry has no visit count to show — it is somewhere the
           user has NOT been, and "0 Besuche" reads as a failure rather than an

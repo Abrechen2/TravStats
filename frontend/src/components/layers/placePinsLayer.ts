@@ -7,7 +7,6 @@ import {
   type PlaceColorConfig,
 } from "../../lib/placeColor";
 import type { Rgb } from "../../lib/cruiseColor";
-import type { PlaceCategory } from "../../shared/placeCategories";
 import { markerDotRadiusProps } from "./markerDotStyle";
 import { declutterByDistance, pickLabelled, type LabelsMode } from "../map/labelPriority";
 import {
@@ -26,7 +25,7 @@ interface PlacePinDatum {
   localName: string | null;
   /** Truncated display label rendered by the name TextLayer — see `toPlaceLabel`. */
   shortLabel: string;
-  category: PlaceCategory;
+  category: string;
   city: string | null;
   /**
    * Free text, exactly as `Lodging.country` is — deliberately NOT pre-resolved

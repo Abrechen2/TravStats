@@ -39,9 +39,10 @@ import type { PlaceList } from "../types/placeList";
 import { logger } from "../lib/logger";
 import { deletePlace, listPlaces } from "../lib/api/places";
 import { useToastStore } from "../store/toastStore";
-import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { classifyPlace } from "../shared/placeCounting";
-import type { PlaceCategory } from "../shared/placeCategories";
 import type { Place } from "../types/place";
 import { useSortPrefs } from "../components/table/useSortPrefs";
 import { usePagination } from "../components/table/usePagination";
@@ -51,7 +52,7 @@ import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 import { LocalName } from "../components/places/LocalName";
 
-type CategoryFilter = PlaceCategory | "all";
+type CategoryFilter = string;
 type CountryFilter = string | "all";
 /** Tri-state on the wire; "all" means the list shows wishlist entries too, so
  *  the one view meant to contain them never hides them. */
@@ -145,6 +146,7 @@ function compareRows(a: Place, b: Place, key: PlaceSortKey, locale: string, t: T
 
 export default function PlacesListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
+  const { customs } = usePlaceCategories();
   const tableHints = useTableHints();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
@@ -514,7 +516,12 @@ export default function PlacesListPage(): JSX.Element {
                   <option value="all">{t("places:filter.allCategories")}</option>
                   {PLACE_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {t(`places:categories.${c}`)}
+                      {placeCategoryLabel(t, c)}
+                    </option>
+                  ))}
+                  {customs.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -613,14 +620,14 @@ export default function PlacesListPage(): JSX.Element {
                     cells={{
                       name: (
                         <span className="flex items-center gap-2 font-medium">
-                          <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+                          <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
                           <span className="min-w-0">
                             {p.name}
                             <LocalName value={p.localName} />
                           </span>
                         </span>
                       ),
-                      category: t(`places:categories.${p.category}`),
+                      category: placeCategoryLabel(t, p.category),
                       location: (
                         // min-w-0 + shrink-0: a long city ("Sassnitz-Stubbenkammer")
                         // wraps inside the cell instead of pushing the flag into

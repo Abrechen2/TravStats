@@ -9,6 +9,7 @@ import {
   type MergeChoices,
   type MergeGroup,
 } from "./placeMergeModel";
+import { placeCategoryLabel } from "../../lib/placeCategoryDisplay";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
@@ -43,7 +44,7 @@ export function PlaceMergeCompare({
       case "localName":
         return place.localName ?? t("places:merge.none");
       case "category":
-        return t(`places:categories.${place.category}`);
+        return placeCategoryLabel(t, place.category);
       case "position":
         return `${place.lat.toFixed(5)}, ${place.lon.toFixed(5)}`;
       case "address":

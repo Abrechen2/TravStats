@@ -20,6 +20,7 @@
   },
   "empty": "No cards yet.",
   "add": "Add card",
+  "manageAll": "Manage all loyalty programmes (Settings)",
   "loadError": "I couldn't load your cards.",
   "saveError": "The programme could not be saved.",
   "duplicateError": "A programme with this name already exists in this section.",

@@ -32,7 +32,8 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
-import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { useDisplayFormat } from "../lib/displayFormat";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
@@ -40,6 +41,7 @@ import type { Place, PlaceVisit } from "../types/place";
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation(["places", "common"]);
+  const { customs } = usePlaceCategories();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const access = usePlacesAccess();
@@ -266,7 +268,7 @@ export default function PlaceDetailPage(): JSX.Element {
         backTo="/places"
         backLabel={t("places:detail.backToLogbook")}
         domain="poi"
-        icon={PLACE_CATEGORY_ICONS[place.category]}
+        icon={placeCategoryIcon(place.category, customs)}
         title={place.name}
         // The name on the sign, under the readable one (forgejo#199).
         subtitle={
@@ -283,7 +285,7 @@ export default function PlaceDetailPage(): JSX.Element {
         status={
           <>
             <span className="ts-status-pill" style={statusPillStyle("scheduled")}>
-              {t(`places:categories.${place.category}`)}
+              {placeCategoryLabel(t, place.category)}
             </span>
             <span
               className="ts-status-pill"
@@ -391,7 +393,7 @@ export default function PlaceDetailPage(): JSX.Element {
           <DetailSection
             title={t("places:detail.masterData")}
             facts={[
-              { label: t("places:form.category"), value: t(`places:categories.${place.category}`) },
+              { label: t("places:form.category"), value: placeCategoryLabel(t, place.category) },
               { label: t("places:detail.source"), value: place.externalRef, mono: true },
             ]}
           />

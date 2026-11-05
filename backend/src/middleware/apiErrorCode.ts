@@ -113,6 +113,11 @@ export type ApiErrorCode =
    *  of the list's kind (a hotel card on the flight list). The list says the
    *  programme is gone instead of showing an unfiltered or empty page. */
   | "LOYALTY_MEMBERSHIP_NOT_FOUND"
+  | "PLACE_CATEGORY_BUILT_IN"
+  | "PLACE_CATEGORY_EXISTS"
+  | "PLACE_CATEGORY_LIMIT"
+  | "PLACE_CATEGORY_NOT_FOUND"
+  | "PLACE_CATEGORY_UNKNOWN"
   /** A workshop template was activated before its preview had run (UI: "run the preview"). */
   | "PREVIEW_REQUIRED"
   /** A `visit` photo finding was accepted with no name for the place it would

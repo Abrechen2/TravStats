@@ -9,6 +9,7 @@ import {
   saveErrorKey,
 } from "../../lib/saveErrorMessage";
 import { useTranslation } from "../../hooks/useTranslation";
+import LoyaltyManageLink from "../Loyalty/LoyaltyManageLink";
 import { useSettingsStore } from "../../store/settingsStore";
 import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
@@ -719,6 +720,9 @@ export function StayEditor({
               ))}
             </select>
           )}
+          <div className="mt-1">
+            <LoyaltyManageLink testId="stay-editor-membership-manage-link" />
+          </div>
         </StayEditorSection>
 
         <StayEditorTripSection

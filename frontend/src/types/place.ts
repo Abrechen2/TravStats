@@ -1,5 +1,4 @@
 import type { LocalTimeInput } from "../shared/time";
-import type { PlaceCategory } from "../shared/placeCategories";
 import type { PlaceVisitPhoto } from "./placeList";
 import type { VisitTimes } from "./times";
 
@@ -45,7 +44,8 @@ export interface Place {
    * none (forgejo#199). Optional: a payload from before the column omits it.
    */
   localName?: string | null;
-  category: PlaceCategory;
+  /** A built-in key or the name of one of the user's own categories. */
+  category: string;
   /** Always present — a place that cannot be drawn is not creatable. */
   lat: number;
   lon: number;
@@ -90,7 +90,8 @@ export interface PlaceInput {
   name: string;
   /** Null clears it; left out on create, a name glued from both scripts is split by the server. */
   localName?: string | null;
-  category: PlaceCategory;
+  /** A built-in key or the name of one of the user's own categories. */
+  category: string;
   lat: number;
   lon: number;
   address?: string | null;
@@ -119,7 +120,7 @@ export type PlaceSortKey = "name" | "city" | "category" | "visitCount" | "lastVi
 
 export interface PlaceListQuery {
   q?: string;
-  category?: PlaceCategory;
+  category?: string;
   country?: string;
   visited?: boolean;
   tripId?: string;

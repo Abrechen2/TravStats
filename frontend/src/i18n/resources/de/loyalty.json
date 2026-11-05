@@ -20,6 +20,7 @@
   },
   "empty": "Noch keine Karten.",
   "add": "Karte hinzufügen",
+  "manageAll": "Alle Bonusprogramme verwalten (Einstellungen)",
   "loadError": "Ich konnte deine Karten nicht laden.",
   "saveError": "Das Programm konnte nicht gespeichert werden.",
   "duplicateError": "Ein Programm mit diesem Namen ist in diesem Bereich bereits hinterlegt.",

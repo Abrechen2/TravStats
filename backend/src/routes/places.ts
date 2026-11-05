@@ -19,6 +19,7 @@ import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
 import { visitTimeColumns } from "./places/visitTime";
 import { timeErrorFromZod } from "../shared/time/errors";
 import { normaliseNamePair } from "../services/geo/gluedPlaceName";
+import { assertPlaceCategoryAllowed } from "../services/places/placeCategoryDefs";
 import { tripForVisitDay } from "../services/places/visitTrip";
 import { findPlaceIdByRef, promoteOwnAlias, refHeldElsewhere } from "../services/places/placeRefs";
 import {
@@ -372,6 +373,7 @@ async function createPlace(
   const parsed = createPlaceSchema.safeParse(body);
   if (!parsed.success) throw new AppError(parsed.error.message, 400);
   const input = parsed.data;
+  await assertPlaceCategoryAllowed(userId, input.category);
 
   // Dedup on the geocoder reference, so picking the same restaurant out of
   // search twice yields one row rather than a second pin on top of the
@@ -459,6 +461,9 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updatePlaceSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
+    if (input.category !== undefined) {
+      await assertPlaceCategoryAllowed(userId, input.category, existing.category);
+    }
 
     const data: Prisma.PlaceUpdateInput = { ...namesForUpdate(input, existing) };
     if (input.category !== undefined) data.category = input.category;

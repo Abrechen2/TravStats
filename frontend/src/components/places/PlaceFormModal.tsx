@@ -21,9 +21,12 @@ import {
   PLACE_CATEGORIES,
   PLACE_CATEGORY_ICONS,
   categoryFromOsmValue,
+  isPlaceCategory,
   placeCountsAsTransit,
-  type PlaceCategory,
 } from "../../shared/placeCategories";
+import { usePlaceCategories } from "../../hooks/usePlaceCategories";
+import { placeCategoryIcon, placeCategoryLabel } from "../../lib/placeCategoryDisplay";
+import PlaceCategoryManager from "./PlaceCategoryManager";
 import type { Place } from "../../types/place";
 import TagInput from "../TagInput";
 import {
@@ -101,7 +104,9 @@ export function PlaceFormModal({
   const initial = placeFormFields(place, initialName);
   const [name, setName] = useState(initial.name);
   const [localName, setLocalName] = useState(initial.localName);
-  const [category, setCategory] = useState<PlaceCategory>(initial.category);
+  const [category, setCategory] = useState<string>(initial.category);
+  const { customs } = usePlaceCategories();
+  const [managingCategories, setManagingCategories] = useState(false);
   const [lat, setLat] = useState<number | null>(initial.lat);
   const [lon, setLon] = useState<number | null>(initial.lon);
   const [address, setAddress] = useState(initial.address);
@@ -429,14 +434,43 @@ export function PlaceFormModal({
               id="place-form-category"
               className={INPUT_CLASS}
               value={category}
-              onChange={(e) => setCategory(e.target.value as PlaceCategory)}
+              onChange={(e) => setCategory(e.target.value)}
             >
               {PLACE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {PLACE_CATEGORY_ICONS[c]} {t(`places:categories.${c}`)}
+                  {PLACE_CATEGORY_ICONS[c]} {placeCategoryLabel(t, c)}
                 </option>
               ))}
+              {customs.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {placeCategoryIcon(c.name, customs)} {c.name}
+                </option>
+              ))}
+              {/* A place keeps a label it arrived with (an import's "food"):
+                  the select must still show it rather than silently jump. */}
+              {!isPlaceCategory(category) && !customs.some((c) => c.name === category) && (
+                <option value={category}>{category}</option>
+              )}
             </select>
+            <button
+              type="button"
+              data-testid="place-form-manage-categories"
+              aria-expanded={managingCategories}
+              className="mt-1 text-xs text-[var(--accent)] hover:underline"
+              onClick={() => setManagingCategories((v) => !v)}
+            >
+              {t("places:customCategories.manage")}
+            </button>
+            {managingCategories && (
+              <div className="mt-2">
+                <PlaceCategoryManager
+                  onCreated={setCategory}
+                  onDeleted={(deleted) =>
+                    setCategory((prev) => (prev === deleted ? "other" : prev))
+                  }
+                />
+              </div>
+            )}
           </Field>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
