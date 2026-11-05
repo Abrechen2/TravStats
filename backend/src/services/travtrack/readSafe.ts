@@ -6,7 +6,7 @@ import {
   type StoredPoint,
 } from "../tripRecording/segments";
 import { privacySafeDevices, privacySafeStretches } from "../tripRecording/privacySafe";
-import type { ZoneCircle } from "./classify";
+import { inPrivacyZone, type ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
 
 /**
@@ -82,6 +82,11 @@ export type SafeSpan = {
   circles: ZoneCircle[];
   deleted: Span[];
   paused: Array<Span & { deviceId: string; reason: string }>;
+  /**
+   * Instants of fixes the privacy cut took out (inside a zone). Internal: it tells a derivation
+   * that a silence between two stretches holds a hidden visit and must never be joined over.
+   */
+  cutAtMs?: number[];
   /** The first instant not read, or null when the span was read whole. */
   next: Date | null;
   /** The last point read, where a continuation picks up; null when read whole. */
@@ -168,7 +173,19 @@ export async function readSafeTravTrack(
   // The safe devices are already the cut; the stretches go through it once
   // more as they leave, so the output itself is what was checked.
   const segments = privacySafeStretches(rawSegments(privacySafeDevices(devices, circles)), circles);
-  return { segments, rowOf: (p) => rowByPoint.get(p), circles, deleted, paused, next, cursor };
+  const cutAtMs = [...byDevice.values()].flatMap((pts) =>
+    pts.filter((p) => inPrivacyZone({ lat: p[1], lon: p[2] }, circles)).map((p) => p[0])
+  );
+  return {
+    segments,
+    rowOf: (p) => rowByPoint.get(p),
+    circles,
+    cutAtMs,
+    deleted,
+    paused,
+    next,
+    cursor,
+  };
 }
 
 /**

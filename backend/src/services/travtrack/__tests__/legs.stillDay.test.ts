@@ -18,6 +18,7 @@ function span(fixes: Array<[number, number, number | null]>): SafeSpan {
       lat: p[1],
       lon: p[2],
       accuracyM: acc,
+      deviceId: "d",
     } as SafePointRow);
     return p;
   });
@@ -106,5 +107,32 @@ describe("travtrack: a day spent in one spot", () => {
     expect(
       stops.every((s) => s.fromMs >= DAY + 5 * 60 * MIN || s.untilMs <= DAY + 3 * 60 * MIN)
     ).toBe(true);
+  });
+
+  it("does not bridge a silence beside a privacy zone (the visit inside it is hidden)", () => {
+    const fixes = still(180);
+    const read = span(fixes);
+    read.segments = fixes.map((_, i) => [read.segments[0][i]]);
+    read.circles = [{ lat: SPOT.lat + 200 / M, lon: SPOT.lon, radiusM: 50 }];
+    const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
+    expect(stops).toEqual([]);
+  });
+
+  it("a zone visited mid-day (fixes cut out, far from the spot) is never joined over: two stops", () => {
+    const morning = still(30).filter(([t]) => t < DAY + 6 * 60 * MIN);
+    const evening = still(30).filter(([t]) => t > DAY + 12 * 60 * MIN);
+    const fixes = [...morning, ...evening];
+    const read = span(fixes);
+    const pts = read.segments[0];
+    read.segments = [
+      pts.filter((p) => p[0] < DAY + 6 * 60 * MIN),
+      pts.filter((p) => p[0] > DAY + 12 * 60 * MIN),
+    ];
+    read.circles = [{ lat: SPOT.lat + 3000 / M, lon: SPOT.lon, radiusM: 100 }];
+    read.cutAtMs = [DAY + 8 * 60 * MIN, DAY + 9 * 60 * MIN];
+    const { stops } = deriveLegs(read, { windows: [], overrides: [], stays: [] });
+    expect(stops).toHaveLength(2);
+    expect(stops[0].untilMs).toBeLessThan(DAY + 8 * 60 * MIN);
+    expect(stops[1].fromMs).toBeGreaterThan(DAY + 9 * 60 * MIN);
   });
 });

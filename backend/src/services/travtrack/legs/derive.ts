@@ -2,7 +2,7 @@ import type { EntryWindow } from "../../locationEvidence/journeys/entryWindows";
 import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import { inFlightBy } from "../months/values";
 import type { StoredPoint } from "../../tripRecording/segments";
-import { inPrivacyZone } from "../classify";
+import { distanceM, inPrivacyZone } from "../classify";
 import type { SafeSpan } from "../readSafe";
 import { classRuns, modeOfSteps, settleStill, stepClass } from "./autoMode";
 import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
@@ -271,20 +271,38 @@ function stopOf(
  * phone left and came back unseen is not knowable; both ends lie within `STEP_M` of the
  * dwell's first fix, which is the same evidence a dense dwell rests on.
  */
+/** A privacy zone this close to a stretch's end may have cut a visit out of the silence. */
+const ZONE_NEAR_M = 500;
+
 function bridgedStops(read: SafeSpan, inputs: LegInputs): Stop[] {
+  const deviceOf = (seg: readonly StoredPoint[]) => read.rowOf(seg[0])?.deviceId ?? "";
+  const nearZone = (p: StoredPoint) =>
+    read.circles.some((c) => distanceM({ lat: p[1], lon: p[2] }, c) <= c.radiusM + ZONE_NEAR_M);
   const ordered = read.segments.filter((s) => s.length > 0).sort((a, b) => a[0][0] - b[0][0]);
-  const blocked = [...read.paused, ...read.deleted];
   const chains: StoredPoint[][][] = [];
+  const open = new Map<string, StoredPoint[][]>();
   for (const seg of ordered) {
-    const chain = chains[chains.length - 1];
+    const device = deviceOf(seg);
+    const chain = open.get(device);
     const prev = chain?.[chain.length - 1];
-    const end = prev?.[prev.length - 1][0] ?? 0;
+    const tail = prev?.[prev.length - 1];
     const joins =
-      prev !== undefined &&
-      seg[0][0] - end > RECORDING_GAP_MS &&
-      !blocked.some((b) => b.fromMs < seg[0][0] && b.untilMs > end);
+      chain !== undefined &&
+      tail !== undefined &&
+      seg[0][0] - tail[0] > RECORDING_GAP_MS &&
+      !(read.cutAtMs ?? []).some((t) => t > tail[0] && t < seg[0][0]) &&
+      !nearZone(tail) &&
+      !nearZone(seg[0]) &&
+      !read.deleted.some((b) => b.fromMs < seg[0][0] && b.untilMs > tail[0]) &&
+      !read.paused.some(
+        (b) => b.deviceId === device && b.fromMs < seg[0][0] && b.untilMs > tail[0]
+      );
     if (joins) chain.push(seg);
-    else chains.push([seg]);
+    else {
+      const fresh = [seg];
+      chains.push(fresh);
+      open.set(device, fresh);
+    }
   }
   const out: Stop[] = [];
   for (const chain of chains.filter((c) => c.length > 1)) {
@@ -345,8 +363,15 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
       }
     }
   });
-  // A bridged stop replaces the stops its stretches found alone.
-  const bridged = bridgedStops(read, inputs);
+  // A bridged stop replaces the stops its stretches found alone, and spans what they covered.
+  const bridged = bridgedStops(read, inputs).map((b) => {
+    const hit = stops.filter((s) => s.fromMs < b.untilMs && b.fromMs < s.untilMs);
+    return {
+      ...b,
+      fromMs: Math.min(b.fromMs, ...hit.map((s) => s.fromMs)),
+      untilMs: Math.max(b.untilMs, ...hit.map((s) => s.untilMs)),
+    };
+  });
   const standing = stops.filter(
     (s) => !bridged.some((b) => s.fromMs < b.untilMs && b.fromMs < s.untilMs)
   );
