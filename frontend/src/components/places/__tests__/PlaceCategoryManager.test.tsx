@@ -74,3 +74,19 @@ describe("PlaceCategoryManager", () => {
     expect(onDeleted).toHaveBeenCalledWith("Schwimmbad");
   });
 });
+
+describe("usePlaceCategories — one account's categories", () => {
+  it("does not show the previous account's categories after another user signs in", async () => {
+    const { useAuthStore } = await import("../../../store/authStore");
+    const { renderHook, act } = await import("@testing-library/react");
+    const { usePlaceCategories } = await import("../../../hooks/usePlaceCategories");
+    resetPlaceCategoriesCache();
+    listMock.mockReset().mockResolvedValueOnce([pool]).mockResolvedValueOnce([]);
+    act(() => useAuthStore.setState({ user: { id: "u1" } as never }));
+    const { result } = renderHook(() => usePlaceCategories());
+    await waitFor(() => expect(result.current.customs).toEqual([pool]));
+    act(() => useAuthStore.setState({ user: { id: "u2" } as never }));
+    await waitFor(() => expect(result.current.customs).toEqual([]));
+    expect(listMock).toHaveBeenCalledTimes(2);
+  });
+});

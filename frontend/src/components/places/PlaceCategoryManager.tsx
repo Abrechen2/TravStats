@@ -37,13 +37,24 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState<string | null>(null);
 
+  // The write succeeded; only the refreshed list is missing. Say so rather than
+  // report a failed save or show a list that silently lacks the change.
+  const refresh = async (): Promise<void> => {
+    try {
+      await reload();
+    } catch (err: unknown) {
+      logger.error("PlaceCategoryManager: reload failed", err);
+      setError(t("places:customCategories.errors.stale"));
+    }
+  };
+
   const create = async (): Promise<void> => {
     setError(null);
     try {
       const made = await createPlaceCategory({ name: name.trim(), icon });
       setName("");
-      await reload();
       onCreated?.(made.name);
+      await refresh();
     } catch (err: unknown) {
       logger.error("PlaceCategoryManager: create failed", err);
       setError(
@@ -61,7 +72,7 @@ export default function PlaceCategoryManager({ onCreated, onDeleted }: Props): J
     setError(null);
     try {
       const { movedPlaces } = await deletePlaceCategory(category.id);
-      await reload();
+      await refresh();
       onDeleted?.(category.name);
       addToast("success", t("places:customCategories.deleted", { count: movedPlaces }));
     } catch (err: unknown) {

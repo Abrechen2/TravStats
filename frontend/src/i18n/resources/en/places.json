@@ -952,7 +952,8 @@
       "exists": "You already have this category.",
       "limit": "You have reached the maximum number of own categories.",
       "generic": "The category could not be saved.",
-      "deleteFailed": "The category could not be deleted."
+      "deleteFailed": "The category could not be deleted.",
+      "stale": "Saved, but the list could not be reloaded. Reload the page."
     }
   }
 }

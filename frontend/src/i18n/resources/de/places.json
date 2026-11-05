@@ -952,7 +952,8 @@
       "exists": "Diese Kategorie hast du schon.",
       "limit": "Du hast die Höchstzahl eigener Kategorien erreicht.",
       "generic": "Die Kategorie konnte nicht gespeichert werden.",
-      "deleteFailed": "Die Kategorie konnte nicht gelöscht werden."
+      "deleteFailed": "Die Kategorie konnte nicht gelöscht werden.",
+      "stale": "Gespeichert, aber die Liste ließ sich nicht neu laden. Lade die Seite neu."
     }
   }
 }
