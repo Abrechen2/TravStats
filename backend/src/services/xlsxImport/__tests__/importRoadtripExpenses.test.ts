@@ -27,8 +27,13 @@ describe("spreadsheet import — roadtrip costs", () => {
   });
 
   beforeEach(async () => {
+    // "No rate" is the offline answer; the real chain would hit the global
+    // network guard and log an FX warning per imported expense.
+    jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
     await prisma.tripRoute.deleteMany({ where: { userId: { in: [userId, victimId] } } });
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { username: { in: USERS } } });

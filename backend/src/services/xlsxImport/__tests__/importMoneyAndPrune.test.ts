@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import * as fx from "../../fx/resolver";
 import { importSheets } from "../importSheets";
 
 /**
@@ -48,9 +49,14 @@ describe("spreadsheet import — bus/rail money and the replace prune", () => {
   });
 
   beforeEach(async () => {
+    // Offline "no rate": the real chain hits the global network guard and
+    // logs an FX warning per priced row.
+    jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
     await prisma.busJourney.deleteMany({ where: { userId } });
     await prisma.railJourney.deleteMany({ where: { userId } });
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { username: USER } });

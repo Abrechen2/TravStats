@@ -149,7 +149,7 @@ export default function GlobalSearch(): JSX.Element {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onInputKey}
-          className="w-24 bg-transparent text-sm outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--ts-accent) sm:w-36 lg:w-52"
+          className="w-14 min-[380px]:w-24 bg-transparent text-sm outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(--ts-accent) sm:w-36 lg:w-52"
           style={{ color: "var(--ts-text-bright)" }}
           autoComplete="off"
         />
