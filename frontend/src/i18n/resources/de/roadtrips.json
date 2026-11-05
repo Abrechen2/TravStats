@@ -1033,5 +1033,48 @@
     "add": "Tags hinzufügen",
     "edit": "Tags bearbeiten",
     "saveFailed": "Die Tags konnten nicht gespeichert werden."
+  },
+  "startFrom": {
+    "legend": "Wie fängt der Roadtrip an?",
+    "empty": "Leer",
+    "lodging": "Aus einer Unterkunft",
+    "gpx": "Aus GPX-Datei",
+    "link": "Aus Maps-Link",
+    "unnamed": "Station {{n}}",
+    "preview": "Der Roadtrip bekommt diese Stationen – Namen und Tage kannst du danach ändern:",
+    "roundTrip": "Rundreise",
+    "roundTripSub": "Der Roadtrip endet dort, wo er beginnt: die erste Station kommt als letzte noch einmal dazu.",
+    "lodgingSearch": "Unterkunft suchen",
+    "lodgingNone": "Keine Unterkunft passt.",
+    "lodgingNoCoords": "ohne Ort – erst in der Unterkunft einen Ort eintragen",
+    "lodgingLoadFailed": "Deine Unterkünfte konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "gpxChoose": "GPX-Datei wählen",
+    "gpxFrom": {
+      "route": "{{count}} Routenpunkte aus „{{file}}“",
+      "waypoints": "{{count}} Wegpunkte aus „{{file}}“",
+      "track": "Start und Ziel der aufgezeichneten Strecke aus „{{file}}“"
+    },
+    "gpxError": {
+      "notXml": "Die Datei ist kein lesbares XML – es ist keine GPX-Datei oder sie ist beschädigt.",
+      "notGpx": "Das ist keine GPX-Datei (kein <gpx>-Wurzelelement).",
+      "noPoints": "Die GPX-Datei enthält weder Routenpunkte noch Wegpunkte noch eine Strecke.",
+      "tooMany": "Die GPX-Datei hat {{count}} Punkte – ein Roadtrip hat höchstens {{max}} Stationen. Bitte die Datei auf die Haltepunkte kürzen.",
+      "read": "Die Datei konnte nicht gelesen werden."
+    },
+    "linkLabel": "Link aus Google Maps oder Apple Karten",
+    "linkHint": "Eine Route mit Start, Zwischenhalten und Ziel – am besten der lange Link aus der Adresszeile.",
+    "linkRead": "Link lesen",
+    "linkReading": "Orte werden gesucht …",
+    "linkError": {
+      "notALink": "Das ist kein Link. Bitte die ganze Adresse (https://…) einfügen.",
+      "notMaps": "Das ist kein Google-Maps- oder Apple-Karten-Link.",
+      "shortLink": "Kurzlinks (goo.gl, maps.app.goo.gl) lassen sich hier nicht lesen. Bitte den Link öffnen und die lange Adresse aus der Adresszeile einfügen.",
+      "noWaypoints": "Im Link steht kein Ort und keine Route.",
+      "tooMany": "Der Link hat mehr Orte, als ein Roadtrip Stationen haben kann.",
+      "notFound": "„{{name}}“ wurde nicht gefunden. Bitte im Link durch Koordinaten ersetzen oder die Station später von Hand setzen.",
+      "unavailable": "Die Ortssuche hat nicht geantwortet – „{{name}}“ konnte nicht gesucht werden. Bitte später erneut versuchen."
+    },
+    "afterFailed": "Der Roadtrip ist angelegt, aber seine Stationen konnten nicht gespeichert werden. Du findest ihn in der Liste und kannst die Stationen dort auf seiner Seite eintragen."
   }
 }

@@ -3,8 +3,9 @@ import type { JSX } from "react";
 
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
-import { Field, Input, Select } from "../ui/Field";
+import { Field, Input, Select, Switch } from "../ui/Field";
 import TagInput from "../TagInput";
+import RoadtripStartSource from "./RoadtripStartSource";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -25,6 +26,8 @@ import {
   saveErrorKey,
 } from "../../lib/saveErrorMessage";
 import { vehicleChoices } from "../../lib/roadtrip/roadtripView";
+import { withReturnToStart } from "../../lib/roadtrip/roundTrip";
+import type { StartPoint } from "../../lib/roadtrip/startSources";
 import type { RoadtripVehicle } from "../../shared/tour/roadtrip";
 import type { TourRoute } from "../../types/tour";
 import type { StationInput } from "../../types/roadtrip";
@@ -41,11 +44,14 @@ interface Draft {
   odometer: string;
   tripId: string;
   tags: string[];
+  /** The stations a lodging, GPX file or Maps link gave. */
+  start: StartPoint[];
+  roundTrip: boolean;
 }
 
 /** The empty draft of one opening — the state's start AND the dirty baseline. */
 function emptyDraft(): Draft {
-  return { name: "", vehicle: null, vehicleName: "", odometer: "", tripId: "", tags: [] };
+  return { name: "", vehicle: null, vehicleName: "", odometer: "", tripId: "", tags: [], start: [], roundTrip: false };
 }
 
 /** The odometer as a number (null when empty); `invalid` when the text cannot be a reading. */
@@ -105,13 +111,21 @@ export default function NewRoadtripDialog({
   const [tripsFailed, setTripsFailed] = useState(false);
 
   const [wasOpen, setWasOpen] = useState(open);
+  // Bumped per opening so the start source (its mode, its file) starts over too.
+  const [openCount, setOpenCount] = useState(0);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft(opening());
+    if (open) {
+      setDraft(opening());
+      setOpenCount((n) => n + 1);
+    }
   }
 
   const { dirty, markSaved } = useDirtyGuard(opening(), draft, { open });
-  const saving = useSaveOnce<TourRoute>({ open });
+  const saving = useSaveOnce<TourRoute>({
+    open,
+    afterSaveFailedKey: "roadtrips:startFrom.afterFailed",
+  });
   const failure = useFormFailure(JSON.stringify(draft));
 
   useEffect(() => {
@@ -143,8 +157,20 @@ export default function NewRoadtripDialog({
       : []),
   ];
 
+  /** The stations the chosen source gives, closed again when it is a round trip. */
+  const sourceStations = (): StationInput[] => {
+    const own: StationInput[] = draft.start.map((p, i) => ({
+      title: p.title.trim() || t("roadtrips:startFrom.unnamed", { n: i + 1 }),
+      lat: p.lat,
+      lon: p.lon,
+      night: { kind: "pass" },
+    }));
+    return draft.roundTrip ? withReturnToStart(own, (first) => ({ ...first })) : own;
+  };
+
   const submit = async (): Promise<void> => {
     if (missing.length > 0) return;
+    const stationsToWrite = initialStations?.length ? initialStations : sourceStations();
     failure.clear();
     const outcome = await saving.save(
       () =>
@@ -158,12 +184,15 @@ export default function NewRoadtripDialog({
         }),
       async (created) => {
         markSaved();
-        if (initialStations?.length) {
+        if (stationsToWrite.length > 0) {
           try {
-            await roadtripsApi.replaceStations(created.id, initialStations, []);
+            await roadtripsApi.replaceStations(created.id, stationsToWrite, []);
           } catch (err: unknown) {
-            // The roadtrip stands; its stations can be added on its page.
+            // The roadtrip stands but its stations do not: said, never hidden
+            // behind a page that opens as if they were there.
             logger.warn("Recording a new roadtrip's stations failed", err);
+            onReload?.();
+            throw err;
           }
         }
         onCreated(created);
@@ -228,6 +257,34 @@ export default function NewRoadtripDialog({
               </ul>
             </div>
           ) : null}
+          {!initialStations?.length && (
+            <>
+              <RoadtripStartSource
+                key={openCount}
+                onPoints={(start) => setDraft((prev) => ({ ...prev, start }))}
+              />
+              {draft.start.length > 0 && (
+                <div className="t-caption">
+                  <p>{t("roadtrips:startFrom.preview")}</p>
+                  <ol className="list-decimal" style={{ paddingLeft: 20 }}>
+                    {draft.start.map((p, i) => (
+                      <li key={`${p.lat},${p.lon},${i}`}>
+                        {p.title.trim() || t("roadtrips:startFrom.unnamed", { n: i + 1 })}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              <Switch
+                id="roadtrip-new-roundtrip"
+                checked={draft.roundTrip}
+                disabled={draft.start.length === 0}
+                onChange={(on) => set("roundTrip", on)}
+                label={t("roadtrips:startFrom.roundTrip")}
+                sub={t("roadtrips:startFrom.roundTripSub")}
+              />
+            </>
+          )}
           <Field
             label={
               <>
