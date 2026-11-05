@@ -25,6 +25,7 @@ import type { PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 import type { EvidenceScopeParams } from "../evidence/useEvidence";
 import { placesVisitedIn } from "../../lib/stats/periodScope";
+import { placeCategoryLabel } from "../../lib/placeCategoryDisplay";
 
 /**
  * The places numbers, on the statistics page.
@@ -192,7 +193,7 @@ export default function PoiStatsSection({
       }));
   };
 
-  const categoryRows = toRows(detail.categories, (key) => t(`places:categories.${key}`));
+  const categoryRows = toRows(detail.categories, (key) => placeCategoryLabel(t, key));
   const countryRows = toRows(detail.countries, (code) => regionNames?.of(code) ?? code);
   const cityRows = toRows(detail.cities, (city) => city);
 

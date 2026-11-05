@@ -24,8 +24,9 @@ import { listLodgings } from "../lib/api/lodging";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
-import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
-import type { PlaceCategory } from "../shared/placeCategories";
+import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { placeCategoryIcon, placeCategoryLabel } from "../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import type { PlaceCountState } from "../shared/placeCounting";
 import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
@@ -55,6 +56,7 @@ const STATE_MARK: Record<PlaceCountState, { glyph: string; color: string }> = {
  */
 export default function PlacesNearbyPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
+  const { customs } = usePlaceCategories();
   const addToast = useToastStore((s) => s.addToast);
   const { isEnabled } = useEnabledDomains();
   const lodgingEnabled = isEnabled("lodging");
@@ -70,7 +72,7 @@ export default function PlacesNearbyPage(): JSX.Element {
   );
   const [origin, setOrigin] = useState<ChosenOrigin | null>(() => pointFromParams(params));
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
-  const [category, setCategory] = useState<PlaceCategory | "all">("all");
+  const [category, setCategory] = useState<string>("all");
   const [states, setStates] = useState<ReadonlySet<PlaceCountState>>(new Set(ALL_STATES));
   const [recordingFor, setRecordingFor] = useState<Place | null>(null);
 
@@ -229,13 +231,18 @@ export default function PlacesNearbyPage(): JSX.Element {
                 <select
                   id="nearby-category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as PlaceCategory | "all")}
+                  onChange={(e) => setCategory(e.target.value)}
                   className={`rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-3 py-2 text-sm ${COARSE}`}
                 >
                   <option value="all">{t("places:filter.allCategories")}</option>
                   {PLACE_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {t(`places:categories.${c}`)}
+                      {placeCategoryLabel(t, c)}
+                    </option>
+                  ))}
+                  {customs.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -335,7 +342,7 @@ export default function PlacesNearbyPage(): JSX.Element {
                     border: "1px solid var(--color-border)",
                   }}
                 >
-                  <span aria-hidden>{PLACE_CATEGORY_ICONS[place.category]}</span>
+                  <span aria-hidden>{placeCategoryIcon(place.category, customs)}</span>
                   <Link
                     to={`/places/${place.id}`}
                     className="min-w-0 flex-1 truncate text-sm"

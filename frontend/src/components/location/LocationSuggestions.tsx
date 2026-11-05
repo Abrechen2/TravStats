@@ -6,6 +6,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { PlaceSearchResult } from "../../lib/api/geo";
 import { categoryFromOsmValue } from "../../shared/placeCategories";
 import { LocalName } from "../places/LocalName";
+import { placeCategoryLabel } from "../../lib/placeCategoryDisplay";
 
 export interface LocationSuggestionsProps {
   listboxId: string;
@@ -56,7 +57,7 @@ export function LocationSuggestions({
   noResultsLabel,
 }: LocationSuggestionsProps): JSX.Element {
   const { t } = useTranslation(["places"]);
-  const categoryLabel = (key: string): string => t(`places:categories.${key}`);
+  const categoryLabel = (key: string): string => placeCategoryLabel(t, key);
   return (
     <div
       id={listboxId}

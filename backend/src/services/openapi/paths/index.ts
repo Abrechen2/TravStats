@@ -73,6 +73,7 @@ import "./lodgingRatingCategories";
 import "./loyalty";
 import "./settings";
 import "./places";
+import "./placeCategories";
 import "./placePhotos";
 import "./placeRelations";
 import "./placeCaptures";

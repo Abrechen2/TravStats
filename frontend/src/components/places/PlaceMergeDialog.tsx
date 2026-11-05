@@ -8,7 +8,8 @@ import { calculateDistance } from "../../lib/geo";
 import { logger } from "../../lib/logger";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
-import { PLACE_CATEGORY_ICONS } from "../../shared/placeCategories";
+import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import type { Place } from "../../types/place";
 import {
   FormErrorBanner,
@@ -59,6 +60,7 @@ interface Props {
  */
 export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
+  const { customs } = usePlaceCategories();
   const [others, setOthers] = useState<Place[] | null>(null);
   const [othersFailed, setOthersFailed] = useState(false);
   const [othersAttempt, setOthersAttempt] = useState(0);
@@ -224,7 +226,7 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
                       onClick={() => setSource(p)}
                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-[var(--bg-muted)] ${COARSE}`}
                     >
-                      <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+                      <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
                       <span className="min-w-0 flex-1 truncate">{p.name}</span>
                       <span className="t-caption">
                         {km < 1

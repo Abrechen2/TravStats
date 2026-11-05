@@ -234,6 +234,7 @@
     "placeImport.ts",
     "placeLists.ts",
     "placeLists/curated.ts",
+    "placeCategories.ts",
     "places.ts",
     "places/merge.ts",
     "places/placeCover.ts",

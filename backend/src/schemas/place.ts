@@ -1,5 +1,17 @@
 import { z } from "./zod";
-import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { PLACE_CATEGORY_ICON_CHOICES, PLACE_CATEGORY_NAME_MAX } from "../shared/placeCategories";
+
+/**
+ * A place's category: a built-in key or the NAME of one of the user's own
+ * categories. Which names exist is per user, so the route checks that
+ * (`services/places/placeCategoryDefs.ts`); the schema only bounds the text.
+ */
+const categoryValue = z.string().trim().min(1).max(PLACE_CATEGORY_NAME_MAX);
+
+export const createPlaceCategorySchema = z.object({
+  name: z.string().trim().min(1).max(PLACE_CATEGORY_NAME_MAX),
+  icon: z.enum(PLACE_CATEGORY_ICON_CHOICES).nullable().optional(),
+});
 import { partialForUpdate } from "./partialUpdate";
 import { timeFieldSchema } from "../shared/time/timeInput";
 
@@ -39,7 +51,7 @@ const basePlaceSchema = z.object({
    * both ("Seoul Station 서울역") is split on write (`geo/gluedPlaceName.ts`).
    */
   localName: clearableText(200),
-  category: z.enum(PLACE_CATEGORIES).default("other"),
+  category: categoryValue.default("other"),
   lat: latField,
   lon: lonField,
   address: clearableText(300),
@@ -94,7 +106,7 @@ export const updateVisitSchema = createVisitSchema.partial();
  */
 export const placeQuerySchema = z.object({
   q: z.string().max(200).optional(),
-  category: z.enum(PLACE_CATEGORIES).optional(),
+  category: categoryValue.optional(),
   country: z.string().max(120).optional(),
   visited: z
     .enum(["true", "false"])

@@ -10,6 +10,7 @@ import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
 import { totalFor } from "../insight/insightFold";
 import { countingSource } from "../counting/countingEntry";
+import { placeCategoryLabel } from "../../../lib/placeCategoryDisplay";
 
 /**
  * The places insights (forgejo#259): what was new and what was a return, how
@@ -59,7 +60,7 @@ export default function PoiInsightsSection({
   const lifetime = t("places:stats.insights.lifetime");
   const help = (block: string, values: Record<string, unknown> = {}) =>
     countingSource(`places:stats.insights.${block}`, values);
-  const category = (key: string): string => t(`places:categories.${key}`, { defaultValue: key });
+  const category = (key: string): string => placeCategoryLabel(t, key);
 
   const discoveries = totalFor(data.totals, "placeDiscoveryVisits", year);
   const revisits = totalFor(data.totals, "placeRevisitVisits", year);

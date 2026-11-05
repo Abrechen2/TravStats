@@ -11,7 +11,8 @@ import { RowActions } from "../../components/Trips/TimelineJournalCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { DetailRow, OpenFullLink } from "../../components/Trips/TimelineDetailParts";
 import { formatTimelineDate } from "../../lib/tripTimeline";
-import { PLACE_CATEGORY_ICONS } from "../../shared/placeCategories";
+import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { placeSubtitle } from "../../lib/placeNames";
 
 const STOP_DOMAIN_ICON: Record<string, string> = {
@@ -355,10 +356,11 @@ export function PlaceVisitCard({
 }: {
   ev: Extract<TimelineEvent, { kind: "place-visit" }>;
 }): JSX.Element {
+  const { customs } = usePlaceCategories();
   const { place, visit } = ev;
   return (
     <EventCard
-      icon={PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other}
+      icon={placeCategoryIcon(place.category, customs)}
       bg="var(--domain-poi-soft)"
       iconColor="var(--domain-poi)"
       title={place.name}

@@ -934,5 +934,26 @@
     "deleteUndated": "Besuch ohne Datum löschen",
     "showOlder": "Ältere Besuche laden",
     "emptyFilter": "Keine Besuche in dieser Auswahl."
+  },
+  "customCategories": {
+    "manage": "Eigene Kategorien",
+    "manageHint": "Lege Kategorien an, die der mitgelieferte Vorrat nicht hat (z. B. Schwimmbad). Die Kategorien gelten für alle deine Orte.",
+    "namePlaceholder": "Name, z. B. Schwimmbad",
+    "iconLabel": "Symbol",
+    "add": "Anlegen",
+    "delete": "Löschen",
+    "deleteSure": "Wirklich löschen? Orte mit dieser Kategorie werden „Sonstiges“.",
+    "deleteYes": "Ja, löschen",
+    "cancel": "Abbrechen",
+    "none": "Noch keine eigenen Kategorien.",
+    "deleted": "Kategorie gelöscht. {{count}} Orte sind jetzt „Sonstiges“.",
+    "errors": {
+      "builtIn": "Diesen Namen gibt es schon als mitgelieferte Kategorie.",
+      "exists": "Diese Kategorie hast du schon.",
+      "limit": "Du hast die Höchstzahl eigener Kategorien erreicht.",
+      "generic": "Die Kategorie konnte nicht gespeichert werden.",
+      "deleteFailed": "Die Kategorie konnte nicht gelöscht werden.",
+      "stale": "Gespeichert, aber die Liste ließ sich nicht neu laden. Lade die Seite neu."
+    }
   }
 }

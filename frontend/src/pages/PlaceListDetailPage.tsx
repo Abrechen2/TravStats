@@ -25,7 +25,8 @@ import {
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { FieldError, FormErrorBanner, fieldErrorProps } from "../components/form";
-import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { placeCategoryIcon } from "../lib/placeCategoryDisplay";
+import { usePlaceCategories } from "../hooks/usePlaceCategories";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
@@ -55,6 +56,7 @@ const RENAME_ID = "place-list-rename";
 export default function PlaceListDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation(["places", "common"]);
+  const { customs } = usePlaceCategories();
   const navigate = useNavigate();
   const access = usePlacesAccess();
   const addToast = useToastStore((s) => s.addToast);
@@ -551,7 +553,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                     border: "1px solid var(--color-border)",
                   }}
                 >
-                  <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+                  <span aria-hidden>{placeCategoryIcon(p.category, customs)}</span>
                   <Link
                     to={`/places/${p.id}`}
                     className="min-w-0 flex-1 truncate text-sm"

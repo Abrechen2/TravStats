@@ -934,5 +934,26 @@
     "deleteUndated": "Delete the undated visit",
     "showOlder": "Load older visits",
     "emptyFilter": "No visits in this selection."
+  },
+  "customCategories": {
+    "manage": "Own categories",
+    "manageHint": "Create categories the built-in set lacks (e.g. Swimming pool). They apply to all your places.",
+    "namePlaceholder": "Name, e.g. Swimming pool",
+    "iconLabel": "Icon",
+    "add": "Add",
+    "delete": "Delete",
+    "deleteSure": "Really delete? Places with this category become “Other”.",
+    "deleteYes": "Yes, delete",
+    "cancel": "Cancel",
+    "none": "No own categories yet.",
+    "deleted": "Category deleted. {{count}} places are now “Other”.",
+    "errors": {
+      "builtIn": "A built-in category already has this name.",
+      "exists": "You already have this category.",
+      "limit": "You have reached the maximum number of own categories.",
+      "generic": "The category could not be saved.",
+      "deleteFailed": "The category could not be deleted.",
+      "stale": "Saved, but the list could not be reloaded. Reload the page."
+    }
   }
 }
