@@ -77,6 +77,15 @@ describe("the header search (forgejo#403)", () => {
   beforeEach(() => vi.resetAllMocks());
   afterEach(cleanup);
 
+  it("is narrow by default so the header row fits a 320 px viewport (layout-320 overflow)", () => {
+    // jsdom has no layout; the e2e layout.noHorizontalOverflow spec measures it.
+    // The 96 px default made the header's right cluster 316 px wide, 13 px more
+    // than a 320 px window leaves it.
+    const box = renderBox();
+    expect(box.className).toMatch(/(^|\s)w-14(\s|$)/);
+    expect(box.className).not.toMatch(/(^|\s)w-24(\s|$)/);
+  });
+
   it("focuses on '/' unless the user is typing elsewhere", () => {
     const box = renderBox();
     fireEvent.keyDown(document.body, { key: "/" });

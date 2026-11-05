@@ -1,3 +1,10 @@
+// The FX lookup is replaced (as in bus.fx.test.ts): the global test guard refuses
+// the network, so the real one logged a warning per save. "No rate" is its
+// answer here, which is what the null-not-zero assertion below is about.
+jest.mock("../../services/fx/snapshot", () => {
+  const actual = jest.requireActual("../../services/fx/snapshot");
+  return { ...actual, fxColumnsFor: jest.fn(async () => actual.CLEARED_FX_COLUMNS) };
+});
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
