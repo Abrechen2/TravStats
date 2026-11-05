@@ -1,3 +1,4 @@
+import RoadtripVehicleSelect from "../components/Roadtrips/RoadtripVehicleSelect";
 import RouteTagsEditor from "../components/Roadtrips/RouteTagsEditor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
@@ -439,6 +440,13 @@ export default function RoadtripDetailPage(): JSX.Element {
         <RouteTagsEditor
           route={r}
           tripId={undefined}
+          onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
+        />
+      </div>
+
+      <div style={{ marginTop: "var(--ts-space-md)", maxWidth: 320 }}>
+        <RoadtripVehicleSelect
+          route={r}
           onSaved={(route) => setDetail({ ...detail, roadtrip: route })}
         />
       </div>

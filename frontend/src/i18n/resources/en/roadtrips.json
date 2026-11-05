@@ -1102,5 +1102,6 @@
     "none": "No station with a place and a past arrival day – there is no measured weather to load.",
     "noLocation": "Without a place or a date there is no weather.",
     "hint": "Measured weather of the arrival day (Open-Meteo). Today and coming days can only be loaded afterwards."
-  }
+  },
+  "vehicleChangeError": "The vehicle could not be changed."
 }
