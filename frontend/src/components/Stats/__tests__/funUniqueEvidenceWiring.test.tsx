@@ -116,6 +116,7 @@ describe("the fun and unique tiles open the measures they render", () => {
     const keys = await keysOpenedBy(<StatsFunSection funStats={funStats} />);
     expect(keys).toEqual(
       [
+        "afternoonFlightCount",
         "co2FootprintKg",
         "earlyBirdFlightCount",
         "longHaulFlightCount",

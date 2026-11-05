@@ -103,6 +103,9 @@ export function LodgingStatStrip({
   ].filter((part): part is string => part !== null);
   const spendSub = spendSubParts.length > 0 ? spendSubParts.join(" · ") : null;
 
+  const plannedStays = stats.plannedStaysCount ?? 0;
+  const undatedNights = stats.undatedNights ?? 0;
+
   const nothingConverted = lodgingSpendNothingConverted(stats);
 
   // `evidenceKey` is present only where a RESOLVER answers for the figure.
@@ -113,6 +116,8 @@ export function LodgingStatStrip({
     value: string;
     label: string;
     sub?: string | null;
+    /** Defaults to the spend line's id; the stays and nights notes carry their own. */
+    subTestId?: string;
     evidenceKey?: string;
     renderedValue?: number | null;
   }[] = [
@@ -127,6 +132,13 @@ export function LodgingStatStrip({
       key: "stays",
       value: String(stats.staysCount),
       label: t("dashboard:lodgingTab.stats.stays", { count: stats.staysCount }),
+      // Booked, check-out still ahead: said beside the figure, never inside
+      // it (owner rule: a stay counts once its check-out is past).
+      sub:
+        plannedStays > 0
+          ? t("dashboard:lodgingTab.stats.staysPlanned", { count: plannedStays })
+          : null,
+      subTestId: "lodging-stat-strip-planned-sub",
       evidenceKey: "lodgingStaysCount",
       renderedValue: stats.staysCount,
     },
@@ -134,6 +146,12 @@ export function LodgingStatStrip({
       key: "nights",
       value: String(stats.totalNights),
       label: t("dashboard:lodgingTab.stats.nights", { count: stats.totalNights }),
+      // The total counts these nights; no calendar series can place them.
+      sub:
+        undatedNights > 0
+          ? t("dashboard:lodgingTab.stats.nightsUndated", { count: undatedNights })
+          : null,
+      subTestId: "lodging-stat-strip-undated-sub",
       evidenceKey: "lodgingNightsTotal",
       renderedValue: stats.totalNights,
     },
@@ -185,7 +203,11 @@ export function LodgingStatStrip({
             valueSize="md"
             accent={accent}
             description={
-              cell.sub ? <span data-testid="lodging-stat-strip-spend-sub">{cell.sub}</span> : null
+              cell.sub ? (
+                <span data-testid={cell.subTestId ?? "lodging-stat-strip-spend-sub"}>
+                  {cell.sub}
+                </span>
+              ) : null
             }
             evidence={
               evidenceScope && cell.evidenceKey
@@ -256,7 +278,7 @@ export function LodgingStatStrip({
             </span>
             {cell.sub && (
               <span
-                data-testid="lodging-stat-strip-spend-sub"
+                data-testid={cell.subTestId ?? "lodging-stat-strip-spend-sub"}
                 style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
               >
                 {cell.sub}

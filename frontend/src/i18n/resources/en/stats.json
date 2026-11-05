@@ -818,7 +818,9 @@
     "zoneTitle": "Front / Middle / Back",
     "noDataHint": "Once your flights carry a seat number (such as 14C) or a seat class, window, aisle, rows and classes appear here.",
     "unplaced_one": "{{count}} seat cannot be placed without its cabin layout",
-    "unplaced_other": "{{count}} seats cannot be placed without their cabin layout"
+    "unplaced_other": "{{count}} seats cannot be placed without their cabin layout",
+    "noSeat_one": "{{count}} flight without a seat number is not included here",
+    "noSeat_other": "{{count}} flights without a seat number are not included here"
   },
   "airlineRanking": {
     "title": "Airline Loyalty Ranking",

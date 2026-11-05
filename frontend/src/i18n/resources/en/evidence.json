@@ -148,6 +148,7 @@
   "evidence.metric.scorecardFlightTimeMinutes": "Flight time",
   "evidence.metric.timezoneHopperFlightCount": "Time zones touched",
   "evidence.metric.earlyBirdFlightCount": "Early departures",
+  "evidence.metric.afternoonFlightCount": "Afternoon departures",
   "evidence.metric.nightOwlFlightCount": "Late departures",
   "evidence.metric.weekendFlightCount": "Weekend flights",
   "evidence.metric.shortHaulFlightCount": "Short-haul flights",
