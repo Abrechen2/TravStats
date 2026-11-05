@@ -1089,5 +1089,10 @@
       "caravan_site": "Motorhome pitch"
     },
     "distance": "{{km}} km"
+  },
+  "gpx": {
+    "export": "Export GPX",
+    "exporting": "Creating …",
+    "failed": "The route lines could not be loaded – no file was saved. Please try again."
   }
 }

@@ -27,6 +27,7 @@ const place = (name: string, kind: string, distanceM: number) => ({
   website: null,
   stars: null,
   brand: null,
+  chain: null,
 });
 
 const press = (el: HTMLElement): Promise<void> =>

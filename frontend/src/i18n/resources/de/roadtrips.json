@@ -1089,5 +1089,10 @@
       "caravan_site": "Stellplatz"
     },
     "distance": "{{km}} km"
+  },
+  "gpx": {
+    "export": "GPX exportieren",
+    "exporting": "Wird erstellt …",
+    "failed": "Die Routenlinien konnten nicht geladen werden – es wurde keine Datei gespeichert. Bitte erneut versuchen."
   }
 }

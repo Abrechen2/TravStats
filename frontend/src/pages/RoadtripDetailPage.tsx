@@ -45,6 +45,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
 import { leaveThroughHistory, navigateAfterSave } from "../components/form/unsavedChanges";
+import RoadtripGpxButton from "../components/Roadtrips/RoadtripGpxButton";
 import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
@@ -381,6 +382,7 @@ export default function RoadtripDetailPage(): JSX.Element {
     <div className="flex flex-wrap" style={{ gap: 8 }}>
       <Button onClick={() => navigate(`/tours/${id}`)}>{t("roadtrips:editLegs")}</Button>
       <Button onClick={() => setOdometerOpen(true)}>{t("roadtrips:odometerDialog.open")}</Button>
+      <RoadtripGpxButton routeId={id} name={r.name} stations={detail.stations} />
       {/* Secondary and without an icon, like "Bearbeiten" on rail, ferry, bus
           and rentals: a primary button is taller and stood out (forgejo#307). */}
       <Button
