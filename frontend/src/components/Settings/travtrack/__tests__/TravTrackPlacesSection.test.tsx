@@ -172,7 +172,11 @@ describe("Feste Orte", () => {
   it("names TravTrack-off (403) and an unreachable server separately", async () => {
     const create = vi
       .spyOn(travTrackPlacesApi, "create")
-      .mockRejectedValueOnce(failure(403, "travtrackDisabled"))
+      .mockRejectedValueOnce(
+        Object.assign(new Error("403"), {
+          response: { status: 403, data: { code: "TRAVTRACK_DISABLED" } },
+        })
+      )
       .mockRejectedValueOnce(Object.assign(new Error("net"), { response: undefined }));
     show();
     await userEvent.click(await screen.findByRole("button", { name: "settings:tt.places.add" }));
@@ -214,7 +218,11 @@ describe("Feste Orte", () => {
   it("deletes a place only after the confirmation, and a 404 on it says it is gone", async () => {
     const remove = vi
       .spyOn(travTrackPlacesApi, "remove")
-      .mockRejectedValueOnce(failure(404, "unknown"));
+      .mockRejectedValueOnce(
+        Object.assign(new Error("404"), {
+          response: { status: 404, data: { code: "TRAVTRACK_PLACE_NOT_FOUND" } },
+        })
+      );
     show();
     await userEvent.click(await screen.findByRole("button", { name: /places\.remove: Büro/ }));
     const dialog = await screen.findByRole("dialog");

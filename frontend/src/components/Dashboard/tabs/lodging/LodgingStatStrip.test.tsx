@@ -96,6 +96,31 @@ describe("LodgingStatStrip", () => {
     expect(screen.getByTestId("lodging-stat-strip-spend-sub")).toBeInTheDocument();
   });
 
+  it("says how many booked stays lie ahead, beside the stays figure and never inside it", () => {
+    render(<LodgingStatStrip stats={{ ...stats, plannedStaysCount: 3 }} />);
+    const note = screen.getByTestId("lodging-stat-strip-planned-sub");
+    expect(note.textContent).toContain("lodgingTab.stats.staysPlanned");
+    // The figure itself is untouched: a booking is not a stay slept.
+    expect(screen.getByText(String(stats.staysCount))).toBeInTheDocument();
+  });
+
+  it("hides the planned-stays note when nothing is booked ahead", () => {
+    render(<LodgingStatStrip stats={{ ...stats, plannedStaysCount: 0 }} />);
+    expect(screen.queryByTestId("lodging-stat-strip-planned-sub")).not.toBeInTheDocument();
+  });
+
+  it("names the nights that have no date, which the total counts but no calendar can place", () => {
+    render(<LodgingStatStrip stats={{ ...stats, undatedNights: 5 }} variant="cards" />);
+    expect(screen.getByTestId("lodging-stat-strip-undated-sub").textContent).toContain(
+      "lodgingTab.stats.nightsUndated"
+    );
+  });
+
+  it("hides the undated-nights note at zero", () => {
+    render(<LodgingStatStrip stats={{ ...stats, undatedNights: 0 }} variant="cards" />);
+    expect(screen.queryByTestId("lodging-stat-strip-undated-sub")).not.toBeInTheDocument();
+  });
+
   it("says how many stays the total leaves out", () => {
     // The lodging DETAIL page footnoted this from the start; the strip — the
     // same money, one screen up — stayed silent, so a total missing two stays

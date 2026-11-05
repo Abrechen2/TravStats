@@ -31,6 +31,7 @@ import {
 } from "./metricEvidenceScorecard";
 import {
   resolveTimezoneHopperFlightCount,
+  resolveAfternoonFlightCount,
   resolveEarlyBirdFlightCount,
   resolveNightOwlFlightCount,
   resolveWeekendFlightCount,
@@ -261,6 +262,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   scorecardFlightTimeMinutes: resolveScorecardFlightTimeMinutes,
   timezoneHopperFlightCount: resolveTimezoneHopperFlightCount,
   earlyBirdFlightCount: resolveEarlyBirdFlightCount,
+  afternoonFlightCount: resolveAfternoonFlightCount,
   nightOwlFlightCount: resolveNightOwlFlightCount,
   weekendFlightCount: resolveWeekendFlightCount,
   shortHaulFlightCount: resolveShortHaulFlightCount,

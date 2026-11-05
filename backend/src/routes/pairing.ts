@@ -184,7 +184,7 @@ router.post(
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { username: true },
+        select: { id: true, username: true },
       });
 
       securityLogger.info({
@@ -204,7 +204,8 @@ router.post(
       // a Host-spoofable field it ignores, so we omit it.
       res.status(201).json({
         token: generated.plaintext,
-        user: { username: user?.username ?? null },
+        // `id` lets an app tell two accounts with one username apart (fixed-places contract S1).
+        user: { id: user?.id ?? userId, username: user?.username ?? null },
       });
     } catch (err) {
       next(err);

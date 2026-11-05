@@ -748,7 +748,11 @@
       "unavailable": "The place lookup is not reachable right now – no suggestion possible.",
       "failed": "The suggestion could not be loaded.",
       "retry": "Try again",
-      "address": "Address"
+      "address": "Address",
+      "fixed": "Fixed place",
+      "lodging": "Lodging",
+      "folded_one": "{{count}} position folded",
+      "folded_other": "{{count}} positions folded"
     }
   }
 }

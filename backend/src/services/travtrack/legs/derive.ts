@@ -8,7 +8,9 @@ import { classRuns, modeOfSteps, settleStill, stepClass } from "./autoMode";
 import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
-import { findDwells, movingRuns } from "./stops";
+import { findFoldRuns, type FoldContext, type FoldRun } from "./fold";
+import { STOP_MS } from "../dayMovement";
+import { findDwells, isBadVertex, movingRuns, type Dwell } from "./stops";
 import type {
   Leg,
   LegMode,
@@ -29,6 +31,8 @@ export type LegInputs = {
   stays: readonly StayCandidate[];
   /** Names the owner accepted for stops; optional so the pure derivation needs none. */
   places?: readonly StopPlaceRow[];
+  /** Fixed places and lodging bookings a run of fixes folds into; none folds nothing. */
+  fold?: FoldContext;
 };
 
 type Piece = {
@@ -151,6 +155,78 @@ function placeFor(
   return best ? { name: best.name, lat: best.lat, lon: best.lon, source: "accepted" } : null;
 }
 
+type FoldedDwell = Dwell & { fold?: FoldRun };
+
+const overlaps = (a: Dwell, b: Dwell) => a.from <= b.to && b.from <= a.to;
+
+/** A dwell minus the folds over it: the pieces still standing for at least `STOP_MS`. */
+function outsideFolds(
+  segment: readonly StoredPoint[],
+  dwell: Dwell,
+  folds: readonly FoldRun[]
+): Dwell[] {
+  let pieces: Dwell[] = [dwell];
+  for (const f of folds.filter((f) => overlaps(dwell, f))) {
+    pieces = pieces.flatMap((p) =>
+      overlaps(p, f)
+        ? [
+            { from: p.from, to: f.from - 1 },
+            { from: f.to + 1, to: p.to },
+          ]
+        : [p]
+    );
+  }
+  return pieces.filter((p) => p.to > p.from && segment[p.to][0] - segment[p.from][0] >= STOP_MS);
+}
+
+/** The natural dwells, with every one a fold run covers replaced by that run. */
+function dwellsWithFolds(
+  segment: readonly StoredPoint[],
+  fold: FoldContext | undefined,
+  read: SafeSpan
+): FoldedDwell[] {
+  const natural = findDwells(segment);
+  if (!fold) return natural;
+  // A circle centred inside a privacy zone would put a stop on the zone: it folds nothing.
+  const clear = (c: { lat: number; lon: number }) => !inPrivacyZone(c, read.circles);
+  const folds = findFoldRuns(
+    segment,
+    { places: fold.places.filter(clear), lodgings: fold.lodgings.filter(clear) },
+    // Coarse fixes are neutral to a fold even in a stretch that holds nothing finer: a
+    // kilometre-wide reading proves nothing about a 100 m circle.
+    isBadVertex
+  );
+  // What a fold leaves of a natural dwell (the stretch before and after it) is still a dwell if long enough.
+  const kept = natural.flatMap((d) => outsideFolds(segment, d, folds));
+  return [...kept, ...folds.map((f): FoldedDwell => ({ from: f.from, to: f.to, fold: f }))].sort(
+    (a, b) => a.from - b.from
+  );
+}
+
+function foldedStop(
+  run: FoldRun,
+  accepted: StopPlace | null
+): Pick<Stop, "anchor" | "place" | "folded"> {
+  const t = run.target;
+  const at = t.source === "fixed" ? t.place : t.lodging;
+  const named: StopPlace =
+    t.source === "fixed"
+      ? { name: t.place.name, lat: at.lat, lon: at.lon, source: "fixed", placeId: t.place.id }
+      : {
+          name: t.lodging.name,
+          lat: at.lat,
+          lon: at.lon,
+          source: "lodging",
+          lodgingStayId: t.lodging.stayId,
+        };
+  // The name the owner accepted outranks a fixed place, which outranks a lodging.
+  return {
+    anchor: { lat: at.lat, lon: at.lon },
+    place: accepted ?? named,
+    folded: { fixCount: run.fixCount },
+  };
+}
+
 export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; stops: Stop[] } {
   const flights = inputs.windows
     .filter((w) => w.domain === "flight")
@@ -159,18 +235,20 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   const legs: Leg[] = [];
   const stops: Stop[] = [];
   read.segments.forEach((segment, segmentIndex) => {
-    const dwells = findDwells(segment);
+    const dwells = dwellsWithFolds(segment, inputs.fold, read);
     for (const d of dwells) {
-      const anchor = { lat: segment[d.from][1], lon: segment[d.from][2] };
-      // Segments are privacy-cut, so this is a second lock, not the first.
-      if (inPrivacyZone(anchor, read.circles)) continue;
       const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
-      stops.push({
-        ...span,
-        anchor,
-        stayRef: stayFor(span, inputs.stays),
-        place: placeFor(span, inputs.places ?? []),
-      });
+      const accepted = placeFor(span, inputs.places ?? []);
+      const shown = d.fold
+        ? foldedStop(d.fold, accepted)
+        : {
+            anchor: { lat: segment[d.from][1], lon: segment[d.from][2] },
+            place: accepted,
+            folded: null,
+          };
+      // Segments are privacy-cut, so this is a second lock, not the first.
+      if (inPrivacyZone(shown.anchor, read.circles)) continue;
+      stops.push({ ...span, ...shown, stayRef: stayFor(span, inputs.stays) });
     }
     for (const run of movingRuns(segment.length, dwells)) {
       for (const piece of piecesOfRun(segment, run, inputs.windows, read)) {

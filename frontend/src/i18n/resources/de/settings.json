@@ -1825,6 +1825,37 @@
         "notCreated": "Ich habe den Schlüssel nicht angelegt.",
         "notRevoked": "Ich habe den Schlüssel nicht widerrufen.",
         "loadError": "Ich konnte die Schlüssel nicht laden."
+      },
+      "places": {
+        "name": "Feste Orte",
+        "sub": "Alles darin zeigt der Tag als einen Punkt",
+        "help": "Zu Hause, Arbeit und eigene Orte: Positionen innerhalb des Umkreises (und der Zeit, falls eine gesetzt ist) erscheinen im Tagesverlauf als ein Stopp. Gespeichert bleibt jede Position. Hier nur zur Ansicht.",
+        "loadError": "Die festen Orte konnten nicht geladen werden.",
+        "none": "Keine festen Orte.",
+        "home": "Zu Hause",
+        "homeUnknown": "Zu Hause (noch kein Wohnort festgelegt)",
+        "kind": {
+          "home": "Zuhause",
+          "work": "Arbeit",
+          "custom": "Eigener Ort"
+        },
+        "radius": "Umkreis {{metres}} m",
+        "always": "immer",
+        "window": "{{days}}, {{from}}–{{until}}",
+        "days": {
+          "1": "Mo",
+          "2": "Di",
+          "3": "Mi",
+          "4": "Do",
+          "5": "Fr",
+          "6": "Sa",
+          "7": "So"
+        },
+        "lodging": "Unterkunft während der Buchung: {{state}}, Umkreis {{metres}} m",
+        "lodgingOn": "an",
+        "lodgingOff": "aus",
+        "lodgingSkipped_one": "{{count}} Buchung ohne Koordinaten wird übersprungen.",
+        "lodgingSkipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen."
       }
     },
     "history": {

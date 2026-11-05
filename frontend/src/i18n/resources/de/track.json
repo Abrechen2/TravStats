@@ -748,7 +748,11 @@
       "unavailable": "Der Ortsdienst ist gerade nicht erreichbar – kein Vorschlag möglich.",
       "failed": "Der Vorschlag konnte nicht geladen werden.",
       "retry": "Erneut versuchen",
-      "address": "Adresse"
+      "address": "Adresse",
+      "fixed": "Fester Ort",
+      "lodging": "Unterkunft",
+      "folded_one": "{{count}} Position zusammengefasst",
+      "folded_other": "{{count}} Positionen zusammengefasst"
     }
   }
 }

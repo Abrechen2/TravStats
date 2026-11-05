@@ -71,13 +71,21 @@ export const travTrackPlacesApi = {
 /** How a places call failed, as the page words it. */
 export type PlacesFailure = "notFound" | "disabled" | "validation" | "network" | "generic";
 
-/** Sorted by the server's status and `error` word, never by its prose. */
+/**
+ * Sorted by status and the server's words, never its prose: 403 with
+ * `TRAVTRACK_DISABLED` (or the contract's `travtrackDisabled`) is the area
+ * being off; 400 carries `error: validation | homeIsDerived`; 404 is an unknown
+ * id (`TRAVTRACK_PLACE_NOT_FOUND`) or, on the list, a server without places.
+ */
 export function placesFailure(err: unknown): PlacesFailure {
-  const response = (err as { response?: { status?: number; data?: { error?: unknown } } } | null)
-    ?.response;
+  const response = (
+    err as { response?: { status?: number; data?: { error?: unknown; code?: unknown } } } | null
+  )?.response;
   if (!response) return "network";
-  const word = typeof response.data?.error === "string" ? response.data.error : "";
-  if (response.status === 403 && word === "travtrackDisabled") return "disabled";
+  const error = response.data?.error;
+  const code = response.data?.code;
+  if (response.status === 403 && (code === "TRAVTRACK_DISABLED" || error === "travtrackDisabled"))
+    return "disabled";
   if (response.status === 400) return "validation";
   if (response.status === 404) return "notFound";
   return "generic";
