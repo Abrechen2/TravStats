@@ -7,6 +7,7 @@
 import request from "supertest";
 import app from "../index";
 import { prisma } from "../db";
+import type { Prisma } from "../prisma";
 import { hashPassword } from "../utils/password";
 import { generateToken } from "../utils/jwt";
 
@@ -16,7 +17,10 @@ describe("GET /stats/summary — daysAway.rail", () => {
   let userId: string;
   let cookie: string;
 
-  const ride = (over: Record<string, unknown>) => ({
+  const ride = (
+    over: Pick<Prisma.RailJourneyUncheckedCreateInput, "departureTime" | "status"> &
+      Partial<Prisma.RailJourneyUncheckedCreateInput>
+  ): Prisma.RailJourneyUncheckedCreateInput => ({
     userId,
     depStationName: "A",
     depLat: 35.68,
@@ -98,7 +102,7 @@ describe("GET /stats/summary — daysAway.rail", () => {
         status: "completed",
         departureTime: new Date("2024-12-31T22:30:00Z"),
         arrivalTime: new Date("2025-01-01T01:00:00Z"),
-      }) as never,
+      }),
     });
     try {
       expect((await daysAway({ year: 2024 })).rail).toBe(1); // 21 May only
