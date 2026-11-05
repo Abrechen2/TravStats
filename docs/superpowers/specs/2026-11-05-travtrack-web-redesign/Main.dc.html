@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Track – Tagesansicht</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Hanken Grotesk",system-ui,sans-serif;color:#e7e3dc;background:#0b0d10}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66}
+button,input,select{font-family:inherit}
+select{color:#e7e3dc;background:#101317}
+.tt-scroll::-webkit-scrollbar{width:8px}.tt-scroll::-webkit-scrollbar-thumb{background:rgba(231,227,220,0.16);border-radius:4px}
+</style>
+</helmet>
+<div style="width: 100%; height: 900px; display: flex; flex-direction: column; overflow: hidden; background: #0b0d10; color: #e7e3dc; font-family: 'Hanken Grotesk', system-ui, sans-serif">
+
+<header style="min-height: 56px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 24px; background: #0b0d10; border-bottom: 1px solid rgba(231,227,220,0.12); flex-wrap: wrap">
+<a href="#" aria-label="Startseite" style="display: flex; align-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f0a947" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 16l20-8-8 14-2-6z"></path></svg></a>
+<nav aria-label="Bereiche" style="display: flex; align-items: baseline; font-size: 20px; font-weight: 700">
+<span aria-hidden="true" style="color: #f4ece0; margin-right: 2px">Trav</span>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: rgba(231,227,220,0.45); border-bottom: 3px solid transparent">Stats</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: rgba(231,227,220,0.45); border-bottom: 3px solid transparent">Plan</a>
+<a href="#" aria-current="true" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: #5ec2b2; border-bottom: 3px solid #5ec2b2">Track</a>
+</nav>
+<span aria-hidden="true" style="width: 1px; height: 22px; background: rgba(231,227,220,0.12); margin: 0 6px"></span>
+<nav aria-label="Track" style="display: flex; gap: 2px; font-size: 14px; flex-wrap: wrap">
+<a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; color: #f4ece0; box-shadow: inset 0 -2px 0 #5ec2b2">Karte</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; color: rgba(231,227,220,0.6)">Erkundet</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; color: rgba(231,227,220,0.6)">Statistik</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; color: rgba(231,227,220,0.6)">Aufenthalte</a>
+<a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; color: rgba(231,227,220,0.6)">Importe</a>
+</nav>
+<div style="flex: 1"></div>
+<button aria-label="Posteingang (1)" style="position: relative; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M4 13l2-8h12l2 8v6H4z"></path><path d="M4 13h5l1 2h4l1-2h5"></path></svg><span style="position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #f0a947"></span></button>
+<button aria-label="Menü" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+</header>
+
+<div style="flex: none; min-height: 60px; display: flex; align-items: center; gap: 14px; padding: 8px 24px; background: #101317; border-bottom: 1px solid rgba(231,227,220,0.12); flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 6px">
+<button aria-label="Vorheriger Tag" style="width: 44px; height: 44px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button>
+<button style="height: 44px; padding: 0 16px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: #14181d; font-size: 16px; font-weight: 700; color: #f4ece0; display: flex; align-items: center; gap: 10px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5ec2b2" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>{{rangeLabel}}</button>
+<button aria-label="Nächster Tag" style="width: 44px; height: 44px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg></button>
+</div>
+<div role="group" aria-label="Zeitraum" style="display: flex; gap: 6px; flex-wrap: wrap">
+<sc-for list="{{presets}}" as="p" hint-placeholder-count="6">
+<button onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+</sc-for>
+</div>
+<div style="flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 5px">
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgba(231,227,220,0.6)"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+<div aria-label="Abdeckung des Tages: 96 Prozent" role="img" style="height: 6px; border-radius: 999px; background: #1a1f26; display: flex; overflow: hidden">
+<div style="width: 34.8%; background: rgba(231,227,220,0.3)"></div>
+<div style="width: 18%; background: #5ec2b2"></div>
+<div style="width: 1.5%; background: #1a1f26"></div>
+<div style="width: 15%; background: #5ec2b2"></div>
+<div style="width: 26.7%; background: rgba(231,227,220,0.3)"></div>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(231,227,220,0.6)"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #5ec2b2"></span>Zuletzt gesehen 12:41 · Merklingen</div>
+<a href="Settings.dc.html" aria-label="TravTrack-Einstellungen" style="width: 44px; height: 44px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg></a>
+</div>
+
+<main style="position: relative; flex: 1; min-height: 0; overflow: hidden; background: #0f1215">
+<svg role="img" aria-label="Karte des 4. November 2026 mit Strecke Stuttgart-Zuffenhausen bis Merklingen" viewBox="0 0 1440 784" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%">
+<rect width="1440" height="784" fill="#0f1215"></rect>
+<path d="M0 120 C 200 90, 300 200, 480 150 S 800 60, 1000 140 S 1300 260, 1440 200 L1440 0 L0 0 Z" fill="#121a17"></path>
+<path d="M600 640 C 700 600, 760 700, 900 690 S 1100 620, 1200 720 L1200 784 L560 784 Z" fill="#121a17"></path>
+<ellipse cx="760" cy="420" rx="90" ry="50" fill="#121a17"></ellipse>
+<path d="M-20 520 C 120 500, 220 560, 330 520 S 470 430, 560 470 S 700 560, 820 520" fill="none" stroke="#14222d" stroke-width="18"></path>
+<path d="M0 330 L 1440 640" stroke="#3a3328" stroke-width="7" fill="none"></path>
+<path d="M380 0 L 470 784" stroke="#262b31" stroke-width="6" fill="none"></path>
+<path d="M0 230 L 1440 260" stroke="#262b31" stroke-width="5" fill="none"></path>
+<path d="M250 784 L 700 0" stroke="#22272c" stroke-width="4" fill="none"></path>
+<path d="M900 0 L 1010 784" stroke="#22272c" stroke-width="4" fill="none"></path>
+<path d="M0 450 L 1440 410" stroke="#1f2328" stroke-width="3" fill="none"></path>
+<path d="M540 120 L 660 520 M 820 300 L 1140 380 M 560 300 L 700 240" stroke="#1d2126" stroke-width="2" fill="none"></path>
+<g font-family="Hanken Grotesk, sans-serif" font-size="13" fill="rgba(231,227,220,0.45)">
+<text x="402" y="176">Zuffenhausen</text><text x="300" y="560">Neckar</text><text x="704" y="402">Filder</text><text x="1180" y="598">A8</text><text x="930" y="646">Merklingen</text>
+</g>
+<path d="M430 200 C 450 230, 480 260, 500 290" fill="none" stroke="#5ec2b2" stroke-width="{{w.l1}}" stroke-linecap="round" stroke-opacity="{{o.l1}}"></path>
+<path d="M500 290 C 530 320, 560 350, 590 380" fill="none" stroke="#5ec2b2" stroke-width="{{w.l2}}" stroke-linecap="round" stroke-opacity="{{o.l2}}"></path>
+<path d="M590 380 L 604 388 L 620 400" fill="none" stroke="#5b8def" stroke-width="{{w.l3}}" stroke-linecap="round" stroke-opacity="{{o.l3}}"></path>
+<path d="M620 400 C 660 430, 700 450, 740 470 L 860 540 L 880 560" fill="none" stroke="#f0a947" stroke-width="{{w.l4}}" stroke-linecap="round" stroke-opacity="{{o.l4}}"></path>
+<path d="M880 560 C 905 575, 930 595, 960 610" fill="none" stroke="#5ec2b2" stroke-width="{{w.l5}}" stroke-linecap="round" stroke-opacity="{{o.l5}}"></path>
+<circle cx="430" cy="200" r="38" fill="#5ec2b2" fill-opacity="0.06" stroke="#5ec2b2" stroke-opacity="0.45" stroke-dasharray="4 4"></circle>
+<g font-family="IBM Plex Mono, monospace" font-size="12" font-weight="500" text-anchor="middle">
+<circle cx="430" cy="200" r="{{r.s1}}" fill="#14181d" stroke="#f4ece0" stroke-width="2"></circle><text x="430" y="204" fill="#f4ece0">1</text>
+<circle cx="500" cy="290" r="{{r.s2}}" fill="#14181d" stroke="#f4ece0" stroke-width="2"></circle><text x="500" y="294" fill="#f4ece0">2</text>
+<circle cx="590" cy="380" r="{{r.s3}}" fill="#14181d" stroke="#f4ece0" stroke-width="2"></circle><text x="590" y="384" fill="#f4ece0">3</text>
+<circle cx="620" cy="400" r="{{r.s4}}" fill="#14181d" stroke="#f4ece0" stroke-width="2"></circle><text x="620" y="404" fill="#f4ece0">4</text>
+<circle cx="880" cy="560" r="{{r.s5}}" fill="#14181d" stroke="#f4ece0" stroke-width="2"></circle><text x="880" y="564" fill="#f4ece0">5</text>
+</g>
+<circle cx="960" cy="610" r="16" fill="#5ec2b2" fill-opacity="0.2"></circle>
+<circle cx="960" cy="610" r="7" fill="#5ec2b2" stroke="#0b0d10" stroke-width="2.5"></circle>
+</svg>
+
+<div style="position: absolute; left: 16px; top: 16px; width: 300px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100% - 32px)">
+<section aria-label="Ebenen und Darstellung" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,0.5); overflow: hidden">
+<button onClick="{{toggleLayers}}" aria-expanded="{{layersOpen}}" style="width: 100%; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border: 0; background: transparent; cursor: pointer; font-size: 16px; font-weight: 700; color: #e7e3dc">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ec2b2" stroke-width="1.8" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg>
+Ebenen<span style="flex: 1"></span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 400; color: rgba(231,227,220,0.6); font-size: 11px; letter-spacing: .12em">{{layerCount}} AN</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(231,227,220,0.6)" stroke-width="1.8" aria-hidden="true"><path d="{{layersChevron}}"></path></svg>
+</button>
+<sc-if value="{{layersOpen}}" hint-placeholder-val="{{ true }}">
+<div class="tt-scroll" style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 2px; max-height: 430px; overflow-y: auto">
+<sc-for list="{{layers}}" as="l" hint-placeholder-count="8">
+<label style="display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; cursor: pointer">
+<input type="checkbox" checked="{{l.on}}" onChange="{{l.flip}}" style="width: 18px; height: 18px; accent-color: #f0a947">
+<span style="display: flex; flex-direction: column"><span style="color: #e7e3dc">{{l.name}}</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">{{l.hint}}</span></span>
+</label>
+</sc-for>
+<div style="height: 1px; background: rgba(231,227,220,0.12); margin: 10px 0"></div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .12em; color: rgba(231,227,220,0.6)">LINIE</div>
+<div role="group" aria-label="Linienfarbe" style="display: flex; gap: 6px; padding: 6px 0">
+<button aria-pressed="true" style="height: 36px; padding: 0 14px; border: 1px solid rgba(240,169,71,0.45); border-radius: 999px; background: rgba(240,169,71,0.15); color: #f0a947; font-size: 13px; font-weight: 600">Nach Tempo</button>
+<button aria-pressed="false" style="height: 36px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: rgba(231,227,220,0.6); font-size: 13px">Einfarbig</button>
+</div>
+<div aria-label="Tempo-Legende" style="display: flex; flex-direction: column; gap: 4px; padding: 2px 0 8px">
+<div style="height: 6px; border-radius: 999px; display: flex; overflow: hidden"><span style="flex: 1; background: #5b8def"></span><span style="flex: 1; background: #5ec2b2"></span><span style="flex: 1; background: #f0a947"></span><span style="flex: 1; background: #e2683c"></span></div>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgba(231,227,220,0.6)"><span>0</span><span>30</span><span>120</span><span>300 km/h</span></div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: rgba(231,227,220,0.6)">Deckkraft<input type="range" min="20" max="100" value="85" style="accent-color: #f0a947"></label>
+<label style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #e7e3dc; min-height: 44px">Bei Pausen trennen<select style="height: 36px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; font: inherit; padding: 0 8px"><option>ab 15 Min.</option><option>nie</option><option>ab 1 Std.</option></select></label>
+<label style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #e7e3dc; min-height: 44px">Genauigkeit<select style="height: 36px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; font: inherit; padding: 0 8px"><option>bis 100 m</option><option>alle Punkte</option><option>bis 25 m</option></select></label>
+</div>
+</sc-if>
+</section>
+
+<section aria-label="Tag in Zahlen" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,0.5); padding: 16px">
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .12em; color: rgba(231,227,220,0.6); margin-bottom: 10px">TAG IN ZAHLEN</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div><div style="font-size: 20px; font-weight: 800; color: #f4ece0; font-variant-numeric: tabular-nums">186 km</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Strecke</div></div>
+<div><div style="font-size: 20px; font-weight: 800; color: #f4ece0; font-variant-numeric: tabular-nums">2:58 h</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">unterwegs</div></div>
+<div><div style="font-size: 20px; font-weight: 800; color: #f4ece0">5</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Stopps</div></div>
+</div>
+<sc-if value="{{totalsOpen}}" hint-placeholder-val="{{ false }}">
+<dl style="margin: 14px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-size: 13px">
+<dt style="color: rgba(231,227,220,0.6)">Ø Tempo in Bewegung</dt><dd style="margin: 0; font-weight: 700">63 km/h</dd>
+<dt style="color: rgba(231,227,220,0.6)">Höchsttempo</dt><dd style="margin: 0; font-weight: 700">134 km/h</dd>
+<dt style="color: rgba(231,227,220,0.6)">Zu Fuß</dt><dd style="margin: 0; font-weight: 700">0,4 km · 6 Min.</dd>
+<dt style="color: rgba(231,227,220,0.6)">Punkte</dt><dd style="margin: 0; font-weight: 700">4.812</dd>
+<dt style="color: rgba(231,227,220,0.6)">Abdeckung</dt><dd style="margin: 0; font-weight: 700">96 % des Tages</dd>
+</dl>
+</sc-if>
+<button onClick="{{toggleTotals}}" aria-expanded="{{totalsOpen}}" style="margin-top: 8px; min-height: 36px; padding: 0; border: 0; background: transparent; color: #f0a947; font-size: 13px; font-weight: 600; cursor: pointer">{{totalsLabel}}</button>
+</section>
+</div>
+
+<aside aria-label="Tagesverlauf" style="position: absolute; right: 16px; top: 16px; bottom: 16px; width: 384px; background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden">
+<sc-if value="{{showList}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; min-height: 0; flex: 1">
+<div role="tablist" aria-label="Ansicht" style="flex: none; display: flex; gap: 4px; padding: 6px 12px 0; border-bottom: 1px solid rgba(231,227,220,0.12)">
+<button role="tab" aria-selected="{{tabLegs}}" onClick="{{toLegs}}" style="{{tabLegsStyle}}">Etappen &amp; Stopps</button>
+<button role="tab" aria-selected="{{tabBook}}" onClick="{{toBook}}" style="{{tabBookStyle}}">Logbuch</button>
+</div>
+<sc-if value="{{tabLegs}}" hint-placeholder-val="{{ true }}">
+<ol class="tt-scroll" style="list-style: none; margin: 0; padding: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="10">
+<li>
+<button onClick="{{row.pick}}" style="{{row.style}}">
+<span style="{{row.dotStyle}}">{{row.badge}}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; text-align: left">
+<span style="font-size: 14px; font-weight: 700; color: #e7e3dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{row.title}}</span>
+<span style="font-size: 12px; color: rgba(231,227,220,0.6)">{{row.sub}}</span>
+</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6); white-space: nowrap">{{row.time}}</span>
+</button>
+</li>
+</sc-for>
+</ol>
+</sc-if>
+<sc-if value="{{tabBook}}" hint-placeholder-val="{{ false }}">
+<div class="tt-scroll" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px">
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .12em; color: rgba(231,227,220,0.6)">AN DIESEM TAG IM LOGBUCH</div>
+<a href="#" style="display: flex; gap: 12px; padding: 12px; background: #1a1f26; border-radius: 14px; color: #e7e3dc">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(94,194,178,0.12); display: flex; align-items: center; justify-content: center; flex: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ec2b2" stroke-width="1.8" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"></path><path d="M9 21v-6h6v6"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700; font-size: 14px">Hotel Stuttgart Zuffenhausen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Unterkunft · 3.–4. Nov. · Check-out 08:15</span></span></a>
+<a href="#" style="display: flex; gap: 12px; padding: 12px; background: #1a1f26; border-radius: 14px; color: #e7e3dc">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(169,196,106,0.12); display: flex; align-items: center; justify-content: center; flex: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a9c46a" stroke-width="1.8" aria-hidden="true"><path d="M5 17h14l-1.5-6h-11z"></path><circle cx="7.5" cy="18" r="1.5"></circle><circle cx="16.5" cy="18" r="1.5"></circle></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700; font-size: 14px">Roadtrip Schwäbische Alb</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Roadtrip · Tag 2 von 4</span></span></a>
+<div style="padding: 14px; border-radius: 14px; border: 1px solid rgba(216,149,47,0.45); background: rgba(216,149,47,0.08); display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 14px; font-weight: 700">Aufenthalt erkannt: H-Albzeit, 11:42–12:30</span>
+<span style="font-size: 12px; color: rgba(231,227,220,0.6)">Als Ort ins Logbuch übernehmen?</span>
+<span style="display: flex; gap: 8px"><button style="height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #f0a947; color: #0b0d10; font-weight: 700; font-size: 14px">Übernehmen</button><button style="height: 44px; padding: 0 16px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 14px">Verwerfen</button></span>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; flex: 1; min-height: 0">
+<div style="flex: none; display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid rgba(231,227,220,0.12)">
+<button onClick="{{back}}" style="height: 44px; padding: 0 10px; border: 0; background: transparent; color: #f0a947; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>Ganzer Tag</button>
+</div>
+<div class="tt-scroll" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 12px"><span style="{{detail.dotStyle}}">{{detail.badge}}</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 800; color: #f4ece0">{{detail.title}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">{{detail.time}}</span></span></div>
+<sc-if value="{{detail.isLeg}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="padding: 12px; background: #1a1f26; border-radius: 14px"><div style="font-size: 18px; font-weight: 800; color: #f4ece0">{{detail.km}}</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Strecke</div></div>
+<div style="padding: 12px; background: #1a1f26; border-radius: 14px"><div style="font-size: 18px; font-weight: 800; color: #f4ece0">{{detail.dur}}</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Dauer</div></div>
+<div style="padding: 12px; background: #1a1f26; border-radius: 14px"><div style="font-size: 18px; font-weight: 800; color: #f4ece0">{{detail.speed}}</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Ø Tempo</div></div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.6)">Verkehrsmittel
+<select style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; font: inherit; font-size: 14px; padding: 0 12px"><option>{{detail.mode}} (automatisch)</option><option>Zu Fuß</option><option>Fahrrad</option><option>Auto</option><option>Bus</option><option>Bahn</option><option>Flug</option></select></label>
+<div style="font-size: 12px; color: rgba(231,227,220,0.6)">Erkannt aus Tempo und Beschleunigung. Eine Änderung gilt nur für diese Etappe.</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button onClick="{{openReplay}}" style="height: 46px; padding: 0 16px; border: 0; border-radius: 12px; background: #f0a947; color: #0b0d10; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Etappe abspielen</button>
+<button style="height: 46px; padding: 0 16px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 14px">Punkte zeigen</button>
+</div>
+<a href="#" style="font-size: 14px; font-weight: 600">Zum Roadtrip-Eintrag →</a>
+</div>
+</sc-if>
+<sc-if value="{{detail.isStop}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 13px; color: rgba(231,227,220,0.6)">{{detail.sub}}</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: .12em; color: rgba(231,227,220,0.6)">NAME DES STOPPS</div>
+<sc-for list="{{detail.names}}" as="n" hint-placeholder-count="3">
+<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: 14px"><input type="radio" name="stopname" checked="{{n.on}}" style="width: 18px; height: 18px; accent-color: #f0a947"><span style="display: flex; flex-direction: column"><span>{{n.name}}</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">{{n.why}}</span></span></label>
+</sc-for>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button style="height: 46px; padding: 0 16px; border: 0; border-radius: 12px; background: #f0a947; color: #0b0d10; font-weight: 700; font-size: 14px">Name übernehmen</button>
+<button style="height: 46px; padding: 0 16px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 14px">Als festen Ort anlegen</button>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</aside>
+
+<div style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; display: flex; justify-content: center; width: min(560px, calc(100% - 760px)); min-width: 300px">
+<sc-if value="{{replayOpen}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Wiedergabe" style="width: 100%; background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; box-shadow: 0 14px 30px rgba(0,0,0,0.5); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px">
+<button onClick="{{togglePlay}}" aria-label="{{playLabel}}" style="width: 48px; height: 48px; border-radius: 16px; border: 0; background: #f0a947; color: #0b0d10; display: flex; align-items: center; justify-content: center; flex: none; cursor: pointer; box-shadow: 0 6px 16px rgba(240,169,71,0.35)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{playIcon}}"></path></svg></button>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+<div style="position: relative; height: 6px; border-radius: 999px; background: #1a1f26">
+<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 46%; border-radius: 999px; background: #f0a947"></div>
+<div title="Lücke" style="position: absolute; left: 62%; top: -3px; width: 6px; height: 12px; border-left: 2px dotted rgba(231,227,220,0.45)"></div>
+<div style="position: absolute; left: calc(46% - 8px); top: -5px; width: 16px; height: 16px; border-radius: 50%; background: #f4ece0; border: 3px solid #f0a947; box-sizing: border-box"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)"><span>11:05</span><span style="color: #f4ece0">11:22 · 118 km/h</span><span>11:42</span></div>
+</div>
+<button onClick="{{toggleReplay}}" aria-label="Wiedergabe schließen" style="width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(231,227,220,0.6)" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.6); flex-wrap: wrap">Tempo
+<button style="height: 32px; padding: 0 12px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: #e7e3dc; font-size: 12px">1×</button>
+<button style="height: 32px; padding: 0 12px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: #e7e3dc; font-size: 12px">10×</button>
+<button aria-pressed="true" style="height: 32px; padding: 0 12px; border: 1px solid rgba(240,169,71,0.45); border-radius: 999px; background: rgba(240,169,71,0.15); color: #f0a947; font-weight: 700; font-size: 12px">60×</button>
+<button style="height: 32px; padding: 0 12px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: #e7e3dc; font-size: 12px">600×</button>
+<span style="flex: 1"></span>
+<label style="display: flex; align-items: center; gap: 6px"><input type="checkbox" checked style="accent-color: #f0a947">Lücken überspringen</label>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{replayClosed}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{toggleReplay}}" style="height: 48px; padding: 0 20px; border: 1px solid rgba(231,227,220,0.12); border-radius: 999px; background: #14181d; box-shadow: 0 14px 30px rgba(0,0,0,0.5); font-size: 14px; font-weight: 700; color: #e7e3dc; display: flex; align-items: center; gap: 8px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="#f0a947" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Tag abspielen</button>
+</sc-if>
+</div>
+
+<div style="position: absolute; right: 416px; bottom: 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-direction: column; background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 12px; overflow: hidden">
+<button aria-label="Hineinzoomen" style="width: 44px; height: 44px; border: 0; border-bottom: 1px solid rgba(231,227,220,0.12); background: transparent; font-size: 20px; color: #e7e3dc">+</button>
+<button aria-label="Herauszoomen" style="width: 44px; height: 44px; border: 0; background: transparent; font-size: 20px; color: #e7e3dc">−</button>
+</div>
+<button aria-label="Ganzen Tag zeigen" onClick="{{back}}" style="width: 44px; height: 44px; border: 1px solid rgba(231,227,220,0.12); border-radius: 12px; background: #14181d; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></button>
+</div>
+<div style="position: absolute; left: 16px; bottom: 10px; font-size: 11px; color: rgba(231,227,220,0.45)">© OpenFreeMap © OpenStreetMap · Private Zonen sind ausgespart und nie eingezeichnet</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { layersOpen: true, totalsOpen: false, tab: 'legs', sel: null, replayOpen: false, playing: false, preset: 'day',
+      layers: { routes: true, points: false, heat: false, fog: false, visits: true, entries: true, photos: true, countries: false } };
+  }
+  renderVals() {
+    const s = this.state;
+    const set = (patch) => () => this.setState(patch);
+    const chip = (on) => on
+      ? 'height: 36px; padding: 0 14px; border: 1px solid rgba(94,194,178,0.55); border-radius: 999px; background: rgba(94,194,178,0.14); font-size: 13px; font-weight: 700; color: #5ec2b2; cursor: pointer'
+      : 'height: 36px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; font-size: 13px; color: rgba(231,227,220,0.6); cursor: pointer';
+    const presetDefs = [['day','Tag'],['yesterday','Gestern'],['week','7 Tage'],['month','Monat'],['year','Jahr'],['custom','Eigener …']];
+    const rangeLabels = { day: 'Mi, 4. Nov. 2026', yesterday: 'Di, 3. Nov. 2026', week: '29. Okt. – 4. Nov.', month: 'November 2026', year: '2026', custom: '1. – 4. Nov. 2026' };
+    const presets = presetDefs.map(([id, label]) => ({ label, on: s.preset === id, style: chip(s.preset === id), pick: set({ preset: id }) }));
+
+    const layerDefs = [
+      ['routes','Strecken','Linien zwischen den Punkten'],['points','Punkte','Jede Position, anklickbar'],
+      ['heat','Heatmap','Wo du dich oft aufhältst'],['fog','Erkundet-Nebel','Unbekanntes abgedunkelt'],
+      ['visits','Aufenthalte und Orte','Zuhause, feste Orte, Unterkünfte'],['entries','Logbuch-Einträge','Flüge, Fahrten, Reisen'],
+      ['photos','Fotos','Aus Immich, auf der Strecke eingeordnet'],['countries','Länder','Länder mit Standortpunkten']];
+    const layers = layerDefs.map(([id, name, hint]) => ({ name, hint, on: s.layers[id],
+      flip: () => this.setState({ layers: { ...s.layers, [id]: !s.layers[id] } }) }));
+    const layerCount = Object.values(s.layers).filter(Boolean).length;
+
+    const legDot = (c) => `width: 34px; height: 34px; flex: none; border-radius: 10px; background: ${c}; color: #0b0d10; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800`;
+    const stopDot = 'width: 34px; height: 34px; flex: none; border-radius: 50%; background: #14181d; border: 2px solid #f4ece0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-family: IBM Plex Mono, monospace; font-size: 13px; font-weight: 500; color: #f4ece0';
+    const items = [
+      { id: 's1', kind: 'stop', badge: '1', title: 'Hotel Stuttgart Zuffenhausen', sub: 'Unterkunft während der Buchung · 214 Punkte zusammengefasst', time: 'BIS 08:21', names: [{ name: 'Hotel Stuttgart Zuffenhausen', why: 'Unterkunft aus dem Logbuch', on: true }, { name: 'Zuffenhausen', why: 'Stadtteil', on: false }] },
+      { id: 'l1', kind: 'leg', badge: 'AUTO', color: '#5ec2b2', title: 'Auto · 6,4 km', sub: '12 Min. · Ø 32 km/h', time: '08:21–08:33', km: '6,4 km', dur: '12 Min.', speed: '32 km/h', mode: 'Auto' },
+      { id: 's2', kind: 'stop', badge: '2', title: 'Mercedes-Benz Bank', sub: 'Firma in 40 m · 47 Min.', time: '08:33–09:20', names: [{ name: 'Mercedes-Benz Bank', why: 'Firma in 40 m', on: true }, { name: 'Pragsattel', why: 'Haltestelle in 60 m', on: false }] },
+      { id: 'l2', kind: 'leg', badge: 'AUTO', color: '#5ec2b2', title: 'Auto · 11,2 km', sub: '17 Min. · Ø 40 km/h', time: '09:20–09:37', km: '11,2 km', dur: '17 Min.', speed: '40 km/h', mode: 'Auto' },
+      { id: 's3', kind: 'stop', badge: '3', title: 'Lidl', sub: 'Supermarkt in 25 m · 18 Min.', time: '09:37–09:55', names: [{ name: 'Lidl', why: 'Supermarkt in 25 m', on: true }] },
+      { id: 'l3', kind: 'leg', badge: 'FUSS', color: '#5b8def', title: 'Zu Fuß · 0,4 km', sub: '6 Min. · Ø 4 km/h', time: '09:55–10:01', km: '0,4 km', dur: '6 Min.', speed: '4 km/h', mode: 'Zu Fuß' },
+      { id: 's4', kind: 'stop', badge: '4', title: 'Restaurant Steinhalde', sub: 'Restaurant in 30 m · 1 Std. 4 Min.', time: '10:01–11:05', names: [{ name: 'Restaurant Steinhalde', why: 'Restaurant in 30 m', on: true }] },
+      { id: 'l4', kind: 'leg', badge: 'AUTO', color: '#f0a947', title: 'Auto · 48 km', sub: '37 Min. · Ø 78 km/h · A8', time: '11:05–11:42', km: '48 km', dur: '37 Min.', speed: '78 km/h', mode: 'Auto' },
+      { id: 's5', kind: 'stop', badge: '5', title: 'H-Albzeit', sub: 'Restaurant in 20 m · 48 Min.', time: '11:42–12:30', names: [{ name: 'H-Albzeit', why: 'Restaurant in 20 m', on: true }, { name: 'Tesla Supercharger', why: 'Ladestation in 60 m', on: false }, { name: 'Ionity Merklingen', why: 'Ladestation in 90 m', on: false }] },
+      { id: 'l5', kind: 'leg', badge: 'AUTO', color: '#5ec2b2', title: 'Auto · 9 km', sub: '11 Min. · Ø 49 km/h', time: '12:30–12:41', km: '9 km', dur: '11 Min.', speed: '49 km/h', mode: 'Auto' }
+    ];
+    const rows = items.map((it) => ({ ...it,
+      dotStyle: it.kind === 'leg' ? legDot(it.color) : stopDot,
+      style: `width: 100%; min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 0; border-radius: 14px; cursor: pointer; background: ${s.sel === it.id ? 'rgba(240,169,71,0.12)' : 'transparent'}`,
+      pick: set({ sel: it.id }) }));
+    const cur = items.find((it) => it.id === s.sel) || null;
+    const detail = cur ? { ...cur, isLeg: cur.kind === 'leg', isStop: cur.kind === 'stop', dotStyle: cur.kind === 'leg' ? legDot(cur.color) : stopDot, names: cur.names || [] }
+      : { isLeg: false, isStop: false, names: [], dotStyle: stopDot };
+
+    const o = {}, w = {}, r = {};
+    ['l1','l2','l3','l4','l5'].forEach((id) => { o[id] = s.sel && s.sel !== id ? 0.22 : 0.95; w[id] = s.sel === id ? 9 : 6; });
+    ['s1','s2','s3','s4','s5'].forEach((id) => { r[id] = s.sel === id ? 17 : 12; });
+    const tabStyle = (on) => `height: 46px; padding: 0 12px; border: 0; background: transparent; font-size: 14px; cursor: pointer; font-weight: ${on ? 700 : 400}; color: ${on ? '#f4ece0' : 'rgba(231,227,220,0.6)'}; box-shadow: inset 0 -2px 0 ${on ? '#5ec2b2' : 'transparent'}`;
+
+    return {
+      rangeLabel: rangeLabels[s.preset], presets, layers, layerCount,
+      layersOpen: s.layersOpen, toggleLayers: set({ layersOpen: !s.layersOpen }),
+      layersChevron: s.layersOpen ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6',
+      totalsOpen: s.totalsOpen, toggleTotals: set({ totalsOpen: !s.totalsOpen }),
+      totalsLabel: s.totalsOpen ? 'Weniger' : 'Alle Werte',
+      tabLegs: s.tab === 'legs', tabBook: s.tab === 'book', toLegs: set({ tab: 'legs' }), toBook: set({ tab: 'book' }),
+      tabLegsStyle: tabStyle(s.tab === 'legs'), tabBookStyle: tabStyle(s.tab === 'book'),
+      rows, showList: !cur, showDetail: !!cur, detail, back: set({ sel: null }),
+      replayOpen: s.replayOpen, replayClosed: !s.replayOpen, toggleReplay: set({ replayOpen: !s.replayOpen, playing: false }),
+      openReplay: set({ replayOpen: true }), togglePlay: set({ playing: !s.playing }),
+      playLabel: s.playing ? 'Pause' : 'Abspielen', playIcon: s.playing ? 'M6 4h4v16H6zM14 4h4v16h-4z' : 'M7 4l13 8-13 8z',
+      o, w, r
+    };
+  }
+}
+</script>
+</body>
+</html>

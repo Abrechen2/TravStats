@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Einstellungen – TravTrack</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Hanken Grotesk",system-ui,sans-serif;color:#e7e3dc;background:#0b0d10}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+input,select{color:#e7e3dc;background:#101317;color-scheme:dark}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 2700px; background: #0b0d10; color: #e7e3dc; font-family: 'Hanken Grotesk', system-ui, sans-serif">
+
+<header style="min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 24px; background: #0b0d10; border-bottom: 1px solid rgba(231,227,220,0.12); flex-wrap: wrap">
+<a href="#" aria-label="Startseite" style="display: flex; align-items: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f0a947" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 16l20-8-8 14-2-6z"></path></svg></a>
+<nav aria-label="Bereiche" style="display: flex; align-items: baseline; font-size: 20px; font-weight: 700">
+<span aria-hidden="true" style="color: #f4ece0; margin-right: 2px">Trav</span>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: rgba(231,227,220,0.45)">Stats</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: rgba(231,227,220,0.45)">Plan</a>
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: rgba(231,227,220,0.45)">Track</a>
+</nav>
+<div style="flex: 1"></div>
+<button aria-label="Menü" style="width: 44px; height: 44px; border: 0; background: transparent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e7e3dc" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+</header>
+
+<div style="max-width: 1240px; margin: 0 auto; padding: 28px 24px 60px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+
+<nav aria-label="Einstellungen" style="flex: 1 1 220px; max-width: 250px; display: flex; flex-direction: column; gap: 2px; font-size: 14px">
+<div style="font-size: 26px; font-weight: 800; color: #f4ece0; margin-bottom: 14px">Einstellungen</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; color: rgba(231,227,220,0.6); padding: 6px 14px">DEIN KONTO</div>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Profil &amp; Anmeldung</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Sprache &amp; Einheiten</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Reisearten</a>
+<a href="#" style="padding: 10px 14px 10px 30px; border-radius: 12px; color: #e7e3dc">Flüge</a>
+<a href="#" style="padding: 10px 14px 10px 30px; border-radius: 12px; color: #e7e3dc">Kreuzfahrten</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Reisen &amp; Eingang</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Teilen</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Erinnerungen</a>
+<a href="#" aria-current="page" style="padding: 10px 14px; border-radius: 12px; background: rgba(94,194,178,0.12); color: #5ec2b2; font-weight: 700; display: flex; align-items: center; justify-content: space-between">TravTrack<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 400; letter-spacing: .1em">NEU</span></a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Treueprogramme</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Daten</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Dienste</a>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; color: rgba(231,227,220,0.6); padding: 16px 14px 6px">SERVER · NUR ADMIN</div>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Server</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Nutzer</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Sicherungen</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Wartung</a>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Stammdaten</a>
+<div style="height: 1px; background: rgba(231,227,220,0.12); margin: 10px 0"></div>
+<a href="#" style="padding: 10px 14px; border-radius: 12px; color: #e7e3dc">Über TravStats</a>
+</nav>
+
+<div style="flex: 999 1 620px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+<div style="flex: 1; min-width: 260px">
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; color: rgba(231,227,220,0.6)">EINSTELLUNGEN › TRAVTRACK</div>
+<h1 style="margin: 6px 0 4px; font-size: 26px; font-weight: 800; color: #f4ece0">TravTrack</h1>
+<div style="font-size: 12px; color: rgba(231,227,220,0.6)">Gilt für dein Konto · ob TravTrack auf dem Server angeboten wird, steht unter Server</div>
+</div>
+<div role="group" aria-label="Ansicht" style="display: flex; padding: 3px; gap: 2px; background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 999px">
+<button aria-pressed="true" style="height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: rgba(240,169,71,0.15); color: #f0a947; font-size: 13px; font-weight: 700">Standard</button>
+<button aria-pressed="false" style="height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: rgba(231,227,220,0.6); font-size: 13px">Experte · 4 mehr</button>
+</div>
+</div>
+
+<nav aria-label="Abschnitte" style="display: flex; gap: 8px; flex-wrap: wrap">
+<a href="#tt-status" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(94,194,178,0.55); border-radius: 999px; background: rgba(94,194,178,0.14); color: #5ec2b2; font-size: 13px; font-weight: 700">Aufzeichnung</a>
+<a href="#tt-places" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; color: #e7e3dc; font-size: 13px">Feste Orte</a>
+<a href="#tt-zones" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; color: #e7e3dc; font-size: 13px">Schutzzonen</a>
+<a href="#tt-recog" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; color: #e7e3dc; font-size: 13px">Erkennung</a>
+<a href="#tt-sources" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; color: #e7e3dc; font-size: 13px">Quellen &amp; Importe</a>
+<a href="#tt-data" style="height: 36px; padding: 0 14px; display: flex; align-items: center; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; color: #e7e3dc; font-size: 13px">Export &amp; Löschen</a>
+</nav>
+
+<section id="tt-status" aria-labelledby="h-status" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="h-status" style="margin: 0; font-size: 16px; font-weight: 700">Aufzeichnung</h2>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<div style="padding: 14px; background: #1a1f26; border-radius: 14px"><div style="font-size: 20px; font-weight: 800; color: #f4ece0">1,9 Mio.</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">Punkte gespeichert</div></div>
+<div style="padding: 14px; background: #1a1f26; border-radius: 14px"><div style="font-size: 20px; font-weight: 800; color: #f4ece0">412 Tage</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">seit 18. Sep. 2025</div></div>
+<div style="padding: 14px; background: #1a1f26; border-radius: 14px"><div style="font-size: 20px; font-weight: 800; color: #5ec2b2">12:41</div><div style="font-size: 12px; color: rgba(231,227,220,0.6)">zuletzt gesehen</div></div>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-top: 1px solid rgba(231,227,220,0.12); padding-top: 12px">
+<span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Standort kommt von</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Woher Karte, Aufenthalte und Länder ihre Positionen lesen</span></span>
+<div role="group" aria-label="Standortquelle" style="display: flex; gap: 6px"><button aria-pressed="true" style="height: 36px; padding: 0 14px; border: 1px solid rgba(240,169,71,0.45); border-radius: 999px; background: rgba(240,169,71,0.15); color: #f0a947; font-size: 13px; font-weight: 700">TravTrack</button><button aria-pressed="false" style="height: 36px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: rgba(231,227,220,0.6); font-size: 13px">Dawarich</button></div>
+</div>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-top: 1px solid rgba(231,227,220,0.12); padding-top: 12px"><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Reisen aufzeichnen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Positionen, die die App während einer Reise sammelt, hier speichern</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #f0a947"></label>
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(231,227,220,0.12); padding-top: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 14px; font-weight: 700">Geräte</span><a href="#" style="font-size: 13px">Koppeln und abmelden in Profil &amp; Anmeldung →</a></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="padding: 12px 14px; background: #1a1f26; border-radius: 14px; font-size: 12px"><div style="font-weight: 700; font-size: 14px">iPhone · Companion</div><div style="color: rgba(231,227,220,0.6)">Sendet · zuletzt 12:41</div></div>
+<div style="padding: 12px 14px; background: #1a1f26; border-radius: 14px; border: 1px solid rgba(216,149,47,0.45); font-size: 12px"><div style="font-weight: 700; font-size: 14px">Xiaomi · Companion</div><div style="color: #d8952f">Kopplung abgelaufen · 580 Punkte warten auf dem Telefon</div></div>
+</div>
+</div>
+</section>
+
+<section id="tt-places" aria-labelledby="h-places" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 12px"><h2 id="h-places" style="margin: 0; font-size: 16px; font-weight: 700; flex: 1">Feste Orte</h2><button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px; display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="font-size: 18px; line-height: 1">+</span>Ort hinzufügen</button></div>
+<p style="margin: 0; font-size: 14px; color: rgba(231,227,220,0.6)">Alles innerhalb des Radius erscheint auf der Karte als ein Stopp mit dem Namen des Orts. Die einzelnen Punkte bleiben gespeichert.</p>
+<div style="display: flex; gap: 16px; flex-wrap: wrap">
+<div role="img" aria-label="Kartenausschnitt mit den festen Orten" style="flex: 1 1 260px; min-height: 220px; border-radius: 14px; overflow: hidden; background: #0f1215; position: relative">
+<svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true">
+<rect width="320" height="220" fill="#0f1215"></rect>
+<path d="M0 60 L320 90 M60 0 L110 220 M0 160 L320 140 M200 0 L240 220" stroke="#22272c" stroke-width="5" fill="none"></path>
+<path d="M0 120 C 80 100, 150 150, 320 110" stroke="#14222d" stroke-width="10" fill="none"></path>
+<circle cx="90" cy="80" r="26" fill="#5ec2b2" fill-opacity="0.12" stroke="#5ec2b2" stroke-width="1.5"></circle><circle cx="90" cy="80" r="4" fill="#5ec2b2"></circle>
+<circle cx="230" cy="150" r="34" fill="#f0a947" fill-opacity="0.10" stroke="#f0a947" stroke-width="1.5"></circle><circle cx="230" cy="150" r="4" fill="#f0a947"></circle>
+<circle cx="160" cy="40" r="16" fill="#a597e8" fill-opacity="0.12" stroke="#a597e8" stroke-width="1.5"></circle><circle cx="160" cy="40" r="3.5" fill="#a597e8"></circle>
+<circle cx="270" cy="60" r="22" fill="none" stroke="#ee6c61" stroke-width="1.5" stroke-dasharray="4 4"></circle>
+</svg>
+</div>
+<ul style="flex: 1 1 320px; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
+<li style="display: flex; gap: 12px; align-items: center; min-height: 56px; padding: 6px 14px; background: #1a1f26; border-radius: 14px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #5ec2b2"></span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700">Zuhause</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Aus deinem Wohnort · <a href="#">Wohnort ändern</a></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">150 M · IMMER</span><button aria-label="Zuhause bearbeiten" style="width: 40px; height: 40px; border: 0; background: transparent; color: rgba(231,227,220,0.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16z"></path></svg></button></li>
+<li style="display: flex; gap: 12px; align-items: center; min-height: 56px; padding: 6px 14px; background: #1a1f26; border-radius: 14px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #f0a947"></span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700">Arbeit</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Mercedes-Benz Bank, Pragsattel</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">200 M · MO–FR 08–18</span><button aria-label="Arbeit bearbeiten" style="width: 40px; height: 40px; border: 0; background: transparent; color: rgba(231,227,220,0.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16z"></path></svg></button></li>
+<li style="display: flex; gap: 12px; align-items: center; min-height: 56px; padding: 6px 14px; background: #1a1f26; border-radius: 14px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #a597e8"></span><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 700">Fitnessstudio</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Anderer Ort</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">80 M · IMMER</span><button aria-label="Fitnessstudio bearbeiten" style="width: 40px; height: 40px; border: 0; background: transparent; color: rgba(231,227,220,0.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16z"></path></svg></button></li>
+</ul>
+</div>
+<div style="padding: 16px; border: 1px solid rgba(240,169,71,0.45); border-radius: 14px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; color: #f0a947">ORT BEARBEITEN · ARBEIT</div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Name<input value="Arbeit" style="height: 46px; width: 180px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+<div role="group" aria-label="Art" style="display: flex; gap: 6px"><button style="height: 46px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: rgba(231,227,220,0.6); font-size: 13px">Zuhause</button><button aria-pressed="true" style="height: 46px; padding: 0 14px; border: 1px solid rgba(240,169,71,0.45); border-radius: 999px; background: rgba(240,169,71,0.15); color: #f0a947; font-size: 13px; font-weight: 700">Arbeit</button><button style="height: 46px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; background: transparent; color: rgba(231,227,220,0.6); font-size: 13px">Anderer Ort</button></div>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6); flex: 1; min-width: 180px">Radius · 200 m<input type="range" min="25" max="2000" value="200" style="accent-color: #f0a947"></label>
+</div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center">
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px"><input type="checkbox" checked style="width: 20px; height: 20px; accent-color: #f0a947">Nur zu bestimmten Zeiten</label>
+<div role="group" aria-label="Wochentage" style="display: flex; gap: 4px">
+<button aria-pressed="true" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(240,169,71,0.45); background: rgba(240,169,71,0.15); color: #f0a947; font-size: 12px; font-weight: 700">Mo</button>
+<button aria-pressed="true" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(240,169,71,0.45); background: rgba(240,169,71,0.15); color: #f0a947; font-size: 12px; font-weight: 700">Di</button>
+<button aria-pressed="true" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(240,169,71,0.45); background: rgba(240,169,71,0.15); color: #f0a947; font-size: 12px; font-weight: 700">Mi</button>
+<button aria-pressed="true" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(240,169,71,0.45); background: rgba(240,169,71,0.15); color: #f0a947; font-size: 12px; font-weight: 700">Do</button>
+<button aria-pressed="true" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(240,169,71,0.45); background: rgba(240,169,71,0.15); color: #f0a947; font-size: 12px; font-weight: 700">Fr</button>
+<button aria-pressed="false" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: rgba(231,227,220,0.6); font-size: 12px">Sa</button>
+<button aria-pressed="false" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(231,227,220,0.18); background: transparent; color: rgba(231,227,220,0.6); font-size: 12px">So</button>
+</div>
+<label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.6)">von<input type="time" value="08:00" style="height: 40px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 10px"></label>
+<label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(231,227,220,0.6)">bis<input type="time" value="18:00" style="height: 40px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 10px"></label>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><button style="height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: #f0a947; color: #0b0d10; font-weight: 700; font-size: 14px">Speichern</button><button style="height: 46px; padding: 0 18px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 14px">Abbrechen</button><span style="flex: 1"></span><button style="height: 46px; padding: 0 14px; border: 0; background: transparent; color: #ee6c61; font-size: 14px">Ort löschen</button></div>
+</div>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-top: 1px solid rgba(231,227,220,0.12); padding-top: 12px"><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Unterkunft während der Buchung</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Von Check-in bis Check-out zählt das Hotel als fester Ort · 150 m · 2 Buchungen ohne Koordinaten werden übersprungen</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #f0a947"></label>
+</section>
+
+<section id="tt-zones" aria-labelledby="h-zones" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px"><h2 id="h-zones" style="margin: 0; font-size: 16px; font-weight: 700; flex: 1">Schutzzonen</h2><button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px">+ Zone hinzufügen</button></div>
+<p style="margin: 0; font-size: 14px; color: rgba(231,227,220,0.6)">In einer Schutzzone wird nichts gespeichert und nichts gezeichnet – anders als bei festen Orten, die nur zusammenfassen. Eine Schutzzone geht immer vor.</p>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
+<li style="display: flex; gap: 12px; align-items: center; min-height: 52px; padding: 6px 14px; background: #1a1f26; border-radius: 14px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; border: 2px dashed #ee6c61"></span><span style="flex: 1; font-weight: 700">Eltern</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">300 M</span><button style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #f0a947; font-size: 13px">Bearbeiten</button></li>
+<li style="display: flex; gap: 12px; align-items: center; min-height: 52px; padding: 6px 14px; background: #1a1f26; border-radius: 14px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; border: 2px dashed #ee6c61"></span><span style="flex: 1; font-weight: 700">Arztpraxis</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">150 M</span><button style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #f0a947; font-size: 13px">Bearbeiten</button></li>
+</ul>
+</section>
+
+<section id="tt-recog" aria-labelledby="h-recog" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 4px">
+<h2 id="h-recog" style="margin: 0 0 8px; font-size: 16px; font-weight: 700">Erkennung &amp; Vorschläge</h2>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px"><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Stopps benennen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Namen von Läden, Firmen und Hotels in der Nähe vorschlagen</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #f0a947"></label>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-top: 1px solid rgba(231,227,220,0.12)"><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Städte benennen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Monatsübersicht mit Städtenamen · sendet gerundete Positionen an den Ortsdienst</span></span><input type="checkbox" style="width: 22px; height: 22px; accent-color: #f0a947"></label>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-top: 1px solid rgba(231,227,220,0.12)"><span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Aufenthalte automatisch suchen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Nächte und Besuche als Vorschlag in den Posteingang · zuletzt heute 03:00, 2 neue</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #f0a947"></label>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-top: 1px solid rgba(231,227,220,0.12); flex-wrap: wrap">
+<span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px">Zeitraum für „Jetzt suchen“<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; color: rgba(231,227,220,0.6); border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; padding: 2px 8px; font-weight: 400">EXPERTE</span></span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Wie weit zurück eine Suche von Hand reicht</span></span>
+<span style="display: flex; gap: 8px; align-items: center"><select style="height: 40px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 10px; font-size: 14px"><option>Letzte 90 Tage</option><option>Letztes Jahr</option><option>Alles</option></select><button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px">Jetzt suchen</button></span>
+</div>
+<div style="font-size: 13px; padding-top: 6px"><a href="#">Offene Vorschläge im Posteingang (2) →</a></div>
+</section>
+
+<section id="tt-sources" aria-labelledby="h-sources" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="h-sources" style="margin: 0; font-size: 16px; font-weight: 700">Quellen &amp; Importe</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="padding: 14px; background: #1a1f26; border-radius: 14px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 700">Aus Dawarich übernehmen</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Fertig am 24. Okt. · 1,2 Mio. Punkte · 3 Lücken</span><span style="display: flex; gap: 12px; font-size: 13px"><a href="#">Bericht</a><a href="#">Erneut übernehmen</a></span></div>
+<div style="padding: 14px; background: #1a1f26; border-radius: 14px; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 700">Dateien importieren</span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">GPX, GeoJSON, Google-Takeout</span><span><button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px">Datei wählen</button></span></div>
+</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; color: rgba(231,227,220,0.6); padding-top: 4px">BISHERIGE IMPORTE</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: 14px">
+<li style="display: flex; gap: 12px; align-items: center; min-height: 48px; border-bottom: 1px solid rgba(231,227,220,0.12)"><span style="flex: 1">Takeout 2019–2024.json</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">640.112 PUNKTE · 9. OKT.</span><button style="height: 40px; padding: 0 10px; border: 0; background: transparent; color: #ee6c61; font-size: 13px">Entfernen</button></li>
+<li style="display: flex; gap: 12px; align-items: center; min-height: 48px"><span style="flex: 1">Alb-Wanderung.gpx</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">4.210 PUNKTE · 2. NOV.</span><button style="height: 40px; padding: 0 10px; border: 0; background: transparent; color: #ee6c61; font-size: 13px">Entfernen</button></li>
+</ul>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-top: 1px solid rgba(231,227,220,0.12); flex-wrap: wrap">
+<span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px">Weitere Apps<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; color: rgba(231,227,220,0.6); border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; padding: 2px 8px; font-weight: 400">EXPERTE</span></span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">OwnTracks oder Overland senden mit eigenem Schlüssel · 1 aktiv</span></span>
+<button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px">Schlüssel verwalten</button>
+</div>
+<div style="font-size: 13px"><a href="#">Dawarich-Verbindung in Dienste →</a></div>
+</section>
+
+<section id="tt-data" aria-labelledby="h-export" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="h-export" style="margin: 0; font-size: 16px; font-weight: 700">Export</h2>
+<p style="margin: 0; font-size: 14px; color: rgba(231,227,220,0.6)">Den Standortverlauf als Datei herunterladen. Schutzzonen sind nie enthalten.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Von<input type="date" value="2026-11-01" style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Bis<input type="date" value="2026-11-04" style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Format<select style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"><option>GPX</option><option>GeoJSON</option><option>CSV</option></select></label>
+<button style="height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: #f0a947; color: #0b0d10; font-weight: 700; font-size: 14px">Exportieren</button>
+</div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(231,227,220,0.6)">4 TAGE · CA. 17.300 PUNKTE · ZEITZONE EUROPE/BERLIN</div>
+</section>
+
+<section aria-labelledby="del-title" style="background: #14181d; border: 1px solid rgba(238,108,97,0.45); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="del-title" style="margin: 0; font-size: 16px; font-weight: 700; color: #ee6c61">Zeitraum löschen</h2>
+<p style="margin: 0; font-size: 14px; color: rgba(231,227,220,0.6)">Löscht alle Standortpunkte im Zeitraum endgültig – auch die aus Importen. Logbuch-Einträge bleiben unberührt.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Von<input type="datetime-local" value="2026-11-04T09:00" style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Bis<input type="datetime-local" value="2026-11-04T10:00" style="height: 46px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+</div>
+<div style="padding: 12px 14px; border-radius: 14px; background: rgba(238,108,97,0.1); font-size: 14px; color: #ee6c61">Betroffen: 612 Punkte am 4. Nov. 2026, 09:00–10:00</div>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: rgba(231,227,220,0.6)">Zum Bestätigen „löschen“ eintippen<input style="height: 46px; max-width: 280px; border: 1px solid rgba(231,227,220,0.16); border-radius: 12px; padding: 0 12px; font-size: 14px"></label>
+<div><button style="height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: #ee6c61; color: #0b0d10; font-weight: 700; font-size: 14px">612 Punkte löschen</button></div>
+</section>
+
+<section aria-labelledby="h-diag" style="background: #14181d; border: 1px solid rgba(231,227,220,0.12); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<span style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 2px"><span id="h-diag" style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px">Diagnose<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; color: rgba(231,227,220,0.6); border: 1px solid rgba(231,227,220,0.18); border-radius: 999px; padding: 2px 8px; font-weight: 400">EXPERTE</span></span><span style="font-size: 12px; color: rgba(231,227,220,0.6)">Was die App gemeldet hat: Lücken, Modus, warum sie eine Aufnahme beendet hat</span></span>
+<button style="height: 40px; padding: 0 14px; border: 1px solid rgba(231,227,220,0.18); border-radius: 12px; background: transparent; color: #e7e3dc; font-size: 13px">Diagnose öffnen</button>
+</section>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
