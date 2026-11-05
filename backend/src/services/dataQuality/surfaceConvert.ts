@@ -119,11 +119,23 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     tripId: flight.tripId,
     bookingId: flight.bookingId,
   };
-  // The flight's edit stamp is part of the reference: an edited flight is a new payload.
-  const clientRef = `dq-surface:${flag.id}:${flight.updatedAt.getTime()}`;
+  // One key per source flight: a retry after a failed removal finds the ride
+  // already filed instead of filing a second one.
+  const clientRef = `dq-surface:${flightId}`;
 
   let rideId: string;
-  if (mode === "rail") {
+  const filed = await prisma.clientWriteRef.findFirst({
+    where: { userId: flag.userId, clientRef, kind: mode },
+    select: { entityId: true },
+  });
+  const alreadyFiled =
+    filed &&
+    (mode === "rail"
+      ? await prisma.railJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } })
+      : await prisma.busJourney.findFirst({ where: { id: filed.entityId, userId: flag.userId } }));
+  if (alreadyFiled) {
+    rideId = alreadyFiled.id;
+  } else if (mode === "rail") {
     const { result } = await createRailRideOnce(
       flag.userId,
       {

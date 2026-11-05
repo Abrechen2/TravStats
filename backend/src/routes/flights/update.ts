@@ -7,6 +7,7 @@ import { Response, NextFunction } from "express";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
+import { tryLinkRailAndFly } from "../../services/rail/railAndFly";
 import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { updateFlightSchema } from "../../schemas/flight";
 import logger from "../../utils/logger";
@@ -402,6 +403,8 @@ export async function updateFlightHandler(
       }
     }
 
+    // Rail&Fly: an edit may bring the flight within reach of a ticket.
+    await tryLinkRailAndFly(userId, flight.id);
     res.json({
       flight: await withAirportFacts(flight),
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined,

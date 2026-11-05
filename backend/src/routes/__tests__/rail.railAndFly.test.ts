@@ -109,6 +109,49 @@ describe("Rail&Fly links a ticket to its flight", () => {
     expect(res.body.data.railAndFlyFlightId).toBeNull();
   });
 
+  it("links a flight saved AFTER its ticket, by the same rule, and not an unrelated one", async () => {
+    const res = await post(ticket());
+    expect(res.body.data.railAndFlyFlightId).toBeNull();
+
+    const far = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send({
+        flightNumber: "LH999",
+        airline: "Lufthansa",
+        departure: { iata: "BER", name: "Berlin", lat: 52.36, lon: 13.5 },
+        arrival: { iata: "JFK", name: "New York", lat: 40.64, lon: -73.78 },
+        departureLocal: "2026-09-10T10:00",
+        depTimezone: "Europe/Berlin",
+        arrivalLocal: "2026-09-10T13:00",
+        arrTimezone: "America/New_York",
+        status: "scheduled",
+      });
+    expect(far.status).toBe(201);
+    const near = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send({
+        flightNumber: "LH400",
+        airline: "Lufthansa",
+        departure: { iata: "FRA", name: "Frankfurt", lat: 50.033, lon: 8.57 },
+        arrival: { iata: "JFK", name: "New York", lat: 40.64, lon: -73.78 },
+        departureLocal: "2026-09-10T10:00",
+        depTimezone: "Europe/Berlin",
+        arrivalLocal: "2026-09-10T13:00",
+        arrTimezone: "America/New_York",
+        status: "scheduled",
+      });
+    expect(near.status).toBe(201);
+
+    const ride = await prisma.railJourney.findUniqueOrThrow({ where: { id: res.body.data.id } });
+    expect(ride.railAndFlyFlightId).toBe(near.body.flight?.id ?? near.body.id);
+    const back = await request(app)
+      .get(`/api/v1/flights/${ride.railAndFlyFlightId}`)
+      .set("Cookie", cookie);
+    expect(back.body.railAndFlyRides.map((r: { id: string }) => r.id)).toEqual([ride.id]);
+  });
+
   it("leaves the ride when the flight is deleted", async () => {
     const f = await flight();
     const res = await post(ticket());

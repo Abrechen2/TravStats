@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import logger from "../../utils/logger";
 import { calculateDistance } from "../../utils/geo";
 import { classifySurfaceSegment } from "../../shared/surfaceSegment";
 
@@ -120,4 +121,63 @@ export async function findRailAndFlyFlight(
       })
   );
   return pickRailAndFlyFlight(ride, flights);
+}
+
+/**
+ * The other order: a flight saved AFTER its ticket. Every unlinked ticket
+ * ride near the flight is run through the same rule over ALL the user's
+ * flights, and linked only when this flight is the one it picks — so the
+ * result is the one the ticket-first order gives.
+ */
+export async function linkRailAndFlyRidesToFlight(
+  userId: string,
+  flightId: string
+): Promise<number> {
+  const flight = await prisma.flight.findFirst({
+    where: { id: flightId, userId },
+    select: { departureTime: true, arrivalTime: true },
+  });
+  const anchors = [flight?.departureTime, flight?.arrivalTime].filter((d): d is Date => !!d);
+  if (anchors.length === 0) return 0;
+  const from = new Date(Math.min(...anchors.map((d) => d.getTime())) - WINDOW_MS);
+  const to = new Date(Math.max(...anchors.map((d) => d.getTime())) + WINDOW_MS);
+  const rides = await prisma.railJourney.findMany({
+    where: {
+      userId,
+      railAndFlyFlightId: null,
+      transitMode: "rail",
+      status: { not: "cancelled" },
+      departureTime: { gte: from, lte: to },
+      OR: [{ bookingReference: { not: null } }, { documents: { some: {} } }],
+    },
+    select: {
+      id: true,
+      tripId: true,
+      departureTime: true,
+      depLat: true,
+      depLon: true,
+      arrLat: true,
+      arrLon: true,
+    },
+  });
+  let linked = 0;
+  for (const ride of rides) {
+    if ((await findRailAndFlyFlight(userId, ride)) !== flightId) continue;
+    // share-exempt: the link is a private pointer; the rail field inventory excludes it
+    const done = await prisma.railJourney.updateMany({
+      where: { id: ride.id, userId, railAndFlyFlightId: null },
+      data: { railAndFlyFlightId: flightId },
+    });
+    linked += done.count;
+  }
+  return linked;
+}
+
+/** The flight-side hook: a failed match is logged, never a failed flight save. */
+export async function tryLinkRailAndFly(userId: string, flightId: string): Promise<void> {
+  try {
+    await linkRailAndFlyRidesToFlight(userId, flightId);
+  } catch (error) {
+    logger.warn({ operation: "rail_and_fly_link", userId, flightId, error: String(error) });
+  }
 }

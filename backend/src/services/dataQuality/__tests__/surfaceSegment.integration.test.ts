@@ -26,6 +26,7 @@ import dataQualityFlagsRouter from "../../../routes/dataQualityFlags";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { runDataQualityChecks } from "../runner";
 import { listFlags } from "../flagService";
+import { convertSurfaceFlight } from "../surfaceConvert";
 
 const NOW = new Date("2026-10-10T12:00:00Z");
 
@@ -181,6 +182,20 @@ describe("flights that are train or bus rides", () => {
     const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
     const kept = await prisma.document.findUnique({ where: { id: doc.id } });
     expect(kept).toMatchObject({ flightId: null, railJourneyId: ride.id });
+  });
+
+  it("is idempotent: a retry after a failed removal reuses the ride, even if the flight was edited", async () => {
+    const { train } = await seed(userId);
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    const row = await prisma.dataQualityFlag.findUniqueOrThrow({ where: { id: flag.id } });
+
+    const first = await convertSurfaceFlight(row);
+    await prisma.flight.update({ where: { id: train.id }, data: { notes: "edited after" } });
+    const second = await convertSurfaceFlight(row);
+
+    expect(second.rideId).toBe(first.rideId);
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(1);
   });
 
   it("files a bus ride for a BUS flight", async () => {

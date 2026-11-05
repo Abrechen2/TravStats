@@ -20,6 +20,7 @@ import { warnIfScheduledInPast } from "../../services/flights/scheduledInPastWar
 import { withAirportTimezones } from "../../services/flightTimezoneDefaults";
 import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from "../../services/fx/snapshot";
 import { flightExternalRef, isDocumentImport } from "../../services/importProvenance";
+import { tryLinkRailAndFly } from "../../services/rail/railAndFly";
 import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../../services/sharing/propagate";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../../services/sync/clientRef";
 import { recomputeTripStatus } from "../../services/tripStatusService";
@@ -106,6 +107,8 @@ export async function createFlightHandler(
 
     const { flight } = result;
     if (flight.tripId) await recomputeTripStatus(flight.tripId);
+    // Rail&Fly, the other order: a ticket imported before this flight.
+    await tryLinkRailAndFly(userId, flight.id);
     // Check achievements after creating a flight and return newly unlocked ones
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
     try {
