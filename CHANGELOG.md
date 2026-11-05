@@ -81,7 +81,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
-- **"Tage unterwegs" counts train, bus and ferry days.** Only flights, cruises and stays fed the figure; a ride now counts its departure and arrival day on the stations' calendars, for each area that is switched on. The number rises for accounts with rides on days nothing else covered.
+- **"Tage unterwegs" counts train, bus and ferry days.** Rides were left out of it; a ride now counts its departure and arrival day on the stations' calendars, for each area that is switched on. The number rises for accounts with rides on days nothing else covered.
 - **TravTrack stop names respect the stay-suggestions switch.** With it off, a stop offers only your own places and lodgings nearby and asks no outside service, and the row says so instead of "no name found".
 - **A TravTrack day recorded only coarsely is drawn again.** Fixes worse than 1 km are left out only where finer ones exist on the same stretch.
 - **TravTrack diagnostics name a stop the app made itself.** A gap that starts with the Companion ending its own recording now reads "recording paused" with the app's reasons (plan verdicts, location access, foreground or background), in German or English.
