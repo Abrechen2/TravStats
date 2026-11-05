@@ -11,6 +11,13 @@ vi.mock("../../../lib/xlsx/exportAll", () => ({
   exportWorkbook: vi.fn(async () => null),
   exportFilename: () => "x.xlsx",
 }));
+vi.mock("../../../lib/api/trips", () => ({
+  tripsApi: { getEvery: vi.fn(async () => []), listEveryBooking: vi.fn(async () => []) },
+}));
+vi.mock("../../../lib/api/documents", () => ({
+  documentsApi: { listEvery: vi.fn(async () => []) },
+}));
+vi.mock("../../../lib/api/placeLists", () => ({ listPlaceLists: vi.fn(async () => []) }));
 vi.unmock("../../../store/settingsStore");
 
 import SpreadsheetSection from "../SpreadsheetSection";

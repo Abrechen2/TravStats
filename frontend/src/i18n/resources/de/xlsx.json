@@ -5,7 +5,7 @@
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
     "empty": "Es gibt nichts zu exportieren.",
-    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Eigenständige Notizen, Fotos, Dokumente und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Administration → Backups; bei fehlenden Rechten frage deinen Administrator."
+    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Reisen, Buchungen, Ortslisten und Dokumente stehen als Übersicht zum Lesen darin (Dokumente nur als Liste, ohne die Dateien). Eigenständige Notizen, Fotos und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Administration → Backups; bei fehlenden Rechten frage deinen Administrator."
   },
   "sheets": {
     "flights": "Flüge",
@@ -24,7 +24,11 @@
     "roadtripExpenses": "Roadtrip-Kosten",
     "rental": "Mietwagen",
     "bus": "Busfahrten",
-    "ferry": "Fährüberfahrten"
+    "ferry": "Fährüberfahrten",
+    "bookings": "Buchungen",
+    "placeLists": "Ortslisten",
+    "placeListEntries": "Listeneinträge",
+    "documents": "Dokumente"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -42,7 +46,12 @@
     "roadtripExpenses": "Eine Ausgabe pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Art: ferry (Fähre), toll (Maut), pitch (Stellplatz), fuel (Tanken), charging (Laden), parking (Parken), transport (Nahverkehr & Taxi), food (Essen & Trinken), groceries (Lebensmittel), activity (Eintritt & Aktivitäten), shopping (Einkäufe), fees (Gebühren) oder other (Sonstiges). Betrag und Währung (ISO-Code wie EUR, NOK) sind Pflicht; Beträge in verschiedenen Währungen werden nie zusammengerechnet. Station ODER Strecke von/bis – nie beides; eine Station, die nicht gefunden wird, entfällt, die Ausgabe bleibt. Eine leere Zelle lässt den gespeicherten Wert stehen.",
     "rental": "Eine Zeile je Miete. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrer Miete zu; ohne ID wird über Anbieter und Buchungsnummer (sonst Abholstation und -tag) wiedererkannt statt verdoppelt. Zeiten in der Ortszeit der Station; Genauigkeit „day“ heißt: nur der Tag ist bekannt. Leere Zellen bleiben unbekannt, nie 0. Die Kaution zählt nie als Kosten.",
     "bus": "Eine Zeile je Busfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleichen Haltestellen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit der jeweiligen Haltestelle. Jede Haltestelle braucht Breite und Länge, denn es gibt keinen Haltestellenkatalog. Art: intercity, shuttle oder other; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket.",
-    "ferry": "Eine Zeile je Fährüberfahrt. Eine Zeile mit der ID einer deiner Überfahrten ändert sie; ohne ID – oder mit einer ID aus einem anderen Konto – wird eine neue angelegt, außer es gibt schon eine mit gleichen Häfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Hafens. Jeder Hafen braucht Breite und Länge, denn es gibt keinen Hafenkatalog. Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen – außer in „Quelle“ steht user, die Angabe vom Ticket. Die Verknüpfung mit einem Roadtrip-Abschnitt steht nicht in der Datei und bleibt, wie sie ist."
+    "ferry": "Eine Zeile je Fährüberfahrt. Eine Zeile mit der ID einer deiner Überfahrten ändert sie; ohne ID – oder mit einer ID aus einem anderen Konto – wird eine neue angelegt, außer es gibt schon eine mit gleichen Häfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Hafens. Jeder Hafen braucht Breite und Länge, denn es gibt keinen Hafenkatalog. Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen – außer in „Quelle“ steht user, die Angabe vom Ticket. Die Verknüpfung mit einem Roadtrip-Abschnitt steht nicht in der Datei und bleibt, wie sie ist.",
+    "trips": "Eine Zeile je Reise. Nur zum Lesen – Reisen werden in der App bearbeitet; beim Wiedereinlesen wird dieses Blatt übersprungen.",
+    "bookings": "Eine Zeile je Buchung (Paket oder Sammelbuchung), auch ohne Reise. Nur zum Lesen – beim Wiedereinlesen wird dieses Blatt übersprungen. Fristen in Ortszeit.",
+    "placeLists": "Eine Zeile je Ortsliste. Nur zum Lesen – beim Wiedereinlesen wird dieses Blatt übersprungen.",
+    "placeListEntries": "Eine Zeile je Ort in einer Liste, in Listenreihenfolge. Nur zum Lesen – beim Wiedereinlesen wird dieses Blatt übersprungen.",
+    "documents": "Eine Zeile je abgelegtem Dokument – nur die Angaben (Name, Art, Größe, verknüpfter Eintrag), nie die Datei selbst. Nur zum Lesen – beim Wiedereinlesen wird dieses Blatt übersprungen."
   },
   "columns": {
     "id": "ID",
@@ -234,7 +243,36 @@
       "cabinType": "Kabine",
       "fareClass": "Tarif",
       "ticketReference": "Ticketnummer"
-    }
+    },
+    "tripOrigin": "Start",
+    "tripDestination": "Ziel",
+    "countries": "Länder",
+    "summary": "Zusammenfassung",
+    "bookingOperator": "Anbieter",
+    "travellers": "Personen",
+    "bookedOn": "Gebucht am",
+    "freeCancellationLocal": "Kostenlos stornierbar bis (Ortszeit)",
+    "freeCancellationZone": "Stornofrist Zeitzone",
+    "freeCancellationOn": "Kostenlos stornierbar bis (Tag)",
+    "paymentDue": "Zahlung fällig am",
+    "description": "Beschreibung",
+    "color": "Farbe",
+    "icon": "Symbol",
+    "checklist": "Checkliste",
+    "placeCount": "Orte",
+    "visitedCount": "Davon besucht",
+    "countryCount": "Länder",
+    "placeList": "Liste",
+    "position": "Position",
+    "addedOn": "Hinzugefügt am",
+    "documentKind": "Art",
+    "documentFormat": "Format",
+    "sizeBytes": "Größe (Bytes)",
+    "issuedOn": "Ausgestellt am",
+    "entryType": "Verknüpft mit (Art)",
+    "entryId": "Verknüpft mit (ID)",
+    "documentSource": "Herkunft",
+    "filedOn": "Abgelegt am"
   },
   "import": {
     "title": "Excel-Import",

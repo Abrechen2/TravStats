@@ -14,6 +14,7 @@
  * Bare response family, like trips.ts (ADR 0001).
  */
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
@@ -50,6 +51,40 @@ async function assertOwnTrip(userId: string, tripId: string): Promise<void> {
   const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "tripId");
 }
+
+const bookingListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(500),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+/**
+ * GET /trips/bookings — the caller's own bookings, paged, oldest first. A
+ * booking was only ever readable through its trip, so one without a trip was
+ * unreachable; the spreadsheet export needs all of them. `total` is the whole
+ * count so a client walking the pages knows when it has them all.
+ */
+router.get(
+  "/trips/bookings",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const { limit, offset } = bookingListQuerySchema.parse(req.query);
+      const [bookings, total] = await Promise.all([
+        prisma.booking.findMany({
+          where: { userId },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          skip: offset,
+          take: limit,
+        }),
+        prisma.booking.count({ where: { userId } }),
+      ]);
+      res.json({ bookings: bookings.map(withBookingTimes), total });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /** POST /trips/bookings — create a booking (must come before /trips/:id) */
 router.post(

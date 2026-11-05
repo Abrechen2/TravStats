@@ -196,6 +196,22 @@ export const documentsApi = {
     return data.data;
   },
 
+  /** Every document the user owns, filed or not, page by page — metadata only (spreadsheet export). */
+  listEvery: async (): Promise<TravelDocument[]> => {
+    const PAGE = 500;
+    const documents: TravelDocument[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await api.get<Envelope<{ documents: TravelDocument[]; total: number }>>(
+        "/documents",
+        { params: { limit: PAGE, offset } }
+      );
+      documents.push(...data.data.documents);
+      if (data.data.documents.length < PAGE || documents.length >= data.data.total) {
+        return documents;
+      }
+    }
+  },
+
   /** The caller's own unfiled uploads, newest first, with the TTL they face. */
   listUnfiled: async (): Promise<UnfiledDocuments> => {
     const { data } = await api.get<Envelope<UnfiledDocuments>>("/documents/unfiled");

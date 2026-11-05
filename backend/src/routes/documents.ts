@@ -8,7 +8,11 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { documentUploadLimiter } from "../middleware/rateLimit";
-import { documentUploadFieldsSchema, updateDocumentSchema } from "../schemas/document";
+import {
+  documentListQuerySchema,
+  documentUploadFieldsSchema,
+  updateDocumentSchema,
+} from "../schemas/document";
 import { DOCUMENT_MAX_BYTES, DOCUMENT_SIZE_LIMITS } from "../services/documents/documentFormats";
 import {
   ENTRY_TYPES,
@@ -23,6 +27,7 @@ import {
   updateDocument,
   type EntryType,
 } from "../services/documents/documentService";
+import { listOwnDocuments } from "../services/documents/documentList";
 import { documentPath } from "../services/documents/documentStore";
 import { renderEmlAsText } from "../services/documents/emlPreview";
 
@@ -125,6 +130,25 @@ router.get(
         success: true,
         data: { ttlDays: UNLINKED_TTL_DAYS, documents: documents.map(toUnfiledDocumentDto) },
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /documents — every document the caller owns, metadata only, paged. ABOVE
+ * `/documents/:id`. The spreadsheet export reads it; `limit` is capped and the
+ * answer says `total`, so a client can tell a cut list from a whole one.
+ */
+router.get(
+  "/documents",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const page = documentListQuerySchema.parse(req.query);
+      const { documents, total } = await listOwnDocuments(req.userId!, page);
+      res.json({ success: true, data: { documents: documents.map(toDocumentDto), total } });
     } catch (error) {
       next(error);
     }
