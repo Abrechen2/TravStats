@@ -160,7 +160,8 @@
       "resolved": "Danke – wir prüfen den Eintrag beim nächsten Durchlauf erneut.",
       "dismissed": "Verstanden. Diese Frage wird nicht mehr gestellt.",
       "checked": "Prüfung abgeschlossen: {{open}} offene Frage(n).",
-      "linked": "Zur Reise hinzugefügt."
+      "linked": "Zur Reise hinzugefügt.",
+      "converted": "Umgewandelt: Der Eintrag ist jetzt eine Zug- oder Busfahrt."
     },
     "errors": {
       "loadFailed": "Die offenen Fragen konnten nicht geladen werden.",
@@ -529,6 +530,10 @@
       "link": {
         "label": "Zur Reise hinzufügen",
         "hint": "Die Überfahrt wird der Reise zugeordnet. Zehn Minuten lang lässt sich das zurücknehmen."
+      },
+      "convert": {
+        "label": "In Zug- oder Busfahrt umwandeln",
+        "hint": "Der Flug wird gelöscht und als Fahrt derselben Reise und Buchung angelegt; das lässt sich nicht zurücknehmen. Dafür brauchen beide Orte eine Position und der Abflug eine Uhrzeit – sonst bleibt der Flug unverändert und du korrigierst ihn zuerst."
       }
     },
     "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
@@ -650,6 +655,15 @@
       "question": "Diese Überfahrt ({{route}}, {{date}}) gehört zu keiner Reise, liegt aber in den Tagen von „{{trip}}“. Gehört sie dazu?",
       "tripLink": "Reise ansehen:",
       "safePath": "Wenn ja: Tippe „Zur Reise hinzufügen“ – das lässt sich zehn Minuten lang zurücknehmen. Gehört sie nicht dazu, tippe „Das stimmt so“."
+    },
+    "surface_segment": {
+      "title": "Flug, der eine Zug- oder Busfahrt ist",
+      "question": "{{flight}} ({{route}}) ist laut Buchungsdaten keine Flugverbindung, sondern {{mode}}. Als Flug zählt sie in Flugkilometern, Flug-CO₂ und den Flughäfen im Pass.",
+      "mode": {
+        "rail": "eine Zugfahrt",
+        "bus": "eine Busfahrt"
+      },
+      "safePath": "Tippe „In Zug- oder Busfahrt umwandeln“, wenn das stimmt. War es wirklich ein Flug, tippe „Das stimmt so“ – dann bleibt er ein Flug."
     }
   },
   "passwordResets": {

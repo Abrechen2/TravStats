@@ -25,6 +25,7 @@ export function findingActionsOf(kind: string, entityType: string): FindingActio
     return MERGEABLE_DUPLICATE_TYPES.has(entityType) ? ["keep", "merge"] : ["keep"];
   }
   if (kind === "ferry_match") return ["link"];
+  if (kind === "surface_segment") return ["convert"];
   return [];
 }
 

@@ -61,6 +61,28 @@ export function legStart(
   return { selected: fresh, saveAs: "rail" };
 }
 
+/**
+ * How a leg of a FLIGHT booking's ground segments starts (owner ruling
+ * 2026-11-05): ticked, as what it is — a train ride, or a bus ride when the
+ * account has the bus domain. The bahn.de defaults (skip local transit) are
+ * for legs the user did not book as part of a flight.
+ */
+export function surfaceLegStart(
+  leg: RailImportLeg,
+  defaults: RailImportDefaults
+): { selected: boolean; saveAs: "rail" | "bus" | null } {
+  const fresh = leg.duplicateOf === null;
+  if (leg.transit?.mode === "bus") {
+    return defaults.busEnabled
+      ? { selected: fresh, saveAs: "bus" }
+      : { selected: false, saveAs: null };
+  }
+  return { selected: fresh, saveAs: "rail" };
+}
+
+/** Where a booking read out of a flight booking says it came from. */
+export const FLIGHT_BOOKING_SOURCE = "flight-booking";
+
 /** The mode a leg saved as a rail journey is stored with. */
 export function railTransitModeOf(leg: RailImportLeg): RailTransitMode {
   const mode = leg.transit?.mode;

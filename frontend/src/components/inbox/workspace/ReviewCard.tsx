@@ -116,6 +116,28 @@ export default function ReviewCard({
               <p className="t-caption mt-1">{t("dataQuality:flag.actions.link.hint")}</p>
             </div>
           )}
+          {flag.actions?.includes("convert") && (
+            <div>
+              <Button
+                variant="primary"
+                disabled={busy}
+                onClick={() =>
+                  void act(
+                    () =>
+                      dataQualityFlagsApi.resolve(flag.id, {
+                        action: "convert",
+                        revision: flag.revision,
+                      }),
+                    false,
+                    t("dataQuality:inbox.messages.converted")
+                  )
+                }
+              >
+                {t("dataQuality:flag.actions.convert.label")}
+              </Button>
+              <p className="t-caption mt-1">{t("dataQuality:flag.actions.convert.hint")}</p>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Button

@@ -170,6 +170,10 @@
     "applyWithChange": "Bis zum Umstieg übernehmen"
   },
   "detail": {
+    "railAndFly": {
+      "title": "Rail&Fly",
+      "flight": "Zubringer zu Flug {{flight}}"
+    },
     "loading": "Lädt …",
     "loadError": "Die Fahrt konnte nicht geladen werden.",
     "notFound": "Diese Fahrt gibt es nicht (mehr).",

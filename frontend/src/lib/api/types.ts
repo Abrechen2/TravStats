@@ -68,6 +68,8 @@ export interface EmailParseResult {
   airlineNotice?: string | null;
   /** Nothing found AND the configured AI parser could not be asked. */
   llmUnreachable?: boolean;
+  /** Train and bus segments sold inside the booking — not flights (owner ruling 2026-11-05). */
+  surfaceBookings?: import("../../types/rail").RailImportBooking[];
 }
 
 /** Generic message response */

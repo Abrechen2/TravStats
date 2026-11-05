@@ -43,6 +43,7 @@ import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
+import type { FlightRailAndFly } from "../types/rail";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
 import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
@@ -79,6 +80,8 @@ export default function FlightDetailPage(): JSX.Element {
   const weightUnit = useSettingsStore((state) => state.units?.weightUnit);
 
   const [flight, setFlight] = useState<Flight | null>(null);
+  // Rail&Fly tickets the single-flight route adds (owner ruling 2026-11-05).
+  const railAndFlyRides = (flight as (Flight & FlightRailAndFly) | null)?.railAndFlyRides;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
@@ -423,6 +426,19 @@ export default function FlightDetailPage(): JSX.Element {
                   {t("flights:detail.openTrip")}
                 </span>
               </Link>
+            </DetailSection>
+          )}
+          {(railAndFlyRides?.length ?? 0) > 0 && (
+            <DetailSection title={t("flights:detail.railAndFly")}>
+              <ul className="flex flex-col gap-1 text-sm" data-testid="flight-detail-rail-and-fly">
+                {railAndFlyRides?.map((ride) => (
+                  <li key={ride.id}>
+                    <Link to={`/rail/${ride.id}`} style={{ color: "var(--ts-accent)" }}>
+                      {ride.depStationName} → {ride.arrStationName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </DetailSection>
           )}
           {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}

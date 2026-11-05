@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
 import SuggestionChips from "../common/SuggestionChips";
@@ -24,6 +24,9 @@ import {
 
 import type { ImportDocument } from "../import/documentHandoff";
 import { useToastStore } from "../../store/toastStore";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { RailImportPreviewModal } from "../rail/RailImportPreviewModal";
+import type { RailImportBooking } from "../../types/rail";
 import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
@@ -83,8 +86,35 @@ export default function FlightLookupStep({
   onPickSpecialFlight,
   initialDocument = null,
 }: FlightLookupStepProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "specialFlights", "import"]);
+  const { t } = useTranslation(["flights", "common", "specialFlights", "import", "rail"]);
   const addToast = useToastStore((s) => s.addToast);
+  const railEnabled = useEnabledDomains().isEnabled("rail");
+  /**
+   * Train and bus segments sold inside the booking (Express Rail, AIRail) are
+   * no flights (owner ruling 2026-11-05): the rail review takes them first,
+   * one booking at a time, and the flight review follows.
+   */
+  const [surfaceQueue, setSurfaceQueue] = useState<RailImportBooking[]>([]);
+  const [afterSurface, setAfterSurface] = useState<(() => void) | null>(null);
+  const present = (hasFlights: boolean, surface: RailImportBooking[]): void => {
+    if (surface.length > 0 && !railEnabled) {
+      // Never silent: the segments left the flight list, so say where they went.
+      addToast("info", t("flights:form.surfaceRailOff", { count: surface.length }));
+    } else if (surface.length > 0) {
+      setSurfaceQueue(surface);
+      setAfterSurface(hasFlights ? () => () => setShowFlightReview(true) : null);
+      return;
+    }
+    if (hasFlights) setShowFlightReview(true);
+  };
+  const nextSurface = (): void => {
+    const rest = surfaceQueue.slice(1);
+    setSurfaceQueue(rest);
+    if (rest.length === 0 && afterSurface) {
+      afterSurface();
+      setAfterSurface(null);
+    }
+  };
   /** Which model read the mail, when one did (beta.17) — a cloud one by host. */
   const announceProvider = (result: unknown): void => {
     const provider = llmProviderOfResult(result);
@@ -136,18 +166,21 @@ export default function FlightLookupStep({
       return;
     }
     const flights: ParsedBooking[] = result.flights ?? [];
-    if (flights.length === 0) {
+    const surface = "surfaceBookings" in result ? (result.surfaceBookings ?? []) : [];
+    if (flights.length === 0 && surface.length === 0) {
       // "No flight" is only a finding when every reader was asked.
       setError(t(result.llmUnreachable ? "flights:form.llmUnreachable" : noFlightsKey));
       return;
     }
     announceProvider(result);
-    void openImportBatch("email", fileName ?? null);
-    setParsedFlights(flights);
-    setCurrentFlightIndex(0);
-    setParserProvider(result.provider ?? "template");
-    setOriginalEmailData({ subject: result.subject, text: result.text, html: result.html });
-    setShowFlightReview(true);
+    if (flights.length > 0) {
+      void openImportBatch("email", fileName ?? null);
+      setParsedFlights(flights);
+      setCurrentFlightIndex(0);
+      setParserProvider(result.provider ?? "template");
+      setOriginalEmailData({ subject: result.subject, text: result.text, html: result.html });
+    }
+    present(flights.length > 0, surface);
   };
 
   const handlePdfResult = (result: ParsePdfResult, fileName?: string | null): void => {
@@ -162,23 +195,37 @@ export default function FlightLookupStep({
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
-    if (result.flights.length === 0) {
+    const surface = "surfaceBookings" in result ? (result.surfaceBookings ?? []) : [];
+    if (result.flights.length === 0 && surface.length === 0) {
       setError(
         t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
       );
       return;
     }
     announceProvider(result);
-    void openImportBatch("pdf", fileName ?? null);
-    setParsedFlights(result.flights);
-    setCurrentFlightIndex(0);
-    setParserProvider(result.parserUsed ?? "template");
-    setOriginalEmailData(undefined);
-    setShowFlightReview(true);
+    if (result.flights.length > 0) {
+      void openImportBatch("pdf", fileName ?? null);
+      setParsedFlights(result.flights);
+      setCurrentFlightIndex(0);
+      setParserProvider(result.parserUsed ?? "template");
+      setOriginalEmailData(undefined);
+    }
+    present(result.flights.length > 0, surface);
   };
 
   return (
     <div className="flex flex-col gap-2">
+      {surfaceQueue[0] && (
+        <RailImportPreviewModal
+          key={surfaceQueue.length}
+          booking={surfaceQueue[0]}
+          onCancel={nextSurface}
+          onSaved={(count) => {
+            addToast("success", t("rail:import.saved", { count }));
+            nextSurface();
+          }}
+        />
+      )}
       {/* The three stacked callouts that used to live here — a starred banner,
           a boarding-pass box, a special-flight box — are now the same rows
           every other area uses. Flights had built their own chooser before the

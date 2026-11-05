@@ -23,7 +23,7 @@ import {
  * The kind-specific answers. Which ones a flag takes is `actions` on the flag
  * itself, so a client never has to know the table — see `findingActionsOf`.
  */
-export const FINDING_ACTIONS = ["keep", "merge", "link"] as const;
+export const FINDING_ACTIONS = ["keep", "merge", "link", "convert"] as const;
 export const findingActionSchema = z.enum(FINDING_ACTIONS);
 export type FindingAction = (typeof FINDING_ACTIONS)[number];
 
@@ -52,6 +52,10 @@ export const INVALID_ACTION_REASONS = [
   "conflictingRecordings",
   /** `merge`: the copies sit on different trips, bookings or loyalty cards. */
   "conflictingLinks",
+  /** `convert`: the flight has no usable positions, so a ride cannot be drawn from it. */
+  "noPosition",
+  /** `convert`: the flight has no certain departure time. */
+  "noTime",
 ] as const;
 export type InvalidActionReason = (typeof INVALID_ACTION_REASONS)[number];
 
@@ -104,7 +108,7 @@ export type DuplicateEvidence = z.infer<typeof duplicateEvidenceSchema>;
  * put it back. Never sent to clients — `undoUntil` is what they read.
  */
 export const findingResolutionSchema = z.object({
-  action: z.enum(["resolve", "dismiss", "keep", "merge", "link"]),
+  action: z.enum(["resolve", "dismiss", "keep", "merge", "link", "convert"]),
   previousStatus: z.enum(["open", "resolved", "dismissed"]),
   previousResolvedAt: z.string().nullable(),
   /** `keep`: the other flags of the same copies, answered along with this one. */
@@ -128,5 +132,7 @@ export const findingResolutionSchema = z.object({
   inheritedFrom: z.string().optional(),
   /** `merge`: a record of what happened. Not undoable. */
   merged: z.object({ keptId: z.string(), removedIds: z.array(z.string()) }).optional(),
+  /** `convert`: the ride the flight became. Not undoable — the flight is gone. */
+  converted: z.object({ rideType: z.enum(["rail", "bus"]), rideId: z.string() }).optional(),
 });
 export type FindingResolution = z.infer<typeof findingResolutionSchema>;

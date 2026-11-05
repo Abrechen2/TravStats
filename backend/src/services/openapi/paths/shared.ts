@@ -145,6 +145,21 @@ export const flightResponse = registry.register(
             "date-only: there is no honest duration to report, and a client draws a " +
             "great-circle estimate instead of dressing up a placeholder as a fact."
         ),
+      railAndFlyRides: z
+        .array(
+          z.object({
+            id: z.string().uuid(),
+            depStationName: z.string(),
+            arrStationName: z.string(),
+            departureTime: z.string(),
+            trainNumber: z.string().nullable(),
+          })
+        )
+        .optional()
+        .describe(
+          "Rail&Fly train tickets that feed this flight, oldest first. Sent by the " +
+            "single-flight route only."
+        ),
     })
     .openapi("Flight")
 );

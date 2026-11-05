@@ -157,6 +157,7 @@
       }
     },
     "messages": {
+      "converted": "Converted: the entry is now a train or bus ride.",
       "resolved": "Thanks — we will look at this record again on the next run.",
       "dismissed": "Understood. This question will not be asked again.",
       "checked": "Check finished: {{open}} open question(s).",
@@ -529,6 +530,10 @@
       "link": {
         "label": "Add to the trip",
         "hint": "The crossing is filed under the trip. You can take that back for ten minutes."
+      },
+      "convert": {
+        "label": "Convert to a train or bus ride",
+        "hint": "The flight is deleted and filed as a ride on the same trip and booking; this cannot be taken back. Both places need a position and the departure a time — otherwise the flight stays unchanged and you correct it first."
       }
     },
     "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
@@ -650,6 +655,15 @@
       "question": "This crossing ({{route}}, {{date}}) belongs to no trip, but it falls within the days of “{{trip}}”. Does it belong there?",
       "tripLink": "See the trip:",
       "safePath": "If so, tap “Add to the trip” — you can take that back for ten minutes. If it does not belong there, tap “This is correct as it is”."
+    },
+    "surface_segment": {
+      "title": "Flight that is a train or bus ride",
+      "question": "{{flight}} ({{route}}) is not a flight according to the booking data but {{mode}}. As a flight it counts in flight kilometres, flight CO₂ and the airports in your passport.",
+      "mode": {
+        "rail": "a train ride",
+        "bus": "a bus ride"
+      },
+      "safePath": "Tap “Convert to a train or bus ride” if that is right. If it really was a flight, tap “This is correct as it is” — it stays a flight."
     }
   },
   "passwordResets": {

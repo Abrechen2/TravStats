@@ -207,6 +207,22 @@ export default function RecordCheckFlag({ flag }: { flag: DataQualityFlag }): JS
       );
     }
 
+    case "surface_segment": {
+      const d = flag.details;
+      return (
+        <div className="space-y-3">
+          <Question>
+            {k("question", {
+              flight: d.flightNumber ?? "?",
+              route: `${d.departureCode ?? "?"} → ${d.arrivalCode ?? "?"}`,
+              mode: k(`mode.${d.mode}`),
+            })}
+          </Question>
+          <Hint>{k("safePath")}</Hint>
+        </div>
+      );
+    }
+
     default:
       return null;
   }

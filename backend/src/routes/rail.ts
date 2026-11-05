@@ -42,6 +42,7 @@ import { linkCompanions, replaceCompanionLinks } from "../services/transport/com
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
+import { findRailAndFlyFlight } from "../services/rail/railAndFly";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
@@ -65,6 +66,17 @@ export const RAIL_INCLUDE = {
   // Read for the short code only; the row goes out flat (withStationShortCodes).
   depStation: { select: { shortCode: true } },
   arrStation: { select: { shortCode: true } },
+  // The flight a Rail&Fly ticket feeds (owner ruling 2026-11-05); the flight
+  // page reads the same link the other way (`railAndFlyRides`).
+  railAndFlyFlight: {
+    select: {
+      id: true,
+      flightNumber: true,
+      depIata: true,
+      arrIata: true,
+      departureTime: true,
+    },
+  },
   // The originals filed with the ride, read as its `source` (withRailSource).
   ...RAIL_SOURCE_INCLUDE,
 } satisfies Prisma.RailJourneyInclude;
@@ -361,14 +373,7 @@ router.post(
       // An outbox replay carries the key it minted (forgejo#283): a repeat
       // answers the journey the first POST made, 200 instead of 201.
       const { clientRef, rest: body } = takeClientRef(req.body);
-      const { created, result } = await createOnce({
-        userId,
-        clientRef,
-        kind: "rail",
-        payload: body,
-        create: (claim) => createRailRide(userId, body, claim),
-        replay: (id) => replayRailRide(userId, id),
-      });
+      const { created, result } = await createRailRideOnce(userId, body, clientRef);
       res.status(created ? 201 : 200).json({ success: true, ...result });
     } catch (err) {
       next(err);
@@ -376,11 +381,42 @@ router.post(
   }
 );
 
-async function createRailRide(userId: string, body: unknown, claim: ClaimClientRef) {
+/**
+ * The create behind POST /rail, callable from a service: the inbox's
+ * `convert` answer files its ride through it so a flight turned into a train
+ * passes every write rule a typed-in train does.
+ */
+export function createRailRideOnce(
+  userId: string,
+  body: unknown,
+  clientRef: string | null,
+  options: CreateRailRideOptions = {}
+) {
+  return createOnce({
+    userId,
+    clientRef,
+    kind: "rail",
+    payload: body,
+    create: (claim) => createRailRide(userId, body, claim, options),
+    replay: (id) => replayRailRide(userId, id),
+  });
+}
+
+interface CreateRailRideOptions {
+  /** A ride made FROM a flight (the inbox's convert answer) is not a Rail&Fly ticket. */
+  skipRailAndFly?: boolean;
+}
+
+async function createRailRide(
+  userId: string,
+  body: unknown,
+  claim: ClaimClientRef,
+  options: CreateRailRideOptions = {}
+) {
   refuseStrayFold(body);
   const parsed = createRailJourneySchema.safeParse(body);
   if (!parsed.success) throw invalidInput(parsed.error);
-  const { connectsFrom, ...input } = parsed.data;
+  const { connectsFrom, railAndFly, ...input } = parsed.data;
   // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
   await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
   const documentIds = await takeDocumentIds(userId, body);
@@ -401,6 +437,24 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
     await getBaseCurrency(userId)
   );
 
+  // Rail&Fly: a train ride with a ticket behind it is tied to the flight it
+  // feeds. Decided before the create, so the link is part of the one insert.
+  const hasTicket = documentIds.length > 0 || Boolean(input.bookingReference);
+  const railAndFlyFlightId =
+    !options.skipRailAndFly &&
+    railAndFly !== false &&
+    (input.transitMode ?? "rail") === "rail" &&
+    hasTicket
+      ? await findRailAndFlyFlight(userId, {
+          tripId: input.tripId ?? null,
+          departureTime: state.departureTime,
+          depLat: state.depLat,
+          depLon: state.depLon,
+          arrLat: state.arrLat,
+          arrLon: state.arrLon,
+        })
+      : null;
+
   const journey = await prisma.$transaction(async (tx) => {
     // Bound inside the transaction, so a failed create leaves the previous
     // leg without the booking it was given for this one.
@@ -411,6 +465,7 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
         ...state,
         ...fxColumns,
         ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
+        railAndFlyFlightId,
         ...(link && {
           bookingId: link.bookingId,
           tripId: input.tripId !== undefined ? input.tripId : link.tripId,
