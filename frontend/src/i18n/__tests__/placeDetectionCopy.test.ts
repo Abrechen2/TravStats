@@ -25,7 +25,7 @@ describe("detecting places automatically — the wording", () => {
 /** The market and venue switches are gone; the stay scan claims no expert rows. */
 describe("the stay scan section", () => {
   it("has no expert rows left", () => {
-    const def = SETTINGS_SECTIONS.find((x) => x.id === "stayScan")!;
+    const def = SETTINGS_SECTIONS.find((x) => x.id === "ttDetect")!;
     expect(def.expertRows).toBeFalsy();
   });
 });

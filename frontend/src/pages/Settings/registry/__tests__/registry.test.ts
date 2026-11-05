@@ -49,12 +49,12 @@ describe("the settings registry follows the designer's data", () => {
     }
   });
 
-  it("counts 18 pages, 84 sections (31 of them service cards) and 246 rows", () => {
+  it("counts 18 pages, 88 sections (31 of them service cards) and 252 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(18);
-    expect(sections).toHaveLength(84);
+    expect(sections).toHaveLength(88);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(246);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(252);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {

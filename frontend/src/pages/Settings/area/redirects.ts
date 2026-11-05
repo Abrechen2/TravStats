@@ -95,6 +95,9 @@ const ADMIN_TARGETS: Readonly<Record<string, Target>> = {
   lodgingChainsMasterData: { page: "masterdata", section: "catalogues", match: "md_chains" },
 };
 
+/** The page id TravTrack replaced; its addresses live on in bookmarks and changelogs. */
+const OLD_LOCATION_PAGE = "location";
+
 const GEOCODER_TARGET: Target = { page: "services", service: "geocoder", expert: true };
 
 const first = (...values: Array<string | null | undefined>): string | null =>
@@ -143,8 +146,18 @@ function settingsSectionTarget(raw: string, input: AddressInput): Target | undef
       return { page: "sharing", section: "compare", match: "verschl" };
     case "dawarich":
       return { page: "services", service: "dawarich" };
+    // The Standort page became TravTrack (web redesign, 2026-11-05): its four
+    // sections, and the "history" section that was folded into the page, moved.
+    case "locationProvider":
+      return { page: "travtrack", section: "ttRecording" };
     case "tripRecording":
-      return { page: "location", section: "locationProvider", match: "aufz" };
+      return { page: "travtrack", section: "ttRecording", match: "aufz" };
+    case "stayScan":
+      return { page: "travtrack", section: "ttDetect" };
+    case "travTrack":
+      return { page: "travtrack", section: "ttZones" };
+    case "history":
+      return { page: "travtrack", section: "ttSources" };
     case "notifications":
       return { page: "notifications" };
     case "externalServices":
@@ -177,6 +190,9 @@ function settingsTarget(
   const fromRemoved = removed ? lookup(REMOVED_PAGES, removed) : undefined;
   const named = first(section, fromRemoved);
   const raw = named ? (lookup(SECTION_ALIASES, named) ?? named) : null;
+
+  // The old Standort page, named without a section, is the TravTrack page.
+  if (!named && (pageSeg ?? tab) === OLD_LOCATION_PAGE) return { page: "travtrack" };
 
   if (raw) {
     // A page of the area that lists the id keeps it.

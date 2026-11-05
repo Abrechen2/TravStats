@@ -16,7 +16,7 @@ describe("settings menu order", () => {
       "trips",
       "sharing",
       "notifications",
-      "location",
+      "travtrack",
       "loyalty",
       "data",
       "services",

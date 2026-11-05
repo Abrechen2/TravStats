@@ -1,4 +1,12 @@
 import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
+import TravTrackRecordingSection from "../../components/Settings/travtrack/TravTrackRecordingSection";
+import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrackPlacesSection";
+import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
+import TravTrackDetectSection from "../../components/Settings/travtrack/TravTrackDetectSection";
+import TravTrackSourcesSection from "../../components/Settings/travtrack/TravTrackSourcesSection";
+import TravTrackExportSection from "../../components/Settings/travtrack/TravTrackExportSection";
+import TravTrackDeleteSection from "../../components/Settings/travtrack/TravTrackDeleteSection";
+import TravTrackDiagSection from "../../components/Settings/travtrack/TravTrackDiagSection";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -20,7 +28,6 @@ import DevicesSection from "../../components/Settings/DevicesSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import InboxSuggestionsSection from "../../components/Settings/InboxSuggestionsSection";
-import TripRecordingSection from "../../components/Settings/TripRecordingSection";
 import SharingSection from "../../components/Settings/SharingSection";
 import ConnectionsSection from "../../components/Settings/ConnectionsSection";
 import RemoteSharingSection from "../../components/Settings/RemoteSharingSection";
@@ -34,11 +41,8 @@ import CruisePreferencesSection from "../../components/Settings/CruisePreference
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
-import StayScanSection from "../../components/Settings/location/StayScanSection";
 import ServicesPage from "../../components/Services/ServicesPage";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
-import LocationSourceSection from "../../components/Settings/location/LocationSourceSection";
-import TravTrackLocationSection from "../../components/Settings/location/TravTrackLocationSection";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -131,17 +135,22 @@ export default function SettingsSectionSwitch({
     case "dawarich":
       // The connection itself is edited under Dienste (settings redesign, package 5).
       return <LegacyServiceSummary serviceId="dawarich" scope="account" />;
-    case "locationProvider":
-      // Where recordings go and positions are read from (TravTrack plan S5).
-      return <LocationSourceSection />;
-    case "travTrack":
-      // TravTrack's own history: summary, export, zones, delete (plan T6).
-      return <TravTrackLocationSection />;
-    case "tripRecording":
-      // Whether the app's trip positions are stored here (forgejo#316).
-      return <TripRecordingSection />;
-    case "stayScan":
-      return <StayScanSection />;
+    case "ttRecording":
+      return <TravTrackRecordingSection />;
+    case "ttPlaces":
+      return <TravTrackPlacesSection />;
+    case "ttZones":
+      return <TravTrackZonesSection />;
+    case "ttDetect":
+      return <TravTrackDetectSection />;
+    case "ttSources":
+      return <TravTrackSourcesSection />;
+    case "ttExport":
+      return <TravTrackExportSection />;
+    case "ttDelete":
+      return <TravTrackDeleteSection />;
+    case "ttDiag":
+      return <TravTrackDiagSection />;
     case "externalServices":
       return <ServicesPage isAdmin={isAdmin} />;
     case "homeAirport":

@@ -1300,7 +1300,7 @@
       "trips": "Trips & inbox",
       "sharing": "Sharing",
       "notifications": "Reminders",
-      "location": "Location",
+      "travtrack": "TravTrack",
       "loyalty": "Loyalty",
       "data": "Data",
       "services": "Services",
@@ -1789,7 +1789,12 @@
         "added": "Privacy zone added.",
         "addedDeleted_one": "Privacy zone added, {{count}} position inside deleted.",
         "addedDeleted_other": "Privacy zone added, {{count}} positions inside deleted.",
-        "loadError": "I couldn't load the privacy zones."
+        "loadError": "I couldn't load the privacy zones.",
+        "edit": "Edit",
+        "editTitle": "Edit privacy zone",
+        "save": "Save",
+        "cancel": "Cancel",
+        "notSaved": "I did not save the privacy zone."
       },
       "cities": {
         "name": "Name cities",
@@ -1881,6 +1886,169 @@
         "deleteDo": "Delete log"
       },
       "title": "History"
+    }
+  },
+  "tt": {
+    "recording": {
+      "title": "Recording",
+      "stored": {
+        "name": "Stored",
+        "empty": "No points yet",
+        "value_one": "{{count}} point since {{since}}",
+        "value_other": "{{count}} points since {{since}}"
+      },
+      "lastSeen": "Last seen: {{at}}",
+      "loadError": "I could not read what is stored.",
+      "off": "TravTrack is off on this server: no new points arrive. Stored points stay, export and delete keep working.",
+      "devices": {
+        "name": "Devices",
+        "sub": "Pair and sign out under Profile & sign-in",
+        "jump": "To Profile & sign-in",
+        "unnamed": "Unnamed device",
+        "points_one": "{{count}} point",
+        "points_other": "{{count}} points"
+      }
+    },
+    "places": {
+      "title": "Fixed places",
+      "name": "Fixed places",
+      "sub": "Home, work and other places",
+      "help": "Everything inside the radius shows on the map as one stop with the place's name. The single points stay stored. A privacy zone always wins.",
+      "loading": "Loading …",
+      "loadError": "I could not load the fixed places.",
+      "tooOld": "This server does not know fixed places yet. They appear once it is updated.",
+      "add": "Add place",
+      "edit": "Edit",
+      "remove": "Delete",
+      "removeTitle": "Delete the place “{{name}}”?",
+      "removeAffects": "The fixed place “{{name}}”",
+      "removeAmount": "One place, {{metres}} m radius",
+      "removeAfter": "The points stay stored; the map shows them one by one again.",
+      "removeDo": "Delete place",
+      "changeHome": "Change home",
+      "homeUnknown": "No home known yet",
+      "always": "always",
+      "radius": "{{metres}} m",
+      "kinds": {
+        "home": "Home",
+        "work": "Work",
+        "custom": "Other place"
+      },
+      "days": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      },
+      "errors": {
+        "notFound": "This place no longer exists. Reload the list.",
+        "disabled": "TravTrack is off on this server.",
+        "validation": "The server rejected the input. Check name, centre, radius and times.",
+        "network": "The server cannot be reached.",
+        "generic": "That did not work."
+      },
+      "editor": {
+        "add": "New fixed place",
+        "edit": "Edit fixed place",
+        "homeNote": "Home comes from your residence. Here you only change radius and times.",
+        "name": "Name",
+        "kind": "Kind",
+        "centre": "Centre",
+        "centreHint": "Coordinates or a Google Maps link, e.g. 52.5200, 13.4050",
+        "centreInvalid": "I cannot read these coordinates.",
+        "radius": "Radius in metres",
+        "radiusHint": "{{min}} to {{max}} m",
+        "radiusInvalid": "The radius must be between {{min}} and {{max}} m.",
+        "timed": "Only at certain times",
+        "daysNeeded": "Pick at least one day.",
+        "from": "from",
+        "until": "until",
+        "windowHint": "Times are read in the place's time zone. An “until” before the “from” spans midnight.",
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "lodging": {
+        "name": "Lodging during the booking",
+        "sub": "From check-in to check-out the hotel counts as a fixed place",
+        "radius": "Lodging radius in metres",
+        "off": "TravTrack is off on this server.",
+        "skipped_one": "{{count}} booking without coordinates is skipped.",
+        "skipped_other": "{{count}} bookings without coordinates are skipped."
+      }
+    },
+    "zones": {
+      "title": "Privacy zones",
+      "difference": "Nothing is stored or drawn inside a privacy zone, unlike fixed places, which only summarise. A privacy zone always wins."
+    },
+    "detect": {
+      "title": "Detection & suggestions",
+      "stops": {
+        "name": "Name stops",
+        "sub": "Suggest names of shops, companies and hotels nearby",
+        "help": "Off: the inbox offers no stay suggestions."
+      },
+      "inbox": {
+        "name": "Open suggestions in the inbox",
+        "jump": "To the inbox"
+      }
+    },
+    "sources": {
+      "title": "Sources & imports",
+      "files": {
+        "name": "Import files",
+        "sub": "GPX, GeoJSON, KML, TCX, Google Takeout",
+        "help": "Earlier imports can be removed one by one."
+      },
+      "dawarich": {
+        "name": "Dawarich connection",
+        "jump": "To Services"
+      }
+    },
+    "export": {
+      "title": "Export",
+      "name": "Export history",
+      "sub": "GPX or JSON, privacy zones are never included",
+      "help": "You see the period, the number of points and the time zone before downloading.",
+      "do": "Export",
+      "from": "From",
+      "until": "Until",
+      "loadError": "I could not read what is stored.",
+      "invalidRange": "“From” is after “Until”.",
+      "empty": "No points are stored.",
+      "count_one": "{{count}} point in the period, time zone {{zone}}",
+      "count_other": "{{count}} points in the period, time zone {{zone}}"
+    },
+    "delete": {
+      "title": "Delete a period",
+      "name": "Delete a period",
+      "sub": "Permanently deletes all location points in the period, also those from imports",
+      "help": "Deleted days stay deleted, even if a phone sends them later. Logbook entries stay untouched.",
+      "do": "Delete",
+      "from": "From",
+      "until": "Until",
+      "invalidRange": "“From” is after “Until”.",
+      "counting": "Counting …",
+      "none": "There are no points in this period.",
+      "affected_one": "Affected: {{count}} point",
+      "affected_other": "Affected: {{count}} points",
+      "done_one": "{{count}} point deleted.",
+      "done_other": "{{count}} points deleted.",
+      "confirm": {
+        "title": "Delete this period?",
+        "affects": "All location points from {{from}} to {{until}}",
+        "amount_one": "{{count}} stored point",
+        "amount_other": "{{count}} stored points",
+        "after": "This cannot be undone. The days stay deleted, even if a phone sends them later.",
+        "do_one": "Delete {{count}} point",
+        "do_other": "Delete {{count}} points",
+        "word": "delete"
+      }
+    },
+    "diag": {
+      "title": "Diagnostics"
     }
   }
 }

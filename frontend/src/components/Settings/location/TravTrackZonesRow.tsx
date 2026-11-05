@@ -34,6 +34,7 @@ export default function TravTrackZonesRow({
   onReload,
   canAdd,
   canRemove,
+  canEdit = false,
   onChanged,
 }: {
   zones: PrivacyZone[];
@@ -41,6 +42,8 @@ export default function TravTrackZonesRow({
   onReload: () => void;
   canAdd: boolean;
   canRemove: boolean;
+  /** A zone can be edited (PATCH): name, centre, radius. */
+  canEdit?: boolean;
   /** A zone was added or removed: stored positions or the list changed. */
   onChanged: () => Promise<void> | void;
 }): JSX.Element {
@@ -55,6 +58,15 @@ export default function TravTrackZonesRow({
     return t(key === "track:errors.generic" ? `${NS}.notAdded` : key);
   });
   const remove = useRowAction(() => t(`${NS}.notRemoved`));
+  const [editing, setEditing] = useState<PrivacyZone | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCentre, setEditCentre] = useState("");
+  const [editRadius, setEditRadius] = useState(250);
+  const edit = useRowAction((err) => {
+    const key = trackErrorKey(err);
+    return t(key === "track:errors.generic" ? `${NS}.notSaved` : key);
+  });
+  const editPoint = parseCoordinateInput(editCentre);
 
   const point = parseCoordinateInput(centre);
   const canSubmit = name.trim() !== "" && point !== null && !add.busy;
@@ -85,6 +97,45 @@ export default function TravTrackZonesRow({
       setNote(
         result.deleted > 0 ? t(`${NS}.addedDeleted`, { count: result.deleted }) : t(`${NS}.added`)
       );
+      await onChanged();
+    });
+    if (!ok) setNote(null);
+  };
+
+  const startEdit = (zone: PrivacyZone): void => {
+    edit.clear();
+    setEditing(zone);
+    setEditName(zone.name);
+    setEditCentre(`${zone.lat}, ${zone.lon}`);
+    setEditRadius(zone.radiusM);
+  };
+
+  const saveEdit = async (): Promise<void> => {
+    if (!editing || !editPoint) return;
+    const zone = editing;
+    const patch = {
+      name: editName.trim(),
+      lat: editPoint.lat,
+      lon: editPoint.lon,
+      radiusM: editRadius,
+    };
+    const ok = await edit.run(async () => {
+      try {
+        await travTrackApi.updateZone(zone.id, patch);
+      } catch (err) {
+        const inside = pointsInsideOf(err);
+        if (inside === null) throw err;
+        const agreed = await confirm({
+          title: t(`${NS}.editTitle`),
+          affects: t(`${NS}.confirmAffects`, { name: patch.name }),
+          amount: t(`${NS}.confirmAmount`, { count: inside }),
+          after: t(`${NS}.confirmAfter`),
+          confirmLabel: t(`${NS}.confirmDo`, { count: inside }),
+        });
+        if (!agreed) return;
+        await travTrackApi.updateZone(zone.id, { ...patch, deleteStoredPoints: true });
+      }
+      setEditing(null);
       await onChanged();
     });
     if (!ok) setNote(null);
@@ -125,6 +176,15 @@ export default function TravTrackZonesRow({
               <span className="t-body">
                 {zone.name} <StatusValue>{t(`${NS}.radius`, { metres: zone.radiusM })}</StatusValue>
               </span>
+              {canEdit ? (
+                <Button
+                  disabled={edit.busy}
+                  aria-label={`${t(`${NS}.edit`)}: ${zone.name}`}
+                  onClick={() => startEdit(zone)}
+                >
+                  {t(`${NS}.edit`)}
+                </Button>
+              ) : null}
               {canRemove ? (
                 <Button
                   disabled={remove.busy}
@@ -139,6 +199,66 @@ export default function TravTrackZonesRow({
         </ul>
       )}
       <RowFailure error={remove.error} onRetry={remove.retry} />
+
+      {editing ? (
+        <div
+          className="flex flex-col"
+          style={{ gap: "var(--ts-space-sm)" }}
+          role="group"
+          aria-label={t(`${NS}.editTitle`)}
+        >
+          <Field label={t(`${NS}.fields.name`)} htmlFor="travtrack-zone-edit-name">
+            <Input
+              id="travtrack-zone-edit-name"
+              value={editName}
+              maxLength={80}
+              onChange={(e) => setEditName(e.target.value)}
+            />
+          </Field>
+          <Field
+            label={t(`${NS}.fields.centre`)}
+            htmlFor="travtrack-zone-edit-centre"
+            hint={t(`${NS}.centreHint`)}
+            error={
+              editCentre.trim() !== "" && editPoint === null ? t(`${NS}.centreInvalid`) : undefined
+            }
+          >
+            <Input
+              id="travtrack-zone-edit-centre"
+              value={editCentre}
+              onChange={(e) => setEditCentre(e.target.value)}
+            />
+          </Field>
+          <Field label={t(`${NS}.fields.radius`)} htmlFor="travtrack-zone-edit-radius">
+            <Select
+              id="travtrack-zone-edit-radius"
+              value={String(editRadius)}
+              onChange={(e) => setEditRadius(Number(e.target.value))}
+            >
+              {[...new Set<number>([...ZONE_RADII, editRadius])]
+                .sort((a, b) => a - b)
+                .map((metres) => (
+                  <option key={metres} value={metres}>
+                    {t(`${NS}.radius`, { metres })}
+                  </option>
+                ))}
+            </Select>
+          </Field>
+          <div className="flex" style={{ gap: "var(--ts-space-sm)" }}>
+            <Button
+              variant="primary"
+              disabled={editName.trim() === "" || editPoint === null || edit.busy}
+              onClick={() => void saveEdit()}
+            >
+              {t(`${NS}.save`)}
+            </Button>
+            <Button disabled={edit.busy} onClick={() => setEditing(null)}>
+              {t(`${NS}.cancel`)}
+            </Button>
+          </div>
+          <RowFailure error={edit.error} onRetry={edit.retry} />
+        </div>
+      ) : null}
 
       {canAdd ? (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>

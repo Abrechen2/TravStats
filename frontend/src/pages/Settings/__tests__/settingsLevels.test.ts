@@ -13,7 +13,8 @@ import { pageLevel, sectionsOf, type PageDef } from "../surface";
 const EXPERT_SECTIONS = {
   // Country counting and the flight form defaults are ordinary choices and
   // moved to standard (settings redesign, package 3).
-  settings: ["apitokens", "enrichment"],
+  // The TravTrack page's Diagnose is an expert section (web redesign, 2026-11-05).
+  settings: ["apitokens", "enrichment", "ttDiag"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -57,7 +58,16 @@ const PAGES = {
   trips: personal("trips", "suggestions", "sharing", "calendarFeed"),
   views: personal("mapAppearance"),
   privacy: personal("shareLinks", "comparisonConsent", "encryptedGrants"),
-  location: personal("locationProvider", "travTrack", "dawarich", "tripRecording", "stayScan"),
+  travtrack: personal(
+    "ttRecording",
+    "ttPlaces",
+    "ttZones",
+    "ttDetect",
+    "ttSources",
+    "ttExport",
+    "ttDelete",
+    "ttDiag"
+  ),
   loyalty: personal("loyalty"),
   flight: personal("homeAirport", "autoupdate", "features", "defaults", "enrichment"),
   cruise: personal("cruisePreferences"),
@@ -109,7 +119,7 @@ describe("the standard/expert classification", () => {
     ["privacy", ["shareLinks", "comparisonConsent", "encryptedGrants"]],
     // The stay scan is standard; detecting places as areas just runs, and its
     // two switches are expert rows inside it (forgejo#318).
-    ["location", ["dawarich", "tripRecording", "stayScan"]],
+    ["travtrack", ["ttRecording", "ttDetect"]],
     ["loyalty", ["loyalty"]],
     ["flight", ["homeAirport", "autoupdate", "features", "defaults"]],
     ["cruise", ["cruisePreferences"]],
@@ -174,7 +184,7 @@ describe("level filtering", () => {
   });
 
   it("shows TravTrack's section only while its server condition holds, and no link lifts it", () => {
-    const location = findPage("location")!;
+    const location = findPage("travtrack")!;
     const at = (held: boolean | undefined, deepLinked: string | null = null) =>
       sectionsOf(location, {
         level: "standard",
@@ -183,10 +193,12 @@ describe("level filtering", () => {
         deepLinked,
         conditions: held === undefined ? undefined : { travTrackHeld: held },
       }).shown;
-    expect(at(true)).toContain("travTrack");
-    expect(at(false)).not.toContain("travTrack");
-    expect(at(undefined)).not.toContain("travTrack");
-    expect(at(false, "travTrack")).not.toContain("travTrack");
+    const held = ["ttPlaces", "ttZones", "ttSources", "ttExport", "ttDelete"];
+    expect(at(true)).toEqual(expect.arrayContaining(held));
+    // Recording and detection stay: they hold no stored data.
+    for (const closed of [at(false), at(undefined), at(false, "ttZones")]) {
+      expect(closed).toEqual(["ttRecording", "ttDetect"]);
+    }
   });
 });
 

@@ -33,10 +33,14 @@ export type SettingsSectionId =
   | "shareLinks"
   | "calendarFeed"
   | "dawarich"
-  | "locationProvider"
-  | "travTrack"
-  | "tripRecording"
-  | "stayScan"
+  | "ttRecording"
+  | "ttPlaces"
+  | "ttZones"
+  | "ttDetect"
+  | "ttSources"
+  | "ttExport"
+  | "ttDelete"
+  | "ttDiag"
   | "loyalty"
   | "homeAirport"
   | "autoupdate"
@@ -82,14 +86,19 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("sharing"),
   section("calendarFeed", "standard"),
   section("companions"),
-  // TravTrack's history shows while the account holds data or the instance
-  // shows TravTrack (plan T6); the stay scan is standard, only its two area
-  // switches are expert rows (forgejo#318).
-  section("locationProvider"),
-  section("travTrack", "standard", { when: "travTrackHeld" }),
+  // The TravTrack page (web redesign, 2026-11-05). Recording and detection show
+  // always; everything that holds or edits stored data shows while the account
+  // holds TravTrack data or the instance shows TravTrack (plan T6), so export,
+  // delete and token revocation stay reachable with the server switch off.
+  section("ttRecording"),
+  section("ttPlaces", "standard", { when: "travTrackHeld" }),
+  section("ttZones", "standard", { when: "travTrackHeld" }),
+  section("ttDetect"),
+  section("ttSources", "standard", { when: "travTrackHeld" }),
+  section("ttExport", "standard", { when: "travTrackHeld" }),
+  section("ttDelete", "standard", { when: "travTrackHeld" }),
+  section("ttDiag", "expert", { when: "travTrackHeld" }),
   section("dawarich"),
-  section("tripRecording"),
-  section("stayScan"),
   section("loyalty"),
   section("shareLinks"),
   section("comparisonConsent", "standard", { gate: "comparison" }),

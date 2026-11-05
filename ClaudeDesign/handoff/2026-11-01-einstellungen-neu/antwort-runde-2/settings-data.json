@@ -2346,16 +2346,34 @@
    ]
   },
   {
-   "id": "location",
+   "id": "travtrack",
    "g": "du",
-   "de": "Standort",
-   "en": "Location",
+   "de": "TravTrack",
+   "en": "TravTrack",
    "s": [
     {
-     "id": "locationProvider",
-     "de": "Quelle",
-     "en": "Source",
+     "id": "ttRecording",
+     "de": "Aufzeichnung",
+     "en": "Recording",
+     "d": 1,
      "rows": [
+      {
+       "id": "ttsum",
+       "t": "status",
+       "v": "18.204 Punkte · seit 03/2025 · 2 Telefone",
+       "ve": "18,204 points · since 03/2025 · 2 phones",
+       "inv": "A8 TravTrack summary",
+       "de": [
+        "Gespeichert",
+        "",
+        ""
+       ],
+       "en": [
+        "Stored",
+        "",
+        ""
+       ]
+      },
       {
        "id": "quelle",
        "t": "choice",
@@ -2415,15 +2433,138 @@
         "Positions from the Companion app",
         "Off: the server accepts no new positions. Stored ones stay."
        ]
+      },
+      {
+       "id": "geraete",
+       "t": "link",
+       "de": [
+        "Geräte",
+        "Koppeln und abmelden in Profil & Anmeldung",
+        ""
+       ],
+       "en": [
+        "Devices",
+        "Pair and sign out under Profile & sign-in",
+        ""
+       ]
       }
-     ],
-     "d": 1
+     ]
     },
     {
-     "id": "stayScan",
-     "de": "Aufenthalte finden",
-     "en": "Find stays",
+     "id": "ttPlaces",
+     "de": "Feste Orte",
+     "en": "Fixed places",
+     "beta": "travTrack",
      "rows": [
+      {
+       "id": "orte",
+       "t": "list",
+       "de": [
+        "Feste Orte",
+        "Zuhause, Arbeit und andere Orte",
+        "Alles innerhalb des Radius erscheint auf der Karte als ein Stopp mit dem Namen des Orts. Die einzelnen Punkte bleiben gespeichert."
+       ],
+       "en": [
+        "Fixed places",
+        "Home, work and other places",
+        "Everything inside the radius shows on the map as one stop with the place's name. The single points stay stored."
+       ],
+       "items": [],
+       "btn": [
+        "Ort hinzufügen",
+        "Add place"
+       ]
+      },
+      {
+       "id": "unterkunft",
+       "t": "toggle",
+       "de": [
+        "Unterkunft während der Buchung",
+        "Von Check-in bis Check-out zählt das Hotel als fester Ort",
+        "Buchungen ohne Koordinaten werden übersprungen."
+       ],
+       "en": [
+        "Lodging during the booking",
+        "From check-in to check-out the hotel counts as a fixed place",
+        "Bookings without coordinates are skipped."
+       ],
+       "v": false
+      }
+     ]
+    },
+    {
+     "id": "ttZones",
+     "de": "Schutzzonen",
+     "en": "Privacy zones",
+     "beta": "travTrack",
+     "rows": [
+      {
+       "id": "zonen",
+       "t": "list",
+       "items": [
+        [
+         "Zuhause",
+         "250 m"
+        ],
+        [
+         "Büro",
+         "100 m"
+        ]
+       ],
+       "btn": [
+        "Zone hinzufügen",
+        "Add zone"
+       ],
+       "inv": "A8 Privacy zones",
+       "de": [
+        "Schutzzonen",
+        "Hier wird nichts gespeichert",
+        "Eine neue Zone löscht Punkte, die schon darin liegen; vorher siehst du, wie viele. Entfernen holt nichts zurück."
+       ],
+       "en": [
+        "Privacy zones",
+        "Nothing is stored here",
+        "A new zone deletes points already inside; you see how many first. Removing brings nothing back."
+       ]
+      }
+     ]
+    },
+    {
+     "id": "ttDetect",
+     "de": "Erkennung & Vorschläge",
+     "en": "Detection & suggestions",
+     "rows": [
+      {
+       "id": "stopps",
+       "t": "toggle",
+       "de": [
+        "Stopps benennen",
+        "Namen von Läden, Firmen und Hotels in der Nähe vorschlagen",
+        "Aus: der Posteingang bietet keine Aufenthaltsvorschläge an."
+       ],
+       "en": [
+        "Name stops",
+        "Suggest names of shops, companies and hotels nearby",
+        "Off: the inbox offers no stay suggestions."
+       ],
+       "v": true
+      },
+      {
+       "id": "staedte",
+       "t": "toggle",
+       "v": false,
+       "inv": "A8 City lookup in monthly values",
+       "de": [
+        "Städte benennen",
+        "Orte ab 30 Minuten",
+        "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder."
+       ],
+       "en": [
+        "Name cities",
+        "Places from 30 minutes",
+        "Sends positions rounded to 1 km to the server's place search. Off removes the cities again."
+       ]
+      },
       {
        "id": "scan",
        "t": "toggle",
@@ -2478,109 +2619,27 @@
         "",
         ""
        ]
-      }
-     ]
-    },
-    {
-     "id": "travTrack",
-     "de": "TravTrack",
-     "en": "TravTrack",
-     "beta": "travTrack",
-     "rows": [
+      },
       {
-       "id": "ttsum",
-       "t": "status",
-       "v": "18.204 Punkte · seit 03/2025 · 2 Telefone",
-       "ve": "18,204 points · since 03/2025 · 2 phones",
-       "inv": "A8 TravTrack summary",
+       "id": "posteingang",
+       "t": "link",
        "de": [
-        "Gespeichert",
+        "Offene Vorschläge im Posteingang",
         "",
         ""
        ],
        "en": [
-        "Stored",
+        "Open suggestions in the inbox",
         "",
         ""
-       ]
-      },
-      {
-       "id": "zonen",
-       "t": "list",
-       "items": [
-        [
-         "Zuhause",
-         "250 m"
-        ],
-        [
-         "Büro",
-         "100 m"
-        ]
-       ],
-       "btn": [
-        "Zone hinzufügen",
-        "Add zone"
-       ],
-       "inv": "A8 Privacy zones",
-       "de": [
-        "Schutzzonen",
-        "Hier wird nichts gespeichert",
-        "Eine neue Zone löscht Punkte, die schon darin liegen; vorher siehst du, wie viele. Entfernen holt nichts zurück."
-       ],
-       "en": [
-        "Privacy zones",
-        "Nothing is stored here",
-        "A new zone deletes points already inside; you see how many first. Removing brings nothing back."
-       ]
-      },
-      {
-       "id": "staedte",
-       "t": "toggle",
-       "v": false,
-       "inv": "A8 City lookup in monthly values",
-       "de": [
-        "Städte benennen",
-        "Orte ab 30 Minuten",
-        "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder."
-       ],
-       "en": [
-        "Name cities",
-        "Places from 30 minutes",
-        "Sends positions rounded to 1 km to the server's place search. Off removes the cities again."
-       ]
-      },
-      {
-       "id": "apps",
-       "t": "list",
-       "x": 1,
-       "items": [
-        [
-         "OwnTracks · Pixel",
-         "seit 14.09.2026"
-        ]
-       ],
-       "btn": [
-        "Schlüssel erstellen",
-        "Create key"
-       ],
-       "inv": "A8 Further sources (OwnTracks / Overland keys)",
-       "de": [
-        "Weitere Apps",
-        "OwnTracks und Overland",
-        "Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal."
-       ],
-       "en": [
-        "Other apps",
-        "OwnTracks and Overland",
-        "These apps don't know your privacy zones; the server drops points inside. You see the key only once."
        ]
       }
      ]
     },
     {
-     "id": "history",
-     "de": "Verlauf",
-     "en": "History",
+     "id": "ttSources",
+     "de": "Quellen & Importe",
+     "en": "Sources & imports",
      "beta": "travTrack",
      "rows": [
       {
@@ -2610,16 +2669,64 @@
        "ve": "on the Track page",
        "inv": "A8 GPX imports (history)",
        "de": [
-        "GPX-Dateien",
+        "Dateien importieren",
+        "GPX, GeoJSON, KML, TCX, Google-Takeout",
+        "Bisherige Importe lassen sich einzeln entfernen."
+       ],
+       "en": [
+        "Import files",
+        "GPX, GeoJSON, KML, TCX, Google Takeout",
+        "Earlier imports can be removed one by one."
+       ]
+      },
+      {
+       "id": "apps",
+       "t": "list",
+       "x": 1,
+       "items": [
+        [
+         "OwnTracks · Pixel",
+         "seit 14.09.2026"
+        ]
+       ],
+       "btn": [
+        "Schlüssel erstellen",
+        "Create key"
+       ],
+       "inv": "A8 Further sources (OwnTracks / Overland keys)",
+       "de": [
+        "Weitere Apps",
+        "OwnTracks und Overland",
+        "Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal."
+       ],
+       "en": [
+        "Other apps",
+        "OwnTracks and Overland",
+        "These apps don't know your privacy zones; the server drops points inside. You see the key only once."
+       ]
+      },
+      {
+       "id": "dawconn",
+       "t": "link",
+       "de": [
+        "Dawarich-Verbindung in Dienste",
         "",
         ""
        ],
        "en": [
-        "GPX files",
+        "Dawarich connection in Services",
         "",
         ""
        ]
-      },
+      }
+     ]
+    },
+    {
+     "id": "ttExport",
+     "de": "Export",
+     "en": "Export",
+     "beta": "travTrack",
+     "rows": [
       {
        "id": "ttexport",
        "t": "action",
@@ -2630,19 +2737,27 @@
        "inv": "A8 Export history",
        "de": [
         "Verlauf exportieren",
-        "GPX oder JSON",
-        ""
+        "GPX oder JSON, Schutzzonen sind nie enthalten",
+        "Zeitraum, Anzahl der Punkte und Zeitzone siehst du vor dem Herunterladen."
        ],
        "en": [
         "Export history",
-        "GPX or JSON",
-        ""
+        "GPX or JSON, privacy zones are never included",
+        "You see the period, the number of points and the time zone before downloading."
        ],
        "res": [
         "Fertig · Herunterladen",
         "Ready · Download"
        ]
-      },
+      }
+     ]
+    },
+    {
+     "id": "ttDelete",
+     "de": "Zeitraum löschen",
+     "en": "Delete a period",
+     "beta": "travTrack",
+     "rows": [
       {
        "id": "ttdel",
        "t": "danger",
@@ -2652,16 +2767,25 @@
        ],
        "inv": "A8 Delete a span",
        "de": [
-        "Tage löschen",
-        "",
-        "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht."
+        "Zeitraum löschen",
+        "Löscht alle Standortpunkte im Zeitraum endgültig, auch die aus Importen",
+        "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht. Logbuch-Einträge bleiben unberührt."
        ],
        "en": [
-        "Delete days",
-        "",
-        "Deleted days stay deleted, even if a phone sends them later."
+        "Delete a period",
+        "Permanently deletes all location points in the period, also those from imports",
+        "Deleted days stay deleted, even if a phone sends them later. Logbook entries stay untouched."
        ]
-      },
+      }
+     ]
+    },
+    {
+     "id": "ttDiag",
+     "de": "Diagnose",
+     "en": "Diagnostics",
+     "beta": "travTrack",
+     "x": 1,
+     "rows": [
       {
        "id": "diag",
        "t": "action",

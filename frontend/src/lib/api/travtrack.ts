@@ -189,6 +189,17 @@ export const travTrackApi = {
     (await api.get<{ zones: PrivacyZone[] }>("/travtrack/zones")).data.zones,
   createZone: async (input: PrivacyZoneInput): Promise<{ zone: PrivacyZone; deleted: number }> =>
     (await api.post<{ zone: PrivacyZone; deleted: number }>("/travtrack/zones", input)).data,
+  /** Edit a zone; moving it over stored positions asks like adding one does. */
+  updateZone: async (
+    id: string,
+    input: Partial<PrivacyZoneInput>
+  ): Promise<{ zone: PrivacyZone; deleted: number }> =>
+    (
+      await api.patch<{ zone: PrivacyZone; deleted: number }>(
+        `/travtrack/zones/${encodeURIComponent(id)}`,
+        input
+      )
+    ).data,
   deleteZone: async (id: string): Promise<void> => {
     await api.delete(`/travtrack/zones/${encodeURIComponent(id)}`);
   },

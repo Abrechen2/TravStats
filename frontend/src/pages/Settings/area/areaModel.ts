@@ -33,7 +33,7 @@ export type AreaPageId =
   | "trips"
   | "sharing"
   | "notifications"
-  | "location"
+  | "travtrack"
   | "loyalty"
   | "data"
   | "services"
@@ -202,11 +202,15 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("encryptedGrants", { matches: ["verschl"] }),
   ]),
   page("notifications", "bell", [P("notifications", { as: "channel", anchors: ["domains"] })]),
-  page("location", "map-pin", [
-    P("locationProvider"),
-    P("tripRecording", { matches: ["aufz"] }),
-    P("stayScan"),
-    P("travTrack", { anchors: ["history"] }),
+  page("travtrack", "map-pin", [
+    P("ttRecording"),
+    P("ttPlaces"),
+    P("ttZones"),
+    P("ttDetect"),
+    P("ttSources"),
+    P("ttExport"),
+    P("ttDelete"),
+    P("ttDiag"),
   ]),
   page("loyalty", "credit-card", [P("loyalty")]),
   page("data", "database", [
@@ -270,7 +274,7 @@ export const AREA_MENU: readonly MenuGroupDef<AreaPageId>[] = [
       "trips",
       "sharing",
       "notifications",
-      "location",
+      "travtrack",
       "loyalty",
       "data",
       "services",

@@ -1300,7 +1300,7 @@
       "trips": "Reisen & Eingang",
       "sharing": "Teilen",
       "notifications": "Erinnerungen",
-      "location": "Standort",
+      "travtrack": "TravTrack",
       "loyalty": "Treueprogramme",
       "data": "Daten",
       "services": "Dienste",
@@ -1789,7 +1789,12 @@
         "added": "Schutzzone angelegt.",
         "addedDeleted_one": "Schutzzone angelegt, {{count}} Position darin gelöscht.",
         "addedDeleted_other": "Schutzzone angelegt, {{count}} Positionen darin gelöscht.",
-        "loadError": "Ich konnte die Schutzzonen nicht laden."
+        "loadError": "Ich konnte die Schutzzonen nicht laden.",
+        "edit": "Bearbeiten",
+        "editTitle": "Schutzzone bearbeiten",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "notSaved": "Ich habe die Schutzzone nicht gespeichert."
       },
       "cities": {
         "name": "Städte benennen",
@@ -1881,6 +1886,169 @@
         "deleteDo": "Protokoll löschen"
       },
       "title": "Verlauf"
+    }
+  },
+  "tt": {
+    "recording": {
+      "title": "Aufzeichnung",
+      "stored": {
+        "name": "Gespeichert",
+        "empty": "Noch keine Punkte",
+        "value_one": "{{count}} Punkt seit {{since}}",
+        "value_other": "{{count}} Punkte seit {{since}}"
+      },
+      "lastSeen": "Zuletzt gesehen: {{at}}",
+      "loadError": "Ich konnte nicht lesen, was gespeichert ist.",
+      "off": "TravTrack ist auf diesem Server aus: Es kommen keine neuen Punkte an. Gespeichertes bleibt, Export und Löschen funktionieren weiter.",
+      "devices": {
+        "name": "Geräte",
+        "sub": "Koppeln und abmelden in Profil & Anmeldung",
+        "jump": "Zu Profil & Anmeldung",
+        "unnamed": "Gerät ohne Namen",
+        "points_one": "{{count}} Punkt",
+        "points_other": "{{count}} Punkte"
+      }
+    },
+    "places": {
+      "title": "Feste Orte",
+      "name": "Feste Orte",
+      "sub": "Zuhause, Arbeit und andere Orte",
+      "help": "Alles innerhalb des Radius erscheint auf der Karte als ein Stopp mit dem Namen des Orts. Die einzelnen Punkte bleiben gespeichert. Eine Schutzzone geht immer vor.",
+      "loading": "Lade …",
+      "loadError": "Ich konnte die festen Orte nicht laden.",
+      "tooOld": "Dieser Server kennt feste Orte noch nicht. Mit dem nächsten Server-Update tauchen sie hier auf.",
+      "add": "Ort hinzufügen",
+      "edit": "Bearbeiten",
+      "remove": "Löschen",
+      "removeTitle": "Ort „{{name}}“ löschen?",
+      "removeAffects": "Der feste Ort „{{name}}“",
+      "removeAmount": "Ein Ort, {{metres}} m Radius",
+      "removeAfter": "Die Punkte bleiben gespeichert, die Karte zeigt sie wieder einzeln.",
+      "removeDo": "Ort löschen",
+      "changeHome": "Wohnort ändern",
+      "homeUnknown": "Noch kein Wohnort bekannt",
+      "always": "immer",
+      "radius": "{{metres}} m",
+      "kinds": {
+        "home": "Zuhause",
+        "work": "Arbeit",
+        "custom": "Anderer Ort"
+      },
+      "days": {
+        "1": "Mo",
+        "2": "Di",
+        "3": "Mi",
+        "4": "Do",
+        "5": "Fr",
+        "6": "Sa",
+        "7": "So"
+      },
+      "errors": {
+        "notFound": "Diesen Ort gibt es nicht mehr. Lade die Liste neu.",
+        "disabled": "TravTrack ist auf diesem Server aus.",
+        "validation": "Der Server hat die Angaben abgelehnt. Prüfe Name, Mittelpunkt, Radius und Zeiten.",
+        "network": "Der Server ist nicht erreichbar.",
+        "generic": "Das hat nicht geklappt."
+      },
+      "editor": {
+        "add": "Neuer fester Ort",
+        "edit": "Festen Ort bearbeiten",
+        "homeNote": "Zuhause kommt aus deinem Wohnort. Hier änderst du nur Radius und Zeiten.",
+        "name": "Name",
+        "kind": "Art",
+        "centre": "Mittelpunkt",
+        "centreHint": "Koordinaten oder ein Google-Maps-Link, z. B. 52.5200, 13.4050",
+        "centreInvalid": "Diese Koordinaten kann ich nicht lesen.",
+        "radius": "Radius in Metern",
+        "radiusHint": "{{min}} bis {{max}} m",
+        "radiusInvalid": "Der Radius muss zwischen {{min}} und {{max}} m liegen.",
+        "timed": "Nur zu bestimmten Zeiten",
+        "daysNeeded": "Wähle mindestens einen Tag.",
+        "from": "von",
+        "until": "bis",
+        "windowHint": "Zeiten gelten in der Zeitzone des Orts. Ein „bis“ vor dem „von“ geht über Mitternacht.",
+        "save": "Speichern",
+        "cancel": "Abbrechen"
+      },
+      "lodging": {
+        "name": "Unterkunft während der Buchung",
+        "sub": "Von Check-in bis Check-out zählt das Hotel als fester Ort",
+        "radius": "Radius der Unterkunft in Metern",
+        "off": "TravTrack ist auf diesem Server aus.",
+        "skipped_one": "{{count}} Buchung ohne Koordinaten wird übersprungen.",
+        "skipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen."
+      }
+    },
+    "zones": {
+      "title": "Schutzzonen",
+      "difference": "In einer Schutzzone wird nichts gespeichert und nichts gezeichnet, anders als bei festen Orten, die nur zusammenfassen. Eine Schutzzone geht immer vor."
+    },
+    "detect": {
+      "title": "Erkennung & Vorschläge",
+      "stops": {
+        "name": "Stopps benennen",
+        "sub": "Namen von Läden, Firmen und Hotels in der Nähe vorschlagen",
+        "help": "Aus: Der Posteingang bietet keine Aufenthaltsvorschläge an."
+      },
+      "inbox": {
+        "name": "Offene Vorschläge im Posteingang",
+        "jump": "Zum Posteingang"
+      }
+    },
+    "sources": {
+      "title": "Quellen & Importe",
+      "files": {
+        "name": "Dateien importieren",
+        "sub": "GPX, GeoJSON, KML, TCX, Google-Takeout",
+        "help": "Bisherige Importe lassen sich einzeln entfernen."
+      },
+      "dawarich": {
+        "name": "Dawarich-Verbindung",
+        "jump": "Zu Dienste"
+      }
+    },
+    "export": {
+      "title": "Export",
+      "name": "Verlauf exportieren",
+      "sub": "GPX oder JSON, Schutzzonen sind nie enthalten",
+      "help": "Zeitraum, Anzahl der Punkte und Zeitzone siehst du vor dem Herunterladen.",
+      "do": "Exportieren",
+      "from": "Von",
+      "until": "Bis",
+      "loadError": "Ich konnte nicht lesen, was gespeichert ist.",
+      "invalidRange": "„Von“ liegt nach „Bis“.",
+      "empty": "Es sind keine Punkte gespeichert.",
+      "count_one": "{{count}} Punkt im Zeitraum, Zeitzone {{zone}}",
+      "count_other": "{{count}} Punkte im Zeitraum, Zeitzone {{zone}}"
+    },
+    "delete": {
+      "title": "Zeitraum löschen",
+      "name": "Zeitraum löschen",
+      "sub": "Löscht alle Standortpunkte im Zeitraum endgültig, auch die aus Importen",
+      "help": "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht. Logbuch-Einträge bleiben unberührt.",
+      "do": "Löschen",
+      "from": "Von",
+      "until": "Bis",
+      "invalidRange": "„Von“ liegt nach „Bis“.",
+      "counting": "Zähle …",
+      "none": "In diesem Zeitraum liegen keine Punkte.",
+      "affected_one": "Betroffen: {{count}} Punkt",
+      "affected_other": "Betroffen: {{count}} Punkte",
+      "done_one": "{{count}} Punkt gelöscht.",
+      "done_other": "{{count}} Punkte gelöscht.",
+      "confirm": {
+        "title": "Zeitraum löschen?",
+        "affects": "Alle Standortpunkte vom {{from}} bis {{until}}",
+        "amount_one": "{{count}} gespeicherter Punkt",
+        "amount_other": "{{count}} gespeicherte Punkte",
+        "after": "Das lässt sich nicht zurückholen. Die Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht.",
+        "do_one": "{{count}} Punkt löschen",
+        "do_other": "{{count}} Punkte löschen",
+        "word": "löschen"
+      }
+    },
+    "diag": {
+      "title": "Diagnose"
     }
   }
 }

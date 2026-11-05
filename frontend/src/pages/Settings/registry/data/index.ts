@@ -7,7 +7,7 @@ import { CRUISE_PAGE } from "./cruise";
 import { TRIPS_PAGE } from "./trips";
 import { SHARING_PAGE } from "./sharing";
 import { NOTIFICATIONS_PAGE } from "./notifications";
-import { LOCATION_PAGE } from "./location";
+import { TRAVTRACK_PAGE } from "./travtrack";
 import { LOYALTY_PAGE } from "./loyalty";
 import { DATA_PAGE } from "./data";
 import { SERVICES_PAGE } from "./services";
@@ -28,7 +28,7 @@ export const REGISTRY_PAGES: readonly RegistryPage[] = [
   TRIPS_PAGE,
   SHARING_PAGE,
   NOTIFICATIONS_PAGE,
-  LOCATION_PAGE,
+  TRAVTRACK_PAGE,
   LOYALTY_PAGE,
   DATA_PAGE,
   SERVICES_PAGE,
