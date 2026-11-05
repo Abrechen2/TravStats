@@ -72,62 +72,97 @@ export async function buildTravTrackDataExport(
 ) {
   const points = new LazyArray(() => iterateTravTrackPoints(userId, page));
   const where = { userId };
-  const [zones, zoneTombstones, deletedRanges, deletedPoints, gaps, legModes, stopPlaces] =
-    await Promise.all([
-      prisma.travTrackPrivacyZone.findMany({
+  const [
+    zones,
+    zoneTombstones,
+    deletedRanges,
+    deletedPoints,
+    gaps,
+    legModes,
+    stopPlaces,
+    fixedPlaces,
+    placeSettings,
+  ] = await Promise.all([
+    prisma.travTrackPrivacyZone.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, lat: true, lon: true, radiusM: true, createdAt: true },
+    }),
+    prisma.travTrackZoneTombstone.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      select: { lat: true, lon: true, radiusM: true, untilAt: true, createdAt: true },
+    }),
+    prisma.travTrackDeletedRange.findMany({
+      where,
+      orderBy: { fromAt: "asc" },
+      select: { fromAt: true, toAt: true, createdAt: true },
+    }),
+    // A point deleted by itself: its second and when, never its position (only a digest is kept).
+    prisma.travTrackDeletedPoint
+      .findMany({ where, orderBy: { tS: "asc" }, select: { tS: true, createdAt: true } })
+      .then((rows) => rows.map((r) => ({ at: new Date(r.tS * 1000), createdAt: r.createdAt }))),
+    prisma.travTrackGap.findMany({
+      where,
+      orderBy: { fromAt: "asc" },
+      select: { deviceId: true, fromAt: true, toAt: true, reason: true },
+    }),
+    // The owner's leg mode corrections (spec 2026-11-03-travtrack-legs): epoch ms as strings,
+    // like `seq`, because the columns are 64-bit.
+    prisma.travTrackLegMode
+      .findMany({
         where,
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, lat: true, lon: true, radiusM: true, createdAt: true },
-      }),
-      prisma.travTrackZoneTombstone.findMany({
+        orderBy: { fromMs: "asc" },
+        select: { fromMs: true, untilMs: true, mode: true, createdAt: true, updatedAt: true },
+      })
+      .then((rows) =>
+        rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
+      ),
+    // The names the owner accepted for stops (spec "As built — stop places"), same encoding.
+    prisma.travTrackStopPlace
+      .findMany({
         where,
-        orderBy: { createdAt: "asc" },
-        select: { lat: true, lon: true, radiusM: true, untilAt: true, createdAt: true },
-      }),
-      prisma.travTrackDeletedRange.findMany({
-        where,
-        orderBy: { fromAt: "asc" },
-        select: { fromAt: true, toAt: true, createdAt: true },
-      }),
-      // A point deleted by itself: its second and when, never its position (only a digest is kept).
-      prisma.travTrackDeletedPoint
-        .findMany({ where, orderBy: { tS: "asc" }, select: { tS: true, createdAt: true } })
-        .then((rows) => rows.map((r) => ({ at: new Date(r.tS * 1000), createdAt: r.createdAt }))),
-      prisma.travTrackGap.findMany({
-        where,
-        orderBy: { fromAt: "asc" },
-        select: { deviceId: true, fromAt: true, toAt: true, reason: true },
-      }),
-      // The owner's leg mode corrections (spec 2026-11-03-travtrack-legs): epoch ms as strings,
-      // like `seq`, because the columns are 64-bit.
-      prisma.travTrackLegMode
-        .findMany({
-          where,
-          orderBy: { fromMs: "asc" },
-          select: { fromMs: true, untilMs: true, mode: true, createdAt: true, updatedAt: true },
-        })
-        .then((rows) =>
-          rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
-        ),
-      // The names the owner accepted for stops (spec "As built — stop places"), same encoding.
-      prisma.travTrackStopPlace
-        .findMany({
-          where,
-          orderBy: { fromMs: "asc" },
-          select: {
-            fromMs: true,
-            untilMs: true,
-            name: true,
-            lat: true,
-            lon: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
-        .then((rows) =>
-          rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
-        ),
-    ]);
+        orderBy: { fromMs: "asc" },
+        select: {
+          fromMs: true,
+          untilMs: true,
+          name: true,
+          lat: true,
+          lon: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+      .then((rows) =>
+        rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
+      ),
+    // Fixed places (spec 2026-11-05-travtrack-fixed-places): the circles, and the home entry's
+    // radius, window and the lodging switch. Home's own point is the home setting's, not here.
+    prisma.travTrackFixedPlace.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        kind: true,
+        lat: true,
+        lon: true,
+        radiusM: true,
+        window: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.travTrackPlaceSettings.findUnique({
+      where: { userId },
+      select: {
+        homeRadiusM: true,
+        homeWindow: true,
+        lodgingEnabled: true,
+        lodgingRadiusM: true,
+      },
+    }),
+  ]);
   return {
     points,
     zones,
@@ -137,6 +172,8 @@ export async function buildTravTrackDataExport(
     gaps,
     legModes,
     stopPlaces,
+    fixedPlaces,
+    placeSettings,
   };
 }
 

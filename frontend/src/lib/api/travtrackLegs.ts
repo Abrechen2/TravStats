@@ -42,8 +42,20 @@ export interface TravTrackStop {
   anchor: { lat: number; lon: number };
   /** An existing stay suggestion / lodging; null when none (or suggestions are off). */
   stayRef: { id: string; status: string } | null;
-  /** The name the owner accepted for this stop; null until then. */
-  place: { name: string; lat: number | null; lon: number | null; source: "accepted" } | null;
+  /**
+   * The stop's name: the one the owner accepted, else a fixed place or a booked
+   * lodging (`fixed`/`lodging`, spec 2026-11-05-travtrack-fixed-places); null until then.
+   */
+  place: {
+    name: string;
+    lat: number | null;
+    lon: number | null;
+    source: "accepted" | "fixed" | "lodging";
+    placeId?: string;
+    lodgingStayId?: string;
+  } | null;
+  /** A run of fixes folded into one stop; null (or absent on an older server) when not folded. */
+  folded?: { fixCount: number } | null;
 }
 
 export interface TravTrackStopCandidate {

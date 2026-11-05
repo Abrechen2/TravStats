@@ -15,6 +15,7 @@ import TravTrackTripNote from "../TravTrackTripNote";
 import TravTrackAppsRow from "./TravTrackAppsRow";
 import TravTrackCitiesRow from "./TravTrackCitiesRow";
 import TravTrackHistoryCard from "./TravTrackHistoryCard";
+import TravTrackPlacesRow from "./TravTrackPlacesRow";
 import TravTrackZonesRow from "./TravTrackZonesRow";
 import { RowFailure } from "./useRowAction";
 
@@ -105,6 +106,8 @@ export default function TravTrackLocationSection(): JSX.Element | null {
             )}
             {caps.enabled ? <TravTrackTripNote /> : null}
           </SettingItem>
+
+          <TravTrackPlacesRow />
 
           <TravTrackZonesRow
             zones={zones}

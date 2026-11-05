@@ -8,7 +8,7 @@
  */
 import { homePlaceSchema, type HomePlace } from "../../schemas/companionData";
 import { zoneOf } from "../../shared/time/zoneOf";
-import { currentPeriod, type HomePeriod } from "../../utils/homeAirport";
+import { currentPeriod, periodAt, type HomePeriod } from "../../utils/homeAirport";
 import logger from "../../utils/logger";
 import { homePeriodsFromData } from "./homeStore";
 
@@ -62,6 +62,28 @@ export async function deriveHomePlace(
       ? { ...legacy.data, name: legacy.data.name ?? "", zone: legacy.data.zone ?? null }
       : null,
     homePlaceSource: "legacy",
+  };
+}
+
+/**
+ * The home place valid on `day` (`YYYY-MM-DD`): the residence of the period
+ * covering it. An account with periods but none covering the day has no home
+ * that day — the current home must not be read back into the past. Only an
+ * account with no periods at all falls back to the legacy column.
+ */
+export async function deriveHomePlaceAt(
+  row: { data?: unknown; homePlace?: unknown } | null | undefined,
+  day: string
+): Promise<HomePlace | null> {
+  const periods = await homePeriodsFromData(row?.data);
+  if (periods.length === 0) return (await deriveHomePlace(row)).homePlace;
+  const residence = periodAt(periods, day)?.residence;
+  if (!residence) return null;
+  return {
+    name: residence.name,
+    lat: residence.lat,
+    lon: residence.lon,
+    zone: residenceZone(residence.lat, residence.lon),
   };
 }
 

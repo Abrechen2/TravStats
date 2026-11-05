@@ -49,6 +49,8 @@ export type Stop = {
   stayRef: { id: string; status: string } | null;
   /** The name the owner accepted for this stop (spec "As built — stop places"); null until then. */
   place: StopPlace | null;
+  /** Set when the stop is a run of fixes folded into a fixed place or a lodging; null otherwise. */
+  folded: { fixCount: number } | null;
 };
 
 export type StopPlace = {
@@ -56,7 +58,11 @@ export type StopPlace = {
   /** Where the named place lies; null when the owner named it without a position. */
   lat: number | null;
   lon: number | null;
-  source: "accepted";
+  source: "accepted" | "fixed" | "lodging";
+  /** `FixedPlace.id` of a `fixed` place. */
+  placeId?: string;
+  /** The `LodgingStay` of a `lodging` place. */
+  lodgingStayId?: string;
 };
 
 /** A stored acceptance, bound to a span of time. */

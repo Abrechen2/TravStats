@@ -271,9 +271,12 @@ registry.registerPath({
   method: "post",
   path: "/pairing/claim",
   summary: "Claim a pairing code from the phone",
+  description:
+    "Answers 201 `{ token, user: { id, username } }`. `user.id` is the account's id " +
+    "(additive; an app that stored an identity without it compares by username).",
   tags: pairingTag,
   responses: {
-    200: { description: "Paired" },
+    200: { description: "Paired: `{ token, user: { id: string, username: string | null } }`" },
     400: badInput,
     410: { description: "Code expired", content: errorContent },
   },

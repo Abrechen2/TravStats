@@ -3,6 +3,9 @@ import {
   ENTRY_WINDOW_ADAPTERS,
   logbookWindows,
 } from "../../locationEvidence/journeys/entryWindows";
+import { localDay } from "../../../shared/time/instant";
+import { profileZoneOf } from "../../../shared/time/profileZone";
+import { foldContextFor } from "../places/places";
 import { staySuggestionsEnabled } from "../../settings/suggestionSwitches";
 import type { SafeSpan, Span } from "../readSafe";
 import { deriveLegs } from "./derive";
@@ -86,11 +89,15 @@ export async function travTrackLegs(
   window: Span,
   read: SafeSpan
 ): Promise<{ legs: Leg[]; stops: Stop[] }> {
-  const [windows, overrides, stays, places] = await Promise.all([
+  // The day the window opens on, on the profile clock: the home that was valid then folds it.
+  const { zone } = await profileZoneOf(userId);
+  const day = localDay(new Date(window.fromMs), zone);
+  const [windows, overrides, stays, places, fold] = await Promise.all([
     movementWindows(userId, window),
     overridesIn(userId, window),
     staysIn(userId, window),
     stopPlacesIn(userId, window),
+    foldContextFor(userId, window, day),
   ]);
-  return deriveLegs(read, { windows, overrides, stays, places });
+  return deriveLegs(read, { windows, overrides, stays, places, fold });
 }

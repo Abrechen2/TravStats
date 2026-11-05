@@ -128,8 +128,31 @@ export default function TrackStopPlace({
     lon: c.lon,
   });
 
+  // A fixed place or a lodging names the stop on the server's word; only an accepted name can be taken back.
+  const derivedSource =
+    accepted === undefined && stop.place && stop.place.source !== "accepted"
+      ? stop.place.source
+      : null;
+  const foldCount = stop.folded?.fixCount ?? 0;
+
   let body: JSX.Element;
-  if (name !== null) {
+  if (derivedSource !== null && name !== null) {
+    body = (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="t-body" style={{ fontWeight: 600 }} data-testid="track-stop-place-name">
+          {t("track:stop.place.accepted", { name })}
+        </span>
+        <span className="t-caption" data-testid="track-stop-place-source">
+          {t(`track:stop.place.${derivedSource}`)}
+        </span>
+        {foldCount > 0 ? (
+          <span className="t-caption" data-testid="track-stop-folded">
+            {t("track:stop.place.folded", { count: foldCount })}
+          </span>
+        ) : null}
+      </div>
+    );
+  } else if (name !== null) {
     body = (
       <div className="flex flex-wrap items-center gap-2">
         <span className="t-body" style={{ fontWeight: 600 }} data-testid="track-stop-place-name">
