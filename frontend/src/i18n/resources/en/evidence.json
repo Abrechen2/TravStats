@@ -348,7 +348,7 @@
   "evidence.subtitle.deck": "Deck {{deck}}",
   "evidence.subtitle.pricePerNight": "{{amount}} {{currency}} per night",
   "evidence.subtitle.pricePerNightAward": "Award stay: {{amount}} {{currency}} per night",
-  "evidence.subtitle.ratings": "Overall {{overall}} · room {{room}} · breakfast {{breakfast}} · service {{service}}",
+  "evidence.subtitle.ratings": "Overall {{overall}}{{categories}}",
   "evidence.subtitle.position": "Latitude {{lat}}°, longitude {{lon}}° · weighs {{weight}}×",
   "evidence.subtitle.tripBase": "Houses: {{houses}} · moves: {{changes}}",
   "evidence.metric.cruisePortCallsTotal": "Port calls of sailed cruises",

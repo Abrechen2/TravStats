@@ -1,3 +1,4 @@
+import { RATING_CATEGORIES } from "../../shared/ratingCategories";
 import logger from "../../utils/logger";
 import { llmRefusalFor } from "../llm/llmGate";
 import { llmGenerateChain } from "../llm/llmProvider";
@@ -21,18 +22,68 @@ export const LODGING_CSV_FIELDS = [
   "currency",
   "ratingRoom",
   "ratingBreakfast",
+  "ratingService",
   "ratingOverall",
   "bookingReference",
   "notes",
 ] as const;
 export type LodgingCsvField = (typeof LODGING_CSV_FIELDS)[number];
-export type LodgingCsvMapping = Partial<Record<LodgingCsvField, string>>;
+/**
+ * A mapping key is a fixed field, or `rating:<category key>` for a rating
+ * category that has no column of its own (built-in `bed` ... `quiet`, own
+ * `custom:<id>`). The three legacy categories keep their fixed fields.
+ */
+export type LodgingCsvMapping = Partial<Record<LodgingCsvField | `rating:${string}`, string>>;
+
+export const RATING_FIELD_PREFIX = "rating:";
+
+/** An own category as the suggestion needs it: the `custom:<id>` key and its live name. */
+export interface OwnCategoryRef {
+  key: string;
+  name: string;
+}
+
+/** A rating column the model named a category for that this account does not have. */
+export interface UnmappedRatingColumn {
+  name: string;
+  header: string;
+}
+
+export interface MappingSuggestion {
+  mapping: LodgingCsvMapping;
+  unmappedRatings: UnmappedRatingColumn[];
+}
+
+const LEGACY_RATING_FIELD: Record<string, LodgingCsvField> = {
+  room: "ratingRoom",
+  breakfast: "ratingBreakfast",
+  service: "ratingService",
+};
+
+/**
+ * Which mapping field a category NAME stands for: a built-in key, or one of
+ * the account's own categories by name, both case-insensitive. null for a name
+ * the account does not have - the caller reports it, it never creates it.
+ */
+export function ratingFieldForName(
+  name: string,
+  own: readonly OwnCategoryRef[]
+): LodgingCsvField | `rating:${string}` | null {
+  const wanted = name.trim().toLowerCase();
+  if (!wanted) return null;
+  const builtIn = RATING_CATEGORIES.find((k) => k === wanted);
+  if (builtIn) return LEGACY_RATING_FIELD[builtIn] ?? `${RATING_FIELD_PREFIX}${builtIn}`;
+  const hit = own.find((c) => c.name.trim().toLowerCase() === wanted);
+  return hit ? `${RATING_FIELD_PREFIX}${hit.key}` : null;
+}
 
 export interface MappingSuggestionOptions {
   /** The account whose CSV this is — a cloud model needs its consent (forgejo#392). */
   userId?: string;
   url?: string;
   model?: string;
+  /** The account's live own rating categories, so the model can name them. */
+  ownCategories?: readonly OwnCategoryRef[];
 }
 
 // Deliberately short. This is an ADVISORY call — if the model is slow, the user
@@ -60,6 +111,8 @@ Return ONLY JSON: {"mapping":{"<travstatsField>":"<csvHeader>", …}}.
 Use ONLY these field names: ${LODGING_CSV_FIELDS.join(", ")}.
 Every value MUST be one of the CSV headers given, copied VERBATIM.
 Omit a field entirely if no header fits — NEVER invent a header, NEVER map two fields to the same header.
+
+A rating column of a further category is returned as "rating:<category name>": "<csvHeader>", using a category name from the list given in the request (a built-in key such as bed, bathroom, cleanliness, location, parking, wifi, quiet, or one of the account's own names). Keep ratingRoom, ratingBreakfast and ratingService for room, breakfast and service.
 
 Hints: German headers are common. "Hotel"/"Name"/"Unterkunft" -> name. "Anreise"/"Check-in" -> checkIn. "Abreise" -> checkOut. "Bew. Zimmer"/"Bewertung Zimmer" -> ratingRoom. "Bew. Frühstück" -> ratingBreakfast. "Kette"/"Marke" -> chainName. "Straße"/"Adresse" -> address. "PLZ" belongs with address, not city. "Ort"/"Stadt" -> city. "Land" -> country. "Sterne" -> stars. "Preis"/"Gesamtpreis" -> totalPrice. "place_id"/"Google Place ID" -> googlePlaceId.`;
 
@@ -100,7 +153,11 @@ function safeJsonParse(text: string, stage: string): unknown | typeof PARSE_FAIL
  * Every degrade path here is logged — but only as counts/reasons, never the
  * actual header or field names, since those are drawn from the user's CSV.
  */
-function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
+function sanitize(
+  raw: unknown,
+  headers: string[],
+  own: readonly OwnCategoryRef[]
+): MappingSuggestion {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     logger.warn(
       {
@@ -110,7 +167,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
       },
       "[Lodging Mapping] Model response was not a JSON object — degrading to empty mapping"
     );
-    return {};
+    return { mapping: {}, unmappedRatings: [] };
   }
   const container = raw as Record<string, unknown>;
   const mappingRaw = container.mapping ?? container;
@@ -123,12 +180,13 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
       },
       "[Lodging Mapping] `mapping` was not a JSON object — degrading to empty mapping"
     );
-    return {};
+    return { mapping: {}, unmappedRatings: [] };
   }
 
   const headerSet = new Set(headers);
   const used = new Set<string>();
   const mapping: LodgingCsvMapping = {};
+  const unmappedRatings: UnmappedRatingColumn[] = [];
   let droppedUnknownHeader = 0;
   let droppedUnknownField = 0;
   let droppedDuplicate = 0;
@@ -137,15 +195,30 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
       droppedUnknownHeader += 1;
       continue;
     }
-    if (!isLodgingField(field)) {
+    let target: LodgingCsvField | `rating:${string}` | null = null;
+    if (field.startsWith(RATING_FIELD_PREFIX)) {
+      const categoryName = field.slice(RATING_FIELD_PREFIX.length);
+      target = ratingFieldForName(categoryName, own);
+      if (target === null) {
+        // A category this account does not have: reported, never created.
+        if (!used.has(header)) {
+          unmappedRatings.push({ name: categoryName, header });
+          used.add(header);
+        }
+        continue;
+      }
+    } else if (isLodgingField(field)) {
+      target = field;
+    }
+    if (target === null) {
       droppedUnknownField += 1;
       continue;
     }
-    if (used.has(header)) {
+    if (used.has(header) || mapping[target] !== undefined) {
       droppedDuplicate += 1;
       continue;
     }
-    mapping[field] = header;
+    mapping[target] = header;
     used.add(header);
   }
 
@@ -161,7 +234,7 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
       "[Lodging Mapping] Dropped one or more hallucinated/invalid pairs from the model's suggestion"
     );
   }
-  return mapping;
+  return { mapping, unmappedRatings };
 }
 
 /**
@@ -184,16 +257,16 @@ function sanitize(raw: unknown, headers: string[]): LodgingCsvMapping {
  * Every degrade path is logged (Pino `warn`) with counts/reasons only — CSV
  * content, the prompt, and the model's raw response are never logged.
  */
-export async function suggestLodgingCsvMapping(
+export async function suggestLodgingCsvMappingDetailed(
   headers: string[],
   sampleRows: Record<string, string>[],
   options?: MappingSuggestionOptions
-): Promise<LodgingCsvMapping> {
+): Promise<MappingSuggestion> {
   // Switched off by the admin: `{}` is the answer this function already gives
   // for "no suggestion", and the client's heuristic takes over from there.
   // A cloud provider without the admin's consent, or an incomplete one, is
   // the same "no suggestion" answer — and the rows never leave the instance.
-  if (await llmRefusalFor(options?.userId)) return {};
+  if (await llmRefusalFor(options?.userId)) return NO_SUGGESTION;
   try {
     // `llmGenerateChain` tries Ollama first, then the enabled+consented cloud
     // slots in the admin's priority order — ONLY on a connectivity/protocol
@@ -207,6 +280,10 @@ export async function suggestLodgingCsvMapping(
         system: SYSTEM_PROMPT,
         prompt: `CSV headers: ${JSON.stringify(headers)}
 Sample rows: ${JSON.stringify(sampleRows.slice(0, 3))}
+Rating category names for "rating:<name>": ${JSON.stringify([
+          ...RATING_CATEGORIES.filter((k) => !(k in LEGACY_RATING_FIELD)),
+          ...(options?.ownCategories ?? []).map((c) => c.name),
+        ])}
 
 Return the mapping JSON.`,
         temperature: 0,
@@ -227,9 +304,13 @@ Return the mapping JSON.`,
       .trim();
 
     const modelMapping = safeJsonParse(cleaned, "mapping");
-    if (modelMapping === PARSE_FAILED) return {};
+    if (modelMapping === PARSE_FAILED) return NO_SUGGESTION;
 
-    const mapping = sanitize(modelMapping, headers);
+    const { mapping, unmappedRatings } = sanitize(
+      modelMapping,
+      headers,
+      options?.ownCategories ?? []
+    );
     logger.info(
       {
         operation: "lodging_mapping_suggested",
@@ -237,12 +318,23 @@ Return the mapping JSON.`,
       },
       "Lodging CSV mapping suggested"
     );
-    return mapping;
+    return { mapping, unmappedRatings };
   } catch (err) {
     logger.warn(
       { err: err instanceof Error ? err.message : String(err) },
       "[Lodging Mapping] Suggestion failed — the client falls back to its heuristic"
     );
-    return {};
+    return NO_SUGGESTION;
   }
+}
+
+const NO_SUGGESTION: MappingSuggestion = { mapping: {}, unmappedRatings: [] };
+
+/** The mapping alone - what callers that do not report unmapped ratings use. */
+export async function suggestLodgingCsvMapping(
+  headers: string[],
+  sampleRows: Record<string, string>[],
+  options?: MappingSuggestionOptions
+): Promise<LodgingCsvMapping> {
+  return (await suggestLodgingCsvMappingDetailed(headers, sampleRows, options)).mapping;
 }

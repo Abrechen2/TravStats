@@ -9,11 +9,13 @@ import {
   buildLodgingMappingFields,
   type LodgingCsvField,
   type LodgingCsvMapping,
+  type RatingColumnTarget,
 } from "../../lib/importers/lodgingCsv";
+import { getRatingCategories } from "../../lib/api/lodging";
 import {
   commitLodgingImport,
   previewLodgingImport,
-  suggestLodgingCsvMapping,
+  suggestLodgingCsvMappingDetailed,
 } from "../../lib/api/lodgingImport";
 import {
   describeLodgingCommitResult,
@@ -23,6 +25,8 @@ import { LodgingImportPreviewModal } from "../lodging/LodgingImportPreviewModal"
 import { ColumnMappingWizard } from "./ColumnMappingWizard";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 import type { LodgingImportPreviewRow, LodgingImportSummary } from "../../types/lodgingImport";
+
+const LEGACY_RATING_KEYS = ["room", "breakfast", "service"];
 
 interface Props {
   /**
@@ -61,9 +65,19 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
   // "visited": that is what every other import source describes.
   const [visited, setVisited] = useState<boolean>(true);
 
+  // Rating columns the suggestion named a category for that the account does
+  // not have. Reported in the preview; the user decides (nothing is created).
+  const [unmappedRatings, setUnmappedRatings] = useState<{ name: string; header: string }[]>([]);
+  // Categories beyond the legacy three that a column can map to.
+  const [ratingTargets, setRatingTargets] = useState<RatingColumnTarget[]>([]);
+
   const fields = useMemo(
-    () => buildLodgingMappingFields((f: LodgingCsvField) => t(`lodging:import.fields.${f}`)),
-    [t]
+    () =>
+      buildLodgingMappingFields(
+        (f: LodgingCsvField) => t(`lodging:import.fields.${f}`),
+        ratingTargets
+      ),
+    [t, ratingTargets]
   );
 
   const handleFile = useCallback(
@@ -80,10 +94,31 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
         setHeaders(Object.keys(rows[0]));
         setSamples(rows[0]);
 
+        // The account's categories: every built-in beyond the legacy three
+        // (which keep their own fields) and its live own ones. A failure
+        // leaves the fixed fields, which still import.
+        try {
+          const view = await getRatingCategories();
+          setRatingTargets([
+            ...view.builtIn
+              .filter((k) => !LEGACY_RATING_KEYS.includes(k))
+              .map((k) => ({ key: k, label: t(`lodging:ratingCategory.${k}`) })),
+            ...view.custom.filter((c) => !c.deleted).map((c) => ({ key: c.key, label: c.name })),
+          ]);
+        } catch (err) {
+          logger.warn("LodgingCsvImportTile: rating categories unavailable", err);
+          setRatingTargets([]);
+        }
+
         // Advisory only: the wizard already has its own header heuristic, so
         // a slow or dead LLM costs nothing but this await (the client
         // resolves to `{}` on any failure — it never rejects).
-        setSuggested(await suggestLodgingCsvMapping(Object.keys(rows[0]), rows.slice(0, 3)));
+        const suggestion = await suggestLodgingCsvMappingDetailed(
+          Object.keys(rows[0]),
+          rows.slice(0, 3)
+        );
+        setSuggested(suggestion.mapping);
+        setUnmappedRatings(suggestion.unmappedRatings);
       } catch (err) {
         // Never surface the raw parse error — it may be untranslated/
         // technical. Log it, show the fixed translated string.
@@ -128,6 +163,8 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
     setHeaders([]);
     setSamples({});
     setSuggested({});
+    setUnmappedRatings([]);
+    setRatingTargets([]);
     setPreview(null);
     setError(null);
     setMappingError(null);
@@ -202,6 +239,7 @@ export function LodgingCsvImportTile({ onImported }: Props): JSX.Element {
         <LodgingImportPreviewModal
           rows={preview.rows}
           summary={preview.summary}
+          unmappedRatings={unmappedRatings}
           onCancel={reset}
           onCommit={async (rows) => {
             const result = await commitLodgingImport("csv", fileName, rows);

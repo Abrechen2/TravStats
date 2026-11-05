@@ -114,6 +114,9 @@ export const stayCandidateFieldsSchema = z.object({
   // from the three components and only falls back to this value for a stay
   // that carries none of them (shared/ratingDerivation.ts).
   ratingOverall: rating,
+  // Every other category (built-in or `custom:<id>`) a CSV column was mapped
+  // to. The keys are checked against the caller's own categories at commit.
+  ratings: z.record(z.string().min(1).max(80), z.number().min(0.5).max(5).nullable()).optional(),
   bookingReference: z.string().max(40).nullable().optional(),
   // "booking:<confirmation number>" — see LodgingStay.externalRef (Task 1).
   externalRef: z.string().max(200).nullable().optional(),

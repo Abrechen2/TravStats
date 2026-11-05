@@ -1116,6 +1116,58 @@ describe("commitLodgingImport", () => {
       expect(row.ratingOverall).toBe(4);
     });
 
+    it("stores built-in and own category ratings from the import's ratings map", async () => {
+      const own = await prisma.lodgingRatingCategory.create({
+        data: { userId, name: "Aussicht" },
+      });
+      const result = await commitLodgingImport(userId, "csv", "cats.csv", [
+        {
+          sourceRowIndex: 0,
+          action: "create",
+          lodging: { name: "Hotel Category Ratings" },
+          stay: {
+            checkIn: "2026-07-01",
+            checkOut: "2026-07-02",
+            ratingRoom: 4,
+            ratings: { bed: 5, [`custom:${own.id}`]: 3 },
+          },
+        },
+      ]);
+      expect(result.failed).toEqual([]);
+      const row = await prisma.lodgingStay.findFirst({ where: { batchId: result.batchId } });
+      expect(row?.ratings).toEqual({ room: 4, bed: 5, [`custom:${own.id}`]: 3 });
+      expect(row?.ratingOverall).toBe(4);
+    });
+
+    it("refuses a ratings key that is not the caller's category, before writing anything", async () => {
+      const other = await prisma.user.create({
+        data: { username: "lodging-import-foreign-cat", passwordHash: "x" },
+      });
+      const foreign = await prisma.lodgingRatingCategory.create({
+        data: { userId: other.id, name: "Fremd" },
+      });
+      try {
+        const before = await prisma.importBatch.count({ where: { userId } });
+        await expect(
+          commitLodgingImport(userId, "csv", "foreign.csv", [
+            {
+              sourceRowIndex: 0,
+              action: "create",
+              lodging: { name: "Hotel Foreign Category" },
+              stay: {
+                checkIn: "2026-07-03",
+                checkOut: "2026-07-04",
+                ratings: { [`custom:${foreign.id}`]: 5 },
+              },
+            },
+          ])
+        ).rejects.toThrow(/Unknown rating category/);
+        expect(await prisma.importBatch.count({ where: { userId } })).toBe(before);
+      } finally {
+        await prisma.user.delete({ where: { id: other.id } });
+      }
+    });
+
     it("keeps a source overall when the import carries no component rating", async () => {
       const row = await commitStay("Hotel Source Overall", {
         checkIn: "2026-06-06",

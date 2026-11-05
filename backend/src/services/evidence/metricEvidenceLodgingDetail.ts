@@ -1,5 +1,7 @@
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
+import { customCategoryId } from "../../shared/ratingCategories";
+import { storedRatingsOf } from "../../shared/ratingDerivation";
 import { lodgingBaseAmount } from "../../shared/lodgingSpendBase";
 import type { PagingParams } from "./paging";
 import { domainSumEvidence } from "./domainMeasureResponse";
@@ -141,28 +143,33 @@ export const resolveLodgingTopChainNights = staySum(
 const rating = (value: number | null): number | string => (value === null ? "–" : value);
 
 /**
- * Stays with any of the four ratings — the population of the four averages.
- * Each average reads only the stays that carry ITS rating, so the subtitle
- * names all four and a blank one shows as a dash, never as a zero.
+ * Stays with an overall or any category rating — the population of the
+ * averages. The subtitle lists the categories the stay carries (built-in and
+ * own), never a blank one as a zero.
  */
-export const resolveLodgingRatedStaysCount = staySum("lodgingRatedStaysCount", "stays", (stay) => {
-  const { ratingOverall, ratingRoom, ratingBreakfast, ratingService } = stay.data;
-  if ([ratingOverall, ratingRoom, ratingBreakfast, ratingService].every((r) => r === null)) {
-    return null;
+export const resolveLodgingRatedStaysCount = staySum(
+  "lodgingRatedStaysCount",
+  "stays",
+  (stay, scoped) => {
+    const { ratingOverall } = stay.data;
+    const stored = storedRatingsOf(stay.data);
+    const present = Object.keys(stored).filter((k) => stored[k] !== undefined);
+    if (ratingOverall === null && present.length === 0) return null;
+    // One `r.<key>` value per category the stay actually carries; an own
+    // category also brings its name as `n.<key>` (the client has no other way
+    // to read it). The client lays them out in the catalogue's order.
+    const values: Record<string, string | number> = { overall: rating(ratingOverall) };
+    for (const key of present) {
+      values[`r.${key}`] = stored[key];
+      const id = customCategoryId(key);
+      if (id !== null) {
+        const name = scoped.ownCategoryNames.get(id);
+        if (name) values[`n.${key}`] = name;
+      }
+    }
+    return { contribution: 1, subtitle: { key: "evidence.subtitle.ratings", values } };
   }
-  return {
-    contribution: 1,
-    subtitle: {
-      key: "evidence.subtitle.ratings",
-      values: {
-        overall: rating(ratingOverall),
-        room: rating(ratingRoom),
-        breakfast: rating(ratingBreakfast),
-        service: rating(ratingService),
-      },
-    },
-  };
-});
+);
 
 /**
  * Stays with coordinates — the population of the northernmost and

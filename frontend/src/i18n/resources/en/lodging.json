@@ -331,6 +331,7 @@
       "title": "Preview ({{count}} rows)",
       "title_one": "Preview ({{count}} row)",
       "title_other": "Preview ({{count}} rows)",
+      "unmappedRatings": "These columns belong to rating categories your account does not have and are not imported: {{columns}}. Add the category in Settings and import again.",
       "commit": "Import selection",
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",

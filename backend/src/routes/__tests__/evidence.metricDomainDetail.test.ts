@@ -170,8 +170,13 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
       prisma.lodgingStay.create({
         data: { userId, lodgingId, status: "completed", datePrecision: "DAY", ...data },
       });
+    const view = await prisma.lodgingRatingCategory.create({
+      data: { userId, name: "Aussicht" },
+    });
+    ids.viewCategory = view.id;
     ids.rheinLong = (
       await stay(rheinblick.id, {
+        ratings: { room: 5, breakfast: 3, service: 4, bed: 2, [`custom:${view.id}`]: 5 },
         checkIn: day("2024-03-10"),
         checkOut: day("2024-03-13"),
         totalPrice: 300,
@@ -296,13 +301,27 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
       expect(top.measure.value).toBe(4);
     });
 
-    it("rated stays carry all four ratings, a blank one as a dash", async () => {
+    it("rated stays list the categories they carry, built-in and own, not a fixed three", async () => {
       const body = await get("lodgingRatedStaysCount");
       expect(split(body)).toEqual({ [ids.rheinLong]: 1, [ids.sakura]: 1 });
       const sakura = body.entries.find((e) => e.id === ids.sakura)!;
       expect(sakura.subtitle).toEqual({
         key: "evidence.subtitle.ratings",
-        values: { overall: 5, room: "–", breakfast: "–", service: "–" },
+        values: { overall: 5 },
+      });
+      const rhein = body.entries.find((e) => e.id === ids.rheinLong)!;
+      const customKey = `custom:${ids.viewCategory}`;
+      expect(rhein.subtitle).toEqual({
+        key: "evidence.subtitle.ratings",
+        values: {
+          overall: 4,
+          "r.room": 5,
+          "r.breakfast": 3,
+          "r.service": 4,
+          "r.bed": 2,
+          [`r.${customKey}`]: 5,
+          [`n.${customKey}`]: "Aussicht",
+        },
       });
     });
 

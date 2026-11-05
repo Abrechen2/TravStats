@@ -31,6 +31,41 @@ type Translator = (key: string, options?: Record<string, unknown>) => string;
  * below exists so a guard can resolve all three without re-stating them.
  */
 const AIRPORT_SUBTITLE_KEY = "evidence.ranking.airport.subtitle";
+const RATINGS_SUBTITLE_KEY = "evidence.subtitle.ratings";
+const RATING_BUILT_INS = [
+  "room",
+  "bed",
+  "bathroom",
+  "cleanliness",
+  "breakfast",
+  "service",
+  "location",
+  "parking",
+  "wifi",
+  "quiet",
+] as const;
+
+/**
+ * " · Zimmer 4 · Bett 5" for the categories a stay carries: built-ins in the
+ * catalogue's order, then own ones by name. The server sends `r.<key>` per
+ * rating and `n.<key>` for an own category's name; the name is the user's own
+ * text and is used as sent (plain text, never a translation key).
+ */
+function ratingCategoryList(values: Record<string, string | number>, t: Translator): string {
+  const keys = Object.keys(values)
+    .filter((k) => k.startsWith("r."))
+    .map((k) => k.slice(2));
+  const label = (key: string): string =>
+    (RATING_BUILT_INS as readonly string[]).includes(key)
+      ? t(`lodging:ratingCategory.${key}`)
+      : String(values[`n.${key}`] ?? t("lodging:ratingCategory.unknown"));
+  const builtIn = RATING_BUILT_INS.filter((k) => keys.includes(k));
+  const own = keys
+    .filter((k) => !(RATING_BUILT_INS as readonly string[]).includes(k))
+    .sort((a, b) => label(a).localeCompare(label(b)));
+  return [...builtIn, ...own].map((k) => ` · ${label(k)} ${values[`r.${k}`]}`).join("");
+}
+
 const ROLE_KEYS: Record<string, string> = {
   departure: "evidence:entry.role.departure",
   arrival: "evidence:entry.role.arrival",
@@ -60,6 +95,9 @@ export function composeI18nText(value: I18nOrText, t: Translator): string {
   if ("text" in value) return value.text;
 
   let values = value.values;
+  if (value.key === RATINGS_SUBTITLE_KEY && values) {
+    values = { ...values, categories: ratingCategoryList(values, t) };
+  }
   if (value.key === AIRPORT_SUBTITLE_KEY && typeof values?.role === "string") {
     const roleKey = ROLE_KEYS[values.role];
     if (roleKey) {

@@ -601,3 +601,45 @@ describe("buildLodgingCandidates: isRealCalendarDay rejects impossible calendar 
     expect(result.rowErrors).toEqual([]);
   });
 });
+
+describe("rating category columns", () => {
+  const targets = [
+    { key: "bed", label: "Bett" },
+    { key: "custom:abc", label: "Aussicht" },
+  ];
+
+  it("auto-maps a column named after a built-in or an own category, case-insensitively", () => {
+    const fields = buildLodgingMappingFields((f) => f, targets);
+    const mapping = autoMapHeaders(fields, ["Name", "bett", "BEWERTUNG AUSSICHT"]);
+    expect(mapping).toMatchObject({
+      name: "Name",
+      "rating:bed": "bett",
+      "rating:custom:abc": "BEWERTUNG AUSSICHT",
+    });
+  });
+
+  it("imports a category column into the stay's ratings map and makes the file a stays file", () => {
+    const mapping: LodgingCsvMapping = {
+      name: "Hotel",
+      checkIn: "Von",
+      checkOut: "Bis",
+      "rating:bed": "Bett",
+      "rating:custom:abc": "Aussicht",
+    };
+    expect(detectCsvShape({ name: "Hotel", "rating:bed": "Bett" })).toBe("stays");
+    const { candidates, rowErrors } = buildLodgingCandidates(
+      [{ Hotel: "A", Von: "2026-01-01", Bis: "2026-01-02", Bett: "4,5", Aussicht: "" }],
+      mapping
+    );
+    expect(rowErrors).toEqual([]);
+    expect(candidates[0].stay?.ratings).toEqual({ bed: 4.5 });
+  });
+
+  it("reports an out-of-range category cell instead of dropping it silently", () => {
+    const { rowErrors } = buildLodgingCandidates(
+      [{ Hotel: "A", Von: "2026-01-01", Bis: "2026-01-02", Bett: "9" }],
+      { name: "Hotel", checkIn: "Von", checkOut: "Bis", "rating:bed": "Bett" }
+    );
+    expect(rowErrors.map((e) => e.code)).toEqual(["out_of_range"]);
+  });
+});
