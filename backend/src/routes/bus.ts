@@ -44,11 +44,7 @@ import { linkCompanions, replaceCompanionLinks } from "../services/transport/com
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
-import {
-  createOnce,
-  takeClientRef,
-  type ClaimClientRef,
-} from "../services/sync/clientRef";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import ticketRoutes from "./bus/tickets";
 import { railListSummaryFromGroups } from "../shared/listSummary";

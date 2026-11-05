@@ -43,11 +43,7 @@ import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
 import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { findRailAndFlyFlight } from "../services/rail/railAndFly";
-import {
-  createOnce,
-  takeClientRef,
-  type ClaimClientRef,
-} from "../services/sync/clientRef";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailCo2 } from "../services/co2/rideDto";
