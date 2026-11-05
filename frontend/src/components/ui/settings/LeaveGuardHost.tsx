@@ -1,6 +1,7 @@
 import { useEffect, type JSX } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { linkClickTarget } from "../../form/linkClickTarget";
 import { navigateAfterSave } from "../../form/unsavedChanges";
 import ConfirmDialog from "./ConfirmDialog";
 import {
@@ -12,18 +13,6 @@ import {
   usePendingLeave,
 } from "./leaveGuard";
 import { flushWrites } from "./writeQueue";
-
-/** An in-app link click that this guard should hold back, as the path to go to. */
-function guardedTarget(event: MouseEvent): string | null {
-  if (event.defaultPrevented || event.button !== 0) return null;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;
-  const anchor = (event.target as Element | null)?.closest?.("a[href]");
-  if (!(anchor instanceof HTMLAnchorElement)) return null;
-  if (anchor.target && anchor.target !== "_self") return null;
-  if (anchor.hasAttribute("download")) return null;
-  if (anchor.origin !== window.location.origin) return null;
-  return anchor.pathname + anchor.search + anchor.hash;
-}
 
 /**
  * Mounted once by the settings area. Does the three things nothing else can:
@@ -43,7 +32,7 @@ export default function LeaveGuardHost(): JSX.Element | null {
   useEffect(() => {
     const onClick = (event: MouseEvent): void => {
       if (!hasDirtyGroups()) return;
-      const to = guardedTarget(event);
+      const to = linkClickTarget(event);
       if (to === null) return;
       if (requestLeave({ to })) return;
       event.preventDefault();

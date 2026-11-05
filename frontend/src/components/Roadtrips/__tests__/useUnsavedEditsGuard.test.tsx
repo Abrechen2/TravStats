@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { openDirtyDialogCount } from "../../form/unsavedChanges";
 import { hasUnsavedEdits, useUnsavedEditsGuard } from "../useUnsavedEditsGuard";
@@ -32,5 +32,34 @@ describe("roadtrip editor — warning on unsaved changes when leaving", () => {
     expect(dirty.defaultPrevented).toBe(true);
 
     unmount();
+  });
+
+  it("holds back a click on an in-app link while edits are unsaved, and lets it through otherwise", () => {
+    const onAskLink = vi.fn();
+    function LinkProbe({ status }: { status: SaveStatus | null }): JSX.Element {
+      useUnsavedEditsGuard({ status, onAsk: () => {}, onAskLink });
+      return (
+        <>
+          <a href="/flights">elsewhere</a>
+          <a href={window.location.pathname + "#same"}>same page</a>
+          <a href="https://example.org/x">external</a>
+        </>
+      );
+    }
+    const swallow = (e: Event): void => e.preventDefault();
+    document.addEventListener("click", swallow);
+    const { rerender, unmount } = render(<LinkProbe status="saved" />);
+    expect(fireEvent.click(screen.getByText("elsewhere"))).toBe(false); // swallow ran
+    expect(onAskLink).not.toHaveBeenCalled();
+
+    rerender(<LinkProbe status="error" />);
+    fireEvent.click(screen.getByText("elsewhere"));
+    expect(onAskLink).toHaveBeenCalledWith("/flights");
+    onAskLink.mockClear();
+    fireEvent.click(screen.getByText("same page"));
+    fireEvent.click(screen.getByText("external"));
+    expect(onAskLink).not.toHaveBeenCalled();
+    unmount();
+    document.removeEventListener("click", swallow);
   });
 });

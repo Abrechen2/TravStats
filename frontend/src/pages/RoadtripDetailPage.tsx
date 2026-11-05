@@ -44,7 +44,7 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
-import { leaveThroughHistory } from "../components/form/unsavedChanges";
+import { leaveThroughHistory, navigateAfterSave } from "../components/form/unsavedChanges";
 import { useUnsavedEditsGuard } from "../components/Roadtrips/useUnsavedEditsGuard";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
@@ -107,6 +107,8 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // The in-app link a click was held back from; null when Back asked.
+  const [leaveLinkTo, setLeaveLinkTo] = useState<string | null>(null);
   /** "Add a station from the map" is armed; the next map click is the point. */
   const [pickArmed, setPickArmed] = useState(false);
   const [mapPick, setMapPick] = useState<{ nonce: number; lat: number; lon: number } | null>(null);
@@ -175,7 +177,14 @@ export default function RoadtripDetailPage(): JSX.Element {
   // Edits the server does not hold: closing the tab asks, and Back asks first.
   useUnsavedEditsGuard({
     status: editing ? save.status : null,
-    onAsk: () => setConfirmLeave(true),
+    onAsk: () => {
+      setLeaveLinkTo(null);
+      setConfirmLeave(true);
+    },
+    onAskLink: (to) => {
+      setLeaveLinkTo(to);
+      setConfirmLeave(true);
+    },
   });
   // A click nobody consumed must not run again when the editor reopens.
   useEffect(() => {
@@ -658,7 +667,9 @@ export default function RoadtripDetailPage(): JSX.Element {
           onClose={() => setConfirmLeave(false)}
           onConfirm={() => {
             setConfirmLeave(false);
-            leaveThroughHistory();
+            if (leaveLinkTo !== null)
+              void navigateAfterSave((path, o) => navigate(path, o), leaveLinkTo);
+            else leaveThroughHistory();
           }}
           title={t("roadtrips:editor.leaveGuard.title")}
           message={t("roadtrips:editor.leaveGuard.message")}

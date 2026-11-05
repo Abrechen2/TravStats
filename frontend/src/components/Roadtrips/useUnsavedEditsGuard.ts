@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { leavesCurrentPage, linkClickTarget } from "../form/linkClickTarget";
 import { registerDirtyDialog } from "../form/unsavedChanges";
 import type { SaveStatus } from "./useStationAutosave";
 
@@ -23,15 +24,38 @@ export function hasUnsavedEdits(status: SaveStatus): boolean {
 export function useUnsavedEditsGuard({
   status,
   onAsk,
+  onAskLink,
 }: {
   status: SaveStatus | null;
   onAsk: () => void;
+  /**
+   * A click on an in-app link that would leave the page. The click is held
+   * back; the page asks and, on "leave", navigates to `to` itself. Without
+   * it, a `<Link>` (menu, breadcrumb) dropped the edits unasked — the
+   * history sentinel only sees the browser's Back.
+   */
+  onAskLink?: (to: string) => void;
 }): void {
   const dirty = status !== null && hasUnsavedEdits(status);
-  const stateRef = useRef({ status, onAsk });
+  const stateRef = useRef({ status, onAsk, onAskLink });
   useEffect(() => {
-    stateRef.current = { status, onAsk };
+    stateRef.current = { status, onAsk, onAskLink };
   });
+  useEffect(() => {
+    if (!dirty) return;
+    const onClick = (event: MouseEvent): void => {
+      const ask = stateRef.current.onAskLink;
+      if (!ask) return;
+      const to = linkClickTarget(event);
+      if (to === null || !leavesCurrentPage(to)) return;
+      // Capture phase: before the router turns the click into a navigation.
+      event.preventDefault();
+      event.stopPropagation();
+      ask(to);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [dirty]);
   useEffect(() => {
     if (!dirty) return;
     return registerDirtyDialog({
