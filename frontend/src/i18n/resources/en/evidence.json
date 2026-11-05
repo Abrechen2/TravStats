@@ -447,6 +447,7 @@
   "evidence.metric.recordLongestRailRide": "Longest train ride (record)",
   "evidence.metric.recordLongestRental": "Longest rental (record)",
   "evidence.metric.recordLongestBusRide": "Longest bus ride (record)",
+  "evidence.metric.recordLongestFerryCrossing": "Longest ferry crossing (record)",
   "evidence.metric.travelAccountTripDaysTotal": "Days of the dated trips",
   "evidence.badge.proof": "Evidence for this badge",
   "evidence.ranking.companion.entries": "Shared entries with {{name}}",

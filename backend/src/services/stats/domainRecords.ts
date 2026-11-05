@@ -7,6 +7,7 @@ import { countableRailWhere } from "../../shared/railCounting";
 import { rideKm } from "../../shared/railRideKinds";
 import { countableRentalWhere, rentalDays } from "../../shared/rentalCounting";
 import { countableBusWhere } from "../../shared/busCounting";
+import { countableFerryWhere } from "../../shared/ferryCounting";
 import { now as clockNow } from "../../shared/time/clock";
 import type { DomainKey } from "../../shared/domains";
 import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
@@ -252,6 +253,32 @@ async function busRecord(userId: string): Promise<DomainRecord | null> {
   };
 }
 
+async function ferryRecord(userId: string): Promise<DomainRecord | null> {
+  const crossings = await prisma.ferryJourney.findMany({
+    where: { userId, ...countableFerryWhere() },
+    select: {
+      id: true,
+      depStationName: true,
+      arrStationName: true,
+      distanceKm: true,
+      distanceSource: true,
+    },
+  });
+  // A crossing without a distance is out of the ranking, never a 0 km record.
+  const best = longest(crossings, (r) => r.distanceKm);
+  if (!best) return null;
+  return {
+    domain: "ferry",
+    id: "longest-ferry-crossing",
+    value: Math.round(best.value),
+    unit: "km",
+    entryId: best.row.id,
+    href: `/ferry/${best.row.id}`,
+    label: `${best.row.depStationName} → ${best.row.arrStationName}`,
+    distanceSource: best.row.distanceSource,
+  };
+}
+
 const RECORDS: Partial<
   Record<DomainKey, (userId: string, now: Date) => Promise<DomainRecord | null>>
 > = {
@@ -262,6 +289,7 @@ const RECORDS: Partial<
   rail: railRecord,
   rental: rentalRecord,
   bus: busRecord,
+  ferry: ferryRecord,
 };
 
 /** The records of the domains `visible` names, in registry order. */

@@ -24,6 +24,7 @@ export const DOMAIN_RECORD_KEYS: Record<
   "longest-rail-ride": { key: "recordLongestRailRide", unit: "km" },
   "longest-rental": { key: "recordLongestRental", unit: "days" },
   "longest-bus-ride": { key: "recordLongestBusRide", unit: "km" },
+  "longest-ferry-crossing": { key: "recordLongestFerryCrossing", unit: "km" },
 };
 
 const EVIDENCE_DOMAIN: Record<DomainRecord["domain"], EvidenceDomain> = {
@@ -34,6 +35,7 @@ const EVIDENCE_DOMAIN: Record<DomainRecord["domain"], EvidenceDomain> = {
   rail: "rail",
   rental: "rental",
   bus: "bus",
+  ferry: "ferry",
 };
 
 function recordResolver(id: DomainRecord["id"], key: string, unit: string) {

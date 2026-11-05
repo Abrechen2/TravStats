@@ -7,7 +7,7 @@ import { z } from "./zod";
  */
 export const domainRecordSchema = z
   .object({
-    domain: z.enum(["cruise", "lodging", "poi", "roadtrip", "rail", "rental", "bus"]),
+    domain: z.enum(["cruise", "lodging", "poi", "roadtrip", "rail", "rental", "bus", "ferry"]),
     id: z
       .enum([
         "longest-cruise",
@@ -17,6 +17,7 @@ export const domainRecordSchema = z
         "longest-rail-ride",
         "longest-rental",
         "longest-bus-ride",
+        "longest-ferry-crossing",
       ])
       .openapi({ description: "A slug, not copy — every client names it in its own language." }),
     value: z.number(),

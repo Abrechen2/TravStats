@@ -1538,7 +1538,8 @@
       "longest-roadtrip": "Longest roadtrip",
       "longest-rail-ride": "Longest train ride",
       "longest-rental": "Longest rental",
-      "longest-bus-ride": "Longest bus ride"
+      "longest-bus-ride": "Longest bus ride",
+      "longest-ferry-crossing": "Longest ferry crossing"
     },
     "units": {
       "days_one": "{{value}} day",
