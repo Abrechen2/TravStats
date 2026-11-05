@@ -25,6 +25,7 @@ import type { TourFacts } from "../../../utils/tourInsights/tourFacts";
 import { loadCruiseInsightData, type CruiseInsightData } from "./rows";
 
 export interface CruiseInsightContext extends CruiseInsightData {
+  facts: NonNullable<CruiseInsightData["facts"]>;
   /** The instance's beta switch — the web's `useToursVisible`. */
   toursVisible: boolean;
   /** Cruise id → the tours linked to its calls. Empty while tours are hidden. */
@@ -53,7 +54,12 @@ export async function cruiseInsightContextOf(
     : preloaded
       ? await excursionToursFromFacts(preloaded.tours, days)
       : await loadExcursionTours(userId, days);
-  return { ...data, toursVisible: visible, linked: linkTours(data.rows, tours) };
+  return {
+    ...data,
+    facts: data.facts ?? new Map(),
+    toursVisible: visible,
+    linked: linkTours(data.rows, tours),
+  };
 }
 
 export async function loadCruiseInsightContext(userId: string): Promise<CruiseInsightContext> {

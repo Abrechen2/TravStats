@@ -1359,6 +1359,20 @@
         "source": "Hafenstopps gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) mit ihrer Ausflugsnotiz – auch an einem nicht erkannten Hafen.",
         "coverage": "Fehlt sie, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab. Tippe auf die Zahl für die Liste.",
         "exclusions": "Seetage, gebuchte und stornierte Kreuzfahrten zählen nicht."
+      },
+      "cruiseMoney": {
+        "unit": "Preise in der aktuellen Basiswährung; Kosten pro Seetag ist die Summe der Preise geteilt durch die Seetage derselben Kreuzfahrten.",
+        "time": "Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben.",
+        "source": "Der erfasste Preis gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) und ihre Reederei.",
+        "coverage": "Ein Preis in einer anderen Währung zählt nur mit gespeicherter Umrechnung in die Basiswährung; sonst steht er in der Fußzeile, nie addiert. Kreuzfahrten ohne Preis zählen nicht – ein eingetragener Preis von 0 schon. Reedereien ohne Eintrag fehlen in der Liste.",
+        "exclusions": "Flussfahrten ohne Seetag gehen nicht in die Kosten pro Seetag ein. Gebuchte und stornierte Kreuzfahrten zählen nicht."
+      },
+      "cruiseShips": {
+        "unit": "Tonnage, Kapazität und Baujahr stammen aus dem Schiffskatalog. Das Alter ist das Jahr des Reisebeginns minus das Baujahr.",
+        "time": "Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben.",
+        "source": "Das Katalogschiff gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen).",
+        "coverage": "Fehlt dem Katalogschiff ein Wert oder ist kein Schiff verknüpft, zählt die Kreuzfahrt dort nicht; die Fußzeile nennt, aus wie vielen Kreuzfahrten jede Zahl stammt.",
+        "exclusions": "Eine Kreuzfahrt vor dem Baujahr ihres Schiffs (ein Datenfehler) und eine ohne Startdatum bleiben beim Alter außen vor. Gebuchte und stornierte Kreuzfahrten zählen nicht."
       }
     },
     "cruise": {
@@ -1439,6 +1453,28 @@
         "onFootRecorded": "{{km}} zu Fuß aufgezeichnet",
         "recorded": "{{km}} aufgezeichnet",
         "planned": "{{km}} geplant (ohne Aufzeichnung)"
+      },
+      "money": {
+        "title": "Kosten im Detail",
+        "empty": "Noch kein Preis in {{currency}} erfasst.",
+        "perSeaDay": "{{amount}} pro Seetag",
+        "perSeaDayDetail": "über {{days}} Seetage von {{cruises}} Kreuzfahrten",
+        "mostExpensive": "Teuerste Kreuzfahrt",
+        "perLine": "Ausgaben je Reederei",
+        "lineCruises_one": "{{count}} Kreuzfahrt",
+        "lineCruises_other": "{{count}} Kreuzfahrten",
+        "coverage": "Gerechnet an {{counted}} von {{cruises}} Kreuzfahrten in {{currency}}; {{unknown}} ohne Preis, {{excluded}} mit Preis in anderer Währung ohne Umrechnung."
+      },
+      "ships": {
+        "title": "Schiffsprofil",
+        "biggest": "Größtes Schiff",
+        "biggestDetail": "{{tonnage}} BRZ",
+        "capacity": "{{capacity}} Passagiere",
+        "built": "Baujahr {{year}}",
+        "averageAge": "Im Schnitt {{years}} Jahre alt zur Reisezeit",
+        "empty": "Noch keine Schiffsdaten im Katalog.",
+        "coverageTonnage": "Tonnage: aus {{known}} von {{cruises}} Kreuzfahrten",
+        "coverageAge": "Alter: aus {{known}} von {{cruises}} Kreuzfahrten"
       }
     }
   },

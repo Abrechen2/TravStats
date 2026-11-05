@@ -22,6 +22,7 @@ import {
   repeatedItineraries,
   unresolvedCallsOf,
 } from "./ports";
+import { foldCruiseMoney, foldShipProfile } from "./moneyAndShips";
 import { foldPortStays, stayExtremes, type PortStay } from "./portStays";
 import type { CruiseInsightRow } from "./rows";
 
@@ -215,7 +216,8 @@ function dayPatternSection(
 
 export function buildCruiseInsights(
   ctx: CruiseInsightContext,
-  year: number | null
+  year: number | null,
+  baseCurrency: string
 ): CruiseInsights {
   const scoped = inYear(ctx.rows, year).sort(
     (a, b) => (a.startDay ?? "9999").localeCompare(b.startDay ?? "9999") || a.id.localeCompare(b.id)
@@ -236,6 +238,8 @@ export function buildCruiseInsights(
     portStays: portStaysSection(scoped),
     excursions: excursionsSection(ctx, scoped),
     dayPattern: dayPatternSection(ctx, scoped),
+    money: foldCruiseMoney(scoped, ctx.facts, baseCurrency),
+    ships: foldShipProfile(scoped, ctx.facts),
     repeatedItineraries: repeatedItineraries(ctx.rows)
       .filter((g) => year === null || g.cruiseIds.some((id) => byId.get(id)?.year === year))
       .map((g) => ({ ports: g.ports, cruises: g.cruiseIds.map((id) => refOf(byId.get(id)!)) })),

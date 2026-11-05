@@ -52,6 +52,44 @@ const linkedTourSchema = z.object({
 
 export const cruiseTypeSchema = z.enum(["seaHeavy", "balanced", "portIntensive"]);
 
+const cruiseMoneySchema = z.object({
+  currency: z.string().openapi({ description: "The account's CURRENT base currency." }),
+  cruises: z.number().int(),
+  unknownPrice: z.number().int().openapi({ description: "Cruises with no recorded price." }),
+  excluded: z
+    .number()
+    .int()
+    .openapi({ description: "Priced cruises that cannot be expressed in `currency`." }),
+  counted: z.number().int().openapi({ description: "Cruises the figures are read on." }),
+  total: z.number().nullable(),
+  perSeaDay: z
+    .object({ amount: z.number(), seaDays: z.number().int(), cruises: z.array(cruiseRefSchema) })
+    .nullable(),
+  mostExpensive: z.object({ cruise: cruiseRefSchema, amount: z.number() }).nullable(),
+  perLine: z.array(
+    z.object({ line: z.string(), total: z.number(), cruises: z.array(cruiseRefSchema) })
+  ),
+});
+
+const shipProfileSchema = z.object({
+  cruises: z.number().int(),
+  biggest: z
+    .object({
+      shipName: z.string(),
+      grossTonnage: z.number().int(),
+      capacity: z.number().int().nullable(),
+      yearBuilt: z.number().int().nullable(),
+      cruises: z.array(cruiseRefSchema),
+    })
+    .nullable(),
+  tonnageKnown: z.number().int().openapi({ description: "Cruises whose ship has a tonnage." }),
+  averageAge: z
+    .object({ years: z.number(), cruises: z.array(cruiseRefSchema) })
+    .nullable()
+    .openapi({ description: "Ship age at sailing, in years; null when no ship has a build year." }),
+  ageKnown: z.number().int(),
+});
+
 export const cruiseInsightsSchema = z.object({
   year: z.number().int().nullable().openapi({
     description: "The `?year=` the per-cruise lists are cut to; null for every year.",
@@ -163,6 +201,8 @@ export const cruiseInsightsSchema = z.object({
       })
     ),
   }),
+  money: cruiseMoneySchema,
+  ships: shipProfileSchema,
   repeatedItineraries: z.array(
     z.object({ ports: z.array(portRef), cruises: z.array(cruiseRefSchema) })
   ),

@@ -41,6 +41,12 @@ export interface CruiseStatsRow {
   /** FX snapshot (#267). `Cruise` was the last priced model to gain one. */
   priceBase: number | null;
   fxBaseCurrency: string | null;
+  /** The catalogue ship's own figures; null where the booking names no catalogue ship. */
+  shipSpecs: {
+    grossTonnage: number | null;
+    capacity: number | null;
+    yearBuilt: number | null;
+  } | null;
   /** Exactly what `calculateCruiseStats` is handed for this cruise. */
   input: CruiseData;
 }
@@ -81,7 +87,7 @@ export async function loadCruiseStatsData(
         legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },
         departurePort: true,
         arrivalPort: true,
-        ship: { select: { name: true } },
+        ship: { select: { name: true, grossTonnage: true, capacity: true, yearBuilt: true } },
       },
     }),
     cruiseSeaDaysCounted(userId),
@@ -98,6 +104,13 @@ export async function loadCruiseStatsData(
     currency: c.currency,
     priceBase: c.priceBase,
     fxBaseCurrency: c.fxBaseCurrency,
+    shipSpecs: c.ship
+      ? {
+          grossTonnage: c.ship.grossTonnage,
+          capacity: c.ship.capacity,
+          yearBuilt: c.ship.yearBuilt,
+        }
+      : null,
     input: {
       id: c.id,
       shipId: c.shipId,

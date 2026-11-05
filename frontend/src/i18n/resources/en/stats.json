@@ -1359,6 +1359,20 @@
         "source": "The calls of sailed cruises (completed or recorded afterwards) with their excursion note – at an unrecognised port too.",
         "coverage": "Without one, the cruise reads “no excursions documented” – which does not mean there were none. Tap the number for the list.",
         "exclusions": "Sea days, booked and cancelled cruises do not count."
+      },
+      "cruiseMoney": {
+        "unit": "Prices in the current base currency; cost per sea day is the sum of the prices divided by the sea days of the same cruises.",
+        "time": "Period: cruises that started in the selected year.",
+        "source": "The recorded price of sailed cruises (completed or recorded afterwards) and their cruise line.",
+        "coverage": "A price in another currency counts only with a stored conversion to the base currency; otherwise it is named in the footer, never added. Cruises without a price do not count - a recorded price of 0 does. Cruises without a line are missing from the list.",
+        "exclusions": "River cruises without a sea day do not enter the cost per sea day. Booked and cancelled cruises do not count."
+      },
+      "cruiseShips": {
+        "unit": "Tonnage, capacity and year built come from the ship catalogue. Age is the year the cruise started minus the year built.",
+        "time": "Period: cruises that started in the selected year.",
+        "source": "The catalogue ship of sailed cruises (completed or recorded afterwards).",
+        "coverage": "If the catalogue ship lacks a value or no ship is linked, the cruise does not count there; the footer says how many cruises each figure comes from.",
+        "exclusions": "A cruise dated before its ship was built (a data error) and one without a start date are left out of the age. Booked and cancelled cruises do not count."
       }
     },
     "cruise": {
@@ -1439,6 +1453,28 @@
         "onFootRecorded": "{{km}} on foot, recorded",
         "recorded": "{{km}} recorded",
         "planned": "{{km}} planned (no recording)"
+      },
+      "money": {
+        "title": "Cost details",
+        "empty": "No price recorded in {{currency}} yet.",
+        "perSeaDay": "{{amount}} per sea day",
+        "perSeaDayDetail": "over {{days}} sea days of {{cruises}} cruises",
+        "mostExpensive": "Most expensive cruise",
+        "perLine": "Spend per cruise line",
+        "lineCruises_one": "{{count}} cruise",
+        "lineCruises_other": "{{count}} cruises",
+        "coverage": "Based on {{counted}} of {{cruises}} cruises in {{currency}}; {{unknown}} without a price, {{excluded}} priced in another currency with no conversion."
+      },
+      "ships": {
+        "title": "Ship profile",
+        "biggest": "Biggest ship",
+        "biggestDetail": "{{tonnage}} GT",
+        "capacity": "{{capacity}} passengers",
+        "built": "Built {{year}}",
+        "averageAge": "On average {{years}} years old when sailed",
+        "empty": "No ship data in the catalogue yet.",
+        "coverageTonnage": "Tonnage: from {{known}} of {{cruises}} cruises",
+        "coverageAge": "Age: from {{known}} of {{cruises}} cruises"
       }
     }
   },

@@ -124,5 +124,32 @@ export interface CruiseInsights {
       type: CruiseType | null;
     }>;
   };
+  money: {
+    /** The account's current base currency. */
+    currency: string;
+    cruises: number;
+    /** No recorded price. */
+    unknownPrice: number;
+    /** Priced, but not expressible in `currency`. */
+    excluded: number;
+    counted: number;
+    total: number | null;
+    perSeaDay: { amount: number; seaDays: number; cruises: CruiseRef[] } | null;
+    mostExpensive: { cruise: CruiseRef; amount: number } | null;
+    perLine: Array<{ line: string; total: number; cruises: CruiseRef[] }>;
+  };
+  ships: {
+    cruises: number;
+    biggest: {
+      shipName: string;
+      grossTonnage: number;
+      capacity: number | null;
+      yearBuilt: number | null;
+      cruises: CruiseRef[];
+    } | null;
+    tonnageKnown: number;
+    averageAge: { years: number; cruises: CruiseRef[] } | null;
+    ageKnown: number;
+  };
   repeatedItineraries: Array<{ ports: Array<{ id: number; name: string }>; cruises: CruiseRef[] }>;
 }

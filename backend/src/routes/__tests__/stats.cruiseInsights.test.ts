@@ -279,4 +279,57 @@ describe("GET /stats/cruise-insights", () => {
       await updateInstanceSettings({ betaFeaturesEnabled: true });
     }
   });
+  it("answers cruise money in the base currency and the ship profile from the catalogue", async () => {
+    const ship = await prisma.ship.create({
+      data: {
+        name: "Insights Test Ship",
+        cruiseLine: "Testline",
+        yearBuilt: 2010,
+        grossTonnage: 90000,
+        capacity: 2200,
+      },
+    });
+    try {
+      await prisma.cruise.update({
+        where: { id: cruiseIds.first },
+        data: { shipId: ship.id, cruiseLine: "Testline", price: 600, currency: "EUR" },
+      });
+      // A USD price with no snapshot: it must stay out, and be counted as such.
+      await prisma.cruise.update({
+        where: { id: cruiseIds.second },
+        data: { cruiseLine: "Testline", price: 100, currency: "USD" },
+      });
+      const res = await request(app).get("/api/v1/stats/cruise-insights").set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.money).toMatchObject({
+        currency: "EUR",
+        total: 600,
+        excluded: 1,
+        counted: 1,
+        unknownPrice: 0,
+        mostExpensive: { cruise: { id: cruiseIds.first }, amount: 600 },
+        perSeaDay: { amount: 600, seaDays: 1 },
+      });
+      expect(res.body.money.perLine).toEqual([
+        {
+          line: "Testline",
+          total: 600,
+          cruises: [expect.objectContaining({ id: cruiseIds.first })],
+        },
+      ]);
+      expect(res.body.ships).toMatchObject({
+        cruises: 2,
+        tonnageKnown: 1,
+        ageKnown: 1,
+        averageAge: { years: 9 },
+        biggest: { shipName: "Insights Test Ship", grossTonnage: 90000, capacity: 2200 },
+      });
+    } finally {
+      await prisma.cruise.updateMany({
+        where: { userId },
+        data: { shipId: null, cruiseLine: null, price: null, currency: null },
+      });
+      await prisma.ship.delete({ where: { id: ship.id } });
+    }
+  });
 });

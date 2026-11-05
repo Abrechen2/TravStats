@@ -12,6 +12,7 @@
 import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../../middleware/auth";
+import { getBaseCurrency } from "../../services/fx/snapshot";
 import { statsEtag } from "../../middleware/statsEtag";
 import { WrappedQuerySchema } from "../../schemas/statsQuery";
 import { buildCruiseInsights } from "../../services/stats/cruiseInsights/build";
@@ -29,7 +30,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       return;
     }
     const ctx = await loadCruiseInsightContext(req.userId!);
-    res.json(buildCruiseInsights(ctx, parsed.data.year ?? null));
+    const baseCurrency = await getBaseCurrency(req.userId!);
+    res.json(buildCruiseInsights(ctx, parsed.data.year ?? null, baseCurrency));
   } catch (error) {
     next(error);
   }
