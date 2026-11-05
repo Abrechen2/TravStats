@@ -221,6 +221,14 @@ describe("TravTrack — fixed places", () => {
       await call("put", "/places/lodging").send({ enabled: true, radiusM: 150 }).expect(403);
     });
 
+    it("stays reachable with TravTrack off when fixed places are the only TravTrack data held", async () => {
+      await call("post", "/places").send({ name: "Office", kind: "work", lat: LAT0, lon: LON0 });
+      await switches.set({ beta: true, config: false });
+      const list = await call("get", "/places").expect(200);
+      expect(list.body.places.map((p: { name: string }) => p.name)).toContain("Office");
+      await call("delete", `/places/${list.body.places[1].id}`).expect(204);
+    });
+
     it("is part of the account export", async () => {
       await call("post", "/places").send({ name: "Office", kind: "work", lat: LAT0, lon: LON0 });
       await call("put", "/places/home").send({ radiusM: 300, window: null });

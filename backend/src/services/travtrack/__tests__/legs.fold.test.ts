@@ -17,7 +17,7 @@ const BERLIN = { lat: 52.52, lon: 13.405 };
 const MON = Date.parse("2026-11-01T23:00:00Z");
 const at = (day: number, hh: number, mm = 0) => MON + day * 86_400_000 + (hh * 60 + mm) * MIN;
 
-type Fix = { t: number; dNorth?: number; dEast?: number };
+type Fix = { t: number; dNorth?: number; dEast?: number; acc?: number };
 
 function span(fixes: Fix[], circles: SafeSpan["circles"] = []): SafeSpan {
   const rows = new WeakMap<StoredPoint, SafePointRow>();
@@ -26,7 +26,7 @@ function span(fixes: Fix[], circles: SafeSpan["circles"] = []): SafeSpan {
       f.t,
       BERLIN.lat + (f.dNorth ?? 0) / M,
       BERLIN.lon + (f.dEast ?? 0) / (M * Math.cos((BERLIN.lat * Math.PI) / 180)),
-      5,
+      f.acc ?? 5,
     ];
     rows.set(p, {
       id: `p${i}`,
@@ -129,6 +129,14 @@ describe("deriveLegs — fixed places fold a run into one stop", () => {
     const before = JSON.stringify(read.segments);
     run(read, ctx([work()]));
     expect(JSON.stringify(read.segments)).toBe(before);
+  });
+});
+
+describe("deriveLegs — coarse fixes", () => {
+  it("never fold a stay out of kilometre-wide readings, even when the stretch holds nothing finer", () => {
+    const coarse = stay(at(0, 9), at(0, 12), 0, 10).map((f) => ({ ...f, acc: 1900 }));
+    const { stops } = run(span(coarse), ctx([work()]));
+    expect(stops.every((s) => s.folded === null)).toBe(true);
   });
 });
 

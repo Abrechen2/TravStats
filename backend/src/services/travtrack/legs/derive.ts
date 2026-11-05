@@ -10,7 +10,7 @@ import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { findFoldRuns, type FoldContext, type FoldRun } from "./fold";
 import { STOP_MS } from "../dayMovement";
-import { badVertexIn, findDwells, movingRuns, type Dwell } from "./stops";
+import { findDwells, isBadVertex, movingRuns, type Dwell } from "./stops";
 import type {
   Leg,
   LegMode,
@@ -192,7 +192,9 @@ function dwellsWithFolds(
   const folds = findFoldRuns(
     segment,
     { places: fold.places.filter(clear), lodgings: fold.lodgings.filter(clear) },
-    badVertexIn(segment)
+    // Coarse fixes are neutral to a fold even in a stretch that holds nothing finer: a
+    // kilometre-wide reading proves nothing about a 100 m circle.
+    isBadVertex
   );
   // What a fold leaves of a natural dwell (the stretch before and after it) is still a dwell if long enough.
   const kept = natural.flatMap((d) => outsideFolds(segment, d, folds));
