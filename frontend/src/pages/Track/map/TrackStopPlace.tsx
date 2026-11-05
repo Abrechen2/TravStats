@@ -195,7 +195,13 @@ export default function TrackStopPlace({
           </div>
         ) : (
           <p className="t-caption" data-testid="track-stop-place-none">
-            {t(down ? "track:stop.place.unavailable" : "track:stop.place.none")}
+            {t(
+              identity.lookup === "off"
+                ? "track:stop.place.suggestionsOff"
+                : down
+                  ? "track:stop.place.unavailable"
+                  : "track:stop.place.none"
+            )}
           </p>
         )}
         {probable && down && (

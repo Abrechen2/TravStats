@@ -728,6 +728,7 @@
       "accepted": "{{name}}",
       "distance": "{{m}} m away",
       "none": "No name found.",
+      "suggestionsOff": "Stay suggestions are switched off in the settings, so nothing is looked up online.",
       "unavailable": "The place lookup is not reachable right now – no suggestion possible.",
       "failed": "The suggestion could not be loaded.",
       "retry": "Try again",

@@ -728,6 +728,7 @@
       "accepted": "{{name}}",
       "distance": "{{m}} m entfernt",
       "none": "Kein Name gefunden.",
+      "suggestionsOff": "Aufenthaltsvorschläge sind in den Einstellungen aus, darum wird nichts im Internet nachgeschlagen.",
       "unavailable": "Der Ortsdienst ist gerade nicht erreichbar – kein Vorschlag möglich.",
       "failed": "Der Vorschlag konnte nicht geladen werden.",
       "retry": "Erneut versuchen",
