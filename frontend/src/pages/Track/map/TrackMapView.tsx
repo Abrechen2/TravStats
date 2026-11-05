@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { collapseFolded, type FoldedSpan } from "./collapseFolded";
 import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
@@ -177,13 +178,29 @@ export default function TrackMapView(): JSX.Element {
   );
   const zone = loaded[0]?.day.zone ?? profileZone;
 
+  // A folded stop (fixed place, lodging) is one point on the line; the raw fixes stay for the Points layer.
+  const foldedSpans = useMemo<FoldedSpan[]>(
+    () =>
+      loaded.flatMap((r) =>
+        (r.day.stops ?? [])
+          .filter((s) => s.folded)
+          .map((s) => ({
+            fromMs: s.fromMs,
+            untilMs: s.untilMs,
+            lat: s.anchor.lat,
+            lon: s.anchor.lon,
+          }))
+      ),
+    [loaded]
+  );
+  const collapsed = useMemo(
+    () => collapseFolded(source.segments, foldedSpans),
+    [source.segments, foldedSpans]
+  );
   const shown = useMemo(
     () =>
-      splitAfterPause(
-        source.segments,
-        prefs.splitMinutes === null ? null : prefs.splitMinutes * 60_000
-      ),
-    [source.segments, prefs.splitMinutes]
+      splitAfterPause(collapsed, prefs.splitMinutes === null ? null : prefs.splitMinutes * 60_000),
+    [collapsed, prefs.splitMinutes]
   );
   const replayed = useMemo(
     () => (replayWindow ? cutToWindow(shown, replayWindow) : shown),
