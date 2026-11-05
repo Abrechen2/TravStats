@@ -492,6 +492,56 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/roadtrips/{id}/stations/{stationId}/weather",
+  summary: "The measured weather of a station's arrival day",
+  description:
+    "Open-Meteo's measurement for the station's start day at its point, computed per request " +
+    "and stored nowhere. Always 200 with an `outcome`: `observed` carries `weather`; " +
+    "`timeout`, `rateLimited` and `unavailable` are failures of the weather SERVICE and say " +
+    "nothing about the day, so a caller keeps whatever it already shows; `futureOrToday`, " +
+    "`noData` and `noLocation` are answers about the station or its day; `disabled` means the " +
+    "instance's open data switch is off.",
+  tags: ["Roadtrips"],
+  request: { params: z.object({ id: z.string().uuid(), stationId: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "What the lookup came to",
+      content: {
+        "application/json": {
+          schema: z.object({
+            outcome: z.enum([
+              "observed",
+              "noLocation",
+              "futureOrToday",
+              "noData",
+              "timeout",
+              "rateLimited",
+              "unavailable",
+              "disabled",
+            ]),
+            weather: z
+              .object({
+                code: z.number().int().describe("WMO weather interpretation code"),
+                tMaxC: z.number(),
+                tMinC: z.number(),
+                precipMm: z.number(),
+                day: isoDay,
+                lat: z.number(),
+                lon: z.number(),
+                source: z.literal("open-meteo"),
+                fetchedAt: z.string(),
+              })
+              .nullable(),
+          }),
+        },
+      },
+    },
+    404: { description: "Roadtrip or station not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/day-context",
   summary: "The trip and roadtrip station a day belongs to",
   description:
