@@ -43,13 +43,22 @@ interface WindowLine {
   size: number;
 }
 
-async function readInWindow(filepath: string, cutoffMs: number): Promise<WindowLine[]> {
+// The filter runs while streaming, so a caller who owns few lines (a user's own
+// diagnostic package) never buffers everyone else's: memory follows the lines
+// kept, not the file. The scan itself stays bounded by the window, the log
+// rotation and the export's rate limit.
+async function readInWindow(
+  filepath: string,
+  cutoffMs: number,
+  filter: ((entry: LogFileEntry) => boolean) | undefined
+): Promise<WindowLine[]> {
   const lines: WindowLine[] = [];
   for await (const line of openLogLines(filepath)) {
     const entry = parseLogLine(line);
     if (!entry) continue;
     const time = entryTime(entry);
     if (!Number.isFinite(time) || time < cutoffMs) continue;
+    if (filter && !filter(entry)) continue;
     lines.push({ entry, size: line.length });
   }
   return lines;
@@ -84,7 +93,7 @@ export async function readLogWindow(
   for (const file of files) {
     let lines: WindowLine[];
     try {
-      lines = await readInWindow(path.join(getLogDir(), file.filename), cutoffMs);
+      lines = await readInWindow(path.join(getLogDir(), file.filename), cutoffMs, options.filter);
     } catch {
       unreadableFiles++;
       continue;
@@ -92,7 +101,6 @@ export async function readLogWindow(
     // Lines are chronological inside a file: walk them from the end.
     for (let i = lines.length - 1; i >= 0; i--) {
       const { entry, size } = lines[i];
-      if (options.filter && !options.filter(entry)) continue;
       if (newestFirst.length >= maxEntries || bytes + size > maxBytes) {
         truncated = true;
         break;
