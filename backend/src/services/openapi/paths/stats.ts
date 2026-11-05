@@ -85,10 +85,20 @@ const statsResponse = registry.register(
             .describe(
               "Distinct days a counted train ride departed or arrived, each on its station's calendar"
             ),
+          bus: z
+            .number()
+            .describe(
+              "Distinct days a counted coach ride departed or arrived, each on its terminal's calendar"
+            ),
+          ferry: z
+            .number()
+            .describe(
+              "Distinct days a counted ferry crossing departed or arrived, each on its terminal's calendar"
+            ),
           total: z
             .number()
             .describe(
-              "The UNION of the six day sets — never their sum; a day with a flight and a hotel night is one day"
+              "The UNION of the eight day sets — never their sum; a day with a flight and a hotel night is one day"
             ),
         })
         .describe(
@@ -98,12 +108,13 @@ const statsResponse = registry.register(
             "every day from departure to arrival inclusive; a lodging stay every day from check-in " +
             "to check-out inclusive; a place visit its visit day; a roadtrip station the days it " +
             "attests; a counted train ride (rail domain switched on) its departure and arrival " +
-            "day on its stations' calendars. Only records that count under " +
+            "day on its stations' calendars; a counted coach ride or ferry crossing (domain switched on) " +
+            "its departure and arrival day on its terminals' calendars. Only records that count under " +
             "the shared counting rules contribute (flown or historical flights, sailed cruises, " +
             "stays whose check-out is past and not cancelled, visits dated no later than today). " +
-            "A day is the UTC date of the stored instant, except a train ride, whose days " +
-            "are read on its stations' clocks. `total` is the " +
-            "size of the union of the six sets. A record with no usable date contributes no day. " +
+            "A day is the UTC date of the stored instant, except a train ride, coach ride or ferry crossing, whose days " +
+            "are read on their stations' or terminals' clocks. `total` is the " +
+            "size of the union of the eight sets. A record with no usable date contributes no day. " +
             "Scoped exactly like the flight figures beside it: with `year`, the year's days."
         ),
       scope: statsScopeSchema.optional().describe("Absent inside `current`/`compare`"),
@@ -118,7 +129,7 @@ registry.registerPath({
   description:
     "Top-level totals (distance, hours, cost) plus rollups by status, " +
     "airline and category, and `daysAway` — distinct calendar days with a " +
-    "record that happened, per domain and as one union across all five. " +
+    "record that happened, per domain and as one union across all of them. " +
     "Other /stats/* sub-routes return more " +
     "specialized breakdowns (routes, fun, business, unique, seats, " +
     "airlines, countries) — see the Stats tag for the full list.",

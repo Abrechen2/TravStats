@@ -165,6 +165,8 @@ describe("GET /stats/summary — daysAway", () => {
       place: 1, // 11 May
       roadtrip: 0, // no roadtrip in this fixture
       rail: 0,
+      bus: 0,
+      ferry: 0,
       // 10, 11, 12 May + 7 June days + 4 New Year days
       total: 14,
     });
@@ -183,6 +185,8 @@ describe("GET /stats/summary — daysAway", () => {
       place: 0,
       roadtrip: 0,
       rail: 0,
+      bus: 0,
+      ferry: 0,
       total: 2,
     });
   });

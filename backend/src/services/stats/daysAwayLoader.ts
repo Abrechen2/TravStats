@@ -33,6 +33,8 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { computeDaysAway, type DayWindow, type DaysAway } from "../../utils/stats/daysAway";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { countableRailWhere, railDayKeys } from "../../shared/railCounting";
+import { busDayKeys, countableBusWhere } from "../../shared/busCounting";
+import { countableFerryWhere, ferryDayKeys } from "../../shared/ferryCounting";
 import { loadVisibleDomainSet } from "../domainVisibility";
 import { attestStation, roadtripHasStarted } from "./roadtripEvidence";
 
@@ -123,13 +125,18 @@ function padWindow(window: DayWindow | null): DayWindow | null {
 }
 
 /**
- * A ride always has a departure, so unlike `spanTouches` there is no
+ * Rail, bus and ferry rides share this shape (their where-inputs are identical
+ * here). A ride always has a departure, so unlike `spanTouches` there is no
  * "start missing" branch (Prisma rejects a null filter on a required column);
  * a missing arrival is read as the departure.
  */
-function railTouches(window: DayWindow | null): Prisma.RailJourneyWhereInput {
+type RideWhere = Prisma.RailJourneyWhereInput &
+  Prisma.BusJourneyWhereInput &
+  Prisma.FerryJourneyWhereInput;
+
+function rideTouches(window: DayWindow | null): RideWhere {
   const { from, to } = windowInstants(window);
-  const clauses: Prisma.RailJourneyWhereInput[] = [];
+  const clauses: RideWhere[] = [];
   if (to !== null) clauses.push({ departureTime: { lt: to } });
   if (from !== null) {
     clauses.push({
@@ -144,15 +151,36 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
   const now = new Date();
   // Rail counts only for a user who has the domain switched on — the same gate
   // the travel account and the cross-domain statistics pass.
-  const railVisible = (await loadVisibleDomainSet(userId)).has("rail");
+  const visible = await loadVisibleDomainSet(userId);
+  const railVisible = visible.has("rail");
+  const busVisible = visible.has("bus");
+  const ferryVisible = visible.has("ferry");
+  const rideSelect = {
+    departureTime: true,
+    arrivalTime: true,
+    depTimezone: true,
+    arrTimezone: true,
+  } as const;
 
-  const [rail, flights, cruises, stays, visits, roadtrips] = await Promise.all([
+  const [bus, ferry, rail, flights, cruises, stays, visits, roadtrips] = await Promise.all([
+    busVisible
+      ? prisma.busJourney.findMany({
+          where: { userId, ...countableBusWhere(), ...rideTouches(padWindow(window)) },
+          select: rideSelect,
+        })
+      : Promise.resolve([]),
+    ferryVisible
+      ? prisma.ferryJourney.findMany({
+          where: { userId, ...countableFerryWhere(), ...rideTouches(padWindow(window)) },
+          select: rideSelect,
+        })
+      : Promise.resolve([]),
     railVisible
       ? prisma.railJourney.findMany({
           where: {
             userId,
             ...countableRailWhere(),
-            ...railTouches(padWindow(window)),
+            ...rideTouches(padWindow(window)),
           },
           select: { departureTime: true, arrivalTime: true, depTimezone: true, arrTimezone: true },
         })
@@ -243,6 +271,8 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
       .filter((route) => roadtripHasStarted(route.stops, now))
       .flatMap((route) => route.stops.flatMap((stop) => attestStation(stop, now) ?? [])),
     rail: rail.map((ride) => ({ days: railDayKeys(ride) })),
+    bus: bus.map((ride) => ({ days: busDayKeys(ride) })),
+    ferry: ferry.map((ride) => ({ days: ferryDayKeys(ride) })),
     window,
   });
 }

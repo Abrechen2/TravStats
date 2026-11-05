@@ -22,9 +22,12 @@
  * - a train ride counts its departure day and its arrival day, each on its
  *   STATION'S calendar (`railDayKeys`) — the loader reduces it, as it does a
  *   roadtrip station, because a night train's two days only exist on the
- *   stations' clocks.
+ *   stations' clocks;
+ * - a coach ride or a ferry crossing counts its departure and arrival day on
+ *   its TERMINALS' calendars (`busDayKeys`, `ferryDayKeys`), reduced by the
+ *   loader the same way.
  *
- * `total` is the size of the UNION of the six day sets — never their sum. A
+ * `total` is the size of the UNION of the eight day sets — never their sum. A
  * day with a flight in the morning and a hotel at night is one day away, and
  * reporting it as two is precisely the cross-domain addition the charter
  * forbids.
@@ -48,7 +51,7 @@
  * `shared/lodgingCounting.ts`, `shared/placeCounting.ts`, and the sailed
  * predicate the cruise statistics use). The loader applies those and hands
  * this function only the records that passed. This function is pure: dates in,
- * six numbers out, so the overlap arithmetic can be tested without a
+ * the per-domain counts out, so the overlap arithmetic can be tested without a
  * database.
  *
  * ## Abstention
@@ -102,6 +105,10 @@ export interface DaysAwayInput {
   roadtrips?: readonly { days: readonly string[] }[];
   /** Counted train rides, each already reduced to its station-local ISO days. */
   rail?: readonly { days: readonly string[] }[];
+  /** Counted coach rides, each already reduced to its terminal-local ISO days. */
+  bus?: readonly { days: readonly string[] }[];
+  /** Counted ferry crossings, each already reduced to its terminal-local ISO days. */
+  ferry?: readonly { days: readonly string[] }[];
   window?: DayWindow | null;
 }
 
@@ -112,7 +119,9 @@ export interface DaysAway {
   place: number;
   roadtrip: number;
   rail: number;
-  /** The union of the six sets above — never their sum. */
+  bus: number;
+  ferry: number;
+  /** The union of the eight sets above — never their sum. */
   total: number;
 }
 
@@ -168,6 +177,8 @@ export function computeDaysAway(input: DaysAwayInput): DaysAway {
   const roadtrip = collect((input.roadtrips ?? []).map((station) => [...station.days]));
 
   const rail = collect((input.rail ?? []).map((ride) => [...ride.days]));
+  const bus = collect((input.bus ?? []).map((ride) => [...ride.days]));
+  const ferry = collect((input.ferry ?? []).map((ride) => [...ride.days]));
 
   return {
     flight: flight.size,
@@ -176,6 +187,17 @@ export function computeDaysAway(input: DaysAwayInput): DaysAway {
     place: place.size,
     roadtrip: roadtrip.size,
     rail: rail.size,
-    total: new Set([...flight, ...cruise, ...lodging, ...place, ...roadtrip, ...rail]).size,
+    bus: bus.size,
+    ferry: ferry.size,
+    total: new Set([
+      ...flight,
+      ...cruise,
+      ...lodging,
+      ...place,
+      ...roadtrip,
+      ...rail,
+      ...bus,
+      ...ferry,
+    ]).size,
   };
 }

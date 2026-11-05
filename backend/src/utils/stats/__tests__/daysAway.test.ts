@@ -20,6 +20,8 @@ describe("computeDaysAway", () => {
       place: 0,
       roadtrip: 0,
       rail: 0,
+      bus: 0,
+      ferry: 0,
       total: 0,
     });
   });
@@ -100,6 +102,8 @@ describe("computeDaysAway", () => {
       place: 0,
       roadtrip: 0,
       rail: 0,
+      bus: 0,
+      ferry: 0,
       total: 0,
     });
   });
@@ -119,6 +123,8 @@ describe("computeDaysAway", () => {
       place: 0,
       roadtrip: 0,
       rail: 0,
+      bus: 0,
+      ferry: 0,
     });
   });
 
@@ -146,5 +152,19 @@ describe("computeDaysAway", () => {
       places: [],
     });
     expect(out.total).toBe(1);
+  });
+
+  it("counts bus and ferry days and unions them with the rest, never summing", () => {
+    const out = computeDaysAway({
+      flights: [{ from: d("2024-05-10T06:00:00Z"), to: d("2024-05-10T09:00:00Z") }],
+      cruises: [],
+      lodging: [],
+      places: [],
+      bus: [{ days: ["2024-05-10", "2024-05-11"] }],
+      ferry: [{ days: ["2024-05-11", "2024-05-12"] }],
+    });
+    expect(out.bus).toBe(2);
+    expect(out.ferry).toBe(2);
+    expect(out.total).toBe(3); // 10, 11, 12 — not 1 + 2 + 2
   });
 });
