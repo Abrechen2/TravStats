@@ -33,6 +33,7 @@ export const diagnosticBundleSchema = z
   .object({
     schema: z.literal(DIAGNOSTIC_BUNDLE_SCHEMA),
     generatedAt: z.string(),
+    scope: z.enum(["server", "user"]),
     app: z.object({ version: z.string(), buildVersion: z.string() }).strict(),
     runtime: z
       .object({
@@ -41,9 +42,10 @@ export const diagnosticBundleSchema = z
         arch: z.string(),
         uptimeSeconds: z.number().int(),
       })
-      .strict(),
+      .strict()
+      .optional(),
     domains: section(z.record(key, z.number().int())),
-    settings: section(z.record(key, z.union([z.boolean(), z.number(), key, z.null()]))),
+    settings: section(z.record(key, z.union([z.boolean(), z.number(), key, z.null()]))).optional(),
     counts: section(z.record(key, z.number().int())),
     database: section(
       z
@@ -56,7 +58,7 @@ export const diagnosticBundleSchema = z
             .nullable(),
         })
         .strict()
-    ),
+    ).optional(),
     logs: section(
       z
         .object({

@@ -64,7 +64,10 @@
       "versions": "App and build version, Node version, operating system and architecture",
       "settings": "Instance settings as switches, numbers and fixed choices – and only whether an integration is set up, never its address or key",
       "counts": "Counts: accounts per enabled domain, entries per table, database migration status",
-      "events": "Log events of the last 24 hours (errors: 7 days) as time, level, category, event key, error code and class, and code location (file name:line)"
+      "events": "Log events of the last 24 hours (errors: 7 days) as time, level, category, event key, error code and class, and code location (file name:line)",
+      "userVersions": "App and build version",
+      "userCounts": "Counts of your own entries (flights by status, trips, stays, cruises, places, tours, rail journeys, documents) and which areas you have switched on",
+      "userEvents": "Only the log events caused by your account (time, level, category, event key, error code and class, code location) – no server settings, no database or machine details"
     },
     "excludes": "Not included: log text, names, usernames, email addresses, booking codes, flights and places, URLs with query strings, IP addresses, host name, directory paths, and any value from a request.",
     "previewLabel": "Preview – exactly this file is downloaded:",
@@ -73,11 +76,12 @@
     "exportFailedToast": "Issue opened without a diagnostic bundle – the export failed.",
     "reasons": {
       "rateLimited": "too many exports in a short time, please try again later",
-      "forbidden": "only administrators may create a diagnostic bundle",
+      "forbidden": "the diagnostic export is blocked for this account (shared demo account)",
       "rejected": "the bundle failed its own checklist and was withheld",
       "network": "the server cannot be reached",
       "server": "server error (HTTP {{status}})"
-    }
+    },
+    "scopeUser": "You are not an administrator: the package contains only your own data, nothing about other accounts and nothing about the server."
   },
   "accessibility": {
     "close": "Close",

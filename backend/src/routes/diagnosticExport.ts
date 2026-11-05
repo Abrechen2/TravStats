@@ -1,8 +1,9 @@
 import { Router, Response, NextFunction } from "express";
-import { authenticate, AuthRequest, requireAdmin } from "../middleware/auth";
+import { authenticate, AuthRequest, requireUser } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { diagnosticExportLimiter } from "../middleware/rateLimit";
-import { buildDiagnosticBundle } from "../services/diagnosticExport";
+import { prisma } from "../db";
+import { buildDiagnosticBundle, buildUserDiagnosticBundle } from "../services/diagnosticExport";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -26,24 +27,36 @@ const router = Router();
  * `rejectDemo`, not `rejectDemoWrites`: this is a GET, and reading is
  * precisely the harm. It sits ABOVE the limiter so a refusal costs no bucket.
  *
- * Admins only (owner decision, 2026-09-25). The demo refusal alone left every
- * ordinary account able to download every OTHER account's scrubbed activity;
- * an instance's logs belong to whoever runs the instance. `rejectDemo` stays
- * in front so the shared login keeps its own, explicit refusal code.
+ * Two scopes (owner decision, 2026-11-05; it was admin-only from 2026-09-25).
+ * An admin gets the server-wide package. Every other account gets a package of
+ * its OWN data only — its row counts, its domain switches and the log lines
+ * written on its behalf — with no instance settings, runtime or database
+ * section, so no other account's activity and nothing about the host. An admin
+ * API token without the admin scope is treated like an ordinary account.
+ * `rejectDemo` stays in front so the shared login keeps its explicit refusal.
  */
 router.get(
   "/diagnostic-export",
   authenticate,
   rejectDemo,
-  requireAdmin,
   diagnosticExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const bundle = await buildDiagnosticBundle();
+      const userId = requireUser(req);
+      const account = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isAdmin: true },
+      });
+      const serverWide =
+        account?.isAdmin === true && (!req.apiToken || req.apiToken.scope === "admin");
+      const bundle = serverWide
+        ? await buildDiagnosticBundle()
+        : await buildUserDiagnosticBundle(userId);
       logger.info({
         operation: "diagnostic_export",
-        userId: req.userId,
+        userId,
         context: {
+          scope: bundle.scope,
           failedSections: Object.entries(bundle)
             .filter(([, value]) => (value as { status?: string })?.status === "failed")
             .map(([name]) => name),

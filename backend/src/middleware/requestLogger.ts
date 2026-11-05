@@ -19,6 +19,8 @@ export interface AuthRequest extends Request {
     username: string;
     isAdmin: boolean;
   };
+  /** Set by `authenticate`. */
+  userId?: string;
   requestId?: string;
 }
 
@@ -56,7 +58,9 @@ export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: N
         statusClass: getStatusClass(res.statusCode),
         ip: req.ip,
         userAgent: req.get("user-agent"),
-        userId: req.user?.id,
+        // `authenticate` sets `req.userId`; `req.user` is never populated, which left every
+        // request line without an owner (and out of a user's own diagnostic package).
+        userId: req.userId ?? req.user?.id,
         isAdmin: req.user?.isAdmin,
         requestId: req.requestId,
         // Not of a raw body (the ingest paths before parsing): a Buffer's keys
