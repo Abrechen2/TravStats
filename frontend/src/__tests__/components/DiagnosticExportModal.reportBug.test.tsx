@@ -50,6 +50,7 @@ vi.mock("../../lib/logger", () => ({
 const fakeBundle: DiagnosticBundle = {
   schema: "travstats-diagnostic/2",
   generatedAt: "2026-09-26T10:00:00.000Z",
+  scope: "server",
   app: { version: "2.7.0", buildVersion: "2.7.0-beta.15" },
   runtime: { node: "v22.0.0", os: "linux", arch: "x64", uptimeSeconds: 10 },
   domains: { status: "ok", data: { flight: 2 } },
@@ -124,6 +125,22 @@ describe("DiagnosticExportModal — Report Bug", () => {
     expect(JSON.parse((preview as HTMLTextAreaElement).value).schema).toBe(
       "travstats-diagnostic/2"
     );
+  });
+
+  it("tells an ordinary account its package holds only its own data, with no server sections", async () => {
+    const { settings: _s, database: _d, runtime: _r, ...rest } = fakeBundle;
+    vi.mocked(diagnosticExportApi.fetch).mockResolvedValue({ ...rest, scope: "user" });
+    render(<DiagnosticExportModal isOpen={true} onClose={() => {}} />);
+    const preview = await screen.findByRole("textbox", {
+      name: "Vorschau – genau diese Datei wird heruntergeladen:",
+    });
+
+    expect(screen.getByText(/nur deine eigenen Daten/)).toBeInTheDocument();
+    expect(screen.queryByText(/Instanz-Einstellungen/)).not.toBeInTheDocument();
+    const parsed = JSON.parse((preview as HTMLTextAreaElement).value);
+    expect(parsed.scope).toBe("user");
+    expect(parsed).not.toHaveProperty("settings");
+    expect(parsed).not.toHaveProperty("database");
   });
 
   it("states what is included instead of promising that all personal data is gone", async () => {

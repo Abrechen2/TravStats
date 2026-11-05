@@ -9,6 +9,7 @@ import { BETA_FEATURE_KEYS } from "../config/betaFeatures";
 import type { DiagnosticBundle } from "../shared/logContract";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
+import { useAuthStore } from "../store/authStore";
 
 /**
  * "Fehler melden": the diagnostic bundle for a PUBLIC GitHub issue.
@@ -34,6 +35,8 @@ type ExportState =
   | { status: "failed"; reasonKey: string; httpStatus: number | null };
 
 const SECTIONS = ["domains", "settings", "counts", "database", "logs"] as const;
+
+type BundleScope = DiagnosticBundle["scope"];
 
 function failureOf(err: unknown): { reasonKey: string; httpStatus: number | null } {
   const status = axios.isAxiosError(err) ? (err.response?.status ?? null) : null;
@@ -64,6 +67,7 @@ export default function DiagnosticExportModal({
   const { t } = useTranslation(["common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [state, setState] = useState<ExportState>({ status: "loading" });
+  const isAdmin = useAuthStore((s) => s.user?.isAdmin ?? false);
 
   // Only re-fetch when the modal opens. addToast and t are intentionally
   // omitted from deps — they are unstable across renders and would re-fetch
@@ -160,11 +164,16 @@ export default function DiagnosticExportModal({
     addToast("warning", t("common:diagnostic.exportFailedToast"));
   };
 
+  // Once the bundle is here its own scope decides what the text promises; until
+  // then the account's role predicts it (the server decides the same way).
+  const scope: BundleScope =
+    state.status === "ready" ? state.download.scope : isAdmin ? "server" : "user";
+
   const failedSections =
     state.status === "ready"
       ? SECTIONS.flatMap((name) => {
           const section = state.download[name];
-          return section.status === "failed" ? [{ name, code: section.errorCode }] : [];
+          return section?.status === "failed" ? [{ name, code: section.errorCode }] : [];
         })
       : [];
 
@@ -229,11 +238,26 @@ export default function DiagnosticExportModal({
           className="text-xs list-disc list-inside mb-2 space-y-1"
           style={{ color: "var(--text-muted)" }}
         >
-          <li>{t("common:diagnostic.includes.versions")}</li>
-          <li>{t("common:diagnostic.includes.settings")}</li>
-          <li>{t("common:diagnostic.includes.counts")}</li>
-          <li>{t("common:diagnostic.includes.events")}</li>
+          {scope === "user" ? (
+            <>
+              <li>{t("common:diagnostic.includes.userVersions")}</li>
+              <li>{t("common:diagnostic.includes.userCounts")}</li>
+              <li>{t("common:diagnostic.includes.userEvents")}</li>
+            </>
+          ) : (
+            <>
+              <li>{t("common:diagnostic.includes.versions")}</li>
+              <li>{t("common:diagnostic.includes.settings")}</li>
+              <li>{t("common:diagnostic.includes.counts")}</li>
+              <li>{t("common:diagnostic.includes.events")}</li>
+            </>
+          )}
         </ul>
+        {scope === "user" && (
+          <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+            {t("common:diagnostic.scopeUser")}
+          </p>
+        )}
         <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
           {t("common:diagnostic.excludes")}
         </p>

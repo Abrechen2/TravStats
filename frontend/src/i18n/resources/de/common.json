@@ -64,7 +64,10 @@
       "versions": "App- und Build-Version, Node-Version, Betriebssystem und Architektur",
       "settings": "Instanz-Einstellungen als Schalter, Zahlen und feste Auswahlwerte – und nur, ob eine Integration eingerichtet ist, nie ihre Adresse oder ihr Schlüssel",
       "counts": "Anzahlen: Konten je aktiviertem Bereich, Einträge je Tabelle, Stand der Datenbank-Migrationen",
-      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage) als Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse und Code-Stelle (Dateiname:Zeile)"
+      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage) als Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse und Code-Stelle (Dateiname:Zeile)",
+      "userVersions": "App- und Build-Version",
+      "userCounts": "Anzahlen deiner eigenen Einträge (Flüge je Status, Reisen, Unterkünfte, Kreuzfahrten, Orte, Touren, Bahnfahrten, Dokumente) und welche Bereiche du aktiviert hast",
+      "userEvents": "Nur die Log-Ereignisse, die durch dein Konto ausgelöst wurden (Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse, Code-Stelle) – keine Server-Einstellungen, keine Datenbank- oder Rechner-Angaben"
     },
     "excludes": "Nicht enthalten: Log-Texte, Namen, Benutzernamen, E-Mail-Adressen, Buchungscodes, Flüge und Orte, URLs mit Query-Strings, IP-Adressen, Rechnername, Verzeichnispfade und alle Werte aus Anfragen.",
     "previewLabel": "Vorschau – genau diese Datei wird heruntergeladen:",
@@ -73,11 +76,12 @@
     "exportFailedToast": "Issue ohne Diagnose-Paket geöffnet – der Export ist fehlgeschlagen.",
     "reasons": {
       "rateLimited": "zu viele Exporte in kurzer Zeit, bitte später erneut versuchen",
-      "forbidden": "nur Administratoren dürfen ein Diagnose-Paket erzeugen",
+      "forbidden": "für dieses Konto ist der Diagnose-Export gesperrt (geteiltes Demo-Konto)",
       "rejected": "das Paket hat die eigene Prüfliste nicht bestanden und wurde zurückgehalten",
       "network": "der Server ist nicht erreichbar",
       "server": "Serverfehler (HTTP {{status}})"
-    }
+    },
+    "scopeUser": "Du bist kein Administrator: Das Paket enthält nur deine eigenen Daten, nichts über andere Konten und nichts über den Server."
   },
   "accessibility": {
     "close": "Schließen",

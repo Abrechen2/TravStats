@@ -80,6 +80,9 @@ function PrimaryLink({
 export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const isAdmin = user?.isAdmin ?? false;
+  // Every account gets a package (admins the server-wide one, others their own);
+  // the shared demo login is refused by the server, so it is not offered.
+  const canReportBug = !(user?.isSharedDemo ?? false);
   // The avatar comes from the settings profile; the name from the auth payload.
   const profilePicture = useSettingsStore((state) => state.profile.profilePicture);
   const navigate = useNavigate();
@@ -247,7 +250,7 @@ export default function NavigationBar(): JSX.Element {
               // The bundle carries every account's log tails, so the server
               // answers it to admins only (owner, 2026-09-25); an entry that
               // always fails would be worse than none.
-              onReportBug={isAdmin ? () => setDiagnosticModalOpen(true) : undefined}
+              onReportBug={canReportBug ? () => setDiagnosticModalOpen(true) : undefined}
               isAdmin={isAdmin}
               onLogout={() => {
                 handleLogout().catch(() => undefined);
@@ -257,7 +260,7 @@ export default function NavigationBar(): JSX.Element {
         </div>
       </header>
 
-      {isAdmin && (
+      {canReportBug && (
         <DiagnosticExportModal
           isOpen={diagnosticModalOpen}
           onClose={() => setDiagnosticModalOpen(false)}

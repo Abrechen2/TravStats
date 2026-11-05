@@ -102,7 +102,7 @@ export const LOG_ERROR_CODES = [
 export type LogErrorCode = (typeof LOG_ERROR_CODES)[number];
 
 // ---------------------------------------------------------------------------
-// Diagnostic export (admin-only, attached to a public GitHub issue)
+// Diagnostic export (attached to a public GitHub issue; server-wide for admins, own data for users)
 // ---------------------------------------------------------------------------
 
 export const DIAGNOSTIC_BUNDLE_SCHEMA = "travstats-diagnostic/2";
@@ -152,14 +152,22 @@ export interface DiagnosticLogsData {
 export interface DiagnosticBundle {
   schema: typeof DIAGNOSTIC_BUNDLE_SCHEMA;
   generatedAt: string;
+  /**
+   * `server`: the admin's instance-wide package. `user`: an ordinary account's
+   * own package (owner decision 2026-11-05) — the account's own row counts and
+   * its own log lines, and none of `runtime`, `settings` or `database`.
+   */
+  scope: "server" | "user";
   app: { version: string; buildVersion: string };
-  runtime: { node: string; os: string; arch: string; uptimeSeconds: number };
-  /** Accounts that have each domain switched on. */
+  /** Server scope only. */
+  runtime?: { node: string; os: string; arch: string; uptimeSeconds: number };
+  /** Server scope: accounts that have each domain switched on. User scope: 1/0 for this account. */
   domains: DiagnosticSection<Record<string, number>>;
-  /** Non-secret instance settings: booleans, numbers and closed enums only. */
-  settings: DiagnosticSection<Record<string, boolean | number | string | null>>;
+  /** Server scope only. Non-secret instance settings: booleans, numbers and closed enums only. */
+  settings?: DiagnosticSection<Record<string, boolean | number | string | null>>;
   counts: DiagnosticSection<Record<string, number>>;
-  database: DiagnosticSection<{
+  /** Server scope only. */
+  database?: DiagnosticSection<{
     appliedMigrations: number;
     failedMigrations: number;
     latestMigration: string | null;

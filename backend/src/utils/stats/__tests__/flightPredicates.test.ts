@@ -124,6 +124,34 @@ describe("flightPredicates", () => {
       expect(crossesEquator(sinSyd)).toBe(true);
     });
 
+    // Owner 2026-11-05: a flight counts when its great-circle path crosses 0°
+    // or 180°. The path takes the shorter way round, so that is exactly "the
+    // endpoints lie on opposite sides of 0° longitude" — real coordinates below.
+    it("counts CDG → JFK (path crosses 0°), NRT → SFO (path crosses 180°) and AKL → HNL", () => {
+      const cdgJfk = { depLat: 49.0, depLon: 2.55, arrLat: 40.64, arrLon: -73.78 };
+      const nrtSfo = { depLat: 35.77, depLon: 140.39, arrLat: 37.62, arrLon: -122.38 };
+      const aklHnl = { depLat: -37.0, depLon: 174.79, arrLat: 21.32, arrLon: -157.92 };
+      for (const flight of [cdgJfk, nrtSfo, aklHnl]) {
+        expect(changesEastWestHemisphere(flight)).toBe(true);
+      }
+    });
+
+    it("does not count flights that stay on one side: LHR → JFK (LHR is west of Greenwich), FRA → MUC", () => {
+      const lhrJfk = { depLat: 51.47, depLon: -0.46, arrLat: 40.64, arrLon: -73.78 };
+      const fraMuc = { depLat: 50.03, depLon: 8.57, arrLat: 48.35, arrLon: 11.79 };
+      expect(changesEastWestHemisphere(lhrJfk)).toBe(false);
+      expect(changesEastWestHemisphere(fraMuc)).toBe(false);
+    });
+
+    it("keeps the equator rule separate: SIN → SYD crosses it, NRT → SFO does not", () => {
+      expect(crossesEquator({ depLat: 1.35, depLon: 103.99, arrLat: -33.95, arrLon: 151.18 })).toBe(
+        true
+      );
+      expect(
+        crossesEquator({ depLat: 35.77, depLon: 140.39, arrLat: 37.62, arrLon: -122.38 })
+      ).toBe(false);
+    });
+
     it("treats longitude 0 as neither hemisphere", () => {
       expect(changesEastWestHemisphere({ depLat: 51, depLon: 0, arrLat: 48, arrLon: -2 })).toBe(
         false

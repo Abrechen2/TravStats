@@ -540,14 +540,16 @@ registry.registerPath({
     "events reduced to time, level, category, event key, error code/class and " +
     "`file:line` frames. No log text, names, URLs, query strings or values. A " +
     'section that could not be collected is `{status: "failed", errorCode}`. ' +
-    "Admins only — the log spans every account on the instance.",
+    "Admins get the server-wide bundle (`scope: server`). Every other account " +
+    "gets `scope: user`: only its own row counts, domain switches and log " +
+    "lines, without the `runtime`, `settings` and `database` sections.",
   tags: miscTag,
   responses: {
     200: {
       description: "Diagnostic bundle",
       content: { "application/json": { schema: diagnosticBundleSchema } },
     },
-    403: { description: "Not an admin", content: errorContent },
+    403: { description: "The shared demo account", content: errorContent },
     429: { description: "Rate-limited", content: errorContent },
     500: {
       description: "The bundle failed its own allowlist (`DIAGNOSTIC_EXPORT_REJECTED`)",
@@ -766,6 +768,6 @@ registry.registerPath({
   tags: parseTag,
   responses: {
     200: { description: "Synced", content: templateStatusContent },
-    403: { description: "Not an admin", content: errorContent },
+    403: { description: "The shared demo account", content: errorContent },
   },
 });

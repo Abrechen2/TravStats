@@ -34,6 +34,7 @@ import {
   DiagnosticBundle,
   DiagnosticLogsData,
   DiagnosticSection,
+  LogFileEntry,
 } from "../shared/logContract";
 import { listLogFiles } from "./logManager";
 import { readLogWindow } from "./logWindow";
@@ -78,6 +79,46 @@ async function collectDomains(): Promise<Record<string, number>> {
     )
   );
   return Object.fromEntries(DOMAIN_KEYS.map((domain, i) => [domain, counts[i]]));
+}
+
+async function collectUserDomains(userId: string): Promise<Record<string, number>> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { enabledDomains: true },
+  });
+  const enabled = new Set(row?.enabledDomains ?? []);
+  return Object.fromEntries(DOMAIN_KEYS.map((domain) => [domain, enabled.has(domain) ? 1 : 0]));
+}
+
+async function collectUserCounts(userId: string): Promise<Record<string, number>> {
+  const where = { userId };
+  const [flightsByStatus, ...totals] = await Promise.all([
+    prisma.flight.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.trip.count({ where }),
+    prisma.lodging.count({ where }),
+    prisma.cruise.count({ where }),
+    prisma.place.count({ where }),
+    prisma.tripRoute.count({ where }),
+    prisma.railJourney.count({ where }),
+    prisma.document.count({ where }),
+    prisma.pendingFlightUpdate.count({ where: { userId, status: "pending" } }),
+  ]);
+  const names = [
+    "trips",
+    "lodgings",
+    "cruises",
+    "places",
+    "tourRoutes",
+    "railJourneys",
+    "documents",
+    "pendingFlightUpdates",
+  ];
+  const counts: Record<string, number> = Object.fromEntries(names.map((n, i) => [n, totals[i]]));
+  for (const row of flightsByStatus as Array<{ status: string; _count: { _all: number } }>) {
+    const status = /^[a-z_]{1,30}$/.test(row.status) ? row.status : "other";
+    counts[`flights_${status}`] = (counts[`flights_${status}`] ?? 0) + row._count._all;
+  }
+  return counts;
 }
 
 async function collectSettings(): Promise<Record<string, SettingValue>> {
@@ -140,15 +181,30 @@ async function collectDatabase(): Promise<{
   };
 }
 
-async function collectLogs(): Promise<DiagnosticLogsData> {
+/**
+ * Whether a raw log line was written on behalf of this account. Request lines
+ * carry `context.userId`, other operations a top-level `userId`; a line with
+ * neither (jobs, boot, other accounts) is not this user's and is left out.
+ */
+function isLineOfUser(entry: LogFileEntry, userId: string): boolean {
+  const context = entry.context;
+  const contextUserId =
+    context && typeof context === "object" ? (context as { userId?: unknown }).userId : undefined;
+  return entry.userId === userId || contextUserId === userId;
+}
+
+async function collectLogs(userId?: string): Promise<DiagnosticLogsData> {
   const [files, app, errors] = await Promise.all([
-    listLogFiles(),
+    // File names and sizes describe the server's disk, not this account.
+    userId ? Promise.resolve([]) : listLogFiles(),
     readLogWindow("app", APP_WINDOW_MS),
     readLogWindow("error", ERROR_WINDOW_MS),
   ]);
+  const own = (entries: LogFileEntry[]): LogFileEntry[] =>
+    userId ? entries.filter((entry) => isLineOfUser(entry, userId)) : entries;
   // Newest kept: the lines around the error being reported.
-  const recent = toDiagnosticLogEvents(app.entries).slice(-MAX_EVENTS);
-  const errorEvents = toDiagnosticLogEvents(errors.entries).slice(-MAX_EVENTS);
+  const recent = toDiagnosticLogEvents(own(app.entries)).slice(-MAX_EVENTS);
+  const errorEvents = toDiagnosticLogEvents(own(errors.entries)).slice(-MAX_EVENTS);
   return {
     files: files.map((file) => ({
       stream: file.category,
@@ -179,6 +235,7 @@ export async function buildDiagnosticBundle(): Promise<DiagnosticBundle> {
   const bundle: DiagnosticBundle = {
     schema: DIAGNOSTIC_BUNDLE_SCHEMA,
     generatedAt: new Date().toISOString(),
+    scope: "server",
     app: { version: appVersion, buildVersion },
     runtime: {
       node: process.version,
@@ -192,6 +249,33 @@ export async function buildDiagnosticBundle(): Promise<DiagnosticBundle> {
     database,
     logs,
   };
+  return checkedBundle(bundle);
+}
+
+/**
+ * The package an ordinary account may download (owner decision 2026-11-05):
+ * its own row counts, its own domain switches and the log lines written on its
+ * behalf — no other account's data, no instance settings, no database or
+ * runtime details. The same allowlist reduction applies to the log lines.
+ */
+export async function buildUserDiagnosticBundle(userId: string): Promise<DiagnosticBundle> {
+  const [domains, counts, logs] = await Promise.all([
+    section("domains", () => collectUserDomains(userId)),
+    section("counts", () => collectUserCounts(userId)),
+    section("logs", () => collectLogs(userId)),
+  ]);
+  return checkedBundle({
+    schema: DIAGNOSTIC_BUNDLE_SCHEMA,
+    generatedAt: new Date().toISOString(),
+    scope: "user",
+    app: { version: appVersion, buildVersion },
+    domains,
+    counts,
+    logs,
+  });
+}
+
+function checkedBundle(bundle: DiagnosticBundle): DiagnosticBundle {
   // Any key or shape outside the allowlist is refused, not published. A 500
   // with its own code, not the validation 400 a ZodError would become: the
   // request was fine, the server built something it must not send.
