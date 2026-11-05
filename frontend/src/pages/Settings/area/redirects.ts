@@ -264,6 +264,13 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
   const match = first(target.match, params.get("match"));
   if (match) query.set("match", match);
   if (target.expert || params.get("expert") === "1") query.set("expert", "1");
+  // The map's gear carries the shown range to export and delete.
+  if (page === "travtrack") {
+    for (const key of ["from", "until"]) {
+      const value = params.get(key);
+      if (value) query.set(key, value);
+    }
+  }
 
   const search = query.toString();
   return {

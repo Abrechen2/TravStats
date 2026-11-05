@@ -87,6 +87,8 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
   }, [load]);
 
   const canWrite = !isDemo && caps?.enabled === true;
+  // Removing stays possible while the area is off but data is held, as the API allows.
+  const canDelete = !isDemo && caps !== null && (caps.enabled || caps.hasData);
 
   const saveDraft = async (draft: PlaceDraft): Promise<void> => {
     const target = editing;
@@ -181,7 +183,7 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                           {t(`${NS}.edit`)}
                         </Button>
                       ) : null}
-                      {canWrite && place.kind !== "home" ? (
+                      {canDelete && place.kind !== "home" ? (
                         <Button
                           disabled={remove.busy}
                           aria-label={`${t(`${NS}.remove`)}: ${place.name}`}
