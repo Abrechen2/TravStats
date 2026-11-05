@@ -35,6 +35,7 @@ import { isTransientSaveError } from "../../lib/saveErrorMessage";
 import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
 import LegModeChips from "./LegModeChips";
+import Toggletip from "../ui/Toggletip";
 import StationMarker from "./StationMarker";
 import { useLodgingLibrary } from "./StayPicker";
 import {
@@ -490,14 +491,12 @@ export default function StationEditor({
       )}
 
       {nights.placesSlept > 0 && (
-        <p
-          className="t-caption"
-          data-testid="editor-nights"
-          title={nights.nightsKnown ? undefined : t("roadtrips:editor.nightsApprox")}
-          style={{ fontWeight: 700 }}
-        >
+        <p className="t-caption" data-testid="editor-nights" style={{ fontWeight: 700 }}>
           {nights.nightsKnown ? "" : "≈ "}
           {t("roadtrips:editor.nightsTotal", { count: nights.nights, places: nights.placesSlept })}
+          {nights.nightsKnown ? null : (
+            <Toggletip content={t("roadtrips:editor.nightsApprox")} position="top" />
+          )}
         </p>
       )}
 

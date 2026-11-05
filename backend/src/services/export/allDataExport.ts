@@ -107,6 +107,10 @@ export const USER_EXPORT_SELECT = {
   // Catalogue chains (no owner) are re-seeded and stay out.
   lodgingChains: true,
   places: true,
+  // The user's own place categories and stay-rating categories: a place or a
+  // rating names them by id (`custom:<id>`), so the labels travel with the records.
+  placeCategories: true,
+  lodgingRatingCategories: true,
   // The other OSM/Google references a place answers to after a merge
   // (forgejo#232): without them a re-import of the export's source would
   // bring the merged duplicate back.

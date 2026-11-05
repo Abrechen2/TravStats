@@ -101,7 +101,15 @@ const lodgingStats = {
     byBoard: [],
     awardNightsValue: 240,
   },
-  ratings: { byChain: [], byCountry: [], byType: [], byStars: [], bestValue: [], worstValue: [] },
+  ratings: {
+    byCategory: [],
+    byChain: [],
+    byCountry: [],
+    byType: [],
+    byStars: [],
+    bestValue: [],
+    worstValue: [],
+  },
   geo: {
     continents: ["Europe", "Asia"],
     continentsCount: 2,
@@ -135,6 +143,11 @@ const ratedStats = {
     avgRoom: 4,
     avgBreakfast: 3.5,
     avgService: 4.5,
+    byCategory: [
+      { key: "room", avg: 4, count: 6 },
+      { key: "breakfast", avg: 3.5, count: 6 },
+      { key: "service", avg: 4.5, count: 6 },
+    ],
     ratedStays: 6,
     unratedStays: 3,
   },

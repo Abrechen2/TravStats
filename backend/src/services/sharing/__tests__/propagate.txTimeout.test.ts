@@ -21,7 +21,7 @@ const PROPAGATES = /\b(propagateWrites?|propagateDeletes?|propagateBulk)\(/;
 const CALL = /\.\$transaction\(\s*async\b/g;
 
 const FROZEN: Record<string, number> = {
-  "routes/bus.ts": 3,
+  "routes/bus.ts": 2,
   "routes/cruises.ts": 2,
   "routes/ferry/roadtrip.ts": 1,
   "routes/flights/remove.ts": 1,
@@ -29,7 +29,7 @@ const FROZEN: Record<string, number> = {
   "routes/flightsBatch.ts": 1,
   "routes/lodging/stays.ts": 1,
   "routes/lodging.ts": 1,
-  "routes/rail.ts": 3,
+  "routes/rail.ts": 2,
   "routes/rental.ts": 1,
   "routes/trips/tourRoutes.ts": 1,
   "routes/trips/tripBookings.ts": 1,
