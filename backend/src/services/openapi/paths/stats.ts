@@ -80,10 +80,15 @@ const statsResponse = registry.register(
             .describe(
               "Distinct days a station of a started roadtrip attests: a night station its span, a station driven through its day"
             ),
+          rail: z
+            .number()
+            .describe(
+              "Distinct days a counted train ride departed or arrived, each on its station's calendar"
+            ),
           total: z
             .number()
             .describe(
-              "The UNION of the five day sets — never their sum; a day with a flight and a hotel night is one day"
+              "The UNION of the six day sets — never their sum; a day with a flight and a hotel night is one day"
             ),
         })
         .describe(
@@ -92,11 +97,13 @@ const statsResponse = registry.register(
             "that HAPPENED there: a flight counts its departure day and its arrival day; a cruise " +
             "every day from departure to arrival inclusive; a lodging stay every day from check-in " +
             "to check-out inclusive; a place visit its visit day; a roadtrip station the days it " +
-            "attests. Only records that count under " +
+            "attests; a counted train ride (rail domain switched on) its departure and arrival " +
+            "day on its stations' calendars. Only records that count under " +
             "the shared counting rules contribute (flown or historical flights, sailed cruises, " +
             "stays whose check-out is past and not cancelled, visits dated no later than today). " +
-            "A day is the UTC date of the stored instant, for every domain alike. `total` is the " +
-            "size of the union of the five sets. A record with no usable date contributes no day. " +
+            "A day is the UTC date of the stored instant, except a train ride, whose days " +
+            "are read on its stations' clocks. `total` is the " +
+            "size of the union of the six sets. A record with no usable date contributes no day. " +
             "Scoped exactly like the flight figures beside it: with `year`, the year's days."
         ),
       scope: statsScopeSchema.optional().describe("Absent inside `current`/`compare`"),

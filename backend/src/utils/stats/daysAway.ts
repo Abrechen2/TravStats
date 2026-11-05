@@ -18,9 +18,13 @@
  * - a lodging stay counts every day from check-in to check-out, inclusive;
  * - a place visit counts its visit day;
  * - a roadtrip station counts the days it attests (`attestStation`): its
- *   whole span for a night, its one day for a station driven through.
+ *   whole span for a night, its one day for a station driven through;
+ * - a train ride counts its departure day and its arrival day, each on its
+ *   STATION'S calendar (`railDayKeys`) — the loader reduces it, as it does a
+ *   roadtrip station, because a night train's two days only exist on the
+ *   stations' clocks.
  *
- * `total` is the size of the UNION of the five day sets — never their sum. A
+ * `total` is the size of the UNION of the six day sets — never their sum. A
  * day with a flight in the morning and a hotel at night is one day away, and
  * reporting it as two is precisely the cross-domain addition the charter
  * forbids.
@@ -44,7 +48,7 @@
  * `shared/lodgingCounting.ts`, `shared/placeCounting.ts`, and the sailed
  * predicate the cruise statistics use). The loader applies those and hands
  * this function only the records that passed. This function is pure: dates in,
- * five numbers out, so the overlap arithmetic can be tested without a
+ * six numbers out, so the overlap arithmetic can be tested without a
  * database.
  *
  * ## Abstention
@@ -96,6 +100,8 @@ export interface DaysAwayInput {
    * many it attests, and that rule lives in `services/stats/roadtripEvidence.ts`.
    */
   roadtrips?: readonly { days: readonly string[] }[];
+  /** Counted train rides, each already reduced to its station-local ISO days. */
+  rail?: readonly { days: readonly string[] }[];
   window?: DayWindow | null;
 }
 
@@ -105,7 +111,8 @@ export interface DaysAway {
   lodging: number;
   place: number;
   roadtrip: number;
-  /** The union of the five sets above — never their sum. */
+  rail: number;
+  /** The union of the six sets above — never their sum. */
   total: number;
 }
 
@@ -160,12 +167,15 @@ export function computeDaysAway(input: DaysAwayInput): DaysAway {
 
   const roadtrip = collect((input.roadtrips ?? []).map((station) => [...station.days]));
 
+  const rail = collect((input.rail ?? []).map((ride) => [...ride.days]));
+
   return {
     flight: flight.size,
     cruise: cruise.size,
     lodging: lodging.size,
     place: place.size,
     roadtrip: roadtrip.size,
-    total: new Set([...flight, ...cruise, ...lodging, ...place, ...roadtrip]).size,
+    rail: rail.size,
+    total: new Set([...flight, ...cruise, ...lodging, ...place, ...roadtrip, ...rail]).size,
   };
 }

@@ -73,26 +73,92 @@ function makeFlight(opts: {
   };
 }
 
-let originalTz: string | undefined;
+/**
+ * Pretend the machine runs in `tz`.
+ *
+ * Assigning `process.env.TZ` inside a Jest worker does NOT move the zone: the
+ * sandbox's `process.env` is a copy, so Node never hears of it. Measured on
+ * 2026-11-05 — `getHours()` of one instant returned 5 under "UTC",
+ * "Europe/Berlin" and "Asia/Singapore" alike — which made every
+ * "same under UTC and Berlin" assertion here compare a run with itself. The
+ * host-local getters are therefore replaced by readings taken in `tz` through
+ * Intl, so any code that still asks the host's clock gives a different answer
+ * per zone (the real-zone runs are the odd-zone CI jobs).
+ */
+const HOST_GETTERS = [
+  "getFullYear",
+  "getMonth",
+  "getDate",
+  "getDay",
+  "getHours",
+  "getMinutes",
+  "getSeconds",
+] as const;
 
-beforeAll(() => {
-  originalTz = process.env.TZ;
-});
-
-afterAll(() => {
-  // `process.env.TZ = undefined` writes the STRING "undefined", which Node
-  // cannot parse as a zone and falls back to UTC for — so this file would have
-  // silently moved every suite that ran after it off the machine's clock.
-  // Deleting is the only way to restore "was not set".
-  if (originalTz === undefined) delete process.env.TZ;
-  else process.env.TZ = originalTz;
-});
-
-/** Run the engine with the process clock set to `tz`. */
-async function statsUnder(tz: string, flights: FlightData[]): Promise<UserStats> {
-  process.env.TZ = tz;
-  return calculateUserStats(flights);
+function hostGetterIn(tz: string, name: (typeof HOST_GETTERS)[number]): (this: Date) => number {
+  const part = {
+    getFullYear: "year",
+    getMonth: "month",
+    getDate: "day",
+    getHours: "hour",
+    getMinutes: "minute",
+    getSeconds: "second",
+  } as const;
+  return function (this: Date): number {
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      weekday: "short",
+    });
+    const parts = Object.fromEntries(
+      fmt.formatToParts(this).map((p) => [p.type, p.value])
+    ) as Record<string, string>;
+    if (name === "getDay")
+      return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
+    const n = Number(parts[part[name]]);
+    return name === "getMonth" ? n - 1 : n;
+  };
 }
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+/** Run the engine as if the machine's clock were `tz`. */
+async function statsUnder(tz: string, flights: FlightData[]): Promise<UserStats> {
+  for (const name of HOST_GETTERS) {
+    jest.spyOn(Date.prototype, name).mockImplementation(hostGetterIn(tz, name));
+  }
+  try {
+    return await calculateUserStats(flights);
+  } finally {
+    jest.restoreAllMocks();
+  }
+}
+
+/** Guard: the simulated host zone really moves the host-local getters. */
+describe("statsUnder — the simulated host zone is effective", () => {
+  it("makes getHours() differ between zones, which process.env.TZ never did in Jest", () => {
+    const at = new Date("2024-04-10T03:30:00Z");
+    const hours = (tz: string): number => {
+      const spy = jest
+        .spyOn(Date.prototype, "getHours")
+        .mockImplementation(hostGetterIn(tz, "getHours"));
+      try {
+        return at.getHours();
+      } finally {
+        spy.mockRestore();
+      }
+    };
+    expect([hours("UTC"), hours("Europe/Berlin"), hours("Asia/Singapore")]).toEqual([3, 5, 11]);
+  });
+});
 
 interface Buckets {
   nightFlights: number;

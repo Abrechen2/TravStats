@@ -32,6 +32,8 @@ import { stayNamesExactDays } from "../../shared/lodgingTiming";
 import { classifyVisit } from "../../shared/placeCounting";
 import { computeDaysAway, type DayWindow, type DaysAway } from "../../utils/stats/daysAway";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
+import { countableRailWhere, railDayKeys } from "../../shared/railCounting";
+import { loadVisibleDomainSet } from "../domainVisibility";
 import { attestStation, roadtripHasStarted } from "./roadtripEvidence";
 
 /** The sailed predicate — the cut `/stats/cruise` and the passport make. */
@@ -110,11 +112,51 @@ function pointTouches(col: string, window: DayWindow | null): Record<string, unk
   };
 }
 
+/** A ride's days sit on its stations' calendars, up to a day off UTC either way. */
+function padWindow(window: DayWindow | null): DayWindow | null {
+  if (window === null) return null;
+  const shift = (day: string | undefined, by: number): string | undefined =>
+    day === undefined
+      ? undefined
+      : new Date(Date.parse(`${day}T00:00:00Z`) + by * DAY_MS).toISOString().slice(0, 10);
+  return { from: shift(window.from, -1), to: shift(window.to, 1) };
+}
+
+/**
+ * A ride always has a departure, so unlike `spanTouches` there is no
+ * "start missing" branch (Prisma rejects a null filter on a required column);
+ * a missing arrival is read as the departure.
+ */
+function railTouches(window: DayWindow | null): Prisma.RailJourneyWhereInput {
+  const { from, to } = windowInstants(window);
+  const clauses: Prisma.RailJourneyWhereInput[] = [];
+  if (to !== null) clauses.push({ departureTime: { lt: to } });
+  if (from !== null) {
+    clauses.push({
+      OR: [{ arrivalTime: { gte: from } }, { arrivalTime: null, departureTime: { gte: from } }],
+    });
+  }
+  return clauses.length > 0 ? { AND: clauses } : {};
+}
+
 export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): Promise<DaysAway> {
   const window = daysAwayWindow(scope);
   const now = new Date();
+  // Rail counts only for a user who has the domain switched on — the same gate
+  // the travel account and the cross-domain statistics pass.
+  const railVisible = (await loadVisibleDomainSet(userId)).has("rail");
 
-  const [flights, cruises, stays, visits, roadtrips] = await Promise.all([
+  const [rail, flights, cruises, stays, visits, roadtrips] = await Promise.all([
+    railVisible
+      ? prisma.railJourney.findMany({
+          where: {
+            userId,
+            ...countableRailWhere(),
+            ...railTouches(padWindow(window)),
+          },
+          select: { departureTime: true, arrivalTime: true, depTimezone: true, arrTimezone: true },
+        })
+      : Promise.resolve([]),
     prisma.flight.findMany({
       where: {
         userId,
@@ -200,6 +242,7 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
     roadtrips: roadtrips
       .filter((route) => roadtripHasStarted(route.stops, now))
       .flatMap((route) => route.stops.flatMap((stop) => attestStation(stop, now) ?? [])),
+    rail: rail.map((ride) => ({ days: railDayKeys(ride) })),
     window,
   });
 }
