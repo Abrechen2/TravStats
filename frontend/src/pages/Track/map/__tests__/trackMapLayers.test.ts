@@ -218,6 +218,23 @@ describe("buildTrackLayers opacity with stable data (forgejo#351)", () => {
     );
   });
 
+  it("the picked leg keeps its speed colours over a halo instead of turning one flat colour", () => {
+    const leg: Array<[number, number, number, number | null]> = [
+      [1_000, 52.5, 13.4, 5],
+      [61_000, 52.51, 13.41, 5],
+    ];
+    const speed = buildTrackLayers(
+      input({ color: "speed", selection: [[[13.4, 52.5]]], selectionSegments: [leg] })
+    ).map((l) => l.id);
+    expect(speed).toContain("track-leg-selected");
+    expect(speed).toContain("track-leg-selected-speed");
+    const plain = buildTrackLayers(
+      input({ color: "plain", selection: [[[13.4, 52.5]]], selectionSegments: [leg] })
+    ).map((l) => l.id);
+    expect(plain).toContain("track-leg-selected-plain");
+    expect(plain).not.toContain("track-leg-selected-speed");
+  });
+
   it("stops are markers on the visits switch; leg lines are pickable only with a handler", () => {
     const stops = [{ date: "d", fromMs: 1, lat: 1, lon: 1, selected: false, stay: null }];
     const legLines = [{ id: "a", date: "d", path: [[1, 1]] as [number, number][] }];

@@ -75,6 +75,7 @@ export default function TrackTotalsPanel({
       collapsed={collapsed}
       onToggle={onToggle}
       coarse={coarse}
+      style={{ flexShrink: 0 }}
     >
       <dl className="grid grid-cols-3 gap-2" data-testid="track-totals">
         {shown.map(([key, value]) => (

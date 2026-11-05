@@ -33,6 +33,7 @@ import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeomet
 import {
   legFrame,
   legLines,
+  legSegments,
   stageFitPadding,
   totalsFromAggregates,
   type TrackSelection,
@@ -63,6 +64,7 @@ type Loaded = Extract<DayResult, { kind: "loaded" }>;
 const NO_STRETCHES: TrackPoint[][] = [];
 const NO_SHAPES: Feature<Geometry>[] = [];
 const NO_LINES: LonLat[][] = [];
+const NO_SEGMENTS: TrackPoint[][] = [];
 const NO_LEG_LINES: MapLegLine[] = [];
 const NO_POINTS: MapPoint[] = [];
 
@@ -262,6 +264,13 @@ export default function TrackMapView(): JSX.Element {
       resolved?.kind === "leg" && !replaying ? legLines(resolved.day, resolved.leg) : NO_LINES,
     [resolved, replaying]
   );
+  const selectedSegments = useMemo(
+    () =>
+      resolved?.kind === "leg" && !replaying
+        ? legSegments(resolved.day, resolved.leg)
+        : NO_SEGMENTS,
+    [resolved, replaying]
+  );
   const legKey = resolved?.kind === "leg" ? `${resolved.day.date}|${resolved.leg.id}` : null;
   // The leg's own vertices, from the day's stretches its ranges index.
   const legPoints = useMemo<readonly MapPoint[]>(() => {
@@ -454,7 +463,7 @@ export default function TrackMapView(): JSX.Element {
       collapsed={layersFolded ?? narrow}
       onToggle={() => setLayersFolded(!(layersFolded ?? narrow))}
       coarse={coarse}
-      bodyStyle={{ maxHeight: "calc(100dvh - 440px)" }}
+      style={{ flexShrink: 1 }}
     >
       <TrackLayersPanel
         prefs={prefs}
@@ -525,6 +534,7 @@ export default function TrackMapView(): JSX.Element {
               frameLines={framed}
               highlight={highlight}
               selection={selectedLines}
+              selectionSegments={selectedSegments}
               legLines={replaying ? NO_LEG_LINES : legLineList}
               onLeg={onLeg}
               stops={stopList}
@@ -597,10 +607,10 @@ export default function TrackMapView(): JSX.Element {
 
         {/* Left: layers, then the day in numbers. */}
         <div
-          className="pointer-events-none absolute left-3 top-3 z-[5] flex flex-col gap-3 overflow-y-auto"
+          className="pointer-events-none absolute left-3 top-3 z-[5] flex flex-col"
           style={{ width: narrow ? 240 : 300, maxHeight: "calc(100% - 48px)" }}
         >
-          <div className="pointer-events-auto flex flex-col gap-3">
+          <div className="pointer-events-auto flex min-h-0 flex-col gap-3">
             {layersPanel}
             <TrackTotalsPanel
               totals={totals}
