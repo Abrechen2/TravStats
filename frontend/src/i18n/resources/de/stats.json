@@ -102,7 +102,7 @@
         "exclusions": "Umwege und Warteschleifen sind nicht enthalten – die Luftlinie ist eine Untergrenze. Geplante und stornierte Flüge zählen nicht."
       },
       "flightTime": {
-        "unit": "Stunden in der Luft, summiert über die Flüge.",
+        "unit": "Flugzeit in Stunden (Abflug bis Ankunft), summiert über die Flüge.",
         "time": "Der Flugtag nach dem Kalender des Abflughafens. „Letzte 12 Monate“: die zwölf ganzen Monate bis einschließlich des laufenden, gegen die zwölf davor; „Jahr“: das Kalenderjahr gegen das ganze Vorjahr; „Insgesamt“: ohne Vergleich.",
         "source": "Gemessen aus Abflug- und Ankunftszeit, wo ein geflogener Flug beide trägt; sonst aus der Entfernung geschätzt – dieselbe Regel wie die Übersicht.",
         "coverage": "Ein Flug ohne Uhrzeiten zählt mit einer Schätzung, nicht mit 0. Ein Tipp auf die Zahl zeigt die Flüge mit ihrer Dauer.",
@@ -789,7 +789,7 @@
     "distanceTraveled": "Zurückgelegte Distanz",
     "totalFlights": "Flüge",
     "totalDistance": "Gesamtdistanz",
-    "totalFlightTime": "Stunden in der Luft",
+    "totalFlightTime": "Flugstunden",
     "yearsActive": "Jahre dabei",
     "topAirline": "Lieblings-Airline",
     "favoriteRoute": "Häufigste Route",
@@ -1359,6 +1359,27 @@
         "source": "Hafenstopps gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) mit ihrer Ausflugsnotiz – auch an einem nicht erkannten Hafen.",
         "coverage": "Fehlt sie, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab. Tippe auf die Zahl für die Liste.",
         "exclusions": "Seetage, gebuchte und stornierte Kreuzfahrten zählen nicht."
+      },
+      "airborne": {
+        "unit": "Zähleinheit: Minuten zwischen Abheben und Aufsetzen, angezeigt als Dauer; die Summe über alle Flüge, die beide Zeiten tragen. Das ist nicht die Flugzeit der Übersicht, die von der Parkposition bis zur Parkposition misst.",
+        "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+        "source": "Abheb- und Aufsetzzeit, die der Datendienst (AeroDataBox) liefert. Geflogene und nachgetragene Flüge.",
+        "coverage": "Nur Flüge mit beiden Zeiten gehen ein; die Zeile nennt, aus wie vielen von allen gezählten Flügen die Summe stammt. Es wird nichts hochgerechnet und keine Blockzeit eingesetzt.",
+        "exclusions": "Nicht enthalten: Flüge ohne Abheb- oder Aufsetzzeit, Flüge, deren Aufsetzzeit vor dem Abheben liegt, geplante und stornierte Flüge."
+      },
+      "overflown": {
+        "unit": "Zähleinheit: ein Land auf der aufgezeichneten Flugstrecke; jedes Land zählt einmal, egal wie oft du es überflogen hast.",
+        "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+        "source": "Die Länder, die der Datendienst zur Flugstrecke gespeichert hat. Geflogene und nachgetragene Flüge.",
+        "coverage": "Nur Flüge mit gespeicherter Strecke tragen Länder; die Zeile nennt, wie viele. Länder von Start und Ziel sind enthalten, wenn der Dienst sie mitgeliefert hat – es ist keine Liste „nur überflogener“ Länder.",
+        "exclusions": "Nicht enthalten: Flüge ohne gespeicherte Streckenländer, geplante und stornierte Flüge."
+      },
+      "codeshare": {
+        "unit": "Zähleinheit: ein Flug, den der Datendienst als Codeshare kennzeichnet, im Verhältnis zu allen Flügen, bei denen er das sagt. Darunter die Fluggesellschaften, die diese Flüge tatsächlich geflogen haben.",
+        "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+        "source": "Die Codeshare-Kennzeichnung und die ausführende Fluggesellschaft aus dem Datendienst. Geflogene und nachgetragene Flüge.",
+        "coverage": "Bei Flügen ohne Angabe ist unbekannt, ob es ein Codeshare war – sie stehen weder im Zähler noch im Nenner. Ein Codeshare ohne genannte ausführende Gesellschaft zählt mit, steht aber nicht in der Liste.",
+        "exclusions": "Nicht enthalten: Flüge ohne Codeshare-Angabe, geplante und stornierte Flüge."
       }
     },
     "cruise": {
@@ -1439,6 +1460,25 @@
         "onFootRecorded": "{{km}} zu Fuß aufgezeichnet",
         "recorded": "{{km}} aufgezeichnet",
         "planned": "{{km}} geplant (ohne Aufzeichnung)"
+      }
+    },
+    "recorded": {
+      "title": "Aus den Flugdaten",
+      "coverage": "aus {{flights}} von {{of}} Flügen",
+      "coverageKnown": "bei {{known}} von {{of}} Flügen bekannt",
+      "airborne": {
+        "label": "Zeit in der Luft"
+      },
+      "overflown": {
+        "label": "Länder auf der Flugstrecke",
+        "count_one": "{{count}} Land",
+        "count_other": "{{count}} Länder"
+      },
+      "codeshare": {
+        "label": "Codeshare",
+        "share_one": "{{count}} von {{known}} Flügen ({{pct}}) als Codeshare",
+        "share_other": "{{count}} von {{known}} Flügen ({{pct}}) als Codeshare",
+        "operators": "Tatsächlich geflogen mit:"
       }
     }
   },

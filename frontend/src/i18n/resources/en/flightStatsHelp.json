@@ -8,7 +8,7 @@
       "exclusions": "Not included: planned and cancelled flights, and drafts (duplicates)."
     },
     "flightTime": {
-      "unit": "Counting unit: minutes in the air, shown in hours; the sum over all counted flights. Where no times exist, the duration is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes for taxi, climb and descent. The footnote says how many hours and flights are estimated.",
+      "unit": "Counting unit: minutes of flight time (departure to arrival), shown in hours; the sum over all counted flights. Where no times exist, the duration is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes for taxi, climb and descent. The footnote says how many hours and flights are estimated.",
       "time": "All years together, regardless of the year filter. Measured between the real departure and arrival instants, taking both airports' time zones into account.",
       "source": "Flown and historical flights: the duration the server computed time-zone-aware, otherwise departure and arrival time, otherwise the coordinates of both airports.",
       "coverage": "Only flights with real times at both ends are measured; a flight that carries only a date contributes an estimate. Adding the times turns the estimate into a measurement.",
@@ -45,7 +45,7 @@
       "exclusions": "Not included: planned and cancelled flights, drafts, and flights without a departure date. A flight with the same departure and destination airport contributes 0 km."
     },
     "flightTime": {
-      "unit": "Counting unit: minutes in the air, shown in hours; the sum over the year's flights. Without real times, it is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes.",
+      "unit": "Counting unit: minutes of flight time (departure to arrival), shown in hours; the sum over the year's flights. Without real times, it is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes.",
       "time": "The year is that of the departure day at the departure airport. Measured between the departure and arrival instants, time-zone-aware across both airports.",
       "source": "Flown and historical flights: the stored duration or one computed from the times, otherwise the coordinates of both airports.",
       "coverage": "Only flown flights with real times are measured. Historical flights always enter here as an estimate, because their times are often placeholders.",

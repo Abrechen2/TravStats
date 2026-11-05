@@ -171,6 +171,9 @@ import {
   resolveFlightNewConnectionsCount,
   resolveFlightRepeatedConnectionsCount,
   resolveFlightTransferCount,
+  resolveFlightAirborneMinutes,
+  resolveFlightOverflownCountriesCount,
+  resolveFlightCodeshareCount,
 } from "./metricEvidenceFlightInsights";
 import {
   resolveCruiseNewPortsCount,
@@ -370,6 +373,9 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   flightNewConnectionsCount: resolveFlightNewConnectionsCount,
   flightRepeatedConnectionsCount: resolveFlightRepeatedConnectionsCount,
   flightTransferCount: resolveFlightTransferCount,
+  flightAirborneMinutes: resolveFlightAirborneMinutes,
+  flightOverflownCountriesCount: resolveFlightOverflownCountriesCount,
+  flightCodeshareCount: resolveFlightCodeshareCount,
   cruiseNewPortsCount: resolveCruiseNewPortsCount,
   cruisePortRevisitCount: resolveCruisePortRevisitCount,
   cruiseMeasuredPortStayCount: resolveCruiseMeasuredPortStayCount,

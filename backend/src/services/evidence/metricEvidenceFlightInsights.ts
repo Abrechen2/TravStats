@@ -6,11 +6,16 @@ import { flightDistinctEvidence, flightSumEvidence } from "./flightMeasureRespon
 import { readYearScope } from "./domainMeasureResponse";
 import { airportVisits, firstVisits } from "../stats/flightInsights/airports";
 import { connectionFlights, firstFlights } from "../stats/flightInsights/connections";
-import { loadFlightInsightRows, type FlightInsightRow } from "../stats/flightInsights/rows";
+import { airborneMinutesOf, overflownOf } from "../stats/flightInsights/recordedFields";
+import {
+  isCountedRow,
+  loadFlightInsightRows,
+  type FlightInsightRow,
+} from "../stats/flightInsights/rows";
 import { foldTransfers } from "../stats/flightInsights/transfers";
 
 /**
- * The four served flight-insight measures (forgejo#256). Each walks the fold
+ * The seven served flight-insight measures (forgejo#256). Each walks the fold
  * the section's figure comes from (`services/stats/flightInsights/`) over the
  * same load, so the panel names exactly the flights the tile counted.
  *
@@ -131,4 +136,67 @@ export async function resolveFlightTransferCount(
     page,
     rows: rows.filter((r) => arriving.has(r.id)),
   });
+}
+
+/** Evidence for the recorded-fields block: lifetime only, counted flights only. */
+async function countedRows(
+  userId: string,
+  key: string,
+  scope: EvidenceScope
+): Promise<FlightInsightRow[]> {
+  if (scope.period.kind !== "allTime") {
+    throw new AppError(
+      `${key} evidence only supports period=allTime; got period=${scope.period.kind}.`,
+      400
+    );
+  }
+  return (await loadFlightInsightRows(userId)).filter(isCountedRow);
+}
+
+export async function resolveFlightAirborneMinutes(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "flightAirborneMinutes";
+  const measured = (await countedRows(userId, key, scope)).filter(
+    (r) => airborneMinutesOf(r) !== null
+  );
+  return flightSumEvidence({
+    userId,
+    key,
+    unit: "minutes",
+    scope,
+    page,
+    rows: measured,
+    contributionOf: (r) => airborneMinutesOf(r) ?? 0,
+  });
+}
+
+export async function resolveFlightOverflownCountriesCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "flightOverflownCountriesCount";
+  const rows = (await countedRows(userId, key, scope)).filter((r) => overflownOf(r).length > 0);
+  return flightDistinctEvidence({
+    userId,
+    key,
+    unit: "countries",
+    scope,
+    page,
+    rows,
+    creditsOf: overflownOf,
+  });
+}
+
+export async function resolveFlightCodeshareCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "flightCodeshareCount";
+  const rows = (await countedRows(userId, key, scope)).filter((r) => r.isCodeshare === true);
+  return flightSumEvidence({ userId, key, unit: "flights", scope, page, rows });
 }

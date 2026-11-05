@@ -34,4 +34,10 @@ export const FLIGHT_INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   flightRepeatedConnectionsCount: insight("distinct", "connections", ["year"]),
   /** Measured changes of planes within one booking, filed under the landing's year. */
   flightTransferCount: insight("sum", "transfers", ["allTime", "year"]),
+  /** Wheels-off to wheels-on minutes, over the counted flights that carry both runway times. */
+  flightAirborneMinutes: insight("sum", "minutes", ["allTime"]),
+  /** Countries on the flight path as recorded, over the flights that recorded any. */
+  flightOverflownCountriesCount: insight("distinct", "countries", ["allTime"]),
+  /** Counted flights the provider marked as a codeshare. */
+  flightCodeshareCount: insight("sum", "flights", ["allTime"]),
 };

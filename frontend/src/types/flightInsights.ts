@@ -118,5 +118,20 @@ export interface FlightInsights {
     longest: MeasuredTransfer | null;
     coverage: TransferCoverage;
   };
+  /** Fields only enriched flights carry; each is null when no counted flight has it. */
+  recorded: RecordedFields;
   story: FlightYearStory | null;
+}
+
+export interface RecordedFields {
+  /** Wheels-off to wheels-on, not block time. `flights` of `of` counted flights carry it. */
+  airborne: { minutes: number; flights: number; of: number } | null;
+  overflown: { countries: string[]; flights: number; of: number } | null;
+  codeshare: {
+    codeshare: number;
+    /** Flights whose provider said codeshare or not. */
+    known: number;
+    of: number;
+    operators: Array<{ name: string; flights: number }>;
+  } | null;
 }

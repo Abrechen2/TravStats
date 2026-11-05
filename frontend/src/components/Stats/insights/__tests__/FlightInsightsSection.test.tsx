@@ -101,6 +101,7 @@ const INSIGHTS: FlightInsights = {
       notFlown: 0,
     },
   },
+  recorded: { airborne: null, overflown: null, codeshare: null },
   story: {
     year: 2024,
     availableYears: [2014, 2024],

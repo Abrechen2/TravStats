@@ -464,5 +464,8 @@
   "evidence.metric.co2FerryKg": "CO₂ ferry (estimate)",
   "evidence.metric.co2CruiseKg": "CO₂ cruise (estimate, lower bound)",
   "evidence.metric.co2RentalKg": "CO₂ rental car (estimate)",
-  "evidence.metric.co2SavedVsFlightKg": "CO₂ saved versus flying (estimate)"
+  "evidence.metric.co2SavedVsFlightKg": "CO₂ saved versus flying (estimate)",
+  "evidence.metric.flightAirborneMinutes": "Time in the air (wheels-off to wheels-on)",
+  "evidence.metric.flightOverflownCountriesCount": "Countries on the flight path",
+  "evidence.metric.flightCodeshareCount": "Codeshare flights"
 }
