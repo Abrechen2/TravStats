@@ -29,6 +29,8 @@ import ReorderPreviewDialog from "./ReorderPreviewDialog";
 import ShiftDaysDialog from "./ShiftDaysDialog";
 import StationConflictDialog from "./StationConflictDialog";
 import { FormErrorBanner } from "../form";
+import { Switch } from "../ui/Field";
+import { isRoundTrip } from "../../lib/roadtrip/roundTrip";
 import { isTransientSaveError } from "../../lib/saveErrorMessage";
 import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
@@ -439,6 +441,23 @@ export default function StationEditor({
     s.title.trim() ||
     (s.night.kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"));
   const warnings = stationWarnings(drafts);
+  const first = drafts[0];
+  const roundTrip = isRoundTrip(drafts);
+  /** "Rundreise": the first place comes back as the closing station, or goes. */
+  const setRoundTrip = (on: boolean): void => {
+    if (on) {
+      const keep = openKey;
+      insertAt(
+        drafts.length,
+        { title: first.title, lat: first.lat, lon: first.lon, night: { kind: "pass" } },
+        false
+      );
+      // Nothing to edit on it: the card stays shut, like the one already open.
+      setOpenKey(keep);
+    } else {
+      remove(drafts.length - 1);
+    }
+  };
   const nightsText = (key: string): string | null => {
     const own = nights.byStation.get(key);
     if (!own) return null;
@@ -480,6 +499,16 @@ export default function StationEditor({
           {nights.nightsKnown ? "" : "≈ "}
           {t("roadtrips:editor.nightsTotal", { count: nights.nights, places: nights.placesSlept })}
         </p>
+      )}
+
+      {first && first.lat !== null && first.lon !== null && (
+        <Switch
+          id="roadtrip-round-trip"
+          checked={roundTrip}
+          onChange={setRoundTrip}
+          label={t("roadtrips:startFrom.roundTrip")}
+          sub={t("roadtrips:startFrom.roundTripSub")}
+        />
       )}
 
       {pickProblem && (

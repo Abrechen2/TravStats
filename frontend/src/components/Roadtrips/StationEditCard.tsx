@@ -12,6 +12,7 @@ import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
 import StayPicker, { type PickableStay } from "./StayPicker";
 import PassPlacePicker from "./PassPlacePicker";
+import StationCampsites from "./StationCampsites";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import type { Place } from "../../types/place";
 import { isOtherPlace } from "./stayPickerModel";
@@ -280,6 +281,23 @@ export default function StationEditCard({
           })
         }
       />
+      {kind !== "via" && (
+        <StationCampsites
+          point={
+            station.lat !== null && station.lon !== null
+              ? { lat: station.lat, lon: station.lon }
+              : null
+          }
+          onPick={(place) =>
+            onChange({
+              lat: place.lat,
+              lon: place.lon,
+              // A name the reader typed stays; an empty one takes the campsite's.
+              title: station.title.trim() === "" ? place.name : station.title,
+            })
+          }
+        />
+      )}
       <Field
         label={
           kind === "via" ? (

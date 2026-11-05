@@ -1076,5 +1076,18 @@
       "unavailable": "Die Ortssuche hat nicht geantwortet – „{{name}}“ konnte nicht gesucht werden. Bitte später erneut versuchen."
     },
     "afterFailed": "Der Roadtrip ist angelegt, aber seine Stationen konnten nicht gespeichert werden. Du findest ihn in der Liste und kannst die Stationen dort auf seiner Seite eintragen."
+  },
+  "campsites": {
+    "search": "Campingplätze im Umkreis von {{km}} km suchen",
+    "searching": "Suche in OpenStreetMap …",
+    "needPlace": "Erst einen Ort für die Station setzen.",
+    "failed": "OpenStreetMap hat nicht geantwortet – ob es hier Campingplätze gibt, ist offen.",
+    "none": "OpenStreetMap kennt im Umkreis von {{km}} km keinen Campingplatz.",
+    "listLabel": "Campingplätze in der Nähe",
+    "kind": {
+      "camp_site": "Campingplatz",
+      "caravan_site": "Stellplatz"
+    },
+    "distance": "{{km}} km"
   }
 }
