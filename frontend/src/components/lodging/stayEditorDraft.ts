@@ -1,4 +1,5 @@
 import type { BoardType, LodgingCurrency, LodgingStay } from "../../types/lodging";
+import { storedRatingsOf } from "../../shared/ratingDerivation";
 import type { LodgingDatePrecision } from "../../shared/lodgingTiming";
 import { stayCheckIn, stayCheckOut } from "../../lib/entityTimes";
 import { deadlineDraftFrom, type DeadlineDraft } from "../deadlines/deadlineDraft";
@@ -24,9 +25,8 @@ export interface StayDraftFields {
   roomNumber: string;
   roomCategory: string;
   board: BoardType;
-  ratingRoom: number | null;
-  ratingBreakfast: number | null;
-  ratingService: number | null;
+  /** category -> value; absent key = not rated. */
+  ratings: Record<string, number>;
   totalPrice: string;
   currency: LodgingCurrency;
   manualFxRate: string;
@@ -75,9 +75,7 @@ export function stayDraftFields(
     roomNumber: stay?.roomNumber ?? "",
     roomCategory: stay?.roomCategory ?? "",
     board: stay?.board ?? "none",
-    ratingRoom: stay?.ratingRoom ?? null,
-    ratingBreakfast: stay?.ratingBreakfast ?? null,
-    ratingService: stay?.ratingService ?? null,
+    ratings: stay ? storedRatingsOf(stay) : {},
     totalPrice: stay?.totalPrice?.toString() ?? "",
     currency: stay?.currency ?? defaultCurrency,
     manualFxRate:

@@ -136,6 +136,7 @@ model User {
   publicShareLinks          PublicShareLink[]
   lodgings                  Lodging[]
   lodgingStays              LodgingStay[]
+  lodgingRatingCategories   LodgingRatingCategory[]
   loyaltyMemberships        LoyaltyMembership[]
   lodgingChains             LodgingChain[]
   places                    Place[]
@@ -959,6 +960,13 @@ model UserSettings {
   userId         String   @unique @map("user_id")
   enabledDomains String[] @default(["flight"]) @map("enabled_domains")
   data           Json     @map("data")
+
+  /// Which BUILT-IN lodging rating categories the stay form offers (a subset of
+  /// shared/ratingCategories.ts). The default is the three that existed before the
+  /// set became switchable, so an upgrade changes nothing on screen. An empty set
+  /// is allowed. Switching one off hides it from the form; it never touches a
+  /// stored value or the overall of any stay.
+  lodgingRatingCategories String[] @default(["room", "breakfast", "service"]) @map("lodging_rating_categories")
 
   /// TravPlan, the planning area, for THIS account (owner, 2026-10-27): switched
   /// on and off like a domain, and only offered while the instance offers TravPlan.
@@ -3308,6 +3316,11 @@ model LodgingStay {
   ratingBreakfast       Float?    @map("rating_breakfast")
   ratingService         Float?    @map("rating_service")
   ratingOverall         Float?    @map("rating_overall")
+  /// Every category value of the stay as {category: 1..5}: built-in keys and own
+  /// `custom:<id>` keys. The source of truth; ratingRoom/Breakfast/Service above are
+  /// mirrored from it on write for one release (rollback must not lose a verdict).
+  /// ratingOverall is the mean of THESE values, never of the currently active set.
+  ratings               Json?     @map("ratings")
   roomAmenities         String[]  @default([]) @map("room_amenities")
   bookingReference      String?   @map("booking_reference")
   membershipId          String?   @map("membership_id")
@@ -6972,4 +6985,19 @@ model ConnectionAnnouncement {
   @@index([nextAttemptAt])
   @@index([connectionId])
   @@map("connection_announcements")
+}
+
+/// A rating category a user named themselves. Deleting one is soft (`deletedAt`):
+/// the values already given on stays stay readable under this name and keep
+/// counting in those stays' overall, but the category is no longer offered.
+model LodgingRatingCategory {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("lodging_rating_categories")
 }

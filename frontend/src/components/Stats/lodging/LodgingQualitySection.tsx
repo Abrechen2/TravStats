@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useRatingCategories } from "../../../hooks/useRatingCategories";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { formatCurrency } from "../../../lib/units";
 import { countryName } from "../../../lib/countryFlag";
@@ -36,6 +37,7 @@ interface Props {
  */
 export default function LodgingQualitySection({ stats, evidenceScope }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "stats"]);
+  const { labelOf } = useRatingCategories();
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { ratings } = stats;
   const locale = i18n.language.startsWith("en") ? "en" : "de";
@@ -100,30 +102,17 @@ export default function LodgingQualitySection({ stats, evidenceScope }: Props): 
           value={score(ratings.avgOverall)}
           description={t("lodging:stats.quality.overallDesc", { count: ratings.ratedStays })}
         />
-        <StatCard
-          accent={LODGING_ACCENT}
-          valueSize="md"
-          title={t("lodging:stats.quality.room")}
-          evidence={ratedStays}
-          value={score(ratings.avgRoom)}
-          description={t("lodging:stats.quality.roomDesc")}
-        />
-        <StatCard
-          accent={LODGING_ACCENT}
-          valueSize="md"
-          title={t("lodging:stats.quality.breakfast")}
-          evidence={ratedStays}
-          value={score(ratings.avgBreakfast)}
-          description={t("lodging:stats.quality.breakfastDesc")}
-        />
-        <StatCard
-          accent={LODGING_ACCENT}
-          valueSize="md"
-          title={t("lodging:stats.quality.service")}
-          evidence={ratedStays}
-          value={score(ratings.avgService)}
-          description={t("lodging:stats.quality.serviceDesc")}
-        />
+        {ratings.byCategory.map((category) => (
+          <StatCard
+            key={category.key}
+            accent={LODGING_ACCENT}
+            valueSize="md"
+            title={labelOf(category.key)}
+            evidence={ratedStays}
+            value={score(category.avg)}
+            description={t("lodging:stats.quality.categoryDesc")}
+          />
+        ))}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

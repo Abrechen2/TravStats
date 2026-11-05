@@ -31,6 +31,8 @@ vi.mock("../../../lib/api/lodging", () => ({
   updateStay: vi.fn(),
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
+  // The account's rating categories: pending, so the form shows the defaults and nothing escapes.
+  getRatingCategories: vi.fn(() => new Promise<never>(() => {})),
   // The overlap notice asks which stays touch the saved dates (forgejo#229).
   listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));

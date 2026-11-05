@@ -21,7 +21,7 @@ import type { Prisma } from "../../prisma";
 import type { createStaySchema, updateStaySchema } from "../../schemas/lodging";
 import type { z } from "zod";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
-import { deriveStayOverallRating } from "../../shared/ratingDerivation";
+import { assertRatingKeysValid, mergeRatings, ratingColumns, storedRatingsOf } from "./stayRatings";
 import { deriveStayTotalPrice } from "../../shared/stayPricing";
 import logger from "../../utils/logger";
 import { assertReferencesOwned } from "../../utils/ownedReferences";
@@ -66,6 +66,7 @@ export async function createStayRecord(
   // whose they are. Without this, a stay could be filed under a stranger's
   // trip and would then show up on their timeline (AUD-038).
   await assertReferencesOwned(userId, data);
+  await assertRatingKeysValid(userId, data.ratings);
   const columns = await buildStayCreateData(
     userId,
     await zoneOfLodging(lodgingId),
@@ -170,12 +171,7 @@ export async function buildStayCreateData(
     // an importer cannot leave it null and a client cannot store one that
     // contradicts them. `current` only carries a source-supplied overall
     // through for a stay that has no component rating at all.
-    ratingOverall: deriveStayOverallRating({
-      room: input.ratingRoom ?? null,
-      breakfast: input.ratingBreakfast ?? null,
-      service: input.ratingService ?? null,
-      current: input.ratingOverall ?? null,
-    }),
+    ...ratingColumns(mergeRatings({}, input), input.ratingOverall ?? null),
     ...(provenance.dataSource ? { dataSource: provenance.dataSource } : {}),
   };
 }
@@ -195,6 +191,7 @@ export async function updateStayRecord(
 ): Promise<StoredStay> {
   // Re-linking is a write too — see the create path (AUD-038).
   await assertReferencesOwned(userId, data);
+  await assertRatingKeysValid(userId, data.ratings);
   // Same reason as the create path: these are not stay columns as sent.
   const { manualFxRate, freeCancellationUntil, paymentDueOn, ...input } = data;
 
@@ -385,14 +382,12 @@ export async function updateStayRecord(
             now: statusNow,
           }),
           // Derived from the EFFECTIVE (merged) ratings for the same reason: a
-          // PATCH sending one component must score the row that will actually
+          // PATCH sending one category must score the row that will actually
           // be stored, not the partial body.
-          ratingOverall: deriveStayOverallRating({
-            room: effectiveRating(input.ratingRoom, stay.ratingRoom),
-            breakfast: effectiveRating(input.ratingBreakfast, stay.ratingBreakfast),
-            service: effectiveRating(input.ratingService, stay.ratingService),
-            current: effectiveRating(input.ratingOverall, stay.ratingOverall),
-          }),
+          ...ratingColumns(
+            mergeRatings(storedRatingsOf(stay), input),
+            effectiveRating(input.ratingOverall, stay.ratingOverall)
+          ),
         },
       });
       await propagateWrite(tx, userId, "lodgingStay", stay.id, before);

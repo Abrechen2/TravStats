@@ -216,13 +216,11 @@ describe("Feste Orte", () => {
   });
 
   it("deletes a place only after the confirmation, and a 404 on it says it is gone", async () => {
-    const remove = vi
-      .spyOn(travTrackPlacesApi, "remove")
-      .mockRejectedValueOnce(
-        Object.assign(new Error("404"), {
-          response: { status: 404, data: { code: "TRAVTRACK_PLACE_NOT_FOUND" } },
-        })
-      );
+    const remove = vi.spyOn(travTrackPlacesApi, "remove").mockRejectedValueOnce(
+      Object.assign(new Error("404"), {
+        response: { status: 404, data: { code: "TRAVTRACK_PLACE_NOT_FOUND" } },
+      })
+    );
     show();
     await userEvent.click(await screen.findByRole("button", { name: /places\.remove: Büro/ }));
     const dialog = await screen.findByRole("dialog");

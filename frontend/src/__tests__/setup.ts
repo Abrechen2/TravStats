@@ -34,6 +34,15 @@ vi.mock("../lib/api/entrySuggestions", async (importActual) => {
   };
 });
 
+// Every lodging view that labels a rating category asks for the account's categories once
+// (an own category is named there). Same treatment as the chips above: the call stays pending,
+// so the view shows the built-in defaults, and no request escapes. A test about the categories
+// themselves mocks this module with its own data.
+vi.mock("../lib/api/lodging", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/api/lodging")>();
+  return { ...actual, getRatingCategories: () => new Promise<never>(() => {}) };
+});
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

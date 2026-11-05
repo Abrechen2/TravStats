@@ -1,3 +1,4 @@
+import { isPerfectStay, storedRatingsOf } from "../../shared/ratingDerivation";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { classifyStay, type LodgingCountState } from "../../shared/lodgingCounting";
@@ -326,9 +327,9 @@ export async function resolveLodgingOneNightStayCount(
 }
 
 /**
- * A perfect stay is FOUR fives, not one: overall, room, breakfast and service
- * all at 5, with the overall rating present. A stay rated 5 overall and left
- * blank elsewhere is not perfect — that is the calculator's rule and the whole
+ * A perfect stay has at least three categories rated and every rated one a 5
+ * (`isPerfectStay`), with the overall present. A stay rated 5 overall and
+ * nothing else is not perfect — that is the calculator's rule and the whole
  * reason this figure is smaller than a count of five-star ratings.
  */
 export async function resolveLodgingPerfectStayCount(
@@ -339,13 +340,7 @@ export async function resolveLodgingPerfectStayCount(
   const key = "lodgingPerfectStayCount";
   const { stats, stays } = await loadScoped(userId, scope, key);
   const entries = visited(stays)
-    .filter(
-      (stay) =>
-        stay.data.ratingOverall === 5 &&
-        stay.data.ratingRoom === 5 &&
-        stay.data.ratingBreakfast === 5 &&
-        stay.data.ratingService === 5
-    )
+    .filter((stay) => stay.data.ratingOverall !== null && isPerfectStay(storedRatingsOf(stay.data)))
     .map((stay) => entryOf(stay, { contribution: 1 }));
   return domainSumEvidence({
     key,

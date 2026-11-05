@@ -149,7 +149,7 @@ describe("LodgingQualitySection", () => {
     });
   });
 
-  it("shows each of the four rating columns on its own", () => {
+  it("shows the overall and each rated category on its own, own categories included", () => {
     render(
       <LodgingQualitySection
         stats={{
@@ -160,6 +160,12 @@ describe("LodgingQualitySection", () => {
             avgRoom: 4,
             avgBreakfast: 2.5,
             avgService: 5,
+            byCategory: [
+              { key: "room", avg: 4, count: 3 },
+              { key: "breakfast", avg: 2.5, count: 2 },
+              { key: "service", avg: 5, count: 1 },
+              { key: "parking", avg: 3.5, count: 1 },
+            ],
             ratedStays: 3,
             unratedStays: 1,
           },
@@ -170,16 +176,20 @@ describe("LodgingQualitySection", () => {
     expect(screen.getByText("★ 4.0")).toBeTruthy();
     expect(screen.getByText("★ 2.5")).toBeTruthy();
     expect(screen.getByText("★ 5.0")).toBeTruthy();
+    // A category nobody rated has no card; one that was rated does, by its own name.
+    expect(screen.getByText("lodging:ratingCategory.parking")).toBeTruthy();
+    expect(screen.queryByText("lodging:ratingCategory.wifi")).toBeNull();
   });
 
-  it("shows a dash for a column nothing was rated on", () => {
+  it("draws no card for a category nothing was rated on", () => {
     render(
       <LodgingQualitySection
         stats={{ ...base, ratings: { ...base.ratings, avgOverall: 4, ratedStays: 1 } }}
       />
     );
-    // room / breakfast / service all null -> three dashes.
-    expect(screen.getAllByText("—").length).toBe(3);
+    // Only the overall card exists: an unrated category is absent, not a dash.
+    expect(screen.queryByText("lodging:ratingCategory.room")).toBeNull();
+    expect(screen.queryByText("lodging:stats.quality.categoryDesc")).toBeNull();
   });
 
   it("renders the star buckets in the order the backend supplied, not re-ranked", () => {

@@ -483,7 +483,7 @@ describe("LodgingDetailPage", () => {
     expect(originalLabel.closest("div")?.textContent).toMatch(/840/);
 
     // Per-category rating averages, not one collapsed aggregate.
-    const roomLabel = screen.getByText("lodging:field.ratingRoom");
+    const roomLabel = screen.getByText("lodging:ratingCategory.room");
     expect(roomLabel.closest("div")?.textContent).toContain("4");
   });
 

@@ -36,6 +36,7 @@ export const EMPTY_LODGING_RATING_STATS: LodgingRatingStats = {
   avgRoom: null,
   avgBreakfast: null,
   avgService: null,
+  byCategory: [],
   ratedStays: 0,
   unratedStays: 0,
   byChain: [],

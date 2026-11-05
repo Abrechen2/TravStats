@@ -18,6 +18,7 @@ import proposeRouter from "./lodging/propose";
 import entrySuggestionsRouter from "./lodging/entrySuggestions";
 import stayListRouter from "./lodging/stayList";
 import deleteFactsRouter from "./lodging/deleteFacts";
+import ratingCategoriesRouter from "./lodging/ratingCategories";
 import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
   queryLodgingPage,
@@ -227,6 +228,8 @@ router.get(
 // "Is this that house?" lives in `lodging/propose` — mounted HERE so the
 // literal path is matched before `/:id` could read "propose" as an id.
 router.use(proposeRouter);
+// Before `/:id`, which would read "rating-categories" as a lodging id.
+router.use(ratingCategoriesRouter);
 // Same reason: "entry-suggestions" is a literal path, not a lodging id.
 router.use(entrySuggestionsRouter);
 // And "stays": the chronological view across houses.

@@ -178,6 +178,14 @@ const baseStaySchema = z.object({
   ratingBreakfast: rating,
   ratingService: rating,
   ratingOverall: rating,
+  // Every category (built-in or `custom:<uuid>`) -> 1..5; an explicit null clears
+  // one. Keys are validated against the caller's categories in stayWrites.
+  ratings: z
+    .record(
+      z.string().regex(/^(?:[a-z]{2,20}|custom:[0-9a-f-]{36})$/),
+      z.number().min(0.5).max(5).nullable()
+    )
+    .optional(),
   roomAmenities: z.array(z.string().max(60)).max(50).optional(),
   bookingReference: z.string().max(40).nullable().optional(),
   // Deadlines (forgejo#285); a bare `{local}` is read on the hotel's clock.

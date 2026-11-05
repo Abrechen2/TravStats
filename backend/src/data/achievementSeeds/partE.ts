@@ -158,7 +158,7 @@ export const seedsPartE: AchievementDefinition[] = [
   {
     code: "PERFECT_STAY_1",
     name: "Nichts zu beanstanden",
-    description: "Ein Aufenthalt mit 5 von 5 in allen vier Bewertungen",
+    description: "Ein Aufenthalt mit mindestens drei Bewertungen, alle 5 von 5",
     category: "elite",
     domain: "lodging",
     icon: "💯",
@@ -170,7 +170,7 @@ export const seedsPartE: AchievementDefinition[] = [
   {
     code: "PERFECT_STAY_10",
     name: "Ein Händchen für Häuser",
-    description: "10 Aufenthalte mit 5 von 5 in allen vier Bewertungen",
+    description: "10 Aufenthalte mit mindestens drei Bewertungen, alle 5 von 5",
     category: "elite",
     domain: "lodging",
     icon: "💯",

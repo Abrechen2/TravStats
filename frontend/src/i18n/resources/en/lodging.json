@@ -105,7 +105,8 @@
     "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
     "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
     "survivorTripsUnnamed": "linked trips",
-    "stayDocuments": "Documents · {{period}}"
+    "stayDocuments": "Documents · {{period}}",
+    "noCategoryRatings": "No categories rated yet"
   },
   "nightPrice": {
     "roomRate": "Room per night",
@@ -170,7 +171,7 @@
     "programName": "Program name",
     "membershipNumber": "Membership number",
     "tier": "Tier",
-    "ratingOverallDerived": "Average of room, breakfast and service",
+    "ratingOverallDerived": "Average of all rated categories",
     "website": "Website",
     "amenitySuggestions": "Your amenities",
     "removeAmenity": "Remove {{name}}",
@@ -276,7 +277,25 @@
       "checkIn": "Please enter the check-in date.",
       "checkOut": "Please enter the check-out date.",
       "checkOutBeforeCheckIn": "The check-out is before the check-in."
-    }
+    },
+    "ratingCategoriesManage": "Manage categories",
+    "ratingCategoriesTitle": "Rating categories",
+    "ratingCategoriesIntro": "Switch on what you want to rate. Switching one off leaves ratings already given and the overall of older stays unchanged.",
+    "ratingCategoriesOwn": "Own categories",
+    "ratingCategoryName": "Name of the new category",
+    "ratingCategoryAdd": "Add",
+    "ratingCategoryRename": "Rename",
+    "ratingCategoryDelete": "Delete",
+    "ratingCategoryDeleteHint": "Ratings already given stay on their stays.",
+    "ratingCategorySave": "Save",
+    "ratingCategoryCancel": "Cancel",
+    "ratingCategoryDuplicate": "This category already exists.",
+    "ratingCategoryTooMany": "You have reached the maximum number of own categories.",
+    "ratingCategoryFailed": "The category could not be saved.",
+    "ratingCategoriesDone": "Done",
+    "ratingNoCategories": "No rating categories switched on.",
+    "ratingRetiredTitle": "No longer switched on",
+    "ratingRetiredHint": "You switched this category off, but the stay still carries a rating. It keeps counting towards the overall until you clear it."
   },
   "membership": {
     "title": "Loyalty programs",
@@ -550,7 +569,8 @@
       "fromStays": "from {{count}} stays",
       "fromStays_one": "from {{count}} stay",
       "fromStays_other": "from {{count}} stays",
-      "bestValue": "Best value for money"
+      "bestValue": "Best value for money",
+      "categoryDesc": "Only stays carrying this rating"
     },
     "geo": {
       "title": "Where you slept",
@@ -1082,5 +1102,18 @@
     "saveError": "The location could not be saved.",
     "saved": "Location saved",
     "openFor": "Add the location: {{issue}}"
+  },
+  "ratingCategory": {
+    "room": "Room",
+    "bed": "Bed",
+    "bathroom": "Bathroom",
+    "cleanliness": "Cleanliness",
+    "breakfast": "Breakfast",
+    "service": "Service",
+    "location": "Location",
+    "parking": "Parking",
+    "wifi": "Wi-Fi",
+    "quiet": "Quiet",
+    "unknown": "Own category"
   }
 }

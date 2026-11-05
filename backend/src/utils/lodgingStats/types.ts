@@ -41,6 +41,12 @@ export interface LodgingStayData {
   ratingBreakfast: number | null;
   ratingService: number | null;
   /**
+   * Every category value of the stay (`custom:<id>` keys included). Optional
+   * so a caller that only knows the three columns still works; read it through
+   * `storedRatingsOf`, which merges the columns in.
+   */
+  ratings?: unknown;
+  /**
    * The loyalty programme this stay ran under, already resolved — the stored
    * `membershipId` is an OVERRIDE, not the answer (a card attached to a chain
    * covers every stay at that chain). Resolution needs the membership link
@@ -139,6 +145,14 @@ export interface LodgingPriceStats {
   awardNightsValue: number | null;
 }
 
+export interface LodgingCategoryAverage {
+  /** Built-in key or `custom:<id>`. */
+  key: string;
+  avg: number;
+  /** Stays that rated this category. */
+  count: number;
+}
+
 /** One row of a rating ranking — chain, country, type, or official star count. */
 export interface LodgingRatingGroup {
   key: string;
@@ -156,6 +170,12 @@ export interface LodgingRatingStats {
   avgRoom: number | null;
   avgBreakfast: number | null;
   avgService: number | null;
+  /**
+   * One block per category that has at least one rating anywhere (built-in or
+   * own), each with its own denominator. Replaces reading the three named
+   * averages above, which stay for older clients.
+   */
+  byCategory: LodgingCategoryAverage[];
   ratedStays: number;
   unratedStays: number;
   byChain: LodgingRatingGroup[];
@@ -288,9 +308,10 @@ export interface LodgingStats {
   /** Nights by board type. Covers every stay, unlike `price.byBoard` which needs a comparable price. */
   nightsByBoard: Record<string, number>;
   /**
-   * Stays rated 5 on ALL FOUR columns. A null on any column disqualifies:
-   * "everything was perfect" is a claim about everything, and three fives with
-   * a blank is a claim about three things.
+   * Stays with at least three categories rated and every rated one a 5
+   * (`isPerfectStay`). A blank is not a category the user judged, so it
+   * neither disqualifies nor counts; the floor of three keeps a single 5 from
+   * being "everything was perfect".
    */
   perfectStays: number;
   /** Stays the user rated 2 or worse overall — the ones they got through. */

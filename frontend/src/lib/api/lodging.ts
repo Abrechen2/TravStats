@@ -308,3 +308,64 @@ export async function updateLodgingPhoto(
 export async function deleteLodgingPhoto(lodgingId: string, photoId: string): Promise<void> {
   await api.delete(`/lodging/${lodgingId}/photos/${photoId}`);
 }
+
+/** The account's rating categories (spec 2026-08-25, owner decisions 24.08. and 05.11.). */
+export interface OwnRatingCategory {
+  id: string;
+  /** Key inside a stay's `ratings` map: `custom:<id>`. */
+  key: string;
+  name: string;
+  /** Deleted: no longer offered, but values already given stay readable. */
+  deleted: boolean;
+}
+
+export interface RatingCategoriesView {
+  builtIn: string[];
+  active: string[];
+  custom: OwnRatingCategory[];
+}
+
+const RATING_CATEGORIES_PATH = "/lodging/rating-categories";
+
+export const getRatingCategories = async (): Promise<RatingCategoriesView> => {
+  const { data } = await api.get<Envelope<RatingCategoriesView>>(RATING_CATEGORIES_PATH);
+  return data.data;
+};
+
+export const setActiveRatingCategories = async (
+  categories: string[]
+): Promise<RatingCategoriesView> => {
+  const { data } = await api.put<Envelope<RatingCategoriesView>>(
+    `${RATING_CATEGORIES_PATH}/active`,
+    {
+      categories,
+    }
+  );
+  return data.data;
+};
+
+export const addOwnRatingCategory = async (name: string): Promise<RatingCategoriesView> => {
+  const { data } = await api.post<Envelope<RatingCategoriesView>>(
+    `${RATING_CATEGORIES_PATH}/custom`,
+    { name }
+  );
+  return data.data;
+};
+
+export const renameOwnRatingCategory = async (
+  id: string,
+  name: string
+): Promise<RatingCategoriesView> => {
+  const { data } = await api.patch<Envelope<RatingCategoriesView>>(
+    `${RATING_CATEGORIES_PATH}/custom/${id}`,
+    { name }
+  );
+  return data.data;
+};
+
+export const deleteOwnRatingCategory = async (id: string): Promise<RatingCategoriesView> => {
+  const { data } = await api.delete<Envelope<RatingCategoriesView>>(
+    `${RATING_CATEGORIES_PATH}/custom/${id}`
+  );
+  return data.data;
+};

@@ -69,6 +69,7 @@ import "./flightDevice";
 import "./flightBooking";
 import "./flightBulkEdit";
 import "./lodging";
+import "./lodgingRatingCategories";
 import "./loyalty";
 import "./settings";
 import "./places";

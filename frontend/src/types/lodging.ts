@@ -113,6 +113,11 @@ export interface LodgingStay {
   ratingBreakfast: number | null;
   ratingService: number | null;
   ratingOverall: number | null;
+  /**
+   * Every category value of the stay, built-in or own (`custom:<id>`). The
+   * three columns above mirror room/breakfast/service for one release.
+   */
+  ratings?: Record<string, number> | null;
   roomAmenities: string[];
   bookingReference: string | null;
   membershipId: string | null;
@@ -249,6 +254,8 @@ export interface StayInput {
   ratingBreakfast?: number | null;
   ratingService?: number | null;
   ratingOverall?: number | null;
+  /** Category -> value; an explicit null clears that category. */
+  ratings?: Record<string, number | null>;
   roomAmenities?: string[];
   bookingReference?: string | null;
   membershipId?: string | null;
@@ -689,6 +696,14 @@ export interface LodgingPriceStats {
   awardNightsValue: number | null;
 }
 
+/** The average of one rating category, over the stays that rated it. */
+export interface LodgingCategoryAverage {
+  /** Built-in key or `custom:<id>`. */
+  key: string;
+  avg: number;
+  count: number;
+}
+
 /** One row of a rating ranking — chain, country, type, or official star count. */
 export interface LodgingRatingGroup {
   key: string;
@@ -717,6 +732,8 @@ export interface LodgingRatingStats {
   avgRoom: number | null;
   avgBreakfast: number | null;
   avgService: number | null;
+  /** One entry per category with at least one rating (built-in or own), most-rated first. */
+  byCategory: LodgingCategoryAverage[];
   ratedStays: number;
   unratedStays: number;
   /** Best average first. */
