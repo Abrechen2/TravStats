@@ -25,6 +25,20 @@ export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
   "couchette",
 ];
 
+/**
+ * What `GET /flights/:id` adds to a flight: the Rail&Fly tickets that feed it
+ * (owner ruling 2026-11-05), oldest first.
+ */
+export interface FlightRailAndFly {
+  railAndFlyRides?: {
+    id: string;
+    depStationName: string;
+    arrStationName: string;
+    departureTime: string;
+    trainNumber: string | null;
+  }[];
+}
+
 export interface RailJourney {
   id: string;
   userId: string;

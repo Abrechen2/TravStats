@@ -252,7 +252,7 @@ async function convert(flag: DataQualityFlag, now: Date): Promise<void> {
   const conversion = await convertSurfaceFlight(flag);
   await prisma.$transaction(
     async (tx) => {
-      await removeConvertedFlight(tx, flag, conversion.tripId);
+      await removeConvertedFlight(tx, flag, conversion);
       const updated = await tx.dataQualityFlag.updateMany({
         where: asRead(flag),
         data: {

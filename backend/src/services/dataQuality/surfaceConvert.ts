@@ -5,7 +5,7 @@ import { surfaceSegmentDetailsSchema } from "../../schemas/dataQualityRecordChec
 import { zoneOf } from "../../shared/time/zoneOf";
 import { createBusRideOnce } from "../../routes/bus";
 import { createRailRideOnce } from "../../routes/rail";
-import { instantToWallClock } from "../rides/rideEnds";
+import { instantToWallClock, wallClockToInstant } from "../rides/rideEnds";
 import { propagateDelete, shareSnapshot } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 import { findSurfaceSegments } from "./checks/surfaceSegment";
@@ -28,6 +28,8 @@ import { loadRecordSnapshot } from "./recordGather";
 export interface Conversion {
   rideType: "rail" | "bus";
   rideId: string;
+  /** The flight as it was read; the removal refuses a flight edited since. */
+  flightUpdatedAt: Date;
   /** The flight's trip, re-derived by the caller after the answer commits. */
   tripId: string | null;
 }
@@ -81,10 +83,19 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     flight.arrLat,
     flight.arrLon
   );
+  // An instant read back as a wall clock is ambiguous in the autumn hour that
+  // happens twice; name the later occurrence when the earlier one is not it.
+  const foldOf = (wall: string, zone: string | null, instant: Date): "later" | null =>
+    wallClockToInstant(wall, zone).getTime() === instant.getTime() ? null : "later";
+  const departureLocal = instantToWallClock(record.departureAt, depZone);
+  const arrivalLocal = record.arrivalAt ? instantToWallClock(record.arrivalAt, arrZone) : null;
   const shared = {
     operator: clean(flight.operatingAirline)?.slice(0, 100) ?? null,
-    departureLocal: instantToWallClock(record.departureAt, depZone),
-    arrivalLocal: record.arrivalAt ? instantToWallClock(record.arrivalAt, arrZone) : null,
+    departureLocal,
+    arrivalLocal,
+    departureFold: foldOf(departureLocal, depZone, record.departureAt),
+    arrivalFold:
+      arrivalLocal && record.arrivalAt ? foldOf(arrivalLocal, arrZone, record.arrivalAt) : null,
     seat: clean(flight.seatNumber)?.slice(0, 20) ?? null,
     bookingReference: clean(flight.bookingReference)?.slice(0, 40) ?? null,
     price: flight.price ?? null,
@@ -95,7 +106,8 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     tripId: flight.tripId,
     bookingId: flight.bookingId,
   };
-  const clientRef = `dq-surface:${flag.id}`;
+  // The flight's edit stamp is part of the reference: an edited flight is a new payload.
+  const clientRef = `dq-surface:${flag.id}:${flight.updatedAt.getTime()}`;
 
   let rideId: string;
   if (mode === "rail") {
@@ -125,21 +137,38 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     );
     rideId = result.ride.id;
   }
-  return { rideType: mode, rideId, tripId: flight.tripId };
+  return { rideType: mode, rideId, flightUpdatedAt: flight.updatedAt, tripId: flight.tripId };
 }
 
 /** The flight's removal, inside the answer's transaction — the same writes as DELETE /flights/:id. */
 export async function removeConvertedFlight(
   tx: DbTransaction,
   flag: DataQualityFlag,
-  tripId: string | null
+  conversion: Conversion
 ): Promise<void> {
   const { flightId } = surfaceSegmentDetailsSchema.parse(flag.details);
   await tx.$queryRaw(Prisma.sql`SELECT id FROM "flights" WHERE id = ${flightId} FOR UPDATE`);
+  // Edited since the ride was drawn from it: the ride would not carry the edit.
+  const current = await tx.flight.findFirst({
+    where: { id: flightId, userId: flag.userId },
+    select: { updatedAt: true },
+  });
+  if (!current || current.updatedAt.getTime() !== conversion.flightUpdatedAt.getTime()) {
+    throw new FindingActionError("staleFinding");
+  }
+  // The originals filed with the flight (tickets, receipts) go with the entry:
+  // deleting the flight would delete them.
+  await tx.document.updateMany({
+    where: { flightId },
+    data:
+      conversion.rideType === "rail"
+        ? { flightId: null, railJourneyId: conversion.rideId }
+        : { flightId: null, busJourneyId: conversion.rideId },
+  });
   const gone = await shareSnapshot(tx, "flight", flightId);
   const removed = await tx.flight.deleteMany({ where: { id: flightId, userId: flag.userId } });
   if (removed.count === 0) throw new FindingActionError("staleFinding");
   await propagateDelete(tx, flag.userId, gone);
   // The flight stretched its trip's span; the ride that replaces it may not.
-  await restatusTrips([tripId], tx);
+  await restatusTrips([conversion.tripId], tx);
 }

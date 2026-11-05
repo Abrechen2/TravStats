@@ -160,6 +160,29 @@ describe("flights that are train or bus rides", () => {
     expect(undo.body).toEqual({ error: "undoExpired" });
   });
 
+  it("moves the originals filed with the flight onto the ride instead of deleting them", async () => {
+    const { train } = await seed(userId);
+    const doc = await prisma.document.create({
+      data: {
+        userId,
+        storedName: `s-${Date.now()}.pdf`,
+        originalName: "ticket.pdf",
+        mimetype: "application/pdf",
+        sizeBytes: 10,
+        sha256: "x".repeat(64),
+        format: "pdf",
+        flightId: train.id,
+      },
+    });
+    await runDataQualityChecks(userId, NOW);
+    const [flag] = await surfaceFlags(userId);
+    expect((await post(`/${flag.id}/resolve`, { action: "convert" })).status).toBe(200);
+
+    const ride = await prisma.railJourney.findFirstOrThrow({ where: { userId } });
+    const kept = await prisma.document.findUnique({ where: { id: doc.id } });
+    expect(kept).toMatchObject({ flightId: null, railJourneyId: ride.id });
+  });
+
   it("files a bus ride for a BUS flight", async () => {
     const { train } = await seed(userId);
     await prisma.flight.update({ where: { id: train.id }, data: { aircraft: "BUS" } });
