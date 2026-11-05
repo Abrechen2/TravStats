@@ -23,6 +23,7 @@ import { prisma } from "../../../db";
 import type { TimeValue } from "../../../shared/time/wire";
 import type { CruiseData } from "../../../utils/cruiseStats";
 import { cruiseStopTimes, type CruiseStopTimeColumns } from "../../cruise/timesDto";
+import type { CruiseMoneyColumns } from "../cruiseSpendBase";
 import { loadCruiseStatsData } from "../cruiseStatsData";
 
 export interface CruiseCall {
@@ -55,8 +56,24 @@ export interface CruiseInsightRow {
   calls: CruiseCall[];
 }
 
+/** What the money and ship figures read beyond a row — one per cruise id. */
+export interface CruiseFacts extends CruiseMoneyColumns {
+  cruiseLine: string | null;
+  /** The catalogue ship, or null. `id` is the grouping key for "biggest ship". */
+  ship: {
+    id: number;
+    name: string;
+    grossTonnage: number | null;
+    capacity: number | null;
+    yearBuilt: number | null;
+  } | null;
+}
+
 export interface CruiseInsightData {
   rows: CruiseInsightRow[];
+  /** Cruise id → facts. Absent where the caller builds rows
+   * only for the badges, which read neither money nor ships. */
+  facts?: Map<string, CruiseFacts>;
   userBirthday?: { month: number; day: number };
 }
 
@@ -120,7 +137,7 @@ export function cruiseInsightRowOf(
 
 export async function loadCruiseInsightData(userId: string): Promise<CruiseInsightData> {
   const { rows, userBirthday } = await loadCruiseStatsData(userId, undefined);
-  if (rows.length === 0) return { rows: [], userBirthday };
+  if (rows.length === 0) return { rows: [], facts: new Map(), userBirthday };
   const stops = await prisma.cruiseStop.findMany({
     where: { cruiseId: { in: rows.map((r) => r.id) } },
     select: {
@@ -145,8 +162,25 @@ export async function loadCruiseInsightData(userId: string): Promise<CruiseInsig
   const byCruise = new Map<string, typeof stops>();
   for (const stop of stops)
     byCruise.set(stop.cruiseId, [...(byCruise.get(stop.cruiseId) ?? []), stop]);
+  const facts = new Map(
+    rows.map((r): [string, CruiseFacts] => [
+      r.id,
+      {
+        price: r.price,
+        currency: r.currency,
+        priceBase: r.priceBase,
+        fxBaseCurrency: r.fxBaseCurrency,
+        cruiseLine: r.input.cruiseLine,
+        ship:
+          r.shipSpecs && r.input.shipId !== null && r.shipName !== null
+            ? { id: r.input.shipId, name: r.shipName, ...r.shipSpecs }
+            : null,
+      },
+    ])
+  );
   return {
     userBirthday,
+    facts,
     rows: rows.map((r) => cruiseInsightRowOf(r, byCruise.get(r.id) ?? [])),
   };
 }

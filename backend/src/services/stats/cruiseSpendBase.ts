@@ -35,6 +35,12 @@
  * abstain about.
  */
 import type { CruiseStatsRow } from "./cruiseStatsData";
+
+/** The columns the money rule reads — a full stats row is a superset. */
+export type CruiseMoneyColumns = Pick<
+  CruiseStatsRow,
+  "price" | "currency" | "priceBase" | "fxBaseCurrency"
+>;
 import { isAmountRecorded } from "../../shared/flightPricing";
 
 /** The wire shape `GET /stats/cruise` carries as `totalSpendBase`. */
@@ -61,7 +67,7 @@ export interface CruiseSpendBase {
  * Spelled as a type predicate so that callers which have asked the question
  * may then READ the price without a non-null assertion.
  */
-export function isPricedCruise(row: CruiseStatsRow): row is CruiseStatsRow & { price: number } {
+export function isPricedCruise<R extends CruiseMoneyColumns>(row: R): row is R & { price: number } {
   return isAmountRecorded(row.price);
 }
 
@@ -90,7 +96,7 @@ export function isPricedCruise(row: CruiseStatsRow): row is CruiseStatsRow & { p
  * so a stored NULL is somebody having written null — not an unknown
  * denomination this sum would be guessing at.
  */
-export function cruiseBaseAmount(row: CruiseStatsRow, baseCurrency: string): number | null {
+export function cruiseBaseAmount(row: CruiseMoneyColumns, baseCurrency: string): number | null {
   if (isPricedCruise(row) && (row.currency ?? "EUR") === baseCurrency) return row.price;
   return row.priceBase !== null && row.fxBaseCurrency === baseCurrency ? row.priceBase : null;
 }

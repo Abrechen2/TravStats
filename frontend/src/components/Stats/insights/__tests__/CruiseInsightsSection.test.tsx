@@ -127,6 +127,18 @@ const INSIGHTS: CruiseInsights = {
       { cruise: norway, seaDays: 1, portDays: 2, listedDays: 3, unlistedDays: 1, type: "balanced" },
     ],
   },
+  money: {
+    currency: "EUR",
+    cruises: 2,
+    unknownPrice: 2,
+    excluded: 0,
+    counted: 0,
+    total: null,
+    perSeaDay: null,
+    mostExpensive: null,
+    perLine: [],
+  },
+  ships: { cruises: 2, biggest: null, tonnageKnown: 0, averageAge: null, ageKnown: 0 },
   repeatedItineraries: [],
 };
 

@@ -10,6 +10,8 @@ import CruisePortsBlock from "./CruisePortsBlock";
 import CruisePortStaysBlock from "./CruisePortStaysBlock";
 import CruiseExcursionsBlock from "./CruiseExcursionsBlock";
 import CruiseDayPatternBlock from "./CruiseDayPatternBlock";
+import CruiseMoneyBlock from "./CruiseMoneyBlock";
+import CruiseShipsBlock from "./CruiseShipsBlock";
 
 /**
  * The cruise insights (forgejo#257) — its own request, like the flight
@@ -61,6 +63,10 @@ export default function CruiseInsightsSection({ year }: { year: number | null })
             <CruiseDayPatternBlock pattern={insights.dayPattern} />
           </div>
           <CruiseExcursionsBlock excursions={insights.excursions} scope={scope} />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <CruiseMoneyBlock money={insights.money} />
+            <CruiseShipsBlock ships={insights.ships} />
+          </div>
         </div>
       )}
     </section>
