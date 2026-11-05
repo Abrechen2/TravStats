@@ -143,7 +143,7 @@ describe("package review", () => {
       vi.mocked(parseApi.readPackageWithModel).mockResolvedValue({
         ...kept,
         fallbackCode: "modelFailed",
-        fallbackReason: "The AI parser failed: Ollama request timed out after 180s",
+        modelReason: "LLM_UNREACHABLE",
       } as never);
       const onCancel = vi.fn();
       render(
@@ -157,8 +157,7 @@ describe("package review", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: "Mit KI lesen" }));
       const alert = await screen.findByRole("alert");
-      expect(alert).toHaveTextContent(/nicht geantwortet/);
-      expect(alert).toHaveTextContent(/timed out after 180s/);
+      expect(alert).toHaveTextContent(/nicht erreichbar/);
       expect(onCancel).not.toHaveBeenCalled();
     });
 

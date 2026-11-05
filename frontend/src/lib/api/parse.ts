@@ -190,7 +190,9 @@ interface PackageParseFields {
   fallbackCode?: PackageParseFallbackCode;
   /** Rows of a model reading the truthfulness gate refused. */
   modelDropped?: Array<{ kind: "bookingReference" | "flight" | "stay" | "price"; value: string }>;
-  /** English; shown only as the technical detail of a model failure. */
+  /** A model failure's stable code: refusal kind or `LLM_UNREACHABLE` / `PARSE_FAILED`. */
+  modelReason?: string;
+  /** English, for the log — never shown. */
   fallbackReason?: string;
   /** The contract paths a recognising template failed. */
   issues?: string[];

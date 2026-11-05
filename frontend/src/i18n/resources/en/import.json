@@ -211,6 +211,14 @@
         "modelFailed": "The AI model did not answer. Nothing was read.",
         "modelInvalid": "The AI model could not read the document as a trip. Nothing was read.",
         "request": "The request failed. Nothing was read."
+      },
+      "reason": {
+        "LLM_UNREACHABLE": "The AI model is unreachable. Check the parser settings or try again later. Nothing was read.",
+        "PARSE_FAILED": "The AI model could not read the document. The cause is in the server log. Nothing was read.",
+        "disabled_by_admin": "The administrator has turned the AI model off. Nothing was read.",
+        "shared_demo": "The AI model is not available in the demo account. Nothing was read.",
+        "cloud_not_consented": "A cloud provider is configured but not yet allowed. Nothing was read.",
+        "provider_incomplete": "No AI provider is configured. Nothing was read."
       }
     }
   },

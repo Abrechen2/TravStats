@@ -10,6 +10,7 @@
  * gate drops is returned so the reviewer sees it. Every failure has its own
  * code and reason; none becomes an empty success.
  */
+import { describeParserError } from "../../../utils/parserErrors";
 import logger from "../../../utils/logger";
 import { llmParseTimeoutMs } from "../../http/llmTimeout";
 import { llmRefusalFor } from "../../llm/llmGate";
@@ -29,6 +30,12 @@ export interface ModelPackageResult {
   fallbackCode?: ModelFallbackCode;
   /** English, for the log and the detail line next to the localized sentence. */
   fallbackReason?: string;
+  /**
+   * A stable code the client words: the refusal kind (`disabled_by_admin`, …)
+   * or the parser-failure code (`LLM_UNREACHABLE`, `PARSE_FAILED`). Never raw
+   * provider text — that stays in the server log.
+   */
+  modelReason?: string;
   /** Contract paths the answer failed (`modelInvalid`). */
   issues?: string[];
   /** Rows the truthfulness gate refused. */
@@ -66,11 +73,26 @@ function flightNumbersIn(text: string): Set<string> {
   return found;
 }
 
-/** True when the amount's digits appear in the document, any separator style. */
+/** Every amount-looking token of the document as a number, any separator style. */
+function amountsIn(text: string): number[] {
+  const out: number[] = [];
+  for (const m of text.matchAll(
+    /\d{1,3}(?:[.,' \u00a0]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g
+  )) {
+    const token = m[0];
+    const decimal = /[.,](\d{1,2})$/.exec(token);
+    const whole = (decimal ? token.slice(0, -decimal[0].length) : token).replace(
+      /[.,' \u00a0]/g,
+      ""
+    );
+    out.push(Number(`${whole}${decimal ? `.${decimal[1]}` : ""}`));
+  }
+  return out;
+}
+
+/** True when the document states exactly this amount (not merely a digit run inside one). */
 function priceAppearsIn(text: string, price: number): boolean {
-  const digits = text.replace(/[.,'’\s\u00a0]/g, "");
-  const cents = String(Math.round(price * 100));
-  return digits.includes(cents) || (Number.isInteger(price) && digits.includes(String(price)));
+  return amountsIn(text).some((a) => Math.abs(a - price) < 0.005);
 }
 
 function unwrap(parsed: unknown): Record<string, unknown> | null {
@@ -120,20 +142,25 @@ export function gatePackageAnswer(
   }
 
   const numbers = flightNumbersIn(text);
-  values.flights = (Array.isArray(answer.flights) ? answer.flights : []).filter((f) => {
-    const raw = (f as { flightNumber?: unknown } | null)?.flightNumber;
-    const canonical = typeof raw === "string" ? canonicalFlightNumber(raw) : null;
-    if (canonical && numbers.has(canonical)) return true;
-    dropped.push({ kind: "flight", value: String(raw) });
-    return false;
-  });
+  // A collection of the wrong type is passed on so the contract refuses it by name.
+  if (Array.isArray(answer.flights)) {
+    values.flights = answer.flights.filter((f) => {
+      const raw = (f as { flightNumber?: unknown } | null)?.flightNumber;
+      const canonical = typeof raw === "string" ? canonicalFlightNumber(raw) : null;
+      if (canonical && numbers.has(canonical)) return true;
+      dropped.push({ kind: "flight", value: String(raw) });
+      return false;
+    });
+  }
 
-  values.stays = (Array.isArray(answer.stays) ? answer.stays : []).filter((s) => {
-    const name = (s as { name?: unknown } | null)?.name;
-    if (typeof name === "string" && haystack.includes(squash(name.trim()))) return true;
-    dropped.push({ kind: "stay", value: String(name) });
-    return false;
-  });
+  if (Array.isArray(answer.stays)) {
+    values.stays = answer.stays.filter((s) => {
+      const name = (s as { name?: unknown } | null)?.name;
+      if (typeof name === "string" && haystack.includes(squash(name.trim()))) return true;
+      dropped.push({ kind: "stay", value: String(name) });
+      return false;
+    });
+  }
 
   if (typeof answer.totalPrice === "number" && !priceAppearsIn(text, answer.totalPrice)) {
     dropped.push({ kind: "price", value: String(answer.totalPrice) });
@@ -153,11 +180,22 @@ export async function readPackageWithModel(
       reading: null,
       fallbackCode: "modelRefused",
       fallbackReason: refusal.reason,
+      modelReason: refusal.kind,
       dropped: [],
     };
   }
 
-  const snippet = text.slice(0, MAX_DOCUMENT_CHARS);
+  // A longer document would be read in part and committed as if whole.
+  if (text.length > MAX_DOCUMENT_CHARS) {
+    return {
+      reading: null,
+      fallbackCode: "modelInvalid",
+      fallbackReason: `The document is longer than ${MAX_DOCUMENT_CHARS} characters; the model would see only part of it`,
+      issues: ["(document): too long to read completely"],
+      dropped: [],
+    };
+  }
+  const snippet = text;
   let raw: string;
   try {
     ({ text: raw } = await llmGenerateChain({
@@ -171,10 +209,13 @@ export async function readPackageWithModel(
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     logger.warn({ err: reason }, "[Package] Model reading failed");
+    // The raw message can carry hosts and URLs: log it, answer with the code.
+    const described = describeParserError(err);
     return {
       reading: null,
       fallbackCode: "modelFailed",
-      fallbackReason: `The AI parser failed: ${reason}`,
+      fallbackReason: described.message,
+      modelReason: described.code,
       dropped: [],
     };
   }

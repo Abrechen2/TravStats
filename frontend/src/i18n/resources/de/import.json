@@ -211,6 +211,14 @@
         "modelFailed": "Das KI-Modell hat nicht geantwortet. Nichts wurde gelesen.",
         "modelInvalid": "Das KI-Modell hat das Dokument nicht als Reise lesen können. Nichts wurde gelesen.",
         "request": "Die Anfrage ist fehlgeschlagen. Nichts wurde gelesen."
+      },
+      "reason": {
+        "LLM_UNREACHABLE": "Das KI-Modell ist nicht erreichbar. Prüfe die Parser-Einstellungen oder versuche es später erneut. Nichts wurde gelesen.",
+        "PARSE_FAILED": "Das KI-Modell konnte das Dokument nicht lesen. Die Ursache steht im Server-Log. Nichts wurde gelesen.",
+        "disabled_by_admin": "Der Administrator hat das KI-Modell abgeschaltet. Nichts wurde gelesen.",
+        "shared_demo": "Im Demo-Konto ist das KI-Modell nicht verfügbar. Nichts wurde gelesen.",
+        "cloud_not_consented": "Ein Cloud-Anbieter ist eingerichtet, aber noch nicht freigegeben. Nichts wurde gelesen.",
+        "provider_incomplete": "Es ist kein KI-Anbieter eingerichtet. Nichts wurde gelesen."
       }
     }
   },

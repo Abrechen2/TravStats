@@ -213,6 +213,8 @@ type PackageBody = {
   issues?: string[];
   /** A model reading only: rows the truthfulness gate refused, for the reviewer. */
   modelDropped?: DroppedRow[];
+  /** A model failure's stable code (refusal kind or parser-failure code). */
+  modelReason?: string;
   /** Present when the reading came from a mail's PDF attachment, not its body. */
   readFromAttachment?: { filename: string | null };
   domainMismatch?: DomainMismatch;
@@ -517,6 +519,7 @@ async function readPackage(
         ...(read.fallbackCode !== undefined ? { fallbackCode: read.fallbackCode } : {}),
         ...(read.fallbackReason !== undefined ? { fallbackReason: read.fallbackReason } : {}),
         ...(read.issues !== undefined ? { issues: read.issues } : {}),
+        ...(read.modelReason !== undefined ? { modelReason: read.modelReason } : {}),
         ...(read.dropped.length > 0 ? { modelDropped: read.dropped } : {}),
       },
     };

@@ -139,14 +139,20 @@ describe("package document read by the model on request", () => {
   });
 
   it("says why a provider failure produced no reading, instead of an empty success", async () => {
-    llmGenerateChain.mockRejectedValue(new Error("Ollama request timed out after 180s"));
+    llmGenerateChain.mockRejectedValue(
+      new Error(
+        "connect ECONNREFUSED 192.168.178.155:11434 (http://192.168.178.155:11434/api/generate)"
+      )
+    );
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
     expect(res.body).toMatchObject({
       package: null,
       parserUsed: "none",
       fallbackCode: "modelFailed",
-      fallbackReason: expect.stringContaining("timed out"),
+      modelReason: "LLM_UNREACHABLE",
     });
+    // The internal address stays in the server log, never in the response.
+    expect(JSON.stringify(res.body)).not.toMatch(/192\.168|11434|ECONNREFUSED/);
   });
 
   it("reports an admin or consent refusal with its reason and never reaches the provider", async () => {
@@ -155,7 +161,7 @@ describe("package document read by the model on request", () => {
     expect(res.body).toMatchObject({
       package: null,
       fallbackCode: "modelRefused",
-      fallbackReason: "AI parser is off",
+      modelReason: "disabled_by_admin",
     });
     expect(llmGenerateChain).not.toHaveBeenCalled();
   });
@@ -168,5 +174,32 @@ describe("package document read by the model on request", () => {
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
     expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
     expect(res.body.issues).toEqual([expect.stringContaining("issuedOn")]);
+  });
+
+  it("does not accept a price that is only a digit run inside the stated amount", async () => {
+    llmGenerateChain.mockResolvedValue({
+      text: JSON.stringify({ ...modelAnswer, totalPrice: 899 }),
+      target: {},
+    });
+    const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
+    expect(res.body.package.totalPrice).toBeNull();
+    expect(res.body.modelDropped).toContainEqual({ kind: "price", value: "899" });
+  });
+
+  it("refuses an answer whose flights are not a list instead of reading it as none", async () => {
+    llmGenerateChain.mockResolvedValue({
+      text: JSON.stringify({ ...modelAnswer, flights: { flightNumber: "ET707" } }),
+      target: {},
+    });
+    const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
+    expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
+    expect(res.body.issues).toEqual([expect.stringContaining("flights")]);
+  });
+
+  it("refuses a document longer than the model is shown, rather than reading part of it", async () => {
+    extractTextFromPdf.mockResolvedValue(`${DOC_TEXT}\n${"x ".repeat(9000)}`);
+    const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);
+    expect(res.body).toMatchObject({ package: null, fallbackCode: "modelInvalid" });
+    expect(llmGenerateChain).not.toHaveBeenCalled();
   });
 });

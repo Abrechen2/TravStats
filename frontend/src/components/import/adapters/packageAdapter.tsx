@@ -110,11 +110,12 @@ function ModelOffer({
           <p>
             {requestFailed
               ? t("import:package.model.failed.request")
-              : t(`import:package.model.failed.${failureKey}`)}
+              : failureKey === "modelRefused" || failureKey === "modelFailed"
+                ? t(`import:package.model.reason.${last?.modelReason ?? "PARSE_FAILED"}`, {
+                    defaultValue: t(`import:package.model.failed.${failureKey}`),
+                  })
+                : t(`import:package.model.failed.${failureKey}`)}
           </p>
-          {!requestFailed && last?.fallbackReason && (
-            <p className="mt-1 font-normal text-(--text-muted)">{last.fallbackReason}</p>
-          )}
           {!requestFailed && last?.issues && last.issues.length > 0 && (
             <p className="mt-1 font-normal text-(--text-muted)">{last.issues.join("; ")}</p>
           )}
