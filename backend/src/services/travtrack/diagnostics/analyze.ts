@@ -11,6 +11,7 @@
  */
 
 export const GAP_MIN_MS = 10 * 60_000;
+const STOP_LEAD_MS = 10 * 60_000;
 const PART_MIN_MS = 2 * 60_000;
 const MINUTE_MS = 60_000;
 const NO_LOG_LOOKBACK_MS = 30 * 60_000;
@@ -293,11 +294,13 @@ function classify(part: Span, input: AnalysisInput): { cause: GapCause; evidence
   }
   if (fixesReceived > 0) return { cause: "droppedOnPhone", evidence };
 
-  // A stop INSIDE the gap that nothing resumed (the usual case: the recorder ends right
-  // after the last stored point) — no fix arrived because the recorder was off.
+  // A stop right after the gap began that nothing resumed (the usual case: the recorder
+  // ends just after the last stored point) — no fix arrived because the recorder was off.
+  // A stop long after the silence began explains only the tail, so it stays `unexplained`.
   const lastRecorder = inside(events, "recorder", part).pop();
   if (
     lastRecorder &&
+    lastRecorder.tMs - part.fromMs <= STOP_LEAD_MS &&
     (field(lastRecorder, "event") === "stop" || field(lastRecorder, "event") === "pause")
   ) {
     return { cause: "recorderPaused", evidence };

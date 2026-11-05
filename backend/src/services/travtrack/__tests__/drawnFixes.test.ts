@@ -42,10 +42,10 @@ describe("withoutBadVertices", () => {
     expect(withoutBadVertices(read([[a, b]], [])).segments).toEqual([[b]]);
   });
 
-  it("a coarse-only stretch beside a fine one is dropped as a spike", () => {
+  it("a coarse-only stretch survives beside a fine one: another day's fix must not blank it", () => {
     const fine = [at(1, 50.5, 9.5, 5), at(2, 50.5, 9.51, 5)];
-    const spike = [at(3, 50.6, 9.5, 3000)];
-    expect(withoutBadVertices(read([fine, spike], [])).segments).toEqual([fine]);
+    const coarseDay = [at(3, 50.6, 9.5, 3000), at(4, 50.6, 9.51, 2000)];
+    expect(withoutBadVertices(read([fine, coarseDay], [])).segments).toEqual([fine, coarseDay]);
   });
 
   it("re-applies the privacy cut: a chord across a zone that only exists once a bad vertex is gone does not come back", () => {

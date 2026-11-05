@@ -12,7 +12,7 @@ import type { SafeSpan } from "./readSafe";
  * legs' `ranges`) stays aligned with what is returned. Storage and export
  * keep the raw points; this is a verdict on the view.
  *
- * A coarse fix is only dropped where finer fixes exist in the read: an account
+ * A coarse fix is only dropped where finer fixes exist in the same stretch: an account
  * whose fixes are ALL coarse (a phone without GPS permission, a Wi-Fi-only
  * device) would otherwise draw nothing at all, while a cell-tower position
  * 1.5 km off is still better than a blank day. Null island and the like
@@ -25,9 +25,10 @@ export function withoutBadVertices<T extends Pick<SafeSpan, "segments" | "circle
     s.filter((p) => !isBadFix({ atMs: p[0], lat: p[1], lon: p[2], accuracyM: p[3] }))
   );
   const isCoarse = (p: StoredPoint) => p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M;
-  const hasFine = valid.some((s) => s.some((p) => !isCoarse(p)));
+  // Per stretch, not per read: a range read spans days, and a coarse-only day must not
+  // vanish because another day in the same read has a fine fix.
   const segments = privacySafeStretches(
-    hasFine ? valid.map((s) => s.filter((p) => !isCoarse(p))) : valid,
+    valid.map((s) => (s.some((p) => !isCoarse(p)) ? s.filter((p) => !isCoarse(p)) : s)),
     read.circles
   ).filter((s) => s.length > 0);
   return { ...read, segments };

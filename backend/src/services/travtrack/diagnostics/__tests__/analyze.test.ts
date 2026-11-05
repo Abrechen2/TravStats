@@ -146,6 +146,11 @@ describe("analyseGaps", () => {
     });
   });
 
+  it("a stop long after the silence began does not explain the whole gap", () => {
+    const events = [ev(DAY + 8 * H + 50 * M, "recorder", { event: "stop", reason: "plan" })];
+    expect(theGap(base({ events })).cause).toBe("unexplained");
+  });
+
   it("reads a stop from an older build (no plan fields) as nulls, and no stop as null", () => {
     const old = [ev(DAY + 7 * H + 2 * M, "recorder", { event: "stop", reason: "plan" })];
     expect(theGap(base({ events: old })).evidence.stopWhy).toMatchObject({
