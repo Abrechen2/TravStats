@@ -33,9 +33,13 @@ export function RatingCategoriesManager({
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One change at a time: a toggle computes the new set from the shown one, so a
+  // second click before the first answer would silently undo it.
+  const [busy, setBusy] = useState(false);
 
   const run = async (action: () => Promise<void>): Promise<boolean> => {
     setError(null);
+    setBusy(true);
     try {
       await action();
       return true;
@@ -49,6 +53,8 @@ export function RatingCategoriesManager({
             : t("lodging:stayEditor.ratingCategoryFailed")
       );
       return false;
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -89,6 +95,7 @@ export function RatingCategoriesManager({
               type="checkbox"
               data-testid={`rating-category-toggle-${key}`}
               checked={view.active.includes(key)}
+              disabled={busy}
               onChange={() => void toggle(key)}
             />
             {labelOf(key)}

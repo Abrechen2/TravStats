@@ -24,7 +24,9 @@ import { DEFAULT_RATING_CATEGORIES, RATING_CATEGORIES } from "../shared/ratingCa
 interface RatingCategoriesState {
   view: RatingCategoriesView;
   loaded: boolean;
-  load: () => Promise<void>;
+  /** The account the view was read for; a different signed-in user reloads. */
+  ownerId: string | null;
+  load: (userId: string) => Promise<void>;
   setActive: (categories: string[]) => Promise<void>;
   add: (name: string) => Promise<void>;
   rename: (id: string, name: string) => Promise<void>;
@@ -37,14 +39,19 @@ const INITIAL_VIEW: RatingCategoriesView = {
   custom: [],
 };
 
-export const useRatingCategoriesStore = create<RatingCategoriesState>((set) => {
+export const useRatingCategoriesStore = create<RatingCategoriesState>((set, get) => {
   const apply = (view: RatingCategoriesView): void => set({ view, loaded: true });
   return {
     view: INITIAL_VIEW,
     loaded: false,
-    load: async () => {
+    ownerId: null,
+    load: async (userId) => {
+      // The previous account's names must not show while the new answer is on its way.
+      if (get().ownerId !== userId) set({ view: INITIAL_VIEW, loaded: false, ownerId: userId });
       try {
-        apply(await getRatingCategories());
+        const view = await getRatingCategories();
+        // A slow answer for an account that has since signed out is dropped.
+        if (get().ownerId === userId) apply(view);
       } catch (err: unknown) {
         // The form keeps working on the defaults; the next open retries.
         logger.error("ratingCategories: could not load the account's categories", err);

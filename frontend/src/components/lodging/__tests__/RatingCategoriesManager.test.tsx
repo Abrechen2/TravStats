@@ -8,6 +8,7 @@ import {
   deleteOwnRatingCategory,
   getRatingCategories,
 } from "../../../lib/api/lodging";
+import { useAuthStore } from "../../../store/authStore";
 import { useRatingCategoriesStore } from "../../../store/lodgingRatingCategoriesStore";
 
 vi.mock("../../../lib/api/lodging", () => ({
@@ -29,7 +30,8 @@ describe("RatingCategoriesManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getRatingCategories).mockResolvedValue(view(["room", "breakfast", "service"]));
-    useRatingCategoriesStore.setState({ loaded: false });
+    useRatingCategoriesStore.setState({ loaded: false, ownerId: null });
+    useAuthStore.setState({ user: { id: "u1" } as never });
   });
 
   it("switches a built-in category on and sends the whole new set", async () => {

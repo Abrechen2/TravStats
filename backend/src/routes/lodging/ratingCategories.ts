@@ -1,7 +1,7 @@
 import { Router, type NextFunction, type Response } from "express";
 import { z } from "zod";
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { type AuthRequest, requireUser } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import {
@@ -75,6 +75,11 @@ async function snapshot(userId: string): Promise<{
   };
 }
 
+/** Serialises the name/limit checks of one account's category writes. */
+async function lockCategories(tx: DbTransaction, userId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('lodging_rating_categories'), hashtext(${userId}))`;
+}
+
 function nameTaken(existing: string[], name: string): boolean {
   return existing.some((n) => n.toLowerCase() === name.toLowerCase());
 }
@@ -114,32 +119,37 @@ router.post(
       const parsed = nameSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError("Invalid category name", 400);
       const { name } = parsed.data;
-      const mine = await prisma.lodgingRatingCategory.findMany({ where: { userId } });
-      const live = mine.filter((c) => c.deletedAt === null);
-      if (
-        nameTaken(
-          live.map((c) => c.name),
-          name
-        )
-      ) {
-        throw new AppError("A category with this name already exists", 409);
-      }
-      if (live.length >= MAX_CUSTOM_CATEGORIES) {
-        throw new AppError("Too many own categories", 400);
-      }
-      // A deleted category of the same name comes back instead of a twin
-      // appearing: the values stays still carry under it are the same judgement.
-      const revived = mine.find(
-        (c) => c.deletedAt !== null && c.name.toLowerCase() === name.toLowerCase()
-      );
-      if (revived) {
-        await prisma.lodgingRatingCategory.update({
-          where: { id: revived.id },
-          data: { deletedAt: null, name },
-        });
-      } else {
-        await prisma.lodgingRatingCategory.create({ data: { userId, name } });
-      }
+      // The name and count checks and the write are one step per user: two
+      // concurrent adds must not both pass the checks.
+      await prisma.$transaction(async (tx) => {
+        await lockCategories(tx, userId);
+        const mine = await tx.lodgingRatingCategory.findMany({ where: { userId } });
+        const live = mine.filter((c) => c.deletedAt === null);
+        if (
+          nameTaken(
+            live.map((c) => c.name),
+            name
+          )
+        ) {
+          throw new AppError("A category with this name already exists", 409);
+        }
+        if (live.length >= MAX_CUSTOM_CATEGORIES) {
+          throw new AppError("Too many own categories", 400);
+        }
+        // A deleted category of the same name comes back instead of a twin
+        // appearing: the values stays still carry under it are the same judgement.
+        const revived = mine.find(
+          (c) => c.deletedAt !== null && c.name.toLowerCase() === name.toLowerCase()
+        );
+        if (revived) {
+          await tx.lodgingRatingCategory.update({
+            where: { id: revived.id },
+            data: { deletedAt: null, name },
+          });
+        } else {
+          await tx.lodgingRatingCategory.create({ data: { userId, name } });
+        }
+      });
       res.status(201).json({ success: true, data: await snapshot(userId) });
     } catch (err) {
       next(err);
@@ -155,19 +165,22 @@ router.patch(
       const parsed = nameSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError("Invalid category name", 400);
       const { name } = parsed.data;
-      const mine = await prisma.lodgingRatingCategory.findMany({ where: { userId } });
-      const target = mine.find((c) => c.id === req.params.id && c.deletedAt === null);
-      if (!target) throw new AppError("Category not found", 404);
-      const others = mine.filter((c) => c.id !== target.id && c.deletedAt === null);
-      if (
-        nameTaken(
-          others.map((c) => c.name),
-          name
-        )
-      ) {
-        throw new AppError("A category with this name already exists", 409);
-      }
-      await prisma.lodgingRatingCategory.update({ where: { id: target.id }, data: { name } });
+      await prisma.$transaction(async (tx) => {
+        await lockCategories(tx, userId);
+        const mine = await tx.lodgingRatingCategory.findMany({ where: { userId } });
+        const target = mine.find((c) => c.id === req.params.id && c.deletedAt === null);
+        if (!target) throw new AppError("Category not found", 404);
+        const others = mine.filter((c) => c.id !== target.id && c.deletedAt === null);
+        if (
+          nameTaken(
+            others.map((c) => c.name),
+            name
+          )
+        ) {
+          throw new AppError("A category with this name already exists", 409);
+        }
+        await tx.lodgingRatingCategory.update({ where: { id: target.id }, data: { name } });
+      });
       res.json({ success: true, data: await snapshot(userId) });
     } catch (err) {
       next(err);

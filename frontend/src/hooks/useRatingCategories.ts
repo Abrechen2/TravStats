@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 
 import { useTranslation } from "./useTranslation";
+import { useAuthStore } from "../store/authStore";
 import { useRatingCategoriesStore } from "../store/lodgingRatingCategoriesStore";
 import { customCategoryId, isBuiltInCategory } from "../shared/ratingCategories";
 
@@ -16,9 +17,14 @@ export function useRatingCategories() {
   const loaded = useRatingCategoriesStore((s) => s.loaded);
   const load = useRatingCategoriesStore((s) => s.load);
 
+  // The categories belong to the signed-in account: a different user (logout,
+  // login on a shared browser) must never see the previous one's own names.
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const ownerOfView = useRatingCategoriesStore((s) => s.ownerId);
   useEffect(() => {
-    if (!loaded) void load();
-  }, [loaded, load]);
+    if (userId === null) return;
+    if (!loaded || ownerOfView !== userId) void load(userId);
+  }, [loaded, ownerOfView, userId, load]);
 
   const labelOf = useCallback(
     (key: string): string => {

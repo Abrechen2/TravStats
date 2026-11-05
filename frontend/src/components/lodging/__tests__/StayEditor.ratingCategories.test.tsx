@@ -10,6 +10,7 @@ import {
   getRatingCategories,
 } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
+import { useAuthStore } from "../../../store/authStore";
 import { useRatingCategoriesStore } from "../../../store/lodgingRatingCategoriesStore";
 import type { LodgingStay } from "../../../types/lodging";
 
@@ -106,7 +107,8 @@ describe("StayEditor — switchable and own rating categories", () => {
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
     vi.mocked(getFxPreview).mockResolvedValue(null);
     vi.mocked(getRatingCategories).mockResolvedValue(OWNER_VIEW);
-    useRatingCategoriesStore.setState({ loaded: false });
+    useRatingCategoriesStore.setState({ loaded: false, ownerId: null });
+    useAuthStore.setState({ user: { id: "u1" } as never });
   });
 
   it("offers the switched-on categories and an own one, and no breakfast picker", async () => {
