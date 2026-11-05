@@ -218,7 +218,33 @@
         "disabled_by_admin": "Der Administrator hat das KI-Modell abgeschaltet. Nichts wurde gelesen.",
         "shared_demo": "Im Demo-Konto ist das KI-Modell nicht verfügbar. Nichts wurde gelesen.",
         "cloud_not_consented": "Ein Cloud-Anbieter ist eingerichtet, aber noch nicht freigegeben. Nichts wurde gelesen.",
-        "provider_incomplete": "Es ist kein KI-Anbieter eingerichtet. Nichts wurde gelesen."
+        "provider_incomplete": "Es ist kein KI-Anbieter eingerichtet. Nichts wurde gelesen.",
+        "documentTooLong": "Das Dokument ist zu lang, als dass das KI-Modell es vollständig sehen könnte. Nichts wurde gelesen.",
+        "answerNotObject": "Die Antwort des KI-Modells war keine verwertbare Reise. Nichts wurde gelesen.",
+        "contractRefused": "Die Antwort des KI-Modells ergibt keine vollständige Reise. Nichts wurde gelesen."
+      },
+      "fields": "Betroffene Angaben: {{fields}}",
+      "field": {
+        "bookingReference": "Buchungsnummer",
+        "issuedOn": "Ausstellungsdatum",
+        "tripName": "Name der Reise",
+        "startDate": "Reisebeginn",
+        "endDate": "Reiseende",
+        "travellers": "Reisende",
+        "operator": "Veranstalter",
+        "totalPrice": "Gesamtpreis",
+        "currency": "Währung",
+        "flights": "Flüge",
+        "stays": "Unterkünfte",
+        "cruiseShip": "Schiff",
+        "cruiseFrom": "Kreuzfahrt von",
+        "cruiseTo": "Kreuzfahrt nach",
+        "cruiseCabin": "Kabine",
+        "cruiseStart": "Kreuzfahrt-Beginn",
+        "cruiseEnd": "Kreuzfahrt-Ende",
+        "freeCancellationUntil": "Kostenlose Stornierung bis",
+        "paymentDueOn": "Zahlung fällig am",
+        "deadlineZone": "Zeitzone der Fristen"
       }
     }
   },

@@ -218,7 +218,33 @@
         "disabled_by_admin": "The administrator has turned the AI model off. Nothing was read.",
         "shared_demo": "The AI model is not available in the demo account. Nothing was read.",
         "cloud_not_consented": "A cloud provider is configured but not yet allowed. Nothing was read.",
-        "provider_incomplete": "No AI provider is configured. Nothing was read."
+        "provider_incomplete": "No AI provider is configured. Nothing was read.",
+        "documentTooLong": "The document is too long for the AI model to see completely. Nothing was read.",
+        "answerNotObject": "The AI model's answer was not a usable trip. Nothing was read.",
+        "contractRefused": "The AI model's answer does not make a complete trip. Nothing was read."
+      },
+      "fields": "Affected details: {{fields}}",
+      "field": {
+        "bookingReference": "Booking number",
+        "issuedOn": "Issue date",
+        "tripName": "Trip name",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "travellers": "Travellers",
+        "operator": "Operator",
+        "totalPrice": "Total price",
+        "currency": "Currency",
+        "flights": "Flights",
+        "stays": "Stays",
+        "cruiseShip": "Ship",
+        "cruiseFrom": "Cruise from",
+        "cruiseTo": "Cruise to",
+        "cruiseCabin": "Cabin",
+        "cruiseStart": "Cruise start",
+        "cruiseEnd": "Cruise end",
+        "freeCancellationUntil": "Free cancellation until",
+        "paymentDueOn": "Payment due on",
+        "deadlineZone": "Deadline time zone"
       }
     }
   },

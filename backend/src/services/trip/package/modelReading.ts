@@ -32,7 +32,9 @@ export interface ModelPackageResult {
   fallbackReason?: string;
   /**
    * A stable code the client words: the refusal kind (`disabled_by_admin`, …)
-   * or the parser-failure code (`LLM_UNREACHABLE`, `PARSE_FAILED`). Never raw
+   * the parser-failure code (`LLM_UNREACHABLE`, `PARSE_FAILED`) or the
+   * invalid-answer code (`documentTooLong`, `answerNotObject`,
+   * `contractRefused`; the last lists the failing field names in `issues`). Never raw
    * provider text — that stays in the server log.
    */
   modelReason?: string;
@@ -191,7 +193,7 @@ export async function readPackageWithModel(
       reading: null,
       fallbackCode: "modelInvalid",
       fallbackReason: `The document is longer than ${MAX_DOCUMENT_CHARS} characters; the model would see only part of it`,
-      issues: ["(document): too long to read completely"],
+      modelReason: "documentTooLong",
       dropped: [],
     };
   }
@@ -235,7 +237,7 @@ export async function readPackageWithModel(
       reading: null,
       fallbackCode: "modelInvalid",
       fallbackReason: "The AI answer was not a package object",
-      issues: ["(root): not a JSON object"],
+      modelReason: "answerNotObject",
       dropped: [],
     };
   }
@@ -247,7 +249,9 @@ export async function readPackageWithModel(
       reading: null,
       fallbackCode: "modelInvalid",
       fallbackReason: "The AI answer does not satisfy the package contract",
-      issues: checked.issues,
+      modelReason: "contractRefused",
+      // Field names only: Zod's own messages are English and never reach the screen.
+      issues: [...new Set(checked.issues.map((i) => i.split(/[.:[]/)[0]))],
       dropped,
     };
   }

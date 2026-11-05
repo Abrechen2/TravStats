@@ -175,5 +175,37 @@ describe("package review", () => {
       fireEvent.click(screen.getByRole("button", { name: "Mit KI lesen" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(/Anfrage ist fehlgeschlagen/);
     });
+
+    it.each([
+      ["modelRefused", "disabled_by_admin", /Administrator/],
+      ["modelFailed", "PARSE_FAILED", /Server-Log/],
+      ["modelInvalid", "documentTooLong", /zu lang/],
+      ["modelInvalid", "answerNotObject", /keine verwertbare Reise/],
+      ["modelInvalid", "contractRefused", /keine vollständige Reise/],
+    ])("words %s / %s in German, never as the server's English", async (code, reason, text) => {
+      vi.mocked(parseApi.readPackageWithModel).mockResolvedValue({
+        ...kept,
+        fallbackCode: code,
+        modelReason: reason,
+        fallbackReason: "English server text",
+        issues: reason === "contractRefused" ? ["issuedOn", "flights"] : undefined,
+      } as never);
+      render(
+        <PackageReviewSlot
+          parseResult={kept}
+          onCommit={vi.fn()}
+          onCancel={vi.fn()}
+          onEmpty={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Mit KI lesen" }));
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(text);
+      expect(alert).not.toHaveTextContent(/English server text|issuedOn|too long|Nothing/);
+      if (reason === "contractRefused") {
+        expect(alert).toHaveTextContent("Betroffene Angaben: Ausstellungsdatum, Flüge");
+      }
+    });
   });
 });

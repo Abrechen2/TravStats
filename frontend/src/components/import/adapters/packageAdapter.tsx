@@ -110,14 +110,18 @@ function ModelOffer({
           <p>
             {requestFailed
               ? t("import:package.model.failed.request")
-              : failureKey === "modelRefused" || failureKey === "modelFailed"
-                ? t(`import:package.model.reason.${last?.modelReason ?? "PARSE_FAILED"}`, {
-                    defaultValue: t(`import:package.model.failed.${failureKey}`),
-                  })
-                : t(`import:package.model.failed.${failureKey}`)}
+              : t(`import:package.model.reason.${last?.modelReason ?? failureKey}`, {
+                  defaultValue: t(`import:package.model.failed.${failureKey}`),
+                })}
           </p>
           {!requestFailed && last?.issues && last.issues.length > 0 && (
-            <p className="mt-1 font-normal text-(--text-muted)">{last.issues.join("; ")}</p>
+            <p className="mt-1 font-normal text-(--text-muted)">
+              {t("import:package.model.fields", {
+                fields: last.issues
+                  .map((f) => t(`import:package.model.field.${f}`, { defaultValue: f }))
+                  .join(", "),
+              })}
+            </p>
           )}
         </div>
       )}
