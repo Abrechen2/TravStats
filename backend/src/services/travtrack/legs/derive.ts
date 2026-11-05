@@ -10,6 +10,7 @@ import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
 import { findFoldRuns, type FoldContext, type FoldRun } from "./fold";
 import { STOP_MS } from "../dayMovement";
+import { RECORDING_GAP_MS } from "../../tripRecording/segments";
 import {
   badVertexIn,
   findDwells,
@@ -241,6 +242,65 @@ function foldedStop(
   };
 }
 
+function stopOf(
+  segment: readonly StoredPoint[],
+  d: FoldedDwell,
+  read: SafeSpan,
+  inputs: LegInputs
+): Stop | null {
+  const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
+  const accepted = placeFor(span, inputs.places ?? []);
+  const shown = d.fold
+    ? foldedStop(d.fold, accepted)
+    : {
+        anchor: { lat: segment[d.from][1], lon: segment[d.from][2] },
+        place: accepted,
+        folded: null,
+      };
+  // Segments are privacy-cut, so this is a second lock, not the first.
+  if (inPrivacyZone(shown.anchor, read.circles)) return null;
+  return { ...span, ...shown, stayRef: stayFor(span, inputs.stays) };
+}
+
+/**
+ * A phone at rest sends few fixes, and a silence of more than `RECORDING_GAP_MS` cuts the
+ * recording into stretches too short to hold a dwell each: a day spent in one spot was
+ * "a single fix, a gap, a single fix" and produced no stop at all. The stretches are
+ * joined here, for stops only, across a clock gap the phone did not announce (no pause, no
+ * deleted range inside it); a dwell that reaches over a join is the stop. Whether the
+ * phone left and came back unseen is not knowable; both ends lie within `STEP_M` of the
+ * dwell's first fix, which is the same evidence a dense dwell rests on.
+ */
+function bridgedStops(read: SafeSpan, inputs: LegInputs): Stop[] {
+  const ordered = read.segments.filter((s) => s.length > 0).sort((a, b) => a[0][0] - b[0][0]);
+  const blocked = [...read.paused, ...read.deleted];
+  const chains: StoredPoint[][][] = [];
+  for (const seg of ordered) {
+    const chain = chains[chains.length - 1];
+    const prev = chain?.[chain.length - 1];
+    const end = prev?.[prev.length - 1][0] ?? 0;
+    const joins =
+      prev !== undefined &&
+      seg[0][0] - end > RECORDING_GAP_MS &&
+      !blocked.some((b) => b.fromMs < seg[0][0] && b.untilMs > end);
+    if (joins) chain.push(seg);
+    else chains.push([seg]);
+  }
+  const out: Stop[] = [];
+  for (const chain of chains.filter((c) => c.length > 1)) {
+    const joined = chain.flat();
+    const bounds = chain.slice(1).map((s) => s[0][0]);
+    for (const d of dwellsWithFolds(joined, inputs.fold, read)) {
+      const first = joined[d.from][0];
+      const last = joined[d.to][0];
+      if (!bounds.some((b) => first < b && b <= last)) continue;
+      const stop = stopOf(joined, d, read, inputs);
+      if (stop) out.push(stop);
+    }
+  }
+  return out;
+}
+
 export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; stops: Stop[] } {
   const flights = inputs.windows
     .filter((w) => w.domain === "flight")
@@ -251,18 +311,8 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   read.segments.forEach((segment, segmentIndex) => {
     const dwells = dwellsWithFolds(segment, inputs.fold, read);
     for (const d of dwells) {
-      const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
-      const accepted = placeFor(span, inputs.places ?? []);
-      const shown = d.fold
-        ? foldedStop(d.fold, accepted)
-        : {
-            anchor: { lat: segment[d.from][1], lon: segment[d.from][2] },
-            place: accepted,
-            folded: null,
-          };
-      // Segments are privacy-cut, so this is a second lock, not the first.
-      if (inPrivacyZone(shown.anchor, read.circles)) continue;
-      stops.push({ ...span, ...shown, stayRef: stayFor(span, inputs.stays) });
+      const stop = stopOf(segment, d, read, inputs);
+      if (stop) stops.push(stop);
     }
     for (const run of movingRuns(segment.length, dwells)) {
       for (const piece of piecesOfRun(segment, run, inputs.windows, read)) {
@@ -295,6 +345,13 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
       }
     }
   });
+  // A bridged stop replaces the stops its stretches found alone.
+  const bridged = bridgedStops(read, inputs);
+  const standing = stops.filter(
+    (s) => !bridged.some((b) => s.fromMs < b.untilMs && b.fromMs < s.untilMs)
+  );
+  stops.length = 0;
+  stops.push(...standing, ...bridged);
   legs.sort((a, b) => a.fromMs - b.fromMs);
   stops.sort((a, b) => a.fromMs - b.fromMs);
   return { legs, stops };
