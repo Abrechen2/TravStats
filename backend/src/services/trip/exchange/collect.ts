@@ -4,6 +4,8 @@
  * 0002) and the private fields only when asked. Returns the files to pack
  * beside it, so the archive writer streams bytes it never has to look up.
  */
+import { customCategoryKey, isBuiltInCategory } from "../../../shared/ratingCategories";
+import { storedRatingsOf } from "../../../shared/ratingDerivation";
 import { RAIL_TRANSIT_MODES, type RailTransitMode } from "../../../shared/railCounting";
 import path from "path";
 import { prisma } from "../../../db";
@@ -159,6 +161,26 @@ function placesAndVisits(trip: LoadedTrip, priv: boolean) {
   return { places, visits, visitKey, addPlace };
 }
 
+/** Built-in values by key, own ones by name; a value whose category is unknown is left out. */
+function exportedRatings(
+  values: Record<string, number>,
+  ownNames: Map<string, string>
+): { ratings?: Record<string, number>; ownRatings?: Record<string, number> } {
+  const ratings: Record<string, number> = {};
+  const ownRatings: Record<string, number> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (isBuiltInCategory(key)) ratings[key] = value;
+    else {
+      const name = ownNames.get(key);
+      if (name !== undefined) ownRatings[name] = value;
+    }
+  }
+  return {
+    ...(Object.keys(ratings).length > 0 ? { ratings } : {}),
+    ...(Object.keys(ownRatings).length > 0 ? { ownRatings } : {}),
+  };
+}
+
 export async function collectTrip(
   userId: string,
   tripId: string,
@@ -166,6 +188,13 @@ export async function collectTrip(
 ): Promise<CollectedTrip> {
   const trip = await loadTrip(userId, tripId);
   const priv = options.private;
+  const ownCategoryNames = priv
+    ? new Map(
+        (await prisma.lodgingRatingCategory.findMany({ where: { userId } })).map(
+          (c) => [customCategoryKey(c.id), c.name] as const
+        )
+      )
+    : new Map<string, string>();
   const bookingKey = keyer("b");
   const flightKey = keyer("f");
   const stayKey = keyer("s");
@@ -310,6 +339,7 @@ export async function collectTrip(
               ratingBreakfast: s.ratingBreakfast,
               ratingService: s.ratingService,
               ratingOverall: s.ratingOverall,
+              ...exportedRatings(storedRatingsOf(s), ownCategoryNames),
               pricePerNight: s.pricePerNight,
               totalPrice: s.totalPrice,
               currency: s.currency,

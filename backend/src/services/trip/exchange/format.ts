@@ -208,6 +208,11 @@ const stayPrivate = z
     ratingBreakfast: z.number().nullable(),
     ratingService: z.number().nullable(),
     ratingOverall: z.number().nullable(),
+    // Additive (the three above stay): every OTHER category value. Built-in
+    // categories by key, the sender's own categories by NAME - an id means
+    // nothing on another account.
+    ratings: z.record(z.string(), z.number().min(0.5).max(5)).optional(),
+    ownRatings: z.record(z.string(), z.number().min(0.5).max(5)).optional(),
     pricePerNight: money,
     totalPrice: money,
     currency,

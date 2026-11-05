@@ -11,7 +11,13 @@
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { customCategoryId, isBuiltInCategory } from "../../shared/ratingCategories";
+import {
+  MAX_CUSTOM_CATEGORIES,
+  MAX_CUSTOM_CATEGORY_NAME,
+  customCategoryId,
+  customCategoryKey,
+  isBuiltInCategory,
+} from "../../shared/ratingCategories";
 import { deriveStayOverallRating, storedRatingsOf } from "../../shared/ratingDerivation";
 
 export interface SentRatings {
@@ -96,4 +102,46 @@ export async function assertRatingKeysValid(
   if (owned !== new Set(customIds).size) {
     throw new AppError("Unknown rating category", 400);
   }
+}
+
+/**
+ * Own categories by NAME, for a trip file that crosses accounts. A name that
+ * matches one of the account's live categories (case-insensitive) is used, a
+ * deleted one of that name is revived, otherwise it is created - the same
+ * rules as `POST /lodging/rating-categories/custom`, including the per-account
+ * limit. A name that cannot be created (limit) is absent from the result, so
+ * the caller drops that one value instead of failing the whole import.
+ */
+export async function ensureOwnCategoriesByName(
+  userId: string,
+  names: string[]
+): Promise<Map<string, string>> {
+  const wanted = [...new Set(names.map((n) => n.trim()).filter((n) => n.length > 0))];
+  const out = new Map<string, string>();
+  if (wanted.length === 0) return out;
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('lodging_rating_categories'), hashtext(${userId}))`;
+    const mine = await tx.lodgingRatingCategory.findMany({ where: { userId } });
+    let live = mine.filter((c) => c.deletedAt === null).length;
+    for (const name of wanted) {
+      if (name.length > MAX_CUSTOM_CATEGORY_NAME) continue;
+      const same = (c: { name: string }): boolean => c.name.toLowerCase() === name.toLowerCase();
+      const liveHit = mine.find((c) => c.deletedAt === null && same(c));
+      if (liveHit) {
+        out.set(name, customCategoryKey(liveHit.id));
+        continue;
+      }
+      if (live >= MAX_CUSTOM_CATEGORIES) continue;
+      const dead = mine.find((c) => c.deletedAt !== null && same(c));
+      const row = dead
+        ? await tx.lodgingRatingCategory.update({
+            where: { id: dead.id },
+            data: { deletedAt: null, name },
+          })
+        : await tx.lodgingRatingCategory.create({ data: { userId, name } });
+      live += 1;
+      out.set(name, customCategoryKey(row.id));
+    }
+  });
+  return out;
 }
