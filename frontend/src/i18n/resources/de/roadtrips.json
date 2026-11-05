@@ -1094,5 +1094,13 @@
     "export": "GPX exportieren",
     "exporting": "Wird erstellt …",
     "failed": "Die Routenlinien konnten nicht geladen werden – es wurde keine Datei gespeichert. Bitte erneut versuchen."
+  },
+  "weather": {
+    "load": "Wetter der Stationen laden",
+    "reload": "Wetter erneut laden",
+    "loading": "Wetter wird geholt …",
+    "none": "Keine Station mit Ort und vergangenem Ankunftstag – es gibt kein gemessenes Wetter zu laden.",
+    "noLocation": "Ohne Ort oder Datum gibt es kein Wetter.",
+    "hint": "Gemessenes Wetter des Ankunftstags (Open-Meteo). Heute und kommende Tage lassen sich erst nachträglich laden."
   }
 }

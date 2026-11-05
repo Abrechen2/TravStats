@@ -70,18 +70,12 @@ export function parseGpxStations(text: string): GpxResult {
   return { ok: true, points, from };
 }
 
-export type MapsLinkFailure =
-  | "notALink"
-  | "notMaps"
-  | "shortLink"
-  | "noWaypoints"
-  | "tooMany";
+export type MapsLinkFailure = "notALink" | "notMaps" | "shortLink" | "noWaypoints" | "tooMany";
 
 export type MapsLinkWaypoint = StartPoint | NamedWaypoint;
 
 export type MapsLinkResult =
-  | { ok: true; waypoints: MapsLinkWaypoint[] }
-  | { ok: false; reason: MapsLinkFailure };
+  { ok: true; waypoints: MapsLinkWaypoint[] } | { ok: false; reason: MapsLinkFailure };
 
 const COORD = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
 
@@ -181,7 +175,8 @@ export function parseMapsLink(input: string): MapsLinkResult {
   } catch {
     return { ok: false, reason: "notALink" };
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return { ok: false, reason: "notALink" };
+  if (url.protocol !== "https:" && url.protocol !== "http:")
+    return { ok: false, reason: "notALink" };
   const host = url.hostname.replace(/^www\./, "");
   if (SHORT_HOSTS.has(host) || (host === "maps.apple.com" && url.pathname.startsWith("/p/"))) {
     return { ok: false, reason: "shortLink" };

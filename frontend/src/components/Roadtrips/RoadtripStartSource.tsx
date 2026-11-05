@@ -274,11 +274,7 @@ function LinkSource({ onPoints }: { onPoints: (p: StartPoint[]) => void }): JSX.
           }}
         />
       </Field>
-      <Button
-        variant="secondary"
-        disabled={busy || text.trim() === ""}
-        onClick={() => void read()}
-      >
+      <Button variant="secondary" disabled={busy || text.trim() === ""} onClick={() => void read()}>
         {busy ? t("roadtrips:startFrom.linkReading") : t("roadtrips:startFrom.linkRead")}
       </Button>
       {problem && <Problem>{problem}</Problem>}

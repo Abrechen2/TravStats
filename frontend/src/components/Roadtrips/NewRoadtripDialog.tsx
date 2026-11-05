@@ -51,7 +51,16 @@ interface Draft {
 
 /** The empty draft of one opening — the state's start AND the dirty baseline. */
 function emptyDraft(): Draft {
-  return { name: "", vehicle: null, vehicleName: "", odometer: "", tripId: "", tags: [], start: [], roundTrip: false };
+  return {
+    name: "",
+    vehicle: null,
+    vehicleName: "",
+    odometer: "",
+    tripId: "",
+    tags: [],
+    start: [],
+    roundTrip: false,
+  };
 }
 
 /** The odometer as a number (null when empty); `invalid` when the text cannot be a reading. */

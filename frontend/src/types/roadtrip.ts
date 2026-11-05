@@ -173,3 +173,17 @@ export interface CreateRoadtripInput {
   startOdometerKm?: number;
   tags?: string[];
 }
+
+/** A station's measured weather (`GET /roadtrips/:id/stations/:stationId/weather`). */
+export interface StationWeather {
+  code: number;
+  tMaxC: number;
+  tMinC: number;
+  precipMm: number;
+  /** The arrival day it was measured for, YYYY-MM-DD. */
+  day: string;
+  lat: number;
+  lon: number;
+  source: "open-meteo";
+  fetchedAt: string;
+}

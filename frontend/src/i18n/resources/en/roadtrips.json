@@ -1094,5 +1094,13 @@
     "export": "Export GPX",
     "exporting": "Creating …",
     "failed": "The route lines could not be loaded – no file was saved. Please try again."
+  },
+  "weather": {
+    "load": "Load weather of the stations",
+    "reload": "Reload weather",
+    "loading": "Fetching weather …",
+    "none": "No station with a place and a past arrival day – there is no measured weather to load.",
+    "noLocation": "Without a place or a date there is no weather.",
+    "hint": "Measured weather of the arrival day (Open-Meteo). Today and coming days can only be loaded afterwards."
   }
 }

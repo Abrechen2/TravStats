@@ -9,7 +9,9 @@ import { searchPlaces } from "../../../lib/api/geo";
 vi.mock("../../../lib/api/roadtrips", () => ({
   roadtripsApi: { create: vi.fn(), replaceStations: vi.fn() },
 }));
-vi.mock("../../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn(async () => [{ id: "t1", name: "Eine Reise" }]) } }));
+vi.mock("../../../lib/api/trips", () => ({
+  tripsApi: { getAll: vi.fn(async () => [{ id: "t1", name: "Eine Reise" }]) },
+}));
 vi.mock("../../../lib/api/lodging", () => ({ listLodgings: vi.fn() }));
 vi.mock("../../../lib/api/geo", () => ({ searchPlaces: vi.fn() }));
 vi.mock("../../../hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
@@ -91,7 +93,9 @@ describe("NewRoadtripDialog — start from a lodging, a GPX file or a Maps link"
     await open(onCreated);
     fireEvent.click(screen.getByText("roadtrips:startFrom.gpx"));
     await chooseFile(fileOf("<kml/>", "x.kml"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("roadtrips:startFrom.gpxError.notGpx");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "roadtrips:startFrom.gpxError.notGpx"
+    );
     expect(screen.getByRole("switch")).toBeDisabled();
     await nameAndSubmit();
     await waitFor(() => expect(onCreated).toHaveBeenCalled());

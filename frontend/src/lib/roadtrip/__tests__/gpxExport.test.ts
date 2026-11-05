@@ -33,18 +33,28 @@ const geometry: TourGeometry = {
           [10.5, 54],
         ],
       },
-      properties: { legId: "l", source: "routed", mode: "drive", confidence: "high", distanceKm: 70 },
+      properties: {
+        legId: "l",
+        source: "routed",
+        mode: "drive",
+        confidence: "high",
+        distanceKm: 70,
+      },
     },
   ],
 } as never;
 
 describe("roadtrip GPX export", () => {
   it("writes stations as waypoints and each leg's line as a track segment, in [lat, lon] order", () => {
-    const gpx = buildRoadtripGpx("Nord & Süd", [
-      station({}),
-      station({ id: "v", title: "", state: "via", lat: 1, lon: 1 }),
-      station({ id: "k", title: "Kiel <Hafen>", lat: 54.3, lon: 10.1, state: "free" }),
-    ], geometry);
+    const gpx = buildRoadtripGpx(
+      "Nord & Süd",
+      [
+        station({}),
+        station({ id: "v", title: "", state: "via", lat: 1, lon: 1 }),
+        station({ id: "k", title: "Kiel <Hafen>", lat: 54.3, lon: 10.1, state: "free" }),
+      ],
+      geometry
+    );
     expect(gpx).toContain("<name>Nord &amp; Süd</name>");
     expect(gpx).toContain('<wpt lat="53.55" lon="9.99">');
     expect(gpx).toContain("<name>Kiel &lt;Hafen&gt;</name>");
@@ -56,7 +66,11 @@ describe("roadtrip GPX export", () => {
   });
 
   it("reads back as the same stations through the importer", () => {
-    const gpx = buildRoadtripGpx("T", [station({}), station({ id: "k", title: "Kiel", lat: 54.3, lon: 10.1 })], geometry);
+    const gpx = buildRoadtripGpx(
+      "T",
+      [station({}), station({ id: "k", title: "Kiel", lat: 54.3, lon: 10.1 })],
+      geometry
+    );
     expect(parseGpxStations(gpx)).toEqual({
       ok: true,
       from: "waypoints",

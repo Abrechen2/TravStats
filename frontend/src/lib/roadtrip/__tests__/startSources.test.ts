@@ -27,7 +27,9 @@ describe("roadtrip start from a GPX file", () => {
     const w = parseGpxStations(gpx(`<wpt lat="50" lon="8"><name>A</name></wpt>`));
     expect(w.ok && w.from).toBe("waypoints");
     const t = parseGpxStations(
-      gpx(`<trk><trkseg><trkpt lat="1" lon="2"/><trkpt lat="3" lon="4"/><trkpt lat="5" lon="6"/></trkseg></trk>`)
+      gpx(
+        `<trk><trkseg><trkpt lat="1" lon="2"/><trkpt lat="3" lon="4"/><trkpt lat="5" lon="6"/></trkseg></trk>`
+      )
     );
     expect(t).toEqual({
       ok: true,

@@ -24,6 +24,8 @@ import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
 import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
 import DraftFirstDialog from "../components/Roadtrips/DraftFirstDialog";
 import OdometerDialog from "../components/Roadtrips/OdometerDialog";
+import RoadtripWeatherBar from "../components/Roadtrips/RoadtripWeatherBar";
+import { useRoadtripWeather } from "../hooks/useRoadtripWeather";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import RoadtripDayView from "../components/Roadtrips/RoadtripDayView";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
@@ -75,6 +77,8 @@ type LegEdit = {
  * A local station draft from an earlier visit (forgejo#244) is offered before
  * anything else: the editor would otherwise write the next change over it.
  */
+const NO_STATIONS: RoadtripStation[] = [];
+
 export default function RoadtripDetailPage(): JSX.Element {
   const { id = "" } = useParams<{ id: string }>();
   const [params, setParams] = useSearchParams();
@@ -234,6 +238,7 @@ export default function RoadtripDetailPage(): JSX.Element {
         : [],
     [geometry, detail, id, roadtripColor]
   );
+  const weather = useRoadtripWeather(id, detail?.stations ?? NO_STATIONS, today);
   const selected = detail?.stations.find((s) => s.id === selectedId) ?? null;
   const highlight = useMemo(
     () =>
@@ -520,16 +525,25 @@ export default function RoadtripDetailPage(): JSX.Element {
               startDate={detail.startDate}
             />
           ) : (
-            <StationTimeline
-              stations={detail.stations}
-              legs={detail.legs}
-              tours={detail.tours}
-              startDate={detail.startDate}
-              today={today}
-              selectedId={selectedId}
-              onSelect={(s) => setSelectedId((cur) => (cur === s.id ? null : s.id))}
-              onStartTour={(s) => void startTour(s)}
-            />
+            <>
+              <RoadtripWeatherBar
+                eligible={weather.eligible}
+                running={weather.running}
+                asked={weather.asked}
+                onLoad={() => void weather.load()}
+              />
+              <StationTimeline
+                weather={weather.byStation}
+                stations={detail.stations}
+                legs={detail.legs}
+                tours={detail.tours}
+                startDate={detail.startDate}
+                today={today}
+                selectedId={selectedId}
+                onSelect={(s) => setSelectedId((cur) => (cur === s.id ? null : s.id))}
+                onStartTour={(s) => void startTour(s)}
+              />
+            </>
           )}
         </section>
 
