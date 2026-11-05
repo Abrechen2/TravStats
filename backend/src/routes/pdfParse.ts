@@ -29,6 +29,9 @@ const parsePdfBodySchema = z.object({
   // 'auto' asks the server to decide what the document is — see Forgejo #57.
   // The default stays 'flight' so no existing caller changes behaviour.
   domain: z.enum(REQUESTABLE_DOMAINS).optional().default("flight"),
+  // Package documents only: read a document no template knows with the model.
+  // An explicit second step the user chose — never implied by `domain`.
+  packageModel: z.boolean().optional(),
   // Keep the PDF, or parse one already kept (forgejo#116).
   ...parseRetentionFields,
 });
@@ -102,6 +105,7 @@ router.post(
         domain: parsed.domain,
         source: "document",
         userId,
+        ...(parsed.packageModel && parsed.domain === "package" ? { packageModel: true } : {}),
       });
 
       logger.info(

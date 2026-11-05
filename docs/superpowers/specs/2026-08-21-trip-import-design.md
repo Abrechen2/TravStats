@@ -142,3 +142,35 @@ One `POST` commits the reviewed proposal atomically:
    the journey's core, else on the **trip**. Fine?
 2. Should the dialog offer linking into an EXISTING trip (dropdown) in stage 2,
    or is "always creates a new trip" acceptable for the first cut?
+
+---
+
+## As built (2026-11-05, `fix/trip-import`) — what the August design became
+
+**This spec is mostly overtaken.** Checked against `dev/user-connections` today:
+
+- **Exists already (plan `2026-10-09-template-engine-v2-packages.md`, P3):** the parse domain is
+  called `package` (not `trip`), read by v2 `package` templates from the template repository
+  (`services/trip/package/parsePackage.ts`; the hard-coded `tripDocumentParser.ts` / "HX template"
+  idea was replaced by owner ruling 1 — vendor specifics live in the template repo). The proposal
+  is built and written by `POST /trips/package/preview|commit` (dedupe against flights, stays,
+  cruise, trip by booking reference; ONE transaction; the original filed on the trip via
+  `documentId`), reviewed in `PackageImportPreviewModal`; the trip import drop zone parses as
+  `package`. Nothing is saved before the user confirms.
+- **The gap:** a document no template recognises ends in a dead end ("no template"). The spec's
+  §2.2 (LLM whole-document extraction for unknown operators) was deliberately left out in P3
+  ("never a model's guess at an itinerary — a misread package is a dozen wrong rows").
+- **Built here:** the model reading as an explicit, user-asked second step — never automatic.
+  On "no template" the dialog offers "Mit KI lesen"; that re-parses the already-kept original
+  (`documentId`) with `packageModel: true`. The model's JSON goes through the SAME package
+  contract as a template's values, preceded by a truthfulness gate (booking reference, flight
+  numbers and stay names must appear verbatim in the document; a price whose digits are not in
+  the document is dropped; dropped rows are listed to the user, not hidden). The result flows
+  into the existing preview/commit — no second pipeline. Refusal (admin switch, demo account,
+  consent), unreachable provider, provider error and an unusable answer each come back with a
+  code and the reason.
+- **Deferred:** the model reading for mail bodies (`/parse-email`; the PDF/document route
+  covers the drop zone); suspicious-row pre-deselection inside the preview modal (the gate
+  drops instead); `rejectedRows` display for transfers; linking into an existing trip by
+  dropdown (the commit already attaches by booking reference / date overlap); template
+  authoring from a model reading.

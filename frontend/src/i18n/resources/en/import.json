@@ -192,6 +192,26 @@
     "empty": {
       "noTemplate": "There is no tour operator template for this document yet. Nothing was read.",
       "invalidReading": "The template for {{issuer}} recognises the document but reads it incompletely. Nothing was read."
+    },
+    "model": {
+      "title": "Read with AI?",
+      "offer": "There is no tour operator template for this document. The AI model can still read it and propose a trip with flights and stays. You review every row before anything is saved; the original is attached to the trip.",
+      "read": "Read with AI",
+      "reading": "Reading …",
+      "intro": "Read by the AI model, not by a template — check every row against your document. Nothing is saved before you confirm.",
+      "dropped": "{{count}} details from the model are not in the document and were discarded:",
+      "droppedKind": {
+        "bookingReference": "Booking number “{{value}}”",
+        "flight": "Flight {{value}}",
+        "stay": "Stay “{{value}}”",
+        "price": "Price {{value}}"
+      },
+      "failed": {
+        "modelRefused": "The AI model may not be used for this account. Nothing was read.",
+        "modelFailed": "The AI model did not answer. Nothing was read.",
+        "modelInvalid": "The AI model could not read the document as a trip. Nothing was read.",
+        "request": "The request failed. Nothing was read."
+      }
     }
   },
   "tripFile": {

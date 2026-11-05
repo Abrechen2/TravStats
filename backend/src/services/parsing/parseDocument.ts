@@ -59,6 +59,11 @@ import {
   type PackageTemplateRef,
 } from "../trip/package/parsePackage";
 import type { PackageContract } from "../trip/package/contract";
+import {
+  readPackageWithModel,
+  type DroppedRow,
+  type ModelFallbackCode,
+} from "../trip/package/modelReading";
 import type { MailAttachment } from "../parsers/pdfAttachmentFlights";
 import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 import { loadActiveWorkshopTemplates } from "../parsers/userTemplates/v2UserTemplates";
@@ -118,6 +123,12 @@ export interface ParseDocumentInput {
    * newer one's data stands, whatever order they are imported in.
    */
   sentAt?: Date;
+  /**
+   * The user asked for the language model to read a package document no
+   * template recognised (spec 2026-08-21). Never set by `auto` or by a
+   * default: a package read by a model is an explicit second step.
+   */
+  packageModel?: boolean;
 }
 
 /**
@@ -194,12 +205,14 @@ type PackageBody = {
   domain: "package";
   package: PackageContract | null;
   template: PackageTemplateRef | null;
-  parserUsed: "template" | "none";
+  parserUsed: "template" | "ollama" | "none";
   ollamaAvailable: boolean;
-  fallbackCode?: PackageFallbackCode;
+  fallbackCode?: PackageFallbackCode | ModelFallbackCode;
   fallbackReason?: string;
-  /** The contract paths a recognising template failed, for `invalidReading`. */
+  /** The contract paths a recognising template (or the model's answer) failed. */
   issues?: string[];
+  /** A model reading only: rows the truthfulness gate refused, for the reviewer. */
+  modelDropped?: DroppedRow[];
   /** Present when the reading came from a mail's PDF attachment, not its body. */
   readFromAttachment?: { filename: string | null };
   domainMismatch?: DomainMismatch;
@@ -491,6 +504,23 @@ async function readPackage(
       ? fromAttachment
       : null;
   const result = chosen?.result ?? fromBody;
+  if (!result.reading && input.packageModel) {
+    const read = await readPackageWithModel(combined, input.userId);
+    return {
+      body: {
+        domain: "package",
+        package: read.reading,
+        template: null,
+        parserUsed: read.reading ? "ollama" : "none",
+        ollamaAvailable:
+          read.fallbackCode !== "modelRefused" && read.fallbackCode !== "modelFailed",
+        ...(read.fallbackCode !== undefined ? { fallbackCode: read.fallbackCode } : {}),
+        ...(read.fallbackReason !== undefined ? { fallbackReason: read.fallbackReason } : {}),
+        ...(read.issues !== undefined ? { issues: read.issues } : {}),
+        ...(read.dropped.length > 0 ? { modelDropped: read.dropped } : {}),
+      },
+    };
+  }
   const body: PackageBody = {
     domain: "package",
     package: result.reading,
