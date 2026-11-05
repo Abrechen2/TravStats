@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useIsPhoneViewport } from "../../../hooks/useIsPhoneViewport";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTodayZone } from "../../../hooks/useTodayZone";
 import type { Feature, Geometry } from "geojson";
 import type { TrackPoint } from "../../../lib/api/travtrack";
 import type { TravTrackFlightPanel, TravTrackPhoto } from "../../../lib/api/travtrackViews";
 import { todayIn } from "../../../shared/time/clock";
-import TrackDeleteDialog from "../TrackDeleteDialog";
-import TrackExportDialog from "../TrackExportDialog";
+import TrackCoverageBar from "../TrackCoverageBar";
 import TrackLegCard from "./TrackLegCard";
 import TrackStopCard from "./TrackStopCard";
 import TrackFlightPanel, { type SelectedFlight } from "../flight/TrackFlightPanel";
@@ -21,24 +20,25 @@ import { useTrackPhotos } from "../photos/useTrackPhotos";
 import TrackCountriesNotice from "../countries/TrackCountriesNotice";
 import { useVisitedCountries } from "../countries/useVisitedCountries";
 import type { FogStatus } from "./TrackFogLayer";
+import TrackFloatingCard, { floatingStyle } from "./TrackFloatingCard";
 import TrackLayersPanel from "./TrackLayersPanel";
 import TrackMapAside from "./TrackMapAside";
 import TrackMapNotices from "./TrackMapNotices";
 import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
 import TrackRangeMap from "./TrackRangeMap";
-import TrackReplayBar from "./TrackReplayBar";
+import TrackReplayDock from "./TrackReplayDock";
+import TrackTotalsPanel from "./TrackTotalsPanel";
 import { lonLat, rangeTotals, splitAfterPause, type LonLat } from "./trackGeometry";
 import {
-  legFitPadding,
   legFrame,
   legLines,
+  stageFitPadding,
   totalsFromAggregates,
   type TrackSelection,
 } from "./trackLegs";
 import { mapAnchors, type MapLegLine, type MapPoint, type MapStop } from "./trackMapLayers";
 import { useTrackMapPrefs } from "./trackMapPrefs";
-import { panelStyle } from "./trackMapStyle";
 import type { DayResult } from "./trackRange";
 import {
   REPLAY_MAX_DAYS,
@@ -52,7 +52,7 @@ import {
 import { clipSegments, cutToWindow, replayPositions, type ReplaySpan } from "./trackReplay";
 import { filterByAccuracy, speedStopsFor } from "./trackSpeedScale";
 import { useFlightTrack } from "./useFlightTrack";
-import { useLiveFollow } from "./useLiveFollow";
+import { useNarrowStage } from "./useNarrowStage";
 import { useReplay } from "./useReplay";
 import { useTrackMapData } from "./useTrackMapData";
 import WebGLGuard from "../../../components/map/WebGLGuard";
@@ -92,7 +92,8 @@ const toLines = (segments: readonly TrackPoint[][]) =>
  */
 export default function TrackMapView(): JSX.Element {
   const { t } = useTranslation(["track"]);
-  const phone = useIsPhoneViewport();
+  const narrow = useNarrowStage();
+  const coarse = useCoarsePointer();
   const navigate = useNavigate();
   const params = useParams<{ date?: string }>();
   const [search, setSearch] = useSearchParams();
@@ -102,9 +103,8 @@ export default function TrackMapView(): JSX.Element {
   const span = useMemo(() => parseSpan(params.date, search, today), [params.date, search, today]);
   const [generation, setGeneration] = useState(0);
   const data = useTrackMapData(span, generation);
-  const { long, days, dayResults, source, loading } = data;
+  const { long, dayResults, source, loading } = data;
   const [prefs, setPrefs, prefsSaveFailed] = useTrackMapPrefs();
-  const [dialog, setDialog] = useState<"export" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapPoint | null>(null);
   const [pick, setPick] = useState<TrackSelection | null>(null);
@@ -142,9 +142,10 @@ export default function TrackMapView(): JSX.Element {
     [setSearch]
   );
   const [fog, setFog] = useState<FogStatus>({ kind: "idle" });
-  const [live, setLive] = useState(false);
-  const following = live && !long && days.includes(today);
-  const liveState = useLiveFollow(following, () => data.refresh(today));
+  // Side cards: open on a wide stage, pills on a narrow one; a selection opens the sheet.
+  const [layersFolded, setLayersFolded] = useState<boolean | null>(null);
+  const [totalsFolded, setTotalsFolded] = useState<boolean | null>(null);
+  const [dayFolded, setDayFolded] = useState<boolean | null>(null);
   const short = spanDays(span) <= REPLAY_MAX_DAYS;
 
   const go = (next: TrackSpan) => {
@@ -333,7 +334,6 @@ export default function TrackMapView(): JSX.Element {
 
   const onPoint = useCallback((p: MapPoint) => setSelected(p), []);
   const onPhoto = useCallback((p: TravTrackPhoto) => setPhoto(p), []);
-  const follow = liveState.kind === "following" ? liveState.at : null;
   const failed = long ? data.range?.kind === "failed" : dayResults.some((r) => r.kind === "failed");
   const empty = !loading && !failed && totals.points === 0;
   const hasDrawing = source.segments.some((s) => s.length > 0);
@@ -342,292 +342,303 @@ export default function TrackMapView(): JSX.Element {
   const highlight = flightTrack.kind === "loaded" ? flightTrack.lines : NO_LINES;
   const legFramed = resolved?.kind === "leg" ? legFrame(resolved.day, resolved.leg) : null;
   const framed = legFramed ?? (highlight.length > 0 ? highlight : frameLines);
-  // The card's real height (figure rows, wrapped mode controls) sets the phone's bottom padding.
-  const [cardHeight, setCardHeight] = useState<number | undefined>(undefined);
-  const cardBox = useRef<HTMLDivElement | null>(null);
-  const cardShown = resolved !== null;
-  useEffect(() => {
-    const el = cardBox.current;
-    if (!el || !cardShown || typeof ResizeObserver === "undefined") return;
-    const measure = () => {
-      const h = Math.ceil(el.getBoundingClientRect().height);
-      if (h > 0) setCardHeight(h);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [cardShown]);
-  const fitPadding = useMemo(() => legFitPadding(phone, cardHeight), [phone, cardHeight]);
+  const detail = selected
+    ? "point"
+    : photo && photos.kind === "loaded"
+      ? "photo"
+      : resolved
+        ? "pick"
+        : flight
+          ? "flight"
+          : null;
+  // Something new selected opens the day card again, even if the reader folded it.
+  const detailKey = `${detail ?? ""}|${legKey ?? ""}|${resolved?.kind === "stop" ? resolved.stop.fromMs : ""}`;
+  useEffect(() => setDayFolded(null), [detailKey]);
+  const fitPadding = useMemo(() => stageFitPadding(narrow, detail !== null), [narrow, detail]);
   const refit = legFramed
     ? `leg:${resolved?.kind === "leg" ? resolved.leg.id : ""}`
     : highlight.length > 0
       ? `flight:${flight?.id ?? ""}`
       : "day";
+  const stopCount = long ? null : loaded.reduce((n, r) => n + (r.day.stops?.length ?? 0), 0);
+  const closeLeg = () => {
+    setPick(null);
+    // "Ganzer Tag" also ends a "play this leg" window.
+    if (replayWindow) resetReplay();
+  };
 
-  return (
-    <div className="flex flex-col gap-4">
-      <TrackRangeBar
-        span={span}
-        today={today}
-        live={following}
-        onStep={(direction) => go(stepSpan(span, direction, today))}
-        onPreset={(preset) => go(presetSpan(preset, today, span))}
-        onSpan={go}
-        onLive={() => {
-          if (following) return setLive(false);
-          setLive(true);
-          if (long || !days.includes(today)) go({ kind: "day", fromDay: today, toDay: today });
-        }}
-        onExport={() => setDialog("export")}
-        onDelete={() => setDialog("delete")}
-      />
-
-      {notice && (
-        <p className="t-body" role="status" style={{ color: token("good") }}>
-          {notice}
-        </p>
-      )}
-      {liveState.kind === "failed" && (
-        <p className="t-body" role="alert" style={{ color: token("bad") }}>
-          {t("track:map.live.failed", { reason: t(liveState.key) })}
-        </p>
-      )}
-      <TrackMapNotices
-        long={long}
-        dayResults={dayResults}
-        range={data.range}
-        onRetry={reload}
-        onResume={data.resume}
-      />
-      {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
-
-      <div className="flex flex-wrap gap-4">
-        {!phone && (
-          <TrackLayersPanel
-            prefs={prefs}
-            onChange={setPrefs}
-            long={long}
-            speedStops={speedStops}
-            saveFailed={prefsSaveFailed}
-          />
-        )}
-
-        <section className="flex min-w-0 flex-col gap-3" style={{ flex: "999 1 480px" }}>
-          {empty && (
-            <p className="t-body" data-testid="track-day-empty" style={panelStyle}>
-              {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
-            </p>
-          )}
-          {(hasDrawing || highlight.length > 0) && (long || !loading) && (
-            <div className="relative">
-              <WebGLGuard>
-                <TrackRangeMap
-                  key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
-                  refit={refit}
-                  fitPadding={legFramed ? fitPadding : undefined}
-                  layers={prefs.layers}
-                  color={prefs.color}
-                  opacity={prefs.opacity}
-                  frameLines={framed}
-                  highlight={highlight}
-                  selection={selectedLines}
-                  legLines={replaying ? NO_LEG_LINES : legLineList}
-                  onLeg={onLeg}
-                  stops={stopList}
-                  onStop={onStop}
-                  lines={lines}
-                  segments={drawn}
-                  points={visiblePoints}
-                  speedStops={speedStops}
-                  legPoints={legPoints}
-                  anchors={anchors}
-                  replay={head}
-                  onPoint={onPoint}
-                  photos={photoList}
-                  onPhoto={onPhoto}
-                  countries={countryShapes}
-                  follow={follow}
-                  onFogStatus={setFog}
-                />
-              </WebGLGuard>
-              {selected && (
-                <TrackPointInspector
-                  point={selected}
-                  onClose={() => setSelected(null)}
-                  onDeleted={() => {
-                    setSelected(null);
-                    setNotice(t("track:map.point.deleted"));
-                    reload();
-                  }}
-                />
-              )}
-              {resolved && (
-                <div
-                  ref={cardBox}
-                  style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2 }}
-                >
-                  {resolved.kind === "leg" ? (
-                    <TrackLegCard
-                      leg={resolved.leg}
-                      zone={resolved.day.zone}
-                      entryHref={entryHref}
-                      onClose={() => {
-                        setPick(null);
-                        // "Ganzer Tag" also ends a "play this leg" window.
-                        if (replayWindow) resetReplay();
-                      }}
-                      onChanged={() => data.refresh(resolved.day.date)}
-                      onReplay={
-                        legReplayable
-                          ? () => {
-                              setReplayWindow({
-                                fromMs: resolved.leg.fromMs,
-                                untilMs: resolved.leg.untilMs,
-                              });
-                              setReplayRequest((n) => n + 1);
-                            }
-                          : null
-                      }
-                      pointsShown={legKey === pointsOf}
-                      onTogglePoints={() => setPointsOf(legKey === pointsOf ? null : legKey)}
-                    />
-                  ) : (
-                    <TrackStopCard
-                      key={`${resolved.day.date}-${resolved.stop.fromMs}`}
-                      stop={resolved.stop}
-                      zone={resolved.day.zone}
-                      onClose={() => setPick(null)}
-                      onChanged={() => data.refresh(resolved.day.date)}
-                    />
-                  )}
-                </div>
-              )}
-              {photo && photos.kind === "loaded" && (
-                <div
-                  role="dialog"
-                  aria-label={t("track:photos.title")}
-                  data-testid="track-photo-popup"
-                  className="flex flex-col gap-2"
-                  style={{ ...panelStyle, position: "absolute", right: 12, top: 12, zIndex: 2 }}
-                >
-                  <TrackPhotoThumb photo={photo} window={photos.window} zone={zone} size={160} />
-                  <button type="button" className="underline" onClick={() => setPhoto(null)}>
-                    {t("track:map.point.close")}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          {!loading && totals.points > 0 && short && (
-            <TrackReplayBar
-              replay={{ ...replay, reset: resetReplay }}
-              zone={zone}
-              multiDay={span.kind !== "day"}
-            />
-          )}
-          {!short && totals.points > 0 && (
-            <p className="t-caption" data-testid="track-replay-limit">
-              {t("track:map.replay.limit", { days: REPLAY_MAX_DAYS })}
-            </p>
-          )}
-          {prefs.layers.photos && photoWindow?.kind === "tooLong" && (
-            <p className="t-caption" data-testid="track-photos-too-long">
-              {t("track:photos.needsShorter")}
-            </p>
-          )}
-          {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
-          {prefs.layers.countries && <TrackCountriesNotice state={countries} />}
-          {fog.kind === "failed" && (
-            <p className="t-caption" role="status" style={{ color: token("warn") }}>
-              {t(fog.key)}
-            </p>
-          )}
-          {fog.kind === "loading" && <p className="t-caption">{t("track:map.fogLoading")}</p>}
-          {totals.points > 0 && (
-            <p className="t-caption" data-testid="track-day-count">
-              {t("track:day.points", { count: totals.points })}
-            </p>
-          )}
-          {flight && (
-            <TrackFlightPanel
-              flight={flight}
-              zone={zone}
-              cursor={replay.t}
-              generation={generation}
-              onClose={() => setFlight(null)}
-              onPanel={setFlightPanel}
-            />
-          )}
-          {flight && flightTrack.kind === "failed" && (
-            <p className="t-caption" role="status" style={{ color: token("warn") }}>
-              {t("track:flight.mapFailed", { reason: t(flightTrack.key) })}
-            </p>
-          )}
-          {flight && flightTrack.kind === "loaded" && flightTrack.partial && (
-            <p className="t-caption" role="status">
-              {t("track:flight.mapPartial")}
-            </p>
-          )}
-        </section>
-
-        {/* On a phone the map comes straight after the range control and the
-            layer and route settings fold away under it (audit 2026-10-26,
-            F-005: at 390 px the map started at y≈1281, below this panel). */}
-        {phone && (
-          <details className="w-full" data-testid="track-layers-fold">
-            <summary
-              className="t-card-title flex cursor-pointer items-center"
-              style={{ ...panelStyle, minHeight: 44, padding: "8px 16px" }}
-            >
-              {t("track:map.panel")}
-              <span aria-hidden className="ml-auto">
-                ▾
-              </span>
-            </summary>
-            <div className="mt-3">
-              <TrackLayersPanel
-                prefs={prefs}
-                onChange={setPrefs}
-                long={long}
-                speedStops={speedStops}
-                fill
-                saveFailed={prefsSaveFailed}
-              />
-            </div>
-          </details>
-        )}
-
-        <TrackMapAside
-          span={span}
-          totals={totals}
-          loaded={loaded}
-          long={long}
-          flightId={flight?.id ?? null}
-          onFlight={setFlight}
-          selection={activePick}
-          onSelect={setPick}
-          onStopPlaceChanged={(date) => void data.refresh(date)}
-        />
-      </div>
-
-      <TrackExportDialog
-        open={dialog === "export"}
-        onClose={() => setDialog(null)}
-        fromDay={span.fromDay}
-        toDay={span.toDay}
-      />
-      <TrackDeleteDialog
-        open={dialog === "delete"}
-        onClose={() => setDialog(null)}
-        fromDay={span.fromDay}
-        toDay={span.toDay}
-        onDeleted={(count) => {
-          setNotice(t("track:delete.done", { count }));
+  const detailView =
+    detail === "point" && selected ? (
+      <TrackPointInspector
+        point={selected}
+        onClose={() => setSelected(null)}
+        onDeleted={() => {
           setSelected(null);
+          setNotice(t("track:map.point.deleted"));
           reload();
         }}
       />
+    ) : detail === "photo" && photo && photos.kind === "loaded" ? (
+      <div
+        role="dialog"
+        aria-label={t("track:photos.title")}
+        data-testid="track-photo-popup"
+        className="flex flex-col gap-2"
+      >
+        <TrackPhotoThumb photo={photo} window={photos.window} zone={zone} size={160} />
+        <button type="button" className="self-start underline" onClick={() => setPhoto(null)}>
+          {t("track:map.point.close")}
+        </button>
+      </div>
+    ) : resolved?.kind === "leg" ? (
+      <TrackLegCard
+        leg={resolved.leg}
+        zone={resolved.day.zone}
+        entryHref={entryHref}
+        onClose={closeLeg}
+        onChanged={() => data.refresh(resolved.day.date)}
+        onReplay={
+          legReplayable
+            ? () => {
+                setReplayWindow({ fromMs: resolved.leg.fromMs, untilMs: resolved.leg.untilMs });
+                setReplayRequest((n) => n + 1);
+              }
+            : null
+        }
+        pointsShown={legKey === pointsOf}
+        onTogglePoints={() => setPointsOf(legKey === pointsOf ? null : legKey)}
+      />
+    ) : resolved?.kind === "stop" ? (
+      <TrackStopCard
+        key={`${resolved.day.date}-${resolved.stop.fromMs}`}
+        stop={resolved.stop}
+        zone={resolved.day.zone}
+        onClose={() => setPick(null)}
+        onChanged={() => data.refresh(resolved.day.date)}
+      />
+    ) : flight ? (
+      <>
+        <TrackFlightPanel
+          flight={flight}
+          zone={zone}
+          cursor={replay.t}
+          generation={generation}
+          onClose={() => setFlight(null)}
+          onPanel={setFlightPanel}
+        />
+        {flightTrack.kind === "failed" && (
+          <p className="t-caption" role="status" style={{ color: token("warn") }}>
+            {t("track:flight.mapFailed", { reason: t(flightTrack.key) })}
+          </p>
+        )}
+        {flightTrack.kind === "loaded" && flightTrack.partial && (
+          <p className="t-caption" role="status">
+            {t("track:flight.mapPartial")}
+          </p>
+        )}
+      </>
+    ) : null;
+
+  const layersPanel = (
+    <TrackFloatingCard
+      testId="track-layers-card"
+      title={t("track:map.layers.title")}
+      collapsed={layersFolded ?? narrow}
+      onToggle={() => setLayersFolded(!(layersFolded ?? narrow))}
+      coarse={coarse}
+      bodyStyle={{ maxHeight: "calc(100dvh - 360px)" }}
+    >
+      <TrackLayersPanel
+        prefs={prefs}
+        onChange={setPrefs}
+        long={long}
+        speedStops={speedStops}
+        embedded
+        saveFailed={prefsSaveFailed}
+      />
+    </TrackFloatingCard>
+  );
+  const dayCard = (
+    <TrackMapAside
+      span={span}
+      loaded={loaded}
+      long={long}
+      flightId={flight?.id ?? null}
+      onFlight={setFlight}
+      selection={activePick}
+      onSelect={setPick}
+      onStopPlaceChanged={(date) => void data.refresh(date)}
+      detail={detailView}
+      collapsed={dayFolded ?? (narrow && detail === null)}
+      onToggle={() => setDayFolded(!(dayFolded ?? (narrow && detail === null)))}
+    />
+  );
+  const replayDock =
+    !loading && totals.points > 0 && short ? (
+      <TrackReplayDock
+        replay={{ ...replay, reset: resetReplay }}
+        zone={zone}
+        multiDay={span.kind !== "day"}
+      />
+    ) : null;
+  const strip =
+    span.kind === "day" && loaded[0] ? (
+      <TrackCoverageBar coverage={loaded[0].day.coverage} zone={loaded[0].day.zone} />
+    ) : null;
+
+  return (
+    <div
+      className="flex flex-col"
+      style={{ height: "calc(100dvh - var(--ts-size-web-header))", minHeight: 520 }}
+    >
+      <TrackRangeBar
+        span={span}
+        today={today}
+        strip={strip}
+        onStep={(direction) => go(stepSpan(span, direction, today))}
+        onPreset={(preset) => go(presetSpan(preset, today, span))}
+        onSpan={go}
+      />
+
+      <div
+        className="relative min-h-0 flex-1 overflow-hidden"
+        style={{ background: "var(--ts-surface2)" }}
+        data-testid="track-stage"
+      >
+        {(hasDrawing || highlight.length > 0) && (long || !loading) && (
+          <WebGLGuard>
+            <TrackRangeMap
+              key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
+              refit={refit}
+              fitPadding={fitPadding}
+              layers={prefs.layers}
+              color={prefs.color}
+              opacity={prefs.opacity}
+              frameLines={framed}
+              highlight={highlight}
+              selection={selectedLines}
+              legLines={replaying ? NO_LEG_LINES : legLineList}
+              onLeg={onLeg}
+              stops={stopList}
+              onStop={onStop}
+              lines={lines}
+              segments={drawn}
+              points={visiblePoints}
+              speedStops={speedStops}
+              legPoints={legPoints}
+              anchors={anchors}
+              replay={head}
+              onPoint={onPoint}
+              photos={photoList}
+              onPhoto={onPhoto}
+              countries={countryShapes}
+              follow={null}
+              onFogStatus={setFog}
+            />
+          </WebGLGuard>
+        )}
+
+        {/* Notices are compact overlays: the stack disappears when nothing is to say. */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 flex-col gap-2 empty:hidden"
+          style={{ width: "min(560px, calc(100% - 24px))" }}
+          data-testid="track-notices"
+        >
+          <div
+            className="pointer-events-auto flex flex-col gap-1 empty:hidden"
+            style={{ ...floatingStyle, padding: 10 }}
+          >
+            {notice && (
+              <p className="t-body" role="status" style={{ color: token("good") }}>
+                {notice}
+              </p>
+            )}
+            <TrackMapNotices
+              long={long}
+              dayResults={dayResults}
+              range={data.range}
+              onRetry={reload}
+              onResume={data.resume}
+            />
+            {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
+            {empty && (
+              <p className="t-body" data-testid="track-day-empty">
+                {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
+              </p>
+            )}
+            {!short && totals.points > 0 && (
+              <p className="t-caption" data-testid="track-replay-limit">
+                {t("track:map.replay.limit", { days: REPLAY_MAX_DAYS })}
+              </p>
+            )}
+            {prefs.layers.photos && photoWindow?.kind === "tooLong" && (
+              <p className="t-caption" data-testid="track-photos-too-long">
+                {t("track:photos.needsShorter")}
+              </p>
+            )}
+            {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
+            {prefs.layers.countries && <TrackCountriesNotice state={countries} />}
+            {fog.kind === "failed" && (
+              <p className="t-caption" role="status" style={{ color: token("warn") }}>
+                {t(fog.key)}
+              </p>
+            )}
+            {fog.kind === "loading" && <p className="t-caption">{t("track:map.fogLoading")}</p>}
+          </div>
+        </div>
+
+        {/* Left: layers, then the day in numbers. */}
+        <div
+          className="pointer-events-none absolute left-3 top-3 z-[5] flex flex-col gap-3 overflow-y-auto"
+          style={{ width: narrow ? 240 : 300, maxHeight: "calc(100% - 48px)" }}
+        >
+          <div className="pointer-events-auto flex flex-col gap-3">
+            {layersPanel}
+            <TrackTotalsPanel
+              totals={totals}
+              stops={stopCount}
+              multi={span.kind !== "day"}
+              collapsed={totalsFolded ?? narrow}
+              onToggle={() => setTotalsFolded(!(totalsFolded ?? narrow))}
+            />
+            {totals.points > 0 && (
+              <p className="t-caption" data-testid="track-day-count" style={{ paddingLeft: 4 }}>
+                {t("track:day.points", { count: totals.points })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {narrow ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[5] flex flex-col items-center gap-2">
+            <div className="pointer-events-auto flex w-full justify-center">{replayDock}</div>
+            <div
+              className="pointer-events-auto flex w-full flex-col"
+              style={{ maxHeight: "min(52dvh, 420px)" }}
+              data-testid="track-sheet"
+            >
+              {dayCard}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              className="pointer-events-auto absolute right-3 top-3 z-[5] flex flex-col"
+              style={{ width: 380, maxHeight: "calc(100% - 48px)" }}
+            >
+              {dayCard}
+            </div>
+            {replayDock && (
+              <div
+                className="pointer-events-auto absolute bottom-6 left-1/2 z-[5] flex -translate-x-1/2 justify-center"
+                style={{ width: "min(720px, max(480px, calc(100% - 760px)))" }}
+              >
+                {replayDock}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

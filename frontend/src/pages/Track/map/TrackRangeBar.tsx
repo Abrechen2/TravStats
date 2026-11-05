@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { LastSeenLine } from "../../../components/Dashboard/LastSeenCard";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { addDays, dayParts, formatDayLong } from "../../../shared/time/calendar";
 import {
@@ -9,7 +12,7 @@ import {
   type SpanPreset,
   type TrackSpan,
 } from "./trackSpan";
-import { pillStyle } from "./trackMapStyle";
+import { pillStyle, panelStyle } from "./trackMapStyle";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const PRESETS: SpanPreset[] = ["today", "yesterday", "week", "month", "year", "custom"];
@@ -63,6 +66,7 @@ function CustomPicker({
     <form
       className="flex flex-wrap items-center gap-2"
       data-testid="track-custom-range"
+      style={{ ...panelStyle, padding: 10 }}
       onSubmit={(e) => {
         e.preventDefault();
         if (valid) onSpan(customSpan(from, to, today));
@@ -92,41 +96,52 @@ function CustomPicker({
   );
 }
 
+/** Where the TravTrack settings open with the shown range, for export and delete. */
+export function settingsHref(span: TrackSpan): string {
+  return `/settings/travtrack?from=${span.fromDay}&until=${span.toDay}`;
+}
+
 /**
- * The range bar (TravTrack plan T5.2 + T5.3, board „Track-Karte"): ‹ › step
- * by the span's own size, the presets Heute, Gestern, 7 Tage, Monat, Jahr and
- * Zeitraum (two days, applied together), a day picker for a deep link by
- * hand, live follow, export and delete of the shown span.
+ * The time bar under the app header (web redesign 2026-11-05): ‹ › step by the
+ * span's own size, the day picker, the presets Tag, Gestern, 7 Tage, Monat, Jahr
+ * and Eigener (two days in a popover, applied together), the day's coverage
+ * strip (`strip`), „Zuletzt gesehen" and the gear to the TravTrack settings,
+ * which now hold export and delete of the shown range.
  */
 export default function TrackRangeBar({
   span,
   today,
-  live,
+  strip,
   onStep,
   onPreset,
   onSpan,
-  onLive,
-  onExport,
-  onDelete,
 }: {
   span: TrackSpan;
   today: string;
-  live: boolean;
+  /** The coverage of a single day; null for a span of several. */
+  strip: ReactNode | null;
   onStep: (direction: -1 | 1) => void;
   onPreset: (preset: SpanPreset) => void;
   onSpan: (span: TrackSpan) => void;
-  onLive: () => void;
-  onExport: () => void;
-  onDelete: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["track"]);
+  const coarse = useCoarsePointer();
+  const min = coarse ? 44 : 40;
   const preset = activeSpanPreset(span, today);
   const [picking, setPicking] = useState(span.kind === "custom");
-  const stepStyle = { ...pillStyle(false), width: 44, minHeight: 44, padding: 0, fontSize: 18 };
+  const stepStyle = { ...pillStyle(false, min), width: min, padding: 0, fontSize: 18 };
   const end = atPresent(span, today);
   return (
-    <div className="flex flex-col gap-2" data-testid="track-range-bar">
-      <div className="flex flex-wrap items-center gap-2">
+    <div
+      className="flex flex-wrap items-center gap-x-3 gap-y-2"
+      data-testid="track-range-bar"
+      style={{
+        background: "var(--ts-surface)",
+        borderBottom: "1px solid var(--ts-border)",
+        padding: "6px 16px",
+      }}
+    >
+      <div className="flex items-center gap-2">
         <button
           type="button"
           aria-label={t("track:map.range.previous")}
@@ -136,8 +151,7 @@ export default function TrackRangeBar({
           ‹
         </button>
         <span
-          className="flex flex-col"
-          style={{ minWidth: 200, fontSize: 17, fontWeight: 700 }}
+          style={{ minWidth: 150, fontSize: 16, fontWeight: 700 }}
           data-testid="track-range-label"
         >
           {spanLabel(span, today, i18n.language, t)}
@@ -151,62 +165,60 @@ export default function TrackRangeBar({
         >
           ›
         </button>
-        <div className="flex flex-wrap gap-1">
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={p === "custom" ? picking || preset === p : preset === p}
-              onClick={() => {
-                if (p === "custom") return setPicking((open) => !open);
-                setPicking(false);
-                onPreset(p);
-              }}
-              style={pillStyle(p === "custom" ? picking || preset === p : preset === p)}
-            >
-              {t(`track:map.range.preset.${p}`)}
-            </button>
-          ))}
-        </div>
-        {span.kind === "day" && (
-          <input
-            type="date"
-            aria-label={t("track:day.label")}
-            value={span.toDay}
-            max={today}
-            onChange={(e) =>
-              DAY.test(e.target.value) &&
-              onSpan({ kind: "day", fromDay: e.target.value, toDay: e.target.value })
-            }
-            style={dateStyle}
-          />
-        )}
-        <span className="flex-1" />
-        <button
-          type="button"
-          aria-pressed={live}
-          onClick={onLive}
-          style={{ ...pillStyle(live), minHeight: 44 }}
-        >
-          {t(live ? "track:map.live.on" : "track:map.live.off")}
-        </button>
-        <button type="button" onClick={onExport} style={{ ...pillStyle(false), minHeight: 44 }}>
-          {t("track:actions.export")}
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          style={{
-            ...pillStyle(false),
-            minHeight: 44,
-            color: "var(--ts-warn)",
-            borderColor: "color-mix(in srgb, var(--ts-warn) 50%, transparent)",
-          }}
-        >
-          {t("track:actions.delete")}
-        </button>
+        <input
+          type="date"
+          aria-label={t("track:day.label")}
+          value={span.toDay}
+          max={today}
+          onChange={(e) =>
+            DAY.test(e.target.value) &&
+            onSpan({ kind: "day", fromDay: e.target.value, toDay: e.target.value })
+          }
+          style={{ ...dateStyle, minHeight: min }}
+        />
       </div>
-      {picking && <CustomPicker span={span} today={today} onSpan={onSpan} />}
+      <div className="relative flex flex-wrap gap-1">
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            aria-pressed={p === "custom" ? picking || preset === p : preset === p}
+            onClick={() => {
+              if (p === "custom") return setPicking((open) => !open);
+              setPicking(false);
+              onPreset(p);
+            }}
+            style={pillStyle(p === "custom" ? picking || preset === p : preset === p, min)}
+          >
+            {t(`track:map.range.preset.${p}`)}
+          </button>
+        ))}
+        {picking && (
+          <div className="absolute left-0 top-full z-20 mt-1" style={{ minWidth: 300 }}>
+            <CustomPicker span={span} today={today} onSpan={onSpan} />
+          </div>
+        )}
+      </div>
+      {strip && <div style={{ flex: "1 1 200px", minWidth: 160, maxWidth: 420 }}>{strip}</div>}
+      <span className="flex-1" />
+      <LastSeenLine />
+      <Link
+        to={settingsHref(span)}
+        aria-label={t("track:map.range.settings")}
+        title={t("track:map.range.settings")}
+        data-testid="track-settings-link"
+        style={{
+          ...pillStyle(false, min),
+          width: min,
+          padding: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+        }}
+      >
+        <span aria-hidden>⚙</span>
+      </Link>
     </div>
   );
 }

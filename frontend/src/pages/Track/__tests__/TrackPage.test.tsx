@@ -195,6 +195,7 @@ describe("TrackPage", () => {
     renderAt();
     expect(await screen.findByTestId("track-day-map-stub")).toHaveTextContent("2 segments");
     expect(api.day).toHaveBeenCalledWith("2026-10-12");
+    fireEvent.click(screen.getByRole("tab", { name: "track:map.dayCard.log" }));
     const timeline = screen.getByTestId("track-timeline");
     expect(within(timeline).getByText(/track:timeline.flight.*KE1201 ICN–CJU/)).toHaveAttribute(
       "href",
@@ -204,20 +205,19 @@ describe("TrackPage", () => {
     expect(screen.getByTestId("track-day-count")).toHaveTextContent('"count":4');
   });
 
-  it("delete asks with the count and refreshes the day", async () => {
-    api.summary.mockResolvedValue({ pointCount: 7 });
-    api.deleteDays.mockResolvedValue(7);
+  it("the map page has no title, intro, live, export or delete — and the gear leads to the settings", async () => {
     renderAt();
     await screen.findByTestId("track-day-map-stub");
-    fireEvent.click(screen.getByRole("button", { name: "track:actions.delete" }));
-    expect(await screen.findByText(/track:delete.preview.*"count":7/)).toBeInTheDocument();
-    expect(api.summary).toHaveBeenCalledWith({ fromDay: "2026-10-12", toDay: "2026-10-12" });
-    fireEvent.click(screen.getByRole("button", { name: "track:delete.do" }));
-    await waitFor(() =>
-      expect(api.deleteDays).toHaveBeenCalledWith({ fromDay: "2026-10-12", toDay: "2026-10-12" })
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.queryByText("track:intro")).not.toBeInTheDocument();
+    for (const name of ["track:map.live.off", "track:actions.export", "track:actions.delete"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+    expect(screen.getByTestId("track-settings-link")).toHaveAttribute(
+      "href",
+      "/settings/travtrack?from=2026-10-12&until=2026-10-12"
     );
-    await waitFor(() => expect(api.day).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText(/track:delete.done.*"count":7/)).toBeInTheDocument();
+    expect(api.deleteDays).not.toHaveBeenCalled();
   });
 
   it("TRAVTRACK_DISABLED shows its copy, not an empty map", async () => {
@@ -242,7 +242,12 @@ describe("TrackPage", () => {
     // colour) are radio groups too, so the tab strip is looked up by its name.
     expect(screen.queryByRole("radiogroup", { name: "track:tabs.label" })).not.toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "track:tabs.day" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("track:title");
+    // The map page draws no title; the other views keep theirs.
+    if (path.includes("2026")) {
+      expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("track:title");
+    }
   });
 
   it("the Erkundet view shows the explored map and no day controls (L1)", async () => {
@@ -273,6 +278,7 @@ describe("TrackPage", () => {
     api.day.mockResolvedValue({ ...DAY, segments: [], pointCount: 0, context: [] });
     renderAt();
     expect(await screen.findByTestId("track-day-empty")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "track:map.dayCard.log" }));
     expect(screen.getByText("track:timeline.none")).toBeInTheDocument();
   });
 

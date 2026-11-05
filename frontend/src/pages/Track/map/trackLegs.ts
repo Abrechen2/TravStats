@@ -94,3 +94,18 @@ export function legFitPadding(
     ? { ...base, bottom: CARD_MARGIN + cardHeight + FRAME_MARGIN }
     : { ...base, left: CARD_MARGIN + LEG_CARD_WIDTH + FRAME_MARGIN };
 }
+
+/**
+ * Fit padding for the map stage (web redesign 2026-11-05): the floating cards
+ * sit on both sides of a wide map, so a framed line keeps clear of them; on a
+ * narrow stage the bottom sheet covers the lower part — most of it while a
+ * detail is open, a strip while it is folded.
+ */
+export function stageFitPadding(
+  narrow: boolean,
+  detailOpen: boolean
+): { top: number; right: number; bottom: number; left: number } {
+  return narrow
+    ? { top: 64, right: 24, bottom: detailOpen ? 380 : 120, left: 24 }
+    : { top: 48, right: 12 + 380 + 24, bottom: 56, left: 12 + 300 + 24 };
+}

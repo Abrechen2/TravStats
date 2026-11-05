@@ -389,7 +389,8 @@
       },
       "from": "Zeitraum von",
       "to": "Zeitraum bis",
-      "apply": "Anzeigen"
+      "apply": "Anzeigen",
+      "settings": "TravTrack-Einstellungen: Export, Löschen und mehr"
     },
     "live": {
       "off": "Live folgen",
@@ -451,7 +452,9 @@
       "rate": "Tempo der Wiedergabe",
       "reset": "Ganze Strecke zeigen",
       "gaps": "Springt über Lücken, nichts wird dazuerfunden",
-      "limit": "Die Wiedergabe gibt es für Zeiträume bis {{days}} Tage – wähle einen kürzeren, um sie abzuspielen."
+      "limit": "Die Wiedergabe gibt es für Zeiträume bis {{days}} Tage – wähle einen kürzeren, um sie abzuspielen.",
+      "open": "Tag abspielen",
+      "close": "Wiedergabe schließen"
     },
     "point": {
       "title": "Position",
@@ -486,7 +489,12 @@
       "minutes": "{{m}} min",
       "hours": "{{h}} h {{m}} min",
       "note": "Gezählt wird nur innerhalb einer Strecke — nie über eine Lücke, Zone oder Pause hinweg. Unterwegs heißt: schneller als 3 km/h.",
-      "maxSpeed": "Höchstes Tempo"
+      "maxSpeed": "Höchstes Tempo",
+      "dayTitle": "Tag in Zahlen",
+      "rangeTitle": "Zeitraum in Zahlen",
+      "stops": "Stopps",
+      "all": "Alle Werte",
+      "fewer": "Weniger Werte"
     },
     "quietDays": "Ohne Aufzeichnung und ohne Eintrag: {{days}}",
     "rangeLoading": "Wird in Teilen geladen … {{parts}} Teile, {{percent}} %",
@@ -505,6 +513,13 @@
       "note": "Eingefärbt sind die Länder der Monatswerte aller Monate, die der Zeitraum berührt (Monate nach UTC) – bei einem einzelnen Tag also die seines Monats.",
       "pending": "Einige dieser Monate werden gerade neu berechnet; die Länder können sich noch ändern.",
       "shapesFailed": "Die Ländergrenzen konnten nicht geladen werden."
+    },
+    "dayCard": {
+      "title": "Tagesverlauf",
+      "tabs": "Ansicht des Tagesverlaufs",
+      "legs": "Etappen & Stopps",
+      "log": "Logbuch",
+      "noLegs": "Für diesen Zeitraum gibt es keine Etappen und Stopps."
     }
   },
   "photos": {

@@ -32,7 +32,7 @@ export default function TrackLayersPanel({
   prefs,
   onChange,
   long = false,
-  fill = false,
+  embedded = false,
   saveFailed = false,
   speedStops = SPEED_STOPS,
 }: {
@@ -40,8 +40,8 @@ export default function TrackLayersPanel({
   onChange: (patch: Partial<TrackMapPrefs>) => void;
   /** A month, a year or a Zeitraum: the day-only layers are not available. */
   long?: boolean;
-  /** Folded under the map on a phone: the full width, not a 300px column. */
-  fill?: boolean;
+  /** Inside a floating card: no panel boxes of its own, the card is the box. */
+  embedded?: boolean;
   /** The last choice did not reach storage: say so, without blocking anything. */
   saveFailed?: boolean;
   /** The ramp's stops for the chosen scale; the legend follows them. */
@@ -55,10 +55,13 @@ export default function TrackLayersPanel({
     <aside
       aria-label={t("track:map.panel")}
       className="flex flex-col gap-3"
-      style={fill ? undefined : { flex: "1 1 240px", maxWidth: 300 }}
+      style={embedded ? undefined : { flex: "1 1 240px", maxWidth: 300 }}
     >
-      <fieldset className="flex flex-col gap-1" style={panelStyle}>
-        <legend className="t-card-title" style={{ float: "left", marginBottom: 6 }}>
+      <fieldset className="flex flex-col gap-1" style={embedded ? undefined : panelStyle}>
+        <legend
+          className={embedded ? "sr-only" : "t-card-title"}
+          style={embedded ? undefined : { float: "left", marginBottom: 6 }}
+        >
           {t("track:map.layers.title")}
         </legend>
         {TRACK_LAYERS.map((id) => {
@@ -77,7 +80,7 @@ export default function TrackLayersPanel({
         })}
       </fieldset>
 
-      <div className="flex flex-col gap-3" style={panelStyle}>
+      <div className="flex flex-col gap-3" style={embedded ? undefined : panelStyle}>
         <h2 className="t-card-title">{t("track:map.route.title")}</h2>
         <div role="radiogroup" aria-label={t("track:map.route.color")} className="flex gap-2">
           {(["speed", "plain"] as RouteColorMode[]).map((mode) => (

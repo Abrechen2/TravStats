@@ -389,7 +389,8 @@
       },
       "from": "Range from",
       "to": "Range to",
-      "apply": "Show"
+      "apply": "Show",
+      "settings": "TravTrack settings: export, delete and more"
     },
     "live": {
       "off": "Follow live",
@@ -451,7 +452,9 @@
       "rate": "Replay speed",
       "reset": "Show the whole route",
       "gaps": "Jumps over gaps, nothing is made up",
-      "limit": "Replay is available for ranges of up to {{days}} days – pick a shorter one to play it."
+      "limit": "Replay is available for ranges of up to {{days}} days – pick a shorter one to play it.",
+      "open": "Play the day",
+      "close": "Close playback"
     },
     "point": {
       "title": "Position",
@@ -486,7 +489,12 @@
       "minutes": "{{m}} min",
       "hours": "{{h}} h {{m}} min",
       "note": "Counted within a route only — never across a gap, zone or pause. Moving means faster than 3 km/h.",
-      "maxSpeed": "Top speed"
+      "maxSpeed": "Top speed",
+      "dayTitle": "The day in numbers",
+      "rangeTitle": "The range in numbers",
+      "stops": "Stops",
+      "all": "All values",
+      "fewer": "Fewer values"
     },
     "quietDays": "Nothing recorded and no entry: {{days}}",
     "rangeLoading": "Loading in parts … {{parts}} parts, {{percent}} %",
@@ -505,6 +513,13 @@
       "note": "Coloured are the countries of the monthly values of every month the range touches (months in UTC) – for a single day, those of its month.",
       "pending": "Some of these months are being recomputed; the countries may still change.",
       "shapesFailed": "The country borders could not be loaded."
+    },
+    "dayCard": {
+      "title": "Day log",
+      "tabs": "Day log view",
+      "legs": "Legs & stops",
+      "log": "Logbook",
+      "noLegs": "There are no legs or stops for this range."
     }
   },
   "photos": {

@@ -15,7 +15,7 @@ import {
 import { logger } from "../../../lib/logger";
 import { useToastStore } from "../../../store/toastStore";
 import { legFigures, legModeLabel, makeNumber, spanText } from "./trackLegFormat";
-import { panelStyle, pillStyle } from "./trackMapStyle";
+import { pillStyle } from "./trackMapStyle";
 
 /**
  * One leg in numbers (spec 2026-11-03-travtrack-legs, W1/W2): its mode and
@@ -83,7 +83,7 @@ export default function TrackLegCard({
       aria-label={t("track:legs.cardTitle")}
       data-testid="track-leg-card"
       className="flex flex-col gap-2"
-      style={{ ...panelStyle, padding: 14, width: 320, maxWidth: "100%" }}
+      style={{ width: "100%" }}
     >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="t-card-title" data-testid="track-leg-mode">

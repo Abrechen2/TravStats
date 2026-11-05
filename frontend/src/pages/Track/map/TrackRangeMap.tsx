@@ -115,7 +115,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
   if (!bounds) return null;
   return (
     <div
-      className="relative h-[34rem] w-full overflow-hidden rounded-xl border border-[var(--color-border)]"
+      className="absolute inset-0 overflow-hidden"
       data-testid="track-range-map"
       role="region"
       aria-label={t("track:day.map")}
@@ -125,7 +125,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         reuseMaps
         initialViewState={{
           bounds,
-          fitBoundsOptions: { padding: FRAME_PADDING },
+          fitBoundsOptions: { padding: props.fitPadding ?? FRAME_PADDING },
         }}
         attributionControl={{ compact: true }}
         mapStyle={mapStyle}
@@ -141,7 +141,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
         style={{
           position: "absolute",
           left: 12,
-          top: 12,
+          bottom: 12,
           padding: "4px 8px",
           borderRadius: 6,
           background: "color-mix(in srgb, var(--ts-bg) 80%, transparent)",

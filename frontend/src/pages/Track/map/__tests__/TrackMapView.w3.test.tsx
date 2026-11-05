@@ -162,6 +162,9 @@ describe("TrackMapView W3", () => {
 
   it("plays only the picked leg: the scrubber spans the leg and nothing after it is drawn", async () => {
     await pickLeg();
+    // The replay is folded to „Tag abspielen" until it is opened or started.
+    expect(screen.queryByTestId("track-replay")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("track-replay-open"));
     expect(screen.getByTestId("track-replay")).toBeInTheDocument();
     expect(screen.getByLabelText("track:map.replay.scrub")).toHaveAttribute(
       "max",
@@ -211,10 +214,14 @@ describe("TrackMapView W3", () => {
   it("frames the picked leg beside the card, not under it", async () => {
     renderDay();
     await screen.findByTestId("map-stub");
-    expect(mapProps.last?.fitPadding).toBeUndefined();
+    const whole = mapProps.last?.fitPadding as { left: number; right: number };
+    // Even the whole day keeps clear of the floating cards on both sides.
+    expect(whole.left).toBeGreaterThanOrEqual(300 + 12);
+    expect(whole.right).toBeGreaterThanOrEqual(380 + 12);
     fireEvent.click(screen.getByRole("button", { name: "pick-line" }));
-    const padding = mapProps.last?.fitPadding as { left: number; bottom: number };
-    expect(padding.left).toBeGreaterThanOrEqual(320 + 12);
+    const padding = mapProps.last?.fitPadding as { left: number; right: number };
+    expect(padding.left).toBeGreaterThanOrEqual(300 + 12);
+    expect(padding.right).toBeGreaterThanOrEqual(380 + 12);
   });
 
   it("'Ganzer Tag' after 'play this leg' returns the replay and scrubber to the whole day", async () => {
@@ -234,12 +241,15 @@ describe("TrackMapView W3", () => {
     expect(times("segments")).toHaveLength(5);
   });
 
-  it("the point inspector stacks above the leg card", async () => {
+  it("the point inspector takes the detail slot over the leg card, and closing it brings the leg back", async () => {
     await pickLeg();
     fireEvent.click(screen.getByTestId("track-leg-points"));
     fireEvent.click(screen.getByRole("button", { name: "pick-point" }));
-    const z = (el: HTMLElement | null) => Number(el?.style.zIndex);
-    const card = screen.getByTestId("track-leg-card").parentElement;
-    expect(z(screen.getByTestId("track-point-inspector"))).toBeGreaterThan(z(card));
+    const slot = screen.getByTestId("track-detail");
+    expect(within(slot).getByTestId("track-point-inspector")).toBeInTheDocument();
+    expect(screen.queryByTestId("track-leg-card")).not.toBeInTheDocument();
+    fireEvent.click(within(slot).getByText("track:map.point.close"));
+    expect(screen.queryByTestId("track-point-inspector")).not.toBeInTheDocument();
+    expect(screen.getByTestId("track-leg-card")).toBeInTheDocument();
   });
 });
