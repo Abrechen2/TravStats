@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { WINDOW_TIME } from "../services/travtrack/places/window";
 
