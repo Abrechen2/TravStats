@@ -949,6 +949,7 @@
     "deleted": "Category deleted. {{count}} places are now “Other”.",
     "errors": {
       "builtIn": "A built-in category already has this name.",
+      "reserved": "This name is reserved for the category filter. Choose another one.",
       "exists": "You already have this category.",
       "limit": "You have reached the maximum number of own categories.",
       "generic": "The category could not be saved.",

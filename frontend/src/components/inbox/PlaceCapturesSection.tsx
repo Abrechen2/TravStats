@@ -5,6 +5,7 @@ import { placeCapturesApi, type PlaceCapture } from "../../lib/api/placeCaptures
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { PLACE_CATEGORIES } from "../../shared/placeCategories";
 import { useToastStore } from "../../store/toastStore";
 import PassPlacePicker from "../Roadtrips/PassPlacePicker";
@@ -39,6 +40,7 @@ export default function PlaceCapturesSection(): JSX.Element | null {
   const [loadFailed, setLoadFailed] = useState(false);
   const [naming, setNaming] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const { customs } = usePlaceCategories();
   const [category, setCategory] = useState("other");
   const [useExisting, setUseExisting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -217,6 +219,12 @@ export default function PlaceCapturesSection(): JSX.Element | null {
                         {PLACE_CATEGORIES.map((c) => (
                           <option key={c} value={c}>
                             {t(`places:categories.${c}`)}
+                          </option>
+                        ))}
+                        {/* The user's own categories, by name and as written. */}
+                        {customs.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
                           </option>
                         ))}
                       </Select>

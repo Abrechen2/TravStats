@@ -62,6 +62,20 @@ describe("PlaceCategoryManager", () => {
     );
   });
 
+  it("says a reserved filter name is refused, with its own message", async () => {
+    createMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "PLACE_CATEGORY_RESERVED" } },
+    });
+    const user = userEvent.setup();
+    render(<PlaceCategoryManager />);
+    await user.type(screen.getByTestId("place-category-name"), "all");
+    await user.click(screen.getByTestId("place-category-add"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "places:customCategories.errors.reserved"
+    );
+  });
+
   it("asks before deleting and reports the fallback to the form", async () => {
     const onDeleted = vi.fn();
     deleteMock.mockResolvedValue({ movedPlaces: 3 });

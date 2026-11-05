@@ -949,6 +949,7 @@
     "deleted": "Kategorie gelöscht. {{count}} Orte sind jetzt „Sonstiges“.",
     "errors": {
       "builtIn": "Diesen Namen gibt es schon als mitgelieferte Kategorie.",
+      "reserved": "Dieser Name ist für den Kategoriefilter reserviert. Wähle einen anderen.",
       "exists": "Diese Kategorie hast du schon.",
       "limit": "Du hast die Höchstzahl eigener Kategorien erreicht.",
       "generic": "Die Kategorie konnte nicht gespeichert werden.",

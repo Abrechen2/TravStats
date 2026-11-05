@@ -75,7 +75,7 @@ registry.registerPath({
   path: "/places/captures/{id}/resolve",
   summary: "Name a capture",
   description:
-    "`{name, category?}` creates a place at the captured position; `{placeId}` uses one the " +
+    "`{name, category?}` creates a place at the captured position (`category` is a built-in key or one of the caller's own category names, else 400 `PLACE_CATEGORY_UNKNOWN`); `{placeId}` uses one the " +
     "caller owns; either way a visit is written at `capturedAt`, in one transaction. " +
     "`{placeId, visitId}` binds a place and visit the phone already wrote and creates " +
     "nothing (400 `VALIDATION_FAILED` when the visit is not that place's or the caller's). " +

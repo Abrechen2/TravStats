@@ -1,5 +1,5 @@
 import { z } from "./zod";
-import { PLACE_CATEGORIES } from "../shared/placeCategories";
+import { PLACE_CATEGORY_NAME_MAX } from "../shared/placeCategories";
 
 /** What a capture can be: waiting for a name, turned into a place, or thrown away. */
 export const CAPTURE_STATUSES = ["open", "resolved", "dismissed"] as const;
@@ -32,7 +32,9 @@ export const captureQuerySchema = z.object({
 export const resolveCaptureSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
-    category: z.enum(PLACE_CATEGORIES).optional(),
+    // A built-in key or one of the caller's own category names; which of the
+    // two is checked against the user's list in `resolveCapture`.
+    category: z.string().trim().min(1).max(PLACE_CATEGORY_NAME_MAX).optional(),
     placeId: z.string().uuid().optional(),
     /** With `placeId`: the visit the phone already wrote — bind, create nothing. */
     visitId: z.string().uuid().optional(),

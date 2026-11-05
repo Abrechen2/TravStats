@@ -17,12 +17,22 @@ import type { Place } from "../../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../../types/placeList";
 import { classifyPlace, classifyVisit } from "../../../shared/placeCounting";
 import type { DomainStats, YearSummary } from "./types";
+import { isPlaceCategory } from "../../../shared/placeCategories";
 import { bucket, topFive } from "./yearSummary";
 
 export interface PoiAdapterInput {
   places: Place[];
   lists: PlaceList[];
   curated: CuratedListSummary[];
+}
+
+/**
+ * An own category name is the user's text: it may hold a "." (which a
+ * translation lookup reads as a path) or collide with a key, so it is flagged
+ * to be shown as written.
+ */
+function markOwnCategory<T extends { label: string }>(item: T): T & { plain?: true } {
+  return isPlaceCategory(item.label) ? item : { ...item, plain: true };
 }
 
 export function adaptPoi(input?: PoiAdapterInput): DomainStats {
@@ -100,7 +110,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
       ],
       topItems: {
         titleKey: "overviewCard.topItems.categories",
-        items: topFive(categories),
+        items: topFive(categories).map(markOwnCategory),
         labelKeyPrefix: "places:categories",
       },
     };
@@ -158,7 +168,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
       ],
       topItems: {
         titleKey: "overviewCard.topItems.categories",
-        items: topCategories,
+        items: topCategories.map(markOwnCategory),
         labelKeyPrefix: "places:categories",
       },
       // The POI statistics tab, like every other card — not the places list,

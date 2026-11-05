@@ -212,7 +212,7 @@ export default function DomainSummaryCard({
                   color: "var(--text-primary)",
                 }}
               >
-                {topItems.labelKeyPrefix
+                {topItems.labelKeyPrefix && !item.plain
                   ? t(`${topItems.labelKeyPrefix}.${item.label}`, { defaultValue: item.label })
                   : item.label}
               </span>
