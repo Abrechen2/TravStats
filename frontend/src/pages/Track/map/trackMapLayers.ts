@@ -117,6 +117,8 @@ export interface TrackLayerInput {
   highlight?: readonly LonLat[][];
   /** The picked leg's stretches: drawn wide over the line, the rest fades. */
   selection?: readonly LonLat[][];
+  /** The picked leg's stretches with readings: drawn in the route's own colours over a halo. */
+  selectionSegments?: readonly TrackPoint[][];
   /** Every leg's stretches, pickable (clear but present); omitted, no line is clickable. */
   legLines?: readonly MapLegLine[];
   onLeg?: (leg: MapLegLine) => void;
@@ -281,19 +283,50 @@ export function buildTrackLayers(input: TrackLayerInput): Layer[] {
     );
   }
   if (dim) {
+    // A halo under the leg, then the leg in the route's own colours at full strength.
     out.push(
       new PathLayer<LonLat[]>({
         id: "track-leg-selected",
         data: input.selection as LonLat[][],
         getPath: (d) => d,
-        getColor: [...HIGHLIGHT_RGB, 255],
-        getWidth: 8,
+        getColor: [...HIGHLIGHT_RGB, 170],
+        getWidth: 10,
         widthUnits: "pixels",
         capRounded: true,
         jointRounded: true,
         pickable: false,
       })
     );
+    const segments = input.selectionSegments ?? [];
+    if (input.color === "speed" && segments.length > 0) {
+      out.push(
+        new PathLayer<SpeedPiece>({
+          id: "track-leg-selected-speed",
+          data: speedPieces(segments),
+          getPath: (d) => d.path,
+          getColor: (d) => [...speedColor(d.kmh, input.speedStops), 255],
+          updateTriggers: { getColor: [input.speedStops] },
+          getWidth: 6,
+          widthUnits: "pixels",
+          capRounded: true,
+          pickable: false,
+        })
+      );
+    } else {
+      out.push(
+        new PathLayer<LonLat[]>({
+          id: "track-leg-selected-plain",
+          data: input.selection as LonLat[][],
+          getPath: (d) => d,
+          getColor: [...TRACK_RGB, 255],
+          getWidth: 6,
+          widthUnits: "pixels",
+          capRounded: true,
+          jointRounded: true,
+          pickable: false,
+        })
+      );
+    }
   }
   if (on.routes && input.legLines && input.legLines.length > 0 && input.onLeg) {
     const onLeg = input.onLeg;

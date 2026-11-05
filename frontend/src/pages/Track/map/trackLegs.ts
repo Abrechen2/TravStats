@@ -24,6 +24,16 @@ export function legLines(day: Pick<TravTrackDay, "segments">, leg: TravTrackLeg)
   });
 }
 
+/** The leg's own stretches with their readings, so the picked leg keeps its speed colours. */
+export function legSegments(day: Pick<TravTrackDay, "segments">, leg: TravTrackLeg) {
+  return leg.ranges.flatMap((range) => {
+    const segment = day.segments[range.segment];
+    if (!segment) return [];
+    const part = segment.slice(range.from, range.to + 1);
+    return part.length > 1 ? [part] : [];
+  });
+}
+
 /** The leg's frame as lines, for the map's fit when the leg has no drawable stretch. */
 export function legFrame(day: Pick<TravTrackDay, "segments">, leg: TravTrackLeg): LonLat[][] {
   const lines = legLines(day, leg);
