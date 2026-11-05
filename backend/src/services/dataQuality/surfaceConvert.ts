@@ -44,6 +44,10 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
   if (!details.success) throw new FindingActionError("staleFinding");
   const { flightId, mode } = details.data;
 
+  // The version the payload is drawn from is read BEFORE the snapshot and
+  // checked again after it: an edit in between is `staleFinding`, never a
+  // ride with the old times that then deletes the edited flight.
+  const flight = await prisma.flight.findFirst({ where: { id: flightId, userId: flag.userId } });
   // The flag may be hours old: the rule must still name this flight and mode.
   const snapshot = await loadRecordSnapshot(flag.userId);
   const still = findSurfaceSegments(snapshot).find((f) => f.entityId === flightId);
@@ -51,8 +55,13 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
     throw new FindingActionError("staleFinding");
   }
   const record = snapshot.flights.find((f) => f.id === flightId);
-  const flight = await prisma.flight.findFirst({ where: { id: flightId, userId: flag.userId } });
-  if (!flight || !record) throw new FindingActionError("staleFinding");
+  const reread = await prisma.flight.findFirst({
+    where: { id: flightId, userId: flag.userId },
+    select: { updatedAt: true },
+  });
+  if (!flight || !record || reread?.updatedAt.getTime() !== flight.updatedAt.getTime()) {
+    throw new FindingActionError("staleFinding");
+  }
 
   if (!hasPosition(flight.depLat, flight.depLon) || !hasPosition(flight.arrLat, flight.arrLon)) {
     throw new FindingActionError("invalidAction", "noPosition");
@@ -86,7 +95,11 @@ export async function convertSurfaceFlight(flag: DataQualityFlag): Promise<Conve
   // An instant read back as a wall clock is ambiguous in the autumn hour that
   // happens twice; name the later occurrence when the earlier one is not it.
   const foldOf = (wall: string, zone: string | null, instant: Date): "later" | null =>
-    wallClockToInstant(wall, zone).getTime() === instant.getTime() ? null : "later";
+    // Minute precision: the wall clock carries no seconds.
+    Math.floor(wallClockToInstant(wall, zone).getTime() / 60_000) ===
+    Math.floor(instant.getTime() / 60_000)
+      ? null
+      : "later";
   const departureLocal = instantToWallClock(record.departureAt, depZone);
   const arrivalLocal = record.arrivalAt ? instantToWallClock(record.arrivalAt, arrZone) : null;
   const shared = {
