@@ -158,7 +158,7 @@ export default function TrackMonths(): JSX.Element {
               <p className="t-caption">{t("track:months.utc")}</p>
               {citiesOff && (
                 <p className="t-caption">
-                  <Link to="/settings/location">{t("track:months.citiesOff")}</Link>
+                  <Link to="/settings/travtrack#ttRecording">{t("track:months.citiesOff")}</Link>
                 </p>
               )}
               <TrackCalendar year={year} />

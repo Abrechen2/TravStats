@@ -30,6 +30,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 
 import TravTrackPlacesSection from "../TravTrackPlacesSection";
 import { travTrackPlacesApi, type FixedPlacesAnswer } from "../../../../lib/api/travtrackPlaces";
+import { travTrackApi } from "../../../../lib/api/travtrack";
 import { resetWriteQueue } from "../../../ui/settings/writeQueue";
 
 /**
@@ -76,6 +77,7 @@ beforeEach(() => {
   caps.current = { version: 1, offered: true, enabled: true, active: true, hasData: true };
   navigate.mockReset();
   vi.spyOn(travTrackPlacesApi, "list").mockResolvedValue(ANSWER);
+  vi.spyOn(travTrackApi, "zones").mockResolvedValue([]);
 });
 afterEach(() => {
   cleanup();

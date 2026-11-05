@@ -1825,37 +1825,6 @@
         "notCreated": "Ich habe den Schlüssel nicht angelegt.",
         "notRevoked": "Ich habe den Schlüssel nicht widerrufen.",
         "loadError": "Ich konnte die Schlüssel nicht laden."
-      },
-      "places": {
-        "name": "Feste Orte",
-        "sub": "Alles darin zeigt der Tag als einen Punkt",
-        "help": "Zu Hause, Arbeit und eigene Orte: Positionen innerhalb des Umkreises (und der Zeit, falls eine gesetzt ist) erscheinen im Tagesverlauf als ein Stopp. Gespeichert bleibt jede Position. Hier nur zur Ansicht.",
-        "loadError": "Die festen Orte konnten nicht geladen werden.",
-        "none": "Keine festen Orte.",
-        "home": "Zu Hause",
-        "homeUnknown": "Zu Hause (noch kein Wohnort festgelegt)",
-        "kind": {
-          "home": "Zuhause",
-          "work": "Arbeit",
-          "custom": "Eigener Ort"
-        },
-        "radius": "Umkreis {{metres}} m",
-        "always": "immer",
-        "window": "{{days}}, {{from}}–{{until}}",
-        "days": {
-          "1": "Mo",
-          "2": "Di",
-          "3": "Mi",
-          "4": "Do",
-          "5": "Fr",
-          "6": "Sa",
-          "7": "So"
-        },
-        "lodging": "Unterkunft während der Buchung: {{state}}, Umkreis {{metres}} m",
-        "lodgingOn": "an",
-        "lodgingOff": "aus",
-        "lodgingSkipped_one": "{{count}} Buchung ohne Koordinaten wird übersprungen.",
-        "lodgingSkipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen."
       }
     },
     "history": {
@@ -1876,35 +1845,6 @@
         "gaps": "Was fehlt",
         "noConnection": "Deine eigene Dawarich-Verbindung fehlt."
       },
-      "gpx": {
-        "name": "GPX-Dateien",
-        "jump": "Zu den Importen"
-      },
-      "export": {
-        "name": "Verlauf exportieren",
-        "sub": "GPX oder JSON",
-        "label": "Exportieren"
-      },
-      "delete": {
-        "name": "Tage löschen",
-        "help": "Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht.",
-        "from": "Vom",
-        "to": "Bis",
-        "do": "Tage löschen",
-        "count": "Zähle …",
-        "title": "Positionen löschen?",
-        "affects": "Alle gespeicherten Positionen vom {{from}} bis {{to}}, beide Tage eingeschlossen",
-        "amount_one": "{{count}} Position",
-        "amount_other": "{{count}} Positionen",
-        "after": "Die Tage bleiben gelöscht: Auch ein Handy, das noch offline war, bringt sie nicht zurück.",
-        "confirm_one": "{{count}} Position löschen",
-        "confirm_other": "{{count}} Positionen löschen",
-        "done_one": "{{count}} Position gelöscht.",
-        "done_other": "{{count}} Positionen gelöscht.",
-        "notCounted": "Ich konnte nicht zählen, was im Zeitraum liegt. Gelöscht habe ich nichts.",
-        "notDone": "Ich habe nichts gelöscht.",
-        "invalidRange": "Das Von-Datum liegt nach dem Bis-Datum."
-      },
       "diag": {
         "name": "Diagnose",
         "sub": "Warum Punkte fehlen",
@@ -1915,8 +1855,7 @@
         "deleteAmount": "Alle Tage der letzten 14",
         "deleteAfter": "Gespeicherte Positionen bleiben.",
         "deleteDo": "Protokoll löschen"
-      },
-      "title": "Verlauf"
+      }
     }
   },
   "tt": {
@@ -2010,7 +1949,8 @@
         "skipped_other": "{{count}} Buchungen ohne Koordinaten werden übersprungen.",
         "saving": "Wird gespeichert …",
         "saveRadius": "Radius speichern"
-      }
+      },
+      "mapLabel": "Karte der festen Orte mit ihrem Umkreis; Schutzzonen gestrichelt rot"
     },
     "zones": {
       "title": "Schutzzonen",

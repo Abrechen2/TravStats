@@ -6,7 +6,7 @@ import type { InFlight } from "../months/values";
 import type { SafePointRow } from "../readSafe";
 import { STILL_MPS } from "./autoMode";
 import { topWindowSpeedMps } from "./windowSpeed";
-import { isBadVertex } from "./stops";
+import { isBadVertex, MAX_DRAWN_ACCURACY_M } from "./stops";
 import type { Leg } from "./types";
 
 /**
@@ -46,15 +46,20 @@ export function legFigures(
   rowOf: RowOf,
   inFlight: InFlight,
   /** False for a flight, whose pace is above any ground cap. */
-  groundOnly = true
+  groundOnly = true,
+  /** The stretch-level verdict (`badVertexIn(segment)`); defaults to the strict one. */
+  isBad: (p: StoredPoint) => boolean = isBadVertex
 ): LegFigures {
+  // Fixes kept only because the stretch holds nothing finer: the line is real, a speed over
+  // fixes a kilometre wide is not (a phone lying still "moves" by its own error), so none is claimed.
+  const coarse = points.some((p) => !isBad(p) && p[3] !== null && p[3] > MAX_DRAWN_ACCURACY_M);
   let distance = 0;
   let movingMs = 0;
   let movingM = 0;
   let measured = false;
   for (let k = 1; k < points.length; k++) {
     const [a, b] = [points[k - 1], points[k]];
-    if (isBadVertex(a) || isBadVertex(b)) continue;
+    if (isBad(a) || isBad(b)) continue;
     const step = distanceM({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] });
     const dt = b[0] - a[0];
     // A jump no ground vehicle makes is a GPS glitch, not distance (everyday rule).
@@ -67,7 +72,7 @@ export function legFigures(
       movingM += step;
     }
   }
-  const good = points.filter((p) => !isBadVertex(p));
+  const good = points.filter((p) => !isBad(p));
   const box = (good.length > 0 ? good : points).reduce<[number, number, number, number]>(
     (b, p) => [
       Math.min(b[0], p[2]),
@@ -81,11 +86,13 @@ export function legFigures(
   const moved = climb(heights);
   return {
     distanceM: Math.round(distance),
-    movingMs: measured ? movingMs : null,
-    avgSpeedMps: measured && movingMs > 0 ? movingM / (movingMs / 1000) : null,
+    movingMs: measured && !coarse ? movingMs : null,
+    avgSpeedMps: measured && !coarse && movingMs > 0 ? movingM / (movingMs / 1000) : null,
     // No reported speed (GPX, Companion without speed): the glitch-safe window speeds.
-    maxSpeedMps:
-      topSpeedOf(points, rowOf, inFlight)?.mps ?? (groundOnly ? topWindowSpeedMps(points) : null),
+    maxSpeedMps: coarse
+      ? null
+      : (topSpeedOf(points, rowOf, inFlight)?.mps ??
+        (groundOnly ? topWindowSpeedMps(points) : null)),
     ascentM: moved ? Math.round(moved.up) : null,
     descentM: moved ? Math.round(moved.down) : null,
     bounds: box,

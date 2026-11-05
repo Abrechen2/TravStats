@@ -148,7 +148,7 @@ describe("TrackPage", () => {
     expect(screen.queryByTestId("track-day-map-stub")).toBeNull();
     expect(
       within(start).getByRole("link", { name: "track:start.companion.action" })
-    ).toHaveAttribute("href", "/settings/location?section=locationProvider");
+    ).toHaveAttribute("href", "/settings/travtrack#ttRecording");
     expect(
       within(start).getByRole("link", { name: "track:start.dawarich.action" })
     ).toHaveAttribute("href", "/track/imports");

@@ -69,7 +69,7 @@ export default function InboxSuggestionsSection(): JSX.Element {
           "avor",
           stays,
           ready.locationSource === false
-            ? dependency("noLocSource", () => go("/settings/location"))
+            ? dependency("noLocSource", () => go("/settings/travtrack#ttRecording"))
             : undefined
         )}
         {item(
