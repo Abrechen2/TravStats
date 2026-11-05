@@ -14,6 +14,7 @@ import { getTextParserInstance } from "./providers";
 import { calculateParserQuality } from "./boardingPass";
 import { findMatchingTemplate } from "./userTemplates/matcher";
 import { applyUserTemplate } from "./userTemplates/engine";
+import { hasRouteOnlyLegsInMultiLegDocument } from "./text/regexParser";
 import { TemplateParser } from "./text/templateParser";
 import { getParserOrder } from "../parserSettings";
 
@@ -178,7 +179,14 @@ export async function parseEmail(
     if (userTemplate) {
       const userResults = applyUserTemplate(userTemplate, subject, cleanedText);
       const bestConfidence = userResults[0]?.parserConfidence ?? 0;
-      if (bestConfidence >= 80) {
+      // The same decline the generic reader applies: a multi-leg result made of
+      // route-only legs is a positional guess. The chain carries on instead.
+      if (hasRouteOnlyLegsInMultiLegDocument(userResults as ParsedBooking[])) {
+        log.info(
+          { templateName: userTemplate.name, flights: userResults.length },
+          "[Parser Factory] User-derived template declined: route-only legs in a multi-leg result"
+        );
+      } else if (bestConfidence >= 80) {
         log.info(
           {
             templateName: userTemplate.name,

@@ -82,14 +82,38 @@ export async function readFeed(
   return { status: response.status, body: response.body as FeedAnswer["body"] };
 }
 
+/**
+ * Waits until no transaction anywhere in the cluster still hides a change row.
+ *
+ * The feed only hands out rows below the snapshot's `xmin`, and `xmin` is a
+ * property of the whole Postgres CLUSTER, not of one database. With parallel
+ * Jest workers (one database each) another worker's open transaction holds the
+ * horizon below this suite's rows, and a drain answers "nothing changed" — a
+ * result that depended on how many workers the machine had. Bounded, and it
+ * never throws: a test that deliberately holds a transaction open passes
+ * `settle: false`.
+ */
+export async function settleHorizon(timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const [row] = await prisma.$queryRaw<Array<{ settled: boolean }>>`
+      SELECT pg_snapshot_xmin(pg_current_snapshot())::text::bigint
+             > COALESCE((SELECT max(xid) FROM sync_changes), 0) AS settled`;
+    if (row?.settled || Date.now() > deadline) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 /** Reads until `hasMore` is false; returns every item and the final cursor. */
 export async function drainFeed(
   user: SyncTestUser,
   since?: string,
-  limit?: number
+  limit?: number,
+  options: { settle?: boolean } = {}
 ): Promise<{ items: NonNullable<FeedAnswer["body"]["data"]>["changes"]; cursor: string }> {
   const items: NonNullable<FeedAnswer["body"]["data"]>["changes"] = [];
   let cursor = since;
+  if (options.settle !== false) await settleHorizon();
   for (let page = 0; page < 100; page += 1) {
     const answer = await readFeed(user, cursor, limit);
     if (answer.status !== 200 || !answer.body.data) {

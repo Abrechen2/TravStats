@@ -89,7 +89,7 @@ describe("GET /api/v1/sync/changes", () => {
       );
       const fast = await createFlight(user.id);
 
-      const during = await drainFeed(user, start.cursor);
+      const during = await drainFeed(user, start.cursor, undefined, { settle: false });
       expect(during.items.map((item) => item.id)).not.toContain(fast.id);
 
       await slow.query("COMMIT");
