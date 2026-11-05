@@ -50,6 +50,10 @@ describe("flight insights: fields only enriched flights carry", () => {
       isCodeshare: true,
       operatingAirline: "TAP",
     });
+    await make("recased", "2024-03-15T08:00:00Z", {
+      status: "flown",
+      overflownCountries: ["germany"],
+    });
     await make("plain", "2024-04-01T08:00:00Z", { status: "flown" });
     await make("planned", "2031-04-01T08:00:00Z", {
       status: "scheduled",
@@ -74,9 +78,9 @@ describe("flight insights: fields only enriched flights carry", () => {
       .set("Cookie", `auth_token=${generateToken(userId)}`);
     expect(res.status).toBe(200);
     expect(res.body.recorded).toEqual({
-      airborne: { minutes: 150, flights: 1, of: 2 },
-      overflown: { countries: ["France", "Germany"], flights: 1, of: 2 },
-      codeshare: { codeshare: 1, known: 1, of: 2, operators: [{ name: "TAP", flights: 1 }] },
+      airborne: { minutes: 150, flights: 1, of: 3 },
+      overflown: { countries: ["France", "Germany"], flights: 2, of: 3 },
+      codeshare: { codeshare: 1, known: 1, of: 3, operators: [{ name: "TAP", flights: 1 }] },
     });
   });
 
@@ -99,7 +103,8 @@ describe("flight insights: fields only enriched flights carry", () => {
       page
     );
     expect(countries!.measure.value).toBe(2);
-    expect(countries!.entries.map((e) => e.id)).toEqual([ids.enriched]);
+    // "Germany" and "germany" on two flights are one country in the tile AND here.
+    expect(countries!.entries.map((e) => e.id).sort()).toEqual([ids.enriched, ids.recased].sort());
 
     const shared = await resolveMetricEvidence(userId, "flightCodeshareCount", allTime, page);
     expect(shared!.measure.value).toBe(1);

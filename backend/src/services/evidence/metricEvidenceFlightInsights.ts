@@ -6,7 +6,11 @@ import { flightDistinctEvidence, flightSumEvidence } from "./flightMeasureRespon
 import { readYearScope } from "./domainMeasureResponse";
 import { airportVisits, firstVisits } from "../stats/flightInsights/airports";
 import { connectionFlights, firstFlights } from "../stats/flightInsights/connections";
-import { airborneMinutesOf, overflownOf } from "../stats/flightInsights/recordedFields";
+import {
+  airborneMinutesOf,
+  countryKeyOf,
+  overflownOf,
+} from "../stats/flightInsights/recordedFields";
 import {
   isCountedRow,
   loadFlightInsightRows,
@@ -180,6 +184,10 @@ export async function resolveFlightOverflownCountriesCount(
 ): Promise<EvidenceResponse> {
   const key = "flightOverflownCountriesCount";
   const rows = (await countedRows(userId, key, scope)).filter((r) => overflownOf(r).length > 0);
+  const canonical = new Map<string, string>();
+  for (const name of rows.flatMap(overflownOf)) {
+    if (!canonical.has(countryKeyOf(name))) canonical.set(countryKeyOf(name), name);
+  }
   return flightDistinctEvidence({
     userId,
     key,
@@ -187,7 +195,9 @@ export async function resolveFlightOverflownCountriesCount(
     scope,
     page,
     rows,
-    creditsOf: overflownOf,
+    // One spelling per country across ALL rows, so the panel's distinct count
+    // is the tile's (which folds case-insensitively).
+    creditsOf: (r) => overflownOf(r).map((name) => canonical.get(countryKeyOf(name)) ?? name),
   });
 }
 
