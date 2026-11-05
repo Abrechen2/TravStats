@@ -21,7 +21,7 @@ vi.mock("../../import/EmailImportTab", () => ({
     onEmailResult,
     onPdfResult,
   }: {
-    onEmailResult: (r: unknown) => void;
+    onEmailResult: (r: unknown, name?: string | null, doc?: unknown) => void;
     onPdfResult: (r: unknown) => void;
   }) => (
     <>
@@ -31,6 +31,13 @@ vi.mock("../../import/EmailImportTab", () => ({
         mail-llm-down
       </button>
       <button onClick={() => onEmailResult({ domain: "flight", flights: [] })}>mail-empty</button>
+      <button
+        onClick={() =>
+          onEmailResult({ domain: "flight", flights: [] }, null, { kind: "text", text: "x" })
+        }
+      >
+        text-empty
+      </button>
       <button
         onClick={() =>
           onPdfResult({ domain: "flight", flights: [], parserUsed: "regex", llmUnreachable: true })
@@ -80,6 +87,8 @@ describe("FlightLookupStep — an empty parse says when the AI parser was down",
     ["mail-llm-down", "flights:form.llmUnreachable"],
     ["pdf-llm-down", "flights:form.llmUnreachable"],
     ["mail-empty", "flights:form.noFlightsInEmail"],
+    // Pasted text is neither a mail nor a PDF (browser check of forgejo#159).
+    ["text-empty", "flights:form.noFlightsInText"],
   ])("%s → %s", async (button, message) => {
     const setError = vi.fn();
     await renderWith(setError);
