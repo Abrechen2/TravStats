@@ -202,7 +202,7 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                           }}
                         />
                         <span>{place.kind === "home" ? t(`${NS}.kinds.home`) : place.name}</span>
-                        <span style={{ whiteSpace: "nowrap" }}>
+                        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                           <StatusValue>
                             {place.kind === "home" && place.lat === null
                               ? t(`${NS}.homeUnknown`)
