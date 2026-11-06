@@ -24,6 +24,7 @@ import { isSharedDemoAccount } from "../utils/sharedDemo";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import logger from "../utils/logger";
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
+import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
 import {
   getAuthCookieOptions,
   getCookieSecure,
@@ -450,6 +451,11 @@ router.post(
 
       // Hash new password
       const newPasswordHash = await hashPassword(newPassword);
+
+      // Tokens (incl. paired devices) go first: a failure here must not leave a
+      // changed password with live tokens. The route is cookie-only, so no caller
+      // is a token cutting its own branch.
+      await revokeAllApiTokensForUser(userId);
 
       // Update password AND close every session that predates it. A password
       // change that leaves old cookies working is not a change anybody can rely

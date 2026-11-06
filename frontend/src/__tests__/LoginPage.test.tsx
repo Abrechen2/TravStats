@@ -16,7 +16,7 @@ vi.mock("../lib/api/loginBackgrounds", () => ({
 vi.mock("../lib/api", () => ({
   authApi: {
     login: vi.fn(),
-    getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
+    getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false }),
     getRegistrationStatus: vi.fn().mockResolvedValue({
       registrationEnabled: true,
       requiresInvitation: false,
@@ -83,7 +83,6 @@ describe("LoginPage", () => {
     });
     vi.mocked(authApi.getSmtpStatus).mockResolvedValue({
       smtpEnabled: false,
-      adminContactEmail: null,
     });
   });
 

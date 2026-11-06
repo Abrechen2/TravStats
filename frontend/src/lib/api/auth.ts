@@ -91,11 +91,9 @@ export const authApi = {
 
   getSmtpStatus: async (): Promise<{
     smtpEnabled: boolean;
-    adminContactEmail: string | null;
   }> => {
     const { data } = await api.get<{
       smtpEnabled: boolean;
-      adminContactEmail: string | null;
     }>("/auth/smtp-status");
     return data;
   },

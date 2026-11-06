@@ -22,7 +22,7 @@ vi.mock("../../lib/api", async (importOriginal) => {
     passkeyApi: { availability: () => Promise.resolve({ available: false }) },
     authApi: {
       ...actual.authApi,
-      getSmtpStatus: () => Promise.resolve({ smtpEnabled: false, adminContactEmail: null }),
+      getSmtpStatus: () => Promise.resolve({ smtpEnabled: false }),
       getRegistrationStatus: () => Promise.resolve({ registrationEnabled: true }),
     },
   };

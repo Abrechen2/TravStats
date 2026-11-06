@@ -190,7 +190,12 @@ export const errorHandler = async (
   // Custom API errors. `statusCode` is the one computed at the top for the log
   // level — by this point the ZodError branch has already returned, so the two
   // expressions were identical and the second was a duplicate.
-  const message = err.message || "Internal server error";
+  // An unexpected failure (no AppError, not a 4xx) can carry anything: a
+  // Prisma message with table names, a stack fragment, an upstream body. In
+  // production the client gets a fixed sentence and a correlation id; the
+  // detail stays in the log under the same id (forgejo#412 M2).
+  const hideDetail = statusCode >= 500 && !isAppError(err) && process.env.NODE_ENV === "production";
+  const message = hideDetail ? "Internal server error" : err.message || "Internal server error";
 
   res.status(statusCode).json({
     // First, so none of the fixed keys below can be overwritten by it.
@@ -204,6 +209,7 @@ export const errorHandler = async (
     ...(isAppError(err) && err.code ? { code: err.code } : {}),
     // Which input the cause belongs to, so a form can put it beside that field.
     ...(isAppError(err) && err.field ? { field: err.field } : {}),
+    ...(hideDetail && req.requestId ? { requestId: req.requestId } : {}),
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };

@@ -20,10 +20,16 @@ const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
  * correct answer: nothing about them has been invalidated yet.
  */
 export const generateToken = (userId: string, epoch = 0): string => {
-  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
+  const options: SignOptions = {
+    algorithm: "HS256",
+    expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"],
+  };
   return jwt.sign({ userId, epoch }, JWT_SECRET, options);
 };
 
 export const verifyToken = (token: string): { userId: string; epoch?: number } => {
-  return jwt.verify(token, JWT_SECRET) as { userId: string; epoch?: number };
+  return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as {
+    userId: string;
+    epoch?: number;
+  };
 };

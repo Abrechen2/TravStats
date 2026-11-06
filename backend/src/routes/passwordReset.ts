@@ -13,6 +13,7 @@ import { AppError } from "../middleware/errorHandler";
 import { SMTP_CONFIG_ID } from "./admin/smtp";
 import { sendPasswordResetEmail } from "../services/emailService";
 import { getInstanceSettings } from "../services/instanceSettingsService";
+import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 
 /**
@@ -39,22 +40,13 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-// GET /smtp-status — public, no auth
+// GET /smtp-status — public, no auth. Booleans only: an admin address handed to
+// anonymous callers is a free harvest target (forgejo#412 N1).
 router.get("/smtp-status", async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
-    // Best-effort admin contact for the "no SMTP" fallback message.
-    // Returns the notificationEmail of any active admin if one is set,
-    // otherwise null. Used by the forgot-password modal to render a
-    // real mailto: link instead of plain text.
-    const adminUser = await prisma.user.findFirst({
-      where: { isAdmin: true, isActive: true, notificationEmail: { not: null } },
-      select: { notificationEmail: true },
-      orderBy: { createdAt: "asc" },
-    });
     res.json({
       smtpEnabled: !!config?.enabled,
-      adminContactEmail: adminUser?.notificationEmail ?? null,
     });
   } catch (error) {
     next(error);
@@ -234,6 +226,9 @@ router.post(
 
       const newHash = await hashPassword(newPassword);
 
+      // Before the password write: see revokeUserApiTokens.ts.
+      await revokeAllApiTokensForUser(user.id);
+
       await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -288,6 +283,9 @@ router.post(
       assertNotSharedDemo(user);
 
       const newHash = await hashPassword(newPassword);
+
+      // Before the password write: see revokeUserApiTokens.ts.
+      await revokeAllApiTokensForUser(user.id);
 
       await prisma.user.update({
         where: { id: user.id },

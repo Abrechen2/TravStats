@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 
 const authApi = vi.hoisted(() => ({
   login: vi.fn(),
-  getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
+  getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false }),
   getRegistrationStatus: vi.fn().mockResolvedValue({
     registrationEnabled: true,
     requiresInvitation: false,
@@ -69,7 +69,7 @@ const renderPage = (): ReturnType<typeof render> =>
 describe("LoginPage — passkey sign-in", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    authApi.getSmtpStatus.mockResolvedValue({ smtpEnabled: false, adminContactEmail: null });
+    authApi.getSmtpStatus.mockResolvedValue({ smtpEnabled: false });
   });
 
   // On an insecure origin WebAuthn cannot run at all, so the button must not
