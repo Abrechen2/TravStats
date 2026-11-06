@@ -36,6 +36,7 @@ export default function TravTrackZonesRow({
   canRemove,
   canEdit = false,
   onChanged,
+  explanation,
 }: {
   zones: PrivacyZone[];
   loadFailed: boolean;
@@ -46,6 +47,8 @@ export default function TravTrackZonesRow({
   canEdit?: boolean;
   /** A zone was added or removed: stored positions or the list changed. */
   onChanged: () => Promise<void> | void;
+  /** Explanation shown directly under the heading, above the list. */
+  explanation?: string;
 }): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const { confirm, dialog } = useBlockConfirm();
@@ -159,6 +162,11 @@ export default function TravTrackZonesRow({
 
   return (
     <SettingItem title={t(`${NS}.name`)} sub={t(`${NS}.sub`)} help={t(`${NS}.help`)}>
+      {explanation ? (
+        <p className="t-caption" style={{ margin: 0 }} data-testid="zones-note">
+          {explanation}
+        </p>
+      ) : null}
       {loadFailed ? (
         <RowFailure error={t(`${NS}.loadError`)} onRetry={onReload} />
       ) : zones.length === 0 ? (

@@ -231,6 +231,13 @@ describe("Schutzzonen: list, add, edit, remove", () => {
     expect(await screen.findByText("settings:tt.zones.difference")).toBeInTheDocument();
   });
 
+  it("puts the Schutzzonen heading before its explanation, not after it", async () => {
+    show(<TravTrackZonesSection />);
+    const note = await screen.findByText("settings:tt.zones.difference");
+    const heading = screen.getByText("settings:location.tt.zones.name");
+    expect(heading.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("edits a zone through PATCH, keeping the form when the server refuses", async () => {
     vi.spyOn(travTrackApi, "zones").mockResolvedValue([ZONE]);
     const patch = vi

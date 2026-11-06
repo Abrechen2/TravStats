@@ -184,10 +184,10 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                 {data?.places.map((place) => (
                   <li key={place.id} data-testid={`place-${place.id}`}>
                     <div
-                      className="flex items-center justify-between"
-                      style={{ gap: "var(--ts-space-md)" }}
+                      className="flex flex-wrap items-center justify-between"
+                      style={{ gap: "var(--ts-space-xs) var(--ts-space-md)" }}
                     >
-                      <span className="t-body">
+                      <span className="t-body flex min-w-0 flex-wrap items-baseline gap-x-2">
                         <span
                           aria-hidden="true"
                           data-testid={`place-dot-${place.id}`}
@@ -196,18 +196,24 @@ export default function TravTrackPlacesSection(): JSX.Element | null {
                             width: 10,
                             height: 10,
                             borderRadius: "50%",
-                            marginRight: 8,
+                            flex: "none",
+                            alignSelf: "center",
                             background: rgbCss(PLACE_RGB[place.kind]),
                           }}
                         />
-                        {place.kind === "home" ? t(`${NS}.kinds.home`) : place.name}{" "}
-                        <StatusValue>
-                          {place.kind === "home" && place.lat === null
-                            ? t(`${NS}.homeUnknown`)
-                            : `${t(`${NS}.radius`, { metres: place.radiusM })} · ${windowLabel(place)}`}
-                        </StatusValue>
+                        <span>{place.kind === "home" ? t(`${NS}.kinds.home`) : place.name}</span>
+                        <span style={{ whiteSpace: "nowrap" }}>
+                          <StatusValue>
+                            {place.kind === "home" && place.lat === null
+                              ? t(`${NS}.homeUnknown`)
+                              : `${t(`${NS}.radius`, { metres: place.radiusM })} · ${windowLabel(place)}`}
+                          </StatusValue>
+                        </span>
                       </span>
-                      <span className="flex items-center" style={{ gap: "var(--ts-space-xs)" }}>
+                      <span
+                        className="ml-auto flex flex-wrap items-center justify-end"
+                        style={{ gap: "var(--ts-space-xs)" }}
+                      >
                         {place.kind === "home" ? (
                           <JumpControl
                             label={t(`${NS}.changeHome`)}

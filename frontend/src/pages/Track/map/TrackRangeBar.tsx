@@ -199,26 +199,31 @@ export default function TrackRangeBar({
           </div>
         )}
       </div>
-      {strip && <div style={{ flex: "1 1 200px", minWidth: 160, maxWidth: 420 }}>{strip}</div>}
-      <span className="flex-1" />
-      <LastSeenLine />
-      <Link
-        to={settingsHref(span)}
-        aria-label={t("track:map.range.settings")}
-        title={t("track:map.range.settings")}
-        data-testid="track-settings-link"
-        style={{
-          ...pillStyle(false, min),
-          width: min,
-          padding: 0,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 18,
-        }}
+      {strip && <div style={{ flex: "1 1 160px", minWidth: 140, maxWidth: 420 }}>{strip}</div>}
+      <div
+        className="ml-auto flex min-w-0 items-center justify-end gap-2 [&>p]:min-w-0 [&>p]:truncate"
+        style={{ flex: "1 1 150px" }}
+        data-testid="track-range-tail"
       >
-        <span aria-hidden>⚙</span>
-      </Link>
+        <LastSeenLine />
+        <Link
+          to={settingsHref(span)}
+          aria-label={t("track:map.range.settings")}
+          title={t("track:map.range.settings")}
+          data-testid="track-settings-link"
+          style={{
+            ...pillStyle(false, min),
+            width: min,
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+          }}
+        >
+          <span aria-hidden>⚙</span>
+        </Link>
+      </div>
     </div>
   );
 }

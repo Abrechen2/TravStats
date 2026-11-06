@@ -10,8 +10,8 @@ import { ZONES_CHANGED } from "./zonesChanged";
 import TravTrackZonesRow from "../location/TravTrackZonesRow";
 
 /**
- * Settings → TravTrack → Schutzzonen: list, add, edit and remove. The note at
- * the top says what separates a zone from a fixed place — nothing is stored
+ * Settings → TravTrack → Schutzzonen: list, add, edit and remove. The note
+ * under the heading says what separates a zone from a fixed place — nothing is stored
  * inside a zone, a fixed place only summarises, and a zone always wins.
  */
 export default function TravTrackZonesSection(): JSX.Element | null {
@@ -38,11 +38,9 @@ export default function TravTrackZonesSection(): JSX.Element | null {
 
   return (
     <SectionCard>
-      <p className="t-caption" style={{ margin: 0 }}>
-        {t("settings:tt.zones.difference")}
-      </p>
       <SettingRows>
         <TravTrackZonesRow
+          explanation={t("settings:tt.zones.difference")}
           zones={zones}
           loadFailed={loadFailed}
           onReload={() => void load()}
