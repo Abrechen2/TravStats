@@ -5,6 +5,40 @@
   "next": "Weiter",
   "betaBadge": "Beta",
   "entries": {
+    "v280": {
+      "travtrack": {
+        "title": "TravTrack: dein Tag auf der Karte",
+        "body": "Die neue Kartenseite zeigt jeden Tag als Wege und Stopps, mit Zeitleiste, Wiedergabe einzelner Wege und Namensvorschlägen für Stopps. Feste Orte wie Zuhause oder Arbeit fassen mehrere Messpunkte zu einem Stopp zusammen. TravTrack hat jetzt eine eigene Einstellungsseite statt „Standort“, und ein Diagnoseprotokoll erklärt, warum eine Aufzeichnung Lücken hat."
+      },
+      "connections": {
+        "title": "Verbindungen zwischen Personen und Servern",
+        "body": "Ein Admin verbindet zwei Server einmalig, danach verbinden sich Personen untereinander: Reisen werden geteilt, sehen auf Wunsch die Abzeichen des anderen und vergleichen sich in der Rangliste. Eine Planung lässt sich mit jemandem auf einem anderen Server gemeinsam bearbeiten. Das Gästelink-Verfahren aus früheren Vorabversionen entfällt."
+      },
+      "settings": {
+        "title": "Einstellungen neu gebaut, Suche über alles",
+        "body": "Alle Einstellungen sind jetzt eine Seite mit einheitlichen Zeilen, Standard- und Expertenansicht und einer Suche, die findet, was eine Einstellung tut. Die Serverseiten stehen im selben Menü. Mit „/“ durchsuchst du oben in der Leiste Flüge, Kreuzfahrten, Unterkünfte, Orte, Bahn, Bus, Fähren, Mietwagen und Reisen auf einmal."
+      },
+      "mail": {
+        "title": "Buchungen per Mail und KI-Hilfe",
+        "body": "Jedes Konto bekommt eine Weiterleitungsadresse (oder verbindet ein eigenes IMAP-Postfach); Mails erlaubter Absender landen als Vorschlag im Posteingang. Eine Pauschalreise ohne Vorlage kann auf Wunsch von der KI gelesen werden – du prüfst den Vorschlag, bevor etwas gespeichert wird. Cloud-KI nutzt nur, wer dem pro Anbieter zugestimmt hat."
+      },
+      "transport": {
+        "title": "Bahn, Bus, Fähre und Mietwagen ziehen nach",
+        "body": "Statistiken gelten jetzt für jedes Verkehrsmittel: Tage unterwegs, Zeitverschiebung, Jahreszeiten und Wochentage, Preis je Kilometer. CO₂ gibt es für Bahn, Bus, Fähre, Kreuzfahrt und Mietwagen. Check-ins aus Träwelling und travelynx lassen sich importieren, Zug- und Busabschnitte in Flugbuchungen werden zu eigenen Fahrten, und Tracks und Orte kannst du als GPX oder KML laden."
+      },
+      "lodging": {
+        "title": "Bewertungskategorien und eigene Ortskategorien",
+        "body": "Unterkünfte bewertest du nach Kategorien, die du ein- und ausschalten und selbst ergänzen kannst; die Statistik zeigt jede einzeln. Auch für Orte legst du eigene Kategorien mit Symbol an, zum Beispiel Schwimmbad oder Freizeitpark. Neue Aufenthalte beginnen mit Check-in um 15 Uhr und Check-out um 11 Uhr."
+      },
+      "data": {
+        "title": "Deine Daten und deine Privatsphäre",
+        "body": "Unter Einstellungen → Sicherung lädst du alles, was dein Konto enthält, als eine Datei herunter und kannst dein Konto selbst löschen. Flaggen und Zertifikatsschriften kommen vom eigenen Server, und wer das Passwort ändert, meldet verbundene Geräte ab. Eigene Immich-Adressen können nicht mehr ins Heimnetz des Servers zeigen."
+      },
+      "beta": {
+        "title": "Noch in Prüfung",
+        "body": "Mit dem Beta-Schalter deines Admins erscheinen Roadtrips mit Wetter und GPX-Export, die Planung mit TravPlan, Kreuzfahrt-Spuren, Reisen über Server teilen, Freundesvergleich zwischen Servern, verschlüsseltes Teilen und das Koppeln der Companion-App."
+      }
+    },
     "v270": {
       "design": {
         "title": "Ein Aussehen für Web und App",

@@ -95,6 +95,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Flight-track upload and the calendar subscription are out of beta** and available on every instance without the beta switch.
 - **The parser page explains itself:** what it reads, where an unrecognised booking goes (a link to the template workshop) and how to share a new template as a request.
 - **Settings search can show every hit,** not only the first eight; the data page opens with a jump list to Sicherung, Mitnehmen and Einlesen; the services page can show only the services that are active or set up.
+- **Flight updates in the inbox can be applied or rejected all at once.** The button acts on the updates currently shown, so a filtered list is handled in one step.
+- **A roadtrip's planned vehicle can be changed** after the trip exists, not only when it is created.
+- **Admins can re-seed the airport, airline and aircraft catalogues** from Maintenance and run the country-day sweep as a job that reports its progress, instead of waiting for the next start-up.
 
 ### Security
 
@@ -103,6 +106,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Unexpected server errors no longer show internal details.** A 500 now answers with a fixed message and a request id; the detail stays in the log.
 - **The login page no longer reveals the admin's e-mail address**, which anyone could read without signing in. Tokens are signed and checked with an explicit algorithm.
 - **Flags, certificate fonts and map styles load from the server itself.** Flags came from flagcdn and the certificate's fonts from Google, which sent every visitor's address to them without consent. Dependencies with known high-severity issues were updated, and CI now fails on high-severity audit findings and scans commits for secrets.
+- **Registering a passkey needs a fresh password check, and a young passkey cannot confirm a deletion.** Adding a passkey now asks for the password again, and a passkey younger than a day cannot confirm an account deletion; a backup code confirms either the way a password does.
 
 ### Fixed
 
@@ -185,6 +189,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Setup no longer redirects past a failed step** when the page was left before its timer ran out.
 - **The trip list searches and filters on the server,** so a trip beyond the first 500 is found, and "mehr laden" loads the next trips in the order the list shows.
 - **A settings change made just before leaving the page is saved,** and two quick changes can no longer overwrite each other.
+- **A pasted booking text that yields no flight no longer says it was a mail.** The import page named the wrong source after an empty parse.
+- **First journeys keep early trips.** The first-journey figures no longer drop early trips, and path countries fold country codes and names into one entry.
+- **A section created inside a trip keeps its tags** instead of losing them on save.
 
 ## [2.7.0] - 2026-10-29
 
@@ -846,6 +853,7 @@ right, and where several doors that were open get shut. Three of the fixes
 change figures that are already on screen; they are named below.
 
 #### Security
+
 - **A receipt file belongs to whoever uploaded it.** Knowing another account's
   receipt URL was enough to obtain the file: permission was derived from "does
   this caller own something that points at this file", and a caller writes their
@@ -878,6 +886,7 @@ change figures that are already on screen; they are named below.
 - **The map library's critical vulnerability is closed** (MapLibre 6).
 
 #### Fixed
+
 - **Confirming flight detection no longer deletes your other trips.** It ended by
   removing every trip with no flight on it — which is every rail trip, every
   cruise, every hotel weekend — and their stops, routes, photographs and journal
@@ -916,8 +925,8 @@ change figures that are already on screen; they are named below.
   no longer refused.** Order was decided by comparing two wall-clock times read
   off two different clocks, so Munich 10:00 to London 09:45 — forty-five minutes
   in the air — was rejected, while London 10:00 to Berlin 10:30 was stored as a
-  flight that lands half an hour before take-off. *This changes stored durations
-  for flights that crossed a time zone.*
+  flight that lands half an hour before take-off. _This changes stored durations
+  for flights that crossed a time zone._
 - **A bulk import stores what a single entry stores.** Cabin class, aircraft
   registration, Mode-S address and every special-flight field were accepted and
   then dropped, so a flight imported as First Class carried a first-class carbon
@@ -925,12 +934,12 @@ change figures that are already on screen; they are named below.
 - **Cost per hour and per kilometre ignore what they could not convert.** A
   booking in a currency with no available rate contributed its distance and its
   hours to the average while contributing nothing to the cost, so the rates read
-  far cheaper than they were. *This raises the cost figures on the statistics
-  page.*
+  far cheaper than they were. _This raises the cost figures on the statistics
+  page._
 - **A trip without a flight follows its own dates.** A hand-made trip stayed
   "completed" after being moved into the future, through the edit, an explicit
   recalculation and the nightly pass alike. Trips built from hotel stays alone
-  are now derived too. *This corrects the status of existing trips.*
+  are now derived too. _This corrects the status of existing trips._
 - **Trip detection keeps the flight you took, not the one that was cancelled.** A
   cancelled leg beat its rebooking purely by being first in the list, and two
   genuine departures from the same airport on one day were treated as a
@@ -963,6 +972,7 @@ change figures that are already on screen; they are named below.
   (#321).
 
 #### Changed
+
 - **An instance's own settings are one record, and are read as one.** Nothing in
   the database said the settings row was unique, and eleven places created one if
   they found none — so two requests arriving together on a fresh instance could
@@ -977,6 +987,7 @@ A fix for a sign-in failure on new installations, and the matching fix for
 installations behind an HTTPS reverse proxy.
 
 ### Fixed
+
 - **A fresh install reached over plain HTTP can sign in again.** Opening
   TravStats at a LAN address such as `http://192.168.0.10:3000`, the setup
   wizard and the login both answered "success", and the very next page said
@@ -1007,6 +1018,7 @@ dependency and housekeeping work that had been waiting on the trunk since
 2.6.1. Nothing here changes how anything is stored.
 
 ### Fixed
+
 - **A half-star rating can be saved.** The rating picker in a hotel stay
   offers half steps, but the server refused anything below a full star, so
   rating breakfast half a star failed the whole save with a red line at the
@@ -1032,6 +1044,7 @@ dependency and housekeeping work that had been waiting on the trunk since
   otherwise. Nothing reported it; it simply cost bandwidth.
 
 ### Added
+
 - **Every time zone, not six.** Display settings offered Berlin, Paris, UTC,
   New York, Los Angeles and Singapore. The list now holds every zone the
   browser knows, grouped by region.
@@ -1042,6 +1055,7 @@ dependency and housekeeping work that had been waiting on the trunk since
   with.
 
 ### Changed
+
 - **Two-factor secrets survive a library upgrade.** The one-time-password
   library moved three major versions; the new one refuses the shorter secrets
   the old one issued, which would have locked every account that had
@@ -1062,6 +1076,7 @@ side: a flight recorded without its times could never be given them, and a
 house with many stays turned its page into a scroll marathon.
 
 ### Fixed
+
 - **A historical flight can leave "historical" and be given its times.** The
   edit form offered no way to enter a clock on such a flight: its status is a
   read-only pill, and the year/month/day pickers carry no time — so a flight
@@ -1074,6 +1089,7 @@ house with many stays turned its page into a scroll marathon.
   Checking the box on a flown flight is the reverse move.
 
 ### Changed
+
 - **The stays of a house scroll in a box of their own.** A house with dozens
   of stays stretched the whole detail page, pushing the map, the spend card
   and the ratings off screen. The list now scrolls inside a bounded box beside
@@ -1105,7 +1121,8 @@ tester found on the release candidate, three map defects, and nine older fixes
 that had shipped without a test.
 
 ### Added
-- **A country counts by what proves you were there, not by where a flight touched down.** The country count was too high and too low at once, which is why it looked plausible for so long: a four-hour connection counted as a visit, while a country reached by car and slept in for a week did not exist at all, and three countries with completed hotel stays and no flight ever were missing. Every country now carries the strongest evidence for it, in four rungs — *slept* (a completed stay, a house on record, a port call over a night, arrival and departure on different local days), *visited* (a same-day stay or a recorded place), *transited* (driven through, read from location history) and *connection* (changed planes and nothing else). Only the connection rung is left out of the headline by default; a connection country is greyed and kept, never hidden, because the tier is inferred from recorded flights and flights are recorded incompletely. A day trip is no longer a connection: MUC–FCO–FRA is a day in Rome. Cruise port calls and recorded places now prove a country the way a landing does, and a house entered without any stay counts as one night (owner's rule); a booking still ahead and a cancelled stay prove nothing. There is deliberately no hour threshold — six hours and twelve hours returned the same set of countries on a real account, so a dial would promise a precision the data does not hold. Only attested days count: a landing in January and the next departure five years later no longer read as five years of presence. **This moves the headline for every account**: it rises for accounts with cruises, places or hotel stays, and falls for accounts whose countries rested on connections.
+
+- **A country counts by what proves you were there, not by where a flight touched down.** The country count was too high and too low at once, which is why it looked plausible for so long: a four-hour connection counted as a visit, while a country reached by car and slept in for a week did not exist at all, and three countries with completed hotel stays and no flight ever were missing. Every country now carries the strongest evidence for it, in four rungs — _slept_ (a completed stay, a house on record, a port call over a night, arrival and departure on different local days), _visited_ (a same-day stay or a recorded place), _transited_ (driven through, read from location history) and _connection_ (changed planes and nothing else). Only the connection rung is left out of the headline by default; a connection country is greyed and kept, never hidden, because the tier is inferred from recorded flights and flights are recorded incompletely. A day trip is no longer a connection: MUC–FCO–FRA is a day in Rome. Cruise port calls and recorded places now prove a country the way a landing does, and a house entered without any stay counts as one night (owner's rule); a booking still ahead and a cancelled stay prove nothing. There is deliberately no hour threshold — six hours and twelve hours returned the same set of countries on a real account, so a dial would promise a precision the data does not hold. Only attested days count: a landing in January and the next departure five years later no longer read as five years of presence. **This moves the headline for every account**: it rises for accounts with cruises, places or hotel stays, and falls for accounts whose countries rested on connections.
 - **Every counted country names its evidence, and the record is one click away.** The passport table shows each country's rung, the records that proved it, the days present, and the time on the ground where a pair of flights bounded one. A duration that cannot be derived reads "unknown", never zero, and a country no flight touched shows a dash — the two differ because only the first says "add the missing flight". Expanding a row lists the flights, cruises, places and houses behind it, each linking to the page that edits it. A country page (`GET /stats/countries/:code`) answers for a country reached only by ship or by a recorded place, instead of a 404 behind a clickable row.
 - **How strictly countries are counted is a setting — an instance default, and a per-user override.** Whether a connection counts is a personal definition, not a property of the server, so an administrator sets the starting point and anyone may override it. The choice is one of the evidence rungs; there is no hours option on purpose. Changing it moves the headline and nothing else: the country list is identical at every threshold, and the year in review and the achievements read the same threshold rather than counting airside stopovers. Badge progress can drop for an account holding connection-only countries; a badge already earned stays earned.
 - **Driving through a country is its own rung, read from location history.** A Dawarich connection is now reduced nightly to country-days — "on this day, in this country" — and folded into the passport as a fifth kind of evidence. Coordinates exist only for the length of one loop and are never stored, returned or logged; what a row keeps is the day, the country and a count of fixes, so a day held up by four hundred points and one held up by a single point can be told apart. A country is a connection when every point ever recorded there lay within an airport's grounds you are known to have flown through; a point beyond that lifts it onto the stronger rung. The road rung and its filter only appear once an account has location history, because a filter that always returns nothing reads as a bug.
@@ -1118,9 +1135,9 @@ that had shipped without a test.
 - **The travel records, the whole route network and the year in review come from the server.** `GET /stats/records` computes the seven records (longest and shortest leg, longest time aloft, streaks, delays) once, as numbers with units rather than formatted sentences; `GET /stats/network` returns every airport with coordinates and every route with a count and a distance, deliberately unbounded because a truncated network is not a smaller globe but a wrong one; `GET /stats/wrapped?year=` reads the year off the data and reports a favourite the year cannot support as absent rather than zero, and a year with no flights no longer headlines as the biggest flying year of your life (forgejo#41, forgejo#42, forgejo#44).
 - **Four more curated checklists, each verified rather than recalled.** The New 7 Wonders of Nature, the UNESCO Biosphere Reserves (646 of ~759 — the register entries with no coordinate are dropped rather than pinned at 0/0, and the gap is stated), and the national parks of Germany (16) and the United States (63). Two coordinates guessed from memory turned out to be an Italian village and an American singer, so every row was checked; a natural wonder gets an arrival point, never the centroid of a rainforest (forgejo#66). Alongside them, fourteen museum warships — USS Missouri, HMS Victory, Mikasa, Vasa, U 995 — with two collector achievements.
 - **A geotagged photo suggests the place it was taken at.** A trip with a linked Immich album is already a list of dated, positioned points, and nothing was reading them. A photo is the only anchor that is not a proxy — a hotel is booked in the town you came to see, but a photograph is a GPS fix at the moment the shutter opened — so its radius is one kilometre and it outranks a hotel or a logged place as the stated reason.
-- **Places can be imported from a CSV or a Google Takeout list, and the rows it cannot place come back to you.** German decimals are read as such ("41,8902"), and a row with no coordinates — every row of a Takeout export — is neither dropped nor written: it returns as *needs input* with your note intact, for one click in the picker. A place added by hand now carries the same identity a later import would mint, so the Colosseum picked today and imported next month is one place, not two. The batch appears in the import log and can be undone. The web import panel for places stays behind the beta switch with the rest of the domain; the routes are live for the API and the Companion.
+- **Places can be imported from a CSV or a Google Takeout list, and the rows it cannot place come back to you.** German decimals are read as such ("41,8902"), and a row with no coordinates — every row of a Takeout export — is neither dropped nor written: it returns as _needs input_ with your note intact, for one click in the picker. A place added by hand now carries the same identity a later import would mint, so the Colosseum picked today and imported next month is one place, not two. The batch appears in the import log and can be undone. The web import panel for places stays behind the beta switch with the rest of the domain; the routes are live for the API and the Companion.
 - **Several flight proposals can be answered in one request.** `POST /pending-updates/apply` and `/reject` take a list of ids and report an outcome per id — a flight edited meanwhile, one already applied, one that is not yours — rather than one success flag that would silently drop changes you believe you accepted (forgejo#33).
-- **The backlog refresh says which kind of nothing happened.** "The provider has nothing on this leg" and "the provider answered and your record was already complete" shared one counter, so a run that had just written three tail numbers read as a run that changed nothing. *Already complete* is its own line now, and every silent per-flight result carries the provider's own reason — no key, a date the free tier refuses, or a leg it genuinely does not know.
+- **The backlog refresh says which kind of nothing happened.** "The provider has nothing on this leg" and "the provider answered and your record was already complete" shared one counter, so a run that had just written three tail numbers read as a run that changed nothing. _Already complete_ is its own line now, and every silent per-flight result carries the provider's own reason — no key, a date the free tier refuses, or a leg it genuinely does not know.
 - **A flight that landed without its actual times is asked about one last time.** For an overnight flight both arrival checks fell on a date the free plan refuses, and once the sweep marked it flown nothing ever asked again. The sweep now leaves one late check outstanding and spends it through the one provider that answers for a past date — exactly once, values filled and never overwritten, and only for flights the sweep has just flipped, so the cost is the number of flights you actually took, not the size of your logbook.
 - **A fresh install lands on a starting point, not an empty dashboard.** The
   empty state says what the map will show and routes to the import section
@@ -1217,9 +1234,9 @@ that had shipped without a test.
   same place on the same day stay several visits. Cruise stops and stays remain
   export-only, and the import panel says so instead of leaving you to find out.
 - **The spreadsheet import asks what to do with what is already there.**
-  *Add only* creates and never touches an existing entry. *Merge* — the
-  default — updates the rows the file names and creates the rest. *Replace
-  contents* additionally deletes everything the file leaves out, and is the
+  _Add only_ creates and never touches an existing entry. _Merge_ — the
+  default — updates the rows the file names and creates the rest. _Replace
+  contents_ additionally deletes everything the file leaves out, and is the
   only mode that can lose data: it takes a full backup before writing a single
   row, shows how many entries would disappear, and will not proceed unless you
   confirm that number. If the backup cannot be made, the import does not run.
@@ -1280,7 +1297,7 @@ that had shipped without a test.
   the same plain dot every other domain uses — including in the key beside it.
 - **Places become a domain of their own — hidden behind the beta switch.** A
   place is a first-class entry with its own list, detail page, form and map
-  layer; a trip is a *view* of it rather than its owner, so "every McDonald's
+  layer; a trip is a _view_ of it rather than its owner, so "every McDonald's
   I have been to" is expressible and the same place on two trips is one entry
   with two visits. A place is visited, planned or on the wishlist — planned is
   derived from a dated future visit, never stored. Invisible to ordinary users:
@@ -1438,11 +1455,12 @@ that had shipped without a test.
   "6 entries · 3 sections" without one request per trip.
 
 ### Changed
+
 - **Tours, the Companion app pairing and the Dawarich connection stay behind the beta switch.** All three work end to end and were briefly offered to everyone in a release candidate; the owner ruled them unfinished. An instance with the switch off does not offer the Tours tab, the trip route editor, the Devices section that mints a claim code, or the Dawarich card. Each gate names why it is still there and what brings it back; the places domain stays gated as well (forgejo#65, forgejo#73).
 - **A route is the pair, not the direction.** FRA→WAW and WAW→FRA were two routes with one flight each while the Companion's globe counted one route with two. Both legs now land on one entry, keyed by the two codes sorted, so an existing account's top-routes list reorders: two entries of one collapse into one of two (forgejo#42).
 - **A flight's duration is owned by the database and cannot go stale.** It was derived independently in three server places and again in the app, and eight code paths write the timestamps it depends on. It is now a generated column that Postgres refuses to hand-write, so no present or future write path can leave an old number behind. Rows whose duration depends on the airport catalogue are deliberately not stored, so a timezone correction lands on the next read. On the way, `GET /flights/:id` and the create and update responses stopped returning a bare row that could show a null duration where the list showed a number (forgejo#45).
 - **The flight table is indexed for the shape the statistics actually ask.** Two composite indexes replace ten single-column ones for the hot queries; on a multi-user instance the counting queries stop reading other users' rows (measured 5007 buffers down to about 20). On a single-account instance this buys nothing and costs nothing — the planner ignores an index that does not help (forgejo#48).
-- **"Transit" is renamed "connection" wherever a country's evidence is shown**, in stored settings as well as on screen, because *Transit* is the word a German reader attaches to driving through the moment a road rung exists. A stored threshold of "visited" becomes "transited" by the same reasoning, so no instance's headline moves on the rename alone.
+- **"Transit" is renamed "connection" wherever a country's evidence is shown**, in stored settings as well as on screen, because _Transit_ is the word a German reader attaches to driving through the moment a road rung exists. A stored threshold of "visited" becomes "transited" by the same reasoning, so no instance's headline moves on the rename alone.
 - **Newest first, everywhere.** What is coming up stands above what is past,
   and an entry with no date sits at the bottom rather than sorting as though it
   happened in 1970.
@@ -1495,6 +1513,7 @@ that had shipped without a test.
   statistics, where figures belong.
 
 ### Fixed
+
 - **"What's new" tells the whole release.** The 2.6.0 overview listed five
   points and left out the ones a reader would notice first — countries
   counted by evidence, tours and the Companion pairing out of beta, the
@@ -1502,7 +1521,9 @@ that had shipped without a test.
   beta switch. Eight points now, and the one that describes what sits behind
   the switch wears a Beta mark, so nobody looks for a page their instance does
   not show.
+
 ### Fixed
+
 - **A booking that names its airport is filed into that airport, not into the
   city's current one.** A 2008 Germanwings confirmation printing
   "Berlin-Schönefeld" came back from the parser as `BER`, the code of an
@@ -1991,6 +2012,7 @@ that had shipped without a test.
   distance badge claimed 50,000 km is the Earth's circumference.
 
 ### Security
+
 - **The page carries a Content-Security-Policy.** Helmet set one, but only on `/api` responses, which govern nothing that matters for script injection — the HTML that decides whether injected script may run was served with no CSP at all. `script-src 'self'` with no `unsafe-eval`, measured against the production bundle rather than hoped for; `connect-src` stays deliberately broad because a self-hosted instance talks to the Immich, Dawarich or OSRM the operator names, often over plain http on a LAN. Verified in a browser — the first attempt silently blocked the fonts and Leaflet's stylesheet, which no reading of the header would have shown (forgejo#29).
 - **A deactivated account is refused a session, on every path.** Login answered a disabled account with HTTP 200 and a fresh cookie; the lock held on the next request, but the door still handed out a key. Five routes mint a session — login, registration, first-boot setup, two-factor verification and passkey assertion — and all five now go through one function that refuses an inactive subject. The two-factor branch is guarded separately, so a disabled account no longer receives a "password accepted, now finish signing in" (forgejo#31).
 - **Every unlimited route now carries a verdict.** The rule "rate limiting on every expensive endpoint" was practised but unreadable: a reader could not tell "considered" from "forgotten". Twenty-five routers now carry a limiter or one sentence saying why they need none. Limited on the way, by cost: the Immich photo-journey scan (the most expensive request in the app), CSV preview and parse, training and photo uploads, the cruise geometry batch, the achievements leaderboard — the one route whose cost scales with the instance rather than the caller — and the checklist suggestions (forgejo#51).
@@ -2014,6 +2036,7 @@ that had shipped without a test.
 Hotfix release. Three ways live flight data went wrong, no database changes.
 
 ### Fixed
+
 - **Flight numbers printed with a leading zero found nothing at all.**
   Airlines write "EK051" on the itinerary and that is what gets stored, but
   every flight-data provider keys on the unpadded form, "EK51", and answers
@@ -2054,6 +2077,7 @@ Hotfix release. Three ways live flight data went wrong, no database changes.
   12,000 characters and a truncation is logged.
 
 ### Upgrade notes
+
 - No database migrations in this release.
 - Flights that live tracking already shifted to a wrong day are not
   corrected retroactively — check recent long-haul arrivals whose departure
@@ -2067,6 +2091,7 @@ Hotfix release. Three ways live flight data went wrong, no database changes.
 Patch release. Three fixes, no database changes.
 
 ### Fixed
+
 - **The aeroplane between two airports flew nose-down.** The glyph in the flight
   table's route column was rotated by a further 45 degrees although it already
   points due east, so a page of flights read as a page of crashes. It flies level
@@ -2082,6 +2107,7 @@ Patch release. Three fixes, no database changes.
   server faults still log as errors; everything below them is a warning.
 
 ### Upgrade notes
+
 - No database migrations in this release.
 
 ## [2.5.0] - 2026-08-09
@@ -2093,9 +2119,10 @@ departures board, adding and editing a flight finally use the same form, and
 status stops being something you set by hand.
 
 ### Added
+
 - **Immich photo albums on a trip** (#154). Link an album from your own Immich
-  server in one of two modes: *linked*, where the images stream through an
-  access-checked proxy and take no storage here at all, or *imported*, where
+  server in one of two modes: _linked_, where the images stream through an
+  access-checked proxy and take no storage here at all, or _imported_, where
   the originals are copied in as ordinary trip photos. The gallery groups by
   album, any picture can become the trip's cover, and a re-sync collects
   stragglers. Photos run oldest first and divide into days, so an album reads
@@ -2134,6 +2161,7 @@ status stops being something you set by hand.
   carries its IATA code, and the achievements summary carries a rank.
 
 ### Fixed
+
 - **Settings marked "auto-saved" that were not** (#198). Flight defaults now
   actually persist — and clearing a field clears it, in every form.
 - **An expired session showed the dashboard and a shower of 401s** instead of
@@ -2193,6 +2221,7 @@ status stops being something you set by hand.
   flights do, on the trip card and on the trip's own page.
 
 ### Security
+
 - react-router 6 → 7, closing the open-redirect advisories, plus every other
   open dependency alert in the app and in the Discord tool.
 - Secrets shorter than 16 bytes were returned as ciphertext by a length
@@ -2200,6 +2229,7 @@ status stops being something you set by hand.
   reaches log messages.
 
 ### Upgrade notes
+
 - **Seven database migrations** run automatically on first boot of this
   version. Take your usual backup first.
 - The Docker image now vendors the airline logo set and the OpenFlights seed
@@ -2217,6 +2247,7 @@ Minor release. Six reported bugs, an overhaul of how the map is coloured, and a
 switch that keeps unfinished features out of sight until they are ready.
 
 ### Added
+
 - **Map colouring is now an explicit choice, for flights and for cruises.**
   Previously the colour picker was quietly overridden by whichever view you were
   in, so picking a colour appeared to do nothing at all. Both domains now offer
@@ -2254,6 +2285,7 @@ switch that keeps unfinished features out of sight until they are ready.
   release's changes (in German and English), shown once after updating.
 
 ### Fixed
+
 - **Cruise port names with non-English characters render correctly** (#185).
   Ålesund, Flåm, Málaga and Kuşadası previously drew as empty boxes on the map.
 - **Cruise direction arrows no longer sit inside the ports.** They were anchored
@@ -2324,6 +2356,7 @@ switch that keeps unfinished features out of sight until they are ready.
   reappear as you zoom in; a selected cruise always keeps its own.
 
 ### Changed — please read before updating
+
 - **Flight colouring:** existing settings migrate to **Status** mode. The
   combined view looks unchanged; the flights-only view switches from the
   frequency ramp to the two status colours. Switch back to **Frequency** in the
@@ -2335,6 +2368,7 @@ switch that keeps unfinished features out of sight until they are ready.
   require the beta-features switch.
 
 ### Removed
+
 - **The "Map settings" section is gone from the flight settings tab.** Base
   map, start zoom, marker style and route colour had no effect anywhere since
   the in-map control panel took over — every control there was a silent no-op.
@@ -2346,6 +2380,7 @@ Patch release. Fixes the release-highlights dialog, which never appeared in
 asked.
 
 ### Fixed
+
 - **The "What's new" dialog now actually appears.** In 2.3.0 the dialog was
   matched to the running version by an exact string comparison, and its only
   entry was tagged with the version the feature had originally been planned
@@ -2369,6 +2404,7 @@ pairing for the companion app — and adds opt-in anonymous usage
 statistics with a What's-New dialog.
 
 ### Added
+
 - **Anonymous usage statistics (opt-in)** — TravStats can now optionally
   report a small, anonymous usage summary to a public dashboard at
   `travstats.de/stats`, so the community's reach is visible. **Off by
@@ -2426,6 +2462,7 @@ statistics with a What's-New dialog.
 - A proper 404 page for unknown routes (was a blank page).
 
 ### Fixed
+
 - **Admin backup page no longer scroll-jumps** — the backup screen's
   5-second status poll was flipping the full-page loading state on every
   tick, blanking the table and snapping the scroll position back to the
@@ -2458,6 +2495,7 @@ statistics with a What's-New dialog.
 ## [2.2.2] - 2026-07-04
 
 ### Fixed
+
 - **No phantom vertical scrollbar on horizontal tab bars** — the trip-detail,
   admin, statistics and parser tab bars no longer show a stray vertical scroll
   bar; horizontal scrolling on small screens is unaffected. (#155)
@@ -2473,6 +2511,7 @@ statistics with a What's-New dialog.
 ## [2.2.1] - 2026-07-04
 
 ### Fixed
+
 - **Uploaded photos now survive container updates** — Trip photos, receipts and
   imported files were stored inside the container instead of on the mounted data
   volume, so they disappeared on every image update. Uploads now live on the
@@ -2494,6 +2533,7 @@ statistics with a What's-New dialog.
 ## [2.2.0] - 2026-06-14
 
 ### Added
+
 - **Cruise itinerary dates** — Each cruise stop now stores its calendar date,
   extracted from booking confirmations on import (even when no arrival or
   departure times are listed) and editable per stop, including sea days. Stop
@@ -2503,6 +2543,7 @@ statistics with a What's-New dialog.
   on import and shown in the cruise list and detail header. (#133)
 
 ### Fixed
+
 - **German and local port names now match on cruise import** — The importer
   resolves German exonyms ("Lissabon", "Singapur", "Venedig") and local
   endonyms ("Lisboa", "Roma", "Napoli") to the correct catalog port instead
@@ -2516,6 +2557,7 @@ statistics with a What's-New dialog.
   opens.
 
 ### Changed
+
 - **Consistent "Add flight" button placement** — The flights page now shows a
   heading with the "Add flight" button right-aligned, matching the cruises and
   trips pages.
@@ -2523,6 +2565,7 @@ statistics with a What's-New dialog.
 ## [2.1.0] - 2026-06-13
 
 ### Added
+
 - **Worldwide port catalog** — The cruise port catalog grew from ~670 to
   over 12,000 seaports (imported from the public UN/LOCODE dataset), so ports
   like Taranto that were previously missing now resolve directly in manual
@@ -2532,6 +2575,7 @@ statistics with a What's-New dialog.
   instead of forcing manual latitude/longitude entry.
 
 ### Fixed
+
 - **Cruise dates were lost or shifted** — Entering only a date in the cruise
   form left it unsaved (so it never appeared in the overview), and entered
   dates could drift to the previous day across timezones. Cruise start/end are
@@ -2547,6 +2591,7 @@ statistics with a What's-New dialog.
   search now surfaces an error instead of silently looking like "no results".
 
 ### Security
+
 - **API write-scope on cruise endpoints** — Cruise, port and ship write
   endpoints now require a write-scoped Personal Access Token (consistent with
   flights/trips), and the new port-lookup endpoint is rate-limited per user.
@@ -2554,6 +2599,7 @@ statistics with a What's-New dialog.
 ## [2.0.1] - 2026-06-13
 
 ### Fixed
+
 - **Cruise parsing ignored the configured Ollama server.** The cruise
   booking parser always connected to `localhost:11434` instead of the
   Ollama URL/model set in admin settings, so a correctly configured — and
@@ -2568,6 +2614,7 @@ statistics with a What's-New dialog.
   and points to Settings.
 
 ### Changed
+
 - **LLM parser configuration moved to the General admin tab.** The Ollama /
   parser settings sat under the "Flight" admin tab, where cruise-only users
   never found them; they now live under "General".
@@ -2575,6 +2622,7 @@ statistics with a What's-New dialog.
 ## [2.0.0-rc.12] - 2026-06-13 (Release Candidate)
 
 ### Fixed
+
 - **Cruise import preview triggered a render-loop.** The editable import
   preview reported its state through an effect whose dependencies changed
   on every render, causing a "Maximum update depth exceeded" loop
@@ -2589,6 +2637,7 @@ statistics with a What's-New dialog.
 ## [2.0.0-rc.11] - 2026-06-13 (Release Candidate)
 
 ### Fixed
+
 - **Fly & cruise import failed at the final save step.** Importing a cruise
   with bundled flights created the cruise and the flights, but then errored
   while grouping them into a trip — the flight IDs were sent empty. The trip
@@ -2597,6 +2646,7 @@ statistics with a What's-New dialog.
 ## [2.0.0-rc.10] - 2026-06-13 (Release Candidate)
 
 ### Fixed
+
 - **Cruise import failed to save bookings that list only dates, no times.**
   Itinerary stop times extracted as a bare date (e.g. `2026-06-15T00:00`,
   without seconds or offset) were rejected by the cruise validation, so the
@@ -2608,11 +2658,13 @@ statistics with a What's-New dialog.
 Cruise-import overhaul on top of rc.8. No schema change.
 
 ### Fixed
+
 - **Duplicate "Add cruise" button.** The dashboard cruise tab showed two
   "+ Kreuzfahrt hinzufügen" buttons; the correctly-placed toolbar button
   now opens the import chooser, and the stray floating one is gone.
 
 ### Added
+
 - **Editable cruise import preview.** After a booking is parsed, every
   field is editable inline before saving — the matched ship and ports now
   show by name, with an expandable itinerary editor, and missing/unmatched
@@ -2628,6 +2680,7 @@ Cruise-import overhaul on top of rc.8. No schema change.
 Bug fixes and import/UX improvements on top of rc.7. No schema change.
 
 ### Fixed
+
 - **Airport popups always showed "0 flights".** Clicking an airport on
   the map opened a card reporting 0 total flights and no routes, even
   though the map clearly drew arcs through it. The popup now aggregates
@@ -2641,6 +2694,7 @@ Bug fixes and import/UX improvements on top of rc.7. No schema change.
   flights that never had it computed.
 
 ### Changed
+
 - **Trip cover image is now an upload.** The trip editor lets you upload
   an image file for the cover directly — including while creating a new
   trip — instead of pasting an image URL.
@@ -2654,6 +2708,7 @@ Bug fixes and import/UX improvements on top of rc.7. No schema change.
 Closes the findings of the V2 function & usability audit. No schema change.
 
 ### Fixed
+
 - **Unreadable form fields on dark surfaces.** A Tailwind color named
   `base` shadowed the `text-base` font-size utility and rendered
   datetime inputs and dropdowns (e.g. in the cruise editor) near-black
@@ -2681,6 +2736,7 @@ Closes the findings of the V2 function & usability audit. No schema change.
   cruise carries malformed data.
 
 ### Added
+
 - **German port names in the port search.** Typing "Lissabon",
   "Kopenhagen" or "Venedig" now finds Lisbon, Copenhagen and Venice —
   about 80 common German exonyms map to the English catalog names,
@@ -2694,6 +2750,7 @@ Closes the findings of the V2 function & usability audit. No schema change.
 ## [2.0.0-rc.6] - 2026-06-11 (Release Candidate)
 
 ### Added
+
 - **Trips are journeys now, not bookings.** Trip auto-detection only
   proposes real multi-leg journeys (3+ flights) — a plain out-and-back
   booking stays trip-less. A new "Clean up" tool on the Trips page
@@ -2704,6 +2761,7 @@ Closes the findings of the V2 function & usability audit. No schema change.
   trips plus a searchable, year-grouped "Filter by trip" popover.
 
 ### Fixed
+
 - **Disabled domains no longer leak content.** With the cruise domain
   switched off, cruises still appeared on the dashboard "All" map, in
   the cross-domain statistics, on trip detail pages and maps, and behind
@@ -2718,6 +2776,7 @@ Full V2 feature audit across both domains — closes a batch of usability
 gaps, mostly in the new cruise module. No schema change.
 
 ### Added
+
 - **Pick which trip the journey map shows.** Journey mode rendered an
   arbitrary first trip with no way to choose another; it now offers a
   trip selector (with a hint when no cross-domain trips exist).
@@ -2729,6 +2788,7 @@ gaps, mostly in the new cruise module. No schema change.
   (with confirmation) — previously a mis-imported cruise was stuck.
 
 ### Fixed
+
 - **The flight status filter hid historical and duplicated flights.**
   Unchecking any one status (flown/scheduled/cancelled) silently dropped
   every historical/duplicated flight; those two statuses now stay visible.
@@ -2749,6 +2809,7 @@ gaps, mostly in the new cruise module. No schema change.
   steps) and an unstyled duplicate-flight dialog — both fixed.
 
 ### Changed
+
 - **Cruise create opens straight to the form.** Removed the fake
   email-import chooser (a dead-end stub); real email/PDF import stays on
   the cruise list page.
@@ -2758,6 +2819,7 @@ gaps, mostly in the new cruise module. No schema change.
   journey modes so it can't contradict the toolbar.
 
 ### Tooling
+
 - Dead-code cleanup (retired 3D map-mode layers + their i18n keys),
   corrected stale cruise-routing notes in CLAUDE.md, and routed the map's
   cruise-overlay gate through the domain-gating API.
@@ -2765,6 +2827,7 @@ gaps, mostly in the new cruise module. No schema change.
 ## [2.0.0-rc.4] - 2026-06-10 (Release Candidate)
 
 ### Fixed
+
 - **The map could still drop a flight on very large accounts.** The rc.3
   fix paginates the full flight set, but the backend ordered each page by
   `departureTime` alone — a column that is nullable and not unique. At a
@@ -2777,6 +2840,7 @@ gaps, mostly in the new cruise module. No schema change.
 ## [2.0.0-rc.3] - 2026-06-09 (Release Candidate)
 
 ### Fixed
+
 - **The dashboard map only showed your 100 most recent flights.** The
   multi-domain refactor replaced V1's paginated map load with a single
   unbounded `/geo` request, which the backend caps at 100 (newest first).
@@ -2786,6 +2850,7 @@ gaps, mostly in the new cruise module. No schema change.
   full set again, so every flight is plotted regardless of age.
 
 ### Changed
+
 - **Single-flown routes are easier to spot.** A route flown just once
   rendered at the faintest possible treatment (alpha 114, 1px) and was easy
   to lose in an empty ocean. Raised the visibility floor (alpha ≥ 160,
@@ -2798,12 +2863,14 @@ verifying real flight data on the rc.1 build, plus a trip-detection UX
 improvement. No schema change.
 
 ### Added
+
 - **Expandable trip-detection cards.** Each auto-detected trip in the
   "Reisen erkennen" review modal can be expanded to reveal its
   constituent legs (date · flight number · departure → arrival · status).
   The proposal payload now carries a `legs` array.
 
 ### Fixed
+
 - **Airport IATA collisions resolved to the wrong airport.** OurAirports
   assigns synthetic ICAO placeholders (e.g. `US-0226`) to minor airfields,
   some of which carry a spurious IATA that collides with a real
@@ -2814,6 +2881,7 @@ improvement. No schema change.
   across the cache, batch and create paths.
 
 ### Tooling
+
 - **`fixMistaggedDurations` maintenance script.** Detects flights whose
   legacy time-semantics tag inflates/deflates the displayed duration
   (e.g. a Sydney→Dubai leg showing 21 h instead of 14 h) by comparing the
@@ -2832,9 +2900,10 @@ aggregates the entire `2.0.0-beta.1` … `2.0.0-beta.28` line; see those
 entries below for the granular history.
 
 ### Added — Cruise domain
+
 - **Cruise logbook**: full CRUD for cruises, ships, and ports, with
   per-cruise itineraries (port calls + sea days).
-- **In-house sea-route renderer**: a vendored Eurostat *marnet*
+- **In-house sea-route renderer**: a vendored Eurostat _marnet_
   shipping-lane graph with an A* pathfinder (`services/marnet/`)
   replaces the abandoned `searoute-ts` package, so cruise legs follow
   real shipping lanes instead of falling back to coarse arcs.
@@ -2845,6 +2914,7 @@ entries below for the granular history.
   KPIs (flights + cruises) on the combined "Alle" view.
 
 ### Added — Multi-domain platform
+
 - **Domain-scoped dashboard**: Alle / Flüge / Kreuzfahrten tabs with
   per-domain visualization modes; the URL carries tab + mode and the
   last-used mode persists per domain.
@@ -2855,6 +2925,7 @@ entries below for the granular history.
   earth occlusion and smoothed map ↔ globe transitions.
 
 ### Fixed
+
 - **Flights to IATA-less airports no longer vanish from the map**
   (#120): airfields with only an ICAO code (common for small / pre-1990
   airports) saved fine but were silently dropped by the route render
@@ -2864,6 +2935,7 @@ entries below for the granular history.
 ## [2.0.0-beta.28] - 2026-05-12 (Beta)
 
 ### Fixed
+
 - **Infinite re-render loop on the dashboard fired ~8 GETs/sec at
   `/api/v1/flights`.** `useEnabledDomains()` returned a fresh
   `isEnabled` arrow function on every render; `DashboardPage` listed it
@@ -2880,12 +2952,13 @@ entries below for the granular history.
 ## [2.0.0-beta.27] - 2026-05-10 (Beta)
 
 ### Fixed
+
 - **Bulk historical refresh aborted client-side after 10 s** while the
   backend kept running. The default axios timeout is 10 s, but
   `runBulkRefresh` loops sequentially through up to 25 flights, each
   calling AeroDataBox / Aviationstack — easily 30–60 s on a healthy
   link. The UI gave up mid-loop, surfaced a red `timeout of 10000ms
-  exceeded` toast, and the user had to re-click before any data
+exceeded` toast, and the user had to re-click before any data
   showed up. Bumped the bulk-refresh request to the parser-class
   180 s timeout so the call stays open for the full server-side
   iteration.
@@ -2893,6 +2966,7 @@ entries below for the granular history.
   the brand-amber `btn-primary`. Side-fix while in the file.
 
 ### Performance
+
 - **Globe hover tooltip moved into a leaf component.** Sweeping the
   cursor over airport / port labels triggered React re-renders at
   60–120 Hz of the entire 1600-line `GlobeView` tree (every onHover
@@ -2910,6 +2984,7 @@ entries below for the granular history.
 ## [2.0.0-beta.26] - 2026-05-10 (Beta)
 
 ### Fixed
+
 - **Sonder-Flug entry was invisible from the dashboard top-bar add
   button** — `DashboardLayout` mounted `SimplifiedFlightFormV2` without
   the `onPickSpecialFlight` prop, so the special-flight chooser card
@@ -2936,6 +3011,7 @@ entries below for the granular history.
   `detailMode` transition so the details actually appear.
 
 ### Visual / brand
+
 - **Cruise-port markers + UN/LOCODE labels on the flat map**: hover
   tooltip ported from globe so airport / port hover bubbles now show
   IATA + name + count + last-visit / last-call across both surfaces.
@@ -2958,8 +3034,8 @@ entries below for the granular history.
     palette to brand state tokens (`--success` / `--danger` /
     `--warning` / `--accent`).
   - Admin LoggingManager + BackupManagement, Training TemplateReview
-    + BoardingPassAnnotation, ParserPage tabs, ReceiptUpload drag-
-    state and AirportSeedingBanner all rerouted to brand tokens.
+    - BoardingPassAnnotation, ParserPage tabs, ReceiptUpload drag-
+      state and AirportSeedingBanner all rerouted to brand tokens.
   - Cruise port markers on the map now render in the canonical
     `--domain-cruise` hex (#6fa0d6) instead of sky-400.
 - **Shared tooltip labels** moved out of `map.globe.pinned.*` into a
@@ -2971,9 +3047,8 @@ entries below for the granular history.
   of an empirical zoom heuristic that was off by 3-22× from the real
   camera. Routes no longer disappear at the rim when zoomed out.
 
-
-
 ### Fixed
+
 - **Alle-tab map legend now reflects domain pills** — The legend stripe
   (sky-blue cruise + orange flight) hard-coded both rows, so toggling
   cruise off in the filter dropdown left the legend lying that cruises
@@ -2983,6 +3058,7 @@ entries below for the granular history.
 ## [2.0.0-beta.24] - 2026-05-09 (Beta)
 
 ### Added
+
 - **Filter button shows active state** — When the year dropdown picks
   a specific year or any domain pill is off, the dashboard top-bar
   Filter button switches to an accent border + the picked year next to
@@ -2996,6 +3072,7 @@ entries below for the granular history.
 ## [2.0.0-beta.23] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Double tooltip on flat-map airport markers** — Beta.21 added a
   hover bubble via deck.gl's `getTooltip` to surface full place names
   on every marker. On the flat map, airport markers already trigger
@@ -3021,6 +3098,7 @@ entries below for the granular history.
 ## [2.0.0-beta.22] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Year + domain filter now actually filters data** — Beta.20 added
   the year dropdown and domain pill row but only updated the store;
   the data layer didn't read either. Wired both into the Alle, Flüge,
@@ -3038,6 +3116,7 @@ entries below for the granular history.
 ## [2.0.0-beta.21] - 2026-05-09 (Beta)
 
 ### Changed
+
 - **Flat-map cruise port labels show UN/LOCODE instead of full name**
   — Mirrors how airport markers show 3-letter IATA codes ("HAM",
   "JFK"). Ports now show the 5-letter UN/LOCODE ("DEHAM", "USJFK")
@@ -3045,6 +3124,7 @@ entries below for the granular history.
   The Globe view already did this — flat-map was inconsistent.
 
 ### Added
+
 - **Hover tooltip on every airport + port marker** — Shows the full
   place name in a small dark bubble on hover. Wired through
   `getTooltip` on every MapboxOverlay (DeckGLMap, GlobeView,
@@ -3055,6 +3135,7 @@ entries below for the granular history.
 ## [2.0.0-beta.20] - 2026-05-09 (Beta)
 
 ### Changed
+
 - **Globe mode is now exclusive to the Alle tab** — The 3-D globe is
   cross-domain by design (mixes flights and cruises on one sphere), so
   exposing it on per-domain tabs caused two problems: clicking it on
@@ -3076,6 +3157,7 @@ entries below for the granular history.
   shipMarkers state plumbing in GlobeView and buildGlobeLayers.
 
 ### Added
+
 - **Year + domain dropdown filter** — The dashboard filter dropdown
   now offers a single year selector (current year + 14 years back, or
   "Alle Jahre") instead of two from/to date pickers. Per-day
@@ -3089,6 +3171,7 @@ entries below for the granular history.
 ## [2.0.0-beta.19] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Cruise paths clipped into the globe** — Cruise sea-route geometry
   comes from the backend as 2-D `[lng, lat]` points, so deck.gl
   rendered the path at exactly altitude 0. That shares depth-buffer
@@ -3101,6 +3184,7 @@ entries below for the granular history.
 ## [2.0.0-beta.18] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Globe pinned-card "Open last flight" CTA was a no-op** — The CTA
   was wired to a callback named `onFlightClick` that mapped to
   `setSelection([flight])` upstream, which only highlights the row in
@@ -3109,6 +3193,7 @@ entries below for the granular history.
   modal the activity-panel "Details" button opens.
 
 ### Added
+
 - **Cruise pinned-card now has an "Open cruise" CTA** — Symmetric to
   the flight CTA. New `onCruiseOpen` prop on GlobeView /
   MapContainer3D, wired in AllTab to navigate to `/cruises/:id` —
@@ -3117,6 +3202,7 @@ entries below for the granular history.
 ## [2.0.0-beta.17] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Globe canvas still disappeared on click after beta.16** — Removing
   `flyToArc` and adding try/catch wasn't enough. Per Gemini's diagnosis
   (matching upstream issue #512), the actual root cause is MapLibre 5's
@@ -3139,6 +3225,7 @@ entries below for the granular history.
 ## [2.0.0-beta.16] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Globe disappeared completely on flight-route click** — Critical
   regression in beta.12-15: clicking an aggregated arc fired both
   `setPinned()` (mounting the new MapLibre Popup) and a 1.5 s
@@ -3159,6 +3246,7 @@ entries below for the granular history.
 ## [2.0.0-beta.15] - 2026-05-09 (Beta)
 
 ### Changed
+
 - **Inactive-tab / section-nav contrast bumped consistently** — The
   TripDetailPage tab fix in beta.10 used a one-off
   `rgba(230,237,243,0.65)` to lift inactive tabs above the borderline
@@ -3174,6 +3262,7 @@ entries below for the granular history.
 ## [2.0.0-beta.14] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Globe pinned-card width stretched to viewport on long content** —
   The MapLibre Popup wrapper was created with `maxWidth: "none"`, which
   let the inner card balloon out to the full viewport width as soon as
@@ -3191,6 +3280,7 @@ entries below for the granular history.
 ## [2.0.0-beta.13] - 2026-05-09 (Beta)
 
 ### Added
+
 - **Globe pinned-card content density (Phase B)** — The pinned detail
   card that opens on click now follows a 3-tier hierarchy: heading
   (icon + identifier), hero stat (the one number you want to see),
@@ -3203,16 +3293,17 @@ entries below for the granular history.
     aggregated flights on this route) + last flight date + aircraft
     types + top airline + the existing "Open last flight" CTA.
   - **Cruise**: cruise line + date range + port count + sea-day count
-    + embark / debark ports.
-  All aggregations are pure helpers in `Globe/cardStats.ts` derived
-  from the `flights` / `cruises` arrays already passed to GlobeView —
-  no extra API roundtrip. Card content extracted into
-  `Globe/PinnedCard.tsx` (~330 LoC) so the GlobeView shell stays
-  focused on map + popup lifecycle. 21 new i18n keys per locale.
+    - embark / debark ports.
+      All aggregations are pure helpers in `Globe/cardStats.ts` derived
+      from the `flights` / `cruises` arrays already passed to GlobeView —
+      no extra API roundtrip. Card content extracted into
+      `Globe/PinnedCard.tsx` (~330 LoC) so the GlobeView shell stays
+      focused on map + popup lifecycle. 21 new i18n keys per locale.
 
 ## [2.0.0-beta.12] - 2026-05-09 (Beta)
 
 ### Changed
+
 - **Globe pinned-card now anchors to the clicked feature** — The detail
   card that opens when you click an airport, port, route arc, or cruise
   path used to live in a fixed bottom-right slot, disconnected from
@@ -3230,6 +3321,7 @@ entries below for the granular history.
 ## [2.0.0-beta.11] - 2026-05-09 (Beta)
 
 ### Fixed
+
 - **Activity-toggle and legend overlapped on the dashboard `Alle` tab** —
   The `☰ Aktivität` button and the flight/cruise legend were two
   independent absolutely-positioned pills with hand-tuned offsets
@@ -3242,6 +3334,7 @@ entries below for the granular history.
 ## [2.0.0-beta.10] - 2026-05-09 (Beta)
 
 ### Added
+
 - **Trip System V2** — A redesigned Trip surface with a dedicated detail page
   carrying five sub-tabs (Overview / Timeline / Map / Gallery / Logistics).
   Iterations 1-9 land in this beta: list-card redesign, stops + journal
@@ -3269,6 +3362,7 @@ entries below for the granular history.
   API endpoint, and the `route_distance` backfill script.
 
 ### Changed
+
 - **Settings → Import promoted to top-level (General tab)** — The
   1.5.0 import section landed nested under Settings → Flug → Import,
   one tab-level deep. With V2 multi-domain ahead (cruise / hotel / POI
@@ -3287,6 +3381,7 @@ entries below for the granular history.
   of the night cycle. Frame pacing is now fully GPU-driven.
 
 ### Fixed
+
 - **Trip delete-confirmation heading was nearly invisible** — The `<h2>`
   in the delete-confirm modal on the Trip detail page was missing an
   explicit text colour and inherited a muted shade against the dark
@@ -3306,6 +3401,7 @@ entries below for the granular history.
   `fontSettings: { sdf: true }` is now set explicitly.
 
 ### Database
+
 - **Four new migrations** — `20260509120000_trip_metadata`,
   `20260509130000_trip_stops_and_journal`, `20260509140000_trip_photos`,
   `20260509150000_special_flights_subtype`. All additive, idempotent,
@@ -3315,24 +3411,29 @@ entries below for the granular history.
 ## [2.0.0-beta.9] - 2026-05-05 (Beta)
 
 ### Added
+
 - **Brand token system wired through the app** — `BRAND.md` per-domain palette (flight `#f0a947`, cruise `#6fa0d6`, hotel `#b072d6`, poi `#5ec2b2`) is now the single source of truth. The shared domain registry (`shared/domains.ts` on both backend and frontend) carries the canonical hexes, so dashboard tab strip, AllTab legend, journey layers, and the legend-driven map controls all read from one place. Stats screen consolidated onto a shared `StatCard` surface — ~30 arbitrary Tailwind gradients replaced with brand tokens.
 - **Merged 1.4.0 trunk** — beta.9 carries the full 1.4 main payload: AeroDataBox provider + bulk historical refresh, persisted tail number / Mode-S / codeshare metadata, Aircraft hulls ranking + per-tail profile pages (`/aircraft/:reg`), API tokens for headless ingestion, OpenAPI spec at `/api/v1/openapi.json` + Swagger UI at `/api/v1/docs`, demo account flag (`isDemo`), upgrade-backup hook on container entrypoint.
 
 ### Changed
+
 - **Dark-only theme**, light-mode classes retired across components. `themeStore` simplified to `mapTheme` only — no more `isDarkMode` toggle. `<html class="dark">` is set defensively at boot so a stale `localStorage` payload can't strip it.
 
 ## [1.5.1] - 2026-05-12
 
 ### Fixed
+
 - **`backfillRouteDistance.ts` now actually runs in production** — The v1.5.0 CHANGELOG advertised the script as runnable via `docker exec TravStats npx tsx /app/backend/scripts/backfillRouteDistance.ts`, but the production Dockerfile only copied `backend/dist/` out of the builder stage so `/app/backend/scripts/` did not exist in the shipped image and every operator who followed the documented path got "No such file or directory". The Dockerfile now explicitly copies `backend/scripts/` into the production stage; the documented command resolves as promised.
 - **AeroDataBox lookup now persists airport `shortName` and `municipalityName`** — The v1.5.0 release notes claimed AeroDataBox lookups populate these airport-side columns, but the adapter's airport-object interface declared only `{iata, icao, name}` and the fields were filled only by the airport seeder on first boot — provider responses never reached them. New `enrichAirportMetadata()` helper backfills NULL slots from AeroDataBox responses on every lookup, never overwrites a curated value, invalidates the airport cache after a write. Six new lock-in tests cover the contract: happy-path, never-overwrite-curated, both-already-set no-op, empty-payload no-op, unknown-code, and whitespace trimming.
 
 ### Tests
+
 - Backend Jest: 657 → 663 (+6 for `enrichAirportMetadata`). Frontend Vitest unchanged at 357/357.
 
 ## [1.5.0] - 2026-05-08
 
 ### Added
+
 - **`GET /api/v1/diagnostics`** — User-scoped, redacted JSON snapshot of selected flights + trips for bug reports. Filters: `flightIds`, `tripIds`, `airline`, `since`. Reduces the manual hand-glueing maintainers used to need (manual `?airline=…` query + JSON trim + redact). Closes #105. Distinct from the existing `/diagnostic-export` (which returns server log tails). `recentErrors` is reserved as `[]` for now — error-events table is v1.5.x scope. Documented in the OpenAPI spec under the `Diagnostics` tag (rc.5).
 - **FR24 CSV importer** — Settings → Import → "From Flightradar24" takes the unmodified `my.flightradar24.com` CSV export. Server-side timezone conversion via the existing airport lookup, hardcoded column map for FR24's known schema (handles the leading blank line and embedded `(IATA/ICAO)` annotations), `Flight reason → category`, `Seat number → seatNumber`, `Note → notes`. Status auto-defaults from `dep_utc` vs. now (past → `flown`, future → `scheduled`). Closes #99.
 - **Generic CSV importer with column-mapping wizard** — Drop any flat per-flight CSV; a wizard opens automatically and lets you assign each column to a TravStats field (Departure IATA, Departure Time, Arrival IATA, Status, Airline, Aircraft, …) with auto-suggestions for known field names.
@@ -3349,11 +3450,13 @@ entries below for the granular history.
 - **`backend/scripts/backfillRouteDistance.ts` script** — One-shot Node script that walks all flights with `route_distance NULL` + non-NULL coords, computes Haversine, UPDATEs in batches of 500. Idempotent (`where: { routeDistance: null }`), supports `--dry-run` and `--batch-size` flags. Run via `docker exec TravStats npx tsx /app/backend/scripts/backfillRouteDistance.ts` to backfill legacy NULL distances on any host that imported flight data before v1.5.0-rc.3. Norberts box would populate ~231 NULLs in well under a second.
 
 ### Changed
+
 - **Routes-layer rendering** — Maximum line width reduced from 7 px to 4 px so dense maps stay readable. Routes carrying only future scheduled flights render as solid sky-blue arcs (no gradient). Routes with both past and upcoming flights render with a hardcoded two-tier red core (red-400 below median frequency, red-600 at/above) plus blue tips, replacing the heatmap-tinted core. Routes with only flown legs continue to use the frequency-driven heatmap palette.
 - **Settings → Import UI** — Redesigned to match the rest of the Settings design system: outer `SectionCard` with title, three sub-cards in a responsive grid (1 / 2 / 3 columns by viewport), `btn-primary` file pickers with 📁 prefix replacing native `<input type="file">` buttons, red-tinted error blocks, green-tinted success blocks.
 - **Generic CSV import description** — Reworded so the upload-then-wizard flow is explicit ("Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field"), avoiding the prior implication that "Wizard" was a button.
 
 ### Fixed
+
 - **`durationMinutes` returned 0 / negative numbers on DATE_ONLY rows** — Manually entered round-trips between airports in different timezones (e.g. RAK↔MAD with both sides marked DATE_ONLY) produced -120 / 0 / +120 minute durations because the 12:00 wall-clock placeholder was put through real airport-timezone conversion. The `tzAwareDurationMinutes` type union didn't even include `DATE_ONLY`; a silent cast in the flights list endpoint mapped it to `UNKNOWN` and ran a naive UTC diff. Now returns `null` when either side is `DATE_ONLY`, and the display layer falls back to the great-circle estimate (Iberia RAK→MAD now reads "~1h 35min" instead of "0min" or "-2h"). Closes #106A; closes #103 as a side-effect (PUT was failing on the resulting bad rows).
 - **Free-text airline names not resolved to IATA/ICAO** — Manual entries like `"Iberia"` saved with `airlineIata=null` / `airlineIcao=null`, so airline filters, codeshare detection, and stats grouping treated spelling variants as separate carriers. New `resolveAirlineCodes()` does strict-exact lookup (canonical name, IATA code, ICAO code, or explicit alias — no fuzzy substring matching, since "Air India" → "Indian Airlines" is worse than `null`). Wired into `POST /flights`, `PUT /flights/:id`, and `POST /flights/batch` so all importers + manual entry benefit. `airlines.ts` gains an `icao` field on every entry. Closes #106B.
 - **Trip auto-assignment skipping the negative-duration leg** — The RAK→MAD return that ended up with `durationMinutes=-120` (cause above) was silently filtered out of trip association on the frontend. Closes #104 as a side-effect of the duration fix.
@@ -3373,6 +3476,7 @@ entries below for the granular history.
 - **Trip auto-detection orphaned DATE_ONLY return legs (rc.7)** — `detectTrips` reads flights ordered by `departureTime asc`. For manually entered DATE_ONLY round-trips, default timestamps don't reflect within-day chain order — Norberts 2009-09-21 return-day stored RAK→MAD with `dep=12:00 UTC` and the connecting MAD→MUC anchor with `dep=10:00 UTC`, so a raw-timestamp sort placed the anchor BEFORE the return leg. The home-loop walker then closed the loop early and orphaned the return (issue #104). The earlier `durationMinutes` fix (#106A, rc.4) cleaned up presentation but didn't change DB sort order, so the RC.4 changelog entry crediting this as a side-effect of #106A was premature. RC.7 adds `chainCoherentSort`: within each calendar date, Kahn's topological sort using arr→dep airport matches as chain edges, with `departureTime` as a stable tiebreak between unrelated same-day chains. Single-flight days and already-timestamp-correct days are unaffected; multi-day order is preserved. The home-loop and continuity heuristics now see Norberts MUC↺RAK return leg in the right place and capture all 4 flights.
 
 ### Tests
+
 - **E2E Playwright critical paths for all three importers** — End-to-end coverage for FR24, Generic-CSV (full mapping-wizard flow), and Round-Trip imports against a fresh dev DB. 5 new tests, suite now 90 across 6 files.
 - **Regression tests for scheduled-flight leakage** — Locked-in coverage that scheduled flights cannot trigger general achievements (`flights_count`, `airports`, `countries`, `continents`, …) or contaminate `highestAirport` / similar unique stats. The engine architecture filters at the SQL layer; these tests prevent silent regressions.
 - **Bug-slot unit tests** — 32 new tests for the historical-date shape discriminator (`useFlightForm.dateShape.test.ts` covering 4 storage shapes), 7 for `bcbpToScanResult`, 4 for Tesseract `extractDateTimes`, plus 10 for historical-flight stats inclusion. Backend 607/607, frontend 348/348.
@@ -3381,14 +3485,17 @@ entries below for the granular history.
 - **RC4 data-integrity coverage** — 13 new tests (`dataIntegrity.rc4.test.ts`) covering the `tzAwareDurationMinutes` DATE_ONLY return-null path (5 tests), the strict-exact airline resolver (8 tests including the defensive "Indian Airlines must NOT resolve to AI/Air India" lock-in), and the granularity-aware chronology refine (4 tests). Existing G1 hardening test message pattern generalised for the new "arrival date must not precede departure date" wording. Backend 652/652, frontend 357/357.
 
 ### Database
+
 - **One new migration** — `20260508120000_add_aerodatabox_extended_fields`: 9 additive `ALTER TABLE ADD COLUMN` statements for the AeroDataBox extended fields (Flight: `runwayDepartureTime`, `runwayArrivalTime`, `isCargo`, `aerodataboxLastUpdatedUtc`, `aerodataboxQualityTags`, `baggageBelt`, `checkInDesk`; Airport: `shortName`, `municipalityName`). Zero-downtime safe, idempotent.
 
 ### Docs
+
 - **Roadmap restructured** — v1.5 (silent field capture) and v1.6 (importers) merged into a single V1 finale; v1.7–v1.9 (social / insights / PWA) moved into V2 as v2.3–v2.5.
 
 ## [1.4.0] - 2026-05-04
 
 ### Added
+
 - **AeroDataBox as a third flight-lookup provider** — Closes the gap that AirLabs and Aviationstack-Free leave open: historical lookup for any date in the last 365 days, plus terminal / gate / aircraft registration / Mode-S / operating-vs-marketing carrier on codeshares. Wired into the cascade as a tertiary fallback for out-of-live-window queries and historical enrichment. RapidAPI BASIC free tier (600 API-units / month).
 - **Bulk historical refresh of existing flights** — Settings → API Keys gains a "Refresh all flights in 365-day range" card under the AeroDataBox key. Backfills tail number, Mode-S, codeshare metadata, distance, airline IATA/ICAO on flights entered before this provider was wired up, never overwriting curated values. A confirmation modal shows how many API calls the run will cost. Disabled on the demo account so shared keys aren't drained by tutorial sessions.
 - **Per-provider quota indicators with capability badges** — Each provider's quota is surfaced honestly on the API Keys page: AeroDataBox shows the live `X/600 API units` (primary) plus the secondary HTTP-request counter; AirLabs / Aviationstack-Free are labelled "provider doesn't expose quota — free tier ~1000/month"; OpenSky says "no monthly limit — IP-based rate-limit only". A "365-day lookup" capability badge marks AeroDataBox as the historical-fallback workhorse so it's clear at a glance which provider does what.
@@ -3400,6 +3507,7 @@ entries below for the granular history.
 - **Round-trip-fair Excel export** — `.xlsx` export now carries every editable field (43 columns), real numeric and date cells (instead of strings), an autoFilter on the header row, and a frozen header. Re-importing the same file is loss-free across all boarding-pass and email-import metadata that the import side already accepts.
 
 ### Fixed
+
 - **AeroDataBox quota indicator showed 2400 instead of the actual 600** — RapidAPI sends two independent rate-limit counters: `X-RateLimit-API-Units-*` (the real BASIC tier quota = 600/month) and `X-RateLimit-Requests-*` (a separate HTTP-request counter ~4× larger and irrelevant for plan budgeting). The indicator was reading the latter, so BASIC-tier users saw a misleading "2400 left" headroom. Now reads API-Units as primary and surfaces the HTTP-request count as a secondary detail only.
 - **Closed and decommissioned airports missing from the seed** — The seeder filtered out OurAirports rows where `type='closed'`, excluding every decommissioned IATA code (BER's predecessor SXF, TXL, etc.). Older flights re-imported via Excel or boarding-pass scan failed to enrich because the lookup couldn't find the code. Closed airports are now seeded on first install, and a one-shot boot-time backfill (`backfillClosedAirports.ts`) adds them to existing installs without re-running the full seed.
 - **API-key test endpoints rejected masked-input retests** — Saving a key, navigating away, returning and clicking "Test" sent the masked display value (`••••abc1`) to the test endpoint instead of the persisted key, so the test always failed with 401 even though the saved key was valid. Test endpoints now fall back to the persisted key when the input is empty or contains the mask placeholder.
@@ -3410,39 +3518,47 @@ entries below for the granular history.
 - **Empty UI after every container restart on Unraid + similar setups (rc.5 boot-race fix)** — supervisord launched nginx and the Express backend in parallel. nginx accepted `/api/*` immediately and proxied to a port where Express wasn't listening yet, so every browser open during the 30-90 s migration + airport-backfill window cached `502 / no live upstreams` and never refetched until the user hard-reloaded. Two-layer fix: (1) supervisord now starts nginx via `scripts/wait-then-nginx.sh`, which polls backend `/health` and only `exec`s nginx when ready (5-minute fallthrough so the container never hangs forever); (2) the frontend Axios clients gained a gateway-retry interceptor that retries idempotent verbs on 502/503/504 / `ERR_NETWORK` with exponential backoff (3 attempts, 0.5/1/2 s) so any future short backend outage heals on its own. Docker `HEALTHCHECK --start-period` bumped 40 s → 180 s to absorb the longest observed first-boot path (closed-airport backfill). Verified end-to-end on a fresh local stack: 0 `no live upstreams` events in `nginx error.log`, port 80 cleanly held closed for the entire boot window, then opened with HTTP 200.
 
 ### Changed
+
 - **Routes-mode "scheduled" indicator now lives inside the arc, not as a separate dot** — Earlier 1.4.0 RCs marked routes carrying an upcoming flight with a small cyan-bordered scatter dot at the arc midpoint. The dot read as a foreign visual element on a heatmap-dense map. Replaced by an in-arc symmetric gradient: the same single arc fades from sky-blue at both ends through a heatmap-coloured core. Implemented via an `UpcomingArcLayer` that subclasses `ArcLayer` and injects ~10 lines of fragment-shader code at `fs:DECKGL_FILTER_COLOR`, using the existing `geometry.uv.x` segment ratio. Single line per route, blue-leaning baseline so an upcoming-route arc reads as primarily scheduled with a heatmap-tinted core.
 - **Currency picker is a styled combobox** — Replaces the native `<datalist>` with a custom dropdown matching the rest of the form styling. Same accept-any-ISO-4217 behaviour, just visually consistent across browsers (native `<datalist>` rendered very differently in Firefox / Chrome / Safari).
 - **Email-import regex warning copy is calmer** — The "automatic import is still limited" warning under email import now leads with a clearer title, separates the explanation from the recommendation with a paragraph break, and points at the Ollama setup more directly.
 
 ### Security
+
 - **Per-minute burst limiter stacked on `/airports/search`** — The autocomplete endpoint is unauthenticated by design (signup-flow needs it before credentials exist) and was already capped at 100 / 15 min. A scraper could still fire ~100 requests in seconds before the sustained ceiling tripped; a 30 / min burst limiter now layers on top so abusive enumeration is bounded both per-second and per-window. PAT-authenticated callers retain the 10× multiplier on both buckets.
 - **Closed 14 Dependabot alerts on the frontend lockfile** — axios bumped from `1.15.0` to `1.16.0` (declared `^1.15.2`), sweeping up 13 alerts (3 high, 9 medium, 1 low) covering prototype-pollution gadgets, CRLF injection, NO_PROXY bypass, and header injection. Backend was already on the safe range; this fix syncs the frontend. `uuid` is forced to `^14` via an override (transitive via `exceljs@4.4.0` was on `8.3.2`) — our usage only hits `uuid.v4()` so the buffer-bounds-check vuln in `v3/v5/v6` was not actually reachable, but the override is preferable to dismissing.
 
 ### Docs
+
 - **OpenAPI spec scope clarified** — The published spec is the curated stable public surface (flights, trips, airports, stats, parsers, batch import, tokens), not 1:1 with the 162-route internal API. The spec description now states this explicitly and invites users to open an issue if they need a route promoted.
 
 ### Database
+
 - **Three new migrations** — `20260503080738_add_aerodatabox_api_key` (admin- and user-level `aerodatabox_api_key` columns), `20260503154328_add_aircraft_provenance` (per-flight `aircraft_registration`, `aircraft_mode_s`, `airline_iata`, `airline_icao`, `distance_km`, `is_codeshare`, `operating_airline`, `callsign`, `status_override`), and `20260504180000_user_is_demo` (`users.is_demo` flag). All additive, idempotent (`IF NOT EXISTS`), zero-downtime safe.
 
 ## [1.3.0] - 2026-05-01
 
 ### Removed
+
 - **Light mode and the in-app theme switcher** — TravStats now boots dark-only across the App, the marketing site, and the wiki. The Settings → Display section no longer offers a theme toggle, and `themeStore.isDarkMode` / `toggleDarkMode` / `setDarkMode` were dropped (only `mapTheme` is persisted now). Rationale: every map, globe, heatmap, and chart was tuned exclusively against the dark token set, so the light variant was always a second-class surface. Collapsing to one mode tightens contrast, removes the toggle CLS, and kills the dark/light branches in 16 components.
 
 ### Changed
+
 - **Brand amber rebalanced and per-domain colour tokens introduced** — The primary accent moved from `#e8a045` to `#f0a947` for stronger dark-surface contrast (8.40 : 1 against `#0d1117`). A new `--domain-flight … --domain-ferry` token set covers the nine planned travel domains (flight, cruise, hotel, POI, train, hike, bike, road, ferry) with WCAG-AA contrast on dark, each with `-soft` and `-locked` variants for upcoming-feature gating. App and TravStatsWeb share the same token system; the source of truth lives in `TravStatsWeb/brand/BRAND.md`.
 
 ### Added
-- **Public REST API with Personal Access Tokens** — External tools (AI agents, scripts, integrations) can now reach every flight, trip, airport and stat the web UI shows. Mint a PAT under *Settings → API Tokens*, then send `Authorization: Bearer ts_pat_…` on any authenticated endpoint. Scopes (`read` / `write` / `admin`) are enforced at middleware level; the plaintext token is shown exactly once on creation and stored only as a bcrypt hash. Per-token rate-limit buckets (`pat:<id>`) keep an aggressive automation script from locking the owning user out of the web UI.
+
+- **Public REST API with Personal Access Tokens** — External tools (AI agents, scripts, integrations) can now reach every flight, trip, airport and stat the web UI shows. Mint a PAT under _Settings → API Tokens_, then send `Authorization: Bearer ts_pat_…` on any authenticated endpoint. Scopes (`read` / `write` / `admin`) are enforced at middleware level; the plaintext token is shown exactly once on creation and stored only as a bcrypt hash. Per-token rate-limit buckets (`pat:<id>`) keep an aggressive automation script from locking the owning user out of the web UI.
 - **OpenAPI 3.0 spec + Swagger UI** — Auto-generated from the existing Zod validation schemas via `zod-to-openapi`. Browse it at `/api/v1/docs` (Swagger UI) or fetch the raw JSON at `/api/v1/openapi.json`. Covers flights CRUD, trips, airports, stats, parsers (email + boarding pass), batch import, and token management.
-- **Boarding-pass-aware flight merge** — `POST /flights?merge=true` now fills missing fields on an existing same-day flight from incoming data without ever overwriting curated values. Boarding-pass scans, email-confirmation imports, and re-imports of partially-entered flights enrich the existing row in place instead of producing a duplicate. The dashboard surfaces a *flightMerged* toast that reports how many fields were filled.
+- **Boarding-pass-aware flight merge** — `POST /flights?merge=true` now fills missing fields on an existing same-day flight from incoming data without ever overwriting curated values. Boarding-pass scans, email-confirmation imports, and re-imports of partially-entered flights enrich the existing row in place instead of producing a duplicate. The dashboard surfaces a _flightMerged_ toast that reports how many fields were filled.
 - **Excel/CSV round-trip import + export** — Export flights as `.xlsx` with a stable column layout, edit them in Excel, re-import the same file: rows with an `id` column update existing flights, rows without create new ones. The shared CSV parser (`parseImportFile`) now handles JSON, CSV, and XLSX through the same pipeline.
 - **DATE_ONLY and UNKNOWN time semantics for historical flights** — Bulk imports of decades-old flights frequently know only the date, not the wall-clock time. The `flights.dep_time_semantics` / `arr_time_semantics` columns introduced in 1.2.0 now accept `'DATE_ONLY'` and `'UNKNOWN'` as first-class values on every write path (`POST /flights`, `POST /flights/batch`, `PUT /flights/:id`). The frontend hides the meaningless `00:00` time on the calendar, in the trip-details sidebar and in CSV exports for `DATE_ONLY` rows; durations fall back to a great-circle estimate (`distance / 800 km/h + 15 min overhead`, formatted as `~3h 20min`) so date-only flights still contribute realistic numbers to the Advanced-Stats aggregates instead of zero. Flight-time UI distinguishes estimated (`~`) vs measured durations.
 - **Agent-driven bulk-import API surface** — Three pieces lift the ceiling for AI-agent automations that import on a user's behalf. (1) Per-PAT rate-limit quotas are now 10× the cookie-session quota for airport search, single-flight create, and batch create — a sustained 152-flight import no longer trips the per-user-bucket on the second iteration. (2) `POST /admin/users` lets an admin-scoped PAT provision new accounts programmatically (Zod-validated, bcrypt-hashed password, `MAX_USERS` enforced). (3) `POST /admin/airports/reseed` re-runs the OurAirports seeder against an existing instance (`force: true` bypasses the "already populated" gate) so an agent can fill in closed/historical airports that an older OpenFlights seed missed; `GET /admin/airports/seeding-status` reports progress.
-- **Trip auto-detection (`POST /trips/detect`)** — A 3-stage heuristic groups flights into trips without ever overwriting curated data. (1) PNR-cluster auto-link picks up shared booking references, capped at a 30-day span so frequent-flyer IDs like a surname don't merge a year of unrelated travel into one mega-trip. (2) Home-loop proposes trips that depart from and return to the user's home airport (uses `users.home_iata` history so prior home-airport moves are respected), grouped via the multi-PNR pattern that emerged in real test data (e.g. one Hawaii trip whose outbound and inbound legs were booked separately). (3) Continuity sliding-window proposes trips for unanchored flight chains where consecutive legs match IATA hops within 7 days, with a 200 km open-jaw tolerance for "fly into Berlin SXF, take the train, fly out from BER". `dryRun: true` returns proposals without writing, `dryRun: false` commits the auto-link round and removes orphan trips atomically. The `<DetectTripsBanner>` on the Trips tab calls the dry-run on mount and shows a single *Link All* CTA when something is found.
+- **Trip auto-detection (`POST /trips/detect`)** — A 3-stage heuristic groups flights into trips without ever overwriting curated data. (1) PNR-cluster auto-link picks up shared booking references, capped at a 30-day span so frequent-flyer IDs like a surname don't merge a year of unrelated travel into one mega-trip. (2) Home-loop proposes trips that depart from and return to the user's home airport (uses `users.home_iata` history so prior home-airport moves are respected), grouped via the multi-PNR pattern that emerged in real test data (e.g. one Hawaii trip whose outbound and inbound legs were booked separately). (3) Continuity sliding-window proposes trips for unanchored flight chains where consecutive legs match IATA hops within 7 days, with a 200 km open-jaw tolerance for "fly into Berlin SXF, take the train, fly out from BER". `dryRun: true` returns proposals without writing, `dryRun: false` commits the auto-link round and removes orphan trips atomically. The `<DetectTripsBanner>` on the Trips tab calls the dry-run on mount and shows a single _Link All_ CTA when something is found.
 - **Per-leg edit, duplicate, and unlink actions in the trip-details sidebar** — Each leg row now reveals icon actions on hover: edit (✏️), duplicate, and remove-from-trip (minus-circle). The trip header itself gained edit / delete actions next to the title. DE and EN strings added (`trips.removeFromTrip`, `toasts.flightRemoved`, `toasts.flightRemoveError`, `common:buttons.duplicate`).
 
 ### Fixed
+
 - **Re-importing a boarding pass for an already-entered flight created a duplicate (issue #84)** — Different scan paths emit the same flight as `LH 123`, `LH123`, `lh123` etc. The duplicate-check on `POST /flights` compared raw strings, so re-importing slipped past as a "different" flight. Flight numbers are now normalised at the schema boundary (uppercase, no whitespace) and the duplicate-check fetches all of the day's candidates and compares normalised in JS, so legacy non-canonical rows in the DB still match.
 - **OpenAPI spec drifted from the actual route surface** — Corrected `/airports` → `/airports/search`, `/stats` → `/stats/summary`, swapped `PATCH /flights/{id}` for the actual `PUT`, and added the missing `GET /flights/{id}` endpoint. The Swagger UI now matches what the server serves.
 - **API Tokens settings page flickered + threw an i18n error** — `useCallback`'s dependency array contained the i18n `t` function, whose identity is not stable across renders, so the reload effect re-fired every render. Empty-deps + an `eslint-disable` comment that explains why. Also corrected `t("common:loading")` (which returns an object, not a string) to `t("common:loading.title")`.
@@ -3463,6 +3579,7 @@ entries below for the granular history.
 - **Frontend formatting drift broke CI** — 16 files had Prettier formatting that diverged from `frontend/.prettierrc`. CI's `format:check` step caught it but local edits had bypassed the post-tool-use Prettier hook for those files. Ran `prettier --write` across `src/**/*.{ts,tsx,css}` to converge.
 
 ### Security
+
 - **Token mutations are explicitly cookie-only** — `POST/DELETE /settings/tokens` reject Bearer-token requests; a leaked PAT cannot self-renew or mint admin tokens.
 - **Admin endpoints require an `admin`-scoped PAT** — Even when the owning user has `isAdmin=true`, an automation script can only reach `/admin` when its token was minted with the `admin` scope. Account-level admin no longer implicitly elevates token scope.
 - **PAT write-scope enforcement on every mutation route** — `requireWriteScope` was defined in the auth middleware but never mounted on any router, so a `read`-scoped PAT could create / update / delete flights, trips, settings, parser templates, achievements, analytics events, and uploads. The guard is now method-aware (`GET/HEAD/OPTIONS` pass through unconditionally) and wired into all mutation routers — read tokens are now genuinely read-only. Cookie sessions are unaffected.
@@ -3471,6 +3588,7 @@ entries below for the granular history.
 - **Defense-in-depth `requireWriteScope` on the admin router** — Even though `requireAdmin` already blocks any non-admin-scoped PAT, the admin router now also runs `requireWriteScope` at the router level. Future-proofs against an intermediate scope (e.g. `admin-read`) being introduced — admin GETs still pass for read-style tokens, mutations stay gated.
 
 ### Tests
+
 - **+38 tests** — 6 for the API-token utility (lookup hash collision-resistance, bcrypt verify, prefix regex, plaintext format), 6 for the OpenAPI spec build (paths, security scheme, BearerAuth, methods on `/flights/{id}`), 2 for flight-number normalisation, 3 for the boarding-pass merge utility, plus 21 for the `requireWriteScope` middleware (cookie passthrough, read-token GET/HEAD/OPTIONS pass, read-token POST/PUT/PATCH/DELETE 403, write/admin-token full passthrough on every method).
 - **+14 tests for trip detection and DATE_ONLY duration** — 10 unit tests covering `tripDetectionService` internals (PNR clustering, 30-day span cap, cancelled-duplicate suppression, home-loop with/without history, continuity 7-day window, gap-break, 200 km open-jaw); 4 unit tests covering `getFlightDuration` (real `UTC` time, `DATE_ONLY` estimate, missing time falls back to estimate, negative-delta guard).
 - **+5 tests for `sortFlightsByLegOrder`** — chronological pass-through, 2-leg DATE_ONLY/timed reversed pair, 3-leg same-day chain repair, no-swap when current order already chains, and disjoint same-day chains keeping timestamp order.
@@ -3478,42 +3596,53 @@ entries below for the granular history.
 ## [1.2.1] - 2026-04-28
 
 ### Fixed
+
 - **Flight number lookup returned today's schedule for past or future dates (issue #82)** — `/api/v1/flight-lookup/:flightNumber` previously went straight to AirLabs `/schedules`, whose free tier silently ignores `dep_date` and returned today's data for any requested date. The route now consumes the full provider cascade and reports three distinct unavailable reasons: `no_provider` (free tier can't serve non-today and no Aviationstack key is configured), `no_match` (live lookup empty — likely a typo), and `no_match_api_gap` (provider returned today's schedule for a non-today request — the issue-#82 symptom). The frontend keeps the user on the input step with a reason-specific error message instead of jumping silently into manual entry. The OpenSky-30-day-historical claim was dropped from the user message and from the in-form tooltip — the underlying `/api/flights/callsign` endpoint does not exist (404), so OpenSky now stays in the live cascade only.
 
 ### Tests
+
 - **+9 regression tests for `lookupFlightWithHistorical`** — Cover the three unavailable reasons, the smoking-gun heuristic for "today's schedule for non-today" responses (yesterday / tomorrow / far past), and the live-window happy path.
 
 ## [1.2.0] - 2026-04-27
 
 ### Fixed
+
 - **Reminder emails for manually-entered flights fired 1–2 h off** — Manual entries, parser results, and CSV imports stored departure/arrival times as wall-clock-as-fake-UTC, while API-imported flights stored real UTC. The reminder scheduler compared `now` (real UTC) to a mixed-convention `departureTime` column, so the 24-hour-before email triggered an hour early in CET, two hours early in CEST, etc. All flight create/update paths now write canonical real UTC built from a `(local datetime, IANA timezone)` pair, and the scheduler normalises legacy rows on the fly via the airport timezone before the ±15-minute window check.
 - **Schema drift between `prisma/schema.prisma` and prod migrations reconciled** — The drift file now uses idempotent `IF EXISTS` drops, backfills NULLs before flipping NOT NULL, and guards every foreign-key add. Previously a fresh deploy could fail mid-migration on rows with NULL `has_live_tracking` or `historical_enrichment_*` flags.
 
 ### Changed
+
 - **Flight write contract is now `(local, timezone)` pairs** — `POST /flights`, `PUT /flights/:id`, and `POST /flights/batch` no longer accept ISO datetime strings. Clients send `departureLocal` (`YYYY-MM-DDTHH:mm`) plus `depTimezone` (IANA, e.g. `Europe/Berlin`); the server runs `fromZonedTime` to derive the canonical real-UTC `Date` it stores. The update endpoint also rejects raw `departureTime` / `arrivalTime` fields. Frontend submit, edit, review, duplicate, and CSV import flows were updated end-to-end.
 - **Time-semantics tagging during the cutover** — Every new write is tagged `dep_time_semantics = 'UTC'`. Existing rows default to `'UNKNOWN'` and are left unchanged by the normaliser until the backfill script reclassifies them as `'UTC'` (API-sourced) or `'LEGACY_FAKE_UTC'` (manual/parser-sourced, converted in place). `tzAwareDurationMinutes` short-circuits when both sides are UTC and only re-interprets when both are explicitly LEGACY.
 
 ### Added
+
 - **In-app update banner** — A pulsing yellow `Update` badge appears next to the wordmark in the header whenever a newer stable GitHub release exists. Click it to open a popover with the version number, release date, a 600-character preview of the release notes, a link to the full notes on GitHub, and an `Ignore this version` action that hides the badge until an even newer release ships. Backend caches the GitHub query in process memory for 6 hours, filters out RC and pre-releases, and degrades to "no banner" when the GitHub call fails — so air-gapped or firewalled instances stay quiet rather than throwing errors.
 
 ### Removed
+
 - **Floating `?` help icon on the dashboard** — Removed the corner help button and its three orphaned i18n keys (`dashboard:map.help2d/help3d/helpExpanded`). It only said "Switch between 2D and 3D" — information that's already visible from the mode selector.
 
 ### Database
+
 - **`flights.dep_time_semantics` / `arr_time_semantics`** — Two new `TEXT NOT NULL DEFAULT 'UNKNOWN'` columns tag the storage convention of each row during the cutover. Migration is additive and idempotent (`IF NOT EXISTS`); zero-downtime safe.
 
 ### Migration
+
 - **Backfill runs automatically at container boot** — `docker-entrypoint.sh` invokes `dist/scripts/backfillTimeSemantics.js --apply` once migrations succeed, so existing self-hosted instances pick up the fix on the first start of `1.2.0` without any manual SSH step. The script is idempotent (`WHERE dep_time_semantics='UNKNOWN' OR arr_time_semantics='UNKNOWN'`), so subsequent boots return zero rows and finish in milliseconds. Disable with `TIMESEMANTICS_AUTO_BACKFILL=false` if you prefer to run it by hand. Manual invocation remains available: `node /app/backend/dist/scripts/backfillTimeSemantics.js [--apply]` (defaults to dry-run). On the dev DB the backfill classified 160 flights (37 UTC, 123 LEGACY converted, 0 errors); production numbers will differ per install.
 
 ### Tests
+
 - **+37 tests covering the new contract** — 11 covering `legacyFakeUtcToRealUtc`, `normalizeFlightTimeUtc`, and semantics-aware `tzAwareDurationMinutes` (CEST / CET / JST / LAX→JFK transcontinental). 9 covering the new Zod schema (paired contract, half-pair rejection, IANA validation, malformed local, legacy-field rejection, historical exemption, partial updates). 8 reminder-scheduler and flights-route integration updates. 9 covering the update-banner semver comparator (rc/beta stripping, edge cases, malformed inputs).
 
 ### Docs
+
 - **Workflow revised** — Branching strategy in `CLAUDE.md` is now scoped to change size (direct `main` / `fix/*` / `feat/*` / `dev/*`); long-running dev branches must merge `main → dev` early and often, never the reverse, and never touch `VERSION` or `CHANGELOG.md` (both owned by `/deploy` on `main`).
 
 ## [1.1.0] - 2026-04-18
 
 ### Added
+
 - **Birthday Flight achievement** — New `BIRTHDAY_FLIGHT` achievement counts flown flights that depart on the user's birthday (month + day, year irrelevant). Profile settings now include an optional birthdate field used by the check.
 - **Kurios calendar easter eggs** — Six hidden achievements tied to aviation and calendar observances: ICAO Day (7 Dec), Wright Day (19 Aug), May the Fourth (4 May), Pi Day (14 Mar), Pi Precision (3 141 km ± 5 % on Pi Day) and Halloween (31 Oct).
 - **Branded GlobeLoader** — Monochrome spinning-globe loader replaces the generic spinner at every large-area loading surface (maps, stats, flight pages, admin). Paints in < 16 ms so users see feedback before deck.gl / three.js finish booting, holds for ≥ 2 s to avoid flashing, and keeps spinning regardless of `prefers-reduced-motion`. Reads live CSS tokens so it reacts to dark-mode toggles without remount.
@@ -3521,10 +3650,12 @@ entries below for the granular history.
 - **App version vs build version split** — Runtime now exposes the deployed app version (from `backend/VERSION`) and the Docker image build version as distinct fields, so About can show `1.1.0 (built from 1.1.0-rc.3)` during the RC cycle.
 
 ### Changed
+
 - **Achievements modules split** — `backend/src/utils/achievements.ts` (1 073 lines) reorganised into three files (orchestrator + stats + checks); `backend/src/data/achievements.ts` (1 306 lines) split into two seed parts plus a thin composition layer. Public API unchanged. Every file now respects the 800-line cap.
 - **Achievement stats are immutable** — `checkAndUpdateAchievements` builds a fresh `augmentedStats` via spread rather than mutating the object returned from `calculateUserStats`; `Set`s are cloned, never mutated in place.
 
 ### Fixed
+
 - **GlobeLoader no longer freezes for reduced-motion users** — The loader is feedback, not decoration; it now always animates.
 - **Favicon visible on light browser chrome** — The new SVG favicon shipped transparent, which made the amber strokes disappear on Safari / iOS tab bars. A dark background is now baked into the SVG.
 - **`LogoMarkFilled` survives theme switches** — Inverse colour used to be hardcoded `#0b0d10`; now reads `var(--bg-base)` so the mark stays legible in light mode.
@@ -3532,14 +3663,17 @@ entries below for the granular history.
 - **`GlobeLoader` canvas no longer churns on parent rerenders** — Derived `buffer` dimension is memoised so the effect dep array is stable.
 
 ### Database
+
 - **`users.birthdate`** — New nullable `TIMESTAMP` column backing the Birthday Flight achievement. Additive only; no data transform; safe to deploy with zero downtime.
 
 ### Tests
+
 - **Brand/Logo component suite** — 9 new Vitest tests cover the four logo components (a11y attributes, theme-token defaults, layout modes). Total frontend coverage is now 257 tests across 54 files.
 
 ## [1.0.1] - 2026-04-17
 
 ### Security
+
 - **Base images refreshed and patched** — Builders moved from `node:20-alpine` to `node:22-alpine`; production stage moved from `node:20-slim` to `node:22-bookworm-slim`. The production image now also runs `apt-get upgrade` at build time so every rebuild pulls the latest Debian security feed on top of the base layer. Closes the Critical CVE-2026-6100 and eleven High-severity npm CVEs (tar, minimatch, cross-spawn) that Docker Scout reported against `v1.0.0`. Drop-in replacement — no schema, config, or runtime behaviour changes.
 - **CI aligned with runtime** — GitHub Actions now runs backend and frontend checks on Node 22 to match the container image.
 
@@ -3550,22 +3684,26 @@ six months of daily use and a 22-finding black-box pentest (all findings
 mitigated). The surface below is what ships out of the box.
 
 ### Core tracking
+
 - Manual flight entry with categories, tags, up to 50 travel companions, costs and currency
 - Five flight states — `flown`, `scheduled`, `cancelled`, `historical`, `duplicated` — each with dedicated forms and validation
 - Timezone-aware durations via `date-fns-tz`
 - Duplicate detection (same `flightNumber` × day) with a confirmed "save anyway" escape hatch and a dedicated `duplicated` status that skips time validation
 
 ### Boarding-pass scanner
+
 - QR code, PDF417 barcode and OCR fallback (Tesseract) with automatic airport/airline resolution
 - Camera capture and image upload, desktop + mobile
 
 ### Email and PDF import
+
 - Template-based parsing with annotation-driven template builder for new airlines
 - Optional local LLM parsing via Ollama (default model `gemma3:12b`, benchmarked 100% accuracy on the TravStats test corpus)
 - Support for plain text, HTML email, Outlook `.msg` and `.eml`
 - Parser rate metrics per template and per LLM model in the admin UI
 
 ### Automatic flight-data lookup
+
 - AirLabs as primary source, OpenSky OAuth and Aviationstack as fallbacks
 - Live gate, terminal, actual-departure, actual-arrival tracking while a flight is in progress
 - Pending-update inbox with per-flight statistics-impact preview; approve, edit, reject
@@ -3573,22 +3711,26 @@ mitigated). The surface below is what ships out of the box.
 - Configurable per-user: approval gate on/off, check interval, only-during-flight window
 
 ### Maps and visualisation
+
 - Six visualisation modes: Routes (ArcLayer), Heatmap, Hexagon (3D), 3D Columns, animated Trips, 3D Globe
 - Deck.gl 9.x + MapLibre GL 5.x using `MapboxOverlay` for a shared WebGL context
 - Two-stage route/trip popup → sidebar detail view
 - Scheduled flights rendered as cyan arcs and excluded from stats until flown
 
 ### Statistics
+
 - Year-over-year comparison, year-filter and all-time totals clearly separated
 - Seat distribution (window/middle/aisle/zone/class), distance, flight time, costs, top routes, top airlines
 - PDF year report with year auto-selected to the most recent flown year
 - Downloadable vintage-passport PNG certificate: hero-km number, equivalences ("N × around the Earth"), deterministic serial, layered radial gradients compatible with `html2canvas`
 
 ### Gamification
+
 - 58 Battlefield-style achievements across 5 categories (Sammler, Distanz, Elite, Entdecker, Survivor) + Planner and Special tiers
 - Automatic unlock on milestone reach, readable locked cards on the achievement page
 
 ### Admin and operations
+
 - Invite-only user management with per-invitation tokens (can't be reused)
 - Admin-triggered user deletion with cascade (self-delete and last-admin delete blocked)
 - SMTP configuration with test-connection
@@ -3598,20 +3740,24 @@ mitigated). The surface below is what ships out of the box.
 - Parse-log statistics dashboard (template hit rate, LLM hit rate per model)
 
 ### Bug reporting
+
 - "Bug" button in the top navigation generates an anonymised diagnostic JSON bundle in-browser
 - Bundle v2 ships: time-windowed log tails (24 h app / 7 d error) from live and rotated `.log.gz` files, per-user flight-state aggregates (byStatus counts + pipeline counters), allow-listed user settings (no credentials)
 - Server-side scrubbing of IPs, emails, JWTs and UUIDs; user IDs replaced with short opaque markers
 - One-click "Report Bug" copies the bundle to the clipboard and opens a pre-filled GitHub Issue Form
 
 ### Export and import
+
 - CSV, GeoJSON, KML (Google Earth) export from the admin panel
 - Email notifications: configurable 24 h / 2 h pre-departure reminders (SMTP)
 
 ### Internationalisation
+
 - Full German and English UI via react-i18next
 - German as primary locale, English as the mirror translation
 
 ### Security
+
 - JWT stored in an `HttpOnly`, `SameSite=Strict`, `Secure`-aware cookie; no Bearer fallback
 - 15 distinct rate limiters across auth, external-API-backed routes and admin exports
 - Zod validation on every input endpoint; Prisma-parameterised queries; Helmet CSP; `server_tokens off`
@@ -3621,6 +3767,7 @@ mitigated). The surface below is what ships out of the box.
 - JWT secret and AES-GCM encryption key are auto-generated on first boot and persisted to `/app/data/secrets/` (mode 0700, key files 0600), inside the single data volume. Pre-1.0 installs on the dedicated `/app/secrets` mount are migrated once at entrypoint time.
 
 ### Zero-config install
+
 - The Docker compose file now requires **one environment variable only** — `DB_PASSWORD`. Everything else (instance name, public URL, user cap, registration mode, API keys, Ollama, backup schedule, WebDAV) is captured by the first-run setup wizard or configured later from the admin UI.
 - `AdminSettings` gains nine new columns (`instance_name`, `max_users`, `allow_registration`, `frontend_url`, `webdav_*`). The WebDAV password is AES-GCM-encrypted at rest via the same helper used for the other API keys.
 - Setup wizard extended: instance name, public URL (pre-filled from the request origin), user cap and registration toggle are captured alongside the admin username/password.
@@ -3639,12 +3786,14 @@ mitigated). The surface below is what ships out of the box.
 ## [0.29.0-beta] - 2026-04-16
 
 ### Added
+
 - **One-click Report Bug flow** — The diagnostic-export modal's former "Issue öffnen" link is now a primary "Fehler melden" / "Report Bug" button. Clicking it copies the JSON bundle to the clipboard and opens a new tab at a GitHub Issue Form with the `version` field pre-filled and the `bug` label already applied. A toast confirms the clipboard step so the paste target is obvious. If the clipboard write is blocked (non-secure context, permissions, etc.), the issue URL still opens and the user is directed to the Download button as a fallback.
 - **Structured GitHub Issue templates** — New `.github/ISSUE_TEMPLATE/` entries for "Bug Report" (7 fields: summary, actual, expected, reproduction, version, diagnostic bundle, additional context) and "Feature Request" (4 fields). `blank_issues_enabled: false` steers non-maintainer contributors through one of the two templates so every incoming issue arrives pre-structured.
 
 ## [0.28.0-beta] - 2026-04-16
 
 ### Added
+
 - **Diagnostic Export v2 — self-sufficient bug-report bundle** — The JSON bundle produced by the "Diagnose-Export" admin action now includes two new sections so a GitHub issue rarely needs follow-up questions:
   - `settings` — the reporter's auto-update and historical-enrichment preferences (booleans and integers only, credentials are never projected). Defends against future schema additions via a hand-written allowlist.
   - `flightState` — per-user aggregates (`byStatus` counts + pipeline counters including `withNextApiCheck`, `withPendingUpdates`, `withLiveTracking`, `withActualTimes`, `zombieCandidates`) so the maintainer can see at a glance what the scheduler is looking at.
@@ -3654,6 +3803,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.27.2-beta] - 2026-04-16
 
 ### Fixed
+
 - **Historical enrichment stayed pending forever** — When users had turned off the approval gate (`autoUpdateRequireApproval=false`), newly created historical enrichments were nonetheless left as "pending" and never surfaced on the flight. The scheduler now mirrors the live auto-update path and auto-applies them.
 - **Zombie-flip missed flights with corrupted arrival time** — The stale-scheduled safety net only considered `arrivalTime + 6h` and was silent when a bad API lookup pushed `arrivalTime` into the future. Added a second `departureTime + 30h` trigger that flips the flight regardless of arrival-time state (30h comfortably covers ultra-long-haul like SIN→JFK).
 - **Gate, terminal and actual departure/arrival never persisted** — `lookupFlightDetails` silently dropped per-flight live fields (gate, terminal) by letting the static airport record shadow them, and `actualDeparture`/`actualArrival` were missing from the snapshot pipeline entirely. Both AirLabs and Aviationstack paths now forward these end-to-end, and `delayMinutes` is recomputed on apply.
@@ -3661,6 +3811,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.27.1-beta] - 2026-04-15
 
 ### Fixed
+
 - **Duplicate flight: airline + flight number nullToUndef** — Older imported flights have these columns NULL in the DB, but the frontend Flight type lies and types them as required strings, so they slipped past the previous nullToUndef fix. All four nullable-typed-as-required fields now go through the helper.
 - **Certificate: black vertical bands in exported PNG** — html2canvas does not render the SVG `feTurbulence` filter consistently and produced solid-black stripes from the noise data URI. Replaced with two layered radial gradients that give the parchment depth without the rasteriser hazard. Also removed `mixBlendMode: multiply` on the postmark for the same reason.
 - **Stats page: clear separation between year-filter and totals** — Both four-card rows looked identical. Added a labelled separator above each row ("── Jahr 2026 ──" / "── Gesamt (alle Jahre) ──") with a subtle bottom-border so the scope is unambiguous.
@@ -3670,32 +3821,38 @@ mitigated). The surface below is what ships out of the box.
 - **Historical-flight month "Unbekannt" snapped back to Januar** — Storing `YYYY-01-01` for both January and "unknown" meant the parser couldn't distinguish them. Now stores year-only (`YYYY`) for the unknown-month case and expands to `YYYY-01-01` only at submit.
 
 ### Changed
+
 - **Removed parser-feedback collection** — Same anti-pattern as the already-removed pattern-updater: data was collected into `analytics_events` but no longer consumed automatically. With Ollama as primary parser, the feedback was unused. Removed the `parserFeedback` service + route, the `/admin/parser-feedback/stats` and `/details` endpoints, the `/admin/parse-logs/promote` endpoint, the `FeedbackAnalytics` admin tab and the parser-correction submission from the FlightReviewModal. The `ParseTrainingLog`-based parser hit-rate dashboard (a different system) is unchanged.
 
 ## [0.27.0-beta] - 2026-04-15
 
 ### Added
+
 - **Anonymous diagnostic export for GitHub bug reports** — A new "Bug" button in the top navigation opens a modal that generates a sanitised JSON bundle of recent app and error log entries plus system info. IP addresses, email addresses, JWT tokens and UUIDs are scrubbed server-side; user IDs are replaced with short opaque markers. Three actions: copy to clipboard, download as file, or open the GitHub issue page.
 - **Save + add return flight** — A second submit button on the manual flight form saves the outbound and immediately prepares the form for the return leg. Departure and arrival airports are swapped, airline / category / tags / companions carry over, and leg-specific fields (flight number, aircraft, terminal, gate, seat, times) are cleared so the user fills them in.
 - **Redesigned flight certificate** — The shareable PNG certificate has been completely redesigned around a vintage aviation passport aesthetic: parchment paper with grain texture, deep ink-blue typography, burnished bronze accents and a faded vermillion postmark stamp. New typography (Fraunces, Big Shoulders Display, JetBrains Mono), the total kilometres rendered as a dominant hero number, equivalence captions ("X × around the Earth at the equator"), and a deterministic 6-character serial number per certificate.
 - **Admin panel: delete user** — Admins can now permanently delete users from the user-management table. Cascade clears the user's flights, trips, achievements, settings and pending updates. Self-deletion and last-admin deletion are blocked.
 
 ### Fixed
+
 - **PDF year report button no longer permanently greyed out** — The advanced statistics page now auto-selects the most recent year as soon as flights have loaded, so the "PDF Jahresbericht" button is enabled out of the box instead of waiting for the user to discover the year dropdown.
 - **Historical flight year input accepted keystrokes** — Typing a digit into the year field for a historical flight no longer cleared itself. The form re-derived the visible year from a stored YYYY-MM-DD string with a strict 4-digit regex; relaxed to accept partial input so the field echoes each keystroke.
 - **Diagnostic export modal no longer trips its own rate limit** — The fetch effect re-ran on every parent re-render due to unstable `t` and `addToast` dependencies, exhausting the 10/hour rate limit within seconds. Now fires once per modal open.
 - **Duplicate flight succeeds again** — The "duplicate as same / return flight" action sent `null` for unset optional fields, which Prisma's optional-but-not-nullable Zod schema rejected. Nullable values are now coerced to undefined, and duplicates are created with the dedicated "duplicated" status (no time-fields requirement) so the user fills in dates in the edit modal that opens immediately.
 
 ### Changed
+
 - **Admin panel cleanup** — Removed the dead Hardware-info section, dropped the unused TemplateCorrection table, and retired the orphan pattern-updater / pattern-analyzer infrastructure that never actually applied any patterns. Tabs and i18n strings simplified accordingly.
 - **Certificate layout** — Footer no longer overlaps the "of note" rows; postmark stamp was repositioned tighter into the corner with a multiply blend so it reads as ink on parchment.
 
 ## [0.26.0-beta] - 2026-04-15
 
 ### Added
+
 - **Duplicate flight action** — Each row in the flights table now has a "Duplicate" dropdown with two options: "As same flight" (copy route) or "As return flight" (swap departure/arrival). Airline, flight number, aircraft, category, tags, companions and notes carry over; time, seat, gate, terminal, booking references and pricing are cleared so the user fills in the trip-specific details. The edit modal opens automatically on the new flight.
 
 ### Fixed
+
 - **Auto-update endless loop** — When "require approval" was disabled the scheduler created a pending update on every check but never applied it, so the same changes were re-detected and re-written every 10-15 minutes. Updates with approval off are now applied immediately while the pending row is still kept for audit.
 - **API check cadence** — Each flight used to be polled every 15 minutes while in the air, burning 30-50+ API calls per long-haul. Scheduling now uses exactly three checkpoints: 30 minutes before departure, 60 minutes before scheduled arrival, and 30 minutes after arrival.
 - **Zombie-scheduled cutoff** — Flights stuck on "scheduled" past their arrival are now auto-flipped to "flown" after 6 hours (was 48h), so they stop showing up in the API-check queue.
@@ -3704,80 +3861,97 @@ mitigated). The surface below is what ships out of the box.
 ## [0.25.4-beta] - 2026-04-14
 
 ### Fixed
+
 - **Settings page no longer trips its own rate limit** — The auto-save effect listed `t` (from useTranslation) in its dependency array, which is unstable across renders, so the debounced save was firing on every keystroke instead of only when units actually changed. Combined with new banner/home-airport fetches this hit the `/settings` rate limit (60→200→1000) within a couple minutes of normal use. Removed the unstable dep and bumped the limit to 1000/15min so background polling has plenty of headroom while still blocking scripted abuse.
 
 ## [0.25.3-beta] - 2026-04-14
 
 ### Fixed
+
 - **Autocomplete shows both active and closed airport for shared codes** — Searching "MUC" now returns Munich Airport (active) followed by Munich-Riem (closed) instead of only the active one. The exact-match step returns all rows with the same IATA/ICAO ordered by `isClosed ASC` so users can pick the historical predecessor for old flights.
 
 ## [0.25.2-beta] - 2026-04-14
 
 ### Fixed
+
 - **Closed predecessor IATA assignment** — When a closed airport's keywords list a single 3-letter token, that's almost always its own historical IATA (Munich-Riem `EDDM, MUC, XMUC` → MUC). When multiple are present the first is usually the successor (Tempelhof `BER, EDDI, THF` → BER is Brandenburg, THF is the closed one), so prefer the candidate not used by an active airport. Both cases now resolve correctly.
 
 ## [0.25.1-beta] - 2026-04-14
 
 ### Fixed
+
 - **Closed predecessors no longer overwrite active airports** — Munich-Riem (closed) shares ICAO EDDM and IATA MUC with the active Munich Airport; the seeder was overwriting the active row with the closed predecessor's data, breaking searches for "MUC". The Airport schema now uses composite uniqueness on `(iata, isClosed)` and `(icao, isClosed)` so both rows can coexist, and the seeder upserts by the composite key. Closed airports are still listed alongside their successors in autocomplete with the "geschlossen" badge.
 - **Airport autocomplete prefers active over closed** — Search and lookup now order by `isClosed ASC` so a typed code like "MUC" returns the active airport first, with the closed predecessor below.
 
 ## [0.25.0-beta] - 2026-04-14
 
 ### Added
+
 - **Home airport with relocation history** — Pick a home airport once during onboarding and change it later under Einstellungen › Heimatflughafen. A move never overwrites the past: every flight keeps the home airport that was active at its date, so old statistics stay truthful.
 - **Copy-down date and estimate arrival time buttons** — Two new icon buttons in the Add Flight and Edit Flight forms: a down-arrow that copies the departure date into the arrival date, and a calculator that estimates the arrival time from the great-circle distance using the arrival airport's local timezone. A "+1 Tag" hint appears below the arrival date for overnight flights.
 - **Flughäfen statistics section** — New stats card group with distinct airports, countries, continents (5/6), top 5 most-visited airports, top countries, rarest airports (visited only once), new airports this year, farthest airport from home, and a continent breakdown bar chart. Plus a new "Kürzester Layover" companion stat.
 - **Closed airports in autocomplete** — Permanently closed airports like Berlin Tegel (TXL) are now seeded too and remain selectable for historical flights, marked with a "geschlossen" badge.
 
 ### Fixed
+
 - **Längster Layover no longer counts living at home as a layover** — Capped at 24 hours and arrivals at the home airport active on that date are excluded. Old: "47944.6h in MUC" (5.5 years). New: realistic transit times only.
 - **Historical flight year input no longer locks to NaN** — Parsing the stored date with `new Date()` could produce `Invalid Date`, then `getFullYear()` wrote "NaN" back into the input and froze it. Now parsed directly from YYYY-MM-DD with regex.
 
 ### Changed
+
 - **Settings rate limit raised** — From 60 to 200 requests per 15 min. The previous limit was tripping on normal navigation now that the settings page has more sub-sections and a new home-airport banner.
 
 ## [0.24.4-beta] - 2026-04-14
 
 ### Fixed
+
 - **Aviationstack now respects Free-tier budget** — Blocks Aviationstack calls outside the flight's live window (±3h of departure, in-flight, or 2h post-arrival) and caps them at an admin-configurable daily budget (default 3/day, enough to stay inside the Free tier's 100/month). Outside the window — the bulk of daily polls, which are just schedule lookups from T-24h to T-6h — the lookup goes straight to AirLabs, which has a much larger Free quota. An 8-flight test account now consumes about 5–8 Aviationstack calls over a 24h window instead of 240+. Skip reasons (`outside_live_window`, `daily_budget_exceeded`, `cooldown`) are logged at every lookup for debuggability.
 - **New admin setting:** `aviationstackDailyBudget` (default 3). Migration adds the column; set to 0 to disable Aviationstack entirely and rely solely on AirLabs + OpenSky.
 
 ## [0.24.3-beta] - 2026-04-14
 
 ### Fixed
+
 - **Historical flights with unknown date are enrichable again** — `findEnrichmentCandidates` queried `departureTime: { gte: maxAgeDate }`, which in Prisma/Postgres also excludes `NULL`. Historical flights (the primary use case: "I flew this but don't remember when") were therefore never candidates for enrichment, even when a full reference pool existed. Now the query accepts both dated and dateless flights, and `getEnrichmentMode` returns `slim` for null so dateless flights use the conservative ICAO + terminal-only aggregation.
 
 ## [0.24.2-beta] - 2026-04-14
 
 ### Fixed
+
 - **Enrichment bootstrap deadlock resolved** — The auto-update and historical enrichment pipelines never produced results on fresh accounts because of a chain of five interacting bugs: the significance filter dropped first-fill gate/terminal changes, `hasLiveTracking` never got seeded (gating all future enrichment), scheduled flights past their arrival time became permanent zombies, and Aviationstack times without seconds silently failed to parse. Each is now fixed — first-fill changes count as significant on their own, `hasLiveTracking` flips on any non-empty API response, a new zombie-transition job flips `status=scheduled` → `flown` after arrival + 48h (marked `lastModifiedBy='zombie_auto_flown'`), and the time parser now accepts the space-separator-without-seconds format observed from the live API.
 - **Aviationstack 429 retry storm prevented** — The free tier is 100 requests per month. A single 429 previously triggered aviationstack retries on every 5-minute scheduler tick. Now a 1h in-memory cooldown blocks Aviationstack after a 429, falling through to AirLabs.
 - **OpenSky credential validation** — If stored credentials decrypt to an unusable pair (neither full OAuth2 client credentials nor full basic auth), the resolver now returns `null` instead of an empty object so downstream logs no longer lie about configuration state.
 
 ### Changed
+
 - **Historical-enrichment threshold lowered for slim mode** — Flights aged ≥ 1 year now require only 3 reference flights instead of 5 for aggregation. Full mode (< 1 year) keeps the 5-reference minimum. This unlocks enrichment for niche routes in small deployments where 5 same-flight-number references would be unreachable.
 
 ### Docs
+
 - Added three post-V1 roadmap items surfaced by the v0.24.1 critical review: route clustering to replace per-dimension median aggregation, confidence calibration via user-feedback loop, and a cross-user consent model for future multi-tenant deployments.
 
 ## [0.24.1-beta] - 2026-04-14
 
 ### Security
+
 - **Admin password reset via SMTP (Pentest H4)** — When the target user has a notification email on file and SMTP is enabled, the generated temporary password is now delivered via email instead of being returned in the HTTP response body. Falls back to response body for deployments without a mail server. Remaining deferred pentest items (H5 leaderboard enumeration, M7 TLS, L2/L3 SSH, L4 Dozzle) are now formally documented as accepted — by-design for the family tracker or infrastructure-level outside the repository.
 
 ### Fixed
+
 - **Map-only filter hidden on list pages** — The "min times flown" route-frequency slider only affects the deck.gl route layer. It no longer appears on the flight list page, where it was a silent no-op that misled users into thinking their list was filtered.
 
 ### Changed
+
 - **Dead canTrainLLM flag dropped** — Removed an unused permission relic of the deleted LLM training pipeline. The field was never set or read by the backend, so the frontend gate always evaluated to false. Parser access is now gated exclusively by `isAdmin`. Prisma migration drops the column; `hasTrainingAccess` renamed to `hasParserAccess`.
 
 ### Tests
+
 - **+21 new service tests** — covers email service (password reset, invitation, admin reset), reminder scheduler (dedupe, per-window error isolation, user opt-out), and cloud sync service (WebDAV upload, download, list, with all failure paths).
 
 ## [0.24.0-beta] - 2026-04-13
 
 ### Security
+
 - **Shell injection in backup service fixed** — Replaced `execAsync` with `spawn` on Unix pg_dump paths to prevent command injection via crafted database URLs (C1).
 - **API credentials no longer leaked in PUT response** — Admin API key update endpoint now returns masked values instead of decrypted plaintext secrets (C2).
 - **Removed `targetDatabaseUrl` from restore API** — Eliminates SSRF and command injection amplification via admin-supplied database URLs (H3).
@@ -3786,42 +3960,51 @@ mitigated). The surface below is what ships out of the box.
 - **13 additional fixes** — changeToken body fallback removed (M2), backup path containment check (M3), typed editedData preview (M4), SMTP password encrypted at rest (M6), nginx security headers on static assets (M1/M8), dotfile access blocked, `Math.random()` replaced with `crypto.randomBytes()` (L1), setup rate limited (L6), `parseInt` radix (L5), RFC 5987 Content-Disposition encoding (L7).
 
 ### Added
+
 - **Parser system marked as beta** — Navigation and parser page show a beta badge and notice explaining that only LLM-based parsing is fully tested.
 - **SECURITY.md** — Comprehensive security architecture documentation with verification commands, audit history, and vulnerability reporting via GitHub Private Security Advisories.
 
 ### Changed
+
 - **Multi-flight parser roadmap** — V1.8 roadmap updated with two-stage hybrid parser design (block splitting + per-block extraction) and multi-version template scoring.
 
 ## [0.23.1-beta] - 2026-04-13
 
 ### Fixed
+
 - **Sidebar overflow on small screens** — The navigation menu, flight list, and stats sidebars used fixed pixel widths (w-80/w-72) that overflowed on narrow viewports. All three panels are now capped at calc(100vw - 3rem), leaving a 48px tap area to close the backdrop. Also fixed the mobile menu DOM nesting by moving it outside the header element into a fragment.
 
 ## [0.23.0-beta] - 2026-04-13
 
 ### Added
+
 - **Smart API check scheduling** — Replaces fixed-interval polling with per-flight scheduling using a geometric midpoint approach. Checks become more frequent as departure nears (min 10 min), run every 15 min in-flight, and stop 2 hours after arrival. Existing scheduled flights are backfilled on startup.
 
 ### Fixed
+
 - **Aircraft name normalization** — Aircraft type names are now normalized consistently across statistics, achievements, and the input form. Existing names in the database are cleaned up on startup.
 
 ## [0.22.0-beta] - 2026-04-13
 
 ### Fixed
+
 - **Timezone-aware statistics** — All airport timezone data is now derived from coordinates via geo-tz and backfilled on startup. Fixes timezoneHopper (was always 0), fastestRoute showing impossible speeds (e.g. 5560 km/h), and incorrect flight durations for cross-timezone flights.
 - **Airline name normalization** — Duplicate airline entries caused by different import-source spellings (EgyptAir/Egyptair, AIR CANADA, Vietnam Airline) are now merged in statistics.
 - **WebGL2 graceful fallback** — Browsers without WebGL2 support no longer crash deck.gl; the map renders correctly.
 - **i18n encoding fixes** — Corrected garbled German umlauts in error messages and added missing translation key.
 
 ### Changed
+
 - **Same-day flights stat renamed** — "Same-Day Returns" renamed to "Tagesflüge" / "Same-Day Flights" to accurately reflect the metric (flights landing on the same calendar day, not round trips).
 
 ### Added
+
 - **Native MapLibre route fallback** — WebGL1-only browsers now get a native MapLibre GeoJSON route layer instead of no map at all.
 
 ## [0.21.0-beta] - 2026-04-13
 
 ### Added
+
 - **Historical flights** — Flights can now be recorded as route-only
   entries without departure/arrival times. Includes a form checkbox,
   year/month partial date picker, grey map arcs, and a "HISTORISCH"
@@ -3842,6 +4025,7 @@ mitigated). The surface below is what ships out of the box.
   across add, edit, and review workflows.
 
 ### Fixed
+
 - **Achievement leaderboard inflated** — The leaderboard was counting
   all tracked achievements (55) instead of only unlocked ones (34),
   showing 12,595 points instead of the correct 3,630.
@@ -3862,12 +4046,14 @@ mitigated). The surface below is what ships out of the box.
   prioritized over partial name/city matches.
 
 ### Docs
+
 - **Post-V1 roadmap** — Added ROADMAP-POST-V1.md with detailed specs
   for V1.1 (Cruises module) through V2.0 (Multi-user platform).
 
 ## [0.20.0-beta] - 2026-04-12
 
 ### Added
+
 - **Historical flights** — New flight status for route-only entries
   without departure/arrival times. Historical flights count toward
   distance, airport, and geographic achievements but are excluded
@@ -3876,6 +4062,7 @@ mitigated). The surface below is what ships out of the box.
   and nullable times across the full Prisma schema.
 
 ### Fixed
+
 - **Null-safe frontend types** — Made departureTime/arrivalTime
   nullable across 17 frontend components to prevent runtime crashes
   when displaying historical flights without timestamps.
@@ -3883,6 +4070,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.19.0-beta] - 2026-04-12
 
 ### Added
+
 - **Scheduled flight distinction** — Future flights are automatically
   marked as "scheduled", shown with cyan arcs on the map and a
   "GEPLANT" badge in the flight list. Scheduled flights are excluded
@@ -3896,6 +4084,7 @@ mitigated). The surface below is what ships out of the box.
   larger with a more visible dark background for better readability.
 
 ### Fixed
+
 - **Achievements page readability** — Locked achievements are no
   longer blurred; they show at reduced opacity with a lock icon
   centered-right in the card. All text and progress bars remain
@@ -3906,6 +4095,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.18.1-beta] - 2026-04-12
 
 ### Fixed
+
 - **Achievement seeding on every server start** — Achievement
   definitions are now ensured on every backend startup (idempotent),
   not only during the Docker entrypoint init script. Fixes empty
@@ -3917,6 +4107,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.18.0-beta] - 2026-04-12
 
 ### Added
+
 - **Two-stage route/trip info popup** — Clicking a route arc on
   the map now shows a redesigned popup with full airport names,
   distance, average duration, airlines, and seat class. A
@@ -3927,6 +4118,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.17.0-beta] - 2026-04-12
 
 ### Added
+
 - **Ollama model selector** — The admin parser settings page now
   shows a dropdown of all models available on the Ollama server
   instead of a free-text field. A "Pull model" section lets admins
@@ -3936,6 +4128,7 @@ mitigated). The surface below is what ships out of the box.
   hidden unless the enableCostTracking feature flag is active.
 
 ### Fixed
+
 - **Timezone-aware flight durations** — Flight duration calculations
   now account for timezone differences between departure and arrival
   airports using IANA timezone data. Fixes inflated durations for
@@ -3947,6 +4140,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.16.1-beta] - 2026-04-12
 
 ### Fixed
+
 - **Setup page simplified** — Removed privacy info box, tips section, and
   instance name field. Only the essential username + password form remains.
 - **Profile shows account username** — The settings profile now displays the
@@ -3968,12 +4162,14 @@ mitigated). The surface below is what ships out of the box.
   imports (previously only worked for single-flight additions).
 
 ### Changed
+
 - **Cost tracking defaults to off** — Cost input fields are now opt-in via
   Settings > Features instead of being visible by default.
 
 ## [0.16.0-beta] - 2026-04-12
 
 ### Security
+
 - **Full pentest with 32 findings resolved** — Comprehensive code review
   uncovered 4 critical, 10 high, 12 medium, and 6 low severity issues.
   All 32 have been fixed: admin data export no longer leaks password
@@ -3991,10 +4187,12 @@ mitigated). The surface below is what ships out of the box.
   backend and frontend.
 
 ### Added
+
 - **Default Ollama model switched to gemma3:12b** — Benchmarked at 100%
   accuracy across all test email samples, replacing qwen2.5:7b.
 
 ### Changed
+
 - **Dead LLM training system removed** — Deleted modelManager,
   trainingAuth middleware, training settings route, 6 Python scripts,
   and ~2 GB of PyTorch dependencies from the Docker image. Dead Prisma
@@ -4004,6 +4202,7 @@ mitigated). The surface below is what ships out of the box.
   (886 to 17 barrel + 4 modules). All files now under the 800-line limit.
 
 ### Tests
+
 - **Backend test isolation improved** — 7 test suites refactored to seed
   users via Prisma instead of the register endpoint, run serially via
   `maxWorkers=1`, and wipe state before each test.
@@ -4011,6 +4210,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.15.2-beta] - 2026-04-11
 
 ### Fixed
+
 - **Password min length aligned with the backend on the invited
   register page** — The client-side check rejected passwords below 6
   characters while the backend Zod schema already required at least 8,
@@ -4028,6 +4228,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.15.1-beta] - 2026-04-11
 
 ### Fixed
+
 - **Copy-to-clipboard on insecure HTTP origins** — Every "Copy link"
   button in the admin area silently did nothing when TravStats was
   accessed over plain HTTP on a LAN IP (the typical deployment), because
@@ -4045,6 +4246,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.15.0-beta] - 2026-04-11
 
 ### Added
+
 - **Invitation system v2** — The admin invitation surface is rebuilt
   end-to-end. Two distinct entry points replace the browser `prompt()`:
   a "Create link" modal that generates a shareable URL with an
@@ -4066,7 +4268,7 @@ mitigated). The surface below is what ships out of the box.
 - **`MAX_USERS` enforcement at invitation create time** — Both
   create endpoints now run a serializable transaction that counts
   `users + active invitations` and rejects with `409 User limit
-  reached` before any row is inserted. `MAX_USERS` was previously
+reached` before any row is inserted. `MAX_USERS` was previously
   only a warning log that never actually blocked anything.
 - **Auto-populated `notificationEmail` on invited registrations** —
   When a user registers through an invitation that carried an email
@@ -4086,12 +4288,13 @@ mitigated). The surface below is what ships out of the box.
   pattern but throws on SMTP misconfiguration instead of silently
   returning. The route handler catches the throw, marks the
   invitation `email_status='failed'` with the underlying error
-  text, and still returns 200 — the *invitation* create succeeded
-  even when the *email send* did not.
+  text, and still returns 200 — the _invitation_ create succeeded
+  even when the _email send_ did not.
 
 ## [0.14.1-beta] - 2026-04-11
 
 ### Fixed
+
 - **Invitation system wired end-to-end** — The register flow never
   forwarded the invitation token to the backend, so invited users
   silently registered as normal uninvited users and the invitation
@@ -4111,6 +4314,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.14.0-beta] - 2026-04-11
 
 ### Added
+
 - **Help texts on every settings and admin surface** — 10 components
   (SmtpManager, ParserSettings, ApiKeys, Backup, Defaults, Features, Map,
   Notifications, Profile, Units) now ship expandable InlineHelp blocks with
@@ -4121,11 +4325,12 @@ mitigated). The surface below is what ships out of the box.
   and EN. Exits non-zero on missing translations; usable as a CI gate.
 
 ### Fixed
+
 - **Backup creation via the UI** — The route handler passed pre-computed
   paths to the service through `existingRecord`, but the service generated
   a fresh timestamp internally and therefore ran `mkdirSync` on a different
   directory than it tried to write to. Result: `pg_dump >
-  .../temp/database.sql: Directory nonexistent`. The service now takes
+.../temp/database.sql: Directory nonexistent`. The service now takes
   `backupDir`/`tempDir` directly from `existingRecord`.
 - **"Date unknown" in the backup table** — `serializeBigInt()` fell into
   the `typeof === 'object'` branch for Date objects and turned them into
@@ -4155,6 +4360,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.13.0-beta] - 2026-04-06
 
 ### Added
+
 - **Email-based password reset** — Users can request a reset link from
   the login page via "Forgot password?". The link is delivered by email
   (only when SMTP is configured).
@@ -4169,6 +4375,7 @@ mitigated). The surface below is what ships out of the box.
   limited to 5 requests per 15 minutes to prevent abuse.
 
 ### Fixed
+
 - **Force-change-password route** — After login the frontend incorrectly
   called `/force-change-password` instead of `/change-password`; fixed.
 - **Unique constraint on token fields** — Reset and change tokens now
@@ -4178,6 +4385,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.12.2-beta] - 2026-04-06
 
 ### Security
+
 - **nginx version leak fixed** — `server_tokens off` in the nginx config
   prevents exposure of the nginx version in response headers.
 - **Duplicate security headers removed** — nginx no longer sets security
@@ -4187,14 +4395,16 @@ mitigated). The surface below is what ships out of the box.
   backend `notes` field before being stored.
 
 ### Fixed
+
 - **Express 404 pages** — Missing routes now return `{"error":"Not
-  found"}` instead of the internal Express HTML page.
+found"}` instead of the internal Express HTML page.
 - **JSON parse errors anonymized** — Invalid JSON bodies now return a
   generic error message instead of the internal parser error text.
 
 ## [0.12.1-beta] - 2026-04-06
 
 ### Security
+
 - **CORS tightened** — The CORS wildcard now only applies in development
   mode (`NODE_ENV === development`), not in all non-production
   environments.
@@ -4205,6 +4415,7 @@ mitigated). The surface below is what ships out of the box.
   8 characters.
 
 ### Fixed
+
 - **Database start failures surfaced immediately** — Missing DB
   configuration now aborts server startup instead of just warning.
 - **Global error handlers** — Unhandled promise rejections and uncaught
@@ -4216,7 +4427,7 @@ mitigated). The surface below is what ships out of the box.
 - **Query parameter validation** — `parseInt()` in admin parse-log
   routes replaced with Zod schemas (prevents NaN reaching DB queries).
 - **Trip list query bounded** — GET `/trips` now loads at most 500 trips
-  + 200 flights per trip (was: unbounded).
+  - 200 flights per trip (was: unbounded).
 - **ErrorBoundary logging** — `console.error` in ErrorBoundary is now
   scoped to development mode.
 - **package.json versioned** — `backend/package.json` and
@@ -4225,6 +4436,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.12.0-beta] - 2026-04-06
 
 ### Added
+
 - **Empty map view** — New users now see a hint card with a direct
   "Add flight" button instead of an empty globe.
 - **ICAO code in the airport tooltip** — Clicking an airport label now
@@ -4233,6 +4445,7 @@ mitigated). The surface below is what ships out of the box.
   — These four fields are now fully editable in the flight edit dialog.
 
 ### Fixed
+
 - **Language support** — Hardcoded German strings in the map tooltip,
   trips tab and flight counter replaced with i18n keys; dead
   ContextualHint reference removed. All text now reacts correctly to
@@ -4243,6 +4456,7 @@ mitigated). The surface below is what ships out of the box.
   ends trip or flight highlight.
 
 ### Changed
+
 - **Tooltip performance** — `onMove` handler throttled via
   requestAnimationFrame; tooltip recalculation runs at most once per
   frame instead of up to 60 times per second.
@@ -4253,6 +4467,7 @@ mitigated). The surface below is what ships out of the box.
 ## [0.11.0-beta] - 2026-04-06
 
 ### Added
+
 - **Trips tab in the sidebar** — Quick selection of all saved trips
   directly from the flight panel, including flight count, year and
   total kilometers.
@@ -4273,6 +4488,7 @@ mitigated). The surface below is what ships out of the box.
   USA West Coast).
 
 ### Fixed
+
 - **Tooltips follow the map** — All info windows (flight, trip,
   airport) update their position while scrolling and zooming through
   geo-anchored projection.
@@ -4297,6 +4513,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.10.0-beta] - 2026-04-05 (Update 2)
 
 ### Added
+
 - **`operatingAirline` field**: New optional DB field `operating_airline`
   (migration `20260405000000_add_operating_airline`). Stores the
   operating carrier for codeshare flights as well as rail/bus tickets.
@@ -4310,6 +4527,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   Mirrors the `filterEmailText` function used in the annotation view.
 
 ### Changed
+
 - **Parser runs against cleaned text**: `parseEmail()` applies
   `cleanEmailBody()` before handing text to any parser — parser and
   annotation view now see identical text.
@@ -4325,6 +4543,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **`AIRLINE_IATA_MAP`** expanded from 15 to ~75 airlines.
 
 ### Fixed
+
 - **400 error when adding a flight**: The Zod schema threw when
   `airline: ""` (empty string) was submitted. Fix:
   `emptyStringToUndefined` transform on `airline` and `flightNumber` in
@@ -4340,6 +4559,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.10.0-beta] - 2026-04-04
 
 ### Added
+
 - **Enrichment two-mode system**: flights < 1 year → full enrichment
   (aircraft, ICAO codes, route, terminal, gate); flights ≥ 1 year →
   slim enrichment (ICAO codes + terminal only).
@@ -4354,6 +4574,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Two-mode explanation panel** in Settings → Enrichment tab.
 
 ### Changed
+
 - **`findEnrichmentCandidates`**: Now excludes flights with `pending`
   or `rejected` pending updates (previously only `applied` was excluded
   — caused infinite nightly re-processing).
@@ -4366,6 +4587,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `autoProcess`).
 
 ### Removed
+
 - **`historicalEnrichmentMaxAgeYears`**,
   **`historicalEnrichmentAutoProcess`**,
   **`historicalEnrichmentRequireApproval`** from the `UserSettings`
@@ -4376,6 +4598,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.9.6-beta] - 2026-04-03
 
 ### Added
+
 - **Ollama config in admin UI**: `ollamaUrl`, `ollamaModel`,
   `ollamaVisionModel` stored in the `AdminSettings` DB table; editable
   in Admin → Parser Settings.
@@ -4389,6 +4612,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   dates using the user's configured timezone from the settings store.
 
 ### Changed
+
 - **`getParserConfig()`**: Reads `ollamaUrl/Model/VisionModel` from the
   `adminSettings` parameter with ENV fallback.
 - **`backupScheduler.ts`**: `getBackupSettings()` reads backup config
@@ -4400,6 +4624,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   renders only `NotificationPreferences`.
 
 ### Removed
+
 - **`debugLoggingEnabled`** + **`requireUserApiKeys`** from
   `AdminSettings` schema — log level from ENV, API keys always
   required.
@@ -4413,6 +4638,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.9.5-beta] - 2026-04-03
 
 ### Removed
+
 - **LLM training dead code**: Deleted orphaned `TrainingDashboard`,
   `TrainingDataFilters`, `TrainingDataPreview` components (never
   imported after the TrainingPage → ParserPage refactor).
@@ -4426,15 +4652,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **Dead TypeScript types**: `TrainingJob`, `TrainingJobLog`,
   `TrainingJobLogsResponse` removed from `types/index.ts`.
 - **LLM-only backend endpoints**: `POST /:id/save-and-train`, `POST
-  /:id/train-only`, `GET /data`, `GET /jobs`, `GET /jobs/:id/logs`,
+/:id/train-only`, `GET /data`, `GET /jobs`, `GET /jobs/:id/logs`,
   `DELETE /:id`, `POST /trigger`, `POST /jobs/:id/cancel`, `GET
-  /data/analysis` removed from the training route.
+/data/analysis` removed from the training route.
 
 ---
 
 ## [0.9.3-beta] - 2026-04-03
 
 ### Added
+
 - **Annotation-driven template parser**: Users can annotate parsed
   email fields to derive regex-based templates. Annotated patterns are
   stored as `ParserTemplate` records and applied as step 0 in the
@@ -4447,7 +4674,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **UserTemplateEngine**: Executes derived templates against email
   bodies with multi-flight extraction.
 - **Parser templates CRUD API**: `GET/POST/DELETE
-  /api/v1/parser-templates` — list, activate, disable, delete
+/api/v1/parser-templates` — list, activate, disable, delete
   user-derived templates.
 - **TemplateReviewCard**: UI card shown after annotation save to
   display the newly derived template with confidence score.
@@ -4457,6 +4684,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   extracted by which method.
 
 ### Fixed
+
 - Regex PNR `matchAll` missing `g` flag — caused 500 errors during
   email parsing.
 - `GET /api/v1/parser-templates/:id` endpoint added (was missing).
@@ -4468,6 +4696,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.9.2-beta] - 2026-04-02
 
 ### Changed
+
 - **Map amber redesign**: The glassmorphism theme now uses TravStats
   brand colors (amber → orange → red) throughout all visualization
   modes. Replaces the previous indigo/cyan color scheme.
@@ -4479,6 +4708,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   canvas removed. Dark-matter map style restored unconditionally.
 
 ### Added
+
 - **Globe night earth**: Night-earth texture (`earth-night.jpg`) with
   amber atmosphere glow + starfield background (`night-sky.png`) in
   globe mode.
@@ -4486,6 +4716,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   legend share the bottom-left column (no overlap).
 
 ### Fixed
+
 - Airport labels (`TextLayer`) now always render above arc lines
   (`depthCompare: "always"`).
 
@@ -4494,6 +4725,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [0.9.1-beta] - 2026-03-31
 
 ### Added
+
 - **Email import as the primary tab**: Email import promoted to the
   main "Import" tab in the UI. `EmailImportTab` component with drag &
   drop, airline notice and text fallback.
@@ -4519,6 +4751,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   limiters.
 
 ### Changed
+
 - **deck.gl visualization**: 6 map modes — routes, heatmap, hexagon
   (3D), 3D columns, trips (animated), globe (react-globe.gl).
 - `VisModeSelector`, `TimeSlider`, layer factories for all
@@ -4529,6 +4762,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   (was silently ignored before).
 
 ### Fixed
+
 - Fresh-DB migration ordering: early migrations (`202501xx`) wrapped in
   `IF EXISTS` guards; catch-up migration (`20251221`) recovers all
   columns.
@@ -4547,6 +4781,7 @@ First public beta release. Re-versioned from 1.0.x to 0.9.0-beta to
 reflect that not all planned features are complete yet.
 
 ### Added
+
 - Version badge in About tab (reads from package.json).
 - Rate limiting on backup-restore (3/hr) and training-trigger (2/hr)
   endpoints.
@@ -4559,12 +4794,14 @@ reflect that not all planned features are complete yet.
   export, map/stats fallbacks).
 
 ### Changed
+
 - Package versions bumped to `0.9.0-beta` (frontend + backend).
 - Admin page refactored to sidebar layout.
 - All plain browser checkboxes replaced with the styled `.checkbox`
   class.
 
 ### Fixed
+
 - `alert()` calls in AchievementsPage replaced with toast
   notifications.
 - `console.debug()` calls in `barcodeExtractor.ts` replaced with
@@ -4577,6 +4814,7 @@ reflect that not all planned features are complete yet.
 ## [1.0.1] - 2026-02-23
 
 ### Added
+
 - Prettier formatter for frontend TypeScript/TSX/CSS (`format` and
   `format:check` scripts).
 - ts-prune dead code detection scripts in frontend and backend
@@ -4599,11 +4837,13 @@ reflect that not all planned features are complete yet.
   verification.
 
 ### Changed
+
 - Docker security hardening: `cap_drop: ALL` + minimal `cap_add`,
   `no-new-privileges`, log rotation, and resource limits on `app`,
   `db`, and `ollama` services.
 
 ### Fixed
+
 - Removed unnecessary `CAP_SETUID`/`CAP_SETGID` from the app container
   (root can setuid without them).
 - Corrected the pre-commit prettier hook entry to properly forward
@@ -4614,6 +4854,7 @@ reflect that not all planned features are complete yet.
 ## [1.0.0] - 2026-02-23
 
 ### Added
+
 - Initial stable release.
 - Flight tracking with map visualization (Leaflet, 3D globe).
 - Statistics dashboard (distance, time, routes, heatmaps).

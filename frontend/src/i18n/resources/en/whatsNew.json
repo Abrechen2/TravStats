@@ -5,6 +5,40 @@
   "next": "Next",
   "betaBadge": "Beta",
   "entries": {
+    "v280": {
+      "travtrack": {
+        "title": "TravTrack: your day on the map",
+        "body": "The new map page shows each day as legs and stops, with a time bar, replay of single legs and name suggestions for stops. Fixed places such as home or work fold several fixes into one stop. TravTrack has its own settings page instead of “Location”, and a diagnostics log explains why a recording has gaps."
+      },
+      "connections": {
+        "title": "Connections between people and servers",
+        "body": "An admin pairs two servers once, after that people connect to each other: they share trips, can see each other's badges if they wish and compare on the leaderboard. A plan can be edited together with someone on another server. The guest-link approach from earlier pre-releases is gone."
+      },
+      "settings": {
+        "title": "Settings rebuilt, search for everything",
+        "body": "All settings are one page with consistent rows, a Standard and an Expert view and a search that finds what a setting does. The server's pages sit in the same menu. Press “/” in the top bar to search flights, cruises, stays, places, rail, bus, ferry, rentals and trips at once."
+      },
+      "mail": {
+        "title": "Bookings by mail and AI help",
+        "body": "Each account gets a forwarding address (or connects its own IMAP mailbox); mails from allowed senders arrive as a proposal in the inbox. A package booking without a template can be read by the AI on request – you review the proposal before anything is saved. Cloud AI is used only after you agreed to it, per provider."
+      },
+      "transport": {
+        "title": "Rail, bus, ferry and rental catch up",
+        "body": "Statistics now cover every way you travel: days on the road, time-zone shift, seasons and weekdays, price per kilometre. CO₂ is estimated for rail, bus, ferry, cruise and rental cars. Check-ins from Träwelling and travelynx can be imported, train and bus segments in flight bookings become rides of their own, and tracks and places download as GPX or KML."
+      },
+      "lodging": {
+        "title": "Rating categories and your own place categories",
+        "body": "You rate stays by categories you can switch on and off and add to yourself; the statistics show each one. Places get your own categories with an icon, such as swimming pool or theme park. New stays start with check-in at 15:00 and check-out at 11:00."
+      },
+      "data": {
+        "title": "Your data and your privacy",
+        "body": "Under Settings → Backup you download everything your account holds as one file, and you can delete your account yourself. Flags and certificate fonts come from your own server, and changing a password signs out connected phones and API keys. Your own Immich address can no longer point into the server's home network."
+      },
+      "beta": {
+        "title": "Still in testing",
+        "body": "Behind your admin's beta switch: roadtrips with weather and GPX export, planning with TravPlan, cruise tracks, sharing trips across servers, friend comparison between servers (federation), encrypted sharing and pairing the Companion app."
+      }
+    },
     "v270": {
       "design": {
         "title": "One look for web and app",

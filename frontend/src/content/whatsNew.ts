@@ -53,6 +53,54 @@ export interface WhatsNewDeveloperNote {
 
 export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
   {
+    version: "2.8.0",
+    highlights: [
+      {
+        icon: "📍",
+        titleKey: "entries.v280.travtrack.title",
+        bodyKey: "entries.v280.travtrack.body",
+        beta: true,
+      },
+      {
+        icon: "🤝",
+        titleKey: "entries.v280.connections.title",
+        bodyKey: "entries.v280.connections.body",
+        beta: true,
+      },
+      {
+        icon: "⚙️",
+        titleKey: "entries.v280.settings.title",
+        bodyKey: "entries.v280.settings.body",
+      },
+      {
+        icon: "✉️",
+        titleKey: "entries.v280.mail.title",
+        bodyKey: "entries.v280.mail.body",
+      },
+      {
+        icon: "🚆",
+        titleKey: "entries.v280.transport.title",
+        bodyKey: "entries.v280.transport.body",
+      },
+      {
+        icon: "🏨",
+        titleKey: "entries.v280.lodging.title",
+        bodyKey: "entries.v280.lodging.body",
+      },
+      {
+        icon: "📦",
+        titleKey: "entries.v280.data.title",
+        bodyKey: "entries.v280.data.body",
+      },
+      {
+        icon: "🧪",
+        titleKey: "entries.v280.beta.title",
+        bodyKey: "entries.v280.beta.body",
+        beta: true,
+      },
+    ],
+  },
+  {
     version: "2.7.0",
     highlights: [
       {
