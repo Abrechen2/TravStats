@@ -17,6 +17,7 @@ import { SMTP_CONFIG_ID } from "./smtp";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
+import { revokeAllApiTokensForUser } from "../../services/revokeUserApiTokens";
 
 const router = Router();
 
@@ -227,6 +228,9 @@ router.post(
       }
 
       const shouldMustChange = mustChangePassword ?? mode === "generate";
+
+      // Before the password write: see revokeUserApiTokens.ts.
+      await revokeAllApiTokensForUser(id);
 
       await prisma.user.update({
         where: { id },

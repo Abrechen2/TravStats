@@ -46,7 +46,6 @@ export default function LoginPage(): JSX.Element {
   );
   const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null);
   const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
-  const [adminContactEmail, setAdminContactEmail] = useState<string | null>(null);
   const [forgotUsername, setForgotUsername] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
@@ -55,10 +54,7 @@ export default function LoginPage(): JSX.Element {
   useEffect(() => {
     authApi
       .getSmtpStatus()
-      .then((r) => {
-        setSmtpEnabled(r.smtpEnabled);
-        setAdminContactEmail(r.adminContactEmail);
-      })
+      .then((r) => setSmtpEnabled(r.smtpEnabled))
       .catch(() => setSmtpEnabled(false));
   }, []);
 
@@ -437,18 +433,6 @@ export default function LoginPage(): JSX.Element {
                       ? t("login.forgotPasswordModal.noSmtpNotified")
                       : t("login.forgotPasswordModal.success")}
                   </p>
-                  {smtpEnabled === false && adminContactEmail && (
-                    <p style={{ color: "var(--text-muted)" }}>
-                      {t("login.forgotPasswordModal.noSmtpContact")}{" "}
-                      <a
-                        href={`mailto:${adminContactEmail}`}
-                        className="font-medium hover:underline"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        {adminContactEmail}
-                      </a>
-                    </p>
-                  )}
                 </div>
               ) : (
                 <form onSubmit={handleForgotSubmit} className="space-y-4">

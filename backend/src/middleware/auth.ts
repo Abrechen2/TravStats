@@ -85,7 +85,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       throw new AppError("No token provided", 401);
     }
 
-    const decoded = jwt.verify(cookieToken, JWT_SECRET) as { userId: string; epoch?: number };
+    const decoded = jwt.verify(cookieToken, JWT_SECRET, { algorithms: ["HS256"] }) as {
+      userId: string;
+      epoch?: number;
+    };
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
