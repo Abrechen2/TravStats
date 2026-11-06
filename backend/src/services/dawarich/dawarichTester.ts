@@ -8,6 +8,7 @@
  * unreachable host.
  */
 import { createDawarichClient } from "./dawarichClient";
+import type { PrivateTargetCode, TargetPolicy } from "../egress/privateTargets";
 import { DawarichError, DawarichErrorKind, normalizeDawarichBaseUrl } from "./errors";
 
 export interface DawarichTestResult {
@@ -24,6 +25,8 @@ export interface DawarichTestResult {
    * fixed `dawarichFailureKind()` vocabulary (identical to Immich's).
    */
   kind?: DawarichErrorKind;
+  /** `PRIVATE_TARGET` beside `invalidUrl`: a host this account may not reach. */
+  code?: PrivateTargetCode;
   details?: { version?: string };
 }
 
@@ -37,11 +40,12 @@ const PROBE_WINDOW_MS = 60_000;
 
 export async function testDawarichConnection(
   baseUrl: string,
-  apiKey: string
+  apiKey: string,
+  policy: TargetPolicy
 ): Promise<DawarichTestResult> {
   let normalized: string;
   try {
-    normalized = normalizeDawarichBaseUrl(baseUrl);
+    normalized = normalizeDawarichBaseUrl(baseUrl, policy);
   } catch (error) {
     // normalizeDawarichBaseUrl only ever throws DawarichError("invalidUrl", …)
     // (bad URL shape / non-http scheme) — the user's own typo, NOT a server
@@ -51,11 +55,17 @@ export async function testDawarichConnection(
     return {
       success: false,
       kind: error instanceof DawarichError ? error.kind : "invalidUrl",
+      ...(error instanceof DawarichError && error.code ? { code: error.code } : {}),
       message: error instanceof DawarichError ? error.message : "Invalid Dawarich URL",
     };
   }
 
-  const client = createDawarichClient({ baseUrl: normalized, apiKey, source: "user" });
+  const client = createDawarichClient({
+    baseUrl: normalized,
+    apiKey,
+    source: "user",
+    allowPrivate: policy.allowPrivate,
+  });
 
   try {
     const health = await client.checkHealth();
@@ -68,7 +78,12 @@ export async function testDawarichConnection(
     };
   } catch (error) {
     if (error instanceof DawarichError) {
-      return { success: false, kind: error.kind, message: error.message };
+      return {
+        success: false,
+        kind: error.kind,
+        ...(error.code ? { code: error.code } : {}),
+        message: error.message,
+      };
     }
     return { success: false, kind: "unreachable", message: "Could not reach Dawarich" };
   }

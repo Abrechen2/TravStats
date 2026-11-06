@@ -75,7 +75,9 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         data.globalDawarichBaseUrl = null;
       } else {
         try {
-          data.globalDawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl);
+          data.globalDawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl, {
+            allowPrivate: true,
+          });
         } catch (error) {
           // The machine-readable KIND, not the prose message — same reason the
           // user-facing settings route already does this.
@@ -120,7 +122,7 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
     // Machine-readable failure kind, consistent with the Immich routes.
     if (!baseUrl || !apiKey) throw new AppError("notConfigured", 400);
 
-    res.json(await testDawarichConnection(baseUrl, apiKey));
+    res.json(await testDawarichConnection(baseUrl, apiKey, { allowPrivate: true }));
   } catch (error) {
     next(error);
   }

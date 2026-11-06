@@ -11,6 +11,13 @@
  * carries over verbatim.
  */
 
+import {
+  PrivateTargetError,
+  assertTargetAllowed,
+  type PrivateTargetCode,
+  type TargetPolicy,
+} from "../egress/privateTargets";
+
 /** Which settings tier supplied the connection. */
 export type DawarichConnectionSource = "user" | "global";
 
@@ -20,6 +27,11 @@ export interface DawarichConnection {
   /** Decrypted. Never leaves the backend. */
   apiKey: string;
   source: DawarichConnectionSource;
+  /**
+   * May this connection reach a private, loopback or link-local address?
+   * Same meaning as `ImmichConnection.allowPrivate` (forgejo#411).
+   */
+  allowPrivate: boolean;
 }
 
 /**
@@ -43,12 +55,15 @@ export type DawarichErrorKind = "unreachable" | "auth" | "notFound" | "protocol"
 export class DawarichError extends Error {
   public readonly kind: DawarichErrorKind;
   public readonly status?: number;
+  /** Set on an `invalidUrl` refusal of a target this caller may not reach. */
+  public readonly code?: PrivateTargetCode;
 
-  constructor(kind: DawarichErrorKind, message: string, status?: number) {
+  constructor(kind: DawarichErrorKind, message: string, status?: number, code?: PrivateTargetCode) {
     super(message);
     this.name = "DawarichError";
     this.kind = kind;
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -60,20 +75,13 @@ export class DawarichError extends Error {
  * with no credentials, query or fragment. A sub-path is allowed
  * (reverse-proxy installs mount Dawarich under e.g. `/dawarich`).
  *
- * DELIBERATE NON-RESTRICTION (SSRF egress): there is intentionally NO block
- * on loopback / link-local / private / ULA hosts here. TravStats is
- * self-hosted and the operator's Dawarich instance is on the LAN (often a
- * private RFC1918 or `.local` address) by design, so a private-IP filter
- * would break the primary use case. The base URL is operator-supplied
- * (per-user or admin-global), not attacker-chosen in the single-tenant
- * deployment this targets. An operator who exposes Dawarich *configuration*
- * to untrusted users on a multi-tenant instance MUST restrict egress at the
- * network layer — the request would otherwise be a blind-SSRF /
- * internal-reconnaissance oracle via the error taxonomy. Mirrors
- * `normalizeImmichBaseUrl`'s decision (reviewed 2026-07-10) exactly; do not
- * "harden" this without changing the threat model.
+ * Egress (forgejo#411): the same rule as `normalizeImmichBaseUrl` — an
+ * ordinary account's own connection may not name a private, loopback or
+ * link-local host (`invalidUrl` + `PRIVATE_TARGET`); the admin-global tier,
+ * ENV and an admin's own connection keep LAN access. A public-looking name is
+ * checked again at connection time (`services/egress/privateTargets.ts`).
  */
-export function normalizeDawarichBaseUrl(raw: string): string {
+export function normalizeDawarichBaseUrl(raw: string, policy: TargetPolicy): string {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -86,5 +94,22 @@ export function normalizeDawarichBaseUrl(raw: string): string {
   }
 
   const path = parsed.pathname.replace(/\/+$/, "");
-  return `${parsed.protocol}//${parsed.host}${path}`;
+  const normalized = `${parsed.protocol}//${parsed.host}${path}`;
+  try {
+    assertTargetAllowed(normalized, policy);
+  } catch (error) {
+    if (error instanceof PrivateTargetError) throw privateTargetDawarichError();
+    throw error;
+  }
+  return normalized;
+}
+
+/** The refusal of a host this caller may not reach, in Dawarich's vocabulary. */
+export function privateTargetDawarichError(): DawarichError {
+  return new DawarichError(
+    "invalidUrl",
+    "Dawarich URL points to a private address this account may not reach",
+    undefined,
+    "PRIVATE_TARGET"
+  );
 }

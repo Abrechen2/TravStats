@@ -11,8 +11,9 @@ import { decryptApiKey } from "../../utils/encryption";
 import { encryptUnlessMasked } from "../../utils/maskedKey";
 import { parseOwnGeoUrl } from "../geo/ownServerConfig";
 import { checkLlmBaseUrl } from "../llm/llmEndpoint";
-import { normalizeDawarichBaseUrl } from "../dawarich/errors";
-import { normalizeImmichBaseUrl } from "../immich/types";
+import { DawarichError, normalizeDawarichBaseUrl } from "../dawarich/errors";
+import type { TargetPolicy } from "../egress/privateTargets";
+import { ImmichError, normalizeImmichBaseUrl } from "../immich/types";
 import { normalizeRelayUrl } from "../../schemas/pushAdmin";
 import { normalizeFxCustomUrl } from "../fx/fxSources";
 import type { FieldDef, ServiceDef } from "./types";
@@ -86,19 +87,32 @@ export function viewField(field: FieldDef, src: FieldSource): FieldView {
 const bad = (message: string, key: string): AppError =>
   new AppError(message, 400, "VALIDATION_FAILED", key);
 
-function normalizeUrl(service: ServiceDef, field: FieldDef, raw: string): string {
+/** A refusal of a host this caller may not reach keeps its own code (forgejo#411). */
+function urlRefusal(error: unknown, message: string, key: string): AppError {
+  if ((error instanceof ImmichError || error instanceof DawarichError) && error.code) {
+    return new AppError(message, 400, error.code, key);
+  }
+  return bad(message, key);
+}
+
+function normalizeUrl(
+  service: ServiceDef,
+  field: FieldDef,
+  raw: string,
+  policy: TargetPolicy
+): string {
   if (service.id === "immich") {
     try {
-      return normalizeImmichBaseUrl(raw);
-    } catch {
-      throw bad("Invalid Immich URL", field.key);
+      return normalizeImmichBaseUrl(raw, policy);
+    } catch (error) {
+      throw urlRefusal(error, "Invalid Immich URL", field.key);
     }
   }
   if (service.id === "dawarich") {
     try {
-      return normalizeDawarichBaseUrl(raw);
-    } catch {
-      throw bad("Invalid Dawarich URL", field.key);
+      return normalizeDawarichBaseUrl(raw, policy);
+    } catch (error) {
+      throw urlRefusal(error, "Invalid Dawarich URL", field.key);
     }
   }
   if (field.column === "pushRelayUrl") {
@@ -144,7 +158,8 @@ function normalizeUrl(service: ServiceDef, field: FieldDef, raw: string): string
 export function toColumnValue(
   service: ServiceDef,
   field: FieldDef,
-  incoming: unknown
+  incoming: unknown,
+  policy: TargetPolicy
 ): string | number | boolean | null | undefined {
   const key = field.key;
   switch (field.kind) {
@@ -181,7 +196,7 @@ export function toColumnValue(
         return null;
       }
       if (trimmed.length > 500) throw bad("Too long", key);
-      return field.kind === "url" ? normalizeUrl(service, field, trimmed) : trimmed;
+      return field.kind === "url" ? normalizeUrl(service, field, trimmed, policy) : trimmed;
     }
   }
 }
@@ -200,13 +215,15 @@ export interface FieldWrite {
 export function collectWrites(
   service: ServiceDef,
   defs: readonly FieldDef[],
-  incoming: Record<string, unknown>
+  incoming: Record<string, unknown>,
+  /** Whether a URL field may name a LAN host — the instance's own always may. */
+  policy: TargetPolicy
 ): FieldWrite {
   const out: FieldWrite = { admin: {}, user: {}, smtp: {} };
   for (const [key, value] of Object.entries(incoming)) {
     const def = defs.find((f) => f.key === key);
     if (!def) throw bad(`Unknown field "${key}" for ${service.id}`, key);
-    const column = toColumnValue(service, def, value);
+    const column = toColumnValue(service, def, value, policy);
     if (column !== undefined) out[def.store][def.column] = column;
   }
   return out;

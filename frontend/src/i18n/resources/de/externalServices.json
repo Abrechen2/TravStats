@@ -140,7 +140,8 @@
     "RATE_LIMITED": "Zu viele Anfragen in kurzer Zeit. Versuch es gleich noch einmal.",
     "LLM_BASE_URL_INVALID": "Diese Adresse nehme ich nicht an. Nötig sind https und der Versionspfad.",
     "TEMPLATE_REPO_URL_INVALID": "Diese Adresse nehme ich für die Vorlagen nicht an.",
-    "AEROAPI_BUDGET_REQUIRED": "Beim eigenen Tarif brauche ich eine Monatsgrenze in USD."
+    "AEROAPI_BUDGET_REQUIRED": "Beim eigenen Tarif brauche ich eine Monatsgrenze in USD.",
+    "PRIVATE_TARGET": "Diese Adresse liegt im lokalen Netz. Eine eigene Verbindung dorthin darf nur ein Admin einrichten."
   },
   "info": {
     "why": "Wozu braucht TravStats das?",

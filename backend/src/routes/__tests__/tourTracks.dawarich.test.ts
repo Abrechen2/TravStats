@@ -22,7 +22,7 @@ import { moving, offset, standing } from "../../services/tracks/__tests__/jitter
  * SECOND-precision timestamps, and NEWEST-FIRST ordering.
  */
 
-const DAWARICH_BASE_URL = "https://dawarich.lan";
+const DAWARICH_BASE_URL = "https://dawarich.example.com";
 const DAWARICH_API_KEY = "sk-super-secret-dawarich-key";
 
 const T_OLD = new Date("2026-06-01T08:00:00Z");

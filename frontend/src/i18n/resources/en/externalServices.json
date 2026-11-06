@@ -140,7 +140,8 @@
     "RATE_LIMITED": "Too many requests in a short time. Try again in a moment.",
     "LLM_BASE_URL_INVALID": "I don't accept this address. It needs https and the version path.",
     "TEMPLATE_REPO_URL_INVALID": "I don't accept this address for the templates.",
-    "AEROAPI_BUDGET_REQUIRED": "With a custom plan I need a monthly limit in USD."
+    "AEROAPI_BUDGET_REQUIRED": "With a custom plan I need a monthly limit in USD.",
+    "PRIVATE_TARGET": "This address is on the local network. Only an admin may set up an own connection to it."
   },
   "info": {
     "why": "Why does TravStats need it?",

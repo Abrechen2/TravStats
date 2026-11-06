@@ -8,6 +8,7 @@
  * reads as a wrong key.
  */
 import { createImmichClient } from "./immichClient";
+import type { PrivateTargetCode, TargetPolicy } from "../egress/privateTargets";
 import { ImmichError, ImmichErrorKind, normalizeImmichBaseUrl } from "./types";
 
 export interface ImmichTestResult {
@@ -23,16 +24,19 @@ export interface ImmichTestResult {
    * `immichFailureKind()` vocabulary.
    */
   kind?: ImmichErrorKind;
+  /** `PRIVATE_TARGET` beside `invalidUrl`: a host this account may not reach. */
+  code?: PrivateTargetCode;
   details?: { version?: string; user?: string };
 }
 
 export async function testImmichConnection(
   baseUrl: string,
-  apiKey: string
+  apiKey: string,
+  policy: TargetPolicy
 ): Promise<ImmichTestResult> {
   let normalized: string;
   try {
-    normalized = normalizeImmichBaseUrl(baseUrl);
+    normalized = normalizeImmichBaseUrl(baseUrl, policy);
   } catch (error) {
     // normalizeImmichBaseUrl only ever throws ImmichError("invalidUrl", …) (bad
     // URL shape / non-http scheme) — the user's own typo, NOT a server problem.
@@ -42,11 +46,17 @@ export async function testImmichConnection(
     return {
       success: false,
       kind: error instanceof ImmichError ? error.kind : "invalidUrl",
+      ...(error instanceof ImmichError && error.code ? { code: error.code } : {}),
       message: error instanceof ImmichError ? error.message : "Invalid Immich URL",
     };
   }
 
-  const client = createImmichClient({ baseUrl: normalized, apiKey, source: "user" });
+  const client = createImmichClient({
+    baseUrl: normalized,
+    apiKey,
+    source: "user",
+    allowPrivate: policy.allowPrivate,
+  });
 
   try {
     const version = await client.getServerVersion();
@@ -58,7 +68,12 @@ export async function testImmichConnection(
     };
   } catch (error) {
     if (error instanceof ImmichError) {
-      return { success: false, kind: error.kind, message: error.message };
+      return {
+        success: false,
+        kind: error.kind,
+        ...(error.code ? { code: error.code } : {}),
+        message: error.message,
+      };
     }
     return { success: false, kind: "unreachable", message: "Could not reach Immich" };
   }

@@ -71,7 +71,9 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
 
   if (turnsOnCloudAi(service, body) && body.confirmDataSharing !== true) throw consentRequired();
 
-  const writes = collectWrites(service, service.fields, body.fields ?? {});
+  const writes = collectWrites(service, service.fields, body.fields ?? {}, {
+    allowPrivate: true,
+  });
   const adminData: Record<string, unknown> = { ...writes.admin };
   const smtpPatch: Record<string, unknown> = { ...writes.smtp };
   const policyEdits: Array<(p: ExternalServicePolicy) => ExternalServicePolicy> = [];

@@ -19,7 +19,9 @@ describe("testImmichConnection", () => {
     getServerVersion.mockResolvedValue("1.138.2");
     whoami.mockResolvedValue({ id: "u1", email: "a@b.c", name: "Ann" });
 
-    await expect(testImmichConnection("https://immich.lan", "key")).resolves.toEqual({
+    await expect(
+      testImmichConnection("https://immich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: true,
       message: "Connected to Immich",
       details: { version: "1.138.2", user: "Ann" },
@@ -29,14 +31,18 @@ describe("testImmichConnection", () => {
   it("distinguishes a bad key from an unreachable server, carrying the kind", async () => {
     getServerVersion.mockResolvedValue("1.138.2");
     whoami.mockRejectedValue(new ImmichError("auth", "Immich rejected the API key", 401));
-    await expect(testImmichConnection("https://immich.lan", "bad")).resolves.toMatchObject({
+    await expect(
+      testImmichConnection("https://immich.lan", "bad", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "auth",
       message: "Immich rejected the API key",
     });
 
     getServerVersion.mockRejectedValue(new ImmichError("unreachable", "Immich is unreachable"));
-    await expect(testImmichConnection("https://immich.lan", "key")).resolves.toMatchObject({
+    await expect(
+      testImmichConnection("https://immich.lan", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "unreachable",
       message: "Immich is unreachable",
@@ -44,7 +50,9 @@ describe("testImmichConnection", () => {
   });
 
   it("reports a non-http base URL as an invalidUrl kind without calling Immich", async () => {
-    await expect(testImmichConnection("file:///etc/passwd", "key")).resolves.toMatchObject({
+    await expect(
+      testImmichConnection("file:///etc/passwd", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "invalidUrl",
       message: "Immich URL must use http:// or https://",
@@ -53,7 +61,9 @@ describe("testImmichConnection", () => {
   });
 
   it("reports a malformed base URL as an invalidUrl kind without calling Immich", async () => {
-    await expect(testImmichConnection("not-a-url", "key")).resolves.toMatchObject({
+    await expect(
+      testImmichConnection("not-a-url", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "invalidUrl",
       message: "Immich URL is not a valid URL",
@@ -65,7 +75,9 @@ describe("testImmichConnection", () => {
     getServerVersion.mockRejectedValue(
       new ImmichError("protocol", "Immich returned an unexpected version payload")
     );
-    await expect(testImmichConnection("https://immich.lan", "key")).resolves.toEqual({
+    await expect(
+      testImmichConnection("https://immich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: false,
       kind: "protocol",
       message: "Immich returned an unexpected version payload",

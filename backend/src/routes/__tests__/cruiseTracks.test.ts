@@ -361,7 +361,7 @@ describe("Cruise recorded tracks", () => {
         data: {
           userId,
           data: {},
-          dawarichBaseUrl: "https://dawarich.lan",
+          dawarichBaseUrl: "https://dawarich.example.com",
           dawarichApiKey: encryptApiKey("sk-test"),
         },
       });

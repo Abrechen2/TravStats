@@ -3,22 +3,30 @@ import { DawarichError, normalizeDawarichBaseUrl } from "../errors";
 
 describe("normalizeDawarichBaseUrl", () => {
   it("strips a trailing slash", () => {
-    expect(normalizeDawarichBaseUrl("https://dawarich.lan/")).toBe("https://dawarich.lan");
+    expect(normalizeDawarichBaseUrl("https://dawarich.lan/", { allowPrivate: true })).toBe(
+      "https://dawarich.lan"
+    );
   });
 
   it("keeps a sub-path (reverse-proxy install) but strips its trailing slash", () => {
-    expect(normalizeDawarichBaseUrl("https://host/dawarich/")).toBe("https://host/dawarich");
+    expect(normalizeDawarichBaseUrl("https://host/dawarich/", { allowPrivate: true })).toBe(
+      "https://host/dawarich"
+    );
   });
 
   it("accepts a plain private-LAN http address without any egress block", () => {
     // Deliberate non-restriction — see the comment on normalizeDawarichBaseUrl.
-    expect(normalizeDawarichBaseUrl("http://192.168.1.50:3000")).toBe("http://192.168.1.50:3000");
+    expect(normalizeDawarichBaseUrl("http://192.168.1.50:3000", { allowPrivate: true })).toBe(
+      "http://192.168.1.50:3000"
+    );
   });
 
   it("rejects a non-http(s) scheme as invalidUrl", () => {
-    expect(() => normalizeDawarichBaseUrl("file:///etc/passwd")).toThrow(DawarichError);
+    expect(() => normalizeDawarichBaseUrl("file:///etc/passwd", { allowPrivate: true })).toThrow(
+      DawarichError
+    );
     try {
-      normalizeDawarichBaseUrl("file:///etc/passwd");
+      normalizeDawarichBaseUrl("file:///etc/passwd", { allowPrivate: true });
       throw new Error("expected to throw");
     } catch (error) {
       expect(error).toBeInstanceOf(DawarichError);
@@ -28,7 +36,7 @@ describe("normalizeDawarichBaseUrl", () => {
 
   it("rejects a malformed URL as invalidUrl", () => {
     try {
-      normalizeDawarichBaseUrl("not a url at all");
+      normalizeDawarichBaseUrl("not a url at all", { allowPrivate: true });
       throw new Error("expected to throw");
     } catch (error) {
       expect(error).toBeInstanceOf(DawarichError);

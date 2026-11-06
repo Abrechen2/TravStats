@@ -11,10 +11,12 @@ import { WebdavSyncError } from "./errors";
  * Where a per-account WebDAV sync may connect — the SSRF boundary of the
  * feature (forgejo#321).
  *
- * Immich, Dawarich and the model endpoints deliberately allow any host,
- * private ranges included (`normalizeImmichBaseUrl`): their URL is set by the
- * operator, or by a user of a single-tenant instance, and the target is a LAN
- * server by design. This target is different in two ways that decide it:
+ * The model endpoints deliberately allow any host, private ranges included:
+ * their URL is set by the operator and the target is a LAN server by design.
+ * (Immich and Dawarich once did too; since forgejo#411 an ordinary account's
+ * own connection follows the address half of this rule — see
+ * `services/egress/privateTargets.ts`.) This target is different in two ways
+ * that decide it:
  *
  *  - any account on a multi-user instance can set it, not only the operator;
  *  - the request is a PUT of a whole file with credentials, run unattended
@@ -126,32 +128,38 @@ export function normalizeWebdavUrl(raw: string, policy: TargetPolicy): string {
   return `${parsed.protocol}//${parsed.host}${path}`;
 }
 
-type LookupCallback = (
+export type LookupCallback = (
   err: NodeJS.ErrnoException | null,
   address: string | dns.LookupAddress[],
   family?: number
 ) => void;
 
-/** `dns.lookup`, refusing every answer that is not a public address. */
-function guardedLookup(
-  hostname: string,
-  options: dns.LookupOptions,
-  callback: LookupCallback
-): void {
-  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
-    if (err) {
-      callback(err, []);
-      return;
-    }
-    const list = addresses as dns.LookupAddress[];
-    if (list.length === 0 || list.some((a) => isBlockedAddress(a.address))) {
-      callback(new WebdavSyncError("blockedTarget"), []);
-      return;
-    }
-    if (options.all) callback(null, list);
-    else callback(null, list[0].address, list[0].family);
-  });
+/**
+ * `dns.lookup`, refusing every answer that is not a public address. The error
+ * a refusal raises is the caller's, so each integration words it in its own
+ * vocabulary (WebDAV `blockedTarget`, Immich/Dawarich `invalidUrl`).
+ */
+export function makeGuardedLookup(
+  onBlocked: () => Error
+): (hostname: string, options: dns.LookupOptions, callback: LookupCallback) => void {
+  return (hostname, options, callback) => {
+    dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+      if (err) {
+        callback(err, []);
+        return;
+      }
+      const list = addresses as dns.LookupAddress[];
+      if (list.length === 0 || list.some((a) => isBlockedAddress(a.address))) {
+        callback(onBlocked(), []);
+        return;
+      }
+      if (options.all) callback(null, list);
+      else callback(null, list[0].address, list[0].family);
+    });
+  };
 }
+
+const guardedLookup = makeGuardedLookup(() => new WebdavSyncError("blockedTarget"));
 
 type ConnectionOptions = http.ClientRequestArgs & { host?: string | null };
 

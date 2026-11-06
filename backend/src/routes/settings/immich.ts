@@ -11,6 +11,7 @@ import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { encryptApiKey } from "../../utils/encryption";
 import { immichConnectionSchema, immichTestSchema } from "../../schemas/immich";
+import { accountMayReachPrivate } from "../../services/egress/privateTargets";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { testImmichConnection } from "../../services/immich/immichTester";
 import { ImmichError, normalizeImmichBaseUrl } from "../../services/immich/types";
@@ -34,11 +35,12 @@ interface ImmichUserUpdateData {
  * exactly the outcome `invalidUrl` exists to prevent, per CLAUDE.md ("so a URL
  * typo does not send the user debugging their server version").
  */
-function normalizeRequestedBaseUrl(raw: string): string {
+function normalizeRequestedBaseUrl(raw: string, allowPrivate: boolean): string {
   try {
-    return normalizeImmichBaseUrl(raw);
+    return normalizeImmichBaseUrl(raw, { allowPrivate });
   } catch (error) {
-    throw new AppError(error instanceof ImmichError ? error.kind : "invalidUrl", 400);
+    if (error instanceof ImmichError) throw new AppError(error.kind, 400, error.code);
+    throw new AppError("invalidUrl", 400);
   }
 }
 
@@ -78,7 +80,11 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       if (payload.baseUrl === null) {
         update.immichBaseUrl = null;
       } else {
-        update.immichBaseUrl = normalizeRequestedBaseUrl(payload.baseUrl);
+        // Only an admin's own connection may name a LAN host (forgejo#411).
+        update.immichBaseUrl = normalizeRequestedBaseUrl(
+          payload.baseUrl,
+          await accountMayReachPrivate(userId)
+        );
       }
     }
     if (payload.apiKey !== undefined) {
@@ -111,6 +117,10 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
 
     let baseUrl = body.baseUrl;
     let apiKey = body.apiKey;
+    // A URL the caller names is held to the caller's own reach; the stored
+    // admin-global connection, tested on the target it was configured for,
+    // keeps the LAN access it has on every other request (forgejo#411).
+    let allowPrivate = await accountMayReachPrivate(req.userId!);
 
     // An empty body means "test whatever is currently resolved for me".
     if (!baseUrl || !apiKey) {
@@ -130,16 +140,17 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
         // Both sides normalized, so a trailing slash is not mistaken for a
         // different target — and the normalized form is what gets tested, the
         // same shape the PUT handler stores.
-        const requested = normalizeRequestedBaseUrl(baseUrl);
+        const requested = normalizeRequestedBaseUrl(baseUrl, true);
         if (requested !== stored.baseUrl) throw new AppError("keyRequired", 400);
         baseUrl = requested;
       }
 
+      if (!baseUrl || baseUrl === stored.baseUrl) allowPrivate = stored.allowPrivate;
       baseUrl = baseUrl ?? stored.baseUrl;
       apiKey = apiKey ?? stored.apiKey;
     }
 
-    res.json(await testImmichConnection(baseUrl, apiKey));
+    res.json(await testImmichConnection(baseUrl, apiKey, { allowPrivate }));
   } catch (error) {
     next(error);
   }

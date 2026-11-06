@@ -12,8 +12,22 @@
  *    original has its own endpoint.
  */
 import axios, { AxiosRequestConfig } from "axios";
+import type { ClientRequest } from "http";
 import logger from "../../utils/logger";
-import { ImmichAlbum, ImmichAsset, ImmichAssetSize, ImmichConnection, ImmichError } from "./types";
+import {
+  PrivateTargetError,
+  assertTargetAllowed,
+  axiosAgentsFor,
+  isPrivateTargetRefusal,
+} from "../egress/privateTargets";
+import {
+  ImmichAlbum,
+  ImmichAsset,
+  ImmichAssetSize,
+  ImmichConnection,
+  ImmichError,
+  privateTargetImmichError,
+} from "./types";
 
 /** Immich caps `size` at 1000. */
 const PAGE_SIZE = 1000;
@@ -22,6 +36,23 @@ const MAX_PAGES = 50;
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Streaming a full-size original over a slow LAN needs more headroom. */
 const STREAM_TIMEOUT_MS = 60_000;
+/**
+ * How long a started asset body may sit without a byte before the socket is
+ * torn down. `STREAM_TIMEOUT_MS` ends at the response headers; without this a
+ * server that stalls mid-body held the connection (and the browser's request)
+ * open forever (forgejo#411).
+ */
+const STREAM_IDLE_TIMEOUT_MS = 60_000;
+/** The only bodies the asset proxy forwards — never HTML, JSON or anything a
+ * browser would interpret on this origin. */
+const STREAMABLE_CONTENT_TYPE = /^(image|video)\//i;
+/** SVG is an image type that carries script; opened directly it runs here. */
+const ACTIVE_IMAGE_TYPE = /^image\/svg/i;
+
+export interface ImmichClientOptions {
+  /** Test seam for `STREAM_IDLE_TIMEOUT_MS`. */
+  streamIdleTimeoutMs?: number;
+}
 
 export interface ImmichAssetStream {
   stream: NodeJS.ReadableStream;
@@ -107,8 +138,17 @@ function asString(value: unknown, fallback: string): string {
  * Normalise anything thrown by axios into the four kinds the UI distinguishes.
  * An unknown non-axios throw is a protocol error — we never leak a raw stack.
  */
+/** A rejected stream request may still hold an open upstream body (a 3xx). */
+function destroyBody(error: unknown): void {
+  const data = isRecord(error) && isRecord(error.response) ? error.response.data : undefined;
+  if (isRecord(data) && typeof data.destroy === "function") {
+    (data as { destroy: () => void }).destroy();
+  }
+}
+
 function toImmichError(error: unknown, context: string): ImmichError {
   if (error instanceof ImmichError) return error;
+  if (isPrivateTargetRefusal(error)) return privateTargetImmichError();
 
   if (isRecord(error) && error.isAxiosError === true) {
     const response = isRecord(error.response) ? error.response : undefined;
@@ -184,10 +224,34 @@ function mapAsset(raw: unknown): ImmichAsset | null {
   };
 }
 
-export function createImmichClient(conn: ImmichConnection): ImmichClient {
+export function createImmichClient(
+  conn: ImmichConnection,
+  options: ImmichClientOptions = {}
+): ImmichClient {
   const headers = { "x-api-key": conn.apiKey };
-  const jsonConfig: AxiosRequestConfig = { headers, timeout: REQUEST_TIMEOUT_MS };
-  const url = (suffix: string): string => `${conn.baseUrl}/api${suffix}`;
+  // No redirects, for any connection: a 3xx is answered as `protocol`
+  // (axios rejects a non-2xx), never followed towards a target nobody
+  // checked. The agents pin DNS for an account that may not reach the LAN,
+  // and such an account never goes through an env proxy (HTTP(S)_PROXY): the
+  // pinned lookup would check the proxy, and the proxy would resolve the name.
+  const transport: AxiosRequestConfig = {
+    maxRedirects: 0,
+    ...axiosAgentsFor(conn),
+    ...(conn.allowPrivate ? {} : { proxy: false as const }),
+  };
+  const jsonConfig: AxiosRequestConfig = { headers, timeout: REQUEST_TIMEOUT_MS, ...transport };
+  const idleTimeoutMs = options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS;
+  // Every request is built from this one URL, so checking it here covers
+  // each call; a name is checked again by the pinned lookup.
+  const url = (suffix: string): string => {
+    try {
+      assertTargetAllowed(conn.baseUrl, conn);
+    } catch (error) {
+      if (error instanceof PrivateTargetError) throw privateTargetImmichError();
+      throw error;
+    }
+    return `${conn.baseUrl}/api${suffix}`;
+  };
 
   return {
     async getServerVersion(): Promise<string> {
@@ -369,10 +433,11 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
      * listener here would swallow errors the caller needs to see (or react to
      * with e.g. `res.destroy()`).
      *
-     * `STREAM_TIMEOUT_MS` only bounds axios' connect/header phase; once the
-     * response starts streaming, axios enforces no timeout on the body
-     * transfer for `responseType: "stream"` — the name promises more than it
-     * delivers here.
+     * `STREAM_TIMEOUT_MS` only bounds axios' connect/header phase; the body
+     * is bounded by an idle timeout on the socket instead
+     * (`STREAM_IDLE_TIMEOUT_MS`). Only `image/*` and `video/*` bodies are
+     * returned — anything else is refused as `protocol`, so the proxy can never
+     * serve upstream HTML or JSON from this origin.
      */
     async fetchAssetStream(assetId: string, size: ImmichAssetSize): Promise<ImmichAssetStream> {
       const suffix =
@@ -380,23 +445,43 @@ export function createImmichClient(conn: ImmichConnection): ImmichClient {
           ? `/assets/${assetId}/original`
           : `/assets/${assetId}/thumbnail?size=${size}`;
 
+      let response;
       try {
-        const response = await axios.get(url(suffix), {
+        response = await axios.get(url(suffix), {
           headers,
           timeout: STREAM_TIMEOUT_MS,
           responseType: "stream",
+          ...transport,
         });
-        const rawLength = response.headers["content-length"];
-        const contentLength = typeof rawLength === "string" ? Number(rawLength) : NaN;
-
-        return {
-          stream: response.data as NodeJS.ReadableStream,
-          contentType: asString(response.headers["content-type"], "application/octet-stream"),
-          contentLength: Number.isFinite(contentLength) ? contentLength : null,
-        };
       } catch (error) {
+        destroyBody(error);
         throw toImmichError(error, `assets/${assetId} size=${size}`);
       }
+
+      const stream = response.data as NodeJS.ReadableStream & { destroy?: () => void };
+      const contentType = asString(response.headers["content-type"], "");
+      if (!STREAMABLE_CONTENT_TYPE.test(contentType) || ACTIVE_IMAGE_TYPE.test(contentType)) {
+        stream.destroy?.();
+        throw new ImmichError(
+          "protocol",
+          `Immich answered assets/${assetId} with a non-media type (${contentType || "none"})`
+        );
+      }
+
+      const request = response.request as ClientRequest | undefined;
+      if (request && typeof request.setTimeout === "function") {
+        request.setTimeout(idleTimeoutMs, () => {
+          request.destroy(new ImmichError("unreachable", `Immich stalled on assets/${assetId}`));
+        });
+      }
+
+      const rawLength = response.headers["content-length"];
+      const contentLength = typeof rawLength === "string" ? Number(rawLength) : NaN;
+      return {
+        stream,
+        contentType,
+        contentLength: Number.isFinite(contentLength) ? contentLength : null,
+      };
     },
   };
 }

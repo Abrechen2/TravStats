@@ -16,7 +16,7 @@ const findFirstAdminSettings =
  * user configured; `callerRow` says who they are — an ordinary account unless
  * a case says otherwise.
  */
-let callerRow: { isDemo: boolean; username: string } | null;
+let callerRow: { isDemo: boolean; username: string; isAdmin?: boolean } | null;
 const findUniqueUser = jest.fn(async () =>
   callerRow ? { ...callerRow, settings: await userSettingsRow() } : null
 );
@@ -71,6 +71,8 @@ describe("getImmichConnection priority", () => {
       baseUrl: "https://user.lan",
       apiKey: "user-key",
       source: "user",
+      // An ordinary account: its own connection may not reach the LAN (forgejo#411).
+      allowPrivate: false,
     });
   });
 
@@ -194,5 +196,40 @@ describe("getImmichDefaultMode", () => {
 
     userSettingsRow.mockResolvedValue(null);
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
+  });
+});
+
+describe("who may reach the LAN (forgejo#411)", () => {
+  it("lets an admin's own connection and the global tier reach private hosts", async () => {
+    callerRow = { isDemo: false, username: "boss", isAdmin: true };
+    userSettingsRow.mockResolvedValue({
+      immichBaseUrl: "http://192.168.1.10:2283",
+      immichApiKey: "enc:k",
+    });
+    await expect(getImmichConnection("u1")).resolves.toMatchObject({
+      source: "user",
+      allowPrivate: true,
+    });
+
+    userSettingsRow.mockResolvedValue(null);
+    findFirstAdminSettings.mockResolvedValue({
+      globalImmichBaseUrl: "http://192.168.1.10:2283",
+      globalImmichApiKey: "enc:g",
+    });
+    await expect(getImmichConnection("u1")).resolves.toMatchObject({
+      source: "global",
+      allowPrivate: true,
+    });
+  });
+
+  it("keeps an ordinary account's stored LAN URL as its own connection, marked unreachable", async () => {
+    userSettingsRow.mockResolvedValue({
+      immichBaseUrl: "http://192.168.1.10:2283",
+      immichApiKey: "enc:k",
+    });
+    await expect(getImmichConnection("u1")).resolves.toMatchObject({
+      source: "user",
+      allowPrivate: false,
+    });
   });
 });
