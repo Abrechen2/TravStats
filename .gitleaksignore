@@ -1,0 +1,4 @@
+# forgejo#414: AirLabs key committed in de9b382e (docker-compose-dev.yml).
+# Handled (rotation) in forgejo#414; the commit stays in history, so the
+# fingerprint is allow-listed here to keep the scan on new pushes meaningful.
+de9b382e694929f8c47e830482b9db2f98f85bd0:docker-compose-dev.yml:generic-api-key:70

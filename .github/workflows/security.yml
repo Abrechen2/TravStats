@@ -52,34 +52,18 @@ jobs:
   # advisory as release-blocking is how audit gates get switched off
   # wholesale. Production dependencies are the ones that ship.
   #
-  # Threshold measured on main @ 6fe74af3 (2026-08-30), `npm audit
-  # --omit=dev` in each tree:
+  # Threshold: `high` (raised from `critical` in forgejo#413, 2026-11-06).
+  # `npm audit --omit=dev` is at 0 critical / 0 high in both trees, so the
+  # gate is genuinely green and can genuinely start failing. (On 2026-08-30
+  # it was 1 high backend / 10 high frontend — the deck.gl texture-compressor
+  # chain and undici — which is why it started at `critical`; the in-range
+  # bumps and the deck.gl update have since cleared them.)
   #
-  #   backend :  1 high,                          0 critical
-  #   frontend: 10 high, 1 moderate,              0 critical
-  #
-  # So `--audit-level=high` would have been born red in BOTH trees — a
-  # required check that has never once been green, which is worth less
-  # than no check. `--audit-level=critical` exits 0 in both trees today
-  # (verified: exit code 0 at critical, exit code 1 at high), so it is a
-  # real gate that is genuinely passing and can genuinely start failing.
-  #
-  # What the current highs actually are, so the next person does not
-  # re-derive it:
-  #
-  #   * frontend, 10 of the 11: one chain — image-size <- texture-compressor
-  #     <- @loaders.gl/textures <- deck.gl 9.x. npm's only offered "fix" is
-  #     deck.gl 8.9.36, a MAJOR DOWNGRADE of the mapping stack. The
-  #     advisories are DoS loops in ICNS/JXL/HEIF decoding inside a texture
-  #     CLI that the browser bundle never executes. There is no forward fix
-  #     to take; taking the backward one would break the maps.
-  #   * frontend dompurify (moderate) via jspdf, and backend undici (high)
-  #     via cheerio, both have real in-range fixes available. Those are
-  #     ordinary dependency-bump work, tracked separately — not a reason to
-  #     wire a gate that blocks every unrelated commit until they land.
-  #
-  # Raise this to `high` the moment those numbers reach zero. Do not raise
-  # it as an aspiration.
+  # Deliberate remaining exception, below the threshold so it is reported
+  # but does not fail: backend moderates via archiver -> archiver-utils ->
+  # glob -> minimatch, and webdav -> minimatch. npm's only fix is a major
+  # bump (archiver 8, webdav 5); they are DoS-on-pattern advisories on
+  # trusted, server-chosen globs. Revisit with the next archiver/webdav major.
   # ---------------------------------------------------------------------
   audit:
     name: npm audit (production deps)
@@ -94,10 +78,10 @@ jobs:
       # `npm audit` queries the registry from the lockfile and needs no
       # node_modules, so there is no install step here.
       - name: Audit backend production dependencies
-        run: cd backend && npm audit --omit=dev --audit-level=critical
+        run: cd backend && npm audit --omit=dev --audit-level=high
 
       - name: Audit frontend production dependencies
-        run: cd frontend && npm audit --omit=dev --audit-level=critical
+        run: cd frontend && npm audit --omit=dev --audit-level=high
 
       # Runs even when the gate above passes, so the highs stay visible
       # instead of sitting silently under the threshold until one of them
@@ -109,7 +93,7 @@ jobs:
           {
             echo "### npm audit — production dependencies"
             echo ""
-            echo "Blocking threshold: critical. Lower severities are reported, not gated."
+            echo "Blocking threshold: high. Lower severities are reported, not gated."
             echo ""
             echo "| Tree | critical | high | moderate | low |"
             echo "|---|---|---|---|---|"
@@ -129,6 +113,58 @@ jobs:
               });
             ' "$tree" >> "$GITHUB_STEP_SUMMARY"
           done
+
+  # ---------------------------------------------------------------------
+  # gitleaks — secret scan of what a push or pull request adds
+  # (forgejo#413 M5).
+  #
+  # A blocking gate: a finding fails the job. Known test vectors and
+  # placeholders are allow-listed in .gitleaks.toml (by path, each with its
+  # reason); the one real historic finding is fingerprinted in
+  # .gitleaksignore. The scheduled run scans the whole history.
+  #
+  # The binary is pinned and checked against its SHA-256 instead of using
+  # gitleaks-action, which wants a licence key for organisation repos.
+  # ---------------------------------------------------------------------
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.28.0"
+      GITLEAKS_SHA256: "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks
+          ./gitleaks version
+
+      - name: Scan the pushed or proposed commits
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          range=""
+          if [ "$EVENT" = "pull_request" ]; then
+            range="${PR_BASE}..${AFTER}"
+          elif [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && [ "${BEFORE//0/}" != "" ]; then
+            range="${BEFORE}..${AFTER}"
+          fi
+          if [ -n "$range" ]; then
+            ./gitleaks git --no-banner --redact --verbose --log-opts="$range" .
+          else
+            # schedule, workflow_dispatch, or a brand-new branch: whole history
+            ./gitleaks git --no-banner --redact --verbose .
+          fi
 
   # ---------------------------------------------------------------------
   # Trivy — repository scan, findings go to the job log.

@@ -40,7 +40,7 @@ describe("createMarkerTooltip — airports", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/de.svg");
+    expect(result!.html).toContain("/flags/de.svg");
     expect(result!.html).toContain("EDDM");
     expect(result!.html).toContain("Munich, Deutschland");
     expect(result!.html).toContain("115");
@@ -55,7 +55,7 @@ describe("createMarkerTooltip — airports", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).not.toContain("flagcdn.com");
+    expect(result!.html).not.toContain("/flags/");
     expect(result!.html).not.toContain("undefined");
     expect(result!.html).not.toContain("null");
   });
@@ -80,7 +80,7 @@ describe("createMarkerTooltip — ports", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/it.svg");
+    expect(result!.html).toContain("/flags/it.svg");
     expect(result!.html).toContain("Civitavecchia, Italien");
     expect(result!.html).toContain("4");
   });
@@ -94,7 +94,7 @@ describe("createMarkerTooltip — ports", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).not.toContain("flagcdn.com");
+    expect(result!.html).not.toContain("/flags/");
     expect(result!.html).toContain("⚓");
   });
 });
@@ -112,8 +112,8 @@ describe("createMarkerTooltip — routes", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/de.svg");
-    expect(result!.html).toContain("flagcdn.com/us.svg");
+    expect(result!.html).toContain("/flags/de.svg");
+    expect(result!.html).toContain("/flags/us.svg");
     expect(result!.html).toContain("MUC");
     expect(result!.html).toContain("JFK");
     expect(result!.html).toContain("3× geflogen");
@@ -252,7 +252,7 @@ describe("createMarkerTooltip — lodging", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/de.svg");
+    expect(result!.html).toContain("/flags/de.svg");
     expect(result!.html).toContain("Hotel Adlon Kempinski");
     expect(result!.html).toContain("Berlin, Deutschland");
     expect(result!.html).toContain("3 Aufenthalte");
@@ -270,13 +270,13 @@ describe("createMarkerTooltip — lodging", () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/fr.svg");
+    expect(result!.html).toContain("/flags/fr.svg");
   });
 
   it("degrades gracefully when city/country/counts are absent", () => {
     const result = getTooltip(makeInfo("lodging-pins", { name: "Unnamed Guesthouse" }));
     expect(result).not.toBeNull();
-    expect(result!.html).not.toContain("flagcdn.com");
+    expect(result!.html).not.toContain("/flags/");
     expect(result!.html).not.toContain("undefined");
     expect(result!.html).not.toContain("null");
     expect(result!.html).toContain("Unnamed Guesthouse");
@@ -315,7 +315,7 @@ describe("createMarkerTooltip — places", () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.html).toContain("flagcdn.com/it.svg");
+    expect(result!.html).toContain("/flags/it.svg");
     expect(result!.html).toContain("McDonald&#039;s Trevi");
     expect(result!.html).toContain("Rom, Italien");
     expect(result!.html).toContain("Restaurant");

@@ -1,0 +1,46 @@
+# gitleaks configuration (forgejo#413 M5).
+#
+# Scope: only known false positives and test vectors are allowed; every other
+# finding fails the `secret-scan` job in .github/workflows/security.yml. The
+# history was scanned once on 2026-11-06 (82 findings): all but one are the
+# placeholder/test material listed below. The one real finding (an AirLabs key
+# in commit de9b382e) is handled in forgejo#414 and fingerprinted in
+# .gitleaksignore.
+
+[extend]
+useDefault = true
+
+# Non-shipping material: fixtures, published vectors, planning docs and
+# documentation samples. Nothing here runs in production.
+[[allowlists]]
+description = "Test fixtures, vectors, planning docs and documentation examples"
+paths = [
+  '''(^|/)__tests__/''',
+  '''backend/src/services/push/push-vectors\.json$''',
+  '''^docs/superpowers/''',
+  '''^(README|SECURITY)\.md$''',
+  '''^backend/IMAP_SETUP\.md$''',
+]
+
+# Shipping files: narrow on purpose (file AND the shape of the line), so a
+# different secret added to the same file still fires.
+[[allowlists]]
+description = "CI service-container key for the throw-away test database"
+paths = ['''^\.(github|forgejo)/workflows/ci\.yml$''']
+regexTarget = "line"
+condition = "AND"
+regexes = ['''ENCRYPTION_KEY:\s*"[0-9a-f]{64}"''']
+
+[[allowlists]]
+description = "i18n key names and storage-key constants that only look like keys"
+regexTarget = "line"
+condition = "AND"
+paths = [
+  '''^frontend/src/content/whatsNew\.ts$''',
+  '''^frontend/src/components/GlobeView\.tsx$''',
+  '''^frontend/src/components/Settings/ApiKeyCard\.tsx$''',
+]
+regexes = [
+  '''bodyKey:\s*"[\w.]+"''',
+  '''(GLOBE_APPEARANCE_KEY|ApiCardCapability)\s*=\s*"[^"]+"''',
+]

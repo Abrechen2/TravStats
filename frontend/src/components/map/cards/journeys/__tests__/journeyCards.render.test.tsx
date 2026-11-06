@@ -146,7 +146,7 @@ describe("journey route card", () => {
   it("carries the domain identity: badge with the ferry icon, both flags, the colour stripe", () => {
     show(ferryRoute());
     expect(screen.getByTestId("journey-domain-badge")).toHaveAttribute("data-icon", "ship");
-    const flags = document.querySelectorAll('img[src*="flagcdn"]');
+    const flags = document.querySelectorAll('img[src^="/flags/"]');
     expect([...flags].map((f) => f.getAttribute("src"))).toEqual(
       expect.arrayContaining([expect.stringContaining("/de."), expect.stringContaining("/no.")])
     );

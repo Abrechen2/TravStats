@@ -1,9 +1,12 @@
-// Country flags as real images from flagcdn.com.
+// Country flags as real images from the instance's own server.
 //
 // Emoji flags were the first attempt but Windows (Segoe UI Emoji) has no
-// flag glyphs — Chrome renders 🇩🇪 as the letters "DE". flagcdn.com serves
-// crisp SVG flags by ISO 3166-1 alpha-2 code with no API key; the app's CSP
-// already allows `https:` images. Airports carry the ISO code; ports derive
+// flag glyphs — Chrome renders 🇩🇪 as the letters "DE". The 4x3 SVGs of the
+// MIT `flag-icons` package (7.5.0, same version as the backend) are shipped as
+// static assets under `public/flags/`, so no viewer's IP reaches a
+// third-party CDN (forgejo#413) and an offline homelab still shows flags.
+// Static rather than `/api/v1/country-flags`: that route is authenticated and
+// rate-limited, which would break public/shared pages and long lists. Airports carry the ISO code; ports derive
 // it from the UN/LOCODE prefix (DEHAM → DE).
 
 import type { JSX } from "react";
@@ -17,10 +20,10 @@ const FLAG_ASPECT = 4 / 3;
 export { countryFromUnlocode, countryName, resolveCountryCode } from "../shared/geo/countryCode";
 import { resolveCountryCode, countryName } from "../shared/geo/countryCode";
 
-// flagcdn serves LOWERCASE codes only — `/DE.svg` is a 404. Everything that
-// builds a flag URL goes through here so the casing is settled in one place.
+// Files are lowercase; everything that builds a flag URL goes through here
+// so the casing is settled in one place.
 function flagUrl(cc: string): string {
-  return `https://flagcdn.com/${cc.toLowerCase()}.svg`;
+  return `/flags/${encodeURIComponent(cc.toLowerCase())}.svg`;
 }
 
 /** Inline flag image. Renders nothing for a missing/invalid country. */
