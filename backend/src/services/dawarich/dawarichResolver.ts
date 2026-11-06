@@ -15,6 +15,7 @@ import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
 import logger from "../../utils/logger";
+import { accountMayReachPrivate } from "../egress/privateTargets";
 import { DawarichConnection, DawarichConnectionSource, normalizeDawarichBaseUrl } from "./errors";
 
 /** Build a connection from one tier, or null if the tier is incomplete/invalid. */
@@ -22,7 +23,8 @@ function buildConnection(
   rawUrl: string | null | undefined,
   rawKey: string | null | undefined,
   source: DawarichConnectionSource,
-  decrypt: boolean
+  decrypt: boolean,
+  allowPrivate: boolean
 ): DawarichConnection | null {
   if (!rawUrl || !rawKey) return null;
 
@@ -36,7 +38,15 @@ function buildConnection(
   }
 
   try {
-    return { baseUrl: normalizeDawarichBaseUrl(rawUrl), apiKey, source };
+    // Syntax only here — the reach rule is enforced on every request, so a
+    // stored LAN URL of a since-demoted account is refused rather than
+    // silently swapped for the global tier (see `immichResolver.ts`).
+    return {
+      baseUrl: normalizeDawarichBaseUrl(rawUrl, { allowPrivate: true }),
+      apiKey,
+      source,
+      allowPrivate,
+    };
   } catch {
     logger.warn({
       message: "dawarich_connection_invalid_base_url",
@@ -70,9 +80,10 @@ function buildConnection(
  */
 export function buildUserDawarichConnection(
   baseUrl: string | null | undefined,
-  encryptedApiKey: string | null | undefined
+  encryptedApiKey: string | null | undefined,
+  allowPrivate: boolean
 ): DawarichConnection | null {
-  return buildConnection(baseUrl, encryptedApiKey, "user", true);
+  return buildConnection(baseUrl, encryptedApiKey, "user", true, allowPrivate);
 }
 
 /**
@@ -90,7 +101,12 @@ export async function ownDawarichConnectionFor(
 ): Promise<DawarichConnection | null> {
   const gate = await connectionGate("dawarich", userId);
   if (gate.off || !gate.accountMayConnect) return null;
-  return buildUserDawarichConnection(baseUrl, encryptedApiKey);
+  if (!baseUrl || !encryptedApiKey) return null;
+  return buildUserDawarichConnection(
+    baseUrl,
+    encryptedApiKey,
+    await accountMayReachPrivate(userId)
+  );
 }
 
 export async function getDawarichConnection(userId?: string): Promise<DawarichConnection | null> {
@@ -121,7 +137,8 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
         settings?.dawarichBaseUrl,
         settings?.dawarichApiKey,
         "user",
-        true
+        true,
+        settings?.dawarichBaseUrl ? await accountMayReachPrivate(userId) : false
       );
       // The admin may forbid accounts to bring their own connection (forgejo#392).
       if (user && gate.accountMayConnect) return user;
@@ -132,6 +149,7 @@ export async function getDawarichConnection(userId?: string): Promise<DawarichCo
       admin?.globalDawarichBaseUrl,
       admin?.globalDawarichApiKey,
       "global",
+      true,
       true
     );
     return global;

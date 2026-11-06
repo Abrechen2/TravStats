@@ -10,26 +10,36 @@ import {
 
 describe("normalizeImmichBaseUrl", () => {
   it("strips trailing slashes and keeps scheme + host + port", () => {
-    expect(normalizeImmichBaseUrl("https://immich.home.lan/")).toBe("https://immich.home.lan");
-    expect(normalizeImmichBaseUrl("http://192.168.1.5:2283//")).toBe("http://192.168.1.5:2283");
+    expect(normalizeImmichBaseUrl("https://immich.home.lan/", { allowPrivate: true })).toBe(
+      "https://immich.home.lan"
+    );
+    expect(normalizeImmichBaseUrl("http://192.168.1.5:2283//", { allowPrivate: true })).toBe(
+      "http://192.168.1.5:2283"
+    );
   });
 
   it("preserves a sub-path prefix (reverse-proxy installs)", () => {
-    expect(normalizeImmichBaseUrl("https://home.lan/immich/")).toBe("https://home.lan/immich");
+    expect(normalizeImmichBaseUrl("https://home.lan/immich/", { allowPrivate: true })).toBe(
+      "https://home.lan/immich"
+    );
   });
 
   it("rejects non-http(s) schemes", () => {
-    expect(() => normalizeImmichBaseUrl("file:///etc/passwd")).toThrow(ImmichError);
-    expect(() => normalizeImmichBaseUrl("ftp://host")).toThrow(ImmichError);
+    expect(() => normalizeImmichBaseUrl("file:///etc/passwd", { allowPrivate: true })).toThrow(
+      ImmichError
+    );
+    expect(() => normalizeImmichBaseUrl("ftp://host", { allowPrivate: true })).toThrow(ImmichError);
   });
 
   it("rejects unparseable input", () => {
-    expect(() => normalizeImmichBaseUrl("not a url")).toThrow(ImmichError);
-    expect(() => normalizeImmichBaseUrl("")).toThrow(ImmichError);
+    expect(() => normalizeImmichBaseUrl("not a url", { allowPrivate: true })).toThrow(ImmichError);
+    expect(() => normalizeImmichBaseUrl("", { allowPrivate: true })).toThrow(ImmichError);
   });
 
   it("strips embedded credentials, query and hash", () => {
-    expect(normalizeImmichBaseUrl("https://u:p@immich.lan/?a=1#x")).toBe("https://immich.lan");
+    expect(normalizeImmichBaseUrl("https://u:p@immich.lan/?a=1#x", { allowPrivate: true })).toBe(
+      "https://immich.lan"
+    );
   });
 });
 

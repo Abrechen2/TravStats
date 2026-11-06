@@ -14,6 +14,7 @@ import { decryptApiKey } from "../../utils/encryption";
 import { testConnection as testWebDAVConnection } from "../cloudSyncService";
 import { testDawarichConnection } from "../dawarich/dawarichTester";
 import { testImmichConnection } from "../immich/immichTester";
+import { accountMayReachPrivate } from "../egress/privateTargets";
 import {
   ANTHROPIC_BASE_URL,
   GOOGLE_BASE_URL,
@@ -166,10 +167,13 @@ async function run(
     case "immich":
     case "dawarich": {
       if (!c.baseUrl || !c.apiKey) return { ok: false, reason: "not_found" };
+      // The instance credential keeps LAN access; an account's own one only
+      // when the account is an admin (forgejo#411).
+      const policy = { allowPrivate: userId ? await accountMayReachPrivate(userId) : true };
       const r =
         service.tester === "immich"
-          ? await testImmichConnection(c.baseUrl, c.apiKey)
-          : await testDawarichConnection(c.baseUrl, c.apiKey);
+          ? await testImmichConnection(c.baseUrl, c.apiKey, policy)
+          : await testDawarichConnection(c.baseUrl, c.apiKey, policy);
       return { ok: r.success, reason: r.success ? null : toReasonCode(r.kind) };
     }
     case "webdav": {

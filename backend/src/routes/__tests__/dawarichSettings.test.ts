@@ -40,8 +40,11 @@ const adminSettingsCreate =
     ) => Promise<Partial<import("../../generated/prisma/client").AdminSettings>>
   >();
 
+const userFindUnique = jest.fn<() => Promise<{ isAdmin: boolean } | null>>();
+
 jest.mock("../../db", () => ({
   prisma: {
+    user: { findUnique: userFindUnique },
     userSettings: { findUnique: userSettingsFindUnique, upsert: userSettingsUpsert },
     adminSettings: {
       findFirst: adminSettingsFindFirst,
@@ -84,10 +87,12 @@ function makeApp(router: express.Router): express.Express {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  userFindUnique.mockResolvedValue({ isAdmin: true });
   getDawarichConnection.mockResolvedValue({
     baseUrl: "https://dawarich.lan",
     apiKey: "k",
     source: "user",
+    allowPrivate: true,
   });
 });
 
@@ -222,14 +227,22 @@ describe("POST /settings/dawarich/test", () => {
       .send({ baseUrl: "https://new.lan", apiKey: "new-key" });
 
     expect(res.status).toBe(200);
-    expect(testDawarichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
+    expect(testDawarichConnection).toHaveBeenCalledWith(
+      "https://new.lan",
+      "new-key",
+      expect.anything()
+    );
   });
 
   it("falls back to the stored connection when the body is empty", async () => {
     testDawarichConnection.mockResolvedValue({ success: true, message: "Connected to Dawarich" });
 
     await request(makeApp(dawarichSettingsRouter)).post("/dawarich/test").send({});
-    expect(testDawarichConnection).toHaveBeenCalledWith("https://dawarich.lan", "k");
+    expect(testDawarichConnection).toHaveBeenCalledWith(
+      "https://dawarich.lan",
+      "k",
+      expect.anything()
+    );
   });
 
   it("falls back when the card sends an empty-string baseUrl (admin-provided connection)", async () => {
@@ -240,7 +253,11 @@ describe("POST /settings/dawarich/test", () => {
       .send({ baseUrl: "" });
 
     expect(res.status).toBe(200);
-    expect(testDawarichConnection).toHaveBeenCalledWith("https://dawarich.lan", "k");
+    expect(testDawarichConnection).toHaveBeenCalledWith(
+      "https://dawarich.lan",
+      "k",
+      expect.anything()
+    );
   });
 
   it("returns 400 + kind=notConfigured when nothing is configured and nothing was sent", async () => {
@@ -266,7 +283,11 @@ describe("POST /settings/dawarich/test", () => {
       .post("/dawarich/test")
       .send({ baseUrl: "https://new.lan", apiKey: "new-key" });
 
-    expect(testDawarichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
+    expect(testDawarichConnection).toHaveBeenCalledWith(
+      "https://new.lan",
+      "new-key",
+      expect.anything()
+    );
   });
 });
 
@@ -367,6 +388,10 @@ describe("POST /admin/dawarich/test", () => {
       .send({ baseUrl: "", apiKey: "" });
 
     expect(res.status).toBe(200);
-    expect(testDawarichConnection).toHaveBeenCalledWith("https://global.lan", "global-key");
+    expect(testDawarichConnection).toHaveBeenCalledWith(
+      "https://global.lan",
+      "global-key",
+      expect.anything()
+    );
   });
 });

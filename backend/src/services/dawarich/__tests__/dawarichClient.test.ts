@@ -22,6 +22,7 @@ const CONN: DawarichConnection = {
   baseUrl: "https://dawarich.lan",
   apiKey: "secret-key",
   source: "user",
+  allowPrivate: true,
 };
 
 interface FakeResponseInit {

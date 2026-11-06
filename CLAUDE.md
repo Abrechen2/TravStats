@@ -485,10 +485,16 @@ enforced, and merely practised** below.
   `startAlbumImport` refuses an in-flight link.
   (2) An ENV-provided connection counts as **shared** (`isShared = source !== "user"`),
   deliberately diverging from `apiKeyResolver.hasApiKeyAccess`.
-  (3) `normalizeImmichBaseUrl` has **no egress restriction** on purpose — a
-  self-hosted Immich lives on the LAN, so a private-IP block would break the
-  primary use case. Instances that expose Immich configuration to untrusted users
-  must restrict it at the deployment layer.
+  (3) **Egress depends on who owns the connection** (forgejo#411,
+  `services/egress/privateTargets.ts`, same rule for Dawarich). The admin-global
+  tier, ENV and an admin's OWN connection keep LAN access — a self-hosted Immich
+  lives on the LAN. An ordinary account's own connection reaches public
+  addresses only: refused on save and on `/test` as `invalidUrl` with code
+  `PRIVATE_TARGET`, and every request re-checks the URL and pins DNS through a
+  guarded lookup (rebinding gains nothing). Admin status is read per
+  resolution, so a demoted account loses its LAN target on the next request.
+  Redirects are never followed for anyone (a 3xx is `protocol`), and the asset
+  proxy forwards only `image/*` / `video/*` bodies, with an idle timeout.
   Every Immich error body uses the fixed kind vocabulary
   (`notConfigured|unreachable|auth|notFound|protocol|invalidUrl`) that the
   frontend's `immichFailureKind()` parses — prose in `{error: …}` silently

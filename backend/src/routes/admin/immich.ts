@@ -64,7 +64,9 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         data.globalImmichBaseUrl = null;
       } else {
         try {
-          data.globalImmichBaseUrl = normalizeImmichBaseUrl(payload.baseUrl);
+          data.globalImmichBaseUrl = normalizeImmichBaseUrl(payload.baseUrl, {
+            allowPrivate: true,
+          });
         } catch (error) {
           // The machine-readable KIND, not the prose message: the admin card
           // renders through the same `immichFailureKind()` vocabulary as the
@@ -110,7 +112,7 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
     // Machine-readable failure kind, consistent with the gallery routes.
     if (!baseUrl || !apiKey) throw new AppError("notConfigured", 400);
 
-    res.json(await testImmichConnection(baseUrl, apiKey));
+    res.json(await testImmichConnection(baseUrl, apiKey, { allowPrivate: true }));
   } catch (error) {
     next(error);
   }

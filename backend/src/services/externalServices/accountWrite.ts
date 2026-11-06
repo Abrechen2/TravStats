@@ -9,6 +9,7 @@ import { currentConsentDestination } from "./consentBinding";
 import { isEnabledForConsent } from "./accountView";
 import { loadAdminState } from "./adminView";
 import { AI_SERVICES, getService } from "./catalogue";
+import { accountMayReachPrivate } from "../egress/privateTargets";
 import { collectWrites } from "./fields";
 import { updatePrefs, withMember } from "./policy";
 import { testAccountService } from "./testRunner";
@@ -67,7 +68,10 @@ export async function applyAccountUpdate(
     }
   }
 
-  const writes = collectWrites(service, service.accountFields, body.fields ?? {});
+  const writes = collectWrites(service, service.accountFields, body.fields ?? {}, {
+    // Only an admin account may point its own connection at a LAN host.
+    allowPrivate: await accountMayReachPrivate(userId),
+  });
   if (Object.keys(writes.user).length > 0) {
     await prisma.userSettings.upsert({
       where: { userId },

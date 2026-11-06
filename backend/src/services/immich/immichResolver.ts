@@ -23,7 +23,8 @@ function buildConnection(
   rawUrl: string | null | undefined,
   rawKey: string | null | undefined,
   source: ImmichConnectionSource,
-  decrypt: boolean
+  decrypt: boolean,
+  allowPrivate: boolean
 ): ImmichConnection | null {
   if (!rawUrl || !rawKey) return null;
 
@@ -37,7 +38,16 @@ function buildConnection(
   }
 
   try {
-    return { baseUrl: normalizeImmichBaseUrl(rawUrl), apiKey, source };
+    // Syntax only here: a stored URL this account may no longer reach (an
+    // admin demoted since saving it) stays its connection and is refused on
+    // every request — falling through to the global tier instead would hand
+    // the account a different server without a word.
+    return {
+      baseUrl: normalizeImmichBaseUrl(rawUrl, { allowPrivate: true }),
+      apiKey,
+      source,
+      allowPrivate,
+    };
   } catch {
     logger.warn({
       message: "immich_connection_invalid_base_url",
@@ -76,6 +86,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
         where: { id: userId },
         select: {
           isDemo: true,
+          isAdmin: true,
           username: true,
           settings: { select: { immichBaseUrl: true, immichApiKey: true } },
         },
@@ -83,7 +94,13 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
       if (caller && isSharedDemoAccount(caller)) return null;
 
       const settings = caller?.settings;
-      const user = buildConnection(settings?.immichBaseUrl, settings?.immichApiKey, "user", true);
+      const user = buildConnection(
+        settings?.immichBaseUrl,
+        settings?.immichApiKey,
+        "user",
+        true,
+        caller?.isAdmin === true
+      );
       // The admin may forbid accounts to bring their own connection (forgejo#392).
       if (user && gate.accountMayConnect) return user;
     }
@@ -93,6 +110,7 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
       admin?.globalImmichBaseUrl,
       admin?.globalImmichApiKey,
       "global",
+      true,
       true
     );
     return global;

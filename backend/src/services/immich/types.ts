@@ -15,6 +15,13 @@ export type ImmichMode = "link" | "import";
  */
 export type ImmichAssetSize = "thumbnail" | "preview" | "original";
 
+import {
+  PrivateTargetError,
+  assertTargetAllowed,
+  type PrivateTargetCode,
+  type TargetPolicy,
+} from "../egress/privateTargets";
+
 /** Which settings tier supplied the connection. */
 export type ImmichConnectionSource = "user" | "global";
 
@@ -24,6 +31,13 @@ export interface ImmichConnection {
   /** Decrypted. Never leaves the backend. */
   apiKey: string;
   source: ImmichConnectionSource;
+  /**
+   * May this connection reach a private, loopback or link-local address?
+   * True for the admin-global/ENV tier and for an admin's own connection;
+   * false for an ordinary account's own one (forgejo#411,
+   * `services/egress/privateTargets.ts`). Checked on every request.
+   */
+  allowPrivate: boolean;
 }
 
 export interface ImmichAlbum {
@@ -69,12 +83,15 @@ export type ImmichErrorKind = "unreachable" | "auth" | "notFound" | "protocol" |
 export class ImmichError extends Error {
   public readonly kind: ImmichErrorKind;
   public readonly status?: number;
+  /** Set on an `invalidUrl` refusal of a target this caller may not reach. */
+  public readonly code?: PrivateTargetCode;
 
-  constructor(kind: ImmichErrorKind, message: string, status?: number) {
+  constructor(kind: ImmichErrorKind, message: string, status?: number, code?: PrivateTargetCode) {
     super(message);
     this.name = "ImmichError";
     this.kind = kind;
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -86,18 +103,14 @@ export class ImmichError extends Error {
  * credentials, query or fragment. A sub-path is allowed (reverse-proxy
  * installs mount Immich under e.g. `/immich`).
  *
- * DELIBERATE NON-RESTRICTION (SSRF egress): there is intentionally NO block on
- * loopback / link-local / private / ULA hosts here. TravStats is self-hosted and
- * the operator's Immich instance is on the LAN (often a private RFC1918 or
- * `.local` address) by design, so a private-IP filter would break the primary
- * use case. The base URL is operator-supplied (per-user or admin-global), not
- * attacker-chosen in the single-tenant deployment this targets. An operator who
- * exposes Immich *configuration* to untrusted users on a multi-tenant instance
- * MUST restrict egress at the network layer — the request would otherwise be a
- * blind-SSRF / internal-reconnaissance oracle via the error taxonomy. Reviewed
- * and accepted 2026-07-10; do not re-flag without changing the threat model.
+ * Egress (forgejo#411): `policy` decides whether the host may be private.
+ * An ordinary account's own connection may not name a private, loopback or
+ * link-local host (`invalidUrl` with code `PRIVATE_TARGET`); the admin-global
+ * tier, ENV and an admin's own connection keep LAN access, since a self-hosted
+ * Immich lives on the LAN by design. A public-looking name is checked again
+ * at connection time, see `services/egress/privateTargets.ts`.
  */
-export function normalizeImmichBaseUrl(raw: string): string {
+export function normalizeImmichBaseUrl(raw: string, policy: TargetPolicy): string {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -110,5 +123,22 @@ export function normalizeImmichBaseUrl(raw: string): string {
   }
 
   const path = parsed.pathname.replace(/\/+$/, "");
-  return `${parsed.protocol}//${parsed.host}${path}`;
+  const normalized = `${parsed.protocol}//${parsed.host}${path}`;
+  try {
+    assertTargetAllowed(normalized, policy);
+  } catch (error) {
+    if (error instanceof PrivateTargetError) throw privateTargetImmichError();
+    throw error;
+  }
+  return normalized;
+}
+
+/** The refusal of a host this caller may not reach, in Immich's vocabulary. */
+export function privateTargetImmichError(): ImmichError {
+  return new ImmichError(
+    "invalidUrl",
+    "Immich URL points to a private address this account may not reach",
+    undefined,
+    "PRIVATE_TARGET"
+  );
 }

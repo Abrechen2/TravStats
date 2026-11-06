@@ -38,8 +38,11 @@ const adminSettingsCreate =
     ) => Promise<Partial<import("../generated/prisma/client").AdminSettings>>
   >();
 
+const userFindUnique = jest.fn<() => Promise<{ isAdmin: boolean } | null>>();
+
 jest.mock("../db", () => ({
   prisma: {
+    user: { findUnique: userFindUnique },
     userSettings: { findUnique: userSettingsFindUnique, upsert: userSettingsUpsert },
     adminSettings: {
       findFirst: adminSettingsFindFirst,
@@ -82,10 +85,14 @@ function makeApp(router: express.Router): express.Express {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // The caller is an admin unless a test says otherwise, so the LAN URLs the
+  // older cases use stay reachable (forgejo#411).
+  userFindUnique.mockResolvedValue({ isAdmin: true });
   getImmichConnection.mockResolvedValue({
     baseUrl: "https://immich.lan",
     apiKey: "k",
     source: "user" as const,
+    allowPrivate: true,
   });
 });
 
@@ -187,14 +194,18 @@ describe("POST /settings/immich/test", () => {
       .send({ baseUrl: "https://new.lan", apiKey: "new-key" });
 
     expect(res.status).toBe(200);
-    expect(testImmichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
+    expect(testImmichConnection).toHaveBeenCalledWith(
+      "https://new.lan",
+      "new-key",
+      expect.anything()
+    );
   });
 
   it("falls back to the stored connection when the body is empty", async () => {
     testImmichConnection.mockResolvedValue({ success: true, message: "Connected to Immich" });
 
     await request(makeApp(immichSettingsRouter)).post("/immich/test").send({});
-    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
+    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k", expect.anything());
   });
 
   it("falls back when the card sends an empty-string baseUrl (admin-provided connection)", async () => {
@@ -207,7 +218,7 @@ describe("POST /settings/immich/test", () => {
       .send({ baseUrl: "" });
 
     expect(res.status).toBe(200);
-    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
+    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k", expect.anything());
   });
 
   it("falls back when both baseUrl and apiKey are empty strings", async () => {
@@ -218,7 +229,7 @@ describe("POST /settings/immich/test", () => {
       .send({ baseUrl: "", apiKey: "" });
 
     expect(res.status).toBe(200);
-    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k");
+    expect(testImmichConnection).toHaveBeenCalledWith("https://immich.lan", "k", expect.anything());
   });
 
   it("returns 400 + kind=notConfigured when nothing is configured and nothing was sent", async () => {
@@ -244,7 +255,11 @@ describe("POST /settings/immich/test", () => {
       .post("/immich/test")
       .send({ baseUrl: "https://new.lan", apiKey: "new-key" });
 
-    expect(testImmichConnection).toHaveBeenCalledWith("https://new.lan", "new-key");
+    expect(testImmichConnection).toHaveBeenCalledWith(
+      "https://new.lan",
+      "new-key",
+      expect.anything()
+    );
   });
 
   /**
@@ -299,7 +314,8 @@ describe("POST /settings/immich/test", () => {
       expect(res.status).toBe(200);
       expect(testImmichConnection).toHaveBeenCalledWith(
         "https://immich.lan",
-        "instance-wide-secret"
+        "instance-wide-secret",
+        expect.anything()
       );
     });
 
@@ -312,7 +328,11 @@ describe("POST /settings/immich/test", () => {
         .send({ baseUrl: "https://mine.example", apiKey: "my-own-key" });
 
       expect(res.status).toBe(200);
-      expect(testImmichConnection).toHaveBeenCalledWith("https://mine.example", "my-own-key");
+      expect(testImmichConnection).toHaveBeenCalledWith(
+        "https://mine.example",
+        "my-own-key",
+        expect.anything()
+      );
     });
 
     it("does not restrict the caller's OWN stored key", async () => {
@@ -329,7 +349,8 @@ describe("POST /settings/immich/test", () => {
       expect(res.status).toBe(200);
       expect(testImmichConnection).toHaveBeenCalledWith(
         "https://my-new-box.lan",
-        "instance-wide-secret"
+        "instance-wide-secret",
+        expect.anything()
       );
     });
 
@@ -443,6 +464,91 @@ describe("POST /admin/immich/test", () => {
       .send({ baseUrl: "", apiKey: "" });
 
     expect(res.status).toBe(200);
-    expect(testImmichConnection).toHaveBeenCalledWith("https://global.lan", "global-key");
+    expect(testImmichConnection).toHaveBeenCalledWith(
+      "https://global.lan",
+      "global-key",
+      expect.anything()
+    );
+  });
+});
+
+describe("an ordinary account may not point its own Immich at a private host (forgejo#411)", () => {
+  beforeEach(() => {
+    userFindUnique.mockResolvedValue({ isAdmin: false });
+  });
+
+  it.each([
+    "http://192.168.1.10:2283",
+    "http://127.0.0.1:2283",
+    "http://169.254.169.254",
+    "http://nas.local",
+  ])("refuses %s on save with invalidUrl + PRIVATE_TARGET", async (baseUrl) => {
+    const res = await request(makeApp(immichSettingsRouter)).put("/immich").send({ baseUrl });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: "invalidUrl", code: "PRIVATE_TARGET" });
+    expect(userSettingsUpsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses a private target it names on /test, before anything is sent", async () => {
+    getImmichConnection.mockResolvedValue(null);
+    const { testImmichConnection: realTester } = jest.requireActual<
+      typeof import("../services/immich/immichTester")
+    >("../services/immich/immichTester");
+    testImmichConnection.mockImplementation(realTester);
+
+    const res = await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "http://10.0.0.5:2283", apiKey: "k" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ success: false, kind: "invalidUrl", code: "PRIVATE_TARGET" });
+    expect(testImmichConnection).toHaveBeenCalledWith("http://10.0.0.5:2283", "k", {
+      allowPrivate: false,
+    });
+  });
+
+  it("still saves a public address", async () => {
+    userSettingsFindUnique.mockResolvedValue(null);
+    const res = await request(makeApp(immichSettingsRouter))
+      .put("/immich")
+      .send({ baseUrl: "https://photos.example.com" });
+    expect(res.status).toBe(200);
+  });
+
+  it("tests the admin-global connection with the LAN access it has", async () => {
+    getImmichConnection.mockResolvedValue({
+      baseUrl: "http://192.168.1.10:2283",
+      apiKey: "g",
+      source: "global",
+      allowPrivate: true,
+    });
+    testImmichConnection.mockResolvedValue({ success: true, message: "ok" });
+    await request(makeApp(immichSettingsRouter)).post("/immich/test").send({});
+    expect(testImmichConnection).toHaveBeenCalledWith("http://192.168.1.10:2283", "g", {
+      allowPrivate: true,
+    });
+  });
+});
+
+describe("an admin keeps LAN access for their own Immich (forgejo#411)", () => {
+  it("saves a private address", async () => {
+    userSettingsFindUnique.mockResolvedValue(null);
+    const res = await request(makeApp(immichSettingsRouter))
+      .put("/immich")
+      .send({ baseUrl: "http://192.168.1.10:2283" });
+    expect(res.status).toBe(200);
+    expect(userSettingsUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { immichBaseUrl: "http://192.168.1.10:2283" } })
+    );
+  });
+
+  it("tests a private address it names", async () => {
+    testImmichConnection.mockResolvedValue({ success: true, message: "ok" });
+    await request(makeApp(immichSettingsRouter))
+      .post("/immich/test")
+      .send({ baseUrl: "http://192.168.1.10:2283", apiKey: "k" });
+    expect(testImmichConnection).toHaveBeenCalledWith("http://192.168.1.10:2283", "k", {
+      allowPrivate: true,
+    });
   });
 });

@@ -17,4 +17,9 @@ export type ExternalServiceApiErrorCode =
   /** The AI provider has no endpoint to consent to (409). */
   | "NOT_CONFIGURED"
   /** The address changed since the account saw it; consent again (409). */
-  | "DESTINATION_CHANGED";
+  | "DESTINATION_CHANGED"
+  /**
+   * An ordinary account's own Immich/Dawarich URL names a private, loopback or
+   * link-local host; only an admin's may (400, beside `invalidUrl`, forgejo#411).
+   */
+  | "PRIVATE_TARGET";

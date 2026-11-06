@@ -20,7 +20,9 @@ describe("testDawarichConnection", () => {
     checkHealth.mockResolvedValue({ reachable: true, version: "1.9.2" });
     getPoints.mockResolvedValue({ points: [], truncated: false });
 
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: true,
       message: "Connected to Dawarich",
       details: { version: "1.9.2" },
@@ -31,7 +33,9 @@ describe("testDawarichConnection", () => {
     checkHealth.mockResolvedValue({ reachable: true, version: null });
     getPoints.mockResolvedValue({ points: [], truncated: false });
 
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: true,
       message: "Connected to Dawarich",
       details: undefined,
@@ -41,14 +45,18 @@ describe("testDawarichConnection", () => {
   it("distinguishes a bad key from an unreachable server, carrying the kind", async () => {
     checkHealth.mockResolvedValue({ reachable: true, version: "1.9.2" });
     getPoints.mockRejectedValue(new DawarichError("auth", "Dawarich rejected the API key", 401));
-    await expect(testDawarichConnection("https://dawarich.lan", "bad")).resolves.toMatchObject({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "bad", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "auth",
       message: "Dawarich rejected the API key",
     });
 
     checkHealth.mockRejectedValue(new DawarichError("unreachable", "Dawarich is unreachable"));
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toMatchObject({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "unreachable",
       message: "Dawarich is unreachable",
@@ -56,7 +64,9 @@ describe("testDawarichConnection", () => {
   });
 
   it("reports a non-http base URL as an invalidUrl kind without calling Dawarich", async () => {
-    await expect(testDawarichConnection("file:///etc/passwd", "key")).resolves.toMatchObject({
+    await expect(
+      testDawarichConnection("file:///etc/passwd", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "invalidUrl",
       message: "Dawarich URL must use http:// or https://",
@@ -65,7 +75,9 @@ describe("testDawarichConnection", () => {
   });
 
   it("reports a malformed base URL as an invalidUrl kind without calling Dawarich", async () => {
-    await expect(testDawarichConnection("not-a-url", "key")).resolves.toMatchObject({
+    await expect(
+      testDawarichConnection("not-a-url", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "invalidUrl",
       message: "Dawarich URL is not a valid URL",
@@ -77,7 +89,9 @@ describe("testDawarichConnection", () => {
     checkHealth.mockRejectedValue(
       new DawarichError("protocol", "Dawarich health check returned an unexpected payload")
     );
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: false,
       kind: "protocol",
       message: "Dawarich health check returned an unexpected payload",
@@ -89,7 +103,9 @@ describe("testDawarichConnection", () => {
     getPoints.mockRejectedValue(
       new DawarichError("notFound", "Dawarich resource not found (points page=1)", 404)
     );
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toMatchObject({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toMatchObject({
       success: false,
       kind: "notFound",
     });
@@ -97,7 +113,9 @@ describe("testDawarichConnection", () => {
 
   it("falls back to kind=unreachable for a non-DawarichError throw", async () => {
     checkHealth.mockRejectedValue(new Error("boom"));
-    await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
+    await expect(
+      testDawarichConnection("https://dawarich.lan", "key", { allowPrivate: true })
+    ).resolves.toEqual({
       success: false,
       kind: "unreachable",
       message: "Could not reach Dawarich",

@@ -24,6 +24,7 @@ const CONN: ImmichConnection = {
   baseUrl: "https://immich.lan",
   apiKey: "secret-key",
   source: "user",
+  allowPrivate: true,
 };
 
 beforeEach(() => {

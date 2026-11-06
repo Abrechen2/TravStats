@@ -64,6 +64,8 @@ describe("getDawarichConnection priority", () => {
       baseUrl: "https://user.lan",
       apiKey: "user-key",
       source: "user",
+      // An ordinary account: its own connection may not reach the LAN (forgejo#411).
+      allowPrivate: false,
     });
   });
 

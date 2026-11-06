@@ -26,8 +26,11 @@ const userSettingsUpsert =
     ) => Promise<Partial<import("../generated/prisma/client").UserSettings>>
   >();
 
+const userFindUnique = jest.fn<() => Promise<{ isAdmin: boolean } | null>>();
+
 jest.mock("../db", () => ({
   prisma: {
+    user: { findUnique: userFindUnique },
     userSettings: { findUnique: userSettingsFindUnique, upsert: userSettingsUpsert },
   },
 }));
@@ -66,10 +69,13 @@ const SHARED = {
   baseUrl: "https://dawarich.lan",
   apiKey: "instance-wide-secret",
   source: "global" as const,
+  allowPrivate: true,
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // An admin unless a test says otherwise (forgejo#411).
+  userFindUnique.mockResolvedValue({ isAdmin: true });
   userSettingsFindUnique.mockResolvedValue(null);
   getDawarichConnection.mockResolvedValue({ ...SHARED, source: "user" });
 });
@@ -83,7 +89,8 @@ describe("POST /settings/dawarich/test", () => {
     expect(res.status).toBe(200);
     expect(testDawarichConnection).toHaveBeenCalledWith(
       "https://dawarich.lan",
-      "instance-wide-secret"
+      "instance-wide-secret",
+      expect.anything()
     );
   });
 
@@ -139,7 +146,8 @@ describe("POST /settings/dawarich/test", () => {
       expect(res.status).toBe(200);
       expect(testDawarichConnection).toHaveBeenCalledWith(
         "https://dawarich.lan",
-        "instance-wide-secret"
+        "instance-wide-secret",
+        expect.anything()
       );
     });
 
@@ -152,7 +160,11 @@ describe("POST /settings/dawarich/test", () => {
         .send({ baseUrl: "https://mine.example", apiKey: "my-own-key" });
 
       expect(res.status).toBe(200);
-      expect(testDawarichConnection).toHaveBeenCalledWith("https://mine.example", "my-own-key");
+      expect(testDawarichConnection).toHaveBeenCalledWith(
+        "https://mine.example",
+        "my-own-key",
+        expect.anything()
+      );
     });
 
     it("does not restrict the caller's OWN stored key", async () => {
@@ -166,7 +178,8 @@ describe("POST /settings/dawarich/test", () => {
       expect(res.status).toBe(200);
       expect(testDawarichConnection).toHaveBeenCalledWith(
         "https://my-new-box.lan",
-        "instance-wide-secret"
+        "instance-wide-secret",
+        expect.anything()
       );
     });
 
@@ -179,5 +192,41 @@ describe("POST /settings/dawarich/test", () => {
       expect(res.body.error).toBe("invalidUrl");
       expect(testDawarichConnection).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("an ordinary account may not point its own Dawarich at a private host (forgejo#411)", () => {
+  beforeEach(() => {
+    userFindUnique.mockResolvedValue({ isAdmin: false });
+  });
+
+  it("refuses a private URL on save with invalidUrl + PRIVATE_TARGET", async () => {
+    const res = await request(makeApp())
+      .put("/dawarich")
+      .send({ baseUrl: "http://192.168.1.20:3000" });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: "invalidUrl", code: "PRIVATE_TARGET" });
+    expect(userSettingsUpsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses a private URL it names on /test", async () => {
+    const { testDawarichConnection: realTester } = jest.requireActual<
+      typeof import("../services/dawarich/dawarichTester")
+    >("../services/dawarich/dawarichTester");
+    testDawarichConnection.mockImplementation(realTester);
+
+    const res = await request(makeApp())
+      .post("/dawarich/test")
+      .send({ baseUrl: "http://127.0.0.1:3000", apiKey: "k" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ success: false, kind: "invalidUrl", code: "PRIVATE_TARGET" });
+  });
+
+  it("an admin may save a private URL", async () => {
+    userFindUnique.mockResolvedValue({ isAdmin: true });
+    const res = await request(makeApp())
+      .put("/dawarich")
+      .send({ baseUrl: "http://192.168.1.20:3000" });
+    expect(res.status).toBe(200);
   });
 });

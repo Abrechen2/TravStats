@@ -160,6 +160,7 @@ export const EXTERNAL_SERVICE_ERROR_CODES = [
   "LLM_BASE_URL_INVALID",
   "TEMPLATE_REPO_URL_INVALID",
   "AEROAPI_BUDGET_REQUIRED",
+  "PRIVATE_TARGET",
 ] as const;
 export type ExternalServiceErrorCode = (typeof EXTERNAL_SERVICE_ERROR_CODES)[number];
 

@@ -14,6 +14,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { encryptApiKey } from "../../utils/encryption";
 import { dawarichConnectionSchema, dawarichTestSchema } from "../../schemas/dawarich";
 import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
+import { accountMayReachPrivate } from "../../services/egress/privateTargets";
 import { testDawarichConnection } from "../../services/dawarich/dawarichTester";
 import { DawarichError, normalizeDawarichBaseUrl } from "../../services/dawarich/errors";
 import logger from "../../utils/logger";
@@ -61,8 +62,12 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         update.dawarichBaseUrl = null;
       } else {
         try {
-          update.dawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl);
+          // Only an admin's own connection may name a LAN host (forgejo#411).
+          update.dawarichBaseUrl = normalizeDawarichBaseUrl(payload.baseUrl, {
+            allowPrivate: await accountMayReachPrivate(userId),
+          });
         } catch (error) {
+          if (error instanceof DawarichError) throw new AppError(error.kind, 400, error.code);
           // Preserve the machine-readable `kind` (always `invalidUrl` here —
           // `normalizeDawarichBaseUrl` never throws any other kind) instead
           // of the earlier prose message, which the frontend's
@@ -101,6 +106,9 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
 
     let baseUrl = body.baseUrl;
     let apiKey = body.apiKey;
+    // A URL the caller names is held to the caller's own reach; the stored
+    // connection keeps its own (forgejo#411).
+    let allowPrivate = await accountMayReachPrivate(req.userId!);
 
     // An empty body means "test whatever is currently resolved for me".
     if (!baseUrl || !apiKey) {
@@ -119,7 +127,7 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
       if (!apiKey && baseUrl && stored.source !== "user") {
         let requested: string;
         try {
-          requested = normalizeDawarichBaseUrl(baseUrl);
+          requested = normalizeDawarichBaseUrl(baseUrl, { allowPrivate: true });
         } catch (error) {
           throw new AppError(error instanceof DawarichError ? error.kind : "invalidUrl", 400);
         }
@@ -129,11 +137,12 @@ router.post("/test", async (req: AuthRequest, res: Response, next: NextFunction)
         baseUrl = requested;
       }
 
+      if (!baseUrl || baseUrl === stored.baseUrl) allowPrivate = stored.allowPrivate;
       baseUrl = baseUrl ?? stored.baseUrl;
       apiKey = apiKey ?? stored.apiKey;
     }
 
-    res.json(await testDawarichConnection(baseUrl, apiKey));
+    res.json(await testDawarichConnection(baseUrl, apiKey, { allowPrivate }));
   } catch (error) {
     next(error);
   }

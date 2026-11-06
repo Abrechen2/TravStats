@@ -32,7 +32,13 @@
  * so tests inject `fetch` directly and never touch the network.
  */
 import logger from "../../utils/logger";
-import { DawarichConnection, DawarichError } from "./errors";
+import {
+  PrivateTargetError,
+  assertTargetAllowed,
+  fetchDispatcherFor,
+  isPrivateTargetRefusal,
+} from "../egress/privateTargets";
+import { DawarichConnection, DawarichError, privateTargetDawarichError } from "./errors";
 
 const POINTS_PATH = "/api/v1/points";
 const HEALTH_PATH = "/api/v1/health";
@@ -168,17 +174,33 @@ function mapPoint(raw: unknown): DawarichPoint | null {
 
 export function createDawarichClient(conn: DawarichConnection): DawarichClient {
   const authHeaders = { Authorization: `Bearer ${conn.apiKey}` };
+  // Pins DNS for an account that may not reach the LAN (forgejo#411).
+  const dispatcher = fetchDispatcherFor(conn);
 
   async function request(path: string, params: URLSearchParams | null, withAuth: boolean) {
     const query = params ? `?${params.toString()}` : "";
+    // Every request is built from this one URL, so checking it here covers
+    // each call; an IP literal never reaches the pinned lookup.
+    try {
+      assertTargetAllowed(conn.baseUrl, conn);
+    } catch (error) {
+      if (error instanceof PrivateTargetError) throw privateTargetDawarichError();
+      throw error;
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response: Response;
     try {
-      return await fetch(`${conn.baseUrl}${path}${query}`, {
+      response = await fetch(`${conn.baseUrl}${path}${query}`, {
         headers: withAuth ? authHeaders : undefined,
         signal: controller.signal,
-      });
+        // Never follow a redirect: a 3xx towards an internal host would walk
+        // past both checks above. It is answered as `protocol` below.
+        redirect: "manual",
+        ...(dispatcher ? { dispatcher } : {}),
+      } as RequestInit);
     } catch (error) {
+      if (isPrivateTargetRefusal(error)) throw privateTargetDawarichError();
       // Anything fetch throws here (connection refused, DNS failure, our own
       // abort on timeout) means the host never answered at all.
       logger.warn({
@@ -189,6 +211,15 @@ export function createDawarichClient(conn: DawarichConnection): DawarichClient {
     } finally {
       clearTimeout(timer);
     }
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new DawarichError(
+        "protocol",
+        `Dawarich answered ${path} with a redirect (${response.status}), not followed`,
+        response.status
+      );
+    }
+    return response;
   }
 
   return {
