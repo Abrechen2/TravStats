@@ -71,7 +71,7 @@ describe('ferry lines and ports (owner: "bei Fähren fehlt es auch")', () => {
     const tip = tooltip({ layer: line, object: datum } as unknown as PickingInfo);
     expect(tip?.html).toContain("Kiel");
     expect(tip?.html).toContain("Oslo");
-    expect(tip?.html).toContain("flagcdn"); // both flags, as the airport tooltip has
+    expect(tip?.html).toContain("/flags/"); // both flags, as the airport tooltip has
     expect(tip?.html).toContain("map:journey.times.ferry:1");
     expect(tip?.html).toContain("map:globe.timesPlanned:1");
     expect(tip?.html).toContain('data-domain-icon="ship"');

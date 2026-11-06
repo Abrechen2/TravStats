@@ -35,6 +35,14 @@ const FAMILIES = [
   { family: "Hanken Grotesk", spec: "wght@400;500;600;700;800", slug: "hanken-grotesk" },
   { family: "IBM Plex Mono", spec: "wght@400;500;600", slug: "ibm-plex-mono" },
   { family: "Newsreader", spec: "ital,wght@1,400;1,500", slug: "newsreader" },
+  // The shareable flight certificate (components/FlightCertificate.tsx).
+  {
+    family: "Fraunces",
+    spec: "ital,opsz,wght@0,9..144,500;0,9..144,800;1,9..144,500;1,9..144,800",
+    slug: "fraunces",
+  },
+  { family: "Big Shoulders Display", spec: "wght@600;800;900", slug: "big-shoulders-display" },
+  { family: "JetBrains Mono", spec: "wght@400;500;700", slug: "jetbrains-mono" },
 ];
 
 /** Parses the `/* subset *\/` comments Google emits above each @font-face. */
@@ -66,7 +74,7 @@ for (const { family, spec, slug } of FAMILIES) {
   for (const face of parseFaces(css)) {
     if (!KEEP_SUBSETS.has(face.subset)) continue;
     const italic = face.style === "italic" ? "-italic" : "";
-    const name = `${slug}-${face.weight}${italic}-${face.subset}.woff2`;
+    const name = `${slug}-${face.weight.replace(/\s+/g, "-")}${italic}-${face.subset}.woff2`;
     const target = resolve(fontDir, name);
     if (!existsSync(target)) {
       const bytes = await fetch(face.url, { headers: { "User-Agent": UA } }).then((r) =>

@@ -17,11 +17,11 @@ describe("countryFromUnlocode", () => {
 describe("flagImgHtml", () => {
   it("builds a flagcdn img tag for a valid code", () => {
     const html = flagImgHtml("DE");
-    expect(html).toContain("https://flagcdn.com/de.svg");
+    expect(html).toContain("/flags/de.svg");
     expect(html).toMatch(/^<img /);
   });
   it("is case-insensitive", () => {
-    expect(flagImgHtml("gr")).toContain("flagcdn.com/gr.svg");
+    expect(flagImgHtml("gr")).toContain("/flags/gr.svg");
   });
   it("returns empty string for invalid input", () => {
     expect(flagImgHtml(null)).toBe("");
@@ -99,7 +99,7 @@ describe("resolveCountryCode", () => {
 
 describe("flagImgHtml", () => {
   it("resolves a name too, so a globe tooltip is not the odd one out", () => {
-    expect(flagImgHtml("Deutschland")).toContain("https://flagcdn.com/de.svg");
+    expect(flagImgHtml("Deutschland")).toContain("/flags/de.svg");
     expect(flagImgHtml("Nirgendwo")).toBe("");
   });
 });
@@ -111,19 +111,19 @@ describe("FlagImg", () => {
     // two-letter code left a whole hotel list flagless while the flight list,
     // fed by the airport catalogue, was fully flagged.
     const { container } = render(<FlagImg country="Deutschland" />);
-    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/de.svg");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/flags/de.svg");
   });
 
   it("still draws one for a plain code", () => {
     const { container } = render(<FlagImg country="ch" />);
-    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/ch.svg");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/flags/ch.svg");
   });
 
-  it("keeps the URL lowercase — flagcdn 404s on /DE.svg", () => {
+  it("keeps the URL lowercase so the browser cache key does not depend on the record casing", () => {
     // `resolveCountryCode` upper-cases by design (it is an ISO code), so the
     // URL builder has to lower it again. Both call sites go through flagUrl.
     const { container } = render(<FlagImg country="Schweiz" />);
-    expect(container.querySelector("img")?.getAttribute("src")).toBe("https://flagcdn.com/ch.svg");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/flags/ch.svg");
   });
 
   it("draws nothing at all when the country cannot be resolved", () => {
