@@ -72,7 +72,6 @@ export default function AchievementsCompare({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(item.progress * 100)}
-        title={pct(item)}
         className="inline-block shrink-0 overflow-hidden rounded-full"
         style={{ width: 80, height: 6, background: "var(--ts-border)" }}
       >

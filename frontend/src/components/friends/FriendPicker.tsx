@@ -54,7 +54,7 @@ export default function FriendPicker({
           return (
             <span key={p.person.key} className="inline-flex items-center" style={{ gap: 4 }}>
               {waiting ? (
-                <span className="t-caption" title={tr("friends.waiting")}>
+                <span className="t-caption">
                   {p.person.displayName} · {tr("friends.waiting")}
                 </span>
               ) : (
