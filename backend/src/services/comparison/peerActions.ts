@@ -81,6 +81,13 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
     });
     if (!invite || invite.usedAt || invite.expiresAt <= new Date() || !invite.user.isActive)
       return { accepted: false as const };
+    // A token an admission request bound to one server is that server's alone: a pinned peer
+    // holding it by other means cannot spend it, and the real holder's claim stays possible.
+    const bound = await tx.federationAdmissionRequest.findUnique({
+      where: { inviteHash: invite.hash },
+      select: { origin: true },
+    });
+    if (bound && bound.origin !== origin) return { accepted: false as const };
     // A full list refuses like a bad code, and before the code is spent, so the inviter can
     // still hand it to someone once a place is free.
     await lockRemoteFriends(tx, invite.userId);
