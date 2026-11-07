@@ -42,6 +42,7 @@ model User {
   leaderboardConsentsViewed LeaderboardConsent[]     @relation("LeaderboardConsentViewer")
   leaderboardRemotes        LeaderboardRemote[]
   leaderboardInvites        LeaderboardInvite[]
+  federationAdmissions      FederationAdmissionRequest[]
   leaderboardBoards         LeaderboardBoard[]
   id                        String                   @id @default(uuid())
   devicePushes              DevicePush[]
@@ -5874,6 +5875,42 @@ model LeaderboardInvite {
 
   @@index([userId])
   @@map("leaderboard_invites")
+}
+
+/// A server asking to be admitted, or being asked (spec 2026-11-07 §6.2). `outgoing`: a local user
+/// accepted an invitation link of a server this one has not pinned yet; `incoming`: such a server
+/// presented one of this server's invitation tokens. Nothing here pins anything by itself: only an
+/// admin's decision does.
+model FederationAdmissionRequest {
+  id            String    @id @default(uuid())
+  /// "outgoing" | "incoming"
+  direction     String
+  origin        String
+  /// SPKI PEM, the text the fingerprint is hashed from.
+  publicKey     String    @map("public_key")
+  fingerprint   String
+  /// outgoing: the user who redeemed; incoming: the user whose invitation was presented.
+  localUserId   String    @map("local_user_id")
+  /// The invitation token, encrypted at rest like an API key.
+  inviteRef     String    @map("invite_ref")
+  /// incoming only: SHA-256 of the token, so one token binds to one request.
+  inviteHash    String?   @unique @map("invite_hash")
+  /// outgoing only: the scope the user agreed to share, applied when the claim runs.
+  scope         Json?
+  /// "pending" | "sent" | "approved" | "declined" | "failed" | "expired"
+  status        String    @default("pending")
+  failureReason String?   @map("failure_reason")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  expiresAt     DateTime  @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  decidedAt     DateTime? @map("decided_at")
+  decidedBy     String?   @map("decided_by")
+  user          User      @relation(fields: [localUserId], references: [id], onDelete: Cascade)
+
+  @@unique([direction, origin, localUserId])
+  @@index([status, direction])
+  @@map("federation_admission_requests")
 }
 
 model LeaderboardBoard {

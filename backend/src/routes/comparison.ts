@@ -24,6 +24,12 @@ import {
 } from "../services/comparison/consents";
 import { deleteBoard, listBoards, saveBoard } from "../services/comparison/boards";
 import { claimInvite, createInvite, endRemote } from "../services/comparison/remote";
+import {
+  createInviteLink,
+  listOwnAdmissions,
+  redeemInviteLink,
+} from "../services/comparison/inviteLinks";
+import { inviteLinkRedeemBodySchema } from "../schemas/inviteLink";
 import { readLeaderboard } from "../services/comparison/leaderboard";
 import {
   boardBodySchema,
@@ -157,6 +163,28 @@ router.post(
     // The scope is validated here, before claimInvite asks the other server anything.
     const body = claimBodySchema.parse(req.body);
     send(res, await claimInvite(req.userId!, body.code, body.scope), 201);
+  })
+);
+router.post(
+  "/invite-links",
+  comparisonWriteLimiter,
+  handle(async (req, res) => {
+    send(res, await createInviteLink(req.userId!), 201);
+  })
+);
+router.post(
+  "/invite-links/redeem",
+  comparisonWriteLimiter,
+  handle(async (req, res) => {
+    // Shape, size and scope are checked here, before any server is asked anything.
+    const body = inviteLinkRedeemBodySchema.parse(req.body);
+    send(res, await redeemInviteLink(req.userId!, body.payload, body.scope));
+  })
+);
+router.get(
+  "/admissions",
+  handle(async (req, res) => {
+    send(res, { admissions: await listOwnAdmissions(req.userId!) });
   })
 );
 router.post(

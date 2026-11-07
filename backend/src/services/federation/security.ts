@@ -57,6 +57,8 @@ export interface PeerTransport {
   accepts: Acceptance;
   /** Overall time for the exchange; defaults to `EXCHANGE_BUDGET_MS`. A file transfer needs more. */
   budgetMs?: number;
+  /** `GET` for an unauthenticated read (`fetchPublic`); signed exchanges are always POST. */
+  method?: "GET";
   /** Whether `body` may reach an admitted peer no ping has verified yet (only a ping may). */
   beforeVerification: (body: object) => boolean;
 }
@@ -99,6 +101,35 @@ export async function exchange(
   if (!peer?.enabled) throw refused("unknown-peer");
   if (remoteOrigin === local.origin) throw refused();
   if (!peer.verifiedAt && !transport.beforeVerification(body)) throw refused("unverified-peer");
+  const { url, answers } = await vetPeerAddress(remoteOrigin);
+  const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
+  const bytes = Buffer.from(JSON.stringify(outgoing));
+  if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
+  const raw = await postToFirstReachable(
+    url,
+    ipv4First(answers),
+    bytes,
+    transport,
+    preAuthHeader(local, remoteOrigin, bytes.length)
+  );
+  const received = verifyEnvelope(
+    JSON.parse(raw.toString()),
+    peer.publicKey,
+    local.origin,
+    Date.now(),
+    transport.accepts
+  );
+  if (received.origin !== remoteOrigin || received.nonce !== outgoing.nonce) throw refused();
+  return JSON.parse(received.body) as unknown;
+}
+/**
+ * The egress check every outbound peer request passes: the origin's DNS answers must all be
+ * public (or inside an operator-listed range), and plain http or a port only where none is public.
+ * Returns the vetted answers, which the request then connects to without resolving again.
+ */
+export async function vetPeerAddress(
+  remoteOrigin: string
+): Promise<{ url: URL; answers: { address: string; family: number }[] }> {
   const url = new URL(remoteOrigin);
   const host = bareHost(url.hostname);
   // Today's rule: an IP literal is a peer only inside a range the operator listed.
@@ -120,26 +151,20 @@ export async function exchange(
     !answers.every((a) => listedPrivateAddress(a.address))
   )
     throw refused("private-address");
-  const outgoing = envelope(body, remoteOrigin, local, undefined, transport.sendPurpose);
-  const bytes = Buffer.from(JSON.stringify(outgoing));
-  if (bytes.length > transport.maxRequest) throw refused("packet-too-large");
-  const raw = await postToFirstReachable(
-    url,
-    ipv4First(answers),
-    bytes,
-    transport,
-    preAuthHeader(local, remoteOrigin, bytes.length)
-  );
-  const received = verifyEnvelope(
-    JSON.parse(raw.toString()),
-    peer.publicKey,
-    local.origin,
-    Date.now(),
-    transport.accepts
-  );
-  if (received.origin !== remoteOrigin || received.nonce !== outgoing.nonce) throw refused();
-  return JSON.parse(received.body) as unknown;
+  return { url, answers };
 }
+
+/**
+ * An unauthenticated GET to a server that is NOT pinned (the public identity endpoint), through
+ * the same egress check, address pinning, redirect refusal, size cap and time budget as a signed
+ * exchange. The reply is untrusted bytes: the caller validates it.
+ */
+export async function fetchPublic(remoteOrigin: string, transport: PeerTransport): Promise<Buffer> {
+  if (!originSchema.safeParse(remoteOrigin).success) throw refused();
+  const { url, answers } = await vetPeerAddress(remoteOrigin);
+  return postToFirstReachable(url, ipv4First(answers), Buffer.alloc(0), transport, "");
+}
+
 /** One overall budget for every address tried, so a dead first answer cannot double the wait. */
 const EXCHANGE_BUDGET_MS = 10_000;
 
@@ -194,7 +219,7 @@ function postPinned(
       ...(secure && !isIP(hostname) ? { servername: hostname } : {}),
       port: url.port ? Number(url.port) : secure ? 443 : 80,
       path: transport.path,
-      method: "POST",
+      method: transport.method ?? "POST",
       agent: false,
       // A single vetted address is pinned; Node 22 otherwise asks lookup for an array.
       autoSelectFamily: false,
@@ -207,14 +232,17 @@ function postPinned(
         _options: unknown,
         cb: (err: null, address: string, family: number) => void
       ) => process.nextTick(cb, null, pinned.address, pinned.family)) as never,
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": bytes.length,
-        // Proves who is sending BEFORE the body is read, so the receiver can allow a large body
-        // (a plan document) to admitted peers only: a signature over origin, destination, time and
-        // length, checked against the pinned key (`middleware/peerBody.ts`).
-        [PEER_PREAUTH_HEADER]: preAuth,
-      },
+      headers:
+        transport.method === "GET"
+          ? {}
+          : {
+              "Content-Type": "application/json",
+              "Content-Length": bytes.length,
+              // Proves who is sending BEFORE the body is read, so the receiver can allow a large body
+              // (a plan document) to admitted peers only: a signature over origin, destination, time and
+              // length, checked against the pinned key (`middleware/peerBody.ts`).
+              [PEER_PREAUTH_HEADER]: preAuth,
+            },
     };
     const request = (secure ? https : http).request(options, (response) => {
       if (response.statusCode !== 200) {

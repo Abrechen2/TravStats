@@ -32,11 +32,15 @@ import {
   readConnectionFile,
   readServerQrPayload,
 } from "../../services/federation/connectionFile";
-import { parsePeerPublicKey } from "../../services/federation/peerKey";
+import { pinPeer } from "../../services/federation/pinning";
 import {
-  holdAllConnections,
-  holdConnectionsOfOrigin,
-} from "../../services/sharing/federation/connections/hooks";
+  approveAdmission,
+  declineAdmission,
+  listAdmissions,
+} from "../../services/federation/admission";
+import { kickAdmissionDelivery } from "../../jobs/admissionDeliveryScheduler";
+import { uuidParamSchema } from "../../schemas/comparison";
+import { holdAllConnections } from "../../services/sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
@@ -180,45 +184,7 @@ async function pin(
   body: { origin: string; publicKey: string; fingerprint: string; enabled: boolean },
   res: Response
 ): Promise<void> {
-  const own = await currentIdentity();
-  if (own && body.origin === own.origin)
-    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
-  const pem = parsePeerPublicKey(body.publicKey);
-  if (!pem)
-    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
-      origin: body.origin,
-    });
-  if (hash(pem) !== body.fingerprint)
-    throw comparisonError(
-      "COMPARISON_PEER_KEY_INVALID",
-      400,
-      "Fingerprint does not match the key",
-      {
-        origin: body.origin,
-      }
-    );
-  const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
-  if (previous && previous.publicKey !== pem) {
-    // A replaced key ends every E2E friendship through it, exactly as before the move.
-    // Leaderboard friendships (LeaderboardRemote) deliberately survive (controller ruling):
-    // they are addressed by origin + channel, not by the key, and nothing flows over them
-    // until the admin re-verifies the new pin (verifiedAt is reset below).
-    await prisma.comparisonLink.updateMany({
-      where: { origin: body.origin },
-      data: { revoked: true },
-    });
-  }
-  await prisma.comparisonPeer.upsert({
-    where: { origin: body.origin },
-    create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
-    update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
-  });
-  // Trips shared across servers through it pause until each person confirms them again
-  // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
-  if (previous && previous.publicKey !== pem) {
-    await holdPeerMemberships(body.origin, "repinned");
-    await holdConnectionsOfOrigin(body.origin);
-  } else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
+  const pem = await pinPeer(body);
   const full = await state();
   // `peer` and `computedFingerprint` serve the Companion (spec 2026-11-02 §6): the fingerprint
   // is the one THIS server hashed from the key, to show beside the one printed in the QR.
@@ -341,6 +307,31 @@ router.post(
         ? { fingerprint: hash(known.publicKey), sameKey: known.publicKey === values.publicKey }
         : null,
     });
+  })
+);
+
+/** The admission queue (spec 2026-11-07 §6.2): servers waiting to be admitted, in both directions. */
+router.get(
+  "/admissions",
+  handle(async (_req, res) => {
+    res.json({ admissions: await listAdmissions() });
+  })
+);
+
+router.post(
+  "/admissions/:id/approve",
+  handle(async (req, res) => {
+    const view = await approveAdmission(uuidParamSchema.parse(req.params.id), req.userId!);
+    // Tell the inviting server soon, not at the next minute's pass.
+    if (view.direction === "outgoing") kickAdmissionDelivery();
+    res.json(view);
+  })
+);
+
+router.post(
+  "/admissions/:id/decline",
+  handle(async (req, res) => {
+    res.json(await declineAdmission(uuidParamSchema.parse(req.params.id), req.userId!));
   })
 );
 

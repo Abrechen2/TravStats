@@ -580,6 +580,17 @@ export type ApiErrorCode =
   /** The user already holds the maximum number of friendships with people on other servers. */
   | "COMPARISON_REMOTE_LIMIT"
   | "COMPARISON_YEAR_NOT_SHARED"
+  /** Server admission (spec 2026-11-07 §6.2, `services/federation/admission*`). Federation is
+   *  off here: the public identity endpoint answers 404 and nothing is queued. */
+  | "FEDERATION_OFF"
+  | "FEDERATION_ADMISSION_DISABLED" // redeem while this server's federation is off (409)
+  | "FEDERATION_ADMISSION_KEY_MISMATCH" // origin and key do not match what the link, the pin or the server says (409)
+  | "FEDERATION_ADMISSION_SUSPENDED" // the admin suspended that server; a user never re-enables it (409)
+  | "FEDERATION_ADMISSION_FULL" // too many open admission requests (429)
+  | "FEDERATION_ADMISSION_INVALID" // not an invitation link (400)
+  | "FEDERATION_ADMISSION_UNREACHABLE" // the other server's identity could not be read (502)
+  | "FEDERATION_ADMISSION_NOT_FOUND" // no such request (404)
+  | "FEDERATION_ADMISSION_NOT_PENDING" // already decided (409)
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"
   /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a

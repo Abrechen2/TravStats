@@ -85,6 +85,7 @@ import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
 import "./comparison";
+import "./comparisonInviteLinks";
 import "./shareLinks";
 import "./calendarFeed";
 import "./catalog";
@@ -103,6 +104,7 @@ import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";
 import "./federationConnectionFile";
+import "./federationIdentity";
 import "./sync";
 
 import "./dawarichStays";
