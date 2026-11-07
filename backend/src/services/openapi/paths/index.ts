@@ -85,6 +85,7 @@ import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
 import "./comparison";
+import "./comparisonInviteLinks";
 import "./shareLinks";
 import "./calendarFeed";
 import "./catalog";

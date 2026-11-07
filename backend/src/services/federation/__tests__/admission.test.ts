@@ -1,7 +1,13 @@
 import { prisma } from "../../../db";
 import logger from "../../../utils/logger";
 import { approveAdmission, declineAdmission, listAdmissions } from "../admission";
+import { fetchPeerIdentity } from "../admissionIdentity";
 import { makeRequest, makeUser, peerKey } from "./admissionFixture";
+
+jest.mock("../admissionIdentity", () => ({
+  ...jest.requireActual("../admissionIdentity"),
+  fetchPeerIdentity: jest.fn(),
+}));
 
 const ORIGIN = "https://far.admission.test";
 let userId: string;
@@ -51,7 +57,13 @@ it("approve pins the peer and logs the admin", async () => {
 });
 
 it("approve of an outgoing request marks it sent, not approved", async () => {
-  const row = await makeRequest(userId, ORIGIN, peerKey(), { direction: "outgoing" });
+  const key = peerKey();
+  (fetchPeerIdentity as jest.Mock).mockResolvedValue({
+    origin: ORIGIN,
+    publicKey: key.pem,
+    fingerprint: key.fingerprint,
+  });
+  const row = await makeRequest(userId, ORIGIN, key, { direction: "outgoing" });
   expect((await approveAdmission(row.id, adminId)).status).toBe("sent");
 });
 

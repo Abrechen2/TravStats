@@ -8,6 +8,7 @@ import logger from "../../utils/logger";
 import type { FederationAdmissionRequest } from "../../prisma";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { admissionError } from "./admissionErrors";
+import { fetchPeerIdentity } from "./admissionIdentity";
 import { pinPeer } from "./pinning";
 
 /** An open request is alive this long (spec §6.2 step 6). */
@@ -111,6 +112,19 @@ async function checkExistingPin(row: FederationAdmissionRequest): Promise<boolea
 export async function approveAdmission(id: string, adminId: string): Promise<AdmissionView> {
   const row = await loadOpen(id);
   const alreadyPinned = await checkExistingPin(row);
+  // The admin's click is the moment a key becomes trusted, so the server is asked once more what
+  // key it publishes now: the link may be days old, and a private origin was never fetched at
+  // redeem (Codex 11). An incoming request was verified when it arrived.
+  if (row.direction === "outgoing" && !alreadyPinned) {
+    const found = await fetchPeerIdentity(row.origin);
+    if (found.publicKey !== row.publicKey)
+      throw admissionError(
+        "FEDERATION_ADMISSION_KEY_MISMATCH",
+        409,
+        "That server now publishes a different key",
+        { id, origin: row.origin }
+      );
+  }
   const target: AdmissionStatus = row.direction === "outgoing" ? "sent" : "approved";
   // Conditional on still being pending: two admins (or one double click) decide once.
   const flipped = await prisma.federationAdmissionRequest.updateMany({
