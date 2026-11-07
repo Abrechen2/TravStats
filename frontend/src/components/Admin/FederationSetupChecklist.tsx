@@ -79,11 +79,14 @@ function Step({
  * `GET /admin/federation` answer the section below draws, so the two never disagree.
  */
 export default function FederationSetupChecklist({
+  tripSharing,
   state,
   busy,
   onSwitchOn,
   onError,
 }: {
+  /** Whether the trip-sharing switch is offered; the identity step serves comparison as well. */
+  tripSharing: boolean;
   state: FederationState;
   busy: boolean;
   onSwitchOn: () => void;
@@ -132,20 +135,22 @@ export default function FederationSetupChecklist({
           )}
         </Step>
 
-        <Step n={2} done={state.tripSharingEnabled} title={t(`${NS}.switch.title`)}>
-          {!state.tripSharingEnabled && (
-            <>
-              <p className="t-caption">
-                {t(identityOk ? `${NS}.switch.off` : `${NS}.switch.afterIdentity`)}
-              </p>
-              <span>
-                <Button variant="primary" disabled={busy || !identityOk} onClick={onSwitchOn}>
-                  {t(`${NS}.switchOn`)}
-                </Button>
-              </span>
-            </>
-          )}
-        </Step>
+        {tripSharing && (
+          <Step n={2} done={state.tripSharingEnabled} title={t(`${NS}.switch.title`)}>
+            {!state.tripSharingEnabled && (
+              <>
+                <p className="t-caption">
+                  {t(identityOk ? `${NS}.switch.off` : `${NS}.switch.afterIdentity`)}
+                </p>
+                <span>
+                  <Button variant="primary" disabled={busy || !identityOk} onClick={onSwitchOn}>
+                    {t(`${NS}.switchOn`)}
+                  </Button>
+                </span>
+              </>
+            )}
+          </Step>
+        )}
       </ol>
     </div>
   );

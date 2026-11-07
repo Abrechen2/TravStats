@@ -36,6 +36,7 @@ export default function FederationRows(): JSX.Element | null {
   const demo = useDemoLock();
   const { isFeatureVisible } = useBetaFeatures();
   const expert = useExpertRows(1);
+  const tripSharingVisible = isFeatureVisible("federatedTripSharing");
   const {
     data: state,
     setData,
@@ -94,8 +95,9 @@ export default function FederationRows(): JSX.Element | null {
 
   return (
     <>
-      {isFeatureVisible("federatedTripSharing") ? (
+      {tripSharingVisible || isFeatureVisible("comparison") ? (
         <FederationSetupChecklist
+          tripSharing={tripSharingVisible}
           state={state}
           busy={busy}
           onSwitchOn={() => void run(() => federationAdminApi.setTripSharing(true))}
@@ -153,7 +155,7 @@ export default function FederationRows(): JSX.Element | null {
           }
         />
       ) : null}
-      {state.fingerprint && isFeatureVisible("federatedTripSharing") ? (
+      {state.fingerprint && tripSharingVisible ? (
         <SettingItem
           controlId="federation-trip-sharing"
           title={t("settingsRows:services.rows.fedtrips.t")}
