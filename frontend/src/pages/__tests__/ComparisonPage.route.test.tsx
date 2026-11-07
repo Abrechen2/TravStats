@@ -8,7 +8,7 @@ import { render, screen, waitFor } from "@testing-library/react";
  * App stops routing either path or the page picks the wrong one.
  */
 const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
-vi.mock("../../components/comparison/LeaderboardPage", () => ({
+vi.mock("../../components/friends/FriendsPage", () => ({
   default: () => <div data-testid="leaderboard-stub" />,
 }));
 vi.mock("../../components/encryptedShare/SealedWorkspace", () => ({

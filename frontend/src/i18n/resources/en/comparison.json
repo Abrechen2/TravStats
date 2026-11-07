@@ -62,7 +62,7 @@
     "metricNotShared": "does not share this figure",
     "domainOff": "{{domain}} switched off",
     "yearNotShared": "shares {{year}} only",
-    "withdrawn": "stopped sharing",
+    "withdrawn": "no longer shares",
     "unreachable": "not reachable right now",
     "outdated": "server needs an update",
     "federationOff": "your server is not connected to others",
@@ -110,7 +110,9 @@
     "sharing": "yes",
     "notSharing": "nothing",
     "waiting": "waiting for an answer — nothing is shared until then",
-    "theirs": { "unknown": "no answer yet" },
+    "theirs": {
+      "unknown": "no answer yet"
+    },
     "change": "Change",
     "end": "Stop",
     "endConfirm": "Stop comparing",
@@ -171,5 +173,78 @@
     "COMPARISON_YEAR_NOT_SHARED": "You do not share that year with this person.",
     "rateLimited": "Too many requests in a short time. Wait a moment and try again.",
     "unknown": "That did not work. Please try again."
+  },
+  "friends": {
+    "title": "Friends",
+    "pick": "Pick a friend",
+    "pickHint": "Up to three friends side by side.",
+    "add": "Add a friend",
+    "details": "Settings for {{name}}",
+    "limit": "More than three friends do not fit side by side.",
+    "noFriends": "No friend to compare with yet",
+    "noFriendsHint": "Add a friend – you will then see each other's totals.",
+    "pickOne": "Pick a friend above to compare.",
+    "waiting": "waiting for an answer",
+    "domains": "Areas",
+    "allDomains": "All",
+    "crossDomainNote": "not recalculated",
+    "crossDomainHint": "Totals across all areas are not recalculated when you filter.",
+    "loadFailed": "The comparison could not be loaded.",
+    "admission": {
+      "pending": "waiting for your admin",
+      "sent": "waiting for the admin of {{origin}}",
+      "approved": "approved",
+      "declined": "declined",
+      "failed": "failed – ask for a new link",
+      "expired": "expired – ask for a new link"
+    },
+    "makeLink": "Create an invitation link",
+    "linkLabel": "Your invitation link",
+    "linkHint": "Pass the link on. It is valid for 72 hours and only once. It is shown only now – copy it before you leave the page.",
+    "pasteLabel": "An invitation from someone else",
+    "linkDamaged": "That is not a complete invitation link or code. Copy it again in full.",
+    "redeem": "Redeem invitation",
+    "outcome": {
+      "claimed": "Connected. You now see the person in the list.",
+      "awaitingAdmin": "Waiting for your admin's approval.",
+      "awaitingPeerAdmin": "Waiting for the approval of the other side's admin."
+    },
+    "admissionsFailed": "Your requests to other servers could not be loaded."
+  },
+  "compare": {
+    "metric": "Figure",
+    "you": "You",
+    "difference": "Difference",
+    "notComparable": "not comparable",
+    "partialHint": "\"≥\" means at least: not every trip has a distance.",
+    "table": "Comparison: {{domain}}",
+    "crossDomain": "Across all areas"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "count": "{{unlocked}} of {{total}}",
+    "points": "{{points}} points",
+    "both": "You both",
+    "onlyYou": "Only you",
+    "only": "Only {{name}}",
+    "open": "still open: {{percent}} %",
+    "yearOnly": "Achievements exist for all time only.",
+    "unknownOther": "unknown on the other server",
+    "notSharedCode": "not shared by {{name}}",
+    "withName": "with {{name}}",
+    "none": "No shared achievements to compare.",
+    "unavailable": {
+      "olderServer": "not available – {{name}}'s server is older",
+      "notShared": "{{name}} does not share achievements",
+      "yearView": "all time only"
+    }
+  },
+  "detail": {
+    "title": "{{name}}",
+    "iShare": "What {{name}} sees of you",
+    "theyShare": "What {{name}} shares with you",
+    "edit": "Change",
+    "remove": "Remove friend",
+    "close": "Done"
   }
 }
