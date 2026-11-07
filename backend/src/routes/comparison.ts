@@ -31,9 +31,11 @@ import {
 } from "../services/comparison/inviteLinks";
 import { inviteLinkRedeemBodySchema } from "../schemas/inviteLink";
 import { readLeaderboard } from "../services/comparison/leaderboard";
+import { readCompare } from "../services/comparison/compareView";
 import {
   boardBodySchema,
   claimBodySchema,
+  compareQuerySchema,
   consentRequestBodySchema,
   leaderboardQuerySchema,
   leaderboardScopeSchema,
@@ -88,6 +90,19 @@ router.get(
       await readLeaderboard(req.userId!, {
         year: q.year === "all" ? null : q.year,
         boardId: q.board,
+      })
+    );
+  })
+);
+router.get(
+  "/compare",
+  handle(async (req, res) => {
+    const q = compareQuerySchema.parse(req.query);
+    send(
+      res,
+      await readCompare(req.userId!, {
+        year: q.year === "all" ? null : q.year,
+        friends: q.friends,
       })
     );
   })

@@ -47,6 +47,23 @@ export interface LeaderboardResponse {
   year: number | null;
   rows: LeaderboardRow[];
 }
+export interface CompareResponse {
+  year: number | null;
+  self: LeaderboardRow;
+  /** In the order asked; a friend who is no longer visible is not a row. */
+  friends: LeaderboardRow[];
+}
+export type InviteRedeemStatus = "claimed" | "awaitingAdmin" | "awaitingPeerAdmin";
+export type AdmissionStatus = "pending" | "sent" | "approved" | "declined" | "failed" | "expired";
+export interface OwnAdmission {
+  id: string;
+  origin: string;
+  fingerprint: string;
+  status: AdmissionStatus;
+  failureReason: string | null;
+  createdAt: string;
+  expiresAt: string;
+}
 export interface PersonView {
   person: Person;
   mine: { consentId: string; status: ConsentStatus; scope: LeaderboardScope | null } | null;

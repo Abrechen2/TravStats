@@ -10,6 +10,7 @@ import {
   boardBodySchema,
   boardViewSchema,
   claimBodySchema,
+  compareResponseSchema,
   consentRequestBodySchema,
   inviteResponseSchema,
   leaderboardResponseSchema,
@@ -61,6 +62,32 @@ registry.registerPath({
     400: err("Invalid year or group id"),
     403: gate,
     404: err("`COMPARISON_BOARD_NOT_FOUND`: no such group of the caller"),
+    429: throttled,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/comparison/compare",
+  summary: "The caller and up to three picked friends — what the Freunde page compares",
+  description:
+    "Like the leaderboard, narrowed to the picked person keys (`local:<uuid>` / `remote:<uuid>`), so other friends' servers are not asked. Rows keep the order of `friends`. A key that is no longer a visible friend (they ended it, or stopped sharing back) is not a row: the page reads the absence as withdrawn. Row statuses and the achievements fields are those of the leaderboard.",
+  tags,
+  request: {
+    query: z.object({
+      friends: z
+        .string()
+        .describe("Up to three person keys, comma separated; empty for the caller alone"),
+      year: z
+        .string()
+        .optional()
+        .describe("A year (1900-2200) or `all` (default) for the lifetime view"),
+    }),
+  },
+  responses: {
+    200: ok("The caller's row and the picked friends' rows", compareResponseSchema),
+    400: err("A malformed or repeated key, more than three keys, or an invalid year"),
+    403: gate,
     429: throttled,
   },
 });
