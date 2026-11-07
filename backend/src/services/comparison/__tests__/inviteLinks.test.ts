@@ -143,6 +143,8 @@ it("redeem against an unknown server creates an outgoing request", async () => {
   expect(row?.inviteRef).not.toContain(token);
   expect(decryptApiKey(row?.inviteRef as string)).toBe(token);
   expect(row?.scope).toEqual(SCOPE);
+  // The token dies with the link, so the request must not outlive it.
+  expect(row?.expiresAt.getTime()).toBeLessThan(Date.now() + 2 * 3_600_000);
   expect(claimMock).not.toHaveBeenCalled();
   expect(await prisma.comparisonPeer.findUnique({ where: { origin: FAR } })).toBeNull();
   // The same link again answers the open request instead of making a second one.

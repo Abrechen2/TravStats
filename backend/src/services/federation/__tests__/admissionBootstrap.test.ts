@@ -12,7 +12,7 @@ import { claimInvite } from "../../comparison/remote";
 import admissionRoutes, { admissionLimiter } from "../../../routes/federationAdmission";
 import { ADMISSION_ACCEPTS, envelope, verifyEnvelope } from "../envelope";
 import { fetchPeerIdentity } from "../admissionIdentity";
-import { ADMISSION_WINDOW_MS } from "../admission";
+import { ADMISSION_WINDOW_MS, declineAdmission } from "../admission";
 import { backoffMs, deliverAdmission, runAdmissionDeliveries } from "../admissionDelivery";
 import { verifyPeerByPing } from "../peerVerification";
 import { hash, refused } from "../refusal";
@@ -212,6 +212,59 @@ describe("the bootstrap route", () => {
     expect((await post(packet(await invite(), { key: peerKey() }))).status).toBe(403);
     await prisma.comparisonPeer.update({ where: { origin: SENDER }, data: { enabled: false } });
     expect((await post(packet(await invite()))).status).toBe(403);
+  });
+
+  it("a token bound to one server is refused to another, pinned or not", async () => {
+    const token = await invite();
+    expect((await post(packet(token))).status).toBe(200);
+    const other = peerKey();
+    const OTHER = "https://pinned-other.admission-boot.test";
+    await prisma.comparisonPeer.create({ data: { origin: OTHER, publicKey: other.pem } });
+    expect((await post(packet(token, { origin: OTHER, key: other }))).status).toBe(403);
+    expect(await incoming()).toHaveLength(1);
+  });
+
+  it("a token spent while the sender's identity is being read creates no request", async () => {
+    const token = await invite();
+    fetchMock.mockImplementation(async (origin: string) => {
+      await prisma.leaderboardInvite.update({
+        where: { hash: hash(token) },
+        data: { usedAt: new Date() },
+      });
+      return { origin, publicKey: sender.pem, fingerprint: sender.fingerprint };
+    });
+    expect((await post(packet(token))).status).toBe(403);
+    expect(await incoming()).toHaveLength(0);
+  });
+
+  it("a declined request keeps answering declined to its sender and to nobody else", async () => {
+    const token = await invite();
+    expect(reads(await post(packet(token)))).toEqual({ status: "pending" });
+    const [row] = await incoming();
+    await declineAdmission(row?.id as string, requester.id);
+    expect(reads(await post(packet(token)))).toEqual({ status: "declined" });
+    const other = peerKey();
+    const OTHER = "https://other2.admission-boot.test";
+    fetchMock.mockResolvedValue({
+      origin: OTHER,
+      publicKey: other.pem,
+      fingerprint: other.fingerprint,
+    });
+    expect((await post(packet(token, { origin: OTHER, key: other }))).status).toBe(403);
+  });
+
+  it("a refused ask does not extend the token", async () => {
+    for (let i = 0; i < 20; i++)
+      await makeRequest(inviter.id, `https://q${i}.admission-boot.test`, peerKey());
+    const token = await invite();
+    const before = await prisma.leaderboardInvite.findUniqueOrThrow({
+      where: { hash: hash(token) },
+    });
+    expect(reads(await post(packet(token)))).toEqual({ status: "refused", reason: "full" });
+    const after = await prisma.leaderboardInvite.findUniqueOrThrow({
+      where: { hash: hash(token) },
+    });
+    expect(after.expiresAt).toEqual(before.expiresAt);
   });
 
   it("a full queue answers a signed refusal, not a stored request", async () => {

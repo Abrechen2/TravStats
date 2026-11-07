@@ -16,7 +16,7 @@ import {
 } from "../../schemas/inviteLink";
 import type { LeaderboardScope } from "../../schemas/comparison";
 import { admissionError } from "../federation/admissionErrors";
-import { ADMISSION_WINDOW_MS, expireStaleAdmissions } from "../federation/admission";
+import { expireStaleAdmissions } from "../federation/admission";
 import { deferIdentityFetch, fetchPeerIdentity } from "../federation/admissionIdentity";
 import { loadIdentity } from "../federation/identity";
 import { fingerprintOfRaw, pemFromRawPublicKey, rawPublicKey } from "../federation/rawKey";
@@ -138,7 +138,8 @@ async function queueOutgoing(
         localUserId: userId,
         inviteRef: encryptApiKey(link.token) as string,
         scope: scope as never,
-        expiresAt: new Date(Date.now() + ADMISSION_WINDOW_MS),
+        // The token dies with the link; the 14 days start when this server's admin approves.
+        expiresAt: new Date(link.expiresAt),
       },
     });
     return statusOf(created);

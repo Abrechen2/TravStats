@@ -132,3 +132,54 @@ it("decline stores nothing in the peer table and an expired request cannot be ap
   const views = await listAdmissions();
   expect(views.find((v) => v.id === old.id)?.status).toBe("expired");
 });
+
+it("approving an outgoing request starts its 14 days and makes it due for delivery", async () => {
+  const key = peerKey();
+  (fetchPeerIdentity as jest.Mock).mockResolvedValue({
+    origin: ORIGIN,
+    publicKey: key.pem,
+    fingerprint: key.fingerprint,
+  });
+  const row = await makeRequest(userId, ORIGIN, key, { direction: "outgoing" });
+  await prisma.federationAdmissionRequest.update({
+    where: { id: row.id },
+    data: { expiresAt: new Date(Date.now() + 3_600_000) },
+  });
+  await approveAdmission(row.id, adminId);
+  const stored = await prisma.federationAdmissionRequest.findUniqueOrThrow({
+    where: { id: row.id },
+  });
+  expect(stored.expiresAt.getTime()).toBeGreaterThan(Date.now() + 13 * 24 * 3_600_000);
+  expect(stored.nextAttemptAt).toBeNull();
+});
+
+it("declining an incoming request burns its invitation token", async () => {
+  const hashValue = "c".repeat(64);
+  await prisma.leaderboardInvite.create({
+    data: { hash: hashValue, userId, expiresAt: new Date(Date.now() + 3_600_000) },
+  });
+  const row = await makeRequest(userId, ORIGIN, peerKey(), { inviteHash: hashValue });
+  await declineAdmission(row.id, adminId);
+  const invite = await prisma.leaderboardInvite.findUniqueOrThrow({ where: { hash: hashValue } });
+  expect(invite.usedAt).not.toBeNull();
+  await prisma.leaderboardInvite.delete({ where: { hash: hashValue } });
+});
+
+it("approve never overwrites a pin that appeared while the identity was being read", async () => {
+  const key = peerKey();
+  const rival = peerKey();
+  (fetchPeerIdentity as jest.Mock).mockImplementation(async () => {
+    await prisma.comparisonPeer.create({ data: { origin: ORIGIN, publicKey: rival.pem } });
+    return { origin: ORIGIN, publicKey: key.pem, fingerprint: key.fingerprint };
+  });
+  const row = await makeRequest(userId, ORIGIN, key, { direction: "outgoing" });
+  await expect(approveAdmission(row.id, adminId)).rejects.toMatchObject({
+    code: "FEDERATION_ADMISSION_KEY_MISMATCH",
+  });
+  expect(
+    (await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: ORIGIN } })).publicKey
+  ).toBe(rival.pem);
+  expect(
+    (await prisma.federationAdmissionRequest.findUniqueOrThrow({ where: { id: row.id } })).status
+  ).toBe("pending");
+});

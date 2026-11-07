@@ -39,13 +39,21 @@ export async function handleAdmit(
   const body = admitRequestSchema.parse(JSON.parse(candidate.body));
   if (body.origin !== candidate.origin) throw refused("bad-signature");
 
-  // Gate 2: a token of ours, before this server fetches anything for an anonymous caller.
+  // Gate 2: a token of ours, before this server fetches anything for an anonymous caller. A token
+  // belongs to the first server that presented it, pinned or not. A declined request keeps
+  // answering "declined" to that server (its token is burnt, so the sender can learn the outcome).
   const invite = await prisma.leaderboardInvite.findUnique({
     where: { hash: hash(body.token) },
     include: { user: { select: { isActive: true } } },
   });
-  if (!invite || invite.usedAt || invite.expiresAt <= new Date() || !invite.user.isActive)
-    throw refused("unknown-peer");
+  const bound = await prisma.federationAdmissionRequest.findUnique({
+    where: { inviteHash: hash(body.token) },
+    select: { origin: true, status: true },
+  });
+  if (!invite || !invite.user.isActive) throw refused("unknown-peer");
+  const usable = !invite.usedAt && invite.expiresAt > new Date();
+  if (!usable && bound?.status !== "declined") throw refused("unknown-peer");
+  if (bound && bound.origin !== candidate.origin) throw refused("unknown-peer");
 
   // Gate 3: whose key is it? A pinned sender is held to the pinned key and never re-read.
   const pinned = await prisma.comparisonPeer.findUnique({ where: { origin: candidate.origin } });
@@ -119,6 +127,14 @@ async function storeIncoming(input: {
     if (pair && OPEN.includes(pair.status))
       return { status: "refused" as const, reason: "duplicate" as const };
     if (pair) await tx.federationAdmissionRequest.delete({ where: { id: pair.id } });
+    // Only an ask that is going to be stored extends the token (a refused one must not keep it
+    // alive), and revalidating it in the same statement catches a claim that spent it, or the
+    // clock, while the sender's identity was being read.
+    const live = await tx.leaderboardInvite.updateMany({
+      where: { hash: inviteHash, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { expiresAt },
+    });
+    if (live.count !== 1) throw refused("unknown-peer");
     await tx.federationAdmissionRequest.create({
       data: {
         direction: "incoming",
@@ -131,12 +147,8 @@ async function storeIncoming(input: {
         expiresAt,
       },
     });
-    // A slow admin must not kill the invitation (§6.2 step 6): it stays redeemable as long as the
-    // request is open. The claim that follows spends it, atomically, in `serveClaim`.
-    await tx.leaderboardInvite.updateMany({
-      where: { hash: inviteHash, expiresAt: { lt: expiresAt } },
-      data: { expiresAt },
-    });
+    // The extension above (§6.2 step 6) keeps the invitation redeemable as long as the request is
+    // open; the claim that follows spends it, atomically, in `serveClaim`.
     return { status: "pending" as const };
   });
 }

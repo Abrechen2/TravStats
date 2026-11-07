@@ -10,7 +10,7 @@ import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { admissionError } from "./admissionErrors";
 import { fetchPeerIdentity } from "./admissionIdentity";
 import { verifyPeerByPing } from "./peerVerification";
-import { pinPeer } from "./pinning";
+import { pinNewPeer } from "./pinning";
 
 /** An open request is alive this long (spec §6.2 step 6). */
 export const ADMISSION_WINDOW_MS = 14 * 24 * 3_600_000;
@@ -135,14 +135,21 @@ export async function approveAdmission(id: string, adminId: string): Promise<Adm
       decidedAt: new Date(),
       decidedBy: adminId,
       // An outgoing request is now due for delivery (`admissionDelivery.ts`).
-      ...(row.direction === "outgoing" ? { nextAttemptAt: null, attempts: 0 } : {}),
+      // Its 14 days start now: the other server extends the token when it first hears from this one.
+      ...(row.direction === "outgoing"
+        ? {
+            nextAttemptAt: null,
+            attempts: 0,
+            expiresAt: new Date(Date.now() + ADMISSION_WINDOW_MS),
+          }
+        : {}),
     },
   });
   if (flipped.count !== 1)
     throw admissionError("FEDERATION_ADMISSION_NOT_PENDING", 409, "Already decided", { id });
   try {
     if (!alreadyPinned)
-      await pinPeer({
+      await pinNewPeer({
         origin: row.origin,
         publicKey: row.publicKey,
         fingerprint: row.fingerprint,
@@ -186,6 +193,12 @@ export async function declineAdmission(id: string, adminId: string): Promise<Adm
   });
   if (flipped.count !== 1)
     throw admissionError("FEDERATION_ADMISSION_NOT_PENDING", 409, "Already decided", { id });
+  // A declined invitation is dead: another server must not be able to use it later.
+  if (row.inviteHash)
+    await prisma.leaderboardInvite.updateMany({
+      where: { hash: row.inviteHash, usedAt: null },
+      data: { usedAt: new Date() },
+    });
   logger.info(
     {
       operation: "federation_admission_declined",

@@ -5,6 +5,7 @@
  */
 import { prisma } from "../../db";
 import { comparisonError } from "../comparison/errors";
+import { admissionError } from "./admissionErrors";
 import { holdConnectionsOfOrigin } from "../sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../sharing/federation/lifecycle";
 import { loadIdentity } from "./identity";
@@ -28,8 +29,8 @@ async function ownOrigin(): Promise<string | null> {
   }
 }
 
-/** Validates and stores the pin; returns the SPKI PEM that was stored. */
-export async function pinPeer(body: PinInput): Promise<string> {
+/** The checks every pin passes; returns the SPKI PEM to store. */
+async function validatedKey(body: PinInput): Promise<string> {
   if (body.origin === (await ownOrigin()))
     throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
   const pem = parsePeerPublicKey(body.publicKey);
@@ -46,6 +47,38 @@ export async function pinPeer(body: PinInput): Promise<string> {
         origin: body.origin,
       }
     );
+  return pem;
+}
+
+/**
+ * Pins a server that is not pinned yet, and ONLY then: the insert is `skipDuplicates`, so an admin
+ * who pinned, replaced or suspended the same origin in the meantime is never overwritten. If the
+ * row is there, it must be the same key and enabled, or the caller gets the named refusal.
+ */
+export async function pinNewPeer(body: PinInput): Promise<void> {
+  const pem = await validatedKey(body);
+  const created = await prisma.comparisonPeer.createMany({
+    data: [{ origin: body.origin, publicKey: pem, enabled: body.enabled }],
+    skipDuplicates: true,
+  });
+  if (created.count === 1) return;
+  const peer = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
+  if (peer?.publicKey !== pem)
+    throw admissionError(
+      "FEDERATION_ADMISSION_KEY_MISMATCH",
+      409,
+      "That server is pinned with a different key",
+      { origin: body.origin }
+    );
+  if (!peer.enabled)
+    throw admissionError("FEDERATION_ADMISSION_SUSPENDED", 409, "That server is suspended", {
+      origin: body.origin,
+    });
+}
+
+/** Validates and stores the pin; returns the SPKI PEM that was stored. */
+export async function pinPeer(body: PinInput): Promise<string> {
+  const pem = await validatedKey(body);
   const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
   if (previous && previous.publicKey !== pem) {
     // A replaced key ends every E2E friendship through it, exactly as before the move.
