@@ -371,12 +371,12 @@ describe("pulling a remote friend's totals", () => {
   });
 
   it("reports a version mismatch as outdated and stops trusting the stored version list", async () => {
-    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [2] });
+    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [3] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     const peer = await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
     expect(peer.leaderboardVersions).toEqual([]);
     // The next check asks the peer again instead of reading "ready" from the stale list.
-    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [2] });
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [3] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     expect(exchange).toHaveBeenLastCalledWith(PEER, { action: "ping" });
   });

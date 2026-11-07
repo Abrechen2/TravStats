@@ -21,6 +21,7 @@ import { origin as originSchema } from "../federation/contract";
 import { hash } from "../federation/refusal";
 import { pingReplySchema } from "../../schemas/federationAdmin";
 import {
+  MUTUAL_PROTOCOL_VERSION,
   SERVED_VERSIONS,
   aggregateReplySchema,
   lbClaimReplySchema,
@@ -104,6 +105,29 @@ async function identityOrNull(): Promise<Identity | null> {
   }
 }
 
+/**
+ * The aggregate request for one remote friend. A peer that announced protocol 2 gets the mutual
+ * assertion (does the local user share with this friend); one that speaks only 1 gets today's
+ * body unchanged, because its strict schema would refuse an unknown field.
+ */
+async function aggregateBody(remote: LeaderboardRemote, year: number | null) {
+  const base = { action: "aggregate" as const, channel: remote.channel, year };
+  const peer = await prisma.comparisonPeer.findUnique({
+    where: { origin: remote.origin },
+    select: { leaderboardVersions: true },
+  });
+  if (!peer?.leaderboardVersions.includes(MUTUAL_PROTOCOL_VERSION)) return { ...base, accept: [1] };
+  const mine = await prisma.leaderboardConsent.findUnique({
+    where: { ownerId_remoteId: { ownerId: remote.userId, remoteId: remote.id } },
+    select: { status: true },
+  });
+  return {
+    ...base,
+    accept: [...SERVED_VERSIONS],
+    viewerShares: mine?.status === "accepted",
+  };
+}
+
 export async function pullRemote(
   remote: LeaderboardRemote,
   year: number | null
@@ -115,12 +139,7 @@ export async function pullRemote(
   let reply: AggregateReply;
   try {
     reply = aggregateReplySchema.parse(
-      await exchange(remote.origin, {
-        action: "aggregate",
-        channel: remote.channel,
-        year,
-        accept: [...SERVED_VERSIONS],
-      })
+      await exchange(remote.origin, await aggregateBody(remote, year))
     );
     // Totals for a year nobody asked for would be shown under the wrong heading.
     if (reply.status === "ok" && reply.snapshot.year !== year)

@@ -13,8 +13,13 @@ const year = z.number().int().min(1900).max(2200);
 const uuid = z.string().uuid();
 
 export const LEADERBOARD_SCHEMA = "travstats-leaderboard" as const;
-/** Snapshot versions this server reads and serves. */
-export const SERVED_VERSIONS = [1] as const;
+/**
+ * Peer protocol versions this server reads and serves. 2 adds the mutual-consent assertion
+ * (`viewerShares`) to the aggregate request; a snapshot is still version 1 on the wire.
+ */
+export const SERVED_VERSIONS = [1, 2] as const;
+/** The first protocol version whose aggregate request carries `viewerShares`. */
+export const MUTUAL_PROTOCOL_VERSION = 2;
 
 export const leaderboardScopeSchema = z.strictObject({
   groups: z
@@ -69,6 +74,11 @@ export const aggregateRequestSchema = z.strictObject({
   channel: uuid,
   year: year.nullable(),
   accept: z.array(z.number().int().positive()).min(1).max(8),
+  /**
+   * Protocol v2: whether the asking side shares its own totals with the user it asks for. Absent
+   * on a v1 request (an older server cannot assert it).
+   */
+  viewerShares: z.boolean().optional(),
 });
 export const lbClaimRequestSchema = z.strictObject({
   action: z.literal("lb-claim"),

@@ -46,6 +46,9 @@ export async function serveAggregate(
     include: { owner: { select: { isActive: true } } },
   });
   if (!consent || !consent.owner.isActive) return { status: "notShared" };
+  // Mutual rule: a v2 asker asserts whether its side shares back. A v1 asker cannot (legacy
+  // path, served as before); an explicit "no" gets nothing, not even a withdrawn notice.
+  if (body.viewerShares === false) return { status: "notShared" };
   if (consent.status === "withdrawn") return { status: "withdrawn" };
   // Only an accepted row is ever read: a pending offer already carries a scope, and must not
   // show it before the other side has answered.
