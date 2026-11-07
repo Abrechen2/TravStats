@@ -45,7 +45,7 @@ import {
 import { comparisonError } from "./errors";
 import { UnexpectedReply, failureKind, tellEnded } from "./remoteNotice";
 
-const INVITE_TTL_MS = 72 * 3_600_000;
+export const INVITE_TTL_MS = 72 * 3_600_000;
 const OPEN_INVITES = 20;
 const SECRET_BYTES = 32;
 

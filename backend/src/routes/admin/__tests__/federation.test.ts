@@ -37,7 +37,8 @@ it("turns federation on with a key generated in the UI", async () => {
     .put("/api/v1/admin/federation")
     .send({ enabled: true, origin: "https://me.admin-federation.test" });
   expect(put.status).toBe(200);
-  expect(put.body).toMatchObject({ source: null, fingerprint: null });
+  // Switching on makes the key itself (forgejo#416); a later "new key" still works.
+  expect(put.body).toMatchObject({ source: "settings", hasKey: true });
   const key = await request(app).post("/api/v1/admin/federation/key").send({});
   expect(key.status).toBe(200);
   expect(key.body).toMatchObject({

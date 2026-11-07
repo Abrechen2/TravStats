@@ -23,6 +23,22 @@ export interface FederationState {
   peers: FederationPeer[];
 }
 
+/** A server asking to be admitted, or being asked (spec 2026-11-07 §6.2). Mirrors `AdmissionView`. */
+export interface FederationAdmission {
+  id: string;
+  /** `incoming`: that server presented one of our invitations; `outgoing`: a local user redeemed theirs. */
+  direction: "incoming" | "outgoing";
+  origin: string;
+  fingerprint: string;
+  status: "pending" | "sent" | "approved" | "declined" | "failed" | "expired";
+  failureReason: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+  expiresAt: string;
+  /** The local person the request is about. */
+  person: { username: string; displayName: string } | null;
+}
+
 /** What the server read from another server's connection file. Nothing is pinned yet. */
 export interface ConnectionFileInspection {
   origin: string;
@@ -98,6 +114,12 @@ export const federationAdminApi = {
       })
     ).data;
   },
+  admissions: async (): Promise<FederationAdmission[]> =>
+    (await api.get<{ admissions: FederationAdmission[] }>(`${BASE}/admissions`)).data.admissions,
+  approveAdmission: async (id: string): Promise<FederationAdmission> =>
+    (await api.post<FederationAdmission>(`${BASE}/admissions/${id}/approve`)).data,
+  declineAdmission: async (id: string): Promise<FederationAdmission> =>
+    (await api.post<FederationAdmission>(`${BASE}/admissions/${id}/decline`)).data,
   verifyPeer: async (origin: string): Promise<void> => {
     await api.post(`${BASE}/peers/verify`, { origin });
   },
@@ -107,7 +129,7 @@ export const federationAdminApi = {
 };
 
 /** Refusal codes the admin federation API sends; each has its own copy. */
-const FEDERATION_ERROR_CODES = [
+export const FEDERATION_ERROR_CODES = [
   "COMPARISON_PEER_KEY_INVALID",
   "COMPARISON_PEER_UNREACHABLE",
   "COMPARISON_PEER_UNKNOWN",
@@ -120,6 +142,16 @@ const FEDERATION_ERROR_CODES = [
   "COMPARISON_CONNECTION_FILE_KEY",
   "COMPARISON_CONNECTION_FILE_FINGERPRINT",
   "COMPARISON_CONNECTION_FILE_SELF",
+  "FEDERATION_OFF",
+  "FEDERATION_ORIGIN_MISSING",
+  "FEDERATION_ADMISSION_DISABLED",
+  "FEDERATION_ADMISSION_KEY_MISMATCH",
+  "FEDERATION_ADMISSION_SUSPENDED",
+  "FEDERATION_ADMISSION_FULL",
+  "FEDERATION_ADMISSION_INVALID",
+  "FEDERATION_ADMISSION_UNREACHABLE",
+  "FEDERATION_ADMISSION_NOT_FOUND",
+  "FEDERATION_ADMISSION_NOT_PENDING",
 ] as const;
 
 export type FederationErrorCode = (typeof FEDERATION_ERROR_CODES)[number];

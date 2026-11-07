@@ -9,7 +9,7 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { smtpConfigSchema, SMTP_CONFIG_ID } from "../../routes/admin/smtp";
 import { applyConsentChange } from "../../routes/admin/usageStats";
-import { federationSettingsSchema } from "../../schemas/federationAdmin";
+import { federationSettingsSchema, httpsOriginSchema } from "../../schemas/federationAdmin";
 import { ensureAdminSettingsRow } from "../adminSettingsRow";
 import { resetIdentityCache } from "../federation/identity";
 import { refreshInstanceTuning } from "../instanceTuning";
@@ -137,7 +137,8 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     else Object.assign(adminData, CLEARED_PUSH_CREDENTIALS);
   }
   if (service.id === "federation" && (adminData.federationOrigin !== undefined || body.enabled)) {
-    federationSettingsSchema.parse({
+    // This route has no public-URL fallback: an address is required here, as before.
+    federationSettingsSchema.extend({ origin: httpsOriginSchema }).parse({
       enabled: adminData.federationEnabled ?? current?.federationEnabled ?? false,
       origin: adminData.federationOrigin ?? current?.federationOrigin ?? "",
     });

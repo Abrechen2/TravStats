@@ -325,3 +325,45 @@ describe("the limit of 20 friends on other servers", () => {
     }
   });
 });
+
+describe("an invitation bound to another server's admission (forgejo#416)", () => {
+  const bind = async (code: string, boundOrigin: string) =>
+    prisma.federationAdmissionRequest.create({
+      data: {
+        direction: "incoming",
+        origin: boundOrigin,
+        publicKey: "pem",
+        fingerprint: "f".repeat(64),
+        localUserId: ownerId,
+        inviteRef: "enc",
+        inviteHash: hash(code),
+        expiresAt: new Date(Date.now() + 3_600_000),
+      },
+    });
+  const claim = (code: string) =>
+    send("remote", { action: "lb-claim", code, username: "bound", displayName: "Bound" });
+
+  it("a pinned peer cannot claim a token bound to another server's admission", async () => {
+    const code = await invite();
+    const row = await bind(code, OTHER);
+    try {
+      expect((await claim(code)).data).toEqual({ accepted: false });
+      const spent = await prisma.leaderboardInvite.findUniqueOrThrow({
+        where: { hash: hash(code) },
+      });
+      expect(spent.usedAt).toBeNull();
+    } finally {
+      await prisma.federationAdmissionRequest.delete({ where: { id: row.id } });
+    }
+  });
+
+  it("the server a token is bound to can still claim it", async () => {
+    const code = await invite();
+    const row = await bind(code, REMOTE);
+    try {
+      expect((await claim(code)).data).toMatchObject({ accepted: true });
+    } finally {
+      await prisma.federationAdmissionRequest.delete({ where: { id: row.id } });
+    }
+  });
+});
