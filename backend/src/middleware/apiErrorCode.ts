@@ -583,6 +583,7 @@ export type ApiErrorCode =
   /** Server admission (spec 2026-11-07 §6.2, `services/federation/admission*`). Federation is
    *  off here: the public identity endpoint answers 404 and nothing is queued. */
   | "FEDERATION_OFF"
+  | "FEDERATION_ORIGIN_MISSING" // switching federation on with no address stored or derivable (400)
   | "FEDERATION_ADMISSION_DISABLED" // redeem while this server's federation is off (409)
   | "FEDERATION_ADMISSION_KEY_MISMATCH" // origin and key do not match what the link, the pin or the server says (409)
   | "FEDERATION_ADMISSION_SUSPENDED" // the admin suspended that server; a user never re-enables it (409)

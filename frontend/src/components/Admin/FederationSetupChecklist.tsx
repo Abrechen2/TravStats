@@ -1,7 +1,6 @@
 import type { JSX, ReactNode } from "react";
-import type { FederationPeer, FederationState } from "../../lib/api/federationAdmin";
+import type { FederationState } from "../../lib/api/federationAdmin";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { Button } from "../ui";
 
@@ -29,9 +28,6 @@ function identityGap(state: FederationState): { gap: IdentityGap; control: strin
   // (http, a port, a path).
   return { gap: "invalidOrigin", control: CONTROL.origin };
 }
-
-/** Admitted = pinned with its fingerprint, not suspended, and a ping reached it (spec §10). */
-export const isAdmitted = (p: FederationPeer): boolean => p.enabled && p.verifiedAt !== null;
 
 function focusControl(id: string): void {
   const el = document.getElementById(id);
@@ -86,32 +82,22 @@ export default function FederationSetupChecklist({
   state,
   busy,
   onSwitchOn,
-  onPing,
   onError,
 }: {
   state: FederationState;
   busy: boolean;
   onSwitchOn: () => void;
-  onPing: (origin: string) => void;
   onError: (key: string) => void;
 }): JSX.Element {
   const { t } = useTranslation(["admin"]);
-  const fmt = useDisplayFormat();
   const identityOk = state.fingerprint !== null;
   const gap = identityOk ? null : identityGap(state);
-  const admitted = state.peers.some(isAdmitted);
 
   const copy = (value: string): void => {
     navigator.clipboard.writeText(value).catch((error: unknown) => {
       logger.error("Copying a federation value failed:", error);
       onError(`${NS}.copyFailed`);
     });
-  };
-
-  const peerLine = (p: FederationPeer): string => {
-    if (!p.enabled) return t(`${NS}.peerSuspended`);
-    if (!p.verifiedAt) return t(`${NS}.peerUnreached`);
-    return t(`${NS}.peerReached`, { date: fmt.dateTime(p.verifiedAt) });
   };
 
   return (
@@ -159,36 +145,6 @@ export default function FederationSetupChecklist({
               </span>
             </>
           )}
-        </Step>
-
-        <Step n={3} done={admitted} title={t(`${NS}.peers.title`)}>
-          {state.peers.length > 0 && (
-            <ul className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-              {state.peers.map((p) => (
-                <li key={p.origin} className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="flex min-w-0 flex-col">
-                    <code className="break-all">{p.origin}</code>
-                    <span className="t-caption">{peerLine(p)}</span>
-                  </span>
-                  {p.enabled && !p.verifiedAt && (
-                    <Button disabled={busy || !identityOk} onClick={() => onPing(p.origin)}>
-                      {t(`${NS}.ping`)}
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="t-caption">{t(`${NS}.peersHint`)}</p>
-          {!admitted && identityOk && (
-            <span>
-              <Button onClick={() => focusControl(CONTROL.peerForm)}>{t(`${NS}.addPeer`)}</Button>
-            </span>
-          )}
-        </Step>
-
-        <Step n={4} done={null} title={t(`${NS}.usersTitle`)}>
-          <p className="t-caption">{t(`${NS}.users`)}</p>
         </Step>
       </ol>
     </div>

@@ -1,6 +1,5 @@
 import { useRef, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useDisplayFormat } from "../../lib/displayFormat";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { logger } from "../../lib/logger";
 import {
@@ -8,7 +7,6 @@ import {
   federationErrorCode,
   type FederationState,
 } from "../../lib/api/federationAdmin";
-import Button from "../ui/Button";
 import {
   ActionControl,
   ConfirmDialog,
@@ -21,6 +19,8 @@ import { useExpertRows } from "../Settings/frame/useExpertRows";
 import { ConnectionFileDownload, ConnectionQr } from "../Admin/FederationConnectionFile";
 import FederationPeerForm, { type PeerValues } from "../Admin/FederationPeerForm";
 import FederationSetupChecklist, { CONTROL } from "../Admin/FederationSetupChecklist";
+import FederationAdmissionCards from "../Admin/FederationAdmissionCards";
+import FederationPeerList from "../Admin/FederationPeerList";
 import { useLoaded } from "./useLoaded";
 import { useDemoLock } from "./useLockFor";
 
@@ -33,7 +33,6 @@ const NS = "federation";
  */
 export default function FederationRows(): JSX.Element | null {
   const { t } = useTranslation(["settingsRows", "admin"]);
-  const fmt = useDisplayFormat();
   const demo = useDemoLock();
   const { isFeatureVisible } = useBetaFeatures();
   const expert = useExpertRows(1);
@@ -100,7 +99,6 @@ export default function FederationRows(): JSX.Element | null {
           state={state}
           busy={busy}
           onSwitchOn={() => void run(() => federationAdminApi.setTripSharing(true))}
-          onPing={(peer) => void run(() => federationAdminApi.verifyPeer(peer))}
           onError={setErrorKey}
         />
       ) : null}
@@ -110,15 +108,6 @@ export default function FederationRows(): JSX.Element | null {
         sub={t("admin:federation.enabledSub")}
         scope="allAccounts"
         locked={lock}
-        dependency={
-          state.origin || state.enabled
-            ? undefined
-            : {
-                reason: t("admin:federation.error.origin", {
-                  defaultValue: t("admin:federation.originHint"),
-                }),
-              }
-        }
         control={
           <SwitchControl
             checked={state.enabled}
@@ -208,21 +197,6 @@ export default function FederationRows(): JSX.Element | null {
                 <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
               </details>
             ) : null}
-            {state.origin ? (
-              <ConnectionFileDownload
-                disabled={busy}
-                stale={!readOnly && origin !== null && origin !== state.origin}
-                onError={setErrorKey}
-              />
-            ) : null}
-            {state.origin && state.publicKey ? (
-              <ConnectionQr
-                origin={state.origin}
-                publicKey={state.publicKey}
-                fingerprint={state.fingerprint}
-                stale={!readOnly && origin !== null && origin !== state.origin}
-              />
-            ) : null}
           </div>
         ) : null}
         {rotated ? (
@@ -232,61 +206,59 @@ export default function FederationRows(): JSX.Element | null {
         ) : null}
       </SettingItem>
       {state.fingerprint ? (
-        <SettingItem
-          title={t("settingsRows:services.rows.fedpeers.t")}
-          help={t("settingsRows:services.rows.fedpeers.h")}
-          scope="allAccounts"
-        >
-          <ul
-            className="flex flex-col"
-            style={{ gap: "var(--ts-space-sm)", margin: 0, padding: 0, listStyle: "none" }}
+        <>
+          <FederationAdmissionCards
+            disabled={Boolean(demo)}
+            onDecided={() => void run(() => federationAdminApi.get())}
+          />
+          <SettingItem
+            title={t("settingsRows:services.rows.fedpeers.t")}
+            help={t("settingsRows:services.rows.fedpeers.h")}
+            scope="allAccounts"
           >
-            {state.peers.map((p) => (
-              <li
-                key={p.origin}
-                className="flex flex-wrap items-center justify-between"
-                style={{ gap: "var(--ts-space-md)" }}
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="break-all">{p.origin}</span>
-                  <span className="t-caption">
-                    {p.verifiedAt
-                      ? t("admin:federation.verifiedAt", { date: fmt.date(p.verifiedAt) }) +
-                        (p.leaderboardVersions.includes(1)
-                          ? ""
-                          : ` · ${t("admin:federation.outdated")}`)
-                      : t("admin:federation.unverified")}
-                  </span>
-                </span>
-                <span className="flex" style={{ gap: "var(--ts-space-xs)" }}>
-                  <Button
-                    variant="secondary"
-                    disabled={busy || Boolean(demo)}
-                    onClick={() => void run(() => federationAdminApi.verifyPeer(p.origin))}
-                  >
-                    {t("admin:federation.verify")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    disabled={busy || !p.enabled || Boolean(demo)}
-                    onClick={() => void run(() => federationAdminApi.suspendPeer(p.origin))}
-                  >
-                    {t("admin:federation.suspend")}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-          {demo ? null : (
-            <FederationPeerForm
+            <FederationPeerList
+              peers={state.peers}
               busy={busy}
-              onPin={(peer: PeerValues) =>
-                run(() => federationAdminApi.pinPeer({ ...peer, enabled: true }))
-              }
-              onError={setErrorKey}
+              locked={Boolean(demo)}
+              onVerify={(peer) => void run(() => federationAdminApi.verifyPeer(peer))}
+              onSuspend={(peer) => void run(() => federationAdminApi.suspendPeer(peer))}
             />
-          )}
-        </SettingItem>
+            <details data-testid="federation-advanced">
+              <summary className="t-label-mono cursor-pointer">
+                {t("admin:federation.advanced")}
+              </summary>
+              <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+                <p className="t-caption" style={{ margin: 0 }}>
+                  {t("admin:federation.advancedHint")}
+                </p>
+                {state.origin ? (
+                  <ConnectionFileDownload
+                    disabled={busy}
+                    stale={!readOnly && origin !== null && origin !== state.origin}
+                    onError={setErrorKey}
+                  />
+                ) : null}
+                {state.origin && state.publicKey ? (
+                  <ConnectionQr
+                    origin={state.origin}
+                    publicKey={state.publicKey}
+                    fingerprint={state.fingerprint}
+                    stale={!readOnly && origin !== null && origin !== state.origin}
+                  />
+                ) : null}
+                {demo ? null : (
+                  <FederationPeerForm
+                    busy={busy}
+                    onPin={(peer: PeerValues) =>
+                      run(() => federationAdminApi.pinPeer({ ...peer, enabled: true }))
+                    }
+                    onError={setErrorKey}
+                  />
+                )}
+              </div>
+            </details>
+          </SettingItem>
+        </>
       ) : null}
       {errorKey ? <ErrorLine>{t(errorKey)}</ErrorLine> : null}
       <ConfirmDialog

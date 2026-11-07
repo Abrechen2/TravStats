@@ -27,6 +27,7 @@ vi.mock("../../../lib/api/federationAdmin", async (original) => ({
     generateKey: vi.fn(),
     pinPeer: vi.fn(),
     verifyPeer: vi.fn(),
+    admissions: vi.fn().mockResolvedValue([]),
     suspendPeer: vi.fn(),
   },
 }));
@@ -73,11 +74,11 @@ describe("FederationRows — setup checklist", () => {
     expect(screen.queryByTestId("federation-checklist")).toBeNull();
   });
 
-  it("is all done: address and fingerprint with copy buttons, switch on, the peer reached", async () => {
+  it("is all done: address and fingerprint with copy buttons, switch on", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     await checklist(done);
-    for (const n of [1, 2, 3]) expect(step(n)).toHaveAttribute("data-done", "true");
+    for (const n of [1, 2]) expect(step(n)).toHaveAttribute("data-done", "true");
     fireEvent.click(
       within(step(1)).getByRole("button", { name: "federation.checklist.copyOrigin" })
     );
@@ -86,9 +87,6 @@ describe("FederationRows — setup checklist", () => {
     );
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(FP));
     expect(writeText).toHaveBeenCalledWith("https://me.example");
-    expect(within(step(3)).getByText(PEER)).toBeInTheDocument();
-    expect(within(step(3)).getByText("federation.checklist.peerReached")).toBeInTheDocument();
-    expect(step(4)).toHaveTextContent("federation.checklist.users");
   });
 
   it.each([
@@ -116,23 +114,5 @@ describe("FederationRows — setup checklist", () => {
     expect(
       within(step(2)).getByRole("button", { name: "federation.checklist.switchOn" })
     ).toBeDisabled();
-  });
-
-  it("no admitted peer: leads to the pin form, and pings an unreached one", async () => {
-    vi.mocked(federationAdminApi.verifyPeer).mockResolvedValue(undefined);
-    await checklist({ ...done, peers: [{ ...done.peers[0], verifiedAt: null }] });
-    expect(step(3)).toHaveAttribute("data-done", "false");
-    expect(within(step(3)).getByText("federation.checklist.peerUnreached")).toBeInTheDocument();
-    expect(step(3)).toHaveTextContent("federation.checklist.peersHint");
-    fireEvent.click(within(step(3)).getByRole("button", { name: "federation.checklist.ping" }));
-    await waitFor(() => expect(federationAdminApi.verifyPeer).toHaveBeenCalledWith(PEER));
-    fireEvent.click(within(step(3)).getByRole("button", { name: "federation.checklist.addPeer" }));
-    expect(document.activeElement?.id).toBe("peer-origin");
-  });
-
-  it("a suspended peer does not count", async () => {
-    await checklist({ ...done, peers: [{ ...done.peers[0], enabled: false }] });
-    expect(step(3)).toHaveAttribute("data-done", "false");
-    expect(within(step(3)).getByText("federation.checklist.peerSuspended")).toBeInTheDocument();
   });
 });

@@ -167,6 +167,15 @@
     "COMPARISON_BOARD_LIMIT": "Du hast die höchste Zahl an Gruppen erreicht. Lösche eine, bevor du eine neue anlegst.",
     "COMPARISON_REMOTE_LIMIT": "Du vergleichst dich schon mit der höchsten Zahl an Personen auf anderen Servern. Beende erst einen Vergleich.",
     "COMPARISON_YEAR_NOT_SHARED": "Dieses Jahr teilst du mit dieser Person nicht.",
+    "FEDERATION_OFF": "Dieser Server ist nicht mit anderen Servern verbunden. Frag deinen Admin.",
+    "FEDERATION_ADMISSION_DISABLED": "Dieser Server ist nicht mit anderen Servern verbunden. Frag deinen Admin.",
+    "FEDERATION_ADMISSION_KEY_MISMATCH": "Der Schlüssel dieses Servers passt nicht zu dem, was hinterlegt oder im Link angegeben ist. Vergleiche den Fingerabdruck mit dem anderen Admin.",
+    "FEDERATION_ADMISSION_SUSPENDED": "Dieser Server ist pausiert. Nur ein Admin kann ihn wieder freigeben.",
+    "FEDERATION_ADMISSION_FULL": "Es warten schon zu viele Anfragen an andere Server. Warte, bis über eine entschieden ist.",
+    "FEDERATION_ADMISSION_INVALID": "Das ist kein gültiger Einladungslink. Lass dir den Link neu schicken.",
+    "FEDERATION_ADMISSION_UNREACHABLE": "Der andere Server antwortet gerade nicht. Versuch es später noch einmal.",
+    "FEDERATION_ADMISSION_NOT_FOUND": "Diese Anfrage gibt es nicht mehr. Lade die Seite neu.",
+    "FEDERATION_ADMISSION_NOT_PENDING": "Über diese Anfrage ist schon entschieden. Lade die Seite neu.",
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Warte einen Moment und versuch es dann noch einmal.",
     "unknown": "Das hat nicht geklappt. Versuch es noch einmal."
   }
