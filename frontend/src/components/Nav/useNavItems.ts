@@ -198,7 +198,7 @@ export function useNavItems(): {
             {
               kind: "leaf" as const,
               id: "comparison",
-              path: "/compare",
+              path: "/freunde",
               label: t("comparison:title"),
               icon: "users" as const,
             },

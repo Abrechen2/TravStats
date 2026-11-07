@@ -30,7 +30,7 @@ const DOMAIN_OF: ReadonlyMap<string, string | null> = new Map(
 );
 const domainSet = (domains: readonly string[]) => [...domains].sort().join(",");
 
-function judge(
+export function judge(
   row: LeaderboardRow,
   metric: MetricKey,
   year: number | null,

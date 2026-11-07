@@ -167,12 +167,19 @@ const remoteRow = (
 
 export async function readLeaderboard(
   viewerId: string,
-  query: { year: number | null; boardId?: string },
+  query: { year: number | null; boardId?: string; keys?: ReadonlySet<string> },
   pull: Pull = pullRemote,
   pullDeadlineMs: number = REMOTE_PULL_DEADLINE_MS
 ): Promise<LeaderboardResponse> {
   const { year } = query;
-  const where = boardWhere(query.boardId ? await boardMemberKeys(viewerId, query.boardId) : null);
+  // `keys` is the compare view's pick; it narrows the same way a board does.
+  const where = boardWhere(
+    query.keys
+      ? new Set(query.keys)
+      : query.boardId
+        ? await boardMemberKeys(viewerId, query.boardId)
+        : null
+  );
 
   // Remote pulls start first, so the network waits overlap the local reads below. None of this
   // runs inside a transaction.

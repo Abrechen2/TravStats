@@ -151,6 +151,16 @@ export const leaderboardQuerySchema = z.strictObject({
   year: z.union([z.literal("all"), z.coerce.number().int().min(1900).max(2200)]).default("all"),
   board: uuid.optional(),
 });
+/** The compare view's pick: up to three friends, comma separated, no repeats. */
+export const COMPARE_MAX_FRIENDS = 3;
+export const compareQuerySchema = z.strictObject({
+  year: leaderboardQuerySchema.shape.year,
+  friends: z
+    .string()
+    .max(COMPARE_MAX_FRIENDS * 50)
+    .transform((raw) => (raw === "" ? [] : raw.split(",")))
+    .pipe(z.array(personKeySchema).max(COMPARE_MAX_FRIENDS).refine(unique, "No duplicates")),
+});
 export const consentRequestBodySchema = z.strictObject({
   username: z.string().trim().min(1).max(80),
   scope: leaderboardScopeSchema,
@@ -197,6 +207,11 @@ export const leaderboardRowSchema = z.strictObject({
 export const leaderboardResponseSchema = z.strictObject({
   year: year.nullable(),
   rows: z.array(leaderboardRowSchema),
+});
+export const compareResponseSchema = z.strictObject({
+  year: year.nullable(),
+  self: leaderboardRowSchema,
+  friends: z.array(leaderboardRowSchema).max(COMPARE_MAX_FRIENDS),
 });
 export const personViewSchema = z.strictObject({
   person: personSchema,
@@ -253,6 +268,7 @@ export type Person = z.infer<typeof personSchema>;
 export type RowStatus = z.infer<typeof rowStatusSchema>;
 export type ConsentStatus = z.infer<typeof consentStatusSchema>;
 export type LeaderboardRow = z.infer<typeof leaderboardRowSchema>;
+export type CompareResponse = z.infer<typeof compareResponseSchema>;
 export type LeaderboardResponse = z.infer<typeof leaderboardResponseSchema>;
 export type PersonView = z.infer<typeof personViewSchema>;
 export type RequestView = z.infer<typeof requestViewSchema>;

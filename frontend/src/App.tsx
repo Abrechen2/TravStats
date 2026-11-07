@@ -55,6 +55,7 @@ const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 import { planRoutes } from "./pages/planRoutes";
+import { friendsRoutes } from "./pages/friendsRoutes";
 import { trackRoutes } from "./pages/Track/trackRoutes";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
@@ -230,13 +231,14 @@ function AppContent() {
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              {/* One lazy page for both: it picks the leaderboard or the encrypted share. */}
-              {["/compare", "/encrypted-share"].map((path) => (
+              {/* One lazy page for both: it picks the friends page or the encrypted share. */}
+              {["/freunde", "/encrypted-share"].map((path) => (
                 <Route key={path} path={path} element={<ComparisonPage />} />
               ))}
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
               {planRoutes(isAuthenticated)}
+              {friendsRoutes()}
               {trackRoutes(isAuthenticated)}
               <Route
                 path="/login"

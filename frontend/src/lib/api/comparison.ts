@@ -3,6 +3,9 @@ import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
 import type {
   BoardView,
+  CompareResponse,
+  InviteRedeemStatus,
+  OwnAdmission,
   LeaderboardResponse,
   LeaderboardScope,
   LeaderboardSnapshot,
@@ -34,6 +37,17 @@ export const comparisonApi = {
       { year: year === null ? "all" : String(year), ...(board ? { board } : {}) },
       API_TIMEOUTS.COMPARISON_LEADERBOARD
     ),
+  /** The reader plus the picked friends (at most three keys); same deadline as the leaderboard. */
+  compare: (friends: readonly string[], year: number | "all") =>
+    get<CompareResponse>(
+      "/compare",
+      { friends: friends.join(","), year: String(year) },
+      API_TIMEOUTS.COMPARISON_LEADERBOARD
+    ),
+  createInviteLink: () => post<{ url: string; expiresAt: string }>("/invite-links"),
+  redeemInviteLink: (payload: string, scope: LeaderboardScope) =>
+    post<{ status: InviteRedeemStatus }>("/invite-links/redeem", { payload, scope }),
+  listAdmissions: async () => (await get<{ admissions: OwnAdmission[] }>("/admissions")).admissions,
   preview: (scope: LeaderboardScope) => post<LeaderboardSnapshot>("/preview", scope),
   people: () => get<PeopleResponse>("/people"),
   request: (username: string, scope: LeaderboardScope) =>

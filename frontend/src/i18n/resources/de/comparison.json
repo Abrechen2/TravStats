@@ -1,5 +1,5 @@
 {
-  "title": "Vergleich mit Freunden",
+  "title": "Freunde",
   "subtitle": "Nur Summen, nie einzelne Reisen",
   "you": "Du",
   "addPerson": "Person hinzufügen",
@@ -62,7 +62,7 @@
     "metricNotShared": "teilt diese Zahl nicht",
     "domainOff": "nutzt {{domain}} nicht",
     "yearNotShared": "teilt nur {{year}}",
-    "withdrawn": "hat das Teilen beendet",
+    "withdrawn": "teilt nicht mehr",
     "unreachable": "gerade nicht erreichbar",
     "outdated": "Server muss aktualisiert werden",
     "federationOff": "dein Server ist nicht mit anderen verbunden",
@@ -110,7 +110,9 @@
     "sharing": "ja",
     "notSharing": "nichts",
     "waiting": "wartet auf Antwort – bis dahin wird nichts geteilt",
-    "theirs": { "unknown": "noch keine Antwort" },
+    "theirs": {
+      "unknown": "noch keine Antwort"
+    },
     "change": "Ändern",
     "end": "Beenden",
     "endConfirm": "Vergleich beenden",
@@ -180,5 +182,103 @@
     "FEDERATION_ADMISSION_NOT_PENDING": "Über diese Anfrage ist schon entschieden. Lade die Seite neu.",
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Warte einen Moment und versuch es dann noch einmal.",
     "unknown": "Das hat nicht geklappt. Versuch es noch einmal."
+  },
+  "friends": {
+    "title": "Freunde",
+    "pick": "Freund wählen",
+    "pickHint": "Bis zu drei Freunde nebeneinander.",
+    "add": "Freund hinzufügen",
+    "details": "Einstellungen für {{name}}",
+    "limit": "Mehr als drei Freunde passen nicht nebeneinander.",
+    "noFriends": "Noch kein Freund zum Vergleichen",
+    "noFriendsHint": "Füge einen Freund hinzu – ihr seht dann gegenseitig eure Summen.",
+    "pickOne": "Wähle oben einen Freund, um zu vergleichen.",
+    "waiting": "wartet auf Antwort",
+    "domains": "Bereiche",
+    "allDomains": "Alle",
+    "crossDomainNote": "nicht neu berechnet",
+    "crossDomainHint": "Summen über alle Bereiche werden beim Filtern nicht neu berechnet.",
+    "loadFailed": "Der Vergleich konnte nicht geladen werden.",
+    "admission": {
+      "pending": "wartet auf deinen Admin",
+      "sent": "wartet auf den Admin von {{origin}}",
+      "approved": "freigegeben",
+      "declined": "abgelehnt",
+      "failed": "fehlgeschlagen – bitte lass dir einen neuen Link schicken",
+      "expired": "abgelaufen – bitte lass dir einen neuen Link schicken"
+    },
+    "makeLink": "Einladungslink erstellen",
+    "linkLabel": "Dein Einladungslink",
+    "linkHint": "Gib den Link weiter. Er gilt 72 Stunden und nur einmal. Er wird nur jetzt angezeigt – kopiere ihn, bevor du die Seite verlässt.",
+    "pasteLabel": "Einladung von jemand anderem",
+    "linkDamaged": "Das ist kein vollständiger Einladungslink oder -code. Kopiere ihn noch einmal komplett.",
+    "redeem": "Einladung einlösen",
+    "outcome": {
+      "claimed": "Verbunden. Du siehst die Person jetzt in der Liste.",
+      "awaitingAdmin": "Wartet auf die Freigabe deines Admins.",
+      "awaitingPeerAdmin": "Wartet auf die Freigabe des Admins der anderen Seite."
+    },
+    "admissionsFailed": "Deine Anfragen an andere Server konnten nicht geladen werden.",
+    "accept": {
+      "title": "Einladung annehmen",
+      "signIn": "Melde dich auf deinem Server an",
+      "signInHint": "Öffne diesen Link nach der Anmeldung noch einmal. Es wurde nichts gesendet.",
+      "off": "Diese Funktion ist auf deinem Server noch nicht eingeschaltet.",
+      "damaged": "Dieser Einladungslink ist beschädigt",
+      "damagedHint": "Er ist unvollständig oder gehört nicht zu TravStats. Es wurde nichts gesendet – lass dir den Link noch einmal schicken.",
+      "intro": "Jemand auf {{origin}} lädt dich ein, Reisesummen zu vergleichen.",
+      "server": "Server",
+      "fingerprint": "Fingerabdruck des Servers",
+      "verify": "Vergleiche den Fingerabdruck mit dem, den dir die Person auf anderem Weg genannt hat. Erst mit dem Button unten wird etwas gesendet.",
+      "button": "Einladung annehmen",
+      "toFriends": "Zu den Freunden"
+    },
+    "invite": {
+      "title": "Einladung zum Vergleichen",
+      "ownServer": "Das ist eine Einladung auf deinem eigenen Server.",
+      "toFriends": "Zu den Freunden",
+      "intro": "Du wurdest von jemandem auf {{origin}} eingeladen. Öffne die Einladung auf deinem eigenen TravStats-Server.",
+      "serverLabel": "Adresse deines TravStats-Servers",
+      "serverHint": "z. B. trav.beispiel.de – sie wird auf diesem Gerät gemerkt.",
+      "serverInvalid": "Das ist keine Serveradresse.",
+      "open": "Auf meinem Server öffnen",
+      "copy": "Link kopieren"
+    }
+  },
+  "compare": {
+    "metric": "Kennzahl",
+    "you": "Du",
+    "difference": "Differenz",
+    "notComparable": "nicht vergleichbar",
+    "partialHint": "„≥“ heißt mindestens: nicht jede Fahrt hat eine Strecke.",
+    "table": "Vergleich: {{domain}}",
+    "crossDomain": "Über alle Bereiche"
+  },
+  "achievements": {
+    "title": "Auszeichnungen",
+    "count": "{{unlocked}} von {{total}}",
+    "points": "{{points}} Punkte",
+    "both": "Beide",
+    "onlyYou": "Nur du",
+    "only": "Nur {{name}}",
+    "open": "noch offen: {{percent}} %",
+    "yearOnly": "Erfolge gibt es nur für die Gesamtzeit.",
+    "unknownOther": "auf dem anderen Server unbekannt",
+    "notSharedCode": "von {{name}} nicht geteilt",
+    "withName": "mit {{name}}",
+    "none": "Keine gemeinsamen Erfolge zu vergleichen.",
+    "unavailable": {
+      "olderServer": "nicht verfügbar – der Server von {{name}} ist älter",
+      "notShared": "{{name}} teilt keine Erfolge",
+      "yearView": "nur für die Gesamtzeit"
+    }
+  },
+  "detail": {
+    "title": "{{name}}",
+    "iShare": "Das sieht {{name}} von dir",
+    "theyShare": "Das teilt {{name}} mit dir",
+    "edit": "Ändern",
+    "remove": "Freund entfernen",
+    "close": "Fertig"
   }
 }
