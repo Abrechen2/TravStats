@@ -109,3 +109,14 @@ it("a failed pull keeps the last definite answer instead of downgrading it", asy
   await pullRemote(r, null);
   expect(await theirsOf(r.id)).toMatchObject({ status: "withdrawn" });
 });
+
+it("a notShared answer to a request that said the viewer does not share is not recorded", async () => {
+  const r = await newRemote();
+  await prisma.leaderboardConsent.updateMany({
+    where: { remoteId: r.id },
+    data: { status: "withdrawn" },
+  });
+  jest.mocked(exchange).mockResolvedValueOnce({ status: "notShared" });
+  await pullRemote(r, null);
+  expect(await theirsOf(r.id)).toEqual({ status: "unknown", answeredAt: null });
+});

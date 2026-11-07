@@ -110,7 +110,9 @@ async function identityOrNull(): Promise<Identity | null> {
  * assertion (does the local user share with this friend); one that speaks only 1 gets today's
  * body unchanged, because its strict schema would refuse an unknown field.
  */
-async function aggregateBody(remote: LeaderboardRemote, year: number | null) {
+type AskedAs = { viewerShares?: boolean };
+
+async function aggregateBody(remote: LeaderboardRemote, year: number | null, asked: AskedAs) {
   const base = { action: "aggregate" as const, channel: remote.channel, year };
   const peer = await prisma.comparisonPeer.findUnique({
     where: { origin: remote.origin },
@@ -121,11 +123,8 @@ async function aggregateBody(remote: LeaderboardRemote, year: number | null) {
     where: { ownerId_remoteId: { ownerId: remote.userId, remoteId: remote.id } },
     select: { status: true },
   });
-  return {
-    ...base,
-    accept: [...SERVED_VERSIONS],
-    viewerShares: mine?.status === "accepted",
-  };
+  asked.viewerShares = mine?.status === "accepted";
+  return { ...base, accept: [...SERVED_VERSIONS], viewerShares: asked.viewerShares };
 }
 
 /** The status a pull outcome leaves on the remote row; null: it says nothing about the friend. */
@@ -140,9 +139,16 @@ const DEFINITE_ANSWERS = ["ok", "notShared", "withdrawn", "yearNotShared"];
  * outdated) is stored only while no definite answer exists: an outage must not erase "withdrawn".
  * A write that fails is logged and costs the page nothing.
  */
-async function recordTheirStatus(remote: LeaderboardRemote, result: RemoteResult): Promise<void> {
+async function recordTheirStatus(
+  remote: LeaderboardRemote,
+  result: RemoteResult,
+  asked: AskedAs
+): Promise<void> {
   const status = theirStatusOf(result);
   if (!status) return;
+  // A v2 request that said "the viewer does not share" is answered notShared whichever side
+  // is missing, so that answer says nothing about the friend's own consent.
+  if (result.status === "notShared" && asked.viewerShares === false) return;
   try {
     await prisma.leaderboardRemote.updateMany({
       where: {
@@ -165,14 +171,16 @@ export async function pullRemote(
   remote: LeaderboardRemote,
   year: number | null
 ): Promise<RemoteResult> {
-  const result = await pullRemoteUnrecorded(remote, year);
-  await recordTheirStatus(remote, result);
+  const asked: AskedAs = {};
+  const result = await pullRemoteUnrecorded(remote, year, asked);
+  await recordTheirStatus(remote, result, asked);
   return result;
 }
 
 async function pullRemoteUnrecorded(
   remote: LeaderboardRemote,
-  year: number | null
+  year: number | null,
+  asked: AskedAs
 ): Promise<RemoteResult> {
   if (!(await identityOrNull())) return { status: "federationOff" };
   const readiness = await peerReadiness(remote.origin);
@@ -181,7 +189,7 @@ async function pullRemoteUnrecorded(
   let reply: AggregateReply;
   try {
     reply = aggregateReplySchema.parse(
-      await exchange(remote.origin, await aggregateBody(remote, year))
+      await exchange(remote.origin, await aggregateBody(remote, year, asked))
     );
     // Totals for a year nobody asked for would be shown under the wrong heading.
     if (reply.status === "ok" && reply.snapshot.year !== year)
