@@ -55,7 +55,7 @@ export default function AchievementLeaderboard({
           }}
         >
           {entries.map((entry) => (
-            <li key={entry.rank} className="flex items-center gap-4 px-5 py-3">
+            <li key={entry.username} className="flex items-center gap-4 px-5 py-3">
               <span
                 className="w-10 text-center text-lg font-bold"
                 style={{

@@ -298,16 +298,22 @@ router.get(
         entry.achievementCount++;
       }
 
-      // Convert to array, sort, and limit
-      const leaderboard = Array.from(userPointsMap.values())
-        .sort((a, b) => b.totalPoints - a.totalPoints)
-        .slice(0, limit)
-        .map((entry, index) => ({
-          rank: index + 1,
-          username: entry.user.username,
-          totalPoints: entry.totalPoints,
-          achievementCount: entry.achievementCount,
-        }));
+      // The rows above come in no particular order, so points alone left a tie
+      // to the heap: equal scores got ranks 1 and 2 by chance, and the `limit`
+      // cut chose who was shown. A tie now shares its rank (1, 1, 3), and the
+      // order within it is fixed — more badges first, then by name.
+      const sorted = Array.from(userPointsMap.values()).sort(
+        (a, b) =>
+          b.totalPoints - a.totalPoints ||
+          b.achievementCount - a.achievementCount ||
+          a.user.username.localeCompare(b.user.username, "en")
+      );
+      const leaderboard = sorted.slice(0, limit).map((entry) => ({
+        rank: sorted.findIndex((e) => e.totalPoints === entry.totalPoints) + 1,
+        username: entry.user.username,
+        totalPoints: entry.totalPoints,
+        achievementCount: entry.achievementCount,
+      }));
 
       res.json({ leaderboard });
     } catch (error) {
