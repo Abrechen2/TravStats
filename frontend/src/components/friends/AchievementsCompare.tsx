@@ -66,12 +66,21 @@ export default function AchievementsCompare({
     tr("achievements.open", { percent: Math.round((item?.progress ?? 0) * 100) });
   const bar = (item: Item | undefined): JSX.Element | null =>
     item && item.progress !== null ? (
-      <progress
-        max={1}
-        value={item.progress}
+      <span
+        role="progressbar"
         aria-label={pct(item)}
-        style={{ width: 80, accentColor: "var(--ts-accent)" }}
-      />
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(item.progress * 100)}
+        title={pct(item)}
+        className="inline-block shrink-0 overflow-hidden rounded-full"
+        style={{ width: 80, height: 6, background: "var(--ts-border)" }}
+      >
+        <span
+          className="block h-full"
+          style={{ width: `${Math.round(item.progress * 100)}%`, background: "var(--ts-accent)" }}
+        />
+      </span>
     ) : null;
   const pointsOf = (items: readonly Item[]): number =>
     items.reduce((sum, i) => sum + (i.unlocked ? (byCode.get(i.code)?.points ?? 0) : 0), 0);
@@ -137,7 +146,13 @@ export default function AchievementsCompare({
           items.length === 0 ? null : (
             <div key={id} data-testid={`ach-${id}-${f.key}`}>
               <h4 className="t-section-label">{title}</h4>
-              <ul className="m-0 flex list-none flex-col p-0" style={{ gap: "var(--ts-space-sm)" }}>
+              <ul
+                className="m-0 grid list-none p-0"
+                style={{
+                  gap: "var(--ts-space-sm) var(--ts-space-lg)",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                }}
+              >
                 {items.map((i) => badge(i.code, lacking(i)))}
               </ul>
             </div>

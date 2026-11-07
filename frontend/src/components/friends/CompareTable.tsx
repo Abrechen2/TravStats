@@ -115,7 +115,15 @@ export default function CompareTable({
               )}
             </h3>
             <TableScroll labelledBy={`${id}-h`}>
-              <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <table
+                className="w-full"
+                style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
+              >
+                <colgroup>
+                  <col style={{ width: "26%" }} />
+                  <col />
+                  {friends.map((f) => [<col key={`${f.key}-v`} />, <col key={`${f.key}-d`} />])}
+                </colgroup>
                 <thead>
                   <tr className="t-caption">
                     <th scope="col" style={{ ...CELL, textAlign: "left" }}>
