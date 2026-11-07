@@ -4,7 +4,7 @@ import logger from "../../../utils/logger";
 import { exchange } from "../../federation/security";
 import { loadIdentity } from "../../federation/identity";
 import type { LeaderboardScope } from "../../../schemas/comparison";
-import { pullRemote } from "../remote";
+import { pullRemote, claimInvite } from "../remote";
 import { serveAggregate } from "../peerActions";
 
 jest.mock("../../federation/security", () => ({
@@ -95,6 +95,28 @@ describe("serving an aggregate under the mutual rule", () => {
   it("a v1 request is served as before", async () => {
     const r = await remoteFor({ status: "accepted" });
     expect((await serveAggregate(PEER, v1(r.channel))).status).toBe("ok");
+  });
+
+  it("B redeems, A has not answered: A's aggregate request for B gets notShared", async () => {
+    const channel = randomUUID();
+    jest.mocked(exchange).mockImplementation(async (_origin, body) => {
+      if ((body as { action: string }).action === "ping")
+        return { ready: true, leaderboard: [1, 2] };
+      return { accepted: true, channel, username: "anna", displayName: "Anna" };
+    });
+    await prisma.comparisonPeer.update({
+      where: { origin: PEER },
+      data: { leaderboardVersions: [1, 2] },
+    });
+    // B's own consent is stored accepted by the claim ...
+    await claimInvite(userId, `${PEER}#${"a".repeat(64)}`, SCOPE);
+    const stored = await prisma.leaderboardRemote.findFirstOrThrow({
+      where: { userId, channel },
+      include: { consents: true },
+    });
+    expect(stored.consents[0].status).toBe("accepted");
+    // ... but A's server (viewerShares false: A has not answered) gets nothing.
+    expect(await serveAggregate(PEER, v2(channel, false))).toEqual({ status: "notShared" });
   });
 });
 
