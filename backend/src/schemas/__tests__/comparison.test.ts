@@ -3,6 +3,7 @@ import {
   aggregateReplySchema,
   leaderboardScopeSchema,
   leaderboardSnapshotSchema,
+  anyLeaderboardSnapshotSchema,
   personKeySchema,
 } from "../comparison";
 
@@ -84,6 +85,8 @@ describe("leaderboard wire schemas", () => {
   it("serves exactly the snapshot version its own schema reads", () => {
     // Two sources for one fact: a version advertised in the ping that the snapshot schema
     // rejects would make every pull from a newer peer fail as malformed.
-    expect([...SERVED_VERSIONS]).toEqual([leaderboardSnapshotSchema.shape.version.value]);
+    expect([...SERVED_VERSIONS]).toEqual(
+      anyLeaderboardSnapshotSchema.options.map((option) => option.shape.version.value)
+    );
   });
 });

@@ -15,7 +15,7 @@ const uuid = z.string().uuid();
 export const LEADERBOARD_SCHEMA = "travstats-leaderboard" as const;
 /**
  * Peer protocol versions this server reads and serves. 2 adds the mutual-consent assertion
- * (`viewerShares`) to the aggregate request; a snapshot is still version 1 on the wire.
+ * (`viewerShares`) to the aggregate request and the achievements to the snapshot.
  */
 export const SERVED_VERSIONS = [1, 2] as const;
 /** The first protocol version whose aggregate request carries `viewerShares`. */

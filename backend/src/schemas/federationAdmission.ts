@@ -3,7 +3,7 @@
  * shapes of the admission queue. Bare family (the identity and admin routes); the user-facing
  * routes in `routes/comparison.ts` wrap these in the router's `{success, data}` envelope.
  */
-import { z } from "zod";
+import { z } from "./zod";
 
 export const federationIdentityResponseSchema = z.strictObject({
   origin: z.string(),
