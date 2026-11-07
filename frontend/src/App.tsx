@@ -238,7 +238,7 @@ function AppContent() {
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
               {planRoutes(isAuthenticated)}
-              {friendsRoutes(isAuthenticated)}
+              {friendsRoutes()}
               {trackRoutes(isAuthenticated)}
               <Route
                 path="/login"

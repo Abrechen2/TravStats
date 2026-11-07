@@ -25,7 +25,7 @@ function renderAt(path: string): void {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        {friendsRoutes(true)}
+        {friendsRoutes()}
         <Route path="/freunde" element={<p>friends page</p>} />
       </Routes>
     </MemoryRouter>
@@ -41,22 +41,10 @@ describe("the friends routes", () => {
   it("serves the invitation landing page without a session", async () => {
     render(
       <MemoryRouter initialEntries={["/freunde/einladung"]}>
-        <Routes>{friendsRoutes(false)}</Routes>
+        <Routes>{friendsRoutes()}</Routes>
       </MemoryRouter>
     );
     expect(await screen.findByText("invite page")).toBeInTheDocument();
-  });
-
-  it("sends a signed-out reader of the accept page to the login", async () => {
-    render(
-      <MemoryRouter initialEntries={["/freunde/annehmen"]}>
-        <Routes>
-          {friendsRoutes(false)}
-          <Route path="/login" element={<p>login page</p>} />
-        </Routes>
-      </MemoryRouter>
-    );
-    expect(await screen.findByText("login page")).toBeInTheDocument();
   });
 });
 

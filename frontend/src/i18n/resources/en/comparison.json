@@ -209,7 +209,32 @@
       "awaitingAdmin": "Waiting for your admin's approval.",
       "awaitingPeerAdmin": "Waiting for the approval of the other side's admin."
     },
-    "admissionsFailed": "Your requests to other servers could not be loaded."
+    "admissionsFailed": "Your requests to other servers could not be loaded.",
+    "accept": {
+      "title": "Accept an invitation",
+      "signIn": "Sign in on your server",
+      "signInHint": "Open this link again after signing in. Nothing has been sent.",
+      "off": "This feature is not switched on on your server yet.",
+      "damaged": "This invitation link is damaged",
+      "damagedHint": "It is incomplete or not from TravStats. Nothing was sent – ask for the link again.",
+      "intro": "Someone on {{origin}} invites you to compare travel totals.",
+      "server": "Server",
+      "fingerprint": "Server fingerprint",
+      "verify": "Compare the fingerprint with the one the person told you another way. Nothing is sent until you press the button below.",
+      "button": "Accept invitation",
+      "toFriends": "To friends"
+    },
+    "invite": {
+      "title": "Invitation to compare",
+      "ownServer": "This is an invitation on your own server.",
+      "toFriends": "To friends",
+      "intro": "Someone on {{origin}} invited you. Open the invitation on your own TravStats server.",
+      "serverLabel": "Address of your TravStats server",
+      "serverHint": "e.g. trav.example.com – remembered on this device.",
+      "serverInvalid": "That is not a server address.",
+      "open": "Open on my server",
+      "copy": "Copy link"
+    }
   },
   "compare": {
     "metric": "Figure",

@@ -209,7 +209,32 @@
       "awaitingAdmin": "Wartet auf die Freigabe deines Admins.",
       "awaitingPeerAdmin": "Wartet auf die Freigabe des Admins der anderen Seite."
     },
-    "admissionsFailed": "Deine Anfragen an andere Server konnten nicht geladen werden."
+    "admissionsFailed": "Deine Anfragen an andere Server konnten nicht geladen werden.",
+    "accept": {
+      "title": "Einladung annehmen",
+      "signIn": "Melde dich auf deinem Server an",
+      "signInHint": "Öffne diesen Link nach der Anmeldung noch einmal. Es wurde nichts gesendet.",
+      "off": "Diese Funktion ist auf deinem Server noch nicht eingeschaltet.",
+      "damaged": "Dieser Einladungslink ist beschädigt",
+      "damagedHint": "Er ist unvollständig oder gehört nicht zu TravStats. Es wurde nichts gesendet – lass dir den Link noch einmal schicken.",
+      "intro": "Jemand auf {{origin}} lädt dich ein, Reisesummen zu vergleichen.",
+      "server": "Server",
+      "fingerprint": "Fingerabdruck des Servers",
+      "verify": "Vergleiche den Fingerabdruck mit dem, den dir die Person auf anderem Weg genannt hat. Erst mit dem Button unten wird etwas gesendet.",
+      "button": "Einladung annehmen",
+      "toFriends": "Zu den Freunden"
+    },
+    "invite": {
+      "title": "Einladung zum Vergleichen",
+      "ownServer": "Das ist eine Einladung auf deinem eigenen Server.",
+      "toFriends": "Zu den Freunden",
+      "intro": "Du wurdest von jemandem auf {{origin}} eingeladen. Öffne die Einladung auf deinem eigenen TravStats-Server.",
+      "serverLabel": "Adresse deines TravStats-Servers",
+      "serverHint": "z. B. trav.beispiel.de – sie wird auf diesem Gerät gemerkt.",
+      "serverInvalid": "Das ist keine Serveradresse.",
+      "open": "Auf meinem Server öffnen",
+      "copy": "Link kopieren"
+    }
   },
   "compare": {
     "metric": "Kennzahl",

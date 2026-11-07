@@ -42,7 +42,7 @@ export const consentDialogStub = {
     onConfirm: (s: unknown) => Promise<void>;
   }) =>
     open ? (
-      <button data-mode={mode} onClick={() => void onConfirm(SCOPE)}>
+      <button data-mode={mode} onClick={() => void onConfirm(SCOPE).catch(() => undefined)}>
         confirm-dialog
       </button>
     ) : null,
