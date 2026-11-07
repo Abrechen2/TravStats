@@ -170,6 +170,25 @@ describe("ConsentDialog", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
+  it("previews the achievements it would share, so an achievements-only consent is not blank", async () => {
+    vi.mocked(comparisonApi.preview).mockResolvedValue({
+      ...snapshot,
+      version: 2,
+      metrics: {},
+      achievements: {
+        catalogue: "0123456789abcdef",
+        items: [
+          { code: "AIRPORTS_10", unlocked: true, progress: 1 },
+          { code: "AIRPORTS_25", unlocked: false, progress: 0.2 },
+        ],
+      },
+    });
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
+    expect(await screen.findByText("consent.achievementsPreview")).toBeInTheDocument();
+  });
+
   it("cannot confirm a scope whose numbers have not arrived yet", async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     render(

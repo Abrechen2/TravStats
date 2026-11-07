@@ -17,6 +17,8 @@ export interface LeaderboardSnapshot {
   /** Absent = not shared; null = shared but not derivable. Unknown keys are ignored. */
   metrics: Record<string, number | null>;
   partial: string[];
+  /** Snapshot v2 only. */
+  achievements?: AchievementSection;
 }
 export interface AchievementSection {
   catalogue: string;

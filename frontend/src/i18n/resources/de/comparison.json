@@ -84,6 +84,7 @@
     "allYears": "Alle Jahre",
     "onlyYear": "Nur {{year}}",
     "preview": "Das wird geteilt",
+    "achievementsPreview": "{{unlocked}} von {{total}} vergleichbaren Erfolgen",
     "nothingChosen": "Wähle mindestens eine Kennzahl und einen Bereich.",
     "previewFailed": "Die Vorschau konnte nicht geladen werden.",
     "finePrint": "Nur Summen – keine Reisen, Orte, Daten oder Kosten. Du kannst das jederzeit ändern oder beenden.",

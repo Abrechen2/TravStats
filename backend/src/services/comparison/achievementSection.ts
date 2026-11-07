@@ -6,20 +6,19 @@ import type {
   LeaderboardSnapshot,
 } from "../../schemas/comparison";
 import type { AchievementDefinition } from "../../data/achievements";
-import { SHARED_BADGE_DOMAINS } from "../../data/achievementSeeds/partL";
+import { AVAILABLE_DOMAINS } from "../../shared/domains";
 import { isAchievementHeld } from "../../utils/achievementHeld";
 import { loadAchievementVisibility } from "../achievementVisibility";
-import { loadVisibleDomains } from "../domainVisibility";
 import { catalogueVersion, comparableAchievements } from "./achievementCatalogue";
 
 /**
- * Every domain a badge reads must be in the consent. A domain badge reads its own; a shared one
- * reads the domains `SHARED_BADGE_DOMAINS` names, or — when it names none — every domain the
- * owner has visible (it spans trips, and a partial scope would leak the withheld ones).
+ * Every domain a badge reads must be in the consent. A domain badge reads its own. A shared one
+ * spans trips, and neither `SHARED_BADGE_DOMAINS` (a visibility rule) nor today's visible domains
+ * (they change when a domain is switched off, while the stored progress keeps what it counted)
+ * says what its figure was built from, so it needs the consent to cover every available domain.
  */
-function domainsRead(a: AchievementDefinition, visible: readonly string[]): readonly string[] {
-  if (a.domain !== "shared") return [a.domain];
-  return SHARED_BADGE_DOMAINS[a.code] ?? visible;
+function domainsRead(a: AchievementDefinition): readonly string[] {
+  return a.domain === "shared" ? AVAILABLE_DOMAINS : [a.domain];
 }
 
 /**
@@ -31,14 +30,11 @@ export async function buildAchievementSection(
   scope: LeaderboardScope
 ): Promise<AchievementSection | undefined> {
   if (!scope.groups.includes("achievements") || scope.year !== null) return undefined;
-  const [visibleFor, visibleDomains] = await Promise.all([
-    loadAchievementVisibility(userId),
-    loadVisibleDomains(userId),
-  ]);
+  const visibleFor = await loadAchievementVisibility(userId);
   const shown = comparableAchievements().filter(
     (a) =>
       visibleFor(a.domain, a.code) &&
-      domainsRead(a, visibleDomains).every((d) => scope.domains.includes(d as never))
+      domainsRead(a).every((d) => scope.domains.includes(d as never))
   );
   const rows = await prisma.userAchievement.findMany({
     where: { userId, achievement: { code: { in: shown.map((a) => a.code) } } },

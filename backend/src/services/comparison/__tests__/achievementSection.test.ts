@@ -4,6 +4,7 @@ import { ensureAchievements } from "../../../data/achievements";
 import { loadVisibleDomains } from "../../domainVisibility";
 import { buildLeaderboardSnapshot } from "../aggregates";
 import { buildAchievementSection } from "../achievementSection";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
 import type { LeaderboardScope } from "../../../schemas/comparison";
 
 jest.mock("../../domainVisibility", () => ({
@@ -81,12 +82,13 @@ it("a badge of an unshared domain is omitted", async () => {
   expect(codes(section)).not.toContain("FIRST_CHECKIN");
 });
 
-it("a cross-domain badge needs every visible domain in the consent", async () => {
-  // FLY_AND_STAY reads flights and stays: flight alone must not carry it.
-  expect(
-    codes(await buildAchievementSection(userId, scope({ domains: ["flight"] })))
-  ).not.toContain("FLY_AND_STAY");
-  expect(codes(await buildAchievementSection(userId, scope()))).toContain("FLY_AND_STAY");
+it("a cross-domain badge needs every available domain in the consent, whatever is visible", async () => {
+  // FLY_AND_STAY is built from stays too: a flight+lodging scope is not enough, and switching a
+  // domain off must not shrink what the consent has to cover.
+  jest.mocked(loadVisibleDomains).mockResolvedValue(["flight"]);
+  expect(codes(await buildAchievementSection(userId, scope()))).not.toContain("FLY_AND_STAY");
+  const all = scope({ domains: [...AVAILABLE_DOMAINS] });
+  expect(codes(await buildAchievementSection(userId, all))).toContain("FLY_AND_STAY");
 });
 
 it("never carries a non-comparable badge", async () => {
