@@ -113,6 +113,11 @@ export default function FriendsPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- query is derived from year and the picked keys; version reloads
   }, [people, query, version]);
 
+  // A group deleted here or elsewhere leaves the filter, rather than filtering to nobody.
+  useEffect(() => {
+    if (board && people && !people.boards.some((b) => b.id === board)) setBoard("");
+  }, [board, people]);
+
   const reload = (): void => setVersion((v) => v + 1);
   const toggle = (key: string): void => {
     setNotice(null);

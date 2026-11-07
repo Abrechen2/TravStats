@@ -147,4 +147,14 @@ describe("FriendsPage", () => {
       expect(comparisonApi.compare).toHaveBeenLastCalledWith([ben.key], Number(year))
     );
   });
+
+  it("a group that no longer exists leaves the filter instead of hiding every friend", async () => {
+    const withBoard = { ...people(ben), boards: [{ id: "b1", name: "Crew", members: [ben.key] }] };
+    vi.mocked(comparisonApi.people).mockResolvedValueOnce(withBoard).mockResolvedValue(people(ben));
+    vi.mocked(comparisonApi.compare).mockResolvedValue(answer([rowOf(ben, 400)]));
+    render(<FriendsPage />);
+    await screen.findByTestId("cell-flightKm-self");
+    fireEvent.change(screen.getByLabelText("board.label"), { target: { value: "b1" } });
+    expect(screen.getByRole("button", { name: "Ben" })).toBeInTheDocument();
+  });
 });

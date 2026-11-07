@@ -77,14 +77,16 @@ export default function FriendInvitePage(): JSX.Element {
           <p role="alert">{tr("friends.accept.damaged")}</p>
           <p className="t-caption">{tr("friends.accept.damagedHint")}</p>
         </Card>
-      ) : user ? (
-        <Card>
-          <p>{tr("friends.invite.ownServer")}</p>
-          <Link to="/freunde">{tr("friends.invite.toFriends")}</Link>
-        </Card>
       ) : (
         <Card>
           <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+            {/* A session here only means this is the inviter's server, not the reader's own. */}
+            {user && (
+              <p>
+                {tr("friends.invite.ownServer")}{" "}
+                <Link to="/freunde">{tr("friends.invite.toFriends")}</Link>
+              </p>
+            )}
             <p>{tr("friends.invite.intro", { origin: decoded.payload.origin })}</p>
             <Field
               label={tr("friends.invite.serverLabel")}

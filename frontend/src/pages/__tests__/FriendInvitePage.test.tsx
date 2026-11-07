@@ -84,11 +84,11 @@ describe("FriendInvitePage", () => {
     expect(screen.queryByRole("button", { name: "friends.invite.open" })).toBeNull();
   });
 
-  it("tells a signed-in reader it is their own server", () => {
+  it("tells a signed-in reader it may be their own server, and still offers the other", () => {
     state.user = { id: "u1" };
     open();
     expect(screen.getByText("friends.invite.ownServer")).toBeInTheDocument();
-    expect(screen.queryByLabelText("friends.invite.serverLabel")).toBeNull();
+    expect(screen.getByLabelText("friends.invite.serverLabel")).toBeInTheDocument();
   });
 
   it("an address that is not a server keeps the button off", () => {

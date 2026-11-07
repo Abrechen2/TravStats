@@ -104,9 +104,11 @@ export default function AchievementsCompare({
         <div data-testid="ach-count-self">
           <strong>{tr("compare.you")}</strong>
           <div>{count(mine.items)}</div>
-          <div className="t-caption">
-            {tr("achievements.points", { points: pointsOf(mine.items) })}
-          </div>
+          {catalogue && (
+            <div className="t-caption">
+              {tr("achievements.points", { points: pointsOf(mine.items) })}
+            </div>
+          )}
         </div>
         {friends.map((f) => (
           <div key={f.key} data-testid={`ach-count-${f.key}`}>
@@ -114,9 +116,11 @@ export default function AchievementsCompare({
             {f.row?.achievements ? (
               <>
                 <div>{count(f.row.achievements.items)}</div>
-                <div className="t-caption">
-                  {tr("achievements.points", { points: pointsOf(f.row.achievements.items) })}
-                </div>
+                {catalogue && (
+                  <div className="t-caption">
+                    {tr("achievements.points", { points: pointsOf(f.row.achievements.items) })}
+                  </div>
+                )}
               </>
             ) : (
               <div className="t-caption">
