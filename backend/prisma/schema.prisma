@@ -5682,6 +5682,8 @@ model ComparisonPeer {
   verifiedAt          DateTime? @map("verified_at")
   /// Leaderboard snapshot versions the peer advertised in its last ping; [] = predates them.
   leaderboardVersions Int[]     @default([]) @map("leaderboard_versions")
+  /// When `leaderboardVersions` was last read from the peer; null = never re-checked since stored.
+  versionsCheckedAt   DateTime? @map("versions_checked_at")
 
   @@map("comparison_peers")
 }

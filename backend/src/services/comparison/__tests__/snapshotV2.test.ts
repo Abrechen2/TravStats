@@ -70,8 +70,9 @@ const peerWith = (origin: string, versions: number[]) =>
       enabled: true,
       verifiedAt: new Date(),
       leaderboardVersions: versions,
+      versionsCheckedAt: new Date(),
     },
-    update: { leaderboardVersions: versions },
+    update: { leaderboardVersions: versions, versionsCheckedAt: new Date() },
   });
 const farRow = async (year: number | null = null) =>
   (await readLeaderboard(viewer, { year })).rows.find(
