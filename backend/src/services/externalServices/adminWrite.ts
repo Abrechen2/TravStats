@@ -12,6 +12,7 @@ import { applyConsentChange } from "../../routes/admin/usageStats";
 import { federationSettingsSchema, httpsOriginSchema } from "../../schemas/federationAdmin";
 import { ensureAdminSettingsRow } from "../adminSettingsRow";
 import { resetIdentityCache } from "../federation/identity";
+import { storeNewKey } from "../federation/storeKey";
 import { refreshInstanceTuning } from "../instanceTuning";
 import { clearAvailabilityCache } from "../parsers/config";
 import { clearLlmAvailabilityCache } from "../parsers/llmAvailability";
@@ -158,7 +159,11 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
       ...consentWithdrawalsForAddressChange(adminData, current),
     ]);
   }
-  if (service.id === "federation") resetIdentityCache();
+  if (service.id === "federation") {
+    // One switch, as in PUT /admin/federation: turning it on makes the first key (insert-only).
+    if (body.enabled && !current?.federationPrivateKey) await storeNewKey(undefined, false);
+    resetIdentityCache();
+  }
   await refreshInstanceTuning();
   if (service.ai) {
     // A provider switch must be felt by the very next parse, not after the cache expires.
