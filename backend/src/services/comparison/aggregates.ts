@@ -81,7 +81,8 @@ export async function buildLeaderboardSnapshot(
     partial,
   };
   if (version === 1) return leaderboardSnapshotSchema.parse({ ...common, version: 1 });
-  const achievements = await buildAchievementSection(userId, scope);
+  // Lifetime only: a year view never carries the section, whatever the consent says.
+  const achievements = year === null ? await buildAchievementSection(userId, scope) : undefined;
   return leaderboardSnapshotV2Schema.parse({
     ...common,
     version: 2,

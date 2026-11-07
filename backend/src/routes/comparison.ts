@@ -90,7 +90,7 @@ router.post(
   "/preview",
   handle(async (req, res) => {
     const scope = leaderboardScopeSchema.parse(req.body);
-    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year));
+    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year, 2));
   })
 );
 router.get(

@@ -31,6 +31,11 @@ import {
   readScope,
 } from "./consents";
 
+/** The newest snapshot version both sides read: the asker's `accept` list meets what we serve. */
+function highestCommonVersion(accept: readonly number[]): 1 | 2 {
+  return accept.includes(2) && (SERVED_VERSIONS as readonly number[]).includes(2) ? 2 : 1;
+}
+
 export async function serveAggregate(
   origin: string,
   body: AggregateRequest
@@ -60,7 +65,12 @@ export async function serveAggregate(
     return { status: "yearNotShared", year: scope.year };
   return {
     status: "ok",
-    snapshot: await buildLeaderboardSnapshot(remote.userId, scope, body.year),
+    snapshot: await buildLeaderboardSnapshot(
+      remote.userId,
+      scope,
+      body.year,
+      highestCommonVersion(body.accept)
+    ),
   };
 }
 

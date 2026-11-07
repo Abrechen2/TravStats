@@ -1,5 +1,10 @@
 import { prisma } from "../../db";
-import type { AchievementSection, LeaderboardScope } from "../../schemas/comparison";
+import type {
+  AchievementSection,
+  LeaderboardRow,
+  LeaderboardScope,
+  LeaderboardSnapshot,
+} from "../../schemas/comparison";
 import type { AchievementDefinition } from "../../data/achievements";
 import { SHARED_BADGE_DOMAINS } from "../../data/achievementSeeds/partL";
 import { isAchievementHeld } from "../../utils/achievementHeld";
@@ -52,4 +57,20 @@ export async function buildAchievementSection(
       };
     }),
   };
+}
+
+/**
+ * What a leaderboard row says about a friend's achievements, from the snapshot it carries. A
+ * year view has none by design; a v1 snapshot comes from a server that cannot send them; a v2
+ * snapshot without the section means the friend did not share that group.
+ */
+export function rowAchievements(
+  snapshot: LeaderboardSnapshot,
+  year: number | null
+): Pick<LeaderboardRow, "achievements" | "achievementsUnavailable"> {
+  if (year !== null) return { achievementsUnavailable: "yearView" };
+  if (snapshot.version === 1) return { achievementsUnavailable: "olderServer" };
+  return snapshot.achievements
+    ? { achievements: snapshot.achievements }
+    : { achievementsUnavailable: "notShared" };
 }

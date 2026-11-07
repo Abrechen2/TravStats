@@ -9,7 +9,8 @@ export interface LeaderboardScope {
 }
 export interface LeaderboardSnapshot {
   schema: "travstats-leaderboard";
-  version: 1;
+  /** 2 may carry `achievements`; the row lifts it out, so readers use `LeaderboardRow.achievements`. */
+  version: 1 | 2;
   asOf: string;
   year: number | null;
   domains: string[];
@@ -17,6 +18,11 @@ export interface LeaderboardSnapshot {
   metrics: Record<string, number | null>;
   partial: string[];
 }
+export interface AchievementSection {
+  catalogue: string;
+  items: { code: string; unlocked: boolean; progress: number | null }[];
+}
+export type AchievementsUnavailable = "olderServer" | "notShared" | "yearView";
 export interface Person {
   key: string;
   kind: "self" | "local" | "remote";
@@ -31,6 +37,8 @@ export interface LeaderboardRow {
   person: Person;
   status: RowStatus;
   snapshot: LeaderboardSnapshot | null;
+  achievements?: AchievementSection;
+  achievementsUnavailable?: AchievementsUnavailable;
   sharedYear: number | null;
 }
 export interface LeaderboardResponse {

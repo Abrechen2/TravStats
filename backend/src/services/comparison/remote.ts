@@ -188,9 +188,11 @@ async function pullRemoteUnrecorded(
   if (readiness !== "ready") return { status: "unreachable" };
   let reply: AggregateReply;
   try {
-    reply = aggregateReplySchema.parse(
-      await exchange(remote.origin, await aggregateBody(remote, year, asked))
-    );
+    const body = await aggregateBody(remote, year, asked);
+    reply = aggregateReplySchema.parse(await exchange(remote.origin, body));
+    // A snapshot version we did not offer is a reply we cannot trust the shape of.
+    if (reply.status === "ok" && !body.accept.includes(reply.snapshot.version))
+      throw new UnexpectedReply("wrong-version");
     // Totals for a year nobody asked for would be shown under the wrong heading.
     if (reply.status === "ok" && reply.snapshot.year !== year)
       throw new UnexpectedReply("wrong-year");
