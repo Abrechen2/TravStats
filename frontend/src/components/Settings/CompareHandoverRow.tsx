@@ -6,7 +6,7 @@ import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useRowCopy } from "./rowCopy";
 
-const TARGETS = { rangliste: "/compare", verschl: "/encrypted-share" } as const;
+const TARGETS = { rangliste: "/freunde", verschl: "/encrypted-share" } as const;
 
 /**
  * "Vergleichen & übergeben" (design §4 A12): the leaderboard's consent and the

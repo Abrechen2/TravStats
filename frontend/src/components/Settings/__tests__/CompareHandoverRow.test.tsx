@@ -13,7 +13,7 @@ const renderRow = (row: "rangliste" | "verschl") =>
     <MemoryRouter initialEntries={["/settings/sharing"]}>
       <Routes>
         <Route path="/settings/sharing" element={<CompareHandoverRow row={row} withTitle />} />
-        <Route path="/compare" element={<p>compare page</p>} />
+        <Route path="/freunde" element={<p>friends page</p>} />
         <Route path="/encrypted-share" element={<p>encrypted page</p>} />
       </Routes>
     </MemoryRouter>
@@ -24,12 +24,12 @@ describe("CompareHandoverRow", () => {
     demo = false;
   });
 
-  it("leads the leaderboard row to /compare and the hand-over row to /encrypted-share: two features, two rows", async () => {
+  it("leads the leaderboard row to /freunde and the hand-over row to /encrypted-share: two features, two rows", async () => {
     const { unmount } = renderRow("rangliste");
     await userEvent.click(
       screen.getByRole("button", { name: /settingsRows:sharing.rangliste.btn/ })
     );
-    expect(await screen.findByText("compare page")).toBeInTheDocument();
+    expect(await screen.findByText("friends page")).toBeInTheDocument();
     unmount();
     renderRow("verschl");
     await userEvent.click(screen.getByRole("button", { name: /settingsRows:sharing.verschl.btn/ }));
@@ -43,6 +43,6 @@ describe("CompareHandoverRow", () => {
     expect(button).toBeDisabled();
     expect(screen.getByText("settings:blocks.lock.demo")).toBeInTheDocument();
     await userEvent.click(button);
-    expect(screen.queryByText("compare page")).toBeNull();
+    expect(screen.queryByText("friends page")).toBeNull();
   });
 });
