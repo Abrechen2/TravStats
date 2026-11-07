@@ -386,16 +386,42 @@ export async function endLocal(userId: string, otherUserId: string): Promise<voi
   if (ended.count === 0) throw notFound(userId);
 }
 
+const ownedConsents = (userId: string) =>
+  prisma.leaderboardConsent.findMany({
+    where: { ownerId: userId },
+    include: { viewer: { select: PERSON_SELECT }, remote: true },
+    orderBy: { createdAt: "asc" },
+    take: 200,
+  });
+
+/**
+ * Mutual rule (forgejo#416, spec §9.1): a friend's figures reach a viewer only while the
+ * viewer shares back. A friend who shares with `userId` while `userId` has no row for them at
+ * all (a copied grant, or an agreement from before the rule) is put to `userId` as an open
+ * question, so the missing yes can be given through the ordinary answer. A viewer who declined
+ * or ended it has a row and is not asked again. Idempotent: the unique pair makes a repeat,
+ * or a race with another list call, a no-op.
+ */
+async function askMissingSide(
+  userId: string,
+  owned: { viewerId: string | null }[],
+  viewed: { ownerId: string; status: string }[]
+): Promise<boolean> {
+  const have = new Set(owned.map((c) => c.viewerId));
+  const missing = viewed.filter((c) => c.status === "accepted" && !have.has(c.ownerId));
+  if (missing.length === 0) return false;
+  await prisma.leaderboardConsent.createMany({
+    data: missing.map((c) => ({ ownerId: userId, viewerId: c.ownerId })),
+    skipDuplicates: true,
+  });
+  return true;
+}
+
 export async function listPeople(
   userId: string
 ): Promise<{ requests: RequestView[]; people: PersonView[] }> {
-  const [owned, viewed, remotes] = await Promise.all([
-    prisma.leaderboardConsent.findMany({
-      where: { ownerId: userId },
-      include: { viewer: { select: PERSON_SELECT }, remote: true },
-      orderBy: { createdAt: "asc" },
-      take: 200,
-    }),
+  const [firstOwned, viewed, remotes] = await Promise.all([
+    ownedConsents(userId),
     prisma.leaderboardConsent.findMany({
       where: { viewerId: userId, owner: { isActive: true } },
       include: { owner: { select: PERSON_SELECT } },
@@ -407,6 +433,9 @@ export async function listPeople(
       take: 100,
     }),
   ]);
+  const owned = (await askMissingSide(userId, firstOwned, viewed))
+    ? await ownedConsents(userId)
+    : firstOwned;
   const personOf = (c: (typeof owned)[number]) =>
     c.viewer ? localPerson(c.viewer) : remotePerson(c.remote as NonNullable<typeof c.remote>);
   const requests = owned

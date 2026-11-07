@@ -185,7 +185,16 @@ export async function readLeaderboard(
   ];
 
   const consents = await prisma.leaderboardConsent.findMany({
-    where: { viewerId, status: "accepted", owner: { isActive: true }, ...where.local },
+    where: {
+      viewerId,
+      status: "accepted",
+      // Mutual rule (forgejo#416): the figures flow only while the viewer shares back.
+      owner: {
+        isActive: true,
+        leaderboardConsentsViewed: { some: { ownerId: viewerId, status: "accepted" } },
+      },
+      ...where.local,
+    },
     include: { owner: { select: PERSON_SELECT } },
     orderBy: [{ decidedAt: "asc" }, { id: "asc" }],
     take: LOCAL_ROW_CAP,
