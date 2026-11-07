@@ -119,7 +119,10 @@ export default function LeaderboardPage(): JSX.Element {
           label={tr("group.label")}
           value={group}
           onChange={setGroup}
-          options={METRIC_GROUPS.map((g) => ({ value: g, label: tr(`group.${g}`) }))}
+          options={METRIC_GROUPS.filter((g) => g !== "achievements").map((g) => ({
+            value: g,
+            label: tr(`group.${g}`),
+          }))}
         />
         <Field label={tr("period.label")} htmlFor="comparison-year">
           <Select

@@ -2,6 +2,7 @@ import { LEADERBOARD_METRICS, type MetricKey } from "../../shared/comparisonMetr
 import {
   LEADERBOARD_SCHEMA,
   leaderboardSnapshotSchema,
+  leaderboardSnapshotV2Schema,
   type LeaderboardScope,
   type LeaderboardSnapshot,
 } from "../../schemas/comparison";
@@ -10,6 +11,7 @@ import { loadPassport } from "../stats/passportLoader";
 import { loadDaysAway } from "../stats/daysAwayLoader";
 import { DOMAIN_AGGREGATES } from "./domainAggregates";
 import { comparisonError } from "./errors";
+import { buildAchievementSection } from "./achievementSection";
 
 /**
  * One person's totals under one consent scope (spec §8).
@@ -22,11 +24,15 @@ import { comparisonError } from "./errors";
  * consent covers every domain the owner has visible: their loaders have no domain mask, and a
  * whole-account figure would leak the domains the owner kept back — the rule snapshots.ts
  * already applied. `countries` has no per-year loader and is null for a year.
+ *
+ * `version` is the snapshot version the reader speaks: 1 is byte-identical to what servers
+ * before the achievements section produced; 2 adds the section when the scope carries it.
  */
 export async function buildLeaderboardSnapshot(
   userId: string,
   scope: LeaderboardScope,
-  year: number | null
+  year: number | null,
+  version: 1 | 2 = 1
 ): Promise<LeaderboardSnapshot> {
   if (scope.year !== null && scope.year !== year)
     throw comparisonError("COMPARISON_YEAR_NOT_SHARED", 403, "Shared for another year only", {
@@ -66,13 +72,19 @@ export async function buildLeaderboardSnapshot(
   if (allowedKeys.has("countries"))
     values.countries =
       wholeAccount && year === null ? (await loadPassport(userId)).summary.countries : null;
-  return leaderboardSnapshotSchema.parse({
+  const common = {
     schema: LEADERBOARD_SCHEMA,
-    version: 1,
     asOf: new Date().toISOString(),
     year,
     domains,
     metrics: values,
     partial,
+  };
+  if (version === 1) return leaderboardSnapshotSchema.parse({ ...common, version: 1 });
+  const achievements = await buildAchievementSection(userId, scope);
+  return leaderboardSnapshotV2Schema.parse({
+    ...common,
+    version: 2,
+    ...(achievements ? { achievements } : {}),
   });
 }

@@ -18,7 +18,8 @@
     "distance": "Strecke",
     "trips": "Reisen",
     "time": "Zeit",
-    "places": "Orte"
+    "places": "Orte",
+    "achievements": "Erfolge"
   },
   "metric": {
     "flightKm": "Flugstrecke",

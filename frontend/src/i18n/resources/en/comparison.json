@@ -18,7 +18,8 @@
     "distance": "Distance",
     "trips": "Trips",
     "time": "Time",
-    "places": "Places"
+    "places": "Places",
+    "achievements": "Achievements"
   },
   "metric": {
     "flightKm": "Flight distance",
