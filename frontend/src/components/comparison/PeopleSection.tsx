@@ -73,8 +73,11 @@ export default function PeopleSection({
   const shares = (p: PersonView): string => {
     if (p.theirs?.status === "accepted") return tr("people.sharing");
     if (p.theirs?.status === "pending") return tr("people.waiting");
-    // A person on another server has no consent row of theirs to read.
-    return p.person.kind === "remote" ? "—" : tr("people.notSharing");
+    // A remote person's state is the last answer of their server; before any it is unknown,
+    // which is not the same as "nothing".
+    if (p.person.kind === "remote" && (!p.theirs || p.theirs.status === "unknown"))
+      return tr("people.theirs.unknown");
+    return tr("people.notSharing");
   };
   const actions = (p: PersonView): JSX.Element => {
     const mine = p.mine;

@@ -5844,17 +5844,21 @@ model LeaderboardConsent {
 /// A person on another instance, as one local user knows them. Both servers hold one row
 /// with the same random channel.
 model LeaderboardRemote {
-  id           String                   @id @default(uuid())
-  userId       String                   @map("user_id")
-  origin       String
-  channel      String
-  username     String
-  displayName  String                   @map("display_name")
-  createdAt    DateTime                 @default(now()) @map("created_at")
-  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consents     LeaderboardConsent[]
-  boardMembers LeaderboardBoardMember[]
-  sharePairing RemoteShareAccount?
+  id            String                   @id @default(uuid())
+  userId        String                   @map("user_id")
+  origin        String
+  channel       String
+  username      String
+  displayName   String                   @map("display_name")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  /// What the friend's server last answered to our aggregate request (ok|notShared|withdrawn|
+  /// yearNotShared|unsupportedVersion|unreachable); null until the first answer.
+  theirStatus   String?                  @map("their_status")
+  theirStatusAt DateTime?                @map("their_status_at")
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consents      LeaderboardConsent[]
+  boardMembers  LeaderboardBoardMember[]
+  sharePairing  RemoteShareAccount?
 
   @@unique([origin, channel])
   @@index([userId])

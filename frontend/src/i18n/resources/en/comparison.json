@@ -108,6 +108,7 @@
     "sharing": "yes",
     "notSharing": "nothing",
     "waiting": "waiting for an answer — nothing is shared until then",
+    "theirs": { "unknown": "no answer yet" },
     "change": "Change",
     "end": "Stop",
     "endConfirm": "Stop comparing",

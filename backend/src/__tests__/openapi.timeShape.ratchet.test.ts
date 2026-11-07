@@ -81,6 +81,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   // A position the phone captured without a name (companion#90): the instant the
   // Companion took it, before any place exists to own a zone.
   "capturedAt",
+  // A friend's consent state in the people view (forgejo#416): when their answer was last
+  // recorded — the server's own bookkeeping, no traveller's place.
+  "answeredAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };

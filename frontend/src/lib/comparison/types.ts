@@ -40,7 +40,8 @@ export interface LeaderboardResponse {
 export interface PersonView {
   person: Person;
   mine: { consentId: string; status: ConsentStatus; scope: LeaderboardScope | null } | null;
-  theirs: { status: ConsentStatus } | null;
+  /** Remote people: derived from their server's last answer, `unknown` before any. */
+  theirs: { status: ConsentStatus | "unknown"; answeredAt?: string | null } | null;
 }
 export interface RequestView {
   consentId: string;

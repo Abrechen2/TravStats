@@ -191,7 +191,7 @@ describe("claiming an invitation", () => {
     expect(view).toMatchObject({
       person: { kind: "remote", username: "anna", origin: PEER },
       mine: { status: "accepted", scope: SCOPE },
-      theirs: null,
+      theirs: { status: "unknown", answeredAt: null },
     });
     expect(
       (await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } }))

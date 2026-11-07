@@ -128,7 +128,49 @@ async function aggregateBody(remote: LeaderboardRemote, year: number | null) {
   };
 }
 
+/** The status a pull outcome leaves on the remote row; null: it says nothing about the friend. */
+const theirStatusOf = (result: RemoteResult): string | null => {
+  if (result.status === "federationOff") return null;
+  return result.status === "outdated" ? "unsupportedVersion" : result.status;
+};
+const DEFINITE_ANSWERS = ["ok", "notShared", "withdrawn", "yearNotShared"];
+
+/**
+ * Remembers what the friend's server last said, for the people view. A failure (unreachable,
+ * outdated) is stored only while no definite answer exists: an outage must not erase "withdrawn".
+ * A write that fails is logged and costs the page nothing.
+ */
+async function recordTheirStatus(remote: LeaderboardRemote, result: RemoteResult): Promise<void> {
+  const status = theirStatusOf(result);
+  if (!status) return;
+  try {
+    await prisma.leaderboardRemote.updateMany({
+      where: {
+        id: remote.id,
+        ...(DEFINITE_ANSWERS.includes(status)
+          ? {}
+          : { OR: [{ theirStatus: null }, { theirStatus: { notIn: DEFINITE_ANSWERS } }] }),
+      },
+      data: { theirStatus: status, theirStatusAt: new Date() },
+    });
+  } catch (error) {
+    logger.warn(
+      { operation: "comparison_their_status_failed", remoteId: remote.id, err: error },
+      "A remote friend's answer could not be stored"
+    );
+  }
+}
+
 export async function pullRemote(
+  remote: LeaderboardRemote,
+  year: number | null
+): Promise<RemoteResult> {
+  const result = await pullRemoteUnrecorded(remote, year);
+  await recordTheirStatus(remote, result);
+  return result;
+}
+
+async function pullRemoteUnrecorded(
   remote: LeaderboardRemote,
   year: number | null
 ): Promise<RemoteResult> {

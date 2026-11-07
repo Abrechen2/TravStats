@@ -173,8 +173,17 @@ export const personViewSchema = z.strictObject({
       scope: leaderboardScopeSchema.nullable(),
     })
     .nullable(),
-  /** This person's consent to the caller; null for a remote person (their server holds it). */
-  theirs: z.strictObject({ status: consentStatusSchema }).nullable(),
+  /**
+   * This person's consent to the caller. For a remote person it is derived from the last
+   * aggregate answer of their server (`unknown` before any); for a local one, their own row
+   * (null when they have none).
+   */
+  theirs: z
+    .strictObject({
+      status: z.enum([...consentStatusSchema.options, "unknown"]),
+      answeredAt: z.string().datetime().nullable(),
+    })
+    .nullable(),
 });
 export const requestViewSchema = z.strictObject({
   consentId: uuid,

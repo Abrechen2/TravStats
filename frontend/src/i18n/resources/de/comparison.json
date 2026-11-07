@@ -108,6 +108,7 @@
     "sharing": "ja",
     "notSharing": "nichts",
     "waiting": "wartet auf Antwort – bis dahin wird nichts geteilt",
+    "theirs": { "unknown": "noch keine Antwort" },
     "change": "Ändern",
     "end": "Beenden",
     "endConfirm": "Vergleich beenden",

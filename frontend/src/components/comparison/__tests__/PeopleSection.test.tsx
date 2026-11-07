@@ -146,6 +146,39 @@ describe("PeopleSection", () => {
     await waitFor(() => expect(comparisonApi.end).toHaveBeenCalledWith(far.key));
   });
 
+  it("a remote friend with no answer reads 'noch keine Antwort', never '—'", () => {
+    const remote: PeopleResponse = {
+      requests: [],
+      people: [
+        {
+          person: far,
+          mine: { consentId: "c-4", status: "accepted", scope: SCOPE as never },
+          theirs: { status: "unknown", answeredAt: null },
+        },
+      ],
+      boards: [],
+    };
+    render(<PeopleSection people={remote} onChanged={vi.fn()} />);
+    expect(screen.getByText("people.theirs.unknown")).toBeInTheDocument();
+    expect(screen.queryByText("—")).toBeNull();
+  });
+
+  it("a remote friend whose server says they share reads as sharing", () => {
+    const remote: PeopleResponse = {
+      requests: [],
+      people: [
+        {
+          person: far,
+          mine: { consentId: "c-4", status: "accepted", scope: SCOPE as never },
+          theirs: { status: "accepted", answeredAt: "2026-11-07T10:00:00.000Z" },
+        },
+      ],
+      boards: [],
+    };
+    render(<PeopleSection people={remote} onChanged={vi.fn()} />);
+    expect(screen.getByText("people.sharing")).toBeInTheDocument();
+  });
+
   it("changes the scope of an accepted person through the dialog", async () => {
     render(<PeopleSection people={people} onChanged={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "people.change" }));

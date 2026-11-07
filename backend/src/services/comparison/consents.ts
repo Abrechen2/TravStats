@@ -386,6 +386,24 @@ export async function endLocal(userId: string, otherUserId: string): Promise<voi
   if (ended.count === 0) throw notFound(userId);
 }
 
+/** What a remote friend's server last answered, as a consent state; `unknown` before any. */
+const THEIRS_BY_ANSWER: Record<string, string> = {
+  ok: "accepted",
+  yearNotShared: "accepted",
+  notShared: "pending",
+  withdrawn: "withdrawn",
+};
+function remoteTheirs(r: {
+  theirStatus: string | null;
+  theirStatusAt: Date | null;
+}): NonNullable<PersonView["theirs"]> {
+  const status = (r.theirStatus && THEIRS_BY_ANSWER[r.theirStatus]) || "unknown";
+  return {
+    status: status as NonNullable<PersonView["theirs"]>["status"],
+    answeredAt: r.theirStatusAt?.toISOString() ?? null,
+  };
+}
+
 const ownedConsents = (userId: string) =>
   prisma.leaderboardConsent.findMany({
     where: { ownerId: userId },
@@ -454,11 +472,17 @@ export async function listPeople(
   }
   for (const c of viewed) {
     const person = localPerson(c.owner);
-    people.set(person.key, { ...entry(person), theirs: { status: c.status as ConsentStatus } });
+    people.set(person.key, {
+      ...entry(person),
+      theirs: {
+        status: c.status as ConsentStatus,
+        answeredAt: c.decidedAt?.toISOString() ?? null,
+      },
+    });
   }
   for (const r of remotes) {
     const person = remotePerson(r);
-    if (!people.has(person.key)) people.set(person.key, entry(person));
+    people.set(person.key, { ...entry(person), theirs: remoteTheirs(r) });
   }
   // A person is listed once there is a yes on either side or the caller's own open question.
   // Someone who merely asked the caller is a request, not yet a person (controller ruling).
