@@ -2,6 +2,7 @@ import mapConfigRoutes from "./mapConfig";
 import encryptedShareRoutes from "./encryptedShare";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
+import federationAdmissionRoutes from "./federationAdmission";
 import federationIdentityRoutes from "./federationIdentity";
 import tripSharePeerRoutes from "./tripSharePeer";
 /**
@@ -210,6 +211,12 @@ export const apiMounts: ApiMount[] = [
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
   // The public key and origin, asked with no session by a server that was invited (spec 2026-11-07).
   { id: "federation-identity", base: "/api/v1/federation", router: federationIdentityRoutes },
+  // A server that is not pinned yet asks to be admitted, with a user's invitation token (spec 2026-11-07 §6.2).
+  {
+    id: "federation-admission",
+    base: "/api/v1/federation-admission",
+    router: federationAdmissionRoutes,
+  },
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },

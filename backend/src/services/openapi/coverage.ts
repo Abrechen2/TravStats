@@ -48,6 +48,10 @@ export const UNDOCUMENTED_MOUNTS: ReadonlyMap<string, string> = new Map([
     "Server-to-server protocol between admin-pinned peers (Ed25519-signed envelopes); no user token reaches it",
   ],
   [
+    "federation-admission",
+    "Server-to-server bootstrap admission (signed envelope, purpose admission/1, valid invitation token required); no user token reaches it",
+  ],
+  [
     "trip-share-peer",
     "Server-to-server trip-sharing protocol between admin-pinned peers (Ed25519-signed envelopes, purpose trip-share/1); no user token reaches it",
   ],

@@ -38,6 +38,7 @@ import {
   declineAdmission,
   listAdmissions,
 } from "../../services/federation/admission";
+import { kickAdmissionDelivery } from "../../jobs/admissionDeliveryScheduler";
 import { uuidParamSchema } from "../../schemas/comparison";
 import { holdAllConnections } from "../../services/sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
@@ -320,7 +321,10 @@ router.get(
 router.post(
   "/admissions/:id/approve",
   handle(async (req, res) => {
-    res.json(await approveAdmission(uuidParamSchema.parse(req.params.id), req.userId!));
+    const view = await approveAdmission(uuidParamSchema.parse(req.params.id), req.userId!);
+    // Tell the inviting server soon, not at the next minute's pass.
+    if (view.direction === "outgoing") kickAdmissionDelivery();
+    res.json(view);
   })
 );
 

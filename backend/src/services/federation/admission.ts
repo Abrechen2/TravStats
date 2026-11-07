@@ -9,6 +9,7 @@ import type { FederationAdmissionRequest } from "../../prisma";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { admissionError } from "./admissionErrors";
 import { fetchPeerIdentity } from "./admissionIdentity";
+import { verifyPeerByPing } from "./peerVerification";
 import { pinPeer } from "./pinning";
 
 /** An open request is alive this long (spec §6.2 step 6). */
@@ -129,7 +130,13 @@ export async function approveAdmission(id: string, adminId: string): Promise<Adm
   // Conditional on still being pending: two admins (or one double click) decide once.
   const flipped = await prisma.federationAdmissionRequest.updateMany({
     where: { id, status: "pending" },
-    data: { status: target, decidedAt: new Date(), decidedBy: adminId },
+    data: {
+      status: target,
+      decidedAt: new Date(),
+      decidedBy: adminId,
+      // An outgoing request is now due for delivery (`admissionDelivery.ts`).
+      ...(row.direction === "outgoing" ? { nextAttemptAt: null, attempts: 0 } : {}),
+    },
   });
   if (flipped.count !== 1)
     throw admissionError("FEDERATION_ADMISSION_NOT_PENDING", 409, "Already decided", { id });
@@ -158,6 +165,16 @@ export async function approveAdmission(id: string, adminId: string): Promise<Adm
     },
     "Federation admission approved"
   );
+  // The other server pinned this one before it asked (outgoing there), so it can answer a ping
+  // now. Verifying here lets the claim that follows pass; if it fails the admin can verify by
+  // hand, and the sender's next ask retries it (`admissionBootstrap`).
+  if (row.direction === "incoming" && !alreadyPinned)
+    await verifyPeerByPing(row.origin).catch((error: unknown) =>
+      logger.warn(
+        { operation: "federation_admission_verify_failed", id, origin: row.origin, err: error },
+        "Admitted server could not be verified yet"
+      )
+    );
   return viewOf(id);
 }
 
