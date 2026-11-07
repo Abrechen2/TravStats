@@ -178,6 +178,7 @@ export const NON_TRAVEL_RELATIONS = [
   "leaderboardConsentsViewed",
   "leaderboardRemotes",
   "leaderboardInvites",
+  "federationAdmissions",
   "leaderboardBoards",
   "devicePushes",
   "clientWriteRefs",
