@@ -21,12 +21,15 @@ import { deferIdentityFetch, fetchPeerIdentity } from "../federation/admissionId
 import { loadIdentity } from "../federation/identity";
 import { fingerprintOfRaw, pemFromRawPublicKey, rawPublicKey } from "../federation/rawKey";
 import { PeerRefusal } from "../federation/refusal";
-import { claimInvite, createInvite } from "./remote";
+import { INVITE_TTL_MS, claimInvite, createInvite } from "./remote";
 import { comparisonError } from "./errors";
 
 export const OPEN_REQUESTS_PER_USER = 5;
 export const OPEN_REQUESTS_PER_INSTANCE = 20;
 const OPEN: string[] = ["pending", "sent"];
+
+/** Clock skew between two servers that the issuer's lifetime is allowed to show. */
+const INVITE_SKEW_MS = 5 * 60_000;
 
 export type RedeemStatus = "claimed" | "awaitingAdmin" | "awaitingPeerAdmin";
 
@@ -139,7 +142,7 @@ async function queueOutgoing(
         inviteRef: encryptApiKey(link.token) as string,
         scope: scope as never,
         // The token dies with the link; the 14 days start when this server's admin approves.
-        expiresAt: new Date(link.expiresAt),
+        expiresAt: new Date(Math.min(Date.parse(link.expiresAt), Date.now() + INVITE_TTL_MS)),
       },
     });
     return statusOf(created);
@@ -160,6 +163,11 @@ export async function redeemInviteLink(
   if (new Date(link.expiresAt) <= new Date())
     throw comparisonError("COMPARISON_INVITE_INVALID", 400, "The invitation has expired", {
       userId,
+    });
+  // The lifetime is the issuer's (72 h), never the payload's: a link claiming more is forged.
+  if (new Date(link.expiresAt).getTime() > Date.now() + INVITE_TTL_MS + INVITE_SKEW_MS)
+    throw admissionError("FEDERATION_ADMISSION_INVALID", 400, "Not an invitation link", {
+      reason: "lifetime",
     });
   const pem = pemFromRawPublicKey(link.publicKey) as string;
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: link.origin } });

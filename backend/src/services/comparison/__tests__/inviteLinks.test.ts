@@ -58,7 +58,8 @@ const claimMock = claimInvite as jest.Mock;
 function linkFor(
   origin: string,
   key: ReturnType<typeof peerKey>,
-  token = randomBytes(32).toString("hex")
+  token = randomBytes(32).toString("hex"),
+  expiresAtMs = Date.now() + 3_600_000
 ) {
   const payload = {
     v: 1,
@@ -67,7 +68,7 @@ function linkFor(
     publicKey: rawPublicKey(key.pem) as string,
     fingerprint: key.fingerprint,
     token,
-    expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    expiresAt: new Date(expiresAtMs).toISOString(),
   };
   return { token, text: Buffer.from(JSON.stringify(payload)).toString("base64url") };
 }
@@ -273,4 +274,25 @@ it("a private origin is not fetched on redeem, only on approve", async () => {
   expect(
     (await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: LAN } })).publicKey
   ).toBe(key.pem);
+});
+
+describe("an invitation's lifetime is the issuer's, not the payload's (forgejo#416)", () => {
+  it("a far-future expiresAt in a payload is refused, never stored", async () => {
+    const key = peerKey();
+    fetchMock.mockResolvedValue(identityOf(FAR, key));
+    const { text } = linkFor(FAR, key, undefined, Date.now() + 365 * 24 * 3_600_000);
+    await expect(redeemInviteLink(user.id, text, SCOPE)).rejects.toMatchObject({
+      code: "FEDERATION_ADMISSION_INVALID",
+    });
+    expect(await rows()).toHaveLength(0);
+  });
+
+  it("an expiresAt a little beyond 72 h is clamped to 72 h", async () => {
+    const key = peerKey();
+    fetchMock.mockResolvedValue(identityOf(FAR, key));
+    const { text } = linkFor(FAR, key, undefined, Date.now() + 72 * 3_600_000 + 4 * 60_000);
+    await redeemInviteLink(user.id, text, SCOPE);
+    const [row] = await rows();
+    expect(row?.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 72 * 3_600_000);
+  });
 });
