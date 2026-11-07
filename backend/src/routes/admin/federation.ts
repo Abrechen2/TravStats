@@ -115,6 +115,7 @@ router.get(
 
 /** A key for this server, encrypted at rest. Peers pinned the old key, so connections are held first. */
 async function storeNewKey(userId: string | undefined, replacing: boolean): Promise<void> {
+  const id = await ensureAdminSettingsRow();
   const pem = generateKeyPairSync("ed25519")
     .privateKey.export({ type: "pkcs8", format: "pem" })
     .toString();
@@ -123,11 +124,13 @@ async function storeNewKey(userId: string | undefined, replacing: boolean): Prom
   // side keeps showing active connections and plan members the peers have already ended. Held
   // before the key is written, so a failure in between fails closed and a retry holds again.
   if (replacing) await holdAllConnections();
-  await prisma.adminSettings.update({
-    where: { id: await ensureAdminSettingsRow() },
+  // A first key is written only while none exists, so two switch-ons racing keep one key.
+  const written = await prisma.adminSettings.updateMany({
+    where: replacing ? { id } : { id, federationPrivateKey: null },
     data: { federationPrivateKey: encryptApiKey(pem) },
   });
   resetIdentityCache();
+  if (written.count === 0) return;
   logger.info({ operation: "federation_key_generated", userId }, "Federation key generated");
 }
 
@@ -153,7 +156,8 @@ router.put(
     });
     const origin =
       body.origin || before?.federationOrigin || publicUrlOrigin(before?.publicUrl) || null;
-    if (body.enabled && !origin)
+    // The stored or derived address is held to today's rules too, not just a typed one.
+    if (body.enabled && (!origin || !httpsOriginSchema.safeParse(origin).success))
       throw new AppError("This server has no public address yet", 400, "FEDERATION_ORIGIN_MISSING");
     // Peers address this server by its origin: a different one is a new party to them, so their
     // side has re-pinned or lost us; do locally what a re-pin does (first-time set: nothing to

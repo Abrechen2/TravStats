@@ -64,6 +64,8 @@ export async function serveAggregate(
   };
 }
 
+class BoundElsewhere extends Error {}
+
 /**
  * Someone on the asking server redeemed one of our users' invitation codes. The inviter is
  * asked (a question: pending, no scope, undecided) before their totals are served; the
@@ -74,6 +76,16 @@ export async function serveAggregate(
  * about which codes or users exist.
  */
 export async function serveClaim(origin: string, body: LbClaimRequest): Promise<LbClaimReply> {
+  try {
+    return await claim(origin, body);
+  } catch (error) {
+    // The transaction rolled back, so the token is unspent for the server it belongs to.
+    if (error instanceof BoundElsewhere) return { accepted: false as const };
+    throw error;
+  }
+}
+
+async function claim(origin: string, body: LbClaimRequest): Promise<LbClaimReply> {
   return prisma.$transaction(async (tx) => {
     const invite = await tx.leaderboardInvite.findUnique({
       where: { hash: hash(body.code) },
@@ -81,13 +93,6 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
     });
     if (!invite || invite.usedAt || invite.expiresAt <= new Date() || !invite.user.isActive)
       return { accepted: false as const };
-    // A token an admission request bound to one server is that server's alone: a pinned peer
-    // holding it by other means cannot spend it, and the real holder's claim stays possible.
-    const bound = await tx.federationAdmissionRequest.findUnique({
-      where: { inviteHash: invite.hash },
-      select: { origin: true },
-    });
-    if (bound && bound.origin !== origin) return { accepted: false as const };
     // A full list refuses like a bad code, and before the code is spent, so the inviter can
     // still hand it to someone once a place is free.
     await lockRemoteFriends(tx, invite.userId);
@@ -99,6 +104,14 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
       data: { usedAt: new Date() },
     });
     if (used.count !== 1) return { accepted: false as const };
+    // A token an admission request bound to one server is that server's alone: a pinned peer
+    // holding it by other means cannot spend it. Checked after the spend, under the row lock it
+    // took, so a binding committing meanwhile is seen here or fails on its own `usedAt` guard.
+    const bound = await tx.federationAdmissionRequest.findUnique({
+      where: { inviteHash: invite.hash },
+      select: { origin: true },
+    });
+    if (bound && bound.origin !== origin) throw new BoundElsewhere();
     const channel = randomUUID();
     const remote = await tx.leaderboardRemote.create({
       data: {
