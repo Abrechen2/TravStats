@@ -105,4 +105,24 @@ describe("FederationAdmissionCards", () => {
     expect(await screen.findByText("https://far.example")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "federation.admissions.approve" })).toBeNull();
   });
+
+  it("a sent request that the delivery job settled as failed does not vanish: it says it did not go through", async () => {
+    vi.mocked(federationAdminApi.admissions).mockResolvedValue([
+      {
+        ...request,
+        id: "22222222-2222-4222-8222-222222222222",
+        direction: "outgoing",
+        origin: "https://gone.example",
+        status: "failed",
+        failureReason: "token-refused",
+      },
+    ]);
+    render(<FederationAdmissionCards onDecided={vi.fn()} />);
+    const line = await screen.findByTestId(
+      "federation-admission-failed-22222222-2222-4222-8222-222222222222"
+    );
+    expect(line).toHaveTextContent("https://gone.example");
+    expect(line).toHaveTextContent("federation.admissions.failed");
+    expect(line).toHaveTextContent("federation.admissions.failedReason.token-refused");
+  });
 });

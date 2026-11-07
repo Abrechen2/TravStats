@@ -864,6 +864,11 @@
       "approve": "Approve",
       "decline": "Decline",
       "waitingForOther": "waiting for the other server's admin",
+      "failed": "request did not go through",
+      "failedReason": {
+        "token-refused": "the other server refused the invitation (expired or already used)",
+        "peer-unpinned": "the other server no longer knows this server (key removed)"
+      },
       "loadFailed": "The requests from other servers could not be loaded. Reload the page."
     },
     "peerListEmpty": "No server is connected yet.",

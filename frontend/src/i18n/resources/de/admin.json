@@ -864,6 +864,11 @@
       "approve": "Freigeben",
       "decline": "Ablehnen",
       "waitingForOther": "wartet auf den Admin des anderen Servers",
+      "failed": "Anfrage nicht durchgegangen",
+      "failedReason": {
+        "token-refused": "Der andere Server hat die Einladung abgelehnt (abgelaufen oder schon benutzt).",
+        "peer-unpinned": "Der andere Server kennt diesen Server nicht mehr (Schlüssel entfernt)."
+      },
       "loadFailed": "Die Anfragen anderer Server konnten nicht geladen werden. Lade die Seite neu."
     },
     "peerListEmpty": "Noch ist kein Server verbunden.",

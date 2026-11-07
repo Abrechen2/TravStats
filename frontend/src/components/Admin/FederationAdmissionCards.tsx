@@ -11,6 +11,8 @@ import { Button } from "../ui";
 import { ErrorLine } from "../ui/settings";
 
 const NS = "federation.admissions";
+const MAX_FAILED_SHOWN = 3;
+const KNOWN_FAILURES = ["token-refused", "peer-unpinned"];
 
 /**
  * Admin → Instanz → Föderation: servers waiting to be admitted (spec 2026-11-07 §6.2). A card
@@ -65,7 +67,12 @@ export default function FederationAdmissionCards({
 
   const pending = (rows ?? []).filter((r) => r.status === "pending");
   const waiting = (rows ?? []).filter((r) => r.status === "sent");
-  if (pending.length === 0 && waiting.length === 0 && !errorKey) return null;
+  // A request the delivery job gave up on (refused token, unpinned peer) must not just disappear
+  // from the list it sat in while it was "sent": the admin who approved it needs to know.
+  const failed = (rows ?? [])
+    .filter((r) => r.direction === "outgoing" && r.status === "failed")
+    .slice(0, MAX_FAILED_SHOWN);
+  if (pending.length === 0 && waiting.length === 0 && failed.length === 0 && !errorKey) return null;
 
   return (
     <section
@@ -113,6 +120,19 @@ export default function FederationAdmissionCards({
       {waiting.map((row) => (
         <p key={row.id} className="t-caption" style={{ margin: 0 }}>
           <code className="break-all">{row.origin}</code> · {t(`${NS}.waitingForOther`)}
+        </p>
+      ))}
+      {failed.map((row) => (
+        <p
+          key={row.id}
+          data-testid={`federation-admission-failed-${row.id}`}
+          className="t-caption"
+          style={{ margin: 0 }}
+        >
+          <code className="break-all">{row.origin}</code> · {t(`${NS}.failed`)}
+          {row.failureReason && KNOWN_FAILURES.includes(row.failureReason)
+            ? ` – ${t(`${NS}.failedReason.${row.failureReason}`)}`
+            : ""}
         </p>
       ))}
       {errorKey ? <ErrorLine>{t(errorKey)}</ErrorLine> : null}
