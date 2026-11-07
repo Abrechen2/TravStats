@@ -2,6 +2,7 @@ import mapConfigRoutes from "./mapConfig";
 import encryptedShareRoutes from "./encryptedShare";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
+import federationIdentityRoutes from "./federationIdentity";
 import tripSharePeerRoutes from "./tripSharePeer";
 /**
  * The API mount table — the single source of truth for what is served
@@ -207,6 +208,8 @@ export const apiMounts: ApiMount[] = [
   { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
   { id: "encrypted-share", base: "/api/v1/encrypted-share", router: encryptedShareRoutes },
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
+  // The public key and origin, asked with no session by a server that was invited (spec 2026-11-07).
+  { id: "federation-identity", base: "/api/v1/federation", router: federationIdentityRoutes },
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },

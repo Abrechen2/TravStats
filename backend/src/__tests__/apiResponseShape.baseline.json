@@ -46,6 +46,7 @@
     "diagnosticExport.ts",
     "emailParse.ts",
     "evidence.ts",
+    "federationIdentity.ts",
     "flightLookup.ts",
     "flights.ts",
     "flights/booking.ts",

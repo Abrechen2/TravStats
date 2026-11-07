@@ -103,6 +103,7 @@ import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";
 import "./federationConnectionFile";
+import "./federationIdentity";
 import "./sync";
 
 import "./dawarichStays";
