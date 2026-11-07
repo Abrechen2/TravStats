@@ -15,6 +15,12 @@ import { loadVisibleDomains } from "../domainVisibility";
 
 export type { LeaderboardSnapshot };
 
+/**
+ * The groups the trip-share leaderboard switch hands over: the totals groups. Achievements are
+ * their own consent (spec §6.4) and a switch that predates them must not grow into them.
+ */
+const TOTALS_GROUPS = METRIC_GROUPS.filter((g) => g !== "achievements");
+
 /** Every group of every domain the person has visible, lifetime or one year: no entries. */
 export async function buildOverviewSnapshot(
   userId: string,
@@ -22,7 +28,7 @@ export async function buildOverviewSnapshot(
 ): Promise<LeaderboardSnapshot> {
   return buildLeaderboardSnapshot(
     userId,
-    { groups: [...METRIC_GROUPS], domains: await loadVisibleDomains(userId), year: null },
+    { groups: [...TOTALS_GROUPS], domains: await loadVisibleDomains(userId), year: null },
     year
   );
 }
@@ -41,7 +47,7 @@ export async function setLeaderboardConsent(
   on: boolean
 ): Promise<void> {
   const scope = scopeJson({
-    groups: [...METRIC_GROUPS],
+    groups: [...TOTALS_GROUPS],
     domains: await loadVisibleDomains(ownerId),
     year: null,
   });

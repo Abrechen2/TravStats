@@ -14,7 +14,7 @@ import {
   inviteResponseSchema,
   leaderboardResponseSchema,
   leaderboardScopeSchema,
-  leaderboardSnapshotSchema,
+  anyLeaderboardSnapshotSchema,
   peopleResponseSchema,
   personViewSchema,
   scopeBodySchema,
@@ -41,7 +41,7 @@ registry.registerPath({
   path: "/comparison/leaderboard",
   summary: "The caller's leaderboard: own totals and every consented friend's",
   description:
-    "Same-instance friends are read under their consent; friends on other servers are pulled over the signed peer link, each bounded at 12 s. A row whose totals are unavailable carries a status instead of numbers: `notShared` (no accepted consent or an unreadable scope), `yearNotShared` (shared for `sharedYear` only), `withdrawn` (the friend ended it on their server), `unreachable` (their server did not answer in time or answered nonsense), `outdated` (their server speaks no snapshot version this one reads), `federationOff` (this server is not connected to other servers). Only `ok` rows carry a snapshot.",
+    "Same-instance friends are read under their consent; friends on other servers are pulled over the signed peer link, each bounded at 12 s. A row whose totals are unavailable carries a status instead of numbers: `notShared` (no accepted consent or an unreadable scope), `yearNotShared` (shared for `sharedYear` only), `withdrawn` (the friend ended it on their server), `unreachable` (their server did not answer in time or answered nonsense), `outdated` (their server speaks no snapshot version this one reads), `federationOff` (this server is not connected to other servers). Only `ok` rows carry a snapshot. An `ok` row also carries `achievements` (the friend's lifetime comparable badges, snapshot v2) or `achievementsUnavailable`: `olderServer` (their server speaks snapshot v1 only), `notShared` (the achievements group is not shared) or `yearView` (achievements exist for the whole time only).",
   tags,
   request: {
     query: z.object({
@@ -72,7 +72,7 @@ registry.registerPath({
   tags,
   request: { body: json(leaderboardScopeSchema) },
   responses: {
-    200: ok("Exactly what that scope would share", leaderboardSnapshotSchema),
+    200: ok("Exactly what that scope would share", anyLeaderboardSnapshotSchema),
     400: err("Invalid scope"),
     403: gate,
     429: throttled,

@@ -46,9 +46,8 @@ const notPrototypeName = (raw: unknown) =>
   raw !== null &&
   !Object.keys(raw).some((k) => Object.prototype.hasOwnProperty.call(Object.prototype, k));
 
-export const leaderboardSnapshotSchema = z.strictObject({
+const snapshotFields = {
   schema: z.literal(LEADERBOARD_SCHEMA),
-  version: z.literal(1),
   asOf: z.string().datetime(),
   year: year.nullable(),
   domains: z.array(z.string().max(30)).max(20),
@@ -67,7 +66,39 @@ export const leaderboardSnapshotSchema = z.strictObject({
     ),
   /** Metrics that are a lower bound (some rides carry no distance). */
   partial: z.array(metricName).max(64),
+};
+
+export const leaderboardSnapshotSchema = z.strictObject({
+  ...snapshotFields,
+  version: z.literal(1),
 });
+
+/**
+ * Snapshot v2 (spec §6.4): v1 plus an optional lifetime achievements section. Only comparable
+ * badges, never a date: an item is the code, whether it is held, and its progress.
+ */
+export const achievementSectionSchema = z.strictObject({
+  catalogue: z.string().regex(/^[a-f0-9]{16}$/),
+  items: z
+    .array(
+      z.strictObject({
+        code: z.string().regex(/^[A-Z0-9_]{1,64}$/),
+        unlocked: z.boolean(),
+        progress: z.number().min(0).max(1).nullable(),
+      })
+    )
+    .max(400),
+});
+export const leaderboardSnapshotV2Schema = z.strictObject({
+  ...snapshotFields,
+  version: z.literal(2),
+  achievements: achievementSectionSchema.optional(),
+});
+/** Any snapshot version this server reads; the version literal tells them apart. */
+export const anyLeaderboardSnapshotSchema = z.discriminatedUnion("version", [
+  leaderboardSnapshotSchema,
+  leaderboardSnapshotV2Schema,
+]);
 
 export const aggregateRequestSchema = z.strictObject({
   action: z.literal("aggregate"),
@@ -93,7 +124,7 @@ export const lbStateRequestSchema = z.strictObject({
 });
 
 export const aggregateReplySchema = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("ok"), snapshot: leaderboardSnapshotSchema }),
+  z.strictObject({ status: z.literal("ok"), snapshot: anyLeaderboardSnapshotSchema }),
   z.strictObject({ status: z.literal("notShared") }),
   z.strictObject({ status: z.literal("withdrawn") }),
   z.strictObject({ status: z.literal("yearNotShared"), year }),
@@ -155,7 +186,11 @@ export const consentStatusSchema = z.enum(["pending", "accepted", "declined", "w
 export const leaderboardRowSchema = z.strictObject({
   person: personSchema,
   status: rowStatusSchema,
-  snapshot: leaderboardSnapshotSchema.nullable(),
+  snapshot: anyLeaderboardSnapshotSchema.nullable(),
+  /** The friend's lifetime achievements (snapshot v2), lifted out of the snapshot. */
+  achievements: achievementSectionSchema.optional(),
+  /** Why `achievements` is absent when it is: the reader says it instead of showing nothing. */
+  achievementsUnavailable: z.enum(["olderServer", "notShared", "yearView"]).optional(),
   /** The one year this person shares, when they share only one. */
   sharedYear: year.nullable(),
 });
@@ -206,7 +241,9 @@ export const inviteResponseSchema = z.strictObject({
 });
 
 export type LeaderboardScope = z.infer<typeof leaderboardScopeSchema>;
-export type LeaderboardSnapshot = z.infer<typeof leaderboardSnapshotSchema>;
+export type LeaderboardSnapshotV1 = z.infer<typeof leaderboardSnapshotSchema>;
+export type LeaderboardSnapshot = z.infer<typeof anyLeaderboardSnapshotSchema>;
+export type AchievementSection = z.infer<typeof achievementSectionSchema>;
 export type AggregateRequest = z.infer<typeof aggregateRequestSchema>;
 export type AggregateReply = z.infer<typeof aggregateReplySchema>;
 export type LbClaimRequest = z.infer<typeof lbClaimRequestSchema>;

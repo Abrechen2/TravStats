@@ -62,7 +62,7 @@ describe("ConsentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "group.time", pressed: true }));
     await waitFor(() =>
       expect(comparisonApi.preview).toHaveBeenLastCalledWith({
-        groups: ["distance", "trips", "places"],
+        groups: ["distance", "trips", "places", "achievements"],
         domains: ["flight", "ferry"],
         year: null,
       })
@@ -70,7 +70,7 @@ describe("ConsentDialog", () => {
     fireEvent.click(await screen.findByRole("button", { name: "consent.share" }));
     await waitFor(() =>
       expect(onConfirm).toHaveBeenCalledWith({
-        groups: ["distance", "trips", "places"],
+        groups: ["distance", "trips", "places", "achievements"],
         domains: ["flight", "ferry"],
         year: null,
       })
@@ -94,7 +94,7 @@ describe("ConsentDialog", () => {
     render(
       <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
     );
-    for (const group of ["distance", "trips", "time", "places"])
+    for (const group of ["distance", "trips", "time", "places", "achievements"])
       fireEvent.click(screen.getByRole("button", { name: `group.${group}` }));
     expect(await screen.findByText("consent.nothingChosen")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "consent.share" })).toBeDisabled();
@@ -134,6 +134,7 @@ describe("ConsentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "group.time" }));
     fireEvent.click(screen.getByRole("button", { name: "group.places" }));
     fireEvent.click(screen.getByRole("button", { name: "group.trips" }));
+    fireEvent.click(screen.getByRole("button", { name: "group.achievements" }));
     expect(await screen.findByText("metric.flights")).toBeInTheDocument();
     expect(comparisonApi.preview).toHaveBeenCalledTimes(1);
     expect(comparisonApi.preview).toHaveBeenCalledWith({
@@ -169,6 +170,25 @@ describe("ConsentDialog", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
+  it("previews the achievements it would share, so an achievements-only consent is not blank", async () => {
+    vi.mocked(comparisonApi.preview).mockResolvedValue({
+      ...snapshot,
+      version: 2,
+      metrics: {},
+      achievements: {
+        catalogue: "0123456789abcdef",
+        items: [
+          { code: "AIRPORTS_10", unlocked: true, progress: 1 },
+          { code: "AIRPORTS_25", unlocked: false, progress: 0.2 },
+        ],
+      },
+    });
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
+    expect(await screen.findByText("consent.achievementsPreview")).toBeInTheDocument();
+  });
+
   it("cannot confirm a scope whose numbers have not arrived yet", async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     render(
@@ -280,7 +300,7 @@ describe("ConsentDialog", () => {
     renderEmpty(
       <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={onConfirm} />
     );
-    for (const group of ["distance", "trips", "time", "places"])
+    for (const group of ["distance", "trips", "time", "places", "achievements"])
       expect(screen.getByRole("button", { name: `group.${group}` })).toHaveAttribute(
         "aria-pressed",
         "false"
@@ -312,7 +332,7 @@ describe("ConsentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "consent.share" }));
     await waitFor(() =>
       expect(onConfirm).toHaveBeenCalledWith({
-        groups: ["distance", "trips", "time", "places"],
+        groups: ["distance", "trips", "time", "places", "achievements"],
         domains: ["flight", "ferry"],
         year: null,
       })

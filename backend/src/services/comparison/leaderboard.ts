@@ -21,6 +21,7 @@ import {
   type Person,
 } from "../../schemas/comparison";
 import { buildLeaderboardSnapshot } from "./aggregates";
+import { rowAchievements } from "./achievementSection";
 import { boardMemberKeys } from "./boards";
 import { localKey, localPerson, readScope, remoteKey, remotePerson } from "./consents";
 import { pullRemote, type RemoteResult } from "./remote";
@@ -91,8 +92,14 @@ async function localRow(
   if (scope.year !== null && scope.year !== year)
     return { person, status: "yearNotShared", snapshot: null, sharedYear: scope.year };
   try {
-    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year);
-    return { person, status: "ok", snapshot, sharedYear: scope.year };
+    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year, 2);
+    return {
+      person,
+      status: "ok",
+      snapshot,
+      ...rowAchievements(snapshot, year),
+      sharedYear: scope.year,
+    };
   } catch (error) {
     // One friend's failing loader must not blank everyone's board; it is logged, not hidden.
     logger.error(
@@ -138,9 +145,19 @@ async function pullWithin(
   }
 }
 
-const remoteRow = (remote: LeaderboardRemote, result: RemoteResult): LeaderboardRow =>
+const remoteRow = (
+  remote: LeaderboardRemote,
+  result: RemoteResult,
+  year: number | null
+): LeaderboardRow =>
   result.status === "ok"
-    ? { person: remotePerson(remote), status: "ok", snapshot: result.snapshot, sharedYear: null }
+    ? {
+        person: remotePerson(remote),
+        status: "ok",
+        snapshot: result.snapshot,
+        ...rowAchievements(result.snapshot, year),
+        sharedYear: null,
+      }
     : {
         person: remotePerson(remote),
         status: result.status,
@@ -171,15 +188,18 @@ export async function readLeaderboard(
     select: PERSON_SELECT,
   });
   const visible = await loadVisibleDomains(viewerId);
+  const own = await buildLeaderboardSnapshot(
+    viewerId,
+    { groups: [...METRIC_GROUPS], domains: visible, year: null },
+    year,
+    2
+  );
   const rows: LeaderboardRow[] = [
     {
       person: { ...localPerson(me), key: "self", kind: "self" },
       status: "ok",
-      snapshot: await buildLeaderboardSnapshot(
-        viewerId,
-        { groups: [...METRIC_GROUPS], domains: visible, year: null },
-        year
-      ),
+      snapshot: own,
+      ...rowAchievements(own, year),
       sharedYear: null,
     },
   ];
@@ -206,6 +226,6 @@ export async function readLeaderboard(
   );
 
   const results = await pulled;
-  rows.push(...remotes.map((remote, i) => remoteRow(remote, results[i])));
+  rows.push(...remotes.map((remote, i) => remoteRow(remote, results[i], year)));
   return leaderboardResponseSchema.parse({ year, rows });
 }

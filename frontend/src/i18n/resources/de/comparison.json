@@ -18,7 +18,8 @@
     "distance": "Strecke",
     "trips": "Reisen",
     "time": "Zeit",
-    "places": "Orte"
+    "places": "Orte",
+    "achievements": "Erfolge"
   },
   "metric": {
     "flightKm": "Flugstrecke",
@@ -83,6 +84,7 @@
     "allYears": "Alle Jahre",
     "onlyYear": "Nur {{year}}",
     "preview": "Das wird geteilt",
+    "achievementsPreview": "{{unlocked}} von {{total}} vergleichbaren Erfolgen",
     "nothingChosen": "Wähle mindestens eine Kennzahl und einen Bereich.",
     "previewFailed": "Die Vorschau konnte nicht geladen werden.",
     "finePrint": "Nur Summen – keine Reisen, Orte, Daten oder Kosten. Du kannst das jederzeit ändern oder beenden.",

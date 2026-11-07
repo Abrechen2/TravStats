@@ -67,16 +67,30 @@ export function parseInviteCode(code: string): { origin: string; secret: string 
   return /^[a-f0-9]{64}$/.test(secret) ? { origin, secret } : null;
 }
 
+const NEWEST_SERVED_VERSION = Math.max(...SERVED_VERSIONS);
+/** How long a cached version list that lacks our newest version is trusted before one re-ping. */
+const VERSIONS_RECHECK_MS = 24 * 3_600_000;
+
 /**
- * Whether a peer can be asked for totals. A stored version list is trusted; an empty one is
- * re-checked with one ping, because the other admin may have updated since the last check.
+ * Whether a peer can be asked for totals. A stored version list is trusted, with two exceptions
+ * that cost one ping: an empty list (the other admin may have updated since), and a list that
+ * lacks our newest version once it is a day old or was never re-checked (an upgraded peer would
+ * otherwise stay on the older protocol for good). The ping is part of the pull, so the pull's
+ * own deadline bounds it; a failed re-check keeps the cached list and stamps the time, so a down
+ * peer is asked once a day, not on every page view.
  * The answer is stored only while the peer is still pinned as it was read: an admin who
  * suspended or re-pinned it during the ping must not see a stale answer written over that.
  */
 export async function peerReadiness(origin: string): Promise<PeerReadiness> {
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin } });
   if (!peer?.enabled || !peer.verifiedAt) return "unknown";
-  if (speaksOurVersion(peer.leaderboardVersions)) return "ready";
+  const pinned = { origin, enabled: true, publicKey: peer.publicKey, verifiedAt: { not: null } };
+  const known = speaksOurVersion(peer.leaderboardVersions);
+  const upToDate = peer.leaderboardVersions.includes(NEWEST_SERVED_VERSION);
+  const checkedRecently =
+    peer.versionsCheckedAt !== null &&
+    Date.now() - peer.versionsCheckedAt.getTime() < VERSIONS_RECHECK_MS;
+  if (known && (upToDate || checkedRecently)) return "ready";
   let versions: number[];
   try {
     versions = pingReplySchema.parse(await exchange(origin, { action: "ping" })).leaderboard ?? [];
@@ -85,11 +99,19 @@ export async function peerReadiness(origin: string): Promise<PeerReadiness> {
       { operation: "comparison_peer_ping_failed", origin, kind: failureKind(error) },
       "Peer did not answer"
     );
+    // A cached list that already works stays in use; the stamp keeps the next day quiet.
+    if (known) {
+      await prisma.comparisonPeer.updateMany({
+        where: pinned,
+        data: { versionsCheckedAt: new Date() },
+      });
+      return "ready";
+    }
     return "unreachable";
   }
   const stored = await prisma.comparisonPeer.updateMany({
-    where: { origin, enabled: true, publicKey: peer.publicKey, verifiedAt: { not: null } },
-    data: { leaderboardVersions: versions },
+    where: pinned,
+    data: { leaderboardVersions: versions, versionsCheckedAt: new Date() },
   });
   if (stored.count === 0) return "unknown";
   return speaksOurVersion(versions) ? "ready" : "outdated";
@@ -188,9 +210,11 @@ async function pullRemoteUnrecorded(
   if (readiness !== "ready") return { status: "unreachable" };
   let reply: AggregateReply;
   try {
-    reply = aggregateReplySchema.parse(
-      await exchange(remote.origin, await aggregateBody(remote, year, asked))
-    );
+    const body = await aggregateBody(remote, year, asked);
+    reply = aggregateReplySchema.parse(await exchange(remote.origin, body));
+    // A snapshot version we did not offer is a reply we cannot trust the shape of.
+    if (reply.status === "ok" && !body.accept.includes(reply.snapshot.version))
+      throw new UnexpectedReply("wrong-version");
     // Totals for a year nobody asked for would be shown under the wrong heading.
     if (reply.status === "ok" && reply.snapshot.year !== year)
       throw new UnexpectedReply("wrong-year");

@@ -236,6 +236,17 @@ export default function ConsentDialog({
                 </dd>
               </div>
             ))}
+            {current.achievements && (
+              <div className="contents">
+                <dt className="t-caption">{tr("group.achievements")}</dt>
+                <dd>
+                  {tr("consent.achievementsPreview", {
+                    unlocked: current.achievements.items.filter((i) => i.unlocked).length,
+                    total: current.achievements.items.length,
+                  })}
+                </dd>
+              </div>
+            )}
           </dl>
         )}
         {previewError && <p role="alert">{previewError}</p>}

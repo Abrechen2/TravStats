@@ -18,7 +18,8 @@
     "distance": "Distance",
     "trips": "Trips",
     "time": "Time",
-    "places": "Places"
+    "places": "Places",
+    "achievements": "Achievements"
   },
   "metric": {
     "flightKm": "Flight distance",
@@ -83,6 +84,7 @@
     "allYears": "All years",
     "onlyYear": "Only {{year}}",
     "preview": "This is what will be shared",
+    "achievementsPreview": "{{unlocked}} of {{total}} comparable achievements",
     "nothingChosen": "Pick at least one figure and one area.",
     "previewFailed": "The preview could not be loaded.",
     "finePrint": "Totals only — no trips, places, dates or costs. You can change or stop this at any time.",

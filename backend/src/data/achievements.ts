@@ -25,6 +25,7 @@ import { seedsPartK } from "./achievementSeeds/partK";
 import { seedsPartL } from "./achievementSeeds/partL";
 import { seedsPartM } from "./achievementSeeds/partM";
 import { seedsPartN } from "./achievementSeeds/partN";
+import { isComparable } from "./achievementComparable";
 
 export interface AchievementDefinition {
   code: string;
@@ -48,9 +49,14 @@ export interface AchievementDefinition {
   requirementType: string;
   points: number;
   isHidden?: boolean;
+  /**
+   * May this badge travel to a friend's server (snapshot v2)? Seeds omit it;
+   * the composed `achievements` array resolves it with `isComparable`.
+   */
+  comparable?: boolean;
 }
 
-export const achievements: AchievementDefinition[] = [
+const seeds: AchievementDefinition[] = [
   ...seedsPartA,
   ...seedsPartB,
   ...seedsPartC,
@@ -68,7 +74,12 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartN,
 ];
 
-type DefinitionFields = Omit<Required<AchievementDefinition>, "code">;
+export const achievements: AchievementDefinition[] = seeds.map((a) => ({
+  ...a,
+  comparable: a.comparable ?? isComparable(a),
+}));
+
+type DefinitionFields = Omit<Required<AchievementDefinition>, "code" | "comparable">;
 
 /** The columns a seed definition owns — everything but the key. */
 function definitionFields(a: AchievementDefinition): DefinitionFields {
