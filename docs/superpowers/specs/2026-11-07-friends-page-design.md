@@ -257,6 +257,8 @@ keeps comparing stats.
 | P4 | Freunde page, add dialog, landing pages, redirect, Mehr entry, Settings link | P2, P3 |
 | P5 | admin page simplification (switch, requests, connected servers, Erweitert) | P3 |
 
+**Status 2026-11-07:** P1–P5 built and merged on `feat/friends-compare` (@ 13415242d), plus an integration pass (four follow-up fixes, two-instance e2e in `scripts/e2e/friends-federation.mjs`, full Build Checks, Codex review without P1/P2). Not merged to `main`.
+
 P2 and P3 can run in parallel (two workers). Two-instance end-to-end test on the
 dev database with two backend ports before the RC (the sandbox recipe already runs two
 servers), plus a browser look at iPad 1366/820.
