@@ -11,7 +11,7 @@ import type { LeaderboardScope } from "../../schemas/comparison";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { connectionView } from "../sharing/federation/connections/view";
 import { ALL_OFF } from "../sharing/federation/connections/switches";
-import { tripFederationAvailability } from "../sharing/federation/availability";
+import { connectionsAvailability } from "../sharing/federation/availability";
 import { fingerprintOfRaw, rawPublicKey } from "../federation/rawKey";
 import { listOwnAdmissions } from "../comparison/inviteLinks";
 import { readScope } from "../comparison/consents";
@@ -169,7 +169,7 @@ export async function listFriends(userId: string): Promise<FriendsList> {
       where: { ownerId: userId, viewerId: { not: null } },
       select: { id: true, scope: true, viewerId: true },
     }),
-    tripFederationAvailability(),
+    connectionsAvailability(),
     listOwnAdmissions(userId),
   ]);
   const users = await prisma.user.findMany({

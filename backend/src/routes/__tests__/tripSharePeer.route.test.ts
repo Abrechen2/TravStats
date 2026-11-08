@@ -111,13 +111,38 @@ describe("off is absent", () => {
   it.each([
     ["the beta switch is off", { betaFeaturesEnabled: false }],
     ["the admin's trip-sharing switch is off", { tripFederationEnabled: false }],
-  ])("answers the plain 404 when %s, before reading the packet", async (_name, flags) => {
-    await setTripFlags(flags);
-    const packet = signed(ping(), "trip-share/1");
-    const res = await request(app).post("/api/v1/trip-share-peer").send(packet);
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: "Not found" });
-    expect(await nonceRow(packet)).toBeNull();
+  ])(
+    "with federation on and %s, serves the ping and user connections only (spec 2026-11-08 §11.7) and refuses every trip message",
+    async (_name, flags) => {
+      await setTripFlags(flags);
+      const pinged = await request(app)
+        .post("/api/v1/trip-share-peer")
+        .send(signed(ping(), "trip-share/1"));
+      expect(pinged.status).toBe(200);
+      const trip = JSON.stringify({
+        kind: "offer",
+        messageId: randomUUID(),
+        sentAt: new Date().toISOString(),
+      });
+      const packet = signed(trip, "trip-share/1");
+      const refused = await request(app).post("/api/v1/trip-share-peer").send(packet);
+      expect(refused.status).toBe(403);
+      expect(await nonceRow(packet)).toBeNull();
+    }
+  );
+
+  it("answers the plain 404 when federation itself is off, before reading the packet", async () => {
+    await setTripFlags({ betaFeaturesEnabled: false });
+    const resume = await pauseFederation();
+    try {
+      const packet = signed(ping(), "trip-share/1");
+      const res = await request(app).post("/api/v1/trip-share-peer").send(packet);
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: "Not found" });
+      expect(await nonceRow(packet)).toBeNull();
+    } finally {
+      await resume();
+    }
   });
 
   it("answers 404 when the server has no identity", async () => {

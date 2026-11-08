@@ -22,6 +22,8 @@ export const friendOf = (p: ReturnType<typeof person>, over: Partial<Friend> = {
   requestedAt: null,
   confirmedAt: "2026-11-08T00:00:00.000Z",
   scope: SCOPE,
+  connectionId: null,
+  olderServer: false,
   ...over,
 });
 

@@ -185,10 +185,18 @@
     "unknown": "That did not work. Please try again.",
     "FRIENDS_NOT_FOUND": "This friend no longer exists. Reload the page.",
     "FRIENDS_CONNECTION_STATE": "The connection has changed in the meantime. Reload the page.",
-    "FRIENDS_SELF": "You cannot connect with yourself.",
-    "FRIENDS_SCOPE_INVALID": "This scope is not valid.",
-    "FRIENDS_FEDERATION_OFF": "Your server is not connected to other servers.",
-    "FRIENDS_PEER_UNREACHABLE": "The other server is not answering right now. Try again later."
+    "FRIENDS_CONNECTION_EXISTS": "You already have a connection or an open request with this person.",
+    "FRIENDS_SCOPE_UNAVAILABLE": "The scope cannot be saved while the comparison is off for this connection.",
+    "SHARE_REMOTE_DISABLED": "Connections to other servers are switched off on this server.",
+    "SHARE_REMOTE_UNREACHABLE": "The other server is not answering right now. Try again later.",
+    "SHARE_REMOTE_PEER_OUTDATED": "The other server has to be updated first.",
+    "SHARE_REMOTE_PEER_NOT_ADMITTED": "The admin has not approved this server.",
+    "SHARE_REMOTE_PEER_DISABLED": "The other server does not accept connections.",
+    "SHARE_REMOTE_PERSON_NOT_FOUND": "This person was not found.",
+    "SHARE_REMOTE_CONNECTION_STATE": "The connection has changed in the meantime. Reload the page.",
+    "SHARE_REMOTE_CONNECTION_EXISTS": "You already have a connection or an open request with this person.",
+    "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE": "The other server cannot offer the comparison.",
+    "SHARE_REMOTE_INVITE_OWN_SERVER": "This link comes from your own server."
   },
   "friends": {
     "title": "Friends",

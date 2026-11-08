@@ -43,9 +43,14 @@ export default function InviteToPlan({ friend, onClose, onInvited }: Props): JSX
     setBusy(true);
     setFailed(null);
     try {
-      if (friend.kind === "remote")
-        await travplanApi.inviteConnection(tripId, friend.key.replace(/^remote:/, ""));
-      else await travplanApi.invite(tripId, friend.username);
+      if (friend.kind === "remote") {
+        // The key can be the leaderboard pairing's id; the invitation takes the connection's.
+        if (!friend.connectionId) {
+          setFailed(tr("friend.olderServer", { name: friend.displayName }));
+          return;
+        }
+        await travplanApi.inviteConnection(tripId, friend.connectionId);
+      } else await travplanApi.invite(tripId, friend.username);
       onInvited();
       onClose();
     } catch (failure) {

@@ -18,7 +18,7 @@ import {
   type ConnectionSwitches,
   type TripSharePacket,
 } from "../../../../schemas/tripSharePeer";
-import { requireTripFederation } from "../access";
+import { requireConnectionFederation } from "../access";
 import { remoteShareError } from "../errors";
 import { peerSupports } from "../peerFeatures";
 import { revokePairing } from "../lifecycle";
@@ -147,7 +147,7 @@ export async function requestConnection(
     leaderboardRemoteId?: string;
   }
 ): Promise<ConnectionView> {
-  const local = await requireTripFederation(userId);
+  const local = await requireConnectionFederation(userId);
   if (input.origin === local.origin)
     throw remoteShareError("SHARE_REMOTE_INVITE_OWN_SERVER", 400, "That is this server", {
       userId,
@@ -192,7 +192,7 @@ export async function acceptConnection(
   id: string,
   switches: ConnectionSwitches
 ): Promise<ConnectionView> {
-  await requireTripFederation(userId);
+  await requireConnectionFederation(userId);
   const row = await own(userId, id);
   if (row.state === "reconfirm") {
     await requireReachable(userId, row.origin);
@@ -239,7 +239,7 @@ export async function acceptConnection(
 
 /** Decline a request; the person's next requests are dropped for 30 days. Tells them once. */
 export async function declineConnection(userId: string, id: string): Promise<ConnectionView> {
-  await requireTripFederation(userId);
+  await requireConnectionFederation(userId);
   const row = await own(userId, id);
   if (row.state !== "pending_in") throw wrongState(userId, row.origin);
   const generation = row.generation + 1;
@@ -265,7 +265,7 @@ export async function updateConnectionSwitches(
   id: string,
   switches: ConnectionSwitches
 ): Promise<ConnectionView> {
-  await requireTripFederation(userId);
+  await requireConnectionFederation(userId);
   const row = await own(userId, id);
   if (row.state !== "active") throw wrongState(userId, row.origin);
   if (switches.leaderboard && !row.leaderboardRemoteId)
@@ -303,7 +303,7 @@ export async function updateConnectionSwitches(
  * is told, and refuses on its own as soon as it is.
  */
 export async function endConnection(userId: string, id: string): Promise<ConnectionView> {
-  await requireTripFederation(userId);
+  await requireConnectionFederation(userId);
   const row = await own(userId, id);
   if (row.state === "pending_in") return declineConnection(userId, id);
   if (!["active", "reconfirm", "pending_out"].includes(row.state))

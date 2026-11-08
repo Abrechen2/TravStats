@@ -28,14 +28,24 @@ const bareOrigin = z
     }
   });
 
+const connectionSwitches = z.strictObject({
+  plans: z.boolean(),
+  stats: z.enum(["off", "overview", "full"]),
+  achievements: z.boolean(),
+  leaderboard: z.boolean(),
+  tripOffers: z.boolean(),
+});
+
 export const inviteLinkPayloadSchema = z.strictObject({
-  v: z.literal(1),
+  /** 1: a link from before connections; 2: also carries the inviter's switches (display only). */
+  v: z.union([z.literal(1), z.literal(2)]),
   kind: z.literal(INVITE_LINK_KIND),
   origin: bareOrigin,
   publicKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   token: z.string().regex(/^[a-f0-9]{64}$/),
   expiresAt: z.string().datetime(),
+  switches: connectionSwitches.optional(),
 });
 export type InviteLinkPayload = z.infer<typeof inviteLinkPayloadSchema>;
 

@@ -110,7 +110,16 @@ describe("FriendPanel", () => {
       ],
     });
     vi.mocked(friendsApi.plans).mockResolvedValue({
-      plans: [{ id: "trip-5", title: "Alps", startDate: null, endDate: null }],
+      plans: [
+        {
+          id: "trip-5",
+          title: "Alps",
+          startDate: null,
+          endDate: null,
+          owner: "me",
+          role: "editor",
+        },
+      ],
     });
   });
 
@@ -203,7 +212,7 @@ describe("FriendPanel", () => {
   it("'Reise teilen' on a remote friend offers the chosen trip by connection id", async () => {
     vi.mocked(tripsApi.getAll).mockResolvedValue([{ id: "t9", name: "Rome" }] as never);
     vi.mocked(sharingRemoteApi.offerTrip).mockResolvedValue({} as never);
-    panel(friendOf(lena, { key: "remote:rc-1" }));
+    panel(friendOf(lena, { key: "remote:lb-9", connectionId: "rc-1" }));
     fireEvent.click(await screen.findByRole("button", { name: "friend.trips.share" }));
     fireEvent.change(await screen.findByLabelText("friend.trips.pick"), {
       target: { value: "t9" },
@@ -271,7 +280,7 @@ describe("FriendPanel", () => {
     await waitFor(() => expect(travplanApi.invite).toHaveBeenCalledWith("trip-5", "ben"));
     unmount();
     vi.mocked(travplanApi.inviteConnection).mockRejectedValueOnce(new Error("nope"));
-    panel(friendOf(lena, { key: "remote:rc-1" }));
+    panel(friendOf(lena, { key: "remote:lb-9", connectionId: "rc-1" }));
     fireEvent.click(await screen.findByRole("button", { name: "friend.plans.invite" }));
     await screen.findByRole("option", { name: "Alps" });
     fireEvent.change(screen.getByLabelText("friend.plans.pick"), { target: { value: "trip-5" } });

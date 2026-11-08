@@ -4,7 +4,7 @@ import RequestsSection from "../RequestsSection";
 import { friendsApi } from "../../../lib/api/friends";
 import type { FriendRequest } from "../../../lib/friends/types";
 import type { OwnAdmission } from "../../../lib/comparison/types";
-import { ALL_ON } from "./fixtures";
+import { ALL_ON, friendOf, person } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -28,11 +28,11 @@ vi.mock("../../../lib/api/friends", async (original) => ({
 }));
 
 const request: FriendRequest = {
-  key: "local:1",
-  displayName: "Ben",
-  username: "ben",
-  origin: null,
+  ...friendOf(person("1", "Ben"), { state: "pending_in", theirs: ALL_ON, confirmedAt: null }),
   switches: ALL_ON,
+  proposed: null,
+  viaLink: false,
+  fingerprint: null,
   requestedAt: "2026-11-07T00:00:00.000Z",
 };
 const admission = (

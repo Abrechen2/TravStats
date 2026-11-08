@@ -185,10 +185,18 @@
     "unknown": "Das hat nicht geklappt. Versuch es noch einmal.",
     "FRIENDS_NOT_FOUND": "Diesen Freund gibt es nicht mehr. Lade die Seite neu.",
     "FRIENDS_CONNECTION_STATE": "Die Verbindung hat sich inzwischen geändert. Lade die Seite neu.",
-    "FRIENDS_SELF": "Du kannst dich nicht mit dir selbst verbinden.",
-    "FRIENDS_SCOPE_INVALID": "Dieser Umfang ist nicht gültig.",
-    "FRIENDS_FEDERATION_OFF": "Dein Server ist nicht mit anderen Servern verbunden.",
-    "FRIENDS_PEER_UNREACHABLE": "Der andere Server antwortet gerade nicht. Versuch es später noch einmal."
+    "FRIENDS_CONNECTION_EXISTS": "Mit dieser Person besteht schon eine Verbindung oder eine offene Anfrage.",
+    "FRIENDS_SCOPE_UNAVAILABLE": "Der Umfang lässt sich nicht speichern, solange der Vergleich für diese Verbindung aus ist.",
+    "SHARE_REMOTE_DISABLED": "Verbindungen zu anderen Servern sind auf diesem Server ausgeschaltet.",
+    "SHARE_REMOTE_UNREACHABLE": "Der andere Server antwortet gerade nicht. Versuch es später noch einmal.",
+    "SHARE_REMOTE_PEER_OUTDATED": "Der andere Server muss zuerst aktualisiert werden.",
+    "SHARE_REMOTE_PEER_NOT_ADMITTED": "Der Admin hat diesen Server nicht freigegeben.",
+    "SHARE_REMOTE_PEER_DISABLED": "Der andere Server nimmt keine Verbindungen an.",
+    "SHARE_REMOTE_PERSON_NOT_FOUND": "Diese Person wurde nicht gefunden.",
+    "SHARE_REMOTE_CONNECTION_STATE": "Die Verbindung hat sich inzwischen geändert. Lade die Seite neu.",
+    "SHARE_REMOTE_CONNECTION_EXISTS": "Mit dieser Person besteht schon eine Verbindung oder eine offene Anfrage.",
+    "SHARE_REMOTE_LEADERBOARD_UNAVAILABLE": "Der andere Server kann den Vergleich nicht anbieten.",
+    "SHARE_REMOTE_INVITE_OWN_SERVER": "Dieser Link stammt von deinem eigenen Server."
   },
   "friends": {
     "title": "Freunde",

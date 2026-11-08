@@ -27,7 +27,10 @@ import {
   PeerRefusal,
 } from "../services/federation/security";
 import { TRIP_SHARE_ACCEPTS } from "../services/federation/envelope";
-import { tripFederationAvailability } from "../services/sharing/federation/availability";
+import {
+  connectionsAvailability,
+  tripFederationAvailability,
+} from "../services/sharing/federation/availability";
 import { serveInviteClaim } from "../services/sharing/federation/invites";
 import { serveEntries } from "../services/sharing/federation/entries";
 import { serveOfferAnswer } from "../services/sharing/federation/offers";
@@ -73,12 +76,20 @@ import logger from "../utils/logger";
 const router = Router();
 
 /** What a parsed, authenticated message is answered with. */
-function serve(origin: string, local: string, body: TripSharePacket): Promise<unknown> {
+function serve(
+  origin: string,
+  local: string,
+  body: TripSharePacket,
+  connectionsOnly: boolean
+): Promise<unknown> {
   switch (body.kind) {
     case "ping":
       return Promise.resolve({
         tripShare: [...TRIP_SHARE_VERSIONS],
-        features: servedFeatures(),
+        // Trip sharing off: say so, or a peer would try plans and offers and meet a refusal.
+        features: connectionsOnly
+          ? servedFeatures().filter((f) => f === "connections")
+          : servedFeatures(),
       });
     case "invite-claim":
       return serveInviteClaim(origin, body, local);
@@ -151,9 +162,14 @@ const GROUP = new Set<string>(GROUP_KINDS);
  * as a refusal and, fourteen days on, the server as unreachable. Nothing was written: the
  * message's transaction rolled back, and a retry is applied as if it were the first.
  */
-async function serveOrFail(origin: string, local: string, body: TripSharePacket) {
+async function serveOrFail(
+  origin: string,
+  local: string,
+  body: TripSharePacket,
+  connectionsOnly: boolean
+) {
   try {
-    return await serve(origin, local, body);
+    return await serve(origin, local, body, connectionsOnly);
   } catch (error) {
     if (!GROUP.has(body.kind) || error instanceof PeerRefusal) throw error;
     logger.error(
@@ -177,11 +193,30 @@ function schemaRejection(raw: unknown, error: ZodError) {
   return { kind: "ack" as const, rejected: "schema" as const, ...(field ? { field } : {}) };
 }
 
+/**
+ * Off is absent. With trip sharing off but federation on, only the ping and the user-connection
+ * messages are served (spec 2026-11-08 §11.7): a friend works on a server that shares no trips.
+ */
+const CONNECTION_ONLY_KINDS: ReadonlySet<unknown> = new Set([
+  "ping",
+  "connect-request",
+  "connect-accept",
+  "connect-decline",
+  "connect-revoke",
+  "connect-settings",
+]);
 router.use((_req, res, next) => {
-  tripFederationAvailability().then(
-    (state) => (state.available ? next() : res.status(404).json({ error: "Not found" })),
-    next
-  );
+  const absent = () => res.status(404).json({ error: "Not found" });
+  tripFederationAvailability()
+    .then(async (state) => {
+      if (state.available) return next();
+      if ((await connectionsAvailability()).available) {
+        res.locals.connectionsOnly = true;
+        return next();
+      }
+      absent();
+    })
+    .catch(next);
 });
 // Spec §4: 600 messages a minute per peer. The peer is not known before the signature is
 // checked, so the bucket is the sending address (express-rate-limit's default, IPv6-masked).
@@ -210,6 +245,8 @@ router.post("/", async (req, res) => {
     const { message, peer, local } = await authenticatePeer(raw, TRIP_SHARE_ACCEPTS);
     const parsedJson: unknown = JSON.parse(message.body);
     const kind = (parsedJson as { kind?: unknown } | null)?.kind;
+    if (res.locals.connectionsOnly && !CONNECTION_ONLY_KINDS.has(kind))
+      throw refused("remote-absent");
     const budget = BODY_BUDGET[kind as keyof typeof BODY_BUDGET] ?? BODY_BUDGET.ping;
     if (message.body.length > budget) throw refused("packet-too-large");
     const parsed = tripSharePacket.safeParse(parsedJson);
@@ -219,7 +256,12 @@ router.post("/", async (req, res) => {
     if (kind !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
     const data = parsed.success
-      ? await serveOrFail(message.origin, local.origin, parsed.data)
+      ? await serveOrFail(
+          message.origin,
+          local.origin,
+          parsed.data,
+          res.locals.connectionsOnly === true
+        )
       : rejection;
     res.setHeader("Cache-Control", "no-store");
     res.json(envelope(data, message.origin, local, message.nonce, TRIP_SHARE_PURPOSE));

@@ -61,6 +61,7 @@ const listOf = (...friends: Friend[]): FriendsResponse => ({
   friends,
   requests: [],
   admissions: [],
+  federationAvailable: true,
 });
 const groups = (boards: { id: string; name: string; members: string[] }[] = []) => ({
   requests: [],

@@ -38,6 +38,8 @@ export default function RequestsSection({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const shown = admissions.filter((a) => SHOWN.has(a.status));
+  const offers = (r: FriendRequest): string | null =>
+    theirsSummary(r.switches ?? r.theirs, (key) => String(t(key)));
   if (requests.length === 0 && shown.length === 0) return null;
 
   const run = async (action: () => Promise<unknown>, done?: () => void): Promise<void> => {
@@ -103,11 +105,8 @@ export default function RequestsSection({
             }
           />
           <p className="t-caption">
-            {theirsSummary(r.switches, (key) => String(t(key)))
-              ? tr("friend.requests.offers", {
-                  name: r.displayName,
-                  what: theirsSummary(r.switches, (key) => String(t(key))),
-                })
+            {offers(r)
+              ? tr("friend.requests.offers", { name: r.displayName, what: offers(r) })
               : tr("friend.requests.offersNothing", { name: r.displayName })}
           </p>
           {r.viaLink && <p className="t-caption">{tr("friend.requests.declineBurns")}</p>}

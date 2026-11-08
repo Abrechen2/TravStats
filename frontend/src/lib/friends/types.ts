@@ -1,7 +1,7 @@
 /**
  * Wire types of /api/v1/friends — spec 2026-11-07 §11.4. One friend is one connection, local or
  * remote; the switches are directional (`mine` is what the reader gives, `theirs` what the friend
- * gives). Fields marked "assumed" are not spelled out in §11.4 and follow the F1 worker's build.
+ * gives). The backend schema (`backend/src/schemas/friends.ts`) is the contract.
  */
 import type { ConnectionState, ConnectionSwitches } from "../../types/sharingRemote";
 import type { LeaderboardScope, OwnAdmission } from "../comparison/types";
@@ -18,36 +18,37 @@ export interface Friend {
   theirs: ConnectionSwitches;
   requestedAt: string | null;
   confirmedAt: string | null;
-  /** Assumed: the stored comparison scope behind the leaderboard switch; null = none stored. */
-  scope?: LeaderboardScope | null;
-  /** Assumed: the peer server lacks the `connections` feature — comparison only (§11.7). */
-  olderServer?: boolean;
+  /** The `/sharing/connections` id of a remote connection; null for a local friend or a bare pairing. */
+  connectionId: string | null;
+  /** The stored comparison scope behind the leaderboard switch; null = none stored. */
+  scope: LeaderboardScope | null;
+  /** The peer server lacks the `connections` feature — comparison only (§11.7). */
+  olderServer: boolean;
 }
 
-/** An incoming request: the asker's switches are what they offer, the reader answers with their own. */
-export interface FriendRequest {
-  key: string;
-  displayName: string;
-  username: string;
-  origin: string | null;
-  /** Assumed: the asker's own switches (`theirs` of the future connection). */
-  switches: ConnectionSwitches;
-  requestedAt: string | null;
-  /** Assumed: set when the request came from a redeemed invitation link (§11.8). */
-  viaLink?: boolean;
-  /** Assumed: the redeemer's server fingerprint, shown to the inviter for a remote redeem. */
-  fingerprint?: string | null;
+/**
+ * An incoming request is a friend row in state `pending_in`, plus what the asker offers
+ * (`switches`, same as `theirs`), the switches the reader chose on their own link (`proposed`) and
+ * the redeem facts.
+ */
+export interface FriendRequest extends Friend {
+  switches: ConnectionSwitches | null;
+  proposed: ConnectionSwitches | null;
+  viaLink: boolean;
+  fingerprint: string | null;
 }
 
 export interface FriendsResponse {
   friends: Friend[];
   requests: FriendRequest[];
   admissions: OwnAdmission[];
+  /** Whether this server can reach people on other servers right now. */
+  federationAvailable: boolean;
 }
 
 export type CopyState = "linked" | "pending" | "declined" | "removed";
 
-/** Assumed shape of one shared trip. `localTripId` is the trip to open on this server, if any. */
+/** Shape of one shared trip. `localTripId` is the trip to open on this server, if any. */
 export interface SharedTrip {
   id: string;
   title: string;
@@ -61,12 +62,14 @@ export interface FriendTrips {
   fromThem: SharedTrip[];
 }
 
-/** Assumed shape of a plan both are members of. */
+/** A plan both are members of; `owner` says whose trip it is, `role` the reader's role. */
 export interface SharedPlan {
   id: string;
   title: string;
   startDate: string | null;
   endDate: string | null;
+  owner: "me" | "them";
+  role: string;
 }
 export interface FriendPlans {
   plans: SharedPlan[];

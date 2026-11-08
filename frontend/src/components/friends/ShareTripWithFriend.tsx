@@ -54,7 +54,12 @@ export default function ShareTripWithFriend({ friend, onClose, onShared }: Props
     setFailed(null);
     try {
       if (friend.kind === "remote") {
-        await sharingRemoteApi.offerTrip(tripId, { remoteId: friend.key.replace(/^remote:/, "") });
+        // The key can be the leaderboard pairing's id; offers take the connection's.
+        if (!friend.connectionId) {
+          setFailed(tr("friend.olderServer", { name: friend.displayName }));
+          return;
+        }
+        await sharingRemoteApi.offerTrip(tripId, { remoteId: friend.connectionId });
         onShared();
         onClose();
       } else {
