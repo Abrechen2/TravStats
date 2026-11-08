@@ -85,7 +85,8 @@ function serve(
   switch (body.kind) {
     case "ping":
       return Promise.resolve({
-        tripShare: [...TRIP_SHARE_VERSIONS],
+        // Trip sharing off: no versions, so a trip-sharing sender reads "off" as before.
+        tripShare: connectionsOnly ? [] : [...TRIP_SHARE_VERSIONS],
         // Trip sharing off: say so, or a peer would try plans and offers and meet a refusal.
         features: connectionsOnly
           ? servedFeatures().filter((f) => f === "connections")
@@ -245,8 +246,11 @@ router.post("/", async (req, res) => {
     const { message, peer, local } = await authenticatePeer(raw, TRIP_SHARE_ACCEPTS);
     const parsedJson: unknown = JSON.parse(message.body);
     const kind = (parsedJson as { kind?: unknown } | null)?.kind;
-    if (res.locals.connectionsOnly && !CONNECTION_ONLY_KINDS.has(kind))
-      throw refused("remote-absent");
+    if (res.locals.connectionsOnly && !CONNECTION_ONLY_KINDS.has(kind)) {
+      // Trip sharing is off here: a trip message meets the same plain 404 as before.
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     const budget = BODY_BUDGET[kind as keyof typeof BODY_BUDGET] ?? BODY_BUDGET.ping;
     if (message.body.length > budget) throw refused("packet-too-large");
     const parsed = tripSharePacket.safeParse(parsedJson);

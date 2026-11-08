@@ -126,7 +126,7 @@ describe("off is absent", () => {
       });
       const packet = signed(trip, "trip-share/1");
       const refused = await request(app).post("/api/v1/trip-share-peer").send(packet);
-      expect(refused.status).toBe(403);
+      expect(refused.status).toBe(404);
       expect(await nonceRow(packet)).toBeNull();
     }
   );

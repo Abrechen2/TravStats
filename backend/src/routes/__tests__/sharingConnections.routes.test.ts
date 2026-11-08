@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { errorHandler } from "../../middleware/errorHandler";
-import { setTripFlags } from "../../services/sharing/federation/__tests__/instanceFlags";
+import { pauseFederation } from "../../services/federation/__tests__/identityFixture";
 import { withTripFederation } from "../../services/sharing/federation/__tests__/federationEnv";
 import sharingConnections from "../sharingConnections";
 import sharing from "../sharing";
@@ -185,13 +185,14 @@ describe("answering and changing", () => {
   });
 });
 
-describe("while cross-server sharing is off", () => {
-  let before: Awaited<ReturnType<typeof setTripFlags>>;
+// Connections need federation, not the trip-sharing switch (spec 2026-11-08 §11.7).
+describe("while federation is off", () => {
+  let resume: () => Promise<void>;
   beforeEach(async () => {
-    before = await setTripFlags({ tripFederationEnabled: false });
+    resume = await pauseFederation();
   });
   afterEach(async () => {
-    await setTripFlags(before);
+    await resume();
   });
   const id = "00000000-0000-4000-8000-000000000000";
   it.each([

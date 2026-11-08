@@ -20,13 +20,12 @@ import {
 } from "../../../../schemas/tripSharePeer";
 import { requireConnectionFederation } from "../access";
 import { remoteShareError } from "../errors";
-import { peerSupports } from "../peerFeatures";
 import { revokePairing } from "../lifecycle";
 import {
   LOCAL_ERROR,
   kindOf,
   requireAdmitted,
-  requireTripSharePeer,
+  requireConnectionsPeer,
   unreachable,
 } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
@@ -71,15 +70,7 @@ async function me(userId: string) {
 
 async function requireReachable(userId: string, origin: string): Promise<void> {
   await requireAdmitted(userId, origin);
-  await requireTripSharePeer(userId, origin);
-  if (!(await peerSupports(origin, "connections").catch(() => false)))
-    throw remoteShareError(
-      "SHARE_REMOTE_PEER_OUTDATED",
-      409,
-      "That server needs an update",
-      { userId, origin },
-      { origin }
-    );
+  await requireConnectionsPeer(userId, origin);
 }
 
 /** The leaderboard channel this side proposes: the linked pairing's own, else a new one. */
