@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import FriendAcceptPage from "../FriendAcceptPage";
 import { comparisonApi } from "../../lib/api/comparison";
-import { SCOPE, VALID_PAYLOAD, b64url } from "../../components/friends/__tests__/fixtures";
+import { ALL_ON, VALID_PAYLOAD, b64url } from "../../components/friends/__tests__/fixtures";
 
 const state = vi.hoisted(() => ({
   user: { id: "u1" } as { id: string } | null,
@@ -20,8 +20,8 @@ vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock(
-  "../../components/comparison/ConsentDialog",
-  async () => (await import("../../components/friends/__tests__/fixtures")).consentDialogStub
+  "../../components/friends/SwitchesAskDialog",
+  async () => (await import("../../components/friends/__tests__/fixtures")).switchesDialogStub
 );
 vi.mock("../../lib/api/comparison", async (original) => ({
   ...(await original<typeof import("../../lib/api/comparison")>()),
@@ -73,7 +73,7 @@ describe("FriendAcceptPage", () => {
     expect((await screen.findByTestId("accept-outcome")).textContent).toBe(
       "friends.outcome.awaitingAdmin"
     );
-    expect(comparisonApi.redeemInviteLink).toHaveBeenCalledWith(PAYLOAD, SCOPE);
+    expect(comparisonApi.redeemInviteLink).toHaveBeenCalledWith(PAYLOAD, ALL_ON);
   });
 
   it("the fragment is cleared after redeeming", async () => {

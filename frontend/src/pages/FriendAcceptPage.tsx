@@ -2,11 +2,11 @@ import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { AppShell, Button, Card, EmptyState, PageHeader } from "../components/ui";
-import ConsentDialog from "../components/comparison/ConsentDialog";
+import SwitchesAskDialog from "../components/friends/SwitchesAskDialog";
 import { useTranslation } from "../hooks/useTranslation";
 import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { useAuthStore } from "../store/authStore";
-import { comparisonApi } from "../lib/api/comparison";
+import { comparisonApi, comparisonFailureCode } from "../lib/api/comparison";
 import { decodeInvitePayload } from "../lib/comparison/inviteLink";
 import type { InviteRedeemStatus } from "../lib/comparison/types";
 
@@ -33,9 +33,9 @@ export default function FriendAcceptPage(): JSX.Element {
   const decoded = decodeInvitePayload(raw);
 
   const redeem = async (
-    scope: Parameters<typeof comparisonApi.redeemInviteLink>[1]
+    switches: Parameters<typeof comparisonApi.redeemInviteLink>[1]
   ): Promise<void> => {
-    const { status } = await comparisonApi.redeemInviteLink(raw, scope);
+    const { status } = await comparisonApi.redeemInviteLink(raw, switches);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     setAsking(false);
     setOutcome(status);
@@ -94,12 +94,12 @@ export default function FriendAcceptPage(): JSX.Element {
           </div>
         </div>
         {asking && (
-          <ConsentDialog
-            open
-            mode="ask"
-            person={{ displayName: tr("people.remoteFriend"), origin }}
-            onClose={() => setAsking(false)}
+          <SwitchesAskDialog
+            title={tr("friend.add.switchesTitle", { name: tr("people.remoteFriend") })}
+            hint={tr("friend.add.redeemHint", { origin })}
             onConfirm={redeem}
+            errorText={(failure) => tr(`error.${comparisonFailureCode(failure)}`)}
+            onClose={() => setAsking(false)}
           />
         )}
       </Card>

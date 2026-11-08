@@ -55,6 +55,18 @@ describe("rankPeople", () => {
     expect(ranked[3].value).toBeNull();
   });
 
+  it("names a null cross-domain total 'notDerivable', not 'unknown' (the 'unbekannt' of a friend who shares one domain)", () => {
+    const ranked = rankPeople(
+      [row("self", { daysAway: 10 }, { domains: ["flight"] }), row("lena", { daysAway: null })],
+      "daysAway",
+      2025
+    );
+    expect(ranked.find((e) => e.row.person.key === "lena")?.reason).toBe("notDerivable");
+    // A per-domain figure that is null with its domain listed stays genuinely unknown.
+    const flights = rankPeople([row("lena", { flights: null })], "flights", 2025);
+    expect(flights[0].reason).toBe("unknown");
+  });
+
   it("puts a real zero ahead of an unknown value", () => {
     const ranked = rankPeople(
       [row("self", { flights: null }), row("b", { flights: 0 })],

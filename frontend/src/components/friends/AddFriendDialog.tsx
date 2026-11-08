@@ -3,6 +3,11 @@ import type { JSX } from "react";
 import { Button, Dialog, Field, Input, SectionLabel } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import { comparisonApi, comparisonFailureCode } from "../../lib/api/comparison";
+import { friendsApi, friendsErrorKey } from "../../lib/api/friends";
+import type { ConnectionSwitches } from "../../types/sharingRemote";
+import ConnectionSwitchesForm from "../Settings/ConnectionSwitchesForm";
+import SwitchesAskDialog from "./SwitchesAskDialog";
+import { DEFAULT_SWITCHES } from "./defaultSwitches";
 import { decodeInvitePayload, payloadOfPastedLink } from "../../lib/comparison/inviteLink";
 import type { InviteRedeemStatus, LeaderboardScope } from "../../lib/comparison/types";
 import { logger } from "../../lib/logger";
@@ -12,7 +17,7 @@ import ConsentDialog from "../comparison/ConsentDialog";
 const LEGACY_CODE = /^https:\/\/[a-z0-9.-]+#[a-f0-9]{64}$/;
 
 type Pending =
-  | { kind: "username"; username: string }
+  | { kind: "username"; username: string; origin: string | null }
   | { kind: "payload"; payload: string; origin: string }
   | { kind: "code"; code: string; origin: string };
 
@@ -39,6 +44,8 @@ export default function AddFriendDialog({ open, onClose, onChanged }: Props): JS
   const [pending, setPending] = useState<Pending | null>(null);
   const [outcome, setOutcome] = useState<InviteRedeemStatus | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+  const [linkSwitches, setLinkSwitches] = useState<ConnectionSwitches>(DEFAULT_SWITCHES);
 
   const text = pasted.trim();
   const payload = payloadOfPastedLink(text);
@@ -50,7 +57,7 @@ export default function AddFriendDialog({ open, onClose, onChanged }: Props): JS
     setFailed(null);
     setCopy("idle");
     try {
-      setLink((await comparisonApi.createInviteLink()).url);
+      setLink((await comparisonApi.createInviteLink(linkSwitches)).url);
     } catch (failure) {
       setFailed(tr(`error.${comparisonFailureCode(failure)}`));
     }
@@ -70,15 +77,25 @@ export default function AddFriendDialog({ open, onClose, onChanged }: Props): JS
       setPending({ kind: "payload", payload, origin: decoded.payload.origin });
     else if (legacy) setPending({ kind: "code", code: text, origin: text.split("#")[0] });
   };
+  /** The legacy code path still asks for a scope; username and link ask for switches. */
   const confirm = async (scope: LeaderboardScope): Promise<void> => {
-    if (!pending) return;
-    if (pending.kind === "username") await comparisonApi.request(pending.username, scope);
-    else if (pending.kind === "code") await comparisonApi.claimInvite(pending.code, scope);
-    else setOutcome((await comparisonApi.redeemInviteLink(pending.payload, scope)).status);
+    if (pending?.kind !== "code") return;
+    await comparisonApi.claimInvite(pending.code, scope);
+    finish();
+  };
+  const finish = (): void => {
     setPending(null);
     setUsername("");
+    setOrigin("");
     setPasted("");
     onChanged();
+  };
+  const send = async (switches: ConnectionSwitches): Promise<void> => {
+    if (!pending || pending.kind === "code") return;
+    if (pending.kind === "username")
+      await friendsApi.request(pending.username, pending.origin, switches);
+    else setOutcome((await comparisonApi.redeemInviteLink(pending.payload, switches)).status);
+    finish();
   };
 
   return (
@@ -97,16 +114,35 @@ export default function AddFriendDialog({ open, onClose, onChanged }: Props): JS
               onChange={(e) => setUsername(e.target.value)}
             />
           </Field>
+          <Field
+            label={tr("friend.add.origin")}
+            htmlFor="friends-origin"
+            hint={tr("friend.add.originHint")}
+          >
+            <Input id="friends-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} />
+          </Field>
           <div>
             <Button
               disabled={!username.trim()}
-              onClick={() => setPending({ kind: "username", username: username.trim() })}
+              onClick={() => {
+                setPending({
+                  kind: "username",
+                  username: username.trim(),
+                  origin: origin.trim() || null,
+                });
+              }}
             >
               {tr("add.ask")}
             </Button>
           </div>
 
           <SectionLabel>{tr("add.inviteTitle")}</SectionLabel>
+          <p className="t-caption">{tr("friend.add.linkGives")}</p>
+          <ConnectionSwitchesForm
+            idPrefix="friend-link"
+            value={linkSwitches}
+            onChange={setLinkSwitches}
+          />
           <div>
             <Button variant="secondary" onClick={() => void makeLink()}>
               {tr("friends.makeLink")}
@@ -153,19 +189,36 @@ export default function AddFriendDialog({ open, onClose, onChanged }: Props): JS
           {failed && <p role="alert">{failed}</p>}
         </div>
       </Dialog>
-      {pending && (
-        <ConsentDialog
-          open
-          mode="ask"
-          person={
-            pending.kind === "username"
-              ? { displayName: pending.username, origin: null }
-              : { displayName: tr("people.remoteFriend"), origin: pending.origin }
-          }
-          onClose={() => setPending(null)}
-          onConfirm={confirm}
-        />
-      )}
+      {pending &&
+        (pending.kind === "code" ? (
+          <ConsentDialog
+            open
+            mode="ask"
+            person={{ displayName: tr("people.remoteFriend"), origin: pending.origin }}
+            onClose={() => setPending(null)}
+            onConfirm={confirm}
+          />
+        ) : (
+          <SwitchesAskDialog
+            title={tr("friend.add.switchesTitle", {
+              name: pending.kind === "username" ? pending.username : tr("people.remoteFriend"),
+            })}
+            hint={
+              pending.kind === "payload"
+                ? tr("friend.add.redeemHint", { origin: pending.origin })
+                : tr("friend.add.askHint")
+            }
+            onConfirm={send}
+            errorText={(failure) =>
+              tr(
+                pending.kind === "username"
+                  ? friendsErrorKey(failure)
+                  : `error.${comparisonFailureCode(failure)}`
+              )
+            }
+            onClose={() => setPending(null)}
+          />
+        ))}
     </>
   );
 }

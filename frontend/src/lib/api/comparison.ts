@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
+import type { ConnectionSwitches } from "../../types/sharingRemote";
 import type {
   BoardView,
   CompareResponse,
@@ -44,9 +45,12 @@ export const comparisonApi = {
       { friends: friends.join(","), year: String(year) },
       API_TIMEOUTS.COMPARISON_LEADERBOARD
     ),
-  createInviteLink: () => post<{ url: string; expiresAt: string }>("/invite-links"),
-  redeemInviteLink: (payload: string, scope: LeaderboardScope) =>
-    post<{ status: InviteRedeemStatus }>("/invite-links/redeem", { payload, scope }),
+  /** The link carries the inviter's switches (spec 2026-11-08 §11.7); a link made without them is the old kind. */
+  createInviteLink: (switches?: ConnectionSwitches) =>
+    post<{ url: string; expiresAt: string }>("/invite-links", switches ? { switches } : {}),
+  /** Redeeming only creates a request carrying the redeemer's switches; the inviter confirms (§11.8). */
+  redeemInviteLink: (payload: string, switches: ConnectionSwitches) =>
+    post<{ status: InviteRedeemStatus }>("/invite-links/redeem", { payload, switches }),
   listAdmissions: async () => (await get<{ admissions: OwnAdmission[] }>("/admissions")).admissions,
   preview: (scope: LeaderboardScope) => post<LeaderboardSnapshot>("/preview", scope),
   people: () => get<PeopleResponse>("/people"),

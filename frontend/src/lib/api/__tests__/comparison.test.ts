@@ -6,8 +6,15 @@ vi.mock("../client", () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
-const scope = { groups: ["trips"], domains: ["flight"], year: null } as never;
 const wrap = (data: unknown) => ({ data: { success: true, data } });
+
+const switches = {
+  plans: true,
+  stats: "full" as const,
+  achievements: true,
+  leaderboard: true,
+  tripOffers: true,
+};
 
 describe("comparisonApi — the Freunde page", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -33,13 +40,17 @@ describe("comparisonApi — the Freunde page", () => {
     });
     expect(api.post).toHaveBeenCalledWith("/comparison/invite-links", {});
     vi.mocked(api.post).mockResolvedValueOnce(wrap({ status: "awaitingAdmin" }));
-    await expect(comparisonApi.redeemInviteLink("PAYLOAD", scope)).resolves.toEqual({
+    await expect(comparisonApi.redeemInviteLink("PAYLOAD", switches)).resolves.toEqual({
       status: "awaitingAdmin",
     });
     expect(api.post).toHaveBeenLastCalledWith("/comparison/invite-links/redeem", {
       payload: "PAYLOAD",
-      scope,
+      switches,
     });
+    // A link made with the inviter's switches carries them (spec 2026-11-08 §11.7).
+    vi.mocked(api.post).mockResolvedValueOnce(wrap({ url: "u", expiresAt: "t" }));
+    await comparisonApi.createInviteLink(switches);
+    expect(api.post).toHaveBeenLastCalledWith("/comparison/invite-links", { switches });
   });
 
   it("lists the reader's own admissions as an array", async () => {

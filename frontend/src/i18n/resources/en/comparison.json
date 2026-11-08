@@ -68,7 +68,8 @@
     "federationOff": "your server is not connected to others",
     "unknown": "unknown",
     "otherYear": "different period",
-    "notComparable": "not comparable (different areas)"
+    "notComparable": "not comparable (different areas)",
+    "notDerivable": "only derivable across all domains together"
   },
   "empty": {
     "title": "Nobody to compare with yet",
@@ -181,7 +182,13 @@
     "FEDERATION_ADMISSION_NOT_FOUND": "That request no longer exists. Reload the page.",
     "FEDERATION_ADMISSION_NOT_PENDING": "That request has already been decided. Reload the page.",
     "rateLimited": "Too many requests in a short time. Wait a moment and try again.",
-    "unknown": "That did not work. Please try again."
+    "unknown": "That did not work. Please try again.",
+    "FRIENDS_NOT_FOUND": "This friend no longer exists. Reload the page.",
+    "FRIENDS_CONNECTION_STATE": "The connection has changed in the meantime. Reload the page.",
+    "FRIENDS_SELF": "You cannot connect with yourself.",
+    "FRIENDS_SCOPE_INVALID": "This scope is not valid.",
+    "FRIENDS_FEDERATION_OFF": "Your server is not connected to other servers.",
+    "FRIENDS_PEER_UNREACHABLE": "The other server is not answering right now. Try again later."
   },
   "friends": {
     "title": "Friends",
@@ -216,7 +223,8 @@
     "outcome": {
       "claimed": "Connected. You now see the person in the list.",
       "awaitingAdmin": "Waiting for your admin's approval.",
-      "awaitingPeerAdmin": "Waiting for the approval of the other side's admin."
+      "awaitingPeerAdmin": "Waiting for the approval of the other side's admin.",
+      "awaitingInviter": "Redeemed. Waiting for the person who invited you to confirm."
     },
     "admissionsFailed": "Your requests to other servers could not be loaded.",
     "accept": {
@@ -280,5 +288,96 @@
     "edit": "Change",
     "remove": "Remove friend",
     "close": "Done"
+  },
+  "friend": {
+    "loading": "Loading …",
+    "retry": "Try again",
+    "compareTitle": "Comparison",
+    "compareOff": "{{name}} does not share comparison figures.",
+    "olderServer": "{{name}}'s server is older – only the comparison works here, no trips or plans yet.",
+    "olderServerPill": "older server",
+    "state": {
+      "pending_out": "waiting for an answer",
+      "pending_in": "is asking you",
+      "active": "connected",
+      "declined": "declined",
+      "revoked": "ended",
+      "reconfirm": "please confirm"
+    },
+    "youLead": "you are ahead",
+    "theyLead": "{{name}} is ahead",
+    "tie": "level",
+    "both": "You both",
+    "neither": "Neither of you",
+    "denominator": "{{total}} achievements both sides can show",
+    "progressYou": "Your progress: {{percent}}",
+    "progressThem": "{{name}}: {{percent}}",
+    "achievementsNoCompare": "{{name}} shows earned achievements only, no comparison.",
+    "achievementsViaCompare": "{{name}} shows earned achievements only, no comparison.",
+    "settings": {
+      "title": "{{name}}",
+      "save": "Save",
+      "iShare": "What you give {{name}}",
+      "theyShare": "{{name}} gives you: {{what}}",
+      "theyShareNothing": "{{name}} does not share anything with you yet.",
+      "scope": "Change the comparison scope",
+      "removeTitle": "Remove {{name}} as a friend?",
+      "removeBody": "After that there are no new trips or plans between you and no comparison. Trips already copied and plans you are both in stay.",
+      "removeConfirm": "Remove friend"
+    },
+    "trips": {
+      "title": "Shared trips",
+      "toThem": "From you to {{name}}",
+      "fromThem": "From {{name}} to you",
+      "none": "No trip yet.",
+      "state": {
+        "linked": "linked copy",
+        "pending": "waiting to be accepted",
+        "declined": "declined",
+        "removed": "removed"
+      },
+      "loadFailed": "The shared trips could not be loaded.",
+      "share": "Share a trip",
+      "offersOff": "{{name}} does not accept trips.",
+      "shareTitle": "Share a trip with {{name}}",
+      "pick": "Trip",
+      "pickPlaceholder": "Choose a trip",
+      "pickFailed": "Your trips could not be loaded.",
+      "next": "Next",
+      "notTraveller": "{{name}} is not a traveller on this trip yet. Add them in the trip under travellers."
+    },
+    "plans": {
+      "title": "Shared plans",
+      "none": "No shared plan yet.",
+      "loadFailed": "The shared plans could not be loaded.",
+      "invite": "Invite to a plan",
+      "mineOff": "You have switched plans off for this friend. Switch them on in the gear to invite.",
+      "theirsOff": "{{name}} does not share plans.",
+      "inviteTitle": "Invite {{name}} to a plan",
+      "inviteConfirm": "Invite",
+      "pick": "Plan",
+      "pickPlaceholder": "Choose a plan",
+      "pickFailed": "Your plans could not be loaded."
+    },
+    "requests": {
+      "asks": "{{name}} wants to connect with you",
+      "viaLink": "{{name}} redeemed your invitation link",
+      "fingerprint": "fingerprint {{fingerprint}}",
+      "offers": "{{name}} gives you: {{what}}",
+      "offersNothing": "{{name}} does not share anything with you yet.",
+      "declineBurns": "Declining makes the link unusable.",
+      "acceptTitle": "Accept {{name}}",
+      "acceptHint": "Choose what {{name}} sees of you. Everything is preselected and can be changed later in the gear."
+    },
+    "add": {
+      "origin": "The person's server",
+      "originHint": "Leave empty for this server, otherwise the address, e.g. https://trav.example.com.",
+      "linkGives": "What you give with the link:",
+      "switchesTitle": "Request to {{name}}",
+      "askHint": "Choose what the person sees of you. Everything is preselected; you are connected only once they accept.",
+      "redeemHint": "You are redeeming an invitation from {{origin}}. The person still has to confirm; only then are you connected."
+    },
+    "withdraw": "Withdraw request to {{name}}",
+    "achievementsFailed": "The achievements could not be loaded."
   }
 }

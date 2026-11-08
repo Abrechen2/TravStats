@@ -53,7 +53,8 @@ export interface CompareResponse {
   /** In the order asked; a friend who is no longer visible is not a row. */
   friends: LeaderboardRow[];
 }
-export type InviteRedeemStatus = "claimed" | "awaitingAdmin" | "awaitingPeerAdmin";
+export type InviteRedeemStatus =
+  "claimed" | "awaitingAdmin" | "awaitingPeerAdmin" | "awaitingInviter";
 export type AdmissionStatus = "pending" | "sent" | "approved" | "declined" | "failed" | "expired";
 export interface OwnAdmission {
   id: string;
