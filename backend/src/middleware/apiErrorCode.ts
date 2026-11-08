@@ -592,6 +592,11 @@ export type ApiErrorCode =
   | "FEDERATION_ADMISSION_UNREACHABLE" // the other server's identity could not be read (502)
   | "FEDERATION_ADMISSION_NOT_FOUND" // no such request (404)
   | "FEDERATION_ADMISSION_NOT_PENDING" // already decided (409)
+  /** Friends (spec 2026-11-08 §11): a friend is one connection, local or remote. */
+  | "FRIENDS_NOT_FOUND" // no such friend or request (404)
+  | "FRIENDS_CONNECTION_STATE" // the connection is not in a state this can be done in, e.g. a stale accept (409)
+  | "FRIENDS_CONNECTION_EXISTS" // there is a connection or an open request with that person already (409)
+  | "FRIENDS_SCOPE_UNAVAILABLE" // the connection has no leaderboard to hold a comparison scope (409)
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"
   /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a

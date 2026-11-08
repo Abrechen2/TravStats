@@ -38,77 +38,77 @@ model User {
   comparisonAudits          ComparisonAudit[]
   comparisonInvites         ComparisonInvite[]
   comparisonCircles         ComparisonCircle[]
-  leaderboardConsentsOwned  LeaderboardConsent[]     @relation("LeaderboardConsentOwner")
-  leaderboardConsentsViewed LeaderboardConsent[]     @relation("LeaderboardConsentViewer")
+  leaderboardConsentsOwned  LeaderboardConsent[]         @relation("LeaderboardConsentOwner")
+  leaderboardConsentsViewed LeaderboardConsent[]         @relation("LeaderboardConsentViewer")
   leaderboardRemotes        LeaderboardRemote[]
   leaderboardInvites        LeaderboardInvite[]
   federationAdmissions      FederationAdmissionRequest[]
   leaderboardBoards         LeaderboardBoard[]
-  id                        String                   @id @default(uuid())
+  id                        String                       @id @default(uuid())
   devicePushes              DevicePush[]
   reminderPreferences       ReminderPreference[]
   reminderClaims            ReminderClaim[]
   clientWriteRefs           ClientWriteRef[]
   travelPlanUsage           TravelPlanUsage[]
-  travelPlanMembers         TravelPlanMember[]       @relation("TravelPlanMemberUser")
-  username                  String                   @unique
-  passwordHash              String                   @map("password_hash")
+  travelPlanMembers         TravelPlanMember[]           @relation("TravelPlanMemberUser")
+  username                  String                       @unique
+  passwordHash              String                       @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
   // (#241). Columns on User rather than keys in the UserSettings JSON blob
   // where profilePicture lives: the header renders the name on every page from
   // the /auth/me payload, and reading it out of settings would make the header
   // wait for a second fetch and flash the username first. Both optional — a
   // logbook does not need your name.
-  firstName                 String?                  @map("first_name")
-  lastName                  String?                  @map("last_name")
-  isAdmin                   Boolean                  @default(false) @map("is_admin")
-  isActive                  Boolean                  @default(true) @map("is_active")
+  firstName                 String?                      @map("first_name")
+  lastName                  String?                      @map("last_name")
+  isAdmin                   Boolean                      @default(false) @map("is_admin")
+  isActive                  Boolean                      @default(true) @map("is_active")
   /// Opt-in to being found by users of connected servers (simplified setup 2026-11-02, forgejo#301).
   /// Default off: nobody appears in another server's lookup without saying yes.
-  federationFindable        Boolean                  @default(false) @map("federation_findable")
-  invitedBy                 String?                  @map("invited_by")
-  createdAt                 DateTime                 @default(now()) @map("created_at")
+  federationFindable        Boolean                      @default(false) @map("federation_findable")
+  invitedBy                 String?                      @map("invited_by")
+  createdAt                 DateTime                     @default(now()) @map("created_at")
   // Email notification preferences
-  notificationEmail         String?                  @map("notification_email")
-  notifyBefore24h           Boolean                  @default(false) @map("notify_before_24h")
-  notifyBefore2h            Boolean                  @default(false) @map("notify_before_2h")
+  notificationEmail         String?                      @map("notification_email")
+  notifyBefore24h           Boolean                      @default(false) @map("notify_before_24h")
+  notifyBefore2h            Boolean                      @default(false) @map("notify_before_2h")
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
-  birthdate                 DateTime?                @map("birthdate")
+  birthdate                 DateTime?                    @map("birthdate")
   /// ADR 0002 phase 2 (dual-write): the birthday as a floating calendar day —
   /// no zone, it means the same day everywhere. `birthdate` keeps its old
   /// meaning (UTC midnight) until phase 6 drops it.
-  birthDay                  DateTime?                @map("birth_day") @db.Date
+  birthDay                  DateTime?                    @map("birth_day") @db.Date
   /// day | unknown — how much of `birthDay` the user actually gave.
-  birthPrecision            String?                  @map("birth_precision")
-  resetToken                String?                  @unique @map("reset_token")
-  resetTokenExpiry          DateTime?                @map("reset_token_expiry")
-  mustChangePassword        Boolean                  @default(false) @map("must_change_password")
-  changeToken               String?                  @unique @map("change_token")
-  changeTokenExpiry         DateTime?                @map("change_token_expiry")
+  birthPrecision            String?                      @map("birth_precision")
+  resetToken                String?                      @unique @map("reset_token")
+  resetTokenExpiry          DateTime?                    @map("reset_token_expiry")
+  mustChangePassword        Boolean                      @default(false) @map("must_change_password")
+  changeToken               String?                      @unique @map("change_token")
+  changeTokenExpiry         DateTime?                    @map("change_token_expiry")
   // Bumped by every password change and reset. A session carries the epoch it
   // was minted under, and `authenticate` refuses anything older — see
   // middleware/auth.ts. A counter rather than a timestamp because `iat` has
   // second resolution, which would leave a one-second window open.
-  sessionEpoch              Int                      @default(0) @map("session_epoch")
+  sessionEpoch              Int                          @default(0) @map("session_epoch")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
   // one holds a secret that has been shown as a QR code but not yet confirmed
   // by a first correct code, so an abandoned setup never locks anyone out.
-  twoFactorSecret           String?                  @map("two_factor_secret")
-  twoFactorPendingSecret    String?                  @map("two_factor_pending_secret")
-  twoFactorEnabledAt        DateTime?                @map("two_factor_enabled_at")
+  twoFactorSecret           String?                      @map("two_factor_secret")
+  twoFactorPendingSecret    String?                      @map("two_factor_pending_secret")
+  twoFactorEnabledAt        DateTime?                    @map("two_factor_enabled_at")
   // Short-lived login challenge, hashed like changeToken above: the password
   // was right, the second factor is still outstanding.
-  twoFactorToken            String?                  @unique @map("two_factor_token")
-  twoFactorTokenExpiry      DateTime?                @map("two_factor_token_expiry")
+  twoFactorToken            String?                      @unique @map("two_factor_token")
+  twoFactorTokenExpiry      DateTime?                    @map("two_factor_token_expiry")
   twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
   webauthnCredentials       WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
-  isDemo                    Boolean                  @default(false) @map("is_demo")
+  isDemo                    Boolean                      @default(false) @map("is_demo")
   flights                   Flight[]
   receiptUploads            ReceiptUpload[]
   userAchievements          UserAchievement[]
@@ -116,8 +116,8 @@ model User {
   externalServiceTests      ExternalServiceTest[]
   webdavSync                UserWebdavSync?
   analyticsEvents           AnalyticsEvent[]
-  createdInvitations        Invitation[]             @relation("CreatedInvitations")
-  usedInvitations           Invitation[]             @relation("UsedInvitations")
+  createdInvitations        Invitation[]                 @relation("CreatedInvitations")
+  usedInvitations           Invitation[]                 @relation("UsedInvitations")
   trainingData              TrainingData[]
   parserTemplates           ParserTemplate[]
   pendingFlightUpdates      PendingFlightUpdate[]
@@ -151,9 +151,11 @@ model User {
   companions                Companion[]
   /// Trip sharing (design 2026-10-09): companions of OTHER users linked to
   /// this account, consents asked and given, groups started, notices.
-  linkedAsCompanion         Companion[]              @relation("CompanionLinkedUser")
-  shareConsentsAsked        ShareConsent[]           @relation("ShareConsentRequester")
-  shareConsentsGiven        ShareConsent[]           @relation("ShareConsentTarget")
+  linkedAsCompanion         Companion[]                  @relation("CompanionLinkedUser")
+  shareConsentsAsked        ShareConsent[]               @relation("ShareConsentRequester")
+  localConnectionsLow       LocalConnection[]            @relation("LocalConnectionLow")
+  localConnectionsHigh      LocalConnection[]            @relation("LocalConnectionHigh")
+  shareConsentsGiven        ShareConsent[]               @relation("ShareConsentTarget")
   /// Federated trip sharing (spec 2026-10-20, F-S4b): this account's pairings with people on
   /// other servers, and the invitation codes it issued.
   remoteShareAccounts       RemoteShareAccount[]
@@ -161,8 +163,8 @@ model User {
   tripShareRosterConsents   TripShareRosterConsent[]
   tripShareWithheld         TripShareWithheld[]
   shareGroupsCreated        TripShareGroup[]
-  shareNotices              ShareNotice[]            @relation("ShareNoticeRecipient")
-  shareNoticesActed         ShareNotice[]            @relation("ShareNoticeActor")
+  shareNotices              ShareNotice[]                @relation("ShareNoticeRecipient")
+  shareNoticesActed         ShareNotice[]                @relation("ShareNoticeActor")
   photoJourneys             PhotoJourney[]
   tripSuggestionAnswers     TripSuggestionDecision[]
   dataQualityFlags          DataQualityFlag[]
@@ -5060,6 +5062,33 @@ model ShareConsent {
   @@index([targetId, status])
   @@index([remoteTargetId])
   @@map("share_consents")
+}
+
+/// A friend on the SAME server (spec 2026-11-08 §11.3): one row per unordered pair, so a crossed
+/// request, a revoke and a stale accept are single-row transitions. `user_low_id < user_high_id`
+/// (byte order, CHECK local_connections_order_check); each side's switches are what THAT user gives
+/// (the same directional set as `remote_share_accounts`, validated by the connection switch schema).
+/// pending | active | declined | revoked — CHECK local_connections_state_check.
+model LocalConnection {
+  id           String    @id @default(uuid())
+  userLowId    String    @map("user_low_id")
+  userHighId   String    @map("user_high_id")
+  state        String    @default("pending")
+  /// The user who asked; while `pending` the other side answers.
+  requestedBy  String    @map("requested_by")
+  lowSwitches  Json      @default("{}") @map("low_switches")
+  highSwitches Json      @default("{}") @map("high_switches")
+  requestedAt  DateTime  @default(now()) @map("requested_at")
+  confirmedAt  DateTime? @map("confirmed_at")
+  endedAt      DateTime? @map("ended_at")
+  endedBy      String?   @map("ended_by")
+
+  low  User @relation("LocalConnectionLow", fields: [userLowId], references: [id], onDelete: Cascade)
+  high User @relation("LocalConnectionHigh", fields: [userHighId], references: [id], onDelete: Cascade)
+
+  @@unique([userLowId, userHighId])
+  @@index([userHighId])
+  @@map("local_connections")
 }
 
 /// A person on another TravStats server, as one pairing with a local account (spec 2026-10-20

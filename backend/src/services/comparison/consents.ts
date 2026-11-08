@@ -32,6 +32,7 @@ import {
 } from "../../schemas/comparison";
 import { comparisonError } from "./errors";
 import { tellEnded } from "./remoteNotice";
+import { connectedUserIds } from "../friends/authz";
 
 export const localKey = (userId: string): string => `local:${userId}`;
 export const remoteKey = (remoteId: string): string => `remote:${remoteId}`;
@@ -100,7 +101,7 @@ type Tx = DbTransaction;
  * would otherwise both read "nothing yet", both create, and one would die on the unique index.
  * The rows may not exist yet, so a row lock cannot do this; an advisory lock on the pair can.
  */
-async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
+export async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
   const key = a < b ? `${a}|${b}` : `${b}|${a}`;
   await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
 }
@@ -426,7 +427,11 @@ async function askMissingSide(
   viewed: { ownerId: string; status: string }[]
 ): Promise<boolean> {
   const have = new Set(owned.map((c) => c.viewerId));
-  const missing = viewed.filter((c) => c.status === "accepted" && !have.has(c.ownerId));
+  // A pair with a connection is answered by its switches, not by a question (spec 2026-11-08).
+  const connected = await connectedUserIds(prisma, userId);
+  const missing = viewed.filter(
+    (c) => c.status === "accepted" && !have.has(c.ownerId) && !connected.has(c.ownerId)
+  );
   if (missing.length === 0) return false;
   await prisma.leaderboardConsent.createMany({
     data: missing.map((c) => ({ ownerId: userId, viewerId: c.ownerId })),

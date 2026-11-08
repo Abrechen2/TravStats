@@ -25,6 +25,7 @@ import { rowAchievements } from "./achievementSection";
 import { boardMemberKeys } from "./boards";
 import { localKey, localPerson, readScope, remoteKey, remotePerson } from "./consents";
 import { pullRemote, type RemoteResult } from "./remote";
+import { ownersRefusedByConnection } from "../friends/authz";
 
 export const LOCAL_ROW_CAP = 50;
 export const REMOTE_ROW_CAP = 20;
@@ -226,9 +227,18 @@ export async function readLeaderboard(
     orderBy: [{ decidedAt: "asc" }, { id: "asc" }],
     take: LOCAL_ROW_CAP,
   });
+  // A pair with a connection is judged by its switches (spec 2026-11-08 §11.7): the stored
+  // consent follows them, but a row that drifted must not open a door the connection closed.
+  const refused = await ownersRefusedByConnection(
+    prisma,
+    viewerId,
+    consents.map((c) => c.ownerId)
+  );
   rows.push(
-    ...(await mapInOrder(consents, SNAPSHOT_CONCURRENCY, (consent) =>
-      localRow(consent, localPerson(consent.owner), year)
+    ...(await mapInOrder(
+      consents.filter((c) => !refused.has(c.ownerId)),
+      SNAPSHOT_CONCURRENCY,
+      (consent) => localRow(consent, localPerson(consent.owner), year)
     ))
   );
 

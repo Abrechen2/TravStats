@@ -10,7 +10,8 @@ import { prisma, type DbTransaction } from "../../db";
 import { METRIC_GROUPS } from "../../shared/comparisonMetrics";
 import { leaderboardSnapshotSchema, type LeaderboardSnapshot } from "../../schemas/comparison";
 import { buildLeaderboardSnapshot } from "../comparison/aggregates";
-import { lockRemotePair, scopeJson } from "../comparison/consents";
+import { lockRemotePair } from "../comparison/consents";
+import { applyLeaderboardSwitch, defaultScope } from "../friends/scopeStore";
 import { loadVisibleDomains } from "../domainVisibility";
 
 export type { LeaderboardSnapshot };
@@ -39,38 +40,19 @@ export const parseOverviewSnapshot = (raw: unknown): LeaderboardSnapshot =>
 
 /**
  * The leaderboard switch for one remote pairing: on shares the totals through the existing
- * leaderboard consent (accepted, all groups, the domains the owner has visible), off withdraws it.
+ * leaderboard consent, off withdraws it. A switch update never touches the stored scope
+ * (spec 2026-11-08 §11.4): off and on again restores what the owner chose; only a pairing that
+ * never had one gets the default (every group, every domain the owner has visible).
  */
 export async function setLeaderboardConsent(
   ownerId: string,
   leaderboardRemoteId: string,
   on: boolean
 ): Promise<void> {
-  const scope = scopeJson({
-    groups: [...TOTALS_GROUPS],
-    domains: await loadVisibleDomains(ownerId),
-    year: null,
-  });
+  const fallback = await defaultScope(ownerId);
   await prisma.$transaction(async (tx) => {
     await lockRemotePair(tx, ownerId, leaderboardRemoteId);
-    const now = new Date();
-    if (on)
-      await tx.leaderboardConsent.upsert({
-        where: { ownerId_remoteId: { ownerId, remoteId: leaderboardRemoteId } },
-        create: {
-          ownerId,
-          remoteId: leaderboardRemoteId,
-          status: "accepted",
-          scope,
-          decidedAt: now,
-        },
-        update: { status: "accepted", scope, decidedAt: now },
-      });
-    else
-      await tx.leaderboardConsent.updateMany({
-        where: { ownerId, remoteId: leaderboardRemoteId },
-        data: { status: "withdrawn", decidedAt: now },
-      });
+    await applyLeaderboardSwitch(tx, ownerId, { remoteId: leaderboardRemoteId }, on, fallback);
   });
 }
 

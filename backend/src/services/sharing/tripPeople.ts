@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { consentStatusSchema, type ConsentStatus } from "../../schemas/sharing";
 import { acceptedWith, missingGroupConsent } from "./members";
+import { offerStatuses } from "../friends/authz";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -52,16 +53,14 @@ export async function tripPeople(
           orderBy: { createdAt: "asc" },
         })
       : Promise.resolve([]),
-    prisma.shareConsent.findMany({
-      // Local pairs only: remote people join a trip through F-S4c's offer, not this list.
-      where: { requesterId: userId, targetId: { not: null } },
-      include: { target: { select: { ...PERSON_SELECT, isActive: true } } },
-      orderBy: { decidedAt: "desc" },
-    }),
+    // Local pairs only: remote people join a trip through F-S4c's offer, not this list.
+    offerStatuses(userId),
   ]);
   const members = memberTrips.map((t) => toPerson(t.user));
   const memberIds = members.map((m) => m.id);
-  const consentOf = new Map(outgoing.map((c) => [c.targetId, consentStatusSchema.parse(c.status)]));
+  const consentOf = new Map(
+    [...outgoing].map(([id, status]) => [id, consentStatusSchema.parse(status)])
+  );
   const accountIds = [
     ...memberIds,
     ...links.flatMap((l) => (l.companion.linkedUser ? [l.companion.linkedUser.id] : [])),
@@ -121,10 +120,11 @@ export async function tripPeople(
       people.push(await rowFor(`u:${member.id}`, null, member.displayName, member));
     }
   }
-  return {
-    people,
-    linkableUsers: outgoing.flatMap((c) =>
-      c.status === "accepted" && c.target?.isActive ? [toPerson(c.target)] : []
-    ),
-  };
+  const acceptedIds = [...outgoing].flatMap(([id, status]) => (status === "accepted" ? [id] : []));
+  const linkable = await prisma.user.findMany({
+    where: { id: { in: acceptedIds }, isActive: true },
+    select: PERSON_SELECT,
+    orderBy: { username: "asc" },
+  });
+  return { people, linkableUsers: linkable.map(toPerson) };
 }

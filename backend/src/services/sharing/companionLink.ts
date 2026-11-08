@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { consentRequired, hasAcceptedConsent } from "./consent";
+import { consentRequired } from "./consent";
+import { mayOfferTripTo, offerStatuses } from "../friends/authz";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -22,26 +23,29 @@ export async function listLinkableCompanions(userId: string): Promise<{
   companions: LinkableCompanion[];
   linkableUsers: SharePerson[];
 }> {
-  const [companions, consents] = await Promise.all([
+  const [companions, statuses] = await Promise.all([
     prisma.companion.findMany({
       where: { userId },
       include: { linkedUser: { select: PERSON_SELECT } },
       orderBy: { displayName: "asc" },
     }),
-    prisma.shareConsent.findMany({
-      // A person on another server is never a linkable account here (spec 2026-10-20 F2).
-      where: { requesterId: userId, targetId: { not: null }, status: "accepted" },
-      include: { target: { select: PERSON_SELECT } },
-      orderBy: { decidedAt: "desc" },
-    }),
+    // A person on another server is never a linkable account here (spec 2026-10-20 F2); a
+    // friend is one while they let the caller offer trips (spec 2026-11-08 §11.7).
+    offerStatuses(userId),
   ]);
+  const acceptedIds = [...statuses].flatMap(([id, status]) => (status === "accepted" ? [id] : []));
+  const targets = await prisma.user.findMany({
+    where: { id: { in: acceptedIds } },
+    select: PERSON_SELECT,
+    orderBy: { username: "asc" },
+  });
   return {
     companions: companions.map((c) => ({
       id: c.id,
       name: c.displayName,
       linkedUser: c.linkedUser ? toPerson(c.linkedUser) : null,
     })),
-    linkableUsers: consents.flatMap((c) => (c.target ? [toPerson(c.target)] : [])),
+    linkableUsers: targets.map(toPerson),
   };
 }
 
@@ -57,7 +61,7 @@ export async function linkCompanion(
   }
   // Checked before the target is looked up, so an id that is no account and
   // an account that never said yes answer alike: no probing for ids.
-  if (!(await hasAcceptedConsent(prisma, userId, targetUserId))) throw consentRequired();
+  if (!(await mayOfferTripTo(prisma, userId, targetUserId))) throw consentRequired();
 
   const other = await prisma.companion.findFirst({
     where: { userId, linkedUserId: targetUserId, NOT: { id: companionId } },
