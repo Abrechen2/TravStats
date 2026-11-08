@@ -18,6 +18,8 @@ import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { exchange, PeerRefusal } from "../federation/security";
 import { loadIdentity, type Identity } from "../federation/identity";
 import { origin as originSchema } from "../federation/contract";
+import type { ConnectionSwitches } from "../../schemas/tripSharePeer";
+import { requestAfterClaim } from "../friends/linkRequest";
 import { hash } from "../federation/refusal";
 import { pingReplySchema } from "../../schemas/federationAdmin";
 import {
@@ -258,7 +260,10 @@ async function lockInvites(tx: DbTransaction, userId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
 }
 
-export async function createInvite(userId: string): Promise<{ code: string; expiresAt: string }> {
+export async function createInvite(
+  userId: string,
+  switches?: ConnectionSwitches
+): Promise<{ code: string; expiresAt: string }> {
   const local = await connectedIdentity(userId);
   const secret = randomBytes(SECRET_BYTES).toString("hex");
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
@@ -271,7 +276,14 @@ export async function createInvite(userId: string): Promise<{ code: string; expi
       throw comparisonError("COMPARISON_INVITE_LIMIT", 429, "Too many open invitations", {
         userId,
       });
-    await tx.leaderboardInvite.create({ data: { hash: hash(secret), userId, expiresAt } });
+    await tx.leaderboardInvite.create({
+      data: {
+        hash: hash(secret),
+        userId,
+        expiresAt,
+        ...(switches ? { switches: switches as unknown as Prisma.InputJsonValue } : {}),
+      },
+    });
   });
   return { code: `${local.origin}#${secret}`, expiresAt: expiresAt.toISOString() };
 }
@@ -389,7 +401,8 @@ async function recordClaim(
 export async function claimInvite(
   userId: string,
   code: string,
-  scope: LeaderboardScope
+  scope: LeaderboardScope,
+  switches?: ConnectionSwitches
 ): Promise<PersonView> {
   const parsed = parseInviteCode(code);
   if (!parsed)
@@ -429,6 +442,9 @@ export async function claimInvite(
       userId,
     });
   const remoteId = await recordClaim(userId, parsed.origin, reply, grant);
+  // A link redeemed with switches also asks for a connection (spec 2026-11-08 §11.8); the claim
+  // above already stands, so this can only fall back to the comparison alone, never fail it.
+  if (switches) await requestAfterClaim(userId, remoteId, switches);
   return personView(userId, remoteKey(remoteId));
 }
 

@@ -37,6 +37,7 @@ import "./mapDetails";
 import "./companions";
 import "./sharingRemote";
 import "./sharingConnections";
+import "./friends";
 import "./airports";
 import "./stats";
 import "./statsNoOwnClient";

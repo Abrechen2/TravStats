@@ -168,6 +168,7 @@ import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import sharingRemoteRoutes from "./sharingRemote";
 import sharingConnectionsRoutes from "./sharingConnections";
+import friendsRoutes from "./friends";
 import shareLinkRoutes from "./shareLinks";
 import passportOverrideRoutes from "./passportOverrides";
 import publicShareLinkRoutes from "./publicShareLinks";
@@ -601,6 +602,8 @@ export const apiMounts: ApiMount[] = [
     router: sharingConnectionsRoutes,
   },
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
+  // Friends (spec 2026-11-08 §11.4): one connection per person, local or remote.
+  { id: "friends", base: "/api/v1/friends", router: friendsRoutes },
   // Public share links (forgejo#281): the owner's list/preview/create/revoke,
   // and the unauthenticated side a link's page asks with its token.
   { id: "shareLinks", base: "/api/v1/share-links", router: shareLinkRoutes },

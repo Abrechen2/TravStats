@@ -16,6 +16,7 @@ import { decryptApiKey } from "../../utils/encryption";
 import { admitReplySchema, type AdmitRequest } from "../../schemas/federationAdmission";
 import { leaderboardScopeSchema } from "../../schemas/comparison";
 import type { FederationAdmissionRequest } from "../../prisma";
+import { connectionSwitchesSchema } from "../../schemas/tripSharePeer";
 import { claimInvite } from "../comparison/remote";
 import { expireStaleAdmissions } from "./admission";
 import { ADMISSION_ACCEPTS } from "./envelope";
@@ -93,7 +94,13 @@ async function completeClaim(
     // The pin has to be verified before the claim: a leaderboard packet from an unverified peer is refused.
     if (!(await verifyPeerByPing(row.origin))) return await retryLater(row, now, "unverified");
     const scope = leaderboardScopeSchema.parse(row.scope);
-    await claimInvite(row.localUserId, `${row.origin}#${token}`, scope);
+    const switches = connectionSwitchesSchema.safeParse(row.switches);
+    await claimInvite(
+      row.localUserId,
+      `${row.origin}#${token}`,
+      scope,
+      switches.success ? switches.data : undefined
+    );
     return await settle(row, "approved", null);
   } catch (error) {
     // A named refusal (invite spent, friend limit, duplicate …) will not change by waiting.

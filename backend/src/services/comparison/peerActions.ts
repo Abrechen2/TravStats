@@ -130,6 +130,7 @@ async function claim(origin: string, body: LbClaimRequest): Promise<LbClaimReply
         channel,
         username: body.username,
         displayName: body.displayName,
+        ...(invite.switches ? { inviteSwitches: invite.switches as never } : {}),
       },
     });
     // The pair is brand new, so nobody else can hold it yet; taken anyway so every writer of a

@@ -29,7 +29,8 @@ import {
   listOwnAdmissions,
   redeemInviteLink,
 } from "../services/comparison/inviteLinks";
-import { inviteLinkRedeemBodySchema } from "../schemas/inviteLink";
+import { defaultScope } from "../services/friends/scopeStore";
+import { inviteLinkCreateBodySchema, inviteLinkRedeemBodySchema } from "../schemas/inviteLink";
 import { readLeaderboard } from "../services/comparison/leaderboard";
 import { readCompare } from "../services/comparison/compareView";
 import {
@@ -184,7 +185,8 @@ router.post(
   "/invite-links",
   comparisonWriteLimiter,
   handle(async (req, res) => {
-    send(res, await createInviteLink(req.userId!), 201);
+    const body = inviteLinkCreateBodySchema.parse(req.body ?? {});
+    send(res, await createInviteLink(req.userId!, body.switches), 201);
   })
 );
 router.post(
@@ -193,7 +195,15 @@ router.post(
   handle(async (req, res) => {
     // Shape, size and scope are checked here, before any server is asked anything.
     const body = inviteLinkRedeemBodySchema.parse(req.body);
-    send(res, await redeemInviteLink(req.userId!, body.payload, body.scope));
+    send(
+      res,
+      await redeemInviteLink(
+        req.userId!,
+        body.payload,
+        body.scope ?? (await defaultScope(req.userId!)),
+        body.switches
+      )
+    );
   })
 );
 router.get(

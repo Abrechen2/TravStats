@@ -63,10 +63,18 @@ export async function ensureLeaderboardPairing(
   }
   const clash = await tx.leaderboardRemote.findUnique({
     where: { origin_channel: { origin, channel: proposed } },
-    select: { userId: true },
+    select: { id: true, userId: true, sharePairing: { select: { id: true } } },
   });
-  // Another pairing already holds that channel: not ours to take over.
-  if (clash) return null;
+  if (clash) {
+    // The pairing a redeemed link made for THIS user and server, not yet bound to a connection,
+    // is this connection's own (spec 2026-11-08 §11.8). Any other holder is not ours to take over.
+    if (clash.userId !== pairing.userId || clash.sharePairing) return null;
+    await tx.remoteShareAccount.update({
+      where: { id: pairing.id },
+      data: { leaderboardRemoteId: clash.id },
+    });
+    return proposed;
+  }
   const remote = await tx.leaderboardRemote.create({
     data: { userId: pairing.userId, origin, channel: proposed, ...names },
   });

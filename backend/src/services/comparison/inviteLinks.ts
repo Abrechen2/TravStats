@@ -15,6 +15,7 @@ import {
   type InviteLinkPayload,
 } from "../../schemas/inviteLink";
 import type { LeaderboardScope } from "../../schemas/comparison";
+import type { ConnectionSwitches } from "../../schemas/tripSharePeer";
 import { admissionError } from "../federation/admissionErrors";
 import { expireStaleAdmissions } from "../federation/admission";
 import { deferIdentityFetch, fetchPeerIdentity } from "../federation/admissionIdentity";
@@ -31,7 +32,7 @@ const OPEN: string[] = ["pending", "sent"];
 /** Clock skew between two servers that the issuer's lifetime is allowed to show. */
 const INVITE_SKEW_MS = 5 * 60_000;
 
-export type RedeemStatus = "claimed" | "awaitingAdmin" | "awaitingPeerAdmin";
+export type RedeemStatus = "claimed" | "awaitingAdmin" | "awaitingPeerAdmin" | "awaitingInviter";
 
 const encode = (payload: InviteLinkPayload): string =>
   Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -73,22 +74,24 @@ async function identityOrThrow(userId: string) {
 
 /** A link to hand to a friend: this server's identity plus one fresh single-use token. */
 export async function createInviteLink(
-  userId: string
+  userId: string,
+  switches?: ConnectionSwitches
 ): Promise<{ url: string; expiresAt: string }> {
   // The same row, cap and lock as a plain code; the link only wraps the secret.
-  const { code, expiresAt } = await createInvite(userId);
+  const { code, expiresAt } = await createInvite(userId, switches);
   const at = code.lastIndexOf("#");
   const identity = await loadIdentity();
   const publicKey = rawPublicKey(identity.publicKey);
   if (!publicKey) throw new Error("The federation key is not an Ed25519 public key");
   const payload: InviteLinkPayload = {
-    v: 1,
+    v: switches ? 2 : 1,
     kind: INVITE_LINK_KIND,
     origin: code.slice(0, at),
     publicKey,
     fingerprint: identity.fingerprint,
     token: code.slice(at + 1),
     expiresAt,
+    ...(switches ? { switches } : {}),
   };
   return { url: `${payload.origin}/freunde/einladung#${encode(payload)}`, expiresAt };
 }
@@ -104,7 +107,8 @@ const statusOf = (row: Pick<FederationAdmissionRequest, "status">): RedeemStatus
 async function queueOutgoing(
   userId: string,
   link: InviteLinkPayload,
-  scope: LeaderboardScope
+  scope: LeaderboardScope,
+  switches?: ConnectionSwitches
 ): Promise<RedeemStatus> {
   const pem = pemFromRawPublicKey(link.publicKey) as string;
   await expireStaleAdmissions();
@@ -141,6 +145,7 @@ async function queueOutgoing(
         localUserId: userId,
         inviteRef: encryptApiKey(link.token) as string,
         scope: scope as never,
+        ...(switches ? { switches: switches as never } : {}),
         // The token dies with the link; the 14 days start when this server's admin approves.
         expiresAt: new Date(Math.min(Date.parse(link.expiresAt), Date.now() + INVITE_TTL_MS)),
       },
@@ -152,7 +157,8 @@ async function queueOutgoing(
 export async function redeemInviteLink(
   userId: string,
   payloadText: string,
-  scope: LeaderboardScope
+  scope: LeaderboardScope,
+  switches?: ConnectionSwitches
 ): Promise<{ status: RedeemStatus }> {
   const link = decodeInviteLinkPayload(payloadText);
   const local = await identityOrThrow(userId);
@@ -185,8 +191,9 @@ export async function redeemInviteLink(
         userId,
         origin: link.origin,
       });
-    await claimInvite(userId, `${link.origin}#${link.token}`, scope);
-    return { status: "claimed" };
+    await claimInvite(userId, `${link.origin}#${link.token}`, scope, switches);
+    // With switches the claim also asked for a connection: the inviter answers it (§11.8).
+    return { status: switches ? "awaitingInviter" : "claimed" };
   }
   if (!deferIdentityFetch()) {
     const found = await fetchPeerIdentity(link.origin);
@@ -198,7 +205,7 @@ export async function redeemInviteLink(
         { userId, origin: link.origin }
       );
   }
-  return { status: await queueOutgoing(userId, link, scope) };
+  return { status: await queueOutgoing(userId, link, scope, switches) };
 }
 
 export interface OwnAdmission {

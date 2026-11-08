@@ -139,7 +139,13 @@ async function sendRequest(
  */
 export async function requestConnection(
   userId: string,
-  input: { origin: string; username: string; switches: ConnectionSwitches }
+  input: {
+    origin: string;
+    username: string;
+    switches: ConnectionSwitches;
+    /** A leaderboard pairing made by redeeming a link: the connection is bound to it (spec §11.8). */
+    leaderboardRemoteId?: string;
+  }
 ): Promise<ConnectionView> {
   const local = await requireTripFederation(userId);
   if (input.origin === local.origin)
@@ -171,6 +177,7 @@ export async function requestConnection(
         username: input.username,
         displayName: input.username,
         state: "pending_out",
+        leaderboardRemoteId: input.leaderboardRemoteId ?? null,
       },
     }));
   return sendRequest(userId, row, input.switches, input.username);

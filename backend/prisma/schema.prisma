@@ -5876,21 +5876,24 @@ model LeaderboardConsent {
 /// A person on another instance, as one local user knows them. Both servers hold one row
 /// with the same random channel.
 model LeaderboardRemote {
-  id            String                   @id @default(uuid())
-  userId        String                   @map("user_id")
-  origin        String
-  channel       String
-  username      String
-  displayName   String                   @map("display_name")
-  createdAt     DateTime                 @default(now()) @map("created_at")
+  id             String                   @id @default(uuid())
+  userId         String                   @map("user_id")
+  origin         String
+  channel        String
+  username       String
+  displayName    String                   @map("display_name")
+  createdAt      DateTime                 @default(now()) @map("created_at")
   /// What the friend's server last answered to our aggregate request (ok|notShared|withdrawn|
   /// yearNotShared|unsupportedVersion|unreachable); null until the first answer.
-  theirStatus   String?                  @map("their_status")
-  theirStatusAt DateTime?                @map("their_status_at")
-  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consents      LeaderboardConsent[]
-  boardMembers  LeaderboardBoardMember[]
-  sharePairing  RemoteShareAccount?
+  theirStatus    String?                  @map("their_status")
+  theirStatusAt  DateTime?                @map("their_status_at")
+  /// Set when the pairing was made by redeeming a link: the switches its inviter chose, offered as
+  /// the default of the confirm dialog (spec 2026-11-08 §11.8).
+  inviteSwitches Json?                    @map("invite_switches")
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consents       LeaderboardConsent[]
+  boardMembers   LeaderboardBoardMember[]
+  sharePairing   RemoteShareAccount?
 
   @@unique([origin, channel])
   @@index([userId])
@@ -5902,6 +5905,9 @@ model LeaderboardInvite {
   userId    String    @map("user_id")
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
+  /// The switches the inviter chose when creating the link (spec 2026-11-08 §11.8); null for a
+  /// code or a link from before: the redeemed request is then leaderboard-only.
+  switches  Json?
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -5928,6 +5934,9 @@ model FederationAdmissionRequest {
   inviteHash    String?   @unique @map("invite_hash")
   /// outgoing only: the scope the user agreed to share, applied when the claim runs.
   scope         Json?
+  /// outgoing only: the connection switches the redeemer chose, sent as the connection request
+  /// once the claim ran (spec 2026-11-08 §11.8); null: leaderboard only.
+  switches      Json?
   /// "pending" | "sent" | "approved" | "declined" | "failed" | "expired"
   status        String    @default("pending")
   failureReason String?   @map("failure_reason")
