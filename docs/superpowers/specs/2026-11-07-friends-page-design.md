@@ -249,8 +249,8 @@ keeps comparing stats.
 
 ## 8. Phases
 
-| Phase | Content | Depends on |
-|---|---|---|
+| Phase | Content | Depends on | Status |
+|---|---|---|---|
 | P1 | §6.1 protocol fixes (mutual consent, remote consent state) + tests | — |
 | P2 | snapshot v2 + achievements builder, consent group, version negotiation | P1 |
 | P3 | identity endpoint, admission table, bootstrap action, admin approve/decline API, invitation link create/redeem | P1 |
@@ -404,11 +404,13 @@ whether that is the demo data or a defect, and fix the latter.
 
 ### 11.6 Phases
 
-| Phase | Content | Depends on |
-|---|---|---|
-| F1 | `local_connections` + migrations (local, remote, no widening, tested on old-shape rows), `/friends` API, invite-link redeem → connection, comparison reads gated by switches, defaults on | — |
-| F2 | Freunde page per friend: head, switches, bars, achievement grid + popover, shared trips, shared plans, Settings link | F1 contract |
-| F3 | two-instance e2e updated (link → admission → connection → share trip → linked copy arrives → plan invite), full Build Checks, Codex | F1, F2 |
+| Phase | Content | Depends on | Status |
+|---|---|---|---|
+| F1 | `local_connections` + migrations (local, remote, no widening, tested on old-shape rows), `/friends` API, invite-link redeem → connection, comparison reads gated by switches, defaults on | — | done (`34ecba495`) |
+| F2 | Freunde page per friend: head, switches, bars, achievement grid + popover, shared trips, shared plans, Settings link | F1 contract | done (`3d6507f66`) |
+| F3 | two-instance e2e updated (link → admission → connection → share trip → linked copy arrives → plan invite), full Build Checks, Codex | F1, F2 | done (`98d2f032b`); e2e 41/41 on two servers |
+
+Open: the admin trip-sharing switch now gates trips, plans and offers only, not user connections (F3) — owner to confirm.
 
 Companion: no change (rule above). If the app later wants local friends, it reads `/friends`.
 
