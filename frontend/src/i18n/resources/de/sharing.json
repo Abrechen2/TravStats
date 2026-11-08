@@ -938,7 +938,8 @@
           "sub": "Diese Person darf dir Reisen anbieten – du entscheidest bei jedem Angebot selbst.",
           "short": "Reiseangebote"
         }
-      }
+      },
+      "toFriends": "Freunde, Vergleich, geteilte Reisen und Pläne findest du pro Person auf der Seite Freunde."
     }
   },
   "route": {

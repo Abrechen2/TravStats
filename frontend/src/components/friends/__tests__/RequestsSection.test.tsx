@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import RequestsSection from "../RequestsSection";
-import { comparisonApi } from "../../../lib/api/comparison";
+import { friendsApi } from "../../../lib/api/friends";
+import type { FriendRequest } from "../../../lib/friends/types";
 import type { OwnAdmission } from "../../../lib/comparison/types";
-import { SCOPE, person } from "./fixtures";
+import { ALL_ON } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -14,22 +15,25 @@ vi.mock("../../../hooks/useTranslation", () => ({
     },
   }),
 }));
-vi.mock(
-  "../../comparison/ConsentDialog",
-  async () => (await import("./fixtures")).consentDialogStub
-);
-vi.mock("../../../lib/api/comparison", async (original) => ({
-  ...(await original<typeof import("../../../lib/api/comparison")>()),
-  comparisonApi: {
+vi.mock("../../Settings/ConnectionSwitchesForm", () => ({
+  default: () => <div data-testid="switches-form" />,
+  theirsSummary: () => "plans",
+}));
+vi.mock("../../../lib/api/friends", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/friends")>()),
+  friendsApi: {
     accept: vi.fn().mockResolvedValue({}),
     decline: vi.fn().mockResolvedValue({}),
   },
 }));
 
-const request = {
-  consentId: "c-1",
-  person: person("1", "Ben"),
-  createdAt: "2026-11-07T00:00:00.000Z",
+const request: FriendRequest = {
+  key: "local:1",
+  displayName: "Ben",
+  username: "ben",
+  origin: null,
+  switches: ALL_ON,
+  requestedAt: "2026-11-07T00:00:00.000Z",
 };
 const admission = (
   status: OwnAdmission["status"],
@@ -54,21 +58,50 @@ describe("RequestsSection", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("accepts a request with the scope chosen in the dialog", async () => {
+  it("accepts a request with the reader's own switches, everything on by default", async () => {
     const onChanged = vi.fn();
     render(<RequestsSection requests={[request]} admissions={[]} onChanged={onChanged} />);
     fireEvent.click(screen.getByRole("button", { name: "requests.accept" }));
-    expect(screen.getByRole("button", { name: "confirm-dialog" })).toHaveAttribute(
-      "data-mode",
-      "accept"
+    expect(screen.getByTestId("switches-form")).toBeInTheDocument();
+    expect(friendsApi.accept).not.toHaveBeenCalled();
+    const buttons = screen.getAllByRole("button", { name: "requests.accept" });
+    fireEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() => expect(friendsApi.accept).toHaveBeenCalledWith("local:1", ALL_ON));
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("shows a redeemed invitation link with the redeemer's server and fingerprint, and says declining burns it", () => {
+    render(
+      <RequestsSection
+        requests={[
+          {
+            ...request,
+            key: "remote:9",
+            origin: "https://far.example",
+            viaLink: true,
+            fingerprint: "ab12",
+          },
+        ]}
+        admissions={[]}
+        onChanged={vi.fn()}
+      />
     );
-    fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
-    await waitFor(() => expect(comparisonApi.accept).toHaveBeenCalledWith("c-1", SCOPE));
+    expect(screen.getByText("friend.requests.viaLink")).toBeInTheDocument();
+    expect(screen.getByText(/https:\/\/far\.example/)).toBeInTheDocument();
+    expect(screen.getByText(/friend\.requests\.fingerprint/)).toBeInTheDocument();
+    expect(screen.getByText("friend.requests.declineBurns")).toBeInTheDocument();
+  });
+
+  it("declines through /friends, by key", async () => {
+    const onChanged = vi.fn();
+    render(<RequestsSection requests={[request]} admissions={[]} onChanged={onChanged} />);
+    fireEvent.click(screen.getByRole("button", { name: "requests.decline" }));
+    await waitFor(() => expect(friendsApi.decline).toHaveBeenCalledWith("local:1"));
     expect(onChanged).toHaveBeenCalled();
   });
 
   it("says why a decline failed instead of swallowing it", async () => {
-    vi.mocked(comparisonApi.decline).mockRejectedValueOnce(new Error("boom"));
+    vi.mocked(friendsApi.decline).mockRejectedValueOnce(new Error("boom"));
     render(<RequestsSection requests={[request]} admissions={[]} onChanged={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "requests.decline" }));
     expect((await screen.findByRole("alert")).textContent).toBe("error.unknown");

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import type { FormEvent, JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
@@ -167,6 +168,11 @@ export default function ConnectionsSection(): JSX.Element | null {
       <SectionTitle title={t(`${NS}.title`)} />
       <div className="flex flex-col gap-4 text-sm">
         <p className="t-caption">{t(`${NS}.hint`)}</p>
+        <p>
+          <Link to="/freunde" data-testid="connections-to-friends">
+            {t(`${NS}.toFriends`)}
+          </Link>
+        </p>
         <SettingRows>
           <SettingItem
             title={t(`${NS}.findable.label`)}

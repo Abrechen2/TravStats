@@ -68,7 +68,8 @@
     "federationOff": "dein Server ist nicht mit anderen verbunden",
     "unknown": "unbekannt",
     "otherYear": "anderer Zeitraum",
-    "notComparable": "nicht vergleichbar (andere Bereiche)"
+    "notComparable": "nicht vergleichbar (andere Bereiche)",
+    "notDerivable": "nur über alle Bereiche zusammen berechenbar"
   },
   "empty": {
     "title": "Noch niemand zum Vergleichen",
@@ -181,7 +182,13 @@
     "FEDERATION_ADMISSION_NOT_FOUND": "Diese Anfrage gibt es nicht mehr. Lade die Seite neu.",
     "FEDERATION_ADMISSION_NOT_PENDING": "Über diese Anfrage ist schon entschieden. Lade die Seite neu.",
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Warte einen Moment und versuch es dann noch einmal.",
-    "unknown": "Das hat nicht geklappt. Versuch es noch einmal."
+    "unknown": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "FRIENDS_NOT_FOUND": "Diesen Freund gibt es nicht mehr. Lade die Seite neu.",
+    "FRIENDS_CONNECTION_STATE": "Die Verbindung hat sich inzwischen geändert. Lade die Seite neu.",
+    "FRIENDS_SELF": "Du kannst dich nicht mit dir selbst verbinden.",
+    "FRIENDS_SCOPE_INVALID": "Dieser Umfang ist nicht gültig.",
+    "FRIENDS_FEDERATION_OFF": "Dein Server ist nicht mit anderen Servern verbunden.",
+    "FRIENDS_PEER_UNREACHABLE": "Der andere Server antwortet gerade nicht. Versuch es später noch einmal."
   },
   "friends": {
     "title": "Freunde",
@@ -216,7 +223,8 @@
     "outcome": {
       "claimed": "Verbunden. Du siehst die Person jetzt in der Liste.",
       "awaitingAdmin": "Wartet auf die Freigabe deines Admins.",
-      "awaitingPeerAdmin": "Wartet auf die Freigabe des Admins der anderen Seite."
+      "awaitingPeerAdmin": "Wartet auf die Freigabe des Admins der anderen Seite.",
+      "awaitingInviter": "Eingelöst. Wartet darauf, dass die einladende Person dich bestätigt."
     },
     "admissionsFailed": "Deine Anfragen an andere Server konnten nicht geladen werden.",
     "accept": {
@@ -280,5 +288,93 @@
     "edit": "Ändern",
     "remove": "Freund entfernen",
     "close": "Fertig"
+  },
+  "friend": {
+    "loading": "Lädt …",
+    "retry": "Erneut versuchen",
+    "compareTitle": "Vergleich",
+    "compareOff": "{{name}} teilt keine Vergleichswerte.",
+    "olderServer": "Der Server von {{name}} ist älter – hier gibt es nur den Vergleich, noch keine Reisen oder Pläne.",
+    "olderServerPill": "älterer Server",
+    "state": {
+      "pending_out": "wartet auf Antwort",
+      "pending_in": "fragt dich an",
+      "active": "verbunden",
+      "declined": "abgelehnt",
+      "revoked": "beendet",
+      "reconfirm": "bitte bestätigen"
+    },
+    "youLead": "du liegst vorn",
+    "theyLead": "{{name}} liegt vorn",
+    "tie": "gleichauf",
+    "both": "Beide",
+    "neither": "Bei keinem von euch",
+    "denominator": "{{total}} Erfolge, die beide zeigen können",
+    "progressYou": "Dein Fortschritt: {{percent}}",
+    "progressThem": "{{name}}: {{percent}}",
+    "achievementsNoCompare": "{{name}} zeigt nur erreichte Erfolge, keinen Vergleich.",
+    "achievementsViaCompare": "{{name}} zeigt nur erreichte Erfolge, keinen Vergleich.",
+    "settings": {
+      "title": "{{name}}",
+      "save": "Speichern",
+      "iShare": "Das gibst du {{name}}",
+      "theyShare": "{{name}} gibt dir: {{what}}",
+      "theyShareNothing": "{{name}} gibt dir noch nichts frei.",
+      "scope": "Umfang des Vergleichs ändern",
+      "removeTitle": "{{name}} als Freund entfernen?",
+      "removeBody": "Danach gibt es keine neuen Reisen oder Pläne mehr zwischen euch und keinen Vergleich. Bereits übernommene Reisen und Pläne, in denen ihr beide seid, bleiben.",
+      "removeConfirm": "Freund entfernen"
+    },
+    "trips": {
+      "title": "Geteilte Reisen",
+      "toThem": "Von dir an {{name}}",
+      "fromThem": "Von {{name}} an dich",
+      "none": "Noch keine Reise.",
+      "state": {
+        "linked": "verknüpfte Kopie",
+        "pending": "wartet auf Annahme",
+        "declined": "abgelehnt",
+        "removed": "entfernt"
+      },
+      "loadFailed": "Die geteilten Reisen konnten nicht geladen werden.",
+      "share": "Reise teilen",
+      "offersOff": "{{name}} nimmt keine Reisen an.",
+      "shareTitle": "Reise mit {{name}} teilen",
+      "pick": "Reise",
+      "pickPlaceholder": "Reise wählen",
+      "pickFailed": "Deine Reisen konnten nicht geladen werden.",
+      "next": "Weiter"
+    },
+    "plans": {
+      "title": "Gemeinsame Pläne",
+      "none": "Noch kein gemeinsamer Plan.",
+      "loadFailed": "Die gemeinsamen Pläne konnten nicht geladen werden.",
+      "invite": "Zu Plan einladen",
+      "mineOff": "Du hast Pläne für diesen Freund ausgeschaltet. Schalte sie im Zahnrad ein, um einzuladen.",
+      "theirsOff": "{{name}} teilt keine Pläne.",
+      "inviteTitle": "{{name}} zu einem Plan einladen",
+      "inviteConfirm": "Einladen",
+      "pick": "Plan",
+      "pickPlaceholder": "Plan wählen",
+      "pickFailed": "Deine Pläne konnten nicht geladen werden."
+    },
+    "requests": {
+      "asks": "{{name}} möchte sich mit dir verbinden",
+      "viaLink": "{{name}} hat deinen Einladungslink eingelöst",
+      "fingerprint": "Fingerabdruck {{fingerprint}}",
+      "offers": "{{name}} gibt dir: {{what}}",
+      "offersNothing": "{{name}} gibt dir noch nichts frei.",
+      "declineBurns": "Ablehnen macht den Link unbrauchbar.",
+      "acceptTitle": "{{name}} annehmen",
+      "acceptHint": "Wähle, was {{name}} von dir sieht. Alles ist vorgewählt und lässt sich später im Zahnrad ändern."
+    },
+    "add": {
+      "origin": "Server der Person",
+      "originHint": "Leer lassen für diesen Server, sonst die Adresse, z. B. https://trav.beispiel.de.",
+      "linkGives": "Das gibst du mit dem Link frei:",
+      "switchesTitle": "Anfrage an {{name}}",
+      "askHint": "Wähle, was die Person von dir sieht. Alles ist vorgewählt; erst die Annahme verbindet euch.",
+      "redeemHint": "Du löst eine Einladung von {{origin}} ein. Die Person muss dich noch bestätigen; erst dann seid ihr verbunden."
+    }
   }
 }

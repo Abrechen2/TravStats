@@ -938,7 +938,8 @@
           "sub": "This person may offer you trips – you decide on every offer yourself.",
           "short": "trip offers"
         }
-      }
+      },
+      "toFriends": "Friends, comparison, shared trips and plans per person are on the Friends page."
     }
   },
   "route": {

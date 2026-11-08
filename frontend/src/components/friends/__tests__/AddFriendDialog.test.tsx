@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AddFriendDialog from "../AddFriendDialog";
 import { comparisonApi } from "../../../lib/api/comparison";
-import { SCOPE, VALID_PAYLOAD, b64url } from "./fixtures";
+import { friendsApi } from "../../../lib/api/friends";
+import { ALL_ON, SCOPE, VALID_PAYLOAD, b64url } from "./fixtures";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
@@ -11,6 +12,11 @@ vi.mock(
   "../../comparison/ConsentDialog",
   async () => (await import("./fixtures")).consentDialogStub
 );
+vi.mock("../SwitchesAskDialog", async () => (await import("./fixtures")).switchesDialogStub);
+vi.mock("../../../lib/api/friends", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/friends")>()),
+  friendsApi: { request: vi.fn().mockResolvedValue({}) },
+}));
 vi.mock("../../../lib/api/comparison", async (original) => ({
   ...(await original<typeof import("../../../lib/api/comparison")>()),
   comparisonApi: {
@@ -31,14 +37,42 @@ describe("AddFriendDialog", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.unstubAllGlobals());
 
-  it("asks a person on this server by username with the dialog's scope", async () => {
+  it("asks a person on this server by username with the chosen switches, not a leaderboard scope", async () => {
     const onChanged = vi.fn();
     open(onChanged);
     fireEvent.change(screen.getByLabelText("add.username"), { target: { value: "ben" } });
     fireEvent.click(screen.getByRole("button", { name: "add.ask" }));
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
-    await waitFor(() => expect(comparisonApi.request).toHaveBeenCalledWith("ben", SCOPE));
+    await waitFor(() => expect(friendsApi.request).toHaveBeenCalledWith("ben", null, ALL_ON));
+    expect(comparisonApi.request).not.toHaveBeenCalled();
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("asks a person on another server when an origin is given", async () => {
+    open();
+    fireEvent.change(screen.getByLabelText("add.username"), { target: { value: "lena" } });
+    fireEvent.change(screen.getByLabelText("friend.add.origin"), {
+      target: { value: "https://far.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "add.ask" }));
+    fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
+    await waitFor(() =>
+      expect(friendsApi.request).toHaveBeenCalledWith("lena", "https://far.example", ALL_ON)
+    );
+  });
+
+  it("the link carries the inviter's switches and the redeemed outcome 'awaitingInviter' is named", async () => {
+    vi.mocked(comparisonApi.redeemInviteLink).mockResolvedValueOnce({ status: "awaitingInviter" });
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "friends.makeLink" }));
+    await screen.findByDisplayValue("https://me.example/freunde/einladung#abc");
+    expect(comparisonApi.createInviteLink).toHaveBeenCalledWith(ALL_ON);
+    fireEvent.change(screen.getByLabelText("friends.pasteLabel"), { target: { value: LINK } });
+    fireEvent.click(screen.getByRole("button", { name: "friends.redeem" }));
+    fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
+    expect((await screen.findByTestId("add-outcome")).textContent).toBe(
+      "friends.outcome.awaitingInviter"
+    );
   });
 
   it("makes an invitation link to pass on and says so when the clipboard refuses", async () => {
@@ -57,13 +91,13 @@ describe("AddFriendDialog", () => {
     expect((await screen.findByRole("status")).textContent).toBe("add.copyFailed");
   });
 
-  it("redeems a pasted link through the consent dialog and names the outcome", async () => {
+  it("redeems a pasted link with the redeemer's switches and names the outcome", async () => {
     open();
     fireEvent.change(screen.getByLabelText("friends.pasteLabel"), { target: { value: LINK } });
     fireEvent.click(screen.getByRole("button", { name: "friends.redeem" }));
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
     await waitFor(() =>
-      expect(comparisonApi.redeemInviteLink).toHaveBeenCalledWith(b64url(VALID_PAYLOAD), SCOPE)
+      expect(comparisonApi.redeemInviteLink).toHaveBeenCalledWith(b64url(VALID_PAYLOAD), ALL_ON)
     );
     expect((await screen.findByTestId("add-outcome")).textContent).toBe(
       "friends.outcome.awaitingPeerAdmin"

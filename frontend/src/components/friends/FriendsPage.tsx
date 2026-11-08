@@ -7,27 +7,23 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
 import { comparisonApi, comparisonFailureCode } from "../../lib/api/comparison";
 import { achievementsApi } from "../../lib/api/achievements";
-import type {
-  CompareResponse,
-  OwnAdmission,
-  PeopleResponse,
-  PersonView,
-} from "../../lib/comparison/types";
+import { friendsApi } from "../../lib/api/friends";
+import type { CompareResponse, PeopleResponse } from "../../lib/comparison/types";
+import type { FriendsResponse } from "../../lib/friends/types";
 import type { Achievement } from "../../types";
 import { recentYears } from "../../lib/comparison/years";
 import { logger } from "../../lib/logger";
 import BoardsSection from "../comparison/BoardsSection";
-import AchievementsCompare from "./AchievementsCompare";
 import AddFriendDialog from "./AddFriendDialog";
-import CompareTable, { type ComparedFriend } from "./CompareTable";
-import FriendDetailSheet from "./FriendDetailSheet";
+import FriendPanel from "./FriendPanel";
 import FriendPicker, { MAX_PICKED } from "./FriendPicker";
 import RequestsSection from "./RequestsSection";
 
 /**
- * /freunde (spec 2026-11-07 §6.5): requests to answer, the friends to pick, then the picked
- * friends side by side — stats per domain, then achievements. The server builds every figure
- * under the consent each side gave; the page only lays them next to each other.
+ * /freunde (spec 2026-11-08 §11.5): requests to answer, the friends to pick, then one panel per
+ * picked friend. A friend is one connection; the page reads `/friends` for who and which switches,
+ * `/comparison/compare` for the figures. The server builds every figure under the grant each side
+ * gave; the page only lays them out.
  */
 export default function FriendsPage(): JSX.Element {
   const { t } = useTranslation(["comparison", "common", "achievements"]);
@@ -37,10 +33,10 @@ export default function FriendsPage(): JSX.Element {
   const zone = useSettingsStore((s) => s.display.timezone);
   const years = useMemo(() => recentYears(zone), [zone]);
 
-  const [people, setPeople] = useState<PeopleResponse | null>(null);
-  const [peopleFailed, setPeopleFailed] = useState(false);
-  const [admissions, setAdmissions] = useState<OwnAdmission[]>([]);
-  const [admissionsFailed, setAdmissionsFailed] = useState(false);
+  const [list, setList] = useState<FriendsResponse | null>(null);
+  const [listFailed, setListFailed] = useState(false);
+  // Groups still come from the comparison API; losing them never hides the friends.
+  const [boards, setBoards] = useState<PeopleResponse | null>(null);
   const [catalogue, setCatalogue] = useState<Achievement[] | null>(null);
   const [version, setVersion] = useState(0);
   const [picked, setPicked] = useState<string[] | null>(null);
@@ -50,26 +46,21 @@ export default function FriendsPage(): JSX.Element {
   const [board, setBoard] = useState("");
   const [loaded, setLoaded] = useState<{ query: string; data: CompareResponse } | null>(null);
   const [compareFailed, setCompareFailed] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PersonView | null>(null);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    setPeopleFailed(false);
-    comparisonApi.people().then(
-      (next) => alive && setPeople(next),
+    setListFailed(false);
+    friendsApi.list().then(
+      (next) => alive && setList(next),
       (failure: unknown) => {
-        logger.error("friends: people load failed", failure);
-        if (alive) setPeopleFailed(true);
+        logger.error("friends: list load failed", failure);
+        if (alive) setListFailed(true);
       }
     );
-    setAdmissionsFailed(false);
-    comparisonApi.listAdmissions().then(
-      (next) => alive && setAdmissions(next),
-      (failure: unknown) => {
-        logger.error("friends: admissions load failed", failure);
-        if (alive) setAdmissionsFailed(true);
-      }
+    comparisonApi.people().then(
+      (next) => alive && setBoards(next),
+      (failure: unknown) => logger.error("friends: groups load failed", failure)
     );
     return () => {
       alive = false;
@@ -88,19 +79,23 @@ export default function FriendsPage(): JSX.Element {
     };
   }, []);
 
-  // The first friend is picked for the reader; after that the pick is theirs alone.
-  const friends = people?.people.filter((p) => p.mine?.status === "accepted") ?? [];
-  const friendKeys = new Set(friends.map((p) => p.person.key));
-  const pickedKeys = (picked ?? friends.slice(0, 1).map((p) => p.person.key)).filter((k) =>
+  // Pickable: an active connection. The first is picked for the reader; after that the pick is theirs.
+  const friends = list?.friends.filter((f) => f.state === "active") ?? [];
+  const friendKeys = new Set(friends.map((f) => f.key));
+  const pickedKeys = (picked ?? friends.slice(0, 1).map((f) => f.key)).filter((k) =>
     friendKeys.has(k)
   );
-  const query = `${year ?? "all"}|${pickedKeys.join(",")}`;
+  // A friend who gives no comparison has nothing to fetch; their panel says so.
+  const comparedKeys = friends
+    .filter((f) => pickedKeys.includes(f.key) && f.theirs.leaderboard)
+    .map((f) => f.key);
+  const query = `${year ?? "all"}|${comparedKeys.join(",")}`;
 
   useEffect(() => {
-    if (!people || pickedKeys.length === 0) return;
+    if (!list || comparedKeys.length === 0) return;
     let alive = true;
     setCompareFailed(null);
-    comparisonApi.compare(pickedKeys, year ?? "all").then(
+    comparisonApi.compare(comparedKeys, year ?? "all").then(
       (data) => alive && setLoaded({ query, data }),
       (failure: unknown) => {
         logger.error("friends: compare failed", failure);
@@ -110,13 +105,13 @@ export default function FriendsPage(): JSX.Element {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- query is derived from year and the picked keys; version reloads
-  }, [people, query, version]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- query is derived from year and the compared keys; version reloads
+  }, [list, query, version]);
 
   // A group deleted here or elsewhere leaves the filter, rather than filtering to nobody.
   useEffect(() => {
-    if (board && people && !people.boards.some((b) => b.id === board)) setBoard("");
-  }, [board, people]);
+    if (board && boards && !boards.boards.some((b) => b.id === board)) setBoard("");
+  }, [board, boards]);
 
   const reload = (): void => setVersion((v) => v + 1);
   const toggle = (key: string): void => {
@@ -134,17 +129,9 @@ export default function FriendsPage(): JSX.Element {
   };
 
   const data = loaded?.query === query ? loaded.data : null;
-  const compared: ComparedFriend[] = pickedKeys.map((key) => {
-    const person = people?.people.find((p) => p.person.key === key)?.person;
-    return {
-      key,
-      name: person?.displayName ?? key,
-      row: data?.friends.find((r) => r.person.key === key),
-    };
-  });
 
   const body = (): JSX.Element => {
-    if (peopleFailed)
+    if (listFailed)
       return (
         <EmptyState
           kind="degraded"
@@ -152,7 +139,7 @@ export default function FriendsPage(): JSX.Element {
           action={<Button onClick={reload}>{tr("common:buttons.retry")}</Button>}
         />
       );
-    if (!people) return <p className="t-caption">{tr("common:loading.default")}</p>;
+    if (!list) return <p className="t-caption">{tr("common:loading.default")}</p>;
     if (friends.length === 0)
       return (
         <EmptyState
@@ -162,36 +149,24 @@ export default function FriendsPage(): JSX.Element {
         />
       );
     if (pickedKeys.length === 0) return <p className="t-caption">{tr("friends.pickOne")}</p>;
-    if (compareFailed)
-      return (
-        <EmptyState
-          kind="degraded"
-          title={tr("friends.loadFailed")}
-          description={compareFailed}
-          action={<Button onClick={reload}>{tr("common:buttons.retry")}</Button>}
-        />
-      );
-    if (!data) return <p className="t-caption">{tr("common:loading.default")}</p>;
     return (
       <div className="flex flex-col" style={{ gap: "var(--ts-space-xxl)" }}>
-        <CompareTable
-          self={data.self}
-          friends={compared}
-          year={year}
-          domains={domains}
-          isEnabled={isEnabled}
-        />
-        <section>
-          <h2 className="t-screen-title" style={{ marginBottom: "var(--ts-space-lg)" }}>
-            {tr("achievements.title")}
-          </h2>
-          <AchievementsCompare
-            self={data.self}
-            friends={compared}
-            year={year}
-            catalogue={catalogue}
-          />
-        </section>
+        {friends
+          .filter((f) => pickedKeys.includes(f.key))
+          .map((f) => (
+            <FriendPanel
+              key={f.key}
+              friend={f}
+              self={data?.self ?? null}
+              row={data?.friends.find((r) => r.person.key === f.key)}
+              compareFailed={compareFailed}
+              year={year}
+              domains={domains}
+              isEnabled={isEnabled}
+              catalogue={catalogue}
+              onChanged={reload}
+            />
+          ))}
       </div>
     );
   };
@@ -199,25 +174,19 @@ export default function FriendsPage(): JSX.Element {
   return (
     <AppShell width="table">
       <PageHeader title={tr("friends.title")} meta={tr("subtitle")} />
-      {admissionsFailed && (
-        <p className="t-caption" role="status">
-          {tr("friends.admissionsFailed")}
-        </p>
-      )}
       <RequestsSection
-        requests={people?.requests ?? []}
-        admissions={admissions}
+        requests={list?.requests ?? []}
+        admissions={list?.admissions ?? []}
         onChanged={reload}
       />
       <FriendPicker
-        people={people?.people ?? []}
-        boards={people?.boards ?? []}
+        friends={list?.friends ?? []}
+        boards={boards?.boards ?? []}
         board={board}
         onBoard={setBoard}
         picked={pickedKeys}
         onToggle={toggle}
         onAdd={() => setAdding(true)}
-        onDetail={setDetail}
         notice={notice}
       />
       <div
@@ -255,14 +224,7 @@ export default function FriendsPage(): JSX.Element {
         </div>
       </div>
       {body()}
-      {people && <BoardsSection boards={people.boards} people={people.people} onChanged={reload} />}
-      {detail && (
-        <FriendDetailSheet
-          friend={people?.people.find((p) => p.person.key === detail.person.key) ?? detail}
-          onClose={() => setDetail(null)}
-          onChanged={reload}
-        />
-      )}
+      {boards && <BoardsSection boards={boards.boards} people={boards.people} onChanged={reload} />}
       <AddFriendDialog open={adding} onClose={() => setAdding(false)} onChanged={reload} />
     </AppShell>
   );
