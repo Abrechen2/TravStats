@@ -99,7 +99,7 @@ async function completeClaim(
       row.localUserId,
       `${row.origin}#${token}`,
       scope,
-      switches.success ? switches.data : undefined
+      ...(switches.success ? [switches.data] : [])
     );
     return await settle(row, "approved", null);
   } catch (error) {

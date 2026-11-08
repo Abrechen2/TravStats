@@ -103,8 +103,9 @@ export const friendRequestedSchema = z.strictObject({
 export const friendTripSchema = z.strictObject({
   id: uuid.describe("The trip's id where it lives (the shared trip, or the friend's)"),
   title: z.string(),
-  startDate: instant.nullable(),
-  endDate: instant.nullable(),
+  // Plain text on purpose: the trip's own dates, as the trip endpoints send them.
+  startDate: z.string().nullable().describe("ISO 8601, the trip's start"),
+  endDate: z.string().nullable().describe("ISO 8601, the trip's end"),
   copyState: z
     .enum(["linked", "pending", "declined", "removed"])
     .describe("`linked`: the linked copy exists; `pending`: an offer waits for an answer"),
@@ -118,8 +119,9 @@ export const friendTripsSchema = z.strictObject({
 export const friendPlanSchema = z.strictObject({
   id: uuid.describe("The plan's trip id"),
   title: z.string(),
-  startDate: instant.nullable(),
-  endDate: instant.nullable(),
+  // Plain text on purpose: the trip's own dates, as the trip endpoints send them.
+  startDate: z.string().nullable().describe("ISO 8601, the trip's start"),
+  endDate: z.string().nullable().describe("ISO 8601, the trip's end"),
   owner: z.enum(["me", "them"]),
   role: z.string(),
 });

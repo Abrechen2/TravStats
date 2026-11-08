@@ -15,7 +15,7 @@ import {
   type InviteLinkPayload,
 } from "../../schemas/inviteLink";
 import type { LeaderboardScope } from "../../schemas/comparison";
-import type { ConnectionSwitches } from "../../schemas/tripSharePeer";
+import type { ConnectionSwitches } from "../../schemas/connectionSwitches";
 import { admissionError } from "../federation/admissionErrors";
 import { expireStaleAdmissions } from "../federation/admission";
 import { deferIdentityFetch, fetchPeerIdentity } from "../federation/admissionIdentity";
@@ -191,7 +191,12 @@ export async function redeemInviteLink(
         userId,
         origin: link.origin,
       });
-    await claimInvite(userId, `${link.origin}#${link.token}`, scope, switches);
+    await claimInvite(
+      userId,
+      `${link.origin}#${link.token}`,
+      scope,
+      ...(switches ? [switches] : [])
+    );
     // With switches the claim also asked for a connection: the inviter answers it (§11.8).
     return { status: switches ? "awaitingInviter" : "claimed" };
   }

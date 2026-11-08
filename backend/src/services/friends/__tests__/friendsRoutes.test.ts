@@ -222,12 +222,12 @@ it("lists shared trips and plans of a local friend in both directions", async ()
   const trip = await prisma.trip.create({ data: { userId: a.id, name: "Madeira" } });
   await shareTripWithUser(a.id, trip.id, b.id);
   const mine = await api("get", `/local:${b.id}/trips`, a.id);
-  expect(mine.body.data.trips).toEqual([
-    expect.objectContaining({ name: "Madeira", direction: "mine", linkedCopy: "delivered" }),
+  expect(mine.body.data.toThem).toEqual([
+    expect.objectContaining({ title: "Madeira", copyState: "linked", localTripId: trip.id }),
   ]);
+  expect(mine.body.data.fromThem).toEqual([]);
   const theirs = await api("get", `/local:${a.id}/trips`, b.id);
-  expect(theirs.body.data.trips).toEqual([
-    expect.objectContaining({ name: "Madeira", direction: "theirs" }),
-  ]);
+  expect(theirs.body.data.fromThem).toEqual([expect.objectContaining({ title: "Madeira" })]);
+  expect(theirs.body.data.toThem).toEqual([]);
   expect((await api("get", `/local:${b.id}/plans`, a.id)).body.data.plans).toEqual([]);
 });

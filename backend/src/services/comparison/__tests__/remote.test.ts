@@ -246,6 +246,25 @@ describe("claiming an invitation", () => {
     ).toEqual([1]);
   });
 
+  it("a link redeemed with the leaderboard switch off shares nothing and the claim still stands", async () => {
+    jest
+      .mocked(exchange)
+      .mockResolvedValueOnce(ping)
+      .mockResolvedValueOnce(claimed(randomUUID(), "mara"));
+    const off = {
+      plans: false,
+      stats: "off" as const,
+      achievements: false,
+      leaderboard: false,
+      tripOffers: true,
+    };
+    const view = await claimInvite(userId, `${PEER}#${"f".repeat(64)}`, SCOPE, off);
+    expect(view).toMatchObject({
+      person: { username: "mara" },
+      mine: { status: "withdrawn", scope: SCOPE },
+    });
+  });
+
   it("calls the other server with no transaction open", async () => {
     const tx = watchTransactions();
     const openAtCall: number[] = [];

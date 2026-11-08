@@ -18,8 +18,8 @@ import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { exchange, PeerRefusal } from "../federation/security";
 import { loadIdentity, type Identity } from "../federation/identity";
 import { origin as originSchema } from "../federation/contract";
-import type { ConnectionSwitches } from "../../schemas/tripSharePeer";
-import { requestAfterClaim } from "../friends/linkRequest";
+import type { ConnectionSwitches } from "../../schemas/connectionSwitches";
+import { runPostClaim } from "./postClaim";
 import { hash } from "../federation/refusal";
 import { pingReplySchema } from "../../schemas/federationAdmin";
 import {
@@ -337,7 +337,8 @@ async function recordClaim(
   userId: string,
   origin: string,
   answer: AcceptedClaim,
-  grant: Prisma.InputJsonValue
+  grant: Prisma.InputJsonValue,
+  shares = true
 ): Promise<string> {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -375,7 +376,8 @@ async function recordClaim(
         data: {
           ownerId: userId,
           remoteId: remote.id,
-          status: "accepted",
+          // The claimant's explicit "no" to the leaderboard keeps the scope but shares nothing.
+          status: shares ? "accepted" : "withdrawn",
           scope: grant,
           decidedAt: new Date(),
         },
@@ -441,10 +443,16 @@ export async function claimInvite(
     throw comparisonError("COMPARISON_INVITE_INVALID", 400, "Unknown, used or expired code", {
       userId,
     });
-  const remoteId = await recordClaim(userId, parsed.origin, reply, grant);
+  const remoteId = await recordClaim(
+    userId,
+    parsed.origin,
+    reply,
+    grant,
+    switches ? switches.leaderboard : true
+  );
   // A link redeemed with switches also asks for a connection (spec 2026-11-08 §11.8); the claim
   // above already stands, so this can only fall back to the comparison alone, never fail it.
-  if (switches) await requestAfterClaim(userId, remoteId, switches);
+  if (switches) await runPostClaim(userId, remoteId, switches);
   return personView(userId, remoteKey(remoteId));
 }
 

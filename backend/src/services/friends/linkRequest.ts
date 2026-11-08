@@ -9,7 +9,10 @@
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import type { ConnectionSwitches } from "../../schemas/tripSharePeer";
+import { registerPostClaim } from "../comparison/postClaim";
 import { requestConnection } from "../sharing/federation/connections/actions";
+
+registerPostClaim(requestAfterClaim);
 
 export async function requestAfterClaim(
   userId: string,

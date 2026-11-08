@@ -20,6 +20,7 @@ import {
   setFriendScope,
   setFriendSwitches,
 } from "../services/friends/actions";
+import "../services/friends/linkRequest";
 import { friendPlans, friendTrips } from "../services/friends/pairs";
 
 /**

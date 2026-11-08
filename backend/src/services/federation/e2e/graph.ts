@@ -176,6 +176,8 @@ export const NON_TRAVEL_RELATIONS = [
   "comparisonCircles",
   "leaderboardConsentsOwned",
   "leaderboardConsentsViewed",
+  "localConnectionsLow",
+  "localConnectionsHigh",
   "leaderboardRemotes",
   "leaderboardInvites",
   "federationAdmissions",
