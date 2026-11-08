@@ -296,3 +296,151 @@ servers), plus a browser look at iPad 1366/820.
 - Copy wording within the DE/EN rule.
 - Whether `/comparison/compare` replaces `/leaderboard` for the page or sits beside it
   (the leaderboard endpoint stays for boards).
+
+## 11. Addendum 2026-11-08 — one friend, one connection
+
+Owner, 2026-11-08, verbatim, after clicking through the page: „die Verbindung ist aber die gleiche,
+Reise teilen mit Lena auf anderen Server sie bekommt dann eine Verknüpfte Kopie. und es wird alles
+geteilt" — and, asked whether one acceptance should switch on everything with per-part switches in
+the friend's settings, on by default: „ja mit Auswahl".
+
+### 11.1 What was wrong with §6
+
+§6 built the page on the leaderboard pairing (`LeaderboardRemote` / `LeaderboardConsent`) and its
+own invitation link. The user connection of `2026-11-02-user-connections.md` already exists, is
+merged, and is exactly what the owner describes: one confirmed connection per person, directional
+switches for plans, statistics, achievements, leaderboard and trip offers. The Freunde page therefore
+becomes **the front of that connection**, and a friend IS a connection. Two pairings for one person
+are the defect this addendum removes.
+
+### 11.2 Rules
+
+1. **One friend = one connection**, local or remote. Comparison, trip sharing (linked copy, whole
+   trip), plans, achievements and statistics all hang off it. No feature creates its own pairing.
+2. **One acceptance.** The asker picks their switches before sending, the other side picks theirs
+   before accepting; after that the connection is `active`. An invitation link counts as the
+   inviter's request (their switches chosen when creating the link); redeeming it with one's own
+   switches makes it `active` — after the server admission of §6.2 where servers are not yet peers.
+3. **Switches default ON** for a new connection (owner 2026-11-08; supersedes "all default off" of
+   2026-11-02 §2 for connections made from now on): leaderboard, achievements, statistics `full`,
+   trip offers, plans. Each stays directional and can be switched off before accepting or later in
+   the friend's gear. The comparison scope (groups, domains, year) stays an editable detail of the
+   leaderboard switch, defaulting to every group and every enabled domain.
+4. **Trips and plans stay per resource.** A connection makes a person eligible; a trip is still
+   shared trip by trip (the recipient gets the whole trip as a linked copy) and a plan plan by plan.
+5. **No silent widening.** Every pairing that exists today migrates without sharing more than it
+   did: a merged connection carries exactly the switches its old rows granted, everything else off.
+   New defaults apply only to connections made after the change.
+
+### 11.3 Local friends
+
+The 2026-11-02 connection is remote-only (`remote_share_accounts`). Same-server friends get
+`local_connections`: **one row per unordered pair** (`user_low_id < user_high_id`, unique), with
+`state`, `requested_by`, two directional switch sets (`low_switches`, `high_switches`, JSON validated
+by the connection switch schema), `requested_at` / `confirmed_at` / `ended_at`, `ended_by`. One row
+makes crossed requests (both ask → the second ask accepts), revoke/re-accept and stale accepts
+single-row transitions instead of two rows that can disagree (Codex 2026-11-08).
+
+Local migration — only granted rows count: `ShareConsent.status = accepted`, a `LeaderboardConsent`
+that is accepted, a `TravelPlanMember` with `status = active` whose underlying consent still holds.
+Pending, declined, withdrawn, invited, left and revoked rows grant nothing. Direction is the grant's
+direction: an accepted `ShareConsent` requester A → target B means **B** lets A offer trips, so it
+sets B's `tripOffers`, not A's. A leaderboard grant sets its owner's `leaderboard` switch and keeps
+its scope verbatim. A pair with any grant becomes one `active` local connection; every switch no old
+row granted is off. Ships with a replay test on old-shape rows, CLAUDE.md migration rule.
+
+Remote migration: a `remote_share_accounts` row already linked through `leaderboard_remote_id` is
+the same person (verified channel binding) and keeps its id, plans and scope. A `LeaderboardRemote`
+with no such link becomes its own connection in `reconfirm` carrying only the leaderboard switch.
+Never merge two remote rows by username or display name — those are not identity proof.
+
+### 11.4 API
+
+- `GET /api/v1/friends` (new, enveloped) — `[friend]`, `friend = {key: "local:<id>"|"remote:<id>",
+  kind, username, displayName, origin|null, state, mine: switches, theirs: switches,
+  requestedAt, confirmedAt}`, plus `requests` (incoming, with the asker's switches) and the user's
+  own pending admissions.
+- `POST /api/v1/friends` `{username, origin|null, switches}` → pending (never says whether the person
+  exists); `POST /friends/:key/accept` `{switches}`; `POST /friends/:key/decline`;
+  `PUT /friends/:key/switches` `{switches}`; `PUT /friends/:key/scope` `{scope}` (comparison scope);
+  `DELETE /friends/:key`. A switch update never touches the stored scope — switching the leaderboard
+  off and on again restores the old scope, it does not widen it to "everything"
+  (`leaderboardBridge.ts` resets it today and must stop doing so). A missing or invalid scope fails
+  closed (no comparison), never open.
+- Remote keys delegate to the existing `/sharing/connections` services. **`/sharing/connections`
+  and its Companion contract stay unchanged** — it keeps listing remote connections only, so no
+  installed app sees a local row or a null origin.
+- The invitation link (§6.3) and its redeem now create/confirm a connection, not a leaderboard
+  pairing. `/comparison/*` reads (`compare`, achievements) check the connection's leaderboard /
+  achievements switch instead of a separate consent; `LeaderboardConsent` survives only as the
+  storage of the comparison scope behind the switch.
+- `GET /friends/:key/trips` → trips shared in both directions (mine to them, theirs to me, each with
+  its linked-copy state); `GET /friends/:key/plans` → plans we are both members of.
+
+### 11.5 The page, per friend
+
+`/freunde` keeps the chip row (up to three friends selected for the comparison). Opening one friend
+shows, top to bottom:
+
+1. **Kopf** — avatar, name, server, connection state; gear opens the switches (`ConnectionSwitchesForm`
+   reused) and "Freund entfernen".
+2. **Vergleich** — head cards with the three key figures side by side, then per domain one row per
+   metric with two bars (who is ahead is visible without reading a sign); "nicht vergleichbar" as now.
+3. **Erfolge** — one shared denominator (the comparable catalogue both sides can show), a grid
+   grouped "ihr beide" / "nur du" / "nur <Name>". Every badge opens an **info popover on hover and
+   on tap** (name, description, both people's progress, points) — never a `title` attribute
+   (`helpReachability`).
+4. **Geteilte Reisen** — both directions, each a link to the trip / linked copy; button
+   "Reise teilen" opens the existing share flow pre-filled with this friend.
+5. **Gemeinsame Pläne** — plans with both as members; button "Zu Plan einladen".
+
+A section whose switch is off on either side says so in one line ("<Name> teilt keine Erfolge")
+instead of disappearing. Settings → Verbindungen becomes a link to `/freunde`. The inbox keeps
+showing requests and offers. Gating: the page shows when `comparison` or `federatedTripSharing` is
+visible; each section follows its own key.
+
+Also in this pass: "Tage unterwegs" / "Länder" showed "unbekannt" for a local demo friend — find out
+whether that is the demo data or a defect, and fix the latter.
+
+### 11.6 Phases
+
+| Phase | Content | Depends on |
+|---|---|---|
+| F1 | `local_connections` + migrations (local, remote, no widening, tested on old-shape rows), `/friends` API, invite-link redeem → connection, comparison reads gated by switches, defaults on | — |
+| F2 | Freunde page per friend: head, switches, bars, achievement grid + popover, shared trips, shared plans, Settings link | F1 contract |
+| F3 | two-instance e2e updated (link → admission → connection → share trip → linked copy arrives → plan invite), full Build Checks, Codex | F1, F2 |
+
+Companion: no change (rule above). If the app later wants local friends, it reads `/friends`.
+
+### 11.7 Codex review 2026-11-08 — resolutions
+
+Resolved in the text above: migration counts granted rows only and in the grant's direction (P1 ×2);
+switch updates keep the scope (P1); one local row per pair (P2); remote merges only through the
+verified `leaderboard_remote_id` binding (P2); a scope API (P2). Further rules:
+
+- **Local authorisation reads the connection.** Local trip offers (`services/sharing`) and plan access
+  (`services/travplan/access.ts`) check `local_connections` switches instead of `ShareConsent`
+  alone. Switching plans off or removing the friend ends eligibility for new invitations and offers;
+  plans already joined and linked copies already delivered keep working, as 2026-11-02 §2 rules for
+  remote (P1).
+- **Old invitation tokens keep their old meaning.** A `LeaderboardInvite` code or a §6.3 link created
+  before this change carries no switches; redeeming it creates a connection with the leaderboard
+  switch only. New links carry a version and the inviter's switches (P1).
+- **Achievements keep their two grants apart.** The connection's `achievements` switch keeps meaning
+  "earned badges" (`{summary, earned}`, Companion contract unchanged). Progress of not-yet-held
+  badges appears only through the leaderboard switch with its `achievements` group (snapshot v2,
+  §6.4), so the popover shows progress only when that grant exists (P1).
+- **Sections follow the data owner's switch.** "Their achievements / statistics / trips" show when
+  *they* switched it on; only plans need both sides. A section without the grant says so in one line
+  (P2).
+- **Comparison-only servers.** Remote friend requests require federation and a peer that speaks the
+  `connections` feature, not the `federatedTripSharing` beta key; a peer without `connections` falls
+  back to the leaderboard pairing and appears as a friend with comparison only, marked
+  "älterer Server" (P2).
+- **Invitation link redeem — see 11.8.**
+
+### 11.8 Open for the owner
+
+Codex P1: a link redeemed immediately to `active` with everything on is a bearer grant — whoever gets
+a forwarded link sees full statistics. The proposed answer: redeeming makes the request, the inviter
+confirms it with one tap (inbox / Freunde "Anfragen", showing who redeemed it). Pending owner answer.
