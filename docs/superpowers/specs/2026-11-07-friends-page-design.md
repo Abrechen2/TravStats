@@ -439,8 +439,10 @@ verified `leaderboard_remote_id` binding (P2); a scope API (P2). Further rules:
   "älterer Server" (P2).
 - **Invitation link redeem — see 11.8.**
 
-### 11.8 Open for the owner
+### 11.8 Invitation link redeem (owner 2026-11-08: „ja mach das")
 
-Codex P1: a link redeemed immediately to `active` with everything on is a bearer grant — whoever gets
-a forwarded link sees full statistics. The proposed answer: redeeming makes the request, the inviter
-confirms it with one tap (inbox / Freunde "Anfragen", showing who redeemed it). Pending owner answer.
+Redeeming a link never activates a connection by itself. It creates the request with the redeemer's
+switches; the inviter sees who redeemed it (name, server, fingerprint where remote) under "Anfragen"
+on `/freunde` and in the inbox, and confirms with one tap (their switches come from the link and can
+still be changed in that dialog). Declining burns the link. A link stays single use, so a forwarded
+link can at most produce one request the inviter can refuse.
