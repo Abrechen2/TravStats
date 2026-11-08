@@ -84,7 +84,7 @@ export default function CompareRows({
         minWidth: 260,
         padding: "var(--ts-space-lg)",
         border: "1px solid var(--ts-border)",
-        borderRadius: "var(--ts-radius-lg, 12px)",
+        borderRadius: "var(--ts-radius-card)",
       }}
     >
       <div className="flex items-center" style={{ gap: "var(--ts-space-md)" }}>

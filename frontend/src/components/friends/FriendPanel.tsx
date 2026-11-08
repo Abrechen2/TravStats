@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
-import { EmptyState, Pill } from "../ui";
+import { Button, EmptyState, Pill } from "../ui";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -97,7 +97,12 @@ export default function FriendPanel({
       );
     if (compareFailed)
       return (
-        <EmptyState kind="degraded" title={tr("friends.loadFailed")} description={compareFailed} />
+        <EmptyState
+          kind="degraded"
+          title={tr("friends.loadFailed")}
+          description={compareFailed}
+          action={<Button onClick={onChanged}>{tr("friend.retry")}</Button>}
+        />
       );
     if (!self) return <p className="t-caption">{tr("friend.loading")}</p>;
     return (
@@ -165,6 +170,10 @@ export default function FriendPanel({
             progressShared={friend.theirs.leaderboard}
             achievementsSwitch={friend.theirs.achievements}
           />
+        ) : compareFailed ? (
+          <p className="t-caption" data-testid="achievements-failed">
+            {tr("friend.achievementsFailed")}
+          </p>
         ) : (
           <p className="t-caption">{tr("friend.loading")}</p>
         )}

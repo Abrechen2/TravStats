@@ -343,7 +343,8 @@
       "pick": "Reise",
       "pickPlaceholder": "Reise wählen",
       "pickFailed": "Deine Reisen konnten nicht geladen werden.",
-      "next": "Weiter"
+      "next": "Weiter",
+      "notTraveller": "{{name}} gehört auf dieser Reise noch nicht zu den Reisenden. Füge die Person in der Reise unter Reisende hinzu."
     },
     "plans": {
       "title": "Gemeinsame Pläne",
@@ -375,6 +376,8 @@
       "switchesTitle": "Anfrage an {{name}}",
       "askHint": "Wähle, was die Person von dir sieht. Alles ist vorgewählt; erst die Annahme verbindet euch.",
       "redeemHint": "Du löst eine Einladung von {{origin}} ein. Die Person muss dich noch bestätigen; erst dann seid ihr verbunden."
-    }
+    },
+    "withdraw": "Anfrage an {{name}} zurückziehen",
+    "achievementsFailed": "Die Erfolge konnten nicht geladen werden."
   }
 }

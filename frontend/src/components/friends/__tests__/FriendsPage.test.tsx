@@ -31,7 +31,7 @@ vi.mock("../../../lib/api/comparison", async (original) => ({
 }));
 vi.mock("../../../lib/api/friends", async (original) => ({
   ...(await original<typeof import("../../../lib/api/friends")>()),
-  friendsApi: { list: vi.fn(), trips: vi.fn(), plans: vi.fn() },
+  friendsApi: { list: vi.fn(), trips: vi.fn(), plans: vi.fn(), remove: vi.fn() },
 }));
 
 const ben = person("11111111-1111-4111-8111-111111111111", "Ben");
@@ -192,6 +192,22 @@ describe("FriendsPage", () => {
     await screen.findByTestId("cell-flightKm-self");
     fireEvent.change(await screen.findByLabelText("board.label"), { target: { value: "b1" } });
     expect(screen.getByRole("button", { name: "Ben" })).toBeInTheDocument();
+  });
+
+  it("an unanswered request can be withdrawn, and a refusal is said", async () => {
+    const waiting = friendOf(cleo, { state: "pending_out" });
+    vi.mocked(friendsApi.list).mockResolvedValue(listOf(friendOf(ben), waiting));
+    vi.mocked(comparisonApi.compare).mockResolvedValue(answer([rowOf(ben, 400)]));
+    vi.mocked(friendsApi.remove)
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValue({ removed: true });
+    mount();
+    await screen.findByTestId("cell-flightKm-self");
+    fireEvent.click(screen.getByRole("button", { name: "friend.withdraw" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("error.unknown");
+    fireEvent.click(screen.getByRole("button", { name: "friend.withdraw" }));
+    await waitFor(() => expect(friendsApi.remove).toHaveBeenLastCalledWith(cleo.key));
+    await waitFor(() => expect(friendsApi.list).toHaveBeenCalledTimes(2));
   });
 
   it("the friend list survives a failed group load", async () => {

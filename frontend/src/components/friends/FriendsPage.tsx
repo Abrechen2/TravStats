@@ -7,7 +7,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
 import { comparisonApi, comparisonFailureCode } from "../../lib/api/comparison";
 import { achievementsApi } from "../../lib/api/achievements";
-import { friendsApi } from "../../lib/api/friends";
+import { friendsApi, friendsErrorKey } from "../../lib/api/friends";
 import type { CompareResponse, PeopleResponse } from "../../lib/comparison/types";
 import type { FriendsResponse } from "../../lib/friends/types";
 import type { Achievement } from "../../types";
@@ -114,6 +114,16 @@ export default function FriendsPage(): JSX.Element {
   }, [board, boards]);
 
   const reload = (): void => setVersion((v) => v + 1);
+  const withdraw = async (key: string): Promise<void> => {
+    setNotice(null);
+    try {
+      await friendsApi.remove(key);
+      reload();
+    } catch (failure) {
+      logger.error("friends: withdraw failed", failure);
+      setNotice(tr(friendsErrorKey(failure)));
+    }
+  };
   const toggle = (key: string): void => {
     setNotice(null);
     if (pickedKeys.includes(key)) return setPicked(pickedKeys.filter((k) => k !== key));
@@ -187,6 +197,7 @@ export default function FriendsPage(): JSX.Element {
         picked={pickedKeys}
         onToggle={toggle}
         onAdd={() => setAdding(true)}
+        onWithdraw={(key) => void withdraw(key)}
         notice={notice}
       />
       <div

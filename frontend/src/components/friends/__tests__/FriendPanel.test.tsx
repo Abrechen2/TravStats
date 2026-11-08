@@ -225,6 +225,39 @@ describe("FriendPanel", () => {
     expect((await screen.findByTestId("share-dialog")).dataset.preselected).toBe("u:7");
   });
 
+  it("a friend who is not a traveller on the trip is never replaced by someone else in the share dialog", async () => {
+    vi.mocked(tripsApi.getAll).mockResolvedValue([{ id: "t9", name: "Rome" }] as never);
+    panel(friendOf(person("33333333-3333-4333-8333-333333333333", "Zoe")));
+    fireEvent.click(await screen.findByRole("button", { name: "friend.trips.share" }));
+    await screen.findByRole("option", { name: "Rome" });
+    fireEvent.change(screen.getByLabelText("friend.trips.pick"), { target: { value: "t9" } });
+    fireEvent.click(screen.getByRole("button", { name: "friend.trips.next" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("friend.trips.notTraveller|Zoe");
+    expect(screen.queryByTestId("share-dialog")).toBeNull();
+  });
+
+  it("a failed comparison offers a retry and the achievements say so instead of loading forever", async () => {
+    const onChanged = vi.fn();
+    render(
+      <MemoryRouter>
+        <FriendPanel
+          friend={friendOf(ben)}
+          self={null}
+          compareFailed="error.unknown"
+          year={null}
+          domains={null}
+          isEnabled={() => true}
+          catalogue={null}
+          onChanged={onChanged}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId("achievements-failed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "friend.retry" }));
+    expect(onChanged).toHaveBeenCalled();
+    await screen.findByText("Lisbon");
+  });
+
   it("'Zu Plan einladen' invites a local friend by username and a remote one by connection", async () => {
     vi.mocked(travplanApi.list).mockResolvedValue([
       { id: "p1", tripId: "trip-5", name: "Alps" },

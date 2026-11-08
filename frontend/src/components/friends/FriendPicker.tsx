@@ -14,6 +14,8 @@ interface Props {
   picked: readonly string[];
   onToggle: (key: string) => void;
   onAdd: () => void;
+  /** Withdraws a request that has not been answered. */
+  onWithdraw: (key: string) => void;
   /** Shown under the chips: the reason a pick was refused. */
   notice: string | null;
 }
@@ -31,6 +33,7 @@ export default function FriendPicker({
   picked,
   onToggle,
   onAdd,
+  onWithdraw,
   notice,
 }: Props): JSX.Element {
   const { t } = useTranslation(["comparison"]);
@@ -46,8 +49,13 @@ export default function FriendPicker({
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
         {visible.map((f) =>
           f.state === "pending_out" ? (
-            <span key={f.key} className="t-caption">
-              {f.displayName} · {tr("friends.waiting")}
+            <span key={f.key} className="inline-flex items-center" style={{ gap: 4 }}>
+              <span className="t-caption">
+                {f.displayName} · {tr("friends.waiting")}
+              </span>
+              <Button variant="secondary" onClick={() => onWithdraw(f.key)}>
+                {tr("friend.withdraw", { name: f.displayName })}
+              </Button>
             </span>
           ) : (
             <Chip

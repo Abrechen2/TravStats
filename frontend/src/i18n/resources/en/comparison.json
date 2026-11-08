@@ -343,7 +343,8 @@
       "pick": "Trip",
       "pickPlaceholder": "Choose a trip",
       "pickFailed": "Your trips could not be loaded.",
-      "next": "Next"
+      "next": "Next",
+      "notTraveller": "{{name}} is not a traveller on this trip yet. Add them in the trip under travellers."
     },
     "plans": {
       "title": "Shared plans",
@@ -375,6 +376,8 @@
       "switchesTitle": "Request to {{name}}",
       "askHint": "Choose what the person sees of you. Everything is preselected; you are connected only once they accept.",
       "redeemHint": "You are redeeming an invitation from {{origin}}. The person still has to confirm; only then are you connected."
-    }
+    },
+    "withdraw": "Withdraw request to {{name}}",
+    "achievementsFailed": "The achievements could not be loaded."
   }
 }

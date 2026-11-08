@@ -58,7 +58,12 @@ export default function ShareTripWithFriend({ friend, onClose, onShared }: Props
         onShared();
         onClose();
       } else {
-        setSharing({ tripId, view: await sharingApi.tripSharing(tripId) });
+        const view = await sharingApi.tripSharing(tripId);
+        // Never fall back to someone else: without this friend among the travellers the
+        // share dialog would offer whoever is first eligible.
+        if (!view.people.some((p) => p.account?.username === friend.username))
+          setFailed(tr("friend.trips.notTraveller", { name: friend.displayName }));
+        else setSharing({ tripId, view });
       }
     } catch (failure) {
       logger.error("friends: share trip failed", failure);
