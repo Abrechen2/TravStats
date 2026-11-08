@@ -204,3 +204,73 @@ describe("plans read the connection", () => {
     expect([gone.status, gone.body.code]).toEqual([403, "PLAN_MEMBER_CONSENT_WITHDRAWN"]);
   });
 });
+
+describe("revocation paths really revoke (security review)", () => {
+  it("a legacy withdraw or decline on a connected pair switches the matching side off", async () => {
+    const [a, b] = [await user(), await user()];
+    await friends(a.id, b.id);
+    expect(await mayOfferTripTo(prisma, a.id, b.id)).toBe(true);
+    // b withdraws the consent a holds into b's account through the OLD control.
+    const consent = await prisma.shareConsent.findFirstOrThrow({
+      where: { requesterId: a.id, targetId: b.id },
+    });
+    const { withdrawConsent } = await import("../../sharing/consent");
+    await withdrawConsent(b.id, consent.id);
+    expect(await mayOfferTripTo(prisma, a.id, b.id)).toBe(false);
+    expect(await plansGivenTo(prisma, b.id, a.id)).toBe(false);
+  });
+
+  it("a decline through the old control switches the decliner's side off", async () => {
+    const [a, b] = [await user(), await user()];
+    await friends(a.id, b.id);
+    const consent = await prisma.shareConsent.findFirstOrThrow({
+      where: { requesterId: a.id, targetId: b.id },
+    });
+    await prisma.shareConsent.update({ where: { id: consent.id }, data: { status: "pending" } });
+    const { decideConsent } = await import("../../sharing/consent");
+    await decideConsent(b.id, consent.id, "declined");
+    expect(await mayOfferTripTo(prisma, a.id, b.id)).toBe(false);
+  });
+
+  it("a connection row alone authorises no plan access: pending, declined and a plans-off row fall through to consent", async () => {
+    const [owner, member] = [await user(), await user()];
+    const { mayWorkOnPlan } = await import("../authz");
+    // Pending row, no consents.
+    await requestLocal(owner.id, member.id, DEFAULT_ON);
+    expect(await mayWorkOnPlan(prisma, owner.id, member.id)).toBe(false);
+    // Active but plans off on one side, consents withdrawn.
+    await acceptLocal(member.id, owner.id, { ...DEFAULT_ON, plans: false });
+    await prisma.shareConsent.updateMany({
+      where: {
+        requesterId: { in: [owner.id, member.id] },
+        targetId: { in: [owner.id, member.id] },
+      },
+      data: { status: "withdrawn" },
+    });
+    expect(await mayWorkOnPlan(prisma, owner.id, member.id)).toBe(false);
+    await setLocalSwitches(member.id, owner.id, DEFAULT_ON);
+    expect(await mayWorkOnPlan(prisma, owner.id, member.id)).toBe(true);
+  });
+
+  it("removing a friend ends a plan membership that never came through both plans switches", async () => {
+    const [owner, member] = [await user(), await user()];
+    await friends(owner.id, member.id, DEFAULT_ON, { ...DEFAULT_ON, plans: false });
+    const trip = await prisma.trip.create({ data: { userId: owner.id, name: "P" } });
+    const plan = await prisma.travelPlan.create({
+      data: { createRef: randomUUID(), tripId: trip.id, state: {} },
+    });
+    const m = await prisma.travelPlanMember.create({
+      data: {
+        planId: plan.id,
+        kind: "local",
+        userId: member.id,
+        displayName: "m",
+        status: "active",
+      },
+    });
+    await revokeLocal(owner.id, member.id);
+    expect((await prisma.travelPlanMember.findUniqueOrThrow({ where: { id: m.id } })).status).toBe(
+      "revoked"
+    );
+  });
+});

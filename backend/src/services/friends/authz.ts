@@ -36,6 +36,18 @@ export async function mayOfferTripTo(
 }
 
 /** Has `userId` switched plans on for `otherId` (a connection, active)? Without a connection: the old consent. */
+/** Pair-level revoke through the old consent controls must reach the connection too. */
+export async function switchOffGiven(db: Db, giverId: string, otherId: string): Promise<void> {
+  const row = await findLocal(db, giverId, otherId);
+  if (!row || row.state !== "active") return;
+  const { mine } = sidesOf(row, giverId);
+  const col = row.userLowId === giverId ? "lowSwitches" : "highSwitches";
+  await db.localConnection.update({
+    where: { id: row.id },
+    data: { [col]: { ...mine, tripOffers: false, plans: false } },
+  });
+}
+
 export async function plansGivenTo(db: Db, userId: string, otherId: string): Promise<boolean> {
   const given = await givenBy(db, userId, otherId);
   if (!given) return hasAcceptedConsent(db, otherId, userId);
@@ -49,7 +61,15 @@ export async function plansGivenTo(db: Db, userId: string, otherId: string): Pro
  * the consent from either side ends the access at once.
  */
 export async function mayWorkOnPlan(db: Db, ownerId: string, memberId: string): Promise<boolean> {
-  if (await findLocal(db, ownerId, memberId)) return true;
+  const row = await findLocal(db, ownerId, memberId);
+  if (row?.state === "active") {
+    const { mine, theirs } = sidesOf(row, ownerId);
+    if (mine.plans && theirs.plans) return true;
+  }
+  // Removed friend: a plan already joined stays open (revokeLocal ends the memberships that were
+  // never granted through plans). A pending or declined row grants nothing; it, and an active row
+  // with plans off, fall through to the old consent rule.
+  if (row?.state === "revoked") return true;
   const [toThem, toMe] = await Promise.all([
     hasAcceptedConsent(db, ownerId, memberId),
     hasAcceptedConsent(db, memberId, ownerId),

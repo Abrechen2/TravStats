@@ -276,6 +276,20 @@ export async function revokeLocal(userId: string, otherId: string): Promise<Loca
       const row = await findLocal(tx, userId, otherId);
       if (!row) throw friendsError("FRIENDS_NOT_FOUND", 404, "No such friend", { userId, otherId });
       const now = new Date();
+      // Plan members whose access never came through both plans switches do not keep it.
+      const sides = sidesOf(row, userId);
+      if (!(row.state === "active" && sides.mine.plans && sides.theirs.plans))
+        await tx.travelPlanMember.updateMany({
+          where: {
+            kind: "local",
+            status: { in: ["active", "invited"] },
+            OR: [
+              { userId: otherId, plan: { trip: { userId } } },
+              { userId, plan: { trip: { userId: otherId } } },
+            ],
+          },
+          data: { status: "revoked", revokedAt: now },
+        });
       const changed = await tx.localConnection.updateMany({
         where: { id: row.id, state: { in: ["active", "pending"] } },
         data: {
