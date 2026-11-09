@@ -44,6 +44,12 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () => (await import("./statusSweepScheduler")).stopStatusSweepScheduler(),
   },
   {
+    name: "elapsed_plan_sweep",
+    start: async () =>
+      (await import("./elapsedPlanSweepScheduler")).startElapsedPlanSweepScheduler(),
+    stop: async () => (await import("./elapsedPlanSweepScheduler")).stopElapsedPlanSweepScheduler(),
+  },
+  {
     name: "place_address_backfill",
     start: async () =>
       (await import("./placeAddressBackfillScheduler")).startPlaceAddressBackfillScheduler(),

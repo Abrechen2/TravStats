@@ -190,3 +190,64 @@ export function countPlaceCountries(
   }
   return seen.size;
 }
+
+/** How long after its own instant a visit may have been written and still count as "recorded after the fact". */
+export const PLAN_RECORDED_SLACK_MS = 5 * 60_000;
+
+/** The slice of a place the elapsed-plan rule reads. */
+export interface PlanPlace {
+  visited: boolean;
+  /** Set on a place a curated checklist item created — its ticked state belongs to the list. */
+  curatedItemId?: string | null;
+  /** Last write to the place row; an explicit unmark moves it. */
+  updatedAt: Date | string;
+}
+
+export interface PlanVisit extends CountableVisit {
+  createdAt: Date | string;
+}
+
+/**
+ * Whether a place that is stored `visited = false` is nevertheless visited
+ * because a visit that was entered as a PLAN has since come due.
+ *
+ * Nothing re-evaluated that: a visit write promotes its place only when the
+ * visit has already happened, so a plan made in spring for a trip in summer
+ * left the place on the wishlist after the trip (tester feedback, 2026-11-08).
+ *
+ * Three guards keep this from overriding a decision the user made:
+ *   - a curated-checklist place keeps its stored state (unticking sets
+ *     `visited = false` on purpose and keeps the visits);
+ *   - only a visit created BEFORE its instant is a plan — one entered after the
+ *     fact on an unvisited place is as likely a deliberate unmark;
+ *   - the place row was not written after the plan came due: an explicit unmark
+ *     bumps `updatedAt`, so it outlives the rule instead of being undone by it.
+ *
+ * MIRRORED in the other tree. Change both together.
+ */
+export function hasElapsedPlan(
+  place: PlanPlace,
+  visits: readonly PlanVisit[],
+  now: Date = clockNow()
+): boolean {
+  if (place.curatedItemId) return false;
+  const placeWritten = toDate(place.updatedAt);
+  if (placeWritten === null) return false;
+  return visits.some((v) => {
+    const instant = toDate(v.visitedAtUtc ?? v.visitedAt);
+    const created = toDate(v.createdAt);
+    if (instant === null || created === null) return false;
+    if (classifyVisit(v, now) !== "visited") return false;
+    if (instant.getTime() <= created.getTime() + PLAN_RECORDED_SLACK_MS) return false;
+    return placeWritten.getTime() <= instant.getTime();
+  });
+}
+
+/** The one "is this place in the logbook" answer: stored flag, or an elapsed plan. */
+export function isEffectivelyVisited(
+  place: PlanPlace,
+  visits: readonly PlanVisit[],
+  now: Date = clockNow()
+): boolean {
+  return place.visited || hasElapsedPlan(place, visits, now);
+}

@@ -33,6 +33,7 @@ export type SchedulerJob =
   | "dawarichStayScan"
   | "placeAddressBackfill"
   | "statusSweep"
+  | "elapsedPlanSweep"
   | "syncRetention"
   | "travTrackDiagnosticsRetention"
   | "travTrackOrphanLinks"

@@ -12,7 +12,7 @@ import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
 import { recheckAchievements } from "../utils/achievements";
-import { classifyVisit, visitPromotesPlace } from "../shared/placeCounting";
+import { classifyVisit, isEffectivelyVisited, visitPromotesPlace } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
@@ -140,6 +140,27 @@ export function decorate<
     ...place,
     visits: place.visits.map((v) => withVisitTimes(v as T["visits"][number])),
     ...computeAggregates(place, place.visits, now),
+    ...effectiveVisited(place, now),
+  };
+}
+
+/** `visited` as the logbook reads it: an elapsed plan counts (shared/placeCounting). */
+function effectiveVisited(
+  place: {
+    visited?: boolean;
+    curatedItemId?: string | null;
+    updatedAt?: Date;
+    visits: PlaceRow["visits"];
+  },
+  now: Date
+): { visited?: boolean } {
+  if (place.visited === undefined || place.updatedAt === undefined) return {};
+  return {
+    visited: isEffectivelyVisited(
+      { visited: place.visited, curatedItemId: place.curatedItemId, updatedAt: place.updatedAt },
+      place.visits,
+      now
+    ),
   };
 }
 
