@@ -69,13 +69,13 @@ This reverses the coordinator ruling of 2026-10-09 recorded in
 
 ## Phases
 
-| Phase | Content | Depends on |
-|---|---|---|
-| T1 server | registry entry (both mirrors), beta-gate registries, timeline-tour copy-on-trip-delete, enabled-domain backfill + `knownDomains` guard, `toursVisible()` → domain + beta check, sync visibility when the switch changes (tombstones/cursor), OpenAPI | — |
-| T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 |
-| T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 |
-| T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 |
-| T4 Companion | contract below; app shows tours as a domain | T1 |
+| Phase | Content | Depends on | Status |
+|---|---|---|---|
+| T1 server | registry entry (both mirrors), beta-gate registries, timeline-tour copy-on-trip-delete, enabled-domain backfill + `knownDomains` guard, `toursVisible()` → domain + beta check, sync visibility when the switch changes (tombstones/cursor), OpenAPI | — | done `81baf7d38` (2026-11-09) |
+| T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 | open |
+| T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 | open |
+| T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 | open |
+| T4 Companion | contract below; app shows tours as a domain | T1 | open |
 
 ## Contract (additive, server first)
 
@@ -105,6 +105,16 @@ Four P1 and seven P2 against the first draft; all folded in above (existing
 `/tours` contract kept, timeline tours preserved, sharing as its own phase
 with tracks and a keyOps audit, beta registries, `knownDomains`, settings-row
 backfill, metric reclassification).
+
+## T1 as built
+
+- Trip photos stay with the trip (`TripPhoto.tripId` is required and
+  cascades); a detached tour keeps stops, legs and geometry, as roadtrips do.
+- Detached stops carry `domain: "tour"`.
+- Data-only migration `20261109130000_tour_domain_backfill`, replay-tested.
+- Follow-ups: `tourKind.ts` conversion does not call
+  `ensureTourDomainEnabled`; `useToursAccess` and the route guard are still
+  beta-only (T2); `usageV2` `domain_buckets` gains a `tour` key.
 
 ## Open for the owner
 
