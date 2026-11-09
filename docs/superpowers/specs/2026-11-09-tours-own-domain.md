@@ -74,7 +74,7 @@ This reverses the coordinator ruling of 2026-10-09 recorded in
 | T1 server | registry entry (both mirrors), beta-gate registries, timeline-tour copy-on-trip-delete, enabled-domain backfill + `knownDomains` guard, `toursVisible()` → domain + beta check, sync visibility when the switch changes (tombstones/cursor), OpenAPI | — | done `81baf7d38` (2026-11-09) |
 | T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 | open |
 | T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 | done (see "T2 as built") |
-| T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 | open |
+| T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 | done (see "T3 as built") |
 | T4 Companion | contract below; app shows tours as a domain | T1 | open |
 
 ## Contract (additive, server first)
@@ -131,3 +131,27 @@ None blocking. The `knownDomains` guard is a coordinator call.
   rule (409) stays. Row actions "Reise zuordnen" / "Von Reise lösen" on `/tours`;
   `ROADTRIP_HAS_TRIP_PHOTOS` is offered as an opt-in, not shown as a timeline error.
 - `PATCH /tours/:id/kind` to `tour` now enables the domain; the review notice reloads settings.
+
+## T3 as built
+
+- Comparison: `tours` / `tourKm` carry domain `tour` in both `comparisonMetrics.ts` mirrors; the
+  loader moved with them and `roadtrip` has no leaderboard figure left (nothing counted under both).
+  **Consents:** a consent granted for `roadtrip` alone no longer carries the tour totals; the
+  tour figures need `tour` in the consent domains (no implicit widening of what a friend may see).
+- Badges: `TOUR_FIRST_STEPS`, `TOUR_THREE_KINDS`, `TOUR_ASCENT_1000` are `domain: "tour"` seeds
+  now (were `shared` + `TOUR_BADGE_CODES`, removed). `ensureAchievements` rewrites the catalogue
+  row in place, so every `UserAchievement` (hung off the achievement id) keeps its unlock and
+  date. Visibility is the plain domain rule, also on the leaderboard (it used the raw beta flag).
+- Evidence: `EvidenceDomain` gains `tour` (both mirrors, schema); `tourEvidenceEntry`; cross-domain
+  population loads one event per completed tour (its day, its year). **No country row:** the
+  passport counts no country a day tour alone reached, so a row would cite evidence the number
+  does not hold. Entry windows: recorded span, else the tour's day on its own clock, movement.
+- Overview: new `GET /stats/insights/tours/counted` (404 while the tour domain is not shown) feeds
+  `adaptTour`; the same `completedTourFacts` feeds the population and the comparison loader, so
+  card, evidence and leaderboard cannot disagree. Tour tab = `TourStatsSection`; it left the
+  roadtrip tab and the overview.
+- Counting guard: `stats.tourInTripCountedOnce.test.ts` (wrapped, trip distance, insights, badge
+  measure, counted endpoint). The data layer already read `kind = "tour"` only; no double count
+  existed, the test pins it.
+- Follow-up: the Companion's `knownDomains` consent UI is T4.
+

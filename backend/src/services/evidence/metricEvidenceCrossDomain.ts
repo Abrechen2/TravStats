@@ -45,6 +45,7 @@ const DOMAIN_OF_EVIDENCE: Partial<Record<EvidenceDomain, DomainKey>> = {
   lodging: "lodging",
   place: "poi",
   roadtrip: "roadtrip",
+  tour: "tour",
   rail: "rail",
   rental: "rental",
   bus: "bus",

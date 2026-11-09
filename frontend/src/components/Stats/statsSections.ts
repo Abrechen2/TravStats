@@ -90,7 +90,11 @@ export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "records", label: t("roadtrips:stats.recordsLabel") },
   { key: "vehicles", label: t("roadtrips:stats.vehicles") },
   { key: "insights", label: t("stats:sections.insights") },
-  { key: "tours", label: t("roadtrips:stats.tours.title") },
+];
+
+/** The tour tab is the day-tour insights (forgejo#264); tours left the roadtrip tab with T3. */
+export const TOUR_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "insights", label: t("roadtrips:stats.tours.title") },
 ];
 
 export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
@@ -137,8 +141,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   rental: RENTAL_SECTIONS,
   bus: BUS_SECTIONS,
   ferry: () => [],
-  // The tour statistics tab arrives with the stats phase (T3).
-  tour: () => [],
+  tour: TOUR_SECTIONS,
 };
 
 /** The menu's options for a tab. */

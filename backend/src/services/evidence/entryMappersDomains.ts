@@ -243,3 +243,15 @@ export function roadtripEvidenceEntry(
     ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
   };
 }
+
+/** A day tour as evidence: one experience on its own day, opening its own page. */
+export function tourEvidenceEntry(
+  row: RoadtripEvidenceRow,
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
+): EvidenceEntry {
+  return {
+    ...roadtripEvidenceEntry(row, fields),
+    domain: "tour",
+    href: `/tours/${row.id}`,
+  };
+}

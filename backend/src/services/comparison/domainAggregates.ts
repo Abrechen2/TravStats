@@ -17,7 +17,7 @@ import { now } from "../../shared/time/clock";
 import { buildWhere, computeSummary } from "../stats/summary";
 import { loadCruiseStatsData } from "../stats/cruiseStatsData";
 import { loadLodgingStatsData } from "../stats/lodgingStatsData";
-import { loadTourFacts } from "../stats/insights";
+import { completedTourFacts } from "../stats/insights";
 import { loadRailStats } from "../rail/railStats";
 import { loadBusStats } from "../bus/busStats";
 import { rentalStatsFor } from "../rental/rentalStats";
@@ -134,9 +134,9 @@ const ferry: Loader = async (userId, year) => {
  * recording was truncated at the import limit (`partial`) only knows a lower bound of its km,
  * so the total is one too (preflight R8).
  */
-const roadtrip: Loader = async (userId, year) => {
-  const done = (await loadTourFacts(userId, now(), { withElevation: false })).filter(
-    (f) => f.state === "completed" && (year === null || f.year === year)
+const tour: Loader = async (userId, year) => {
+  const done = (await completedTourFacts(userId, now())).filter(
+    (f) => year === null || f.year === year
   );
   const km = sumKnown(done.map((f) => f.km));
   const truncated = done.some((f) => f.partial && f.km !== null);
@@ -188,12 +188,12 @@ export const DOMAIN_AGGREGATES: Record<DomainKey, Loader> = {
   cruise,
   lodging,
   poi,
-  roadtrip,
+  // A roadtrip carries no leaderboard figure of its own; its day tours are `tour`'s since the
+  // tours-own-domain stats phase (T3), so nothing is counted under both.
+  roadtrip: async () => ({ values: {}, partial: [] }),
   rail,
   rental,
   bus,
   ferry,
-  // Tour metrics still sit under `roadtrip` until the stats phase (T3) moves
-  // them (tours-own-domain, decision 5); nothing is counted twice meanwhile.
-  tour: async () => ({ values: {}, partial: [] }),
+  tour,
 };

@@ -70,6 +70,7 @@ import {
   placeEvidenceEntry,
   railEvidenceEntry,
   roadtripEvidenceEntry,
+  tourEvidenceEntry,
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "../entryMappersDomains";
@@ -105,14 +106,8 @@ const entryAs = <R>(
 const insight = (rule: BadgeRule, fields: Partial<InsightAchievementStats>): number =>
   progressOf(checkInsightAchievement(rule, { ...EMPTY_INSIGHT_STATS, ...fields }));
 
-/** A day tour has no evidence domain of its own: it is a route and opens its own page. */
-const tourEntry = (tour: { id: string; name: string; tourDate: Date | null }): Entry => ({
-  ...roadtripEvidenceEntry(
-    { id: tour.id, name: tour.name, startDate: tour.tourDate },
-    { subtitle: null }
-  ),
-  href: `/tours/${tour.id}`,
-});
+const tourEntry = (tour: { id: string; name: string; tourDate: Date | null }): Entry =>
+  tourEvidenceEntry({ id: tour.id, name: tour.name, startDate: tour.tourDate }, { subtitle: null });
 
 async function railFamily(userId: string, rule: BadgeRule) {
   const rows = await loadRailBadgeRows(userId);

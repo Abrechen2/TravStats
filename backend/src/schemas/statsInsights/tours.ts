@@ -73,3 +73,32 @@ export const tourInsightsResponseSchema = z
   });
 
 export type TourInsightsResponse = z.infer<typeof tourInsightsResponseSchema>;
+
+/**
+ * The wire shape of `GET /stats/insights/tours/counted`: the tours that count (recorded, or dated
+ * before today at their place), one row each, in the year and on the day the cross-domain
+ * overview files them under — the same rows `crossDomainPopulations` reads, so the card and the
+ * evidence panel behind it cannot disagree.
+ */
+export const countedToursResponseSchema = z.object({
+  tours: z.array(
+    z.object({
+      id: z.string(),
+      year: z
+        .number()
+        .int()
+        .nullable()
+        .openapi({ description: "Year of its day, else of its first recording." }),
+      day: z.string().nullable().openapi({ description: "`YYYY-MM-DD` of that day." }),
+      km: z
+        .number()
+        .nullable()
+        .openapi({ description: "Recorded, else drawn; null when neither." }),
+      partial: z
+        .boolean()
+        .openapi({ description: "A recording stopped at the import limit: km is a lower bound." }),
+    })
+  ),
+});
+
+export type CountedToursResponse = z.infer<typeof countedToursResponseSchema>;

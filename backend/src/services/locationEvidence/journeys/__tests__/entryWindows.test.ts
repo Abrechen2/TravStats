@@ -172,7 +172,7 @@ describe("entry windows", () => {
         },
       });
       // A day tour is not a roadtrip.
-      await prisma.tripRoute.create({ data: { userId, name: "Tour", mode: "foot" } });
+      await prisma.tripRoute.create({ data: { userId, name: "Tour", mode: "foot", kind: "tour" } });
       expect(await only("roadtrip")).toEqual([
         {
           domain: "roadtrip",
@@ -180,6 +180,51 @@ describe("entry windows", () => {
           fromMs: Date.parse("2026-10-18T22:00:00Z"),
           untilMs: Date.parse("2026-10-20T22:00:00Z"),
         },
+      ]);
+    });
+
+    it("tour: the recording's span, else the day on its own clock, inside a trip or not", async () => {
+      const trip = await prisma.trip.create({ data: { userId, name: "Eifel" } });
+      const recorded = await prisma.tripRoute.create({
+        data: { userId, tripId: trip.id, name: "Rur", mode: "foot", kind: "tour" },
+      });
+      await prisma.tripRouteTrack.create({
+        data: {
+          routeId: recorded.id,
+          source: "gpx",
+          startedAt: new Date(T - 3 * H),
+          endedAt: new Date(T - H),
+          geometry: [
+            [6.1, 50.5],
+            [6.2, 50.6],
+          ],
+          pointCount: 2,
+          distanceKm: 4,
+        },
+      });
+      const dated = await prisma.tripRoute.create({
+        data: {
+          userId,
+          name: "Tagestour",
+          mode: "foot",
+          kind: "tour",
+          tourDate: new Date("2026-10-20T00:00:00Z"),
+          stops: { create: [{ title: "Start", routeOrderIdx: 0, stopZone: "Europe/Berlin" }] },
+        },
+      });
+      // A sketch: no day, no recording, nothing to state.
+      await prisma.tripRoute.create({
+        data: { userId, name: "Skizze", mode: "foot", kind: "tour" },
+      });
+      const windows = (await only("tour")).sort((a, b) => a.fromMs - b.fromMs);
+      expect(windows).toEqual([
+        {
+          domain: "tour",
+          id: dated.id,
+          fromMs: Date.parse("2026-10-19T22:00:00Z"),
+          untilMs: Date.parse("2026-10-20T22:00:00Z"),
+        },
+        { domain: "tour", id: recorded.id, fromMs: T - 3 * H, untilMs: T - H },
       ]);
     });
 
@@ -209,7 +254,7 @@ describe("entry windows", () => {
 
     it("logbookWindows lists every domain's windows", async () => {
       const domains = new Set((await logbookWindows(userId, WINDOW)).map((w) => w.domain));
-      // A domain whose adapter says `none` (tours, until the stats phase) has no windows.
+      // A domain whose adapter says `none` has no windows.
       const withWindows = DOMAIN_KEYS.filter((k) => !("none" in ENTRY_WINDOW_ADAPTERS[k]));
       expect([...domains].sort()).toEqual([...withWindows].sort());
     });

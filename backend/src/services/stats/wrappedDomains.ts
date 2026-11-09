@@ -12,7 +12,6 @@ import { localDay } from "../../shared/time/instant";
 import { now as clockNow } from "../../shared/time/clock";
 import type { DomainKey } from "../../shared/domains";
 import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
-import { toursVisible } from "../tourVisibility";
 import { countRoadtripNights } from "../../shared/tour/roadtrip";
 import { travelledKm } from "../tour/tourDistance";
 import { roadtripHasStarted } from "./roadtripEvidence";
@@ -22,6 +21,7 @@ import { loadPassport, type PassportLoaderFlight } from "./passportLoader";
 import {
   placeEvidenceEntry,
   roadtripEvidenceEntry,
+  tourEvidenceEntry,
   stayEvidenceEntry,
 } from "../evidence/entryMappersDomains";
 import {
@@ -50,8 +50,8 @@ import {
  *    with their legs' kilometres and their nights (null when not fully known);
  *  - tours: dated day tours whose day is past (`tourDate`, a floating date),
  *    with their recording's (else their legs') kilometres,
- *    while the instance shows tours (`toursVisible`, the web's rule — not the
- *    roadtrip domain toggle);
+ *    while the `tour` domain is visible, inside a trip or not, never also as a
+ *    roadtrip (the roadtrip rows read `kind = "roadtrip"` only);
  *  - rentals: completed, under the pickup's year (`rentalCounting`);
  *  - bus: completed rides, the year they left (`busCounting`), with the nights
  *    a night bus ran through (`busRideKinds`);
@@ -152,8 +152,8 @@ async function loadChapterRows(
         },
       })
     ),
-    // Roadtrips and day tours both follow the user's domain gate; tours also
-    // ask `toursVisible` — the web's `useToursVisible` (one rule).
+    // Roadtrips and day tours each follow their own domain gate (`tour` is a domain of its own
+    // since tours-own-domain: the user's switch AND the instance's beta switch).
     whenVisible(visible, "roadtrip", () =>
       prisma.tripRoute.findMany({
         where: { userId, kind: "roadtrip" },
@@ -185,19 +185,17 @@ async function loadChapterRows(
         },
       })
     ),
-    toursVisible(userId).then((shown) =>
-      shown
-        ? prisma.tripRoute.findMany({
-            where: { userId, kind: "tour" },
-            select: {
-              id: true,
-              name: true,
-              tourDate: true,
-              legs: { select: { distanceKm: true } },
-              tracks: { select: { distanceKm: true } },
-            },
-          })
-        : null
+    whenVisible(visible, "tour", () =>
+      prisma.tripRoute.findMany({
+        where: { userId, kind: "tour" },
+        select: {
+          id: true,
+          name: true,
+          tourDate: true,
+          legs: { select: { distanceKm: true } },
+          tracks: { select: { distanceKm: true } },
+        },
+      })
     ),
     whenVisible(visible, "rental", () =>
       prisma.rentalBooking.findMany({
@@ -333,15 +331,10 @@ async function loadChapterRows(
             // A floating date: its stored components ARE the day (ADR 0002 D1).
             const day = route.tourDate.toISOString().slice(0, 10);
             if (day > today) return [];
-            // A day tour has no evidence domain of its own; it is a route like
-            // a roadtrip and opens its own page.
-            const entry = {
-              ...roadtripEvidenceEntry(
-                { id: route.id, name: route.name, startDate: route.tourDate },
-                { subtitle: null }
-              ),
-              href: `/tours/${route.id}`,
-            };
+            const entry = tourEvidenceEntry(
+              { id: route.id, name: route.name, startDate: route.tourDate },
+              { subtitle: null }
+            );
             // A recording measures a day tour better than its drawn legs.
             const km =
               route.tracks.length > 0

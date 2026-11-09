@@ -22,7 +22,10 @@ import {
   placeInsights,
   roadtripInsights,
   tourInsights,
+  completedTourFacts,
 } from "../../services/stats/insights";
+import { toursVisible } from "../../services/tourVisibility";
+import { AppError } from "../../middleware/errorHandler";
 
 const router = Router();
 router.use(authenticate);
@@ -59,6 +62,27 @@ router.get("/roadtrips", async (req: AuthRequest, res: Response, next: NextFunct
 router.get("/tours", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     res.json((await tourInsights(req.userId!)).response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// The tours the overview counts, one row each. Unlike the insights above it is the OVERVIEW's
+// source, so it follows the tour gate itself (domain switched on AND beta open): a hidden domain
+// has no figure, not an empty one.
+router.get("/tours/counted", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!(await toursVisible(req.userId!))) throw new AppError("Tours are not shown", 404);
+    const facts = await completedTourFacts(req.userId!);
+    res.json({
+      tours: facts.map((f) => ({
+        id: f.tour.id,
+        year: f.year,
+        day: f.day,
+        km: f.km,
+        partial: f.partial,
+      })),
+    });
   } catch (error) {
     next(error);
   }
