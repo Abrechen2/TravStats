@@ -57,8 +57,10 @@ describe("buildUsageV2", () => {
       rental: "0",
       bus: "0",
       ferry: "0",
+      tour: "1-10",
     });
     expect(p.tripRoute.count).toHaveBeenCalledWith({ where: { kind: "roadtrip" } });
+    expect(p.tripRoute.count).toHaveBeenCalledWith({ where: { kind: "tour" } });
   });
 
   it("reports the largest passport, and skips an account whose passport fails", async () => {

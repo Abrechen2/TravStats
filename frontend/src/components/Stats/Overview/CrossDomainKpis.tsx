@@ -41,7 +41,7 @@ interface Props {
  * is); the domain registry calls it `poi` (what the FEATURE is). One letter
  * of translation, in one place, rather than a cast at each tile.
  */
-const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
+const EVIDENCE_DOMAIN_OF: Record<Exclude<StatsDomain, "tour">, EvidenceDomain> = {
   flight: "flight",
   cruise: "cruise",
   lodging: "lodging",
@@ -91,7 +91,10 @@ export default function CrossDomainKpis({
   const scope: EvidenceScopeParams = {
     period: selectedYear === null ? "allTime" : "year",
     ...(selectedYear === null ? {} : { year: selectedYear }),
-    domains: foldedDomains.map((domain) => EVIDENCE_DOMAIN_OF[domain]),
+    // A tour has no evidence domain until the stats phase (T3).
+    domains: foldedDomains.flatMap((domain) =>
+      domain === "tour" ? [] : [EVIDENCE_DOMAIN_OF[domain]]
+    ),
   };
 
   const cards: Array<{

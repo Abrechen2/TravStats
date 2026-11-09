@@ -359,7 +359,10 @@ export function DashboardLayout({
             // that opens nothing on click. This guard makes the SAME mistake
             // impossible for the next domain-less tab too, instead of only
             // excluding the one we happened to find.
-            isValidDomain(tab) && (
+            // The tour tab has no add flow until T2 of tours-own-domain (create a
+            // tour without a trip); `tour` is a domain now, so it is excluded by name.
+            isValidDomain(tab) &&
+            tab !== "tour" && (
               <button
                 type="button"
                 onClick={() => startAdding(tab)}

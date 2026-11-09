@@ -7,7 +7,7 @@ import { adaptFerry } from "./ferryStatsAdapter";
 // domain's slot stays empty, the rest renders. Lodging is fed by
 // `/stats/lodging` + the raw lodging list; POI has no rollup endpoint at all
 // and derives everything from places, lists and the checklist catalog.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
@@ -60,7 +60,11 @@ export function useDomainStats(input: {
   const { enabled: enabledDomains } = useEnabledDomains();
   // A domain behind a closed beta switch is not in `enabledDomains`, so it is
   // not fetched and can reach neither a card nor a sum on the overview.
-  const enabled: readonly StatsDomain[] = enabledDomains;
+  // Tours have no statistics until the stats phase (T3 of tours-own-domain).
+  const enabled = useMemo(
+    () => enabledDomains.filter((key): key is StatsLoadable => key !== "tour"),
+    [enabledDomains]
+  );
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -96,7 +100,9 @@ export function useDomainStats(input: {
   return { stats, errors, loading };
 }
 
-async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<DomainStats> {
+type StatsLoadable = Exclude<StatsDomain, "tour">;
+
+async function loadDomain(domain: StatsLoadable, flights: Flight[]): Promise<DomainStats> {
   switch (domain) {
     case "flight": {
       const countryResp = await statsApi.getCountryStats();

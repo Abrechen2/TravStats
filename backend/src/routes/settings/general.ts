@@ -13,6 +13,7 @@ import {
   PLACEHOLDER_PROFILE_EMAIL,
 } from "./types";
 import { AVAILABLE_DOMAINS, DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
+import { keepUnknownDomains } from "../../services/domainVisibility";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
@@ -211,6 +212,9 @@ const settingsSchema = z
     enabledDomains: z
       .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
       .optional(),
+    // The domain keys the writing client knows. Absent = an older client that
+    // cannot have shown a switch for a newer domain (see `keepUnknownDomains`).
+    knownDomains: z.array(z.string().max(32)).max(64).optional(),
     whatsNewSeenVersion: z.string().max(32).optional(),
     // Lodging-domain preference: single currency used to aggregate stay costs that
     // were originally billed in whatever currency the hotel uses.
@@ -543,6 +547,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     const {
       enabledDomains,
+      knownDomains,
       baseCurrency,
       autoCreateTrips,
       tripSuggestions,
@@ -695,7 +700,11 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     // Handle enabled domains (multi-domain foundation)
     if (enabledDomains !== undefined) {
-      updateData.enabledDomains = enabledDomains;
+      updateData.enabledDomains = keepUnknownDomains(
+        enabledDomains,
+        existing?.enabledDomains,
+        knownDomains
+      );
     }
 
     // Handle base currency (lodging-domain aggregation currency)

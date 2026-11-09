@@ -95,7 +95,7 @@ describe("calendar feed", () => {
     setClockForTests(NOW);
 
     // Rail and the roadtrip domain are on; bus is NOT, though a ride exists.
-    owner = await account("owner", ["flight", "lodging", "cruise", "rail", "roadtrip"]);
+    owner = await account("owner", ["flight", "lodging", "cruise", "rail", "roadtrip", "tour"]);
     stranger = await account("stranger", ["flight"]);
 
     await flight(owner.id, "00000000-0000-4000-8000-0000000000a1", "2030-06-01T12:00:00Z");
@@ -247,7 +247,7 @@ describe("calendar feed", () => {
       "UID:roadtrip-station-00000000-0000-4000-8000-000000000111@travstats\r\n" +
         "DTSTAMP:20300520T100000Z\r\nDTSTART;VALUE=DATE:20300610\r\nDTEND;VALUE=DATE:20300613"
     );
-    // A day tour on its day (tours ride on the roadtrip switch).
+    // A day tour on its day (the tour domain, its own switch since tours-own-domain).
     expect(text).toContain(
       "UID:tour-00000000-0000-4000-8000-000000000121@travstats\r\n" +
         "DTSTAMP:20300520T100000Z\r\nDTSTART;VALUE=DATE:20300612\r\nDTEND;VALUE=DATE:20300613"

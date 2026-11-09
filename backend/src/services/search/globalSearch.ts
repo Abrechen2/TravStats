@@ -52,8 +52,8 @@ export interface GlobalSearchResult {
 
 /**
  * The domains this account may search: the enabled, offered domains, plus
- * trips always and tours while the instance's beta switch (shared with
- * roadtrips) lets them in. Mirrors `useEnabledDomains` / `useToursVisible`.
+ * trips always. Tours are a domain like the rest (switched on, and the instance's
+ * beta switch shared with roadtrips open). Mirrors `useEnabledDomains`.
  */
 export async function searchableDomains(userId: string): Promise<SearchDomain[]> {
   const [settings, instance] = await Promise.all([
@@ -64,7 +64,6 @@ export async function searchableDomains(userId: string): Promise<SearchDomain[]>
     visibleDomainKeys(settings?.enabledDomains, instance.betaFeaturesEnabled)
   );
   visible.add("trip");
-  if (instance.betaFeaturesEnabled) visible.add("tour");
   return SEARCH_DOMAINS.filter((d) => visible.has(d));
 }
 

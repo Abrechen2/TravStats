@@ -23,6 +23,7 @@ describe("domain registry", () => {
       "rental",
       "bus",
       "ferry",
+      "tour",
     ]);
   });
 
@@ -43,6 +44,7 @@ describe("domain registry", () => {
       "rental",
       "bus",
       "ferry",
+      "tour",
     ]);
   });
 
@@ -90,13 +92,15 @@ describe("domain colours agree with design/tokens.json", () => {
     rental: "rental",
     bus: "bus",
     ferry: "ferry",
+    tour: "tour",
   };
 
   it.each(DOMAIN_KEYS)("%s", (key) => {
     expect(DOMAINS[key].color.toLowerCase()).toBe(tokens.domainColor[tokenName[key]].toLowerCase());
   });
 
-  it("tour", () => {
+  it("tour: the constant and the registry entry are one hue", () => {
+    expect(DOMAINS.tour.color).toBe(TOUR_COLOR);
     expect(TOUR_COLOR.toLowerCase()).toBe(tokens.domainColor.tour.toLowerCase());
   });
 });

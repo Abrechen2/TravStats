@@ -193,4 +193,7 @@ export const DOMAIN_AGGREGATES: Record<DomainKey, Loader> = {
   rental,
   bus,
   ferry,
+  // Tour metrics still sit under `roadtrip` until the stats phase (T3) moves
+  // them (tours-own-domain, decision 5); nothing is counted twice meanwhile.
+  tour: async () => ({ values: {}, partial: [] }),
 };

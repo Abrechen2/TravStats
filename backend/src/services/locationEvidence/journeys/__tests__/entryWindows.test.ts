@@ -209,7 +209,9 @@ describe("entry windows", () => {
 
     it("logbookWindows lists every domain's windows", async () => {
       const domains = new Set((await logbookWindows(userId, WINDOW)).map((w) => w.domain));
-      expect([...domains].sort()).toEqual([...DOMAIN_KEYS].sort());
+      // A domain whose adapter says `none` (tours, until the stats phase) has no windows.
+      const withWindows = DOMAIN_KEYS.filter((k) => !("none" in ENTRY_WINDOW_ADAPTERS[k]));
+      expect([...domains].sort()).toEqual([...withWindows].sort());
     });
   });
 

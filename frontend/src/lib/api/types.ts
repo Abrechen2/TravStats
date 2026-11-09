@@ -141,6 +141,8 @@ export interface UserSettings {
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
   enabledDomains?: DomainKey[];
+  /** The domain keys this client knows; sent with `enabledDomains` (see `settingsApi`). */
+  knownDomains?: DomainKey[];
   whatsNewSeenVersion?: string;
   /** ISO 4217 alpha-3 code. The user's real base currency (see `UserSettings.baseCurrency`
    * on the backend) — used to convert/aggregate money figures like lodging spend. Distinct

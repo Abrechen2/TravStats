@@ -45,7 +45,7 @@ export async function cruiseInsightContextOf(
    */
   preloaded?: { tours: readonly TourFacts[] }
 ): Promise<CruiseInsightContext> {
-  const visible = await toursVisible();
+  const visible = await toursVisible(userId);
   const days = data.rows.flatMap((r) =>
     r.calls.filter((c) => !c.isAtSea && c.day !== null).map((c) => c.day as string)
   );

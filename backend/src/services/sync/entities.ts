@@ -79,7 +79,7 @@ const domainShown =
   (scope: SyncScope): boolean =>
     scope.domains.has(domain);
 
-/** A tour section is a roadtrip (its own domain) or a tour (the beta switch). */
+/** A tour section is a roadtrip or a tour — each a domain of its own, so each follows its switch. */
 function routeKindVisible(kind: unknown, scope: SyncScope): boolean {
   return kind === "roadtrip" ? scope.domains.has("roadtrip") : scope.tours;
 }

@@ -549,19 +549,6 @@ describe("Roadtrips", () => {
     ]);
   });
 
-  it("still deletes a trip's day tours with the trip — they were drawn over its timeline", async () => {
-    const trip = await prisma.trip.create({ data: { userId, name: "Mit Tour" } });
-    const tour = await prisma.tripRoute.create({
-      data: { userId, tripId: trip.id, name: "Wanderung", mode: "foot", kind: "tour" },
-    });
-    // Drawn over the timeline: its point is one of the trip's own stops.
-    await prisma.tripStop.create({
-      data: { tripId: trip.id, title: "Zeitleiste", lat: 58, lon: 6, routeId: tour.id },
-    });
-    await request(app).delete(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
-    expect(await prisma.tripRoute.findUnique({ where: { id: tour.id } })).toBeNull();
-  });
-
   it("unlocks the first-roadtrip badge on its own once a started roadtrip has a station", async () => {
     const first = await prisma.achievement.findUniqueOrThrow({ where: { code: "ROADTRIP_FIRST" } });
     await prisma.userAchievement.deleteMany({ where: { userId, achievementId: first.id } });

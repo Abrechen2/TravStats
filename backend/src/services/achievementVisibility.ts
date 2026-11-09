@@ -4,7 +4,6 @@ import { SHARED_BADGE_DOMAINS } from "../data/achievementSeeds/partL";
 import { TOUR_BADGE_CODES } from "../data/achievementSeeds/partK";
 import { TRAVTRACK_BADGE_CODES } from "../data/achievementSeeds/partN";
 import { providerIs } from "./locationProvider/provider";
-import { getInstanceSettings } from "./instanceSettingsService";
 
 /**
  * Which achievements a user may see, count and score — the ONE rule, applied
@@ -50,10 +49,9 @@ export function achievementVisibility(
 
 /** The rule for a stored user, from their domain toggles and the beta switch. */
 export async function loadAchievementVisibility(userId: string): Promise<AchievementVisibility> {
-  const [visible, instance, travTrack] = await Promise.all([
+  const [visible, travTrack] = await Promise.all([
     loadVisibleDomains(userId),
-    getInstanceSettings(),
     providerIs(userId, "travtrack"),
   ]);
-  return achievementVisibility(visible, instance.betaFeaturesEnabled, travTrack);
+  return achievementVisibility(visible, visible.includes("tour"), travTrack);
 }

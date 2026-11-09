@@ -36,7 +36,9 @@
       "bus_one": "{{count}} bus ride",
       "bus_other": "{{count}} bus rides",
       "ferry_one": "{{count}} ferry crossing",
-      "ferry_other": "{{count}} ferry crossings"
+      "ferry_other": "{{count}} ferry crossings",
+      "tour_one": "{{count}} tour",
+      "tour_other": "{{count}} tours"
     },
     "help": {
       "experiences": {

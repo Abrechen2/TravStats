@@ -629,46 +629,32 @@ router.delete(
       });
       if (!existing) throw new AppError("Trip not found", 404);
 
-      // A roadtrip is a domain of its own and outlives the trip, as a flight
-      // or a cruise does; the schema's cascade is right for a day tour drawn
-      // over the trip's timeline and wrong for it. Its stations borrowed from
-      // the timeline become its own first — they would go with the trip.
-      //
-      // A day tour whose points are all its own outlives the trip too: since
-      // 2026-09-26 an accepted trip suggestion files standalone tours on the
-      // trip it creates, and deleting that trip must not take the tour and
-      // its recorded tracks with it. Only a tour built from the trip's
-      // timeline stops still cascades — those stops go with the trip, and a
-      // tour left without them would be a route pointing at nothing. The
-      // same rule decides whether a route may change trip (tourRoutes.ts).
+      // A roadtrip and a tour are domains of their own and outlive the trip, as a
+      // flight or a cruise does (tours since tours-own-domain T1); the schema's
+      // cascade is right for mere scaffolding and wrong for them. A stop
+      // borrowed from the timeline becomes the route's own first — it would go
+      // with the trip. A tour drawn over the trip's timeline used to cascade
+      // away with its geometry and legs; now it ends detached.
       await prisma.$transaction(async (tx) => {
-        // A shared trip leaves its group first — before its roadtrips leave the trip, or their
+        // A shared trip leaves its group first — before its routes leave the trip, or their
         // keys would outlive the group: the others keep their copies and are told (design
         // 2026-10-09, decision 5).
         await detachTrip(tx, userId, existing);
-        const roadtrips = await tx.tripRoute.findMany({
-          where: { tripId: existing.id, kind: "roadtrip" },
-          select: { id: true },
-        });
-        const ids = roadtrips.map((r) => r.id);
-        if (ids.length > 0) {
+        for (const kind of ["roadtrip", "tour"] as const) {
+          const routes = await tx.tripRoute.findMany({
+            where: { tripId: existing.id, kind },
+            select: { id: true },
+          });
+          const ids = routes.map((r) => r.id);
+          if (ids.length === 0) continue;
           // share-exempt: detachTrip above already cleared the keys and told the members
           await tx.tripStop.updateMany({
             where: { routeId: { in: ids }, tripId: existing.id },
-            data: { tripId: null, domain: "roadtrip" },
+            data: { tripId: null, domain: kind },
           });
           // share-exempt: detachTrip above already cleared the keys and told the members
           await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
         }
-        // share-exempt: day tours are never shared
-        await tx.tripRoute.updateMany({
-          where: {
-            tripId: existing.id,
-            kind: "tour",
-            stops: { none: { tripId: { not: null } } },
-          },
-          data: { tripId: null },
-        });
         await tx.trip.delete({ where: { id: existing.id } });
       });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");

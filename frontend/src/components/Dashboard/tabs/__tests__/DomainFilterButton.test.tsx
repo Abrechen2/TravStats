@@ -99,7 +99,7 @@ describe("DomainFilterButton", () => {
       countsLoaded: true,
     });
     useSettingsStore.setState({
-      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "tour"],
       betaFeaturesEnabled: true,
     });
   });

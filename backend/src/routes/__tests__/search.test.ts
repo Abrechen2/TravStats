@@ -186,7 +186,7 @@ describe("GET /api/v1/search", () => {
       .mockResolvedValue({ ...real, betaFeaturesEnabled: true });
     await prisma.userSettings.update({
       where: { userId: user.id },
-      data: { enabledDomains: ["flight", "roadtrip"] },
+      data: { enabledDomains: ["flight", "roadtrip", "tour"] },
     });
     try {
       const res = await search({ q: "zephyr" });
@@ -262,7 +262,7 @@ describe("GET /api/v1/search", () => {
     });
     await prisma.userSettings.update({
       where: { userId: user.id },
-      data: { enabledDomains: ["flight", "roadtrip"] },
+      data: { enabledDomains: ["flight", "roadtrip", "tour"] },
     });
     try {
       const res = await search({ q: "dated roadtrip", domains: "roadtrip" });

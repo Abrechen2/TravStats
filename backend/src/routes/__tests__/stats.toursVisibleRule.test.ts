@@ -11,14 +11,13 @@ import {
 } from "../../services/instanceSettingsService";
 
 /**
- * Integration of the statistics branches (coordinator ruling 2026-10-09): day
- * tours are shown by ONE rule, the web's `useToursVisible` — the instance's
- * beta switch — and never by the roadtrip DOMAIN toggle. A user who switched
- * roadtrips off still sees their tours on the tours page, so the year in
- * review counts them and the tour badges are listed; with the switch off,
- * neither is.
+ * Integration of the statistics branches. Day tours are a domain of their own
+ * since 2026-11-09 (it replaced the coordinator ruling of 2026-10-09 "tours
+ * follow the beta switch alone"): shown while the user has `tour` switched on
+ * AND the instance's beta switch is open, and never by the roadtrip DOMAIN
+ * toggle. With either off, the year in review and the tour badges drop them.
  */
-describe("tours follow the beta switch, not the roadtrip toggle", () => {
+describe("tours follow the tour domain and the beta switch, not the roadtrip toggle", () => {
   const username = "tours-visible-rule";
   let userId: string;
   let cookie: string;
@@ -34,8 +33,10 @@ describe("tours follow the beta switch, not the roadtrip toggle", () => {
       })
     ).id;
     cookie = `auth_token=${generateToken(userId)}`;
-    // Roadtrips switched OFF by the user.
-    await prisma.userSettings.create({ data: { userId, enabledDomains: ["flight"], data: {} } });
+    // Roadtrips switched OFF by the user, tours ON.
+    await prisma.userSettings.create({
+      data: { userId, enabledDomains: ["flight", "tour"], data: {} },
+    });
     await prisma.tripRoute.create({
       data: {
         userId,
@@ -73,7 +74,21 @@ describe("tours follow the beta switch, not the roadtrip toggle", () => {
     expect(listed).not.toContain("ROADTRIP_BASE_CAMP");
   });
 
-  it("drops both while the switch is off", async () => {
+  it("drops both when the user switched the tour domain off, beta open", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
+    try {
+      expect((await wrapped()).status).toBe(404);
+      expect(await codes()).not.toContain("TOUR_FIRST_STEPS");
+    } finally {
+      await prisma.userSettings.update({
+        where: { userId },
+        data: { enabledDomains: ["flight", "tour"] },
+      });
+    }
+  });
+
+  it("drops both while the beta switch is off", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     expect((await wrapped()).status).toBe(404);
     expect(await codes()).not.toContain("TOUR_FIRST_STEPS");

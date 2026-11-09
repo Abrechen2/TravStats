@@ -10,6 +10,7 @@ import {
 } from "../../services/expenses/sectionRemoval";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { kindFieldsSchema } from "../../schemas/roadtrip";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
@@ -280,6 +281,7 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createRouteSchema.parse(req.body);
+      await ensureTourDomainEnabled(userId);
 
       const last = await prisma.tripRoute.findFirst({
         where: { tripId: trip.id },

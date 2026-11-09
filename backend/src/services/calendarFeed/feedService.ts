@@ -43,12 +43,14 @@ const DOMAIN_READERS: Record<DomainKey, Reader[]> = {
   // Only a visit still ahead is a plan (forgejo#405); one that has happened is
   // history and stays out — see `placeEvents.ts`.
   poi: [placeVisitEvents],
-  // Tours share the roadtrip switch and beta key, as they do in the UI.
-  roadtrip: [roadtripStationEvents, tourEvents],
+  roadtrip: [roadtripStationEvents],
   rail: [railEvents],
   rental: [rentalEvents],
   bus: [busEvents],
   ferry: [ferryEvents],
+  // A tour is a domain of its own since 2026-11-09: its own switch, no longer
+  // the roadtrip one.
+  tour: [tourEvents],
 };
 
 export const feedDisabled = () =>

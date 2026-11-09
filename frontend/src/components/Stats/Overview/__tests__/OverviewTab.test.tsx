@@ -135,7 +135,7 @@ describe("OverviewTab hides the blocks the reader switched off", () => {
 });
 
 // Integration of the statistics branches (coordinator ruling 2026-10-09): tours
-// follow `useToursVisible` alone. Their home is the roadtrip tab; without that
+// follow `useToursVisible` (the tour domain switched on, beta open). Their home is the roadtrip tab; without that
 // tab the overview carries them, so a shown tour always has its figures.
 describe("OverviewTab carries the tour figures where the roadtrip tab is not", () => {
   beforeEach(() => {
@@ -143,16 +143,25 @@ describe("OverviewTab carries the tour figures where the roadtrip tab is not", (
   });
 
   it("draws them with roadtrips switched off while tours are shown", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "tour"],
+      betaFeaturesEnabled: true,
+    });
     renderOverview();
     expect(screen.getByTestId("tour-stats")).toBeInTheDocument();
   });
 
   it("leaves them to the roadtrip tab when that tab is there", () => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "roadtrip"],
+      enabledDomains: ["flight", "roadtrip", "tour"],
       betaFeaturesEnabled: true,
     });
+    renderOverview();
+    expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
+  });
+
+  it("draws none while the tour domain is switched off, beta open", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     renderOverview();
     expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
   });

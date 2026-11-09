@@ -1,12 +1,12 @@
-import { getInstanceSettings } from "../instanceSettingsService";
 import { loadVisibleDomains } from "../domainVisibility";
 import type { DomainKey } from "../../shared/domains";
 
 /**
- * What one account may see through the sync feed: its visible domains, plus
- * whether tours are shown (they follow the instance's beta switch, the same
- * key the web's `useToursVisible` reads — `BETA_GATED_DOMAINS` in
- * `domainVisibility.ts`).
+ * What one account may see through the sync feed: its visible domains. `tours`
+ * is `tour` among them — the user's switch AND the instance's beta key
+ * (`BETA_GATED_DOMAINS`), since tours became a domain (2026-11-09). Switching
+ * it changes the fingerprint below, so the phone is told to resync: hidden
+ * tours drop out, shown ones are sent again.
  */
 export interface SyncScope {
   readonly domains: ReadonlySet<DomainKey>;
@@ -14,11 +14,8 @@ export interface SyncScope {
 }
 
 export async function loadSyncScope(userId: string): Promise<SyncScope> {
-  const [domains, instance] = await Promise.all([
-    loadVisibleDomains(userId),
-    getInstanceSettings(),
-  ]);
-  return { domains: new Set(domains), tours: instance.betaFeaturesEnabled };
+  const domains = new Set(await loadVisibleDomains(userId));
+  return { domains, tours: domains.has("tour") };
 }
 
 /**

@@ -137,6 +137,8 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   rental: RENTAL_SECTIONS,
   bus: BUS_SECTIONS,
   ferry: () => [],
+  // The tour statistics tab arrives with the stats phase (T3).
+  tour: () => [],
 };
 
 /** The menu's options for a tab. */

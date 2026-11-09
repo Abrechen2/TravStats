@@ -649,6 +649,8 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   rental: loadRental,
   bus: loadBus,
   ferry: loadFerry,
+  // Tours enter the evidence populations with the stats phase (T3).
+  tour: async () => ({ events: [], countryRows: [] }),
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

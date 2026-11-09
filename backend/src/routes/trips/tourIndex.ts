@@ -14,6 +14,7 @@ import {
   RouteGeometryFeatureCollection,
 } from "./tourLegs";
 import { toDto, ROUTE_SELECT } from "./tourRoutes";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { resolveTrip } from "../trips";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../../services/sync/clientRef";
 
@@ -242,6 +243,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
+      await ensureTourDomainEnabled(userId);
       // The workout queue repeats a create whose answer it lost (forgejo#283):
       // a repeat with the same key answers the first tour, 200 instead of 201.
       const { clientRef, rest } = takeClientRef(req.body);

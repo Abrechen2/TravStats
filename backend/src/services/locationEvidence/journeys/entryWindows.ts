@@ -296,6 +296,7 @@ export const ENTRY_WINDOW_ADAPTERS: Record<DomainKey, EntryWindowAdapter> = {
   rental: { read: readRentals, movement: true },
   bus: { read: readBus, movement: true },
   ferry: { read: readFerry, movement: true },
+  tour: { none: "tours are not matched against location evidence yet (stats phase T3)" },
 };
 
 /** Keys with neither an adapter nor a reason — empty, or a new domain was not classified. */

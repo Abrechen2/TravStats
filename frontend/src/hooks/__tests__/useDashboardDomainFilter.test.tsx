@@ -51,7 +51,7 @@ describe("useDashboardDomainFilter", () => {
 
   it("adds tour and roadtrip once the roadtrips beta key and the domain are both on", () => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "tour"],
       betaFeaturesEnabled: true,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(4), {
@@ -66,7 +66,7 @@ describe("useDashboardDomainFilter", () => {
 
   it("rail is the seventh row, last and no longer beta-labelled, once the domain is on", () => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"],
+      enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "rail", "tour"],
       betaFeaturesEnabled: true,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {
@@ -129,7 +129,7 @@ describe("useDashboardDomainFilter", () => {
   // forgejo#180: bus beside rail, behind the user's domain (out of beta since 2026-10-26).
   it("bus sits beside rail once the domain is on, with an unknown count, unlabelled", () => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "rail", "bus"],
+      enabledDomains: ["flight", "rail", "bus", "tour"],
       betaFeaturesEnabled: true,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {
@@ -157,7 +157,7 @@ describe("useDashboardDomainFilter", () => {
       },
     });
     useSettingsStore.setState({
-      enabledDomains: ["flight", "bus", "ferry", "rental"],
+      enabledDomains: ["flight", "bus", "ferry", "rental", "tour"],
       betaFeaturesEnabled: true,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {
@@ -188,7 +188,7 @@ describe("useDashboardDomainFilter", () => {
     "isolating %s opens its own dashboard tab (forgejo#405: it used to stay on 'Alle')",
     (domain) => {
       useSettingsStore.setState({
-        enabledDomains: ["flight", "bus", "ferry", "rental"],
+        enabledDomains: ["flight", "bus", "ferry", "rental", "tour"],
         betaFeaturesEnabled: true,
       });
       const { result } = renderHook(
@@ -203,7 +203,7 @@ describe("useDashboardDomainFilter", () => {
   // row either. Beside bus.
   it("ferry sits beside bus once the domain is on, with an unknown count, unlabelled", () => {
     useSettingsStore.setState({
-      enabledDomains: ["flight", "bus", "ferry"],
+      enabledDomains: ["flight", "bus", "ferry", "tour"],
       betaFeaturesEnabled: true,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {

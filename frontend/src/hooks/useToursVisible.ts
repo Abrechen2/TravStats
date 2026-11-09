@@ -1,19 +1,19 @@
+import { useSettingsStore } from "../store/settingsStore";
 import { useBetaFeatureAccess, useBetaFeatures, type BetaFeatureAccess } from "./useBetaFeatures";
 
 /**
- * Whether day tours may be shown at all (owner, 2026-09-24): tours sit behind
- * the same beta key as roadtrips, `roadtrips`, because the two are one feature
- * under review — the key's own entry in `config/betaFeatures.ts` names both —
- * and one switch lets them in or out together.
- *
- * Roadtrips need no such hook: they are a domain, and `useEnabledDomains`
- * already drops `roadtrip` while the key is closed. Tours are not a domain,
- * so every surface that shows one asks this instead. Removing the gate means
- * deleting this file and every call to it, as the registry asks.
+ * Whether day tours may be shown at all: `tour` is a domain since 2026-11-09, so
+ * the user's switch AND the instance's beta key (`roadtrips`, shared with
+ * roadtrips — the key's entry in `config/betaFeatures.ts` names both) must be
+ * open — the same two conditions `useEnabledDomains` applies to a gated domain
+ * (`DOMAIN_BETA_GATES`); this stays as the one name the tour surfaces ask, until T2 folds them into the
+ * domain gate. Removing the beta gate means deleting its registry entries and
+ * every `isFeatureVisible("roadtrips")` call, as the registry asks.
  */
 export function useToursVisible(): boolean {
+  const stored = useSettingsStore((s) => s.enabledDomains);
   const { isFeatureVisible } = useBetaFeatures();
-  return isFeatureVisible("roadtrips");
+  return (stored ?? []).includes("tour") && isFeatureVisible("roadtrips");
 }
 
 /** Three-state for route guards: `pending` while the instance flag is unknown. */

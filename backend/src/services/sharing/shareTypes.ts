@@ -144,6 +144,7 @@ export const DOMAIN_SHARING: Readonly<Record<DomainKey, ShareEntity | { notShare
   rental: "rental",
   bus: "bus",
   ferry: "ferry",
+  tour: { notShared: "Tours are shared in phase T1b of tours-own-domain; exempt until then." },
 };
 
 /** What a copy is marked with where the table has a `dataSource` column. */

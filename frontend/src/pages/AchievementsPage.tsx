@@ -57,6 +57,7 @@ const DOMAIN_LABEL: Record<DomainKey, string> = {
   rental: "achievements:filters.domainRental",
   bus: "achievements:filters.domainBus",
   ferry: "common:domain.ferry",
+  tour: "common:domain.tour",
 };
 
 type DomainFilter = "all" | "shared" | DomainKey;

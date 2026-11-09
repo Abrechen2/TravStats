@@ -152,8 +152,8 @@ async function loadChapterRows(
         },
       })
     ),
-    // Roadtrips follow the user's domain gate; day tours are not a domain and
-    // follow `toursVisible` alone — the web's `useToursVisible` (one rule).
+    // Roadtrips and day tours both follow the user's domain gate; tours also
+    // ask `toursVisible` — the web's `useToursVisible` (one rule).
     whenVisible(visible, "roadtrip", () =>
       prisma.tripRoute.findMany({
         where: { userId, kind: "roadtrip" },
@@ -185,7 +185,7 @@ async function loadChapterRows(
         },
       })
     ),
-    toursVisible().then((shown) =>
+    toursVisible(userId).then((shown) =>
       shown
         ? prisma.tripRoute.findMany({
             where: { userId, kind: "tour" },

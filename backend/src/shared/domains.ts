@@ -13,6 +13,7 @@ export const DOMAIN_KEYS = [
   "rental",
   "bus",
   "ferry",
+  "tour",
 ] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
@@ -24,6 +25,18 @@ export interface DomainDescriptor {
   color: string;
   routePrefix: string;
 }
+
+/**
+ * Day tours are ONE colour (owner, 2026-09-05); the means of transport changes
+ * the icon, never the hue. Since 2026-11-09 a tour is a domain of its own
+ * (`DOMAINS.tour`, owner: "mach es als eigener Bereich"), and this constant
+ * stays exported so the map and the legend keep reading the one place the hue
+ * is written. Mirrors `domainColor.tour` in `design/tokens.json` and
+ * `--ts-domain-tour` in the generated theme. It equals the roadtrip default —
+ * one "road" hue; the map tells a tour from a roadtrip by its thinner line
+ * (`tourMapOverlay.tsx`).
+ */
+export const TOUR_COLOR = "#a9c46a";
 
 // Per-domain hexes are the DEFAULTS the user's override sits on top of
 // (`hooks/useDomainColors.ts`), and since 2.7.0 they are the Companion's
@@ -130,23 +143,20 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: "#5686b8",
     routePrefix: "/ferry",
   },
+  // Day tours (hike, ride, paddle …): stored as `TripRoute` rows with
+  // `kind = "tour"`, like a roadtrip, and a domain of its own since
+  // 2026-11-09 — its own page, enable switch and statistics. No parser target.
+  // Behind the `roadtrips` beta key until roadtrips are released
+  // (`DOMAIN_BETA_GATES`).
+  tour: {
+    key: "tour",
+    available: true,
+    i18nKey: "domain.tour",
+    icon: "🥾",
+    color: TOUR_COLOR,
+    routePrefix: "/tours",
+  },
 };
-
-/**
- * Day tours are ONE colour (owner, 2026-09-05) — and since 2.7 a day tour is
- * all a tour is; the multi-day kind is the `roadtrip` domain above. The means of
- * transport changes the icon, never the hue — the web ran five colours for
- * train, hiking, cycling, road and ferry, and they fall with this constant.
- *
- * Not a member of `DOMAINS`: a tour is not a domain in the gating sense — it
- * has no `enabledDomains` entry, no route prefix of its own and no parser
- * target. It is a colour the map and the legend both need, and this is the one
- * place it is written. Mirrors `domainColor.tour` in `design/tokens.json` and
- * `--ts-domain-tour` in the generated theme. Since round 29 (2026-09-26) it
- * equals the roadtrip default — one "road" hue; the map tells a tour from a
- * roadtrip by its thinner line (`tourMapOverlay.tsx`).
- */
-export const TOUR_COLOR = "#a9c46a";
 
 export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[k].available);
 
