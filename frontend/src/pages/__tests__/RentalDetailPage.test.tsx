@@ -66,6 +66,15 @@ describe("RentalDetailPage", () => {
     expect(screen.getByText("#oneway")).toBeInTheDocument();
   });
 
+  // Tester feedback 2026-11-08: the list shows the provider's logo, the detail page showed a car glyph.
+  it("shows the provider logo in the header, as the list row does, in one tile", async () => {
+    get.mockResolvedValue(makeRental({ id: "r1", provider: "Sixt" }));
+    renderPage();
+    const logo = await screen.findByTestId("operator-logo");
+    expect(logo.getAttribute("src")).toBe("/api/v1/rentals/providers/logo?name=Sixt");
+    expect(screen.getAllByTestId("operator-tile")).toHaveLength(1);
+  });
+
   // forgejo#405: the rental was the one booking page without the trip photo window.
   it("shows the trip photo window only for a rental on a trip", async () => {
     get.mockResolvedValue(makeRental({ id: "r1", tripId: "t1" }));

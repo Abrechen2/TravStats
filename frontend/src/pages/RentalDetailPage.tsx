@@ -3,12 +3,12 @@ import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
+import { OperatorTile, rentalProviderLogoUrl } from "../components/table/OperatorTile";
 import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import TagChips from "../components/common/TagChips";
 import PeopleList from "../components/ui/PeopleList";
 import Button from "../components/ui/Button";
-import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
@@ -197,7 +197,15 @@ export default function RentalDetailPage(): JSX.Element {
         backTo="/rentals"
         backLabel={t("rental:detail.back")}
         domain="rental"
-        icon={<Icon name="car" size={24} />}
+        icon={
+          <OperatorTile
+            name={rental.provider}
+            domain="rental"
+            logoUrl={rentalProviderLogoUrl(rental.provider)}
+            size={48}
+          />
+        }
+        iconIsTile
         title={`${rental.provider} · ${route}`}
         subtitle={
           rental.confirmationNumber ? (

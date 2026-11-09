@@ -12,6 +12,11 @@ interface DetailHeaderProps {
   domain: DomainKey;
   /** The mark's glyph. One character; the tile is drawn here. */
   icon: ReactNode;
+  /**
+   * The icon brings its own tile (a provider logo from `OperatorTile`): it is
+   * drawn as is, not inside the domain-tinted 48px square — a tile in a tile.
+   */
+  iconIsTile?: boolean;
   title: string;
   /** Under the title: what this thing is. A line or two, never a paragraph. */
   subtitle?: ReactNode;
@@ -74,6 +79,7 @@ export default function DetailHeader({
   backLabel,
   domain,
   icon,
+  iconIsTile = false,
   title,
   subtitle,
   status,
@@ -118,22 +124,26 @@ export default function DetailHeader({
       >
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start" style={{ gap: "var(--ts-space-lg)" }}>
-            <span
-              aria-hidden
-              className="flex items-center justify-center"
-              style={{
-                flexShrink: 0,
-                width: 48,
-                height: 48,
-                borderRadius: "var(--ts-radius-tile)",
-                background: alpha(hue, 12),
-                color: hue,
-                fontSize: 22,
-                lineHeight: 1,
-              }}
-            >
-              {icon}
-            </span>
+            {iconIsTile ? (
+              <span style={{ flexShrink: 0 }}>{icon}</span>
+            ) : (
+              <span
+                aria-hidden
+                className="flex items-center justify-center"
+                style={{
+                  flexShrink: 0,
+                  width: 48,
+                  height: 48,
+                  borderRadius: "var(--ts-radius-tile)",
+                  background: alpha(hue, 12),
+                  color: hue,
+                  fontSize: 22,
+                  lineHeight: 1,
+                }}
+              >
+                {icon}
+              </span>
+            )}
             <div className="min-w-0">
               {/* The status beside the title, as round 4 draws the head: what
                 this is and what state it is in are read together. */}
