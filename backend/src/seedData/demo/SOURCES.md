@@ -6,11 +6,11 @@ network, by `backend/scripts/demo/generateDemoGeometry.ts` (roads, trails) and
 `backend/scripts/demo/generateDemoRailGeometry.ts` (rail), and read by the
 seed without it — the seed runs on first boot, possibly offline.
 
-| File                    | Content                                                                                                                                                                | Generated from                                                                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `roadtrip-legs.json.gz` | 43 routed roadtrip legs (car profile), simplified to ~30 m; 2 ferry crossings drawn by hand                                                                            | FOSSGIS OSRM, `routing.openstreetmap.de/routed-car`                                                                                 |
-| `rail-lines.json.gz`    | 23 train lines, one per station pair of the 44 train rides (a ride in the other direction reads its pair's line reversed), simplified to ~20 m, with the routed length | BRouter, `brouter.de`, profile `rail` (the OSM railway network), through the via points in `data/railRoutes.ts`                     |
-| `tour-tracks.json.gz`   | 10 recorded tracks (hikes and a four-day cycle tour): every point with elevation and a time since the start                                                            | path: BRouter, `brouter.de` (`hiking-mountain`, `trekking`); elevation: Open-Meteo Elevation API, `api.open-meteo.com/v1/elevation` |
+| File | Content | Generated from |
+|---|---|---|
+| `roadtrip-legs.json.gz` | 43 routed roadtrip legs (car profile), simplified to ~30 m; 2 ferry crossings drawn by hand | FOSSGIS OSRM, `routing.openstreetmap.de/routed-car` |
+| `rail-lines.json.gz` | 23 train lines, one per station pair of the 44 train rides (a ride in the other direction reads its pair's line reversed), simplified to ~20 m, with the routed length | BRouter, `brouter.de`, profile `rail` (the OSM railway network), through the via points in `data/railRoutes.ts` |
+| `tour-tracks.json.gz` | 10 recorded tracks (hikes and a four-day cycle tour): every point with elevation and a time since the start | path: BRouter, `brouter.de` (`hiking-mountain`, `trekking`); elevation: Open-Meteo Elevation API, `api.open-meteo.com/v1/elevation` |
 
 Coordinates of the hotels, campsites and huts the routes connect were looked
 up with Nominatim (`nominatim.openstreetmap.org`) on 2026-09-26 and are
