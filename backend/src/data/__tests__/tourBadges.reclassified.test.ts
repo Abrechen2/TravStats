@@ -10,18 +10,16 @@ import { achievementVisibility } from "../../services/achievementVisibility";
  */
 const CODES = ["TOUR_FIRST_STEPS", "TOUR_THREE_KINDS", "TOUR_ASCENT_1000"];
 let userId: string;
+let username: string;
 
 beforeAll(async () => {
   await ensureAchievements();
-  userId = (
-    await prisma.user.create({
-      data: { username: `tour-badge-${randomUUID()}`, passwordHash: "test-only" },
-    })
-  ).id;
+  username = `tour-badge-${randomUUID()}`;
+  userId = (await prisma.user.create({ data: { username, passwordHash: "test-only" } })).id;
 });
 
 afterAll(async () => {
-  await prisma.user.deleteMany({ where: { id: userId } });
+  await prisma.user.deleteMany({ where: { username } });
   await prisma.$disconnect();
 });
 

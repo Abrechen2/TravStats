@@ -14,13 +14,22 @@ export interface TourAdapterInput {
   tours: CountedTour[];
 }
 
-/** "No distance measured" is not 0 km: the KPI is left out, never zeroed. */
-function kpis(count: number, km: number | null): DomainKpi[] {
+/**
+ * "No distance measured" is not 0 km: the KPI is left out, never zeroed. A recording that stopped
+ * at the import limit only knows a lower bound, so a total resting on one says "at least".
+ */
+function kpis(count: number, km: number | null, partial: boolean): DomainKpi[] {
   return [
     { labelKey: "overviewCard.kpi.tours", value: count },
     ...(km === null
       ? []
-      : [{ labelKey: "overviewCard.kpi.distance", value: Math.round(km), unit: "km" as const }]),
+      : [
+          {
+            labelKey: partial ? "overviewCard.kpi.distanceAtLeast" : "overviewCard.kpi.distance",
+            value: Math.round(km),
+            unit: "km" as const,
+          },
+        ]),
   ];
 }
 
@@ -37,19 +46,26 @@ export function adaptTour(input: TourAdapterInput): DomainStats {
   const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
-  const perYear = new Map<number, { count: number; km: number | null }>();
+  const perYear = new Map<number, { count: number; km: number | null; partial: boolean }>();
   let totalKm: number | null = null;
+  let totalPartial = false;
 
   for (const tour of counted) {
     totalKm = addKm(totalKm, tour.km);
+    totalPartial ||= tour.partial && tour.km !== null;
     if (tour.year === null || tour.day === null) continue;
     yearlyEvents[tour.year] = (yearlyEvents[tour.year] ?? 0) + 1;
     dailyEvents[tour.day] = (dailyEvents[tour.day] ?? 0) + 1;
     const weekday = new Date(`${tour.day}T00:00:00Z`).getUTCDay();
     weekdayEvents[weekday] = (weekdayEvents[weekday] ?? 0) + 1;
-    const y = bucket(perYear, tour.year, () => ({ count: 0, km: null as number | null }));
+    const y = bucket(perYear, tour.year, () => ({
+      count: 0,
+      km: null as number | null,
+      partial: false,
+    }));
     y.count += 1;
     y.km = addKm(y.km, tour.km);
+    y.partial ||= tour.partial && tour.km !== null;
     if (dailyActiveDays[tour.day]) continue;
     dailyActiveDays[tour.day] = 1;
     yearlyActiveDays[tour.year] = (yearlyActiveDays[tour.year] ?? 0) + 1;
@@ -58,7 +74,8 @@ export function adaptTour(input: TourAdapterInput): DomainStats {
   }
 
   const summaryByYear: Record<number, YearSummary> = {};
-  for (const [year, y] of perYear) summaryByYear[year] = { headlineKpis: kpis(y.count, y.km) };
+  for (const [year, y] of perYear)
+    summaryByYear[year] = { headlineKpis: kpis(y.count, y.km, y.partial) };
 
   return {
     domain: "tour",
@@ -75,7 +92,7 @@ export function adaptTour(input: TourAdapterInput): DomainStats {
     dailyActiveDays,
     weekdayEvents,
     summary: {
-      headlineKpis: kpis(counted.length, totalKm),
+      headlineKpis: kpis(counted.length, totalKm, totalPartial),
       detailRoute: "/stats?tab=tour",
     },
   };

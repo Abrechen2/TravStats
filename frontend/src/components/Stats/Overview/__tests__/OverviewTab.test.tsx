@@ -1,3 +1,4 @@
+import type { DomainKey } from "../../../../shared/domains";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -142,7 +143,7 @@ describe("OverviewTab does not carry the tour insights", () => {
     localStorage.clear();
   });
 
-  it.each([
+  it.each<[DomainKey[], string]>([
     [["flight", "tour"], "roadtrips switched off, tours shown"],
     [["flight", "roadtrip", "tour"], "roadtrips and tours shown"],
     [["flight"], "tour domain off"],

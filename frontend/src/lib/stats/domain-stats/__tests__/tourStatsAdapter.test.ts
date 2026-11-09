@@ -48,4 +48,13 @@ describe("adaptTour", () => {
     expect(stats.totalEvents).toBe(1);
     expect(stats.yearlyEvents).toEqual({});
   });
+
+  it("says a distance is a lower bound when a counted recording stopped at the import limit", () => {
+    const stats = adaptTour({ tours: [tour({ partial: true }), tour({ id: "b", km: 3 })] });
+    if (!stats.hasData) throw new Error("expected data");
+    expect(stats.summary.headlineKpis.map((k) => k.labelKey)).toEqual([
+      "overviewCard.kpi.tours",
+      "overviewCard.kpi.distanceAtLeast",
+    ]);
+  });
 });
