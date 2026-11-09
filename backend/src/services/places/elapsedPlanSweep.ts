@@ -44,10 +44,16 @@ export async function sweepElapsedPlannedVisits(
   const due = places.filter((p) => hasElapsedPlan(p, p.visits, now));
   if (due.length === 0) return { scanned: places.length, promoted: 0 };
 
-  const result = await prisma.place.updateMany({
-    where: { id: { in: due.map((p) => p.id) }, visited: false, curatedItemId: null },
-    data: { visited: true },
-  });
+  // One guarded write per place: the row must still be the one that was read, so
+  // an unmark or edit that landed since is not overwritten.
+  let promoted = 0;
+  for (const p of due) {
+    const written = await prisma.place.updateMany({
+      where: { id: p.id, visited: false, curatedItemId: null, updatedAt: p.updatedAt },
+      data: { visited: true },
+    });
+    promoted += written.count;
+  }
   for (const userId of new Set(due.map((p) => p.userId))) {
     try {
       await recheckAchievements(userId, "elapsed planned visit");
@@ -56,8 +62,8 @@ export async function sweepElapsedPlannedVisits(
     }
   }
   logger.info(
-    { operation: "elapsed_plan_sweep", scanned: places.length, promoted: result.count },
+    { operation: "elapsed_plan_sweep", scanned: places.length, promoted },
     "Elapsed planned visits promoted"
   );
-  return { scanned: places.length, promoted: result.count };
+  return { scanned: places.length, promoted };
 }

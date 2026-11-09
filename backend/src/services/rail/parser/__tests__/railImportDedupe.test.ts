@@ -131,6 +131,20 @@ describe("repeat import of a connection without a booking reference", () => {
     ]);
   });
 
+  it("finds a ride saved under the train number when the import now names the line (RE 9)", async () => {
+    const saved = await savedTrain({
+      depStationName: "Dedupstadt Hauptbahnhof",
+      depStationId: stationId,
+      trainCategory: null,
+      trainNumber: "54876",
+    });
+    const candidate = await toRailCandidate(
+      connection([leg({ trainCategory: "RE", trainNumber: "9", operationalTrainNumber: "54876" })]),
+      userId
+    );
+    expect(verdicts(candidate)).toEqual([[saved.id, null]]);
+  });
+
   it("only flags, never omits, a train whose number one side does not name", async () => {
     const saved = await savedTrain({
       depStationName: "Dedupstadt Hauptbahnhof",

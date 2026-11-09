@@ -97,7 +97,10 @@ function trainIdentity(
 ): "same" | "other" | "unknown" {
   const [a, b] = [foldTrainPart(stored.trainNumber), foldTrainPart(leg.trainNumber)];
   if (a === null || b === null) return "unknown";
-  if (a !== b) return "other";
+  // A bahn.de regional train shown by its line ("RE 9") also carries the train
+  // number a ride saved before that shows ("54876"): either one is the same train.
+  const operational = foldTrainPart(leg.operationalTrainNumber ?? null);
+  if (a !== b && a !== operational) return "other";
   const [ca, cb] = [foldTrainPart(stored.trainCategory), foldTrainPart(leg.trainCategory)];
   return ca !== null && cb !== null && ca !== cb ? "other" : "same";
 }
