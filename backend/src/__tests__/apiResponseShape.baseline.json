@@ -111,6 +111,7 @@
     "settings/personal.ts",
     "settings/profile.ts",
     "settings/tokens.ts",
+    "settings/trackGap.ts",
     "settings/types.ts",
     "settings/webPrefs.ts",
     "settings/webdavSync.ts",

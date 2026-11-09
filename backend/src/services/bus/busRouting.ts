@@ -8,6 +8,7 @@ import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { providerCallGate } from "../tour/routing/providerBudget";
 import { resolveRouteProvider } from "../tour/routing/resolveProvider";
 import { routeLegGeometry } from "../tour/routing/routeLeg";
+import { lookupBusLine, type BusLineMiss } from "./transitousBusLine";
 import type { RouteFallbackReason } from "../tour/routing/types";
 
 /**
@@ -42,10 +43,26 @@ export interface BusEnds {
   arrLon: number;
 }
 
+/** What identifies the timetable trip: the ticket's line and the departure instant. */
+export interface BusLineAsk extends BusEnds {
+  lineName?: string | null;
+  departureTime?: Date | null;
+}
+
+/**
+ * A line that follows something real: `transitous` = the timetable trip's own
+ * shape (Transitous/MOTIS), `road` = the likely road path between the ends.
+ */
+export type BusDrawnSource = "road" | "transitous";
+export const isDrawnSource = (source: string | null | undefined): source is BusDrawnSource =>
+  source === "road" || source === "transitous";
+
 /** What one routing attempt delivered. */
 export interface BusLine {
   geometry: LonLat[] | null;
-  geometrySource: "road" | "straight";
+  geometrySource: BusDrawnSource | "straight";
+  /** Why no timetable line came back (the road line may still have); null when one did or none was asked for. */
+  lineMiss: BusLineMiss | null;
   /** The routed length; null for a straight line (the chord is the state's own figure). */
   routedKm: number | null;
   /** Why no road line came back; null when one did. */
@@ -55,10 +72,13 @@ export interface BusLine {
 const round1 = (km: number): number => Math.round(km * 10) / 10;
 
 /** One routing attempt between the two terminals. Never throws for a routing failure. */
-export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLine> {
+export async function fetchBusLine(userId: string, ask: BusLineAsk): Promise<BusLine> {
+  const ends = ask;
+  let lineMiss: BusLineMiss | null = null;
   const straight = (fallback: RouteFallbackReason): BusLine => ({
     geometry: null,
     geometrySource: "straight",
+    lineMiss,
     routedKm: null,
     fallback,
   });
@@ -66,6 +86,24 @@ export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLi
     // The shared demo account never spends the instance's routing key: its
     // rides save as straight lines, and the routing endpoint reports "none".
     if (await isSharedDemoUser(userId)) return straight("no_provider");
+    // The real line first; any miss is reported and the road path stands in.
+    const timetable = await lookupBusLine({
+      lineName: ask.lineName ?? null,
+      departureTime: ask.departureTime ?? null,
+      dep: { lat: ends.depLat, lon: ends.depLon },
+      arr: { lat: ends.arrLat, lon: ends.arrLon },
+    });
+    if (timetable.ok) {
+      return {
+        geometry: timetable.geometry,
+        geometrySource: "transitous",
+        lineMiss: null,
+        routedKm: round1(timetable.lengthKm),
+        fallback: null,
+      };
+    }
+    // Nothing to match on is not a failure worth a sentence on every plain ride.
+    lineMiss = timetable.miss === "no_line" ? null : timetable.miss;
     const provider = await resolveRouteProvider(userId);
     const routed = await withTimeout(
       routeLegGeometry(
@@ -92,6 +130,7 @@ export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLi
     return {
       geometry: routed.waypoints,
       geometrySource: "road",
+      lineMiss,
       routedKm: round1(routed.distanceKm),
       fallback: null,
     };
@@ -106,6 +145,8 @@ export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLi
 
 /** The stored row as the edit rule reads it. */
 export interface StoredBusLine extends BusEnds {
+  lineName?: string | null;
+  departureTime?: Date;
   geometry: unknown;
   geometrySource: string;
   distanceKm: number | null;
@@ -119,10 +160,29 @@ export interface StoredBusLine extends BusEnds {
 export type BusLineEdit =
   | { kind: "unchanged" }
   | { kind: "fetched"; line: BusLine }
-  | { kind: "kept"; geometry: LonLat[]; fallback: RouteFallbackReason | null };
+  | {
+      kind: "kept";
+      geometry: LonLat[];
+      source: BusDrawnSource;
+      fallback: RouteFallbackReason | null;
+      lineMiss: BusLineMiss | null;
+    };
 
 const terminalsMoved = (a: BusEnds, b: BusEnds): boolean =>
   a.depLat !== b.depLat || a.depLon !== b.depLon || a.arrLat !== b.arrLat || a.arrLon !== b.arrLon;
+
+/** The timetable match depends on the line and the departure; a new value asks again. */
+const lineAskChanged = (a: StoredBusLine, b: BusLineAsk): boolean => {
+  if (b.lineName === undefined && b.departureTime === undefined) return false;
+  const name = (v: string | null | undefined) => (v ?? "").trim();
+  return (
+    (name(a.lineName) !== name(b.lineName) && name(b.lineName) !== "") ||
+    (a.departureTime !== undefined &&
+      b.departureTime != null &&
+      a.departureTime.getTime() !== b.departureTime.getTime() &&
+      name(b.lineName ?? a.lineName) !== "")
+  );
+};
 
 function anchored(line: LonLat[], ends: BusEnds): boolean {
   const head = line[0];
@@ -146,14 +206,27 @@ function anchored(line: LonLat[], ends: BusEnds): boolean {
 export async function resolveEditedBusLine(
   userId: string,
   existing: StoredBusLine,
-  next: BusEnds
+  next: BusLineAsk
 ): Promise<BusLineEdit> {
-  if (!terminalsMoved(existing, next)) return { kind: "unchanged" };
-  const line = await fetchBusLine(userId, next);
-  if (line.geometrySource === "road") return { kind: "fetched", line };
-  const stored = existing.geometrySource === "road" ? readStoredLine(existing.geometry) : null;
-  if (stored && anchored(stored, next)) {
-    return { kind: "kept", geometry: stored, fallback: line.fallback };
+  if (!terminalsMoved(existing, next) && !lineAskChanged(existing, next)) {
+    return { kind: "unchanged" };
+  }
+  const line = await fetchBusLine(userId, {
+    ...next,
+    lineName: next.lineName !== undefined ? next.lineName : (existing.lineName ?? null),
+    departureTime: next.departureTime ?? existing.departureTime ?? null,
+  });
+  if (line.geometrySource !== "straight") return { kind: "fetched", line };
+  const storedSource = existing.geometrySource;
+  const stored = isDrawnSource(storedSource) ? readStoredLine(existing.geometry) : null;
+  if (stored && isDrawnSource(storedSource) && anchored(stored, next)) {
+    return {
+      kind: "kept",
+      geometry: stored,
+      source: storedSource,
+      fallback: line.fallback,
+      lineMiss: line.lineMiss,
+    };
   }
   return { kind: "fetched", line };
 }
@@ -161,7 +234,7 @@ export async function resolveEditedBusLine(
 /** The line a row ends up with, in the shape the geometry columns take. */
 export interface BusLineColumns {
   geometry: LonLat[] | null;
-  geometrySource: "road" | "straight";
+  geometrySource: BusDrawnSource | "straight";
 }
 
 /** The geometry columns of a write; the null line is SQL NULL, not JSON null. */
@@ -179,7 +252,7 @@ export function busGeometryColumns(line: BusLineColumns): {
 /** The line to write for an edit, or null when the stored one stays as it is. */
 export function writtenLine(edit: BusLineEdit): BusLineColumns | null {
   if (edit.kind === "unchanged") return null;
-  if (edit.kind === "kept") return { geometry: edit.geometry, geometrySource: "road" };
+  if (edit.kind === "kept") return { geometry: edit.geometry, geometrySource: edit.source };
   return { geometry: edit.line.geometry, geometrySource: edit.line.geometrySource };
 }
 
@@ -197,12 +270,12 @@ export function withRoutedDistance<
   const storedLine = existing ? readStoredLine(existing.geometry) : null;
   const roadLine =
     edit.kind === "fetched"
-      ? edit.line.geometrySource === "road"
+      ? edit.line.geometrySource !== "straight"
         ? edit.line.geometry
         : null
       : edit.kind === "kept"
         ? edit.geometry
-        : existing?.geometrySource === "road"
+        : isDrawnSource(existing?.geometrySource)
           ? storedLine
           : null;
   if (!roadLine) return state;
@@ -224,18 +297,26 @@ export interface BusGeometryReport {
   outcome: "unchanged" | "routed" | "straight" | "kept";
   geometrySource: string;
   fallback: RouteFallbackReason | null;
+  /** Why the timetable line was not used (the road line or chord stands in); null when it was or none was asked for. */
+  lineMiss: BusLineMiss | null;
 }
 
 export function busGeometryReport(edit: BusLineEdit, storedSource: string): BusGeometryReport {
   if (edit.kind === "unchanged") {
-    return { outcome: "unchanged", geometrySource: storedSource, fallback: null };
+    return { outcome: "unchanged", geometrySource: storedSource, fallback: null, lineMiss: null };
   }
   if (edit.kind === "kept") {
-    return { outcome: "kept", geometrySource: "road", fallback: edit.fallback };
+    return {
+      outcome: "kept",
+      geometrySource: edit.source,
+      fallback: edit.fallback,
+      lineMiss: edit.lineMiss,
+    };
   }
   return {
-    outcome: edit.line.geometrySource === "road" ? "routed" : "straight",
+    outcome: edit.line.geometrySource === "straight" ? "straight" : "routed",
     geometrySource: edit.line.geometrySource,
     fallback: edit.line.fallback,
+    lineMiss: edit.line.lineMiss,
   };
 }

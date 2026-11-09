@@ -5,6 +5,7 @@ import {
   type RecordingBreak,
   type StoredPoint,
 } from "../tripRecording/segments";
+import { trackGapMsFor } from "../tripRecording/trackGap";
 import { privacySafeDevices, privacySafeStretches } from "../tripRecording/privacySafe";
 import type { ZoneCircle } from "./classify";
 import { privacyCirclesFor } from "./privacyCircles";
@@ -77,6 +78,8 @@ export type Span = { fromMs: number; untilMs: number };
 export type SafeSpan = {
   /** The stretches, `[tMs, lat, lon, accuracyM]`, every one cut and privacy-cut. */
   segments: StoredPoint[][];
+  /** The user's track gap these stretches were cut at (ms); absent = the default. */
+  gapMs?: number;
   /** The row each vertex came from (identity-keyed). */
   rowOf: (point: StoredPoint) => SafePointRow | undefined;
   circles: ZoneCircle[];
@@ -180,7 +183,11 @@ export async function readSafeTravTrack(
   }));
   // The safe devices are already the cut; the stretches go through it once
   // more as they leave, so the output itself is what was checked.
-  const segments = privacySafeStretches(rawSegments(privacySafeDevices(devices, circles)), circles);
+  const gapMs = await trackGapMsFor(userId);
+  const segments = privacySafeStretches(
+    rawSegments(privacySafeDevices(devices, circles, gapMs), gapMs),
+    circles
+  );
   // Every fix read but not returned (a zone, a chord through one, a lone survivor): the silence
   // it leaves must never be bridged. Fail closed: any reason, any device.
   const kept = new Set(segments.flat());
@@ -190,6 +197,7 @@ export async function readSafeTravTrack(
   ];
   return {
     segments,
+    gapMs,
     rowOf: (p) => rowByPoint.get(p),
     circles,
     removedAtMs,

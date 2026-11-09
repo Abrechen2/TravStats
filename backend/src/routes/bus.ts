@@ -314,7 +314,11 @@ export async function prepareBusRide(userId: string, body: unknown): Promise<Pre
   const merged = mergeBusJourney(null, input);
   // Fetched once and frozen with the row; a failure stores the chord and says
   // why in `meta.geometry`. Bounded by a timeout well under the client's.
-  const line = await fetchBusLine(userId, merged);
+  const line = await fetchBusLine(userId, {
+    ...merged,
+    lineName: input.lineName ?? null,
+    departureTime: merged.departureTime,
+  });
   const edit: BusLineEdit = { kind: "fetched", line };
   const state = withRoutedDistance(merged, null, edit);
   const plannedCompanions = planCompanions(input.companions ?? []);
@@ -375,7 +379,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const merged = mergeBusJourney(existing, input);
     // Fetched again only when a terminal's coordinates changed; a failed
     // re-fetch keeps the frozen road line (resolveEditedBusLine).
-    const edit = await resolveEditedBusLine(userId, existing, merged);
+    const edit = await resolveEditedBusLine(userId, existing, {
+      ...merged,
+      lineName: input.lineName,
+      departureTime: merged.departureTime,
+    });
     const state = withRoutedDistance(merged, existing, edit);
     const written = writtenLine(edit);
     const resolved =

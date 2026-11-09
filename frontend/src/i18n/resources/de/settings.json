@@ -1673,6 +1673,14 @@
     }
   },
   "location": {
+    "trackGap": {
+      "name": "Track trennen ab",
+      "sub": "Pause ohne Positionen, ab der eine neue Aufzeichnung beginnt",
+      "help": "Eine Aufzeichnung wird nur getrennt, wenn das Handy länger als diese Zeit keine Position gemeldet hat. Die Entfernung zwischen zwei Positionen trennt nie. Schon gespeicherte Punkte bleiben unverändert.",
+      "option_one": "{{count}} Minute",
+      "option_other": "{{count}} Minuten",
+      "loadError": "Ich konnte die Track-Pause nicht laden."
+    },
     "source": {
       "name": "Standort kommt von",
       "sub": "Für Ländertage, Aufenthalte, Routen",

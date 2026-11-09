@@ -1673,6 +1673,14 @@
     }
   },
   "location": {
+    "trackGap": {
+      "name": "Split track after",
+      "sub": "A silence with no positions after which a new recording starts",
+      "help": "A recording is only split when the phone reported no position for longer than this. The distance between two positions never splits it. Points already stored stay unchanged.",
+      "option_one": "{{count}} minute",
+      "option_other": "{{count}} minutes",
+      "loadError": "I could not load the track pause."
+    },
     "source": {
       "name": "Location comes from",
       "sub": "For country days, stays, routes",

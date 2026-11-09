@@ -1,7 +1,13 @@
 import type { ZoneCircle } from "../travtrack/classify";
 import { privacyCutBy } from "../travtrack/privacyCut";
 import { localDayReader } from "./localDays";
-import { splitAtGaps, type DevicePoints, type RecordingBreak, type StoredPoint } from "./segments";
+import {
+  RECORDING_GAP_MS,
+  splitAtGaps,
+  type DevicePoints,
+  type RecordingBreak,
+  type StoredPoint,
+} from "./segments";
 
 /**
  * A trip recording as far as the privacy zones let it be described (TravTrack
@@ -38,11 +44,12 @@ export function privacySafeStretches(
 
 export function privacySafeDevices(
   devices: readonly DevicePoints[],
-  circles: readonly ZoneCircle[]
+  circles: readonly ZoneCircle[],
+  gapMs: number = RECORDING_GAP_MS
 ): DevicePoints[] {
   if (circles.length === 0) return [...devices];
   return devices.flatMap((device) => {
-    const pieces = privacySafeStretches(splitAtGaps(device.points, device.breaks), circles);
+    const pieces = privacySafeStretches(splitAtGaps(device.points, device.breaks, gapMs), circles);
     if (pieces.length === 0) return [];
     const breaks: RecordingBreak[] = [...(device.breaks ?? [])];
     for (let k = 1; k < pieces.length; k++) {

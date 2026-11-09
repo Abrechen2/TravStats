@@ -25,6 +25,7 @@ import {
 } from "../../../schemas/bus";
 import { busTimesSchema } from "../../../schemas/times";
 import { ROUTE_FALLBACK_REASONS } from "../../tour/routing/types";
+import { BUS_LINE_MISSES } from "../../bus/transitousBusLine";
 
 const busJourney = registry.register(
   "BusJourney",
@@ -99,6 +100,16 @@ const geometryReport = z
         "Why no road line was delivered: no_provider (the instance has no routing " +
           "provider), provider_error (network, 5xx, unreadable answer or timeout), no_route, " +
           "point_not_near_road, rate_limited, auth, untrustworthy; null when nothing asked for failed"
+      ),
+    lineMiss: z
+      .enum(BUS_LINE_MISSES)
+      .nullable()
+      .describe(
+        "Why the timetable's own line (Transitous) was not used and a road line or the chord " +
+          "stands in: no_line (no line name or departure to match), no_match (no trip with that " +
+          "line, time and direction), no_shape (the trip has no usable shape), rate_limited, " +
+          "timeout, unavailable; null when it was used or not asked for. `geometrySource: " +
+          "transitous` marks a stored timetable line."
       ),
   })
   .openapi("BusGeometryReport");

@@ -125,5 +125,9 @@ describe("BusRouteMap", () => {
     expect(busLineCaptionKey({ geometry: ROAD, geometrySource: "road" })).toBe(
       "bus:detail.lineRoad"
     );
+    // The road fallback is labelled as the likely path; a timetable line says so too.
+    expect(busLineCaptionKey({ geometry: ROAD, geometrySource: "transitous" })).toBe(
+      "bus:detail.lineTransit"
+    );
   });
 });

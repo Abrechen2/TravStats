@@ -16,6 +16,7 @@ import instanceServicesRouter from "./instanceServices";
 import webdavSyncRouter from "./webdavSync";
 import personalRouter from "./personal";
 import locationProviderRouter from "./locationProvider";
+import trackGapRouter from "./trackGap";
 import externalServicesRouter from "./externalServices";
 import instanceBackupRouter from "./instanceBackup";
 import { guardAccountKeyWrite, guardConnectionWrite } from "../../services/externalServices/guards";
@@ -64,6 +65,8 @@ router.use(
     "/personal",
     // Which source records and reads positions: one visitor's would be everyone's.
     "/location-provider",
+    // The same account-wide TravTrack reading: one visitor's gap would be everyone's.
+    "/track-gap",
     // Keys, connections and the AI consent of the shared account would be everyone's.
     "/external-services",
   ],
@@ -92,6 +95,7 @@ router.use("/instance-services", instanceServicesRouter);
 router.use("/webdav-sync", webdavSyncRouter);
 router.use("/personal", personalRouter);
 router.use("/location-provider", locationProviderRouter);
+router.use("/track-gap", trackGapRouter);
 router.use("/external-services", externalServicesRouter);
 router.use("/instance-backup", instanceBackupRouter);
 

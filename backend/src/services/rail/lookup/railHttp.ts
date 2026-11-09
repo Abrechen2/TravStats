@@ -79,7 +79,9 @@ export function __clearRailHttpCache(): void {
  * `failed` = the service itself did not deliver.
  */
 export type RailFetchResult<T> =
-  { ok: true; data: T } | { ok: false; reason: "failed" | "outOfTime" };
+  | { ok: true; data: T }
+  /** `status` is the HTTP status when the service answered at all (429 = asked too often). */
+  | { ok: false; reason: "failed" | "outOfTime"; status?: number };
 
 /**
  * GET JSON, validate it, cache the validated value by URL. `ok: false` on a
@@ -108,7 +110,7 @@ export async function fetchRailJson<T>(
     });
     if (!response.ok) {
       logger.warn({ operation: "rail_lookup_request", service, status: response.status });
-      return { ok: false, reason: "failed" };
+      return { ok: false, reason: "failed", status: response.status };
     }
     const parsed = schema.safeParse(await response.json());
     if (!parsed.success) {

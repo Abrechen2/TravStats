@@ -7,26 +7,35 @@
  *
  * So every month holding a point that could reach the circle is deleted and
  * owed again, in the zone's own transaction: a stretch joins no two fixes more
- * than `RECORDING_GAP_KM` apart, and a dwell's cell centre lies within about
+ * than the user's track gap apart in time, so none lies further apart than a
+ * vehicle covers in it (`MAX_HOP_KMH`; distance itself no longer cuts a
+ * track), and a dwell's cell centre lies within about
  * a kilometre of its points, so every point within the radius plus that
  * reach is a candidate — a box around the circle, wide rather than exact.
  */
 import { Prisma } from "../../../prisma";
 import type { DbTransaction } from "../../../db";
-import { RECORDING_GAP_KM } from "../../tripRecording/segments";
+import { trackGapMsOf } from "../../tripRecording/trackGapBounds";
 import type { ZoneCircle } from "../classify";
 import { MONTHS_BIT } from "../dirtyDays";
 
 /** A dwell's points to its cell's centre: the cell's half-diagonal plus the dwell radius. */
 const CELL_REACH_KM = 1.1;
 const KM_PER_DEG_LAT = 111.0;
+/** Faster than any ground or air vehicle a phone rides in; a bound, not a measurement. */
+const MAX_HOP_KMH = 1000;
 
 export async function monthsOnZoneChanged(
   tx: DbTransaction,
   userId: string,
   zone: ZoneCircle
 ): Promise<void> {
-  const reachKm = zone.radiusM / 1000 + RECORDING_GAP_KM + CELL_REACH_KM;
+  const settings = await tx.userSettings.findUnique({
+    where: { userId },
+    select: { trackGapMinutes: true },
+  });
+  const hopKm = (trackGapMsOf(settings?.trackGapMinutes) / 3_600_000) * MAX_HOP_KMH;
+  const reachKm = zone.radiusM / 1000 + hopKm + CELL_REACH_KM;
   const dLat = reachKm / KM_PER_DEG_LAT;
   const cos = Math.cos((zone.lat * Math.PI) / 180);
   const dLon = cos > 0.01 ? reachKm / (KM_PER_DEG_LAT * cos) : 360;

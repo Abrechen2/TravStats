@@ -21,8 +21,8 @@ export type BusRideKind = (typeof BUS_RIDE_KINDS)[number];
  * routed over the road network (B3).
  */
 export const BUS_DISTANCE_SOURCES = ["great_circle", "user", "route"] as const;
-/** Where the map line comes from: the chord, a road-routed line (B3), or one drawn by hand. */
-export const BUS_GEOMETRY_SOURCES = ["straight", "road", "manual"] as const;
+/** Where the map line comes from: the chord, a road-routed line (B3), the timetable's own line (Transitous), or one drawn by hand. */
+export const BUS_GEOMETRY_SOURCES = ["straight", "road", "transitous", "manual"] as const;
 export const BUS_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
 /**

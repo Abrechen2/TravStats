@@ -1,20 +1,21 @@
 import type { Prisma } from "../../prisma";
-import { haversineKm } from "../../shared/geo/haversine";
 import { simplifyDegrees } from "../schematicRouter";
 import { filterJitterYielding, type JitterFix } from "../tracks/jitterFilter";
 import { JITTER_PROFILES } from "../tracks/jitterProfiles";
 import { localDayReader } from "./localDays";
+import { DEFAULT_TRACK_GAP_MS } from "./trackGapBounds";
 
 /**
  * A trip recording read back (forgejo#316): the stored batches as one line per
  * device, cut wherever the phone recorded nothing.
  *
- * A gap is a gap. Two consecutive fixes more than two hours or 50 km apart
- * are two stretches, never joined: a straight line across them would draw a
- * road nobody took — the phone was off, in a plane, in a tunnel, or in a
- * pocket without a fix. 50 km is the hole threshold every stored track uses
- * (`FLIGHT_TRACK_GAP_KM`); two hours is twenty-four of the Companion's
- * five-minute fixes in a row lost.
+ * A gap is a gap. Two consecutive fixes further apart in TIME than the user's
+ * track gap (`trackGap.ts`, two hours by default) are two stretches, never
+ * joined: a straight line across them would draw a road nobody took — the
+ * phone was off, in a plane, in a tunnel, or in a pocket without a fix.
+ * Distance alone never cuts a track (owner 2026-11-09, as Dawarich does it):
+ * a recorded fix is a place the phone was, and a long hop between two fixes
+ * inside the gap is the phone's own claim.
  *
  * Each device is its own line. Two phones recording the same trip interleave
  * in time; merged into one, they would zigzag between two people.
@@ -23,8 +24,8 @@ import { localDayReader } from "./localDays";
 /** `[tMs, lat, lon, accuracyM | null]`, as stored. */
 export type StoredPoint = [number, number, number, number | null];
 
-export const RECORDING_GAP_MS = 2 * 3_600_000;
-export const RECORDING_GAP_KM = 50;
+/** The default time gap; the user's own is `trackGapMsFor`. */
+export const RECORDING_GAP_MS = DEFAULT_TRACK_GAP_MS;
 
 /**
  * Display tolerance in degrees (~20 m at the equator). Below the phone's own
@@ -32,6 +33,9 @@ export const RECORDING_GAP_KM = 50;
  * one could tell apart on the map.
  */
 const DISPLAY_TOLERANCE_DEG = 0.0002;
+
+/** A track is at least this many points. */
+export const MIN_TRACK_POINTS = 2;
 
 const isPoint = (p: unknown): p is StoredPoint =>
   Array.isArray(p) &&
@@ -65,23 +69,23 @@ export function crossesBreak(
 export function isGap(
   a: StoredPoint,
   b: StoredPoint,
-  breaks: readonly RecordingBreak[] = []
+  breaks: readonly RecordingBreak[] = [],
+  gapMs: number = RECORDING_GAP_MS
 ): boolean {
-  if (b[0] - a[0] > RECORDING_GAP_MS) return true;
-  if (crossesBreak(a, b, breaks)) return true;
-  return haversineKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) > RECORDING_GAP_KM;
+  return b[0] - a[0] > gapMs || crossesBreak(a, b, breaks);
 }
 
 /** Time-ordered points cut at every gap and every explicit break. Never an empty stretch. */
 export function splitAtGaps(
   points: readonly StoredPoint[],
-  breaks: readonly RecordingBreak[] = []
+  breaks: readonly RecordingBreak[] = [],
+  gapMs: number = RECORDING_GAP_MS
 ): StoredPoint[][] {
   const out: StoredPoint[][] = [];
   let current: StoredPoint[] = [];
   for (const point of points) {
     const last = current[current.length - 1];
-    if (last && isGap(last, point, breaks)) {
+    if (last && isGap(last, point, breaks, gapMs)) {
       out.push(current);
       current = [];
     }
@@ -153,21 +157,28 @@ export function pointsByDevice(
 
 /** Every stretch of every device, `[tMs…]` raw — the GPX's `<trkseg>`s. */
 export function rawSegments(
-  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>,
+  gapMs: number = RECORDING_GAP_MS
 ): StoredPoint[][] {
-  return devices.flatMap((d) => splitAtGaps(d.points, d.breaks));
+  return devices.flatMap((d) => splitAtGaps(d.points, d.breaks, gapMs));
 }
 
-/** The stretches as `[lon, lat]` lines for the map, each simplified on its own. */
+/**
+ * The stretches as `[lon, lat]` lines for the map, each simplified on its own.
+ * A track needs two points (as in Dawarich); a lone fix between two gaps is no
+ * line and is left out of the drawing — the points themselves stay stored.
+ */
 export function displaySegments(
   segments: readonly StoredPoint[][]
 ): Array<Array<[number, number]>> {
-  return segments.map((segment) =>
-    simplifyDegrees(
-      segment.map((p): [number, number] => [p[2], p[1]]),
-      DISPLAY_TOLERANCE_DEG
-    )
-  );
+  return segments
+    .filter((segment) => segment.length >= MIN_TRACK_POINTS)
+    .map((segment) =>
+      simplifyDegrees(
+        segment.map((p): [number, number] => [p[2], p[1]]),
+        DISPLAY_TOLERANCE_DEG
+      )
+    );
 }
 
 /** The distinct days the points fall on, on the trip's clock, in order. */
@@ -183,21 +194,19 @@ export function recordingDays(points: readonly StoredPoint[], zone: string): str
  * The stored batches and the GPX keep every raw point; this is a reading of
  * them, recomputed on every request, so there is nothing stored to correct.
  *
- * The two halves of the gap rule are applied on either side of the filter:
- * the clock half (> `RECORDING_GAP_MS` without a fix) on the RAW points, where
- * it means the phone recorded nothing — a stay collapsed to its arrival and
- * departure must not read as hours without a fix (review of forgejo#319); the
- * distance half (> `RECORDING_GAP_KM`) on the FILTERED points, so a teleport
- * spike far enough out to look like a 50 km gap is seen as a spike first. A
- * stay comes back as two synthetic points at the middle of its cloud; nothing
- * stores them.
+ * The gap rule is the clock alone, applied on the RAW points, where it means
+ * the phone recorded nothing — a stay collapsed to its arrival and departure
+ * must not read as hours without a fix (review of forgejo#319). A stay comes
+ * back as two synthetic points at the middle of its cloud; nothing stores
+ * them. There is no distance half any more (owner 2026-11-09).
  *
  * A recording has no upper size and this runs on every read, so the filter
  * hands the event loop back every few milliseconds (`pacing.ts`) instead of
  * holding every other request for the length of the recording.
  */
 export async function withoutJitter(
-  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>
+  devices: ReadonlyArray<Pick<DevicePoints, "points" | "breaks">>,
+  gapMs: number = RECORDING_GAP_MS
 ): Promise<{
   segments: StoredPoint[][];
   dropped: number;
@@ -216,37 +225,15 @@ export async function withoutJitter(
     const starts = device.points.flatMap((p, i) => {
       if (i === 0) return [];
       const prev = device.points[i - 1];
-      return p[0] - prev[0] > RECORDING_GAP_MS || crossesBreak(prev, p, breaks) ? [i] : [];
+      return p[0] - prev[0] > gapMs || crossesBreak(prev, p, breaks) ? [i] : [];
     });
     const result = await filterJitterYielding(fixes, starts, JITTER_PROFILES.mixed);
     dropped += result.dropped;
     const points = result.fixes.map((f): StoredPoint => [f.t ?? 0, f.lat, f.lon, f.accuracyM]);
     const bounds = [...result.segmentStarts, points.length];
     for (let k = 0; k + 1 < bounds.length; k++) {
-      for (const part of splitAtDistance(points.slice(bounds[k], bounds[k + 1]))) {
-        segments.push(part);
-      }
+      segments.push(points.slice(bounds[k], bounds[k + 1]));
     }
   }
   return { segments, dropped };
-}
-
-/** The distance half of the gap rule alone. */
-function splitAtDistance(points: readonly StoredPoint[]): StoredPoint[][] {
-  const out: StoredPoint[][] = [];
-  let current: StoredPoint[] = [];
-  for (const point of points) {
-    const last = current[current.length - 1];
-    if (
-      last &&
-      haversineKm({ lat: last[1], lon: last[2] }, { lat: point[1], lon: point[2] }) >
-        RECORDING_GAP_KM
-    ) {
-      out.push(current);
-      current = [];
-    }
-    current.push(point);
-  }
-  if (current.length > 0) out.push(current);
-  return out;
 }

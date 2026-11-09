@@ -150,7 +150,8 @@
     "route": "Route",
     "lineRoad": "Line: routed over the road network and stored — the likely path, not from a timetable.",
     "lineManual": "Line: drawn by hand.",
-    "lineStraight": "Line: straight line between the terminals — not the bus's path."
+    "lineStraight": "Line: straight line between the terminals — not the bus's path.",
+    "lineTransit": "Line: taken from the timetable (Transitous) — this ride's course between boarding and alighting."
   },
   "stats": {
     "loadError": "The bus statistics could not be loaded.",
@@ -357,6 +358,17 @@
       "rate_limited": "The routing service's quota is used up.",
       "auth": "The routing service refused the key.",
       "untrustworthy": "The routing service's answer did not match the terminals and was discarded."
+    },
+    "routedTimetable": "Line taken from the timetable: {{km}} km.",
+    "routedNoLine": "Routed over the road: {{km}} km. The timetable line is missing: {{reason}}",
+    "savedRoadForLine": "Saved. The line could not be taken from the timetable: {{reason}} The likely road path is stored instead.",
+    "savedStraightNoLine": "Saved. The line could not be taken from the timetable: {{reason}} It stays a straight line.",
+    "lineMiss": {
+      "no_match": "The timetable has no trip for this line, departure time and direction.",
+      "no_shape": "The timetable trip has no usable line course.",
+      "rate_limited": "The timetable service (Transitous) asks for fewer requests; try again later.",
+      "timeout": "The timetable service (Transitous) did not answer in time.",
+      "unavailable": "The timetable service (Transitous) is not reachable right now."
     }
   },
   "import": {

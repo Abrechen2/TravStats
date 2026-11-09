@@ -25,7 +25,7 @@ import { busApi } from "../lib/api/bus";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
-import { distanceSourceKey, fallbackReasonKey } from "../lib/bus/busRoutingWords";
+import { distanceSourceKey, fallbackReasonKey, lineMissKey } from "../lib/bus/busRoutingWords";
 import { apiErrorMachineCode } from "../lib/apiError";
 import { formatAmount, dateLocaleForLanguage } from "../lib/units";
 import { usePriceFxReadout } from "../hooks/usePriceFxReadout";
@@ -115,7 +115,14 @@ export default function BusDetailPage(): JSX.Element {
       setRide(routed);
       if (geometry?.outcome === "routed") {
         const km = Math.round(routed.distanceKm ?? 0).toLocaleString(locale);
-        setRouteMessage(t("bus:routing.routed", { km }));
+        const miss = lineMissKey(geometry.lineMiss);
+        setRouteMessage(
+          geometry.geometrySource === "transitous"
+            ? t("bus:routing.routedTimetable", { km })
+            : miss
+              ? t("bus:routing.routedNoLine", { km, reason: t(miss) })
+              : t("bus:routing.routed", { km })
+        );
       } else if (geometry?.outcome === "straight") {
         const reason = t(fallbackReasonKey(geometry.fallback));
         setRouteMessage(t("bus:routing.stillStraight", { reason }));

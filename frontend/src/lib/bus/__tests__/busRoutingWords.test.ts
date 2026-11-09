@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import de from "../../../i18n/resources/de/bus.json";
 import en from "../../../i18n/resources/en/bus.json";
-import { distanceSourceKey, fallbackReasonKey, saveGeometryNotice } from "../busRoutingWords";
+import {
+  distanceSourceKey,
+  fallbackReasonKey,
+  lineMissKey,
+  saveGeometryNotice,
+} from "../busRoutingWords";
 
 const REASONS = [
   "no_provider",
@@ -49,5 +54,49 @@ describe("busRoutingWords", () => {
     expect(
       saveGeometryNotice({ geometrySource: "road", outcome: "kept", fallback: "rate_limited" })
     ).toEqual({ key: "bus:routing.savedKept", reasonKey: "bus:routing.reason.rate_limited" });
+  });
+});
+
+describe("the timetable line's own reasons", () => {
+  const MISSES = ["no_match", "no_shape", "rate_limited", "timeout", "unavailable"] as const;
+
+  it("every miss has its own DE and EN sentence; no_line and null say nothing", () => {
+    for (const miss of MISSES) {
+      const key = lineMissKey(miss);
+      expect(key).toBe(`bus:routing.lineMiss.${miss}`);
+      expect(de.routing.lineMiss[miss].length).toBeGreaterThan(10);
+      expect(en.routing.lineMiss[miss].length).toBeGreaterThan(10);
+    }
+    expect(lineMissKey("no_line")).toBeNull();
+    expect(lineMissKey(null)).toBeNull();
+    expect(lineMissKey("from_a_newer_server")).toBe("bus:routing.lineMiss.unavailable");
+  });
+
+  it("a save that fell back to the road because of a 429 says so, naming the road as the stand-in", () => {
+    expect(
+      saveGeometryNotice({
+        outcome: "routed",
+        geometrySource: "road",
+        fallback: null,
+        lineMiss: "rate_limited",
+      })
+    ).toEqual({
+      key: "bus:routing.savedRoadForLine",
+      reasonKey: "bus:routing.lineMiss.rate_limited",
+    });
+  });
+
+  it("a stored timetable line and a plain ride owe no notice", () => {
+    expect(
+      saveGeometryNotice({
+        outcome: "routed",
+        geometrySource: "transitous",
+        fallback: null,
+        lineMiss: null,
+      })
+    ).toBeNull();
+    expect(
+      saveGeometryNotice({ outcome: "routed", geometrySource: "road", fallback: null })
+    ).toBeNull();
   });
 });

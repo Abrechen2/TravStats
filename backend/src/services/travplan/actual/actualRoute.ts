@@ -14,6 +14,7 @@ import {
   tripFlightWindows,
   type RecordingTrip,
 } from "../../tripRecording/bounds";
+import { trackGapMsFor } from "../../tripRecording/trackGap";
 import { privacySafeDevices } from "../../tripRecording/privacySafe";
 import { cachedTrack, clearTrackCache } from "./trackCache";
 import {
@@ -184,12 +185,13 @@ const coord = (p: StoredPoint): LonLat => [p[2], p[1]];
 /** Jitter-free, privacy-safe positions, device by device, each in its stretch. */
 async function positionsOf(
   devices: readonly DevicePoints[],
-  circles: readonly ZoneCircle[]
+  circles: readonly ZoneCircle[],
+  gapMs: number
 ): Promise<{ positions: ActualPosition[]; stretches: StoredPoint[][] }> {
   const positions: ActualPosition[] = [];
   const stretches: StoredPoint[][] = [];
   for (const device of devices) {
-    const clean = await withoutJitter([device]);
+    const clean = await withoutJitter([device], gapMs);
     for (const stretch of privacyCutBy(clean.segments, circles, coord)) {
       const id = stretches.length;
       stretches.push(stretch);
@@ -230,10 +232,11 @@ async function readTrack(
   const first = Math.min(...raw.map((d) => d.points[0]?.[0] ?? Infinity));
   const circles = await privacyCirclesFor(userId, Number.isFinite(first) ? first : 0);
   // Whatever a zone hides is gone before anything is counted (T5).
-  const safe = privacySafeDevices(raw, circles);
+  const gapMs = await trackGapMsFor(userId);
+  const safe = privacySafeDevices(raw, circles, gapMs);
   const safePoints = safe.flatMap((d) => d.points);
   const recorded = recordingDays(safePoints, zone);
-  const { positions, stretches } = await positionsOf(safe, circles);
+  const { positions, stretches } = await positionsOf(safe, circles, gapMs);
   return {
     // Cut again on the final, simplified line: a chord simplification makes is checked as it leaves.
     segments: privacyCut(displaySegments(stretches), circles),

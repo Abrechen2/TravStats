@@ -10,6 +10,7 @@ import {
   type BusGeometryReport,
   type BusLine,
 } from "./busRouting";
+import type { BusLineMiss } from "./transitousBusLine";
 
 /**
  * Road routing for rides that exist already (spec §5, B3). Every ride logged
@@ -28,6 +29,10 @@ export const BUS_ROUTE_ALL_MAX_RIDES = 200;
 /** Failures that will repeat for every following ride; the pass stops on them. */
 const STOP_REASONS: readonly RouteFallbackReason[] = ["rate_limited", "auth", "no_provider"];
 
+/** A courtesy gap between rides, so a bulk pass does not hit Transitous in a burst. */
+export const BUS_ROUTE_ALL_PAUSE_MS = 250;
+const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export type BusRouteOutcome = BusGeometryReport["outcome"];
 
 const ROUTE_SELECT = {
@@ -36,6 +41,8 @@ const ROUTE_SELECT = {
   depLon: true,
   arrLat: true,
   arrLon: true,
+  lineName: true,
+  departureTime: true,
   geometrySource: true,
   distanceKm: true,
   distanceSource: true,
@@ -57,11 +64,21 @@ export async function routeStraightRide(
   });
   if (!ride) return null;
   if (ride.geometrySource !== "straight") {
-    return { outcome: "unchanged", geometrySource: ride.geometrySource, fallback: null };
+    return {
+      outcome: "unchanged",
+      geometrySource: ride.geometrySource,
+      fallback: null,
+      lineMiss: null,
+    };
   }
   const line = await fetchLine(ride);
-  if (line.geometrySource !== "road" || line.routedKm === null) {
-    return { outcome: "straight", geometrySource: "straight", fallback: line.fallback };
+  if (line.geometrySource === "straight" || line.routedKm === null) {
+    return {
+      outcome: "straight",
+      geometrySource: "straight",
+      fallback: line.fallback,
+      lineMiss: line.lineMiss,
+    };
   }
   // The road line is a shared fact of a ride on a shared trip: the members'
   // copies follow it (design 2026-10-09), so the state before the write is
@@ -97,9 +114,14 @@ export async function routeStraightRide(
     return result.count === 1;
   });
   if (!written) {
-    return { outcome: "unchanged", geometrySource: "straight", fallback: null };
+    return { outcome: "unchanged", geometrySource: "straight", fallback: null, lineMiss: null };
   }
-  return { outcome: "routed", geometrySource: "road", fallback: null };
+  return {
+    outcome: "routed",
+    geometrySource: line.geometrySource,
+    fallback: null,
+    lineMiss: line.lineMiss,
+  };
 }
 
 export interface BusRouteAllResult {
@@ -113,7 +135,12 @@ export interface BusRouteAllResult {
   remaining: number;
   /** Why the pass stopped before the end; null when it ran through. */
   stoppedBy: RouteFallbackReason | null;
-  rides: Array<{ id: string; outcome: BusRouteOutcome; fallback: RouteFallbackReason | null }>;
+  rides: Array<{
+    id: string;
+    outcome: BusRouteOutcome;
+    fallback: RouteFallbackReason | null;
+    lineMiss: BusLineMiss | null;
+  }>;
 }
 
 /** The running bulk job of this user, if any — a second click joins it. */
@@ -153,12 +180,20 @@ async function routeAll(
     result.attempted += 1;
     if (report.outcome === "routed") result.routed += 1;
     if (report.outcome === "straight") result.straight += 1;
-    result.rides.push({ id, outcome: report.outcome, fallback: report.fallback });
-    if (report.fallback && STOP_REASONS.includes(report.fallback)) {
-      result.stoppedBy = report.fallback;
+    result.rides.push({
+      id,
+      outcome: report.outcome,
+      fallback: report.fallback,
+      lineMiss: report.lineMiss,
+    });
+    // Transitous asked us to slow down: the pass stops instead of hammering it.
+    const stop = report.lineMiss === "rate_limited" ? "rate_limited" : report.fallback;
+    if (stop && STOP_REASONS.includes(stop)) {
+      result.stoppedBy = stop;
       result.remaining += batch.length - index - 1;
       break;
     }
+    await pause(BUS_ROUTE_ALL_PAUSE_MS);
   }
   reportProgress(batch.length, batch.length);
   return result;
