@@ -3,6 +3,7 @@ import { prisma } from "../../db";
 import { AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { settingsLimiter } from "../../middleware/rateLimit";
+import { monthsOnTrackGapChanged } from "../../services/travtrack/months/gapChange";
 import { putTrackGapSchema } from "../../schemas/trackGap";
 import {
   DEFAULT_TRACK_GAP_MINUTES,
@@ -50,11 +51,23 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         "VALIDATION_FAILED"
       );
     }
-    const row = await prisma.userSettings.upsert({
-      where: { userId: req.userId! },
-      create: { userId: req.userId!, data: {}, trackGapMinutes: parsed.data.minutes },
-      update: { trackGapMinutes: parsed.data.minutes },
-      select: { trackGapMinutes: true },
+    // Written with the invalidation: a month value built from the old cuts must
+    // never outlive the setting that decides them.
+    const row = await prisma.$transaction(async (tx) => {
+      const before = await tx.userSettings.findUnique({
+        where: { userId: req.userId! },
+        select: { trackGapMinutes: true },
+      });
+      const saved = await tx.userSettings.upsert({
+        where: { userId: req.userId! },
+        create: { userId: req.userId!, data: {}, trackGapMinutes: parsed.data.minutes },
+        update: { trackGapMinutes: parsed.data.minutes },
+        select: { trackGapMinutes: true },
+      });
+      if (clampTrackGapMinutes(before?.trackGapMinutes) !== saved.trackGapMinutes) {
+        await monthsOnTrackGapChanged(tx, req.userId!);
+      }
+      return saved;
     });
     res.json(view(row.trackGapMinutes));
   } catch (error) {

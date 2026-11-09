@@ -96,6 +96,9 @@ export async function routeStraightRide(
         id: ride.id,
         userId,
         geometrySource: "straight",
+        // The timetable match rests on these two as much as on the terminals.
+        lineName: ride.lineName,
+        departureTime: ride.departureTime,
         depLat: ride.depLat,
         depLon: ride.depLon,
         arrLat: ride.arrLat,

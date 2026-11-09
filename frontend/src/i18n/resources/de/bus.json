@@ -369,7 +369,8 @@
       "rate_limited": "Der Fahrplan-Dienst (Transitous) bittet um weniger Anfragen; versuche es später noch einmal.",
       "timeout": "Der Fahrplan-Dienst (Transitous) hat nicht rechtzeitig geantwortet.",
       "unavailable": "Der Fahrplan-Dienst (Transitous) ist gerade nicht erreichbar."
-    }
+    },
+    "savedKeptLine": "Gespeichert. Die Linie konnte nicht neu aus dem Fahrplan geholt werden: {{reason}} Die gespeicherte Linie bleibt."
   },
   "import": {
     "title": "Busticket einlesen",

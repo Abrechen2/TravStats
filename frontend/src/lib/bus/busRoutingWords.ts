@@ -75,6 +75,9 @@ export function saveGeometryNotice(
   if (report && miss && report.outcome === "straight" && report.fallback === "no_provider") {
     return { key: "bus:routing.savedStraightNoLine", reasonKey: miss };
   }
+  if (report && miss && report.outcome === "kept") {
+    return { key: "bus:routing.savedKeptLine", reasonKey: miss };
+  }
   if (!report || report.fallback === null || report.fallback === "no_provider") return null;
   if (report.outcome === "straight") {
     return { key: "bus:routing.savedStraight", reasonKey: fallbackReasonKey(report.fallback) };

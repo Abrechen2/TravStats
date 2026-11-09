@@ -48,6 +48,25 @@ describe("settings — track gap", () => {
     expect(await trackGapMsFor(userId)).toBe(45 * 60_000);
   });
 
+  it("changing the gap owes the month values again; setting the same gap does not", async () => {
+    await prisma.travTrackMonthValue.create({
+      data: {
+        userId,
+        month: new Date("2026-10-01"),
+        kmGround: 1,
+        countries: [],
+        daysWithData: 1,
+        daysPaused: 0,
+        algorithm: 1,
+      },
+    });
+    const count = () => prisma.travTrackMonthValue.count({ where: { userId } });
+    await request(app).put(PATH).set("Cookie", cookie).send({ minutes: 120 }).expect(200);
+    expect(await count()).toBe(1);
+    await request(app).put(PATH).set("Cookie", cookie).send({ minutes: 60 }).expect(200);
+    expect(await count()).toBe(0);
+  });
+
   it("PUT refuses an out-of-range or fractional value instead of clamping silently", async () => {
     for (const minutes of [0, 4, 721, 30.5, "30"]) {
       const res = await request(app).put(PATH).set("Cookie", cookie).send({ minutes });
