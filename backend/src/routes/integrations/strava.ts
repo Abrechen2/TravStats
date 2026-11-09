@@ -32,6 +32,7 @@ import { resolveRoute } from "../trips/tourRoutes";
 import { resolveTrip } from "../trips/resolveTrip";
 import logger from "../../utils/logger";
 import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 
 /**
  * Strava (2.7, design 2026-09-24 §5).
@@ -290,6 +291,7 @@ router.post(
       // Fetch first: a failed Strava call must not leave an empty tour behind.
       const fetched = await fetchActivityTrack(token, activityId);
       const mapped = activityFromSportType(fetched.sportType);
+      await ensureTourDomainEnabled(userId);
       // share-exempt: a Strava import is a tour — only roadtrips are shared
       const route = await prisma.tripRoute.create({
         data: {

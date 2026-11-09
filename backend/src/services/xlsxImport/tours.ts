@@ -38,6 +38,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { ensureTourDomainEnabled } from "../domainVisibility";
 
 /** A created tour's leg mode when the sheet names none: wheels for a ride, feet otherwise. */
 function modeFor(activity: string | undefined): string {
@@ -211,6 +212,7 @@ async function createTour(
     orderBy: { orderIdx: "desc" },
     select: { orderIdx: true },
   });
+  await ensureTourDomainEnabled(userId);
   // share-exempt: tour sheet — only roadtrips are shared
   const created = await prisma.tripRoute.create({
     data: {

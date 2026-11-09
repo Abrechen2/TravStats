@@ -8,6 +8,7 @@ import { filterParsedTrack } from "../../tracks/recordingJitter";
 import { ingestedTrackColumns } from "./trackRow";
 import { readArchiveBlock, restoredTrackColumns, type ArchiveBlock } from "./gpxArchive";
 import { prefillTourDateFromTrack } from "../tourDay";
+import { ensureTourDomainEnabled } from "../../domainVisibility";
 
 /**
  * Recordings from files — one GPX/TCX/FIT, or many out of a ZIP — each placed
@@ -219,6 +220,7 @@ export async function importTrackArchive(
     let createdTour = false;
     if (!route && create) {
       createdTour = true;
+      if (!dryRun) await ensureTourDomainEnabled(userId);
       route = dryRun
         ? { id: `${PENDING}${file.name}`, name: create.name }
         : // share-exempt: an archive import makes tours — only roadtrips are shared
