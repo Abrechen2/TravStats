@@ -192,3 +192,18 @@ None blocking. The `knownDomains` guard is a coordinator call.
 - Open for the owner/coordinator: federation version skew (a trip with a tour offered to a pre-T1b server
   fails there); a recipient who converts a shared copy to the other type creates a second route for the
   sender (same rule as for any member).
+
+## Open for the Companion (T4)
+
+Not handed over yet: on 2026-11-10 the `travstats-companion` tmux pane ran a
+bare shell, no Claude session. Hand-over when it is back:
+
+- Branch `feat/tours-domain` @ 80f601cdb on forgejo (T1, T1b, T2, T3 in).
+- Contract: `enabledDomains` may contain `"tour"`; send `knownDomains` with
+  every settings write once the app knows the key (absent = old client, the
+  server keeps `tour`). Sync tombstones tours when `tour` is switched off and
+  re-sends them when it is switched on. `GET /tours` unchanged.
+- Show tours as a domain (nav, list, detail, domain switch), gated by domain
+  AND the `roadtrips` beta key.
+- Minimum server version: the release that carries T1. Federation: a trip
+  with a tour offered to a pre-T1b server is rejected there (unknown entity).
