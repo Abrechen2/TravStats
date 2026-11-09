@@ -23,7 +23,11 @@ import { getDawarichConnection } from "../../services/dawarich/dawarichResolver"
 import { DawarichError } from "../../services/dawarich/errors";
 import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
-import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
+import {
+  propagateWrite,
+  shareSnapshot,
+  SHARE_TX_TIMEOUT_MS,
+} from "../../services/sharing/propagate";
 import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
 import { filterParsedTrack } from "../../services/tracks/recordingJitter";
 import { jitterModeOfRoute } from "../../services/tracks/tourJitterMode";
@@ -272,7 +276,6 @@ router.post(
       }
 
       const source = trackSource.parse(fields.data.origin ?? file.format);
-      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
       // A Companion workout is named on the phone in the phone's zone; its
       // clock is re-read at the track's first point (`workoutName.ts`).
       const workoutName = fields.data.origin
@@ -280,19 +283,39 @@ router.post(
         : null;
       let track;
       try {
-        track = await prisma.tripRouteTrack.create({
-          data: {
-            routeId,
-            source,
-            name: workoutName ?? file.track.name,
-            ...ingestedTrackColumns(ingested),
-            externalRef: fields.data.externalRef ?? null,
-            // A file upload refuses an oversized file outright (see
-            // `handleGpxUpload` above) rather than ever storing a shortened
-            // one — always false here, unlike the Dawarich pull below.
-            truncated: false,
+        // The track, the tour's own follow-ups and their propagation commit together: a failure
+        // in the members' copies leaves nothing stored, so a retry is not a "duplicate".
+        track = await prisma.$transaction(
+          async (tx) => {
+            const routeBefore = await shareSnapshot(tx, "tour", routeId);
+            const created = await tx.tripRouteTrack.create({
+              data: {
+                routeId,
+                source,
+                name: workoutName ?? file.track.name,
+                ...ingestedTrackColumns(ingested),
+                externalRef: fields.data.externalRef ?? null,
+                // A file upload refuses an oversized file outright (see
+                // `handleGpxUpload` above) rather than ever storing a shortened
+                // one — always false here, unlike the Dawarich pull below.
+                truncated: false,
+              },
+            });
+            // The Companion made the tour under the same generated name; it follows
+            // the track unless the user has renamed it since.
+            if (workoutName && file.track.name)
+              // share-exempt: renames a tour after a recording; the propagateWrite below carries it
+              await tx.tripRoute.updateMany({
+                where: { id: routeId, name: file.track.name },
+                data: { name: workoutName },
+              });
+            // A day tour with no date takes the recording's day (D2).
+            await prefillTourDateFromTrack(routeId, created, tx);
+            await propagateWrite(tx, userId, "tour", routeId, routeBefore);
+            return created;
           },
-        });
+          { timeout: SHARE_TX_TIMEOUT_MS }
+        );
       } catch (error) {
         if (isDuplicateExternalRef(error)) {
           throw new AppError(
@@ -303,17 +326,6 @@ router.post(
         }
         throw error;
       }
-      // The Companion made the tour under the same generated name; it follows
-      // the track unless the user has renamed it since.
-      if (workoutName && file.track.name)
-        // share-exempt: renames a tour after a recording; the propagateWrite below carries it
-        await prisma.tripRoute.updateMany({
-          where: { id: routeId, name: file.track.name },
-          data: { name: workoutName },
-        });
-      // A day tour with no date takes the recording's day (D2).
-      await prefillTourDateFromTrack(routeId, track);
-      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
 
       logger.info({
         operation: "tour.track.create",
@@ -434,23 +446,29 @@ router.post(
       }
 
       const source = trackSource.parse("dawarich");
-      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
-      const track = await prisma.tripRouteTrack.create({
-        data: {
-          routeId,
-          source,
-          name: null,
-          ...ingestedTrackColumns(ingested),
-          // Reaches the stored row (and from there the API response and
-          // `TourTrackList`) rather than only the log line
-          // `dawarichClient.ts` already writes — a partial pull must not be
-          // presented with the same confidence as a complete one.
-          truncated,
+      const track = await prisma.$transaction(
+        async (tx) => {
+          const routeBefore = await shareSnapshot(tx, "tour", routeId);
+          const created = await tx.tripRouteTrack.create({
+            data: {
+              routeId,
+              source,
+              name: null,
+              ...ingestedTrackColumns(ingested),
+              // Reaches the stored row (and from there the API response and
+              // `TourTrackList`) rather than only the log line
+              // `dawarichClient.ts` already writes — a partial pull must not be
+              // presented with the same confidence as a complete one.
+              truncated,
+            },
+          });
+          // A day tour with no date takes the recording's day (D2).
+          await prefillTourDateFromTrack(routeId, created, tx);
+          await propagateWrite(tx, userId, "tour", routeId, routeBefore);
+          return created;
         },
-      });
-      // A day tour with no date takes the recording's day (D2).
-      await prefillTourDateFromTrack(routeId, track);
-      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
 
       logger.info({
         operation: "tour.track.pullDawarich",
@@ -539,9 +557,14 @@ router.delete(
       const routeId = await resolveRouteFromRequest(userId, req);
       await resolveTrack(routeId, req.params.trackId);
 
-      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
-      await prisma.tripRouteTrack.delete({ where: { id: req.params.trackId } });
-      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
+      await prisma.$transaction(
+        async (tx) => {
+          const routeBefore = await shareSnapshot(tx, "tour", routeId);
+          await tx.tripRouteTrack.delete({ where: { id: req.params.trackId } });
+          await propagateWrite(tx, userId, "tour", routeId, routeBefore);
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
 
       logger.info({ operation: "tour.track.delete", trackId: req.params.trackId, routeId });
       res.status(204).send();

@@ -184,6 +184,20 @@ describe("trip sharing — tours", () => {
     expect(tracks.map((t) => t.name)).toEqual(["Lauf 8", "Lauf 16"]);
   });
 
+  it("a track deleted through the API leaves the member's copy too, and one stored twice is one track", async () => {
+    await track(tourId, 12);
+    await share();
+    expect((await bensRoutes("tour"))[0].tracks).toHaveLength(2);
+    const gone = await prisma.tripRouteTrack.findFirstOrThrow({
+      where: { routeId: tourId, name: "Lauf 8" },
+    });
+    await request(app)
+      .delete(`/api/v1/tours/${tourId}/tracks/${gone.id}`)
+      .set("Cookie", anna.cookie)
+      .expect(204);
+    expect((await bensRoutes("tour"))[0].tracks.map((t) => t.name)).toEqual(["Lauf 12"]);
+  });
+
   it("keeps a track Ben recorded himself when Anna changes another one", async () => {
     await share();
     const mine = await bensRoutes("tour");

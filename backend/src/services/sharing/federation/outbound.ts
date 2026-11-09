@@ -154,7 +154,14 @@ export async function queueFactUpdate(
       .filter((field) => !sameFact(b[field], a[field]))
       .map((field) => ({ field, before: b[field], after: a[field] }));
     // A line too long for one message travels without it — a stated loss (spec §4), logged.
-    if (tooLarge(changes)) changes = changes.filter((ch) => !GEOMETRY_FACTS.has(ch.field));
+    if (tooLarge(changes)) {
+      const kept = changes.filter((ch) => !GEOMETRY_FACTS.has(ch.field));
+      logger.warn(
+        { operation: "trip_share_update_geometry_dropped", entity, groupId: spread.groupId },
+        "A change carries lines too long for one message; they are not sent"
+      );
+      changes = kept;
+    }
     if (changes.length === 0) return null;
     // Still too large: queued all the same, so the delivery parks it as `too-large` and the trip
     // page names the entry — a change dropped here would vanish without a word.

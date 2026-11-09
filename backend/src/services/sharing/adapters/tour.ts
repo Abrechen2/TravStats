@@ -8,7 +8,7 @@ import {
   pickFacts,
   tourFacts,
   tourTrackFacts,
-  trackKeys,
+  trackKey,
   type TourFactField,
 } from "../facts";
 import {
@@ -28,7 +28,7 @@ import { plainData, type EntityAdapter, type SharedRow } from "./types";
  * HealthKit workout), the tour's anchor station, notes, tags, odometer, expenses — and everything
  * of the trip around it.
  *
- * A track has no share key column; its identity is derived (`trackKeys`: source and span), the
+ * A track has no share key column; its identity is derived (`trackKey`: source and span), the
  * same on both sides of a copy. Tracks are matched by it. A track the sender dropped is removed
  * from a copy only when the change says the sender HAD it (`previous`): a copy never loses a track
  * it was not told about, and a track the member recorded themselves is theirs.
@@ -51,8 +51,13 @@ type TourRow = RouteWithParts & { tracks: Prisma.TripRouteTrackGetPayload<object
 async function tourRows(c: DbTransaction, rows: TourRow[]): Promise<SharedRow[]> {
   const parts = await partsOf(c, rows);
   return rows.map((row) => {
-    const keys = trackKeys(row.tracks);
-    const tracks: TrackWire[] = row.tracks.map((t, i) => ({ key: keys[i], ...tourTrackFacts(t) }));
+    const seen = new Set<string>();
+    const tracks: TrackWire[] = row.tracks.flatMap((t) => {
+      const key = trackKey(t);
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [{ key, ...tourTrackFacts(t) }];
+    });
     return {
       id: row.id,
       userId: row.userId,
@@ -89,8 +94,8 @@ async function writeTracks(
     where: { routeId },
     orderBy: [{ startedAt: "asc" }, { id: "asc" }],
   });
-  const ownKeys = trackKeys(current);
-  const byKey = new Map(current.map((t, i) => [ownKeys[i], t.id]));
+  const byKey = new Map<string, string>();
+  for (const t of current) if (!byKey.has(trackKey(t))) byKey.set(trackKey(t), t.id);
   for (const track of tracks) {
     const data = trackData(track);
     const id = byKey.get(track.key);

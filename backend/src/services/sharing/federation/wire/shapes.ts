@@ -422,6 +422,9 @@ export const ROADTRIP_SHAPE = {
   routeLegs: C.list(C.object(ROADTRIP_LEG_SHAPE), 800),
 } as const satisfies Shape<RoadtripFactField | "stations" | "routeLegs">;
 
+/** The most recorded tracks one tour carries on the wire (the receiver refuses more). */
+export const TOUR_MAX_TRACKS = 60;
+
 export const TOUR_TRACK_SHAPE = {
   key: C.text(200),
   source: C.text(40),
@@ -450,7 +453,7 @@ export const TOUR_SHAPE = {
   tourStartMinute: C.optInt,
   stations: C.list(C.object(ROADTRIP_STATION_SHAPE), 400),
   routeLegs: C.list(C.object(ROADTRIP_LEG_SHAPE), 800),
-  tracks: C.list(C.object(TOUR_TRACK_SHAPE), 60),
+  tracks: C.list(C.object(TOUR_TRACK_SHAPE), TOUR_MAX_TRACKS),
 } as const satisfies Shape<TourFactField | "stations" | "routeLegs" | "tracks">;
 
 /** The trip's own facts, as an offer carries them (`TRIP_FACT_FIELDS`). */

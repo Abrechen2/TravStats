@@ -60,15 +60,10 @@ export function tourTrackFacts(row: Pick<TripRouteTrack, TourTrackFactField>) {
   return pickFacts(row, TOUR_TRACK_FACT_FIELDS);
 }
 
-/** The identity of each track of one tour, in order; a repeated recording gets a `#n` suffix. */
-export function trackKeys(
-  tracks: readonly Pick<TripRouteTrack, "source" | "startedAt" | "endedAt">[]
-): string[] {
-  const seen = new Map<string, number>();
-  return tracks.map((t) => {
-    const base = `${t.source}|${t.startedAt.getTime()}|${t.endedAt.getTime()}`;
-    const n = seen.get(base) ?? 0;
-    seen.set(base, n + 1);
-    return n === 0 ? base : `${base}#${n}`;
-  });
-}
+/**
+ * The identity of a track: its source and span. Two rows of one tour with the same identity are one
+ * recording imported twice; the adapter carries the first only (`tourRows`), so the key is a
+ * function of the data and never of row order.
+ */
+export const trackKey = (t: Pick<TripRouteTrack, "source" | "startedAt" | "endedAt">): string =>
+  `${t.source}|${t.startedAt.getTime()}|${t.endedAt.getTime()}`;

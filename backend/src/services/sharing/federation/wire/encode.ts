@@ -22,6 +22,7 @@ import {
   ENTRY_SHAPES,
   type AirportRef,
   type EntryWireRef,
+  TOUR_MAX_TRACKS,
   type StationRef,
   type WireEntry,
 } from "./shapes";
@@ -205,9 +206,10 @@ const ENTRY_BYTES = 262_144 - 16_384;
  */
 function fitTracks(entity: ShareEntity, shareKey: string, facts: Facts): Facts {
   if (entity !== "tour" || !Array.isArray(facts.tracks)) return facts;
-  let tracks = facts.tracks as unknown[];
+  let tracks = (facts.tracks as unknown[]).slice(0, TOUR_MAX_TRACKS);
   const size = (t: unknown[]) => JSON.stringify({ ...facts, tracks: t }).length;
-  if (size(tracks) <= ENTRY_BYTES) return facts;
+  const capped = tracks.length < (facts.tracks as unknown[]).length;
+  if (!capped && size(tracks) <= ENTRY_BYTES) return facts;
   while (tracks.length > 0 && size(tracks) > ENTRY_BYTES) tracks = tracks.slice(0, -1);
   logger.warn(
     { operation: "trip_share_tracks_trimmed", shareKey, kept: tracks.length },

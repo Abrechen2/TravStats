@@ -105,12 +105,13 @@ export function recordedDay(startedAt: Date, geometry: unknown): string | null {
  */
 export async function prefillTourDateFromTrack(
   routeId: string,
-  track: { startedAt: Date; geometry: unknown }
+  track: { startedAt: Date; geometry: unknown },
+  db: Pick<typeof prisma, "tripRoute"> = prisma
 ): Promise<void> {
   const day = recordedDay(track.startedAt, track.geometry);
   if (!day) return;
   // share-exempt: a day tour's date; every caller propagates the tour after its recording is stored
-  await prisma.tripRoute.updateMany({
+  await db.tripRoute.updateMany({
     where: { id: routeId, kind: "tour", tourDate: null },
     data: { tourDate: dayColumn(day) },
   });

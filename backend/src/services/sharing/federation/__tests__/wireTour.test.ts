@@ -5,7 +5,7 @@ import { prisma } from "../../../../db";
 import { ADAPTERS } from "../../adapters";
 import { fromWireEntries } from "../wire/decode";
 import { toWireEntries } from "../wire/encode";
-import { wireEntrySchema } from "../wire/shapes";
+import { TOUR_MAX_TRACKS, wireEntrySchema } from "../wire/shapes";
 
 /**
  * A tour on the trip-share wire (tours-own-domain T1b): stops, legs and recorded tracks travel; the
@@ -65,6 +65,34 @@ describe("the wire — a tour", () => {
     expect(tracks).toHaveLength(1);
     expect(tracks[0]).toMatchObject({ name: "Morgenlauf", distanceKm: 14.2 });
     expect(row.facts).toMatchObject({ name: "Brocken", activity: "hike" });
+  });
+
+  it("sends at most the tracks the receiver accepts, and the entry still parses", async () => {
+    const u = await prisma.user.create({
+      data: { username: `wire-tour-${randomUUID().slice(0, 8)}`, passwordHash: "x" },
+    });
+    users.push(u.id);
+    const route = await prisma.tripRoute.create({
+      data: { userId: u.id, kind: "tour", name: "Viele", mode: "foot", shareKey: randomUUID() },
+    });
+    await prisma.tripRouteTrack.createMany({
+      data: Array.from({ length: TOUR_MAX_TRACKS + 1 }, (_, i) => ({
+        routeId: route.id,
+        source: "gpx",
+        startedAt: new Date(Date.UTC(2030, 5, 1, 0, i)),
+        endedAt: new Date(Date.UTC(2030, 5, 1, 0, i, 30)),
+        geometry: [[10, 54]],
+        pointCount: 1,
+        distanceKm: 1,
+      })),
+    });
+    const [entry] = await toWireEntries(
+      prisma,
+      "tour",
+      await ADAPTERS.tour.load(prisma, [route.id])
+    );
+    expect((entry.facts.tracks as unknown[]).length).toBe(TOUR_MAX_TRACKS);
+    expect(() => wireEntrySchema.parse(entry)).not.toThrow();
   });
 
   it("drops a track whose line did not fit the wire rather than copying an empty one", async () => {
