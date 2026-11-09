@@ -364,7 +364,7 @@ describe("Trip recording — /trips/:id/recording", () => {
           // Three hours later, a few hundred metres on: a gap in TIME.
           pt("2026-04-30T18:45:00Z", 35.68, 139.725),
           pt("2026-04-30T18:50:00Z", 35.68, 139.73),
-          // Five minutes later but ~60 km away: a gap in DISTANCE.
+          // Five minutes later but ~60 km away: a distance jump alone is NOT a gap.
           pt("2026-04-30T18:55:00Z", 35.68, 140.4),
           pt("2026-04-30T19:00:00Z", 35.68, 140.41),
           // Day 2 in Tokyo, after the flight's window.
@@ -374,17 +374,17 @@ describe("Trip recording — /trips/:id/recording", () => {
       }).expect(201);
     });
 
-    it("cuts the line at every gap and never joins across one", async () => {
+    it("cuts the line at every TIME gap and never joins across one; a distance jump alone does not cut", async () => {
       const res = await request(app).get(`/api/v1/trips/${tripId}/recording`).set("Cookie", cookie);
       expect(res.status).toBe(200);
       expect(res.body.summary.pointCount).toBe(9);
       const segments: Array<Array<[number, number]>> = res.body.segments;
-      expect(segments).toHaveLength(4);
+      expect(segments).toHaveLength(3);
       expect(segments[0].at(-1)).toEqual([139.72, 35.68]);
+      // 18:45 to 19:00 is one stretch although 18:55 lies ~60 km east of 18:50.
       expect(segments[1][0]).toEqual([139.725, 35.68]);
-      expect(segments[1].at(-1)).toEqual([139.73, 35.68]);
-      expect(segments[2][0]).toEqual([140.4, 35.68]);
-      expect(segments[3][0]).toEqual([135.5, 34.7]);
+      expect(segments[1].at(-1)).toEqual([140.41, 35.68]);
+      expect(segments[2][0]).toEqual([135.5, 34.7]);
     });
 
     it("lists and filters days on the trip's clock, not UTC's", async () => {
@@ -407,7 +407,7 @@ describe("Trip recording — /trips/:id/recording", () => {
       expect(day1.body.summary.pointCount).toBe(7);
       expect(day1.body.summary.lastAt.local).toBe("2026-05-01T04:00:00");
       expect(day1.body.summary.days).toHaveLength(2);
-      expect(day1.body.segments).toHaveLength(3);
+      expect(day1.body.segments).toHaveLength(2);
 
       const none = await request(app)
         .get(`/api/v1/trips/${tripId}/recording?day=2026-04-30`)
@@ -432,7 +432,7 @@ describe("Trip recording — /trips/:id/recording", () => {
       expect(res.headers["content-disposition"]).toMatch(/attachment; filename=".*\.gpx"/);
       const xml = res.text;
       expect(xml).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>\n<gpx version="1.1"/);
-      expect(xml.match(/<trkseg>/g)).toHaveLength(4);
+      expect(xml.match(/<trkseg>/g)).toHaveLength(3);
       expect(xml.match(/<trkpt /g)).toHaveLength(9);
       expect(xml).toContain(
         '<trkpt lat="35.68" lon="139.7"><time>2026-04-30T15:30:00.000Z</time></trkpt>'
