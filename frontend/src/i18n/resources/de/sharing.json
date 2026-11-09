@@ -230,6 +230,7 @@
     "ferry": "die Fährfahrt",
     "rental": "den Mietwagen",
     "roadtrip": "den Roadtrip",
+    "tour": "die Tour",
     "stop": "den Stopp"
   },
   "values": {
@@ -322,6 +323,10 @@
     "vehicleName": "Fahrzeugname",
     "stations": "Stationen",
     "routeLegs": "Streckenabschnitte",
+    "activity": "Aktivität",
+    "tourDate": "Tourtag",
+    "tourStartMinute": "Startzeit",
+    "tracks": "Aufzeichnungen",
     "operator": "Betreiber",
     "trainCategory": "Zuggattung",
     "trainNumber": "Zugnummer",
@@ -798,6 +803,8 @@
         "rentals_other": "{{count}} Mietwagen",
         "roadtrips_one": "{{count}} Roadtrip",
         "roadtrips_other": "{{count}} Roadtrips",
+        "tours_one": "{{count}} Tour",
+        "tours_other": "{{count}} Touren",
         "stops_one": "{{count}} Station",
         "stops_other": "{{count}} Stationen"
       },

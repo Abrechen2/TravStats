@@ -4,6 +4,7 @@ import { restatusTrips } from "../trip/restatusTrips";
 import { DERIVE } from "./deriveCopy";
 import { heldKeys, keyedDelegate, keyedIdsOnTrip } from "./keyOps";
 import type { ShareEntity } from "./shareTypes";
+import { loadVisibleDomains } from "../domainVisibility";
 
 /**
  * The one copy path (spec 2026-10-16, D3). Sharing a trip, propagating a new
@@ -84,6 +85,12 @@ export async function copyInto(
   source: SharedRow,
   recipient: Recipient
 ): Promise<CopyResult | null> {
+  // A recipient who cannot see tours (the domain is off for them, or the instance's beta switch
+  // is) is not handed one: nothing is copied and the caller records nothing, as for an own entry
+  // in another group. A later share of the trip brings it once they can see tours.
+  if (entity === "tour" && !(await loadVisibleDomains(recipient.userId)).includes("tour")) {
+    return null;
+  }
   const adapter = ADAPTERS[entity];
   const matches = adapter.ownMatches ? await adapter.ownMatches(c, source, recipient.userId) : [];
   if (matches.length > 0) {

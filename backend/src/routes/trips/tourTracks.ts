@@ -23,6 +23,7 @@ import { getDawarichConnection } from "../../services/dawarich/dawarichResolver"
 import { DawarichError } from "../../services/dawarich/errors";
 import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
 import { filterParsedTrack } from "../../services/tracks/recordingJitter";
 import { jitterModeOfRoute } from "../../services/tracks/tourJitterMode";
@@ -271,6 +272,7 @@ router.post(
       }
 
       const source = trackSource.parse(fields.data.origin ?? file.format);
+      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
       // A Companion workout is named on the phone in the phone's zone; its
       // clock is re-read at the track's first point (`workoutName.ts`).
       const workoutName = fields.data.origin
@@ -304,13 +306,14 @@ router.post(
       // The Companion made the tour under the same generated name; it follows
       // the track unless the user has renamed it since.
       if (workoutName && file.track.name)
-        // share-exempt: renames a tour after a recording — only roadtrips are shared
+        // share-exempt: renames a tour after a recording; the propagateWrite below carries it
         await prisma.tripRoute.updateMany({
           where: { id: routeId, name: file.track.name },
           data: { name: workoutName },
         });
       // A day tour with no date takes the recording's day (D2).
       await prefillTourDateFromTrack(routeId, track);
+      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
 
       logger.info({
         operation: "tour.track.create",
@@ -431,6 +434,7 @@ router.post(
       }
 
       const source = trackSource.parse("dawarich");
+      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
       const track = await prisma.tripRouteTrack.create({
         data: {
           routeId,
@@ -446,6 +450,7 @@ router.post(
       });
       // A day tour with no date takes the recording's day (D2).
       await prefillTourDateFromTrack(routeId, track);
+      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
 
       logger.info({
         operation: "tour.track.pullDawarich",
@@ -534,7 +539,9 @@ router.delete(
       const routeId = await resolveRouteFromRequest(userId, req);
       await resolveTrack(routeId, req.params.trackId);
 
+      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
       await prisma.tripRouteTrack.delete({ where: { id: req.params.trackId } });
+      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
 
       logger.info({ operation: "tour.track.delete", trackId: req.params.trackId, routeId });
       res.status(204).send();

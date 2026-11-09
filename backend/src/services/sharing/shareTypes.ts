@@ -9,7 +9,8 @@ import type { DomainKey } from "../../shared/domains";
  * Order is copy order. Stops come last: a stop resolves the entry it wraps by
  * share key in the recipient's account, so that entry must exist first. A
  * roadtrip sits just before them for the same reason: its stations name a stay
- * and its legs a ferry crossing, both resolved by share key.
+ * and its legs a ferry crossing, both resolved by share key. A tour sits in the
+ * same table as a roadtrip and is told apart by `kind` (`routeKind` below).
  *
  * `shareTypes.test.ts` holds this list against the database (every table with
  * a `share_key` column), against `DOMAIN_KEYS` and against the inbox labels.
@@ -23,6 +24,7 @@ export const SHARE_ENTITIES = [
   "ferry",
   "rental",
   "roadtrip",
+  "tour",
   "stop",
 ] as const;
 export type ShareEntity = (typeof SHARE_ENTITIES)[number];
@@ -54,6 +56,15 @@ export interface ShareTypeMeta {
   /** The `.travstats` kind; null while the file format does not carry the type. */
   readonly exchangeKind: ExchangeKind | null;
 }
+
+/**
+ * A roadtrip and a tour are two types over ONE table (`trip_routes`), told apart by its `kind`
+ * column. Every query that reads "the rows of this type" filters on it; a type of its own table has
+ * no such filter. Absent here: the type's rows are the whole table (or, for a stop, a trip's).
+ */
+export const ROUTE_KINDS = { roadtrip: "roadtrip", tour: "tour" } as const;
+export type RouteEntity = keyof typeof ROUTE_KINDS;
+export const isRouteEntity = (e: ShareEntity): e is RouteEntity => Object.hasOwn(ROUTE_KINDS, e);
 
 export const SHARE_TYPES = {
   flight: {
@@ -112,6 +123,14 @@ export const SHARE_TYPES = {
     countKey: "roadtrips",
     exchangeKind: "roadtrip",
   },
+  tour: {
+    domain: "tour",
+    delegate: "tripRoute",
+    table: "trip_routes",
+    countKey: "tours",
+    // The .travstats file carries roadtrips only; a tour on a trip is not in it (T1b scope).
+    exchangeKind: null,
+  },
   stop: {
     domain: null,
     delegate: "tripStop",
@@ -144,7 +163,7 @@ export const DOMAIN_SHARING: Readonly<Record<DomainKey, ShareEntity | { notShare
   rental: "rental",
   bus: "bus",
   ferry: "ferry",
-  tour: { notShared: "Tours are shared in phase T1b of tours-own-domain; exempt until then." },
+  tour: "tour",
 };
 
 /** What a copy is marked with where the table has a `dataSource` column. */

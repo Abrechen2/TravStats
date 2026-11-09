@@ -54,7 +54,7 @@ export interface Spread {
 /** Room left in a message for its header and the envelope. */
 const ROOM = BODY_BUDGET["fact-update"] - 8_192;
 /** Lines on the map: the one kind of fact that can outgrow a message on its own. */
-const GEOMETRY_FACTS = new Set(["actualRoute", "geometry"]);
+const GEOMETRY_FACTS = new Set(["actualRoute", "geometry", "tracks"]);
 
 async function targets(c: DbTransaction, spread: Spread): Promise<RemoteMemberRef[]> {
   const seen = new Map<string, RemoteMemberRef>();

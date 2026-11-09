@@ -26,6 +26,8 @@ import type {
   RoadtripFactField,
   RoadtripLegFactField,
   RoadtripStationFactField,
+  TourFactField,
+  TourTrackFactField,
   StopFactField,
   TripFactField,
 } from "../../facts";
@@ -43,6 +45,7 @@ export const CATALOGUE_REFS = {
   ferry: {},
   rental: { pickupAirportId: "pickupAirport", returnAirportId: "returnAirport" },
   roadtrip: {},
+  tour: {},
   stop: {},
 } as const satisfies Readonly<Record<ShareEntity, Readonly<Record<string, string>>>>;
 export const CRUISE_STOP_REFS = { portId: "port" } as const;
@@ -62,6 +65,7 @@ export const PSEUDO_FACTS = {
   ferry: [],
   rental: [],
   roadtrip: ["stations", "routeLegs"],
+  tour: ["stations", "routeLegs", "tracks"],
   stop: ["sourceRef", "lodgingStayRef"],
 } as const satisfies Readonly<Record<ShareEntity, readonly string[]>>;
 
@@ -82,7 +86,7 @@ export const airportRef = z.strictObject({
 /** The entry a timeline stop wraps, by its share key; resolved like locally (stops come last). */
 export const entryRef = z.strictObject({
   entity: z.enum(
-    SHARE_ENTITIES.filter((e) => e !== "stop" && e !== "roadtrip") as [
+    SHARE_ENTITIES.filter((e) => e !== "stop" && e !== "roadtrip" && e !== "tour") as [
       ShareEntity,
       ...ShareEntity[],
     ]
@@ -418,6 +422,37 @@ export const ROADTRIP_SHAPE = {
   routeLegs: C.list(C.object(ROADTRIP_LEG_SHAPE), 800),
 } as const satisfies Shape<RoadtripFactField | "stations" | "routeLegs">;
 
+export const TOUR_TRACK_SHAPE = {
+  key: C.text(200),
+  source: C.text(40),
+  name: C.optText(300),
+  startedAt: C.instant,
+  endedAt: C.instant,
+  geometry: C.geometry,
+  segmentStarts: C.geometry,
+  cumulativeKm: C.geometry,
+  pointCount: C.int,
+  jitterDropped: C.optInt,
+  distanceKm: C.num,
+  truncated: C.bool,
+  elevations: C.geometry,
+  ascentM: C.optNum,
+  descentM: C.optNum,
+  movingSeconds: C.optInt,
+} as const satisfies Shape<TourTrackFactField | "key">;
+
+export const TOUR_SHAPE = {
+  name: C.name(300),
+  mode: C.text(40),
+  orderIdx: C.int,
+  activity: C.optText(40),
+  tourDate: C.optDay,
+  tourStartMinute: C.optInt,
+  stations: C.list(C.object(ROADTRIP_STATION_SHAPE), 400),
+  routeLegs: C.list(C.object(ROADTRIP_LEG_SHAPE), 800),
+  tracks: C.list(C.object(TOUR_TRACK_SHAPE), 60),
+} as const satisfies Shape<TourFactField | "stations" | "routeLegs" | "tracks">;
+
 /** The trip's own facts, as an offer carries them (`TRIP_FACT_FIELDS`). */
 export const TRIP_SHAPE = {
   name: C.name(200),
@@ -445,6 +480,7 @@ export const ENTRY_SHAPES: Readonly<Record<ShareEntity, Readonly<Record<string, 
   ferry: FERRY_SHAPE,
   rental: RENTAL_SHAPE,
   roadtrip: ROADTRIP_SHAPE,
+  tour: TOUR_SHAPE,
   stop: STOP_SHAPE,
 };
 

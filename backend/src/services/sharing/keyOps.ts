@@ -2,7 +2,14 @@ import { randomUUID } from "crypto";
 import { recordEntryAuthor } from "./federation/entryAuthors";
 
 import type { DbTransaction } from "../../db";
-import { SHARE_ENTITIES, SHARE_TYPES, type ShareDelegate, type ShareEntity } from "./shareTypes";
+import {
+  ROUTE_KINDS,
+  SHARE_ENTITIES,
+  SHARE_TYPES,
+  isRouteEntity,
+  type ShareDelegate,
+  type ShareEntity,
+} from "./shareTypes";
 
 /**
  * Share keys, generically over the registry (spec 2026-10-16, D2): keying a
@@ -77,10 +84,14 @@ export const keyedDelegate = (c: DbTransaction, entity: ShareEntity): KeyedDeleg
  */
 const TIMELINE_STOP = { routeId: null, viaPoint: false } as const;
 
-/** Only a roadtrip is shared; a tour sits in the same table and stays private. */
-const ROADTRIP_ONLY = { kind: "roadtrip" } as const;
+/**
+ * A roadtrip and a tour are two types over one table: each sees only its own `kind`. This filter is
+ * what stops a roadtrip's key operation from keying, clearing or counting a tour (and back).
+ */
+const kindOf = (entity: ShareEntity): Where =>
+  isRouteEntity(entity) ? { kind: ROUTE_KINDS[entity] } : {};
 const onlyShareable = (entity: ShareEntity): Where =>
-  entity === "stop" ? TIMELINE_STOP : entity === "roadtrip" ? ROADTRIP_ONLY : {};
+  entity === "stop" ? TIMELINE_STOP : kindOf(entity);
 
 /** The owner's rows of `entity` filed on `tripId` (every stop of the trip for `stop`). */
 function ownedOnTrip(entity: ShareEntity, ownerId: string, tripId: string): Where {
@@ -89,7 +100,7 @@ function ownedOnTrip(entity: ShareEntity, ownerId: string, tripId: string): Wher
 
 /** Every delegate a timeline stop may wrap (`sourceId` / `lodgingStayId`). */
 export const REF_DELEGATES: readonly ShareDelegate[] = SHARE_ENTITIES.filter(
-  (e) => e !== "stop" && e !== "roadtrip"
+  (e) => e !== "stop" && !isRouteEntity(e)
 ).map((e) => SHARE_TYPES[e].delegate);
 
 /** Key the unkeyed rows of one type on the owner's trip; one uuid per row. */
@@ -179,7 +190,7 @@ export async function heldKeys(
   const where =
     entity === "stop"
       ? { tripId: recipientTripId, shareKey: { in: [...keys] } }
-      : { userId: recipientId, shareKey: { in: [...keys] } };
+      : { userId: recipientId, ...kindOf(entity), shareKey: { in: [...keys] } };
   const rows = await keyedDelegate(c, entity).findMany({
     where,
     select: { id: true, shareKey: true },
@@ -197,7 +208,7 @@ export async function sharedIdsOf(
   const rows = await keyedDelegate(c, entity).findMany({
     where: {
       ...owned,
-      ...(entity === "roadtrip" ? ROADTRIP_ONLY : {}),
+      ...kindOf(entity),
       OR: [{ shareKey: { not: null } }, { trip: { shareGroupId: { not: null } } }],
     },
     select: { id: true, shareKey: true },
@@ -212,7 +223,7 @@ export async function idsOnTrips(
   tripIds: readonly string[]
 ): Promise<string[]> {
   const rows = await keyedDelegate(c, entity).findMany({
-    where: { tripId: { in: [...tripIds] } },
+    where: { tripId: { in: [...tripIds] }, ...kindOf(entity) },
     select: { id: true, shareKey: true },
   });
   return rows.map((r) => r.id);

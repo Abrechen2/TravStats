@@ -72,7 +72,7 @@ This reverses the coordinator ruling of 2026-10-09 recorded in
 | Phase | Content | Depends on | Status |
 |---|---|---|---|
 | T1 server | registry entry (both mirrors), beta-gate registries, timeline-tour copy-on-trip-delete, enabled-domain backfill + `knownDomains` guard, `toursVisible()` → domain + beta check, sync visibility when the switch changes (tombstones/cursor), OpenAPI | — | done `81baf7d38` (2026-11-09) |
-| T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 | open |
+| T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 | done (see "T1b as built") |
 | T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 | done (see "T2 as built") |
 | T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 | done (see "T3 as built") |
 | T4 Companion | contract below; app shows tours as a domain | T1 | open |
@@ -155,3 +155,40 @@ None blocking. The `knownDomains` guard is a coordinator call.
   existed, the test pins it.
 - Follow-up: the Companion's `knownDomains` consent UI is T4.
 
+
+## T1b as built
+
+- **Registry:** `tour` is a `SHARE_TYPES` entry over `trip_routes` (`ROUTE_KINDS` / `isRouteEntity` in
+  `shareTypes.ts`): two types, one table, told apart by `kind`. `DOMAIN_SHARING.tour = "tour"`; count key
+  `tours`; `exchangeKind: null` (the `.travstats` file stays roadtrips-only, listed in `shareTypes.test.ts`).
+- **Adapter:** `adapters/tour.ts` over the route half shared with the roadtrip (`adapters/routeParts.ts`).
+  Facts: name, mode, orderIdx, activity, tourDate, tourStartMinute; pseudo-facts `stations`, `routeLegs`
+  and `tracks`. Not carried: notes, tags, odometer, expenses, anchor station, vehicle, `externalRef`
+  (Strava / HealthKit ids), row ids. A copy's tracks have `externalRef = null`.
+- **Track identity:** `trip_route_tracks` has no share key (no schema change); identity is derived from
+  source + span (`facts/tour.ts` `trackKeys`). A track the sender dropped is removed from a copy only when
+  the change's `previous` says the sender held it; a track a member recorded is theirs.
+- **Kind filter everywhere:** both adapters filter `load`/`copiesOf` by `kind`; `keyOps` filters assign,
+  keyed ids, held keys, shared ids and moved ids. Route writes that say `"roadtrip"` for "a route" are
+  dispatched by the row's kind in `propagate.ts` (`routeIdsByKind`); callers did not change.
+- **Kind switch** (`PATCH /tours/:id/kind`): the members' entry of the old type is ended (key cleared,
+  `deleted` notice, their copy stays) and the row is shared afresh as the new type with a new key. No
+  entry changes type under its key.
+- **Write paths now propagating as `tour`:** tour create (both routes), track upload / Dawarich pull /
+  delete / Strava import / archive import / jitter re-measure, point replacement (`replaceTourPoints`),
+  suggestion link. `tripRouteTrack` joined the `propagate.writePaths` table list; the stale
+  "only roadtrips are shared" exemptions were rewritten or removed.
+- **Receiver gate:** `copyInto` hands a tour only to a recipient whose `loadVisibleDomains` includes `tour`
+  (user switch AND the instance's `roadtrips` beta switch). Otherwise nothing is copied and no notice is
+  written (same contract as an own entry in another group). The tour is not backfilled later by itself;
+  a new share of the trip (`copyMissing`) brings it.
+- **Federation:** wire shape `TOUR_SHAPE` (tracks <= 60, geometry over the point budget travels as null and
+  is dropped on decode, never stored as an empty track); an entry over one message sheds trailing tracks
+  with a log line (`trip_share_tracks_trimmed`); a `fact-update` too large drops the `tracks` change like a
+  geometry. A server without T1b rejects a `tour` entry (unknown `entity`), see Open.
+- **Migration** `20261110100000_tour_share_entity_type`: widens the `share_notices_entity_type_check`
+  CHECK constraint (hand-written, not visible to Prisma; `shareVocabulary.test.ts` holds it).
+- Inbox: DE+EN entity type, fact labels (`activity`, `tourDate`, `tourStartMinute`, `tracks`), offer counts.
+- Open for the owner/coordinator: federation version skew (a trip with a tour offered to a pre-T1b server
+  fails there); a recipient who converts a shared copy to the other type creates a second route for the
+  sender (same rule as for any member).

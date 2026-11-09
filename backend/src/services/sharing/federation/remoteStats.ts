@@ -51,7 +51,7 @@ import type { WireEntry } from "./wire/shapes";
 
 /** The entry types a statistics read pages through: a stop only exists inside its trip. */
 export const STATS_ENTITIES: readonly ShareEntity[] = SHARE_ENTITIES.filter(
-  (e) => e !== "stop" && e !== "roadtrip"
+  (e) => e !== "stop" && e !== "roadtrip" && e !== "tour"
 );
 
 const NOT_SHARED: StatsReply = { kind: "stats-reply", status: "notShared" };

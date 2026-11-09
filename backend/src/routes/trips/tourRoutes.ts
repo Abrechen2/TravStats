@@ -282,7 +282,6 @@ router.post(
         select: { orderIdx: true },
       });
 
-      // share-exempt: a section made here is a tour (the column default); only roadtrips are shared
       const route = await prisma.tripRoute.create({
         data: {
           userId,
@@ -298,6 +297,9 @@ router.post(
         },
         include: ROUTE_SELECT,
       });
+
+      // A section made here is a tour (the column default): shared with the trip's members.
+      await propagateWrite(prisma, userId, "tour", route.id);
 
       logger.info({ operation: "tour.route.create", routeId: route.id, tripId: trip.id });
       res.status(201).json({ route: toDto(route) });

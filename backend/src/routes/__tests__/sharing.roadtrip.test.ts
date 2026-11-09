@@ -155,11 +155,12 @@ describe("trip sharing — roadtrips", () => {
     expect(after?.stops[1].shareKey).not.toBe(before!.stops[2].shareKey);
   });
 
-  it("a tour is never shared, only a roadtrip", async () => {
+  it("a tour does not arrive as a roadtrip (a tour is its own type; sharing.tour.test.ts)", async () => {
     await prisma.tripRoute.create({
       data: { userId: anna.id, tripId, kind: "tour", name: "Tagestour", mode: "foot" },
     });
     await share();
+    // Ben has the roadtrip domain only: the tour is not handed to an account that cannot see tours.
     expect(await prisma.tripRoute.count({ where: { userId: ben.id, kind: "tour" } })).toBe(0);
     expect(await prisma.tripRoute.count({ where: { userId: ben.id, kind: "roadtrip" } })).toBe(1);
   });

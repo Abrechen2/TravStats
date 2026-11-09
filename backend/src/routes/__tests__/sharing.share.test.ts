@@ -76,6 +76,7 @@ describe("sharing — share a trip", () => {
       ferryJourneys: 0,
       rentals: 1,
       roadtrips: 0,
+      tours: 0,
       stops: 2,
     });
 

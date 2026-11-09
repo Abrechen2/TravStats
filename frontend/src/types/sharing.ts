@@ -92,6 +92,7 @@ export interface ShareCounts {
   ferryJourneys: number;
   rentals: number;
   roadtrips: number;
+  tours: number;
   stops: number;
 }
 
@@ -119,6 +120,7 @@ export type ShareEntityType =
   | "ferry"
   | "rental"
   | "roadtrip"
+  | "tour"
   | "stop";
 
 /**

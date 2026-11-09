@@ -190,6 +190,8 @@ export type OfferCounts = Record<
 > & {
   /** Absent in an offer from a server that predates shared roadtrips (forgejo#404). */
   roadtrips?: number;
+  /** Absent in an offer from a server that predates shared tours (tours-own-domain T1b). */
+  tours?: number;
 };
 
 export interface ReceivedOffer {

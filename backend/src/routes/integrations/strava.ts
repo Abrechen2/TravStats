@@ -31,6 +31,7 @@ import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tou
 import { resolveRoute } from "../trips/tourRoutes";
 import { resolveTrip } from "../trips/resolveTrip";
 import logger from "../../utils/logger";
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
 import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 
@@ -225,6 +226,7 @@ async function importInto(routeId: string, activityId: string, fetched: FetchedA
     throw new StravaError("protocol", "This activity cannot be placed in time");
   }
   try {
+    // share-exempt: both callers propagate the tour once the track has landed
     const track = await prisma.tripRouteTrack.create({
       data: {
         routeId,
@@ -259,11 +261,10 @@ router.post(
       const routeId = await resolveRoute(userId, undefined, req.params.routeId);
       const { activityId } = importSchema.parse(req.body);
       const token = await getStravaAccessToken(userId);
-      const track = await importInto(
-        routeId,
-        activityId,
-        await fetchActivityTrack(token, activityId)
-      );
+      const fetched = await fetchActivityTrack(token, activityId);
+      const routeBefore = await shareSnapshot(prisma, "tour", routeId);
+      const track = await importInto(routeId, activityId, fetched);
+      await propagateWrite(prisma, userId, "tour", routeId, routeBefore);
       res.status(201).json({ track });
     } catch (error) {
       sendStravaError(error, res, next);
@@ -292,7 +293,7 @@ router.post(
       const fetched = await fetchActivityTrack(token, activityId);
       const mapped = activityFromSportType(fetched.sportType);
       await ensureTourDomainEnabled(userId);
-      // share-exempt: a Strava import is a tour — only roadtrips are shared
+      // share-exempt: the tour is shared once its track has landed (propagateWrite below), not empty
       const route = await prisma.tripRoute.create({
         data: {
           userId,
@@ -306,9 +307,10 @@ router.post(
       });
       try {
         const track = await importInto(route.id, activityId, fetched);
+        await propagateWrite(prisma, userId, "tour", route.id);
         res.status(201).json({ routeId: route.id, track });
       } catch (error) {
-        // share-exempt: a Strava import is a tour — only roadtrips are shared
+        // share-exempt: never shared — it is only copied after the track lands
         await prisma.tripRoute.delete({ where: { id: route.id } });
         throw error;
       }

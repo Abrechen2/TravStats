@@ -15,6 +15,7 @@ import {
 } from "../../shareTypes";
 import type { EntryRef } from "../../adapters/stop";
 import type { PortRef, ShipRef } from "../../../trip/exchange/publicHalf";
+import logger from "../../../../utils/logger";
 import { encodeShape } from "./codec";
 import {
   CATALOGUE_REFS,
@@ -121,7 +122,7 @@ const ENTITY_OF_DELEGATE = new Map<ShareDelegate, ShareEntity>(
 function entryRef(ref: unknown): EntryWireRef | null {
   const r = ref as EntryRef | null;
   const entity = r ? ENTITY_OF_DELEGATE.get(r.table) : undefined;
-  return r && entity && entity !== "stop" && entity !== "roadtrip"
+  return r && entity && entity !== "stop" && entity !== "roadtrip" && entity !== "tour"
     ? { entity, shareKey: r.key }
     : null;
 }
@@ -160,6 +161,7 @@ function withRefs(entity: ShareEntity, f: Facts, cat: Catalogue): Facts {
       return { ...f, lodging: { ...house, chain: lookup(cat.chains, house.catalogueChainId) } };
     }
     case "roadtrip":
+    case "tour":
       return {
         ...f,
         stations: (f.stations as Facts[]).map((s) => ({
@@ -185,8 +187,33 @@ export async function toWireEntries(
   return keyed.map((row) => ({
     entity,
     shareKey: row.shareKey,
-    facts: encodeShape(ENTRY_SHAPES[entity], withRefs(entity, row.facts, cat)),
+    facts: fitTracks(
+      entity,
+      row.shareKey,
+      encodeShape(ENTRY_SHAPES[entity], withRefs(entity, row.facts, cat))
+    ),
   }));
+}
+
+/** One entry must fit the smallest message that carries a whole entry (`entry-create`). */
+const ENTRY_BYTES = 262_144 - 16_384;
+
+/**
+ * A tour with more recorded lines than one message holds sends the first ones that fit and says so
+ * in the log: a stated loss (spec §4), never a message the receiver refuses. The rest stay with
+ * the sender; the receiver's copy is complete as far as it goes.
+ */
+function fitTracks(entity: ShareEntity, shareKey: string, facts: Facts): Facts {
+  if (entity !== "tour" || !Array.isArray(facts.tracks)) return facts;
+  let tracks = facts.tracks as unknown[];
+  const size = (t: unknown[]) => JSON.stringify({ ...facts, tracks: t }).length;
+  if (size(tracks) <= ENTRY_BYTES) return facts;
+  while (tracks.length > 0 && size(tracks) > ENTRY_BYTES) tracks = tracks.slice(0, -1);
+  logger.warn(
+    { operation: "trip_share_tracks_trimmed", shareKey, kept: tracks.length },
+    "A tour has more recorded tracks than one message holds; the rest are not sent"
+  );
+  return { ...facts, tracks };
 }
 
 /** The wire key a local fact travels under: a catalogue id becomes its reference (`shipId` → `ship`). */

@@ -9,6 +9,7 @@ import { ingestedTrackColumns } from "./trackRow";
 import { readArchiveBlock, restoredTrackColumns, type ArchiveBlock } from "./gpxArchive";
 import { prefillTourDateFromTrack } from "../tourDay";
 import { ensureTourDomainEnabled } from "../../domainVisibility";
+import { propagateWrite, shareSnapshot } from "../../sharing/propagate";
 
 /**
  * Recordings from files — one GPX/TCX/FIT, or many out of a ZIP — each placed
@@ -223,7 +224,7 @@ export async function importTrackArchive(
       if (!dryRun) await ensureTourDomainEnabled(userId);
       route = dryRun
         ? { id: `${PENDING}${file.name}`, name: create.name }
-        : // share-exempt: an archive import makes tours — only roadtrips are shared
+        : // share-exempt: a new tour stands alone (no trip, no group); its tracks propagate below
           await prisma.tripRoute.create({
             data: {
               userId,
@@ -239,6 +240,7 @@ export async function importTrackArchive(
     if (!route) continue;
 
     if (!dryRun) {
+      const routeBefore = await shareSnapshot(prisma, "tour", route.id);
       await prisma.tripRouteTrack.create({
         data: {
           ...(columns as Omit<
@@ -251,6 +253,7 @@ export async function importTrackArchive(
       });
       // A day tour with no date takes the recording's day (D2).
       await prefillTourDateFromTrack(route.id, columns as { startedAt: Date; geometry: unknown });
+      await propagateWrite(prisma, userId, "tour", route.id, routeBefore);
     }
     takenInRun.add(externalRef);
     takenInRun.add(`${route.id}|${externalRef}`);
