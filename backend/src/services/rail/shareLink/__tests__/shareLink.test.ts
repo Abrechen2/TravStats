@@ -86,6 +86,53 @@ describe("bookingFromConnection", () => {
     expect(train({ name: "57031", kurzText: "57031" })).toEqual([null, "57031"]);
   });
 
+  // Tester feedback 2026-11-08: a regional train was named "Zug 54876" instead of "RE 9".
+  describe("the line bahn.de prints in mittelText", () => {
+    const first = (verkehrsmittel: Record<string, string>) => {
+      const l = bookingFromConnection(
+        {
+          verbindungsAbschnitte: [
+            {
+              abfahrtsOrt: "Augsburg Hbf",
+              ankunftsOrt: "München Hbf",
+              abfahrtsZeitpunkt: "2026-10-15T08:08:00",
+              ankunftsZeitpunkt: "2026-10-15T08:54:00",
+              verkehrsmittel,
+            },
+          ],
+        },
+        null
+      )?.legs[0];
+      return [l?.trainCategory, l?.trainNumber, l?.operationalTrainNumber];
+    };
+
+    it("names a regional train by its line and keeps the train number beside it (RE, RB)", () => {
+      expect(first({ name: "54876", kurzText: "RE", mittelText: "RE 9" })).toEqual([
+        "RE",
+        "9",
+        "54876",
+      ]);
+      expect(first({ name: "57031", mittelText: "RB37" })).toEqual(["RB", "37", "57031"]);
+    });
+
+    it("leaves an ICE with its own number, with or without mittelText", () => {
+      expect(first({ name: "ICE 578", typ: "HOCHGESCHWINDIGKEITSZUEGE" })).toEqual([
+        "ICE",
+        "578",
+        "578",
+      ]);
+      expect(first({ name: "2374", mittelText: "ICE 2374" })).toEqual(["ICE", "2374", "2374"]);
+    });
+
+    it("leaves an S-Bahn named as before", () => {
+      expect(first({ name: "S 1", kurzText: "S", mittelText: "S 1" })).toEqual(["S", "1", "1"]);
+    });
+
+    it("falls back to the number alone for an answer without mittelText (old bookmarklet)", () => {
+      expect(first({ name: "54876" })).toEqual([null, "54876", "54876"]);
+    });
+  });
+
   it("keeps the trains, drops the walk, and invents no reference or price", () => {
     const b = bookingFromConnection(connection, "first");
     expect(b).toMatchObject({

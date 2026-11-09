@@ -200,23 +200,55 @@ function kindOfSection(s: Section): "vehicle" | "walk" | null {
 
 const isTrain = (s: Section): boolean => kindOfSection(s) === "vehicle";
 
-/** "ICE 578" → ICE / 578, "57031" → – / 57031; a number only when printed — never invented. */
-function trainOf(s: Section): { category: string | null; number: string | null } {
+/** Long-distance categories: their printed number IS the train's number. */
+const LONG_DISTANCE = new Set(["ICE", "IC", "EC", "ECE", "RJ", "RJX", "TGV", "NJ", "EN", "FLX"]);
+
+/**
+ * The line bahn.de prints in `mittelText` ("RE 9", "RB37"), read as category +
+ * line number. Only where `name` carries the operational train number alone
+ * ("54876"): that is the case that surfaced as "Zug 54876". An answer from an
+ * installed bookmarklet that predates `mittelText` simply has none.
+ */
+function lineOf(s: Section): { category: string; number: string; operational: string } | null {
+  const t = s.verkehrsmittel;
+  const bare = /^\d{1,6}$/.exec((t?.name ?? "").trim());
+  const line = /^([A-Za-zÄÖÜäöü]{1,5})\s*(\d{1,4}[A-Za-z]?)$/.exec((t?.mittelText ?? "").trim());
+  if (!bare || !line) return null;
+  const category = line[1].toUpperCase();
+  // A long-distance train keeps its own number; only the category is added.
+  if (LONG_DISTANCE.has(category)) return { category, number: bare[0], operational: bare[0] };
+  return { category: line[1], number: line[2], operational: bare[0] };
+}
+
+/**
+ * "ICE 578" → ICE / 578, "57031" → – / 57031; a number only when printed — never
+ * invented. A regional line from `mittelText` ("RE 9") is shown as the name and
+ * the operational number travels beside it (`operational`).
+ */
+function trainOf(s: Section): {
+  category: string | null;
+  number: string | null;
+  operational: string | null;
+} {
   const t = s.verkehrsmittel ?? {};
+  const line = lineOf(s);
+  if (line) return { category: line.category, number: line.number, operational: line.operational };
   const named = /^([A-Za-zÄÖÜäöü]{1,8})\s*(\d{1,6})$/.exec((t.name ?? "").trim());
-  if (named) return { category: named[1], number: named[2] };
+  if (named) return { category: named[1], number: named[2], operational: named[2] };
   // bahn.de names some regional trains by number alone ("57031"): that is the
   // number, not a category. A category the answer states beside it ("RB") is
   // kept; none is guessed when it states none.
   const bare = /^\d{1,6}$/.exec((t.name ?? "").trim());
   if (bare) {
     const kurz = t.kurzText?.trim() ?? "";
-    return { category: kurz && !/^\d+$/.test(kurz) ? kurz : null, number: bare[0] };
+    return {
+      category: kurz && !/^\d+$/.test(kurz) ? kurz : null,
+      number: bare[0],
+      operational: bare[0],
+    };
   }
-  return {
-    category: t.kurzText?.trim() || null,
-    number: t.nummer && /^\d{1,6}$/.test(t.nummer.trim()) ? t.nummer.trim() : null,
-  };
+  const number = t.nummer && /^\d{1,6}$/.test(t.nummer.trim()) ? t.nummer.trim() : null;
+  return { category: t.kurzText?.trim() || null, number, operational: number };
 }
 
 /** An EVA number is digits only; anything else a section names is not one. */
@@ -238,6 +270,7 @@ function legOf(s: Section): ParsedRailLeg {
     arrivalLocal: s.ankunftsZeitpunkt ? wallClock(s.ankunftsZeitpunkt) : null,
     trainCategory: train.category,
     trainNumber: train.number,
+    operationalTrainNumber: train.operational,
     coach: null,
     seat: null,
     direction: null,

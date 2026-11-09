@@ -46,6 +46,22 @@ const fragmentOf = (target: string | null): string => {
 };
 
 describe("the „In TravStats übernehmen“ bookmarklet (forgejo#204)", () => {
+  it("carries a section's line (mittelText) over, so a regional train is not just a number", async () => {
+    const run = await runOn(`https://www.bahn.de/buchung/start?vbid=${VBID}`, () =>
+      json({
+        verbindungsAbschnitte: [
+          {
+            abfahrtsOrt: "Augsburg Hbf",
+            ankunftsOrt: "München Hbf",
+            verkehrsmittel: { name: "54876", kurzText: "RE", mittelText: "RE 9" },
+          },
+        ],
+      })
+    );
+    const decoded = decodeBahnHandoff(fragmentOf(run.target));
+    expect(JSON.stringify(decoded)).toContain('"mittelText":"RE 9"');
+  });
+
   it("fetches the connection same-origin on bahn.de and hands it over in the fragment", async () => {
     const run = await runOn(
       `https://www.bahn.de/buchung/start?vbid=${VBID.replace(/-/g, "%2D")}`,

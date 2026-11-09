@@ -36,6 +36,11 @@ export interface ParsedRailLeg {
   arrivalLocal: string | null;
   trainCategory: string | null;
   trainNumber: string | null;
+  /**
+   * The operational train number when `trainNumber` is a LINE number (a bahn.de
+   * "RE 9" is shown as the name; "54876" is the train). Not stored on a journey.
+   */
+  operationalTrainNumber?: string | null;
   coach: string | null;
   seat: string | null;
   /** "Hinfahrt" / "Rückfahrt" when the document sections its legs. */

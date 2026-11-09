@@ -45,6 +45,7 @@ const section = z.object({
     .object({
       name: text(60),
       kurzText: text(30),
+      mittelText: text(60),
       nummer: text(20),
       typ: text(40),
       produktGattung: text(40),
