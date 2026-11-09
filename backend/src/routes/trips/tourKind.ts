@@ -10,6 +10,7 @@ import {
   shareSnapshot,
   SHARE_TX_TIMEOUT_MS,
 } from "../../services/sharing/propagate";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { resolveRoute, toDto, ROUTE_SELECT } from "./tourRoutes";
 
 /**
@@ -37,6 +38,9 @@ router.patch(
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, undefined, req.params.routeId);
       const body = kindSwitchSchema.parse(req.body);
+      // The tour page is gated by the user's domain list: a tour made by
+      // conversion must not stay invisible in an account that never switched it on.
+      if (body.kind === "tour") await ensureTourDomainEnabled(userId);
 
       // A roadtrip is shared with the trip's members, a tour never: the switch can make one.
       const route = await prisma.$transaction(

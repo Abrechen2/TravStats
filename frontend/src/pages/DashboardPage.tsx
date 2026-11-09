@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToursAccess } from "../hooks/useToursVisible";
+import { useBetaFeatureAccess } from "../hooks/useBetaFeatures";
 import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
@@ -43,11 +44,13 @@ export default function DashboardPage(): JSX.Element {
   const ferryVisible = useDomainVisible("ferry");
   const rentalVisible = useDomainVisible("rental");
   const toursAccess = useToursAccess();
-  // Tours have no domain to be "enabled"/"disabled" — only the instance-level
-  // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
-  // a cold load; treating that as "denied" would redirect a direct
-  // `/dashboard/tour` load away before the flag has even answered, the exact
-  // /dashboard/poi bug below.
+  // Tours are a domain since 2026-11-09: the user's switch AND the roadtrips
+  // beta key. The roadtrip tab (the same TourTab, another kind) answers to the
+  // beta key and its own domain guard only. Both are three-state: the flag is
+  // `null` for one request on a cold load, and treating that as "denied" would
+  // redirect a direct `/dashboard/tour` load away before it has answered, the
+  // exact /dashboard/poi bug below.
+  const roadtripBetaAccess = useBetaFeatureAccess("roadtrips");
   // Counts live in a module-level Zustand store, not `useState` here --
   // `App.tsx` keys its animated `Routes` on `location.pathname`, so
   // `/dashboard/flight` -> `/dashboard/cruise` remounts this component on
@@ -189,8 +192,10 @@ export default function DashboardPage(): JSX.Element {
   if (tab === "poi" && placesAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
-  // Same for the tour and roadtrip tabs behind the roadtrips beta key.
-  if ((tab === "tour" || tab === "roadtrip") && toursAccess === "denied") {
+  if (
+    (tab === "tour" && toursAccess === "denied") ||
+    (tab === "roadtrip" && roadtripBetaAccess === "denied")
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
   return (

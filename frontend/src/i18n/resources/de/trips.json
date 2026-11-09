@@ -645,7 +645,22 @@
       "claimedMeanwhile": "Ein Halt wurde gerade von einer anderen Änderung einem Abschnitt zugeordnet. Nichts wurde gespeichert – versuche es noch einmal."
     },
     "searchPlaceholder": "Touren suchen …",
-    "searchEmpty": "Keine Tour passt zu „{{q}}“."
+    "searchEmpty": "Keine Tour passt zu „{{q}}“.",
+    "move": {
+      "action": "Reise zuordnen",
+      "detach": "Von Reise lösen",
+      "title": "Tour „{{name}}“ einer Reise zuordnen",
+      "confirm": "Zuordnen",
+      "tripLabel": "Reise",
+      "pick": "Reise wählen …",
+      "noTrips": "Es gibt noch keine Reise, der die Tour zugeordnet werden könnte.",
+      "loadError": "Die Reisen konnten nicht geladen werden.",
+      "error": "Die Tour konnte nicht verschoben werden.",
+      "timelineError": "Diese Tour ist über die Stationen der Reise gezeichnet und kann nicht von ihr gelöst oder einer anderen Reise zugeordnet werden.",
+      "photosTitle": "Fotos von den Stationen lösen?",
+      "photosError": "An den Stationen dieser Tour hängen Fotos einer Reise. Die Fotos bleiben bei der Reise, müssen für den Wechsel aber von den Stationen gelöst werden.",
+      "detachPhotosConfirm": "Fotos lösen und fortfahren"
+    }
   },
   "head": {
     "days_one": "{{count}} Tag",

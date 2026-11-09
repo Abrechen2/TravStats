@@ -16,7 +16,17 @@ export function useToursVisible(): boolean {
   return (stored ?? []).includes("tour") && isFeatureVisible("roadtrips");
 }
 
-/** Three-state for route guards: `pending` while the instance flag is unknown. */
+/**
+ * Three-state for route guards: `pending` while the instance flag or the user's
+ * settings are still unknown, `denied` when the beta key is closed or the user
+ * switched tours off. Roadtrip surfaces that share the beta key but not the
+ * domain ask `useBetaFeatureAccess("roadtrips")` themselves.
+ */
 export function useToursAccess(): BetaFeatureAccess {
-  return useBetaFeatureAccess("roadtrips");
+  const beta = useBetaFeatureAccess("roadtrips");
+  const stored = useSettingsStore((s) => s.enabledDomains);
+  const loaded = useSettingsStore((s) => s.enabledDomainsLoaded);
+  if (beta === "denied") return "denied";
+  if (beta === "pending" || !loaded) return "pending";
+  return (stored ?? []).includes("tour") ? "allowed" : "denied";
 }

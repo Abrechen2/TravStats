@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { useToastStore } from "../../store/toastStore";
+import { useSettingsStore } from "../../store/settingsStore";
 
 /**
  * The rule's decisions, shown once for the owner to correct (design
@@ -54,7 +55,13 @@ export default function KindReviewNotice({
           kind: row.kind === "tour" ? "roadtrip" : "tour",
         });
       setRows((prev) => prev.filter((r) => r.id !== row.id));
-      if (action === "switch") onChanged();
+      if (action === "switch") {
+        // A row that became a tour: the server turned the tour domain on for it,
+        // and the client's copy of the user's domains must follow or the tour
+        // page stays hidden.
+        if (row.kind !== "tour") void useSettingsStore.getState().loadRemoteSettings();
+        onChanged();
+      }
     } catch {
       addToast("error", t("roadtrips:review.error"));
     } finally {

@@ -14,6 +14,8 @@ import { SELECTABLE_LEG_MODES, type LegMode } from "../types/tour";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import TourTripDialog from "../components/Tours/TourTripDialog";
+import { moveTourToTrip } from "../components/Tours/tourTripMove";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 
 const DEFAULT_MODE: LegMode = "road";
@@ -61,6 +63,8 @@ export default function ToursPage(): JSX.Element {
   const [saveTried, setSaveTried] = useState(false);
   const showNameMissing = saveTried && !newName.trim();
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
+  const [photoOptIn, setPhotoOptIn] = useState<TourSummary | null>(null);
+  const [movingTour, setMovingTour] = useState<TourSummary | null>(null);
   const [costsBlock, setCostsBlock] = useState<{ tour: TourSummary; count: number } | null>(null);
 
   const mountedRef = useRef(true);
@@ -132,6 +136,15 @@ export default function ToursPage(): JSX.Element {
       if (count !== null) setCostsBlock({ tour, count });
       else addToast("error", t("trips:tours.deleteError"));
     }
+  };
+
+  // Detach is one click and needs no dialog; a refusal is shown, never swallowed.
+  const handleDetach = async (tour: TourSummary, detachPhotos = false): Promise<void> => {
+    const result = await moveTourToTrip(tour.id, null, { detachPhotos });
+    if (!mountedRef.current) return;
+    if (result.ok) await load();
+    else if (result.canDetachPhotos) setPhotoOptIn(tour);
+    else addToast("error", t(`trips:${result.errorKey}`));
   };
 
   const isLoading = tours === null && !loadError;
@@ -332,6 +345,23 @@ export default function ToursPage(): JSX.Element {
                   {tour.ascentM !== null && <span>↑ {formatKm(tour.ascentM)} m</span>}
                 </span>
               </Link>
+              {tour.tripId === null ? (
+                <button
+                  type="button"
+                  className="shrink-0 text-xs underline"
+                  onClick={() => setMovingTour(tour)}
+                >
+                  {t("trips:tours.move.action")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="shrink-0 text-xs underline"
+                  onClick={() => void handleDetach(tour)}
+                >
+                  {t("trips:tours.move.detach")}
+                </button>
+              )}
               <button
                 type="button"
                 className="shrink-0 text-xs underline"
@@ -342,6 +372,32 @@ export default function ToursPage(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+
+      {movingTour && (
+        <TourTripDialog
+          tour={movingTour}
+          onClose={() => setMovingTour(null)}
+          onMoved={() => {
+            setMovingTour(null);
+            void load();
+          }}
+        />
+      )}
+
+      {photoOptIn && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setPhotoOptIn(null)}
+          onConfirm={() => {
+            const tour = photoOptIn;
+            setPhotoOptIn(null);
+            void handleDetach(tour, true);
+          }}
+          title={t("trips:tours.move.photosTitle")}
+          message={t("trips:tours.move.photosError")}
+          confirmText={t("trips:tours.move.detachPhotosConfirm")}
+        />
       )}
 
       {costsBlock && (

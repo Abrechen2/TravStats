@@ -297,7 +297,7 @@ describe("Roadtrips", () => {
     expect(res.status).toBe(404);
   });
 
-  it("moves only a roadtrip between trips", async () => {
+  it("moves a roadtrip between trips, and a trip-less tour too (tours-own-domain T2)", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Sommer im Norden" } });
     const moved = await request(app)
       .patch(`/api/v1/tours/${roadtripId}`)
@@ -310,11 +310,12 @@ describe("Roadtrips", () => {
       .post("/api/v1/tours")
       .set("Cookie", cookie)
       .send({ name: "Runde", mode: "foot" });
-    const refused = await request(app)
+    const tourMoved = await request(app)
       .patch(`/api/v1/tours/${tour.body.route.id}`)
       .set("Cookie", cookie)
       .send({ tripId: trip.id });
-    expect(refused.status).toBe(400);
+    expect(tourMoved.status).toBe(200);
+    expect(tourMoved.body.route.tripId).toBe(trip.id);
   });
 
   it("switches a row's kind and clears the automatic flag; confirm clears it too", async () => {

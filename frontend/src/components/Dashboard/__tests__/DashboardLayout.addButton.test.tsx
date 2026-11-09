@@ -26,6 +26,11 @@ import { MemoryRouter } from "react-router-dom";
  */
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
+const mockNavigate = vi.hoisted(() => vi.fn());
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => mockNavigate,
+}));
 // The flight forms ask the user's logbook for suggestions over the network;
 // these tests pin other wiring and must reach none.
 vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
@@ -116,6 +121,7 @@ function renderAt(
 
 beforeEach(() => {
   mockUseDashboardRoute.mockReset();
+  mockNavigate.mockReset();
 });
 
 describe("DashboardLayout: the per-tab add button only targets real domains", () => {
@@ -128,10 +134,11 @@ describe("DashboardLayout: the per-tab add button only targets real domains", ()
     fireEvent.click(button);
   });
 
-  it("renders no add button at all on the domain-less 'tour' tab", () => {
+  it("renders the add button on the tour tab and opens the tours page (tour is a domain since 2026-11-09)", () => {
     renderAt("tour");
-    expect(screen.queryByRole("button", { name: /addPerTab\.tour/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/addPerTab\.tour/i)).not.toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /addPerTab\.tour/i });
+    fireEvent.click(button);
+    expect(mockNavigate).toHaveBeenCalledWith("/tours");
   });
 });
 

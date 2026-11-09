@@ -73,7 +73,7 @@ This reverses the coordinator ruling of 2026-10-09 recorded in
 |---|---|---|---|
 | T1 server | registry entry (both mirrors), beta-gate registries, timeline-tour copy-on-trip-delete, enabled-domain backfill + `knownDomains` guard, `toursVisible()` → domain + beta check, sync visibility when the switch changes (tombstones/cursor), OpenAPI | — | done `81baf7d38` (2026-11-09) |
 | T1b sharing | share type + adapter with tracks, keyOps/federation audit | T1 | open |
-| T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 | open |
+| T2 web | `/tours` route as a domain page (list layout shared with roadtrips), nav entry, dashboard tab + map overlay through the domain registry, create a tour without a trip, "move to trip / detach" action, settings domain switch | T1 | done (see "T2 as built") |
 | T3 stats | stats tab, insights, achievements, year in review under domain `tour` | T1 | open |
 | T4 Companion | contract below; app shows tours as a domain | T1 | open |
 
@@ -119,3 +119,15 @@ backfill, metric reclassification).
 ## Open for the owner
 
 None blocking. The `knownDomains` guard is a coordinator call.
+
+## T2 as built
+
+- `/tours` and both tour editor routes use `DomainRouteGuard domain="tour"` (switch AND
+  `roadtrips` beta key via `DOMAIN_BETA_GATES`); `useToursAccess` is three-state on both.
+  Nav and settings switch already followed from the T1 registry entry.
+- The dashboard add button on the tour tab opens `/tours` (T1 exclusion removed).
+- Deviation from the contract text: the existing PATCH `tripId` refused every tour
+  ("Only a roadtrip can be attached"); that kind check is gone, the timeline-stop
+  rule (409) stays. Row actions "Reise zuordnen" / "Von Reise lösen" on `/tours`;
+  `ROADTRIP_HAS_TRIP_PHOTOS` is offered as an opt-in, not shown as a timeline error.
+- `PATCH /tours/:id/kind` to `tour` now enables the domain; the review notice reloads settings.

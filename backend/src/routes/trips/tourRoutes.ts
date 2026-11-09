@@ -59,16 +59,9 @@ async function assertKindFields(
   let detach: ((tx: DbTransaction) => Promise<number>) | null = null;
   if (body.tripId) await resolveTrip(userId, body.tripId);
   if (body.tripId !== undefined) {
-    // Only a roadtrip moves between trips: its stations are its own. A tour
-    // section of a trip is built from that trip's timeline, and a standalone
-    // tour's points would land beside a timeline the assign endpoint owns.
-    const { kind } = await prisma.tripRoute.findUniqueOrThrow({
-      where: { id: routeId },
-      select: { kind: true },
-    });
-    if (kind !== "roadtrip") {
-      throw new AppError("Only a roadtrip can be attached to or moved between trips", 400);
-    }
+    // Any kind moves (a tour is a domain of its own since 2026-11-09), as long
+    // as its points are its own — a standalone tour or a roadtrip. A section
+    // built from a trip's timeline is refused below.
     // A section built from a trip's timeline stops cannot change trip: its
     // stops would stay on the old trip's timeline while the route claimed the
     // new one. Only a route whose points are its own may move.

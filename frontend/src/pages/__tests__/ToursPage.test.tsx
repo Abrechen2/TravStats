@@ -5,6 +5,8 @@ import { MemoryRouter } from "react-router-dom";
 import ToursPage from "../ToursPage";
 import { tourIndexApi, type TourSummary } from "../../lib/api/tourIndex";
 import { toursApi } from "../../lib/api/tours";
+import { tripsApi } from "../../lib/api/trips";
+import { useToastStore } from "../../store/toastStore";
 
 vi.mock("../../lib/api/tourIndex", () => ({
   tourIndexApi: { list: vi.fn(), geometryBatch: vi.fn() },
@@ -15,8 +17,9 @@ vi.mock("../../components/Trips/StravaImportDialog", () => ({
   useStravaConnected: () => false,
 }));
 vi.mock("../../lib/api/tours", () => ({
-  toursApi: { createStandalone: vi.fn(), removeStandalone: vi.fn() },
+  toursApi: { createStandalone: vi.fn(), removeStandalone: vi.fn(), update: vi.fn() },
 }));
+vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
@@ -270,5 +273,107 @@ describe("the tours page — a tour needs a name", () => {
 
     fireEvent.change(input, { target: { value: "Besseggen" } });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("detaches a tour from its trip through the tour path, then re-reads the list", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    vi.mocked(toursApi.update).mockResolvedValue({} as never);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+
+    await waitFor(() =>
+      expect(toursApi.update).toHaveBeenCalledWith(undefined, "t-1", { tripId: null })
+    );
+    await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalledTimes(2));
+  });
+
+  it("tells the reader why a tour drawn over the trip's stops cannot be detached (409), and keeps the row", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    vi.mocked(toursApi.update).mockRejectedValue(
+      Object.assign(new Error("conflict"), { isAxiosError: true, response: { status: 409 } })
+    );
+    const addToast = vi.fn();
+    useToastStore.setState({ addToast } as never);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.timelineError")
+    );
+    expect(screen.getByText("Süd-Norwegen")).toBeInTheDocument();
+    expect(tourIndexApi.list).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a plain error when the detach fails for another reason", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    vi.mocked(toursApi.update).mockRejectedValue(new Error("network"));
+    const addToast = vi.fn();
+    useToastStore.setState({ addToast } as never);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:tours.move.error"));
+  });
+
+  it("offers 'assign to trip' on a trip-less tour and says why a refused move failed", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([
+      tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
+    ]);
+    vi.mocked(tripsApi.getAll).mockResolvedValue([{ id: "trip-9", name: "Jotunheimen" }] as never);
+    vi.mocked(toursApi.update).mockRejectedValue(new Error("boom"));
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.action"));
+    const select = await screen.findByLabelText("trips:tours.move.tripLabel");
+    fireEvent.change(select, { target: { value: "trip-9" } });
+    fireEvent.click(screen.getByText("trips:tours.move.confirm"));
+
+    await waitFor(() =>
+      expect(toursApi.update).toHaveBeenCalledWith(undefined, "t-2", { tripId: "trip-9" })
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("trips:tours.move.error");
+  });
+
+  it("does not render a failed trip read as 'no trips' in the move dialog", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([
+      tour({ id: "t-2", tripId: null, tripName: null, name: "Besseggen" }),
+    ]);
+    vi.mocked(tripsApi.getAll).mockRejectedValue(new Error("down"));
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.action"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("trips:tours.move.loadError");
+    expect(screen.queryByText("trips:tours.move.noTrips")).not.toBeInTheDocument();
+  });
+
+  it("offers to unlink station photos when the server says they block the detach, and resends with the opt-in", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    vi.mocked(toursApi.update)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("conflict"), {
+          isAxiosError: true,
+          response: { status: 409, data: { code: "ROADTRIP_HAS_TRIP_PHOTOS" } },
+        })
+      )
+      .mockResolvedValueOnce({} as never);
+    const addToast = vi.fn();
+    useToastStore.setState({ addToast } as never);
+    renderPage();
+
+    fireEvent.click(await screen.findByText("trips:tours.move.detach"));
+    // Not the timeline message: the reader is asked, and can agree.
+    fireEvent.click(await screen.findByText("trips:tours.move.detachPhotosConfirm"));
+
+    await waitFor(() =>
+      expect(toursApi.update).toHaveBeenLastCalledWith(undefined, "t-1", {
+        tripId: null,
+        detachStationPhotos: true,
+      })
+    );
+    expect(addToast).not.toHaveBeenCalled();
   });
 });

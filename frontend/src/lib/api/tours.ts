@@ -53,6 +53,8 @@ export interface UpdateTourRouteInput {
   anchorStopId?: string | null;
   /** Only a roadtrip may move between trips; the server refuses it for a tour. */
   tripId?: string | null;
+  /** With `tripId`: take trip photos off the stations first (`ROADTRIP_HAS_TRIP_PHOTOS` opt-in). */
+  detachStationPhotos?: boolean;
   /** Tour only: its day (null clears it and the start time) and start time (D2). */
   date?: string | null;
   startTime?: string | null;

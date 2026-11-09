@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+vi.unmock("../../../store/settingsStore");
+
 import KindReviewNotice from "../KindReviewNotice";
 import { tourIndexApi } from "../../../lib/api/tourIndex";
 import { roadtripsApi } from "../../../lib/api/roadtrips";
+import { useSettingsStore } from "../../../store/settingsStore";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -51,5 +54,15 @@ describe("KindReviewNotice", () => {
       expect(roadtripsApi.switchKind).toHaveBeenCalledWith("b", { kind: "roadtrip" })
     );
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it("re-reads the user's settings after a row becomes a tour, so the tour page opens (server enables the domain)", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([row("c", "roadtrip")] as never);
+    vi.mocked(roadtripsApi.switchKind).mockResolvedValue({} as never);
+    const loadRemoteSettings = vi.fn().mockResolvedValue(undefined);
+    useSettingsStore.setState({ loadRemoteSettings });
+    render(<KindReviewNotice onChanged={() => {}} />);
+    fireEvent.click(await screen.findByText("roadtrips:review.moveTo.tour"));
+    await waitFor(() => expect(loadRemoteSettings).toHaveBeenCalled());
   });
 });

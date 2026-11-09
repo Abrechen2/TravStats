@@ -76,6 +76,19 @@ describe("making a tour enables the tour domain", () => {
     expect(await domains()).toEqual(["flight", "tour"]);
   });
 
+  it("enables tour when a roadtrip is converted to a tour (PATCH /tours/:id/kind)", async () => {
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
+    const road = await prisma.tripRoute.create({
+      data: { userId, name: "Rundreise", kind: "roadtrip", mode: "road" },
+    });
+    await request(app)
+      .patch(`/api/v1/tours/${road.id}/kind`)
+      .set("Cookie", cookie)
+      .send({ kind: "tour" })
+      .expect(200);
+    expect(await domains()).toEqual(["flight", "tour"]);
+  });
+
   it("global search offers tours only while the domain is on", async () => {
     await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
     expect(await searchableDomains(userId)).not.toContain("tour");
