@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { detachAfterWithdrawal } from "./detach";
+import { lockPair } from "../comparison/consents";
+import { switchOffGiven } from "../friends/authz";
 import { consentStatusSchema, type ConsentStatus } from "../../schemas/sharing";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
@@ -126,9 +128,15 @@ export async function decideConsent(
       status: row.status,
     });
   }
-  const updated = await prisma.shareConsent.update({
-    where: { id: row.id },
-    data: { status: decision, decidedAt: new Date() },
+  const updated = await prisma.$transaction(async (tx) => {
+    await lockPair(tx, userId, requester.id);
+    const done = await tx.shareConsent.update({
+      where: { id: row.id },
+      data: { status: decision, decidedAt: new Date() },
+    });
+    // A pair with a connection is judged by its switches: a "no" here must switch the target's off.
+    if (decision === "declined") await switchOffGiven(tx, userId, requester.id);
+    return done;
   });
   return view(updated, requester);
 }
@@ -158,6 +166,11 @@ export async function withdrawConsent(userId: string, consentId: string): Promis
           // S2: the target stops receiving the requester's changes — their
           // copies become independent trips (`detach.ts`).
           await detachAfterWithdrawal(tx, requesterId, targetId);
+          // The target's grant to the requester ends; the connection must say so too.
+          await lockPair(tx, requesterId, targetId);
+          await switchOffGiven(tx, targetId, requesterId);
+          // Withdrawing from the requester's own side ends what they give as well.
+          await switchOffGiven(tx, requesterId, targetId);
           return done;
         });
   return view(updated, localPerson(requesterId === userId ? row.target : row.requester));

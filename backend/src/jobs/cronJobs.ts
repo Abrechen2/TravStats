@@ -162,6 +162,14 @@ export const CRON_JOBS: CronJob[] = [
     stop: async () =>
       (await import("./tripShareDeliveryScheduler")).stopTripShareDeliveryScheduler(),
   },
+  // Server admission: tells an inviting server "admit me" after the admin approved it (forgejo#416).
+  {
+    name: "admission_delivery",
+    start: async () =>
+      (await import("./admissionDeliveryScheduler")).startAdmissionDeliveryScheduler(),
+    stop: async () =>
+      (await import("./admissionDeliveryScheduler")).stopAdmissionDeliveryScheduler(),
+  },
   {
     name: "mail_intake",
     start: async () => (await import("./mailIntakeScheduler")).startMailIntakeScheduler(),

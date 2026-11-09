@@ -10,7 +10,7 @@ import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
-import { hasAcceptedConsent } from "../sharing/consent";
+import { plansGivenTo } from "../friends/authz";
 import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { shareTripWithUser } from "../sharing/shareTrip";
 import { assertOwner, planAccess, selfOf } from "./access";
@@ -132,13 +132,13 @@ export async function inviteLocalMember(
   if (invitee.id === ownerId)
     throw new AppError("The owner is already on the plan", 400, "PLAN_MEMBER_SELF");
   // Both directions, and each says whose answer is missing so the dialog can name the step.
-  if (!(await hasAcceptedConsent(prisma, invitee.id, ownerId)))
+  if (!(await plansGivenTo(prisma, ownerId, invitee.id)))
     throw new AppError(
       "You have not accepted sharing with this person",
       403,
       "PLAN_MEMBER_CONSENT_MINE"
     );
-  if (!(await hasAcceptedConsent(prisma, ownerId, invitee.id)))
+  if (!(await plansGivenTo(prisma, invitee.id, ownerId)))
     throw new AppError(
       "This person has not accepted sharing with you",
       403,
@@ -223,8 +223,7 @@ export async function respondToInvitation(
   const ownerId = row.plan.trip.userId;
   // The pair may have changed since the invitation went out.
   const both =
-    (await hasAcceptedConsent(prisma, ownerId, userId)) &&
-    (await hasAcceptedConsent(prisma, userId, ownerId));
+    (await plansGivenTo(prisma, userId, ownerId)) && (await plansGivenTo(prisma, ownerId, userId));
   if (!both)
     throw new AppError(
       "Sharing consent with the plan's owner is missing",

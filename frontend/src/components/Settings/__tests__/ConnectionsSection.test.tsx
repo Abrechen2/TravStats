@@ -14,6 +14,13 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: { language: "de" },
   }),
 }));
+vi.mock("react-router-dom", () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 vi.mock("../../sharing/RemotePlanInvitations", () => ({ default: () => null }));
 vi.mock("../../../lib/api/sharingRemote", () => ({
   sharingRemoteApi: {
@@ -78,6 +85,12 @@ describe("Verbindungen", () => {
     const { container } = render(<ConnectionsSection />);
     await waitFor(() => expect(remote.status).toHaveBeenCalled());
     expect(container.textContent).toBe("");
+  });
+
+  it("points to the Freunde page, where a person's connection now lives", async () => {
+    render(<ConnectionsSection />);
+    const link = await screen.findByTestId("connections-to-friends");
+    expect(link).toHaveAttribute("href", "/freunde");
   });
 
   it("asks with every switch off unless chosen, and says the request is on its way", async () => {

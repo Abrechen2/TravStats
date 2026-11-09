@@ -16,7 +16,7 @@
 import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
-import { hasAcceptedConsent } from "../sharing/consent";
+import { mayWorkOnPlan } from "../friends/authz";
 import { toPerson, PERSON_SELECT } from "../sharing/people";
 import { connectionAllowsPlans } from "../sharing/federation/connections/switches";
 import type { PlanSelf } from "./types";
@@ -123,13 +123,10 @@ export async function planAccess(actor: PlanActor, tripId: string) {
     select: { id: true, displayName: true },
   });
   if (!member) throw notFound();
-  // Consent is not a one-time gate: withdrawing it from either side ends the access at once,
-  // without anybody having to find the member row.
-  const [toThem, toMe] = await Promise.all([
-    hasAcceptedConsent(prisma, ownerId, userId),
-    hasAcceptedConsent(prisma, userId, ownerId),
-  ]);
-  if (!toThem || !toMe)
+  // Not a one-time gate: without a connection, withdrawing the consent from either side ends the
+  // access at once; with one, a plan already joined stays open (friends/authz.ts),
+  // and nobody has to find the member row.
+  if (!(await mayWorkOnPlan(prisma, ownerId, userId)))
     throw new AppError(
       "Sharing consent with the plan's owner was withdrawn",
       403,

@@ -9,7 +9,7 @@ import logger from "../../utils/logger";
 import { exchange, PeerRefusal } from "../federation/security";
 
 /** Why a reply that parsed was still not used. */
-type UnexpectedReplyKind = "wrong-year" | "nameless" | "channel-reused";
+type UnexpectedReplyKind = "wrong-year" | "wrong-version" | "nameless" | "channel-reused";
 
 /** A reply that parsed but does not answer what was asked (another year, a reused channel). */
 export class UnexpectedReply extends Error {

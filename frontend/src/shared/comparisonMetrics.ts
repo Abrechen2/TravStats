@@ -10,7 +10,7 @@
  */
 import type { DomainKey } from "./domains";
 
-export const METRIC_GROUPS = ["distance", "trips", "time", "places"] as const;
+export const METRIC_GROUPS = ["distance", "trips", "time", "places", "achievements"] as const;
 export type MetricGroup = (typeof METRIC_GROUPS)[number];
 export type MetricUnit = "km" | "count" | "minutes" | "days" | "nights";
 

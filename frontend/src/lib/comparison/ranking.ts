@@ -11,6 +11,7 @@ export type UnrankedReason =
   | "metricNotShared"
   | "domainOff"
   | "unknown"
+  | "notDerivable"
   | "otherYear"
   | "notComparable";
 
@@ -30,7 +31,7 @@ const DOMAIN_OF: ReadonlyMap<string, string | null> = new Map(
 );
 const domainSet = (domains: readonly string[]) => [...domains].sort().join(",");
 
-function judge(
+export function judge(
   row: LeaderboardRow,
   metric: MetricKey,
   year: number | null,
@@ -48,6 +49,9 @@ function judge(
     // domain off. Shared, just not tracked — never "does not share this figure".
     const domain = DOMAIN_OF.get(metric) ?? null;
     const off = domain !== null && !snapshot.domains.includes(domain);
+    // A cross-domain total (days away, countries) is derived only when EVERY domain of the account
+    // is shared — the server sends null for a narrower scope. That is a rule, not an unknown.
+    if (domain === null && !off) return { value: null, reason: "notDerivable" };
     return { value: null, reason: off ? "domainOff" : "unknown" };
   }
   if (

@@ -8,6 +8,7 @@ import { createPrivateKey } from "crypto";
 import {
   COMPARISON_ACCEPTS,
   TRIP_SHARE_ACCEPTS,
+  ADMISSION_ACCEPTS,
   envelope,
   signingBytes,
   verifyEnvelope,
@@ -28,6 +29,7 @@ const key = createPrivateKey({
 const ACCEPTANCES: Record<EnvelopePurpose, Acceptance> = {
   "comparison/1": COMPARISON_ACCEPTS,
   "trip-share/1": TRIP_SHARE_ACCEPTS,
+  "admission/1": ADMISSION_ACCEPTS,
 };
 
 describe.each(vectors.cases)("envelope vector $name", (vector) => {

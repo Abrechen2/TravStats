@@ -30,6 +30,17 @@ async function user(): Promise<string> {
   users.push(u.id);
   return u.id;
 }
+/** The viewer's own yes to each owner: the mutual rule serves figures only when both agreed. */
+const shareBack = (me: string, owners: string[]) =>
+  prisma.leaderboardConsent.createMany({
+    data: owners.map((o) => ({
+      ownerId: me,
+      viewerId: o,
+      status: "accepted",
+      scope: TRIPS,
+      decidedAt: new Date(),
+    })),
+  });
 async function shares(ownerId: string, scope: object, status = "accepted", ageMs = 0) {
   await prisma.leaderboardConsent.create({
     data: {
@@ -40,6 +51,7 @@ async function shares(ownerId: string, scope: object, status = "accepted", ageMs
       decidedAt: new Date(Date.now() - 10_000 + ageMs),
     },
   });
+  await shareBack(viewer, [ownerId]);
 }
 // Each remote gets its own creation instant: the board orders remotes by
 // (createdAt, id), and two rows made in the same millisecond fell back to their
@@ -158,6 +170,7 @@ describe("one bad row costs only that row", () => {
         },
       ],
     });
+    await shareBack(me, [odd, fine]);
     const res = await readLeaderboard(me, { year: null }, pull);
     expect(res.rows.map((r) => [r.person.key, r.status, r.snapshot, r.sharedYear])).toEqual([
       ["self", "ok", expect.anything(), null],
@@ -203,6 +216,7 @@ it("finds a board member who is not among the oldest LOCAL_ROW_CAP friends", asy
       decidedAt: new Date(1_000_000 + i * 1000),
     })),
   });
+  await shareBack(me, friends);
   const newest = friends[LOCAL_ROW_CAP];
   const far = await remoteFor(me, "board-far");
   await remoteFor(me, "not-on-board");
@@ -233,6 +247,7 @@ it("builds friends' totals a few at a time, in order, with the self row first", 
       decidedAt: new Date(2_000_000 + i * 1000),
     })),
   });
+  await shareBack(me, friends);
   const broken = friends[4];
   let open = 0;
   let most = 0;

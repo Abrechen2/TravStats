@@ -8,7 +8,7 @@ import SealedWorkspace from "../components/encryptedShare/SealedWorkspace";
 export default function EncryptedSharePage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   return user ? (
-    <BetaFeatureRouteGuard feature="encryptedShare" redirectTo="/compare">
+    <BetaFeatureRouteGuard feature="encryptedShare" redirectTo="/freunde">
       <SealedWorkspace />
     </BetaFeatureRouteGuard>
   ) : (

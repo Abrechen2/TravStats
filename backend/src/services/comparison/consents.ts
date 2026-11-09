@@ -32,6 +32,7 @@ import {
 } from "../../schemas/comparison";
 import { comparisonError } from "./errors";
 import { tellEnded } from "./remoteNotice";
+import { connectedUserIds } from "../friends/authz";
 
 export const localKey = (userId: string): string => `local:${userId}`;
 export const remoteKey = (remoteId: string): string => `remote:${remoteId}`;
@@ -100,7 +101,7 @@ type Tx = DbTransaction;
  * would otherwise both read "nothing yet", both create, and one would die on the unique index.
  * The rows may not exist yet, so a row lock cannot do this; an advisory lock on the pair can.
  */
-async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
+export async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
   const key = a < b ? `${a}|${b}` : `${b}|${a}`;
   await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
 }
@@ -386,16 +387,64 @@ export async function endLocal(userId: string, otherUserId: string): Promise<voi
   if (ended.count === 0) throw notFound(userId);
 }
 
+/** What a remote friend's server last answered, as a consent state; `unknown` before any. */
+const THEIRS_BY_ANSWER: Record<string, string> = {
+  ok: "accepted",
+  yearNotShared: "accepted",
+  notShared: "pending",
+  withdrawn: "withdrawn",
+};
+function remoteTheirs(r: {
+  theirStatus: string | null;
+  theirStatusAt: Date | null;
+}): NonNullable<PersonView["theirs"]> {
+  const status = (r.theirStatus && THEIRS_BY_ANSWER[r.theirStatus]) || "unknown";
+  return {
+    status: status as NonNullable<PersonView["theirs"]>["status"],
+    answeredAt: r.theirStatusAt?.toISOString() ?? null,
+  };
+}
+
+const ownedConsents = (userId: string) =>
+  prisma.leaderboardConsent.findMany({
+    where: { ownerId: userId },
+    include: { viewer: { select: PERSON_SELECT }, remote: true },
+    orderBy: { createdAt: "asc" },
+    take: 200,
+  });
+
+/**
+ * Mutual rule (forgejo#416, spec §9.1): a friend's figures reach a viewer only while the
+ * viewer shares back. A friend who shares with `userId` while `userId` has no row for them at
+ * all (a copied grant, or an agreement from before the rule) is put to `userId` as an open
+ * question, so the missing yes can be given through the ordinary answer. A viewer who declined
+ * or ended it has a row and is not asked again. Idempotent: the unique pair makes a repeat,
+ * or a race with another list call, a no-op.
+ */
+async function askMissingSide(
+  userId: string,
+  owned: { viewerId: string | null }[],
+  viewed: { ownerId: string; status: string }[]
+): Promise<boolean> {
+  const have = new Set(owned.map((c) => c.viewerId));
+  // A pair with a connection is answered by its switches, not by a question (spec 2026-11-08).
+  const connected = await connectedUserIds(prisma, userId);
+  const missing = viewed.filter(
+    (c) => c.status === "accepted" && !have.has(c.ownerId) && !connected.has(c.ownerId)
+  );
+  if (missing.length === 0) return false;
+  await prisma.leaderboardConsent.createMany({
+    data: missing.map((c) => ({ ownerId: userId, viewerId: c.ownerId })),
+    skipDuplicates: true,
+  });
+  return true;
+}
+
 export async function listPeople(
   userId: string
 ): Promise<{ requests: RequestView[]; people: PersonView[] }> {
-  const [owned, viewed, remotes] = await Promise.all([
-    prisma.leaderboardConsent.findMany({
-      where: { ownerId: userId },
-      include: { viewer: { select: PERSON_SELECT }, remote: true },
-      orderBy: { createdAt: "asc" },
-      take: 200,
-    }),
+  const [firstOwned, viewed, remotes] = await Promise.all([
+    ownedConsents(userId),
     prisma.leaderboardConsent.findMany({
       where: { viewerId: userId, owner: { isActive: true } },
       include: { owner: { select: PERSON_SELECT } },
@@ -407,6 +456,9 @@ export async function listPeople(
       take: 100,
     }),
   ]);
+  const owned = (await askMissingSide(userId, firstOwned, viewed))
+    ? await ownedConsents(userId)
+    : firstOwned;
   const personOf = (c: (typeof owned)[number]) =>
     c.viewer ? localPerson(c.viewer) : remotePerson(c.remote as NonNullable<typeof c.remote>);
   const requests = owned
@@ -425,11 +477,17 @@ export async function listPeople(
   }
   for (const c of viewed) {
     const person = localPerson(c.owner);
-    people.set(person.key, { ...entry(person), theirs: { status: c.status as ConsentStatus } });
+    people.set(person.key, {
+      ...entry(person),
+      theirs: {
+        status: c.status as ConsentStatus,
+        answeredAt: c.decidedAt?.toISOString() ?? null,
+      },
+    });
   }
   for (const r of remotes) {
     const person = remotePerson(r);
-    if (!people.has(person.key)) people.set(person.key, entry(person));
+    people.set(person.key, { ...entry(person), theirs: remoteTheirs(r) });
   }
   // A person is listed once there is a yes on either side or the caller's own open question.
   // Someone who merely asked the caller is a request, not yet a person (controller ruling).

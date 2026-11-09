@@ -12,7 +12,8 @@ export const httpsOriginSchema = z
 
 export const federationSettingsSchema = z.strictObject({
   enabled: z.boolean(),
-  origin: httpsOriginSchema,
+  /** Empty (or absent): keep the stored address, else the instance's public URL. */
+  origin: z.union([httpsOriginSchema, z.literal("")]).optional(),
 });
 
 export const peerPinSchema = z.strictObject({

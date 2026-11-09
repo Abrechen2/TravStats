@@ -5,8 +5,8 @@
  * person gets before they set their own).
  */
 import { prisma } from "../../../../db";
-import { requireTripFederation } from "../access";
-import { tripFederationAvailability } from "../availability";
+import { requireConnectionFederation } from "../access";
+import { connectionsAvailability } from "../availability";
 import { remoteShareError } from "../errors";
 import type { ConnectionSwitches } from "../../../../schemas/tripSharePeer";
 import { mineOf, theirsOf } from "./switches";
@@ -63,7 +63,7 @@ export function connectionView(row: Row): ConnectionView {
 }
 
 export async function listConnections(userId: string): Promise<ConnectionView[]> {
-  await requireTripFederation(userId);
+  await requireConnectionFederation(userId);
   const rows = await prisma.remoteShareAccount.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -80,7 +80,7 @@ export async function readConnection(userId: string, id: string): Promise<Connec
 
 /** Requests waiting for an answer, and pairings from before connections that wait to be confirmed. */
 export async function countConnectionRequests(userId: string): Promise<number> {
-  if (!(await tripFederationAvailability()).available) return 0;
+  if (!(await connectionsAvailability()).available) return 0;
   return prisma.remoteShareAccount.count({
     where: { userId, state: { in: ["pending_in", "reconfirm"] } },
   });

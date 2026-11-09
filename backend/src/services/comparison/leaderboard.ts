@@ -21,9 +21,11 @@ import {
   type Person,
 } from "../../schemas/comparison";
 import { buildLeaderboardSnapshot } from "./aggregates";
+import { rowAchievements } from "./achievementSection";
 import { boardMemberKeys } from "./boards";
 import { localKey, localPerson, readScope, remoteKey, remotePerson } from "./consents";
 import { pullRemote, type RemoteResult } from "./remote";
+import { ownersRefusedByConnection } from "../friends/authz";
 
 export const LOCAL_ROW_CAP = 50;
 export const REMOTE_ROW_CAP = 20;
@@ -91,8 +93,14 @@ async function localRow(
   if (scope.year !== null && scope.year !== year)
     return { person, status: "yearNotShared", snapshot: null, sharedYear: scope.year };
   try {
-    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year);
-    return { person, status: "ok", snapshot, sharedYear: scope.year };
+    const snapshot = await buildLeaderboardSnapshot(consent.ownerId, scope, year, 2);
+    return {
+      person,
+      status: "ok",
+      snapshot,
+      ...rowAchievements(snapshot, year),
+      sharedYear: scope.year,
+    };
   } catch (error) {
     // One friend's failing loader must not blank everyone's board; it is logged, not hidden.
     logger.error(
@@ -138,9 +146,19 @@ async function pullWithin(
   }
 }
 
-const remoteRow = (remote: LeaderboardRemote, result: RemoteResult): LeaderboardRow =>
+const remoteRow = (
+  remote: LeaderboardRemote,
+  result: RemoteResult,
+  year: number | null
+): LeaderboardRow =>
   result.status === "ok"
-    ? { person: remotePerson(remote), status: "ok", snapshot: result.snapshot, sharedYear: null }
+    ? {
+        person: remotePerson(remote),
+        status: "ok",
+        snapshot: result.snapshot,
+        ...rowAchievements(result.snapshot, year),
+        sharedYear: null,
+      }
     : {
         person: remotePerson(remote),
         status: result.status,
@@ -150,12 +168,19 @@ const remoteRow = (remote: LeaderboardRemote, result: RemoteResult): Leaderboard
 
 export async function readLeaderboard(
   viewerId: string,
-  query: { year: number | null; boardId?: string },
+  query: { year: number | null; boardId?: string; keys?: ReadonlySet<string> },
   pull: Pull = pullRemote,
   pullDeadlineMs: number = REMOTE_PULL_DEADLINE_MS
 ): Promise<LeaderboardResponse> {
   const { year } = query;
-  const where = boardWhere(query.boardId ? await boardMemberKeys(viewerId, query.boardId) : null);
+  // `keys` is the compare view's pick; it narrows the same way a board does.
+  const where = boardWhere(
+    query.keys
+      ? new Set(query.keys)
+      : query.boardId
+        ? await boardMemberKeys(viewerId, query.boardId)
+        : null
+  );
 
   // Remote pulls start first, so the network waits overlap the local reads below. None of this
   // runs inside a transaction.
@@ -171,32 +196,53 @@ export async function readLeaderboard(
     select: PERSON_SELECT,
   });
   const visible = await loadVisibleDomains(viewerId);
+  const own = await buildLeaderboardSnapshot(
+    viewerId,
+    { groups: [...METRIC_GROUPS], domains: visible, year: null },
+    year,
+    2
+  );
   const rows: LeaderboardRow[] = [
     {
       person: { ...localPerson(me), key: "self", kind: "self" },
       status: "ok",
-      snapshot: await buildLeaderboardSnapshot(
-        viewerId,
-        { groups: [...METRIC_GROUPS], domains: visible, year: null },
-        year
-      ),
+      snapshot: own,
+      ...rowAchievements(own, year),
       sharedYear: null,
     },
   ];
 
   const consents = await prisma.leaderboardConsent.findMany({
-    where: { viewerId, status: "accepted", owner: { isActive: true }, ...where.local },
+    where: {
+      viewerId,
+      status: "accepted",
+      // Mutual rule (forgejo#416): the figures flow only while the viewer shares back.
+      owner: {
+        isActive: true,
+        leaderboardConsentsViewed: { some: { ownerId: viewerId, status: "accepted" } },
+      },
+      ...where.local,
+    },
     include: { owner: { select: PERSON_SELECT } },
     orderBy: [{ decidedAt: "asc" }, { id: "asc" }],
     take: LOCAL_ROW_CAP,
   });
+  // A pair with a connection is judged by its switches (spec 2026-11-08 §11.7): the stored
+  // consent follows them, but a row that drifted must not open a door the connection closed.
+  const refused = await ownersRefusedByConnection(
+    prisma,
+    viewerId,
+    consents.map((c) => c.ownerId)
+  );
   rows.push(
-    ...(await mapInOrder(consents, SNAPSHOT_CONCURRENCY, (consent) =>
-      localRow(consent, localPerson(consent.owner), year)
+    ...(await mapInOrder(
+      consents.filter((c) => !refused.has(c.ownerId)),
+      SNAPSHOT_CONCURRENCY,
+      (consent) => localRow(consent, localPerson(consent.owner), year)
     ))
   );
 
   const results = await pulled;
-  rows.push(...remotes.map((remote, i) => remoteRow(remote, results[i])));
+  rows.push(...remotes.map((remote, i) => remoteRow(remote, results[i], year)));
   return leaderboardResponseSchema.parse({ year, rows });
 }

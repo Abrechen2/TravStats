@@ -9,6 +9,7 @@ import { prisma } from "../../../db";
 import { PeerRefusal } from "../../federation/refusal";
 import { TRIP_SHARE_VERSIONS, tripPingReplySchema } from "../../../schemas/tripSharePeer";
 import { remoteShareError } from "./errors";
+import { peerFeatures } from "./peerFeatures";
 import { messageHeader, tripShareExchange } from "./transport";
 
 /**
@@ -48,12 +49,10 @@ export async function requireAdmitted(userId: string, origin: string): Promise<v
     );
 }
 
-/** The other server serves trip sharing version 1 and has it switched on. */
-export async function requireTripSharePeer(userId: string, origin: string): Promise<void> {
-  let versions: number[];
+async function pingPeer(userId: string, origin: string) {
   try {
     const reply = await tripShareExchange(origin, { kind: "ping", ...messageHeader() });
-    versions = tripPingReplySchema.parse(reply).tripShare;
+    return tripPingReplySchema.parse(reply);
   } catch (error) {
     // 404: off there, or a server from before trip sharing — the route is absent either way.
     if (error instanceof PeerRefusal && error.kind === "remote-absent")
@@ -66,14 +65,45 @@ export async function requireTripSharePeer(userId: string, origin: string): Prom
       );
     throw peerFailure(userId, origin, error);
   }
-  if (!versions.some((v) => (TRIP_SHARE_VERSIONS as readonly number[]).includes(v)))
+}
+
+const outdated = (userId: string, origin: string) =>
+  remoteShareError(
+    "SHARE_REMOTE_PEER_OUTDATED",
+    409,
+    "That server needs an update",
+    { userId, origin },
+    { origin }
+  );
+
+/**
+ * The other server serves trip sharing version 1 and has it switched on. A server that has trip
+ * sharing off but answers user connections names no versions (spec 2026-11-08 §11.7).
+ */
+export async function requireTripSharePeer(userId: string, origin: string): Promise<void> {
+  const { tripShare: versions } = await pingPeer(userId, origin);
+  if (versions.length === 0)
     throw remoteShareError(
-      "SHARE_REMOTE_PEER_OUTDATED",
+      "SHARE_REMOTE_PEER_DISABLED",
       409,
-      "That server needs an update",
+      "That server does not share trips across servers",
       { userId, origin },
       { origin }
     );
+  if (!versions.some((v) => (TRIP_SHARE_VERSIONS as readonly number[]).includes(v)))
+    throw outdated(userId, origin);
+}
+
+/** The other server answers user connections (its ping names the `connections` feature). */
+export async function requireConnectionsPeer(userId: string, origin: string): Promise<void> {
+  // Through the cached feature list, which later plan and offer calls read without pinging again.
+  let features: ReadonlySet<string>;
+  try {
+    features = await peerFeatures(origin);
+  } catch (error) {
+    throw peerFailure(userId, origin, error);
+  }
+  if (!features.has("connections")) throw outdated(userId, origin);
 }
 
 /**

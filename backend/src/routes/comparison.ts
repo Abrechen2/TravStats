@@ -24,10 +24,19 @@ import {
 } from "../services/comparison/consents";
 import { deleteBoard, listBoards, saveBoard } from "../services/comparison/boards";
 import { claimInvite, createInvite, endRemote } from "../services/comparison/remote";
+import {
+  createInviteLink,
+  listOwnAdmissions,
+  redeemInviteLink,
+} from "../services/comparison/inviteLinks";
+import { defaultScope } from "../services/friends/scopeStore";
+import { inviteLinkCreateBodySchema, inviteLinkRedeemBodySchema } from "../schemas/inviteLink";
 import { readLeaderboard } from "../services/comparison/leaderboard";
+import { readCompare } from "../services/comparison/compareView";
 import {
   boardBodySchema,
   claimBodySchema,
+  compareQuerySchema,
   consentRequestBodySchema,
   leaderboardQuerySchema,
   leaderboardScopeSchema,
@@ -86,11 +95,24 @@ router.get(
     );
   })
 );
+router.get(
+  "/compare",
+  handle(async (req, res) => {
+    const q = compareQuerySchema.parse(req.query);
+    send(
+      res,
+      await readCompare(req.userId!, {
+        year: q.year === "all" ? null : q.year,
+        friends: q.friends,
+      })
+    );
+  })
+);
 router.post(
   "/preview",
   handle(async (req, res) => {
     const scope = leaderboardScopeSchema.parse(req.body);
-    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year));
+    send(res, await buildLeaderboardSnapshot(req.userId!, scope, scope.year, 2));
   })
 );
 router.get(
@@ -157,6 +179,37 @@ router.post(
     // The scope is validated here, before claimInvite asks the other server anything.
     const body = claimBodySchema.parse(req.body);
     send(res, await claimInvite(req.userId!, body.code, body.scope), 201);
+  })
+);
+router.post(
+  "/invite-links",
+  comparisonWriteLimiter,
+  handle(async (req, res) => {
+    const body = inviteLinkCreateBodySchema.parse(req.body ?? {});
+    send(res, await createInviteLink(req.userId!, body.switches), 201);
+  })
+);
+router.post(
+  "/invite-links/redeem",
+  comparisonWriteLimiter,
+  handle(async (req, res) => {
+    // Shape, size and scope are checked here, before any server is asked anything.
+    const body = inviteLinkRedeemBodySchema.parse(req.body);
+    send(
+      res,
+      await redeemInviteLink(
+        req.userId!,
+        body.payload,
+        body.scope ?? (await defaultScope(req.userId!)),
+        body.switches
+      )
+    );
+  })
+);
+router.get(
+  "/admissions",
+  handle(async (req, res) => {
+    send(res, { admissions: await listOwnAdmissions(req.userId!) });
   })
 );
 router.post(

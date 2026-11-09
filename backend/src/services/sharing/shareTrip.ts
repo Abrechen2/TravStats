@@ -2,7 +2,8 @@ import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
-import { consentRequired, hasAcceptedConsent } from "./consent";
+import { consentRequired } from "./consent";
+import { mayOfferTripTo } from "../friends/authz";
 import { copyMissing, joinedMeta, type CopiedEntry } from "./copyInto";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
@@ -162,7 +163,7 @@ export async function shareTripWithUser(
         throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
       // Asked again on every share, not only when linking: a consent can be
       // withdrawn after the link was made.
-      if (!(await hasAcceptedConsent(tx, userId, recipientId))) throw consentRequired();
+      if (!(await mayOfferTripTo(tx, userId, recipientId))) throw consentRequired();
 
       if (trip.shareGroupId) {
         // A trip that came from another server is shared on from its home (F5, F-S4e): a

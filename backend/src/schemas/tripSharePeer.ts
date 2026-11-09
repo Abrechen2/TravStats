@@ -17,6 +17,7 @@
  * no private half on this wire at all (owner decision O1, 2026-10-20).
  */
 import { z } from "./zod";
+import { connectionSwitchesSchema, type ConnectionSwitches } from "./connectionSwitches";
 import { PLAN_PACKETS } from "./tripSharePlans";
 import { origin as peerOrigin } from "../services/federation/envelope";
 import { SHARE_ENTITIES, SHARE_TYPES } from "../services/sharing/shareTypes";
@@ -115,8 +116,7 @@ export const directoryPairReplySchema = z.discriminatedUnion("paired", [
 ]);
 
 /** What a person lets a paired person see of their statistics (CHECK remote_share_accounts_stats_level_check). */
-export const STATS_LEVELS = ["off", "overview", "full"] as const;
-export type StatsLevel = (typeof STATS_LEVELS)[number];
+export { STATS_LEVELS, type StatsLevel } from "./connectionSwitches";
 
 /**
  * A viewer's server reads the statistics a person on this server chose to show it. `from` is the
@@ -216,14 +216,7 @@ export type RemoteBadge = z.infer<typeof remoteBadgeSchema>;
  * changes nothing. Every connection message is answered `{received:true}` whatever happened — the
  * answer is no oracle for who exists, is findable or has blocked whom.
  */
-export const connectionSwitchesSchema = z.strictObject({
-  plans: z.boolean(),
-  stats: z.enum(STATS_LEVELS),
-  achievements: z.boolean(),
-  leaderboard: z.boolean(),
-  tripOffers: z.boolean(),
-});
-export type ConnectionSwitches = z.infer<typeof connectionSwitchesSchema>;
+export { connectionSwitchesSchema, type ConnectionSwitches };
 const generation = z.number().int().positive().max(2_147_483_647);
 
 /**

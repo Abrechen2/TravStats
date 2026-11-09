@@ -1,8 +1,12 @@
 import { isAxiosError } from "axios";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
+import type { ConnectionSwitches } from "../../types/sharingRemote";
 import type {
   BoardView,
+  CompareResponse,
+  InviteRedeemStatus,
+  OwnAdmission,
   LeaderboardResponse,
   LeaderboardScope,
   LeaderboardSnapshot,
@@ -34,6 +38,20 @@ export const comparisonApi = {
       { year: year === null ? "all" : String(year), ...(board ? { board } : {}) },
       API_TIMEOUTS.COMPARISON_LEADERBOARD
     ),
+  /** The reader plus the picked friends (at most three keys); same deadline as the leaderboard. */
+  compare: (friends: readonly string[], year: number | "all") =>
+    get<CompareResponse>(
+      "/compare",
+      { friends: friends.join(","), year: String(year) },
+      API_TIMEOUTS.COMPARISON_LEADERBOARD
+    ),
+  /** The link carries the inviter's switches (spec 2026-11-08 §11.7); a link made without them is the old kind. */
+  createInviteLink: (switches?: ConnectionSwitches) =>
+    post<{ url: string; expiresAt: string }>("/invite-links", switches ? { switches } : {}),
+  /** Redeeming only creates a request carrying the redeemer's switches; the inviter confirms (§11.8). */
+  redeemInviteLink: (payload: string, switches: ConnectionSwitches) =>
+    post<{ status: InviteRedeemStatus }>("/invite-links/redeem", { payload, switches }),
+  listAdmissions: async () => (await get<{ admissions: OwnAdmission[] }>("/admissions")).admissions,
   preview: (scope: LeaderboardScope) => post<LeaderboardSnapshot>("/preview", scope),
   people: () => get<PeopleResponse>("/people"),
   request: (username: string, scope: LeaderboardScope) =>
@@ -74,6 +92,15 @@ export const KNOWN_COMPARISON_CODES = [
   "COMPARISON_BOARD_LIMIT",
   "COMPARISON_REMOTE_LIMIT",
   "COMPARISON_YEAR_NOT_SHARED",
+  "FEDERATION_OFF",
+  "FEDERATION_ADMISSION_DISABLED",
+  "FEDERATION_ADMISSION_KEY_MISMATCH",
+  "FEDERATION_ADMISSION_SUSPENDED",
+  "FEDERATION_ADMISSION_FULL",
+  "FEDERATION_ADMISSION_INVALID",
+  "FEDERATION_ADMISSION_UNREACHABLE",
+  "FEDERATION_ADMISSION_NOT_FOUND",
+  "FEDERATION_ADMISSION_NOT_PENDING",
 ] as const;
 export type ComparisonFailureCode =
   (typeof KNOWN_COMPARISON_CODES)[number] | "rateLimited" | "unknown";

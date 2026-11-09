@@ -31,6 +31,11 @@ import {
   readScope,
 } from "./consents";
 
+/** The newest snapshot version both sides read: the asker's `accept` list meets what we serve. */
+function highestCommonVersion(accept: readonly number[]): 1 | 2 {
+  return accept.includes(2) && (SERVED_VERSIONS as readonly number[]).includes(2) ? 2 : 1;
+}
+
 export async function serveAggregate(
   origin: string,
   body: AggregateRequest
@@ -46,6 +51,9 @@ export async function serveAggregate(
     include: { owner: { select: { isActive: true } } },
   });
   if (!consent || !consent.owner.isActive) return { status: "notShared" };
+  // Mutual rule: a v2 asker asserts whether its side shares back. A v1 asker cannot (legacy
+  // path, served as before); an explicit "no" gets nothing, not even a withdrawn notice.
+  if (body.viewerShares === false) return { status: "notShared" };
   if (consent.status === "withdrawn") return { status: "withdrawn" };
   // Only an accepted row is ever read: a pending offer already carries a scope, and must not
   // show it before the other side has answered.
@@ -57,9 +65,16 @@ export async function serveAggregate(
     return { status: "yearNotShared", year: scope.year };
   return {
     status: "ok",
-    snapshot: await buildLeaderboardSnapshot(remote.userId, scope, body.year),
+    snapshot: await buildLeaderboardSnapshot(
+      remote.userId,
+      scope,
+      body.year,
+      highestCommonVersion(body.accept)
+    ),
   };
 }
+
+class BoundElsewhere extends Error {}
 
 /**
  * Someone on the asking server redeemed one of our users' invitation codes. The inviter is
@@ -71,6 +86,16 @@ export async function serveAggregate(
  * about which codes or users exist.
  */
 export async function serveClaim(origin: string, body: LbClaimRequest): Promise<LbClaimReply> {
+  try {
+    return await claim(origin, body);
+  } catch (error) {
+    // The transaction rolled back, so the token is unspent for the server it belongs to.
+    if (error instanceof BoundElsewhere) return { accepted: false as const };
+    throw error;
+  }
+}
+
+async function claim(origin: string, body: LbClaimRequest): Promise<LbClaimReply> {
   return prisma.$transaction(async (tx) => {
     const invite = await tx.leaderboardInvite.findUnique({
       where: { hash: hash(body.code) },
@@ -89,6 +114,14 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
       data: { usedAt: new Date() },
     });
     if (used.count !== 1) return { accepted: false as const };
+    // A token an admission request bound to one server is that server's alone: a pinned peer
+    // holding it by other means cannot spend it. Checked after the spend, under the row lock it
+    // took, so a binding committing meanwhile is seen here or fails on its own `usedAt` guard.
+    const bound = await tx.federationAdmissionRequest.findUnique({
+      where: { inviteHash: invite.hash },
+      select: { origin: true },
+    });
+    if (bound && bound.origin !== origin) throw new BoundElsewhere();
     const channel = randomUUID();
     const remote = await tx.leaderboardRemote.create({
       data: {
@@ -97,6 +130,7 @@ export async function serveClaim(origin: string, body: LbClaimRequest): Promise<
         channel,
         username: body.username,
         displayName: body.displayName,
+        ...(invite.switches ? { inviteSwitches: invite.switches as never } : {}),
       },
     });
     // The pair is brand new, so nobody else can hold it yet; taken anyway so every writer of a

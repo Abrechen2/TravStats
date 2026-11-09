@@ -8,7 +8,7 @@ import { render, screen, waitFor } from "@testing-library/react";
  * App stops routing either path or the page picks the wrong one.
  */
 const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
-vi.mock("../../components/comparison/LeaderboardPage", () => ({
+vi.mock("../../components/friends/FriendsPage", () => ({
   default: () => <div data-testid="leaderboard-stub" />,
 }));
 vi.mock("../../components/encryptedShare/SealedWorkspace", () => ({
@@ -82,9 +82,9 @@ describe("the comparison routes", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomainsLoaded: true });
   });
 
-  it("draws the leaderboard at /compare", { timeout: 10000 }, async () => {
+  it("draws the leaderboard at /freunde", { timeout: 10000 }, async () => {
     remoteBeta.value = true;
-    await landOn("/compare", "leaderboard-stub");
+    await landOn("/freunde", "leaderboard-stub");
     expect(screen.queryByTestId("sealed-stub")).toBeNull();
   });
 
@@ -99,7 +99,7 @@ describe("the comparison routes", () => {
     { timeout: 10000 },
     async () => {
       remoteBeta.value = false;
-      for (const path of ["/compare", "/encrypted-share"]) {
+      for (const path of ["/freunde", "/encrypted-share"]) {
         window.history.pushState({}, "", path);
         const view = render(<App />);
         await waitFor(() => expect(screen.getByTestId("dashboard-stub")).toBeTruthy(), {

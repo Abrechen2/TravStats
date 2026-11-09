@@ -9,9 +9,10 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { smtpConfigSchema, SMTP_CONFIG_ID } from "../../routes/admin/smtp";
 import { applyConsentChange } from "../../routes/admin/usageStats";
-import { federationSettingsSchema } from "../../schemas/federationAdmin";
+import { federationSettingsSchema, httpsOriginSchema } from "../../schemas/federationAdmin";
 import { ensureAdminSettingsRow } from "../adminSettingsRow";
 import { resetIdentityCache } from "../federation/identity";
+import { storeNewKey } from "../federation/storeKey";
 import { refreshInstanceTuning } from "../instanceTuning";
 import { clearAvailabilityCache } from "../parsers/config";
 import { clearLlmAvailabilityCache } from "../parsers/llmAvailability";
@@ -137,7 +138,8 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     else Object.assign(adminData, CLEARED_PUSH_CREDENTIALS);
   }
   if (service.id === "federation" && (adminData.federationOrigin !== undefined || body.enabled)) {
-    federationSettingsSchema.parse({
+    // This route has no public-URL fallback: an address is required here, as before.
+    federationSettingsSchema.extend({ origin: httpsOriginSchema }).parse({
       enabled: adminData.federationEnabled ?? current?.federationEnabled ?? false,
       origin: adminData.federationOrigin ?? current?.federationOrigin ?? "",
     });
@@ -157,7 +159,11 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
       ...consentWithdrawalsForAddressChange(adminData, current),
     ]);
   }
-  if (service.id === "federation") resetIdentityCache();
+  if (service.id === "federation") {
+    // One switch, as in PUT /admin/federation: turning it on makes the first key (insert-only).
+    if (body.enabled && !current?.federationPrivateKey) await storeNewKey(undefined, false);
+    resetIdentityCache();
+  }
   await refreshInstanceTuning();
   if (service.ai) {
     // A provider switch must be felt by the very next parse, not after the cache expires.

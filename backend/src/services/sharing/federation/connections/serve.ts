@@ -108,7 +108,18 @@ async function applyRequest(origin: string, body: ConnectRequest, localOrigin: s
     if (byChannel && byChannel.user.username !== body.toUsername) return;
     // Findable means "may receive requests" from strangers; a person who already holds a connection
     // with us (one from before connections, or one sent back to reconfirm) keeps being able to ask.
-    if (!user.federationFindable && !["reconfirm", "active"].includes(byChannel?.state ?? ""))
+    // A person who redeemed this user's own link is invited whatever the findable switch says:
+    // the leaderboard channel the request names was minted by that claim and only the redeemer
+    // holds it (spec 2026-11-08 §11.8). The request still waits for this user's answer.
+    const invitedBy = await tx.leaderboardRemote.findFirst({
+      where: { userId: user.id, origin, channel: body.leaderboardChannel, sharePairing: null },
+      select: { id: true },
+    });
+    if (
+      !user.federationFindable &&
+      !invitedBy &&
+      !["reconfirm", "active"].includes(byChannel?.state ?? "")
+    )
       return;
     const existing = byChannel as Account | null;
     if (existing) {
@@ -153,6 +164,7 @@ async function applyRequest(origin: string, body: ConnectRequest, localOrigin: s
         origin,
         localChannel: randomUUID(),
         ...incoming(body),
+        ...(invitedBy ? { leaderboardRemoteId: invitedBy.id } : {}),
       },
     });
   });

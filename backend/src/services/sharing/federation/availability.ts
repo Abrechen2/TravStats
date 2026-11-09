@@ -39,3 +39,20 @@ export async function hasAdmittedPeer(): Promise<boolean> {
   });
   return admitted > 0;
 }
+
+/**
+ * Whether this server can take part in user connections (spec 2026-11-08 §11.7): federation is on
+ * and its identity loads. Deliberately NOT the trip-sharing beta key or the trip-sharing switch —
+ * a friend on another server must work on a server that shares no trips. Trip, plan and offer
+ * traffic keeps asking `tripFederationAvailability`.
+ */
+export async function connectionsAvailability(): Promise<
+  { available: true; identity: Identity } | { available: false; reason: "no-identity" }
+> {
+  try {
+    return { available: true, identity: await loadIdentity() };
+  } catch (error) {
+    if (error instanceof PeerRefusal) return { available: false, reason: "no-identity" };
+    throw error;
+  }
+}

@@ -2,6 +2,8 @@ import mapConfigRoutes from "./mapConfig";
 import encryptedShareRoutes from "./encryptedShare";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
+import federationAdmissionRoutes from "./federationAdmission";
+import federationIdentityRoutes from "./federationIdentity";
 import tripSharePeerRoutes from "./tripSharePeer";
 /**
  * The API mount table — the single source of truth for what is served
@@ -166,6 +168,7 @@ import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import sharingRemoteRoutes from "./sharingRemote";
 import sharingConnectionsRoutes from "./sharingConnections";
+import friendsRoutes from "./friends";
 import shareLinkRoutes from "./shareLinks";
 import passportOverrideRoutes from "./passportOverrides";
 import publicShareLinkRoutes from "./publicShareLinks";
@@ -207,6 +210,14 @@ export const apiMounts: ApiMount[] = [
   { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
   { id: "encrypted-share", base: "/api/v1/encrypted-share", router: encryptedShareRoutes },
   { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
+  // The public key and origin, asked with no session by a server that was invited (spec 2026-11-07).
+  { id: "federation-identity", base: "/api/v1/federation", router: federationIdentityRoutes },
+  // A server that is not pinned yet asks to be admitted, with a user's invitation token (spec 2026-11-07 §6.2).
+  {
+    id: "federation-admission",
+    base: "/api/v1/federation-admission",
+    router: federationAdmissionRoutes,
+  },
   { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   // Trip sharing across servers (spec 2026-10-20): signed server-to-server messages, 404 when off.
   { id: "trip-share-peer", base: "/api/v1/trip-share-peer", router: tripSharePeerRoutes },
@@ -591,6 +602,8 @@ export const apiMounts: ApiMount[] = [
     router: sharingConnectionsRoutes,
   },
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
+  // Friends (spec 2026-11-08 §11.4): one connection per person, local or remote.
+  { id: "friends", base: "/api/v1/friends", router: friendsRoutes },
   // Public share links (forgejo#281): the owner's list/preview/create/revoke,
   // and the unauthenticated side a link's page asks with its token.
   { id: "shareLinks", base: "/api/v1/share-links", router: shareLinkRoutes },

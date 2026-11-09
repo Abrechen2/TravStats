@@ -95,11 +95,11 @@ it("a decline leaves nothing visible either way, and the pair may be asked again
   expect(await sees(b.id, a.id)).toBe(false);
   const accepted = await acceptConsent(b.id, again.consentId, { ...SCOPE, year: 2025 });
   expect(accepted.mine).toMatchObject({ status: "accepted", scope: { year: 2025 } });
-  expect(accepted.theirs).toEqual({ status: "accepted" });
+  expect(accepted.theirs).toMatchObject({ status: "accepted" });
   expect(await sees(b.id, a.id)).toBe(true);
   expect(await sees(a.id, b.id)).toBe(true);
   const forA = (await listPeople(a.id)).people[0];
-  expect(forA.theirs).toEqual({ status: "accepted" });
+  expect(forA.theirs).toMatchObject({ status: "accepted" });
   expect(forA.mine).toMatchObject({ status: "accepted", scope: SCOPE });
 });
 

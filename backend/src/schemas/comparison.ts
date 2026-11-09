@@ -13,8 +13,13 @@ const year = z.number().int().min(1900).max(2200);
 const uuid = z.string().uuid();
 
 export const LEADERBOARD_SCHEMA = "travstats-leaderboard" as const;
-/** Snapshot versions this server reads and serves. */
-export const SERVED_VERSIONS = [1] as const;
+/**
+ * Peer protocol versions this server reads and serves. 2 adds the mutual-consent assertion
+ * (`viewerShares`) to the aggregate request and the achievements to the snapshot.
+ */
+export const SERVED_VERSIONS = [1, 2] as const;
+/** The first protocol version whose aggregate request carries `viewerShares`. */
+export const MUTUAL_PROTOCOL_VERSION = 2;
 
 export const leaderboardScopeSchema = z.strictObject({
   groups: z
@@ -41,9 +46,8 @@ const notPrototypeName = (raw: unknown) =>
   raw !== null &&
   !Object.keys(raw).some((k) => Object.prototype.hasOwnProperty.call(Object.prototype, k));
 
-export const leaderboardSnapshotSchema = z.strictObject({
+const snapshotFields = {
   schema: z.literal(LEADERBOARD_SCHEMA),
-  version: z.literal(1),
   asOf: z.string().datetime(),
   year: year.nullable(),
   domains: z.array(z.string().max(30)).max(20),
@@ -62,13 +66,50 @@ export const leaderboardSnapshotSchema = z.strictObject({
     ),
   /** Metrics that are a lower bound (some rides carry no distance). */
   partial: z.array(metricName).max(64),
+};
+
+export const leaderboardSnapshotSchema = z.strictObject({
+  ...snapshotFields,
+  version: z.literal(1),
 });
+
+/**
+ * Snapshot v2 (spec §6.4): v1 plus an optional lifetime achievements section. Only comparable
+ * badges, never a date: an item is the code, whether it is held, and its progress.
+ */
+export const achievementSectionSchema = z.strictObject({
+  catalogue: z.string().regex(/^[a-f0-9]{16}$/),
+  items: z
+    .array(
+      z.strictObject({
+        code: z.string().regex(/^[A-Z0-9_]{1,64}$/),
+        unlocked: z.boolean(),
+        progress: z.number().min(0).max(1).nullable(),
+      })
+    )
+    .max(400),
+});
+export const leaderboardSnapshotV2Schema = z.strictObject({
+  ...snapshotFields,
+  version: z.literal(2),
+  achievements: achievementSectionSchema.optional(),
+});
+/** Any snapshot version this server reads; the version literal tells them apart. */
+export const anyLeaderboardSnapshotSchema = z.discriminatedUnion("version", [
+  leaderboardSnapshotSchema,
+  leaderboardSnapshotV2Schema,
+]);
 
 export const aggregateRequestSchema = z.strictObject({
   action: z.literal("aggregate"),
   channel: uuid,
   year: year.nullable(),
   accept: z.array(z.number().int().positive()).min(1).max(8),
+  /**
+   * Protocol v2: whether the asking side shares its own totals with the user it asks for. Absent
+   * on a v1 request (an older server cannot assert it).
+   */
+  viewerShares: z.boolean().optional(),
 });
 export const lbClaimRequestSchema = z.strictObject({
   action: z.literal("lb-claim"),
@@ -83,7 +124,7 @@ export const lbStateRequestSchema = z.strictObject({
 });
 
 export const aggregateReplySchema = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("ok"), snapshot: leaderboardSnapshotSchema }),
+  z.strictObject({ status: z.literal("ok"), snapshot: anyLeaderboardSnapshotSchema }),
   z.strictObject({ status: z.literal("notShared") }),
   z.strictObject({ status: z.literal("withdrawn") }),
   z.strictObject({ status: z.literal("yearNotShared"), year }),
@@ -109,6 +150,16 @@ export const uuidParamSchema = uuid;
 export const leaderboardQuerySchema = z.strictObject({
   year: z.union([z.literal("all"), z.coerce.number().int().min(1900).max(2200)]).default("all"),
   board: uuid.optional(),
+});
+/** The compare view's pick: up to three friends, comma separated, no repeats. */
+export const COMPARE_MAX_FRIENDS = 3;
+export const compareQuerySchema = z.strictObject({
+  year: leaderboardQuerySchema.shape.year,
+  friends: z
+    .string()
+    .max(COMPARE_MAX_FRIENDS * 50)
+    .transform((raw) => (raw === "" ? [] : raw.split(",")))
+    .pipe(z.array(personKeySchema).max(COMPARE_MAX_FRIENDS).refine(unique, "No duplicates")),
 });
 export const consentRequestBodySchema = z.strictObject({
   username: z.string().trim().min(1).max(80),
@@ -145,13 +196,22 @@ export const consentStatusSchema = z.enum(["pending", "accepted", "declined", "w
 export const leaderboardRowSchema = z.strictObject({
   person: personSchema,
   status: rowStatusSchema,
-  snapshot: leaderboardSnapshotSchema.nullable(),
+  snapshot: anyLeaderboardSnapshotSchema.nullable(),
+  /** The friend's lifetime achievements (snapshot v2), lifted out of the snapshot. */
+  achievements: achievementSectionSchema.optional(),
+  /** Why `achievements` is absent when it is: the reader says it instead of showing nothing. */
+  achievementsUnavailable: z.enum(["olderServer", "notShared", "yearView"]).optional(),
   /** The one year this person shares, when they share only one. */
   sharedYear: year.nullable(),
 });
 export const leaderboardResponseSchema = z.strictObject({
   year: year.nullable(),
   rows: z.array(leaderboardRowSchema),
+});
+export const compareResponseSchema = z.strictObject({
+  year: year.nullable(),
+  self: leaderboardRowSchema,
+  friends: z.array(leaderboardRowSchema).max(COMPARE_MAX_FRIENDS),
 });
 export const personViewSchema = z.strictObject({
   person: personSchema,
@@ -163,8 +223,17 @@ export const personViewSchema = z.strictObject({
       scope: leaderboardScopeSchema.nullable(),
     })
     .nullable(),
-  /** This person's consent to the caller; null for a remote person (their server holds it). */
-  theirs: z.strictObject({ status: consentStatusSchema }).nullable(),
+  /**
+   * This person's consent to the caller. For a remote person it is derived from the last
+   * aggregate answer of their server (`unknown` before any); for a local one, their own row
+   * (null when they have none).
+   */
+  theirs: z
+    .strictObject({
+      status: z.enum([...consentStatusSchema.options, "unknown"]),
+      answeredAt: z.string().datetime().nullable(),
+    })
+    .nullable(),
 });
 export const requestViewSchema = z.strictObject({
   consentId: uuid,
@@ -187,7 +256,9 @@ export const inviteResponseSchema = z.strictObject({
 });
 
 export type LeaderboardScope = z.infer<typeof leaderboardScopeSchema>;
-export type LeaderboardSnapshot = z.infer<typeof leaderboardSnapshotSchema>;
+export type LeaderboardSnapshotV1 = z.infer<typeof leaderboardSnapshotSchema>;
+export type LeaderboardSnapshot = z.infer<typeof anyLeaderboardSnapshotSchema>;
+export type AchievementSection = z.infer<typeof achievementSectionSchema>;
 export type AggregateRequest = z.infer<typeof aggregateRequestSchema>;
 export type AggregateReply = z.infer<typeof aggregateReplySchema>;
 export type LbClaimRequest = z.infer<typeof lbClaimRequestSchema>;
@@ -197,6 +268,7 @@ export type Person = z.infer<typeof personSchema>;
 export type RowStatus = z.infer<typeof rowStatusSchema>;
 export type ConsentStatus = z.infer<typeof consentStatusSchema>;
 export type LeaderboardRow = z.infer<typeof leaderboardRowSchema>;
+export type CompareResponse = z.infer<typeof compareResponseSchema>;
 export type LeaderboardResponse = z.infer<typeof leaderboardResponseSchema>;
 export type PersonView = z.infer<typeof personViewSchema>;
 export type RequestView = z.infer<typeof requestViewSchema>;

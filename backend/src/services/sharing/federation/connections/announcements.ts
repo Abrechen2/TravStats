@@ -17,7 +17,7 @@ import type { Prisma } from "../../../../prisma";
 import logger from "../../../../utils/logger";
 import { connectReplySchema, type TripSharePacket } from "../../../../schemas/tripSharePeer";
 import { planReplySchema } from "../../../../schemas/tripSharePlans";
-import { tripFederationAvailability } from "../availability";
+import { connectionsAvailability } from "../availability";
 import { UNREACHABLE_AFTER_MS, backoffAfter } from "../outbox";
 import { LOCAL_ERROR, kindOf } from "../peerCheck";
 import { messageHeader, tripShareExchange } from "../transport";
@@ -132,7 +132,7 @@ export interface AnnouncementRun {
 /** One delivery pass (run by the trip-share delivery scheduler). */
 export async function runAnnouncements(now = new Date()): Promise<AnnouncementRun> {
   const run: AnnouncementRun = { sent: 0, failed: 0, dropped: 0 };
-  if (!(await tripFederationAvailability()).available) return run;
+  if (!(await connectionsAvailability()).available) return run;
   const cutoff = { createdAt: { lt: new Date(now.getTime() - UNREACHABLE_AFTER_MS) } };
   const stale = await prisma.connectionAnnouncement.findMany({
     where: cutoff,

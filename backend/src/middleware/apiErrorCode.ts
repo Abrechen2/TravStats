@@ -580,6 +580,23 @@ export type ApiErrorCode =
   /** The user already holds the maximum number of friendships with people on other servers. */
   | "COMPARISON_REMOTE_LIMIT"
   | "COMPARISON_YEAR_NOT_SHARED"
+  /** Server admission (spec 2026-11-07 §6.2, `services/federation/admission*`). Federation is
+   *  off here: the public identity endpoint answers 404 and nothing is queued. */
+  | "FEDERATION_OFF"
+  | "FEDERATION_ORIGIN_MISSING" // switching federation on with no address stored or derivable (400)
+  | "FEDERATION_ADMISSION_DISABLED" // redeem while this server's federation is off (409)
+  | "FEDERATION_ADMISSION_KEY_MISMATCH" // origin and key do not match what the link, the pin or the server says (409)
+  | "FEDERATION_ADMISSION_SUSPENDED" // the admin suspended that server; a user never re-enables it (409)
+  | "FEDERATION_ADMISSION_FULL" // too many open admission requests (429)
+  | "FEDERATION_ADMISSION_INVALID" // not an invitation link (400)
+  | "FEDERATION_ADMISSION_UNREACHABLE" // the other server's identity could not be read (502)
+  | "FEDERATION_ADMISSION_NOT_FOUND" // no such request (404)
+  | "FEDERATION_ADMISSION_NOT_PENDING" // already decided (409)
+  /** Friends (spec 2026-11-08 §11): a friend is one connection, local or remote. */
+  | "FRIENDS_NOT_FOUND" // no such friend or request (404)
+  | "FRIENDS_CONNECTION_STATE" // the connection is not in a state this can be done in, e.g. a stale accept (409)
+  | "FRIENDS_CONNECTION_EXISTS" // there is a connection or an open request with that person already (409)
+  | "FRIENDS_SCOPE_UNAVAILABLE" // the connection has no leaderboard to hold a comparison scope (409)
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"
   /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a

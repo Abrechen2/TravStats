@@ -18,9 +18,12 @@ import { PERSON_SELECT, toPerson } from "../sharing/people";
 import { exchange, PeerRefusal } from "../federation/security";
 import { loadIdentity, type Identity } from "../federation/identity";
 import { origin as originSchema } from "../federation/contract";
+import type { ConnectionSwitches } from "../../schemas/connectionSwitches";
+import { runPostClaim } from "./postClaim";
 import { hash } from "../federation/refusal";
 import { pingReplySchema } from "../../schemas/federationAdmin";
 import {
+  MUTUAL_PROTOCOL_VERSION,
   SERVED_VERSIONS,
   aggregateReplySchema,
   lbClaimReplySchema,
@@ -44,7 +47,7 @@ import {
 import { comparisonError } from "./errors";
 import { UnexpectedReply, failureKind, tellEnded } from "./remoteNotice";
 
-const INVITE_TTL_MS = 72 * 3_600_000;
+export const INVITE_TTL_MS = 72 * 3_600_000;
 const OPEN_INVITES = 20;
 const SECRET_BYTES = 32;
 
@@ -66,16 +69,30 @@ export function parseInviteCode(code: string): { origin: string; secret: string 
   return /^[a-f0-9]{64}$/.test(secret) ? { origin, secret } : null;
 }
 
+const NEWEST_SERVED_VERSION = Math.max(...SERVED_VERSIONS);
+/** How long a cached version list that lacks our newest version is trusted before one re-ping. */
+const VERSIONS_RECHECK_MS = 24 * 3_600_000;
+
 /**
- * Whether a peer can be asked for totals. A stored version list is trusted; an empty one is
- * re-checked with one ping, because the other admin may have updated since the last check.
+ * Whether a peer can be asked for totals. A stored version list is trusted, with two exceptions
+ * that cost one ping: an empty list (the other admin may have updated since), and a list that
+ * lacks our newest version once it is a day old or was never re-checked (an upgraded peer would
+ * otherwise stay on the older protocol for good). The ping is part of the pull, so the pull's
+ * own deadline bounds it; a failed re-check keeps the cached list and stamps the time, so a down
+ * peer is asked once a day, not on every page view.
  * The answer is stored only while the peer is still pinned as it was read: an admin who
  * suspended or re-pinned it during the ping must not see a stale answer written over that.
  */
 export async function peerReadiness(origin: string): Promise<PeerReadiness> {
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin } });
   if (!peer?.enabled || !peer.verifiedAt) return "unknown";
-  if (speaksOurVersion(peer.leaderboardVersions)) return "ready";
+  const pinned = { origin, enabled: true, publicKey: peer.publicKey, verifiedAt: { not: null } };
+  const known = speaksOurVersion(peer.leaderboardVersions);
+  const upToDate = peer.leaderboardVersions.includes(NEWEST_SERVED_VERSION);
+  const checkedRecently =
+    peer.versionsCheckedAt !== null &&
+    Date.now() - peer.versionsCheckedAt.getTime() < VERSIONS_RECHECK_MS;
+  if (known && (upToDate || checkedRecently)) return "ready";
   let versions: number[];
   try {
     versions = pingReplySchema.parse(await exchange(origin, { action: "ping" })).leaderboard ?? [];
@@ -84,11 +101,19 @@ export async function peerReadiness(origin: string): Promise<PeerReadiness> {
       { operation: "comparison_peer_ping_failed", origin, kind: failureKind(error) },
       "Peer did not answer"
     );
+    // A cached list that already works stays in use; the stamp keeps the next day quiet.
+    if (known) {
+      await prisma.comparisonPeer.updateMany({
+        where: pinned,
+        data: { versionsCheckedAt: new Date() },
+      });
+      return "ready";
+    }
     return "unreachable";
   }
   const stored = await prisma.comparisonPeer.updateMany({
-    where: { origin, enabled: true, publicKey: peer.publicKey, verifiedAt: { not: null } },
-    data: { leaderboardVersions: versions },
+    where: pinned,
+    data: { leaderboardVersions: versions, versionsCheckedAt: new Date() },
   });
   if (stored.count === 0) return "unknown";
   return speaksOurVersion(versions) ? "ready" : "outdated";
@@ -104,9 +129,82 @@ async function identityOrNull(): Promise<Identity | null> {
   }
 }
 
+/**
+ * The aggregate request for one remote friend. A peer that announced protocol 2 gets the mutual
+ * assertion (does the local user share with this friend); one that speaks only 1 gets today's
+ * body unchanged, because its strict schema would refuse an unknown field.
+ */
+type AskedAs = { viewerShares?: boolean };
+
+async function aggregateBody(remote: LeaderboardRemote, year: number | null, asked: AskedAs) {
+  const base = { action: "aggregate" as const, channel: remote.channel, year };
+  const peer = await prisma.comparisonPeer.findUnique({
+    where: { origin: remote.origin },
+    select: { leaderboardVersions: true },
+  });
+  if (!peer?.leaderboardVersions.includes(MUTUAL_PROTOCOL_VERSION)) return { ...base, accept: [1] };
+  const mine = await prisma.leaderboardConsent.findUnique({
+    where: { ownerId_remoteId: { ownerId: remote.userId, remoteId: remote.id } },
+    select: { status: true },
+  });
+  asked.viewerShares = mine?.status === "accepted";
+  return { ...base, accept: [...SERVED_VERSIONS], viewerShares: asked.viewerShares };
+}
+
+/** The status a pull outcome leaves on the remote row; null: it says nothing about the friend. */
+const theirStatusOf = (result: RemoteResult): string | null => {
+  if (result.status === "federationOff") return null;
+  return result.status === "outdated" ? "unsupportedVersion" : result.status;
+};
+const DEFINITE_ANSWERS = ["ok", "notShared", "withdrawn", "yearNotShared"];
+
+/**
+ * Remembers what the friend's server last said, for the people view. A failure (unreachable,
+ * outdated) is stored only while no definite answer exists: an outage must not erase "withdrawn".
+ * A write that fails is logged and costs the page nothing.
+ */
+async function recordTheirStatus(
+  remote: LeaderboardRemote,
+  result: RemoteResult,
+  asked: AskedAs
+): Promise<void> {
+  const status = theirStatusOf(result);
+  if (!status) return;
+  // A v2 request that said "the viewer does not share" is answered notShared whichever side
+  // is missing, so that answer says nothing about the friend's own consent.
+  if (result.status === "notShared" && asked.viewerShares === false) return;
+  try {
+    await prisma.leaderboardRemote.updateMany({
+      where: {
+        id: remote.id,
+        ...(DEFINITE_ANSWERS.includes(status)
+          ? {}
+          : { OR: [{ theirStatus: null }, { theirStatus: { notIn: DEFINITE_ANSWERS } }] }),
+      },
+      data: { theirStatus: status, theirStatusAt: new Date() },
+    });
+  } catch (error) {
+    logger.warn(
+      { operation: "comparison_their_status_failed", remoteId: remote.id, err: error },
+      "A remote friend's answer could not be stored"
+    );
+  }
+}
+
 export async function pullRemote(
   remote: LeaderboardRemote,
   year: number | null
+): Promise<RemoteResult> {
+  const asked: AskedAs = {};
+  const result = await pullRemoteUnrecorded(remote, year, asked);
+  await recordTheirStatus(remote, result, asked);
+  return result;
+}
+
+async function pullRemoteUnrecorded(
+  remote: LeaderboardRemote,
+  year: number | null,
+  asked: AskedAs
 ): Promise<RemoteResult> {
   if (!(await identityOrNull())) return { status: "federationOff" };
   const readiness = await peerReadiness(remote.origin);
@@ -114,14 +212,11 @@ export async function pullRemote(
   if (readiness !== "ready") return { status: "unreachable" };
   let reply: AggregateReply;
   try {
-    reply = aggregateReplySchema.parse(
-      await exchange(remote.origin, {
-        action: "aggregate",
-        channel: remote.channel,
-        year,
-        accept: [...SERVED_VERSIONS],
-      })
-    );
+    const body = await aggregateBody(remote, year, asked);
+    reply = aggregateReplySchema.parse(await exchange(remote.origin, body));
+    // A snapshot version we did not offer is a reply we cannot trust the shape of.
+    if (reply.status === "ok" && !body.accept.includes(reply.snapshot.version))
+      throw new UnexpectedReply("wrong-version");
     // Totals for a year nobody asked for would be shown under the wrong heading.
     if (reply.status === "ok" && reply.snapshot.year !== year)
       throw new UnexpectedReply("wrong-year");
@@ -165,7 +260,10 @@ async function lockInvites(tx: DbTransaction, userId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${key}::text, 0))) l`;
 }
 
-export async function createInvite(userId: string): Promise<{ code: string; expiresAt: string }> {
+export async function createInvite(
+  userId: string,
+  switches?: ConnectionSwitches
+): Promise<{ code: string; expiresAt: string }> {
   const local = await connectedIdentity(userId);
   const secret = randomBytes(SECRET_BYTES).toString("hex");
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
@@ -178,7 +276,14 @@ export async function createInvite(userId: string): Promise<{ code: string; expi
       throw comparisonError("COMPARISON_INVITE_LIMIT", 429, "Too many open invitations", {
         userId,
       });
-    await tx.leaderboardInvite.create({ data: { hash: hash(secret), userId, expiresAt } });
+    await tx.leaderboardInvite.create({
+      data: {
+        hash: hash(secret),
+        userId,
+        expiresAt,
+        ...(switches ? { switches: switches as unknown as Prisma.InputJsonValue } : {}),
+      },
+    });
   });
   return { code: `${local.origin}#${secret}`, expiresAt: expiresAt.toISOString() };
 }
@@ -232,7 +337,8 @@ async function recordClaim(
   userId: string,
   origin: string,
   answer: AcceptedClaim,
-  grant: Prisma.InputJsonValue
+  grant: Prisma.InputJsonValue,
+  shares = true
 ): Promise<string> {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -270,7 +376,8 @@ async function recordClaim(
         data: {
           ownerId: userId,
           remoteId: remote.id,
-          status: "accepted",
+          // The claimant's explicit "no" to the leaderboard keeps the scope but shares nothing.
+          status: shares ? "accepted" : "withdrawn",
           scope: grant,
           decidedAt: new Date(),
         },
@@ -296,7 +403,8 @@ async function recordClaim(
 export async function claimInvite(
   userId: string,
   code: string,
-  scope: LeaderboardScope
+  scope: LeaderboardScope,
+  switches?: ConnectionSwitches
 ): Promise<PersonView> {
   const parsed = parseInviteCode(code);
   if (!parsed)
@@ -335,7 +443,16 @@ export async function claimInvite(
     throw comparisonError("COMPARISON_INVITE_INVALID", 400, "Unknown, used or expired code", {
       userId,
     });
-  const remoteId = await recordClaim(userId, parsed.origin, reply, grant);
+  const remoteId = await recordClaim(
+    userId,
+    parsed.origin,
+    reply,
+    grant,
+    switches ? switches.leaderboard : true
+  );
+  // A link redeemed with switches also asks for a connection (spec 2026-11-08 §11.8); the claim
+  // above already stands, so this can only fall back to the comparison alone, never fail it.
+  if (switches) await runPostClaim(userId, remoteId, switches);
   return personView(userId, remoteKey(remoteId));
 }
 

@@ -7,10 +7,18 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: undefined }),
 }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+const visible = vi.hoisted(() => ({ keys: new Set<string>() }));
 vi.mock("../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({ betaFeaturesEnabled: false, isFeatureVisible: () => false }),
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: false,
+    isFeatureVisible: (key: string) => visible.keys.has(key),
+  }),
 }));
-const api = vi.hoisted(() => ({ get: vi.fn(), update: vi.fn() }));
+const api = vi.hoisted(() => ({
+  get: vi.fn(),
+  update: vi.fn(),
+  admissions: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("../../../lib/api/federationAdmin", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/federationAdmin")>()),
   federationAdminApi: api,
@@ -33,6 +41,7 @@ const state = {
 describe("FederationRows", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    visible.keys.clear();
     useSettingsLevelStore.setState({ level: "expert" });
     api.get.mockResolvedValue(state);
   });
@@ -77,5 +86,40 @@ describe("FederationRows", () => {
     });
     await userEvent.click(await screen.findByRole("switch"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  describe("setup checklist gates (federation serves comparison AND trip sharing)", () => {
+    const live = { ...state, enabled: true, fingerprint: "ab".repeat(32), hasKey: true };
+    const open = async (): Promise<void> => {
+      api.get.mockResolvedValue(live);
+      await act(async () => {
+        render(
+          <MemoryRouter>
+            <FederationRows />
+          </MemoryRouter>
+        );
+      });
+      await screen.findAllByRole("switch");
+    };
+
+    it("shows identity but not the trip-sharing step when only comparison is visible", async () => {
+      visible.keys.add("comparison");
+      await open();
+      expect(screen.getByTestId("federation-step-1")).toBeInTheDocument();
+      expect(screen.queryByTestId("federation-step-2")).toBeNull();
+      expect(document.getElementById("federation-trip-sharing")).toBeNull();
+    });
+
+    it("shows identity and the trip-sharing step when trip sharing is visible", async () => {
+      visible.keys.add("federatedTripSharing");
+      await open();
+      expect(screen.getByTestId("federation-step-1")).toBeInTheDocument();
+      expect(screen.getByTestId("federation-step-2")).toBeInTheDocument();
+    });
+
+    it("shows no checklist when neither is visible", async () => {
+      await open();
+      expect(screen.queryByTestId("federation-checklist")).toBeNull();
+    });
   });
 });

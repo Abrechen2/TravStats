@@ -286,7 +286,7 @@ describe("comparison and encrypted share (rework 2026-10-16)", () => {
   it("gives the comparison its own icon, apart from the achievements trophy", () => {
     const collections = section(run().more, "collections");
     expect(collections.find((l) => l.id === "comparison")).toMatchObject({
-      path: "/compare",
+      path: "/freunde",
       icon: "users",
     });
     expect(collections.find((l) => l.id === "achievements")?.icon).toBe("trophy");

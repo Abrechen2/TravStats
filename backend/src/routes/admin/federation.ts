@@ -10,14 +10,14 @@
  * cheap; the connection-file upload is capped at 64 KB and inflates one bounded entry.
  */
 import { Router, type Response, type NextFunction } from "express";
-import { generateKeyPairSync } from "crypto";
 import multer, { MulterError } from "multer";
 import { prisma } from "../../db";
 import { peerPinLimiter } from "../../middleware/peerPinLimiter";
 import type { AuthRequest } from "../../middleware/auth";
 import logger from "../../utils/logger";
-import { encryptApiKey } from "../../utils/encryption";
+import { AppError } from "../../middleware/errorHandler";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
+import { storeNewKey } from "../../services/federation/storeKey";
 import {
   loadIdentity,
   resetIdentityCache,
@@ -32,14 +32,19 @@ import {
   readConnectionFile,
   readServerQrPayload,
 } from "../../services/federation/connectionFile";
-import { parsePeerPublicKey } from "../../services/federation/peerKey";
+import { pinPeer } from "../../services/federation/pinning";
 import {
-  holdAllConnections,
-  holdConnectionsOfOrigin,
-} from "../../services/sharing/federation/connections/hooks";
+  approveAdmission,
+  declineAdmission,
+  listAdmissions,
+} from "../../services/federation/admission";
+import { kickAdmissionDelivery } from "../../jobs/admissionDeliveryScheduler";
+import { uuidParamSchema } from "../../schemas/comparison";
+import { holdAllConnections } from "../../services/sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
 import {
   federationSettingsSchema,
+  httpsOriginSchema,
   peerOriginSchema,
   peerPinFromFileSchema,
   peerPinFromQrSchema,
@@ -107,6 +112,17 @@ router.get(
   })
 );
 
+/** The instance's public URL as an origin, or null when it is unset or not a valid peer address. */
+function publicUrlOrigin(publicUrl: string | null | undefined): string | null {
+  if (!publicUrl) return null;
+  try {
+    const candidate = new URL(publicUrl).origin;
+    return httpsOriginSchema.safeParse(candidate).success ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
 router.put(
   "/",
   handle(async (req, res) => {
@@ -114,18 +130,25 @@ router.put(
     const id = await ensureAdminSettingsRow();
     const before = await prisma.adminSettings.findUnique({
       where: { id },
-      select: { federationOrigin: true },
+      select: { federationOrigin: true, federationPrivateKey: true, publicUrl: true },
     });
+    const origin =
+      body.origin || before?.federationOrigin || publicUrlOrigin(before?.publicUrl) || null;
+    // The stored or derived address is held to today's rules too, not just a typed one.
+    if (body.enabled && (!origin || !httpsOriginSchema.safeParse(origin).success))
+      throw new AppError("This server has no public address yet", 400, "FEDERATION_ORIGIN_MISSING");
     // Peers address this server by its origin: a different one is a new party to them, so their
     // side has re-pinned or lost us; do locally what a re-pin does (first-time set: nothing to
     // hold). The hold comes FIRST: if the write below then fails, the connections are merely
     // reconfirm-able, and a retry still sees the old origin and holds again.
-    if (before?.federationOrigin && before.federationOrigin !== body.origin)
+    if (before?.federationOrigin && origin && before.federationOrigin !== origin)
       await holdAllConnections();
     await prisma.adminSettings.update({
       where: { id },
-      data: { federationEnabled: body.enabled, federationOrigin: body.origin },
+      data: { federationEnabled: body.enabled, federationOrigin: origin },
     });
+    // One switch: turning federation on is enough, the key makes itself the first time.
+    if (body.enabled && !before?.federationPrivateKey) await storeNewKey(req.userId, false);
     resetIdentityCache();
     res.json(await state());
   })
@@ -154,23 +177,7 @@ router.put(
 router.post(
   "/key",
   handle(async (req, res) => {
-    const pem = generateKeyPairSync("ed25519")
-      .privateKey.export({ type: "pkcs8", format: "pem" })
-      .toString();
-    // Peers pinned the old key: they refuse this server until their admins pin the new one, and
-    // their re-pin sends their side of every connection to reconfirm. Mirror that here, or this
-    // side keeps showing active connections and plan members the peers have already ended. Held
-    // before the key is written, so a failure in between fails closed and a retry holds again.
-    await holdAllConnections();
-    await prisma.adminSettings.update({
-      where: { id: await ensureAdminSettingsRow() },
-      data: { federationPrivateKey: encryptApiKey(pem) },
-    });
-    resetIdentityCache();
-    logger.info(
-      { operation: "federation_key_generated", userId: req.userId },
-      "Federation key generated"
-    );
+    await storeNewKey(req.userId, true);
     res.json(await state());
   })
 );
@@ -180,45 +187,7 @@ async function pin(
   body: { origin: string; publicKey: string; fingerprint: string; enabled: boolean },
   res: Response
 ): Promise<void> {
-  const own = await currentIdentity();
-  if (own && body.origin === own.origin)
-    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
-  const pem = parsePeerPublicKey(body.publicKey);
-  if (!pem)
-    throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
-      origin: body.origin,
-    });
-  if (hash(pem) !== body.fingerprint)
-    throw comparisonError(
-      "COMPARISON_PEER_KEY_INVALID",
-      400,
-      "Fingerprint does not match the key",
-      {
-        origin: body.origin,
-      }
-    );
-  const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
-  if (previous && previous.publicKey !== pem) {
-    // A replaced key ends every E2E friendship through it, exactly as before the move.
-    // Leaderboard friendships (LeaderboardRemote) deliberately survive (controller ruling):
-    // they are addressed by origin + channel, not by the key, and nothing flows over them
-    // until the admin re-verifies the new pin (verifiedAt is reset below).
-    await prisma.comparisonLink.updateMany({
-      where: { origin: body.origin },
-      data: { revoked: true },
-    });
-  }
-  await prisma.comparisonPeer.upsert({
-    where: { origin: body.origin },
-    create: { origin: body.origin, publicKey: pem, enabled: body.enabled },
-    update: { publicKey: pem, enabled: body.enabled, verifiedAt: null, leaderboardVersions: [] },
-  });
-  // Trips shared across servers through it pause until each person confirms them again
-  // (spec 2026-10-20 O9): a new key is a new party until someone says otherwise.
-  if (previous && previous.publicKey !== pem) {
-    await holdPeerMemberships(body.origin, "repinned");
-    await holdConnectionsOfOrigin(body.origin);
-  } else if (previous && !body.enabled) await holdPeerMemberships(body.origin, "peer-blocked");
+  const pem = await pinPeer(body);
   const full = await state();
   // `peer` and `computedFingerprint` serve the Companion (spec 2026-11-02 §6): the fingerprint
   // is the one THIS server hashed from the key, to show beside the one printed in the QR.
@@ -341,6 +310,31 @@ router.post(
         ? { fingerprint: hash(known.publicKey), sameKey: known.publicKey === values.publicKey }
         : null,
     });
+  })
+);
+
+/** The admission queue (spec 2026-11-07 §6.2): servers waiting to be admitted, in both directions. */
+router.get(
+  "/admissions",
+  handle(async (_req, res) => {
+    res.json({ admissions: await listAdmissions() });
+  })
+);
+
+router.post(
+  "/admissions/:id/approve",
+  handle(async (req, res) => {
+    const view = await approveAdmission(uuidParamSchema.parse(req.params.id), req.userId!);
+    // Tell the inviting server soon, not at the next minute's pass.
+    if (view.direction === "outgoing") kickAdmissionDelivery();
+    res.json(view);
+  })
+);
+
+router.post(
+  "/admissions/:id/decline",
+  handle(async (req, res) => {
+    res.json(await declineAdmission(uuidParamSchema.parse(req.params.id), req.userId!));
   })
 );
 

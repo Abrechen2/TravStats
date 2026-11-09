@@ -10,11 +10,12 @@ import {
   boardBodySchema,
   boardViewSchema,
   claimBodySchema,
+  compareResponseSchema,
   consentRequestBodySchema,
   inviteResponseSchema,
   leaderboardResponseSchema,
   leaderboardScopeSchema,
-  leaderboardSnapshotSchema,
+  anyLeaderboardSnapshotSchema,
   peopleResponseSchema,
   personViewSchema,
   scopeBodySchema,
@@ -41,7 +42,7 @@ registry.registerPath({
   path: "/comparison/leaderboard",
   summary: "The caller's leaderboard: own totals and every consented friend's",
   description:
-    "Same-instance friends are read under their consent; friends on other servers are pulled over the signed peer link, each bounded at 12 s. A row whose totals are unavailable carries a status instead of numbers: `notShared` (no accepted consent or an unreadable scope), `yearNotShared` (shared for `sharedYear` only), `withdrawn` (the friend ended it on their server), `unreachable` (their server did not answer in time or answered nonsense), `outdated` (their server speaks no snapshot version this one reads), `federationOff` (this server is not connected to other servers). Only `ok` rows carry a snapshot.",
+    "Same-instance friends are read under their consent; friends on other servers are pulled over the signed peer link, each bounded at 12 s. A row whose totals are unavailable carries a status instead of numbers: `notShared` (no accepted consent or an unreadable scope), `yearNotShared` (shared for `sharedYear` only), `withdrawn` (the friend ended it on their server), `unreachable` (their server did not answer in time or answered nonsense), `outdated` (their server speaks no snapshot version this one reads), `federationOff` (this server is not connected to other servers). Only `ok` rows carry a snapshot. An `ok` row also carries `achievements` (the friend's lifetime comparable badges, snapshot v2) or `achievementsUnavailable`: `olderServer` (their server speaks snapshot v1 only), `notShared` (the achievements group is not shared) or `yearView` (achievements exist for the whole time only).",
   tags,
   request: {
     query: z.object({
@@ -66,13 +67,39 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/comparison/compare",
+  summary: "The caller and up to three picked friends — what the Freunde page compares",
+  description:
+    "Like the leaderboard, narrowed to the picked person keys (`local:<uuid>` / `remote:<uuid>`), so other friends' servers are not asked. Rows keep the order of `friends`. A key that is no longer a visible friend (they ended it, or stopped sharing back) is not a row: the page reads the absence as withdrawn. Row statuses and the achievements fields are those of the leaderboard.",
+  tags,
+  request: {
+    query: z.object({
+      friends: z
+        .string()
+        .describe("Up to three person keys, comma separated; empty for the caller alone"),
+      year: z
+        .string()
+        .optional()
+        .describe("A year (1900-2200) or `all` (default) for the lifetime view"),
+    }),
+  },
+  responses: {
+    200: ok("The caller's row and the picked friends' rows", compareResponseSchema),
+    400: err("A malformed or repeated key, more than three keys, or an invalid year"),
+    403: gate,
+    429: throttled,
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/comparison/preview",
   summary: "The caller's own totals under a consent scope — what the consent dialog shows",
   tags,
   request: { body: json(leaderboardScopeSchema) },
   responses: {
-    200: ok("Exactly what that scope would share", leaderboardSnapshotSchema),
+    200: ok("Exactly what that scope would share", anyLeaderboardSnapshotSchema),
     400: err("Invalid scope"),
     403: gate,
     429: throttled,

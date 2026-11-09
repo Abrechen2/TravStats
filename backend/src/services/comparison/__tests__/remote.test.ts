@@ -111,7 +111,7 @@ beforeEach(async () => {
   info = jest.spyOn(logger, "info").mockImplementation(() => undefined);
   await prisma.comparisonPeer.update({
     where: { origin: PEER },
-    data: { leaderboardVersions: [], enabled: true },
+    data: { leaderboardVersions: [], versionsCheckedAt: null, enabled: true },
   });
 });
 afterEach(() => {
@@ -138,13 +138,60 @@ it("reads an invitation code as origin and secret", () => {
 });
 
 describe("peer readiness", () => {
-  it("trusts a stored version list without asking again", async () => {
-    await prisma.comparisonPeer.update({
+  const DAY = 24 * 3_600_000;
+  const cached = (versions: number[], checkedAgoMs: number | null) =>
+    prisma.comparisonPeer.update({
       where: { origin: PEER },
-      data: { leaderboardVersions: [1] },
+      data: {
+        leaderboardVersions: versions,
+        versionsCheckedAt: checkedAgoMs === null ? null : new Date(Date.now() - checkedAgoMs),
+      },
     });
+  const stored = () => prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
+
+  it("trusts a stored version list without asking again", async () => {
+    await cached([1, 2], null);
     expect(await peerReadiness(PEER)).toBe("ready");
     expect(exchange).not.toHaveBeenCalled();
+  });
+
+  it("no re-ping within 24 h", async () => {
+    await cached([1], DAY - 60_000);
+    expect(await peerReadiness(PEER)).toBe("ready");
+    expect(exchange).not.toHaveBeenCalled();
+  });
+
+  it("an upgraded peer is re-pinged after 24 h and then served v2", async () => {
+    await cached([1], DAY + 60_000);
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [1, 2] });
+    expect(await peerReadiness(PEER)).toBe("ready");
+    const peer = await stored();
+    expect(peer.leaderboardVersions).toEqual([1, 2]);
+    expect(Date.now() - peer.versionsCheckedAt!.getTime()).toBeLessThan(10_000);
+    // The next pull asks for version 2 without another ping.
+    jest.mocked(exchange).mockClear();
+    expect(await peerReadiness(PEER)).toBe("ready");
+    expect(exchange).not.toHaveBeenCalled();
+  });
+
+  it("a never re-checked list without version 2 is re-pinged once", async () => {
+    await cached([1], null);
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [1] });
+    expect(await peerReadiness(PEER)).toBe("ready");
+    expect(exchange).toHaveBeenCalledTimes(1);
+    expect(await peerReadiness(PEER)).toBe("ready");
+    expect(exchange).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed re-ping keeps the cached list and stamps the time", async () => {
+    await cached([1], DAY + 60_000);
+    jest.mocked(exchange).mockRejectedValueOnce(new Error("socket hang up"));
+    expect(await peerReadiness(PEER)).toBe("ready");
+    const peer = await stored();
+    expect(peer.leaderboardVersions).toEqual([1]);
+    expect(Date.now() - peer.versionsCheckedAt!.getTime()).toBeLessThan(10_000);
+    expect(await peerReadiness(PEER)).toBe("ready");
+    expect(exchange).toHaveBeenCalledTimes(1);
   });
 
   it("stores nothing from a ping reply that does not parse", async () => {
@@ -191,12 +238,31 @@ describe("claiming an invitation", () => {
     expect(view).toMatchObject({
       person: { kind: "remote", username: "anna", origin: PEER },
       mine: { status: "accepted", scope: SCOPE },
-      theirs: null,
+      theirs: { status: "unknown", answeredAt: null },
     });
     expect(
       (await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } }))
         .leaderboardVersions
     ).toEqual([1]);
+  });
+
+  it("a link redeemed with the leaderboard switch off shares nothing and the claim still stands", async () => {
+    jest
+      .mocked(exchange)
+      .mockResolvedValueOnce(ping)
+      .mockResolvedValueOnce(claimed(randomUUID(), "mara"));
+    const off = {
+      plans: false,
+      stats: "off" as const,
+      achievements: false,
+      leaderboard: false,
+      tripOffers: true,
+    };
+    const view = await claimInvite(userId, `${PEER}#${"f".repeat(64)}`, SCOPE, off);
+    expect(view).toMatchObject({
+      person: { username: "mara" },
+      mine: { status: "withdrawn", scope: SCOPE },
+    });
   });
 
   it("calls the other server with no transaction open", async () => {
@@ -350,7 +416,12 @@ describe("pulling a remote friend's totals", () => {
     createdAt: new Date(),
   });
   beforeEach(() =>
-    prisma.comparisonPeer.update({ where: { origin: PEER }, data: { leaderboardVersions: [1] } })
+    // Checked just now: the queued exchange answers below are all aggregate replies, and a cached
+    // list without version 2 would otherwise spend the first of them on a re-ping.
+    prisma.comparisonPeer.update({
+      where: { origin: PEER },
+      data: { leaderboardVersions: [1], versionsCheckedAt: new Date() },
+    })
   );
 
   it("maps the other server's answers onto row statuses", async () => {
@@ -371,12 +442,12 @@ describe("pulling a remote friend's totals", () => {
   });
 
   it("reports a version mismatch as outdated and stops trusting the stored version list", async () => {
-    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [2] });
+    jest.mocked(exchange).mockResolvedValueOnce({ status: "unsupportedVersion", supported: [3] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     const peer = await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
     expect(peer.leaderboardVersions).toEqual([]);
     // The next check asks the peer again instead of reading "ready" from the stale list.
-    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [2] });
+    jest.mocked(exchange).mockResolvedValueOnce({ ready: true, leaderboard: [3] });
     expect(await pullRemote(remote(), null)).toEqual({ status: "outdated" });
     expect(exchange).toHaveBeenLastCalledWith(PEER, { action: "ping" });
   });

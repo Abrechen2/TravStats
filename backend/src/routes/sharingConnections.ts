@@ -4,7 +4,7 @@ import type { Request } from "express";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
 import { rejectDemoWrites } from "../middleware/demoGuard";
-import { requireTripFederation } from "../services/sharing/federation/access";
+import { requireConnectionFederation } from "../services/sharing/federation/access";
 import {
   acceptConnection,
   declineConnection,
@@ -66,7 +66,7 @@ const handle =
   (fn: Handler) =>
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await requireTripFederation(req.userId!);
+      await requireConnectionFederation(req.userId!);
       await fn(req, res);
     } catch (err) {
       next(err);

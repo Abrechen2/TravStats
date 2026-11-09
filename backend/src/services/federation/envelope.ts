@@ -18,7 +18,7 @@ export const origin = z
   .max(250)
   .refine((v) => v === "local" || peerOriginAcceptable(v));
 
-export const ENVELOPE_PURPOSES = ["comparison/1", "trip-share/1"] as const;
+export const ENVELOPE_PURPOSES = ["comparison/1", "trip-share/1", "admission/1"] as const;
 export type EnvelopePurpose = (typeof ENVELOPE_PURPOSES)[number];
 
 const signedFields = {
@@ -66,6 +66,8 @@ export interface Acceptance {
 }
 export const COMPARISON_ACCEPTS: Acceptance = { purpose: "comparison/1", legacyV1: true };
 export const TRIP_SHARE_ACCEPTS: Acceptance = { purpose: "trip-share/1", legacyV1: false };
+/** Server admission (spec 2026-11-07 §6.2): a packet signed for it verifies nowhere else. */
+export const ADMISSION_ACCEPTS: Acceptance = { purpose: "admission/1", legacyV1: false };
 
 const admits = (e: Envelope, accepts: Acceptance): boolean =>
   "v" in e ? e.purpose === accepts.purpose : accepts.legacyV1;
