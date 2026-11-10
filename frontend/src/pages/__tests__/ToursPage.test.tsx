@@ -8,6 +8,8 @@ import { toursApi } from "../../lib/api/tours";
 import { tripsApi } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 
+const pointer = vi.hoisted(() => ({ coarse: false }));
+vi.mock("../../hooks/useCoarsePointer", () => ({ useCoarsePointer: () => pointer.coarse }));
 vi.mock("../../lib/api/tourIndex", () => ({
   tourIndexApi: { list: vi.fn(), geometryBatch: vi.fn() },
 }));
@@ -102,6 +104,22 @@ describe("the tours page", () => {
     fireEvent.change(box, { target: { value: "zzz" } });
     expect(screen.getByText("trips:tours.searchEmpty")).toBeInTheDocument();
     expect(screen.queryByText("trips:tours.pageEmpty")).not.toBeInTheDocument();
+  });
+
+  it("gives the row actions 44 px button targets under a coarse pointer, not underlined links", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour({ tripId: null, tripName: null })]);
+    pointer.coarse = true;
+    try {
+      renderPage();
+      const move = await screen.findByText("trips:tours.move.action");
+      const del = screen.getByText("trips:tours.deleteLabel");
+      for (const el of [move, del]) {
+        expect(el.className).toContain("min-h-11");
+        expect(el.className).not.toContain("underline");
+      }
+    } finally {
+      pointer.coarse = false;
+    }
   });
 
   it("links a standalone tour to the trip-less editor path", async () => {

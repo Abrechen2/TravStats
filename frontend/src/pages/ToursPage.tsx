@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import { useCoarsePointer } from "../hooks/useCoarsePointer";
 import { useTranslation } from "../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../lib/api/tourIndex";
 import { toursApi } from "../lib/api/tours";
@@ -19,6 +20,12 @@ import { moveTourToTrip } from "../components/Tours/tourTripMove";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 
 const DEFAULT_MODE: LegMode = "road";
+
+/** Row actions are bordered buttons; a finger gets a 44 px target, a mouse the compact one. */
+const ROW_ACTION_BASE =
+  "shrink-0 rounded-md border border-(--border-default) px-3 text-xs hover:bg-(--bg-surface)";
+const ROW_ACTION_COARSE = `${ROW_ACTION_BASE} min-h-11 min-w-11`;
+const ROW_ACTION_FINE = `${ROW_ACTION_BASE} py-1`;
 
 function formatKm(value: number): string {
   return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
@@ -41,6 +48,8 @@ function formatKm(value: number): string {
  */
 export default function ToursPage(): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
+  const coarse = useCoarsePointer();
+  const rowActionClass = coarse ? ROW_ACTION_COARSE : ROW_ACTION_FINE;
   const addToast = useToastStore((s) => s.addToast);
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
@@ -348,7 +357,7 @@ export default function ToursPage(): JSX.Element {
               {tour.tripId === null ? (
                 <button
                   type="button"
-                  className="shrink-0 text-xs underline"
+                  className={rowActionClass}
                   onClick={() => setMovingTour(tour)}
                 >
                   {t("trips:tours.move.action")}
@@ -356,7 +365,7 @@ export default function ToursPage(): JSX.Element {
               ) : (
                 <button
                   type="button"
-                  className="shrink-0 text-xs underline"
+                  className={rowActionClass}
                   onClick={() => void handleDetach(tour)}
                 >
                   {t("trips:tours.move.detach")}
@@ -364,7 +373,7 @@ export default function ToursPage(): JSX.Element {
               )}
               <button
                 type="button"
-                className="shrink-0 text-xs underline"
+                className={rowActionClass}
                 onClick={() => setPendingDelete(tour)}
               >
                 {t("trips:tours.deleteLabel")}
