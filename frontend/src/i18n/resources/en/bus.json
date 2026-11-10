@@ -320,7 +320,8 @@
   "distanceSource": {
     "great_circle": "Straight line",
     "route": "Road",
-    "user": "per ticket"
+    "user": "per ticket",
+    "timetable": "Timetable"
   },
   "routing": {
     "noProvider": "Without a routing service, rides stay a straight line.",

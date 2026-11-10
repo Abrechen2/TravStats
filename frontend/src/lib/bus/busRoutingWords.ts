@@ -1,5 +1,6 @@
 import type {
   BusDistanceSource,
+  BusGeometrySource,
   BusGeometryReport,
   BusLineMiss,
   BusRouteFallback,
@@ -20,9 +21,21 @@ const SOURCE_KEY: Record<BusDistanceSource, string> = {
   user: "bus:distanceSource.user",
 };
 
-/** The i18n key naming what a ride's distance measures; null when it has none. */
-export function distanceSourceKey(source: BusDistanceSource | null): string | null {
-  return source === null ? null : SOURCE_KEY[source];
+/** A routed length read off the timetable's own line is the timetable's, not the road's. */
+const TIMETABLE_KEY = "bus:distanceSource.timetable";
+
+/**
+ * The i18n key naming what a ride's distance measures; null when it has none.
+ * A routed distance whose geometry came from the timetable (`transitous`) is
+ * "Fahrplan", not "Straße": the length is the line's, not a road route's.
+ */
+export function distanceSourceKey(
+  source: BusDistanceSource | null,
+  geometrySource?: BusGeometrySource | null
+): string | null {
+  if (source === null) return null;
+  if (source === "route" && geometrySource === "transitous") return TIMETABLE_KEY;
+  return SOURCE_KEY[source];
 }
 
 const FALLBACKS: readonly BusRouteFallback[] = [

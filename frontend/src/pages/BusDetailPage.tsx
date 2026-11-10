@@ -193,7 +193,7 @@ export default function BusDetailPage(): JSX.Element {
         ? t("bus:delay", { minutes: ride.delayMinutes })
         : t("bus:onTime");
   // The figure says what it measures — "Luftlinie" only for the chord.
-  const sourceKey = distanceSourceKey(ride.distanceSource);
+  const sourceKey = distanceSourceKey(ride.distanceSource, ride.geometrySource);
   const distanceLabel = sourceKey
     ? `${t("bus:detail.distance")} · ${t(sourceKey)}`
     : t("bus:detail.distance");

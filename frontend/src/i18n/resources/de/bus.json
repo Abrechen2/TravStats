@@ -320,7 +320,8 @@
   "distanceSource": {
     "great_circle": "Luftlinie",
     "route": "Straße",
-    "user": "laut Ticket"
+    "user": "laut Ticket",
+    "timetable": "Fahrplan"
   },
   "routing": {
     "noProvider": "Ohne Routing-Dienst bleibt es bei der Luftlinie.",

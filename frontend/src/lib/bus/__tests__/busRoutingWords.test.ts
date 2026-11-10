@@ -20,6 +20,14 @@ const REASONS = [
 ] as const;
 
 describe("busRoutingWords", () => {
+  it("labels a timetable-line length Fahrplan, not Straße", () => {
+    expect(distanceSourceKey("route", "transitous")).toBe("bus:distanceSource.timetable");
+    expect(distanceSourceKey("route", "road")).toBe("bus:distanceSource.route");
+    expect(distanceSourceKey("great_circle", "transitous")).toBe("bus:distanceSource.great_circle");
+    expect(de.distanceSource.timetable).toBe("Fahrplan");
+    expect(en.distanceSource.timetable).toBe("Timetable");
+  });
+
   it("says Luftlinie only for a great-circle distance", () => {
     expect(de.distanceSource.great_circle).toBe("Luftlinie");
     expect(de.distanceSource.route).toBe("Straße");
