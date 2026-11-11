@@ -65,11 +65,19 @@ describe("Profil › Sichtbarkeit › Für andere Server auffindbar", () => {
     expect(remote.setFindable).not.toHaveBeenCalled();
   });
 
-  it("shows no notice before the server has answered: unknown is not 'off by the admin'", async () => {
+  it("draws no switch before the server has answered, and no notice either: unknown is not 'off by the admin'", async () => {
     remote.status.mockReturnValue(new Promise(() => {}));
     render(<VisibilitySection />);
-    await findable();
+    await act(async () => {});
+    expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByText("settings:blocks.dep.noFederation.reason")).toBeNull();
+  });
+
+  it("draws no switch while the state of 'findable' itself is still being read", async () => {
+    remote.getFindable.mockReturnValue(new Promise(() => {}));
+    render(<VisibilitySection />);
+    await act(async () => {});
+    expect(screen.queryByRole("switch")).toBeNull();
   });
 
   it("keeps the choice on its row and says it was not saved when the server refuses", async () => {
@@ -90,5 +98,14 @@ describe("Profil › Sichtbarkeit › Für andere Server auffindbar", () => {
     remote.status.mockRejectedValue(new Error("down"));
     render(<VisibilitySection />);
     expect(await screen.findByText("settings:visibility.loadFailed")).toBeInTheDocument();
+    // A switch drawn from a guess would write over the state that could not be read.
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("does not draw a switch when only the findable read fails", async () => {
+    remote.getFindable.mockRejectedValue(new Error("down"));
+    render(<VisibilitySection />);
+    expect(await screen.findByText("settings:visibility.loadFailed")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
   });
 });

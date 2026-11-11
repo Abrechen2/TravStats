@@ -1235,7 +1235,10 @@
     },
     "userkeys": {
       "t": "Konten dürfen eigene Schlüssel nutzen",
-      "h": "Gilt für KI und Flugdaten: Ein Konto kann seinen eigenen Schlüssel eintragen. Aus lässt nur den Server-Schlüssel gelten; bereits eingetragene Schlüssel bleiben gespeichert."
+      "h": "Gilt für KI und Flugdaten: Ein Konto kann seinen eigenen Schlüssel eintragen. Aus lässt nur den Server-Schlüssel gelten; bereits eingetragene Schlüssel bleiben gespeichert.",
+      "mixed": "Gerade gilt es nur für {{only}}. Ein- oder Ausschalten setzt beides.",
+      "onlyAi": "die KI",
+      "onlyFlights": "die Flugdaten"
     }
   },
   "users": {

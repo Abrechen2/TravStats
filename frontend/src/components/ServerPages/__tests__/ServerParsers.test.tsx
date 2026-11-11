@@ -196,18 +196,40 @@ describe("Server › Buchungen lesen", () => {
       });
     });
 
-    it("reads as on only when both halves are on", async () => {
+    it("reads as on when either half is on, and says which, so there is always a way to withdraw both", async () => {
       api.getAdminParserSettings.mockResolvedValue(
         parser({ allowUserApiKeys: true, allowUserFlightApiKeys: false })
       );
+      api.updateAdminParserSettings.mockResolvedValue({});
+      api.updateGlobalApiKeys.mockResolvedValue({});
       renderIt();
-      expect(await switchRow()).toHaveAttribute("aria-checked", "false");
-      cleanup();
+      const row = await switchRow();
+      expect(row).toHaveAttribute("aria-checked", "true");
+      expect(document.querySelector("[data-keys-mixed]")).toHaveTextContent(
+        "settingsRows:server.userkeys.mixed"
+      );
+      // One press withdraws what is still on, in both columns.
+      await userEvent.click(row);
+      await waitFor(() => {
+        expect(api.updateAdminParserSettings).toHaveBeenCalledWith({ allowUserApiKeys: false });
+        expect(api.updateGlobalApiKeys).toHaveBeenCalledWith({ allowUserFlightApiKeys: false });
+      });
+    });
+
+    it("says nothing about halves when both agree", async () => {
       api.getAdminParserSettings.mockResolvedValue(
         parser({ allowUserApiKeys: true, allowUserFlightApiKeys: true })
       );
       renderIt();
       expect(await switchRow()).toHaveAttribute("aria-checked", "true");
+      expect(document.querySelector("[data-keys-mixed]")).toBeNull();
+      cleanup();
+      api.getAdminParserSettings.mockResolvedValue(
+        parser({ allowUserApiKeys: false, allowUserFlightApiKeys: false })
+      );
+      renderIt();
+      expect(await switchRow()).toHaveAttribute("aria-checked", "false");
+      expect(document.querySelector("[data-keys-mixed]")).toBeNull();
     });
 
     it("takes the AI half back when the flight-data half is refused, so the switch never governs half", async () => {

@@ -103,7 +103,9 @@ function Rows({
   // so the switch never reads "on" for half of what it governs.
   const accountKeys = useSettingWrite<boolean>(
     "server:userkeys",
-    settings.allowUserApiKeys && (settings.allowUserFlightApiKeys ?? true),
+    // Either half on reads as on, so switching off always revokes both: "on only when both are"
+    // would leave an admin unable to withdraw the half that is still on.
+    settings.allowUserApiKeys || (settings.allowUserFlightApiKeys ?? true),
     async (on) => {
       const before = settings.allowUserApiKeys;
       await adminApi.updateAdminParserSettings({ allowUserApiKeys: on });
@@ -162,6 +164,8 @@ function Rows({
   const keys = row("userkeys");
   const test = row("olltest");
   const hasOllama = Boolean(settings.ollamaUrl && settings.ollamaModel);
+  // The two columns can differ (older data, a half-failed write): the row says which half holds.
+  const mixed = settings.allowUserApiKeys !== (settings.allowUserFlightApiKeys ?? true);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       <SettingItem
@@ -238,7 +242,19 @@ function Rows({
                 label={keys.title}
               />
             }
-          />
+          >
+            {mixed ? (
+              <p role="status" className="t-caption" data-keys-mixed="" style={{ margin: 0 }}>
+                {t("settingsRows:server.userkeys.mixed", {
+                  only: t(
+                    settings.allowUserApiKeys
+                      ? "settingsRows:server.userkeys.onlyAi"
+                      : "settingsRows:server.userkeys.onlyFlights"
+                  ),
+                })}
+              </p>
+            ) : null}
+          </SettingItem>
           <SettingItem
             title={test.title}
             expert

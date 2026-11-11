@@ -1235,7 +1235,10 @@
     },
     "userkeys": {
       "t": "Accounts may use their own keys",
-      "h": "Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored."
+      "h": "Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored.",
+      "mixed": "Right now it only applies to {{only}}. Switching on or off sets both.",
+      "onlyAi": "AI",
+      "onlyFlights": "flight data"
     }
   },
   "users": {

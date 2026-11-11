@@ -4,7 +4,13 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { sharingRemoteApi } from "../../lib/api/sharingRemote";
 import { logger } from "../../lib/logger";
 import { SettingRows } from "../ui/SettingRow";
-import { SettingItem, SettingWriteError, SwitchControl, useSettingWrite } from "../ui/settings";
+import {
+  ErrorLine,
+  SettingItem,
+  SettingWriteError,
+  SwitchControl,
+  useSettingWrite,
+} from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 /**
@@ -20,6 +26,7 @@ export default function VisibilitySection(): JSX.Element {
   const demo = useIsDemoAccount();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [findable, setFindable] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -30,6 +37,7 @@ export default function VisibilitySection(): JSX.Element {
         if (!alive) return;
         setAvailable(status.available);
         if (status.available) setFindable(await sharingRemoteApi.getFindable());
+        if (alive) setLoaded(true);
       } catch (error) {
         logger.error("Loading the findable switch failed:", error);
         if (alive) setFailed(true);
@@ -48,31 +56,36 @@ export default function VisibilitySection(): JSX.Element {
     }
   });
 
+  // Nothing to switch before the server has answered, and nothing that would write over a
+  // state that could not be read: a switch drawn from a guess is a switch that lies.
   return (
     <SectionCard>
       <SectionTitle title={t("settings:visibility.title")} />
       <SettingRows>
-        <SettingItem
-          title={t("settings:visibility.findable.label")}
-          sub={t("settings:visibility.findable.sub")}
-          save={write}
-          // Unknown (not read yet, or the read failed) is not "off by the admin":
-          // no notice, but nothing to switch either.
-          dependency={
-            available === false
-              ? { reason: t("settings:blocks.dep.noFederation.reason") }
-              : undefined
-          }
-          locked={demo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
-          error={failed ? t("settings:visibility.loadFailed") : undefined}
-          control={
-            <SwitchControl
-              checked={write.value}
-              onChange={write.choose}
-              label={t("settings:visibility.findable.label")}
-            />
-          }
-        />
+        {failed ? (
+          <ErrorLine>{t("settings:visibility.loadFailed")}</ErrorLine>
+        ) : !loaded ? (
+          <div style={{ minHeight: 48 }} aria-busy="true" />
+        ) : (
+          <SettingItem
+            title={t("settings:visibility.findable.label")}
+            sub={t("settings:visibility.findable.sub")}
+            save={write}
+            dependency={
+              available === false
+                ? { reason: t("settings:blocks.dep.noFederation.reason") }
+                : undefined
+            }
+            locked={demo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+            control={
+              <SwitchControl
+                checked={write.value}
+                onChange={write.choose}
+                label={t("settings:visibility.findable.label")}
+              />
+            }
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

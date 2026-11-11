@@ -172,6 +172,24 @@ describe("FederationRows", () => {
       expect(screen.queryByTestId("federation-peer-list")).toBeNull();
     });
 
+    it("the switch part still asks for the server's address while it has none: without it the switch cannot work", async () => {
+      api.get.mockResolvedValue({ ...state, origin: null });
+      await act(async () => {
+        render(
+          <MemoryRouter>
+            <FederationRows part="switch" />
+          </MemoryRouter>
+        );
+      });
+      await screen.findByRole("switch");
+      expect(screen.getByPlaceholderText("https://travstats.example.org")).toBeInTheDocument();
+      cleanup();
+      await show("switch");
+      await screen.findByRole("switch");
+      // With an address saved the rest is the connections page's business.
+      expect(screen.queryByPlaceholderText("https://travstats.example.org")).toBeNull();
+    });
+
     it("the connections part holds the peers and the key, and no switch for the connection itself", async () => {
       await show("connections");
       expect(await screen.findByTestId("federation-peer-list")).toBeInTheDocument();

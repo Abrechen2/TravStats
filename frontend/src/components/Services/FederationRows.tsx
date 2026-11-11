@@ -143,7 +143,7 @@ export default function FederationRows({
           }
         />
       ) : null}
-      {showRest && (expert || !state.origin) ? (
+      {(showRest && expert) || !state.origin ? (
         <SettingItem
           controlId={CONTROL.origin}
           title={t("settingsRows:services.rows.fedorigin.t")}
