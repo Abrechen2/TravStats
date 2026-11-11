@@ -1292,27 +1292,35 @@
   },
   "area": {
     "pages": {
-      "account": "Profile & sign-in",
-      "display": "Language & units",
-      "domains": "Travel types",
-      "flight": "Flights",
-      "cruise": "Cruises",
-      "trips": "Trips & inbox",
-      "sharing": "Sharing",
-      "notifications": "Reminders",
-      "travtrack": "TravTrack",
-      "loyalty": "Loyalty",
-      "data": "Data",
-      "services": "Services",
-      "server": "Server",
-      "users": "Users",
-      "backups": "Backups",
-      "maintenance": "Maintenance",
-      "masterdata": "Reference data",
-      "about": "About TravStats"
+      "profil": "Profile & sign-in",
+      "anzeige": "Display",
+      "reisearten": "Travel types",
+      "reisen": "Trips & suggestions",
+      "fluege": "Flights",
+      "kreuzfahrten": "Cruises",
+      "treue": "Loyalty programs",
+      "erinnerungen": "Reminders",
+      "freunde": "Friends & sharing",
+      "telefone": "Phones",
+      "dienstek": "Connected services",
+      "daten": "Data",
+      "ueber": "About TravStats",
+      "tt-aufz": "Recording & places",
+      "tt-erk": "Detection & suggestions",
+      "tt-daten": "Data & sources",
+      "pl-plan": "Plan trips",
+      "allgemein": "General",
+      "nutzer": "Users",
+      "funktionen": "Features",
+      "buchungen": "Reading bookings",
+      "sicherungen": "Backups",
+      "wartung": "Maintenance",
+      "stamm": "Reference data"
     },
     "menu": {
-      "account": "Your account",
+      "konto": "My account",
+      "track": "TravTrack",
+      "plan": "TravPlan",
       "server": "Server · admin only"
     },
     "scope": {
@@ -1320,7 +1328,8 @@
       "mixed": "Applies to your account · rows marked “All accounts” apply to the server",
       "instance": "Applies to all accounts · admin only"
     },
-    "adminOnlyNotice": "This applies to all accounts. Only an admin can change it."
+    "adminOnlyNotice": "This applies to all accounts. Only an admin can change it.",
+    "notOffered": "This area is not offered on this server."
   },
   "blocks": {
     "scope": {

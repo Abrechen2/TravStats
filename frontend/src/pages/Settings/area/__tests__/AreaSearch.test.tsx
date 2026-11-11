@@ -20,7 +20,7 @@ function Where(): JSX.Element {
 const renderSearch = (isAdmin: boolean): void => {
   useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight", "cruise"] });
   render(
-    <MemoryRouter initialEntries={["/settings/account"]}>
+    <MemoryRouter initialEntries={["/settings/profil"]}>
       <AreaSearch isAdmin={isAdmin} />
       <Routes>
         <Route path="*" element={<Where />} />
@@ -79,7 +79,7 @@ describe("the search box", () => {
     type("Vorname");
     fireEvent.click(screen.getAllByRole("link")[0]);
     expect(screen.getByTestId("where")).toHaveTextContent(
-      '/settings/account?match=vorname#profile|{"highlight":"profile"}'
+      '/settings/profil?match=vorname#profil-personliche-angaben|{"highlight":"profile"}'
     );
     // The box empties after a jump.
     expect(screen.getByRole("searchbox")).toHaveValue("");
@@ -90,7 +90,7 @@ describe("the search box", () => {
     type("Vorname");
     fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Enter" });
     expect(screen.getByTestId("where")).toHaveTextContent(
-      "/settings/account?match=vorname#profile"
+      "/settings/profil?match=vorname#profil-personliche-angaben"
     );
   });
 

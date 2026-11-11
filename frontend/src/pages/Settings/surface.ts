@@ -78,7 +78,7 @@ export function pageLevel(page: PageDef): SettingsLevel {
 }
 
 /** The server-decided conditions a section may wait for (`SectionDef.when`). */
-export type SectionCondition = "travTrackHeld";
+export type SectionCondition = "travTrackHeld" | "travPlanOffered";
 
 export interface SectionVisibilityInput {
   level: SettingsLevel;
@@ -136,6 +136,18 @@ export function sectionsOf<S extends string>(
     shown.push(section.id);
   }
   return { shown, hiddenExpert, hiddenExpertSettings, deepLinkedExpert };
+}
+
+/**
+ * Whether a page has anything a condition-bound account can reach: a page whose
+ * every mount waits for an unmet server answer (TravTrack's, TravPlan's) has no
+ * menu entry, and so neither has its area.
+ */
+export function pageReachable(
+  page: PageDef,
+  conditions: Partial<Record<SectionCondition, boolean>>
+): boolean {
+  return page.sections.some((s) => !s.when || conditions[s.when] === true);
 }
 
 /** The page holding a section, searched in table order. */

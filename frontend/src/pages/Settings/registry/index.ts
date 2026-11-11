@@ -4,7 +4,7 @@ import { REGISTRY_PAGES } from "./data";
 import type { RegistryPage, RegistrySection, SettingsRow } from "./types";
 
 export type {
-  RegistryGroup,
+  RegistryArea,
   RegistryPage,
   RegistrySection,
   SettingAudience,

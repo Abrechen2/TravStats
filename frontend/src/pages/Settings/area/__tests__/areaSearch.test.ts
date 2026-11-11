@@ -11,8 +11,12 @@ const find = (query: string, access = admin, lang: "de" | "en" = "de") =>
 describe("the settings search reads the registry", () => {
   it("finds a row by its name and links it as page, ?match=row and #section", () => {
     const hit = find("Vorname")[0];
-    expect(hit).toMatchObject({ pageId: "account", sectionId: "profile", rowId: "vorname" });
-    expect(hit.href).toBe("/settings/account?match=vorname#profile");
+    expect(hit).toMatchObject({
+      pageId: "profil",
+      sectionId: "profil-personliche-angaben",
+      rowId: "vorname",
+    });
+    expect(hit.href).toBe("/settings/profil?match=vorname#profil-personliche-angaben");
     expect(hit.expertOnly).toBe(false);
   });
 
@@ -37,7 +41,7 @@ describe("the settings search reads the registry", () => {
   it("finds a service card by its name though it holds no rows of its own", () => {
     const hit = find("AirLabs").find((h) => h.sectionId === "airlabs")!;
     expect(hit.rowId).toBeNull();
-    expect(hit.href).toBe("/settings/services?service=airlabs#airlabs");
+    expect(hit.href).toBe("/settings/dienstek?service=airlabs#airlabs");
   });
 
   it("ranks a name that starts with the query before one that contains it", () => {
@@ -53,7 +57,7 @@ describe("the settings search reads the registry", () => {
   it("does not offer the server's rows to an account without the permission", () => {
     expect(find("Anfragen pro Tag", admin).length).toBeGreaterThan(0);
     const onlyServer = (access: RegistryAccess) =>
-      find("Ein Land zählt ab", access).filter((h) => h.pageId === "server");
+      find("Ein Land zählt ab", access).filter((h) => h.pageId === "funktionen");
     expect(onlyServer(admin).length).toBeGreaterThan(0);
     expect(onlyServer(user)).toEqual([]);
     expect(find("SMTP", user).some((h) => h.sectionId === "smtp")).toBe(false);
@@ -65,12 +69,13 @@ describe("the settings search reads the registry", () => {
     expect(find("TravTrack anbieten").some((h) => h.rowId === "ttoffer")).toBe(true);
     expect(find("TravTrack anbieten", closed).some((h) => h.rowId === "ttoffer")).toBe(false);
     const noFlights: RegistryAccess = { ...admin, isDomainOn: (d) => d !== "flight" };
-    expect(find("Heimatflughäfen", noFlights).some((h) => h.pageId === "flight")).toBe(false);
+    expect(find("Heimatflughäfen", noFlights).some((h) => h.pageId === "reisearten")).toBe(false);
   });
 
   it("marks the mounted section a hit should highlight, through the page's aliases", () => {
-    // Registry section `home` has its own block now (Zuhause).
-    const hit = find("Reisepass").find((h) => h.sectionId === "home")!;
+    // The passport row sits in the Zuhause block, which draws on Reisearten.
+    const hit = find("Reisepass").find((h) => h.rowId === "pass")!;
+    expect(hit.pageId).toBe("reisearten");
     expect(hit.highlight).toBe("home");
     // A service card answers to the one section that draws the catalogue.
     const card = find("Immich").find((h) => h.sectionId === "immich")!;
@@ -91,10 +96,10 @@ describe("a row of the server's side of a service card", () => {
 
 describe("which mount answers for a service card", () => {
   it("gives a server-only card (geocoder) to the services section for an admin", () => {
-    expect(mountFor("services", "geocoder", null, true)?.id).toBe("externalServices");
+    expect(mountFor("dienstek", "geocoder", null, true)?.id).toBe("externalServices");
   });
 
   it("gives the same card to the same section when the account is no admin", () => {
-    expect(mountFor("services", "geocoder", null, false)?.id).toBe("externalServices");
+    expect(mountFor("dienstek", "geocoder", null, false)?.id).toBe("externalServices");
   });
 });

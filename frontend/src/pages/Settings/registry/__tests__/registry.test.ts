@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AREA_MENU, AREA_PAGES, findAreaPage } from "../../area/areaModel";
+import { AREA_MENU, AREA_PAGES, findAreaPage, mountFor } from "../../area/areaModel";
 import { SETTINGS_REGISTRY, expertRowCount, findableRows, registryPage } from "..";
 import { DOMAIN_KEYS } from "../../../../shared/domains";
 import { BETA_FEATURES } from "../../../../config/betaFeatures";
@@ -19,18 +19,15 @@ interface DesignPage {
   s: DesignSection[];
 }
 
-/** The designer's data, read from the repository: the registry must not drift from it. */
+/** The settings v3 page model, read from the repository: the registry must not drift from it. */
 const design = JSON.parse(
   readFileSync(
-    resolve(
-      process.cwd(),
-      "../ClaudeDesign/handoff/2026-11-01-einstellungen-neu/antwort-runde-2/settings-data.json"
-    ),
+    resolve(process.cwd(), "../docs/superpowers/specs/2026-11-11-settings-v3/settings-data.json"),
     "utf8"
   )
 ) as { pages: DesignPage[] };
 
-describe("the settings registry follows the designer's data", () => {
+describe("the settings registry follows the settings v3 page model", () => {
   it("holds every page, section and row of settings-data.json, in order", () => {
     expect(SETTINGS_REGISTRY.map((p) => p.id)).toEqual(design.pages.map((p) => p.id));
     for (const page of design.pages) {
@@ -49,10 +46,10 @@ describe("the settings registry follows the designer's data", () => {
     }
   });
 
-  it("counts 18 pages, 88 sections (31 of them service cards) and 252 rows", () => {
+  it("counts 24 pages, 99 groups and cards (31 of them service cards) and 252 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
-    expect(SETTINGS_REGISTRY).toHaveLength(18);
-    expect(sections).toHaveLength(88);
+    expect(SETTINGS_REGISTRY).toHaveLength(24);
+    expect(sections).toHaveLength(99);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
     expect(sections.flatMap((s) => s.rows)).toHaveLength(252);
   });
@@ -104,18 +101,27 @@ describe("the settings registry follows the designer's data", () => {
   });
 
   it("carries scope and audience: the server's pages are instance-wide and admin-only", () => {
-    for (const id of ["server", "users", "backups", "maintenance", "masterdata"]) {
+    for (const id of [
+      "allgemein",
+      "nutzer",
+      "funktionen",
+      "buchungen",
+      "sicherungen",
+      "wartung",
+      "stamm",
+    ]) {
       const page = registryPage(id)!;
       expect(page.audience, id).toBe("admin");
       for (const row of page.sections.flatMap((s) => s.rows)) {
+        // The access card of the Konten page holds the server's switches only.
         expect(row.scope, `${id}/${row.id}`).toBe("instance");
         expect(row.audience, `${id}/${row.id}`).toBe("admin");
       }
     }
     // An account's page holds server rows too ("Alle Konten"), admin-only in it.
-    const smtp = registryPage("services")!.sections.find((s) => s.id === "smtp")!;
+    const smtp = registryPage("dienstek")!.sections.find((s) => s.id === "smtp")!;
     expect(smtp.audience).toBe("admin");
-    const opensky = registryPage("services")!.sections.find((s) => s.id === "opensky")!;
+    const opensky = registryPage("dienstek")!.sections.find((s) => s.id === "opensky")!;
     expect(opensky.rows.some((r) => r.scope === "instance" && r.audience === "admin")).toBe(true);
     expect(opensky.rows.some((r) => r.scope === "account" && r.audience === "all")).toBe(true);
   });
@@ -132,7 +138,7 @@ describe("the settings registry follows the designer's data", () => {
         }
       }
     }
-    const tour = registryPage("domains")!
+    const tour = registryPage("reisearten")!
       .sections.flatMap((s) => s.rows)
       .find((r) => r.id === "d_tour")!;
     expect(tour.domain).toBe("roadtrip");
@@ -140,36 +146,53 @@ describe("the settings registry follows the designer's data", () => {
 });
 
 describe("the area mounts what the registry lists", () => {
-  /**
-   * Registry sections whose block does not exist yet: they are searchable and
-   * their address works, but nothing draws them until the package that builds
-   * them (7: server access). A stale entry
-   * fails, so the list can only shrink.
-   */
-  const NOT_MOUNTED_YET: string[] = [];
-
   it("has a page for every registry page, and none besides", () => {
     expect(AREA_PAGES.map((p) => p.id)).toEqual(SETTINGS_REGISTRY.map((p) => p.id));
   });
 
-  it("answers for every registry section with a mount or an alias, bar the listed ones", () => {
-    const unmounted: string[] = [];
+  it("leaves no registry row without a mounted control", () => {
+    const orphans: string[] = [];
     for (const page of SETTINGS_REGISTRY) {
       const mounts = findAreaPage(page.id)!.sections;
       for (const section of page.sections) {
-        if (!mounts.some((m) => m.id === section.id || m.anchors.includes(section.id))) {
-          unmounted.push(`${page.id}/${section.id}`);
+        for (const row of section.rows) {
+          // The catalogue's rows are answered by its one mount (`?match=`, `#<card>`).
+          const mount = row.mount
+            ? mounts.find((m) => m.id === row.mount)
+            : mountFor(page.id, section.id, row.id);
+          if (!mount) orphans.push(`${page.id}/${section.id}/${row.id}`);
+          // The address a search hit carries reaches the same mount.
+          else expect(mountFor(page.id, section.id, row.id)?.id, row.id).toBe(mount.id);
         }
       }
     }
-    expect(unmounted).toEqual(NOT_MOUNTED_YET);
+    expect(orphans).toEqual([]);
   });
 
-  it("lets no alias point at a section the page does not have", () => {
+  it("names a mount on every row outside the service catalogue", () => {
+    for (const page of SETTINGS_REGISTRY.filter((p) => p.id !== "dienstek")) {
+      for (const row of page.sections.flatMap((s) => s.rows)) {
+        expect(row.mount, `${page.id}/${row.id}`).toBeTruthy();
+      }
+    }
+  });
+
+  it("draws no control without a registry row", () => {
     for (const page of AREA_PAGES) {
-      const ids = new Set(registryPage(page.id)!.sections.map((s) => s.id));
+      const rows = registryPage(page.id)!.sections.flatMap((s) => s.rows);
       for (const mount of page.sections) {
-        for (const alias of mount.anchors) expect(ids.has(alias), `${page.id}/${alias}`).toBe(true);
+        const owns = rows.some((r) => r.mount === mount.id) || page.id === "dienstek";
+        expect(owns, `${page.id}/${mount.id}`).toBe(true);
+      }
+    }
+  });
+
+  it("answers for every registry group of a page with one of its mounts", () => {
+    for (const page of SETTINGS_REGISTRY) {
+      const mounts = findAreaPage(page.id)!.sections;
+      for (const section of page.sections) {
+        const answered = mounts.some((m) => m.id === section.id || m.anchors.includes(section.id));
+        expect(answered, `${page.id}/${section.id}`).toBe(true);
       }
     }
   });
@@ -179,12 +202,27 @@ describe("the area mounts what the registry lists", () => {
     expect([...listed].sort()).toEqual(AREA_PAGES.map((p) => p.id).sort());
   });
 
-  it("groups the menu as Dein Konto, Server (admin pages only) and About", () => {
+  it("groups the menu as Mein Konto, TravTrack, TravPlan and the server's (admin pages only)", () => {
+    expect(AREA_MENU.map((g) => g.id)).toEqual(["konto", "track", "plan", "server"]);
     const server = AREA_MENU.find((g) => g.id === "server")!;
     expect(server.pages.every((id) => findAreaPage(id)!.adminOnly)).toBe(true);
-    const account = AREA_MENU.find((g) => g.id === "account")!;
-    expect(account.pages.every((id) => !findAreaPage(id)!.adminOnly)).toBe(true);
-    expect(AREA_MENU[AREA_MENU.length - 1]).toMatchObject({ id: "about", pages: ["about"] });
+    for (const id of ["konto", "track", "plan"]) {
+      const group = AREA_MENU.find((g) => g.id === id)!;
+      expect(group.pages.every((p) => !findAreaPage(p)!.adminOnly)).toBe(true);
+    }
+    expect(AREA_MENU.find((g) => g.id === "track")!.pages).toEqual([
+      "tt-aufz",
+      "tt-erk",
+      "tt-daten",
+    ]);
+    expect(AREA_MENU.find((g) => g.id === "plan")!.pages).toEqual(["pl-plan"]);
+  });
+
+  it("waits for the server's answer before the TravTrack and TravPlan pages show", () => {
+    for (const id of ["tt-aufz", "tt-erk", "tt-daten"]) {
+      for (const mount of findAreaPage(id)!.sections) expect(mount.when, id).toBe("travTrackHeld");
+    }
+    expect(findAreaPage("pl-plan")!.sections.map((m) => m.when)).toEqual(["travPlanOffered"]);
   });
 });
 
@@ -212,7 +250,7 @@ describe("the expert count", () => {
 
 describe("account deletion is immediate (owner, 2026-11-01)", () => {
   it("the search terms of the delete-account row promise no grace period and no cancelling", () => {
-    const row = registryPage("account")!
+    const row = registryPage("profil")!
       .sections.flatMap((s) => s.rows)
       .find((r) => r.id === "deleteacct")!;
     const terms = `${row.terms.de} ${row.terms.en}`.toLowerCase();

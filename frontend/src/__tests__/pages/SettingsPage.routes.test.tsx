@@ -137,7 +137,7 @@ vi.mock("@/lib/api/webdavSync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/webdavSync")>();
   return {
     ...actual,
-    // The WebDAV card on /settings/data fetches its status on mount; it is not
+    // The WebDAV card on /settings/daten fetches its status on mount; it is not
     // the subject here, so it answers "not configured" without a request.
     webdavSyncApi: {
       ...actual.webdavSyncApi,
@@ -314,7 +314,7 @@ describe("SettingsPage — one page per menu entry", () => {
   // forgejo#321: one page per menu entry. Round 4 had drawn the general
   // groups as anchors on ONE account page; a menu entry is a page again.
   it("draws only the account page's own sections on the account route", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
 
     expect(sectionShown("profile")).toBe(true);
@@ -326,31 +326,31 @@ describe("SettingsPage — one page per menu entry", () => {
     expect(sectionShown("homeAirport")).toBe(false);
   });
 
-  it("draws /settings/data as a page of its own", async () => {
-    renderAt("/settings/data");
+  it("draws /settings/daten as a page of its own", async () => {
+    renderAt("/settings/daten");
     expect(await findNamed("region", SECTION_LABEL_KEY.backup)).toBeTruthy();
     expect(sectionShown("import")).toBe(true);
     expect(sectionShown("profile")).toBe(false);
   });
 
   it("titles the page with its menu label, word for word", async () => {
-    renderAt("/settings/display");
+    renderAt("/settings/anzeige");
     await findNamed("region", SECTION_LABEL_KEY.units);
     // By selector, not by role: the page holds hundreds of currency options,
     // and a role query weighs every one (see SettingsPage.adminScope.test).
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.display");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.anzeige");
     const active = document.querySelector('[data-settings-menu] a[aria-current="page"]');
-    expect(active).toHaveTextContent("settings:area.pages.display");
+    expect(active).toHaveTextContent("settings:area.pages.anzeige");
   });
 
   it("lands a round-4 anchor on the account page on the page that holds it now", async () => {
-    renderAt("/settings/account?section=units");
+    renderAt("/settings/profil?section=units");
     expect(await findNamed("region", SECTION_LABEL_KEY.units)).toBeTruthy();
     expect(sectionShown("profile")).toBe(false);
   });
 
   it("keeps a domain group's own sections on its own route", async () => {
-    renderAt("/settings/cruise");
+    renderAt("/settings/kreuzfahrten");
     await findNamed("region", SECTION_LABEL_KEY.cruisePreferences);
     expect(sectionShown("profile")).toBe(false);
   });
@@ -365,7 +365,7 @@ describe("SettingsPage — one page per menu entry", () => {
   });
 
   it("sends a bare /settings to the page last visited", async () => {
-    window.localStorage.setItem("travstats.settings.lastPage", "cruise");
+    window.localStorage.setItem("travstats.settings.lastPage", "kreuzfahrten");
     renderAt("/settings");
     expect(await findNamed("region", SECTION_LABEL_KEY.cruisePreferences)).toBeTruthy();
     window.localStorage.removeItem("travstats.settings.lastPage");
@@ -397,7 +397,7 @@ describe("SettingsPage — one page per menu entry", () => {
   });
 
   it("keeps no loyalty section on a domain route", async () => {
-    renderAt("/settings/cruise");
+    renderAt("/settings/kreuzfahrten");
     await findNamed("region", SECTION_LABEL_KEY.cruisePreferences);
     expect(screen.queryByTestId("loyalty-section-stub")).toBeNull();
   });
@@ -411,18 +411,20 @@ describe("SettingsPage — one page per menu entry", () => {
   // the way to switch it on — a bookmark no longer lands on the account page.
   it("says a switched-off domain's page is off and points to Reisearten", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
-    renderAt("/settings/cruise?section=cruisePreferences");
+    renderAt("/settings/kreuzfahrten?section=cruisePreferences");
     const notice = await screen.findByText("settings:domainOff.message");
     expect(notice.closest("[data-domain-off]")).toHaveAttribute("data-domain-off", "cruise");
     expect(screen.getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
       "href",
-      "/settings/domains#domains"
+      "/settings/reisearten#domains"
     );
     expect(sectionShown("cruisePreferences")).toBe(false);
     expect(sectionShown("profile")).toBe(false);
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.cruise");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.kreuzfahrten");
     // Off the menu, as the prototype draws it.
-    expect(document.querySelector('[data-settings-menu] a[href="/settings/cruise"]')).toBeNull();
+    expect(
+      document.querySelector('[data-settings-menu] a[href="/settings/kreuzfahrten"]')
+    ).toBeNull();
   });
 
   it("sends an unknown group back to the default rather than rendering an empty frame", async () => {
@@ -437,7 +439,7 @@ describe("SettingsPage — one page per menu entry", () => {
   // `useSectionInView` carries the rule now — at the bottom of the document
   // the last section is the active one — so the spacer has no job left.
   it("ends with the last section, with no empty scroll tail under it", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     expect(document.querySelector('[data-testid="settings-scroll-tail"]')).toBeNull();
   });
@@ -453,7 +455,7 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
   });
 
   it("leaves the expert section off the page and says one more setting exists", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     expect(sectionShown("apitokens")).toBe(false);
     // At the top of the page, counting settings (forgejo#321 prototype).
@@ -465,7 +467,7 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
   });
 
   it("counts the flight page's hidden expert settings, not its sections, at the top", async () => {
-    renderAt("/settings/flight");
+    renderAt("/settings/fluege");
     await findNamed("region", SECTION_LABEL_KEY.features);
     // Enrichment (3) is the one expert section left; defaults and the seat
     // statistics switch moved to standard (settings redesign, package 3), and
@@ -487,7 +489,7 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
 
   it("shows an expert row a link names, and only then", async () => {
     const { unmount } = render(
-      <MemoryRouter initialEntries={["/settings/data?section=backup&expert=1"]}>
+      <MemoryRouter initialEntries={["/settings/daten?section=backup&expert=1"]}>
         <Routes>
           <Route path="/settings/:page" element={<SettingsPage />} />
         </Routes>
@@ -499,14 +501,14 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     expect(screen.getByText("settings:level.revealedRows")).toBeTruthy();
     unmount();
 
-    renderAt("/settings/data?section=backup");
+    renderAt("/settings/daten?section=backup");
     await findNamed("region", SECTION_LABEL_KEY.backup);
     expect(await screen.findByText("settingsRows:data.webdaveigen.t")).toBeTruthy();
     expect(screen.queryByText("settingsRows:data.webdavvers.t")).toBeNull();
   });
 
   it("puts the level switch in the sidebar, with the count of what Experte adds", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
     expect(within(menu).getByRole("radiogroup", { name: "settings:level.label" })).toBeTruthy();
@@ -517,7 +519,7 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
   });
 
   it("keeps the version in view for every account, under the menu", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     expect((await screen.findAllByTestId("settings-version"))[0]).toHaveTextContent(
       "settings:menu.version"
@@ -543,27 +545,46 @@ describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
   });
 
   it("names the place in a breadcrumb; there is one area, so no Administration tab", async () => {
-    renderAt("/settings/display");
+    renderAt("/settings/anzeige");
     await findNamed("region", SECTION_LABEL_KEY.units);
     expect(screen.getByRole("navigation", { name: "settings:frame.breadcrumb" })).toHaveTextContent(
-      "settings:title›settings:area.pages.display"
+      "settings:title›settings:area.pages.anzeige"
     );
     expect(screen.queryByRole("navigation", { name: "settings:frame.surfaces" })).toBeNull();
   });
 
   it("groups the menu as Dein Konto and the About entry, with Flüge and Kreuzfahrten indented", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", SECTION_LABEL_KEY.profile);
     const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
-    expect(menu).toHaveTextContent("settings:area.menu.account");
+    expect(menu).toHaveTextContent("settings:area.menu.konto");
     // No server group for an account without the permission.
     expect(menu).not.toHaveTextContent("settings:area.menu.server");
     const links = [...menu.querySelectorAll<HTMLAnchorElement>("nav a")];
-    expect(links[links.length - 1]).toHaveAttribute("href", "/settings/about");
-    const flight = menu.querySelector('a[href="/settings/flight"]') as HTMLElement;
-    const account = menu.querySelector('a[href="/settings/account"]') as HTMLElement;
+    expect(links[links.length - 1]).toHaveAttribute("href", "/settings/ueber");
+    const flight = menu.querySelector('a[href="/settings/fluege"]') as HTMLElement;
+    const account = menu.querySelector('a[href="/settings/profil"]') as HTMLElement;
     expect(flight.style.paddingLeft).not.toBe("");
     expect(account.style.paddingLeft).toBe("");
+  });
+
+  // Settings v3 (S1): the menu has four areas; TravTrack's and TravPlan's wait
+  // for the server's answer, and the server's is an admin's.
+  it("offers no TravTrack or TravPlan area while the server offers neither", async () => {
+    renderAt("/settings/profil");
+    await findNamed("region", SECTION_LABEL_KEY.profile);
+    const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
+    expect(menu).toHaveTextContent("settings:area.menu.konto");
+    expect(menu).not.toHaveTextContent("settings:area.menu.track");
+    expect(menu).not.toHaveTextContent("settings:area.menu.plan");
+    expect(menu.querySelector('a[href="/settings/tt-aufz"]')).toBeNull();
+    expect(menu.querySelector('a[href="/settings/pl-plan"]')).toBeNull();
+  });
+
+  it("says a TravTrack page opened by link is not offered, instead of drawing nothing", async () => {
+    renderAt("/settings/tt-aufz");
+    expect(await screen.findByText("settings:area.notOffered")).toBeTruthy();
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.tt-aufz");
   });
 
   it("dots each domain page in the menu with the colour the account chose", async () => {
@@ -571,14 +592,14 @@ describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
     useDomainColorStore.setState({
       colors: { ...useDomainColorStore.getState().colors, flight: "#123456" },
     });
-    renderAt("/settings/display");
+    renderAt("/settings/anzeige");
     await findNamed("region", SECTION_LABEL_KEY.units);
     const flight = document.querySelector(
-      '[data-settings-menu] a[href="/settings/flight"] [data-domain-dot]'
+      '[data-settings-menu] a[href="/settings/fluege"] [data-domain-dot]'
     ) as HTMLElement;
     expect(flight.style.background).toBe("rgb(18, 52, 86)");
     expect(
-      document.querySelector('[data-settings-menu] a[href="/settings/data"] [data-domain-dot]')
+      document.querySelector('[data-settings-menu] a[href="/settings/daten"] [data-domain-dot]')
     ).toBeNull();
   });
 });

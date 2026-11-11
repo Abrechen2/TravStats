@@ -158,7 +158,7 @@ vi.mock("@/lib/api/webdavSync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/webdavSync")>();
   return {
     ...actual,
-    // The WebDAV card on /settings/data fetches its status on mount; it is not
+    // The WebDAV card on /settings/daten fetches its status on mount; it is not
     // the subject here, so it answers "not configured" without a request.
     webdavSyncApi: {
       ...actual.webdavSyncApi,
@@ -325,25 +325,25 @@ describe("SettingsPage — the account/server boundary", () => {
 
   it("is one area: there is no second Administration tab, for an admin or anyone", async () => {
     isAdmin = true;
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", "settings:profile.title");
     expect(screen.queryByRole("navigation", { name: "settings:frame.surfaces" })).toBeNull();
   });
 
   it("lists the server's group in the menu for an admin only", async () => {
     isAdmin = true;
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", "settings:profile.title");
     const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
-    expect(menu.querySelector('a[href="/settings/server"]')).not.toBeNull();
+    expect(menu.querySelector('a[href="/settings/allgemein"]')).not.toBeNull();
     expect(menu).toHaveTextContent("settings:area.menu.server");
   });
 
   it("keeps the server's group out of the menu of an account without the permission", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     await findNamed("region", "settings:profile.title");
     const menu = document.querySelector("[data-settings-menu]") as HTMLElement;
-    expect(menu.querySelector('a[href="/settings/server"]')).toBeNull();
+    expect(menu.querySelector('a[href="/settings/allgemein"]')).toBeNull();
     expect(menu).not.toHaveTextContent("settings:area.menu.server");
   });
 
@@ -355,19 +355,19 @@ describe("SettingsPage — the account/server boundary", () => {
   it("sends an admin's bookmarked ?section=admin on to the Server page", async () => {
     isAdmin = true;
     renderAt("/settings?section=admin");
-    await pageTitle("server");
+    await pageTitle("allgemein");
     expect(screen.getByTestId("admin-body-instance")).toBeTruthy();
   });
 
   it("sends a non-admin's ?section=admin to their own account page", async () => {
     renderAt("/settings?section=admin");
     await findNamed("region", "settings:profile.title");
-    await pageTitle("account");
+    await pageTitle("profil");
     expect(screen.queryByTestId("admin-body-instance")).toBeNull();
   });
 
   it("states the scope of the page, so a same-named server entry is distinguishable", async () => {
-    renderAt("/settings/account");
+    renderAt("/settings/profil");
     expect(await screen.findByText("settings:area.scope.account")).toBeTruthy();
   });
 
@@ -377,12 +377,12 @@ describe("SettingsPage — the account/server boundary", () => {
    * disagreeing. It now lands on the account's own page with the line that
    * says why (design §6) — no panel is drawn, and nothing is asked of the server.
    */
-  it.each(["/admin/users", "/admin/logging", "/settings/server", "/settings/masterdata"])(
+  it.each(["/admin/users", "/admin/logging", "/settings/allgemein", "/settings/stamm"])(
     "sends a non-admin from %s to their own page, and says why",
     async (address) => {
       renderAt(address);
       expect(await screen.findByText(ADMIN_ONLY_NOTICE)).toBeTruthy();
-      await pageTitle("account");
+      await pageTitle("profil");
       expect(document.querySelector('[data-testid^="admin-body-"]')).toBeNull();
     }
   );
@@ -390,20 +390,20 @@ describe("SettingsPage — the account/server boundary", () => {
   it("sends a non-admin's old backups address to the data page, where the backup status is", async () => {
     renderAt("/admin/backups");
     expect(await screen.findByText(ADMIN_ONLY_NOTICE)).toBeTruthy();
-    await pageTitle("data");
+    await pageTitle("daten");
   });
 
   it("draws the server's page for an admin on the same address, with no notice", async () => {
     isAdmin = true;
     renderAt("/admin/users");
-    await pageTitle("users");
+    await pageTitle("nutzer");
     expect(screen.getAllByTestId("admin-body-users")[0]).toBeTruthy();
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 
   it("keeps the notice off an address everyone may open (About moved to everyone)", async () => {
     renderAt("/admin/instance#about");
-    await pageTitle("about");
+    await pageTitle("ueber");
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 
@@ -411,19 +411,19 @@ describe("SettingsPage — the account/server boundary", () => {
   // lodging address is just their display page, with nothing said (§6.2).
   it("sends a non-admin's old lodging address to the display page", async () => {
     renderAt("/settings?tab=lodging&section=lodgingPreferences");
-    await pageTitle("display");
+    await pageTitle("anzeige");
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 
   it("sends an old /settings/lodging address to the display page too", async () => {
     renderAt("/settings/lodging");
-    await pageTitle("display");
+    await pageTitle("anzeige");
   });
 
   it("sends an admin on to the geocoder, a service card of Dienste", async () => {
     isAdmin = true;
     renderAt("/settings?tab=lodging&section=lodgingPreferences");
-    await pageTitle("services");
+    await pageTitle("dienstek");
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 

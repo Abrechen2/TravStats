@@ -11,9 +11,9 @@ const resources = import.meta.glob("../resources/{de,en}/*.json", {
 
 describe("settings wording", () => {
   it("does not promise that everything saves itself on a page with a save button", () => {
-    expect(autoSaveKey("account", "idle")).toBe("idleWithButtons");
-    expect(autoSaveKey("display", "idle")).toBe("idle");
-    expect(autoSaveKey("account", "saving")).toBe("saving");
+    expect(autoSaveKey("profil", "idle")).toBe("idleWithButtons");
+    expect(autoSaveKey("anzeige", "idle")).toBe("idle");
+    expect(autoSaveKey("profil", "saving")).toBe("saving");
     expect(de.autoSave.idleWithButtons).toMatch(/Knopf/);
     expect(en.autoSave.idleWithButtons).toMatch(/button/);
   });

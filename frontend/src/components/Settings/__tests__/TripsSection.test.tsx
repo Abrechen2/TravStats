@@ -30,10 +30,10 @@ describe("TripsSection", () => {
   });
 
   it("lives on its own general page, in the menu's ungated first block", () => {
-    const page = findAreaPage("trips");
-    expect(page?.id).toBe("trips");
+    const page = findAreaPage("reisen");
+    expect(page?.id).toBe("reisen");
     expect(page?.domain).toBeUndefined();
-    expect(AREA_MENU.flatMap((g) => g.pages)).toContain("trips");
+    expect(AREA_MENU.flatMap((g) => g.pages)).toContain("reisen");
   });
 
   it("renders the automatic-trip switch checked when the setting is on", () => {

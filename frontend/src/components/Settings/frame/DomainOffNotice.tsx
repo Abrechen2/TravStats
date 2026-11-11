@@ -6,7 +6,7 @@ import type { DomainKey } from "../../../shared/domains";
 import { DOMAINS } from "../../../shared/domains";
 
 /** Where a domain is switched on: Einstellungen › Reisearten. */
-export const DOMAINS_SETTINGS_PATH = "/settings/domains#domains";
+export const DOMAINS_SETTINGS_PATH = "/settings/reisearten#domains";
 
 /**
  * Said on the page of a switched-off domain instead of its settings

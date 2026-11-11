@@ -1292,27 +1292,35 @@
   },
   "area": {
     "pages": {
-      "account": "Profil & Anmeldung",
-      "display": "Sprache & Einheiten",
-      "domains": "Reisearten",
-      "flight": "Flüge",
-      "cruise": "Kreuzfahrten",
-      "trips": "Reisen & Eingang",
-      "sharing": "Teilen",
-      "notifications": "Erinnerungen",
-      "travtrack": "TravTrack",
-      "loyalty": "Treueprogramme",
-      "data": "Daten",
-      "services": "Dienste",
-      "server": "Server",
-      "users": "Nutzer",
-      "backups": "Sicherungen",
-      "maintenance": "Wartung",
-      "masterdata": "Stammdaten",
-      "about": "Über TravStats"
+      "profil": "Profil & Anmeldung",
+      "anzeige": "Anzeige",
+      "reisearten": "Reisearten",
+      "reisen": "Reisen & Vorschläge",
+      "fluege": "Flüge",
+      "kreuzfahrten": "Kreuzfahrten",
+      "treue": "Treueprogramme",
+      "erinnerungen": "Erinnerungen",
+      "freunde": "Freunde & Teilen",
+      "telefone": "Telefone",
+      "dienstek": "Verbundene Dienste",
+      "daten": "Daten",
+      "ueber": "Über TravStats",
+      "tt-aufz": "Aufzeichnung & Orte",
+      "tt-erk": "Erkennung & Vorschläge",
+      "tt-daten": "Daten & Quellen",
+      "pl-plan": "Reisen planen",
+      "allgemein": "Allgemein",
+      "nutzer": "Nutzer",
+      "funktionen": "Funktionen",
+      "buchungen": "Buchungen lesen",
+      "sicherungen": "Sicherungen",
+      "wartung": "Wartung",
+      "stamm": "Stammdaten"
     },
     "menu": {
-      "account": "Dein Konto",
+      "konto": "Mein Konto",
+      "track": "TravTrack",
+      "plan": "TravPlan",
       "server": "Server · nur Admin"
     },
     "scope": {
@@ -1320,7 +1328,8 @@
       "mixed": "Gilt für dein Konto · Zeilen mit „Alle Konten“ gelten für den Server",
       "instance": "Gilt für alle Konten · nur Admin"
     },
-    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin."
+    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin.",
+    "notOffered": "Dieser Bereich wird auf diesem Server nicht angeboten."
   },
   "blocks": {
     "scope": {

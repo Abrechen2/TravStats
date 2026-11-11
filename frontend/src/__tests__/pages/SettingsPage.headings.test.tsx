@@ -1,5 +1,9 @@
 // The mail-intake card loads its own settings; it has its own tests.
 vi.mock("../../components/MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
+// TravTrack's and TravPlan's pages wait for the server's answer: here it is yes.
+vi.mock("../../pages/Settings/useSectionConditions", () => ({
+  useSectionConditions: () => ({ travTrackHeld: true, travPlanOffered: true }),
+}));
 vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 vi.mock("../../lib/api/trackGap", () => ({
   trackGapApi: {
@@ -179,7 +183,7 @@ vi.mock("@/lib/api/webdavSync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/webdavSync")>();
   return {
     ...actual,
-    // The WebDAV card on /settings/data fetches its status on mount; it is not
+    // The WebDAV card on /settings/daten fetches its status on mount; it is not
     // the subject here, so it answers "not configured" without a request.
     webdavSyncApi: {
       ...actual.webdavSyncApi,
@@ -228,6 +232,12 @@ vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="photo-journey-nightly-scan-card" />,
 }));
 // Public share links (forgejo#281) load their list on mount — not the subject here.
+vi.mock("../../components/Settings/travtrack/TravTrackPlacesSection", () => ({
+  default: () => null,
+}));
+vi.mock("../../components/Settings/travtrack/TravTrackZonesSection", () => ({
+  default: () => null,
+}));
 vi.mock("../../components/Settings/ShareLinksSection", () => ({
   default: () => <div data-testid="share-links-section" />,
 }));
@@ -362,21 +372,28 @@ describe("SettingsPage — no heading repeats the one above it (forgejo#321)", (
     useSettingsLevelStore.setState({ level: "expert" });
   });
 
-  it.each(OWN_PAGES.map((p) => [p.id]))("holds on /settings/%s", async (page) => {
-    const { unmount } = render(
-      <MemoryRouter initialEntries={[`/settings/${page}`]}>
-        <Routes>
-          <Route path="/settings/:page" element={<SettingsPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-    // Real copy: wait for the page's first section by its landmark id.
-    await waitFor(() =>
-      expect(
-        document.getElementById(`settings-${OWN_PAGES.find((p) => p.id === page)!.sections[0].id}`)
-      ).not.toBeNull()
-    );
-    expect(repeatedHeadings(document.body)).toEqual([]);
-    unmount();
-  });
+  // A page whose every mount sits behind a closed beta key (Telefone, while
+  // device pairing is in beta) draws nothing to measure at this setting.
+  it.each(OWN_PAGES.filter((p) => p.sections.some((s) => !s.gate)).map((p) => [p.id]))(
+    "holds on /settings/%s",
+    async (page) => {
+      const { unmount } = render(
+        <MemoryRouter initialEntries={[`/settings/${page}`]}>
+          <Routes>
+            <Route path="/settings/:page" element={<SettingsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      // Real copy: wait for the page's first section by its landmark id.
+      await waitFor(() =>
+        expect(
+          document.getElementById(
+            `settings-${OWN_PAGES.find((p) => p.id === page)!.sections.find((s) => !s.gate)!.id}`
+          )
+        ).not.toBeNull()
+      );
+      expect(repeatedHeadings(document.body)).toEqual([]);
+      unmount();
+    }
+  );
 });

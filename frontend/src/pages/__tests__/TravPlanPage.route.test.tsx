@@ -161,7 +161,7 @@ describe("the /plan route", () => {
       capabilities.mockResolvedValue({ enabled: false, instanceEnabled: true, userEnabled: false });
       window.history.pushState({}, "", "/plan");
       render(<App />);
-      await waitFor(() => expect(window.location.pathname).toBe("/settings/display"), {
+      await waitFor(() => expect(window.location.pathname).toBe("/settings/pl-plan"), {
         timeout: 8000,
       });
       expect(listPlans).not.toHaveBeenCalled();

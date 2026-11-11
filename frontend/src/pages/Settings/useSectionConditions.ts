@@ -2,6 +2,7 @@ import {
   travTrackSettingsVisible,
   useTravTrackCapabilities,
 } from "../../hooks/useTravTrackVisible";
+import { useTravPlanInstanceOn } from "../../hooks/useTravPlanVisible";
 import type { SectionCondition } from "./surface";
 
 /**
@@ -11,5 +12,6 @@ import type { SectionCondition } from "./surface";
  */
 export function useSectionConditions(): Partial<Record<SectionCondition, boolean>> {
   const caps = useTravTrackCapabilities();
-  return { travTrackHeld: travTrackSettingsVisible(caps) };
+  const travPlanOffered = useTravPlanInstanceOn();
+  return { travTrackHeld: travTrackSettingsVisible(caps), travPlanOffered };
 }

@@ -15,7 +15,7 @@ describe("the 31 cards", () => {
   });
 
   it("are the registry's service cards, one for one", () => {
-    const ids = registryPage("services")!.sections.map((s) => s.id);
+    const ids = registryPage("dienstek")!.sections.map((s) => s.id);
     expect(SERVICE_CARDS.map((c) => c.id)).toEqual(ids);
   });
 

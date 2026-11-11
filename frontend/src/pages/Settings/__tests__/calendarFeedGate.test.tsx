@@ -8,7 +8,7 @@ import type { BetaFeatureKey } from "../../../config/betaFeatures";
  * left beta on 2026-11-01 (forgejo#390): it is there whether or not the
  * instance's beta switch is on, so a stale gate cannot hide it again.
  */
-const trips = findAreaPage("trips")!;
+const trips = findAreaPage("reisen")!;
 const shown = (betaOpen: boolean): string[] =>
   sectionsOf(trips, {
     level: "expert",

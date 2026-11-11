@@ -8,24 +8,33 @@ import { SECTION_ALIASES, SETTINGS_SECTIONS } from "../Settings/settingsModel";
 describe("settings menu order", () => {
   it("lists the pages in the owner's order", () => {
     expect(AREA_MENU.flatMap((g) => g.pages)).toEqual([
-      "account",
-      "display",
-      "domains",
-      "flight",
-      "cruise",
-      "trips",
-      "sharing",
-      "notifications",
-      "travtrack",
-      "loyalty",
-      "data",
-      "services",
-      "server",
-      "users",
-      "backups",
-      "maintenance",
-      "masterdata",
-      "about",
+      // Mein Konto
+      "profil",
+      "anzeige",
+      "reisearten",
+      "reisen",
+      "fluege",
+      "kreuzfahrten",
+      "treue",
+      "erinnerungen",
+      "freunde",
+      "telefone",
+      "dienstek",
+      "daten",
+      "ueber",
+      // TravTrack, TravPlan
+      "tt-aufz",
+      "tt-erk",
+      "tt-daten",
+      "pl-plan",
+      // Server
+      "allgemein",
+      "nutzer",
+      "funktionen",
+      "buchungen",
+      "sicherungen",
+      "wartung",
+      "stamm",
     ]);
   });
 
