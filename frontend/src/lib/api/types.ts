@@ -164,8 +164,16 @@ export interface UserSettings {
   };
   /** Whether the server stores the app's trip positions (forgejo#316). */
   tripRecording?: { enabled?: boolean };
-  /** The account's TravPlan switch (owner, 2026-10-27). */
-  travPlan?: { enabled?: boolean };
+  /**
+   * The account's TravPlan switch (owner, 2026-10-27), and — settings v3 —
+   * whether AI proposals and weather forecasts work inside its plans.
+   */
+  travPlan?: { enabled?: boolean; ai?: boolean; weather?: boolean };
+  /**
+   * The currency amounts are SHOWN in (settings v3). Equals `baseCurrency` until
+   * chosen, and never changes what sums are converted into: that stays `baseCurrency`.
+   */
+  displayCurrency?: string | null;
   /** The colour of a new trip; null = automatic (forgejo#321). */
   tripDefaults?: { color?: string | null };
   /** Whether sea days count in the cruise day total (forgejo#321). */

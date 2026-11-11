@@ -94,10 +94,13 @@ function namedAnchor(search: string, hash: string): string | null {
   }
 }
 
-/** Which of the two scope lines a page carries (design §5.7). */
+/**
+ * Which of the two scope lines a page carries (design §5.7). The services page
+ * used to carry a third ("your account; rows marked 'All accounts' are the
+ * server's"); since settings v3 S5 its two halves are two pages.
+ */
 function scopeLineKey(page: AreaPageDef): string {
-  if (page.adminOnly) return "settings:area.scope.instance";
-  return page.id === "dienstek" ? "settings:area.scope.mixed" : "settings:area.scope.account";
+  return page.adminOnly ? "settings:area.scope.instance" : "settings:area.scope.account";
 }
 
 /**
@@ -136,7 +139,8 @@ export default function SettingsPage(): JSX.Element {
 
   // `?service=` names a card of the catalogue: it stands in for the section when
   // the address carries no hash, so an expert or server card opens by it alone.
-  const service = current?.id === "dienstek" ? searchParams.get("service") : null;
+  const service =
+    current?.id === "dienstek" || current?.id === "dienste" ? searchParams.get("service") : null;
   const anchor = isCanonical ? (namedAnchor(location.search, location.hash) ?? service) : null;
   const match = isCanonical ? searchParams.get("match") : null;
   const namedMount = current ? mountFor(current.id, anchor, match, isAdmin) : undefined;
@@ -148,6 +152,7 @@ export default function SettingsPage(): JSX.Element {
   const travTrackHeld = conditions.travTrackHeld === true;
   const travPlanOffered = conditions.travPlanOffered === true;
   const locationSourceHeld = conditions.locationSourceHeld === true;
+  const federationOn = conditions.federationOn === true;
   const visible = useMemo(
     () =>
       current && !domainOff
@@ -157,7 +162,7 @@ export default function SettingsPage(): JSX.Element {
             // sections, with a note above, rather than an empty page.
             level: pageLevel(current) === "expert" ? "expert" : level,
             isGateOpen: isFeatureVisible,
-            conditions: { travTrackHeld, travPlanOffered, locationSourceHeld },
+            conditions: { travTrackHeld, travPlanOffered, locationSourceHeld, federationOn },
             isAdmin,
             deepLinked: named,
           })
@@ -170,6 +175,7 @@ export default function SettingsPage(): JSX.Element {
       travTrackHeld,
       travPlanOffered,
       locationSourceHeld,
+      federationOn,
       isAdmin,
       named,
     ]
@@ -292,6 +298,7 @@ export default function SettingsPage(): JSX.Element {
                 frame={frameOf(mount)}
                 deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
                 revealExpertRows={named === id && searchParams.get("expert") === "1"}
+                expertPage={isExpertPage}
                 highlighted={highlighted === id}
               >
                 {body(mount)}
@@ -383,7 +390,7 @@ export default function SettingsPage(): JSX.Element {
               }}
             >
               <span>{t("settingsRows:server.publicUrlBanner")}</span>
-              <button type="button" className="btn-secondary" onClick={() => jump("addresses")}>
+              <button type="button" className="btn-secondary" onClick={() => jump("general")}>
                 {t("settingsRows:server.publicUrlBannerJump")}
               </button>
             </p>

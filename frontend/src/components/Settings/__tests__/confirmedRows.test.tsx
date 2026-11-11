@@ -30,6 +30,7 @@ import ModuleSection from "../ModuleSection";
 import { saveDomainEnabled } from "../../../store/confirmedSettings";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
+import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 
 const units = { distanceUnit: "kilometers" as const, weightUnit: "kg" as const, currency: "EUR" };
@@ -51,9 +52,13 @@ afterEach(() => {
   act(() => resetWriteQueue());
 });
 
+// The display currency comes first, the base currency (expert) second.
+const displayBox = (): HTMLElement => screen.getAllByRole("combobox")[0];
+const baseBox = (): HTMLElement => screen.getAllByRole("combobox")[1];
+
 describe("base currency", () => {
   const pick = (value: string): void => {
-    fireEvent.change(screen.getByRole("combobox"), { target: { value } });
+    fireEvent.change(baseBox(), { target: { value } });
   };
 
   it("a refused save keeps the picked currency, offers a retry, and the store keeps the confirmed one", async () => {
@@ -62,7 +67,7 @@ describe("base currency", () => {
     pick("USD");
     await settle();
     expect(update).toHaveBeenCalledWith({ baseCurrency: "USD" });
-    expect(screen.getByRole("combobox")).toHaveValue("USD");
+    expect(baseBox()).toHaveValue("USD");
     expect(useSettingsStore.getState().baseCurrency).toBe("EUR");
     expect(
       screen
@@ -81,7 +86,54 @@ describe("base currency", () => {
     pick("USD");
     await settle();
     fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
-    expect(screen.getByRole("combobox")).toHaveValue("EUR");
+    expect(baseBox()).toHaveValue("EUR");
+  });
+});
+
+describe("display currency (settings v3 `cur`)", () => {
+  beforeEach(() => {
+    useSuggestionSwitchesStore.setState({ displayCurrency: null });
+  });
+
+  it("is its own setting: picking it writes displayCurrency and leaves the base currency alone", async () => {
+    render(<UnitsSection units={units} baseCurrency="EUR" />);
+    // Until the account chose, it shows the base currency the server answers with.
+    expect(displayBox()).toHaveValue("EUR");
+    fireEvent.change(displayBox(), { target: { value: "CHF" } });
+    await settle();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith({ displayCurrency: "CHF" });
+    expect(useSuggestionSwitchesStore.getState().displayCurrency).toBe("CHF");
+    // The sums keep converting into EUR: nothing of the base currency moved.
+    expect(useSettingsStore.getState().baseCurrency).toBe("EUR");
+    expect(baseBox()).toHaveValue("EUR");
+  });
+
+  it("keeps the base currency as it is when the base currency is changed after the display one", async () => {
+    useSuggestionSwitchesStore.setState({ displayCurrency: "CHF" });
+    render(<UnitsSection units={units} baseCurrency="EUR" />);
+    fireEvent.change(baseBox(), { target: { value: "USD" } });
+    await settle();
+    expect(update).toHaveBeenCalledWith({ baseCurrency: "USD" });
+    expect(useSuggestionSwitchesStore.getState().displayCurrency).toBe("CHF");
+    expect(displayBox()).toHaveValue("CHF");
+  });
+
+  it("a refused save keeps the picked display currency and offers a retry", async () => {
+    update.mockRejectedValueOnce(new Error("Network Error"));
+    render(<UnitsSection units={units} baseCurrency="EUR" />);
+    fireEvent.change(displayBox(), { target: { value: "GBP" } });
+    await settle();
+    expect(displayBox()).toHaveValue("GBP");
+    expect(useSuggestionSwitchesStore.getState().displayCurrency).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
+    await waitFor(() => expect(useSuggestionSwitchesStore.getState().displayCurrency).toBe("GBP"));
+  });
+
+  it("is a standard row, the base currency stays an expert one", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    render(<UnitsSection units={units} baseCurrency="EUR" />);
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
   });
 });
 

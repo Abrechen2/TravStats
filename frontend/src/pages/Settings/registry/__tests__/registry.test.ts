@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AREA_MENU, AREA_PAGES, findAreaPage, mountFor } from "../../area/areaModel";
+import { pageLevel, pageReachable } from "../../surface";
 import { SETTINGS_REGISTRY, expertRowCount, findableRows, registryPage } from "..";
 import { DOMAIN_KEYS } from "../../../../shared/domains";
 import { BETA_FEATURES } from "../../../../config/betaFeatures";
@@ -46,12 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 27 pages, 98 groups and cards (31 of them service cards) and 272 rows", () => {
+  it("counts 33 pages, 118 groups and cards (40 of them service cards: 15 the account's, 25 the server's) and 284 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
-    expect(SETTINGS_REGISTRY).toHaveLength(27);
-    expect(sections).toHaveLength(98);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(272);
+    expect(SETTINGS_REGISTRY).toHaveLength(33);
+    expect(sections).toHaveLength(118);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(40);
+    expect(registryPage("dienstek")!.sections).toHaveLength(15);
+    expect(registryPage("dienste")!.sections).toHaveLength(25);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(284);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -105,8 +108,14 @@ describe("the settings registry follows the settings v3 page model", () => {
       "allgemein",
       "nutzer",
       "funktionen",
+      "email",
       "buchungen",
+      "dienste",
       "sicherungen",
+      "srvconn",
+      "datenschutz",
+      "adressen",
+      "eigene",
       "wartung",
       "stamm",
     ]) {
@@ -118,12 +127,21 @@ describe("the settings registry follows the settings v3 page model", () => {
         expect(row.audience, `${id}/${row.id}`).toBe("admin");
       }
     }
-    // An account's page holds server rows too ("Alle Konten"), admin-only in it.
-    const smtp = registryPage("dienstek")!.sections.find((s) => s.id === "smtp")!;
-    expect(smtp.audience).toBe("admin");
-    const opensky = registryPage("dienstek")!.sections.find((s) => s.id === "opensky")!;
-    expect(opensky.rows.some((r) => r.scope === "instance" && r.audience === "admin")).toBe(true);
-    expect(opensky.rows.some((r) => r.scope === "account" && r.audience === "all")).toBe(true);
+    // The service catalogue is two pages since settings v3 S5: the account's holds its own
+    // keys and connections only, the server's holds the server's.
+    const own = registryPage("dienstek")!;
+    expect(own.audience).toBe("all");
+    for (const row of own.sections.flatMap((s) => s.rows)) {
+      expect(row.scope, row.id).toBe("account");
+      expect(row.audience, row.id).toBe("all");
+    }
+    const opensky = registryPage("dienste")!.sections.find((s) => s.id === "opensky")!;
+    expect(opensky.rows.every((r) => r.scope === "instance" && r.audience === "admin")).toBe(true);
+    expect(
+      registryPage("dienstek")!
+        .sections.find((s) => s.id === "opensky")!
+        .rows.map((r) => r.id)
+    ).toEqual(["oskid", "osksec", "oskuser", "oskpw"]);
   });
 
   it("ties rows to real domains and real beta keys; tours and roadtrips are two domains", () => {
@@ -215,7 +233,7 @@ describe("the area mounts what the registry lists", () => {
   });
 
   it("names a mount on every row outside the service catalogue", () => {
-    for (const page of SETTINGS_REGISTRY.filter((p) => p.id !== "dienstek")) {
+    for (const page of SETTINGS_REGISTRY.filter((p) => p.id !== "dienstek" && p.id !== "dienste")) {
       for (const row of page.sections.flatMap((s) => s.rows)) {
         expect(row.mount, `${page.id}/${row.id}`).toBeTruthy();
       }
@@ -226,7 +244,8 @@ describe("the area mounts what the registry lists", () => {
     for (const page of AREA_PAGES) {
       const rows = registryPage(page.id)!.sections.flatMap((s) => s.rows);
       for (const mount of page.sections) {
-        const owns = rows.some((r) => r.mount === mount.id) || page.id === "dienstek";
+        const owns =
+          rows.some((r) => r.mount === mount.id) || page.id === "dienstek" || page.id === "dienste";
         expect(owns, `${page.id}/${mount.id}`).toBe(true);
       }
     }
@@ -329,6 +348,184 @@ describe("TravTrack and TravPlan pages follow the prototype (settings v3 S4)", (
     expect(where("gelaende")).toBeUndefined();
     expect(where("scanzeit")!.row.level).toBe("expert");
     expect(where("staedte")!.row.level).toBe("expert");
+  });
+});
+
+describe("the server area follows the prototype (settings v3 S5)", () => {
+  const rowsOf = (page: string, group?: string): string[] =>
+    registryPage(page)!
+      .sections.filter((g) => !group || g.id === group)
+      .flatMap((g) => g.rows.map((r) => r.id));
+  const level = (page: string, row: string): string =>
+    registryPage(page)!
+      .sections.flatMap((g) => g.rows)
+      .find((r) => r.id === row)!.level;
+
+  it("has the thirteen pages in the prototype's order", () => {
+    expect(AREA_MENU.find((g) => g.id === "server")!.pages).toEqual([
+      "allgemein",
+      "nutzer",
+      "funktionen",
+      "email",
+      "buchungen",
+      "dienste",
+      "sicherungen",
+      "srvconn",
+      "datenschutz",
+      "adressen",
+      "eigene",
+      "wartung",
+      "stamm",
+    ]);
+  });
+
+  it("makes the four expert pages expert as a whole, and the others standard", () => {
+    for (const id of ["adressen", "eigene", "wartung", "stamm"]) {
+      expect(pageLevel(findAreaPage(id)!), id).toBe("expert");
+    }
+    for (const id of ["allgemein", "nutzer", "funktionen", "email", "buchungen", "dienste"]) {
+      expect(pageLevel(findAreaPage(id)!), id).toBe("standard");
+    }
+  });
+
+  it("takes the addresses and the passkeys out of Allgemein and gives them a page", () => {
+    expect(rowsOf("allgemein")).toEqual([
+      "instname",
+      "puburl",
+      "puburlw",
+      "registr",
+      "maxnutzer",
+      "loginbilder",
+    ]);
+    expect(rowsOf("adressen")).toEqual(["pairurl", "lanurl", "rpid", "origins"]);
+    expect(level("allgemein", "loginbilder")).toBe("expert");
+    expect(level("allgemein", "instname")).toBe("standard");
+  });
+
+  it("splits the service cards: mail, privacy, connections and own servers are pages, not cards", () => {
+    expect(rowsOf("email").slice(0, 6)).toEqual([
+      "smtphost",
+      "smtpuser",
+      "smtppw",
+      "smtpfrom",
+      "smtptest",
+      "mailstat",
+    ]);
+    expect(rowsOf("datenschutz")).toEqual(["nutzstat", "pushon", "pushrelay", "pushreset"]);
+    expect(rowsOf("srvconn")).toEqual(["requests", "fedpeers", "fedorigin", "fedkey", "fedtrips"]);
+    expect(rowsOf("eigene")).toEqual([
+      "geoeigen",
+      "photon",
+      "nominatim",
+      "osrm",
+      "orr",
+      "overpass",
+      "tplrepo",
+      "fxsrc",
+    ]);
+    const cards = registryPage("dienste")!.sections.map((c) => c.id);
+    for (const id of [
+      "smtp",
+      "push",
+      "usageStats",
+      "federation",
+      "geocoder",
+      "selfHostedRouting",
+    ]) {
+      expect(cards, id).not.toContain(id);
+    }
+    // The prototype's 21 cards, then the four whose switches the master switch folds (expert).
+    expect(cards).toHaveLength(25);
+    const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
+    expect(expertCards.map((c) => c.id)).toEqual([
+      "railTimetables",
+      "openData",
+      "fx",
+      "updatesTemplates",
+    ]);
+  });
+
+  it("puts the master internet switch first on Funktionen, in Netz, as a standard row", () => {
+    expect(rowsOf("funktionen", "funktionen-netz")).toEqual(["internet"]);
+    expect(level("funktionen", "internet")).toBe("standard");
+    expect(rowsOf("funktionen")).toEqual([
+      "internet",
+      "linkserlaubt",
+      "fedon",
+      "l_tt",
+      "l_pl",
+      "beta",
+      "laenderstd",
+      "importmodus",
+    ]);
+    for (const id of ["beta", "laenderstd", "importmodus"]) {
+      expect(level("funktionen", id), id).toBe("expert");
+    }
+  });
+
+  it("makes Wartung's 24 h log a row of its own, and keeps the old verbose switch out", () => {
+    expect(rowsOf("wartung")).toContain("debug24");
+    expect(rowsOf("wartung")).not.toContain("debug");
+  });
+
+  it("keeps the accounts' own keys switch in Buchungen lesen, an expert row", () => {
+    expect(rowsOf("buchungen")).toContain("userkeys");
+    expect(level("buchungen", "userkeys")).toBe("expert");
+    expect(level("buchungen", "leserfolge")).toBe("expert");
+    expect(level("buchungen", "kiaktiv")).toBe("standard");
+  });
+
+  it("waits for the federation switch before 'Server-Verbindungen' is reachable", () => {
+    const page = findAreaPage("srvconn")!;
+    expect(page.sections.map((m) => m.when)).toEqual(["federationOn"]);
+    expect(pageReachable(page, {})).toBe(false);
+    expect(pageReachable(page, { federationOn: false })).toBe(false);
+    expect(pageReachable(page, { federationOn: true })).toBe(true);
+    // Every other server page is there regardless.
+    for (const id of ["email", "dienste", "datenschutz", "adressen", "eigene"]) {
+      expect(pageReachable(findAreaPage(id)!, {}), id).toBe(true);
+    }
+  });
+
+  it("lays the Sicherungen out as the prototype does: the backup first, the tuning behind it", () => {
+    expect(findAreaPage("sicherungen")!.sections.map((m) => [m.id, m.level])).toEqual([
+      ["backups", "standard"],
+      ["automatic", "expert"],
+    ]);
+    expect(rowsOf("sicherungen", "sicherungen-sicherung")).toEqual([
+      "baknow",
+      "bakjetzt",
+      "bakliste",
+      "bakwdload",
+    ]);
+    for (const id of ["baktakt", "bakhalten", "bakwddel", "bakzone", "autobak"]) {
+      expect(level("sicherungen", id), id).toBe("expert");
+    }
+  });
+});
+
+describe("the account rows that came with the S2 backend (settings v3 S5)", () => {
+  const find = (page: string, row: string) =>
+    registryPage(page)!
+      .sections.flatMap((g) => g.rows.map((r) => ({ group: g.id, ...r })))
+      .find((r) => r.id === row);
+
+  it("has 'Für andere Server auffindbar' in Profil › Sichtbarkeit", () => {
+    expect(find("profil", "findable")).toMatchObject({
+      group: "profil-sichtbarkeit",
+      mount: "visibility",
+      level: "standard",
+    });
+  });
+
+  it("has the display currency beside the base currency, which stays an expert row", () => {
+    expect(find("anzeige", "anzeigew")).toMatchObject({ level: "standard", mount: "units" });
+    expect(find("anzeige", "waehrung")).toMatchObject({ level: "expert" });
+  });
+
+  it("has AI suggestions and weather in plans on the TravPlan page", () => {
+    expect(find("pl-plan", "planai")).toMatchObject({ level: "standard", mount: "planning" });
+    expect(find("pl-plan", "planwx")).toMatchObject({ level: "standard", mount: "planning" });
   });
 });
 

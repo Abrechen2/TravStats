@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import UsersAccess from "../UsersAccess";
@@ -25,7 +25,12 @@ vi.mock("../../../lib/api", () => ({ adminApi: api }));
 vi.mock("../../../store/authStore", () => ({
   useAuthStore: (sel: (s: { user: { id: string } }) => unknown) => sel({ user: { id: "me" } }),
 }));
-vi.mock("../../Admin/AdminPasswordResetModal", () => ({ default: () => null }));
+vi.mock("../../Admin/LoginBackgroundsCard", () => ({
+  LoginBackgroundsCard: () => <div data-testid="login-backgrounds" />,
+}));
+vi.mock("../../Admin/AdminPasswordResetModal", () => ({
+  default: ({ username }: { username: string }) => <div data-testid="pw-modal">{username}</div>,
+}));
 
 const user = (id: string, over = {}) => ({
   id,
@@ -70,12 +75,44 @@ describe("Nutzer › Zugang", () => {
   it("keeps the edit when the save is refused", async () => {
     api.updateInstanceSettings.mockRejectedValue(httpError(500));
     render(<UsersAccess />);
-    await userEvent.click(await screen.findByRole("switch"));
+    await userEvent.click(
+      await screen.findByRole("radio", { name: "settingsRows:users.registr.o.1" })
+    );
     await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
     await waitFor(() =>
       expect(document.querySelector('[data-group-state="failed"]')).toBeInTheDocument()
     );
-    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "settingsRows:users.registr.o.1" })).toBeChecked();
+  });
+
+  it("offers registration as two words, 'Nur mit Einladung' and 'Offen', and writes the flag the choice stands for", async () => {
+    api.updateInstanceSettings.mockResolvedValue({
+      settings: instance({ allowRegistration: true }),
+    });
+    render(<UsersAccess />);
+    expect(
+      await screen.findByRole("radio", { name: "settingsRows:users.registr.o.0" })
+    ).toBeChecked();
+    await userEvent.click(screen.getByRole("radio", { name: "settingsRows:users.registr.o.1" }));
+    await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
+    await waitFor(() =>
+      expect(api.updateInstanceSettings).toHaveBeenCalledWith({
+        maxUsers: 10,
+        allowRegistration: true,
+      })
+    );
+  });
+
+  it("puts the sign-in pictures behind the expert level", async () => {
+    const { useSettingsLevelStore } = await import("../../../store/settingsLevelStore");
+    act(() => useSettingsLevelStore.setState({ level: "standard" }));
+    const { rerender } = render(<UsersAccess />);
+    await screen.findByRole("radio", { name: "settingsRows:users.registr.o.0" });
+    expect(screen.queryByTestId("login-backgrounds")).toBeNull();
+    act(() => useSettingsLevelStore.setState({ level: "expert" }));
+    rerender(<UsersAccess />);
+    expect(await screen.findByTestId("login-backgrounds")).toBeInTheDocument();
+    act(() => useSettingsLevelStore.setState({ level: null }));
   });
 });
 
@@ -119,6 +156,38 @@ describe("Nutzer › Konten", () => {
     await userEvent.click(screen.getByRole("menuitem", { name: "admin:users.actions.activate" }));
     await waitFor(() => expect(api.toggleUserActive).toHaveBeenCalledWith("jonas"));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks before a new password is set, and opens the dialog that sets it only after the answer", async () => {
+    renderAccounts();
+    await screen.findByText("jonas");
+    await openMenu("jonas");
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "admin:users.actions.resetPassword" })
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("settingsRows:dialogs.userpw.title");
+    // Nothing is changed and nothing is shown before the answer.
+    expect(screen.queryByTestId("pw-modal")).toBeNull();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settingsRows:dialogs.userpw.confirm" })
+    );
+    expect(await screen.findByTestId("pw-modal")).toHaveTextContent("jonas");
+  });
+
+  it("does not open the password dialog when the question is cancelled", async () => {
+    renderAccounts();
+    await screen.findByText("jonas");
+    await openMenu("jonas");
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "admin:users.actions.resetPassword" })
+    );
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /cancel|abbrechen|common:/i,
+      })
+    );
+    expect(screen.queryByTestId("pw-modal")).toBeNull();
   });
 
   it("says the second step could not be reset", async () => {

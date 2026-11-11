@@ -6,7 +6,7 @@ export const NUTZER_PAGE: RegistryPage = {
   ...{"id":"nutzer","area":"server","de":"Nutzer","en":"Users","level":"standard","audience":"admin","demoLocked":false},
   sections: [
       {"id":"nutzer-konten","de":"Konten","en":"Accounts","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"nutzerliste","mount":"accounts","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Konten","en":"Accounts","terms":{"de":"Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen.","en":"Per account under ⋯: lock, set new password, reset second step, delete."}},
+        {"id":"nutzerliste","mount":"accounts","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Konten","en":"Accounts","terms":{"de":"Je Konto: Passwort zurücksetzen, Zwei-Faktor zurücksetzen, sperren, löschen. Löschen verlangt das Eintippen des Namens.","en":"Per account: reset password, reset two-factor, lock, delete. Deleting asks you to type the name."}},
       ]},
       {"id":"nutzer-einladungen","de":"Einladungen","en":"Invitations","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
         {"id":"einlliste","mount":"invitations","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Einladungen","en":"Invitations","terms":{"de":"Ein Link gilt einmal und 7 Tage Per Mail geht nur, wenn der Server Mails verschickt.","en":"A link works once, for 7 days By e-mail only works if the server sends mail."}},

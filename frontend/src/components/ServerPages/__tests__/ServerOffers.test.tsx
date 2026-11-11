@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement } from "react";
@@ -180,5 +180,59 @@ describe("Server › Bereitstellung pages (settings v3 S4)", () => {
     renderOffers(<ServerOffers part="track" />);
     await userEvent.click(await screen.findByRole("button", { name: /needsBetaJump/ }));
     expect(navigate).toHaveBeenCalledWith("/settings/funktionen?match=beta", undefined);
+  });
+});
+
+describe("Funktionen › Netz and Bereiche (settings v3 S5)", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 450));
+
+  it("shows the master switch for the internet as on unless the server says it is off", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.internet.t" })
+    ).toHaveAttribute("aria-checked", "true");
+    cleanup();
+    resetInstanceStore();
+    api.getInstanceSettings.mockResolvedValue(answer({ internetEnabled: false }));
+    renderOffers(<ServerOffers part="net" />);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "settingsRows:server.internet.t" })
+      ).toHaveAttribute("aria-checked", "false")
+    );
+  });
+
+  it("writes internetEnabled alone and keeps the choice on its row when the write is refused", async () => {
+    api.updateInstanceSettings.mockRejectedValue(httpError(500));
+    renderOffers(<ServerOffers part="net" />);
+    const net = await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    await userEvent.click(net);
+    await act(settle);
+    expect(api.updateInstanceSettings).toHaveBeenCalledWith({ internetEnabled: false });
+    expect(net).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "settings:blocks.save.retry" })).toBeInTheDocument();
+  });
+
+  it("lists what the switch switches off in its help, so nobody has to guess", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    // The key-echo mock proves the help is asked for; the real words are pinned in the locale test.
+    expect(screen.getByText("settingsRows:server.internet.s")).toBeInTheDocument();
+  });
+
+  it("draws the TravTrack and TravPlan links as buttons to their Bereitstellung pages", async () => {
+    renderOffers(<ServerOffers part="areas" />);
+    const buttons = await screen.findAllByRole("button", { name: "settingsRows:server.l_tt.btn" });
+    await userEvent.click(buttons[0]);
+    expect(navigate).toHaveBeenCalledWith("/settings/tt-bereit", undefined);
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:server.l_pl.btn" }));
+    expect(navigate).toHaveBeenCalledWith("/settings/pl-bereit", undefined);
+  });
+
+  it("draws nothing of the other groups in the net and areas parts", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.beta.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
   });
 });

@@ -17,7 +17,7 @@ import { remoteSharingError, type RemoteSharingError } from "../sharing/remoteSh
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { Field, Input, Select } from "../ui/Field";
-import { ConfirmDialog, SettingItem, SwitchControl } from "../ui/settings";
+import { ConfirmDialog, SettingItem } from "../ui/settings";
 import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useDialogCopy } from "./rowCopy";
@@ -34,14 +34,12 @@ type Editing = { connection: Connection; mode: "confirm" | "change" };
 /**
  * Einstellungen → Teilen → „Verbindungen" (user connections, spec 2026-11-02): ask a person on a
  * connected server with the switches you choose, confirm requests (and pairings from before
- * connections) with your own, change what you give, end it. Being findable only lets people ask
- * you. Drawn only while the server has trip sharing across servers on.
+ * connections) with your own, change what you give, end it. Drawn only while the server has trip sharing across servers on.
  */
 export default function ConnectionsSection(): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const dialog = useDialogCopy();
   const [status, setStatus] = useState<RemoteSharingStatus | null>(null);
-  const [findable, setFindable] = useState(false);
   const [servers, setServers] = useState<RemoteServer[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [origin, setOrigin] = useState("");
@@ -61,12 +59,10 @@ export default function ConnectionsSection(): JSX.Element | null {
       const next = await sharingRemoteApi.status();
       setStatus(next);
       if (!next.available) return;
-      const [f, s, c] = await Promise.all([
-        sharingRemoteApi.getFindable(),
+      const [s, c] = await Promise.all([
         sharingRemoteApi.listServers(),
         sharingConnectionsApi.list(),
       ]);
-      setFindable(f);
       setServers(s);
       setConnections(c);
       setOrigin((current) => current || s[0]?.origin || "");
@@ -174,21 +170,6 @@ export default function ConnectionsSection(): JSX.Element | null {
           </Link>
         </p>
         <SettingRows>
-          <SettingItem
-            title={t(`${NS}.findable.label`)}
-            sub={t(`${NS}.findable.sub`)}
-            control={
-              <SwitchControl
-                checked={findable}
-                onChange={(next) => {
-                  if (busy) return;
-                  void run(async () => {
-                    setFindable(await sharingRemoteApi.setFindable(next));
-                  }, "sharing:remote.errors.findableFailed");
-                }}
-              />
-            }
-          />
           <SettingItem title={t(`${NS}.request.title`)}>
             <form onSubmit={ask} className="flex flex-col gap-3">
               {servers.length === 0 ? (

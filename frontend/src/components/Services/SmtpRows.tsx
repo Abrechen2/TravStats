@@ -7,10 +7,13 @@ import {
   ErrorLine,
   SettingItem,
   SettingWriteError,
+  StatusValue,
   SwitchControl,
   useSettingWrite,
 } from "../ui/settings";
 import { externalServicesApi, type AdminService } from "../../lib/api/externalServices";
+import { formatDateTime } from "../../lib/displayFormat";
+import { useExpertRows } from "../Settings/frame/useExpertRows";
 import FieldsGroup from "./FieldsGroup";
 import { useServices } from "./servicesContext";
 import { useDemoLock } from "./useLockFor";
@@ -35,7 +38,11 @@ function fieldValue(service: AdminService, key: string, changes: Record<string, 
   return key in changes ? changes[key] : service.fields.find((f) => f.key === key)?.value;
 }
 
-/** Mail (SMTP): the switch, the connection group with "Speichern & testen", the test and the delete. */
+/**
+ * Mail (SMTP) on its own page (settings v3 S5): the connection group with
+ * "Speichern & testen", the check and the verdict of the last one; the "Mails
+ * verschicken" switch and the removal are the expert rows.
+ */
 export default function SmtpRows({ service }: { service: AdminService }): JSX.Element {
   const { t } = useTranslation(["settingsRows"]);
   const { admin } = useServices();
@@ -44,6 +51,7 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+  const expert = useExpertRows(2);
 
   const on = useSettingWrite<boolean>("services.smtp.on", service.enabled, async (v) => {
     try {
@@ -77,6 +85,8 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
       setResult({ ok: false, text: t(`settingsRows:services.smtp.${smtpTestCode(err)}`) });
     } finally {
       setBusy(false);
+      // The verdict was kept server-side: "Letzte Prüfung" reads it from there.
+      await admin?.reload();
     }
   };
 
@@ -96,14 +106,6 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
 
   return (
     <>
-      <SettingItem
-        title={t("settingsRows:services.rows.smtpon.t")}
-        sub={t("settingsRows:services.rows.smtpon.s")}
-        scope="allAccounts"
-        locked={demo}
-        save={on}
-        control={<SwitchControl checked={on.value} onChange={on.choose} />}
-      />
       <FieldsGroup
         id="services.smtp.server"
         label={t("settingsRows:services.ui.serverGroup", { name: "SMTP" })}
@@ -120,6 +122,7 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
       />
       <SettingItem
         title={t("settingsRows:services.rows.smtptest.t")}
+        sub={t("settingsRows:services.rows.smtptest.s")}
         locked={demo}
         control={
           <ActionControl
@@ -144,17 +147,50 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
         ) : null}
       </SettingItem>
       <SettingItem
-        title={t("settingsRows:services.rows.smtpdel.t")}
-        help={t("settingsRows:services.rows.smtpdel.h")}
-        locked={demo}
+        title={t("settingsRows:services.rows.mailstat.t")}
         control={
-          <ActionControl
-            danger
-            label={t("settingsRows:services.rows.smtpdel.btn")}
-            onClick={() => setDeleting(true)}
-          />
+          <StatusValue>
+            {!service.lastTest
+              ? t("settingsRows:services.ui.neverTested")
+              : service.lastTest.ok
+                ? t("settingsRows:services.ui.lastOk", {
+                    when: formatDateTime(service.lastTest.at),
+                  })
+                : t("settingsRows:services.ui.lastFailed", {
+                    when: formatDateTime(service.lastTest.at),
+                    reason: t(
+                      `settingsRows:services.smtp.${smtpTestCode({ response: { data: { code: service.lastTest.reason } } })}`
+                    ),
+                  })}
+          </StatusValue>
         }
       />
+      {expert ? (
+        <SettingItem
+          title={t("settingsRows:services.rows.smtpon.t")}
+          sub={t("settingsRows:services.rows.smtpon.s")}
+          scope="allAccounts"
+          expert
+          locked={demo}
+          save={on}
+          control={<SwitchControl checked={on.value} onChange={on.choose} />}
+        />
+      ) : null}
+      {expert ? (
+        <SettingItem
+          title={t("settingsRows:services.rows.smtpdel.t")}
+          help={t("settingsRows:services.rows.smtpdel.h")}
+          expert
+          locked={demo}
+          control={
+            <ActionControl
+              danger
+              label={t("settingsRows:services.rows.smtpdel.btn")}
+              onClick={() => setDeleting(true)}
+            />
+          }
+        />
+      ) : null}
       <ConfirmDialog
         open={deleting}
         title={t("settingsRows:services.dialogs.smtpdel.title")}

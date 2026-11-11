@@ -5,6 +5,7 @@ export const instance = (over: Partial<InstanceSettings> = {}): InstanceSettings
   maxUsers: 10,
   allowRegistration: false,
   betaFeaturesEnabled: false,
+  internetEnabled: true,
   openDataEnabled: false,
   operatorLogosOpenDataEnabled: true,
   shareLinksEnabled: true,

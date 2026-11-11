@@ -55,6 +55,16 @@ interface SuggestionSwitchesState {
   railImportSaves: { localTransit: number; bus: number };
   /** Whether this account uses TravPlan (owner, 2026-10-27); server default off. */
   travPlan: boolean;
+  /** AI proposals inside the account's plans (settings v3); server default on. */
+  travPlanAi: boolean;
+  /** Weather forecasts inside the account's plans (settings v3); server default on. */
+  travPlanWeather: boolean;
+  /**
+   * The currency amounts are shown in (settings v3). `null` until the settings
+   * arrive; the server answers the base currency for an account that never chose.
+   * Separate from `baseCurrency`, which the sums are converted into.
+   */
+  displayCurrency: string | null;
   /** What `GET /settings` said; anything that is not a boolean keeps the default. */
   noteRemote: (remote: unknown) => void;
   setTrips: (enabled: boolean) => void;
@@ -110,6 +120,9 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
   railImportBus: "skip",
   railImportSaves: { localTransit: 0, bus: 0 },
   travPlan: false,
+  travPlanAi: true,
+  travPlanWeather: true,
+  displayCurrency: null,
   noteRemote: (remote) => {
     const body = remote as {
       tripSuggestions?: unknown;
@@ -120,6 +133,7 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       liveTracking?: unknown;
       railImport?: unknown;
       travPlan?: unknown;
+      displayCurrency?: unknown;
     } | null;
     const stay = body?.staySuggestions;
     // `null` is an answer (automatic), not an absence: only `undefined` keeps
@@ -141,6 +155,12 @@ export const useSuggestionSwitchesStore = create<SuggestionSwitchesState>((set, 
       railImportBus:
         wordIn(body?.railImport, "bus", ["skip", "bus"] as const) ?? get().railImportBus,
       travPlan: enabledIn(body?.travPlan) ?? get().travPlan,
+      travPlanAi: booleanIn(body?.travPlan, "ai") ?? get().travPlanAi,
+      travPlanWeather: booleanIn(body?.travPlan, "weather") ?? get().travPlanWeather,
+      displayCurrency:
+        typeof body?.displayCurrency === "string" && body.displayCurrency.length > 0
+          ? body.displayCurrency
+          : get().displayCurrency,
     });
   },
   setTrips: serializedSetting({

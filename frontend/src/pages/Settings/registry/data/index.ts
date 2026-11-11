@@ -22,8 +22,14 @@ import { PL_BEREIT_PAGE } from "./pl-bereit";
 import { ALLGEMEIN_PAGE } from "./allgemein";
 import { NUTZER_PAGE } from "./nutzer";
 import { FUNKTIONEN_PAGE } from "./funktionen";
+import { EMAIL_PAGE } from "./email";
 import { BUCHUNGEN_PAGE } from "./buchungen";
+import { DIENSTE_PAGE } from "./dienste";
 import { SICHERUNGEN_PAGE } from "./sicherungen";
+import { SRVCONN_PAGE } from "./srvconn";
+import { DATENSCHUTZ_PAGE } from "./datenschutz";
+import { ADRESSEN_PAGE } from "./adressen";
+import { EIGENE_PAGE } from "./eigene";
 import { WARTUNG_PAGE } from "./wartung";
 import { STAMM_PAGE } from "./stamm";
 import type { RegistryPage } from "../types";
@@ -52,8 +58,14 @@ export const REGISTRY_PAGES: readonly RegistryPage[] = [
   ALLGEMEIN_PAGE,
   NUTZER_PAGE,
   FUNKTIONEN_PAGE,
+  EMAIL_PAGE,
   BUCHUNGEN_PAGE,
+  DIENSTE_PAGE,
   SICHERUNGEN_PAGE,
+  SRVCONN_PAGE,
+  DATENSCHUTZ_PAGE,
+  ADRESSEN_PAGE,
+  EIGENE_PAGE,
   WARTUNG_PAGE,
   STAMM_PAGE,
 ];

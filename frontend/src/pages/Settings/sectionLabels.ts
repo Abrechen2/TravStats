@@ -13,6 +13,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   deletion: "settings:deleteAccount.title",
   planning: "settings:planning.title",
   security: "settings:security.title",
+  visibility: "settings:visibility.title",
   devices: "settings:devices.title",
   notifications: "settings:notifications.title",
   apitokens: "settings:apiTokens.title",

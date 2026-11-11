@@ -2,7 +2,7 @@
 // the 31 catalogue entries in their seven groups and the row templates each one
 // uses. Copy lives in `settingsRows:services.*` (DE and EN together).
 
-export const SERVICE_GROUPS = ["flug", "karte", "foto", "ki", "open", "sync", "inst"] as const;
+export const SERVICE_GROUPS = ["flug", "ki", "foto", "karte", "sync", "open", "inst"] as const;
 export type ServiceGroup = (typeof SERVICE_GROUPS)[number];
 
 /** The row templates of the design (`tpl`). */
@@ -19,6 +19,44 @@ export type ServiceTemplate =
   | "aiAllow"
   | "aiConsent"
   | "model";
+
+/**
+ * Cards the server's page keeps behind the expert level only: the granular
+ * switches behind "Server darf externe Dienste abfragen" (settings v3 S2). Their
+ * rows are removed by S6, when the six columns fold into the master switch.
+ */
+export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set([
+  "railTimetables",
+  "openData",
+  "fx",
+  "updatesTemplates",
+]);
+
+/** The switches the master internet switch gates, as `<card>.<field>` of the catalogue. */
+export const INTERNET_GATED_FIELDS: ReadonlySet<string> = new Set([
+  "railTimetables.transitous",
+  "railTimetables.dbRest",
+  "logos.operatorLogos",
+  "fx.cdnFallback",
+]);
+/** Cards whose "on" switch is one of those columns. */
+export const INTERNET_GATED_SWITCH_CARDS: ReadonlySet<string> = new Set([
+  "openData",
+  "updatesTemplates",
+]);
+
+/**
+ * Cards that moved to a page of their own (settings v3 S5): E-Mail, Datenschutz,
+ * Server-Verbindungen, Eigene Server. They are not on the grid any more.
+ */
+export const MOVED_TO_OWN_PAGE: ReadonlySet<string> = new Set([
+  "smtp",
+  "push",
+  "usageStats",
+  "federation",
+  "geocoder",
+  "selfHostedRouting",
+]);
 
 export interface ServiceCardDef {
   /** The catalogue id. */
@@ -55,18 +93,18 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: ["mine", "on", "allowKeys", "test", "quota"],
   },
   {
-    id: "adsblol",
-    group: "flug",
-    use: ["on", "instKey", "test", "quota"],
-  },
-  {
     id: "adsbx",
     group: "flug",
     use: ["on", "instKey", "test", "quota"],
   },
   {
+    id: "adsblol",
+    group: "flug",
+    use: ["on", "instKey", "test", "quota"],
+  },
+  {
     id: "aisstream",
-    group: "karte",
+    group: "flug",
     use: ["on", "instKey"],
   },
   {
@@ -87,7 +125,7 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   {
     id: "googlePlaces",
     group: "karte",
-    use: ["on", "instKey", "test"],
+    use: ["ownKey", "mine", "on", "instKey", "allowKeys", "test"],
   },
   {
     id: "geocoder",
@@ -132,7 +170,7 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   {
     id: "gemini",
     group: "ki",
-    use: ["aiConsent", "aiAllow", "instKey", "model", "test"],
+    use: ["aiConsent", "ownKey", "aiAllow", "instKey", "allowKeys", "model", "test"],
   },
   {
     id: "customLlm",
@@ -146,7 +184,7 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   },
   {
     id: "logos",
-    group: "open",
+    group: "karte",
     use: ["on", "instKey", "test"],
   },
   {
@@ -185,3 +223,20 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: [],
   },
 ];
+
+/** Whether the card has anything for the account itself to do. */
+export const hasAccountRows = (card: ServiceCardDef): boolean =>
+  (["mine", "ownKey", "aiConsent", "allowConn"] as const).some((u) =>
+    (card.use as readonly string[]).includes(u)
+  );
+
+/** The cards of the account's page (prototype `own:1`), in catalogue order. */
+export const ACCOUNT_CARDS: readonly ServiceCardDef[] = SERVICE_CARDS.filter(hasAccountRows);
+
+/**
+ * The cards of the server's page: the grid of the prototype, then — expert
+ * only — the cards whose switches the master switch folds.
+ */
+export const SERVER_CARDS: readonly ServiceCardDef[] = SERVICE_CARDS.filter(
+  (c) => !MOVED_TO_OWN_PAGE.has(c.id)
+);

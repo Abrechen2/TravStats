@@ -70,24 +70,24 @@ const TABLE_6_1: ReadonlyArray<readonly [string, string]> = [
   ["/admin/instance#instance", "/settings/allgemein#general"],
   ["/admin/instance#travTrack", "/settings/tt-bereit?match=ttoffer"],
   ["/admin/instance#travPlan", "/settings/pl-bereit?match=tpoffer"],
-  ["/admin/instance#shareLinks", "/settings/funktionen?match=linkserlaubt#shareLinksServer"],
+  ["/admin/instance#shareLinks", "/settings/funktionen?match=linkserlaubt#sharing"],
   ["/admin/instance#importMode", "/settings/funktionen?match=importmodus#features"],
-  ["/admin/instance#usageStats", "/settings/dienstek?service=usageStats"],
+  ["/admin/instance#usageStats", "/settings/datenschutz#stats"],
   ["/admin/instance#about", "/settings/ueber"],
-  ["/admin/instance#federation", "/settings/dienstek?service=federation"],
-  ["/admin/instance#push", "/settings/dienstek?service=push"],
+  ["/admin/instance#federation", "/settings/funktionen?match=fedon#sharing"],
+  ["/admin/instance#push", "/settings/datenschutz#push"],
   ["/admin/users", "/settings/nutzer#accounts"],
   ["/admin/users?user=u-42", "/settings/nutzer?user=u-42#accounts"],
   ["/admin/invitations", "/settings/nutzer#invitations"],
-  ["/admin/externalServices", "/settings/dienstek"],
-  ["/admin/externalServices?service=immich", "/settings/dienstek?service=immich"],
+  ["/admin/externalServices", "/settings/dienste"],
+  ["/admin/externalServices?service=immich", "/settings/dienste?service=immich"],
   ["/admin/parsers#parsers", "/settings/buchungen"],
   ["/admin/parsers", "/settings/buchungen"],
-  ["/admin/parsers#templateRepo", "/settings/dienstek?service=updatesTemplates"],
-  ["/admin/smtp", "/settings/dienstek?service=smtp"],
+  ["/admin/parsers#templateRepo", "/settings/eigene?match=tplrepo"],
+  ["/admin/smtp", "/settings/email"],
   ["/admin/backups#backups", "/settings/sicherungen"],
   ["/admin/backups", "/settings/sicherungen"],
-  ["/admin/backups#webdav", "/settings/dienstek?service=webdav"],
+  ["/admin/backups#webdav", "/settings/dienste?service=webdav"],
   ["/admin/timeModel", "/settings/wartung#timeModel"],
   ["/admin/logging", "/settings/wartung#logging"],
   ["/admin/system", "/settings/wartung#system"],
@@ -115,9 +115,9 @@ const TABLE_6_2: ReadonlyArray<readonly [string, string]> = [
   ["/settings?section=modules", "/settings/reisearten#domains"],
   ["/settings#modules", "/settings/reisearten#domains"],
   ["/settings?section=about", "/settings/ueber"],
-  ["/settings?section=lodgingPreferences", "/settings/dienstek?service=geocoder&expert=1"],
-  ["/settings/lodging", "/settings/dienstek?service=geocoder&expert=1"],
-  ["/settings?tab=lodging", "/settings/dienstek?service=geocoder&expert=1"],
+  ["/settings?section=lodgingPreferences", "/settings/eigene?match=photon"],
+  ["/settings/lodging", "/settings/eigene?match=photon"],
+  ["/settings?tab=lodging", "/settings/eigene?match=photon"],
   ["/settings?section=admin", "/settings/allgemein"],
   ["/settings/services?service=immich", "/settings/dienstek?service=immich"],
   [
@@ -133,9 +133,9 @@ const TABLE_6_2: ReadonlyArray<readonly [string, string]> = [
     "/admin?section=airlineAircraftMasterData",
     "/settings/stamm?match=md_airlines#airlinesMasterData",
   ],
-  ["/admin?section=apiKeys", "/settings/dienstek"],
-  ["/admin/externalServices?section=apikeys", "/settings/dienstek"],
-  ["/admin?section=geocoder", "/settings/dienstek?service=geocoder&expert=1"],
+  ["/admin?section=apiKeys", "/settings/dienste"],
+  ["/admin/externalServices?section=apikeys", "/settings/dienste"],
+  ["/admin?section=geocoder", "/settings/eigene?match=photon"],
   // Pre-page links the old admin router resolved by tab and section.
   ["/admin?tab=general&section=logging", "/settings/wartung#logging"],
   ["/admin?tab=general&section=users", "/settings/nutzer#accounts"],
@@ -312,7 +312,7 @@ describe("every page of the settings area before settings v3 still opens", () =>
 
   it("lets a named row decide between the pages an old page split into", () => {
     expect(resolve("/settings/sharing?match=linkserlaubt#shareLinks").to).toBe(
-      "/settings/funktionen?match=linkserlaubt#shareLinksServer"
+      "/settings/funktionen?match=linkserlaubt#sharing"
     );
     expect(resolve("/settings/server?match=laenderstd#features").to).toBe(
       "/settings/funktionen?match=laenderstd#features"
@@ -329,6 +329,30 @@ describe("every page of the settings area before settings v3 still opens", () =>
       "/settings/dienstek?service=immich"
     );
     expect(resolve("/settings/users?user=u-1").to).toBe("/settings/nutzer?user=u-1");
+  });
+
+  it("finds the addresses and the passkeys on the page they got in settings v3 S5", () => {
+    expect(resolve("/settings/server#addresses").to).toBe("/settings/adressen");
+    expect(resolve("/settings/server#passkeys").to).toBe("/settings/adressen#passkeys");
+  });
+
+  it("sends a card that has a page of its own there, and a server-only card to the server's page", () => {
+    // A bookmark of the catalogue's geocoder or mail card from before the split.
+    expect(resolve("/settings/dienstek?service=geocoder").to).toBe("/settings/eigene?match=photon");
+    expect(resolve("/settings/dienstek?service=smtp").to).toBe("/settings/email");
+    expect(resolve("/settings/dienstek?service=push").to).toBe("/settings/datenschutz#push");
+    // A card the account has nothing to set on goes to the server's half for an admin ...
+    expect(resolve("/settings/dienstek?service=aeroapi").to).toBe(
+      "/settings/dienste?service=aeroapi"
+    );
+    // ... and for anyone else loses the card name rather than the page.
+    expect(resolve("/settings/dienstek?service=aeroapi", { isAdmin: false }).to).toBe(
+      "/settings/dienstek"
+    );
+    // An account's own card stays.
+    expect(resolve("/settings/dienstek?service=gemini").to).toBe(
+      "/settings/dienstek?service=gemini"
+    );
   });
 
   it("opens every new page as it is, for an admin", () => {

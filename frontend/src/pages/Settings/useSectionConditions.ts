@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useAuthStore } from "../../store/authStore";
+import { useFederationStatus } from "../../store/federationStatusStore";
 import {
   travTrackSettingsVisible,
   useTravTrackCapabilities,
@@ -35,8 +37,16 @@ export function useSectionConditions(): Partial<Record<SectionCondition, boolean
   useEffect(() => {
     if (!isDemo) void refresh();
   }, [isDemo, refresh]);
+  const isAdmin = useAuthStore((s) => s.user?.isAdmin ?? false);
+  const federation = useFederationStatus((s) => s.enabled);
+  const refreshFederation = useFederationStatus((s) => s.refresh);
+  // The page "Server-Verbindungen" exists only while the admin has the server connect to others.
+  useEffect(() => {
+    if (isAdmin && !isDemo) void refreshFederation();
+  }, [isAdmin, isDemo, refreshFederation]);
   const travTrackHeld = travTrackSettingsVisible(caps);
   return {
+    federationOn: isAdmin && federation === true,
     travTrackHeld,
     travPlanOffered,
     locationSourceHeld: travTrackHeld || dawarichSourceHeld(provider),

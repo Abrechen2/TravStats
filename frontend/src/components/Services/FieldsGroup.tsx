@@ -53,7 +53,11 @@ interface FieldsGroupProps {
   children?: ReactNode;
   /** Take a stored secret out for good (sends `""`). */
   onRemoveSecret?: (key: string) => Promise<void>;
+  /** A reason a field cannot act (the master internet switch is off): it locks that row. */
+  dependencyOf?: (field: ServiceField) => { reason: ReactNode; jump?: Jump } | undefined;
 }
+
+type Jump = { label: string; onJump: () => void };
 
 /**
  * The credential fields of one side of a service as ONE group with a save
@@ -73,6 +77,7 @@ export default function FieldsGroup({
   errorText,
   children,
   onRemoveSecret,
+  dependencyOf,
 }: FieldsGroupProps): JSX.Element | null {
   const { t } = useTranslation(["settingsRows", "externalServices"]);
   const hiddenCount = fields.filter((f) => f.expert).length;
@@ -102,7 +107,11 @@ export default function FieldsGroup({
       );
     },
   });
-  const shown = fields.filter((f) => expert || !f.expert);
+  // Standard rows first, the expert ones after them: the order of a page that
+  // shows the tuning only when asked.
+  const shown = fields
+    .filter((f) => expert || !f.expert)
+    .sort((a, b) => Number(a.expert) - Number(b.expert));
   if (shown.length === 0) return null;
 
   const titleOf = (f: ServiceField): string =>
@@ -127,6 +136,7 @@ export default function FieldsGroup({
           sub: subOf(f),
           help: helpOf(f),
           expert: f.expert,
+          dependency: dependencyOf?.(f),
           locked: lock,
           changed: group.isChanged(f.key),
         };

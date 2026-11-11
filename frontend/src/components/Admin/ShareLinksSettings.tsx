@@ -18,6 +18,17 @@ const NS = "sharing:links.section";
  * reports — and a refused write is said, not swallowed.
  */
 export default function ShareLinksSettings(): JSX.Element {
+  const { t } = useTranslation(["settingsRows"]);
+  return (
+    <SectionCard>
+      <SectionTitle title={t("settingsRows:sharing.sections.shareLinks")} />
+      <ShareLinksSwitch />
+    </SectionCard>
+  );
+}
+
+/** The switch and its confirmation, without a card: Funktionen › Teilen draws it beside the server switch. */
+export function ShareLinksSwitch(): JSX.Element {
   const { t } = useTranslation(["sharing", "settingsRows"]);
   const row = useRowCopy("sharing");
   const dialog = useDialogCopy();
@@ -67,8 +78,7 @@ export default function ShareLinksSettings(): JSX.Element {
   const copy = row("linkserlaubt");
   const off = dialog("linksoff", { count: stats?.links ?? 0, accounts: stats?.accounts ?? 0 });
   return (
-    <SectionCard>
-      <SectionTitle title={t("settingsRows:sharing.sections.shareLinks")} />
+    <>
       <SettingRows>
         {enabled !== null && (
           <SettingItem
@@ -98,6 +108,6 @@ export default function ShareLinksSettings(): JSX.Element {
         onConfirm={() => void write(false)}
         onCancel={() => setAsking(false)}
       />
-    </SectionCard>
+    </>
   );
 }

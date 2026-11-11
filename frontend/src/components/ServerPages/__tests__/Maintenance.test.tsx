@@ -67,22 +67,19 @@ describe("Wartung › Protokoll", () => {
     );
     render(<MaintenanceLogging />);
     expect(await screen.findAllByText("settingsRows:maintenance.deps.envPinned")).toHaveLength(2);
-    expect(screen.getByRole("switch", { name: "settingsRows:maintenance.debug.t" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "settingsRows:maintenance.debug24.btn" })
+    ).toBeDisabled();
   });
 
-  it("keeps the verbose switch where the user put it when the server refuses it", async () => {
+  it("says the 24 h switch-on was refused, and does not pretend it runs", async () => {
     admin.toggleDebugLogging.mockRejectedValue(httpError(500));
     render(<MaintenanceLogging />);
-    const verbose = await screen.findByRole("switch", { name: "settingsRows:maintenance.debug.t" });
-    await userEvent.click(verbose);
-    expect(verbose).toHaveAttribute("aria-checked", "true");
-    await waitFor(
-      () => expect(screen.getByText(/settings:blocks.save.failed/)).toBeInTheDocument(),
-      {
-        timeout: 3000,
-      }
+    await userEvent.click(
+      await screen.findByRole("button", { name: "settingsRows:maintenance.debug24.btn" })
     );
-    expect(verbose).toHaveAttribute("aria-checked", "true");
+    expect(await screen.findByText("settingsRows:maintenance.debug24.failed")).toBeInTheDocument();
+    expect(document.querySelector('[data-debug24="running"]')).toBeNull();
   });
 
   it("sends only what was edited, so a verbose switch flipped meanwhile is not written back", async () => {
@@ -100,7 +97,9 @@ describe("Wartung › Protokoll", () => {
     await userEvent.type(days, "14");
     // The server now runs at debug (the switch), while the group still holds the old level "info".
     admin.getLoggingConfig.mockResolvedValue(config({ logLevel: "debug" }));
-    await userEvent.click(screen.getByRole("switch", { name: "settingsRows:maintenance.debug.t" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "settingsRows:maintenance.debug24.btn" })
+    );
     await waitFor(() => expect(admin.toggleDebugLogging).toHaveBeenCalledWith(true), {
       timeout: 3000,
     });
@@ -130,7 +129,7 @@ describe("Wartung › Protokoll", () => {
     expect(await screen.findByText("settingsRows:maintenance.logLoadFailed")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "settingsRows:server.retry" }));
     expect(
-      await screen.findByRole("switch", { name: "settingsRows:maintenance.debug.t" })
+      await screen.findByRole("button", { name: "settingsRows:maintenance.debug24.btn" })
     ).toBeInTheDocument();
   });
 

@@ -42,6 +42,7 @@ import LodgingRatingsSection from "../../components/Settings/LodgingRatingsSecti
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
+import VisibilitySection from "../../components/Settings/VisibilitySection";
 import ServicesPage from "../../components/Services/ServicesPage";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 
@@ -83,6 +84,8 @@ export default function SettingsSectionSwitch({
       return <DeleteAccountSection />;
     case "security":
       return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;
+    case "visibility":
+      return <VisibilitySection />;
     case "apitokens":
       return <ApiTokensSection />;
     case "devices":
@@ -153,7 +156,8 @@ export default function SettingsSectionSwitch({
     case "ttDiag":
       return <TravTrackDiagSection />;
     case "externalServices":
-      return <ServicesPage isAdmin={isAdmin} />;
+      // The account's own page: its half of the catalogue, whoever is looking (an admin has the server's on "Dienste").
+      return <ServicesPage isAdmin={false} side="account" />;
     case "homeAirport":
       return <HomeAirportSection view="airports" />;
     case "defaults":

@@ -300,6 +300,31 @@
      ]
     },
     {
+     "id": "profil-sichtbarkeit",
+     "de": "Sichtbarkeit",
+     "en": "Visibility",
+     "rows": [
+      {
+       "id": "findable",
+       "t": "toggle",
+       "v": false,
+       "de": [
+        "Für andere Server auffindbar",
+        "Menschen auf verbundenen Servern dürfen dir eine Freundschaftsanfrage schicken",
+        ""
+       ],
+       "en": [
+        "Findable from other servers",
+        "People on connected servers may send you a friend request",
+        ""
+       ],
+       "m": "visibility",
+       "x": 0,
+       "d": 1
+      }
+     ]
+    },
+    {
      "id": "profil-konto-verwalten",
      "de": "Konto verwalten",
      "en": "Manage account",
@@ -503,6 +528,23 @@
         "Baggage",
         "For allowances without a unit",
         "Converts nothing."
+       ],
+       "m": "units",
+       "x": 0
+      },
+      {
+       "id": "anzeigew",
+       "t": "select",
+       "v": "EUR",
+       "de": [
+        "Anzeigewährung",
+        "Wie Beträge angezeigt werden",
+        ""
+       ],
+       "en": [
+        "Display currency",
+        "How amounts are shown",
+        ""
        ],
        "m": "units",
        "x": 0
@@ -2490,26 +2532,7 @@
       "test",
       "quota"
      ],
-     "rows": [
-      {
-       "id": "avbudget",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Aviationstack daily budget",
-       "de": [
-        "Anfragen pro Tag",
-        "0 schaltet ab",
-        ""
-       ],
-       "en": [
-        "Requests per day",
-        "0 turns it off",
-        ""
-       ],
-       "v": "3"
-      }
-     ]
+     "rows": []
     },
     {
      "id": "aerodatabox",
@@ -2537,102 +2560,6 @@
       "quota"
      ],
      "rows": []
-    },
-    {
-     "id": "aeroapi",
-     "cat": "flug",
-     "svc": {
-      "n": [
-       "FlightAware AeroAPI",
-       "FlightAware AeroAPI"
-      ],
-      "de": "Flugstatus und echte Flugwege",
-      "en": "Flight status and real tracks",
-      "st": [
-       "Nicht eingerichtet",
-       "Not set up"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "on",
-      "instKey",
-      "test"
-     ],
-     "rows": [
-      {
-       "id": "aerotarif",
-       "t": "select",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 AeroAPI plan tier",
-       "de": [
-        "Tarif",
-        "",
-        ""
-       ],
-       "en": [
-        "Plan",
-        "",
-        ""
-       ],
-       "v": "personal"
-      },
-      {
-       "id": "aerolimit",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 AeroAPI monthly USD limit",
-       "de": [
-        "Monatsgrenze in USD",
-        "Nur beim eigenen Tarif",
-        ""
-       ],
-       "en": [
-        "Monthly limit in USD",
-        "Custom plan only",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "aerotracks",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 AeroAPI fetch real tracks after arrival",
-       "de": [
-        "Echte Flugwege nach der Landung",
-        "Kostet zusätzliche Anfragen",
-        ""
-       ],
-       "en": [
-        "Real tracks after landing",
-        "Costs extra requests",
-        ""
-       ],
-       "v": false
-      },
-      {
-       "id": "aerousage",
-       "t": "status",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Quota / budget display (AeroAPI monthly budget)",
-       "de": [
-        "Verbraucht diesen Monat",
-        "",
-        "TravStats hört vor der Grenze auf."
-       ],
-       "en": [
-        "Used this month",
-        "",
-        "TravStats stops before the limit."
-       ],
-       "v": "0,00 USD"
-      }
-     ]
     },
     {
      "id": "opensky",
@@ -2721,450 +2648,108 @@
         ""
        ],
        "x": 1
-      },
-      {
-       "id": "oskidI",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky client id)",
-       "de": [
-        "Client-ID des Servers",
-        "Für alle Konten ohne eigene",
-        ""
-       ],
-       "en": [
-        "Server client ID",
-        "For every account without its own",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "osksecI",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky client secret)",
-       "de": [
-        "Client-Secret des Servers",
-        "",
-        ""
-       ],
-       "en": [
-        "Server client secret",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "oskuserI",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky username, expert)",
-       "de": [
-        "Benutzername des Servers",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Server username",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "oskpwI",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky password, expert)",
-       "de": [
-        "Passwort des Servers",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Server password",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1
       }
      ]
     },
     {
-     "id": "adsblol",
-     "cat": "flug",
+     "id": "openai",
+     "cat": "ki",
      "svc": {
       "n": [
-       "ADS-B Lol",
-       "ADS-B Lol"
+       "OpenAI",
+       "OpenAI"
       ],
-      "de": "Positionen in der Luft, frei",
-      "en": "Positions in the air, free",
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
       "st": [
-       "Aus",
-       "Off"
+       "Nicht freigegeben",
+       "Not enabled"
       ],
       "tone": "muted"
      },
      "use": [
-      "on",
+      "aiConsent",
+      "aiAllow",
       "instKey",
-      "test",
-      "quota"
-     ],
-     "rows": [],
-     "ov": {
-      "on": {
-       "v": false
-      }
-     }
-    },
-    {
-     "id": "adsbx",
-     "cat": "flug",
-     "svc": {
-      "n": [
-       "ADS-B Exchange",
-       "ADS-B Exchange"
-      ],
-      "de": "Positionen in der Luft",
-      "en": "Positions in the air",
-      "st": [
-       "Nicht eingerichtet",
-       "Not set up"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "on",
-      "instKey",
-      "test",
-      "quota"
-     ],
-     "rows": []
-    },
-    {
-     "id": "aisstream",
-     "cat": "karte",
-     "svc": {
-      "n": [
-       "AISStream",
-       "AISStream"
-      ],
-      "de": "Schiffspositionen",
-      "en": "Ship positions",
-      "st": [
-       "Nicht eingerichtet",
-       "Not set up"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "on",
-      "instKey"
-     ],
-     "rows": []
-    },
-    {
-     "id": "openrouteservice",
-     "cat": "karte",
-     "svc": {
-      "n": [
-       "OpenRouteService",
-       "OpenRouteService"
-      ],
-      "de": "Routen für Touren",
-      "en": "Routes for tours",
-      "st": [
-       "Nicht eingerichtet",
-       "Not set up"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "ownKey",
-      "mine",
-      "on",
-      "instKey",
-      "allowKeys",
+      "model",
       "test"
      ],
      "rows": []
     },
     {
-     "id": "graphhopper",
-     "cat": "karte",
+     "id": "anthropic",
+     "cat": "ki",
      "svc": {
       "n": [
-       "GraphHopper",
-       "GraphHopper"
+       "Anthropic",
+       "Anthropic"
       ],
-      "de": "Routen für Touren",
-      "en": "Routes for tours",
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
       "st": [
-       "Nicht eingerichtet",
-       "Not set up"
+       "Nicht freigegeben",
+       "Not enabled"
       ],
       "tone": "muted"
      },
      "use": [
-      "ownKey",
-      "mine",
-      "on",
+      "aiConsent",
+      "aiAllow",
       "instKey",
-      "allowKeys",
+      "model",
       "test"
      ],
      "rows": []
     },
     {
-     "id": "railTimetables",
-     "cat": "karte",
+     "id": "gemini",
+     "cat": "ki",
      "svc": {
       "n": [
-       "Transitous & db-rest",
-       "Transitous & db-rest"
+       "Google Gemini",
+       "Google Gemini"
       ],
-      "de": "Bahn-Fahrpläne",
-      "en": "Rail timetables",
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
       "st": [
-       "An",
-       "On"
-      ],
-      "tone": "good"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "transitous",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Rail timetables: Transitous switch",
-       "de": [
-        "Transitous",
-        "Fahrpläne aus offenen Daten",
-        ""
-       ],
-       "en": [
-        "Transitous",
-        "Timetables from open data",
-        ""
-       ],
-       "v": true
-      },
-      {
-       "id": "dbrest",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Rail timetables: db-rest switch",
-       "de": [
-        "db-rest",
-        "Fahrpläne der Deutschen Bahn",
-        ""
-       ],
-       "en": [
-        "db-rest",
-        "Deutsche Bahn timetables",
-        ""
-       ],
-       "v": true
-      },
-      {
-       "id": "bahnkontakt",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Rail timetables: lookup contact",
-       "de": [
-        "Kontakt für Anfragen",
-        "Wird den Betreibern mitgeschickt",
-        ""
-       ],
-       "en": [
-        "Contact for requests",
-        "Sent along to the operators",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      }
-     ]
-    },
-    {
-     "id": "googlePlaces",
-     "cat": "karte",
-     "svc": {
-      "n": [
-       "Google Places",
-       "Google Places"
-      ],
-      "de": "Orte und Öffnungszeiten",
-      "en": "Places and opening hours",
-      "st": [
-       "Aus",
-       "Off"
+       "Nicht freigegeben",
+       "Not enabled"
       ],
       "tone": "muted"
      },
      "use": [
-      "on",
+      "aiConsent",
+      "aiAllow",
       "instKey",
+      "model",
       "test"
      ],
-     "rows": [],
-     "ov": {
-      "on": {
-       "v": false
-      }
-     }
+     "rows": []
     },
     {
-     "id": "geocoder",
-     "cat": "karte",
+     "id": "customLlm",
+     "cat": "ki",
      "svc": {
       "n": [
-       "Photon & Nominatim",
-       "Photon & Nominatim"
+       "OpenAI-kompatibel",
+       "OpenAI-compatible"
       ],
-      "de": "Ortssuche",
-      "en": "Place search",
+      "de": "Eigener KI-Anbieter",
+      "en": "Own AI provider",
       "st": [
-       "Immer an",
-       "Always on"
-      ],
-      "tone": "good"
-     },
-     "use": [
-      "always"
-     ],
-     "rows": [
-      {
-       "id": "photon",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Geocoder: Photon URL",
-       "de": [
-        "Photon-Adresse",
-        "",
-        ""
-       ],
-       "en": [
-        "Photon address",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "nominatim",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Geocoder: Nominatim URL",
-       "de": [
-        "Nominatim-Adresse",
-        "",
-        ""
-       ],
-       "en": [
-        "Nominatim address",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "geoeigen",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Geocoder: own geo server URL",
-       "de": [
-        "Eigener Geo-Server",
-        "",
-        ""
-       ],
-       "en": [
-        "Own geo server",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      }
-     ]
-    },
-    {
-     "id": "selfHostedRouting",
-     "cat": "karte",
-     "svc": {
-      "n": [
-       "OSRM & OpenRailRouting",
-       "OSRM & OpenRailRouting"
-      ],
-      "de": "Eigenes Routing",
-      "en": "Own routing",
-      "st": [
-       "Aus",
-       "Off"
+       "Nicht freigegeben",
+       "Not enabled"
       ],
       "tone": "muted"
      },
      "use": [
-      "on"
+      "aiConsent",
+      "aiAllow",
+      "instKey",
+      "model",
+      "test"
      ],
-     "rows": [
-      {
-       "id": "osrm",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Self-hosted routing: OSRM URL",
-       "de": [
-        "OSRM-Adresse",
-        "Leer: aus",
-        ""
-       ],
-       "en": [
-        "OSRM address",
-        "Empty: off",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "orr",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Self-hosted routing: OpenRailRouting URL",
-       "de": [
-        "OpenRailRouting-Adresse",
-        "Leer: aus",
-        ""
-       ],
-       "en": [
-        "OpenRailRouting address",
-        "Empty: off",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      }
-     ],
-     "ad": 1
+     "rows": []
     },
     {
      "id": "immich",
@@ -3282,41 +2867,6 @@
         "Läuft · 37 Orte · fertig in etwa 1 Minute",
         "Running · 37 places · done in about 1 minute"
        ]
-      },
-      {
-       "id": "imminsturl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Immich instance connection (URL)",
-       "de": [
-        "Immich des Servers: Adresse",
-        "Für Konten ohne eigene Verbindung",
-        ""
-       ],
-       "en": [
-        "Server's Immich: address",
-        "For accounts without their own",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "imminstkey",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Immich instance connection (API key)",
-       "de": [
-        "Immich des Servers: API-Schlüssel",
-        "",
-        ""
-       ],
-       "en": [
-        "Server's Immich: API key",
-        "",
-        ""
-       ]
       }
      ],
      "grp": [
@@ -3376,66 +2926,6 @@
         "",
         "Your connection is the only one used for location source, stay search and country days."
        ]
-      },
-      {
-       "id": "dawinsturl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Dawarich instance connection (URL), R8",
-       "de": [
-        "Dawarich des Servers: Adresse",
-        "Nur für Tracks von Touren und Kreuzfahrten",
-        "Standortquelle, Aufenthalte und Ländertage brauchen die eigene Verbindung jedes Kontos. Sonst sähen alle Konten die Bewegungen eines Menschen."
-       ],
-       "en": [
-        "Server's Dawarich: address",
-        "Only for tour and cruise tracks",
-        "Location source, stays and country days need each account's own connection. Otherwise every account would see one person's movements."
-       ],
-       "v": ""
-      },
-      {
-       "id": "dawinstkey",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Dawarich instance connection (API key)",
-       "de": [
-        "Dawarich des Servers: API-Schlüssel",
-        "",
-        ""
-       ],
-       "en": [
-        "Server's Dawarich: API key",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "dawsweep",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Action: Sweep country days now",
-       "de": [
-        "Ländertage jetzt zählen",
-        "Für jedes Konto mit eigener Verbindung",
-        "Läuft sonst jede Nacht. Kann einige Minuten dauern."
-       ],
-       "en": [
-        "Count country days now",
-        "For every account with its own connection",
-        "Otherwise runs nightly. May take a few minutes."
-       ],
-       "btn": [
-        "Starten",
-        "Start"
-       ],
-       "res": [
-        "Läuft · fertig in etwa 4 Minuten",
-        "Running · done in about 4 minutes"
-       ]
       }
      ],
      "grp": [
@@ -3487,298 +2977,19 @@
         "Verbunden als Mara O.",
         "Connected as Mara O."
        ]
-      },
-      {
-       "id": "stravaid",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Strava app (client id)",
-       "de": [
-        "Client-ID der Strava-App",
-        "Einmal für den Server registriert",
-        ""
-       ],
-       "en": [
-        "Strava app client ID",
-        "Registered once for the server",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "stravasec",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Strava app (client secret)",
-       "de": [
-        "Client-Secret der Strava-App",
-        "",
-        ""
-       ],
-       "en": [
-        "Strava app client secret",
-        "",
-        ""
-       ]
       }
      ]
     },
     {
-     "id": "ollama",
-     "cat": "ki",
+     "id": "googlePlaces",
+     "cat": "karte",
      "svc": {
       "n": [
-       "Ollama",
-       "Ollama"
+       "Google Places",
+       "Google Places"
       ],
-      "de": "KI auf deinem Server",
-      "en": "AI on your server",
-      "st": [
-       "Bereit",
-       "Ready"
-      ],
-      "tone": "good"
-     },
-     "use": [
-      "on",
-      "test"
-     ],
-     "rows": [
-      {
-       "id": "ollurl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Ollama URL",
-       "de": [
-        "Adresse",
-        "",
-        ""
-       ],
-       "en": [
-        "Address",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": "http://ollama.lan:11434"
-      },
-      {
-       "id": "ollmodel",
-       "t": "select",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C4 Ollama model",
-       "de": [
-        "Modell",
-        "",
-        ""
-       ],
-       "en": [
-        "Model",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": "llama3.1:8b"
-      },
-      {
-       "id": "ollvision",
-       "t": "select",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3/C4 Ollama vision model",
-       "de": [
-        "Modell für Bilder",
-        "",
-        ""
-       ],
-       "en": [
-        "Model for images",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": "llava:7b"
-      },
-      {
-       "id": "ollpull",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C4 Action: Download a model",
-       "de": [
-        "Modell auf den Server laden",
-        "",
-        ""
-       ],
-       "en": [
-        "Download model to server",
-        "",
-        ""
-       ],
-       "x": 1,
-       "btn": [
-        "Laden",
-        "Download"
-       ],
-       "res": [
-        "Modell geladen",
-        "Model downloaded"
-       ]
-      },
-      {
-       "id": "ollremote",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Ollama remote opt-in",
-       "de": [
-        "Liegt außerhalb dieses Netzes",
-        "Dann stimmt jedes Konto selbst zu",
-        ""
-       ],
-       "en": [
-        "Runs outside this network",
-        "Then each account agrees on its own",
-        ""
-       ],
-       "v": false
-      }
-     ]
-    },
-    {
-     "id": "openai",
-     "cat": "ki",
-     "svc": {
-      "n": [
-       "OpenAI",
-       "OpenAI"
-      ],
-      "de": "KI in der Cloud",
-      "en": "Cloud AI",
-      "st": [
-       "Nicht freigegeben",
-       "Not enabled"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "aiConsent",
-      "aiAllow",
-      "instKey",
-      "model",
-      "test"
-     ],
-     "rows": []
-    },
-    {
-     "id": "anthropic",
-     "cat": "ki",
-     "svc": {
-      "n": [
-       "Anthropic",
-       "Anthropic"
-      ],
-      "de": "KI in der Cloud",
-      "en": "Cloud AI",
-      "st": [
-       "Nicht freigegeben",
-       "Not enabled"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "aiConsent",
-      "aiAllow",
-      "instKey",
-      "model",
-      "test"
-     ],
-     "rows": []
-    },
-    {
-     "id": "gemini",
-     "cat": "ki",
-     "svc": {
-      "n": [
-       "Google Gemini",
-       "Google Gemini"
-      ],
-      "de": "KI in der Cloud",
-      "en": "Cloud AI",
-      "st": [
-       "Nicht freigegeben",
-       "Not enabled"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "aiConsent",
-      "aiAllow",
-      "instKey",
-      "model",
-      "test"
-     ],
-     "rows": []
-    },
-    {
-     "id": "customLlm",
-     "cat": "ki",
-     "svc": {
-      "n": [
-       "OpenAI-kompatibel",
-       "OpenAI-compatible"
-      ],
-      "de": "Eigener KI-Anbieter",
-      "en": "Own AI provider",
-      "st": [
-       "Nicht freigegeben",
-       "Not enabled"
-      ],
-      "tone": "muted"
-     },
-     "use": [
-      "aiConsent",
-      "aiAllow",
-      "instKey",
-      "model",
-      "test"
-     ],
-     "rows": [
-      {
-       "id": "custurl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Custom OpenAI-compatible base URL",
-       "de": [
-        "Adresse mit Versionspfad",
-        "z. B. …/v1",
-        ""
-       ],
-       "en": [
-        "Address with version path",
-        "e.g. …/v1",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      }
-     ]
-    },
-    {
-     "id": "openData",
-     "cat": "open",
-     "svc": {
-      "n": [
-       "OpenStreetMap · Overpass",
-       "OpenStreetMap · Overpass"
-      ],
-      "de": "Märkte und Orte aus offenen Daten",
-      "en": "Markets and places from open data",
+      "de": "Orte und Öffnungszeiten",
+      "en": "Places and opening hours",
       "st": [
        "Aus",
        "Off"
@@ -3786,29 +2997,11 @@
       "tone": "muted"
      },
      "use": [
-      "on"
+      "on",
+      "instKey",
+      "test"
      ],
-     "rows": [
-      {
-       "id": "overpass",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Open data: Overpass URL",
-       "de": [
-        "Overpass-Adresse",
-        "",
-        ""
-       ],
-       "en": [
-        "Overpass address",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      }
-     ],
+     "rows": [],
      "ov": {
       "on": {
        "v": false
@@ -3816,111 +3009,56 @@
      }
     },
     {
-     "id": "logos",
-     "cat": "open",
+     "id": "openrouteservice",
+     "cat": "karte",
      "svc": {
       "n": [
-       "Logostream",
-       "Logostream"
+       "OpenRouteService",
+       "OpenRouteService"
       ],
-      "de": "Logos von Airlines und Betreibern",
-      "en": "Airline and operator logos",
+      "de": "Routen für Touren",
+      "en": "Routes for tours",
       "st": [
-       "An",
-       "On"
+       "Nicht eingerichtet",
+       "Not set up"
       ],
-      "tone": "good"
+      "tone": "muted"
      },
      "use": [
+      "ownKey",
+      "mine",
       "on",
       "instKey",
+      "allowKeys",
       "test"
      ],
-     "rows": [
-      {
-       "id": "oplogos",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Logos: operator-logo lookup",
-       "de": [
-        "Logos von Betreibern suchen",
-        "",
-        ""
-       ],
-       "en": [
-        "Look up operator logos",
-        "",
-        ""
-       ],
-       "v": true
-      },
-      {
-       "id": "logorefresh",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3/C7 Action: Refresh airline logos",
-       "de": [
-        "Logos neu laden",
-        "Passiert auch jede Nacht",
-        ""
-       ],
-       "en": [
-        "Reload logos",
-        "Also happens every night",
-        ""
-       ],
-       "btn": [
-        "Neu laden",
-        "Reload"
-       ],
-       "res": [
-        "84 Logos neu · 1.210 geprüft",
-        "84 new logos · 1,210 checked"
-       ]
-      }
-     ]
+     "rows": []
     },
     {
-     "id": "fx",
-     "cat": "open",
+     "id": "graphhopper",
+     "cat": "karte",
      "svc": {
       "n": [
-       "EZB-Kurse",
-       "ECB rates"
+       "GraphHopper",
+       "GraphHopper"
       ],
-      "de": "Wechselkurse",
-      "en": "Exchange rates",
+      "de": "Routen für Touren",
+      "en": "Routes for tours",
       "st": [
-       "Immer an",
-       "Always on"
+       "Nicht eingerichtet",
+       "Not set up"
       ],
-      "tone": "good"
+      "tone": "muted"
      },
      "use": [
-      "always"
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test"
      ],
-     "rows": [
-      {
-       "id": "fxcdn",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 FX: CDN fallback switch",
-       "de": [
-        "Ersatzquelle",
-        "Wenn die EZB nicht antwortet",
-        ""
-       ],
-       "en": [
-        "Fallback source",
-        "When the ECB doesn't answer",
-        ""
-       ],
-       "v": true
-      }
-     ]
+     "rows": []
     },
     {
      "id": "webdav",
@@ -4007,652 +3145,12 @@
        ],
        "x": 1,
        "v": "/TravStats/"
-      },
-      {
-       "id": "wdsrv",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV off-site sync + C3 WebDAV backupSync",
-       "de": [
-        "Server-Sicherungen hochladen",
-        "Jede gelungene Sicherung",
-        ""
-       ],
-       "en": [
-        "Upload server backups",
-        "Every successful backup",
-        ""
-       ],
-       "v": false
-      },
-      {
-       "id": "wdsrvurl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV URL (server)",
-       "de": [
-        "Server: Adresse",
-        "",
-        ""
-       ],
-       "en": [
-        "Server: address",
-        "",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "wdsrvuser",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV user (server)",
-       "de": [
-        "Server: Benutzer",
-        "",
-        ""
-       ],
-       "en": [
-        "Server: user",
-        "",
-        ""
-       ],
-       "v": ""
-      },
-      {
-       "id": "wdsrvpw",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV password (server)",
-       "de": [
-        "Server: Passwort",
-        "",
-        "Wird verschlüsselt gespeichert. Erst speichern, dann testen."
-       ],
-       "en": [
-        "Server: password",
-        "",
-        "Stored encrypted. Save first, then test."
-       ]
-      },
-      {
-       "id": "wdpath",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV backup path",
-       "de": [
-        "Ordner für Server-Sicherungen",
-        "",
-        ""
-       ],
-       "en": [
-        "Folder for server backups",
-        "",
-        ""
-       ],
-       "x": 1,
-       "v": "/TravStats/backups/"
       }
      ],
      "grp": [
       "Speichern & testen",
       "Save & test"
      ]
-    },
-    {
-     "id": "smtp",
-     "cat": "sync",
-     "svc": {
-      "n": [
-       "Mail (SMTP)",
-       "Mail (SMTP)"
-      ],
-      "de": "Mail-Versand",
-      "en": "Sending mail",
-      "st": [
-       "An",
-       "On"
-      ],
-      "tone": "good"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "smtpon",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C5 Enable e-mail notifications",
-       "de": [
-        "Mails verschicken",
-        "Einladungen, Erinnerungen, neues Passwort",
-        ""
-       ],
-       "en": [
-        "Send mail",
-        "Invitations, reminders, new password",
-        ""
-       ]
-      },
-      {
-       "id": "smtphost",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "v": "mail.example.org",
-       "inv": "C5 Host",
-       "de": [
-        "Server",
-        "",
-        ""
-       ],
-       "en": [
-        "Server",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "smtpuser",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "v": "travstats",
-       "inv": "C5 Username",
-       "de": [
-        "Benutzer",
-        "",
-        ""
-       ],
-       "en": [
-        "User",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "smtppw",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C5 Password",
-       "de": [
-        "Passwort",
-        "Gmail und Outlook brauchen ein App-Passwort",
-        ""
-       ],
-       "en": [
-        "Password",
-        "Gmail and Outlook need an app password",
-        ""
-       ]
-      },
-      {
-       "id": "smtpfrom",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "v": "reise@example.org",
-       "inv": "C5 From address",
-       "de": [
-        "Absender",
-        "Am besten aus derselben Domain",
-        ""
-       ],
-       "en": [
-        "Sender",
-        "Ideally from the same domain",
-        ""
-       ]
-      },
-      {
-       "id": "smtpport",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "587",
-       "inv": "C5 Port",
-       "de": [
-        "Port",
-        "587 mit STARTTLS, 465 mit TLS",
-        ""
-       ],
-       "en": [
-        "Port",
-        "587 with STARTTLS, 465 with TLS",
-        ""
-       ]
-      },
-      {
-       "id": "smtptls",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": false,
-       "inv": "C5 Secure (TLS)",
-       "de": [
-        "Direkt verschlüsselt (TLS)",
-        "",
-        ""
-       ],
-       "en": [
-        "Encrypted from the start (TLS)",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "smtpname",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "TravStats",
-       "inv": "C5 From name",
-       "de": [
-        "Absendername",
-        "",
-        ""
-       ],
-       "en": [
-        "Sender name",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "smtptest",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "btn": [
-        "Testen",
-        "Test"
-       ],
-       "inv": "C5 Action: Test connection",
-       "de": [
-        "Verbindung prüfen",
-        "",
-        ""
-       ],
-       "en": [
-        "Check connection",
-        "",
-        ""
-       ],
-       "res": [
-        "Testmail an mara@example.org verschickt",
-        "Test mail sent to mara@example.org"
-       ]
-      },
-      {
-       "id": "smtpdel",
-       "t": "danger",
-       "sc": "i",
-       "ad": 1,
-       "btn": [
-        "Zugangsdaten löschen",
-        "Delete credentials"
-       ],
-       "inv": "C5 Action: Delete credentials",
-       "de": [
-        "Zugangsdaten löschen",
-        "",
-        "Danach verschickt der Server gar keine Mails mehr."
-       ],
-       "en": [
-        "Delete credentials",
-        "",
-        "After that the server sends no mail at all."
-       ]
-      }
-     ],
-     "ad": 1,
-     "grp": [
-      "Speichern",
-      "Save"
-     ]
-    },
-    {
-     "id": "push",
-     "cat": "sync",
-     "svc": {
-      "n": [
-       "Push",
-       "Push"
-      ],
-      "de": "Mitteilungen an die Companion-App",
-      "en": "Notifications to the Companion app",
-      "st": [
-       "Aus",
-       "Off"
-      ],
-      "tone": "muted"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "pushon",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": false,
-       "inv": "C8 Push to Companion",
-       "de": [
-        "Mitteilungen senden",
-        "Über den Push-Dienst von TravStats",
-        "Aus: Der Server meldet sich nie beim Push-Dienst."
-       ],
-       "en": [
-        "Send notifications",
-        "Through the TravStats push service",
-        "Off: the server never contacts the push service."
-       ],
-       "us": [
-        "Auf diesem Server aus · App-Erinnerungen gehen nicht",
-        "Off on this server · app reminders won't arrive"
-       ]
-      },
-      {
-       "id": "pushconsent",
-       "t": "status",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C8 Push consent record (R16)",
-       "de": [
-        "Zugestimmt am",
-        "",
-        "Der Push-Dienst erfährt die Kennung des Telefons und den Text der Mitteilung, sonst nichts."
-       ],
-       "en": [
-        "Agreed on",
-        "",
-        "The push service learns the phone's ID and the notification text, nothing else."
-       ],
-       "v": "12.10.2026"
-      },
-      {
-       "id": "pushrelay",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "https://push.travstats.de",
-       "inv": "C8 Relay address",
-       "de": [
-        "Adresse des Push-Dienstes",
-        "",
-        "Eine andere Adresse meldet den Server neu an."
-       ],
-       "en": [
-        "Push service address",
-        "",
-        "A different address registers the server again."
-       ]
-      },
-      {
-       "id": "pushreset",
-       "t": "danger",
-       "sc": "i",
-       "ad": 1,
-       "x": 0,
-       "btn": [
-        "Zurücksetzen",
-        "Reset"
-       ],
-       "inv": "C8 Action: Reset push registration",
-       "de": [
-        "Anmeldung zurücksetzen",
-        "",
-        ""
-       ],
-       "en": [
-        "Reset registration",
-        "",
-        ""
-       ]
-      }
-     ],
-     "ad": 1
-    },
-    {
-     "id": "federation",
-     "cat": "inst",
-     "svc": {
-      "n": [
-       "Andere Server",
-       "Other servers"
-      ],
-      "de": "Föderation zwischen TravStats-Servern",
-      "en": "Federation between TravStats servers",
-      "st": [
-       "Aus",
-       "Off"
-      ],
-      "tone": "muted"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "fedon",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": false,
-       "inv": "C8 Connect to other servers",
-       "de": [
-        "Mit anderen Servern verbinden",
-        "",
-        ""
-       ],
-       "en": [
-        "Connect to other servers",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "fedtrips",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": false,
-       "beta": "federatedTripSharing",
-       "inv": "C1 Trip sharing across servers + C8 Share trips with other servers",
-       "de": [
-        "Reisen mit anderen Servern teilen",
-        "",
-        ""
-       ],
-       "en": [
-        "Share trips with other servers",
-        "",
-        ""
-       ]
-      },
-      {
-       "id": "fedorigin",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "",
-       "inv": "C8 Public address of this server",
-       "de": [
-        "Adresse dieses Servers",
-        "https, ohne Port und Pfad",
-        ""
-       ],
-       "en": [
-        "This server's address",
-        "https, no port or path",
-        ""
-       ]
-      },
-      {
-       "id": "fedkey",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "x": 0,
-       "btn": [
-        "Erzeugen",
-        "Generate"
-       ],
-       "inv": "C8 Server key",
-       "de": [
-        "Server-Schlüssel",
-        "",
-        "Ein neuer Schlüssel trennt alle Verbindungen, bis die anderen ihn neu bestätigen."
-       ],
-       "en": [
-        "Server key",
-        "",
-        "A new key cuts all connections until the others confirm it again."
-       ],
-       "res": [
-        "Schlüssel erzeugt · Fingerabdruck zeigen",
-        "Key generated · show fingerprint"
-       ]
-      },
-      {
-       "id": "fedpeers",
-       "t": "list",
-       "sc": "i",
-       "ad": 1,
-       "x": 0,
-       "items": [],
-       "btn": [
-        "Verbindungsdatei einlesen",
-        "Import connection file"
-       ],
-       "inv": "C8 Trusted servers + connection file actions",
-       "de": [
-        "Vertraute Server",
-        "",
-        "Eine eingelesene Datei vertraut noch niemandem, erst „Vertrauen“ tut es."
-       ],
-       "en": [
-        "Trusted servers",
-        "",
-        "An imported file trusts no one yet; only “Trust” does."
-       ]
-      }
-     ],
-     "ad": 1
-    },
-    {
-     "id": "usageStats",
-     "cat": "inst",
-     "svc": {
-      "n": [
-       "Nutzungsstatistik",
-       "Usage statistics"
-      ],
-      "de": "Täglicher Bericht ohne Namen",
-      "en": "Daily report without names",
-      "st": [
-       "Nicht gefragt",
-       "Not asked"
-      ],
-      "tone": "muted"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "nutzstat",
-       "t": "choice",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C1 Anonymous usage statistics",
-       "de": [
-        "Nutzungsstatistik senden",
-        "Einmal am Tag, ohne Namen",
-        "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus."
-       ],
-       "en": [
-        "Send usage statistics",
-        "Once a day, without names",
-        "The install ID is shown in the help. If the receiver is disabled at start, nothing is sent."
-       ],
-       "o": [
-        "nein",
-        "ja"
-       ],
-       "oe": [
-        "no",
-        "yes"
-       ],
-       "v": ""
-      }
-     ],
-     "ad": 1
-    },
-    {
-     "id": "updatesTemplates",
-     "cat": "inst",
-     "svc": {
-      "n": [
-       "GitHub",
-       "GitHub"
-      ],
-      "de": "Neue Versionen und Vorlagen",
-      "en": "New versions and templates",
-      "st": [
-       "An",
-       "On"
-      ],
-      "tone": "good"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "updcheck",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C4 Update check",
-       "de": [
-        "Nach neuen Versionen suchen",
-        "Fragt GitHub",
-        ""
-       ],
-       "en": [
-        "Check for new versions",
-        "Asks GitHub",
-        ""
-       ]
-      },
-      {
-       "id": "tplrepo",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "",
-       "inv": "C4 Template repository",
-       "de": [
-        "Quelle der Buchungsvorlagen",
-        "Leer: offizielle Quelle",
-        ""
-       ],
-       "en": [
-        "Booking template source",
-        "Empty: official source",
-        ""
-       ]
-      }
-     ],
-     "ad": 1
     }
    ],
    "d": 1,
@@ -5941,6 +4439,40 @@
        "beta": "travPlan"
       },
       {
+       "id": "planai",
+       "t": "toggle",
+       "v": true,
+       "de": [
+        "KI-Vorschläge in Plänen",
+        "",
+        ""
+       ],
+       "en": [
+        "AI suggestions in plans",
+        "",
+        ""
+       ],
+       "m": "planning",
+       "x": 0
+      },
+      {
+       "id": "planwx",
+       "t": "toggle",
+       "v": true,
+       "de": [
+        "Wetter in Plänen",
+        "",
+        ""
+       ],
+       "en": [
+        "Weather in plans",
+        "",
+        ""
+       ],
+       "m": "planning",
+       "x": 0
+      },
+      {
        "id": "planshare",
        "t": "link",
        "lnk": "freunde",
@@ -6050,6 +4582,7 @@
   {
    "id": "allgemein",
    "g": "server",
+   "ad": 1,
    "de": "Allgemein",
    "en": "General",
    "s": [
@@ -6064,14 +4597,13 @@
        "sc": "i",
        "ad": 1,
        "v": "Reisekiste",
-       "inv": "C1 Instance name",
        "de": [
-        "Name",
+        "Servername",
         "In Mails und Sicherungen",
         ""
        ],
        "en": [
-        "Name",
+        "Server name",
         "In e-mails and backups",
         ""
        ],
@@ -6084,18 +4616,35 @@
        "sc": "i",
        "ad": 1,
        "v": "https://reise.example.org",
-       "inv": "C1 Public URL",
+       "req": 1,
        "de": [
         "Öffentliche Adresse",
-        "Für Einladungen, Mails und neue Passwörter",
+        "Daraus werden alle anderen Adressen abgeleitet",
         "Pflicht. Ohne sie zeigen Links auf localhost. Auch Kalender-Abos und der Rücksprung von Strava nutzen sie."
        ],
        "en": [
         "Public address",
-        "For invitations, e-mails and password resets",
+        "All other addresses are derived from it",
         "Required. Without it, links point to localhost. Calendar feeds and the Strava return use it too."
        ],
-       "req": 1,
+       "m": "general",
+       "x": 0
+      },
+      {
+       "id": "puburlw",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost.",
+        "",
+        ""
+       ],
+       "en": [
+        "Still missing. Until then, invitations, mails and calendars point to localhost.",
+        "",
+        ""
+       ],
        "m": "general",
        "x": 0
       }
@@ -6107,22 +4656,30 @@
      "en": "Access & accounts",
      "rows": [
       {
-       "id": "loginbilder",
-       "t": "upload",
+       "id": "registr",
+       "t": "choice",
        "sc": "i",
        "ad": 1,
-       "inv": "C1 Sign-in page images",
+       "o": [
+        "Nur mit Einladung",
+        "Offen"
+       ],
+       "oe": [
+        "Invitation only",
+        "Open"
+       ],
+       "v": "Nur mit Einladung",
        "de": [
-        "Bilder der Anmeldeseite",
-        "Sieht jeder, auch ohne Anmeldung",
-        "Alle entfernen bringt die mitgelieferten zurück."
+        "Registrierung",
+        "",
+        "Offen: Jeder kann sich ein Konto anlegen, bis die Höchstzahl erreicht ist."
        ],
        "en": [
-        "Sign-in page images",
-        "Everyone sees them, signed in or not",
-        "Removing all brings back the shipped ones."
+        "Registration",
+        "",
+        "Open: anyone can create an account until the maximum is reached."
        ],
-       "m": "general",
+       "m": "access",
        "x": 0
       },
       {
@@ -6131,9 +4688,8 @@
        "sc": "i",
        "ad": 1,
        "v": "10",
-       "inv": "C1 Maximum users",
        "de": [
-        "Höchstens Konten",
+        "Höchstzahl Konten",
         "",
         ""
        ],
@@ -6146,124 +4702,26 @@
        "x": 0
       },
       {
-       "id": "registr",
-       "t": "toggle",
+       "id": "loginbilder",
+       "t": "upload",
        "sc": "i",
        "ad": 1,
-       "v": false,
-       "inv": "C1 Allow public registration",
        "de": [
-        "Anmelden ohne Einladung",
-        "",
-        "Dann kann sich jeder ein Konto anlegen, bis die Höchstzahl erreicht ist."
+        "Bilder der Anmeldeseite",
+        "Sieht jeder, auch ohne Anmeldung",
+        "Alle entfernen bringt die mitgelieferten zurück."
        ],
        "en": [
-        "Sign up without invitation",
-        "",
-        "Anyone can then create an account until the maximum is reached."
+        "Sign-in page images",
+        "Everyone sees them, signed in or not",
+        "Removing all brings back the shipped ones."
        ],
        "m": "access",
-       "x": 0
+       "x": 1
       }
      ]
-    },
-    {
-     "id": "allgemein-addresses",
-     "de": "Adressen",
-     "en": "Addresses",
-     "rows": [
-      {
-       "id": "pairurl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "v": "",
-       "inv": "C1 Public URL for device pairing",
-       "de": [
-        "Adresse für Telefone",
-        "Steht im Kopplungs-QR",
-        "Leer: die Adresse, unter der du TravStats gerade offen hast. Passkeys nehmen sie, wenn keine erlaubten Adressen eingetragen sind."
-       ],
-       "en": [
-        "Address for phones",
-        "Goes into the pairing QR",
-        "Empty: the address you have TravStats open at right now. Passkeys use it when no allowed addresses are set."
-       ],
-       "m": "general",
-       "x": 0
-      },
-      {
-       "id": "lanurl",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "",
-       "inv": "C1 Internal URL (LAN)",
-       "de": [
-        "Adresse im eigenen Netz",
-        "Nur für den Rücksprung von Strava",
-        "Telefone bekommen sie nicht; das Koppeln nimmt die Adresse für Telefone."
-       ],
-       "en": [
-        "Local network address",
-        "Only for the Strava return",
-        "Phones don't get it; pairing uses the address for phones."
-       ],
-       "m": "general"
-      }
-     ]
-    },
-    {
-     "id": "allgemein-passkeys",
-     "de": "Passkeys",
-     "en": "Passkeys",
-     "rows": [
-      {
-       "id": "rpid",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "example.org",
-       "inv": "C1 Passkey domain (rpId)",
-       "de": [
-        "Passkey-Domain",
-        "Nur die Domain, keine IP",
-        "Ändern macht jeden angelegten Passkey wertlos."
-       ],
-       "en": [
-        "Passkey domain",
-        "Domain only, no IP",
-        "Changing it voids every passkey ever created."
-       ],
-       "m": "general"
-      },
-      {
-       "id": "origins",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "https://reise.example.org",
-       "inv": "C1 Allowed origins",
-       "de": [
-        "Erlaubte Adressen",
-        "Eine pro Zeile, mit https und Port",
-        "Die erste zählt. Mehrere nur mit derselben Domain. Leer: die Adresse für Telefone."
-       ],
-       "en": [
-        "Allowed addresses",
-        "One per line, with https and port",
-        "The first one counts. Several only on the same domain. Empty: the address for phones."
-       ],
-       "m": "general"
-      }
-     ],
-     "x": 1
     }
-   ],
-   "ad": 1
+   ]
   },
   {
    "id": "nutzer",
@@ -6299,12 +4757,12 @@
        "de": [
         "Konten",
         "",
-        "Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen."
+        "Je Konto: Passwort zurücksetzen, Zwei-Faktor zurücksetzen, sperren, löschen. Löschen verlangt das Eintippen des Namens."
        ],
        "en": [
         "Accounts",
         "",
-        "Per account under ⋯: lock, set new password, reset second step, delete."
+        "Per account: reset password, reset two-factor, lock, delete. Deleting asks you to type the name."
        ],
        "m": "accounts",
        "x": 0
@@ -6353,9 +4811,36 @@
   {
    "id": "funktionen",
    "g": "server",
+   "ad": 1,
    "de": "Funktionen",
    "en": "Features",
    "s": [
+    {
+     "id": "funktionen-netz",
+     "de": "Netz",
+     "en": "Network",
+     "rows": [
+      {
+       "id": "internet",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "de": [
+        "Server darf externe Dienste abfragen",
+        "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
+        "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+       ],
+       "en": [
+        "Server may ask external services",
+        "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
+        "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+       ],
+       "m": "net",
+       "x": 0
+      }
+     ]
+    },
     {
      "id": "funktionen-teilen",
      "de": "Teilen",
@@ -6367,7 +4852,6 @@
        "sc": "i",
        "ad": 1,
        "v": false,
-       "inv": "C1 Public links permission + A12 Allow public links",
        "de": [
         "Öffentliche Links erlauben",
         "",
@@ -6378,11 +4862,77 @@
         "",
         "Turning off revokes every link of every account at once."
        ],
-       "us": [
-        "Auf diesem Server aus",
-        "Off on this server"
+       "m": "sharing",
+       "x": 0
+      },
+      {
+       "id": "fedon",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": false,
+       "de": [
+        "Mit anderen Servern verbinden",
+        "Freunde auf anderen TravStats-Servern; jeder neue Server braucht deine Freigabe",
+        ""
        ],
-       "m": "shareLinksServer",
+       "en": [
+        "Connect to other servers",
+        "Friends on other TravStats servers; every new server needs your approval",
+        ""
+       ],
+       "m": "sharing",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "funktionen-bereiche",
+     "de": "Bereiche",
+     "en": "Areas",
+     "rows": [
+      {
+       "id": "l_tt",
+       "t": "link",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Bereitstellung",
+        "Provisioning"
+       ],
+       "de": [
+        "TravTrack",
+        "Anbieten und Grenzen",
+        ""
+       ],
+       "en": [
+        "TravTrack",
+        "Offer and limits",
+        ""
+       ],
+       "m": "areas",
+       "x": 0
+      },
+      {
+       "id": "l_pl",
+       "t": "link",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Bereitstellung",
+        "Provisioning"
+       ],
+       "de": [
+        "TravPlan",
+        "Anbieten und Grenzen",
+        ""
+       ],
+       "en": [
+        "TravPlan",
+        "Offer and limits",
+        ""
+       ],
+       "m": "areas",
        "x": 0
       }
      ]
@@ -6398,7 +4948,6 @@
        "sc": "i",
        "ad": 1,
        "v": true,
-       "inv": "C1 Show beta features",
        "de": [
         "Beta-Funktionen zeigen",
         "Für alle Konten",
@@ -6410,7 +4959,7 @@
         "Opens: pairing phones, tours, planning, ship tracks, flight path upload, leaderboard, encrypted handover, calendar feed, sharing with other servers, TravTrack."
        ],
        "m": "features",
-       "x": 0
+       "x": 1
       },
       {
        "id": "laenderstd",
@@ -6419,27 +4968,24 @@
        "ad": 1,
        "v": "durchreist",
        "ve": "passed through",
-       "inv": "C1 Country counting default",
        "de": [
-        "Ein Land zählt ab",
+        "Standard: wann zählt ein Land",
         "Konten können abweichen",
         ""
        ],
        "en": [
-        "A country counts from",
+        "Default: when a country counts",
         "Accounts may differ",
         ""
        ],
        "m": "features",
-       "x": 0
+       "x": 1
       },
       {
        "id": "importmodus",
        "t": "select",
        "sc": "i",
        "ad": 1,
-       "v": "aus",
-       "ve": "off",
        "o": [
         "aus",
         "24 h für alle",
@@ -6450,7 +4996,8 @@
         "24 h for all",
         "24 h for one account"
        ],
-       "inv": "C1 Import mode",
+       "v": "aus",
+       "ve": "off",
        "de": [
         "Großer Import",
         "Hebt Upload-Grenzen für 24 h auf",
@@ -6462,12 +5009,251 @@
         "Turns itself off."
        ],
        "m": "features",
-       "x": 0
+       "x": 1
       }
      ]
     }
-   ],
-   "ad": 1
+   ]
+  },
+  {
+   "id": "email",
+   "g": "server",
+   "ad": 1,
+   "de": "E-Mail",
+   "en": "E-mail",
+   "s": [
+    {
+     "id": "email-mailserver",
+     "de": "Mailserver",
+     "en": "Mail server",
+     "rows": [
+      {
+       "id": "smtphost",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "smtp.example.org",
+       "de": [
+        "Mailserver",
+        "",
+        ""
+       ],
+       "en": [
+        "Mail server",
+        "",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      },
+      {
+       "id": "smtpuser",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "travstats",
+       "de": [
+        "Benutzer",
+        "",
+        ""
+       ],
+       "en": [
+        "User",
+        "",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      },
+      {
+       "id": "smtppw",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Passwort",
+        "Gmail und Outlook brauchen ein App-Passwort",
+        ""
+       ],
+       "en": [
+        "Password",
+        "Gmail and Outlook need an app password",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      },
+      {
+       "id": "smtpfrom",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "reisen@example.org",
+       "de": [
+        "Absenderadresse",
+        "Am besten aus derselben Domain",
+        ""
+       ],
+       "en": [
+        "Sender address",
+        "Ideally from the same domain",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      },
+      {
+       "id": "smtptest",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Prüfen",
+        "Check"
+       ],
+       "res": [
+        "Verbunden · gerade geprüft",
+        "Connected · just checked"
+       ],
+       "de": [
+        "Verbindung prüfen",
+        "Meldet sich beim Mailserver an; es geht keine Mail raus",
+        ""
+       ],
+       "en": [
+        "Check connection",
+        "Signs in at the mail server; no mail is sent",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      },
+      {
+       "id": "mailstat",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Letzte Prüfung",
+        "",
+        ""
+       ],
+       "en": [
+        "Last check",
+        "",
+        ""
+       ],
+       "m": "smtp",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "email-erweitert",
+     "de": "Erweitert",
+     "en": "Advanced",
+     "rows": [
+      {
+       "id": "smtpon",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "de": [
+        "Mails verschicken",
+        "Einladungen, Erinnerungen, neues Passwort",
+        ""
+       ],
+       "en": [
+        "Send mail",
+        "Invitations, reminders, new password",
+        ""
+       ],
+       "m": "smtp",
+       "x": 1
+      },
+      {
+       "id": "smtpport",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "587",
+       "de": [
+        "Port und Verschlüsselung",
+        "587 mit STARTTLS, 465 mit TLS",
+        ""
+       ],
+       "en": [
+        "Port and encryption",
+        "587 with STARTTLS, 465 with TLS",
+        ""
+       ],
+       "m": "smtp",
+       "x": 1
+      },
+      {
+       "id": "smtptls",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": false,
+       "de": [
+        "Direkt verschlüsselt (TLS)",
+        "",
+        ""
+       ],
+       "en": [
+        "Encrypted from the start (TLS)",
+        "",
+        ""
+       ],
+       "m": "smtp",
+       "x": 1
+      },
+      {
+       "id": "smtpname",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "TravStats",
+       "de": [
+        "Absendername",
+        "Leer: wie der Servername",
+        ""
+       ],
+       "en": [
+        "Sender name",
+        "Empty: same as the server name",
+        ""
+       ],
+       "m": "smtp",
+       "x": 1
+      },
+      {
+       "id": "smtpdel",
+       "t": "danger",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Entfernen",
+        "Remove"
+       ],
+       "de": [
+        "Mailserver entfernen",
+        "",
+        "Danach verschickt der Server gar keine Mails mehr."
+       ],
+       "en": [
+        "Remove mail server",
+        "",
+        "After that the server sends no mail at all."
+       ],
+       "m": "smtp",
+       "x": 1
+      }
+     ]
+    }
+   ]
   },
   {
    "id": "buchungen",
@@ -6480,6 +5266,47 @@
      "de": "Lesen",
      "en": "Reading",
      "rows": [
+      {
+       "id": "builtin",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "v": "Texterkennung · Vorlagen",
+       "ve": "Text recognition · templates",
+       "inv": "C4 Built-in readers",
+       "de": [
+        "Bekannte Vorlagen",
+        "Immer dabei",
+        ""
+       ],
+       "en": [
+        "Known templates",
+        "Always included",
+        ""
+       ],
+       "m": "parsers",
+       "x": 0
+      },
+      {
+       "id": "kiaktiv",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "inv": "C4 Use the AI model",
+       "de": [
+        "KI zum Lesen von Buchungen",
+        "Ohne KI werden nur bekannte Vorlagen erkannt",
+        "Was hingeht: der Text einer Mail oder PDF, höchstens 12.000 Zeichen, nur wenn die Vorlagen nichts finden."
+       ],
+       "en": [
+        "AI for reading bookings",
+        "Without AI only known templates are recognised",
+        "What is sent: the text of a mail or PDF, at most 12,000 characters, only when the templates find nothing."
+       ],
+       "m": "parsers",
+       "x": 0
+      },
       {
        "id": "leserfolge",
        "t": "choice",
@@ -6496,37 +5323,17 @@
        "v": "Vorlagen zuerst",
        "inv": "C4 Who reads first",
        "de": [
-        "Wer zuerst liest",
+        "Reihenfolge",
         "",
         "Vorlagen lesen Flugmails in unter einer Sekunde."
        ],
        "en": [
-        "Who reads first",
+        "Order",
         "",
         "Templates read flight mails in under a second."
        ],
        "m": "parsers",
-       "x": 0
-      },
-      {
-       "id": "kiaktiv",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C4 Use the AI model",
-       "de": [
-        "KI verwenden",
-        "Lesen, Spalten zuordnen, Zusammenfassungen",
-        "Aus: keine KI, auch wenn Ollama eingerichtet ist."
-       ],
-       "en": [
-        "Use AI",
-        "Reading, column mapping, summaries",
-        "Off: no AI, even if Ollama is set up."
-       ],
-       "m": "parsers",
-       "x": 0
+       "x": 1
       },
       {
        "id": "cloudorder",
@@ -6553,46 +5360,37 @@
        ],
        "inv": "C4 Cloud provider priority",
        "de": [
-        "Reihenfolge der Cloud-KI",
+        "Reihenfolge der KI-Anbieter",
         "Ollama kommt immer zuerst",
         "Versucht wird nur, wer Schlüssel und Freigabe hat."
        ],
        "en": [
-        "Cloud AI order",
+        "Order of the AI providers",
         "Ollama always comes first",
         "Only providers with key and approval are tried."
        ],
        "m": "parsers",
-       "x": 0
+       "x": 1
       },
       {
-       "id": "builtin",
-       "t": "status",
+       "id": "userkeys",
+       "t": "toggle",
        "sc": "i",
        "ad": 1,
-       "v": "Texterkennung · Vorlagen",
-       "ve": "Text recognition · templates",
-       "inv": "C4 Built-in readers",
+       "v": true,
        "de": [
-        "Immer dabei",
+        "Konten dürfen eigene Schlüssel nutzen",
         "",
-        ""
+        "Gilt für KI und Flugdaten: Ein Konto kann seinen eigenen Schlüssel eintragen. Aus lässt nur den Server-Schlüssel gelten; bereits eingetragene Schlüssel bleiben gespeichert."
        ],
        "en": [
-        "Always included",
+        "Accounts may use their own keys",
         "",
-        ""
+        "Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored."
        ],
        "m": "parsers",
-       "x": 0
-      }
-     ]
-    },
-    {
-     "id": "buchungen-parsers",
-     "de": "Buchungen lesen",
-     "en": "Reading bookings",
-     "rows": [
+       "x": 1
+      },
       {
        "id": "olltest",
        "t": "action",
@@ -6618,12 +5416,1318 @@
         "Reachable · just checked"
        ],
        "m": "parsers",
-       "x": 0
+       "x": 1
       }
      ]
     }
    ],
    "ad": 1
+  },
+  {
+   "id": "dienste",
+   "g": "server",
+   "ad": 1,
+   "de": "Dienste",
+   "en": "Services",
+   "svcPage": 1,
+   "s": [
+    {
+     "id": "airlabs",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "AirLabs",
+       "AirLabs"
+      ],
+      "de": "Flugpläne und Strecken",
+      "en": "Schedules and routes",
+      "st": [
+       "Über den Server",
+       "Via the server"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test",
+      "quota"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "aviationstack",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "Aviationstack",
+       "Aviationstack"
+      ],
+      "de": "Flugstatus",
+      "en": "Flight status",
+      "st": [
+       "Über den Server",
+       "Via the server"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test",
+      "quota"
+     ],
+     "rows": [
+      {
+       "id": "avbudget",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Aviationstack daily budget",
+       "de": [
+        "Anfragen pro Tag",
+        "0 schaltet ab",
+        ""
+       ],
+       "en": [
+        "Requests per day",
+        "0 turns it off",
+        ""
+       ],
+       "v": "3"
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "aerodatabox",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "AeroDataBox",
+       "AeroDataBox"
+      ],
+      "de": "Flüge und Maschinen",
+      "en": "Flights and aircraft",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test",
+      "quota"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "aeroapi",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "FlightAware AeroAPI",
+       "FlightAware AeroAPI"
+      ],
+      "de": "Flugstatus und echte Flugwege",
+      "en": "Flight status and real tracks",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on",
+      "instKey",
+      "test"
+     ],
+     "rows": [
+      {
+       "id": "aerotarif",
+       "t": "select",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 AeroAPI plan tier",
+       "de": [
+        "Tarif",
+        "",
+        ""
+       ],
+       "en": [
+        "Plan",
+        "",
+        ""
+       ],
+       "v": "personal"
+      },
+      {
+       "id": "aerolimit",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 AeroAPI monthly USD limit",
+       "de": [
+        "Monatsgrenze in USD",
+        "Nur beim eigenen Tarif",
+        ""
+       ],
+       "en": [
+        "Monthly limit in USD",
+        "Custom plan only",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "aerotracks",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 AeroAPI fetch real tracks after arrival",
+       "de": [
+        "Echte Flugwege nach der Landung",
+        "Kostet zusätzliche Anfragen",
+        ""
+       ],
+       "en": [
+        "Real tracks after landing",
+        "Costs extra requests",
+        ""
+       ],
+       "v": false
+      },
+      {
+       "id": "aerousage",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Quota / budget display (AeroAPI monthly budget)",
+       "de": [
+        "Verbraucht diesen Monat",
+        "",
+        "TravStats hört vor der Grenze auf."
+       ],
+       "en": [
+        "Used this month",
+        "",
+        "TravStats stops before the limit."
+       ],
+       "v": "0,00 USD"
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "opensky",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "OpenSky",
+       "OpenSky"
+      ],
+      "de": "Positionen in der Luft",
+      "en": "Positions in the air",
+      "st": [
+       "Über den Server",
+       "Via the server"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "mine",
+      "on",
+      "allowKeys",
+      "test",
+      "quota"
+     ],
+     "rows": [
+      {
+       "id": "oskidI",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Credential fields (OpenSky client id)",
+       "de": [
+        "Client-ID des Servers",
+        "Für alle Konten ohne eigene",
+        ""
+       ],
+       "en": [
+        "Server client ID",
+        "For every account without its own",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "osksecI",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Credential fields (OpenSky client secret)",
+       "de": [
+        "Client-Secret des Servers",
+        "",
+        ""
+       ],
+       "en": [
+        "Server client secret",
+        "",
+        ""
+       ]
+      },
+      {
+       "id": "oskuserI",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Credential fields (OpenSky username, expert)",
+       "de": [
+        "Benutzername des Servers",
+        "Altes Anmeldeverfahren",
+        ""
+       ],
+       "en": [
+        "Server username",
+        "Legacy sign-in",
+        ""
+       ],
+       "x": 1,
+       "v": ""
+      },
+      {
+       "id": "oskpwI",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Credential fields (OpenSky password, expert)",
+       "de": [
+        "Passwort des Servers",
+        "Altes Anmeldeverfahren",
+        ""
+       ],
+       "en": [
+        "Server password",
+        "Legacy sign-in",
+        ""
+       ],
+       "x": 1
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "adsbx",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "ADS-B Exchange",
+       "ADS-B Exchange"
+      ],
+      "de": "Positionen in der Luft",
+      "en": "Positions in the air",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on",
+      "instKey",
+      "test",
+      "quota"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "adsblol",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "ADS-B Lol",
+       "ADS-B Lol"
+      ],
+      "de": "Positionen in der Luft, frei",
+      "en": "Positions in the air, free",
+      "st": [
+       "Aus",
+       "Off"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on",
+      "instKey",
+      "test",
+      "quota"
+     ],
+     "rows": [],
+     "ov": {
+      "on": {
+       "v": false
+      }
+     },
+     "ad": 1
+    },
+    {
+     "id": "aisstream",
+     "cat": "flug",
+     "svc": {
+      "n": [
+       "AISStream",
+       "AISStream"
+      ],
+      "de": "Schiffspositionen",
+      "en": "Ship positions",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on",
+      "instKey"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "openai",
+     "cat": "ki",
+     "svc": {
+      "n": [
+       "OpenAI",
+       "OpenAI"
+      ],
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
+      "st": [
+       "Nicht freigegeben",
+       "Not enabled"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "aiConsent",
+      "aiAllow",
+      "instKey",
+      "model",
+      "test"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "anthropic",
+     "cat": "ki",
+     "svc": {
+      "n": [
+       "Anthropic",
+       "Anthropic"
+      ],
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
+      "st": [
+       "Nicht freigegeben",
+       "Not enabled"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "aiConsent",
+      "aiAllow",
+      "instKey",
+      "model",
+      "test"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "gemini",
+     "cat": "ki",
+     "svc": {
+      "n": [
+       "Google Gemini",
+       "Google Gemini"
+      ],
+      "de": "KI in der Cloud",
+      "en": "Cloud AI",
+      "st": [
+       "Nicht freigegeben",
+       "Not enabled"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "aiConsent",
+      "aiAllow",
+      "instKey",
+      "model",
+      "test"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "ollama",
+     "cat": "ki",
+     "svc": {
+      "n": [
+       "Ollama",
+       "Ollama"
+      ],
+      "de": "KI auf deinem Server",
+      "en": "AI on your server",
+      "st": [
+       "Bereit",
+       "Ready"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "on",
+      "test"
+     ],
+     "rows": [
+      {
+       "id": "ollurl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Ollama URL",
+       "de": [
+        "Adresse",
+        "",
+        ""
+       ],
+       "en": [
+        "Address",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "http://ollama.lan:11434"
+      },
+      {
+       "id": "ollmodel",
+       "t": "select",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C4 Ollama model",
+       "de": [
+        "Modell",
+        "",
+        ""
+       ],
+       "en": [
+        "Model",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "llama3.1:8b"
+      },
+      {
+       "id": "ollvision",
+       "t": "select",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3/C4 Ollama vision model",
+       "de": [
+        "Modell für Bilder",
+        "",
+        ""
+       ],
+       "en": [
+        "Model for images",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "llava:7b"
+      },
+      {
+       "id": "ollpull",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C4 Action: Download a model",
+       "de": [
+        "Modell auf den Server laden",
+        "",
+        ""
+       ],
+       "en": [
+        "Download model to server",
+        "",
+        ""
+       ],
+       "x": 1,
+       "btn": [
+        "Laden",
+        "Download"
+       ],
+       "res": [
+        "Modell geladen",
+        "Model downloaded"
+       ]
+      },
+      {
+       "id": "ollremote",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Ollama remote opt-in",
+       "de": [
+        "Liegt außerhalb dieses Netzes",
+        "Dann stimmt jedes Konto selbst zu",
+        ""
+       ],
+       "en": [
+        "Runs outside this network",
+        "Then each account agrees on its own",
+        ""
+       ],
+       "v": false
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "customLlm",
+     "cat": "ki",
+     "svc": {
+      "n": [
+       "OpenAI-kompatibel",
+       "OpenAI-compatible"
+      ],
+      "de": "Eigener KI-Anbieter",
+      "en": "Own AI provider",
+      "st": [
+       "Nicht freigegeben",
+       "Not enabled"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "aiConsent",
+      "aiAllow",
+      "instKey",
+      "model",
+      "test"
+     ],
+     "rows": [
+      {
+       "id": "custurl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Custom OpenAI-compatible base URL",
+       "de": [
+        "Adresse mit Versionspfad",
+        "z. B. …/v1",
+        ""
+       ],
+       "en": [
+        "Address with version path",
+        "e.g. …/v1",
+        ""
+       ],
+       "x": 1,
+       "v": ""
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "immich",
+     "cat": "foto",
+     "svc": {
+      "n": [
+       "Immich",
+       "Immich"
+      ],
+      "de": "Fotos",
+      "en": "Photos",
+      "st": [
+       "Nicht verbunden",
+       "Not connected"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "mine",
+      "allowConn",
+      "on"
+     ],
+     "rows": [
+      {
+       "id": "imminsturl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Immich instance connection (URL)",
+       "de": [
+        "Immich des Servers: Adresse",
+        "Für Konten ohne eigene Verbindung",
+        ""
+       ],
+       "en": [
+        "Server's Immich: address",
+        "For accounts without their own",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "imminstkey",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Immich instance connection (API key)",
+       "de": [
+        "Immich des Servers: API-Schlüssel",
+        "",
+        ""
+       ],
+       "en": [
+        "Server's Immich: API key",
+        "",
+        ""
+       ]
+      }
+     ],
+     "grp": [
+      "Speichern & testen",
+      "Save & test"
+     ],
+     "ad": 1
+    },
+    {
+     "id": "dawarich",
+     "cat": "foto",
+     "svc": {
+      "n": [
+       "Dawarich",
+       "Dawarich"
+      ],
+      "de": "Standortverlauf",
+      "en": "Location history",
+      "st": [
+       "Nicht verbunden",
+       "Not connected"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "mine",
+      "allowConn",
+      "on"
+     ],
+     "rows": [
+      {
+       "id": "dawinsturl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Dawarich instance connection (URL), R8",
+       "de": [
+        "Dawarich des Servers: Adresse",
+        "Nur für Tracks von Touren und Kreuzfahrten",
+        "Standortquelle, Aufenthalte und Ländertage brauchen die eigene Verbindung jedes Kontos. Sonst sähen alle Konten die Bewegungen eines Menschen."
+       ],
+       "en": [
+        "Server's Dawarich: address",
+        "Only for tour and cruise tracks",
+        "Location source, stays and country days need each account's own connection. Otherwise every account would see one person's movements."
+       ],
+       "v": ""
+      },
+      {
+       "id": "dawinstkey",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Dawarich instance connection (API key)",
+       "de": [
+        "Dawarich des Servers: API-Schlüssel",
+        "",
+        ""
+       ],
+       "en": [
+        "Server's Dawarich: API key",
+        "",
+        ""
+       ]
+      },
+      {
+       "id": "dawsweep",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Action: Sweep country days now",
+       "de": [
+        "Ländertage jetzt zählen",
+        "Für jedes Konto mit eigener Verbindung",
+        "Läuft sonst jede Nacht. Kann einige Minuten dauern."
+       ],
+       "en": [
+        "Count country days now",
+        "For every account with its own connection",
+        "Otherwise runs nightly. May take a few minutes."
+       ],
+       "btn": [
+        "Starten",
+        "Start"
+       ],
+       "res": [
+        "Läuft · fertig in etwa 4 Minuten",
+        "Running · done in about 4 minutes"
+       ]
+      }
+     ],
+     "grp": [
+      "Speichern & testen",
+      "Save & test"
+     ],
+     "ad": 1
+    },
+    {
+     "id": "strava",
+     "cat": "foto",
+     "svc": {
+      "n": [
+       "Strava",
+       "Strava"
+      ],
+      "de": "Aktivitäten",
+      "en": "Activities",
+      "st": [
+       "Nicht verbunden",
+       "Not connected"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "mine",
+      "allowConn",
+      "on"
+     ],
+     "rows": [
+      {
+       "id": "stravaid",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Strava app (client id)",
+       "de": [
+        "Client-ID der Strava-App",
+        "Einmal für den Server registriert",
+        ""
+       ],
+       "en": [
+        "Strava app client ID",
+        "Registered once for the server",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "stravasec",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Strava app (client secret)",
+       "de": [
+        "Client-Secret der Strava-App",
+        "",
+        ""
+       ],
+       "en": [
+        "Strava app client secret",
+        "",
+        ""
+       ]
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "googlePlaces",
+     "cat": "karte",
+     "svc": {
+      "n": [
+       "Google Places",
+       "Google Places"
+      ],
+      "de": "Orte und Öffnungszeiten",
+      "en": "Places and opening hours",
+      "st": [
+       "Aus",
+       "Off"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on",
+      "instKey",
+      "test"
+     ],
+     "rows": [],
+     "ov": {
+      "on": {
+       "v": false
+      }
+     },
+     "ad": 1
+    },
+    {
+     "id": "openrouteservice",
+     "cat": "karte",
+     "svc": {
+      "n": [
+       "OpenRouteService",
+       "OpenRouteService"
+      ],
+      "de": "Routen für Touren",
+      "en": "Routes for tours",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "graphhopper",
+     "cat": "karte",
+     "svc": {
+      "n": [
+       "GraphHopper",
+       "GraphHopper"
+      ],
+      "de": "Routen für Touren",
+      "en": "Routes for tours",
+      "st": [
+       "Nicht eingerichtet",
+       "Not set up"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "ownKey",
+      "mine",
+      "on",
+      "instKey",
+      "allowKeys",
+      "test"
+     ],
+     "rows": [],
+     "ad": 1
+    },
+    {
+     "id": "logos",
+     "cat": "karte",
+     "svc": {
+      "n": [
+       "Logostream",
+       "Logostream"
+      ],
+      "de": "Logos von Airlines und Betreibern",
+      "en": "Airline and operator logos",
+      "st": [
+       "An",
+       "On"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "on",
+      "instKey",
+      "test"
+     ],
+     "rows": [
+      {
+       "id": "oplogos",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Logos: operator-logo lookup",
+       "de": [
+        "Logos von Betreibern suchen",
+        "",
+        ""
+       ],
+       "en": [
+        "Look up operator logos",
+        "",
+        ""
+       ],
+       "v": true
+      },
+      {
+       "id": "logorefresh",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3/C7 Action: Refresh airline logos",
+       "de": [
+        "Logos neu laden",
+        "Passiert auch jede Nacht",
+        ""
+       ],
+       "en": [
+        "Reload logos",
+        "Also happens every night",
+        ""
+       ],
+       "btn": [
+        "Neu laden",
+        "Reload"
+       ],
+       "res": [
+        "84 Logos neu · 1.210 geprüft",
+        "84 new logos · 1,210 checked"
+       ]
+      }
+     ],
+     "ad": 1
+    },
+    {
+     "id": "webdav",
+     "cat": "sync",
+     "svc": {
+      "n": [
+       "WebDAV",
+       "WebDAV"
+      ],
+      "de": "Backup-Ziel",
+      "en": "Backup target",
+      "st": [
+       "Nicht verbunden",
+       "Not connected"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "mine",
+      "allowConn",
+      "on"
+     ],
+     "rows": [
+      {
+       "id": "wdsrv",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C6 WebDAV off-site sync + C3 WebDAV backupSync",
+       "de": [
+        "Server-Sicherungen hochladen",
+        "Jede gelungene Sicherung",
+        ""
+       ],
+       "en": [
+        "Upload server backups",
+        "Every successful backup",
+        ""
+       ],
+       "v": false
+      },
+      {
+       "id": "wdsrvurl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C6 WebDAV URL (server)",
+       "de": [
+        "Server: Adresse",
+        "",
+        ""
+       ],
+       "en": [
+        "Server: address",
+        "",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "wdsrvuser",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C6 WebDAV user (server)",
+       "de": [
+        "Server: Benutzer",
+        "",
+        ""
+       ],
+       "en": [
+        "Server: user",
+        "",
+        ""
+       ],
+       "v": ""
+      },
+      {
+       "id": "wdsrvpw",
+       "t": "secret",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C6 WebDAV password (server)",
+       "de": [
+        "Server: Passwort",
+        "",
+        "Wird verschlüsselt gespeichert. Erst speichern, dann testen."
+       ],
+       "en": [
+        "Server: password",
+        "",
+        "Stored encrypted. Save first, then test."
+       ]
+      },
+      {
+       "id": "wdpath",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C6 WebDAV backup path",
+       "de": [
+        "Ordner für Server-Sicherungen",
+        "",
+        ""
+       ],
+       "en": [
+        "Folder for server backups",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "/TravStats/backups/"
+      }
+     ],
+     "grp": [
+      "Speichern & testen",
+      "Save & test"
+     ],
+     "ad": 1
+    },
+    {
+     "id": "railTimetables",
+     "cat": "karte",
+     "svc": {
+      "n": [
+       "Transitous & db-rest",
+       "Transitous & db-rest"
+      ],
+      "de": "Bahn-Fahrpläne",
+      "en": "Rail timetables",
+      "st": [
+       "An",
+       "On"
+      ],
+      "tone": "good"
+     },
+     "use": [],
+     "rows": [
+      {
+       "id": "transitous",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Rail timetables: Transitous switch",
+       "de": [
+        "Transitous",
+        "Fahrpläne aus offenen Daten",
+        ""
+       ],
+       "en": [
+        "Transitous",
+        "Timetables from open data",
+        ""
+       ],
+       "v": true
+      },
+      {
+       "id": "dbrest",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Rail timetables: db-rest switch",
+       "de": [
+        "db-rest",
+        "Fahrpläne der Deutschen Bahn",
+        ""
+       ],
+       "en": [
+        "db-rest",
+        "Deutsche Bahn timetables",
+        ""
+       ],
+       "v": true
+      },
+      {
+       "id": "bahnkontakt",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Rail timetables: lookup contact",
+       "de": [
+        "Kontakt für Anfragen",
+        "Wird den Betreibern mitgeschickt",
+        ""
+       ],
+       "en": [
+        "Contact for requests",
+        "Sent along to the operators",
+        ""
+       ],
+       "x": 1,
+       "v": ""
+      }
+     ],
+     "ad": 1,
+     "x": 1
+    },
+    {
+     "id": "openData",
+     "cat": "open",
+     "svc": {
+      "n": [
+       "OpenStreetMap · Overpass",
+       "OpenStreetMap · Overpass"
+      ],
+      "de": "Märkte und Orte aus offenen Daten",
+      "en": "Markets and places from open data",
+      "st": [
+       "Aus",
+       "Off"
+      ],
+      "tone": "muted"
+     },
+     "use": [
+      "on"
+     ],
+     "rows": [],
+     "ov": {
+      "on": {
+       "v": false
+      }
+     },
+     "ad": 1,
+     "x": 1
+    },
+    {
+     "id": "fx",
+     "cat": "open",
+     "svc": {
+      "n": [
+       "EZB-Kurse",
+       "ECB rates"
+      ],
+      "de": "Wechselkurse",
+      "en": "Exchange rates",
+      "st": [
+       "Immer an",
+       "Always on"
+      ],
+      "tone": "good"
+     },
+     "use": [
+      "always"
+     ],
+     "rows": [
+      {
+       "id": "fxcdn",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 FX: CDN fallback switch",
+       "de": [
+        "Ersatzquelle",
+        "Wenn die EZB nicht antwortet",
+        ""
+       ],
+       "en": [
+        "Fallback source",
+        "When the ECB doesn't answer",
+        ""
+       ],
+       "v": true
+      }
+     ],
+     "ad": 1,
+     "x": 1
+    },
+    {
+     "id": "updatesTemplates",
+     "cat": "inst",
+     "svc": {
+      "n": [
+       "GitHub",
+       "GitHub"
+      ],
+      "de": "Neue Versionen und Vorlagen",
+      "en": "New versions and templates",
+      "st": [
+       "An",
+       "On"
+      ],
+      "tone": "good"
+     },
+     "use": [],
+     "rows": [
+      {
+       "id": "updcheck",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "inv": "C4 Update check",
+       "de": [
+        "Nach neuen Versionen suchen",
+        "Fragt GitHub",
+        ""
+       ],
+       "en": [
+        "Check for new versions",
+        "Asks GitHub",
+        ""
+       ]
+      }
+     ],
+     "ad": 1,
+     "x": 1
+    }
+   ]
   },
   {
    "id": "sicherungen",
@@ -6632,136 +6736,28 @@
    "en": "Backups",
    "s": [
     {
-     "id": "sicherungen-automatic",
-     "de": "Automatisch",
-     "en": "Automatic",
-     "rows": [
-      {
-       "id": "autobak",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C6 Automatic backup",
-       "de": [
-        "Automatisch sichern",
-        "Um 02:00",
-        ""
-       ],
-       "en": [
-        "Back up automatically",
-        "At 02:00",
-        ""
-       ],
-       "m": "automatic",
-       "x": 0
-      }
-     ]
-    },
-    {
-     "id": "sicherungen-erweitert",
-     "de": "Erweitert",
-     "en": "Advanced",
-     "rows": [
-      {
-       "id": "baktakt",
-       "t": "choice",
-       "sc": "i",
-       "ad": 1,
-       "o": [
-        "täglich",
-        "sonntags",
-        "am 1."
-       ],
-       "oe": [
-        "daily",
-        "Sundays",
-        "on the 1st"
-       ],
-       "v": "sonntags",
-       "inv": "C6 Interval",
-       "de": [
-        "Wie oft",
-        "",
-        ""
-       ],
-       "en": [
-        "How often",
-        "",
-        ""
-       ],
-       "m": "automatic",
-       "x": 0
-      },
-      {
-       "id": "bakhalten",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "v": "30 Tage",
-       "ve": "30 days",
-       "inv": "C6 Retention",
-       "de": [
-        "Aufheben",
-        "1–365 Tage",
-        "Die letzte vollständige Sicherung bleibt immer."
-       ],
-       "en": [
-        "Keep for",
-        "1–365 days",
-        "The last full backup always stays."
-       ],
-       "m": "automatic",
-       "x": 0
-      },
-      {
-       "id": "bakzone",
-       "t": "select",
-       "sc": "i",
-       "ad": 1,
-       "v": "Europe/Berlin",
-       "inv": "C6 Time zone of backup hour",
-       "de": [
-        "Zeitzone für 02:00",
-        "",
-        ""
-       ],
-       "en": [
-        "Time zone for 02:00",
-        "",
-        ""
-       ],
-       "m": "automatic",
-       "x": 0
-      },
-      {
-       "id": "bakwddel",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": false,
-       "dep": "noWebdav",
-       "inv": "C6 Also delete expired from WebDAV",
-       "de": [
-        "Auch auf WebDAV aufräumen",
-        "",
-        ""
-       ],
-       "en": [
-        "Also clean up on WebDAV",
-        "",
-        ""
-       ],
-       "m": "automatic",
-       "x": 0
-      }
-     ]
-    },
-    {
      "id": "sicherungen-sicherung",
      "de": "Sicherung",
      "en": "Backup",
      "rows": [
+      {
+       "id": "baknow",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Automatisch",
+        "",
+        ""
+       ],
+       "en": [
+        "Automatic",
+        "",
+        ""
+       ],
+       "m": "automatic",
+       "x": 0
+      },
       {
        "id": "bakjetzt",
        "t": "action",
@@ -6783,8 +6779,8 @@
         ""
        ],
        "res": [
-        "Gesichert · 1,2 GB",
-        "Backed up · 1.2 GB"
+        "Gesichert · gerade eben",
+        "Backed up · just now"
        ],
        "m": "backups",
        "x": 0
@@ -6806,14 +6802,14 @@
        ],
        "inv": "C6 Actions: Download / Upload / Delete / Restore",
        "de": [
-        "Sicherungen",
+        "Vorhandene Sicherungen",
         "",
-        "Je Sicherung unter ⋯: herunterladen, hochladen, wiederherstellen, löschen."
+        "Je Sicherung: herunterladen, hochladen, wiederherstellen, löschen."
        ],
        "en": [
-        "Backups",
+        "Existing backups",
         "",
-        "Per backup under ⋯: download, upload, restore, delete."
+        "Per backup: download, upload, restore, delete."
        ],
        "m": "backups",
        "x": 0
@@ -6847,9 +6843,674 @@
        "x": 0
       }
      ]
+    },
+    {
+     "id": "sicherungen-erweitert",
+     "de": "Erweitert",
+     "en": "Advanced",
+     "rows": [
+      {
+       "id": "baktakt",
+       "t": "choice",
+       "sc": "i",
+       "ad": 1,
+       "o": [
+        "täglich",
+        "sonntags",
+        "am 1."
+       ],
+       "oe": [
+        "daily",
+        "Sundays",
+        "on the 1st"
+       ],
+       "v": "sonntags",
+       "inv": "C6 Interval",
+       "de": [
+        "Intervall",
+        "Um 02:00",
+        ""
+       ],
+       "en": [
+        "Interval",
+        "At 02:00",
+        ""
+       ],
+       "m": "automatic",
+       "x": 1
+      },
+      {
+       "id": "bakhalten",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "30 Tage",
+       "ve": "30 days",
+       "inv": "C6 Retention",
+       "de": [
+        "Aufbewahren",
+        "1–365 Tage",
+        "Die letzte vollständige Sicherung bleibt immer."
+       ],
+       "en": [
+        "Keep",
+        "1–365 days",
+        "The last full backup always stays."
+       ],
+       "m": "automatic",
+       "x": 1
+      },
+      {
+       "id": "bakwddel",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": false,
+       "dep": "noWebdav",
+       "inv": "C6 Also delete expired from WebDAV",
+       "de": [
+        "Alte Sicherungen auch auf WebDAV löschen",
+        "",
+        ""
+       ],
+       "en": [
+        "Also delete old backups on WebDAV",
+        "",
+        ""
+       ],
+       "m": "automatic",
+       "x": 1
+      },
+      {
+       "id": "bakzone",
+       "t": "select",
+       "sc": "i",
+       "ad": 1,
+       "v": "Europe/Berlin",
+       "inv": "C6 Time zone of backup hour",
+       "de": [
+        "Zeitzone für 02:00",
+        "",
+        ""
+       ],
+       "en": [
+        "Time zone for 02:00",
+        "",
+        ""
+       ],
+       "m": "automatic",
+       "x": 1
+      },
+      {
+       "id": "autobak",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "inv": "C6 Automatic backup",
+       "de": [
+        "Automatisch sichern",
+        "Um 02:00",
+        ""
+       ],
+       "en": [
+        "Back up automatically",
+        "At 02:00",
+        ""
+       ],
+       "m": "automatic",
+       "x": 1
+      }
+     ]
     }
    ],
    "ad": 1
+  },
+  {
+   "id": "srvconn",
+   "g": "server",
+   "ad": 1,
+   "de": "Server-Verbindungen",
+   "en": "Server connections",
+   "when": "fed",
+   "s": [
+    {
+     "id": "srvconn-anfragen",
+     "de": "Anfragen",
+     "en": "Requests",
+     "rows": [
+      {
+       "id": "requests",
+       "t": "list",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Anfragen",
+        "",
+        "Eine Anfrage vertraut noch niemandem, erst „Zulassen“ tut es."
+       ],
+       "en": [
+        "Requests",
+        "",
+        "A request trusts no one yet; only “Allow” does."
+       ],
+       "m": "connections",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "srvconn-verbunden",
+     "de": "Verbunden",
+     "en": "Connected",
+     "rows": [
+      {
+       "id": "fedpeers",
+       "t": "list",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Verbundene Server",
+        "",
+        "Eine eingelesene Verbindungsdatei vertraut noch niemandem, erst „Vertrauen“ tut es."
+       ],
+       "en": [
+        "Connected servers",
+        "",
+        "An imported connection file trusts no one yet; only “Trust” does."
+       ],
+       "m": "connections",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "srvconn-erweitert",
+     "de": "Erweitert",
+     "en": "Advanced",
+     "rows": [
+      {
+       "id": "fedorigin",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "",
+       "de": [
+        "Adresse dieses Servers",
+        "https, ohne Port und Pfad",
+        ""
+       ],
+       "en": [
+        "This server's address",
+        "https, no port or path",
+        ""
+       ],
+       "m": "connections",
+       "x": 1
+      },
+      {
+       "id": "fedkey",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Neu erzeugen",
+        "Generate again"
+       ],
+       "res": [
+        "Schlüssel erzeugt · Fingerabdruck zeigen",
+        "Key generated · show fingerprint"
+       ],
+       "de": [
+        "Server-Schlüssel",
+        "",
+        "Ein neuer Schlüssel trennt alle Verbindungen, bis die anderen ihn neu bestätigen."
+       ],
+       "en": [
+        "Server key",
+        "",
+        "A new key cuts all connections until the others confirm it again."
+       ],
+       "m": "connections",
+       "x": 1
+      },
+      {
+       "id": "fedtrips",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "beta": "federatedTripSharing",
+       "v": false,
+       "de": [
+        "Reisen mit anderen Servern teilen",
+        "",
+        ""
+       ],
+       "en": [
+        "Share trips with other servers",
+        "",
+        ""
+       ],
+       "m": "connections",
+       "x": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "datenschutz",
+   "g": "server",
+   "ad": 1,
+   "de": "Datenschutz",
+   "en": "Privacy",
+   "s": [
+    {
+     "id": "datenschutz-statistik",
+     "de": "Statistik",
+     "en": "Statistics",
+     "rows": [
+      {
+       "id": "nutzstat",
+       "t": "choice",
+       "sc": "i",
+       "ad": 1,
+       "o": [
+        "Ja",
+        "Nein",
+        "Noch nicht entschieden"
+       ],
+       "oe": [
+        "Yes",
+        "No",
+        "Not decided yet"
+       ],
+       "v": "Noch nicht entschieden",
+       "de": [
+        "Anonyme Nutzungsstatistik senden",
+        "",
+        "Gesendet werden Version, Betriebssystem und Zähler ohne Inhalte. Keine Reisen, keine Namen, keine Adressen."
+       ],
+       "en": [
+        "Send anonymous usage statistics",
+        "",
+        "Sent: version, operating system and counters without content. No trips, no names, no addresses."
+       ],
+       "m": "stats",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "datenschutz-mitteilungen",
+     "de": "Mitteilungen",
+     "en": "Notifications",
+     "rows": [
+      {
+       "id": "pushon",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": false,
+       "de": [
+        "Benachrichtigungen aufs Telefon",
+        "Über den Push-Dienst von TravStats (Einwilligung beim Einschalten)",
+        ""
+       ],
+       "en": [
+        "Notifications to the phone",
+        "Through the TravStats push service (consent when you switch it on)",
+        ""
+       ],
+       "m": "push",
+       "x": 0
+      },
+      {
+       "id": "pushrelay",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "https://push.travstats.de",
+       "de": [
+        "Push-Dienst-Adresse",
+        "",
+        ""
+       ],
+       "en": [
+        "Push service address",
+        "",
+        ""
+       ],
+       "m": "push",
+       "x": 1
+      },
+      {
+       "id": "pushreset",
+       "t": "danger",
+       "sc": "i",
+       "ad": 1,
+       "btn": [
+        "Zurücksetzen",
+        "Reset"
+       ],
+       "de": [
+        "Push zurücksetzen",
+        "",
+        "Mitteilungen kommen erst wieder, wenn sich jedes Telefon neu meldet."
+       ],
+       "en": [
+        "Reset push",
+        "",
+        "Notifications resume only when every phone has checked in again."
+       ],
+       "m": "push",
+       "x": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "adressen",
+   "g": "server",
+   "ad": 1,
+   "de": "Adressen & Passkeys",
+   "en": "Addresses & passkeys",
+   "x": 1,
+   "s": [
+    {
+     "id": "adressen-adressen",
+     "de": "Adressen",
+     "en": "Addresses",
+     "rows": [
+      {
+       "id": "pairurl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "",
+       "de": [
+        "Adresse für Telefone",
+        "Steht im Kopplungs-QR",
+        "Leer: wie die Öffentliche Adresse. Passkeys nehmen sie, wenn keine erlaubten Adressen eingetragen sind."
+       ],
+       "en": [
+        "Address for phones",
+        "Goes into the pairing QR",
+        "Empty: same as the public address. Passkeys use it when no allowed addresses are set."
+       ],
+       "m": "addresses",
+       "x": 1
+      },
+      {
+       "id": "lanurl",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "",
+       "de": [
+        "Adresse im eigenen Netz",
+        "Nur für den Rücksprung von Strava",
+        "Telefone bekommen sie nicht; das Koppeln nimmt die Adresse für Telefone."
+       ],
+       "en": [
+        "Local network address",
+        "Only for the Strava return",
+        "Phones don't get it; pairing uses the address for phones."
+       ],
+       "m": "addresses",
+       "x": 1
+      }
+     ],
+     "x": 1
+    },
+    {
+     "id": "adressen-passkeys",
+     "de": "Passkeys",
+     "en": "Passkeys",
+     "rows": [
+      {
+       "id": "rpid",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "example.org",
+       "de": [
+        "Passkey-Domain",
+        "Eine Domain, für immer",
+        "Ein Passkey gilt nur für die Domain, unter der er angelegt wurde. Ändern macht alle Passkeys unbrauchbar."
+       ],
+       "en": [
+        "Passkey domain",
+        "One domain, forever",
+        "A passkey only works on the domain it was created on. Changing it voids all passkeys."
+       ],
+       "m": "addresses",
+       "x": 1
+      },
+      {
+       "id": "origins",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "v": "https://reise.example.org",
+       "de": [
+        "Erlaubte Passkey-Adressen",
+        "Eine pro Zeile, mit https und Port",
+        "Die erste zählt. Mehrere nur mit derselben Domain. Eine reine IP-Adresse ist keine gültige Passkey-Domain."
+       ],
+       "en": [
+        "Allowed passkey addresses",
+        "One per line, with https and port",
+        "The first one counts. Several only on the same domain. A bare IP address is not a valid passkey domain."
+       ],
+       "m": "addresses",
+       "x": 1
+      }
+     ],
+     "x": 1
+    }
+   ]
+  },
+  {
+   "id": "eigene",
+   "g": "server",
+   "ad": 1,
+   "de": "Eigene Server",
+   "en": "Own servers",
+   "x": 1,
+   "s": [
+    {
+     "id": "eigene-orte",
+     "de": "Orte",
+     "en": "Places",
+     "rows": [
+      {
+       "id": "geoeigen",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Geocoder: own geo server URL",
+       "de": [
+        "Eigener Geo-Server",
+        "",
+        ""
+       ],
+       "en": [
+        "Own geo server",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      },
+      {
+       "id": "photon",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Geocoder: Photon URL",
+       "de": [
+        "Photon",
+        "",
+        ""
+       ],
+       "en": [
+        "Photon",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      },
+      {
+       "id": "nominatim",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Geocoder: Nominatim URL",
+       "de": [
+        "Nominatim",
+        "",
+        ""
+       ],
+       "en": [
+        "Nominatim",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      }
+     ],
+     "x": 1
+    },
+    {
+     "id": "eigene-routen",
+     "de": "Routen",
+     "en": "Routes",
+     "rows": [
+      {
+       "id": "osrm",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Self-hosted routing: OSRM URL",
+       "de": [
+        "Routing",
+        "OSRM-Adresse",
+        ""
+       ],
+       "en": [
+        "Routing",
+        "OSRM address",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      },
+      {
+       "id": "orr",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Self-hosted routing: OpenRailRouting URL",
+       "de": [
+        "OpenRailRouting",
+        "",
+        ""
+       ],
+       "en": [
+        "OpenRailRouting",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      }
+     ],
+     "x": 1
+    },
+    {
+     "id": "eigene-karten",
+     "de": "Karten",
+     "en": "Maps",
+     "rows": [
+      {
+       "id": "overpass",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "inv": "C3 Open data: Overpass URL",
+       "de": [
+        "Overpass",
+        "",
+        ""
+       ],
+       "en": [
+        "Overpass",
+        "",
+        ""
+       ],
+       "x": 1,
+       "v": "",
+       "m": "own"
+      }
+     ],
+     "x": 1
+    },
+    {
+     "id": "eigene-weitere",
+     "de": "Weitere",
+     "en": "More",
+     "rows": [
+      {
+       "id": "tplrepo",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "v": "",
+       "inv": "C4 Template repository",
+       "de": [
+        "Vorlagen-Quelle",
+        "",
+        ""
+       ],
+       "en": [
+        "Template source",
+        "",
+        ""
+       ],
+       "m": "own"
+      },
+      {
+       "id": "fxsrc",
+       "t": "select",
+       "sc": "i",
+       "ad": 1,
+       "de": [
+        "Wechselkurs-Quelle",
+        "",
+        "Quelle und Ersatzquelle der Wechselkurse."
+       ],
+       "en": [
+        "Exchange rate source",
+        "",
+        "Source and fallback source of the exchange rates."
+       ],
+       "m": "own",
+       "x": 1
+      }
+     ],
+     "x": 1
+    }
+   ]
   },
   {
    "id": "wartung",
@@ -6861,27 +7522,8 @@
      "id": "wartung-protokolle",
      "de": "Protokolle",
      "en": "Logs",
+     "x": 1,
      "rows": [
-      {
-       "id": "debug",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": false,
-       "inv": "C7 Debug mode",
-       "de": [
-        "Ausführlich protokollieren",
-        "Macht den Server langsamer",
-        ""
-       ],
-       "en": [
-        "Verbose logging",
-        "Slows the server down",
-        ""
-       ],
-       "m": "logging"
-      },
       {
        "id": "loglevel",
        "t": "select",
@@ -6891,16 +7533,40 @@
        "v": "info",
        "inv": "C7 Log level",
        "de": [
-        "Stufe",
+        "Protokoll-Stufe",
         "",
-        ""
+        "Gesetzt beim Start des Servers kann die Stufe hier nur teilweise geändert werden."
        ],
        "en": [
-        "Level",
+        "Log level",
         "",
-        ""
+        "When set at server start, the level can only be partly changed here."
        ],
        "m": "logging"
+      },
+      {
+       "id": "debug24",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "v": false,
+       "inv": "C7 Debug mode",
+       "de": [
+        "Ausführliches Protokoll für 24 h",
+        "Macht den Server langsamer",
+        "Danach schaltet der Server von selbst auf die normale Stufe zurück."
+       ],
+       "en": [
+        "Verbose log for 24 h",
+        "Slows the server down",
+        "After that the server switches back to the normal level by itself."
+       ],
+       "m": "logging",
+       "btn": [
+        "Einschalten",
+        "Switch on"
+       ]
       },
       {
        "id": "logtage",
@@ -6912,12 +7578,12 @@
        "ve": "7 days",
        "inv": "C7 Log retention",
        "de": [
-        "Aufheben",
+        "Protokolle aufbewahren",
         "1–90 Tage",
         ""
        ],
        "en": [
-        "Keep for",
+        "Keep logs",
         "1–90 days",
         ""
        ],
@@ -6966,15 +7632,7 @@
         ""
        ],
        "m": "logging"
-      }
-     ],
-     "x": 1
-    },
-    {
-     "id": "wartung-logging",
-     "de": "Protokoll",
-     "en": "Log",
-     "rows": [
+      },
       {
        "id": "loghttp",
        "t": "toggle",
@@ -7035,13 +7693,13 @@
        ],
        "m": "logging"
       }
-     ],
-     "x": 1
+     ]
     },
     {
      "id": "wartung-system",
      "de": "System",
      "en": "System",
+     "x": 1,
      "rows": [
       {
        "id": "sysver",
@@ -7062,6 +7720,54 @@
         ""
        ],
        "m": "system"
+      },
+      {
+       "id": "tzreport",
+       "t": "status",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "v": "fertig · 3 offen",
+       "ve": "done · 3 open",
+       "inv": "C7 Time model: migration report",
+       "de": [
+        "Zeitmodell",
+        "",
+        ""
+       ],
+       "en": [
+        "Time model",
+        "",
+        ""
+       ],
+       "m": "timeModel"
+      },
+      {
+       "id": "tzresolve",
+       "t": "action",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "btn": [
+        "Probelauf",
+        "Dry run"
+       ],
+       "inv": "C7 Action: Re-resolve time zones",
+       "de": [
+        "Zeitzonen neu bestimmen",
+        "Erst Probelauf, dann übernehmen",
+        ""
+       ],
+       "en": [
+        "Determine time zones again",
+        "Dry run first, then apply",
+        ""
+       ],
+       "res": [
+        "Probelauf: 14 Änderungen · Übernehmen",
+        "Dry run: 14 changes · Apply"
+       ],
+       "m": "timeModel"
       },
       {
        "id": "fulljson",
@@ -7158,57 +7864,8 @@
         ""
        ],
        "m": "system"
-      },
-      {
-       "id": "tzreport",
-       "t": "status",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "fertig · 3 offen",
-       "ve": "done · 3 open",
-       "inv": "C7 Time model: migration report",
-       "de": [
-        "Umstellung der Zeiten",
-        "",
-        ""
-       ],
-       "en": [
-        "Time conversion",
-        "",
-        ""
-       ],
-       "m": "timeModel"
-      },
-      {
-       "id": "tzresolve",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "btn": [
-        "Probelauf",
-        "Dry run"
-       ],
-       "inv": "C7 Action: Re-resolve time zones",
-       "de": [
-        "Zeitzonen neu bestimmen",
-        "Erst Probelauf, dann übernehmen",
-        ""
-       ],
-       "en": [
-        "Determine time zones again",
-        "Dry run first, then apply",
-        ""
-       ],
-       "res": [
-        "Probelauf: 14 Änderungen · Übernehmen",
-        "Dry run: 14 changes · Apply"
-       ],
-       "m": "timeModel"
       }
-     ],
-     "x": 1
+     ]
     }
    ],
    "ad": 1,

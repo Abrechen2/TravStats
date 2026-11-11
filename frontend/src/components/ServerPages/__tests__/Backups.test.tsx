@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import BackupsAutomatic from "../BackupsAutomatic";
 import BackupsExisting from "../BackupsExisting";
 import { restoreOutcome } from "../restoreFailure";
@@ -45,6 +46,14 @@ const entry = (id: string, over = {}) => ({
   fileExists: true,
   ...over,
 });
+
+// "Sicherungen von WebDAV holen" can send you to the service, so the page needs a router.
+const renderExisting = () =>
+  render(
+    <MemoryRouter>
+      <BackupsExisting />
+    </MemoryRouter>
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -110,7 +119,7 @@ describe("Sicherungen › Vorhandene", () => {
   it("runs a backup as a job and names the cause when it fails", async () => {
     backup.create.mockResolvedValue({ jobId: "j1" });
     jobs.waitForJob.mockRejectedValue(new JobFailedError("BACKUP_DISK_FULL", 500));
-    render(<BackupsExisting />);
+    renderExisting();
     await userEvent.click(await screen.findByRole("button", { name: "settingsRows:backups.now" }));
     // The job block words the cause (the suite's translator echoes keys, so the reason itself is not visible).
     expect(await screen.findByText("settings:blocks.job.failed")).toBeInTheDocument();
@@ -120,7 +129,7 @@ describe("Sicherungen › Vorhandene", () => {
   it("says it does not know when the server forgot the backup job", async () => {
     backup.create.mockResolvedValue({ jobId: "j1" });
     jobs.waitForJob.mockRejectedValue(new JobLostError());
-    render(<BackupsExisting />);
+    renderExisting();
     await userEvent.click(await screen.findByRole("button", { name: "settingsRows:backups.now" }));
     expect(await screen.findByText("settings:blocks.job.unknown")).toBeInTheDocument();
   });
@@ -128,7 +137,7 @@ describe("Sicherungen › Vorhandene", () => {
   it("restores only behind the typed confirmation, and writes nothing before it", async () => {
     backup.restore.mockResolvedValue({ jobId: "j2" });
     jobs.waitForJob.mockResolvedValue(undefined);
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     await userEvent.click(
       screen.getByRole("menuitem", { name: "settingsRows:backups.restoreAction.database" })
@@ -153,7 +162,7 @@ describe("Sicherungen › Vorhandene", () => {
     jobs.waitForJob
       .mockRejectedValueOnce(new JobFailedError("RESTORE_ENCRYPTION_KEY_MISMATCH", 409))
       .mockResolvedValueOnce(undefined);
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     await userEvent.click(
       screen.getByRole("menuitem", { name: "settingsRows:backups.restoreAction.full" })
@@ -177,7 +186,7 @@ describe("Sicherungen › Vorhandene", () => {
   it("names why a restore was refused and that nothing was written", async () => {
     backup.restore.mockResolvedValue({ jobId: "j2" });
     jobs.waitForJob.mockRejectedValue(new JobFailedError("RESTORE_ARCHIVE_NEWER", 409));
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     await userEvent.click(
       screen.getByRole("menuitem", { name: "settingsRows:backups.restoreAction.full" })
@@ -202,7 +211,7 @@ describe("Sicherungen › Vorhandene", () => {
 
   it("names a failed delete and keeps the backup in the list", async () => {
     backup.delete.mockRejectedValue(httpError(500));
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     await userEvent.click(screen.getByRole("menuitem", { name: "common:buttons.delete" }));
     await userEvent.click(
@@ -216,7 +225,7 @@ describe("Sicherungen › Vorhandene", () => {
 
   it("names a failed download", async () => {
     backup.download.mockRejectedValue(httpError(500));
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     await userEvent.click(screen.getByRole("menuitem", { name: "admin:backup.actions.download" }));
     expect(await screen.findByText("settingsRows:backups.errors.download")).toBeInTheDocument();
@@ -224,13 +233,13 @@ describe("Sicherungen › Vorhandene", () => {
 
   it("offers a retry when the list cannot be loaded", async () => {
     backup.list.mockRejectedValueOnce(httpError());
-    render(<BackupsExisting />);
+    renderExisting();
     expect(await screen.findByText("settingsRows:backups.errors.list")).toBeInTheDocument();
   });
 
   it("offers the upload only while the WebDAV copy is on", async () => {
     admin.getWebDAVSettings.mockResolvedValue({ settings: { enabled: true } });
-    render(<BackupsExisting />);
+    renderExisting();
     await openMenu();
     expect(
       await screen.findByRole("menuitem", { name: "admin:backup.actions.upload" })
@@ -241,10 +250,51 @@ describe("Sicherungen › Vorhandene", () => {
   it("says why upload and the cloud list are missing when the WebDAV status cannot be read, and retries", async () => {
     admin.getWebDAVSettings.mockRejectedValueOnce(httpError());
     admin.getWebDAVSettings.mockResolvedValue({ settings: { enabled: true } });
-    render(<BackupsExisting />);
+    renderExisting();
     expect(await screen.findByText(/backups\.errors\.webdavStatus/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "settingsRows:backups.retry" }));
     expect(await screen.findByTestId("cloud-list")).toBeInTheDocument();
     expect(screen.queryByText(/backups\.errors\.webdavStatus/)).toBeNull();
+  });
+
+  it("tells without a WebDAV target that fetching backups has nothing to fetch from, and goes to the service", async () => {
+    admin.getWebDAVSettings.mockResolvedValue({ settings: { enabled: false } });
+    renderExisting();
+    expect(await screen.findByText("settings:blocks.dep.noWebdav.reason")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /settings:blocks.dep.noWebdav.jump/ })).toBeEnabled();
+    expect(screen.queryByTestId("cloud-list")).toBeNull();
+  });
+
+  it("opens with the schedule and what the list holds: the last completed backup, the rhythm, how many are kept", async () => {
+    backup.list.mockResolvedValue({
+      backups: [
+        entry("old", { completedAt: "2026-10-25T01:05:00Z" }),
+        entry("new", { completedAt: "2026-11-01T01:05:00Z", size: "1288490188" }),
+        entry("broken", { status: "failed", completedAt: null }),
+      ],
+    });
+    renderExisting();
+    expect(await screen.findByText("settingsRows:backups.nowLine")).toBeInTheDocument();
+    const stats = await waitFor(() => {
+      const el = document.querySelector("[data-backup-stats]") as HTMLElement;
+      expect(el).toBeTruthy();
+      return el;
+    });
+    expect(stats).toHaveTextContent("1.2 GB");
+    expect(stats).toHaveTextContent("settingsRows:backups.stats.keptCount");
+    expect(stats).toHaveTextContent("settingsRows:backups.rhythm");
+  });
+
+  it("says the schedule is off instead of promising a next run", async () => {
+    backup.getBackupSettings.mockResolvedValue({
+      backupEnabled: false,
+      backupInterval: "weekly",
+      backupRetentionDays: 30,
+    });
+    renderExisting();
+    await waitFor(() =>
+      expect(screen.getAllByText("settingsRows:backups.rhythmOff").length).toBeGreaterThan(0)
+    );
+    expect(document.body.textContent).not.toMatch(/backups\.rhythm(?!Off)/);
   });
 });

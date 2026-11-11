@@ -1,7 +1,12 @@
 import type { JSX } from "react";
 import ShareLinksSettings from "../../components/Admin/ShareLinksSettings";
-import MailIntakeAdminCard from "../../components/MailIntake/MailIntakeAdminCard";
 import ExternalServicesPointer from "../../components/ExternalServices/ExternalServicesPointer";
+import FederationRows from "../../components/Services/FederationRows";
+import ServerAddresses from "../../components/ServerPages/ServerAddresses";
+import ServerEmail from "../../components/ServerPages/ServerEmail";
+import ServerOwn from "../../components/ServerPages/ServerOwn";
+import ServerPrivacy from "../../components/ServerPages/ServerPrivacy";
+import ServerSharing from "../../components/ServerPages/ServerSharing";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 import ServicesPage from "../../components/Services/ServicesPage";
 import AboutSection from "../../components/Settings/AboutSection";
@@ -58,6 +63,15 @@ export const ADMIN_SECTION_FRAME: Record<ActiveSection, "own" | "card"> = {
   lodgingChainsMasterData: "card",
 };
 
+/** Which rows of the server's offer a mount draws (`ServerOffers`). */
+const OFFER_PART: Readonly<Record<string, "track" | "plan" | "net" | "areas" | "rest">> = {
+  ttoffer: "track",
+  tpoffer: "plan",
+  net: "net",
+  areas: "areas",
+  features: "rest",
+};
+
 /**
  * Renders one server section. The server pages are built on the settings
  * blocks (package 7) and each loads what it shows; `mountId` tells the two
@@ -73,20 +87,13 @@ export default function AdminSectionSwitch({
 }): JSX.Element | null {
   switch (section) {
     case "instance":
-      return (
-        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-          <ServerGeneral />
-          <MailIntakeAdminCard />
-        </div>
-      );
+      // "Dein Server" on Allgemein; the other addresses and the passkeys are an expert page.
+      return mountId === "addresses" ? <ServerAddresses /> : <ServerGeneral />;
     case "travTrack":
       // TravTrack's offer and TravPlan's offer each have a "Bereitstellung" page
-      // (settings v3 S4); what is left is "Funktionen".
-      return (
-        <ServerOffers
-          part={mountId === "ttoffer" ? "track" : mountId === "tpoffer" ? "plan" : "rest"}
-        />
-      );
+      // (settings v3 S4); Funktionen draws the rest in four groups (S5).
+      if (mountId === "sharing") return <ServerSharing />;
+      return <ServerOffers part={OFFER_PART[mountId] ?? "rest"} />;
     case "parsers":
       return (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
@@ -121,24 +128,27 @@ export default function AdminSectionSwitch({
       return <LodgingChainsSection />;
 
     case "externalServices":
-      // The services page itself: an administrator's cards carry both sides.
-      return <ServicesPage isAdmin />;
+      // The server's page of the catalogue (settings v3 S5); the account's half
+      // is "Verbundene Dienste".
+      return <ServicesPage isAdmin side="server" />;
     case "shareLinks":
       return <ShareLinksSettings />;
     case "about":
       return <AboutSection />;
+    // The server's own infrastructure: the template source's old section is the
+    // page "Eigene Server" now.
     case "templateRepo":
-      return <LegacyServiceSummary serviceId="updatesTemplates" />;
+      return <ServerOwn />;
     case "usageStats":
-      return <LegacyServiceSummary serviceId="usageStats" />;
-    case "federation":
-      return <LegacyServiceSummary serviceId="federation" />;
+      return <ServerPrivacy part="stats" />;
     case "push":
-      return <LegacyServiceSummary serviceId="push" />;
+      return <ServerPrivacy part="push" />;
+    case "federation":
+      return <FederationRows part="connections" />;
+    case "smtp":
+      return <ServerEmail />;
     case "webdav":
       return <LegacyServiceSummary serviceId="webdav" />;
-    case "smtp":
-      return <LegacyServiceSummary serviceId="smtp" />;
     default:
       return null;
   }

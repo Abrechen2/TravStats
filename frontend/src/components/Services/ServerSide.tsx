@@ -15,12 +15,17 @@ import {
 } from "../../lib/api/externalServices";
 import AdminConsentDialog from "../ExternalServices/AdminConsentDialog";
 import { serviceName } from "../ExternalServices/serviceText";
+import { useInternetDependency } from "../ServerPages/useInternetDependency";
 import FieldsGroup from "./FieldsGroup";
 import QuotaRow from "./QuotaRow";
 import TestRow from "./TestRow";
 import { ServerExtras, ownsEnabledSwitch, ownsFields } from "./serverExtras";
 import { useServices } from "./servicesContext";
-import type { ServiceCardDef } from "./serviceCards";
+import {
+  INTERNET_GATED_FIELDS,
+  INTERNET_GATED_SWITCH_CARDS,
+  type ServiceCardDef,
+} from "./serviceCards";
 import { useDemoLock } from "./useLockFor";
 
 /** The "Alle Konten" switch rows of one service, each its own immediate write. */
@@ -36,6 +41,7 @@ function SwitchRows({
   const { t } = useTranslation(["settingsRows"]);
   const { admin } = useServices();
   const demo = useDemoLock();
+  const internet = useInternetDependency();
   const uses = (u: string): boolean => (card.use as readonly string[]).includes(u);
   const [consentOpen, setConsentOpen] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -124,6 +130,7 @@ function SwitchRows({
           )}
           scope="allAccounts"
           locked={demo}
+          dependency={INTERNET_GATED_SWITCH_CARDS.has(card.id) ? internet : undefined}
           save={cloud ? undefined : on}
           control={
             <SwitchControl
@@ -187,6 +194,7 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
   const { t } = useTranslation(["settingsRows", "externalServices"]);
   const { admin } = useServices();
   const demo = useDemoLock();
+  const internet = useInternetDependency();
   const uses = (u: string): boolean => (card.use as readonly string[]).includes(u);
   // A remote Ollama is "cloud" for the data it is sent: turning that on asks first.
   const [ask, setAsk] = useState<((agreed: boolean) => void) | null>(null);
@@ -216,6 +224,11 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
           tests={uses("test")}
           lock={demo}
           errorText={null}
+          dependencyOf={(f) =>
+            f.kind === "switch" && INTERNET_GATED_FIELDS.has(`${card.id}.${f.key}`)
+              ? internet
+              : undefined
+          }
           write={async (changes) => {
             // The refusal is worded on the card (`feedback`); the group keeps the draft.
             const remote = changes.remoteOptIn === true;

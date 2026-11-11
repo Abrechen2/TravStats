@@ -5,19 +5,18 @@ import type { RegistryPage } from "../types";
 export const SICHERUNGEN_PAGE: RegistryPage = {
   ...{"id":"sicherungen","area":"server","de":"Sicherungen","en":"Backups","level":"standard","audience":"admin","demoLocked":false},
   sections: [
-      {"id":"sicherungen-automatic","de":"Automatisch","en":"Automatic","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"autobak","mount":"automatic","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Automatisch sichern","en":"Back up automatically","terms":{"de":"Um 02:00","en":"At 02:00"}},
+      {"id":"sicherungen-sicherung","de":"Sicherung","en":"Backup","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
+        {"id":"baknow","mount":"automatic","kind":"status","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Automatisch","en":"Automatic","terms":{"de":"","en":""}},
+        {"id":"bakjetzt","mount":"backups","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Jetzt sichern","en":"Back up now","terms":{"de":"","en":""}},
+        {"id":"bakliste","mount":"backups","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Vorhandene Sicherungen","en":"Existing backups","terms":{"de":"Je Sicherung: herunterladen, hochladen, wiederherstellen, löschen.","en":"Per backup: download, upload, restore, delete."}},
+        {"id":"bakwdload","mount":"backups","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Sicherungen von WebDAV holen","en":"Fetch backups from WebDAV","terms":{"de":"Nach einem Umzug","en":"After moving servers"}},
       ]},
       {"id":"sicherungen-erweitert","de":"Erweitert","en":"Advanced","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"baktakt","mount":"automatic","kind":"choice","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Wie oft","en":"How often","terms":{"de":"täglich sonntags am 1.","en":"daily Sundays on the 1st"}},
-        {"id":"bakhalten","mount":"automatic","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Aufheben","en":"Keep for","terms":{"de":"1–365 Tage Die letzte vollständige Sicherung bleibt immer.","en":"1–365 days The last full backup always stays."}},
-        {"id":"bakzone","mount":"automatic","kind":"select","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitzone für 02:00","en":"Time zone for 02:00","terms":{"de":"","en":""}},
-        {"id":"bakwddel","mount":"automatic","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Auch auf WebDAV aufräumen","en":"Also clean up on WebDAV","terms":{"de":"","en":""}},
-      ]},
-      {"id":"sicherungen-sicherung","de":"Sicherung","en":"Backup","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"bakjetzt","mount":"backups","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Jetzt sichern","en":"Back up now","terms":{"de":"","en":""}},
-        {"id":"bakliste","mount":"backups","kind":"list","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Sicherungen","en":"Backups","terms":{"de":"Je Sicherung unter ⋯: herunterladen, hochladen, wiederherstellen, löschen.","en":"Per backup under ⋯: download, upload, restore, delete."}},
-        {"id":"bakwdload","mount":"backups","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Sicherungen von WebDAV holen","en":"Fetch backups from WebDAV","terms":{"de":"Nach einem Umzug","en":"After moving servers"}},
+        {"id":"baktakt","mount":"automatic","kind":"choice","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Intervall","en":"Interval","terms":{"de":"Um 02:00 täglich sonntags am 1.","en":"At 02:00 daily Sundays on the 1st"}},
+        {"id":"bakhalten","mount":"automatic","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Aufbewahren","en":"Keep","terms":{"de":"1–365 Tage Die letzte vollständige Sicherung bleibt immer.","en":"1–365 days The last full backup always stays."}},
+        {"id":"bakwddel","mount":"automatic","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Alte Sicherungen auch auf WebDAV löschen","en":"Also delete old backups on WebDAV","terms":{"de":"","en":""}},
+        {"id":"bakzone","mount":"automatic","kind":"select","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitzone für 02:00","en":"Time zone for 02:00","terms":{"de":"","en":""}},
+        {"id":"autobak","mount":"automatic","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Automatisch sichern","en":"Back up automatically","terms":{"de":"Um 02:00","en":"At 02:00"}},
       ]},
   ],
 };
