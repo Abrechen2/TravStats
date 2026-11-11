@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -214,5 +214,45 @@ describe("Einstellungen → Bonusprogramme (LoyaltySection)", () => {
     );
     // The list reloads, and the open suggestion list with it.
     await waitFor(() => expect(api.listFrequentFlyerSuggestions).toHaveBeenCalledTimes(2));
+  });
+
+  it("offers a Mietwagen list only while rental is on, and a switched-off rental keeps the reason row", async () => {
+    enabled = ["flight"];
+    renderPage();
+    await screen.findByTestId("loyalty-flight");
+    expect(screen.queryByTestId("loyalty-rental")).toBeNull();
+    cleanup();
+
+    enabled = ["flight", "rental"];
+    api.listLoyaltyMemberships.mockResolvedValue([
+      card({ id: "r1", domain: "rental", programName: "Sixt Card", membershipNumber: "55-1234" }),
+    ]);
+    renderPage();
+    const block = await screen.findByTestId("loyalty-rental");
+    expect(within(block).getByText("Sixt Card")).toBeInTheDocument();
+    // A rental card covers nothing by itself, so no coverage caption and no activity line.
+    expect(within(block).queryByText(/loyalty:coversNone/)).toBeNull();
+    expect(within(block).queryByTestId("loyalty-activity")).toBeNull();
+  });
+
+  it("saves a rental card without any coverage field, which the server's schema refuses", async () => {
+    enabled = ["rental"];
+    api.createLoyaltyMembership.mockResolvedValue(card({ domain: "rental" }));
+    renderPage();
+    fireEvent.click(await screen.findByTestId("loyalty-add-rental"));
+    const form = screen.getByTestId("loyalty-form-rental");
+    expect(within(form).queryByTestId("loyalty-coverage-rental")).toBeNull();
+    fireEvent.change(within(form).getByLabelText("loyalty:field.programName"), {
+      target: { value: "Europcar Privilege" },
+    });
+    fireEvent.click(within(form).getByTestId("loyalty-save-rental"));
+    await waitFor(() =>
+      expect(api.createLoyaltyMembership).toHaveBeenCalledWith("rental", {
+        programName: "Europcar Privilege",
+        membershipNumber: null,
+        tier: null,
+        notes: null,
+      })
+    );
   });
 });

@@ -22,6 +22,25 @@ import {
 import { saveDomainEnabled } from "../../store/confirmedSettings";
 import { useGuardedNavigate } from "../ui/settings";
 import FirstVisitCard from "./FirstVisitCard";
+import { useExpertRows } from "./frame/useExpertRows";
+
+/** The order the prototype lists the travel types in; one not named here follows. */
+const PROTOTYPE_ORDER: readonly DomainKey[] = [
+  "flight",
+  "cruise",
+  "lodging",
+  "rail",
+  "bus",
+  "ferry",
+  "rental",
+  "poi",
+  "tour",
+  "roadtrip",
+];
+const orderOf = (key: DomainKey): number => {
+  const index = PROTOTYPE_ORDER.indexOf(key);
+  return index === -1 ? PROTOTYPE_ORDER.length : index;
+};
 
 /** Domains that have a page of their own under Reisearten. */
 const DOMAIN_PAGE: Partial<Record<DomainKey, "flight" | "cruise">> = {
@@ -137,7 +156,12 @@ export default function ModuleSection(): JSX.Element {
   const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const { isFeatureVisible } = useBetaFeatures();
-  const visibleKeys = switchableDomains(DOMAIN_KEYS, enabledDomains, isFeatureVisible);
+  const visibleKeys = [...switchableDomains(DOMAIN_KEYS, enabledDomains, isFeatureVisible)].sort(
+    (a, b) => orderOf(a) - orderOf(b)
+  );
+  // "Farben zurücksetzen" is an expert row, and only drawn while a colour was changed.
+  const colorsChanged = !isBrandDefault(colors);
+  const showReset = useExpertRows(colorsChanged ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -155,7 +179,7 @@ export default function ModuleSection(): JSX.Element {
         {visibleKeys.some((key) => needsOutline(colors[key])) && (
           <p className="t-caption">{t("settings:domainColors.lowContrast")}</p>
         )}
-        {!isBrandDefault(colors) && (
+        {colorsChanged && showReset && (
           <SettingItem
             title={t("settings:rows.resetColors.name")}
             help={t("settings:rows.resetColors.help")}

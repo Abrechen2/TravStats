@@ -15,6 +15,7 @@ describe("settings menu order", () => {
       "reisen",
       "fluege",
       "kreuzfahrten",
+      "unterkuenfte",
       "treue",
       "erinnerungen",
       "freunde",

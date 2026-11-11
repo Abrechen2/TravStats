@@ -160,6 +160,8 @@ vi.mock("../../components/Settings/DevicesSection", () => ({
 // DevicesSection is above — its own fetches on mount are irrelevant to
 // whether the beta gate mounts it at all.
 // Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/PassportRow", () => ({ default: () => null }));
+vi.mock("../../components/Settings/OpenSuggestionsRow", () => ({ default: () => null }));
 vi.mock("../../components/Settings/HomeSection", () => ({
   default: () => <div data-testid="home-section" />,
 }));

@@ -10,6 +10,7 @@ export const TREUE_PAGE: RegistryPage = {
         {"id":"tr_hotel","mount":"loyalty","kind":"list","level":"standard","scope":"account","audience":"all","domain":"lodging","demoLocked":false,"de":"Hotels","en":"Hotels","terms":{"de":"Ketten und einzelne Häuser","en":"Chains and single hotels"}},
         {"id":"tr_rail","mount":"loyalty","kind":"list","level":"standard","scope":"account","audience":"all","domain":"rail","demoLocked":false,"de":"Bahn","en":"Rail","terms":{"de":"","en":""}},
         {"id":"tr_cruise","mount":"loyalty","kind":"list","level":"standard","scope":"account","audience":"all","domain":"cruise","demoLocked":false,"de":"Reedereien","en":"Cruise lines","terms":{"de":"","en":""}},
+        {"id":"tr_rental","mount":"loyalty","kind":"list","level":"standard","scope":"account","audience":"all","domain":"rental","demoLocked":true,"de":"Mietwagen","en":"Rental cars","terms":{"de":"","en":""}},
       ]},
   ],
 };

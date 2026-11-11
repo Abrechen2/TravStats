@@ -2,22 +2,21 @@ import { useEffect, useMemo, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi } from "../../lib/api";
-import { personalApi, type PersonalFacts } from "../../lib/api/companionData";
 import { logger } from "../../lib/logger";
 import { countryName, ISO_3166_1_ALPHA2 } from "../../shared/geo/countryCode";
 import { SectionCard } from "./SettingsShared";
 import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, useSettingWrite } from "../ui/settings";
-import { useSettingItem } from "../ui/settings/itemContext";
+import { useExpertRows } from "./frame/useExpertRows";
 import HomeAirportSection from "./HomeAirportSection";
 
 const NONE = "";
 
 /**
- * "Zuhause" under Profil & Anmeldung: the residence with its moves, the home
- * country and the passport date. The residence is the one place a home is
- * written (plan `2026-11-01-home-one-source`); the Companion's "home" is its
- * current period.
+ * "Heimatort" under Reisearten: the residence with its moves, and the home
+ * country (expert). The residence is the one place a home is written (plan
+ * `2026-11-01-home-one-source`); the Companion's "home" is its current period.
+ * The passport date moved to Profil & Anmeldung (`PassportRow`).
  */
 export default function HomeSection(): JSX.Element {
   return (
@@ -33,9 +32,7 @@ function HomeFacts(): JSX.Element {
   const locale = i18n?.language ?? "de";
   const isDemo = useIsDemoAccount();
   const [country, setCountry] = useState<string | null>(null);
-  const [facts, setFacts] = useState<PersonalFacts | null>(null);
   const [countryLoadFailed, setCountryLoadFailed] = useState(false);
-  const [factsLoadFailed, setFactsLoadFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -46,18 +43,12 @@ function HomeFacts(): JSX.Element {
         logger.warn("Failed to load home country", error);
         if (alive) setCountryLoadFailed(true);
       });
-    personalApi
-      .get()
-      .then((f) => alive && setFacts(f))
-      .catch((error: unknown) => {
-        logger.warn("Failed to load personal facts", error);
-        if (alive) setFactsLoadFailed(true);
-      });
     return () => {
       alive = false;
     };
   }, []);
 
+  const showCountry = useExpertRows(1);
   const options = useMemo(
     () =>
       ISO_3166_1_ALPHA2.map((code) => ({ code, name: countryName(code, locale) || code }))
@@ -74,14 +65,6 @@ function HomeFacts(): JSX.Element {
       setCountry(v);
     }
   );
-  const passportWrite = useSettingWrite<string>(
-    "account.passportExpiry",
-    facts?.passportExpiry ?? "",
-    async (v) => {
-      setFacts(await personalApi.put({ passportExpiry: v === "" ? null : v }));
-    }
-  );
-
   const demo = isDemo
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
@@ -95,6 +78,7 @@ function HomeFacts(): JSX.Element {
         ? undefined
         : { why: "dependency", reason: t("settings:home.loading") };
 
+  if (!showCountry) return <></>;
   return (
     <SectionCard>
       <SettingRows>
@@ -121,46 +105,7 @@ function HomeFacts(): JSX.Element {
             </select>
           }
         />
-        <SettingItem
-          title={t("settings:home.passport.name")}
-          sub={t("settings:home.passport.sub")}
-          save={passportWrite}
-          locked={demo ?? loadLock(factsLoadFailed, facts !== null)}
-          control={<DateControl value={passportWrite.value} onCommit={passportWrite.choose} />}
-        />
       </SettingRows>
     </SectionCard>
-  );
-}
-
-/**
- * A date written when the field is left, not on every keystroke: a half-typed
- * date reads as "" too, and that is not a request to clear it.
- */
-function DateControl({
-  value,
-  onCommit,
-}: {
-  value: string;
-  onCommit: (next: string) => void;
-}): JSX.Element {
-  const { id, locked, describedBy } = useSettingItem();
-  return (
-    <input
-      id={id}
-      type="date"
-      className="input"
-      style={{ minHeight: "var(--ts-size-touch-min)" }}
-      // Keyed by the shown value: a discarded or refused pick snaps back.
-      key={value}
-      defaultValue={value}
-      disabled={locked}
-      aria-disabled={locked || undefined}
-      aria-describedby={describedBy}
-      onBlur={(e) => {
-        if (e.target.value === "" && e.target.validity.badInput) return;
-        if (e.target.value !== value) onCommit(e.target.value);
-      }}
-    />
   );
 }

@@ -46,12 +46,12 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 24 pages, 99 groups and cards (31 of them service cards) and 252 rows", () => {
+  it("counts 25 pages, 98 groups and cards (31 of them service cards) and 265 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
-    expect(SETTINGS_REGISTRY).toHaveLength(24);
-    expect(sections).toHaveLength(99);
+    expect(SETTINGS_REGISTRY).toHaveLength(25);
+    expect(sections).toHaveLength(98);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(252);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(265);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -60,9 +60,9 @@ describe("the settings registry follows the settings v3 page model", () => {
     );
     for (const id of ["r_rental", "r_roadtrip", "r_poi", "enrich"])
       expect(ids.has(id), id).toBe(true);
-    // Every reminder area the app offers has its row.
+    // Every reminder area the app offers has its row (one lead select each).
     const reminders = SETTINGS_REGISTRY.flatMap((p) => p.sections.flatMap((s) => s.rows)).filter(
-      (r) => r.kind === "remind"
+      (r) => r.id.startsWith("r_")
     );
     expect(reminders.map((r) => r.id).sort()).toEqual(
       [
@@ -126,7 +126,7 @@ describe("the settings registry follows the settings v3 page model", () => {
     expect(opensky.rows.some((r) => r.scope === "account" && r.audience === "all")).toBe(true);
   });
 
-  it("ties rows to real domains and real beta keys, with the design's tour = roadtrip", () => {
+  it("ties rows to real domains and real beta keys; tours and roadtrips are two domains", () => {
     const betaKeys = new Set(Object.keys(BETA_FEATURES));
     for (const page of SETTINGS_REGISTRY) {
       if (page.domain) expect(DOMAIN_KEYS).toContain(page.domain);
@@ -138,10 +138,55 @@ describe("the settings registry follows the settings v3 page model", () => {
         }
       }
     }
-    const tour = registryPage("reisearten")!
+    // The switches themselves carry no domain: a switched-off type's own switch
+    // must stay findable, or it could never be switched on from the search.
+    const switches = registryPage("reisearten")!
       .sections.flatMap((s) => s.rows)
-      .find((r) => r.id === "d_tour")!;
-    expect(tour.domain).toBe("roadtrip");
+      .filter((r) => r.kind === "domain");
+    expect(switches.map((r) => r.id)).toEqual([
+      "d_flight",
+      "d_cruise",
+      "d_lodging",
+      "d_rail",
+      "d_bus",
+      "d_ferry",
+      "d_rental",
+      "d_poi",
+      "d_tour",
+      "d_roadtrip",
+    ]);
+    for (const row of switches) expect(row.domain, row.id).toBeUndefined();
+  });
+
+  it("keeps the status default of new flights in 'Neue Flüge starten mit', expert like its neighbours (coordinator's call)", () => {
+    const group = registryPage("fluege")!.sections.find(
+      (s) => s.id === "fluege-neue-fluge-starten-mit"
+    )!;
+    expect(group.rows.map((r) => r.id)).toEqual(["fklasse", "fairline", "fanlass", "fstatus"]);
+    for (const row of group.rows) expect(row.level, row.id).toBe("expert");
+    // The reminder for places stays too, although the prototype forgot it.
+    expect(
+      registryPage("erinnerungen")!
+        .sections.flatMap((s) => s.rows)
+        .map((r) => r.id)
+    ).toContain("r_poi");
+  });
+
+  it("gives Unterkünfte its own page only while stays are on, and Mietwagen its loyalty list only with rental", () => {
+    expect(registryPage("unterkuenfte")).toMatchObject({ area: "konto", domain: "lodging" });
+    const rental = registryPage("treue")!
+      .sections.flatMap((s) => s.rows)
+      .find((r) => r.id === "tr_rental")!;
+    expect(rental.domain).toBe("rental");
+    const off = { isAdmin: false, isDomainOn: (d: string) => d !== "lodging" && d !== "rental" };
+    const found = findableRows({ ...off, isGateOpen: () => true }).map((r) => r.row.id);
+    expect(found).not.toContain("ratingcats");
+    expect(found).not.toContain("tr_rental");
+    const on = findableRows({ isAdmin: false, isDomainOn: () => true, isGateOpen: () => true }).map(
+      (r) => r.row.id
+    );
+    expect(on).toContain("ratingcats");
+    expect(on).toContain("tr_rental");
   });
 });
 

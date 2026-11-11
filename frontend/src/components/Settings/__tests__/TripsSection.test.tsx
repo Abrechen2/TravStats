@@ -8,6 +8,7 @@ vi.unmock("../../../store/settingsStore");
 
 import TripsSection from "../TripsSection";
 import { settingsApi } from "../../../lib/api";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import { useSettingsStore } from "../../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../../store/suggestionSwitchesStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
@@ -20,6 +21,8 @@ import { AREA_MENU, findAreaPage } from "../../../pages/Settings/area/areaModel"
  */
 describe("TripsSection", () => {
   beforeEach(() => {
+    // "Farbe neuer Reisen" is an expert row (settings v3).
+    useSettingsLevelStore.setState({ level: "expert" });
     useSettingsStore.setState({ autoCreateTrips: true });
     useSuggestionSwitchesStore.setState({ tripDefaultColor: null });
   });

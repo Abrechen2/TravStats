@@ -29,6 +29,7 @@ vi.mock("../../../lib/api/webdavSync", async (importOriginal) => ({
 vi.mock("../../../lib/api/pendingUpdates", () => ({
   pendingUpdatesApi: { getAll: vi.fn().mockResolvedValue({ updates: [], count: 0 }) },
 }));
+vi.mock("../OpenSuggestionsRow", () => ({ default: () => null })); // its own tests
 import AutoUpdateSection from "../AutoUpdateSection";
 import InboxSuggestionsSection from "../InboxSuggestionsSection";
 import BackupSection from "../BackupSection";
@@ -129,6 +130,7 @@ describe("standard level inside a section", () => {
     const report = renderReporting(<BackupSection />);
     expect(await screen.findByText("settingsRows:data.srvbackup.t")).toBeInTheDocument();
     expect(screen.getByText("settingsRows:data.meine.t")).toBeInTheDocument();
-    expect(lastHidden(report)).toBe(1);
+    // How often, versions to keep and "Jetzt hochladen" (settings v3).
+    expect(lastHidden(report)).toBe(3);
   });
 });

@@ -22,6 +22,8 @@ import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
 import { useBlockConfirm } from "./useBlockConfirm";
+import PushStateRow from "./PushStateRow";
+import { useRowCopy } from "./rowCopy";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -62,6 +64,7 @@ function formatRemaining(totalSeconds: number): string {
 
 export default function DevicesSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const pairCopy = useRowCopy("devices")("pair");
   const { confirm: askConfirm, dialog: confirmDialog } = useBlockConfirm();
   const isDemo = useIsDemoAccount();
   const [devices, setDevices] = useState<ApiToken[]>([]);
@@ -216,11 +219,92 @@ export default function DevicesSection(): JSX.Element {
           title={t("settings:rows.phones.name")}
           help={t("settings:rows.phones.help")}
           locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+        >
+          {/* Device list */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              {t("settings:devices.existingTitle")}
+            </h3>
+            {loadFailed ? (
+              <LinkButton onClick={() => void reload()}>
+                {t("settings:blocks.save.retry")}
+              </LinkButton>
+            ) : loading ? (
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("common:loading.title")}
+              </div>
+            ) : devices.length === 0 ? (
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("settings:devices.empty")}
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {devices.map((dev) => (
+                  <li
+                    key={dev.id}
+                    className="flex items-center justify-between rounded-md p-3"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--color-border)",
+                      opacity: dev.revokedAt ? 0.5 : 1,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xl" aria-hidden>
+                        {platformIcon(dev.platform)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className="font-medium truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {dev.label}
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          {dev.lastUsedAt
+                            ? t("settings:devices.lastUsed", {
+                                when: formatDateTime(dev.lastUsedAt),
+                              })
+                            : t("settings:devices.neverUsed")}
+                          {dev.lastUsedIp &&
+                            ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}
+                          {dev.revokedAt && ` · ${t("settings:devices.revoked")}`}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Unpairing revokes the same token row ApiTokensSection lists
+                    (via /settings/tokens, guarded for the demo account) — the
+                    section-level notice above already explains the lock, so
+                    this action is simply not offered rather than repeated. */}
+                    {!dev.revokedAt && !isDemo && (
+                      <button
+                        type="button"
+                        onClick={() => handleUnpair(dev.id, dev.label)}
+                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--danger)",
+                        }}
+                      >
+                        {t("settings:devices.unpairButton")}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SettingItem>
+        <SettingItem
+          title={pairCopy.title}
+          sub={pairCopy.sub}
+          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
           error={error ?? undefined}
           control={
             !session && !isDemo ? (
               <ActionControl
-                label={t("settings:devices.connectButton")}
+                label={pairCopy.btn ?? t("settings:devices.connectButton")}
                 busy={starting}
                 onClick={() => void handleStart()}
               />
@@ -393,83 +477,8 @@ export default function DevicesSection(): JSX.Element {
               )}
             </div>
           )}
-
-          {/* Device list */}
-          <div>
-            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              {t("settings:devices.existingTitle")}
-            </h3>
-            {loadFailed ? (
-              <LinkButton onClick={() => void reload()}>
-                {t("settings:blocks.save.retry")}
-              </LinkButton>
-            ) : loading ? (
-              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("common:loading.title")}
-              </div>
-            ) : devices.length === 0 ? (
-              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("settings:devices.empty")}
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {devices.map((dev) => (
-                  <li
-                    key={dev.id}
-                    className="flex items-center justify-between rounded-md p-3"
-                    style={{
-                      background: "var(--bg-elevated)",
-                      border: "1px solid var(--color-border)",
-                      opacity: dev.revokedAt ? 0.5 : 1,
-                    }}
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="text-xl" aria-hidden>
-                        {platformIcon(dev.platform)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="font-medium truncate"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {dev.label}
-                        </div>
-                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                          {dev.lastUsedAt
-                            ? t("settings:devices.lastUsed", {
-                                when: formatDateTime(dev.lastUsedAt),
-                              })
-                            : t("settings:devices.neverUsed")}
-                          {dev.lastUsedIp &&
-                            ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}
-                          {dev.revokedAt && ` · ${t("settings:devices.revoked")}`}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Unpairing revokes the same token row ApiTokensSection lists
-                    (via /settings/tokens, guarded for the demo account) — the
-                    section-level notice above already explains the lock, so
-                    this action is simply not offered rather than repeated. */}
-                    {!dev.revokedAt && !isDemo && (
-                      <button
-                        type="button"
-                        onClick={() => handleUnpair(dev.id, dev.label)}
-                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
-                        style={{
-                          background: "transparent",
-                          border: "1px solid var(--color-border)",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        {t("settings:devices.unpairButton")}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </SettingItem>
+        <PushStateRow />
       </SettingRows>
       {confirmDialog}
     </SectionCard>

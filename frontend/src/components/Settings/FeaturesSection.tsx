@@ -8,6 +8,7 @@ import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, SwitchControl, useSettingWrite } from "../ui/settings";
 import { saveSwitch } from "../../store/confirmedSettings";
 import { useDocumentSetting } from "./useDocumentSetting";
+import { useExpertRows } from "./frame/useExpertRows";
 
 const setFeatures = (partial: Partial<FeaturesSettings>): void =>
   useSettingsStore.getState().setFeatures(partial);
@@ -24,6 +25,8 @@ export default function FeaturesSection(): JSX.Element {
   const locked = isDemo
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
+  // "Kennzeichen der Maschine" is an expert row (settings v3).
+  const showAircraft = useExpertRows(1);
   const features = useSettingsStore((s) => s.features);
   const liveTracking = useSuggestionSwitchesStore((s) => s.liveTracking);
   const liveTrackingWrite = useSettingWrite<boolean>("features.liveTracking", liveTracking, (on) =>
@@ -58,19 +61,22 @@ export default function FeaturesSection(): JSX.Element {
             />
           }
         />
-        <SettingItem
-          title={t("settings:rows.trackAircraft.name")}
-          help={t("settings:rows.trackAircraft.help")}
-          save={aircraft}
-          locked={locked}
-          control={
-            <SwitchControl
-              checked={aircraft.value}
-              onChange={aircraft.choose}
-              label={t("settings:rows.trackAircraft.name")}
-            />
-          }
-        />
+        {showAircraft && (
+          <SettingItem
+            expert
+            title={t("settings:rows.trackAircraft.name")}
+            help={t("settings:rows.trackAircraft.help")}
+            save={aircraft}
+            locked={locked}
+            control={
+              <SwitchControl
+                checked={aircraft.value}
+                onChange={aircraft.choose}
+                label={t("settings:rows.trackAircraft.name")}
+              />
+            }
+          />
+        )}
         <SettingItem
           title={t("settings:rows.liveTracking.name")}
           sub={t("settings:rows.liveTracking.sub")}

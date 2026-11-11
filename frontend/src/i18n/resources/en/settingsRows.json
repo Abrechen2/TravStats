@@ -6,7 +6,7 @@
       "calendarFeed": "Calendar"
     },
     "autoreise": {
-      "t": "Group trips on import",
+      "t": "Create trips automatically",
       "s": "Same booking reference, one trip"
     },
     "reisefarbe": {
@@ -14,7 +14,8 @@
     },
     "rvor": {
       "t": "Suggest trips",
-      "h": "Off: nothing is computed. Your decisions stay."
+      "h": "Off: nothing is computed. Your decisions stay.",
+      "s": "From flights and stays that belong together"
     },
     "avor": {
       "t": "Suggest stays",
@@ -33,6 +34,12 @@
       "h": "You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address.",
       "btn": "Create link",
       "res": "Link created · visible only now · Copy"
+    },
+    "offenevor": {
+      "t": "Open suggestions",
+      "off": "Off",
+      "count_one": "{{count}} in the inbox",
+      "count_other": "{{count}} in the inbox"
     }
   },
   "sharing": {
@@ -82,6 +89,9 @@
       "t": "Hand over encrypted",
       "s": "Full entries to another account",
       "btn": "Open"
+    },
+    "linksoff": {
+      "t": "Public links are off on this server. The admin can allow them."
     }
   },
   "notifications": {
@@ -90,7 +100,7 @@
       "domains": "Before you leave"
     },
     "erimail": {
-      "t": "Mail to",
+      "t": "Reminders to",
       "s": "Empty: no mail"
     },
     "pushstate": {
@@ -98,8 +108,7 @@
       "h": "Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."
     },
     "r_flight": {
-      "t": "Flight",
-      "h": "Plus one own time, whole hours from 1 to 168."
+      "t": "Flight"
     },
     "r_cruise": {
       "t": "Cruise"
@@ -124,6 +133,23 @@
     },
     "r_poi": {
       "t": "Places"
+    },
+    "remaddr": {
+      "none": "No address",
+      "jump": "To profile"
+    },
+    "rchan": {
+      "t": "Channel",
+      "both": "Both",
+      "mixed": "So far different per travel type. Your choice applies to all."
+    },
+    "leadSub": "Reminder before departure",
+    "lead": {
+      "off": "Off",
+      "h2": "2 h",
+      "h24": "24 h",
+      "d2": "2 days",
+      "own": "Own: {{hours}}"
     }
   },
   "loyalty": {
@@ -132,8 +158,8 @@
     },
     "tr_flight": {
       "t": "Airlines",
-      "h": "Suggestions from your flights show up here to accept.",
-      "btn": "Add card"
+      "btn": "Add card",
+      "s": "Suggestions from your flights show up here to accept."
     },
     "tr_hotel": {
       "t": "Hotels",
@@ -147,10 +173,16 @@
     "tr_cruise": {
       "t": "Cruise lines",
       "btn": "Add card"
+    },
+    "tr_rental": {
+      "t": "Rental cars",
+      "btn": "Add card"
     }
   },
   "data": {
-    "jump": { "label": "Parts of the Data page" },
+    "jump": {
+      "label": "Parts of the Data page"
+    },
     "sections": {
       "backup": "Backup",
       "export": "Take out",
@@ -221,13 +253,15 @@
       "h": "Entries something else already points to stay; I'll say which."
     },
     "ubahn": {
-      "t": "Metro and tram",
-      "s": "Preselection, changeable per import",
-      "o": ["skip", "as rail journey"]
+      "t": "Metro and tram on rail import",
+      "o": ["Skip", "Import"]
     },
     "busleg": {
-      "t": "Bus legs",
-      "o": ["skip", "as bus ride"]
+      "t": "Bus legs on rail import",
+      "o": ["Skip", "Import"]
+    },
+    "webdavlast": {
+      "t": "Last own copy"
     }
   },
   "dialogs": {
@@ -1403,5 +1437,23 @@
     },
     "nothingOld": "No file is older than the retention.",
     "download": "Download"
+  },
+  "lodging": {
+    "ratingcats": {
+      "t": "Rating categories",
+      "s": "What you rate stays on",
+      "h": "Your own categories join the standard ones. Deleting one changes no stay: it is just not asked for any more."
+    }
+  },
+  "devices": {
+    "pair": {
+      "t": "Pair a phone",
+      "s": "Shows a QR code for the Companion app",
+      "btn": "Show code"
+    },
+    "pushstate2": {
+      "t": "Notifications",
+      "h": "Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."
+    }
   }
 }

@@ -8,11 +8,10 @@ export const DATEN_PAGE: RegistryPage = {
       {"id":"daten-sicherung","de":"Sicherung","en":"Backup","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"srvbackup","mount":"backup","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Letzte Sicherung des Servers","en":"Last server backup","terms":{"de":"Kümmert sich der Admin drum","en":"Your admin takes care of it"}},
         {"id":"webdaveigen","mount":"backup","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Eigene Kopie auf WebDAV","en":"Own copy on WebDAV","terms":{"de":"Dein Export, regelmäßig Die Verbindung richtest du unter Dienste → Backup-Ziel ein.","en":"Your export, on a schedule Set up the connection under Services → Backup target."}},
-        {"id":"webdavtakt","mount":"backup","kind":"choice","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Wie oft","en":"How often","terms":{"de":"täglich wöchentlich","en":"daily weekly"}},
+        {"id":"webdavtakt","mount":"backup","kind":"choice","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Wie oft","en":"How often","terms":{"de":"täglich wöchentlich","en":"daily weekly"}},
         {"id":"webdavvers","mount":"backup","kind":"input","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Versionen behalten","en":"Versions to keep","terms":{"de":"1–30","en":"1–30"}},
-      ]},
-      {"id":"daten-backup","de":"Sicherung","en":"Backup","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"webdavjetzt","mount":"backup","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Jetzt hochladen","en":"Upload now","terms":{"de":"","en":""}},
+        {"id":"webdavlast","mount":"backup","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Letzte eigene Kopie","en":"Last own copy","terms":{"de":"","en":""}},
+        {"id":"webdavjetzt","mount":"backup","kind":"action","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Jetzt hochladen","en":"Upload now","terms":{"de":"","en":""}},
       ]},
       {"id":"daten-mitnehmen","de":"Mitnehmen","en":"Take with you","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"meine","mount":"backup","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Alle meine Daten","en":"All my data","terms":{"de":"JSON, ohne Passwörter und Schlüssel Fotos und Dokumente sind nicht dabei.","en":"JSON, without passwords or keys Photos and documents aren't included."}},
@@ -26,8 +25,8 @@ export const DATEN_PAGE: RegistryPage = {
         {"id":"implog","mount":"import","kind":"list","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Bisherige Importe","en":"Past imports","terms":{"de":"Ganz zurücknehmen Einträge, auf die schon anderes verweist, bleiben; ich sage, welche.","en":"Undo as a whole Entries something else already points to stay; I'll say which."}},
       ]},
       {"id":"daten-beim-import-von-bahn-de","de":"Beim Import von bahn.de","en":"When importing from bahn.de","level":"expert","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"ubahn","mount":"import","kind":"choice","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"U-Bahn und Tram","en":"Metro and tram","terms":{"de":"Vorauswahl, im Import änderbar weglassen als Bahnfahrt","en":"Preselection, changeable per import skip as rail journey"}},
-        {"id":"busleg","mount":"import","kind":"choice","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Busabschnitte","en":"Bus legs","terms":{"de":"weglassen als Busfahrt","en":"skip as bus ride"}},
+        {"id":"ubahn","mount":"import","kind":"choice","level":"expert","scope":"account","audience":"all","domain":"rail","demoLocked":false,"de":"U-Bahn und Tram beim Bahn-Import","en":"Metro and tram on rail import","terms":{"de":"Überspringen Importieren","en":"Skip Import"}},
+        {"id":"busleg","mount":"import","kind":"choice","level":"expert","scope":"account","audience":"all","domain":"rail","demoLocked":false,"de":"Busabschnitte beim Bahn-Import","en":"Bus legs on rail import","terms":{"de":"Überspringen Importieren","en":"Skip Import"}},
       ]},
   ],
 };

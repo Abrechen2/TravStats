@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 
 vi.mock("../../../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/api")>();
@@ -17,6 +17,8 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
 
 import ModuleSection from "../ModuleSection";
 import { useSettingsStore } from "../../../store/settingsStore";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
+import { useDomainColorStore } from "../../../store/domainColorStore";
 
 /**
  * "Bereiche & Farben" (forgejo#321): the module switch and the domain colour
@@ -49,6 +51,26 @@ describe("ModuleSection — one row per domain, switch and colour", () => {
     mockBeta.mockReturnValue(true);
     render(<ModuleSection />);
     expect(screen.getByRole("switch", { name: /domain\.tour/ })).not.toBeChecked();
+  });
+
+  it("lists the travel types in the prototype's order: Bahn, Bus, Fähre, Mietwagen before Orte, Touren, Roadtrips", () => {
+    mockBeta.mockReturnValue(true);
+    render(<ModuleSection />);
+    const order = screen
+      .getAllByRole("switch")
+      .map((el) => /domain\.(\w+)/.exec(el.getAttribute("aria-label") ?? "")?.[1]);
+    expect(order).toEqual([
+      "flight",
+      "cruise",
+      "lodging",
+      "rail",
+      "bus",
+      "ferry",
+      "rental",
+      "poi",
+      "tour",
+      "roadtrip",
+    ]);
   });
 
   it("draws the switch and the colour of a domain in the same row", () => {
@@ -86,5 +108,34 @@ describe("ModuleSection — a switched-off domain (forgejo#321 prototype)", () =
     expect(off.style.opacity).toBe("0.5");
     expect(on.style.opacity).toBe("1");
     expect(within(off).getByRole("switch")).not.toBeDisabled();
+  });
+});
+
+describe("ModuleSection — Farben zurücksetzen is an expert row (settings v3)", () => {
+  beforeEach(() => {
+    mockBeta.mockReturnValue(false);
+    useSettingsStore.setState({ enabledDomains: ["flight"] });
+    act(() => useDomainColorStore.getState().setColor("flight", "#123456"));
+  });
+  afterEach(() => {
+    cleanup();
+    act(() => useDomainColorStore.getState().resetToBrand());
+    useSettingsLevelStore.setState({ level: null });
+  });
+
+  it("is not drawn at the standard level, even with a changed colour", () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    render(<ModuleSection />);
+    expect(screen.queryByRole("button", { name: "settings:rows.resetColors.name" })).toBeNull();
+  });
+
+  it("is drawn at the expert level while a colour was changed, and not when none was", () => {
+    useSettingsLevelStore.setState({ level: "expert" });
+    const { unmount } = render(<ModuleSection />);
+    expect(screen.getByRole("button", { name: "settings:rows.resetColors.name" })).toBeTruthy();
+    unmount();
+    act(() => useDomainColorStore.getState().resetToBrand());
+    render(<ModuleSection />);
+    expect(screen.queryByRole("button", { name: "settings:rows.resetColors.name" })).toBeNull();
   });
 });

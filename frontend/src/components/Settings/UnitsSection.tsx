@@ -8,6 +8,7 @@ import { SettingItem, useSettingWrite } from "../ui/settings";
 import { useSettingItem } from "../ui/settings/itemContext";
 import { saveBaseCurrency } from "../../store/confirmedSettings";
 import { UnitRow } from "./UnitRow";
+import { useExpertRows } from "./frame/useExpertRows";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
@@ -55,6 +56,8 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
   // Same 403 as the display card, and the same silent local write before the
   // beta audit of 2026-09-19.
   const isDemo = useIsDemoAccount();
+  // "Basiswährung für Summen" is an expert row (settings v3).
+  const showCurrency = useExpertRows(1);
   const currency = useSettingWrite<string>("units.baseCurrency", baseCurrency, saveBaseCurrency);
 
   return (
@@ -83,16 +86,19 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
           name={(value) => t(`settings:units.weightOptions.${value}`)}
           locked={isDemo}
         />
-        <SettingItem
-          title={t("settings:rows.currency.name")}
-          sub={t("settings:rows.currency.sub")}
-          // Why the choice is narrower than what you may RECORD in — the one
-          // question this field reliably raises.
-          help={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
-          save={currency}
-          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
-          control={<CurrencyField value={currency.value} onChange={currency.choose} />}
-        />
+        {showCurrency && (
+          <SettingItem
+            expert
+            title={t("settings:rows.currency.name")}
+            sub={t("settings:rows.currency.sub")}
+            // Why the choice is narrower than what you may RECORD in — the one
+            // question this field reliably raises.
+            help={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
+            save={currency}
+            locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+            control={<CurrencyField value={currency.value} onChange={currency.choose} />}
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

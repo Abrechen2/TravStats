@@ -32,7 +32,7 @@ const SOURCE = resolve(
 const OUT = resolve(here, "../src/pages/Settings/registry/data");
 const check = process.argv.includes("--check");
 
-const DOMAIN = { hotel: "lodging", tour: "roadtrip" };
+const DOMAIN = { hotel: "lodging" };
 const level = (x) => (x ? "expert" : "standard");
 const q = (v) => JSON.stringify(v);
 

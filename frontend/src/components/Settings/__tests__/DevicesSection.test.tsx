@@ -6,6 +6,8 @@ const tokens = vi.hoisted(() => ({ list: vi.fn(), revoke: vi.fn() }));
 
 vi.mock("../../../lib/api/pairing", () => ({ pairingApi: pairing }));
 vi.mock("../../../lib/api/tokens", () => ({ apiTokensApi: tokens }));
+// The "Mitteilungen" row reads the push state; its own tests are PushStateRow.test.tsx.
+vi.mock("../PushStateRow", () => ({ default: () => null }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
@@ -23,7 +25,7 @@ const CODE = "clm_0123456789abcdef0123456789abcdef";
 
 async function openPairingPanel(): Promise<void> {
   render(<DevicesSection />);
-  fireEvent.click(await screen.findByRole("button", { name: "settings:devices.connectButton" }));
+  fireEvent.click(await screen.findByRole("button", { name: "settingsRows:devices.pair.btn" }));
   await screen.findByTestId("pairing-code");
 }
 
@@ -136,7 +138,7 @@ describe("DevicesSection failures", () => {
     tokens.list.mockResolvedValue([]);
     pairing.start.mockRejectedValue(new Error("500"));
     render(<DevicesSection />);
-    fireEvent.click(await screen.findByRole("button", { name: "settings:devices.connectButton" }));
+    fireEvent.click(await screen.findByRole("button", { name: "settingsRows:devices.pair.btn" }));
     expect(await screen.findByText("settings:devices.errors.start")).toBeInTheDocument();
   });
 });

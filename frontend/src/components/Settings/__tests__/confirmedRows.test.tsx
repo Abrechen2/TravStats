@@ -29,6 +29,7 @@ import UnitsSection from "../UnitsSection";
 import ModuleSection from "../ModuleSection";
 import { saveDomainEnabled } from "../../../store/confirmedSettings";
 import { useSettingsStore } from "../../../store/settingsStore";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 
 const units = { distanceUnit: "kilometers" as const, weightUnit: "kg" as const, currency: "EUR" };
@@ -39,6 +40,8 @@ const settle = async (): Promise<void> => {
 };
 
 beforeEach(() => {
+  // The base currency is an expert row (settings v3).
+  useSettingsLevelStore.setState({ level: "expert" });
   update.mockReset().mockResolvedValue({});
   toast.mockReset();
   useSettingsStore.setState({ baseCurrency: "EUR", enabledDomains: ["flight"] });

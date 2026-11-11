@@ -5,6 +5,7 @@ import { REISEARTEN_PAGE } from "./reisearten";
 import { REISEN_PAGE } from "./reisen";
 import { FLUEGE_PAGE } from "./fluege";
 import { KREUZFAHRTEN_PAGE } from "./kreuzfahrten";
+import { UNTERKUENFTE_PAGE } from "./unterkuenfte";
 import { TREUE_PAGE } from "./treue";
 import { ERINNERUNGEN_PAGE } from "./erinnerungen";
 import { FREUNDE_PAGE } from "./freunde";
@@ -32,6 +33,7 @@ export const REGISTRY_PAGES: readonly RegistryPage[] = [
   REISEN_PAGE,
   FLUEGE_PAGE,
   KREUZFAHRTEN_PAGE,
+  UNTERKUENFTE_PAGE,
   TREUE_PAGE,
   ERINNERUNGEN_PAGE,
   FREUNDE_PAGE,

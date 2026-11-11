@@ -6,7 +6,7 @@
       "calendarFeed": "Kalender"
     },
     "autoreise": {
-      "t": "Reisen beim Import bilden",
+      "t": "Reisen automatisch anlegen",
       "s": "Gleiche Buchungsnummer, eine Reise"
     },
     "reisefarbe": {
@@ -14,7 +14,8 @@
     },
     "rvor": {
       "t": "Reisen vorschlagen",
-      "h": "Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben."
+      "h": "Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben.",
+      "s": "Aus Flügen und Unterkünften, die zusammengehören"
     },
     "avor": {
       "t": "Aufenthalte vorschlagen",
@@ -33,6 +34,12 @@
       "h": "Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers.",
       "btn": "Link erstellen",
       "res": "Link erstellt · nur jetzt sichtbar · Kopieren"
+    },
+    "offenevor": {
+      "t": "Offene Vorschläge",
+      "off": "Aus",
+      "count_one": "{{count}} im Posteingang",
+      "count_other": "{{count}} im Posteingang"
     }
   },
   "sharing": {
@@ -82,6 +89,9 @@
       "t": "Verschlüsselt übergeben",
       "s": "Ganze Einträge an ein anderes Konto",
       "btn": "Öffnen"
+    },
+    "linksoff": {
+      "t": "Öffentliche Links sind auf diesem Server aus. Der Admin kann sie erlauben."
     }
   },
   "notifications": {
@@ -90,7 +100,7 @@
       "domains": "Vor der Abreise"
     },
     "erimail": {
-      "t": "Mail an",
+      "t": "Erinnerungen an",
       "s": "Leer: keine Mails"
     },
     "pushstate": {
@@ -98,8 +108,7 @@
       "h": "Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt. Der Server muss sie außerdem senden dürfen."
     },
     "r_flight": {
-      "t": "Flug",
-      "h": "Bis zu einer eigenen Zeit, ganze Stunden von 1 bis 168."
+      "t": "Flug"
     },
     "r_cruise": {
       "t": "Kreuzfahrt"
@@ -124,6 +133,23 @@
     },
     "r_poi": {
       "t": "Orte"
+    },
+    "remaddr": {
+      "none": "Keine Adresse",
+      "jump": "Zum Profil"
+    },
+    "rchan": {
+      "t": "Kanal",
+      "both": "Beides",
+      "mixed": "Bisher je Reiseart verschieden. Deine Wahl gilt für alle."
+    },
+    "leadSub": "Erinnerung vor Abreise",
+    "lead": {
+      "off": "Aus",
+      "h2": "2 h",
+      "h24": "24 h",
+      "d2": "2 Tage",
+      "own": "Eigene: {{hours}}"
     }
   },
   "loyalty": {
@@ -132,8 +158,8 @@
     },
     "tr_flight": {
       "t": "Airlines",
-      "h": "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen.",
-      "btn": "Karte hinzufügen"
+      "btn": "Karte hinzufügen",
+      "s": "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen."
     },
     "tr_hotel": {
       "t": "Hotels",
@@ -147,10 +173,16 @@
     "tr_cruise": {
       "t": "Reedereien",
       "btn": "Karte hinzufügen"
+    },
+    "tr_rental": {
+      "t": "Mietwagen",
+      "btn": "Karte hinzufügen"
     }
   },
   "data": {
-    "jump": { "label": "Teile der Seite „Daten“" },
+    "jump": {
+      "label": "Teile der Seite „Daten“"
+    },
     "sections": {
       "backup": "Sicherung",
       "export": "Mitnehmen",
@@ -221,13 +253,15 @@
       "h": "Einträge, auf die schon anderes verweist, bleiben; ich sage, welche."
     },
     "ubahn": {
-      "t": "U-Bahn und Tram",
-      "s": "Vorauswahl, im Import änderbar",
-      "o": ["weglassen", "als Bahnfahrt"]
+      "t": "U-Bahn und Tram beim Bahn-Import",
+      "o": ["Überspringen", "Importieren"]
     },
     "busleg": {
-      "t": "Busabschnitte",
-      "o": ["weglassen", "als Busfahrt"]
+      "t": "Busabschnitte beim Bahn-Import",
+      "o": ["Überspringen", "Importieren"]
+    },
+    "webdavlast": {
+      "t": "Letzte eigene Kopie"
     }
   },
   "dialogs": {
@@ -1403,5 +1437,23 @@
     },
     "nothingOld": "Keine Datei ist älter als die Aufbewahrung.",
     "download": "Herunterladen"
+  },
+  "lodging": {
+    "ratingcats": {
+      "t": "Bewertungskategorien",
+      "s": "Worauf du Unterkünfte bewertest",
+      "h": "Eigene Kategorien kommen zu den Standardkategorien dazu. Löschst du eine, ändert das keinen Aufenthalt: Es wird nur nicht mehr danach gefragt."
+    }
+  },
+  "devices": {
+    "pair": {
+      "t": "Telefon koppeln",
+      "s": "Zeigt einen QR-Code für die Companion-App",
+      "btn": "Code anzeigen"
+    },
+    "pushstate2": {
+      "t": "Mitteilungen",
+      "h": "Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt. Der Server muss sie außerdem senden dürfen."
+    }
   }
 }

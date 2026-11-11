@@ -9,5 +9,9 @@ export const UEBER_PAGE: RegistryPage = {
         {"id":"ver","mount":"about","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Version","en":"Version","terms":{"de":"","en":""}},
         {"id":"build","mount":"about","kind":"status","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Build","en":"Build","terms":{"de":"","en":""}},
       ]},
+      {"id":"ueber-mehr","de":"Mehr","en":"More","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"changelog","mount":"about","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Changelog","en":"Changelog","terms":{"de":"","en":""}},
+        {"id":"docs","mount":"about","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Dokumentation","en":"Documentation","terms":{"de":"","en":""}},
+      ]},
   ],
 };

@@ -83,6 +83,18 @@ describe("WebdavSyncRow", () => {
     await renderRow();
     expect(await screen.findByText("settingsRows:data.webdaveigen.t")).toBeInTheDocument();
     expect(screen.queryByText("settingsRows:data.webdavvers.t")).toBeNull();
+    // Settings v3: how often and "Jetzt hochladen" are expert rows too; the
+    // last copy's result is its own standard row while the copy is on.
+    expect(screen.queryByText("settingsRows:data.webdavtakt.t")).toBeNull();
+    expect(screen.queryByText("settingsRows:data.webdavjetzt.t")).toBeNull();
+    expect(screen.getByText("settingsRows:data.webdavlast.t")).toBeInTheDocument();
+  });
+
+  it("draws no 'last own copy' row while the copy is off", async () => {
+    respond({ ...STATUS, enabled: false });
+    await renderRow();
+    await screen.findByText("settingsRows:data.webdaveigen.t");
+    expect(screen.queryByText("settingsRows:data.webdavlast.t")).toBeNull();
   });
 
   it("shows the last nightly failure with its reason, not just 'failed'", async () => {

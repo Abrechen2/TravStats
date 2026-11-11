@@ -64,7 +64,14 @@
     "supportSub": "A star on GitHub or a donation helps keep it going.",
     "star": "Project on GitHub",
     "donate": "Donate via PayPal",
-    "madeBy": "A project by"
+    "madeBy": "A project by",
+    "changelog": {
+      "name": "Changelog"
+    },
+    "docs": {
+      "name": "Documentation"
+    },
+    "open": "Open"
   },
   "profile": {
     "title": "Profile",
@@ -93,7 +100,11 @@
     "emailHelp": "Reminders use their own address under Reminders.",
     "emailBad": "That doesn't look like an e-mail address. I'll save once it does.",
     "birthdateSub": "Optional",
-    "birthdateHelp": "Unlocks the “Birthday flight” achievement."
+    "birthdateHelp": "Unlocks the “Birthday flight” achievement.",
+    "display": {
+      "name": "Display name",
+      "sub": "How friends see you"
+    }
   },
   "homeAirport": {
     "title": "Home airports",
@@ -148,7 +159,7 @@
     "residenceRow": {
       "name": "Home town",
       "sub": "Distances are measured from here",
-      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home is also your home in the Companion app."
+      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home town is also your home in the Companion app."
     },
     "airportsRow": {
       "name": "Home airports",
@@ -1315,7 +1326,8 @@
       "buchungen": "Reading bookings",
       "sicherungen": "Backups",
       "wartung": "Maintenance",
-      "stamm": "Reference data"
+      "stamm": "Reference data",
+      "unterkuenfte": "Stays"
     },
     "menu": {
       "konto": "My account",
@@ -1441,7 +1453,7 @@
         "jump": "Set address"
       },
       "no2fa": {
-        "reason": "Needs two-step sign-in first."
+        "reason": "Only with two-factor sign-in."
       },
       "noSmtp": {
         "reason": "The server doesn't send mail.",
@@ -1462,7 +1474,7 @@
         "reason": "Only works with the WebDAV copy."
       },
       "noMailAddr": {
-        "reason": "Mail needs an address above."
+        "reason": "Mail needs an address."
       },
       "envPinned": {
         "reason": "Pinned at server start ({{name}}). In effect: {{value}}."
@@ -1556,8 +1568,8 @@
       "sub": "For local times and daily values"
     },
     "dateFormat": {
-      "name": "Date",
-      "sub": "Tables always show 2026-12-31"
+      "name": "Date format",
+      "sub": "Tables always show 2026-11-08"
     },
     "timeFormat": {
       "name": "Time"
@@ -1571,8 +1583,8 @@
       "help": "Converts nothing."
     },
     "currency": {
-      "name": "Main currency",
-      "sub": "All totals in this currency",
+      "name": "Base currency for totals",
+      "sub": "All costs are converted into this currency for totals",
       "help": "Amounts already converted keep their value. ECB rates back to 1999."
     },
     "domainJump": "Settings",
@@ -1600,7 +1612,7 @@
       "sub": "Statistics only"
     },
     "costTracking": {
-      "name": "Taxes and fees",
+      "name": "Record taxes and fees",
       "sub": "Also business-travel totals",
       "help": "Price and currency are always there."
     },
@@ -1627,8 +1639,8 @@
       "name": "Password"
     },
     "twoFactor": {
-      "name": "Two-step sign-in",
-      "sub": "Code from an authenticator app",
+      "name": "Two-factor sign-in",
+      "sub": "A code from an authenticator app on top of your password",
       "help": "API keys bypass the second step. A passkey replaces both password and second step."
     },
     "backupCodes": {
@@ -1651,20 +1663,20 @@
       "help": "A key bypasses the second step. You see it only once. Revoking locks the tool out at once."
     },
     "liveUpdates": {
-      "name": "Fetch live updates",
-      "sub": "While a flight is under way",
+      "name": "Live updates",
+      "sub": "From 24 h before departure until landing, every 15 minutes: delay, gate, cancellation",
       "noFlightData": "Needs a flight data service.",
       "toServices": "Go to services"
     },
     "approveUpdates": {
-      "name": "Approve updates first"
+      "name": "Confirm changes first"
     },
     "updateExpiry": {
-      "name": "Drop open updates after",
+      "name": "Open changes expire after",
       "sub": "1 to 168 hours"
     },
     "openUpdates": {
-      "name": "Open updates",
+      "name": "Open changes",
       "count": "{{count}} open"
     },
     "enrichment": {
@@ -1673,7 +1685,7 @@
       "help": "Only creates suggestions in the inbox."
     },
     "enrichmentConfidence": {
-      "name": "Minimum confidence",
+      "name": "Minimum match",
       "sub": "0–100 %"
     },
     "enrichmentPerNight": {
@@ -2040,5 +2052,8 @@
     "diag": {
       "title": "Diagnostics"
     }
+  },
+  "lodgingRatings": {
+    "title": "Rating"
   }
 }

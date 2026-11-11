@@ -6,9 +6,12 @@ export const REISEN_PAGE: RegistryPage = {
   ...{"id":"reisen","area":"konto","de":"Reisen & Vorschläge","en":"Trips & suggestions","level":"standard","audience":"all","demoLocked":false},
   sections: [
       {"id":"reisen-reisen","de":"Reisen","en":"Trips","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"autoreise","mount":"trips","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Reisen beim Import bilden","en":"Group trips on import","terms":{"de":"Gleiche Buchungsnummer, eine Reise","en":"Same booking reference, one trip"}},
-        {"id":"reisefarbe","mount":"trips","kind":"select","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Farbe neuer Reisen","en":"Colour of new trips","terms":{"de":"","en":""}},
-        {"id":"rvor","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Reisen vorschlagen","en":"Suggest trips","terms":{"de":"Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben.","en":"Off: nothing is computed. Your decisions stay."}},
+        {"id":"autoreise","mount":"trips","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Reisen automatisch anlegen","en":"Create trips automatically","terms":{"de":"Gleiche Buchungsnummer, eine Reise","en":"Same booking reference, one trip"}},
+        {"id":"rvor","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Reisen vorschlagen","en":"Suggest trips","terms":{"de":"Aus Flügen und Unterkünften, die zusammengehören Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben.","en":"From flights and stays that belong together Off: nothing is computed. Your decisions stay."}},
+        {"id":"reisefarbe","mount":"trips","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Farbe neuer Reisen","en":"Colour of new trips","terms":{"de":"","en":""}},
+      ]},
+      {"id":"reisen-posteingang","de":"Posteingang","en":"Inbox","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"offenevor","mount":"suggestions","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Offene Vorschläge","en":"Open suggestions","terms":{"de":"","en":""}},
       ]},
       {"id":"reisen-suggestions","de":"Vorschläge im Eingang","en":"Inbox suggestions","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"avor","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Aufenthalte vorschlagen","en":"Suggest stays","terms":{"de":"Aus deinem Standortverlauf","en":"From your location history"}},

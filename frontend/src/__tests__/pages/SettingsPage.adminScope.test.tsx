@@ -134,6 +134,8 @@ vi.unmock("../../store/settingsStore");
 // cases — the gate used to keep them out of the tree, and the network guard in
 // `src/__tests__/setup.ts` failed the suite the moment it stopped.
 // Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/PassportRow", () => ({ default: () => null }));
+vi.mock("../../components/Settings/OpenSuggestionsRow", () => ({ default: () => null }));
 vi.mock("../../components/Settings/HomeSection", () => ({
   default: () => <div data-testid="home-section" />,
 }));

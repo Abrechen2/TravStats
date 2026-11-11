@@ -48,6 +48,7 @@ export type SettingsSectionId =
   | "defaults"
   | "enrichment"
   | "cruisePreferences"
+  | "lodgingRatings"
   | "backup"
   | "import"
   | "externalServices"
@@ -80,7 +81,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("countryCounting"),
   // Where the map, the dashboard and the lists are set is on the map, the
   // dashboard and the lists (rule 1 of the settings redesign).
-  section("mapAppearance"),
+  // The prototype drops these three links; they stay reachable at the expert level until S6.
+  section("mapAppearance", "expert", { settings: 3 }),
   section("trips"),
   section("suggestions"),
   section("sharing"),
@@ -106,9 +108,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("homeAirport"),
   section("autoupdate", "standard", { expertRows: true }),
   section("features"),
-  section("defaults"),
+  // "Neue Flüge starten mit": class, airline, purpose and (coordinator's call) status.
+  section("defaults", "expert", { settings: 4 }),
   section("enrichment", "expert", { settings: 3 }),
-  section("cruisePreferences"),
+  // The whole Kreuzfahrten page is expert in the prototype.
+  section("cruisePreferences", "expert", { settings: 3 }),
+  section("lodgingRatings"),
   section("backup", "standard", { expertRows: true }),
   section("import"),
   section("externalServices", "standard", { expertRows: true, foldsRows: true }),

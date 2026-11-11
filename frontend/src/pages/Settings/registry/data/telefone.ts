@@ -7,6 +7,10 @@ export const TELEFONE_PAGE: RegistryPage = {
   sections: [
       {"id":"telefone-telefone","de":"Telefone","en":"Phones","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"telefone","mount":"devices","kind":"list","level":"standard","scope":"account","audience":"all","beta":"devicePairing","demoLocked":true,"de":"Gekoppelte Telefone","en":"Paired phones","terms":{"de":"Der Kopplungscode verfällt nach wenigen Minuten. Abmelden nimmt dem Telefon sofort den Zugang.","en":"The pairing code expires after a few minutes. Signing out removes the phone's access at once."}},
+        {"id":"pair","mount":"devices","kind":"action","level":"standard","scope":"account","audience":"all","beta":"devicePairing","demoLocked":true,"de":"Telefon koppeln","en":"Pair a phone","terms":{"de":"Zeigt einen QR-Code für die Companion-App","en":"Shows a QR code for the Companion app"}},
+      ]},
+      {"id":"telefone-mitteilungen","de":"Mitteilungen","en":"Notifications","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"pushstate2","mount":"devices","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Mitteilungen","en":"Notifications","terms":{"de":"","en":""}},
       ]},
   ],
 };

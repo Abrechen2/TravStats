@@ -38,6 +38,7 @@ import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
+import LodgingRatingsSection from "../../components/Settings/LodgingRatingsSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
@@ -184,6 +185,8 @@ export default function SettingsSectionSwitch({
       );
     case "cruisePreferences":
       return <CruisePreferencesSection cruise={page.cruise} />;
+    case "lodgingRatings":
+      return <LodgingRatingsSection />;
     case "loyalty":
       return <LoyaltySection />;
     case "mapAppearance":

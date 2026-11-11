@@ -13,8 +13,15 @@ import { logger } from "../../lib/logger";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import Button from "../ui/Button";
 import { SettingRows } from "../ui/SettingRow";
-import { ActionControl, ConfirmDialog, ErrorLine, SettingItem } from "../ui/settings";
-import { useDialogCopy, useRowCopy } from "./rowCopy";
+import {
+  ActionControl,
+  ConfirmDialog,
+  ErrorLine,
+  SettingItem,
+  useGuardedNavigate,
+} from "../ui/settings";
+import { useAuthStore } from "../../store/authStore";
+import { useDependency, useDialogCopy, useRowCopy } from "./rowCopy";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 const NS = "settings:calendarFeed";
@@ -39,6 +46,9 @@ export default function CalendarFeedSection(): JSX.Element {
   const format = useDisplayFormat();
   const isDemo = useIsDemoAccount();
   const row = useRowCopy("trips");
+  const dependency = useDependency();
+  const go = useGuardedNavigate();
+  const isAdmin = useAuthStore((state) => state.user?.isAdmin === true);
   const dialog = useDialogCopy();
   const [asking, setAsking] = useState<"regenerate" | "revoke" | null>(null);
   const [status, setStatus] = useState<CalendarFeedStatus | null>(null);
@@ -160,6 +170,17 @@ export default function CalendarFeedSection(): JSX.Element {
             }
             locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
             error={errorKey ? t(errorKey) : undefined}
+            // Before a link exists the row says what will be missing; once one is
+            // shown, the warning under it names the address it got. Only an admin
+            // can set the address, so only an admin is offered the jump.
+            dependency={
+              !link && !status.reachableFromInternet
+                ? dependency(
+                    "noPublicUrl",
+                    isAdmin ? () => go("/settings/allgemein#addresses") : undefined
+                  )
+                : undefined
+            }
             control={
               <span className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
                 <ActionControl

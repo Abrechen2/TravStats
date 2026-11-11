@@ -77,6 +77,7 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
   const enabled = list?.enabled === true;
   const stateCopy = row("linkserlaubt");
   const listCopy = row("linkliste");
+  const offCopy = row("linksoff");
 
   return (
     <SectionCard>
@@ -91,33 +92,38 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
             }
           />
         )}
-        <SettingItem
-          title={listCopy.title}
-          sub={listCopy.sub}
-          error={loadFailed ? t(`${NS}.loadFailed`) : undefined}
-        >
-          {list && list.links.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
-          {list && list.links.length > 0 && (
-            <ul className="flex flex-col gap-2">
-              {list.links.map((link) => (
-                <li key={link.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
-                    {target(link)}
-                    <span className="t-caption">
-                      {" · "}
-                      {t(`${NS}.endsAt`, { date: format.dateTime(link.effectiveExpiresAt) })}
-                      {" · "}
-                      {t(`${NS}.views`, { count: link.viewCount })}
+        {list && !enabled ? (
+          // The prototype says it once, as a callout, instead of an empty list.
+          <SettingItem title={offCopy.title} />
+        ) : (
+          <SettingItem
+            title={listCopy.title}
+            sub={listCopy.sub}
+            error={loadFailed ? t(`${NS}.loadFailed`) : undefined}
+          >
+            {list && list.links.length === 0 && <p className="t-caption">{t(`${NS}.empty`)}</p>}
+            {list && list.links.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {list.links.map((link) => (
+                  <li key={link.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {target(link)}
+                      <span className="t-caption">
+                        {" · "}
+                        {t(`${NS}.endsAt`, { date: format.dateTime(link.effectiveExpiresAt) })}
+                        {" · "}
+                        {t(`${NS}.views`, { count: link.viewCount })}
+                      </span>
                     </span>
-                  </span>
-                  <Button variant="danger" disabled={busy} onClick={() => void revoke(link)}>
-                    {t(`${NS}.revoke`)}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SettingItem>
+                    <Button variant="danger" disabled={busy} onClick={() => void revoke(link)}>
+                      {t(`${NS}.revoke`)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SettingItem>
+        )}
       </SettingRows>
     </SectionCard>
   );

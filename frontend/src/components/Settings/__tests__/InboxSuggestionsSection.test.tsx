@@ -16,6 +16,7 @@ import { resetWriteQueue } from "../../ui/settings/writeQueue";
  * the server refuses, and the refinements say what they wait for.
  */
 let hasLlm: boolean | "disabled" | null = true;
+vi.mock("../OpenSuggestionsRow", () => ({ default: () => null })); // its own tests
 vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => hasLlm }));
 
 /** Rendered inside act, so the readiness reads settle before the first assertion. */

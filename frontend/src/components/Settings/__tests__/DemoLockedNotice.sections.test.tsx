@@ -25,6 +25,10 @@ const notificationsApiMock = vi.hoisted(() => ({
   updatePreferences: vi.fn(),
 }));
 
+vi.mock("../PassportRow", () => ({ default: () => null })); // its own tests
+vi.mock("../../../hooks/useEnabledDomains", () => ({
+  useEnabledDomains: () => ({ enabled: ["flight"], isEnabled: () => true }),
+}));
 vi.mock("../../../lib/api/tokens", () => ({ apiTokensApi: tokensApi }));
 vi.mock("../../../lib/api", () => ({
   passkeyApi: passkeyApiMock,
@@ -38,6 +42,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({
 }));
 
 import { useSettingsStore } from "../../../store/settingsStore";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import ApiTokensSection from "../ApiTokensSection";
 import PasskeySection from "../PasskeySection";
@@ -139,28 +144,30 @@ describe("NotificationsSection on the demo account", () => {
     notificationsApiMock.updatePreferences.mockReset();
   });
 
-  it("shows the address field locked, with the reason, instead of offering a write that always fails", async () => {
+  it("shows the reminder controls locked, with the reason, instead of offering a write that always fails", async () => {
     render(
       <MemoryRouter>
         <NotificationsSection />
       </MemoryRouter>
     );
-    const field = await screen.findByLabelText("settingsRows:notifications.erimail.t");
-    expect(field).toBeDisabled();
-    expect(field).toHaveAttribute("aria-disabled", "true");
+    const leads = await screen.findAllByRole("combobox");
+    for (const lead of leads) {
+      expect(lead).toBeDisabled();
+      expect(lead).toHaveAttribute("aria-disabled", "true");
+    }
     expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThan(0);
     // Read-only is fine for the shared account; a write never leaves the page.
     expect(notificationsApiMock.updatePreferences).not.toHaveBeenCalled();
   });
 
-  it("offers the field for a normal account — the case above is not vacuous", async () => {
+  it("offers them for a normal account — the case above is not vacuous", async () => {
     isDemoMock.current = false;
     render(
       <MemoryRouter>
         <NotificationsSection />
       </MemoryRouter>
     );
-    expect(await screen.findByLabelText("settingsRows:notifications.erimail.t")).toBeEnabled();
+    for (const lead of await screen.findAllByRole("combobox")) expect(lead).toBeEnabled();
     expect(screen.queryByText("settings:blocks.lock.demo")).not.toBeInTheDocument();
   });
 });
@@ -171,6 +178,9 @@ describe("NotificationsSection on the demo account", () => {
  * drives an achievement, and both survived the nightly reseed.
  */
 describe("ProfileSection on the demo account", () => {
+  beforeEach(() => {
+    useSettingsLevelStore.setState({ level: "expert" });
+  });
   const profile = {
     username: "demo",
     email: "",

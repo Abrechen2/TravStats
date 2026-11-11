@@ -22,6 +22,8 @@ import {
   useSettingsStore,
 } from "../../store/settingsStore";
 import { useRemoteSettingsStatus } from "../../store/remoteSettingsStatus";
+import PassportRow from "./PassportRow";
+import { useExpertRows } from "./frame/useExpertRows";
 
 interface ProfileSectionProps {
   profile: {
@@ -133,6 +135,7 @@ export default function ProfileSection({
       }
     },
   });
+  const showBirthdate = useExpertRows(1);
   const emailBad = group.draft.email.trim() !== "" && !EMAIL_SHAPE.test(group.draft.email.trim());
 
   return (
@@ -220,11 +223,6 @@ export default function ProfileSection({
 
       <SettingRows>
         <SettingItem
-          title={t("settings:profile.username")}
-          sub={t("settings:profile.usernameSub")}
-          control={<StatusValue>@{profile.username}</StatusValue>}
-        />
-        <SettingItem
           title={t("settings:profile.firstName")}
           locked={locked}
           changed={group.isChanged("firstName")}
@@ -247,6 +245,23 @@ export default function ProfileSection({
           }
         />
         <SettingItem
+          title={t("settings:profile.display.name")}
+          sub={t("settings:profile.display.sub")}
+          control={
+            <StatusValue>
+              {[group.draft.firstName, group.draft.lastName]
+                .map((part) => part.trim())
+                .filter(Boolean)
+                .join(" ") || profile.username}
+            </StatusValue>
+          }
+        />
+        <SettingItem
+          title={t("settings:profile.username")}
+          sub={t("settings:profile.usernameSub")}
+          control={<StatusValue>@{profile.username}</StatusValue>}
+        />
+        <SettingItem
           title={t("settings:profile.email")}
           sub={t("settings:profile.emailSub")}
           help={t("settings:profile.emailHelp")}
@@ -262,19 +277,22 @@ export default function ProfileSection({
             />
           }
         />
-        <SettingItem
-          title={t("settings:profile.birthdate")}
-          sub={t("settings:profile.birthdateSub")}
-          help={t("settings:profile.birthdateHelp")}
-          locked={locked}
-          changed={group.isChanged("birthdate")}
-          control={
-            <DateField
-              value={group.draft.birthdate}
-              onChange={(birthdate) => group.edit({ birthdate })}
-            />
-          }
-        />
+        <PassportRow />
+        {showBirthdate && (
+          <SettingItem
+            title={t("settings:profile.birthdate")}
+            sub={t("settings:profile.birthdateSub")}
+            help={t("settings:profile.birthdateHelp")}
+            locked={locked}
+            changed={group.isChanged("birthdate")}
+            control={
+              <DateField
+                value={group.draft.birthdate}
+                onChange={(birthdate) => group.edit({ birthdate })}
+              />
+            }
+          />
+        )}
       </SettingRows>
       {!isDemo && (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>

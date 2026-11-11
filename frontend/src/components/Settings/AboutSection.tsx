@@ -8,6 +8,8 @@ import Toggletip from "../ui/Toggletip";
 import { Abrechen2Credit } from "../Brand/Abrechen2Credit";
 
 const REPO_URL = "https://github.com/Abrechen2/TravStats";
+const CHANGELOG_URL = `${REPO_URL}/blob/main/CHANGELOG.md`;
+const DOCS_URL = "https://travstats.de/docs/";
 const DONATE_URL = "https://www.paypal.com/donate?hosted_button_id=GLXYTD3FV9Y78";
 
 export default function AboutSection(): JSX.Element {
@@ -79,6 +81,27 @@ export default function AboutSection(): JSX.Element {
           control={
             <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary">
               {t("settings:about.sourceCode")}
+            </a>
+          }
+        />
+        <SettingRow
+          title={t("settings:about.changelog.name")}
+          control={
+            <a
+              href={CHANGELOG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+            >
+              {t("settings:about.open")}
+            </a>
+          }
+        />
+        <SettingRow
+          title={t("settings:about.docs.name")}
+          control={
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+              {t("settings:about.open")}
             </a>
           }
         />

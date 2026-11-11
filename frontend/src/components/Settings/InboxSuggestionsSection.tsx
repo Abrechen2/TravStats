@@ -6,6 +6,7 @@ import { SettingItem, SwitchControl, useGuardedNavigate, useSettingWrite } from 
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { saveSwitch } from "../../store/confirmedSettings";
 import { useDependency, useRowCopy } from "./rowCopy";
+import OpenSuggestionsRow from "./OpenSuggestionsRow";
 import { useServiceReadiness } from "./useServiceReadiness";
 
 type Field = "trips" | "stays" | "stayImmichEvidence" | "stayLlmPlaceClassification";
@@ -65,6 +66,7 @@ export default function InboxSuggestionsSection(): JSX.Element {
       <SectionTitle title={t("settingsRows:trips.sections.suggestions")} />
       <SettingRows>
         {item("rvor", trips)}
+        <OpenSuggestionsRow />
         {item(
           "avor",
           stays,

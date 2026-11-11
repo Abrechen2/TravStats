@@ -64,7 +64,14 @@
     "supportSub": "Ein Stern auf GitHub oder eine Spende hilft beim Weiterbauen.",
     "star": "Projekt auf GitHub",
     "donate": "Spenden via PayPal",
-    "madeBy": "Ein Projekt von"
+    "madeBy": "Ein Projekt von",
+    "changelog": {
+      "name": "Changelog"
+    },
+    "docs": {
+      "name": "Dokumentation"
+    },
+    "open": "Öffnen"
   },
   "profile": {
     "title": "Profil",
@@ -93,7 +100,11 @@
     "emailHelp": "Erinnerungen haben eine eigene Adresse unter Erinnerungen.",
     "emailBad": "Das sieht nicht wie eine E-Mail-Adresse aus. Ich speichere erst, wenn sie stimmt.",
     "birthdateSub": "Optional",
-    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei."
+    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei.",
+    "display": {
+      "name": "Anzeigename",
+      "sub": "Wie dich Freunde sehen"
+    }
   },
   "homeAirport": {
     "title": "Heimatflughäfen",
@@ -146,9 +157,9 @@
       "overlap": "Der Umzug liegt vor einem Zeitraum, den es schon gibt. Ich habe die Liste neu geladen, bitte prüf das Datum."
     },
     "residenceRow": {
-      "name": "Wohnort",
+      "name": "Heimatort",
       "sub": "Von hier misst TravStats Entfernungen",
-      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Wohnort ist auch dein Heimatort in der Companion-App."
+      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Heimatort ist auch dein Zuhause in der Companion-App."
     },
     "airportsRow": {
       "name": "Heimatflughäfen",
@@ -1315,7 +1326,8 @@
       "buchungen": "Buchungen lesen",
       "sicherungen": "Sicherungen",
       "wartung": "Wartung",
-      "stamm": "Stammdaten"
+      "stamm": "Stammdaten",
+      "unterkuenfte": "Unterkünfte"
     },
     "menu": {
       "konto": "Mein Konto",
@@ -1441,7 +1453,7 @@
         "jump": "Adresse setzen"
       },
       "no2fa": {
-        "reason": "Erst mit zweitem Faktor."
+        "reason": "Erst mit Zwei-Faktor-Anmeldung."
       },
       "noSmtp": {
         "reason": "Der Server verschickt keine Mails.",
@@ -1462,7 +1474,7 @@
         "reason": "Wirkt erst mit WebDAV-Kopie."
       },
       "noMailAddr": {
-        "reason": "Mail geht erst mit einer Adresse oben."
+        "reason": "Mail geht erst mit einer Adresse."
       },
       "envPinned": {
         "reason": "Vom Server-Start festgelegt ({{name}}). Wirksam: {{value}}."
@@ -1556,8 +1568,8 @@
       "sub": "Für Ortszeiten und Tageswerte"
     },
     "dateFormat": {
-      "name": "Datum",
-      "sub": "Tabellen zeigen immer 2026-12-31"
+      "name": "Datumsformat",
+      "sub": "Tabellen zeigen immer 2026-11-08"
     },
     "timeFormat": {
       "name": "Uhrzeit"
@@ -1571,8 +1583,8 @@
       "help": "Rechnet nichts um."
     },
     "currency": {
-      "name": "Hauptwährung",
-      "sub": "Alle Summen in dieser Währung",
+      "name": "Basiswährung für Summen",
+      "sub": "Alle Kosten werden für Summen in diese Währung umgerechnet",
       "help": "Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."
     },
     "domainJump": "Einstellungen",
@@ -1600,7 +1612,7 @@
       "sub": "Nur für Statistiken"
     },
     "costTracking": {
-      "name": "Steuern und Gebühren",
+      "name": "Steuern und Gebühren erfassen",
       "sub": "Auch Geschäftsreise-Summen",
       "help": "Preis und Währung gibt es immer."
     },
@@ -1627,8 +1639,8 @@
       "name": "Passwort"
     },
     "twoFactor": {
-      "name": "Zweiter Faktor",
-      "sub": "Code aus einer Authenticator-App",
+      "name": "Zwei-Faktor-Anmeldung",
+      "sub": "Code aus einer Authenticator-App zusätzlich zum Passwort",
       "help": "API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."
     },
     "backupCodes": {
@@ -1651,29 +1663,29 @@
       "help": "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
     },
     "liveUpdates": {
-      "name": "Live-Updates abrufen",
-      "sub": "Während ein Flug unterwegs ist",
+      "name": "Live-Updates",
+      "sub": "Ab 24 h vor Abflug bis zur Landung alle 15 Minuten: Verspätung, Gate, Annullierung",
       "noFlightData": "Braucht einen Flugdaten-Dienst.",
       "toServices": "Zu Dienste"
     },
     "approveUpdates": {
-      "name": "Updates erst nach Freigabe"
+      "name": "Änderungen erst bestätigen"
     },
     "updateExpiry": {
-      "name": "Offene Updates verwerfen nach",
+      "name": "Offene Änderungen verfallen nach",
       "sub": "1 bis 168 Stunden"
     },
     "openUpdates": {
-      "name": "Offene Updates",
+      "name": "Offene Änderungen",
       "count": "{{count}} offen"
     },
     "enrichment": {
       "name": "Ältere Flüge ergänzen",
       "sub": "Aus Live-Flügen mit derselben Nummer",
-      "help": "Es entstehen nur Vorschläge im Eingang."
+      "help": "Es entstehen nur Vorschläge im Posteingang."
     },
     "enrichmentConfidence": {
-      "name": "Mindestens sicher",
+      "name": "Mindestübereinstimmung",
       "sub": "0–100 %"
     },
     "enrichmentPerNight": {
@@ -2040,5 +2052,8 @@
     "diag": {
       "title": "Diagnose"
     }
+  },
+  "lodgingRatings": {
+    "title": "Bewertung"
   }
 }

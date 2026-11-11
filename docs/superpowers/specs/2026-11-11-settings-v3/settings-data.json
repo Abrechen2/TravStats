@@ -68,6 +68,25 @@
        "d": 1
       },
       {
+       "id": "anzeige",
+       "t": "status",
+       "v": "Mara Ostend",
+       "d": 0,
+       "inv": "S3 Display name (derived: first + last name)",
+       "de": [
+        "Anzeigename",
+        "Wie dich Freunde sehen",
+        ""
+       ],
+       "en": [
+        "Display name",
+        "How friends see you",
+        ""
+       ],
+       "m": "profile",
+       "x": 0
+      },
+      {
        "id": "benutzer",
        "t": "status",
        "v": "mara",
@@ -94,12 +113,31 @@
        "de": [
         "E-Mail",
         "Für ein neues Passwort",
-        "Erinnerungen haben eine eigene Adresse unter Erinnerungen."
+        ""
        ],
        "en": [
         "E-mail",
         "For a new password",
-        "Reminders use their own address under Reminders."
+        ""
+       ],
+       "m": "profile",
+       "x": 0,
+       "d": 1
+      },
+      {
+       "id": "pass",
+       "t": "input",
+       "v": "",
+       "inv": "A10 Passport valid until",
+       "de": [
+        "Reisepass gültig bis",
+        "Die Companion-App warnt 6 Monate vorher",
+        ""
+       ],
+       "en": [
+        "Passport valid until",
+        "The Companion app warns 6 months ahead",
+        ""
        ],
        "m": "profile",
        "x": 0,
@@ -121,7 +159,7 @@
         "Unlocks the “Birthday flight” achievement."
        ],
        "m": "profile",
-       "x": 0,
+       "x": 1,
        "d": 1
       }
      ]
@@ -163,13 +201,13 @@
        "v": false,
        "inv": "A1 Two-factor authentication (TOTP)",
        "de": [
-        "Zweiter Faktor",
-        "Code aus einer Authenticator-App",
+        "Zwei-Faktor-Anmeldung",
+        "Code aus einer Authenticator-App zusätzlich zum Passwort",
         "API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."
        ],
        "en": [
-        "Two-step sign-in",
-        "Code from an authenticator app",
+        "Two-factor sign-in",
+        "A code from an authenticator app on top of your password",
         "API keys bypass the second step. A passkey replaces both password and second step."
        ],
        "m": "security",
@@ -370,13 +408,13 @@
        "v": "31.12.2026",
        "inv": "A3 Date format",
        "de": [
-        "Datum",
-        "Tabellen zeigen immer 2026-12-31",
+        "Datumsformat",
+        "Tabellen zeigen immer 2026-11-08",
         ""
        ],
        "en": [
-        "Date",
-        "Tables always show 2026-12-31",
+        "Date format",
+        "Tables always show 2026-11-08",
         ""
        ],
        "m": "language",
@@ -475,17 +513,17 @@
        "v": "EUR · Euro",
        "inv": "A3 Base currency",
        "de": [
-        "Hauptwährung",
-        "Alle Summen in dieser Währung",
+        "Basiswährung für Summen",
+        "Alle Kosten werden für Summen in diese Währung umgerechnet",
         "Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."
        ],
        "en": [
-        "Main currency",
-        "All totals in this currency",
-        "Amounts already converted keep their value. ECB rates back to 1999."
+        "Base currency for totals",
+        "All costs are converted into this currency for totals",
+        "Amounts already converted keep their value. ECB rates since 1999."
        ],
        "m": "units",
-       "x": 0
+       "x": 1
       }
      ]
     },
@@ -551,7 +589,8 @@
        "m": "views",
        "x": 0
       }
-     ]
+     ],
+     "x": 1
     }
    ]
   },
@@ -562,62 +601,227 @@
    "en": "Travel types",
    "s": [
     {
+     "id": "reisearten-deine-reisearten",
+     "de": "Deine Reisearten",
+     "en": "Your travel types",
+     "rows": [
+      {
+       "id": "d_flight",
+       "t": "domain",
+       "v": true,
+       "lnk": "flight",
+       "inv": "A4 Domain on/off + Domain colour (flight)",
+       "de": [
+        "Flüge",
+        "",
+        ""
+       ],
+       "en": [
+        "Flights",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_cruise",
+       "t": "domain",
+       "v": false,
+       "lnk": "cruise",
+       "inv": "A4 Domain on/off + Domain colour (cruise)",
+       "de": [
+        "Kreuzfahrten",
+        "",
+        ""
+       ],
+       "en": [
+        "Cruises",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_lodging",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (lodging)",
+       "de": [
+        "Unterkünfte",
+        "",
+        ""
+       ],
+       "en": [
+        "Stays",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_rail",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (rail)",
+       "de": [
+        "Bahn",
+        "",
+        ""
+       ],
+       "en": [
+        "Rail",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_bus",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (bus)",
+       "de": [
+        "Bus",
+        "",
+        ""
+       ],
+       "en": [
+        "Bus",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_ferry",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (ferry)",
+       "de": [
+        "Fähre",
+        "",
+        ""
+       ],
+       "en": [
+        "Ferry",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_rental",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (rental)",
+       "de": [
+        "Mietwagen",
+        "",
+        ""
+       ],
+       "en": [
+        "Rental cars",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_poi",
+       "t": "domain",
+       "v": false,
+       "inv": "A4 Domain on/off + Domain colour (poi)",
+       "de": [
+        "Orte",
+        "",
+        ""
+       ],
+       "en": [
+        "Places",
+        "",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_tour",
+       "t": "domain",
+       "v": false,
+       "beta": "roadtrips",
+       "inv": "A4 Domain on/off + Domain colour (roadtrip/tour)",
+       "de": [
+        "Touren",
+        "Wandern, Rad, Roadtrip",
+        ""
+       ],
+       "en": [
+        "Tours",
+        "Hiking, cycling, road trips",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "d_roadtrip",
+       "t": "domain",
+       "v": false,
+       "beta": "roadtrips",
+       "d": 1,
+       "inv": "S3 Domain on/off (roadtrip)",
+       "de": [
+        "Roadtrips",
+        "Stationen, die bei deinen Unterkünften schlafen",
+        ""
+       ],
+       "en": [
+        "Road trips",
+        "Stops that sleep at your stays",
+        ""
+       ],
+       "m": "domains",
+       "x": 0
+      },
+      {
+       "id": "farbenreset",
+       "t": "action",
+       "btn": [
+        "Zurücksetzen",
+        "Reset"
+       ],
+       "inv": "A4 Action: reset colours",
+       "de": [
+        "Farben zurücksetzen",
+        "Die Karte hat eigene Farben und bleibt, wie sie ist.",
+        ""
+       ],
+       "en": [
+        "Reset colours",
+        "The map has its own colours and stays as it is.",
+        ""
+       ],
+       "res": [
+        "Farben zurückgesetzt",
+        "Colours reset"
+       ],
+       "m": "domains",
+       "x": 1
+      }
+     ]
+    },
+    {
      "id": "reisearten-lander-zuhause",
      "de": "Länder & Zuhause",
      "en": "Countries & home",
      "rows": [
-      {
-       "id": "wohnort",
-       "t": "list",
-       "items": [
-        [
-         "Leipzig",
-         "seit 03/2021"
-        ],
-        [
-         "Halle",
-         "2016–2021"
-        ]
-       ],
-       "btn": [
-        "Umgezogen",
-        "I moved"
-       ],
-       "inv": "A10 Home (residence, periods) + A10 Home place",
-       "de": [
-        "Wohnort",
-        "Von hier misst TravStats Entfernungen",
-        "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Wohnort ist auch dein Heimatort in der Companion-App."
-       ],
-       "en": [
-        "Home town",
-        "Distances are measured from here",
-        "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home is also your home in the Companion app."
-       ],
-       "m": "home",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "heimatland",
-       "t": "select",
-       "v": "Deutschland",
-       "ve": "Germany",
-       "inv": "A10 Home country",
-       "de": [
-        "Heimatland",
-        "Buchungsvorlagen von hier zuerst",
-        "Filtert nichts, ändert nur die Reihenfolge."
-       ],
-       "en": [
-        "Home country",
-        "Booking templates from here first",
-        "Filters nothing, only changes the order."
-       ],
-       "m": "home",
-       "x": 0,
-       "d": 1
-      },
       {
        "id": "laender",
        "t": "select",
@@ -652,6 +856,38 @@
        "x": 0
       },
       {
+       "id": "wohnort",
+       "t": "list",
+       "items": [
+        [
+         "Leipzig",
+         "seit 03/2021"
+        ],
+        [
+         "Halle",
+         "2016–2021"
+        ]
+       ],
+       "btn": [
+        "Umgezogen",
+        "I moved"
+       ],
+       "inv": "A10 Home (residence, periods) + A10 Home place",
+       "de": [
+        "Heimatort",
+        "Von hier misst TravStats Entfernungen",
+        "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Heimatort ist auch dein Zuhause in der Companion-App."
+       ],
+       "en": [
+        "Home town",
+        "Distances are measured from here",
+        "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home town is also your home in the Companion app."
+       ],
+       "m": "home",
+       "x": 0,
+       "d": 1
+      },
+      {
        "id": "airports",
        "t": "list",
        "items": [
@@ -682,238 +918,26 @@
        "m": "homeAirport",
        "x": 0,
        "dom": "flight"
-      }
-     ]
-    },
-    {
-     "id": "reisearten-home",
-     "de": "Zuhause",
-     "en": "Home",
-     "rows": [
+      },
       {
-       "id": "pass",
-       "t": "input",
-       "v": "",
-       "inv": "A10 Passport valid until",
+       "id": "heimatland",
+       "t": "select",
+       "v": "Deutschland",
+       "ve": "Germany",
+       "inv": "A10 Home country",
        "de": [
-        "Reisepass gültig bis",
-        "Die Companion-App warnt 6 Monate vorher",
+        "Heimatland",
+        "Buchungsvorlagen von hier zuerst",
         ""
        ],
        "en": [
-        "Passport valid until",
-        "The Companion app warns 6 months ahead",
+        "Home country",
+        "Booking templates from here first",
         ""
        ],
        "m": "home",
-       "x": 0,
+       "x": 1,
        "d": 1
-      }
-     ]
-    },
-    {
-     "id": "reisearten-deine-reisearten",
-     "de": "Deine Reisearten",
-     "en": "Your travel types",
-     "rows": [
-      {
-       "id": "d_flight",
-       "t": "domain",
-       "dom": "flight",
-       "v": true,
-       "lnk": "flight",
-       "inv": "A4 Domain on/off + Domain colour (flight)",
-       "de": [
-        "Flüge",
-        "",
-        ""
-       ],
-       "en": [
-        "Flights",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_cruise",
-       "t": "domain",
-       "dom": "cruise",
-       "v": false,
-       "lnk": "cruise",
-       "inv": "A4 Domain on/off + Domain colour (cruise)",
-       "de": [
-        "Kreuzfahrten",
-        "",
-        ""
-       ],
-       "en": [
-        "Cruises",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_lodging",
-       "t": "domain",
-       "dom": "hotel",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (lodging)",
-       "de": [
-        "Unterkünfte",
-        "",
-        ""
-       ],
-       "en": [
-        "Stays",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_poi",
-       "t": "domain",
-       "dom": "poi",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (poi)",
-       "de": [
-        "Orte",
-        "",
-        ""
-       ],
-       "en": [
-        "Places",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_rail",
-       "t": "domain",
-       "dom": "rail",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (rail)",
-       "de": [
-        "Bahn",
-        "",
-        ""
-       ],
-       "en": [
-        "Rail",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_bus",
-       "t": "domain",
-       "dom": "bus",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (bus)",
-       "de": [
-        "Bus",
-        "",
-        ""
-       ],
-       "en": [
-        "Bus",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_ferry",
-       "t": "domain",
-       "dom": "ferry",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (ferry)",
-       "de": [
-        "Fähre",
-        "",
-        ""
-       ],
-       "en": [
-        "Ferry",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_rental",
-       "t": "domain",
-       "dom": "rental",
-       "v": false,
-       "inv": "A4 Domain on/off + Domain colour (rental)",
-       "de": [
-        "Mietwagen",
-        "",
-        ""
-       ],
-       "en": [
-        "Rental cars",
-        "",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "d_tour",
-       "t": "domain",
-       "dom": "tour",
-       "v": false,
-       "beta": "roadtrips",
-       "inv": "A4 Domain on/off + Domain colour (roadtrip/tour)",
-       "de": [
-        "Touren",
-        "Wandern, Rad, Roadtrip",
-        ""
-       ],
-       "en": [
-        "Tours",
-        "Hiking, cycling, road trips",
-        ""
-       ],
-       "m": "domains",
-       "x": 0
-      },
-      {
-       "id": "farbenreset",
-       "t": "action",
-       "btn": [
-        "Zurücksetzen",
-        "Reset"
-       ],
-       "inv": "A4 Action: reset colours",
-       "de": [
-        "Farben zurücksetzen",
-        "",
-        "Die Karte hat eigene Farben und bleibt, wie sie ist."
-       ],
-       "en": [
-        "Reset colours",
-        "",
-        "The map has its own colours and stays as it is."
-       ],
-       "res": [
-        "Farben zurückgesetzt",
-        "Colours reset"
-       ],
-       "m": "domains",
-       "x": 0
       }
      ]
     }
@@ -936,16 +960,34 @@
        "v": true,
        "inv": "A5 Create trips automatically on import",
        "de": [
-        "Reisen beim Import bilden",
+        "Reisen automatisch anlegen",
         "Gleiche Buchungsnummer, eine Reise",
         ""
        ],
        "en": [
-        "Group trips on import",
+        "Create trips automatically",
         "Same booking reference, one trip",
         ""
        ],
        "m": "trips",
+       "x": 0
+      },
+      {
+       "id": "rvor",
+       "t": "toggle",
+       "v": true,
+       "inv": "A5 Trip suggestions",
+       "de": [
+        "Reisen vorschlagen",
+        "Aus Flügen und Unterkünften, die zusammengehören",
+        "Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben."
+       ],
+       "en": [
+        "Suggest trips",
+        "From flights and stays that belong together",
+        "Off: nothing is computed. Your decisions stay."
+       ],
+       "m": "suggestions",
        "x": 0
       },
       {
@@ -965,22 +1007,31 @@
         ""
        ],
        "m": "trips",
-       "x": 0
-      },
+       "x": 1
+      }
+     ]
+    },
+    {
+     "id": "reisen-posteingang",
+     "de": "Posteingang",
+     "en": "Inbox",
+     "rows": [
       {
-       "id": "rvor",
-       "t": "toggle",
-       "v": true,
-       "inv": "A5 Trip suggestions",
+       "id": "offenevor",
+       "t": "status",
+       "v": "4 im Posteingang",
+       "ve": "4 in the inbox",
+       "d": 0,
+       "inv": "S3 Open suggestions (count)",
        "de": [
-        "Reisen vorschlagen",
+        "Offene Vorschläge",
         "",
-        "Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben."
+        ""
        ],
        "en": [
-        "Suggest trips",
+        "Open suggestions",
         "",
-        "Off: nothing is computed. Your decisions stay."
+        ""
        ],
        "m": "suggestions",
        "x": 0
@@ -1093,121 +1144,91 @@
    "en": "Flights",
    "s": [
     {
-     "id": "fluege-defaults",
-     "de": "Neue Flüge starten mit",
-     "en": "New flights start with",
+     "id": "fluege-live-updates",
+     "de": "Live-Updates",
+     "en": "Live updates",
      "rows": [
       {
-       "id": "fstatus",
-       "t": "choice",
-       "o": [
-        "geplant",
-        "geflogen"
-       ],
-       "oe": [
-        "planned",
-        "flown"
-       ],
-       "v": "geplant",
-       "inv": "A10 Flight defaults — status",
+       "id": "autoupd",
+       "t": "toggle",
+       "v": false,
+       "dep": "noFlightData",
+       "inv": "A10 Automatic updates",
        "de": [
-        "Status",
-        "",
+        "Live-Updates",
+        "Ab 24 h vor Abflug bis zur Landung alle 15 Minuten: Verspätung, Gate, Annullierung",
         ""
        ],
        "en": [
-        "Status",
-        "",
+        "Live updates",
+        "From 24 h before departure until landing, every 15 minutes: delay, gate, cancellation",
         ""
        ],
-       "m": "defaults",
+       "m": "autoupdate",
        "x": 0,
-       "dom": "flight"
-      }
-     ]
-    },
-    {
-     "id": "fluege-neue-fluge-starten-mit",
-     "de": "Neue Flüge starten mit",
-     "en": "New flights start with",
-     "rows": [
-      {
-       "id": "fklasse",
-       "t": "select",
-       "v": "keine",
-       "ve": "none",
-       "o": [
-        "keine",
-        "Economy",
-        "Premium Economy",
-        "Business",
-        "First"
-       ],
-       "inv": "A10 Flight defaults — seat class",
-       "de": [
-        "Klasse",
-        "",
-        ""
-       ],
-       "en": [
-        "Class",
-        "",
-        ""
-       ],
-       "m": "defaults",
-       "x": 0,
-       "dom": "flight"
+       "dom": "flight",
+       "d": 1
       },
       {
-       "id": "fairline",
+       "id": "freigabe",
+       "t": "toggle",
+       "v": true,
+       "inv": "A10 Require approval for updates",
+       "de": [
+        "Änderungen erst bestätigen",
+        "",
+        ""
+       ],
+       "en": [
+        "Confirm changes first",
+        "",
+        ""
+       ],
+       "m": "autoupdate",
+       "x": 0,
+       "dom": "flight",
+       "d": 1
+      },
+      {
+       "id": "offen",
+       "t": "link",
+       "v": "2 offen",
+       "ve": "2 open",
+       "inv": "A10 Action: View pending updates",
+       "de": [
+        "Offene Änderungen",
+        "",
+        ""
+       ],
+       "en": [
+        "Open changes",
+        "",
+        ""
+       ],
+       "m": "autoupdate",
+       "x": 0,
+       "dom": "flight",
+       "d": 1
+      },
+      {
+       "id": "verfall",
        "t": "input",
-       "v": "",
-       "inv": "A10 Flight defaults — favourite airline",
+       "x": 1,
+       "v": "24 h",
+       "inv": "A10 Update expiry",
        "de": [
-        "Airline",
-        "",
+        "Offene Änderungen verfallen nach",
+        "1 bis 168 Stunden",
         ""
        ],
        "en": [
-        "Airline",
-        "",
+        "Open changes expire after",
+        "1 to 168 hours",
         ""
        ],
-       "m": "defaults",
-       "x": 0,
-       "dom": "flight"
-      },
-      {
-       "id": "fanlass",
-       "t": "select",
-       "v": "keiner",
-       "ve": "none",
-       "o": [
-        "keiner",
-        "Geschäftlich",
-        "Privat",
-        "Urlaub"
-       ],
-       "oe": [
-        "none",
-        "Business",
-        "Private",
-        "Holiday"
-       ],
-       "inv": "A10 Flight defaults — category",
-       "de": [
-        "Anlass",
-        "Nur für Statistiken",
-        ""
-       ],
-       "en": [
-        "Purpose",
-        "Statistics only",
-        ""
-       ],
-       "m": "defaults",
-       "x": 0,
-       "dom": "flight"
+       "m": "autoupdate",
+       "dom": "flight",
+       "d": 1
       }
      ]
     },
@@ -1222,33 +1243,14 @@
        "v": false,
        "inv": "A10 Cost tracking",
        "de": [
-        "Steuern und Gebühren",
+        "Steuern und Gebühren erfassen",
         "Auch Geschäftsreise-Summen",
         "Preis und Währung gibt es immer."
        ],
        "en": [
-        "Taxes and fees",
+        "Record taxes and fees",
         "Also business-travel totals",
         "Price and currency are always there."
-       ],
-       "m": "features",
-       "x": 0,
-       "dom": "flight"
-      },
-      {
-       "id": "kennz",
-       "t": "toggle",
-       "v": true,
-       "inv": "A10 Track tail numbers",
-       "de": [
-        "Kennzeichen der Maschine",
-        "",
-        "Aus: nur Flugzeugtypen, keine einzelnen Maschinen."
-       ],
-       "en": [
-        "Aircraft registration",
-        "",
-        "Off: aircraft types only, no individual aircraft."
        ],
        "m": "features",
        "x": 0,
@@ -1272,95 +1274,25 @@
        "m": "features",
        "x": 0,
        "dom": "flight"
-      }
-     ]
-    },
-    {
-     "id": "fluege-live-updates",
-     "de": "Live-Updates",
-     "en": "Live updates",
-     "rows": [
-      {
-       "id": "autoupd",
-       "t": "toggle",
-       "v": false,
-       "dep": "noFlightData",
-       "inv": "A10 Automatic updates",
-       "de": [
-        "Live-Updates abrufen",
-        "Während ein Flug unterwegs ist",
-        ""
-       ],
-       "en": [
-        "Fetch live updates",
-        "While a flight is under way",
-        ""
-       ],
-       "m": "autoupdate",
-       "x": 0,
-       "dom": "flight",
-       "d": 1
       },
       {
-       "id": "freigabe",
+       "id": "kennz",
        "t": "toggle",
        "v": true,
-       "inv": "A10 Require approval for updates",
+       "inv": "A10 Track tail numbers",
        "de": [
-        "Updates erst nach Freigabe",
+        "Kennzeichen der Maschine",
         "",
-        ""
+        "Aus: nur Flugzeugtypen, keine einzelnen Maschinen."
        ],
        "en": [
-        "Approve updates first",
+        "Aircraft registration",
         "",
-        ""
+        "Off: aircraft types only, no individual aircraft."
        ],
-       "m": "autoupdate",
-       "x": 0,
-       "dom": "flight",
-       "d": 1
-      },
-      {
-       "id": "verfall",
-       "t": "input",
+       "m": "features",
        "x": 1,
-       "v": "24 h",
-       "inv": "A10 Update expiry",
-       "de": [
-        "Offene Updates verwerfen nach",
-        "1 bis 168 Stunden",
-        ""
-       ],
-       "en": [
-        "Drop open updates after",
-        "1 to 168 hours",
-        ""
-       ],
-       "m": "autoupdate",
-       "dom": "flight",
-       "d": 1
-      },
-      {
-       "id": "offen",
-       "t": "link",
-       "v": "2 offen",
-       "ve": "2 open",
-       "inv": "A10 Action: View pending updates",
-       "de": [
-        "Offene Updates",
-        "",
-        ""
-       ],
-       "en": [
-        "Open updates",
-        "",
-        ""
-       ],
-       "m": "autoupdate",
-       "x": 0,
-       "dom": "flight",
-       "d": 1
+       "dom": "flight"
       }
      ]
     },
@@ -1378,7 +1310,7 @@
        "de": [
         "Ältere Flüge ergänzen",
         "Aus Live-Flügen mit derselben Nummer",
-        "Es entstehen nur Vorschläge im Eingang."
+        "Es entstehen nur Vorschläge im Posteingang."
        ],
        "en": [
         "Fill in older flights",
@@ -1396,12 +1328,12 @@
        "v": "60 %",
        "inv": "A10 Enrichment min. confidence",
        "de": [
-        "Mindestens sicher",
+        "Mindestübereinstimmung",
         "0–100 %",
         ""
        ],
        "en": [
-        "Minimum confidence",
+        "Minimum match",
         "0–100 %",
         ""
        ],
@@ -1454,6 +1386,118 @@
       }
      ],
      "x": 1
+    },
+    {
+     "id": "fluege-neue-fluge-starten-mit",
+     "de": "Neue Flüge starten mit",
+     "en": "New flights start with",
+     "rows": [
+      {
+       "id": "fklasse",
+       "t": "select",
+       "v": "keine",
+       "ve": "none",
+       "o": [
+        "keine",
+        "Economy",
+        "Premium Economy",
+        "Business",
+        "First"
+       ],
+       "inv": "A10 Flight defaults — seat class",
+       "de": [
+        "Klasse",
+        "",
+        ""
+       ],
+       "en": [
+        "Class",
+        "",
+        ""
+       ],
+       "m": "defaults",
+       "x": 1,
+       "dom": "flight"
+      },
+      {
+       "id": "fairline",
+       "t": "input",
+       "v": "",
+       "inv": "A10 Flight defaults — favourite airline",
+       "de": [
+        "Airline",
+        "",
+        ""
+       ],
+       "en": [
+        "Airline",
+        "",
+        ""
+       ],
+       "m": "defaults",
+       "x": 1,
+       "dom": "flight"
+      },
+      {
+       "id": "fanlass",
+       "t": "select",
+       "v": "keiner",
+       "ve": "none",
+       "o": [
+        "keiner",
+        "Geschäftlich",
+        "Privat",
+        "Urlaub"
+       ],
+       "oe": [
+        "none",
+        "Business",
+        "Private",
+        "Holiday"
+       ],
+       "inv": "A10 Flight defaults — category",
+       "de": [
+        "Anlass",
+        "Nur für Statistiken",
+        ""
+       ],
+       "en": [
+        "Purpose",
+        "Statistics only",
+        ""
+       ],
+       "m": "defaults",
+       "x": 1,
+       "dom": "flight"
+      },
+      {
+       "id": "fstatus",
+       "t": "choice",
+       "o": [
+        "geplant",
+        "geflogen"
+       ],
+       "oe": [
+        "planned",
+        "flown"
+       ],
+       "v": "geplant",
+       "inv": "A10 Flight defaults — status",
+       "de": [
+        "Status",
+        "",
+        ""
+       ],
+       "en": [
+        "Status",
+        "",
+        ""
+       ],
+       "m": "defaults",
+       "x": 1,
+       "dom": "flight"
+      }
+     ]
     }
    ],
    "dom": "flight"
@@ -1551,7 +1595,48 @@
      ]
     }
    ],
-   "dom": "cruise"
+   "dom": "cruise",
+   "x": 1
+  },
+  {
+   "id": "unterkuenfte",
+   "g": "konto",
+   "de": "Unterkünfte",
+   "en": "Stays",
+   "dom": "hotel",
+   "s": [
+    {
+     "id": "unterkuenfte-bewertung",
+     "de": "Bewertung",
+     "en": "Rating",
+     "rows": [
+      {
+       "id": "ratingcats",
+       "t": "list",
+       "items": [],
+       "btn": [
+        "Verwalten",
+        "Manage"
+       ],
+       "inv": "S3 Rating categories (lodgingRatingCategories + own rows)",
+       "de": [
+        "Bewertungskategorien",
+        "Worauf du Unterkünfte bewertest",
+        "Eigene Kategorien kommen zu den Standardkategorien dazu. Löschst du eine, ändert das keinen Aufenthalt: Es wird nur nicht mehr danach gefragt."
+       ],
+       "en": [
+        "Rating categories",
+        "What you rate stays on",
+        "Your own categories join the standard ones. Deleting one changes no stay: it is just not asked for any more."
+       ],
+       "m": "lodgingRatings",
+       "x": 0,
+       "d": 1,
+       "dom": "hotel"
+      }
+     ]
+    }
+   ]
   },
   {
    "id": "treue",
@@ -1581,13 +1666,13 @@
        "inv": "A7 Programme cards (airline)",
        "de": [
         "Airlines",
-        "",
-        "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen."
+        "Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen.",
+        ""
        ],
        "en": [
         "Airlines",
-        "",
-        "Suggestions from your flights show up here to accept."
+        "Suggestions from your flights show up here to accept.",
+        ""
        ],
        "m": "loyalty",
        "x": 0
@@ -1661,6 +1746,30 @@
        ],
        "m": "loyalty",
        "x": 0
+      },
+      {
+       "id": "tr_rental",
+       "t": "list",
+       "dom": "rental",
+       "items": [],
+       "btn": [
+        "Karte hinzufügen",
+        "Add card"
+       ],
+       "d": 1,
+       "inv": "S3 Programme cards (rental)",
+       "de": [
+        "Mietwagen",
+        "",
+        ""
+       ],
+       "en": [
+        "Rental cars",
+        "",
+        ""
+       ],
+       "m": "loyalty",
+       "x": 0
       }
      ]
     }
@@ -1675,34 +1784,58 @@
     {
      "id": "erinnerungen-wohin",
      "de": "Wohin",
-     "en": "Where to",
+     "en": "Where",
      "rows": [
       {
        "id": "erimail",
-       "t": "input",
-       "v": "mara@example.org",
+       "t": "status",
+       "v": "= Profil-E-Mail",
        "inv": "A2 Reminder e-mail address",
        "de": [
-        "Mail an",
+        "Erinnerungen an",
         "Leer: keine Mails",
         ""
        ],
        "en": [
-        "Mail to",
+        "Reminders to",
         "Empty: no mail",
         ""
        ],
        "m": "channel",
        "x": 0,
-       "d": 1
-      }
-     ]
-    },
-    {
-     "id": "erinnerungen-channel",
-     "de": "Wohin",
-     "en": "Where",
-     "rows": [
+       "d": 1,
+       "ve": "= profile e-mail"
+      },
+      {
+       "id": "rchan",
+       "t": "choice",
+       "v": "Beides",
+       "ve": "Both",
+       "o": [
+        "App",
+        "Mail",
+        "Beides"
+       ],
+       "oe": [
+        "App",
+        "Mail",
+        "Both"
+       ],
+       "d": 1,
+       "inv": "S3 One channel for every area",
+       "de": [
+        "Kanal",
+        "",
+        ""
+       ],
+       "en": [
+        "Channel",
+        "",
+        ""
+       ],
+       "m": "channel",
+       "x": 0
+      },
       {
        "id": "pushstate",
        "t": "status",
@@ -1727,215 +1860,298 @@
      ]
     },
     {
-     "id": "erinnerungen-vor-der-abreise",
-     "de": "Vor der Abreise",
-     "en": "Before departure",
-     "rows": [
-      {
-       "id": "r_flight",
-       "t": "remind",
-       "dom": "flight",
-       "v": true,
-       "ch": "beide",
-       "che": "both",
-       "inv": "A2 Reminders on/off + Lead times + Channel (flight)",
-       "de": [
-        "Flug",
-        "",
-        "Bis zu einer eigenen Zeit, ganze Stunden von 1 bis 168."
-       ],
-       "en": [
-        "Flight",
-        "",
-        "Plus one own time, whole hours from 1 to 168."
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_cruise",
-       "t": "remind",
-       "dom": "cruise",
-       "v": true,
-       "ch": "App",
-       "che": "App",
-       "dep": "cruiseOff",
-       "inv": "A2 Reminders (cruise)",
-       "de": [
-        "Kreuzfahrt",
-        "",
-        ""
-       ],
-       "en": [
-        "Cruise",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_rail",
-       "t": "remind",
-       "dom": "rail",
-       "v": true,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (rail)",
-       "de": [
-        "Bahn",
-        "",
-        ""
-       ],
-       "en": [
-        "Rail",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_bus",
-       "t": "remind",
-       "dom": "bus",
-       "v": false,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (bus)",
-       "de": [
-        "Bus",
-        "",
-        ""
-       ],
-       "en": [
-        "Bus",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_ferry",
-       "t": "remind",
-       "dom": "ferry",
-       "v": false,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (ferry)",
-       "de": [
-        "Fähre",
-        "",
-        ""
-       ],
-       "en": [
-        "Ferry",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_lodging",
-       "t": "remind",
-       "dom": "hotel",
-       "v": false,
-       "ch": "Mail",
-       "che": "Mail",
-       "inv": "A2 Reminders (lodging)",
-       "de": [
-        "Unterkunft",
-        "",
-        ""
-       ],
-       "en": [
-        "Stay",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_rental",
-       "t": "remind",
-       "dom": "rental",
-       "v": false,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (rental)",
-       "de": [
-        "Mietwagen",
-        "",
-        ""
-       ],
-       "en": [
-        "Rental car",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "r_roadtrip",
-       "t": "remind",
-       "dom": "roadtrip",
-       "v": false,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (roadtrip)",
-       "de": [
-        "Roadtrip",
-        "",
-        ""
-       ],
-       "en": [
-        "Roadtrip",
-        "",
-        ""
-       ],
-       "m": "channel",
-       "x": 0,
-       "d": 1
-      }
-     ]
-    },
-    {
      "id": "erinnerungen-domains",
      "de": "Vor der Abreise",
      "en": "Before you leave",
      "rows": [
       {
-       "id": "r_poi",
-       "t": "remind",
-       "dom": "poi",
-       "v": false,
-       "ch": "App",
-       "che": "App",
-       "inv": "A2 Reminders (poi)",
+       "id": "r_flight",
+       "t": "select",
+       "dom": "flight",
+       "v": "24 h",
+       "inv": "A2 Reminders on/off + Lead times + Channel (flight)",
        "de": [
-        "Orte",
-        "",
+        "Flug",
+        "Erinnerung vor Abreise",
+        "Bis zu einer eigenen Zeit, ganze Stunden von 1 bis 168."
+       ],
+       "en": [
+        "Flight",
+        "Reminder before departure",
+        "Plus one own time, whole hours from 1 to 168."
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_cruise",
+       "t": "select",
+       "dom": "cruise",
+       "v": "24 h",
+       "dep": "cruiseOff",
+       "inv": "A2 Reminders (cruise)",
+       "de": [
+        "Kreuzfahrt",
+        "Erinnerung vor Abreise",
         ""
        ],
        "en": [
-        "Places",
-        "",
+        "Cruise",
+        "Reminder before departure",
         ""
        ],
        "m": "channel",
        "x": 0,
-       "d": 1
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_lodging",
+       "t": "select",
+       "dom": "hotel",
+       "v": "24 h",
+       "inv": "A2 Reminders (lodging)",
+       "de": [
+        "Unterkunft",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Stay",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_rail",
+       "t": "select",
+       "dom": "rail",
+       "v": "24 h",
+       "inv": "A2 Reminders (rail)",
+       "de": [
+        "Bahn",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Rail",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_bus",
+       "t": "select",
+       "dom": "bus",
+       "v": "24 h",
+       "inv": "A2 Reminders (bus)",
+       "de": [
+        "Bus",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Bus",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_ferry",
+       "t": "select",
+       "dom": "ferry",
+       "v": "24 h",
+       "inv": "A2 Reminders (ferry)",
+       "de": [
+        "Fähre",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Ferry",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_rental",
+       "t": "select",
+       "dom": "rental",
+       "v": "24 h",
+       "inv": "A2 Reminders (rental)",
+       "de": [
+        "Mietwagen",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Rental car",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_roadtrip",
+       "t": "select",
+       "dom": "roadtrip",
+       "v": "24 h",
+       "inv": "A2 Reminders (roadtrip)",
+       "de": [
+        "Roadtrip",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Roadtrip",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
+      },
+      {
+       "id": "r_poi",
+       "t": "select",
+       "dom": "poi",
+       "v": "24 h",
+       "inv": "A2 Reminders (poi)",
+       "de": [
+        "Orte",
+        "Erinnerung vor Abreise",
+        ""
+       ],
+       "en": [
+        "Places",
+        "Reminder before departure",
+        ""
+       ],
+       "m": "channel",
+       "x": 0,
+       "d": 1,
+       "o": [
+        "Aus",
+        "2 h",
+        "24 h",
+        "2 Tage"
+       ],
+       "oe": [
+        "Off",
+        "2 h",
+        "24 h",
+        "2 days"
+       ]
       }
      ]
     }
@@ -1947,44 +2163,6 @@
    "de": "Freunde & Teilen",
    "en": "Friends & sharing",
    "s": [
-    {
-     "id": "freunde-mitreisende",
-     "de": "Mitreisende",
-     "en": "Travel companions",
-     "rows": [
-      {
-       "id": "personen",
-       "t": "list",
-       "items": [
-        [
-         "Jonas",
-         "14 Einträge"
-        ],
-        [
-         "Ilka",
-         "3 Einträge"
-        ]
-       ],
-       "btn": [
-        "Unbenutzte löschen",
-        "Delete unused"
-       ],
-       "inv": "A6 Companion list",
-       "de": [
-        "Personen",
-        "Umbenennen, zusammenführen, löschen",
-        "Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen."
-       ],
-       "en": [
-        "People",
-        "Rename, merge, delete",
-        "Merging changes every entry with this person and can't be undone."
-       ],
-       "m": "companions",
-       "x": 0
-      }
-     ]
-    },
     {
      "id": "freunde-freunde",
      "de": "Freunde",
@@ -2067,10 +2245,92 @@
      ]
     },
     {
+     "id": "freunde-mitreisende",
+     "de": "Mitreisende",
+     "en": "Travel companions",
+     "rows": [
+      {
+       "id": "personen",
+       "t": "list",
+       "items": [
+        [
+         "Jonas",
+         "14 Einträge"
+        ],
+        [
+         "Ilka",
+         "3 Einträge"
+        ]
+       ],
+       "btn": [
+        "Unbenutzte löschen",
+        "Delete unused"
+       ],
+       "inv": "A6 Companion list",
+       "de": [
+        "Personen",
+        "Umbenennen, zusammenführen, löschen",
+        "Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen."
+       ],
+       "en": [
+        "People",
+        "Rename, merge, delete",
+        "Merging changes every entry with this person and can't be undone."
+       ],
+       "m": "companions",
+       "x": 0
+      },
+      {
+       "id": "unused",
+       "t": "action",
+       "btn": [
+        "Löschen",
+        "Delete"
+       ],
+       "res": [
+        "Aufgeräumt",
+        "Tidied up"
+       ],
+       "d": 1,
+       "inv": "S3 Delete unused companions",
+       "de": [
+        "Unbenutzte Personen löschen",
+        "",
+        ""
+       ],
+       "en": [
+        "Delete unused people",
+        "",
+        ""
+       ],
+       "m": "companions",
+       "x": 0
+      }
+     ]
+    },
+    {
      "id": "freunde-offentliche-links",
      "de": "Öffentliche Links",
      "en": "Public links",
      "rows": [
+      {
+       "id": "linksoff",
+       "t": "status",
+       "d": 0,
+       "inv": "S3 Callout while links are off",
+       "de": [
+        "Öffentliche Links sind auf diesem Server aus. Der Admin kann sie erlauben.",
+        "",
+        ""
+       ],
+       "en": [
+        "Public links are off on this server. The admin can allow them.",
+        "",
+        ""
+       ],
+       "m": "shareLinks",
+       "x": 0
+      },
       {
        "id": "linkliste",
        "t": "list",
@@ -2182,6 +2442,56 @@
        "x": 0,
        "beta": "devicePairing",
        "d": 1
+      },
+      {
+       "id": "pair",
+       "t": "action",
+       "btn": [
+        "Code anzeigen",
+        "Show code"
+       ],
+       "beta": "devicePairing",
+       "d": 1,
+       "inv": "S3 Pair a phone",
+       "de": [
+        "Telefon koppeln",
+        "Zeigt einen QR-Code für die Companion-App",
+        ""
+       ],
+       "en": [
+        "Pair a phone",
+        "Shows a QR code for the Companion app",
+        ""
+       ],
+       "m": "devices",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "telefone-mitteilungen",
+     "de": "Mitteilungen",
+     "en": "Notifications",
+     "rows": [
+      {
+       "id": "pushstate2",
+       "t": "status",
+       "v": "1 Telefon bereit",
+       "ve": "1 phone ready",
+       "d": 0,
+       "inv": "S3 Push state (phones page)",
+       "de": [
+        "Mitteilungen",
+        "",
+        ""
+       ],
+       "en": [
+        "Notifications",
+        "",
+        ""
+       ],
+       "m": "devices",
+       "x": 0
       }
      ]
     }
@@ -4488,7 +4798,7 @@
         ""
        ],
        "m": "backup",
-       "x": 0
+       "x": 1
       },
       {
        "id": "webdavvers",
@@ -4508,14 +4818,27 @@
         ""
        ],
        "m": "backup"
-      }
-     ]
-    },
-    {
-     "id": "daten-backup",
-     "de": "Sicherung",
-     "en": "Backup",
-     "rows": [
+      },
+      {
+       "id": "webdavlast",
+       "t": "status",
+       "v": "gestern 03:12 · erfolgreich",
+       "ve": "yesterday 03:12 · succeeded",
+       "d": 0,
+       "inv": "S3 Own copy status",
+       "de": [
+        "Letzte eigene Kopie",
+        "",
+        ""
+       ],
+       "en": [
+        "Last own copy",
+        "",
+        ""
+       ],
+       "m": "backup",
+       "x": 0
+      },
       {
        "id": "webdavjetzt",
        "t": "action",
@@ -4540,7 +4863,7 @@
         "Uploaded · just now"
        ],
        "m": "backup",
-       "x": 0
+       "x": 1
       }
      ]
     },
@@ -4728,52 +5051,54 @@
        "t": "choice",
        "x": 1,
        "o": [
-        "weglassen",
-        "als Bahnfahrt"
+        "Überspringen",
+        "Importieren"
        ],
        "oe": [
-        "skip",
-        "as rail journey"
+        "Skip",
+        "Import"
        ],
        "v": "weglassen",
        "inv": "A11 Rail import: U-Bahn/tram legs",
        "de": [
-        "U-Bahn und Tram",
-        "Vorauswahl, im Import änderbar",
+        "U-Bahn und Tram beim Bahn-Import",
+        "",
         ""
        ],
        "en": [
-        "Metro and tram",
-        "Preselection, changeable per import",
+        "Metro and tram on rail import",
+        "",
         ""
        ],
-       "m": "import"
+       "m": "import",
+       "dom": "rail"
       },
       {
        "id": "busleg",
        "t": "choice",
        "x": 1,
        "o": [
-        "weglassen",
-        "als Busfahrt"
+        "Überspringen",
+        "Importieren"
        ],
        "oe": [
-        "skip",
-        "as bus ride"
+        "Skip",
+        "Import"
        ],
        "v": "weglassen",
        "inv": "A11 Rail import: bus legs",
        "de": [
-        "Busabschnitte",
+        "Busabschnitte beim Bahn-Import",
         "",
         ""
        ],
        "en": [
-        "Bus legs",
+        "Bus legs on rail import",
         "",
         ""
        ],
-       "m": "import"
+       "m": "import",
+       "dom": "rail"
       }
      ],
      "x": 1
@@ -4826,6 +5151,57 @@
         ""
        ],
        "m": "about"
+      }
+     ]
+    },
+    {
+     "id": "ueber-mehr",
+     "de": "Mehr",
+     "en": "More",
+     "rows": [
+      {
+       "id": "changelog",
+       "t": "link",
+       "btn": [
+        "Öffnen",
+        "Open"
+       ],
+       "d": 0,
+       "inv": "S3 Changelog link",
+       "de": [
+        "Changelog",
+        "",
+        ""
+       ],
+       "en": [
+        "Changelog",
+        "",
+        ""
+       ],
+       "m": "about",
+       "x": 0
+      },
+      {
+       "id": "docs",
+       "t": "link",
+       "btn": [
+        "Öffnen",
+        "Open"
+       ],
+       "d": 0,
+       "inv": "S3 Documentation link",
+       "de": [
+        "Dokumentation",
+        "",
+        ""
+       ],
+       "en": [
+        "Documentation",
+        "",
+        ""
+       ],
+       "m": "about",
+       "x": 0
       }
      ]
     }

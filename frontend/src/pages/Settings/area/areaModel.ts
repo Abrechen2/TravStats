@@ -31,6 +31,7 @@ export type AreaPageId =
   | "reisen"
   | "fluege"
   | "kreuzfahrten"
+  | "unterkuenfte"
   | "treue"
   | "erinnerungen"
   | "freunde"
@@ -207,6 +208,9 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("kreuzfahrten", "ship", [P("cruisePreferences", { anchors: ["counting"] })], {
     domain: "cruise",
   }),
+  // Rating categories of the stay editor, which had no page of their own since the
+  // lodging settings page left (coordinator's call, settings v3).
+  page("unterkuenfte", "bed", [P("lodgingRatings")], { domain: "lodging" }),
   page("treue", "credit-card", [P("loyalty")]),
   page("erinnerungen", "bell", [P("notifications", { as: "channel", anchors: ["domains"] })]),
   page("freunde", "users", [
@@ -297,6 +301,7 @@ export const AREA_MENU: readonly MenuGroupDef<AreaPageId>[] = (
 export const INDENTED_PAGES: ReadonlySet<AreaPageId> = new Set<AreaPageId>([
   "fluege",
   "kreuzfahrten",
+  "unterkuenfte",
 ]);
 
 export const DEFAULT_AREA_PAGE: AreaPageId = "profil";

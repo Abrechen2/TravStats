@@ -16,6 +16,10 @@
     "rail": {
       "title": "Rail",
       "description": "Your rail operators' loyalty programmes, e.g. BahnBonus."
+    },
+    "rental": {
+      "title": "Rental cars",
+      "description": "Your rental companies' loyalty programmes."
     }
   },
   "empty": "No cards yet.",

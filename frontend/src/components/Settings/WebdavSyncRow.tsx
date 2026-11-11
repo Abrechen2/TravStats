@@ -11,6 +11,7 @@ import {
   ErrorLine,
   InputControl,
   SettingItem,
+  StatusValue,
   SwitchControl,
   useGuardedNavigate,
   useSettingWrite,
@@ -57,7 +58,8 @@ export default function WebdavSyncRow({
   const row = useRowCopy("data");
   const dependency = useDependency();
   const isDemo = useIsDemoAccount();
-  const levelExpert = useExpertRows(1);
+  // How often, versions to keep and "Jetzt hochladen" are expert rows (settings v3).
+  const levelExpert = useExpertRows(3);
   const expert = alwaysExpert || levelExpert;
   const go = useGuardedNavigate();
   const [status, setStatus] = useState<WebdavSyncStatus | null>(null);
@@ -158,6 +160,7 @@ export default function WebdavSyncRow({
   const takt = row("webdavtakt");
   const vers = row("webdavvers");
   const jetzt = row("webdavjetzt");
+  const last = row("webdavlast");
 
   return (
     <div
@@ -167,7 +170,7 @@ export default function WebdavSyncRow({
     >
       <SettingItem
         title={eigen.title}
-        sub={<LastResult status={status} fallback={eigen.sub} />}
+        sub={eigen.sub}
         help={eigen.help}
         save={enabled}
         locked={lock}
@@ -179,23 +182,26 @@ export default function WebdavSyncRow({
         }
         control={<SwitchControl checked={enabled.value} onChange={enabled.choose} />}
       />
-      <SettingItem
-        title={takt.title}
-        save={schedule}
-        locked={lock}
-        dependency={offDep}
-        control={
-          <ChoiceControl<WebdavSchedule>
-            label={takt.title}
-            value={schedule.value}
-            onChange={schedule.choose}
-            options={[
-              { value: "daily", label: t("settings:webdavSync.schedules.daily") },
-              { value: "weekly", label: t("settings:webdavSync.schedules.weekly") },
-            ]}
-          />
-        }
-      />
+      {expert && (
+        <SettingItem
+          title={takt.title}
+          expert
+          save={schedule}
+          locked={lock}
+          dependency={offDep}
+          control={
+            <ChoiceControl<WebdavSchedule>
+              label={takt.title}
+              value={schedule.value}
+              onChange={schedule.choose}
+              options={[
+                { value: "daily", label: t("settings:webdavSync.schedules.daily") },
+                { value: "weekly", label: t("settings:webdavSync.schedules.weekly") },
+              ]}
+            />
+          }
+        />
+      )}
       {expert && (
         <SettingItem
           title={vers.title}
@@ -219,31 +225,44 @@ export default function WebdavSyncRow({
           }
         />
       )}
-      <SettingItem
-        title={jetzt.title}
-        locked={lock}
-        dependency={offDep}
-        control={
-          <ActionControl
-            label={
-              busy === "run" || status.running
-                ? t("settings:webdavSync.running")
-                : (jetzt.btn ?? t("settings:webdavSync.runNow"))
-            }
-            busy={busy !== null || status.running}
-            onClick={() => void runNow()}
-          />
-        }
-      >
-        {runMessage &&
-          (runMessage.ok ? (
-            <p role="status" className="t-caption" style={{ color: token("good") }}>
-              {runMessage.text}
-            </p>
-          ) : (
-            <ErrorLine>{runMessage.text}</ErrorLine>
-          ))}
-      </SettingItem>
+      {status.enabled && (
+        <SettingItem
+          title={last.title}
+          control={
+            <StatusValue>
+              <LastResult status={status} />
+            </StatusValue>
+          }
+        />
+      )}
+      {expert && (
+        <SettingItem
+          title={jetzt.title}
+          expert
+          locked={lock}
+          dependency={offDep}
+          control={
+            <ActionControl
+              label={
+                busy === "run" || status.running
+                  ? t("settings:webdavSync.running")
+                  : (jetzt.btn ?? t("settings:webdavSync.runNow"))
+              }
+              busy={busy !== null || status.running}
+              onClick={() => void runNow()}
+            />
+          }
+        >
+          {runMessage &&
+            (runMessage.ok ? (
+              <p role="status" className="t-caption" style={{ color: token("good") }}>
+                {runMessage.text}
+              </p>
+            ) : (
+              <ErrorLine>{runMessage.text}</ErrorLine>
+            ))}
+        </SettingItem>
+      )}
     </div>
   );
 }

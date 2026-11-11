@@ -73,10 +73,10 @@ describe("the settings search reads the registry", () => {
   });
 
   it("marks the mounted section a hit should highlight, through the page's aliases", () => {
-    // The passport row sits in the Zuhause block, which draws on Reisearten.
+    // The passport row moved to the profile block, which draws on Profil & Anmeldung.
     const hit = find("Reisepass").find((h) => h.rowId === "pass")!;
-    expect(hit.pageId).toBe("reisearten");
-    expect(hit.highlight).toBe("home");
+    expect(hit.pageId).toBe("profil");
+    expect(hit.highlight).toBe("profile");
     // A service card answers to the one section that draws the catalogue.
     const card = find("Immich").find((h) => h.sectionId === "immich")!;
     expect(card.highlight).toBe("externalServices");

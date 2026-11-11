@@ -118,12 +118,16 @@ export default function LoyaltyCardSection({
                     </button>
                   </div>
                 </div>
-                <p className="t-caption mt-1">
-                  {coverageOf(domain, card).length > 0
-                    ? coverageOf(domain, card).join(", ")
-                    : t(`loyalty:coversNone.${domain}`)}
-                </p>
-                <ActivityLine domain={domain} membershipId={card.id} activity={card.activity} />
+                {domain !== "rental" && (
+                  <p className="t-caption mt-1">
+                    {coverageOf(domain, card).length > 0
+                      ? coverageOf(domain, card).join(", ")
+                      : t(`loyalty:coversNone.${domain}`)}
+                  </p>
+                )}
+                {domain !== "rental" && (
+                  <ActivityLine domain={domain} membershipId={card.id} activity={card.activity} />
+                )}
                 {card.notes && <p className="t-caption mt-1">{card.notes}</p>}
               </li>
             )

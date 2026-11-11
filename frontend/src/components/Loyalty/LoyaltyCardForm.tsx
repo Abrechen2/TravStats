@@ -65,6 +65,8 @@ export default function LoyaltyCardForm({
     return IATA_AIRLINE.test(code) ? code : null;
   };
 
+  const field = coverageField(domain);
+
   const submit = async (): Promise<void> => {
     if (programName.trim() === "") return;
     const input: LoyaltyMembershipInput = {
@@ -72,7 +74,7 @@ export default function LoyaltyCardForm({
       membershipNumber: membershipNumber.trim() || null,
       tier: tier.trim() || null,
       notes: notes.trim() || null,
-      [coverageField(domain)]: coverage,
+      ...(field === null ? {} : { [field]: coverage }),
     };
     setSaving(true);
     setError(null);
@@ -120,16 +122,18 @@ export default function LoyaltyCardForm({
           className="input"
         />
       </div>
-      <ValueChips
-        testId={`loyalty-coverage-${domain}`}
-        label={t(`loyalty:field.${coverageField(domain)}`)}
-        hint={t(`loyalty:field.${coverageField(domain)}Hint`)}
-        invalidMessage={domain === "flight" ? t("loyalty:field.invalidCode") : undefined}
-        values={coverage}
-        onChange={setCoverage}
-        accept={acceptCoverage}
-        options={coverageOptions}
-      />
+      {field !== null && (
+        <ValueChips
+          testId={`loyalty-coverage-${domain}`}
+          label={t(`loyalty:field.${field}`)}
+          hint={t(`loyalty:field.${field}Hint`)}
+          invalidMessage={domain === "flight" ? t("loyalty:field.invalidCode") : undefined}
+          values={coverage}
+          onChange={setCoverage}
+          accept={acceptCoverage}
+          options={coverageOptions}
+        />
+      )}
       {domain === "flight" && <AlliancePicker values={coverage} onChange={setCoverage} />}
       <textarea
         aria-label={t("loyalty:field.notes")}

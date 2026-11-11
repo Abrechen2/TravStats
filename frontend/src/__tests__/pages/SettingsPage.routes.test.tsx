@@ -169,6 +169,8 @@ vi.unmock("../../store/settingsStore");
 // cases — the gate used to keep them out of the tree, and the network guard in
 // `src/__tests__/setup.ts` failed the suite the moment it stopped.
 // Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/PassportRow", () => ({ default: () => null }));
+vi.mock("../../components/Settings/OpenSuggestionsRow", () => ({ default: () => null }));
 vi.mock("../../components/Settings/HomeSection", () => ({
   default: () => <div data-testid="home-section" />,
 }));
@@ -461,7 +463,8 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
     // At the top of the page, counting settings (forgejo#321 prototype).
     const note = document.querySelector('[data-expert-note="page"]');
     expect(note).toHaveTextContent("settings:level.pageMore");
-    expect(note).toHaveAttribute("data-count", "1");
+    // The API keys section and, since settings v3, the birthday row.
+    expect(note).toHaveAttribute("data-count", "2");
     // Said once: the section's own footer would repeat the banner.
     expect(document.querySelector('[data-expert-note="settings"]')).toBeNull();
   });
@@ -469,10 +472,11 @@ describe("SettingsPage — the standard level (forgejo#321)", () => {
   it("counts the flight page's hidden expert settings, not its sections, at the top", async () => {
     renderAt("/settings/fluege");
     await findNamed("region", SECTION_LABEL_KEY.features);
-    // Enrichment (3) is the one expert section left; defaults and the seat
-    // statistics switch moved to standard (settings redesign, package 3), and
-    // auto-update hides no row while it is off (the stub's state).
-    expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "3");
+    // Enrichment (3) and, since settings v3, the form defaults (4: class,
+    // airline, purpose, status) are expert sections, and the aircraft
+    // registration is one expert row; auto-update hides no row while it is off
+    // (the stub's state).
+    expect(document.querySelector('[data-expert-note="page"]')).toHaveAttribute("data-count", "8");
   });
 
   it("puts the blue pill on an expert section a link opened", async () => {

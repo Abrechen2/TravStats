@@ -42,6 +42,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   defaults: "settings:defaults.title",
   enrichment: "settings:historicalEnrichment.title",
   cruisePreferences: "settings:cruisePreferences.title",
+  lodgingRatings: "settings:lodgingRatings.title",
   backup: "settings:backup.title",
   import: "settings:import.title",
   externalServices: "settings:externalServices.title",
