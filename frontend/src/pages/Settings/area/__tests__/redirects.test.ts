@@ -310,6 +310,20 @@ describe("every page of the settings area before settings v3 still opens", () =>
     expect(resolve("/settings/domains#planning").to).toBe("/settings/pl-plan");
   });
 
+  it("lets a named row decide between the pages an old page split into", () => {
+    expect(resolve("/settings/sharing?match=linkserlaubt#shareLinks").to).toBe(
+      "/settings/funktionen?match=linkserlaubt#shareLinksServer"
+    );
+    expect(resolve("/settings/server?match=laenderstd#features").to).toBe(
+      "/settings/funktionen?match=laenderstd#features"
+    );
+  });
+
+  it("reads an old page named as ?tab= the same way", () => {
+    expect(resolve("/settings?tab=server#features").to).toBe("/settings/funktionen#features");
+    expect(resolve("/settings?tab=flight#features").to).toBe("/settings/fluege#features");
+  });
+
   it("keeps the catalogue's card and the user filter on their pages", () => {
     expect(resolve("/settings/services?service=immich").to).toBe(
       "/settings/dienstek?service=immich"

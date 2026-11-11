@@ -205,10 +205,25 @@ function ownerOfAnchor(anchor: string, among?: readonly string[]): string | unde
   return (among ?? SETTINGS_REGISTRY.map((p) => p.id)).find((id) => validAnchors(id).has(anchor));
 }
 
+/** The page among `pages` whose registry holds the row, and the mount that draws it. */
+function homeOfRow(
+  rowId: string,
+  pages: readonly string[]
+): { page: string; mount: string | undefined } | undefined {
+  for (const id of pages) {
+    for (const group of SETTINGS_REGISTRY.find((p) => p.id === id)?.sections ?? []) {
+      const row = group.rows.find((r) => r.id === rowId);
+      if (row) return { page: id, mount: row.mount };
+    }
+  }
+  return undefined;
+}
+
 function settingsTarget(
   pageSeg: string | undefined,
   section: string | null,
   tab: string | null,
+  match: string | null,
   input: AddressInput
 ): Target {
   // A removed page named without a section stands for the section that took
@@ -223,8 +238,13 @@ function settingsTarget(
 
   // A page of the area as it was before settings v3: its section is looked for
   // on the pages its content moved to, and the page alone lands on the first.
-  const oldPages = pageSeg ? lookup(OLD_PAGES, pageSeg) : undefined;
-  if (oldPages && !findAreaPage(pageSeg)) {
+  const oldKey = pageSeg ?? tab ?? undefined;
+  const oldPages = oldKey ? lookup(OLD_PAGES, oldKey) : undefined;
+  if (oldPages && !findAreaPage(oldKey)) {
+    // A row the address names (`?match=`) decides the page: the old page's rows
+    // moved apart, and the section alone would pick the wrong half.
+    const home = match ? homeOfRow(match, oldPages) : undefined;
+    if (home) return { page: home.page, section: home.mount ?? raw ?? undefined };
     const owner = raw ? ownerOfAnchor(raw, oldPages) : undefined;
     if (owner) return { page: owner, section: raw ?? undefined };
     // A section none of its pages holds (the old tables moved some across pages
@@ -278,7 +298,7 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
 
   const target = fromAdmin
     ? adminTarget(pageSeg, section, tab)
-    : settingsTarget(pageSeg, section, tab, input);
+    : settingsTarget(pageSeg, section, tab, params.get("match"), input);
   if (target.external) return { to: target.external, adminOnly: false };
 
   let page = target.page ?? DEFAULT_AREA_PAGE;
