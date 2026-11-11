@@ -3,12 +3,10 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { withTripFederation } from "../../services/sharing/federation/__tests__/federationEnv";
 
 /**
  * Settings v3 phase S2, the account-level rows: `cur` (display currency apart from the
- * base currency), `planai`/`planwx` (nested under `travPlan`), `findable` on the settings
- * route family, and the admin's `internet` master switch as the user settings report it.
+ * base currency), `planai`/`planwx` (nested under `travPlan`) and the admin's `internet` master switch as the user settings report it.
  */
 describe("settings v3 — backend for the new rows", () => {
   const stamp = Date.now();
@@ -17,7 +15,6 @@ describe("settings v3 — backend for the new rows", () => {
   let cookie: string;
   let adminCookie: string;
   let userId: string;
-  let restoreFederation: (() => Promise<void>) | null = null;
 
   beforeAll(async () => {
     const user = await prisma.user.create({
@@ -32,10 +29,6 @@ describe("settings v3 — backend for the new rows", () => {
   });
   beforeEach(async () => {
     await prisma.userSettings.deleteMany({ where: { userId } });
-  });
-  afterEach(async () => {
-    if (restoreFederation) await restoreFederation();
-    restoreFederation = null;
   });
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { username: { in: [username, adminName] } } });
@@ -84,40 +77,6 @@ describe("settings v3 — backend for the new rows", () => {
 
     it("refuse a key outside the block", async () => {
       await put({ travPlan: { forecast: true } }).expect(400);
-    });
-  });
-
-  describe("findable on the settings route family", () => {
-    it("is refused while this server is not connected to others (SHARE_REMOTE_DISABLED)", async () => {
-      const res = await request(app)
-        .put("/api/v1/settings/profile/findable")
-        .set("Cookie", cookie)
-        .send({ findable: true });
-      expect(res.status).toBe(404);
-      expect(res.body.code).toBe("SHARE_REMOTE_DISABLED");
-    });
-
-    it("reads and writes users.federationFindable, bare, default off", async () => {
-      restoreFederation = await withTripFederation("https://me.example.test");
-      const before = await request(app)
-        .get("/api/v1/settings/profile/findable")
-        .set("Cookie", cookie)
-        .expect(200);
-      expect(before.body).toEqual({ findable: false });
-      const on = await request(app)
-        .put("/api/v1/settings/profile/findable")
-        .set("Cookie", cookie)
-        .send({ findable: true })
-        .expect(200);
-      expect(on.body).toEqual({ findable: true });
-      expect(
-        (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).federationFindable
-      ).toBe(true);
-      await request(app)
-        .put("/api/v1/settings/profile/findable")
-        .set("Cookie", cookie)
-        .send({ findable: "yes" })
-        .expect(400);
     });
   });
 

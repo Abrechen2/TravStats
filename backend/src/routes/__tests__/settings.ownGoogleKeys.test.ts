@@ -6,6 +6,7 @@ import { generateToken } from "../../utils/jwt";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import { resolveApiKey, hasApiKeyAccess } from "../../services/apiKeyResolver";
 import { resolveLlmChain } from "../../services/llm/llmProvider";
+import { llmRefusalFor } from "../../services/llm/llmGate";
 import { ensureAdminSettings } from "../../services/instanceSettingsService";
 
 // A saved key is tested at once; the test must not call Google.
@@ -129,5 +130,63 @@ describe("own Gemini and Google Places keys of an account", () => {
       (await prisma.userSettings.findUniqueOrThrow({ where: { userId } })).googlePlacesApiKey
     ).toBeNull();
     expect((await resolveApiKey("googlePlaces", userId)).source).toBe("global");
+  });
+
+  describe("an account key works on its own, like the other account keys", () => {
+    const noInstanceGoogle = () =>
+      prisma.adminSettings.update({
+        where: { id: adminId },
+        data: { globalGooglePlacesApiKey: null, llmGoogleApiKey: null, llmGoogleOptIn: false },
+      });
+    const consent = () =>
+      request(app)
+        .put("/api/v1/settings/external-services/ai-consent/google")
+        .set("Cookie", cookie)
+        .send({ consent: true });
+    const consents = async () =>
+      (await request(app).get("/api/v1/settings/external-services").set("Cookie", cookie)).body
+        .aiConsents as Array<{ id: string }>;
+
+    it("Google Places: a user-only key resolves with no instance key at all", async () => {
+      await noInstanceGoogle();
+      expect((await resolveApiKey("googlePlaces", userId)).key).toBeNull();
+      await saveOwn("googlePlaces", "my-places-key").expect(200);
+      expect(await resolveApiKey("googlePlaces", userId)).toEqual({
+        key: "my-places-key",
+        source: "user",
+      });
+    });
+
+    it("Gemini: with no admin key and the slot off it is listed for consent, then used and not refused", async () => {
+      await noInstanceGoogle();
+      expect(await consents()).not.toContainEqual(expect.objectContaining({ id: "gemini" }));
+      await saveOwn("gemini", "my-gemini-key").expect(200);
+      expect(await consents()).toContainEqual(expect.objectContaining({ id: "gemini" }));
+      // Without consent the account's documents still do not go to it.
+      expect(await llmRefusalFor(userId)).toMatchObject({ kind: "cloud_not_consented" });
+      await consent().expect(200);
+      expect(await llmRefusalFor(userId)).toBeNull();
+      const chain = await resolveLlmChain({ userId });
+      expect(chain.find((t) => t.kind === "google")?.apiKey).toBe("my-gemini-key");
+      // Another account sees nothing of it.
+      expect((await resolveLlmChain({ systemTask: true })).some((t) => t.kind === "google")).toBe(
+        false
+      );
+    });
+
+    it("Gemini: the admin forbidding account keys blocks it everywhere", async () => {
+      await noInstanceGoogle();
+      await saveOwn("gemini", "my-gemini-key").expect(200);
+      await consent().expect(200);
+      await prisma.adminSettings.update({
+        where: { id: adminId },
+        data: { externalServicePolicy: { accountKeysForbidden: ["gemini"] } },
+      });
+      expect(
+        (await resolveLlmChain({ userId, systemTask: true })).some((t) => t.kind === "google")
+      ).toBe(false);
+      expect(await consents()).not.toContainEqual(expect.objectContaining({ id: "gemini" }));
+      await consent().expect(409);
+    });
   });
 });

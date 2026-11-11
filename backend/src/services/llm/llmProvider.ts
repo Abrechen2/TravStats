@@ -227,7 +227,9 @@ function fixedEndpointChainTarget(
       : kind === "anthropic"
         ? admin?.llmAnthropicOptIn
         : admin?.llmGoogleOptIn;
-  if (!key || !(optIn ?? false)) return null;
+  // An account's own key is a slot of its own: the admin's opt-in covers the INSTANCE key only
+  // (the account's consent, checked by the caller, is what lets documents go to its own key).
+  if (!key || !(ownKey || (optIn ?? false))) return null;
   const configuredModel =
     kind === "openai"
       ? admin?.llmOpenaiModel

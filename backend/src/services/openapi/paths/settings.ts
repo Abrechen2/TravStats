@@ -20,7 +20,6 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent, timeRefused } from "./shared";
-import { remoteFindableSchema } from "../../../schemas/sharingRemote";
 import { profileZoneBodySchema, profileZoneViewSchema } from "../../settings/profileZoneSettings";
 import {
   homeAirportsResponseSchema,
@@ -228,39 +227,6 @@ registry.registerPath({
   summary: "Update the user's profile",
   tags: settingsTag,
   responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/settings/profile/findable",
-  summary: "Whether users of connected servers can find the caller",
-  description:
-    "Settings v3 `findable`. The same switch as `GET /sharing/remote/findable`, answered bare. Default off.",
-  tags: settingsTag,
-  responses: {
-    200: {
-      description: "`{ findable: boolean }`",
-      content: { "application/json": { schema: remoteFindableSchema } },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/settings/profile/findable",
-  summary: "Opt in or out of being found by users of connected servers",
-  description:
-    "Body `{ findable: boolean }`. Existing pairings are untouched. 404 `SHARE_REMOTE_DISABLED` while this server is not connected to other servers; 403 for the shared demo account.",
-  tags: settingsTag,
-  request: { body: { content: { "application/json": { schema: remoteFindableSchema } } } },
-  responses: {
-    200: {
-      description: "`{ findable: boolean }`",
-      content: { "application/json": { schema: remoteFindableSchema } },
-    },
-    400: badInput,
-    404: { description: "`SHARE_REMOTE_DISABLED`" },
-  },
 });
 
 registry.registerPath({

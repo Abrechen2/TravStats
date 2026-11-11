@@ -140,7 +140,12 @@ export async function setAiConsent(
     // consent would be a promise about a destination nobody confirmed.
     const state = await loadAdminState();
     const service = AI_SERVICES.find((s) => s.ai?.kind === provider);
-    if (!service || !isEnabledForConsent(service, state)) {
+    const userRow = await prisma.userSettings.findUnique({ where: { userId } });
+    const ownKey =
+      !!service &&
+      service.accountFields.length > 0 &&
+      service.accountFields.every((f) => !!(userRow as Record<string, unknown> | null)?.[f.column]);
+    if (!service || !isEnabledForConsent(service, state, ownKey)) {
       throw new AppError(
         "This AI provider is not allowed on this instance",
         409,
