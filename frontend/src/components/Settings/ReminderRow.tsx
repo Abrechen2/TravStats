@@ -2,7 +2,14 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { ReminderDomain, ReminderDomainPrefs } from "../../lib/api";
 import { ChoiceControl, SettingItem, useSettingWrite } from "../ui/settings";
-import { LEAD_CUSTOM, LEAD_OFF, leadChoiceOf, leadPatch, ownLeadLabel } from "./reminderPrefs";
+import {
+  LEAD_CUSTOM,
+  LEAD_OFF,
+  hasOwnLead,
+  leadChoiceOf,
+  leadPatch,
+  ownLeadLabel,
+} from "./reminderPrefs";
 import { useRowCopy } from "./rowCopy";
 
 interface ReminderRowProps {
@@ -17,9 +24,10 @@ interface ReminderRowProps {
 /**
  * One area of "Vor der Abreise" (settings v3 prototype): ONE select, Aus / 2 h /
  * 24 h / 2 Tage. The channel is not here — one row above writes it to every
- * area. A lead the select has no entry for (the server keeps up to two presets
- * and one own time of 1-168 h) is shown as "Eigene: N h" and kept until the
- * person picks something else: looking at a row never rewrites it.
+ * area, and this row never sends it (two queues writing the same field would
+ * overwrite each other). A lead the select has no entry for (the server keeps
+ * up to two presets and one own time of 1-168 h) is shown as "Eigene: N h" and
+ * kept until the person picks something else: looking at a row never rewrites it.
  */
 export default function ReminderRow({
   domain,
@@ -44,7 +52,8 @@ export default function ReminderRow({
     { value: "2", label: t("settingsRows:notifications.lead.h2") },
     { value: "24", label: t("settingsRows:notifications.lead.h24") },
     { value: "48", label: t("settingsRows:notifications.lead.d2") },
-    ...(current === LEAD_CUSTOM
+    // Kept while the area is off too: switching it on again must not cost the own time.
+    ...(hasOwnLead(row)
       ? [
           {
             value: LEAD_CUSTOM,

@@ -134,10 +134,6 @@
     "r_poi": {
       "t": "Places"
     },
-    "remaddr": {
-      "none": "No address",
-      "jump": "To profile"
-    },
     "rchan": {
       "t": "Channel",
       "both": "Both",

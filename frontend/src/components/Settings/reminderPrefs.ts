@@ -33,14 +33,21 @@ export function ownLeadLabel(leadHours: readonly number[]): string {
   return leadHours.map((h) => `${h} h`).join(" + ");
 }
 
+/** Does the row keep leads the select has no entry for (two leads, 36 h, ...)? */
+export function hasOwnLead(row: { leadHours: readonly number[] }): boolean {
+  if (row.leadHours.length === 0) return false;
+  const only = row.leadHours.length === 1 ? row.leadHours[0] : undefined;
+  return only === undefined || !LEAD_CHOICES.includes(only);
+}
+
 /**
  * The change a pick makes. Off keeps the stored leads (switching an area off
- * and on again must not lose its own time); the custom entry is a display of
- * what is stored, picking it again changes nothing.
+ * and on again must not lose its own time); picking the custom entry switches
+ * the area on with the leads it already has.
  */
 export function leadPatch(choice: string): { enabled: boolean; leadHours?: number[] } | null {
   if (choice === LEAD_OFF) return { enabled: false };
-  if (choice === LEAD_CUSTOM) return null;
+  if (choice === LEAD_CUSTOM) return { enabled: true };
   const hours = Number(choice);
   return LEAD_CHOICES.includes(hours) ? { enabled: true, leadHours: [hours] } : null;
 }

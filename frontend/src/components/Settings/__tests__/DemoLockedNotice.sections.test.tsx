@@ -150,6 +150,7 @@ describe("NotificationsSection on the demo account", () => {
         <NotificationsSection />
       </MemoryRouter>
     );
+    expect(await screen.findByLabelText("settingsRows:notifications.erimail.t")).toBeDisabled();
     const leads = await screen.findAllByRole("combobox");
     for (const lead of leads) {
       expect(lead).toBeDisabled();
@@ -167,6 +168,7 @@ describe("NotificationsSection on the demo account", () => {
         <NotificationsSection />
       </MemoryRouter>
     );
+    expect(await screen.findByLabelText("settingsRows:notifications.erimail.t")).toBeEnabled();
     for (const lead of await screen.findAllByRole("combobox")) expect(lead).toBeEnabled();
     expect(screen.queryByText("settings:blocks.lock.demo")).not.toBeInTheDocument();
   });

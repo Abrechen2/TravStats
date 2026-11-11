@@ -87,6 +87,13 @@ describe("ShareLinksSection", () => {
     expect(screen.queryByText("sharing:links.section.empty")).toBeNull();
   });
 
+  it("keeps stored links revocable under the callout while sharing is off", async () => {
+    api.list.mockResolvedValue({ enabled: false, links: [link] });
+    renderSection(false);
+    expect(await screen.findByText("settingsRows:sharing.linksoff.t")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "sharing:links.section.revoke" })).toBeTruthy();
+  });
+
   it("draws the list, not the callout, while links are on", async () => {
     renderSection(false);
     expect(await screen.findByText("settingsRows:sharing.linkliste.t")).toBeTruthy();

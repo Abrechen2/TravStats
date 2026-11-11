@@ -13,9 +13,8 @@ import { logger } from "../../lib/logger";
 import {
   ChoiceControl,
   Dependency,
+  InputControl,
   SettingItem,
-  StatusValue,
-  useGuardedNavigate,
   useSettingWrite,
   type ChoiceOption,
 } from "../ui/settings";
@@ -43,7 +42,6 @@ export default function NotificationPreferencesCards(): JSX.Element {
   const { t } = useTranslation(["settings", "common", "settingsRows"]);
   const row = useRowCopy("notifications");
   const dependency = useDependency();
-  const go = useGuardedNavigate();
   const { isEnabled } = useEnabledDomains();
   const isDemo = useIsDemoAccount();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
@@ -65,14 +63,25 @@ export default function NotificationPreferencesCards(): JSX.Element {
 
   const writeDomain = useCallback(
     async (domain: ReminderDomain, value: ReminderDomainPrefs): Promise<void> => {
-      const updated = await notificationsApi.updatePreferences({ domains: { [domain]: value } });
-      // Only this area's row (and the channel availability): rows are written
+      // The lead and the on/off only: the channel is the shared row's to write,
+      // and sending a stale copy of it from here would undo that pick.
+      const updated = await notificationsApi.updatePreferences({
+        domains: { [domain]: { enabled: value.enabled, leadHours: value.leadHours } },
+      });
+      // Only this area's two fields (and the channel availability): rows are written
       // independently, so an answer to one must not undo another's confirmed state.
       setPrefs((current) =>
         current
           ? {
               ...current,
-              domains: { ...current.domains, [domain]: updated.domains[domain] },
+              domains: {
+                ...current.domains,
+                [domain]: {
+                  ...current.domains[domain],
+                  enabled: updated.domains[domain].enabled,
+                  leadHours: updated.domains[domain].leadHours,
+                },
+              },
               mail: updated.mail,
               push: updated.push,
             }
@@ -80,6 +89,16 @@ export default function NotificationPreferencesCards(): JSX.Element {
       );
     },
     []
+  );
+
+  // The address as typed, until the field is left.
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  // The reminder address is its own field, not the profile's (they are two stores).
+  const email = useSettingWrite<string | null>(
+    "notifications.email",
+    prefs?.notificationEmail ?? null,
+    async (value) =>
+      setPrefs(await notificationsApi.updatePreferences({ notificationEmail: value }))
   );
 
   const channels = prefs ? channelsOf(prefs) : [];
@@ -132,6 +151,12 @@ export default function NotificationPreferencesCards(): JSX.Element {
     return <p className="t-caption">{t("common:messages.loading")}</p>;
   }
 
+  const commitEmail = (): void => {
+    if (emailDraft === null) return;
+    const trimmed = emailDraft.trim();
+    setEmailDraft(null);
+    email.choose(trimmed === "" ? null : trimmed);
+  };
   const addrCopy = row("erimail");
   const channelCopy = row("rchan");
   const pushCopy = row("pushstate");
@@ -168,22 +193,24 @@ export default function NotificationPreferencesCards(): JSX.Element {
           <SettingItem
             title={addrCopy.title}
             sub={addrCopy.sub}
+            save={email}
+            locked={lock}
             control={
-              <StatusValue>
-                {prefs.notificationEmail ?? t("settingsRows:notifications.remaddr.none")}
-              </StatusValue>
-            }
-          >
-            {prefs.notificationEmail === null ? (
-              <Dependency
-                reason={dependency("noMailAddr").reason}
-                jump={{
-                  label: t("settingsRows:notifications.remaddr.jump"),
-                  onJump: () => go("/settings/profil"),
+              <span
+                onBlur={commitEmail}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEmail();
                 }}
-              />
-            ) : null}
-          </SettingItem>
+              >
+                <InputControl
+                  type="email"
+                  value={emailDraft ?? email.value ?? ""}
+                  onChange={setEmailDraft}
+                  placeholder="name@example.com"
+                />
+              </span>
+            }
+          />
           <SettingItem
             title={channelCopy.title}
             sub={picked === MIXED ? t("settingsRows:notifications.rchan.mixed") : channelCopy.sub}

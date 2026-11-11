@@ -134,10 +134,6 @@
     "r_poi": {
       "t": "Orte"
     },
-    "remaddr": {
-      "none": "Keine Adresse",
-      "jump": "Zum Profil"
-    },
     "rchan": {
       "t": "Kanal",
       "both": "Beides",

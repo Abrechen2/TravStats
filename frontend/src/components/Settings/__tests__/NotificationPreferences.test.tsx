@@ -130,25 +130,43 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     expect(updatePreferences).not.toHaveBeenCalled();
   });
 
-  it("a custom lead survives switching the area off, and a pick of the same custom entry writes nothing", async () => {
+  it("a custom lead survives switching the area off, and can be switched on again without losing it", async () => {
     await renderPage();
     await userEvent.selectOptions(leadSelect("lodging"), "off");
     await waitFor(
       () =>
         expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { lodging: { enabled: false, leadHours: [36], channel: "both" } },
+          domains: { lodging: { enabled: false, leadHours: [36] } },
         }),
       WAIT
     );
   });
 
-  it("picking '2 Tage' sends 48 h as the area's only lead, in one write with its channel", async () => {
+  it("picking the 'Eigene' entry of an area that was switched off turns it on with its own lead", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({
+        domains: { ...STORED.domains, lodging: row({ enabled: false, leadHours: [36] }) },
+      })
+    );
+    await renderPage();
+    expect(leadSelect("lodging").value).toBe("off");
+    await userEvent.selectOptions(leadSelect("lodging"), "custom");
+    await waitFor(
+      () =>
+        expect(updatePreferences).toHaveBeenCalledWith({
+          domains: { lodging: { enabled: true, leadHours: [36] } },
+        }),
+      WAIT
+    );
+  });
+
+  it("picking '2 Tage' sends 48 h as the area's only lead, and never the channel", async () => {
     await renderPage();
     await userEvent.selectOptions(leadSelect("cruise"), "48");
     await waitFor(
       () =>
         expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { cruise: { enabled: true, leadHours: [48], channel: "both" } },
+          domains: { cruise: { enabled: true, leadHours: [48] } },
         }),
       WAIT
     );
@@ -161,7 +179,7 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     await waitFor(
       () =>
         expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { rail: { enabled: true, leadHours: [24], channel: "both" } },
+          domains: { rail: { enabled: true, leadHours: [24] } },
         }),
       WAIT
     );
@@ -208,13 +226,13 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     expect(leadSelect("flight").value).toBe("off");
   }, 15000);
 
-  it("with no address the mail option is off and the page says why, with a jump to the profile", async () => {
+  it("with no address the page says why mail cannot be chosen", async () => {
     getPreferences.mockResolvedValue(
       fixture({ notificationEmail: null, mail: { available: false, reason: "no_email" } })
     );
     await renderPage();
     expect(within(channelRow()).getByText("settings:blocks.dep.noMailAddr.reason")).toBeTruthy();
-    expect(screen.getByText("settingsRows:notifications.remaddr.none")).toBeTruthy();
+    expect(screen.getByLabelText("settingsRows:notifications.erimail.t")).toHaveValue("");
   });
 
   it("with no paired device the app option is off; with no relay it stays usable and the page names the server's push switch (R2-11)", async () => {
@@ -248,7 +266,7 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     );
     await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2), WAIT);
     expect(updatePreferences).toHaveBeenLastCalledWith({
-      domains: { flight: { enabled: false, leadHours: [2], channel: "both" } },
+      domains: { flight: { enabled: false, leadHours: [2] } },
     });
   });
 
@@ -263,10 +281,33 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     expect(leadSelect("flight").value).toBe("2");
   });
 
-  it("shows the address as the profile's, read-only", async () => {
+  it("a lead write carries no channel, so it cannot undo a channel pick still on its way", async () => {
     await renderPage();
-    expect(screen.getByText("a@example.com")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).toBeNull();
+    await userEvent.selectOptions(leadSelect("flight"), "24");
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1), WAIT);
+    const sent = updatePreferences.mock.calls[0][0] as { domains: { flight: object } };
+    expect(sent.domains.flight).toEqual({ enabled: true, leadHours: [24] });
+  });
+
+  it("writes the address when the field is left, only if it changed, and a refusal keeps what was typed", async () => {
+    await renderPage();
+    const field = screen.getByLabelText("settingsRows:notifications.erimail.t");
+    await userEvent.click(field);
+    await userEvent.tab();
+    await new Promise((r) => setTimeout(r, 600));
+    expect(updatePreferences).not.toHaveBeenCalled();
+
+    updatePreferences.mockRejectedValueOnce(new Error("Network Error"));
+    await userEvent.clear(field);
+    await userEvent.type(field, "new@example.com");
+    await userEvent.tab();
+    await waitFor(
+      () =>
+        expect(updatePreferences).toHaveBeenCalledWith({ notificationEmail: "new@example.com" }),
+      WAIT
+    );
+    expect(await screen.findByText(/settings:blocks.save.failed/, undefined, WAIT)).toBeTruthy();
+    expect(field).toHaveValue("new@example.com");
   });
 
   it("the demo account sees the preferences locked, with the reason", async () => {

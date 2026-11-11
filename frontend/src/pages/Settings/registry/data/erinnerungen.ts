@@ -6,7 +6,7 @@ export const ERINNERUNGEN_PAGE: RegistryPage = {
   ...{"id":"erinnerungen","area":"konto","de":"Erinnerungen","en":"Reminders","level":"standard","audience":"all","demoLocked":false},
   sections: [
       {"id":"erinnerungen-wohin","de":"Wohin","en":"Where","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"erimail","mount":"channel","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Erinnerungen an","en":"Reminders to","terms":{"de":"Leer: keine Mails","en":"Empty: no mail"}},
+        {"id":"erimail","mount":"channel","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Erinnerungen an","en":"Reminders to","terms":{"de":"Leer: keine Mails","en":"Empty: no mail"}},
         {"id":"rchan","mount":"channel","kind":"choice","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Kanal","en":"Channel","terms":{"de":"App Mail Beides","en":"App Mail Both"}},
         {"id":"pushstate","mount":"channel","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Mitteilungen an die App","en":"Notifications to the app","terms":{"de":"Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt. Der Server muss sie außerdem senden dürfen.","en":"Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."}},
       ]},

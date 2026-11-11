@@ -113,12 +113,12 @@
        "de": [
         "E-Mail",
         "Für ein neues Passwort",
-        ""
+        "Erinnerungen haben eine eigene Adresse unter Erinnerungen."
        ],
        "en": [
         "E-mail",
         "For a new password",
-        ""
+        "Reminders use their own address under Reminders."
        ],
        "m": "profile",
        "x": 0,
@@ -1788,8 +1788,8 @@
      "rows": [
       {
        "id": "erimail",
-       "t": "status",
-       "v": "= Profil-E-Mail",
+       "t": "input",
+       "v": "mara@example.org",
        "inv": "A2 Reminder e-mail address",
        "de": [
         "Erinnerungen an",
@@ -1803,8 +1803,7 @@
        ],
        "m": "channel",
        "x": 0,
-       "d": 1,
-       "ve": "= profile e-mail"
+       "d": 1
       },
       {
        "id": "rchan",

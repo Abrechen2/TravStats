@@ -92,10 +92,13 @@ export default function ShareLinksSection({ isAdmin }: { isAdmin: boolean }): JS
             }
           />
         )}
-        {list && !enabled ? (
-          // The prototype says it once, as a callout, instead of an empty list.
+        {list && !enabled && (
+          // The prototype says it once, as a callout. Links that are still stored
+          // stay listed below it: a person must be able to revoke them even while
+          // sharing is off, or they would come back to life with the switch.
           <SettingItem title={offCopy.title} />
-        ) : (
+        )}
+        {!(list && !enabled && list.links.length === 0) && (
           <SettingItem
             title={listCopy.title}
             sub={listCopy.sub}
