@@ -3,7 +3,10 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { apiErrorMachineCode } from "../../../lib/apiError";
-import type { LocationProviderKind } from "../../../lib/api/locationProvider";
+import type {
+  LocationProviderKind,
+  LocationProviderSettings,
+} from "../../../lib/api/locationProvider";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
 import { SectionCard } from "../SettingsShared";
 import { SettingRows } from "../../ui/SettingRow";
@@ -23,6 +26,16 @@ import {
 /** Where an account's own Dawarich connection is edited (Dienste). */
 export const DAWARICH_CONNECTION_PATH =
   "/settings/services?section=externalServices&service=dawarich";
+
+/**
+ * TravTrack is the chosen source: the Dawarich rows (its connection, the hint
+ * that it is missing, the jump to Dienste) only add noise then, since nothing
+ * reads Dawarich (beta feedback, 2026-11-11). Unknown while the choice has not
+ * loaded, so nothing is hidden on a failed read.
+ */
+export function onTravTrackSource(settings: LocationProviderSettings | null): boolean {
+  return settings?.kind === "travtrack";
+}
 
 /** The refusals the server names for a switch, as their own lines. */
 function refusalKey(err: unknown): string | null {
@@ -85,6 +98,7 @@ export default function LocationSourceSection(): JSX.Element {
   const travTrackOffered =
     state !== null &&
     ((state.choices.travtrack && isFeatureVisible("travTrack")) || state.kind === "travtrack");
+  const dawarichHidden = onTravTrackSource(state);
   const options: ChoiceOption<LocationProviderKind>[] = state
     ? [
         { value: "none", label: t("settings:location.source.options.none") },
@@ -133,7 +147,7 @@ export default function LocationSourceSection(): JSX.Element {
               </LinkButton>
             </ErrorLine>
           ) : null}
-          {state && !state.choices.dawarich ? (
+          {state && !state.choices.dawarich && !dawarichHidden ? (
             <Dependency
               reason={t("settings:blocks.dep.noOwnDawarich.reason")}
               jump={{
@@ -150,27 +164,29 @@ export default function LocationSourceSection(): JSX.Element {
           {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
         </SettingItem>
 
-        <SettingItem
-          title={t("settings:location.dawlink.name")}
-          locked={locked}
-          control={
-            <>
-              {state ? (
-                <StatusValue>
-                  {t(
-                    state.choices.dawarich
-                      ? "settings:location.dawlink.connected"
-                      : "settings:location.dawlink.notConnected"
-                  )}
-                </StatusValue>
-              ) : null}
-              <JumpControl
-                label={t("settings:location.dawlink.jump")}
-                onJump={() => navigate(DAWARICH_CONNECTION_PATH)}
-              />
-            </>
-          }
-        />
+        {dawarichHidden ? null : (
+          <SettingItem
+            title={t("settings:location.dawlink.name")}
+            locked={locked}
+            control={
+              <>
+                {state ? (
+                  <StatusValue>
+                    {t(
+                      state.choices.dawarich
+                        ? "settings:location.dawlink.connected"
+                        : "settings:location.dawlink.notConnected"
+                    )}
+                  </StatusValue>
+                ) : null}
+                <JumpControl
+                  label={t("settings:location.dawlink.jump")}
+                  onJump={() => navigate(DAWARICH_CONNECTION_PATH)}
+                />
+              </>
+            }
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

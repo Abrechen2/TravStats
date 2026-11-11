@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useTravTrackCapabilities } from "../../../hooks/useTravTrackVisible";
@@ -9,7 +9,8 @@ import { useExpertRows } from "../frame/useExpertRows";
 import { hasPushSources } from "../travTrackPushSources";
 import TravTrackImports from "../TravTrackImports";
 import DawarichCopyRow from "../location/DawarichCopyRow";
-import { DAWARICH_CONNECTION_PATH } from "../location/LocationSourceSection";
+import { DAWARICH_CONNECTION_PATH, onTravTrackSource } from "../location/LocationSourceSection";
+import { useLocationProviderStore } from "../../../store/locationProviderStore";
 import TravTrackAppsRow from "../location/TravTrackAppsRow";
 
 const NS = "settings:tt.sources";
@@ -18,6 +19,9 @@ const NS = "settings:tt.sources";
  * Settings → TravTrack → Quellen & Importe: the Dawarich copy, file imports
  * with the history of earlier imports (each removable), further apps (expert)
  * and the jump to the Dawarich connection under Dienste.
+ *
+ * With TravTrack as the chosen source the jump is gone, and the copy stays
+ * only while the account still has its own Dawarich connection to copy from.
  *
  * The import list is here, not behind a jump, so a first file and every delete
  * stay reachable while TravTrack is off on the server and the account still
@@ -31,15 +35,25 @@ export default function TravTrackSourcesSection(): JSX.Element | null {
   const [importsVersion, setImportsVersion] = useState(0);
   const pushSources = hasPushSources(caps?.sources);
   const expert = useExpertRows(pushSources ? 1 : 0);
+  const provider = useLocationProviderStore((s) => s.settings);
+  const refreshProvider = useLocationProviderStore((s) => s.refresh);
+  useEffect(() => {
+    if (!isDemo) void refreshProvider();
+  }, [isDemo, refreshProvider]);
   if (!caps || !(caps.hasData || caps.enabled)) return null;
+
+  const dawarichHidden = onTravTrackSource(provider);
+  const copyShown = !dawarichHidden || provider?.choices.dawarich === true;
 
   return (
     <SectionCard>
       <SettingRows>
-        <DawarichCopyRow
-          canStart={caps.enabled && !isDemo}
-          onChanged={() => setImportsVersion((v) => v + 1)}
-        />
+        {copyShown ? (
+          <DawarichCopyRow
+            canStart={caps.enabled && !isDemo}
+            onChanged={() => setImportsVersion((v) => v + 1)}
+          />
+        ) : null}
         <SettingItem
           title={t(`${NS}.files.name`)}
           sub={t(`${NS}.files.sub`)}
@@ -58,15 +72,17 @@ export default function TravTrackSourcesSection(): JSX.Element | null {
             canRevoke={!isDemo}
           />
         ) : null}
-        <SettingItem
-          title={t(`${NS}.dawarich.name`)}
-          control={
-            <JumpControl
-              label={t(`${NS}.dawarich.jump`)}
-              onJump={() => navigate(DAWARICH_CONNECTION_PATH)}
-            />
-          }
-        />
+        {dawarichHidden ? null : (
+          <SettingItem
+            title={t(`${NS}.dawarich.name`)}
+            control={
+              <JumpControl
+                label={t(`${NS}.dawarich.jump`)}
+                onJump={() => navigate(DAWARICH_CONNECTION_PATH)}
+              />
+            }
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

@@ -166,6 +166,16 @@ describe("Standort → Quelle", () => {
     expect(screen.getByText("settings:location.source.status.unavailable")).toBeInTheDocument();
   });
 
+  it("drops the Dawarich rows once TravTrack is the chosen source", async () => {
+    getProvider.mockResolvedValue(
+      state({ kind: "travtrack", choices: { none: true, travtrack: true, dawarich: false } })
+    );
+    show();
+    expect(await screen.findByRole("radio", { name: TRAVTRACK })).toBeChecked();
+    expect(screen.queryByText("settings:location.dawlink.name")).toBeNull();
+    expect(screen.queryByText("settings:blocks.dep.noOwnDawarich.reason")).toBeNull();
+  });
+
   it("is locked for the demo account and asks the server nothing", async () => {
     demo.current = true;
     show();
