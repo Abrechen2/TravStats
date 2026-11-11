@@ -25,6 +25,7 @@ const NOT_A_SERVICE = new Set([
   "publicUrl",
   "lanUrl",
   "shareLinksEnabled",
+  "internetEnabled", // settings v3 master switch over the services below, not a service itself
   "tripFederationEnabled", // second federation switch, own endpoint
   "betaFeaturesEnabled",
   "backupEnabled", // local backup schedule, not an outbound service

@@ -35,7 +35,7 @@ describe("settings — TravPlan per account", () => {
 
   it("GET answers off for a new account, like every domain but flights", async () => {
     const res = await request(app).get("/api/v1/settings").set("Cookie", cookie).expect(200);
-    expect(res.body.travPlan).toEqual({ enabled: false });
+    expect(res.body.travPlan).toEqual({ enabled: false, ai: true, weather: true });
   });
 
   it("PUT stores it in its column, echoes it, and leaves domains and the blob alone", async () => {
@@ -49,7 +49,7 @@ describe("settings — TravPlan per account", () => {
       .set("Cookie", cookie)
       .send({ travPlan: { enabled: true } })
       .expect(200);
-    expect(put.body.travPlan).toEqual({ enabled: true });
+    expect(put.body.travPlan).toEqual({ enabled: true, ai: true, weather: true });
     expect(put.body.enabledDomains).toEqual(["flight", "lodging"]);
     const row = await prisma.userSettings.findUniqueOrThrow({ where: { userId } });
     expect(row.travPlanEnabled).toBe(true);
@@ -60,7 +60,7 @@ describe("settings — TravPlan per account", () => {
       .set("Cookie", cookie)
       .send({ travPlan: { enabled: false } })
       .expect(200);
-    expect(off.body.travPlan).toEqual({ enabled: false });
+    expect(off.body.travPlan).toEqual({ enabled: false, ai: true, weather: true });
   });
 
   it("refuses a value that is not a boolean", async () => {
