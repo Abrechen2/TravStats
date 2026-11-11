@@ -111,23 +111,11 @@ function SwitchRows({
           control={<StatusValue>{t("settingsRows:services.status.always")}</StatusValue>}
         />
       ) : null}
-      {service && (uses("on") || uses("aiAllow")) && !ownsEnabledSwitch(card.id) ? (
+      {service && uses("aiAllow") && !ownsEnabledSwitch(card.id) ? (
         <SettingItem
-          title={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.t"
-              : "settingsRows:services.tpl.on.t"
-          )}
-          sub={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.s"
-              : "settingsRows:services.tpl.on.s"
-          )}
-          help={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.h"
-              : "settingsRows:services.tpl.on.h"
-          )}
+          title={t("settingsRows:services.tpl.aiAllow.t")}
+          sub={t("settingsRows:services.tpl.aiAllow.s")}
+          help={t("settingsRows:services.tpl.aiAllow.h")}
           scope="allAccounts"
           locked={demo}
           dependency={INTERNET_GATED_SWITCH_CARDS.has(card.id) ? internet : undefined}
@@ -139,6 +127,33 @@ function SwitchRows({
                 if (cloud && next) setConsentOpen(true);
                 else if (cloud) void admin?.setEnabled(card.id, false);
                 else on.choose(next);
+              }}
+            />
+          }
+        />
+      ) : null}
+      {/* "Pausieren" (the prototype's card dialog): a service with something to pause. It starts
+          on by itself with its first key (ServerSide `write`), so there is no separate "on". */}
+      {service &&
+      uses("on") &&
+      !uses("aiAllow") &&
+      !ownsEnabledSwitch(card.id) &&
+      (service.configured || service.keyless || service.enabled) ? (
+        <SettingItem
+          title={t("settingsRows:services.tpl.pause.t")}
+          sub={t("settingsRows:services.tpl.pause.s")}
+          help={t("settingsRows:services.tpl.pause.h")}
+          scope="allAccounts"
+          locked={demo}
+          dependency={INTERNET_GATED_SWITCH_CARDS.has(card.id) ? internet : undefined}
+          save={cloud ? undefined : on}
+          control={
+            <SwitchControl
+              checked={cloud ? !service.enabled : !on.value}
+              onChange={(paused) => {
+                if (cloud && !paused) setConsentOpen(true);
+                else if (cloud) void admin?.setEnabled(card.id, false);
+                else on.choose(!paused);
               }}
             />
           }
@@ -236,6 +251,23 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
               throw new Error("consent declined");
             }
             if (!(await admin.write(card.id, changes, remote))) throw new Error("save refused");
+            // The first key switches the service on (the prototype's "auto-on"). A service that
+            // was configured before and is off was paused on purpose and stays paused; a cloud
+            // model still needs the admin's data-sharing confirmation, so it is asked for here.
+            const firstKey =
+              !service?.configured &&
+              !service?.enabled &&
+              uses("on") &&
+              Object.values(changes).some((v) => typeof v === "string" && v.length > 0);
+            if (firstKey) {
+              if (service?.consent !== undefined) {
+                if (await new Promise<boolean>((resolve) => setAsk(() => resolve))) {
+                  await admin.setEnabled(card.id, true, true);
+                }
+              } else {
+                await admin.setEnabled(card.id, true);
+              }
+            }
             if (uses("test")) await admin.test(card.id);
           }}
           onRemoveSecret={async (key) => {

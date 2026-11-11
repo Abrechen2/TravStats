@@ -121,4 +121,21 @@ describe("Wartung › Ausführliches Protokoll für 24 h", () => {
     expect(screen.getByText("settingsRows:maintenance.debug24.failed")).toBeInTheDocument();
     expect(document.querySelector("[data-debug24]")).toBeNull();
   });
+
+  it("shows the fresh countdown from the toggle's own answer when the reload that follows fails", async () => {
+    const until = new Date(NOW + 24 * 3_600_000).toISOString();
+    admin.toggleDebugLogging.mockResolvedValue({
+      message: "ok",
+      config: config({ debugUntil: until }),
+    });
+    const reload = vi.fn().mockRejectedValue(new Error("offline"));
+    render(<MaintenanceDebug24 config={config()} reload={reload} />);
+    await act(async () => {
+      screen.getByRole("button", { name: "settingsRows:maintenance.debug24.btn" }).click();
+    });
+    expect(reload).toHaveBeenCalled();
+    // The switch worked: the row runs, and the failed re-read is not reported as a failed switch.
+    expect(document.querySelector("[data-debug24='running']")).toHaveTextContent(`at(${until})`);
+    expect(screen.queryByText("settingsRows:maintenance.debug24.failed")).toBeNull();
+  });
 });

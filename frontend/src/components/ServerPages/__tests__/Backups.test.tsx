@@ -7,6 +7,7 @@ import BackupsExisting from "../BackupsExisting";
 import { restoreOutcome } from "../restoreFailure";
 import { JobFailedError, JobLostError } from "../../../lib/api/jobs";
 import { httpError } from "./fixtures";
+import { useBackupScheduleStore } from "../../../store/backupScheduleStore";
 
 const backup = vi.hoisted(() => ({
   getBackupSettings: vi.fn(),
@@ -57,6 +58,7 @@ const renderExisting = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useBackupScheduleStore.setState({ saved: null });
   backup.getBackupSettings.mockResolvedValue({
     backupEnabled: true,
     backupInterval: "weekly",
@@ -296,5 +298,27 @@ describe("Sicherungen › Vorhandene", () => {
       expect(screen.getAllByText("settingsRows:backups.rhythmOff").length).toBeGreaterThan(0)
     );
     expect(document.body.textContent).not.toMatch(/backups\.rhythm(?!Off)/);
+  });
+
+  it("refreshes the summary when the tuning group below it saves a new schedule", async () => {
+    backup.updateBackupSettings.mockResolvedValue({
+      backupEnabled: false,
+      backupInterval: "weekly",
+      backupRetentionDays: 30,
+      backupCloudRetention: false,
+      backupZone: null,
+      hostZone: "UTC",
+    });
+    render(
+      <MemoryRouter>
+        <BackupsExisting />
+        <BackupsAutomatic />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("settingsRows:backups.nowLine")).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("switch", { name: /backups\.autobak/ }));
+    await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
+    await waitFor(() => expect(screen.queryByText("settingsRows:backups.nowLine")).toBeNull());
+    expect(screen.getAllByText("settingsRows:backups.rhythmOff").length).toBeGreaterThan(0);
   });
 });

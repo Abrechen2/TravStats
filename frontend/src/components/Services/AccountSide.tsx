@@ -24,6 +24,10 @@ import { useServices } from "./servicesContext";
 import type { ServiceCardDef } from "./serviceCards";
 import { useDemoLock } from "./useLockFor";
 
+/** Does this save carry a credential, not just an address or a clear? */
+const hasNewSecret = (changes: Record<string, unknown>): boolean =>
+  Object.values(changes).some((v) => typeof v === "string" && v.length > 0);
+
 function Strava({ onDisconnected }: { onDisconnected: () => void }): JSX.Element {
   const wasConnected = useRef(false);
   return (
@@ -37,7 +41,11 @@ function Strava({ onDisconnected }: { onDisconnected: () => void }): JSX.Element
   );
 }
 
-function MineRow({
+/**
+ * "Pausieren" (the prototype's card dialog): the account stops using the service without losing
+ * its key or connection. Inverted against the stored `accountDisabled`.
+ */
+function PauseRow({
   service,
   adminOff,
 }: {
@@ -48,11 +56,11 @@ function MineRow({
   const { account } = useServices();
   const demo = useDemoLock();
   const write = useSettingWrite<boolean>(
-    `services.${service.id}.mine`,
-    !service.accountDisabled,
-    async (on) => {
+    `services.${service.id}.pause`,
+    service.accountDisabled,
+    async (paused) => {
       try {
-        await externalServicesApi.accountUpdate(service.id, { accountDisabled: !on });
+        await externalServicesApi.accountUpdate(service.id, { accountDisabled: paused });
       } catch {
         throw new SettingWriteError("rejected");
       }
@@ -61,8 +69,8 @@ function MineRow({
   );
   return (
     <SettingItem
-      title={t("settingsRows:services.tpl.mine.t")}
-      help={t("settingsRows:services.tpl.mine.h")}
+      title={t("settingsRows:services.tpl.pauseMine.t")}
+      help={t("settingsRows:services.tpl.pauseMine.h")}
       save={write}
       locked={
         demo ??
@@ -130,7 +138,14 @@ export default function AccountSide({
           errorText={null}
           write={async (changes) => {
             // The refusal is worded on the card (`feedback`); the group keeps the draft.
-            const ok = await account.save(card.id, { fields: changes }, uses("test"));
+            // The first own key of a paused account puts the service back on (the prototype's
+            // "auto-on"); a paused service that already had a key stays paused.
+            const resume = acct.accountDisabled && !acct.configured && hasNewSecret(changes);
+            const ok = await account.save(
+              card.id,
+              resume ? { fields: changes, accountDisabled: false } : { fields: changes },
+              uses("test")
+            );
             if (!ok) throw new Error("save refused");
             if (card.id === "dawarich") setDawarichSaved((n) => n + 1);
           }}
@@ -191,11 +206,22 @@ export default function AccountSide({
     );
     // A cloud model an account may bring its own key for (Gemini, settings v3 S2): the
     // consent above is still what lets reading bookings send text to it.
-    if (uses("ownKey") && service) body.push(...ownRows(service));
+    if (uses("ownKey") && service) {
+      body.push(...ownRows(service));
+      if (service.configured) {
+        body.push(
+          <PauseRow
+            key="pause"
+            service={service}
+            adminOff={service.effectiveSource === "off" && !service.accountDisabled}
+          />
+        );
+      }
+    }
   } else if (service) {
     if (uses("mine")) {
       body.push(
-        <MineRow
+        <PauseRow
           key="mine"
           service={service}
           adminOff={service.effectiveSource === "off" && !service.accountDisabled}

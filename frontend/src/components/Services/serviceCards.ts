@@ -160,12 +160,12 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   {
     id: "openai",
     group: "ki",
-    use: ["aiConsent", "aiAllow", "instKey", "model", "test"],
+    use: ["aiConsent", "ownKey", "aiAllow", "instKey", "allowKeys", "model", "test"],
   },
   {
     id: "anthropic",
     group: "ki",
-    use: ["aiConsent", "aiAllow", "instKey", "model", "test"],
+    use: ["aiConsent", "ownKey", "aiAllow", "instKey", "allowKeys", "model", "test"],
   },
   {
     id: "gemini",

@@ -1414,7 +1414,8 @@
     },
     "card": {
       "open": "Öffnen",
-      "close": "Schließen"
+      "close": "Schließen",
+      "done": "Fertig"
     },
     "oneShot": "Experten-Einstellung · nur für diesen Besuch sichtbar. Deine Stufe bleibt Standard.",
     "oneShotAlways": "Immer zeigen",

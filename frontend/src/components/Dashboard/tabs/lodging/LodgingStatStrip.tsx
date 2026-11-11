@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from "react";
+import { useBaseMoney } from "../../../../hooks/useBaseMoney";
 import { useTranslation } from "../../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { formatCurrency } from "../../../../lib/units";
@@ -77,6 +78,7 @@ export function LodgingStatStrip({
   // with `units.currency` would show the correctly-computed number under the
   // wrong currency symbol whenever a user has changed that preference.
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const baseMoney = useBaseMoney();
   const accent = useDomainColors().colorOf("lodging");
   const ratingLabel =
     stats.avgRatingOverall !== null
@@ -94,7 +96,7 @@ export function LodgingStatStrip({
           orig: otherSpend.currencies
             .map(({ currency, amount }) => formatCurrency(amount, currency))
             .join(" + "),
-          converted: formatCurrency(otherSpend.convertedTotal, baseCurrency),
+          converted: baseMoney(otherSpend.convertedTotal),
         })
       : null,
     stats.spendUnconvertedStays > 0
@@ -177,7 +179,7 @@ export function LodgingStatStrip({
         }
       : {
           key: "spend",
-          value: formatCurrency(stats.spendBaseTotal, baseCurrency),
+          value: baseMoney(stats.spendBaseTotal),
           label: t("dashboard:lodgingTab.stats.spend"),
           sub: spendSub,
           evidenceKey: "lodgingSpendTotal",

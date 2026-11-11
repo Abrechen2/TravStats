@@ -465,10 +465,6 @@
       "inst": "Instanz"
     },
     "tpl": {
-      "mine": {
-        "t": "Für mich nutzen",
-        "h": "Hat der Admin den Dienst abgeschaltet, bleibt er aus."
-      },
       "ownKey": {
         "t": "Eigener Schlüssel",
         "s": "Statt des Server-Schlüssels",
@@ -523,6 +519,15 @@
       },
       "model": {
         "t": "Modell"
+      },
+      "pause": {
+        "t": "Pausieren",
+        "s": "Pausiert: keine Anfrage, auch kein Test",
+        "h": "Gilt für alle Konten, auch mit eigenem Schlüssel. Schlüssel und Einstellungen bleiben gespeichert; der Dienst läuft wieder, wenn du das hier ausschaltest."
+      },
+      "pauseMine": {
+        "t": "Pausieren",
+        "h": "Für dein Konto ausgeschaltet. Schlüssel und Verbindung bleiben gespeichert. Hat der Admin den Dienst abgeschaltet, bleibt er aus."
       }
     },
     "cards": {

@@ -465,10 +465,6 @@
       "inst": "Instance"
     },
     "tpl": {
-      "mine": {
-        "t": "Use for me",
-        "h": "If your admin switched the service off, it stays off."
-      },
       "ownKey": {
         "t": "Own key",
         "s": "Instead of the server's key",
@@ -523,6 +519,15 @@
       },
       "model": {
         "t": "Model"
+      },
+      "pause": {
+        "t": "Pause",
+        "s": "Paused: no requests, not even a test",
+        "h": "Applies to every account, even with its own key. The key and settings stay saved; the service runs again when you switch this off."
+      },
+      "pauseMine": {
+        "t": "Pause",
+        "h": "Switched off for your account. The key and connection stay saved. If your admin switched the service off, it stays off."
       }
     },
     "cards": {
