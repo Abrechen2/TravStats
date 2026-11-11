@@ -140,8 +140,8 @@ register(
       .boolean()
       .describe("The account half: `travPlan.enabled` in the user's settings. Default off."),
     offlineWrites: z.boolean(),
-    ai: z.boolean(),
-    forecast: z.boolean(),
+    ai: z.boolean().describe("The account's `travPlan.ai` switch (default on)."),
+    forecast: z.boolean().describe("The account's `travPlan.weather` switch (default on)."),
     notifications: z.boolean(),
   })
 );

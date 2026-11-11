@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { getInstanceSettings } from "../instanceSettingsService";
+import { internetAllowed } from "../internetGate";
 
 /**
  * Whether the instance's beta switch lets TravPlan exist at all (`travPlan` in the frontend's
@@ -55,5 +56,60 @@ export async function assertTravPlanForUser(userId: string): Promise<void> {
       "Travel planning is switched off for this account",
       403,
       "PLAN_USER_DISABLED"
+    );
+}
+
+/**
+ * The account's AI-in-plans switch (settings v3 `planai`, `user_settings.trav_plan_ai_enabled`,
+ * on by default). Off keeps every stored proposal and refuses new ones.
+ */
+export async function travPlanAiUserEnabled(userId: string): Promise<boolean> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { travPlanAiEnabled: true },
+  });
+  return row?.travPlanAiEnabled ?? true;
+}
+
+/** The account's weather-in-plans switch (settings v3 `planwx`), same shape as the AI one. */
+export async function travPlanWeatherUserEnabled(userId: string): Promise<boolean> {
+  const row = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { travPlanWeatherEnabled: true },
+  });
+  return row?.travPlanWeatherEnabled ?? true;
+}
+
+/** Refuses with `PLAN_AI_USER_DISABLED`: the account switched AI proposals in plans off. */
+export async function assertTravPlanAiForUser(userId: string): Promise<void> {
+  if (!(await travPlanAiUserEnabled(userId)))
+    throw new AppError(
+      "AI suggestions in plans are switched off for this account",
+      403,
+      "PLAN_AI_USER_DISABLED"
+    );
+}
+
+/** Refuses with `PLAN_WEATHER_USER_DISABLED`: the account switched forecasts in plans off. */
+export async function assertTravPlanWeatherForUser(userId: string): Promise<void> {
+  if (!(await travPlanWeatherUserEnabled(userId)))
+    throw new AppError(
+      "Weather in plans is switched off for this account",
+      403,
+      "PLAN_WEATHER_USER_DISABLED"
+    );
+}
+
+/**
+ * Plan forecasts and the weather-location search call Open-Meteo directly, so the admin's
+ * master "external services" switch (settings v3 `internet`) stops them too: 409
+ * `PLAN_WEATHER_DISABLED`, the code a client already words for "weather is off on this server".
+ */
+export async function assertInternetForPlanWeather(): Promise<void> {
+  if (!(await internetAllowed()))
+    throw new AppError(
+      "This server is not allowed to ask external services",
+      409,
+      "PLAN_WEATHER_DISABLED"
     );
 }

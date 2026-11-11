@@ -2,6 +2,7 @@ import { z } from "zod";
 import { requestTextWithDeadline } from "../http/boundedHttp";
 import { assertEnabled, configuration, reserveUsage } from "./store";
 import { AppError } from "../../middleware/errorHandler";
+import { assertInternetForPlanWeather } from "./availability";
 export const locationSchema = z.object({
   id: z.number().int(),
   name: z.string(),
@@ -20,6 +21,7 @@ export const locationSchema = z.object({
 });
 export async function findLocations(userId: string, query: string, language: "de" | "en") {
   await assertEnabled();
+  await assertInternetForPlanWeather();
   await reserveUsage(userId, "weather", (await configuration()).weatherDailyLimit);
   const params = new URLSearchParams({ name: query, language, count: "8", format: "json" });
   try {

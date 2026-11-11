@@ -1,5 +1,6 @@
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../instanceSettingsService";
+import { throughInternet } from "../internetGate";
 
 /**
  * Shared plumbing for the open data services (Open-Meteo, Wikipedia/Wikidata,
@@ -16,8 +17,8 @@ export const OPEN_DATA_TIMEOUT_MS = 8_000;
 
 /** Whether the instance admin allowed these calls at all (off by default). */
 export async function isOpenDataEnabled(): Promise<boolean> {
-  const { openDataEnabled } = await getInstanceSettings();
-  return openDataEnabled;
+  const settings = await getInstanceSettings();
+  return throughInternet(settings, settings.openDataEnabled);
 }
 
 /** Thrown by an endpoint when the switch is off; answered as 409 `openDataDisabled`. */

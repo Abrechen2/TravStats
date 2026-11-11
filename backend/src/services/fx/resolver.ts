@@ -42,6 +42,10 @@ export async function resolveRate(from: string, to: string, date: string): Promi
     logger.warn({ error }, "FX settings unreadable — assuming the defaults");
   }
 
+  // The master "external services" switch (settings v3) is off: no ECB mirror
+  // and no CDN is asked. "No rate" is a state every caller already renders.
+  if (settings && settings.internetEnabled === false) return null;
+
   // The ECB sources: the chosen primary, then the optional fallback, and only
   // when the first fails (timeout, non-OK, unusable). Both report "ecb" — the
   // data is the ECB's whichever mirror served it. An unreadable settings row

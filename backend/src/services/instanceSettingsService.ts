@@ -102,6 +102,11 @@ export interface InstanceSettings {
    * deletes every link (`updateInstanceSettings`). Admin-settable only.
    */
   shareLinksEnabled: boolean;
+  /**
+   * Master switch "the server may ask external services" (settings v3). It gates
+   * the six columns named in `services/internetGate.ts`; they keep their own values.
+   */
+  internetEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -157,6 +162,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     openDataEnabled: row.openDataEnabled,
     operatorLogosOpenDataEnabled: row.operatorLogosOpenDataEnabled,
     shareLinksEnabled: row.shareLinksEnabled,
+    internetEnabled: row.internetEnabled,
     railTransitousEnabled: row.railTransitousEnabled,
     railDbRestEnabled: row.railDbRestEnabled,
     railRoutingUrl: row.railRoutingUrl ?? null,
@@ -224,6 +230,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
+      }),
+      ...(patch.internetEnabled !== undefined && {
+        internetEnabled: patch.internetEnabled,
       }),
       ...(patch.railTransitousEnabled !== undefined && {
         railTransitousEnabled: patch.railTransitousEnabled,

@@ -17,6 +17,7 @@ import { keepUnknownDomains } from "../../services/domainVisibility";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
+import { throughInternet } from "../../services/internetGate";
 import {
   profileZoneBodySchema,
   profileZoneView,
@@ -219,6 +220,8 @@ const settingsSchema = z
     // Lodging-domain preference: single currency used to aggregate stay costs that
     // were originally billed in whatever currency the hotel uses.
     baseCurrency: baseCurrencyField.optional(),
+    // Display currency (settings v3): null = follow baseCurrency. Display only.
+    displayCurrency: baseCurrencyField.nullable().optional(),
     // Silent trip auto-creation during flight import (column-backed, default
     // true). The explicit "detect trips" button is not gated by this.
     autoCreateTrips: z.boolean().optional(),
@@ -321,6 +324,7 @@ function buildSettingsResponse(
     historicalEnrichmentMaxPerDay: number | null;
     enabledDomains: string[];
     baseCurrency: string;
+    displayCurrency: string | null;
     autoCreateTrips: boolean;
     countryThreshold: string | null;
     homeCountry: string | null;
@@ -363,6 +367,7 @@ function buildSettingsResponse(
     enabledDomains: record.enabledDomains,
     availableDomains: [...AVAILABLE_DOMAINS],
     baseCurrency: record.baseCurrency,
+    displayCurrency: record.displayCurrency ?? record.baseCurrency,
     autoCreateTrips: record.autoCreateTrips ?? true,
     ...suggestionSwitchesView(record),
     ...accountPrefsView(record),
@@ -407,18 +412,14 @@ async function hasCountryTracks(userId: string): Promise<boolean> {
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const {
-      betaFeaturesEnabled,
-      openDataEnabled,
-      shareLinksEnabled,
-      countryThreshold: instanceCountryThreshold,
-    } = await getInstanceSettings();
+    const instance = await getInstanceSettings();
     const extra = {
-      betaFeaturesEnabled,
-      openDataEnabled,
-      shareLinksEnabled,
+      betaFeaturesEnabled: instance.betaFeaturesEnabled,
+      // What the instance MAY do: the master "external services" switch gates it.
+      openDataEnabled: throughInternet(instance, instance.openDataEnabled),
+      shareLinksEnabled: instance.shareLinksEnabled,
       calendarFeedEnabled: await calendarFeedEnabled(),
-      countryThreshold: instanceCountryThreshold,
+      countryThreshold: instance.countryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
     const existing = await prisma.userSettings.findUnique({
@@ -549,6 +550,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       enabledDomains,
       knownDomains,
       baseCurrency,
+      displayCurrency,
       autoCreateTrips,
       tripSuggestions,
       staySuggestions,
@@ -567,18 +569,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       ...suggestionSwitchesUpdate(tripSuggestions, staySuggestions, tripRecording, travPlan),
       ...accountPrefsUpdate(tripDefaults, cruiseSeaDays, liveTracking, railImport),
     };
-    const {
-      betaFeaturesEnabled,
-      openDataEnabled,
-      shareLinksEnabled,
-      countryThreshold: instanceCountryThreshold,
-    } = await getInstanceSettings();
+    const instance = await getInstanceSettings();
     const extra = {
-      betaFeaturesEnabled,
-      openDataEnabled,
-      shareLinksEnabled,
+      betaFeaturesEnabled: instance.betaFeaturesEnabled,
+      // What the instance MAY do: the master "external services" switch gates it.
+      openDataEnabled: throughInternet(instance, instance.openDataEnabled),
+      shareLinksEnabled: instance.shareLinksEnabled,
       calendarFeedEnabled: await calendarFeedEnabled(),
-      countryThreshold: instanceCountryThreshold,
+      countryThreshold: instance.countryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
     logger.info({ operation: "settings_update", userId });
@@ -712,6 +710,8 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.baseCurrency = baseCurrency;
     }
 
+    if (displayCurrency !== undefined) updateData.displayCurrency = displayCurrency;
+
     // Handle silent trip auto-creation (column-backed; absent = leave alone)
     if (autoCreateTrips !== undefined) {
       updateData.autoCreateTrips = autoCreateTrips;
@@ -751,6 +751,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
         enabledDomains: enabledDomains ?? ["flight"],
         baseCurrency: baseCurrency ?? "EUR",
+        displayCurrency: displayCurrency ?? null,
         autoCreateTrips: autoCreateTrips ?? true,
         ...switches,
         // null on a fresh row means "follow the instance", which is what an

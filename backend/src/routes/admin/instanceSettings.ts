@@ -93,6 +93,8 @@ const instancePatchSchema = z.object({
   openDataEnabled: z.boolean().optional(),
   /** May operator logos come from Wikidata / Commons (on by default, forgejo#323). */
   operatorLogosOpenDataEnabled: z.boolean().optional(),
+  /** Master switch: may the server ask external services at all (on by default). */
+  internetEnabled: z.boolean().optional(),
   /** May users create public share links (off by default; off deletes every link). */
   shareLinksEnabled: z.boolean().optional(),
   /** May the rail lookup ask Transitous / db-rest (both on by default). */
@@ -184,6 +186,7 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
       }),
+      ...(patch.internetEnabled !== undefined && { internetEnabled: patch.internetEnabled }),
       ...(patch.railTransitousEnabled !== undefined && {
         railTransitousEnabled: patch.railTransitousEnabled,
       }),

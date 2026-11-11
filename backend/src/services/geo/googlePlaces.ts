@@ -106,8 +106,8 @@ export interface GooglePlaceMatch {
 }
 
 /** True when an instance has a key configured — used to skip the tier entirely. */
-export async function isGooglePlacesConfigured(): Promise<boolean> {
-  return (await getApiKey("googlePlaces")) !== null;
+export async function isGooglePlacesConfigured(userId?: string): Promise<boolean> {
+  return (await getApiKey("googlePlaces", userId)) !== null;
 }
 
 /**
@@ -116,8 +116,11 @@ export async function isGooglePlacesConfigured(): Promise<boolean> {
  * Returns null when there is no key, no match, or the best match is not a
  * lodging. The caller keeps whatever the earlier tiers found.
  */
-export async function findLodgingPlace(query: string): Promise<GooglePlaceMatch | null> {
-  const key = await getApiKey("googlePlaces");
+export async function findLodgingPlace(
+  query: string,
+  userId?: string
+): Promise<GooglePlaceMatch | null> {
+  const key = await getApiKey("googlePlaces", userId);
   if (!key) return null;
 
   const trimmed = query.trim();
