@@ -69,8 +69,7 @@ export default function StayScanSection({
   const { t } = useTranslation(["settings", "trips"]);
   const isDemo = useIsDemoAccount();
   const navigate = useGuardedNavigate();
-  // The search period and the areas switch are the expert rows of Feinabstimmung.
-  const expert = useExpertRows(2);
+  const expert = useExpertRows(1);
   const [state, setState] = useState<StayScanState | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [lookback, setLookback] = useState<(typeof LOOKBACKS)[number]>("7");
@@ -114,23 +113,6 @@ export default function StayScanSection({
       }
       await load();
       onScanned?.();
-    }
-  );
-
-  // "Märkte, Parks und Museen mitsuchen": markets and venues are one switch in
-  // the design; the server accepts them only while the search itself is on.
-  const areas = useSettingWrite<boolean>(
-    "location.stayScanAreas",
-    state ? (state.marketEnabled ?? false) && (state.venueEnabled ?? false) : false,
-    async (on) => {
-      setRefusal(null);
-      try {
-        await dawarichStaysApi.enableAreas(on);
-      } catch (err) {
-        setRefusal(stayErrorKey(err));
-        throw err;
-      }
-      await load();
     }
   );
 
@@ -404,29 +386,6 @@ export default function StayScanSection({
                     }))}
                     onChange={setLookback}
                   />
-                }
-              />
-            ) : null}
-
-            {expert ? (
-              <SettingItem
-                expert
-                title={t("settings:location.stay.areas.name")}
-                locked={locked}
-                save={areas}
-                dependency={
-                  state && !state.enabled
-                    ? { reason: t("settings:location.stay.areas.scanOff") }
-                    : undefined
-                }
-                control={
-                  state ? (
-                    <SwitchControl
-                      checked={areas.value}
-                      label={t("settings:location.stay.areas.name")}
-                      onChange={areas.choose}
-                    />
-                  ) : undefined
                 }
               />
             ) : null}

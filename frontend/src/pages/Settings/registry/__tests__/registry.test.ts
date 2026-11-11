@@ -46,12 +46,12 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 27 pages, 98 groups and cards (31 of them service cards) and 273 rows", () => {
+  it("counts 27 pages, 98 groups and cards (31 of them service cards) and 272 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(27);
     expect(sections).toHaveLength(98);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(273);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(272);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -325,7 +325,8 @@ describe("TravTrack and TravPlan pages follow the prototype (settings v3 S4)", (
 
   it("makes 'Unterkunft während der Buchung' and the search tuning expert rows", () => {
     expect(where("unterkunft")!.row.level).toBe("expert");
-    expect(where("gelaende")!.row.level).toBe("expert");
+    // No "Märkte, Parks und Museen" switch: since 2.8 the server runs area recognition always.
+    expect(where("gelaende")).toBeUndefined();
     expect(where("scanzeit")!.row.level).toBe("expert");
     expect(where("staedte")!.row.level).toBe("expert");
   });

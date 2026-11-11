@@ -19,6 +19,7 @@ import {
   SettingItem,
   SwitchControl,
   useGroupSave,
+  useGuardedNavigate,
   useSettingWrite,
 } from "../ui/settings";
 import GroupFooter from "./GroupFooter";
@@ -46,6 +47,9 @@ export default function ServerOffers({ part = "all" }: { part?: OffersPart }): J
  */
 export type OffersPart = "all" | "rest" | "track" | "plan";
 
+/** Where the beta switch lives, for the Bereitstellung pages that do not draw it. */
+const BETA_SWITCH_PATH = "/settings/funktionen?match=beta";
+
 function focusBeta(): void {
   const el = document.getElementById("server-beta-switch");
   if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center" });
@@ -58,6 +62,7 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   const { isFeatureVisible } = useBetaFeatures();
   const patch = useInstanceStore((s) => s.patch);
   const bump = useCapabilitiesEpochStore((s) => s.bump);
+  const go = useGuardedNavigate();
   const showTrack = part === "all" || part === "track";
   const showPlan = part === "all" || part === "plan";
   const showRest = part === "all" || part === "rest";
@@ -137,7 +142,11 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
 
   const needsBeta = {
     reason: t("settingsRows:server.deps.needsBeta"),
-    jump: { label: t("settingsRows:server.deps.needsBetaJump"), onJump: focusBeta },
+    jump: {
+      label: t("settingsRows:server.deps.needsBetaJump"),
+      // The offer pages do not draw the switch: go to the page that does.
+      onJump: part === "track" || part === "plan" ? () => go(BETA_SWITCH_PATH) : focusBeta,
+    },
   };
 
   const b = row("beta");

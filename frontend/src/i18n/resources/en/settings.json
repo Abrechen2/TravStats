@@ -1785,10 +1785,6 @@
       "last": {
         "name": "Last search",
         "none": "No search yet"
-      },
-      "areas": {
-        "name": "Also search markets, parks and museums",
-        "scanOff": "Takes effect with “Search automatically”."
       }
     },
     "tt": {

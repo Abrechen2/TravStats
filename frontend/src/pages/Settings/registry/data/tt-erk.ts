@@ -23,7 +23,6 @@ export const TT_ERK_PAGE: RegistryPage = {
         {"id":"staedte","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Städte benennen","en":"Name cities","terms":{"de":"Orte ab 30 Minuten Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder.","en":"Places from 30 minutes Sends positions rounded to 1 km to the server's place search. Off removes the cities again."}},
         {"id":"kiort","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
         {"id":"scanzeit","mount":"ttDetect","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Zeitraum für „Jetzt suchen“","en":"Period for “Search now”","terms":{"de":"","en":""}},
-        {"id":"gelaende","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Märkte, Parks und Museen mitsuchen","en":"Also search markets, parks and museums","terms":{"de":"","en":""}},
       ]},
   ],
 };

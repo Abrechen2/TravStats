@@ -5629,24 +5629,6 @@
         ""
        ],
        "m": "ttDetect"
-      },
-      {
-       "id": "gelaende",
-       "t": "toggle",
-       "v": true,
-       "inv": "S4 Markets, parks and museums in the stay search (marketEnabled + venueEnabled)",
-       "de": [
-        "Märkte, Parks und Museen mitsuchen",
-        "",
-        ""
-       ],
-       "en": [
-        "Also search markets, parks and museums",
-        "",
-        ""
-       ],
-       "m": "ttDetect",
-       "x": 1
       }
      ]
     }

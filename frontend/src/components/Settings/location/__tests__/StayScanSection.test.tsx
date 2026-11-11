@@ -20,7 +20,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 vi.mock("../../../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { state: vi.fn(), enable: vi.fn(), enableAreas: vi.fn(), scan: vi.fn() },
+  dawarichStaysApi: { state: vi.fn(), enable: vi.fn(), scan: vi.fn() },
 }));
 
 import StayScanSection from "../StayScanSection";
@@ -177,43 +177,6 @@ describe("Standort → Aufenthalte finden", () => {
     show();
     expect(await screen.findByText(/settings:location\.stay\.result\.done/)).toBeInTheDocument();
     expect(screen.getByText("settings:location.stay.last.name")).toBeInTheDocument();
-  });
-
-  describe("'Märkte, Parks und Museen mitsuchen' (an expert row of Feinabstimmung)", () => {
-    const areasSwitch = () =>
-      screen.findByRole("switch", { name: "settings:location.stay.areas.name" });
-
-    it("is not drawn at the standard level", async () => {
-      show();
-      await scanButton();
-      expect(screen.queryByText("settings:location.stay.areas.name")).toBeNull();
-    });
-
-    it("shows the two area switches as one and writes both with one request", async () => {
-      expert.current = true;
-      api.state.mockResolvedValue({ ...base, marketEnabled: true, venueEnabled: true });
-      api.enableAreas.mockResolvedValue();
-      show();
-      const toggle = await areasSwitch();
-      expect(toggle).toBeChecked();
-      fireEvent.click(toggle);
-      await settle();
-      await waitFor(() => expect(api.enableAreas).toHaveBeenCalledWith(false));
-    });
-
-    it("reads as off when only one of the two is on, and says it needs the search itself", async () => {
-      expert.current = true;
-      api.state.mockResolvedValue({
-        ...base,
-        enabled: false,
-        pausedReason: "disabled",
-        marketEnabled: true,
-        venueEnabled: false,
-      });
-      show();
-      expect(await areasSwitch()).not.toBeChecked();
-      expect(screen.getByText("settings:location.stay.areas.scanOff")).toBeInTheDocument();
-    });
   });
 
   it("keeps the period (an expert row) out of the standard level", async () => {

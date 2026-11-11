@@ -1785,10 +1785,6 @@
       "last": {
         "name": "Letzter Suchlauf",
         "none": "Noch kein Suchlauf"
-      },
-      "areas": {
-        "name": "Märkte, Parks und Museen mitsuchen",
-        "scanOff": "Wirkt erst mit „Automatisch suchen“."
       }
     },
     "tt": {

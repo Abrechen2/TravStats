@@ -195,10 +195,6 @@ export const dawarichStaysApi = {
   enableVenues: async (venueEnabled: boolean): Promise<void> => {
     await api.patch(`${base}/settings`, { venueEnabled });
   },
-  /** Markets and venues together: the one "Märkte, Parks und Museen mitsuchen" switch. */
-  enableAreas: async (on: boolean): Promise<void> => {
-    await api.patch(`${base}/settings`, { marketEnabled: on, venueEnabled: on });
-  },
   scan: async (
     lookbackDays = 7,
     options: { onPoll?: (job: JobView) => void } = {}
