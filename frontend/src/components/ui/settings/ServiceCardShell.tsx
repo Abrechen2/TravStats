@@ -1,6 +1,7 @@
 import { useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import Dialog from "../Dialog";
+import { hasDirtyGroups, usePendingLeave } from "./leaveGuard";
 
 interface ServiceCardShellProps {
   title: ReactNode;
@@ -30,6 +31,9 @@ export function ServiceCardShell({
 }: ServiceCardShellProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [open, setOpen] = useState(defaultOpen);
+  // Closing unmounts the card's forms; unsaved input asks first instead of vanishing.
+  usePendingLeave();
+  const dirty = open && hasDirtyGroups();
   const head = (
     <>
       <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ts-text-bright)" }}>{title}</span>
@@ -83,6 +87,7 @@ export function ServiceCardShell({
           closeLabel={t("settings:blocks.card.close")}
           dismissLabel={t("settings:blocks.card.done")}
           maxWidth={680}
+          dirty={dirty}
         >
           <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
             <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>

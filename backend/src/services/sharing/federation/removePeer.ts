@@ -12,7 +12,7 @@ import { revokePairing } from "./lifecycle";
 
 export interface RemovedPeer {
   pairings: number;
-  /** Shared trips that were linked to a group through this server and now stand alone here. */
+  /** Trips that were shared through this server; they all stay here as local copies. */
   trips: number;
 }
 
@@ -27,8 +27,9 @@ export async function removePeer(origin: string): Promise<RemovedPeer> {
         select: { groupId: true },
       });
       const groupIds = [...new Set(groups.map((g) => g.groupId))];
-      for (const pairing of pairings) await revokePairing(tx, pairing, false, true);
+      // Counted before the revoke detaches copies: these are the trips that were shared through it.
       const trips = await tx.trip.count({ where: { shareGroupId: { in: groupIds } } });
+      for (const pairing of pairings) await revokePairing(tx, pairing, false, true);
       await tx.tripShareOutbox.deleteMany({ where: { peerOrigin: origin } });
       await tx.comparisonPeer.delete({ where: { origin } });
       return { pairings: pairings.length, trips };

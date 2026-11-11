@@ -56,7 +56,7 @@ import { getAdminParserSettings, type AdminParserSettings } from "../parserSetti
 import logger from "../../utils/logger";
 import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
 import { loadPolicy } from "../externalServices/policy";
-import { ownLlmKeys } from "./ownKeys";
+import { ownLlmKeys, pausedLlmKinds } from "./ownKeys";
 import {
   checkLlmBaseUrl,
   consentDestination,
@@ -332,7 +332,10 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   // An account's own key for a cloud model (settings v3) goes ahead of the instance's, as for
   // every resolver provider; the slot still needs the admin's opt-in below.
   const ownKeys = options.userId !== undefined ? await ownLlmKeys(options.userId) : {};
+  const paused = options.userId !== undefined ? await pausedLlmKinds(options.userId) : [];
   for (const kind of parseProviderOrder(admin?.llmProviderOrder)) {
+    // An account that paused a model sends nothing to it, with its own key or the instance's.
+    if (kind !== "custom" && paused.includes(kind)) continue;
     const target = isFixedEndpointKind(kind)
       ? fixedEndpointChainTarget(kind, admin, ownKeys[kind] ?? null)
       : customChainTarget(admin);

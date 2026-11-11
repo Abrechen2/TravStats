@@ -510,6 +510,23 @@ describe("ServicesPage", () => {
     expect(card("airlabs").closest(".svc-tile")).toHaveAttribute("hidden");
   });
 
+  it("closing a card that holds an unsaved key asks first instead of dropping it", async () => {
+    await show(false);
+    const dialog = await open("airlabs");
+    await userEvent.type(
+      within(dialog).getByPlaceholderText("settings:blocks.secret.empty"),
+      "half-typed"
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settings:blocks.card.done" })
+    );
+    expect(await screen.findByTestId("discard-question")).toBeInTheDocument();
+    // Still there, with what was typed.
+    expect(within(dialog).getByPlaceholderText("settings:blocks.secret.empty")).toHaveValue(
+      "half-typed"
+    );
+  });
+
   it("a secret that was sent is not sent again with the next save (a removed key does not come back)", async () => {
     api.accountUpdate.mockResolvedValue({});
     api.accountOverview.mockResolvedValue(

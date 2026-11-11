@@ -19,7 +19,9 @@ export type BaseMoney = ((
 export function useBaseMoney(): BaseMoney {
   const base = useSettingsStore((s) => s.baseCurrency) || "EUR";
   const display = useSuggestionSwitchesStore((s) => s.displayCurrency);
-  const known = useDisplayRateStore((s) => s.known);
+  const pair = `${base}>${display}`;
+  const rate = useDisplayRateStore((s) => s.rates[pair]);
+  const known = useMemo(() => (rate === undefined ? null : { pair, rate }), [pair, rate]);
   const ensure = useDisplayRateStore((s) => s.ensure);
   useEffect(() => {
     if (display && display !== base) void ensure(base, display);

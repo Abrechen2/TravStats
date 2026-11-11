@@ -33,6 +33,8 @@ export default function BackupsSummary({ backups }: { backups: Backup[] | null }
   const saved = useBackupScheduleStore((s) => s.saved);
   const schedule = saved ?? loaded;
   useEffect(() => {
+    // A save from an earlier visit is no fresher than the read below.
+    useBackupScheduleStore.setState({ saved: null });
     let alive = true;
     backupApi.getBackupSettings().then(
       (s) => alive && setSchedule(s),

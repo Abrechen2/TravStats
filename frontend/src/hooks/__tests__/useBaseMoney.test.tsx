@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("../../lib/api/client", () => ({ api: { get: mocks.get } }));
@@ -20,7 +20,7 @@ const setCurrencies = (base: string, display: string | null): void => {
 describe("a base-currency total in the display currency", () => {
   beforeEach(() => {
     mocks.get.mockReset();
-    useDisplayRateStore.setState({ known: null, asked: [] });
+    useDisplayRateStore.setState({ rates: {}, asked: [] });
   });
 
   it("is written in the display currency once the server's rate is known", async () => {
@@ -53,5 +53,19 @@ describe("a base-currency total in the display currency", () => {
       value: 10,
       currency: "EUR",
     });
+  });
+
+  it("keeps a rate per pair, so switching USD, GBP, USD does not fall back to the base currency", async () => {
+    mocks.get
+      .mockResolvedValueOnce({ data: { data: { base: "EUR", display: "USD", rate: 2 } } })
+      .mockResolvedValueOnce({ data: { data: { base: "EUR", display: "GBP", rate: 0.5 } } });
+    setCurrencies("EUR", "USD");
+    const { result } = renderHook(() => useBaseMoney());
+    await waitFor(() => expect(result.current.currency).toBe("USD"));
+    act(() => setCurrencies("EUR", "GBP"));
+    await waitFor(() => expect(result.current.currency).toBe("GBP"));
+    act(() => setCurrencies("EUR", "USD"));
+    await waitFor(() => expect(result.current.currency).toBe("USD"));
+    expect(mocks.get).toHaveBeenCalledTimes(2);
   });
 });

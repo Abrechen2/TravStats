@@ -127,4 +127,21 @@ describe.each([
       .expect(200);
     expect((await resolveLlmChain({ userId })).some((t) => t.kind === kind)).toBe(false);
   });
+
+  it("a paused service gets nothing from this account, not even through the instance's key", async () => {
+    await prisma.adminSettings.update({
+      where: { id: adminId },
+      data: { [adminKey]: encryptApiKey("instance-key"), [optIn]: true },
+    });
+    await consent().expect(200);
+    expect((await resolveLlmChain({ userId })).some((t) => t.kind === kind)).toBe(true);
+    await request(app)
+      .put(`/api/v1/settings/external-services/${id}`)
+      .set("Cookie", cookie)
+      .send({ accountDisabled: true })
+      .expect(200);
+    expect((await resolveLlmChain({ userId })).some((t) => t.kind === kind)).toBe(false);
+    // Another account is not paused and still reaches the instance's key.
+    expect((await resolveLlmChain({ systemTask: true })).some((t) => t.kind === kind)).toBe(true);
+  });
 });

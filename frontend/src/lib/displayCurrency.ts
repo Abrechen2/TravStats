@@ -43,14 +43,15 @@ export function formatBaseAmount(
 }
 
 interface DisplayRateStore {
-  known: DisplayRate | null;
-  /** Pairs already asked for, so a missing rate is not re-requested on every render. */
+  /** The rate per `base>display` pair (null: the server had none), so switching back needs no new call. */
+  rates: Record<string, number | null>;
+  /** Pairs asked for, so a missing rate is not re-requested on every render. */
   asked: string[];
   ensure: (base: Currency, display: Currency) => Promise<void>;
 }
 
 export const useDisplayRateStore = create<DisplayRateStore>((set, get) => ({
-  known: null,
+  rates: {},
   asked: [],
   ensure: async (base, display) => {
     const pair = `${base}>${display}`;
@@ -61,8 +62,8 @@ export const useDisplayRateStore = create<DisplayRateStore>((set, get) => ({
         "/currencies/display-rate"
       );
       const body = res.data.data;
-      // The server answers for the account's current pair; keep it only if it is the one asked for.
-      set({ known: { pair: `${body.base}>${body.display}`, rate: body.rate } });
+      // The server answers for the account's current pair; store it under the pair it names.
+      set((s) => ({ rates: { ...s.rates, [`${body.base}>${body.display}`]: body.rate } }));
     } catch (error) {
       // No rate is a state the amounts render (base currency); the next pair change asks again.
       logger.warn("display currency rate unavailable", error);

@@ -170,7 +170,7 @@ registry.registerPath({
           schema: z.object({
             removed: z.literal(true),
             pairings: z.number().int().describe("Pairings with people on that server that ended"),
-            trips: z.number().int().describe("Shared trips that now stand alone on this server"),
+            trips: z.number().int().describe("Trips that were shared through that server (they stay here as local copies)"),
           }),
         },
       },
