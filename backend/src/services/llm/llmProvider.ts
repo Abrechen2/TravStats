@@ -56,7 +56,7 @@ import { getAdminParserSettings, type AdminParserSettings } from "../parserSetti
 import logger from "../../utils/logger";
 import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
 import { loadPolicy } from "../externalServices/policy";
-import { resolveApiKey } from "../apiKeyResolver";
+import { ownLlmKeys } from "./ownKeys";
 import {
   checkLlmBaseUrl,
   consentDestination,
@@ -329,14 +329,12 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   const ollama = ollamaOff ? null : ollamaChainTarget(admin);
   if (ollama) chain.push(ollama);
 
-  // An account's own Gemini key (settings v3) goes ahead of the instance's, as for
+  // An account's own key for a cloud model (settings v3) goes ahead of the instance's, as for
   // every resolver provider; the slot still needs the admin's opt-in below.
-  const ownGoogle =
-    options.userId !== undefined ? await resolveApiKey("gemini", options.userId) : null;
-  const ownGoogleKey = ownGoogle?.source === "user" ? ownGoogle.key : null;
+  const ownKeys = options.userId !== undefined ? await ownLlmKeys(options.userId) : {};
   for (const kind of parseProviderOrder(admin?.llmProviderOrder)) {
     const target = isFixedEndpointKind(kind)
-      ? fixedEndpointChainTarget(kind, admin, kind === "google" ? ownGoogleKey : null)
+      ? fixedEndpointChainTarget(kind, admin, ownKeys[kind] ?? null)
       : customChainTarget(admin);
     if (target) chain.push(target);
   }

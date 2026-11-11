@@ -349,8 +349,10 @@ export const SERVICES: readonly ServiceDef[] = [
   svc({
     id: "openai",
     category: "ai",
-    level: "instance",
+    // An account may bring its own key (settings v3 S5b), like Gemini.
+    level: "instanceAndAccount",
     credential: "key",
+    resolverProvider: "openai",
     getKeyUrl: "https://platform.openai.com/api-keys",
     ai: { kind: "openai" },
     enabled: { kind: "adminColumns", columns: ["llmOpenaiOptIn"] },
@@ -358,14 +360,17 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmOpenaiApiKey"),
       admin("model", "text", "llmOpenaiModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "openaiApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),
   svc({
     id: "anthropic",
     category: "ai",
-    level: "instance",
+    level: "instanceAndAccount",
     credential: "key",
+    // The resolver names Anthropic "claude".
+    resolverProvider: "claude",
     getKeyUrl: "https://console.anthropic.com/settings/keys",
     ai: { kind: "anthropic" },
     enabled: { kind: "adminColumns", columns: ["llmAnthropicOptIn"] },
@@ -373,6 +378,7 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmAnthropicApiKey"),
       admin("model", "text", "llmAnthropicModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "claudeApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),
@@ -552,7 +558,7 @@ export function getService(id: string): ServiceDef | undefined {
   return SERVICE_BY_ID.get(id);
 }
 
-/** The service that owns an `apiKeyResolver` provider id (openai/claude have none). */
+/** The service that owns an `apiKeyResolver` provider id . */
 export function serviceForResolverProvider(provider: string): ServiceDef | undefined {
   return SERVICES.find((s) => s.resolverProvider === provider);
 }
