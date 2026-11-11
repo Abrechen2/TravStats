@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent, timeRefused } from "./shared";
+import { remoteFindableSchema } from "../../../schemas/sharingRemote";
 import { profileZoneBodySchema, profileZoneViewSchema } from "../../settings/profileZoneSettings";
 import {
   homeAirportsResponseSchema,
@@ -103,16 +104,33 @@ const accountPrefsFields = {
 };
 
 const travPlanField = z
-  .object({ enabled: z.boolean() })
+  .object({
+    enabled: z.boolean(),
+    ai: z.boolean().describe("Settings v3 `planai`: AI proposals in plans. Default on."),
+    weather: z.boolean().describe("Settings v3 `planwx`: forecasts in plans. Default on."),
+  })
   .describe(
     "Whether this account uses TravPlan, the planning area (owner, 2026-10-27). Default off; " +
       "accounts that held a plan when it arrived were switched on. Off refuses the plan paths " +
       "with 403 PLAN_USER_DISABLED and keeps every plan. Offered only while GET " +
-      "/travplan/capabilities answers `instanceEnabled: true`."
+      "/travplan/capabilities answers `instanceEnabled: true`. `ai` off refuses a new proposal " +
+      "(403 PLAN_AI_USER_DISABLED) and makes a plan import read without AI; `weather` off " +
+      "refuses a forecast refresh (403 PLAN_WEATHER_USER_DISABLED). Stored proposals and " +
+      "forecasts are kept."
   );
 
 const settingsResponseSchema = z
-  .object({ settingsLevel: settingsLevelField, ...accountPrefsFields, travPlan: travPlanField })
+  .object({
+    settingsLevel: settingsLevelField,
+    ...accountPrefsFields,
+    travPlan: travPlanField,
+    displayCurrency: z
+      .string()
+      .describe(
+        "Settings v3 `cur`: the currency amounts are SHOWN in. Equals `baseCurrency` until " +
+          "chosen. Display only: totals and conversions keep using `baseCurrency`."
+      ),
+  })
   .passthrough()
   .describe("The user's settings. Only the listed fields are typed in this spec so far.");
 const settingsOk = (description: string) => ({
@@ -128,6 +146,11 @@ const settingsUpdateBodySchema = z
     liveTracking: liveTrackingSettingsSchema.optional(),
     railImport: railImportSettingsSchema.optional(),
     travPlan: travPlanField.partial().optional(),
+    displayCurrency: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("An ECB currency code; null returns to following `baseCurrency`."),
   })
   .passthrough()
   .describe("Every block is optional; an omitted key leaves the stored value alone.");
@@ -205,6 +228,39 @@ registry.registerPath({
   summary: "Update the user's profile",
   tags: settingsTag,
   responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/profile/findable",
+  summary: "Whether users of connected servers can find the caller",
+  description:
+    "Settings v3 `findable`. The same switch as `GET /sharing/remote/findable`, answered bare. Default off.",
+  tags: settingsTag,
+  responses: {
+    200: {
+      description: "`{ findable: boolean }`",
+      content: { "application/json": { schema: remoteFindableSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/profile/findable",
+  summary: "Opt in or out of being found by users of connected servers",
+  description:
+    "Body `{ findable: boolean }`. Existing pairings are untouched. 404 `SHARE_REMOTE_DISABLED` while this server is not connected to other servers; 403 for the shared demo account.",
+  tags: settingsTag,
+  request: { body: { content: { "application/json": { schema: remoteFindableSchema } } } },
+  responses: {
+    200: {
+      description: "`{ findable: boolean }`",
+      content: { "application/json": { schema: remoteFindableSchema } },
+    },
+    400: badInput,
+    404: { description: "`SHARE_REMOTE_DISABLED`" },
+  },
 });
 
 registry.registerPath({

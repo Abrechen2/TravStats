@@ -182,6 +182,8 @@ export async function getParserConfigWithSettings(
 
 export interface AdminFxSettings {
   cdnFallbackEnabled: boolean;
+  /** `admin_settings.internet_enabled`; false = no FX call leaves the server. */
+  internetEnabled: boolean;
   /** Base URL of the primary ECB source (never null: unusable choices fall back to Frankfurter). */
   primaryUrl: string;
   /** Base URL of the optional second ECB source, or null for none. */
@@ -201,6 +203,7 @@ export async function getAdminFxSettings(): Promise<AdminFxSettings> {
     orderBy: { id: "asc" },
     select: {
       fxCdnFallbackEnabled: true,
+      internetEnabled: true,
       fxPrimarySource: true,
       fxPrimaryCustomUrl: true,
       fxFallbackSource: true,
@@ -209,6 +212,8 @@ export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   });
   return {
     cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true,
+    // Master switch off: the resolver makes no call at all (ECB or CDN).
+    internetEnabled: settings?.internetEnabled ?? true,
     // A primary that cannot be resolved (custom without a valid URL) reads as
     // the default rather than as "no ECB at all".
     primaryUrl:

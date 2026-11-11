@@ -238,11 +238,13 @@ export const SERVICES: readonly ServiceDef[] = [
   svc({
     id: "googlePlaces",
     category: "mapsRoutes",
-    level: "instance",
+    // An account may bring its own key (settings v3); lookups made for that account use it first.
+    level: "instanceAndAccount",
     credential: "key",
     resolverProvider: "googlePlaces",
     getKeyUrl: "https://console.cloud.google.com/google/maps-apis",
     fields: [admin("apiKey", "secret", "globalGooglePlacesApiKey")],
+    accountFields: [user("apiKey", "secret", "googlePlacesApiKey")],
     requiredFields: ["apiKey"],
     tester: "googlePlaces",
   }),
@@ -377,8 +379,11 @@ export const SERVICES: readonly ServiceDef[] = [
   svc({
     id: "gemini",
     category: "ai",
-    level: "instance",
+    // An account may bring its own key (settings v3); the instance's consent
+    // switch below still decides whether the slot exists at all.
+    level: "instanceAndAccount",
     credential: "key",
+    resolverProvider: "gemini",
     getKeyUrl: "https://aistudio.google.com/app/apikey",
     ai: { kind: "google" },
     enabled: { kind: "adminColumns", columns: ["llmGoogleOptIn"] },
@@ -386,6 +391,7 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmGoogleApiKey"),
       admin("model", "text", "llmGoogleModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "googleApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),

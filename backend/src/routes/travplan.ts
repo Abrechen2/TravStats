@@ -33,8 +33,10 @@ import documentEndpoints from "./travplan/documentEndpoints";
 import {
   assertTravPlanForUser,
   assertTravPlanOffered,
+  travPlanAiUserEnabled,
   travPlanOffered,
   travPlanUserEnabled,
+  travPlanWeatherUserEnabled,
 } from "../services/travplan/availability";
 import { planVersusActual } from "../services/travplan/actual/planActual";
 import { accessiblePlan, assertOwner, planAccess } from "../services/travplan/access";
@@ -55,10 +57,12 @@ router.get(
   "/travplan/capabilities",
   authenticate,
   route(async (req, res) => {
-    const [config, offered, userEnabled] = await Promise.all([
+    const [config, offered, userEnabled, aiEnabled, weatherEnabled] = await Promise.all([
       configuration(),
       travPlanOffered(),
       travPlanUserEnabled(req.userId!),
+      travPlanAiUserEnabled(req.userId!),
+      travPlanWeatherUserEnabled(req.userId!),
     ]);
     const instanceEnabled = config.enabled && offered;
     res.json({
@@ -67,8 +71,9 @@ router.get(
       instanceEnabled,
       userEnabled,
       offlineWrites: true,
-      ai: true,
-      forecast: true,
+      // The account's own "AI / weather in plans" switches (settings v3).
+      ai: aiEnabled,
+      forecast: weatherEnabled,
       notifications: false,
     });
   })

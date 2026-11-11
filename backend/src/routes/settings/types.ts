@@ -98,6 +98,8 @@ export interface SettingsResponse extends SettingsDataJson {
   /** Read-only server capabilities, independent of the account selection. */
   availableDomains?: string[];
   baseCurrency: string;
+  /** The currency amounts are SHOWN in (settings v3); equals `baseCurrency` until chosen. Display only. */
+  displayCurrency: string;
   /** Silent trip auto-creation during flight import (column-backed). */
   autoCreateTrips: boolean;
   /** Inbox suggestion switches (forgejo#306), column-backed, nested here. */
@@ -188,6 +190,7 @@ export interface UserSettingsUpdateData {
   boardingPassParserStrategy?: string | null;
   enabledDomains?: string[];
   baseCurrency?: string;
+  displayCurrency?: string | null;
   autoCreateTrips?: boolean;
   tripSuggestionsEnabled?: boolean;
   staySuggestionsEnabled?: boolean;

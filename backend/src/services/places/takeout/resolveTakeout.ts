@@ -102,7 +102,8 @@ export async function resolveTakeoutList(
   reportProgress: ReportProgress = () => undefined,
   deps: ResolveDeps = {}
 ): Promise<PlaceImportResolution> {
-  const key = deps.googleKey !== undefined ? deps.googleKey : await getApiKey("googlePlaces");
+  const key =
+    deps.googleKey !== undefined ? deps.googleKey : await getApiKey("googlePlaces", userId);
   const lookupCid = deps.lookupCid ?? ((cid: string, k: string) => lookupPlaceByCid(cid, k));
   const searchName = deps.searchName ?? throttledPhotonSearch();
 

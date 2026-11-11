@@ -36,6 +36,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   openDataEnabled: bool,
   operatorLogosOpenDataEnabled: bool,
   shareLinksEnabled: bool,
+  internetEnabled: bool,
   llmEnabled: bool,
   fxCdnFallbackEnabled: bool,
   fxPrimarySource: oneOf(FX_SOURCE_IDS),

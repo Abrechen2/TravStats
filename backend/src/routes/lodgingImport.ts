@@ -41,7 +41,7 @@ const requireUser = (req: AuthRequest): string => {
  * The shared demo account does not run the CSV lodging import.
  *
  * `/commit` hands its rows to `backfillLodgingLocations` → `findLodgingPlace` →
- * `getApiKey("googlePlaces")`, which takes no user argument, so every geocode is
+ * `getApiKey("googlePlaces", userId)`: the account's own key first, else every geocode is
  * billed to the OPERATOR per request. `/preview` is the step that produces the
  * rows `/commit` is given, and `/suggest-mapping` asks the admin's Ollama to
  * read the CSV headers — the same compute the summarize route is guarded
