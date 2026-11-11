@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   get: vi.fn(),
   update: vi.fn(),
   suspendPeer: vi.fn(),
+  removePeer: vi.fn(),
   verifyPeer: vi.fn(),
   generateKey: vi.fn(),
   admissions: vi.fn().mockResolvedValue([]),
@@ -204,26 +205,26 @@ describe("FederationRows", () => {
       await waitFor(() => expect(useFederationStatus.getState().enabled).toBe(false));
     });
 
-    it("asks before a server is no longer trusted, and cuts it only after the answer", async () => {
-      api.suspendPeer.mockResolvedValue(undefined);
+    it("asks before a server is no longer trusted, and removes it only after the answer (peerremove)", async () => {
+      api.removePeer.mockResolvedValue(undefined);
       await show("connections");
-      const rows = await screen.findAllByRole("button", { name: "federation.suspend" });
+      const rows = await screen.findAllByRole("button", { name: "federation.remove" });
       await userEvent.click(rows[0]);
       const dialog = await screen.findByRole("dialog");
       expect(dialog).toHaveTextContent("settingsRows:dialogs.peerremove.title");
-      expect(api.suspendPeer).not.toHaveBeenCalled();
+      expect(api.removePeer).not.toHaveBeenCalled();
       await userEvent.click(
         within(dialog).getByRole("button", { name: "settingsRows:dialogs.peerremove.confirm" })
       );
-      await waitFor(() =>
-        expect(api.suspendPeer).toHaveBeenCalledWith("https://reise.example.net")
-      );
+      await waitFor(() => expect(api.removePeer).toHaveBeenCalledWith("https://reise.example.net"));
+      // The list is read again, so the removed server disappears from it.
+      await waitFor(() => expect(api.get.mock.calls.length).toBeGreaterThan(1));
     });
 
     it("does not cut anything when the question is declined", async () => {
       await show("connections");
       await userEvent.click(
-        (await screen.findAllByRole("button", { name: "federation.suspend" }))[0]
+        (await screen.findAllByRole("button", { name: "federation.remove" }))[0]
       );
       const dialog = await screen.findByRole("dialog");
       await userEvent.click(
@@ -237,7 +238,7 @@ describe("FederationRows", () => {
               })
           )!
       );
-      expect(api.suspendPeer).not.toHaveBeenCalled();
+      expect(api.removePeer).not.toHaveBeenCalled();
     });
 
     it("names how many servers a new key cuts off before it is made", async () => {

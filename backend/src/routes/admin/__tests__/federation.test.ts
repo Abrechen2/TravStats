@@ -261,4 +261,42 @@ describe("trips shared through a peer pause when the admin blocks it or pins a n
       await prisma.user.delete({ where: { id: user.id } });
     }
   });
+  it("removing the peer deletes the pin, ends the pairings and keeps the shared trip as a local copy", async () => {
+    await pinPeer(pemOf());
+    const { user, member } = await sharedWithPeer();
+    try {
+      const group = await prisma.tripShareGroup.findFirstOrThrow({
+        where: { createdById: user.id },
+      });
+      const trip = await prisma.trip.create({
+        data: { userId: user.id, name: "Madeira", shareGroupId: group.id },
+      });
+      await prisma.tripShareOutbox.create({
+        data: {
+          groupId: group.id,
+          memberId: member.id,
+          peerOrigin: PEER,
+          kind: "entries",
+          payload: {},
+        },
+      });
+      const missing = await request(app).delete("/api/v1/admin/federation/peers").query({
+        origin: "https://nobody.admin-federation.test",
+      });
+      expect(missing.status).toBe(404);
+      const res = await request(app)
+        .delete("/api/v1/admin/federation/peers")
+        .query({ origin: PEER });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ removed: true, pairings: 1 });
+      // Nothing in or out: no pin to admit against, no queue left, the membership is a tombstone.
+      expect(await prisma.comparisonPeer.findUnique({ where: { origin: PEER } })).toBeNull();
+      expect(await prisma.tripShareOutbox.count({ where: { peerOrigin: PEER } })).toBe(0);
+      expect((await stateOf(member.id)).state).toBe("revoked");
+      // The trip is still the user's.
+      expect(await prisma.trip.findUnique({ where: { id: trip.id } })).not.toBeNull();
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
 });

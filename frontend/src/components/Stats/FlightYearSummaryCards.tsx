@@ -1,13 +1,9 @@
 import type { SummaryStats } from "../../lib/api";
+import { useBaseMoney } from "../../hooks/useBaseMoney";
 import { useTranslation } from "../../hooks/useTranslation";
 import { comparisonWindow } from "../../lib/stats/comparisonWindow";
 import { useSettingsStore } from "../../store/settingsStore";
-import {
-  convertDistance,
-  formatCurrency,
-  formatHoursValue,
-  getDistanceLabel,
-} from "../../lib/units";
+import { convertDistance, formatHoursValue, getDistanceLabel } from "../../lib/units";
 import TrendDelta from "./TrendDelta";
 import EvidenceTrigger from "./EvidenceTrigger";
 import CountingHelp from "./counting/CountingHelp";
@@ -38,7 +34,7 @@ export default function FlightYearSummaryCards({
 }: FlightYearSummaryCardsProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const units = useSettingsStore((s) => s.units);
-  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const baseMoney = useBaseMoney();
   const formatHours = (minutes: number): string => formatHoursValue(minutes / 60, i18n.language);
   // `year`-scoped measures need the year itself, not just the "year" period
   // kind — an evidence request without it is a request the resolver cannot
@@ -225,9 +221,7 @@ export default function FlightYearSummaryCards({
               <div className="flex items-end gap-2 mt-2">
                 <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
                   {/* Null is "nothing recorded", not "free" (forgejo#83) — a dash, never 0 €. */}
-                  {yearSummary.totalCost === null
-                    ? "—"
-                    : formatCurrency(yearSummary.totalCost, baseCurrency)}
+                  {yearSummary.totalCost === null ? "—" : baseMoney(yearSummary.totalCost)}
                 </p>
                 {compareSummary !== null &&
                   yearSummary.totalCost !== null &&
@@ -245,10 +239,8 @@ export default function FlightYearSummaryCards({
               )}
               {compareSummary !== null && (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                  {compareSummary.totalCost === null
-                    ? "—"
-                    : formatCurrency(compareSummary.totalCost, baseCurrency)}{" "}
-                  ({compareYear})
+                  {compareSummary.totalCost === null ? "—" : baseMoney(compareSummary.totalCost)} (
+                  {compareYear})
                 </p>
               )}
             </EvidenceTrigger>

@@ -3,10 +3,13 @@ import { prisma } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { isCurrencyCode } from "../shared/currencies";
+import { fxPreviewLimiter } from "../middleware/rateLimit";
+import { resolveRate } from "../services/fx/resolver";
+import { getBaseCurrency } from "../services/fx/snapshot";
 
-// No rate limiter: `/recent` reads the currencies the caller has already used,
-// from their own rows. Nothing here touches the FX upstream — the route that
-// does is `/lodging/fx-preview`, and that one has `fxPreviewLimiter`.
+// `/recent` reads the currencies the caller has already used, from their own
+// rows, and needs no limiter. `/display-rate` asks the FX chain (cached per
+// pair and day) and carries the same `fxPreviewLimiter` as `/lodging/fx-preview`.
 const router = Router();
 router.use(authenticate);
 
@@ -46,6 +49,43 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     // The project's envelope, like every other route — this one answered a
     // bare `{codes}`, which every client would have had to special-case.
     res.json({ success: true, data: { codes } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * The one rate the web needs to show a base-currency total in the account's display
+ * currency (settings v3 `cur`). Conversion rules live here and in the FX chain: the
+ * client multiplies, it never looks a rate up itself. `rate` is null when the chain
+ * has none (offline, unknown pair, external services off) — the client then shows
+ * the base amount with its own currency instead of a guessed number.
+ */
+router.get("/display-rate", fxPreviewLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.userId;
+    if (!userId) throw new AppError("Not authenticated", 401);
+    const [base, settings] = await Promise.all([
+      getBaseCurrency(userId),
+      prisma.userSettings.findUnique({ where: { userId }, select: { displayCurrency: true } }),
+    ]);
+    const display = settings?.displayCurrency ?? base;
+    if (display === base) {
+      res.json({ success: true, data: { base, display, rate: 1, rateDate: null, source: null } });
+      return;
+    }
+    const rateDate = new Date().toISOString().slice(0, 10);
+    const found = await resolveRate(base, display, rateDate);
+    res.json({
+      success: true,
+      data: {
+        base,
+        display,
+        rate: found?.rate ?? null,
+        rateDate: found ? rateDate : null,
+        source: found?.source ?? null,
+      },
+    });
   } catch (error) {
     next(error);
   }

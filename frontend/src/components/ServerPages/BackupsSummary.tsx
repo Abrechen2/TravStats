@@ -1,4 +1,5 @@
 import { useEffect, useState, type JSX } from "react";
+import { useBackupScheduleStore } from "../../store/backupScheduleStore";
 import { backupApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { logger } from "../../lib/logger";
@@ -27,8 +28,13 @@ const formatSize = (bytes: string): string => {
 export default function BackupsSummary({ backups }: { backups: Backup[] | null }): JSX.Element {
   const { t } = useTranslation(["settingsRows", "settings"]);
   const row = useRowCopy("backups");
-  const [schedule, setSchedule] = useState<BackupScheduleSettings | null>(null);
+  const [loaded, setSchedule] = useState<BackupScheduleSettings | null>(null);
+  // A save made in the tuning group below is newer than what this component read on mount.
+  const saved = useBackupScheduleStore((s) => s.saved);
+  const schedule = saved ?? loaded;
   useEffect(() => {
+    // A save from an earlier visit is no fresher than the read below.
+    useBackupScheduleStore.setState({ saved: null });
     let alive = true;
     backupApi.getBackupSettings().then(
       (s) => alive && setSchedule(s),

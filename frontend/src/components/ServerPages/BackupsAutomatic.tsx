@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import { useBackupScheduleStore } from "../../store/backupScheduleStore";
 import { backupApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { groupTimeZones } from "../../lib/timezones";
@@ -90,6 +91,8 @@ function Form({
         backupZone: draft.zone === "" ? null : draft.zone,
       });
       onSaved(updated);
+      // The summary above reads the same schedule: tell it, or it keeps the old rhythm.
+      useBackupScheduleStore.getState().publish(updated);
       return draftOf(updated);
     },
   });

@@ -1,7 +1,6 @@
 import type { JSX } from "react";
+import { useBaseMoney } from "../../../hooks/useBaseMoney";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useSettingsStore } from "../../../store/settingsStore";
-import { formatCurrency } from "../../../lib/units";
 import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPriceGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
@@ -38,11 +37,11 @@ interface Props {
  */
 export default function LodgingMoneySection({ stats, evidenceScope }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "stats"]);
-  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const baseMoney = useBaseMoney();
   const { price } = stats;
   const locale = i18n.language.startsWith("en") ? "en" : "de";
 
-  const money = (value: number): string => formatCurrency(value, baseCurrency);
+  const money = (value: number): string => baseMoney(value);
   const priceRows = (groups: LodgingPriceGroup[], label: (key: string) => string): RankedRow[] =>
     groups.map((g) => ({
       key: g.key,
@@ -70,7 +69,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
       }
     : undefined;
   const helpValues = {
-    currency: baseCurrency,
+    currency: baseMoney.currency,
     stays: price.pricedStays,
     nights: price.pricedNights,
     omitted: price.unpricedStays,
@@ -106,7 +105,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           : t("lodging:stats.money.basis", {
               stays: price.pricedStays,
               nights: price.pricedNights,
-              currency: baseCurrency,
+              currency: baseMoney.currency,
             })}
         {price.unpricedStays > 0 &&
           ` · ${t("lodging:stats.money.omitted", { count: price.unpricedStays })}`}

@@ -59,7 +59,7 @@ export default function FederationRows({
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [rotated, setRotated] = useState(false);
   const [confirmKey, setConfirmKey] = useState(false);
-  const [suspending, setSuspending] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   // Every call answers with the whole state, so two at once would race: they run
   // one after the other, each reading the origin and the switch as they are THEN.
@@ -244,7 +244,7 @@ export default function FederationRows({
               busy={busy}
               locked={Boolean(demo)}
               onVerify={(peer) => void run(() => federationAdminApi.verifyPeer(peer))}
-              onSuspend={(peer) => setSuspending(peer)}
+              onRemove={(peer) => setRemoving(peer)}
             />
             <details data-testid="federation-advanced">
               <summary className="t-label-mono cursor-pointer">
@@ -296,15 +296,20 @@ export default function FederationRows({
       />
       {/* Not trusting a server any more cuts both directions at once, so it asks. */}
       <ConfirmDialog
-        open={suspending !== null}
-        {...dialog("peerremove", { name: suspending ?? "" })}
+        open={removing !== null}
+        {...dialog("peerremove", { name: removing ?? "" })}
         busy={busy}
         onConfirm={() => {
-          const origin = suspending;
-          setSuspending(null);
-          if (origin) void run(() => federationAdminApi.suspendPeer(origin));
+          const origin = removing;
+          setRemoving(null);
+          if (origin) {
+            void run(async () => {
+              await federationAdminApi.removePeer(origin);
+              return federationAdminApi.get();
+            });
+          }
         }}
-        onCancel={() => setSuspending(null)}
+        onCancel={() => setRemoving(null)}
       />
     </>
   );

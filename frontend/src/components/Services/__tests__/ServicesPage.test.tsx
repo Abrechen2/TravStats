@@ -68,7 +68,8 @@ const open = async (id: string): Promise<HTMLElement> => {
     return found;
   }, WAIT);
   await userEvent.click(within(el).getByRole("button", { name: /settings:blocks\.card|^/ }));
-  return el;
+  // The card opens as a dialog over the page (settings v3 S5b): its body is the dialog's.
+  return screen.getByRole("dialog");
 };
 const side = (el: HTMLElement, which: "account" | "server"): HTMLElement =>
   el.querySelector(`[data-service-side="${which}"]`) as HTMLElement;
@@ -187,6 +188,101 @@ describe("ServicesPage", () => {
     expect(api.accountUpdate).not.toHaveBeenCalled();
   });
 
+  describe("Pausieren and the first key (settings v3 S5b)", () => {
+    const withServer = (over: Parameters<typeof admin>[1]) =>
+      adminOverview({
+        categories: [{ id: "flight", services: [admin("airlabs", over)] }],
+      });
+    const typeServerKey = async (key: string): Promise<void> => {
+      const srv = side(await open("airlabs"), "server");
+      await userEvent.type(within(srv).getByPlaceholderText(/settings:blocks\.secret\./), key);
+      await userEvent.click(
+        within(srv).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
+      );
+    };
+
+    it("the first server key switches the service on by itself", async () => {
+      api.adminUpdate.mockResolvedValue({});
+      api.adminTest.mockResolvedValue({ ok: true, reason: null, usedQuota: false, lastTest: null });
+      api.adminOverview.mockResolvedValue(
+        withServer({
+          configured: false,
+          enabled: false,
+          fields: [{ key: "apiKey", kind: "secret", value: null, masked: true, expert: false }],
+        })
+      );
+      await show(true);
+      await typeServerKey("first-key");
+      await waitFor(
+        () => expect(api.adminUpdate).toHaveBeenCalledWith("airlabs", { enabled: true }),
+        WAIT
+      );
+    });
+
+    it("a key added to a service that was paused on purpose does not switch it back on", async () => {
+      api.adminUpdate.mockResolvedValue({});
+      api.adminTest.mockResolvedValue({ ok: true, reason: null, usedQuota: false, lastTest: null });
+      api.adminOverview.mockResolvedValue(withServer({ configured: true, enabled: false }));
+      await show(true);
+      await typeServerKey("second-key");
+      await waitFor(
+        () =>
+          expect(api.adminUpdate).toHaveBeenCalledWith("airlabs", {
+            fields: { apiKey: "second-key" },
+          }),
+        WAIT
+      );
+      expect(api.adminUpdate).not.toHaveBeenCalledWith("airlabs", { enabled: true });
+    });
+
+    it("Pausieren writes enabled:false, and is not offered for a service with nothing to pause", async () => {
+      api.adminUpdate.mockResolvedValue({});
+      await show(true);
+      const srv = side(await open("airlabs"), "server");
+      await userEvent.click(within(srv).getAllByRole("switch")[0]);
+      await waitFor(
+        () => expect(api.adminUpdate).toHaveBeenCalledWith("airlabs", { enabled: false }),
+        WAIT
+      );
+      cleanup();
+      api.adminOverview.mockResolvedValue(
+        withServer({ configured: false, enabled: false, fields: [] })
+      );
+      await show(true);
+      expect(
+        within(side(await open("airlabs"), "server")).queryByText(
+          "settingsRows:services.tpl.pause.t"
+        )
+      ).toBeNull();
+    });
+
+    it("the first own key of a paused account puts the service back on in the same save", async () => {
+      api.accountUpdate.mockResolvedValue({});
+      api.accountOverview.mockResolvedValue(
+        accountOverview({
+          ownKeys: [{ ...accountOverview().ownKeys[0], accountDisabled: true }],
+        })
+      );
+      await show(false);
+      const el = await open("airlabs");
+      await userEvent.type(
+        within(el).getByPlaceholderText("settings:blocks.secret.empty"),
+        "my-key"
+      );
+      await userEvent.click(
+        within(el).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
+      );
+      await waitFor(
+        () =>
+          expect(api.accountUpdate).toHaveBeenCalledWith("airlabs", {
+            fields: { apiKey: "my-key" },
+            accountDisabled: false,
+          }),
+        WAIT
+      );
+    });
+  });
+
   it("a refused own key keeps what was typed and says why — the admin forbade it", async () => {
     api.accountUpdate.mockRejectedValue({
       response: { status: 403, data: { error: "x", code: "ACCOUNT_KEYS_NOT_ALLOWED" } },
@@ -232,13 +328,14 @@ describe("ServicesPage", () => {
     await show(true);
     const el = await open("airlabs");
     const srv = side(el, "server");
+    // "Pausieren": off while the service runs.
     const toggle = within(srv).getAllByRole("switch")[0];
-    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
     await userEvent.click(toggle);
     expect(
       await within(srv).findByText(/settings:blocks\.save\.failed/, undefined, WAIT)
     ).toBeInTheDocument();
-    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
     await userEvent.click(within(srv).getByRole("button", { name: "settings:blocks.save.retry" }));
     await waitFor(() => expect(api.adminUpdate).toHaveBeenCalledTimes(2), WAIT);
     expect(api.adminUpdate).toHaveBeenLastCalledWith("airlabs", { enabled: false });
@@ -397,23 +494,37 @@ describe("ServicesPage", () => {
     expect(screen.getByTestId("services-empty")).toBeInTheDocument();
   });
 
-  it("switching group or closing a card does not throw away an unsaved key", async () => {
+  it("a card opens as a dialog over the page, not inline, and Fertig closes it", async () => {
     await show(false);
-    const el = await open("airlabs");
-    const input = within(el).getByPlaceholderText("settings:blocks.secret.empty");
-    await userEvent.type(input, "half-typed");
-    await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.groups.ki" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const dialog = await open("airlabs");
+    // The settings are in the dialog, not in the tile on the grid.
+    expect(card("airlabs").contains(dialog)).toBe(false);
+    expect(within(dialog).getByPlaceholderText("settings:blocks.secret.empty")).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "settingsRows:services.groups.alle" })
+      within(dialog).getByRole("button", { name: "settings:blocks.card.done" })
     );
-    expect(
-      within(card("airlabs")).getByPlaceholderText("settings:blocks.secret.empty")
-    ).toHaveValue("half-typed");
-    await userEvent.click(within(card("airlabs")).getAllByRole("button")[0]);
-    await userEvent.click(within(card("airlabs")).getAllByRole("button")[0]);
-    expect(
-      within(card("airlabs")).getByPlaceholderText("settings:blocks.secret.empty")
-    ).toHaveValue("half-typed");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Filtering by group keeps the tiles mounted, hidden, as before.
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:services.groups.ki" }));
+    expect(card("airlabs").closest(".svc-tile")).toHaveAttribute("hidden");
+  });
+
+  it("closing a card that holds an unsaved key asks first instead of dropping it", async () => {
+    await show(false);
+    const dialog = await open("airlabs");
+    await userEvent.type(
+      within(dialog).getByPlaceholderText("settings:blocks.secret.empty"),
+      "half-typed"
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "settings:blocks.card.done" })
+    );
+    expect(await screen.findByTestId("discard-question")).toBeInTheDocument();
+    // Still there, with what was typed.
+    expect(within(dialog).getByPlaceholderText("settings:blocks.secret.empty")).toHaveValue(
+      "half-typed"
+    );
   });
 
   it("a secret that was sent is not sent again with the next save (a removed key does not come back)", async () => {
@@ -495,7 +606,9 @@ describe("ServicesPage", () => {
       within(srv).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
     );
     expect(api.adminUpdate).not.toHaveBeenCalled();
-    await userEvent.click(await within(screen.getByRole("dialog")).findByRole("checkbox"));
+    // The confirmation opens on top of the card's own dialog.
+    const dialogs = await screen.findAllByRole("dialog");
+    await userEvent.click(await within(dialogs[dialogs.length - 1]).findByRole("checkbox"));
     await userEvent.click(
       await screen.findByRole("button", { name: /externalServices:consent\.admin\.confirm/ })
     );
@@ -600,6 +713,9 @@ describe("ServicesPage", () => {
       const locked = rail.querySelector("[data-locked]") as HTMLElement;
       expect(locked).toBeTruthy();
       expect(within(rail).getAllByText("internet-off-reason")).toHaveLength(1);
+      await userEvent.click(
+        within(rail).getByRole("button", { name: "settings:blocks.card.done" })
+      );
       const dataSwitch = await open("openData");
       expect(within(dataSwitch).getByText("internet-off-reason")).toBeTruthy();
     });
@@ -682,12 +798,36 @@ describe("ServicesPage", () => {
         ).toBeTruthy();
       });
 
-      it("an AI card that takes no own key (OpenAI) still draws the consent alone", async () => {
+      it.each(["openai", "anthropic"])(
+        "%s holds the consent AND the own key, and the key goes to the account endpoint (settings v3 S5b)",
+        async (id) => {
+          api.accountOverview.mockResolvedValue(
+            accountOverview({
+              ownKeys: [ownKey(id)],
+              aiConsents: [{ id, consentedAt: null }] as never,
+            })
+          );
+          api.accountUpdate.mockResolvedValue({});
+          await showSide("account");
+          const el = await open(id);
+          expect(
+            within(side(el, "account")).getByText("settingsRows:services.tpl.aiConsent.t")
+          ).toBeTruthy();
+          await typeAndSave(el, "own-key-1");
+          await waitFor(
+            () =>
+              expect(api.accountUpdate).toHaveBeenCalledWith(id, {
+                fields: { apiKey: "own-key-1" },
+              }),
+            WAIT
+          );
+          expect(api.adminUpdate).not.toHaveBeenCalled();
+        }
+      );
+
+      it("an AI card the admin forbade own keys for (OpenAI) draws the consent alone", async () => {
         api.accountOverview.mockResolvedValue(
-          accountOverview({
-            ownKeys: [ownKey("openai")],
-            aiConsents: [{ id: "openai", consentedAt: null }] as never,
-          })
+          accountOverview({ aiConsents: [{ id: "openai", consentedAt: null }] as never })
         );
         await showSide("account");
         const el = await open("openai");

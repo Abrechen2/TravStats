@@ -59,7 +59,7 @@ import {
   type LlmProviderKind,
 } from "./llmEndpoint";
 import { loadPolicy, loadPrefs } from "../externalServices/policy";
-import { resolveApiKey } from "../apiKeyResolver";
+import { ownLlmKeys } from "./ownKeys";
 
 /** Why a model was not asked. Distinct kinds, because the UI says different things. */
 export type LlmRefusalKind =
@@ -166,10 +166,10 @@ function anythingConfigured(settings: AdminParserSettings | null): boolean {
 function providerRefusal(
   settings: AdminParserSettings | null,
   ollamaOff = false,
-  ownGoogleKey = false
+  ownKeyKinds: readonly string[] = []
 ): LlmRefusal | null {
-  // An account that brought its own Gemini key has a slot of its own (its consent is asked next).
-  if (ownGoogleKey) return null;
+  // An account that brought its own cloud key has a slot of its own (its consent is asked next).
+  if (ownKeyKinds.length > 0) return null;
   if (!anythingConfigured(settings)) return null;
   if (ollamaEligible(settings, ollamaOff)) return null;
   if (customSlotEligible(settings) || anyFixedSlotEligible(settings)) return null;
@@ -211,9 +211,9 @@ export async function accountConsentedTo(
 async function accountConsentRefusal(
   settings: AdminParserSettings | null,
   userId: string,
-  ownGoogleKey = false
+  ownKeyKinds: readonly string[] = []
 ): Promise<boolean> {
-  if (!anythingConfigured(settings) && !ownGoogleKey) return false;
+  if (!anythingConfigured(settings) && ownKeyKinds.length === 0) return false;
   const ollamaOff = (await loadPolicy()).disabled.includes("ollama");
   const url = ollamaConfiguredUrl(settings);
   let ollamaLocal = false;
@@ -250,8 +250,12 @@ async function accountConsentRefusal(
       cloud.push({ kind, destination: consentDestination(kind, null) });
     }
   }
-  if (ownGoogleKey && !cloud.some((c) => c.kind === "google")) {
-    cloud.push({ kind: "google", destination: consentDestination("google", null) });
+  for (const kind of ownKeyKinds) {
+    if (cloud.some((c) => c.kind === kind)) continue;
+    cloud.push({
+      kind: kind as LlmProviderKind,
+      destination: consentDestination(kind as "openai", null),
+    });
   }
   if (cloud.length === 0) return false;
   const prefs = await loadPrefs(userId);
@@ -282,11 +286,10 @@ export async function llmRefusalFor(userId?: string): Promise<LlmRefusal | null>
     return { kind: "disabled_by_admin", reason: LLM_DISABLED_REASON };
   }
   const policy = await loadPolicy();
-  const ownGoogleKey =
-    userId !== undefined && (await resolveApiKey("gemini", userId)).source === "user";
-  const provider = providerRefusal(settings, policy.disabled.includes("ollama"), ownGoogleKey);
+  const ownKeyKinds = userId !== undefined ? Object.keys(await ownLlmKeys(userId)) : [];
+  const provider = providerRefusal(settings, policy.disabled.includes("ollama"), ownKeyKinds);
   if (provider) return provider;
-  if (userId !== undefined && (await accountConsentRefusal(settings, userId, ownGoogleKey))) {
+  if (userId !== undefined && (await accountConsentRefusal(settings, userId, ownKeyKinds))) {
     return { kind: "cloud_not_consented", reason: LLM_ACCOUNT_NOT_CONSENTED_REASON };
   }
   if (userId !== undefined && (await isSharedDemoUser(userId))) {

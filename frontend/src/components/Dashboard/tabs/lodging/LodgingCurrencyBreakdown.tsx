@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from "react";
+import { useBaseMoney } from "../../../../hooks/useBaseMoney";
 import { useTranslation } from "../../../../hooks/useTranslation";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { formatCurrency } from "../../../../lib/units";
@@ -58,6 +59,7 @@ export function LodgingCurrencyBreakdown({
 }: LodgingCurrencyBreakdownProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const baseMoney = useBaseMoney();
   const entries = Object.entries(stats.spendByCurrency).sort(([a], [b]) => a.localeCompare(b));
   // Amounts snapshotted under a base currency the user has since moved away
   // from — `spendBaseTotal` above only covers the CURRENT base currency, so
@@ -88,9 +90,7 @@ export function LodgingCurrencyBreakdown({
           {t("dashboard:lodgingTab.currencyBreakdown.baseLabel")}:{" "}
         </span>
         <strong>
-          {lodgingSpendNothingConverted(stats)
-            ? "—"
-            : formatCurrency(stats.spendBaseTotal, baseCurrency)}
+          {lodgingSpendNothingConverted(stats) ? "—" : baseMoney(stats.spendBaseTotal)}
         </strong>
       </div>
 

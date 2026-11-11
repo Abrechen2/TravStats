@@ -39,12 +39,16 @@ export default function MaintenanceDebug24({
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // What the toggle itself answered: it is the server's fresh word, so the row shows it even
+  // when the reload that follows fails. A successful reload hands the same value back via `config`.
+  const [fresh, setFresh] = useState<{ until: string | null } | null>(null);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(id);
   }, []);
 
-  const until = config.debugUntil ? Date.parse(config.debugUntil) : null;
+  const debugUntil = fresh ? fresh.until : (config.debugUntil ?? null);
+  const until = debugUntil ? Date.parse(debugUntil) : null;
   const running = until !== null && Number.isFinite(until) && until > now;
   const copy = row("debug24");
 
@@ -52,9 +56,16 @@ export default function MaintenanceDebug24({
     setBusy(true);
     setFailed(false);
     try {
-      await adminApi.toggleDebugLogging(on);
-      await reload();
+      const answer = await adminApi.toggleDebugLogging(on);
+      setFresh({ until: answer.config?.debugUntil ?? null });
       setNow(Date.now());
+      try {
+        await reload();
+        setFresh(null);
+      } catch (error) {
+        // The switch itself worked; only the re-read failed, and the row already shows the answer.
+        logger.warn("Re-reading the logging settings after the 24 h switch failed:", error);
+      }
     } catch (error) {
       logger.error("Switching the 24 h verbose log failed:", error);
       setFailed(true);
@@ -83,7 +94,7 @@ export default function MaintenanceDebug24({
       {running && left ? (
         <p role="status" data-debug24="running" className="t-caption" style={{ margin: 0 }}>
           {t("settingsRows:maintenance.debug24.running", {
-            until: fmt.dateTime(config.debugUntil ?? ""),
+            until: fmt.dateTime(debugUntil ?? ""),
             hours: left.hours,
             minutes: left.minutes,
           })}
