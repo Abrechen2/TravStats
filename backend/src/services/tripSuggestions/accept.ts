@@ -96,6 +96,7 @@ async function linkMembers(
   await propagateWrites(tx, userId, "cruise", ids("cruise"));
   await propagateWrites(tx, userId, "lodgingStay", ids("lodging"));
   await propagateWrites(tx, userId, "roadtrip", ids("roadtrip"));
+  await propagateWrites(tx, userId, "tour", ids("tour"));
   return linked;
 }
 
@@ -120,7 +121,7 @@ async function linkTours(
   let orderIdx = last ? last.orderIdx + 1 : 0;
   let count = 0;
   for (const id of tourIds) {
-    // share-exempt: day tours only (kind: tour) — only roadtrips are shared
+    // share-exempt: day tours only; linkMembers propagates them as the "tour" type
     const moved = await tx.tripRoute.updateMany({
       where: {
         id,

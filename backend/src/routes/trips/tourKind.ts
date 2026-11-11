@@ -10,6 +10,7 @@ import {
   shareSnapshot,
   SHARE_TX_TIMEOUT_MS,
 } from "../../services/sharing/propagate";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { resolveRoute, toDto, ROUTE_SELECT } from "./tourRoutes";
 
 /**
@@ -37,11 +38,22 @@ router.patch(
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, undefined, req.params.routeId);
       const body = kindSwitchSchema.parse(req.body);
+      // The tour page is gated by the user's domain list: a tour made by
+      // conversion must not stay invisible in an account that never switched it on.
+      if (body.kind === "tour") await ensureTourDomainEnabled(userId);
 
-      // A roadtrip is shared with the trip's members, a tour never: the switch can make one.
+      // A roadtrip and a tour are both shared with the trip's members, as two different types: a
+      // switch ends the entry the members hold (they keep their copy and are told) and shares the
+      // row afresh as the other type. Never one entry that changes type under its key, which
+      // would reach copies of the old type with the new type's facts.
       const route = await prisma.$transaction(
         async (tx) => {
-          const before = await shareSnapshot(tx, "roadtrip", routeId);
+          const current = await tx.tripRoute.findUniqueOrThrow({
+            where: { id: routeId },
+            select: { kind: true },
+          });
+          const from = current.kind === "tour" ? "tour" : "roadtrip";
+          const before = await shareSnapshot(tx, from, routeId);
           const updated = await tx.tripRoute.update({
             where: { id: routeId },
             data:
@@ -59,13 +71,12 @@ router.patch(
                   },
             include: ROUTE_SELECT,
           });
-          if (body.kind === "tour" && before?.shareKey) {
-            // A tour is never shared: the members keep their copies and are told.
+          if (from !== body.kind && before?.shareKey) {
             await tx.tripRoute.update({ where: { id: routeId }, data: { shareKey: null } });
             await propagateDelete(tx, userId, before);
-          } else {
-            await propagateWrite(tx, userId, "roadtrip", routeId, before);
           }
+          // The row's new kind decides the type; it gets a key and copies if its trip is shared.
+          await propagateWrite(tx, userId, body.kind, routeId, from === body.kind ? before : null);
           return updated;
         },
         { timeout: SHARE_TX_TIMEOUT_MS }

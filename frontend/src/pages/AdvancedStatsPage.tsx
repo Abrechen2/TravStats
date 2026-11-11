@@ -57,6 +57,8 @@ import BusStatsSection from "../components/Stats/bus/BusStatsSection";
 import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
 import { mergeYears, useRentalBusYears } from "../lib/stats/useRentalBusYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
+import { useDomainColors } from "../hooks/useDomainColors";
+import TourStatsSection from "../components/Stats/roadtrip/TourStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
 import type { WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
@@ -111,6 +113,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // "Details →" links from the cross-domain Gesamt overview can route to
   // the right drill-down.
   const { enabled } = useEnabledDomains();
+  const { colorOf } = useDomainColors();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilterState] = useState<DomainKey | "all">(() =>
     parseStatsTab(searchParams.get("tab"))
@@ -590,6 +593,9 @@ export default function AdvancedStatsPage(): JSX.Element {
           )}
           {effectiveFilter === "roadtrip" && (
             <RoadtripStatsSection scope={scope} visibility={sections} />
+          )}
+          {effectiveFilter === "tour" && sections.isVisible("insights") && (
+            <TourStatsSection year={scope.year} accent={colorOf("tour")} />
           )}
           {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
           {effectiveFilter === "rental" && (

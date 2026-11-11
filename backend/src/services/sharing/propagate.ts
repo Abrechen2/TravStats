@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import type { Db, DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { ADAPTERS, type EntityAdapter, type ShareEntity, type SharedRow } from "./adapters";
+import { ROUTE_KINDS, isRouteEntity, type RouteEntity } from "./shareTypes";
 import { copyInto, joinedMeta } from "./copyInto";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
 import { restatusTrips } from "../trip/restatusTrips";
@@ -124,7 +125,33 @@ export async function shareSnapshots(
   ids: readonly string[]
 ): Promise<Map<string, ShareSnapshot>> {
   if (isPropagating() || ids.length === 0) return new Map();
-  return snapshotsWith(c as DbTransaction, entity, ids);
+  if (!isRouteEntity(entity)) return snapshotsWith(c as DbTransaction, entity, ids);
+  const out = new Map<string, ShareSnapshot>();
+  for (const [kind, group] of await routeIdsByKind(c as DbTransaction, ids)) {
+    for (const [id, snap] of await snapshotsWith(c as DbTransaction, kind, group))
+      out.set(id, snap);
+  }
+  return out;
+}
+
+/**
+ * A roadtrip and a tour are two share types over one table, and most of the routes that write a
+ * route (legs, tracks, stations, routing) serve both kinds. They say "roadtrip" for "a route";
+ * the row's `kind` decides which type it is. Ids of no row are dropped.
+ */
+async function routeIdsByKind(c: DbTransaction, ids: readonly string[]) {
+  const rows = await c.tripRoute.findMany({
+    where: { id: { in: [...ids] } },
+    select: { id: true, kind: true },
+  });
+  const out = new Map<RouteEntity, string[]>();
+  for (const row of rows) {
+    const kind = (Object.keys(ROUTE_KINDS) as RouteEntity[]).find(
+      (k) => ROUTE_KINDS[k] === row.kind
+    );
+    if (kind) out.set(kind, [...(out.get(kind) ?? []), row.id]);
+  }
+  return out;
 }
 
 export async function shareSnapshot(
@@ -446,6 +473,27 @@ export async function propagateWrites(
   before?: Map<string, ShareSnapshot>
 ): Promise<void> {
   if (isPropagating() || ids.length === 0) return;
+  if (isRouteEntity(entity)) {
+    // The row's kind picks the type (see `routeIdsByKind`); a snapshot of the other type is not
+    // this write's before-state and is ignored.
+    await inTransaction(c, async (tx) => {
+      for (const [kind, group] of await routeIdsByKind(tx, ids)) {
+        const own = new Map([...(before ?? [])].filter(([, snap]) => snap.entity === kind));
+        await propagateExact(tx, actorId, kind, group, own);
+      }
+    });
+    return;
+  }
+  await propagateExact(c, actorId, entity, ids, before);
+}
+
+async function propagateExact(
+  c: ShareClient,
+  actorId: string,
+  entity: ShareEntity,
+  ids: readonly string[],
+  before?: Map<string, ShareSnapshot>
+): Promise<void> {
   await inTransaction(c, async (tx) => {
     const adapter = ADAPTERS[entity];
     const rows = (await adapter.load(tx, ids)).filter((r) => r.userId === actorId);

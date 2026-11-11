@@ -199,6 +199,15 @@ const describeRoadtrips: Describer = async (userId, ids) =>
     (r) => ({ label: r.name, href: `/roadtrips/${r.id}`, pin: null })
   );
 
+const describeTours: Describer = async (userId, ids) =>
+  byId(
+    await prisma.tripRoute.findMany({
+      where: { userId, id: { in: [...ids] } },
+      select: { id: true, name: true },
+    }),
+    (r) => ({ label: r.name, href: `/tours/${r.id}`, pin: null })
+  );
+
 const describeLodging: Describer = async (userId, ids) =>
   byId(
     await prisma.lodgingStay.findMany({
@@ -235,4 +244,5 @@ export const DAY_LABEL_DESCRIBERS: Record<DomainKey, Describer> = {
   rental: describeRentals,
   bus: describeBus,
   ferry: describeFerry,
+  tour: describeTours,
 };

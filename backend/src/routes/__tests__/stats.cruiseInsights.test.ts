@@ -68,7 +68,7 @@ describe("GET /stats/cruise-insights", () => {
     await prisma.userSettings.create({
       // No "roadtrip" domain on purpose: tours follow the web's
       // `useToursVisible` — the beta switch alone (ruling 2026-10-09).
-      data: { userId, enabledDomains: ["flight", "cruise"], data: {} },
+      data: { userId, enabledDomains: ["flight", "cruise", "tour"], data: {} },
     });
 
     const kiel = await port("Kiel", 54.32, 10.14);

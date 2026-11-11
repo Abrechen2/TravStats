@@ -126,14 +126,39 @@ it("marks the tour km a lower bound when a counted recording stopped at the impo
       truncated: true,
     },
   });
-  jest.mocked(loadVisibleDomains).mockResolvedValue(["roadtrip"]);
+  jest.mocked(loadVisibleDomains).mockResolvedValue(["tour"]);
   const s = await buildLeaderboardSnapshot(
     userId,
-    { groups: ["distance", "trips"], domains: ["roadtrip"], year: null },
+    { groups: ["distance", "trips"], domains: ["tour"], year: null },
     2025
   );
   expect(s.metrics).toEqual({ tours: 1, tourKm: 20 });
   expect(s.partial).toEqual(["tourKm"]);
+
+  // The tour figures live under `tour` now: a consent for roadtrips alone carries none, and a
+  // tour inside a trip is counted once, not again as a roadtrip leg.
+  const trip = await prisma.trip.create({ data: { userId, name: "Norwegen" } });
+  await prisma.tripRoute.update({ where: { id: tour.id }, data: { tripId: trip.id } });
+  const inTrip = await buildLeaderboardSnapshot(
+    userId,
+    { groups: ["distance", "trips"], domains: ["tour", "roadtrip"], year: null },
+    2025
+  );
+  expect(inTrip.metrics).toEqual({ tours: 1, tourKm: 20 });
+  // Domain off (or the beta switch closed: `loadVisibleDomains` drops it): no tour figure.
+  jest.mocked(loadVisibleDomains).mockResolvedValue(["roadtrip"]);
+  const off = await buildLeaderboardSnapshot(
+    userId,
+    { groups: ["distance", "trips"], domains: ["tour", "roadtrip"], year: null },
+    2025
+  );
+  expect(off.metrics).toEqual({ tours: null, tourKm: null });
+  const roadtripOnly = await buildLeaderboardSnapshot(
+    userId,
+    { groups: ["distance", "trips"], domains: ["roadtrip"], year: null },
+    2025
+  );
+  expect(roadtripOnly.metrics).toEqual({});
 });
 
 it("counts a place only once it is marked visited, as the places page does", async () => {

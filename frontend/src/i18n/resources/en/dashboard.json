@@ -256,7 +256,8 @@
       "lodging": "Add stay",
       "poi": "Add place",
       "roadtrip": "Add roadtrip",
-      "rail": "Add train journey"
+      "rail": "Add train journey",
+      "tour": "Add tour"
     }
   },
   "filter": {

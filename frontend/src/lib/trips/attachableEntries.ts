@@ -264,6 +264,8 @@ const LOADERS: Record<DomainKey, (bare: BareTrainName) => Promise<AttachableLoad
   roadtrip: loadRoadtrips,
   bus: loadBus,
   ferry: loadFerry,
+  // Tours are moved between trips from their own page (T2), not through this picker.
+  tour: async () => ({ entries: [], unlinkable: 0 }),
 };
 
 /**

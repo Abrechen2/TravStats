@@ -10,6 +10,7 @@ import {
 } from "../../services/expenses/sectionRemoval";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { kindFieldsSchema } from "../../schemas/roadtrip";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
@@ -58,16 +59,9 @@ async function assertKindFields(
   let detach: ((tx: DbTransaction) => Promise<number>) | null = null;
   if (body.tripId) await resolveTrip(userId, body.tripId);
   if (body.tripId !== undefined) {
-    // Only a roadtrip moves between trips: its stations are its own. A tour
-    // section of a trip is built from that trip's timeline, and a standalone
-    // tour's points would land beside a timeline the assign endpoint owns.
-    const { kind } = await prisma.tripRoute.findUniqueOrThrow({
-      where: { id: routeId },
-      select: { kind: true },
-    });
-    if (kind !== "roadtrip") {
-      throw new AppError("Only a roadtrip can be attached to or moved between trips", 400);
-    }
+    // Any kind moves (a tour is a domain of its own since 2026-11-09), as long
+    // as its points are its own — a standalone tour or a roadtrip. A section
+    // built from a trip's timeline is refused below.
     // A section built from a trip's timeline stops cannot change trip: its
     // stops would stay on the old trip's timeline while the route claimed the
     // new one. Only a route whose points are its own may move.
@@ -280,6 +274,7 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createRouteSchema.parse(req.body);
+      await ensureTourDomainEnabled(userId);
 
       const last = await prisma.tripRoute.findFirst({
         where: { tripId: trip.id },
@@ -287,7 +282,6 @@ router.post(
         select: { orderIdx: true },
       });
 
-      // share-exempt: a section made here is a tour (the column default); only roadtrips are shared
       const route = await prisma.tripRoute.create({
         data: {
           userId,
@@ -303,6 +297,9 @@ router.post(
         },
         include: ROUTE_SELECT,
       });
+
+      // A section made here is a tour (the column default): shared with the trip's members.
+      await propagateWrite(prisma, userId, "tour", route.id);
 
       logger.info({ operation: "tour.route.create", routeId: route.id, tripId: trip.id });
       res.status(201).json({ route: toDto(route) });

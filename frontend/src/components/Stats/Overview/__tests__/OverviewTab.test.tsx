@@ -1,3 +1,4 @@
+import type { DomainKey } from "../../../../shared/domains";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -134,31 +135,20 @@ describe("OverviewTab hides the blocks the reader switched off", () => {
   });
 });
 
-// Integration of the statistics branches (coordinator ruling 2026-10-09): tours
-// follow `useToursVisible` alone. Their home is the roadtrip tab; without that
-// tab the overview carries them, so a shown tour always has its figures.
-describe("OverviewTab carries the tour figures where the roadtrip tab is not", () => {
+// Tours are a domain of their own (tours-own-domain T3): their insights live on the tour tab, and
+// the overview carries them as one card among the domains — never as a block of its own, with the
+// roadtrip tab there or not.
+describe("OverviewTab does not carry the tour insights", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it("draws them with roadtrips switched off while tours are shown", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
-    renderOverview();
-    expect(screen.getByTestId("tour-stats")).toBeInTheDocument();
-  });
-
-  it("leaves them to the roadtrip tab when that tab is there", () => {
-    useSettingsStore.setState({
-      enabledDomains: ["flight", "roadtrip"],
-      betaFeaturesEnabled: true,
-    });
-    renderOverview();
-    expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
-  });
-
-  it("draws none while tours are not shown", () => {
-    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+  it.each<[DomainKey[], string]>([
+    [["flight", "tour"], "roadtrips switched off, tours shown"],
+    [["flight", "roadtrip", "tour"], "roadtrips and tours shown"],
+    [["flight"], "tour domain off"],
+  ])("draws no tour block with %j (%s)", (enabledDomains) => {
+    useSettingsStore.setState({ enabledDomains, betaFeaturesEnabled: true });
     renderOverview();
     expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
   });

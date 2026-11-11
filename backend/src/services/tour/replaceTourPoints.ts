@@ -4,6 +4,7 @@ import type { TourPointsInput } from "../../schemas/tour";
 import { recomputeLegs, type StopCoords } from "./legRecompute";
 import { autoRouteNewLegs } from "./routing/autoRouteLegs";
 import logger from "../../utils/logger";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
 
 /**
@@ -84,6 +85,7 @@ export async function replaceTourPoints(
 
   const saved = await prisma.$transaction(
     async (tx) => {
+      const routeBefore = await shareSnapshot(tx, "tour", routeId);
       // Every id the body names must already be a point of THIS tour.
       // Without this an id from a stranger's tour would be adopted by the
       // update below, which filters on the id alone.
@@ -152,6 +154,8 @@ export async function replaceTourPoints(
       await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 
       const createdLegs = await recomputeLegs(tx, routeId, section.mode, ordered);
+      // The points are the tour's stations: on a shared trip the members' copies follow.
+      await propagateWrite(tx, userId, "tour", routeId, routeBefore);
 
       return {
         createdLegs,
@@ -173,7 +177,7 @@ export async function replaceTourPoints(
     // The assign endpoint raises this for the same reason: a long list is
     // one round trip per point, and the default 5000ms is not a budget
     // anyone measured.
-    { timeout: 20_000 }
+    { timeout: SHARE_TX_TIMEOUT_MS }
   );
 
   logger.info({ operation: "tour.points.replace", routeId, count: points.length });

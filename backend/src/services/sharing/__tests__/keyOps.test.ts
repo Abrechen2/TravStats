@@ -55,10 +55,17 @@ describe("key operations over every registered type", () => {
     bus: await prisma.busJourney.create({ data: ride(tripId) }),
     ferry: await prisma.ferryJourney.create({ data: ride(tripId) }),
   });
-  /** A roadtrip with a station and a route correction: the roadtrip is keyed, its stations ride in it (keyed when it is read). */
+  /**
+   * A roadtrip with a station and a route correction: the roadtrip is keyed, its stations ride in it
+   * (keyed when it is read). A tour beside it sits in the same table and is its own type: keyed
+   * once, under `tour`, and never counted as the roadtrip (tours-own-domain T1b).
+   */
   const addStations = async (tripId: string) => {
     const route = await prisma.tripRoute.create({
       data: { userId: anna.id, tripId, name: "Südschweden", mode: "car", kind: "roadtrip" },
+    });
+    await prisma.tripRoute.create({
+      data: { userId: anna.id, tripId, name: "Tagestour", mode: "foot", kind: "tour" },
     });
     return Promise.all([
       prisma.tripStop.create({
@@ -97,6 +104,12 @@ describe("key operations over every registered type", () => {
       );
       expect({ entity, n: ids.length }).toEqual({ entity, n: expected(entity) });
     }
+    const routes = await prisma.tripRoute.findMany({
+      where: { userId: anna.id },
+      select: { kind: true, shareKey: true },
+    });
+    expect(routes.map((r) => r.kind).sort()).toEqual(["roadtrip", "tour"]);
+    expect(new Set(routes.map((r) => r.shareKey)).size).toBe(2);
     const first = await prisma.flight.findUniqueOrThrow({ where: { id: full.flight.id } });
     await prisma.$transaction((tx) => assignShareKeys(tx, anna.id, full.trip.id));
     const again = await prisma.flight.findUniqueOrThrow({ where: { id: full.flight.id } });
@@ -120,15 +133,11 @@ describe("key operations over every registered type", () => {
   it("finds a user's rows on a shared trip for the bulk sync", async () => {
     const full = await makeFullTrip(anna);
     await addRides(full.trip.id);
-    await prisma.tripRoute.create({
-      data: {
-        userId: anna.id,
-        tripId: full.trip.id,
-        name: "Südschweden",
-        mode: "car",
-        kind: "roadtrip",
-      },
-    });
+    for (const kind of ["roadtrip", "tour"]) {
+      await prisma.tripRoute.create({
+        data: { userId: anna.id, tripId: full.trip.id, name: kind, mode: "car", kind },
+      });
+    }
     const group = await prisma.tripShareGroup.create({ data: { createdById: anna.id } });
     await prisma.trip.update({ where: { id: full.trip.id }, data: { shareGroupId: group.id } });
     for (const entity of SHARE_ENTITIES) {

@@ -48,6 +48,7 @@ const EVIDENCE_DOMAINS = [
   "rail",
   "trip",
   "roadtrip",
+  "tour",
   "rental",
   "bus",
   "ferry",

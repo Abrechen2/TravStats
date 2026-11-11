@@ -230,6 +230,7 @@
     "ferry": "the ferry crossing",
     "rental": "the rental car",
     "roadtrip": "the roadtrip",
+    "tour": "the tour",
     "stop": "the stop"
   },
   "values": {
@@ -322,6 +323,10 @@
     "vehicleName": "Vehicle name",
     "stations": "Stations",
     "routeLegs": "Route legs",
+    "activity": "Activity",
+    "tourDate": "Tour day",
+    "tourStartMinute": "Start time",
+    "tracks": "Recorded tracks",
     "operator": "Operator",
     "trainCategory": "Train category",
     "trainNumber": "Train number",
@@ -798,6 +803,8 @@
         "rentals_other": "{{count}} rentals",
         "roadtrips_one": "{{count}} roadtrip",
         "roadtrips_other": "{{count}} roadtrips",
+        "tours_one": "{{count}} tour",
+        "tours_other": "{{count}} tours",
         "stops_one": "{{count}} stop",
         "stops_other": "{{count}} stops"
       },

@@ -27,6 +27,7 @@ import {
   railEvidenceEntry,
   roadtripEvidenceEntry,
   stayEvidenceEntry,
+  tourEvidenceEntry,
 } from "./entryMappersDomains";
 import {
   countableRailWhere,
@@ -36,6 +37,8 @@ import {
 } from "../../shared/railCounting";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
 import { stationCountries } from "../roadtrip/roadtripSummary";
+import { completedTourFacts } from "../stats/insights";
+import { now as clockNow } from "../../shared/time/clock";
 
 /**
  * The rows behind the three `CrossDomainKpis` numbers, per domain, as the
@@ -639,6 +642,25 @@ async function loadFerry(userId: string): Promise<CrossDomainPopulation> {
   return { events, countryRows };
 }
 
+/**
+ * Day tours that happened (`shared/tour/tourCounting`: recorded, or dated before today): one
+ * event on the tour's own day, the country of its first point. A tour inside a trip is a tour
+ * and nothing else here — the roadtrip loader above reads `kind = "roadtrip"` only, so the
+ * same route is never filed twice. A planned or undated tour counts nowhere.
+ */
+async function loadTours(userId: string): Promise<CrossDomainPopulation> {
+  const facts = await completedTourFacts(userId, clockNow());
+  const events: CrossDomainEventRow[] = [];
+  for (const f of facts) {
+    const entry = tourEvidenceEntry(
+      { id: f.tour.id, name: f.tour.name, startDate: f.tour.tourDate },
+      { subtitle: null }
+    );
+    events.push({ domain: "tour", entry, year: f.year, dayKeys: f.day ? [f.day] : [] });
+  }
+  return { events, countryRows: [] };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
@@ -649,6 +671,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   rental: loadRental,
   bus: loadBus,
   ferry: loadFerry,
+  tour: loadTours,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

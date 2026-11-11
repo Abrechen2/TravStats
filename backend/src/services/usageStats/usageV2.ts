@@ -35,6 +35,7 @@ const DOMAIN_COUNTS: Record<Domain, () => Promise<number>> = {
   rental: () => prisma.rentalBooking.count(),
   bus: () => prisma.busJourney.count(),
   ferry: () => prisma.ferryJourney.count(),
+  tour: () => prisma.tripRoute.count({ where: { kind: "tour" } }),
 };
 
 /**

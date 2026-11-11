@@ -213,6 +213,48 @@ const readRoadtrips: Read = async (userId, window, db = prisma) => {
   });
 };
 
+/**
+ * A day tour's window: its recordings' first start to last end when it has any (the logbook then
+ * holds the exact walk), else its day on the tour's own clock. A tour with neither is a sketch
+ * with no moment to state and is left out.
+ */
+const readTours: Read = async (userId, window, db = prisma) => {
+  const [rows, profile] = await Promise.all([
+    db.tripRoute.findMany({
+      where: { userId, kind: "tour" },
+      select: {
+        id: true,
+        tourDate: true,
+        tracks: { select: { startedAt: true, endedAt: true } },
+        stops: {
+          where: { viaPoint: false },
+          orderBy: { routeOrderIdx: "asc" },
+          select: { stopZone: true },
+          take: 1,
+        },
+      },
+    }),
+    profileZoneOf(userId, db),
+  ]);
+  return rows.flatMap((t) => {
+    const recorded = t.tracks.length > 0;
+    const zone = t.stops[0]?.stopZone ?? profile.zone;
+    const from = recorded
+      ? Math.min(...t.tracks.map((r) => r.startedAt.getTime()))
+      : t.tourDate
+        ? startOfDayAt(fromDbDate(t.tourDate), zone).getTime()
+        : null;
+    const until = recorded
+      ? Math.max(...t.tracks.map((r) => r.endedAt.getTime()))
+      : t.tourDate
+        ? startOfDayAt(nextDay(fromDbDate(t.tourDate)), zone).getTime()
+        : null;
+    if (from === null || until === null || until < from) return [];
+    const w = { domain: "tour" as const, id: t.id, fromMs: from, untilMs: until };
+    return overlaps(w, window) ? [w] : [];
+  });
+};
+
 /** Check-in to check-out: the instants when the stay has them, else its days on its own clock. */
 const readLodging: Read = async (userId, window, db = prisma) => {
   const [rows, profile] = await Promise.all([
@@ -296,6 +338,7 @@ export const ENTRY_WINDOW_ADAPTERS: Record<DomainKey, EntryWindowAdapter> = {
   rental: { read: readRentals, movement: true },
   bus: { read: readBus, movement: true },
   ferry: { read: readFerry, movement: true },
+  tour: { read: readTours, movement: true },
 };
 
 /** Keys with neither an adapter nor a reason — empty, or a new domain was not classified. */

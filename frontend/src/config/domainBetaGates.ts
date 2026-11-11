@@ -15,6 +15,8 @@ import type { BetaFeatureKey } from "./betaFeatures";
 export const DOMAIN_BETA_GATES: Readonly<Partial<Record<DomainKey, BetaFeatureKey>>> =
   Object.freeze({
     roadtrip: "roadtrips",
+    // Tours share the roadtrip key until roadtrips are released.
+    tour: "roadtrips",
   });
 
 /** Whether the instance allows `key` at all — true for a domain no switch gates. */

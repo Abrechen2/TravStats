@@ -20,7 +20,6 @@ import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 import { statsInsightsApi } from "../../lib/api/statsInsights";
 import type { RoadtripInsights } from "../../types/statsInsights";
 import RoadtripInsightsSection from "./roadtrip/RoadtripInsightsSection";
-import TourStatsSection from "./roadtrip/TourStatsSection";
 
 /**
  * The roadtrip tab of the statistics page (2.7).
@@ -123,8 +122,6 @@ export default function RoadtripStatsSection({
             ? t("roadtrips:stats.empty")
             : t("stats:period.emptyYear", { year: scope.year })}
         </p>
-        {/* forgejo#264 — tours stand on their own: no roadtrip is needed for one. */}
-        {visibility.isVisible("tours") && <TourStatsSection year={scope.year} accent={accent} />}
       </section>
     );
   }
@@ -315,7 +312,6 @@ export default function RoadtripStatsSection({
         ) : insightsFailed ? (
           <p className="text-sm text-(--text-muted)">{t("roadtrips:stats.insights.loadFailed")}</p>
         ) : null)}
-      {show("tours") && <TourStatsSection year={scope.year} accent={accent} />}
     </section>
   );
 }

@@ -171,6 +171,9 @@ describe("track archive", () => {
     expect(first.body.files[0]).toMatchObject({ action: "createTour", tourName: "Morgenlauf" });
     const second = await importFiles(target.cookie, [["lauf-kopie.gpx", gpx]], false);
     expect(second.body.files[0].action).toBe("duplicate");
+    // A tour made here must not be invisible to the server's tour gate (tours-own-domain).
+    const settings = await prisma.userSettings.findUnique({ where: { userId: target.id } });
+    expect(settings?.enabledDomains).toContain("tour");
   });
 
   it("says why a recording without times cannot be placed", async () => {

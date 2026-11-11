@@ -16,15 +16,14 @@ import { countingSource } from "../counting/countingEntry";
  * added up to, moving time apart from pauses, personal records, the rhythm of
  * the year with first-time and repeated areas, and what a tour hangs on.
  *
- * Lives on the roadtrip tab because tours share its beta switch and its
- * engine; it loads on its own, so a user with tours and no roadtrip still
- * sees it. Where the roadtrip tab is not there (the user switched roadtrips
- * off) the overview carries it instead. Every figure is the server's
+ * The body of the tour tab of the statistics page (tours are a domain of their
+ * own since tours-own-domain T3; they used to hang off the roadtrip tab and
+ * the overview). Every figure is the server's
  * (`GET /stats/insights/tours`): a tour counts once recorded or dated before
  * today, and climb, moving time and height come only from recordings.
  *
- * Drawn only while `useToursVisible` says tours exist on this instance — the
- * one tour rule, never the roadtrip domain toggle.
+ * Drawn only while `useToursVisible` says tours are shown — the tour domain
+ * switched on and the roadtrips beta key open.
  */
 interface Props {
   year: number | null;

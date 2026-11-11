@@ -13,7 +13,10 @@ import { WrappedQuerySchema } from "../../../schemas/statsQuery";
 import { lodgingInsightsResponseSchema } from "../../../schemas/statsInsights/lodging";
 import { placeInsightsResponseSchema } from "../../../schemas/statsInsights/places";
 import { roadtripInsightsResponseSchema } from "../../../schemas/statsInsights/roadtrips";
-import { tourInsightsResponseSchema } from "../../../schemas/statsInsights/tours";
+import {
+  tourInsightsResponseSchema,
+  countedToursResponseSchema,
+} from "../../../schemas/statsInsights/tours";
 
 const flightInsights = registry.register(
   "FlightInsights",
@@ -175,6 +178,29 @@ registry.registerPath({
     200: {
       description: "The insights",
       content: { "application/json": { schema: tourInsights } },
+    },
+    ...STANDARD_ERRORS,
+  },
+});
+
+const countedTours = registry.register(
+  "CountedTours",
+  countedToursResponseSchema.openapi("CountedTours")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/insights/tours/counted",
+  summary: "The day tours that count, one row each, for the cross-domain overview",
+  description:
+    "Recorded tours and tours whose day lies before today at their place, with the year and " +
+    "day they are filed under. 404 while the tour domain is not shown (switched off, or the " +
+    "instance's beta switch closed).",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "The counted tours",
+      content: { "application/json": { schema: countedTours } },
     },
     ...STANDARD_ERRORS,
   },

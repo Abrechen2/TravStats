@@ -19,6 +19,7 @@ const COUNT_ORDER: readonly (keyof OfferCounts)[] = [
   "ferryJourneys",
   "rentals",
   "roadtrips",
+  "tours",
   "stops",
 ];
 

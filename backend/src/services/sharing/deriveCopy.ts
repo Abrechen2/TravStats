@@ -98,6 +98,8 @@ export const DERIVE: Readonly<Record<ShareEntity, DeriveCopy>> = {
   },
   // A roadtrip caches no status: its trip is re-derived by the caller.
   async roadtrip() {},
+  // A tour caches no status either.
+  async tour() {},
   // A timeline stop caches nothing.
   async stop() {},
 };

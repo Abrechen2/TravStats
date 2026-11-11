@@ -41,6 +41,16 @@ describe("ModuleSection — one row per domain, switch and colour", () => {
     expect(screen.getAllByLabelText(/roadtrip/i).length).toBeGreaterThan(0);
   });
 
+  it("offers the tour switch only while the roadtrips beta is open (tours-own-domain)", () => {
+    const { unmount } = render(<ModuleSection />);
+    expect(screen.queryByRole("switch", { name: /domain\.tour/ })).not.toBeInTheDocument();
+    unmount();
+
+    mockBeta.mockReturnValue(true);
+    render(<ModuleSection />);
+    expect(screen.getByRole("switch", { name: /domain\.tour/ })).not.toBeChecked();
+  });
+
   it("draws the switch and the colour of a domain in the same row", () => {
     render(<ModuleSection />);
     const toggle = screen.getByRole("switch", { name: /domain\.cruise/ });

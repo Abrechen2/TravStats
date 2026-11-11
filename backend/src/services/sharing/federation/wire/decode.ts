@@ -38,6 +38,7 @@ const PASSTHROUGH: Readonly<Record<ShareEntity, readonly string[]>> = {
   ferry: RAIL_PASSTHROUGH,
   rental: RENTAL_PASSTHROUGH,
   roadtrip: [],
+  tour: [],
   stop: [],
 };
 
@@ -209,6 +210,14 @@ const DECODERS: Readonly<
       "stations",
       (v) => (v as Facts[]).map((s) => ({ ...s, lodgingStayRef: localRef(s.lodgingStayRef) })),
     ],
+  },
+  tour: {
+    stations: [
+      "stations",
+      (v) => (v as Facts[]).map((s) => ({ ...s, lodgingStayRef: localRef(s.lodgingStayRef) })),
+    ],
+    // A line the wire dropped (over the geometry budget) cannot be a track: a track IS its line.
+    tracks: ["tracks", (v) => (v as Facts[]).filter((t) => t.geometry !== null)],
   },
   stop: {
     sourceRef: ["sourceRef", (v) => localRef(v)],

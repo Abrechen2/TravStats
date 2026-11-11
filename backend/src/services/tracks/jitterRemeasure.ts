@@ -201,25 +201,33 @@ async function remeasureTourTrack(
   if (!ingested) return false;
   // The span stays the stored one: it is what the row was measured over.
   const { startedAt: _s, endedAt: _e, ...columns } = ingestedTrackColumns(ingested);
-  await prisma.$transaction(async (tx) => {
-    const before = await tx.tripRouteTrack.findUniqueOrThrow({
-      where: { id: row.id },
-      select: {
-        geometry: true,
-        segmentStarts: true,
-        cumulativeKm: true,
-        pointCount: true,
-        distanceKm: true,
-        elevations: true,
-        ascentM: true,
-        descentM: true,
-        movingSeconds: true,
-      },
-    });
-    const previous = { ...before, sourceUrl } as unknown as Prisma.InputJsonValue;
-    await tx.tripRouteTrack.update({ where: { id: row.id }, data: columns });
-    await record(tx, { routeTrackId: row.id }, row, "remeasured", now, previous);
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      const before = await tx.tripRouteTrack.findUniqueOrThrow({
+        where: { id: row.id },
+        select: {
+          routeId: true,
+          geometry: true,
+          segmentStarts: true,
+          cumulativeKm: true,
+          pointCount: true,
+          distanceKm: true,
+          elevations: true,
+          ascentM: true,
+          descentM: true,
+          movingSeconds: true,
+        },
+      });
+      const { routeId, ...stored } = before;
+      const previous = { ...stored, sourceUrl } as unknown as Prisma.InputJsonValue;
+      // A re-measured line is a change to a shared tour's tracks.
+      const routeBefore = await shareSnapshot(tx, "tour", routeId);
+      await tx.tripRouteTrack.update({ where: { id: row.id }, data: columns });
+      await propagateWrite(tx, row.userId, "tour", routeId, routeBefore);
+      await record(tx, { routeTrackId: row.id }, row, "remeasured", now, previous);
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
   return true;
 }
 

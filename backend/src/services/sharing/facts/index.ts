@@ -15,3 +15,4 @@ export * from "./stop";
 export * from "./trip";
 export { pickFacts, jsonForWrite } from "./pick";
 export * from "./roadtrip";
+export * from "./tour";

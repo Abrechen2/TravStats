@@ -24,6 +24,8 @@ import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptRoadtrip } from "./roadtripStatsAdapter";
+import { adaptTour } from "./tourStatsAdapter";
+import { statsInsightsApi } from "../../api/statsInsights";
 import { roadtripsApi } from "../../api/roadtrips";
 import { adaptPoi } from "./poiStatsAdapter";
 import { adaptRail } from "./railStatsAdapter";
@@ -60,7 +62,7 @@ export function useDomainStats(input: {
   const { enabled: enabledDomains } = useEnabledDomains();
   // A domain behind a closed beta switch is not in `enabledDomains`, so it is
   // not fetched and can reach neither a card nor a sum on the overview.
-  const enabled: readonly StatsDomain[] = enabledDomains;
+  const enabled = enabledDomains;
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -129,6 +131,8 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
     }
     case "roadtrip":
       return adaptRoadtrip({ roadtrips: await roadtripsApi.list() });
+    case "tour":
+      return adaptTour({ tours: (await statsInsightsApi.toursCounted()).tours });
     case "rail":
       return adaptRail({ journeys: await railApi.listAll({ status: "completed" }) });
     case "ferry":

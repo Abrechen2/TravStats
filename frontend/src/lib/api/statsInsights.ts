@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type {
+  CountedTours,
   LodgingInsights,
   PlaceInsights,
   RoadtripInsights,
@@ -21,6 +22,11 @@ export const statsInsightsApi = {
   },
   roadtrips: async (): Promise<RoadtripInsights> => {
     const { data } = await api.get<RoadtripInsights>("/stats/insights/roadtrips");
+    return data;
+  },
+  /** The tours the overview counts, one row each; 404 while the tour domain is not shown. */
+  toursCounted: async (): Promise<CountedTours> => {
+    const { data } = await api.get<CountedTours>("/stats/insights/tours/counted");
     return data;
   },
   tours: async (): Promise<TourInsights> => {

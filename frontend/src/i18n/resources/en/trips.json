@@ -645,7 +645,22 @@
       "claimedMeanwhile": "Another change just assigned a stop to a section. Nothing was saved — try again."
     },
     "searchPlaceholder": "Search tours …",
-    "searchEmpty": "No tour matches “{{q}}”."
+    "searchEmpty": "No tour matches “{{q}}”.",
+    "move": {
+      "action": "Assign to trip",
+      "detach": "Detach from trip",
+      "title": "Assign tour “{{name}}” to a trip",
+      "confirm": "Assign",
+      "tripLabel": "Trip",
+      "pick": "Choose a trip …",
+      "noTrips": "There is no trip yet to assign the tour to.",
+      "loadError": "The trips could not be loaded.",
+      "error": "The tour could not be moved.",
+      "timelineError": "This tour is drawn over the trip's own stops, so it cannot be detached from it or assigned to another trip.",
+      "photosTitle": "Unlink photos from the stations?",
+      "photosError": "Photos of a trip are filed at this tour's stations. They stay with the trip, but have to be unlinked from the stations for the move.",
+      "detachPhotosConfirm": "Unlink photos and continue"
+    }
   },
   "head": {
     "days_one": "{{count}} day",

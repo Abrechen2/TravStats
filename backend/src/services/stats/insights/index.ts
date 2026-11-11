@@ -81,6 +81,13 @@ export async function roadtripInsights(
   };
 }
 
+/** The tours that count (`shared/tour/tourCounting`: completed), with their year, day and km. */
+export async function completedTourFacts(userId: string, at: Date = now()): Promise<TourFacts[]> {
+  return (await loadTourFacts(userId, at, { withElevation: false })).filter(
+    (f) => f.state === "completed"
+  );
+}
+
 export async function tourInsights(
   userId: string,
   at: Date = now(),

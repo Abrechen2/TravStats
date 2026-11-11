@@ -23,6 +23,8 @@ const COUNT_OF: Record<DomainKey, ((trip: Trip) => number) | null> = {
   rental: (t) => t._count?.rentalBookings ?? t.rentalBookings?.length ?? 0,
   ferry: (trip) => trip._count?.ferryJourneys ?? trip.ferryJourneys?.length ?? 0,
   bus: (t) => t._count?.busJourneys ?? t.busJourneys?.length ?? 0,
+  // A tour is listed on its own page, not among a trip's entries (T2 decides).
+  tour: null,
 };
 
 /** Each area's count, zero for an area the reader cannot see. */

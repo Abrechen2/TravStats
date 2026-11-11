@@ -38,6 +38,7 @@ const DAY_FIELDS = new Set([
   "startDay",
   "endDay",
   "stopDate",
+  "tourDate",
   "date",
 ]);
 

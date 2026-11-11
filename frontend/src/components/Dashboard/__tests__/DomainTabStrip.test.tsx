@@ -46,14 +46,14 @@ describe("DomainTabStrip", () => {
   // The POI tab only exists on a beta-flagged instance; the pre-existing cases
   // below are about tab behaviour, so run them with the gate open.
   beforeEach(() => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
+    useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight", "tour"] });
   });
 
   it("renders the five tabs with counts", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
         enabled={{
           flight: true,
           cruise: true,
@@ -61,6 +61,7 @@ describe("DomainTabStrip", () => {
           lodging: true,
           roadtrip: true,
           rail: false,
+          tour: true,
         }}
         onSelect={() => {}}
       />
@@ -76,7 +77,7 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="cruise"
-        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
         enabled={{
           flight: true,
           cruise: true,
@@ -84,6 +85,7 @@ describe("DomainTabStrip", () => {
           lodging: true,
           roadtrip: true,
           rail: false,
+          tour: true,
         }}
         onSelect={() => {}}
       />
@@ -97,7 +99,7 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
         enabled={{
           flight: true,
           cruise: true,
@@ -105,6 +107,7 @@ describe("DomainTabStrip", () => {
           lodging: true,
           roadtrip: true,
           rail: false,
+          tour: true,
         }}
         onSelect={onSelect}
       />
@@ -124,7 +127,7 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
           enabled={{
             flight: true,
             cruise: true,
@@ -132,6 +135,7 @@ describe("DomainTabStrip", () => {
             lodging: true,
             roadtrip: true,
             rail: false,
+            tour: true,
           }}
           onSelect={onSelect}
         />
@@ -194,7 +198,7 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
           enabled={{
             flight: true,
             cruise: true,
@@ -202,6 +206,7 @@ describe("DomainTabStrip", () => {
             lodging: true,
             roadtrip: true,
             rail: false,
+            tour: true,
           }}
           onSelect={() => {}}
         />
@@ -221,7 +226,7 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
           enabled={{
             flight: true,
             cruise: true,
@@ -229,6 +234,7 @@ describe("DomainTabStrip", () => {
             lodging: true,
             roadtrip: true,
             rail: false,
+            tour: true,
           }}
           onSelect={() => {}}
         />
@@ -250,8 +256,8 @@ describe("DomainTabStrip", () => {
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
     });
 
-    it("shows the Touren tab, never dimmed, when the beta flag is on", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: true });
+    it("shows the Touren tab, undimmed while the tour domain is on, when the beta flag is on", () => {
+      useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight", "tour"] });
       renderStrip();
       const tour = screen.getByRole("tab", { name: /tours/i });
       expect(tour).toBeTruthy();
@@ -267,7 +273,7 @@ describe("DomainTabStrip", () => {
      * can ever take away.
      */
     it("draws no Beta badge on the Touren tab — tours are released", () => {
-      useSettingsStore.setState({ betaFeaturesEnabled: true });
+      useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight", "tour"] });
       renderStrip();
       expect(screen.getByRole("tab", { name: /tours/i }).textContent).not.toMatch(/beta/i);
       expect(screen.queryByText("Beta")).not.toBeInTheDocument();
@@ -280,7 +286,7 @@ describe("DomainTabStrip: the next-up entry", () => {
   // completely (232x39 px, measured 2026-08-14). Living in the strip, it also
   // gets to follow the tab: the next thing about what you are looking at.
   beforeEach(() => {
-    useSettingsStore.setState({ betaFeaturesEnabled: true });
+    useSettingsStore.setState({ betaFeaturesEnabled: true, enabledDomains: ["flight", "tour"] });
   });
 
   const NOW = Date.parse("2026-08-14T12:00:00.000Z");
@@ -312,7 +318,7 @@ describe("DomainTabStrip: the next-up entry", () => {
       <MemoryRouter>
         <DomainTabStrip
           active={active}
-          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0, tour: 0 }}
           enabled={{
             flight: true,
             cruise: true,
@@ -320,6 +326,7 @@ describe("DomainTabStrip: the next-up entry", () => {
             lodging: true,
             roadtrip: true,
             rail: false,
+            tour: true,
           }}
           onSelect={vi.fn()}
           upcoming={entries}
@@ -403,7 +410,7 @@ describe("DomainTabStrip: the next-up entry", () => {
         <MemoryRouter>
           <DomainTabStrip
             active="all"
-            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243, roadtrip: 0, rail: 0 }}
+            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243, roadtrip: 0, rail: 0, tour: 0 }}
             scheduledCounts={scheduledCounts}
             enabled={{
               flight: true,
@@ -412,6 +419,7 @@ describe("DomainTabStrip: the next-up entry", () => {
               lodging: true,
               roadtrip: true,
               rail: false,
+              tour: true,
             }}
             onSelect={() => {}}
           />
@@ -445,7 +453,7 @@ describe("DomainTabStrip: the next-up entry", () => {
         <MemoryRouter>
           <DomainTabStrip
             active="all"
-            counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 3 }}
+            counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 3, tour: 0 }}
             enabled={{
               flight: true,
               cruise: true,
@@ -453,6 +461,7 @@ describe("DomainTabStrip: the next-up entry", () => {
               lodging: true,
               roadtrip: true,
               rail: true,
+              tour: true,
             }}
             onSelect={() => {}}
           />

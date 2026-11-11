@@ -14,7 +14,9 @@ import {
   RouteGeometryFeatureCollection,
 } from "./tourLegs";
 import { toDto, ROUTE_SELECT } from "./tourRoutes";
+import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { resolveTrip } from "../trips";
+import { propagateWrite, SHARE_TX_TIMEOUT_MS } from "../../services/sharing/propagate";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../../services/sync/clientRef";
 
 /**
@@ -285,29 +287,35 @@ async function createTour(userId: string, raw: unknown, claim: ClaimClientRef) {
     select: { orderIdx: true },
   });
 
-  const route = await prisma.$transaction(async (tx) => {
-    // share-exempt: a standalone or trip tour — only roadtrips are shared
-    const created = await tx.tripRoute.create({
-      data: {
-        userId,
-        tripId: tripId ?? null,
-        name: body.name,
-        mode: body.mode,
-        activity: body.activity ?? null,
-        anchorStopId: anchorStopId ?? null,
-        color: body.color,
-        notes: body.notes,
-        tags: body.tags ?? [],
-        startOdometerKm: body.startOdometerKm,
-        endOdometerKm: body.endOdometerKm,
-        orderIdx: last ? last.orderIdx + 1 : 0,
-        ...day,
-      },
-      include: ROUTE_SELECT,
-    });
-    await claim(tx, created.id);
-    return created;
-  });
+  // After validation and ownership checks, before the write: a failure refuses the create.
+  await ensureTourDomainEnabled(userId);
+  const route = await prisma.$transaction(
+    async (tx) => {
+      const created = await tx.tripRoute.create({
+        data: {
+          userId,
+          tripId: tripId ?? null,
+          name: body.name,
+          mode: body.mode,
+          activity: body.activity ?? null,
+          anchorStopId: anchorStopId ?? null,
+          color: body.color,
+          notes: body.notes,
+          tags: body.tags ?? [],
+          startOdometerKm: body.startOdometerKm,
+          endOdometerKm: body.endOdometerKm,
+          orderIdx: last ? last.orderIdx + 1 : 0,
+          ...day,
+        },
+        include: ROUTE_SELECT,
+      });
+      await claim(tx, created.id);
+      // On a shared trip the tour is copied to the members (a standalone one has no group).
+      await propagateWrite(tx, userId, "tour", created.id);
+      return created;
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 
   return route;
 }

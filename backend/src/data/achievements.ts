@@ -38,6 +38,7 @@ export interface AchievementDefinition {
     | "lodging"
     | "poi"
     | "roadtrip"
+    | "tour"
     | "rail"
     | "rental"
     | "bus"

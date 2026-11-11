@@ -34,6 +34,7 @@ export type EvidenceDomain =
   | "rail"
   | "trip"
   | "roadtrip"
+  | "tour"
   | "rental"
   | "bus"
   | "ferry";

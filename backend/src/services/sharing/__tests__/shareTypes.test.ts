@@ -5,7 +5,7 @@ import { join } from "path";
 import { prisma } from "../../../db";
 import { DOMAIN_KEYS } from "../../../shared/domains";
 import { ADAPTERS } from "../adapters";
-import { DOMAIN_SHARING, SHARE_ENTITIES, SHARE_TYPES } from "../shareTypes";
+import { DOMAIN_SHARING, ROUTE_KINDS, SHARE_ENTITIES, SHARE_TYPES } from "../shareTypes";
 
 /**
  * The shareable entry types are ONE list (spec 2026-10-16, D1). Bus was missing
@@ -16,6 +16,9 @@ import { DOMAIN_SHARING, SHARE_ENTITIES, SHARE_TYPES } from "../shareTypes";
 
 /** Tables that carry `share_key` but are not shareable YET. Only shrinks. */
 const UNWIRED_SHARE_KEY_TABLES: readonly string[] = [];
+
+/** Shareable types the `.travstats` file does not carry yet. Only shrinks. */
+const NOT_IN_TRAVSTATS_FILE: readonly string[] = ["tour"];
 
 const sharingJson = (lang: "de" | "en") =>
   JSON.parse(
@@ -35,7 +38,8 @@ describe("share type registry", () => {
       SELECT table_name FROM information_schema.columns
       WHERE column_name = 'share_key' AND table_schema = current_schema()`;
     const inDb = rows.map((r) => r.table_name).sort();
-    const registered = SHARE_ENTITIES.map((e) => SHARE_TYPES[e].table);
+    // A roadtrip and a tour are two types over one table (`ROUTE_KINDS`).
+    const registered = [...new Set(SHARE_ENTITIES.map((e) => SHARE_TYPES[e].table))];
     expect(inDb).toEqual([...registered, ...UNWIRED_SHARE_KEY_TABLES].sort());
   });
 
@@ -59,8 +63,20 @@ describe("share type registry", () => {
     for (const entity of SHARE_ENTITIES) expect(ADAPTERS[entity].entity).toBe(entity);
   });
 
-  it("carries every shareable type in the .travstats file", () => {
-    expect(SHARE_ENTITIES.filter((e) => SHARE_TYPES[e].exchangeKind === null)).toEqual([]);
+  it("carries every shareable type in the .travstats file, bar the listed ones", () => {
+    expect(SHARE_ENTITIES.filter((e) => SHARE_TYPES[e].exchangeKind === null)).toEqual(
+      NOT_IN_TRAVSTATS_FILE
+    );
+  });
+
+  it("tells two types over one table apart by kind, and only those", () => {
+    const byTable = new Map<string, string[]>();
+    for (const e of SHARE_ENTITIES) {
+      byTable.set(SHARE_TYPES[e].table, [...(byTable.get(SHARE_TYPES[e].table) ?? []), e]);
+    }
+    const shared = [...byTable.values()].filter((v) => v.length > 1);
+    expect(shared).toEqual([["roadtrip", "tour"]]);
+    expect(Object.keys(ROUTE_KINDS)).toEqual(["roadtrip", "tour"]);
   });
 
   it("keeps stops last: a stop resolves the entry it wraps by key", () => {

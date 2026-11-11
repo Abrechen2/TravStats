@@ -230,3 +230,20 @@ export interface TourInsights {
   partial: number;
   totals: MeasureTotals;
 }
+
+/** `GET /stats/insights/tours/counted` — mirrors `countedToursResponseSchema` on the server. */
+export interface CountedTour {
+  id: string;
+  /** Year of its day, else of its first recording. */
+  year: number | null;
+  /** `YYYY-MM-DD`. */
+  day: string | null;
+  /** Recorded, else drawn; null when neither. */
+  km: number | null;
+  /** A recording stopped at the import limit: `km` is a lower bound. */
+  partial: boolean;
+}
+
+export interface CountedTours {
+  tours: CountedTour[];
+}

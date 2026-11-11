@@ -256,7 +256,8 @@
       "lodging": "Unterkunft anlegen",
       "poi": "Ort anlegen",
       "roadtrip": "Roadtrip hinzufügen",
-      "rail": "Zugfahrt hinzufügen"
+      "rail": "Zugfahrt hinzufügen",
+      "tour": "Tour hinzufügen"
     }
   },
   "filter": {

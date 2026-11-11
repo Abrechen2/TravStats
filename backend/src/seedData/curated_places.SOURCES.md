@@ -48,15 +48,16 @@ Iguazú.
 Two rows carry a country that is a choice rather than a fact — the Amazon spans
 nine countries and Iguazú sits on a border — and both blurbs name the other side
 rather than letting the single `isoCountryCode` column assert something untrue.
+
 ## `curated_places.world-heritage.csv` — UNESCO World Heritage
 
-| | |
-|---|---|
-| **Source** | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
-| **Licence** | **CC0 1.0** — public domain dedication, no attribution required |
-| **Retrieved** | 2026-08-24 |
-| **Rows** | 1247 sites |
-| **Generator** | `backend/scripts/build-world-heritage-csv.mjs` (carries the SPARQL query and the filters) |
+|               |                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| **Source**    | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
+| **Licence**   | **CC0 1.0** — public domain dedication, no attribution required                            |
+| **Retrieved** | 2026-08-24                                                                                 |
+| **Rows**      | 1247 sites                                                                                 |
+| **Generator** | `backend/scripts/build-world-heritage-csv.mjs` (carries the SPARQL query and the filters)  |
 
 **Do not hand-edit this file.** Regenerate it:
 
@@ -90,13 +91,13 @@ than rendered as a caption that reads like a bug.
 
 ## `curated_places.biosphere.csv` — UNESCO Biosphere Reserves
 
-| | |
-|---|---|
-| **Source** | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
-| **Licence** | **CC0 1.0** — public domain dedication, no attribution required |
-| **Retrieved** | 2026-09-01 |
-| **Rows** | 646 |
-| **Generator** | `backend/scripts/build-biosphere-csv.mjs` (carries the query and the filters) |
+|               |                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| **Source**    | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
+| **Licence**   | **CC0 1.0** — public domain dedication, no attribution required                            |
+| **Retrieved** | 2026-09-01                                                                                 |
+| **Rows**      | 646                                                                                        |
+| **Generator** | `backend/scripts/build-biosphere-csv.mjs` (carries the query and the filters)              |
 
 **Do not hand-edit this file.** Regenerate it with the generator.
 
@@ -107,7 +108,7 @@ than rendered as a caption that reads like a bug.
 **~759**. That agreement is the evidence, and it is why the query does NOT walk
 `P279*`: the superclass chain runs into "protected area" and returns 178,000.
 
-Several namesakes carry the English label "biosphere reserve" and are *national*
+Several namesakes carry the English label "biosphere reserve" and are _national_
 designations, not the UNESCO one: `Q61453609` (German), `Q28055306` (Latvian),
 `Q107990793` (Spanish), `Q28861739` (Moldovan). Matching on the label rather
 than the id would silently pull those in.
@@ -162,13 +163,13 @@ upstream — widening the band is the wrong response to a signal working correct
 
 ## `curated_places.nationalparks.csv` — National parks, per country
 
-| | |
-|---|---|
-| **Source** | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
-| **Licence** | **CC0 1.0** — public domain dedication, no attribution required |
-| **Retrieved** | 2026-09-01 |
-| **Rows** | 79 — `nationalparks-de` 16, `nationalparks-us` 63 |
-| **Generator** | `backend/scripts/build-national-parks-csv.mjs` |
+|               |                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| **Source**    | [Wikidata](https://www.wikidata.org/) via the [Query Service](https://query.wikidata.org/) |
+| **Licence**   | **CC0 1.0** — public domain dedication, no attribution required                            |
+| **Retrieved** | 2026-09-01                                                                                 |
+| **Rows**      | 79 — `nationalparks-de` 16, `nationalparks-us` 63                                          |
+| **Generator** | `backend/scripts/build-national-parks-csv.mjs`                                             |
 
 **Do not hand-edit this file.** Regenerate it with the generator.
 
@@ -195,13 +196,13 @@ California") as often as at a preserve.
 
 ### Three more things the query has to know
 
-- **Rank.** Lake Clark files `protected area` at *preferred* rank and the
-  national-park designation at *normal*, so `wdt:P31` — which returns preferred
+- **Rank.** Lake Clark files `protected area` at _preferred_ rank and the
+  national-park designation at _normal_, so `wdt:P31` — which returns preferred
   values only — hides the park completely. The query walks `p:P31 → ps:P31` and
   rejects only deprecated rank. (Verified independently: `Q712296` really does
   carry `Q473972` preferred and `Q34918903` normal.)
 - **Qualified dissolution.** Virgin Islands NP carries `P576`, qualified
-  *applies to part = biosphere reserve*: its MAB status lapsed, the park did not.
+  _applies to part = biosphere reserve_: its MAB status lapsed, the park did not.
   A naive `NOT EXISTS { wdt:P576 }` deletes an open national park. Only
   UNQUALIFIED dissolutions count — which is what correctly drops General Grant NP
   (folded into Kings Canyon in 1940) and Nationalpark Elbtalaue (designated 1998,
@@ -217,7 +218,7 @@ California") as often as at a preserve.
   are three state designations over one mudflat. Collapsing them would make 16
   unreachable.
 - **`isoCountryCode` is a per-list constant**, not read from `P17`: the country
-  *defines* the list, American Samoa and the Virgin Islands are US national parks
+  _defines_ the list, American Samoa and the Virgin Islands are US national parks
   whatever their own code says, and a missing `P17` must not silently produce a
   row the seeder then rejects.
 - **A German label that does not contain "Nationalpark" is not the park's German

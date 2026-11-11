@@ -29,6 +29,8 @@
       "poi_other": "{{count}} places",
       "roadtrip_one": "{{count}} roadtrip",
       "roadtrip_other": "{{count}} roadtrips",
+      "tour_one": "{{count}} day tour",
+      "tour_other": "{{count}} day tours",
       "rail_one": "{{count}} train journey",
       "rail_other": "{{count}} train journeys",
       "rental_one": "{{count}} rental car",
@@ -36,7 +38,9 @@
       "bus_one": "{{count}} bus ride",
       "bus_other": "{{count}} bus rides",
       "ferry_one": "{{count}} ferry crossing",
-      "ferry_other": "{{count}} ferry crossings"
+      "ferry_other": "{{count}} ferry crossings",
+      "tour_one": "{{count}} tour",
+      "tour_other": "{{count}} tours"
     },
     "help": {
       "experiences": {
@@ -170,6 +174,8 @@
       "bestChecklist": "Best checklist",
       "cruiseNights": "Nights aboard",
       "roadtripNights": "Nights on the road",
+      "tours": "Tours",
+      "distanceAtLeast": "Distance (at least)",
       "railJourneys": "Rides",
       "railKmMeasured": "Track",
       "railKmStraight": "Straight line",
@@ -1647,6 +1653,7 @@
       "lodging": "Stays",
       "poi": "Places",
       "roadtrip": "Roadtrips",
+      "tour": "Tours",
       "rail": "Train",
       "rental": "Rentals",
       "bus": "Bus",

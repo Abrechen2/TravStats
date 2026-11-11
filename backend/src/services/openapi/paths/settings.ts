@@ -121,6 +121,7 @@ const settingsOk = (description: string) => ({
 });
 const settingsUpdateBodySchema = z
   .object({
+    knownDomains: z.array(z.string()).optional(),
     settingsLevel: settingsLevelField.optional(),
     tripDefaults: tripDefaultsSettingsSchema.optional(),
     cruiseSeaDays: cruiseSeaDaysSettingsSchema.optional(),
@@ -154,7 +155,10 @@ registry.registerPath({
   description:
     "Includes which domains are switched on. Switching one off hides it " +
     "everywhere and deletes nothing — the data is waiting if it is switched " +
-    "back on. `homeCountry` (ISO 3166-1 alpha-2, upper-case, or null to " +
+    "back on. `knownDomains` lists the domain keys the writing client knows: a key " +
+    "missing from `enabledDomains` AND from `knownDomains` keeps its stored state " +
+    "(an older client cannot have shown a switch for it — today only `tour`), so " +
+    "send it whenever `enabledDomains` is sent. `homeCountry` (ISO 3166-1 alpha-2, upper-case, or null to " +
     "clear) decides which booking templates are tried first; templates for " +
     "other countries stay active. `settingsLevel` is `standard` or `expert`; any other " +
     "value is a 400.",

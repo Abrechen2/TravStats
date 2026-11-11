@@ -1,4 +1,5 @@
 import { api, API_URL } from "./client";
+import { DOMAIN_KEYS } from "../../shared/domains";
 import type {
   ApiKeyTestResponse,
   MessageResponse,
@@ -116,13 +117,25 @@ async function keepalivePut(path: string, payload: unknown): Promise<unknown> {
   return response;
 }
 
+/**
+ * A write that carries `enabledDomains` also says which keys this build knows:
+ * the server keeps a domain added later (`tour`) as stored when the writer does
+ * not name it, because an older client cannot have shown its switch. Without
+ * this the web itself could never switch `tour` off.
+ */
+function withKnownDomains(payload: Partial<UserSettings>): Partial<UserSettings> {
+  return payload.enabledDomains === undefined
+    ? payload
+    : { ...payload, knownDomains: [...DOMAIN_KEYS] };
+}
+
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
     const { data } = await api.get<UserSettings>("/settings");
     return data;
   },
   update: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
-    const { data } = await api.put<UserSettings>("/settings", payload);
+    const { data } = await api.put<UserSettings>("/settings", withKnownDomains(payload));
     return data;
   },
   /**
@@ -131,7 +144,7 @@ export const settingsApi = {
    * are far below the 64 KB keepalive body limit. Resolves on 2xx, else throws.
    */
   updateKeepalive: (payload: Partial<UserSettings>): Promise<unknown> =>
-    keepalivePut("/settings", payload),
+    keepalivePut("/settings", withKnownDomains(payload)),
   updateProfileKeepalive: (payload: { birthdate: string | null }): Promise<unknown> =>
     keepalivePut("/settings/profile", payload),
   /**
