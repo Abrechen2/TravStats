@@ -35,8 +35,11 @@ type Phase =
 
 /** Where each pause reason is lifted (the jump under its sentence). */
 const PAUSE_JUMPS: Record<string, { label: string; to: string } | undefined> = {
-  suggestionsDisabled: { label: "settings:blocks.dep.stayOff.jump", to: "/settings/trips" },
-  placesDisabled: { label: "settings:blocks.dep.placesOff.jump", to: "/settings/domains" },
+  suggestionsDisabled: { label: "settings:blocks.dep.stayOff.jump", to: "/settings/reisen" },
+  placesDisabled: {
+    label: "settings:blocks.dep.placesOff.jump",
+    to: "/settings/reisearten#domains",
+  },
   connectionMissing: {
     label: "settings:blocks.dep.noOwnDawarich.jump",
     to: DAWARICH_CONNECTION_PATH,

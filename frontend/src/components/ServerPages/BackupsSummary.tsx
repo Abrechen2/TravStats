@@ -45,12 +45,10 @@ export default function BackupsSummary({ backups }: { backups: Backup[] | null }
   const last = done[0];
   const zone = schedule?.backupZoneEffective ?? schedule?.backupZone ?? schedule?.hostZone ?? "";
   const rhythm = schedule
-    ? schedule.backupEnabled
-      ? t("settingsRows:backups.rhythm", {
-          interval: t(`settings:backup.intervals.${schedule.backupInterval}`),
-          zone,
-        })
-      : t("settingsRows:backups.rhythmOff")
+    ? t("settingsRows:backups.rhythm", {
+        interval: t(`settings:backup.intervals.${schedule.backupInterval}`),
+        zone,
+      })
     : null;
   const auto = row("baknow");
   return (
@@ -61,12 +59,10 @@ export default function BackupsSummary({ backups }: { backups: Backup[] | null }
           scope="allAccounts"
           control={
             <StatusValue>
-              {schedule.backupEnabled
-                ? t("settingsRows:backups.nowLine", {
-                    interval: t(`settings:backup.intervals.${schedule.backupInterval}`),
-                    days: schedule.backupRetentionDays,
-                  })
-                : t("settingsRows:backups.rhythmOff")}
+              {t("settingsRows:backups.nowLine", {
+                interval: t(`settings:backup.intervals.${schedule.backupInterval}`),
+                days: schedule.backupRetentionDays,
+              })}
             </StatusValue>
           }
         />

@@ -104,7 +104,7 @@ describe("PasswordResetRequestsSection", () => {
       await screen.findByRole("button", { name: "dataQuality:passwordResets.openUser" })
     );
 
-    expect(navigate).toHaveBeenCalledWith("/admin?tab=general&section=users&user=user-7");
+    expect(navigate).toHaveBeenCalledWith("/settings/nutzer?user=user-7#accounts");
     // An anchor may not contain interactive content: a <Button> inside a <Link>
     // is two controls where the user sees one.
     expect(screen.queryByRole("link")).toBeNull();

@@ -48,6 +48,12 @@ const DOMAIN_PAGE: Partial<Record<DomainKey, "flight" | "cruise">> = {
   cruise: "cruise",
 };
 
+/** The area page of a type's own settings. */
+const DOMAIN_SETTINGS_PAGE = {
+  flight: "/settings/fluege",
+  cruise: "/settings/kreuzfahrten",
+} as const;
+
 /** The jump to a type's own settings; needs the router, which a bare render may lack. */
 function DomainJump({ page }: { page: "flight" | "cruise" }): JSX.Element {
   const { t } = useTranslation(["settings"]);
@@ -55,7 +61,7 @@ function DomainJump({ page }: { page: "flight" | "cruise" }): JSX.Element {
   return (
     <JumpControl
       label={t("settings:rows.domainJump")}
-      onJump={() => navigate(`/settings/${page}`)}
+      onJump={() => navigate(DOMAIN_SETTINGS_PAGE[page])}
     />
   );
 }

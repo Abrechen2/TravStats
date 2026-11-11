@@ -24,8 +24,7 @@ import {
 } from "../../ui/settings";
 
 /** Where an account's own Dawarich connection is edited (Dienste). */
-export const DAWARICH_CONNECTION_PATH =
-  "/settings/services?section=externalServices&service=dawarich";
+export const DAWARICH_CONNECTION_PATH = "/settings/dienstek?service=dawarich";
 
 /**
  * TravTrack is the chosen source: the Dawarich rows (its connection, the hint

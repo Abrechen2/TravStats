@@ -16,11 +16,7 @@ export default function ExternalServicesPointer(): JSX.Element {
       data-testid="external-services-pointer"
     >
       {t("externalServices:pointer.text")}{" "}
-      <Link
-        to="/admin/externalServices"
-        className="underline"
-        style={{ color: "var(--ts-accent)" }}
-      >
+      <Link to="/settings/dienste" className="underline" style={{ color: "var(--ts-accent)" }}>
         {t("externalServices:pointer.link")}
       </Link>
     </p>

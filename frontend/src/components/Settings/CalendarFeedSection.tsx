@@ -175,10 +175,7 @@ export default function CalendarFeedSection(): JSX.Element {
             // can set the address, so only an admin is offered the jump.
             dependency={
               !link && !status.reachableFromInternet
-                ? dependency(
-                    "noPublicUrl",
-                    isAdmin ? () => go("/settings/allgemein#addresses") : undefined
-                  )
+                ? dependency("noPublicUrl", isAdmin ? () => go("/settings/adressen") : undefined)
                 : undefined
             }
             control={

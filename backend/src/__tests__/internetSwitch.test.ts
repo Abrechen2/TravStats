@@ -26,7 +26,7 @@ jest.mock("../services/fx/currencyApiCdn", () => ({
  * asserted in both positions: with the column ON the master switch decides, and
  * a column that is itself OFF stays off when the master switch is on.
  */
-describe("internet master switch gates the six external-service columns", () => {
+describe("internet master switch gates the external-service calls", () => {
   let rowId: number;
   let original: Awaited<ReturnType<typeof ensureAdminSettings>>;
 
@@ -46,11 +46,6 @@ describe("internet master switch gates the six external-service columns", () => 
     await set({
       internetEnabled: true,
       openDataEnabled: original.openDataEnabled,
-      operatorLogosOpenDataEnabled: original.operatorLogosOpenDataEnabled,
-      fxCdnFallbackEnabled: original.fxCdnFallbackEnabled,
-      railTransitousEnabled: original.railTransitousEnabled,
-      railDbRestEnabled: original.railDbRestEnabled,
-      updateCheckEnabled: original.updateCheckEnabled,
     });
   });
   afterAll(async () => {
@@ -75,8 +70,7 @@ describe("internet master switch gates the six external-service columns", () => 
     expect(await isOpenDataEnabled()).toBe(false);
   });
 
-  it("railTransitousEnabled / railDbRestEnabled: the rail lookup and the account view read both as off", async () => {
-    await set({ railTransitousEnabled: true, railDbRestEnabled: true });
+  it("rail timetable sources: the rail lookup and the account view read both as off", async () => {
     expect(await railProviderSwitches()).toEqual({ transitous: true, dbRest: true });
     expect(await instanceServicesView()).toMatchObject({ transitous: true, dbRest: true });
     await set({ internetEnabled: false });
@@ -84,8 +78,8 @@ describe("internet master switch gates the six external-service columns", () => 
     expect(await instanceServicesView()).toMatchObject({ transitous: false, dbRest: false });
   });
 
-  it("operatorLogosOpenDataEnabled: no Wikidata or Commons lookup while the master switch is off", async () => {
-    await set({ operatorLogosOpenDataEnabled: true, internetEnabled: false });
+  it("operator logos: no Wikidata or Commons lookup while the master switch is off", async () => {
+    await set({ internetEnabled: false });
     const fetchSpy = jest.spyOn(globalThis, "fetch");
     expect(await answerOperatorMark("airline", "Zzyzx Test Airways")).toEqual({
       mark: null,
@@ -97,9 +91,9 @@ describe("internet master switch gates the six external-service columns", () => 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("fxCdnFallbackEnabled: no ECB and no CDN call while the master switch is off, both while it is on", async () => {
+  it("exchange rates: no ECB and no CDN call while the master switch is off, both while it is on", async () => {
     const { resolveRate } = await import("../services/fx/resolver");
-    await set({ fxCdnFallbackEnabled: true, internetEnabled: false });
+    await set({ internetEnabled: false });
     expect((await getAdminFxSettings()).internetEnabled).toBe(false);
     expect(await resolveRate("USD", "EGP", "2024-03-04")).toBeNull();
     expect(getRate).not.toHaveBeenCalled();
@@ -111,11 +105,11 @@ describe("internet master switch gates the six external-service columns", () => 
     expect(getCdnRate).toHaveBeenCalled();
   });
 
-  it("updateCheckEnabled: no GitHub release request while the master switch is off", async () => {
+  it("update check: no GitHub release request while the master switch is off", async () => {
     const fetchSpy = jest
       .spyOn(globalThis, "fetch")
       .mockResolvedValue({ ok: false, status: 500 } as Response);
-    await set({ updateCheckEnabled: true, internetEnabled: false });
+    await set({ internetEnabled: false });
     expect(await getCachedLatestRelease()).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
 
@@ -124,11 +118,11 @@ describe("internet master switch gates the six external-service columns", () => 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("updateCheckEnabled: the scheduled template sync makes no request while the master switch is off", async () => {
+  it("update check: the scheduled template sync makes no request while the master switch is off", async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "tpl-internet-"));
     try {
       const run = async (internetEnabled: boolean): Promise<string[]> => {
-        await set({ updateCheckEnabled: true, internetEnabled });
+        await set({ internetEnabled });
         const calls: string[] = [];
         const registry = new TemplateRegistry({
           baseUrl: "https://templates.example.test",

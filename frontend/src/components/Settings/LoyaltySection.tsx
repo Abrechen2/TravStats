@@ -125,7 +125,7 @@ export default function LoyaltySection(): JSX.Element {
               reason: t("loyalty:domainOff", { area: t(`loyalty:sections.${domain}.title`) }),
               jump: {
                 label: t("loyalty:domainOffAction"),
-                onJump: () => go("/settings/domains"),
+                onJump: () => go("/settings/reisearten#domains"),
               },
             }}
           />

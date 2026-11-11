@@ -22,7 +22,7 @@ import { CompanionDeleteDialog, DeleteUnusedDialog } from "./CompanionDeleteDial
 const NS = "companions:manage";
 
 /** Where an account link is made: the trip-sharing section, never a second copy of it. */
-export const SHARING_SETTINGS_PATH = "/settings/sharing#accounts";
+export const SHARING_SETTINGS_PATH = "/settings/freunde#accounts";
 
 type Open =
   | { kind: "rename"; companion: ManagedCompanion }

@@ -97,7 +97,9 @@ export default function TrackArchiveSection({
   const exportCopy = row("gpxzip");
   const importCopy = row("gpxin");
   // Tours off: the rows stay, with the reason and the jump that turns them on.
-  const off = toursVisible ? undefined : dependency("toursOff", () => go("/settings/domains"));
+  const off = toursVisible
+    ? undefined
+    : dependency("toursOff", () => go("/settings/reisearten#domains"));
 
   return (
     <>

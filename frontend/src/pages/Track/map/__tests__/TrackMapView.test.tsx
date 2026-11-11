@@ -141,7 +141,7 @@ describe("TrackMapView", () => {
     // The gear carries the shown range to the settings page.
     expect(screen.getByTestId("track-settings-link")).toHaveAttribute(
       "href",
-      "/settings/travtrack?from=2026-10-25&until=2026-10-25"
+      "/settings/tt-aufz?from=2026-10-25&until=2026-10-25"
     );
     expect(mapProps.last?.follow).toBeNull();
   });

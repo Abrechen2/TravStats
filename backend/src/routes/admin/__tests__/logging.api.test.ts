@@ -75,9 +75,7 @@ beforeAll(async () => {
     select: {
       id: true,
       logLevel: true,
-      logHttpRequests: true,
       logRetentionDays: true,
-      maxLogFiles: true,
     },
   })) as Record<string, unknown> | null;
 }, APP_IMPORT_TIMEOUT_MS);
@@ -202,7 +200,7 @@ describe("reading a log file", () => {
 
 describe("stats and cleanup", () => {
   beforeAll(async () => {
-    await prisma.adminSettings.updateMany({ data: { logRetentionDays: 7, maxLogFiles: 30 } });
+    await prisma.adminSettings.updateMany({ data: { logRetentionDays: 7 } });
     const { invalidateCache } = await import("../../../services/loggingConfig");
     invalidateCache();
     writeFile("old-20260101-0000-01.log.gz", zlib.gzipSync(Buffer.from(line(1))), 40);
@@ -268,11 +266,14 @@ describe("the logging settings take effect", () => {
     }
   });
 
-  it("switching HTTP logging on logs the very next request — full path, no query string", async () => {
+  // Settings v3 S6: the HTTP, database and parser switches are gone — a verbose level
+  // writes every category, a quiet one writes none of the opt-in ones. A client that
+  // still sends `logHttpRequests` is not refused, and the field decides nothing.
+  it("a verbose level logs the very next request — full path, no query string — and info stops it", async () => {
     await admin(
       request(app)
         .put("/api/v1/admin/logging/config")
-        .send({ logLevel: "debug", logHttpRequests: true })
+        .send({ logLevel: "debug", logHttpRequests: false })
     );
     await admin(request(app).get("/api/v1/admin/logging/stats?search=Mustermann&pnr=ABC123"));
 
@@ -282,7 +283,7 @@ describe("the logging settings take effect", () => {
     expect(logged).not.toContain("ABC123");
     expect(JSON.parse(logged!).context.path).toBe("/api/v1/admin/logging/stats");
 
-    await admin(request(app).put("/api/v1/admin/logging/config").send({ logHttpRequests: false }));
+    await admin(request(app).put("/api/v1/admin/logging/config").send({ logLevel: "info" }));
     await admin(request(app).get("/api/v1/admin/logging/files?after=off"));
     await new Promise((r) => setTimeout(r, 300));
     const httpLog = fs.existsSync(path.join(logDir, "http.log"))

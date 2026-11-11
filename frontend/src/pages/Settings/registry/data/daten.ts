@@ -11,7 +11,6 @@ export const DATEN_PAGE: RegistryPage = {
         {"id":"webdavtakt","mount":"backup","kind":"choice","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Wie oft","en":"How often","terms":{"de":"täglich wöchentlich","en":"daily weekly"}},
         {"id":"webdavvers","mount":"backup","kind":"input","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Versionen behalten","en":"Versions to keep","terms":{"de":"1–30","en":"1–30"}},
         {"id":"webdavlast","mount":"backup","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Letzte eigene Kopie","en":"Last own copy","terms":{"de":"","en":""}},
-        {"id":"webdavjetzt","mount":"backup","kind":"action","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Jetzt hochladen","en":"Upload now","terms":{"de":"","en":""}},
       ]},
       {"id":"daten-mitnehmen","de":"Mitnehmen","en":"Take with you","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"meine","mount":"backup","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Alle meine Daten","en":"All my data","terms":{"de":"JSON, ohne Passwörter und Schlüssel Fotos und Dokumente sind nicht dabei.","en":"JSON, without passwords or keys Photos and documents aren't included."}},

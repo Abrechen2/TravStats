@@ -2,7 +2,7 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 type ScheduleSettings = Pick<
   import("../generated/prisma/client").AdminSettings,
-  "backupEnabled" | "backupInterval" | "backupRetentionDays"
+  "backupInterval" | "backupRetentionDays"
 >;
 const mockFindFirst = jest.fn<() => Promise<ScheduleSettings | null>>();
 jest.mock("../db", () => ({
@@ -30,22 +30,8 @@ describe("backupScheduler", () => {
     jest.resetModules();
   });
 
-  it("does not start scheduler when backupEnabled is false in DB", async () => {
-    mockFindFirst.mockResolvedValue({
-      backupEnabled: false,
-      backupInterval: "weekly",
-      backupRetentionDays: 30,
-    });
-    const { startScheduler } = await import("../services/backupScheduler");
-
-    await startScheduler();
-
-    expect(mockSchedule).not.toHaveBeenCalled();
-  });
-
   it("starts scheduler with daily cron pattern when backupInterval is daily", async () => {
     mockFindFirst.mockResolvedValue({
-      backupEnabled: true,
       backupInterval: "daily",
       backupRetentionDays: 30,
     });
@@ -61,7 +47,6 @@ describe("backupScheduler", () => {
 
   it("starts scheduler with weekly cron pattern when backupInterval is weekly", async () => {
     mockFindFirst.mockResolvedValue({
-      backupEnabled: true,
       backupInterval: "weekly",
       backupRetentionDays: 30,
     });
@@ -75,19 +60,19 @@ describe("backupScheduler", () => {
     });
   });
 
-  it("uses default values when adminSettings row is null", async () => {
+  it("starts the weekly schedule when adminSettings row is null (automatic backups cannot be switched off)", async () => {
     mockFindFirst.mockResolvedValue(null);
     const { startScheduler } = await import("../services/backupScheduler");
 
     await startScheduler();
 
-    // Default enabled=false, so scheduler should NOT start
-    expect(mockSchedule).not.toHaveBeenCalled();
+    // Automatic backups are always on (settings v3 S6): a fresh instance without a
+    // settings row gets the default weekly schedule instead of none at all.
+    expect(mockSchedule).toHaveBeenCalledWith("0 2 * * 0", expect.any(Function), expect.anything());
   });
 
   it("getScheduleStatus returns running=false when no job is scheduled", async () => {
     mockFindFirst.mockResolvedValue({
-      backupEnabled: true,
       backupInterval: "weekly",
       backupRetentionDays: 30,
     });

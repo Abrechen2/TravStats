@@ -1355,11 +1355,6 @@ model AdminSettings {
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
   allowUserFlightApiKeys Boolean @default(true) @map("allow_user_flight_api_keys")
 
-  // FX: whether a rate the ECB cannot serve may be fetched from the keyless
-  // jsDelivr currency dataset. On by default because it needs no key and is
-  // the only way to convert a currency outside the ECB's 30 — but a
-  // self-hoster gets to decide whether their instance talks to jsDelivr at all.
-  fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
 
   // FX: where the ECB reference rates come from (GitHub #391). Source ids are
   // "frankfurter" | "allratestoday" | "custom"; the fallback also knows "none".
@@ -1442,8 +1437,6 @@ model AdminSettings {
   llmGoogleModel  String? @map("llm_google_model")
   llmGoogleOptIn  Boolean @default(false) @map("llm_google_opt_in")
 
-  // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
-  backupEnabled        Boolean   @default(false) @map("backup_enabled")
   backupInterval       String    @default("weekly") @map("backup_interval")
   backupRetentionDays  Int       @default(30) @map("backup_retention_days")
   backupCloudRetention Boolean   @default(false) @map("backup_cloud_retention")
@@ -1510,12 +1503,6 @@ model AdminSettings {
   /// up (2026-09-24).
   openDataEnabled Boolean @default(false) @map("open_data_enabled")
 
-  /// May operator marks (ferry lines, cruise lines, rail operators, coach and
-  /// rental companies) be looked up on Wikidata and Wikimedia Commons, server
-  /// side (forgejo#323). ON by default, unlike `openDataEnabled`: the request
-  /// carries only a company name the user wrote, never a place or a date, and
-  /// both sources are keyless. Off: the cards draw monograms.
-  operatorLogosOpenDataEnabled Boolean @default(true) @map("operator_logos_open_data_enabled")
 
   /// Whether users may create public share links (forgejo#281, D7). OFF by
   /// default: a link hands a person's travel data to anyone holding the URL.
@@ -1550,12 +1537,6 @@ model AdminSettings {
   /// values along that mapping, so no instance's headline moves.
   countryThreshold String @default("transited") @map("country_threshold")
 
-  /// May the rail train-number lookup ask Transitous (api.transitous.org) and
-  /// db-rest (v6.db.transport.rest) on its users' behalf. Both ON by default:
-  /// the lookup only runs when a user presses the button, and an admin whose
-  /// instance must not talk to third parties switches either off here.
-  railTransitousEnabled Boolean @default(true) @map("rail_transitous_enabled")
-  railDbRestEnabled     Boolean @default(true) @map("rail_db_rest_enabled")
   /// Base URL of a self-hosted OpenRailRouting (GraphHopper on the OSM rail
   /// network). Null = off, the default: a rail journey without a Transitous
   /// trace then keeps the straight line and says so. When set, such a journey
@@ -1576,20 +1557,10 @@ model AdminSettings {
   // Log level for file output (error | warn | info | debug | trace)
   logLevel String @default("info") @map("log_level")
 
-  // Maximum file size before rotation (in MB)
-  maxLogFileSize Int @default(10) @map("max_log_file_size")
 
-  // Number of rotated log files to keep
-  maxLogFiles Int @default(7) @map("max_log_files")
 
-  // Enable request/response logging (captures full HTTP traffic)
-  logHttpRequests Boolean @default(false) @map("log_http_requests")
 
-  // Enable database query logging (captures SQL with parameters)
-  logDatabaseQueries Boolean @default(false) @map("log_database_queries")
 
-  // Enable parser operation logging (captures LLM requests/responses)
-  logParserOperations Boolean @default(false) @map("log_parser_operations")
 
   // Log retention in days (auto-delete older logs)
   logRetentionDays Int @default(7) @map("log_retention_days")
@@ -1629,15 +1600,13 @@ model AdminSettings {
   /// enabled / allowed, so an existing instance keeps today's behaviour.
   externalServicePolicy Json @default("{}") @map("external_service_policy")
 
-  /// Whether the server asks GitHub for new releases (forgejo#392). The check
-  /// had no switch before; on by default.
-  updateCheckEnabled Boolean @default(true) @map("update_check_enabled")
 
   /// Settings v3 master switch "the server may ask external services" (default
-  /// on). It GATES six older columns without replacing them: `openDataEnabled`,
-  /// `operatorLogosOpenDataEnabled`, `fxCdnFallbackEnabled`, `railTransitousEnabled`,
-  /// `railDbRestEnabled`, `updateCheckEnabled`. Off = none of those calls leave
-  /// the server; the columns keep their values and apply again when it is on.
+  /// on). It decides alone whether the exchange-rate fallback, the rail timetable
+  /// sources (Transitous, db-rest), the operator logos, the update check and the
+  /// scheduled template sync reach out; their own switches were removed in S6.
+  /// `openDataEnabled` stays a column of its own (it is off by default, because
+  /// each of its calls sends a place and a date) and is gated by this one too.
   /// See `services/internetGate.ts`.
   internetEnabled Boolean @default(true) @map("internet_enabled")
 

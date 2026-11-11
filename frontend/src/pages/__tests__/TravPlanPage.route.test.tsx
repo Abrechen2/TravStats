@@ -146,7 +146,7 @@ describe("the /plan route", () => {
       render(<App />);
       expect(
         await screen.findByRole("link", { name: /configOpenAdmin/ }, { timeout: 8000 })
-      ).toHaveAttribute("href", "/admin/instance?section=travPlan&expert=1");
+      ).toHaveAttribute("href", "/settings/pl-bereit?match=tpoffer&expert=1");
       expect(screen.queryByTestId("dashboard-stub")).toBeNull();
     }
   );
@@ -179,7 +179,7 @@ describe("the /plan route", () => {
       render(<App />);
       expect(
         await screen.findByRole("link", { name: /configOpenAdmin/ }, { timeout: 8000 })
-      ).toHaveAttribute("href", "/admin/instance?section=travPlan&expert=1");
+      ).toHaveAttribute("href", "/settings/pl-bereit?match=tpoffer&expert=1");
       expect(window.location.pathname).toBe("/plan/admin");
     }
   );

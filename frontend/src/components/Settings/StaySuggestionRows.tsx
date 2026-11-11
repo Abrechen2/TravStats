@@ -75,7 +75,7 @@ function RefinementRow({ id }: { id: Exclude<StayRowId, "avor"> }): JSX.Element 
     stayOff ??
     (id === "immichbeleg"
       ? ready.immich === false
-        ? dependency("noImmich", () => go("/settings/services"))
+        ? dependency("noImmich", () => go("/settings/dienstek"))
         : undefined
       : ready.ai === false
         ? dependency("aiNotAllowed")

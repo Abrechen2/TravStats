@@ -24,7 +24,6 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
-vi.mock("../ImmichModeRow", () => ({ default: () => null }));
 vi.mock("../../Settings/DawarichProviderHint", () => ({ default: () => null }));
 
 // The master internet switch (settings v3 S2): on unless a test says it is off.
@@ -93,13 +92,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 31 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 29 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(31),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(29),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(31);
+    expect(SERVICE_CARDS).toHaveLength(29);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -549,7 +548,7 @@ describe("ServicesPage", () => {
       ]) {
         expect(ids()).not.toContain(id);
       }
-      for (const id of ["railTimetables", "openData", "fx", "updatesTemplates"]) {
+      for (const id of ["railTimetables", "openData"]) {
         expect(ids()).not.toContain(id);
       }
       // The groups of the prototype, in its order.
@@ -566,12 +565,12 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(25), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(23), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });
 
-    it("with the master internet switch off, the rows behind it are locked with the reason", async () => {
+    it("with the master internet switch off, the open-data switch is locked with the reason; the rail contact stays editable", async () => {
       internetOff = true;
       api.adminOverview.mockResolvedValue(
         adminOverview({
@@ -583,10 +582,7 @@ describe("ServicesPage", () => {
                 admin("railTimetables", {
                   level: "instance",
                   allowAccountKeys: null,
-                  fields: [
-                    { key: "transitous", kind: "switch", value: true, expert: false },
-                    { key: "contact", kind: "text", value: "", expert: true },
-                  ],
+                  fields: [{ key: "contact", kind: "text", value: "", expert: true }],
                 }),
               ],
             },
@@ -595,11 +591,10 @@ describe("ServicesPage", () => {
       );
       await showSide("server");
       const rail = await open("railTimetables");
-      await waitFor(() => expect(within(rail).getByText("internet-off-reason")).toBeTruthy(), WAIT);
-      // The switch cannot act; the address next to it can still be edited.
-      const locked = rail.querySelector("[data-locked]") as HTMLElement;
-      expect(locked).toBeTruthy();
-      expect(within(rail).getAllByText("internet-off-reason")).toHaveLength(1);
+      // The two timetable sources have no switch of their own any more (S6): what is
+      // left on the card is the contact address, which the master switch does not lock.
+      await waitFor(() => expect(within(rail).getByDisplayValue("")).toBeTruthy(), WAIT);
+      expect(within(rail).queryByText("internet-off-reason")).toBeNull();
       const dataSwitch = await open("openData");
       expect(within(dataSwitch).getByText("internet-off-reason")).toBeTruthy();
     });

@@ -1230,11 +1230,6 @@
     },
     "save": "Speichern",
     "saving": "Speichern …",
-    "runNow": "Jetzt abgleichen",
-    "running": "Gleicht ab …",
-    "runOk": "Abgleich erfolgreich.",
-    "runPartial": "Hochgeladen, aber alte Versionen ließen sich nicht löschen: {{reason}}",
-    "runLost": "Ob der Abgleich fertig wurde, ist unbekannt. Der letzte Stand oben wird neu geladen.",
     "loadError": "Die WebDAV-Einstellungen konnten nicht geladen werden.",
     "saveError": "Speichern fehlgeschlagen.",
     "last": {
@@ -1282,24 +1277,6 @@
   },
   "travTrack": {
     "title": "TravTrack"
-  },
-  "views": {
-    "title": "Karte, Start & Listen",
-    "map": {
-      "name": "Kartendarstellung",
-      "sub": "Stil, Linien, Beschriftungen",
-      "jump": "An der Karte"
-    },
-    "start": {
-      "name": "Startseite",
-      "sub": "Reisearten und Kartenart",
-      "jump": "Auf der Startseite"
-    },
-    "lists": {
-      "name": "Listen",
-      "sub": "Spalten, Sortierung, Seitengröße",
-      "jump": "An jeder Liste"
-    }
   },
   "area": {
     "pages": {

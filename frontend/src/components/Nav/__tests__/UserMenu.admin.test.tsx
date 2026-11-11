@@ -20,7 +20,7 @@ const user = { username: "akuenzel", firstName: "Alex", lastName: "Künzel" };
  * already are.
  */
 describe("UserMenu — admin link (T4)", () => {
-  it("offers a link to /admin when the account is an admin", () => {
+  it("offers a link to the server settings when the account is an admin", () => {
     render(
       <MemoryRouter>
         <UserMenu user={user} onLogout={vi.fn()} isAdmin />
@@ -29,7 +29,7 @@ describe("UserMenu — admin link (T4)", () => {
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByRole("menuitem", { name: "dashboard:admin" })).toHaveAttribute(
       "href",
-      "/admin"
+      "/settings/allgemein"
     );
   });
 

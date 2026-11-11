@@ -136,7 +136,7 @@ export function RailShareLinkRoute({ context }: Props): JSX.Element {
             // The way that works where the server is refused (forgejo#204).
             <p className="text-sm" data-testid="rail-share-link-bookmarklet">
               {t("rail:shareLink.bookmarkletHint")}{" "}
-              <Link to="/settings/data?section=import" className="underline">
+              <Link to="/settings/daten#import" className="underline">
                 {t("rail:shareLink.bookmarkletSetup")}
               </Link>
             </p>

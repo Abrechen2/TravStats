@@ -21,7 +21,7 @@ function renderAt(search: string) {
     <MemoryRouter initialEntries={[`/integrations/strava/callback${search}`]}>
       <Routes>
         <Route path="/integrations/strava/callback" element={<StravaCallbackPage />} />
-        <Route path="/settings" element={<div>settings-page</div>} />
+        <Route path="/settings/dienstek" element={<div>settings-page</div>} />
       </Routes>
     </MemoryRouter>
   );

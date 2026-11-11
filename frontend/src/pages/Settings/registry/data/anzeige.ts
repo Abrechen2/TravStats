@@ -19,10 +19,5 @@ export const ANZEIGE_PAGE: RegistryPage = {
         {"id":"anzeigew","mount":"units","kind":"select","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Anzeigewährung","en":"Display currency","terms":{"de":"Wie Beträge angezeigt werden","en":"How amounts are shown"}},
         {"id":"waehrung","mount":"units","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Basiswährung für Summen","en":"Base currency for totals","terms":{"de":"Alle Kosten werden für Summen in diese Währung umgerechnet Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999.","en":"All costs are converted into this currency for totals Amounts already converted keep their value. ECB rates since 1999."}},
       ]},
-      {"id":"anzeige-views","de":"Karte, Start & Listen","en":"Map, home & lists","level":"expert","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"karte","mount":"views","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Kartendarstellung","en":"Map look","terms":{"de":"Stil, Linien, Beschriftungen","en":"Style, lines, labels"}},
-        {"id":"start","mount":"views","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Startseite","en":"Home page","terms":{"de":"Reisearten und Kartenart","en":"Travel types and map mode"}},
-        {"id":"listen","mount":"views","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Listen","en":"Lists","terms":{"de":"Spalten, Sortierung, Seitengröße","en":"Columns, sorting, page size"}},
-      ]},
   ],
 };

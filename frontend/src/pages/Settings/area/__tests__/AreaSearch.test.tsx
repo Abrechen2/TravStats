@@ -96,7 +96,7 @@ describe("the search box", () => {
 
   it("flags an expert hit and explains that opening it keeps the saved level", () => {
     renderSearch(true);
-    type("Altes Anmeldeverfahren");
+    type("Kontakt für Anfragen");
     expect(screen.getAllByRole("link")[0]).toHaveTextContent("settings:level.expert");
     expect(screen.getByText("settings:search.expertNote")).toBeInTheDocument();
   });

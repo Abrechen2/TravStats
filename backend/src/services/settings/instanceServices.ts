@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getInstanceSettings } from "../instanceSettingsService";
-import { throughInternet } from "../internetGate";
+import { internetOn } from "../internetGate";
 import { railRoutingBaseUrl } from "../rail/openRailRouting";
 
 /**
@@ -24,8 +24,8 @@ export type InstanceServicesView = z.infer<typeof instanceServicesSchema>;
 export async function instanceServicesView(): Promise<InstanceServicesView> {
   const settings = await getInstanceSettings();
   return instanceServicesSchema.parse({
-    transitous: throughInternet(settings, settings.railTransitousEnabled),
-    dbRest: throughInternet(settings, settings.railDbRestEnabled),
+    transitous: internetOn(settings),
+    dbRest: internetOn(settings),
     // The router's own test (`railRoutingBaseUrl`): a URL set means on. The
     // URL itself is the admin's and stays here.
     openRailRouting: (await railRoutingBaseUrl()) !== null,

@@ -64,7 +64,7 @@ export default function CloudOrderList({
   const enabled = new Set(order.filter((kind) => serviceOf(kind)?.enabled === true));
   const onChain = order.filter((kind) => enabled.has(kind));
   const off = order.filter((kind) => !enabled.has(kind));
-  const linkTo = (kind: CloudProviderKind): string => `/settings/services#${SERVICE_OF[kind]}`;
+  const linkTo = (kind: CloudProviderKind): string => `/settings/dienste#${SERVICE_OF[kind]}`;
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>

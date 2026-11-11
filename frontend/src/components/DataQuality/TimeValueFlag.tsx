@@ -152,7 +152,7 @@ export default function TimeValueFlag({
               domain: t(`dashboard:tabStrip.tabs.${domain}`),
             })}
           </p>
-          <Link to="/settings#modules" className="btn-secondary inline-block">
+          <Link to="/settings/reisearten#domains" className="btn-secondary inline-block">
             {t("dataQuality:time.domainOffAction")}
           </Link>
         </div>

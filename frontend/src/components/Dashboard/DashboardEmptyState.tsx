@@ -48,7 +48,7 @@ export function DashboardEmptyState({ onAddFlight }: DashboardEmptyStateProps): 
               with existing travel history. */}
           <button
             type="button"
-            onClick={() => navigate("/settings?section=import")}
+            onClick={() => navigate("/settings/daten#import")}
             className="cursor-pointer rounded-lg px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ background: "var(--accent)", color: "#0d1117", border: "none" }}
           >
@@ -70,7 +70,7 @@ export function DashboardEmptyState({ onAddFlight }: DashboardEmptyStateProps): 
             </button>
             <button
               type="button"
-              onClick={() => navigate("/settings?section=modules")}
+              onClick={() => navigate("/settings/reisearten#domains")}
               className="flex-1 cursor-pointer rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
               style={{
                 background: "var(--bg-elevated)",

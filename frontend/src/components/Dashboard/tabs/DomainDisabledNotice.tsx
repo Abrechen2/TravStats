@@ -37,7 +37,10 @@ export function DomainDisabledNotice({ domain }: { domain: DomainKey }): JSX.Ele
       glyph={TAB_ICON[domain]}
       title={t("dashboard:tabDisabled.title")}
       body={t("dashboard:tabDisabled.body", { domain: t(`dashboard:tabStrip.tabs.${domain}`) })}
-      action={{ to: "/settings#modules", label: t("dashboard:tabDisabled.goToSettings") }}
+      action={{
+        to: "/settings/reisearten#domains",
+        label: t("dashboard:tabDisabled.goToSettings"),
+      }}
     />
   );
 }

@@ -16,7 +16,6 @@ export const SICHERUNGEN_PAGE: RegistryPage = {
         {"id":"bakhalten","mount":"automatic","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Aufbewahren","en":"Keep","terms":{"de":"1–365 Tage Die letzte vollständige Sicherung bleibt immer.","en":"1–365 days The last full backup always stays."}},
         {"id":"bakwddel","mount":"automatic","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Alte Sicherungen auch auf WebDAV löschen","en":"Also delete old backups on WebDAV","terms":{"de":"","en":""}},
         {"id":"bakzone","mount":"automatic","kind":"select","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitzone für 02:00","en":"Time zone for 02:00","terms":{"de":"","en":""}},
-        {"id":"autobak","mount":"automatic","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Automatisch sichern","en":"Back up automatically","terms":{"de":"Um 02:00","en":"At 02:00"}},
       ]},
   ],
 };

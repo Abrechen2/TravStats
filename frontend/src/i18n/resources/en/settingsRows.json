@@ -204,11 +204,6 @@
       "t": "Versions to keep",
       "s": "1–30"
     },
-    "webdavjetzt": {
-      "t": "Upload now",
-      "btn": "Upload now",
-      "res": "Uploaded · just now"
-    },
     "meine": {
       "t": "All my data",
       "s": "JSON, without passwords or keys",
@@ -679,36 +674,12 @@
         "t": "Your client secret",
         "h": "Stored encrypted and never shown again."
       },
-      "oskuser": {
-        "t": "Your username",
-        "s": "Legacy sign-in"
-      },
-      "oskpw": {
-        "t": "Your password",
-        "s": "Legacy sign-in"
-      },
       "oskidI": {
         "t": "Server client ID",
         "s": "For every account without its own"
       },
       "osksecI": {
         "t": "Server client secret"
-      },
-      "oskuserI": {
-        "t": "Server username",
-        "s": "Legacy sign-in"
-      },
-      "oskpwI": {
-        "t": "Server password",
-        "s": "Legacy sign-in"
-      },
-      "transitous": {
-        "t": "Transitous",
-        "s": "Timetables from open data"
-      },
-      "dbrest": {
-        "t": "db-rest",
-        "s": "Deutsche Bahn timetables"
       },
       "bahnkontakt": {
         "t": "Contact for requests",
@@ -742,11 +713,6 @@
       "immnacht": {
         "t": "Look through photos nightly",
         "s": "Finds trips you haven't logged"
-      },
-      "immmode": {
-        "t": "Photos on trips",
-        "h": "Link shows photos from Immich and copies nothing. Copy downloads the originals to this server.",
-        "o": ["verknüpfen", "kopieren"]
       },
       "immvisit": {
         "t": "Link visit photos",
@@ -821,18 +787,11 @@
       "overpass": {
         "t": "Overpass address"
       },
-      "oplogos": {
-        "t": "Look up operator logos"
-      },
       "logorefresh": {
         "t": "Reload logos",
         "s": "Also happens every night",
         "btn": "Reload",
         "res": "84 new logos · 1,210 checked"
-      },
-      "fxcdn": {
-        "t": "Fallback source",
-        "s": "When the ECB doesn't answer"
       },
       "wdurl": {
         "t": "Address",
@@ -847,10 +806,6 @@
       "wdfolder": {
         "t": "Folder"
       },
-      "wdsrv": {
-        "t": "Upload server backups",
-        "s": "Every successful backup"
-      },
       "wdsrvurl": {
         "t": "Server: address"
       },
@@ -863,10 +818,6 @@
       },
       "wdpath": {
         "t": "Folder for server backups"
-      },
-      "smtpon": {
-        "t": "Send mail",
-        "s": "Invitations, reminders, new password"
       },
       "smtphost": {
         "t": "Mail server"
@@ -947,10 +898,6 @@
         "s": "Once a day, without names",
         "h": "The install ID is shown in the help. If the receiver is disabled at start, nothing is sent.",
         "o": ["nein", "ja"]
-      },
-      "updcheck": {
-        "t": "Check for new versions",
-        "s": "Asks GitHub"
       },
       "tplrepo": {
         "t": "Booking template source",
@@ -1114,10 +1061,6 @@
       "s": "Off: the pages disappear for every account. Plans stay stored.",
       "h": "Off keeps all plans, only hides them."
     },
-    "laenderstd": {
-      "t": "Default: when a country counts",
-      "s": "Accounts may differ"
-    },
     "importmodus": {
       "t": "Big import",
       "s": "Lifts upload limits for 24 h",
@@ -1141,9 +1084,6 @@
       "t": "Known templates",
       "s": "Always included"
     },
-    "olltest": {
-      "t": "Check Ollama"
-    },
     "sections": {
       "general": "General",
       "addresses": "Addresses",
@@ -1165,7 +1105,6 @@
     },
     "loadFailed": "I couldn't load the server's settings.",
     "retry": "Try again",
-    "running": "Running …",
     "groups": {
       "general": "General",
       "addresses": "Addresses",
@@ -1199,13 +1138,7 @@
     "parsers": {
       "templateFirst": "Templates first",
       "llmFirst": "AI first",
-      "builtin": "Text recognition (OCR) and templates",
-      "noOllama": "Needs Ollama.",
-      "check": "Check",
-      "testOk": "Reachable · just checked",
-      "testNoModel": "Reachable, but the model {{model}} is missing.",
-      "test_unreachable": "I can't reach Ollama.",
-      "test_failed": "I couldn't check Ollama."
+      "builtin": "Text recognition (OCR) and templates"
     },
     "cloud": {
       "loading": "Reading which providers are on …",
@@ -1221,7 +1154,7 @@
     "internet": {
       "t": "Server may ask external services",
       "s": "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
-      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. Services with their own key (flight data, AI, photos) are not affected."
     },
     "l_tt": {
       "t": "TravTrack",
@@ -1300,10 +1233,6 @@
     }
   },
   "backups": {
-    "autobak": {
-      "t": "Back up automatically",
-      "s": "At 02:00"
-    },
     "baktakt": {
       "t": "Interval",
       "s": "At 02:00"
@@ -1340,7 +1269,6 @@
     },
     "loadFailed": "I couldn't load the backup settings.",
     "deps": {
-      "autoOff": "Only works with “Back up automatically”.",
       "webdavOff": "Only works with the WebDAV copy.",
       "webdavUnknown": "Only works with the WebDAV copy. I can't read its state right now."
     },
@@ -1392,7 +1320,6 @@
     },
     "nowLine": "{{interval}} · kept for {{days}} days",
     "rhythm": "{{interval}} at 02:00 ({{zone}})",
-    "rhythmOff": "Off: the server does not back up by itself.",
     "stats": {
       "last": "Last successful backup",
       "next": "Next",
@@ -1412,15 +1339,6 @@
     "logtage": {
       "t": "Keep logs",
       "s": "1–90 days"
-    },
-    "loghttp": {
-      "t": "Log requests"
-    },
-    "logdb": {
-      "t": "Log database"
-    },
-    "logparser": {
-      "t": "Log reading"
     },
     "logfiles": {
       "t": "Log files",

@@ -107,7 +107,7 @@ export default function AutoUpdateSection({
                   reason: t("settings:rows.liveUpdates.noFlightData"),
                   jump: {
                     label: t("settings:rows.liveUpdates.toServices"),
-                    onJump: () => navigate("/settings/services"),
+                    onJump: () => navigate("/settings/dienstek"),
                   },
                 }
               : undefined

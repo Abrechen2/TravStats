@@ -408,7 +408,7 @@ export default function CruisesPage(): JSX.Element {
         <p className="mb-4 text-xs text-(--text-muted)">
           {t("list.wholeListHint")}{" "}
           <Link
-            to="/settings?section=import"
+            to="/settings/daten#import"
             className="underline underline-offset-4 hover:text-(--text-primary)"
           >
             {t("settings:import.openHub")}

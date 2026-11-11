@@ -101,6 +101,7 @@ describe("GET /settings/immich", () => {
     userSettingsFindUnique.mockResolvedValue({
       immichBaseUrl: "https://immich.lan",
       immichApiKey: "enc:super-secret",
+      // A stored "import" from before settings v3 S6 no longer decides.
       immichDefaultMode: "import",
     });
 
@@ -110,7 +111,7 @@ describe("GET /settings/immich", () => {
     expect(res.body).toEqual({
       baseUrl: "https://immich.lan",
       hasKey: true,
-      defaultMode: "import",
+      defaultMode: "link",
       source: "user" as const,
       isShared: false,
       hasAccess: true,
@@ -135,11 +136,10 @@ describe("GET /settings/immich", () => {
 });
 
 describe("PUT /settings/immich", () => {
-  it("normalises the URL, encrypts the key and upserts", async () => {
+  it("normalises the URL, encrypts the key and upserts; a sent defaultMode is accepted and ignored", async () => {
     userSettingsFindUnique.mockResolvedValue({
       immichBaseUrl: "https://immich.lan",
       immichApiKey: "enc:k",
-      immichDefaultMode: "link",
     });
 
     const res = await request(makeApp(immichSettingsRouter))
@@ -153,7 +153,6 @@ describe("PUT /settings/immich", () => {
         update: {
           immichBaseUrl: "https://immich.lan",
           immichApiKey: "enc:k",
-          immichDefaultMode: "import",
         },
       })
     );

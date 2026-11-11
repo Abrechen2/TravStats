@@ -107,7 +107,7 @@ describe("DomainRouteGuard", () => {
     expect(screen.getByText("dashboard:tabDisabled.title")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "dashboard:tabDisabled.goToSettings" })
-    ).toHaveAttribute("href", "/settings#modules");
+    ).toHaveAttribute("href", "/settings/reisearten#domains");
     // The chrome is drawn, so the reader is not stranded on a bare card.
     expect(screen.getByTestId("nav")).toBeTruthy();
   });

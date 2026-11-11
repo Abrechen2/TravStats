@@ -152,17 +152,16 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "oauthClient",
     recommended: "free",
     getKeyUrl: "https://opensky-network.org/",
+    // The legacy username / password login is no longer a field (settings v3 S6):
+    // OpenSky stopped accepting basic authentication on 2026-03-18. The columns and
+    // the legacy routes stay until the Companion version that stops sending them is named.
     fields: [
       admin("clientId", "secret", "globalOpenskyClientId"),
       admin("clientSecret", "secret", "globalOpenskyClientSecret"),
-      admin("username", "secret", "globalOpenskyUsername", true),
-      admin("password", "secret", "globalOpenskyPassword", true),
     ],
     accountFields: [
       user("clientId", "secret", "openskyClientId"),
       user("clientSecret", "secret", "openskyClientSecret"),
-      user("username", "secret", "openskyUsername", true),
-      user("password", "secret", "openskyPassword", true),
     ],
     requiredFields: ["clientId", "clientSecret"],
     tester: "opensky",
@@ -228,12 +227,9 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     recommended: "free",
-    enabled: { kind: "adminColumns", columns: ["railTransitousEnabled", "railDbRestEnabled"] },
-    fields: [
-      admin("transitous", "switch", "railTransitousEnabled"),
-      admin("dbRest", "switch", "railDbRestEnabled"),
-      admin("contact", "text", "railLookupContact", true),
-    ],
+    // Both sources run under the master internet switch alone (settings v3 S6).
+    alwaysOn: true,
+    fields: [admin("contact", "text", "railLookupContact", true)],
   }),
   svc({
     id: "googlePlaces",
@@ -430,10 +426,7 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
     recommended: "free",
     resolverProvider: "logostream",
-    fields: [
-      admin("apiKey", "secret", "globalLogostreamApiKey"),
-      admin("operatorLogos", "switch", "operatorLogosOpenDataEnabled"),
-    ],
+    fields: [admin("apiKey", "secret", "globalLogostreamApiKey")],
     tester: "logostream",
   }),
   svc({
@@ -443,9 +436,9 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     // The ECB lookup (Frankfurter) is what every stay and cost total converts
-    // through; only a currency code and a date leave the server. What an admin may
-    // decide is the public CDN fallback for currencies the ECB does not publish,
-    // and that stays its own switch (the Parser page's "fxCdnFallbackEnabled").
+    // through; only a currency code and a date leave the server. The public CDN
+    // fallback for currencies the ECB does not publish has no switch of its own
+    // any more: it runs under the master internet switch (settings v3 S6).
     alwaysOn: true,
     recommended: "free",
     fields: [
@@ -453,7 +446,6 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("primaryUrl", "url", "fxPrimaryCustomUrl"),
       admin("fallbackSource", "select", "fxFallbackSource", false, [...FX_FALLBACK_IDS]),
       admin("fallbackUrl", "url", "fxFallbackCustomUrl"),
-      admin("cdnFallback", "switch", "fxCdnFallbackEnabled"),
     ],
   }),
 
@@ -539,7 +531,8 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "url",
     keyless: true,
-    enabled: { kind: "adminColumns", columns: ["updateCheckEnabled"] },
+    // The update check runs under the master internet switch alone (settings v3 S6).
+    alwaysOn: true,
     fields: [admin("templateRepoUrl", "url", "templateRepoBaseUrl", true)],
   }),
 ];

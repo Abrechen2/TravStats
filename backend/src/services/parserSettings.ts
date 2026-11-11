@@ -181,7 +181,6 @@ export async function getParserConfigWithSettings(
 }
 
 export interface AdminFxSettings {
-  cdnFallbackEnabled: boolean;
   /** `admin_settings.internet_enabled`; false = no FX call leaves the server. */
   internetEnabled: boolean;
   /** Base URL of the primary ECB source (never null: unusable choices fall back to Frankfurter). */
@@ -202,7 +201,6 @@ export async function getAdminFxSettings(): Promise<AdminFxSettings> {
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
     select: {
-      fxCdnFallbackEnabled: true,
       internetEnabled: true,
       fxPrimarySource: true,
       fxPrimaryCustomUrl: true,
@@ -211,7 +209,6 @@ export async function getAdminFxSettings(): Promise<AdminFxSettings> {
     },
   });
   return {
-    cdnFallbackEnabled: settings?.fxCdnFallbackEnabled ?? true,
     // Master switch off: the resolver makes no call at all (ECB or CDN).
     internetEnabled: settings?.internetEnabled ?? true,
     // A primary that cannot be resolved (custom without a valid URL) reads as

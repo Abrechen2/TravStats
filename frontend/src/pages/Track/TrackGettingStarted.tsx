@@ -39,7 +39,7 @@ export default function TrackGettingStarted({ active }: { active: boolean }): JS
     {
       key: "companion",
       done: active,
-      to: "/settings/travtrack#ttRecording",
+      to: "/settings/tt-aufz#ttRecording",
     },
     { key: "dawarich", done: false, to: "/track/imports" },
     { key: "gpx", done: false, to: "/track/imports" },
@@ -80,7 +80,7 @@ export default function TrackGettingStarted({ active }: { active: boolean }): JS
       {paired === false && (
         <p className="t-caption" data-testid="track-start-pairing">
           {t("track:start.pairing")}{" "}
-          <Link to="/settings/account?section=devices">{t("track:start.pairingAction")}</Link>
+          <Link to="/settings/telefone#devices">{t("track:start.pairingAction")}</Link>
         </p>
       )}
     </section>

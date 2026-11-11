@@ -12,6 +12,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { encryptApiKey } from "../../utils/encryption";
 import { immichConnectionSchema, immichTestSchema } from "../../schemas/immich";
 import { accountMayReachPrivate } from "../../services/egress/privateTargets";
+import { IMMICH_DEFAULT_MODE } from "../../services/immich/defaultMode";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { testImmichConnection } from "../../services/immich/immichTester";
 import { ImmichError, normalizeImmichBaseUrl } from "../../services/immich/types";
@@ -22,7 +23,6 @@ const router = Router();
 interface ImmichUserUpdateData {
   immichBaseUrl?: string | null;
   immichApiKey?: string | null;
-  immichDefaultMode?: string;
 }
 
 /**
@@ -47,14 +47,15 @@ function normalizeRequestedBaseUrl(raw: string, allowPrivate: boolean): string {
 async function readStatus(userId: string): Promise<Record<string, unknown>> {
   const settings = await prisma.userSettings.findUnique({
     where: { userId },
-    select: { immichBaseUrl: true, immichApiKey: true, immichDefaultMode: true },
+    select: { immichBaseUrl: true, immichApiKey: true },
   });
   const conn = await getImmichConnection(userId);
 
   return {
     baseUrl: settings?.immichBaseUrl ?? null,
     hasKey: Boolean(settings?.immichApiKey),
-    defaultMode: settings?.immichDefaultMode === "import" ? "import" : "link",
+    // Fixed since settings v3 S6; kept in the answer for clients that still read it.
+    defaultMode: IMMICH_DEFAULT_MODE,
     source: conn?.source ?? null,
     isShared: conn !== null && conn.source !== "user",
     hasAccess: conn !== null,
@@ -90,9 +91,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     if (payload.apiKey !== undefined) {
       update.immichApiKey = payload.apiKey === null ? null : encryptApiKey(payload.apiKey);
     }
-    if (payload.defaultMode !== undefined) {
-      update.immichDefaultMode = payload.defaultMode;
-    }
+    // `payload.defaultMode` is still accepted and ignored (settings v3 S6, rule 6).
 
     await prisma.userSettings.upsert({
       where: { userId },

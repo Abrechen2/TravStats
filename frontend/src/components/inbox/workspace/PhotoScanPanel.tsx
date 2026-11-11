@@ -12,7 +12,7 @@ import Button from "../../ui/Button";
 import EmptyState from "../../ui/EmptyState";
 
 const NS = "dataQuality:inbox.photoJourneys";
-const SERVICES_PATH = "/settings/services?section=externalServices";
+const SERVICES_PATH = "/settings/dienstek#immich";
 
 /**
  * The photo library's own controls, shown when the inbox is filtered to photo

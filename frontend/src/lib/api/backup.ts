@@ -2,8 +2,11 @@ import { api } from "./client";
 import { waitForJob } from "./jobs";
 import type { BackupEntry } from "./types";
 
+/**
+ * The automatic backup has no switch (settings v3 S6): it is always on, so the
+ * server's `backupEnabled` (always true, kept for older clients) is not read here.
+ */
 export interface BackupScheduleSettings {
-  backupEnabled: boolean;
   backupInterval: "daily" | "weekly" | "monthly";
   backupRetentionDays: number;
   backupCloudRetention?: boolean;

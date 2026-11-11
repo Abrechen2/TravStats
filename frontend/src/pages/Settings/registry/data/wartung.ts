@@ -11,9 +11,6 @@ export const WARTUNG_PAGE: RegistryPage = {
         {"id":"logtage","mount":"logging","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Protokolle aufbewahren","en":"Keep logs","terms":{"de":"1–90 Tage","en":"1–90 days"}},
         {"id":"logfiles","mount":"logging","kind":"link","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Protokolldateien","en":"Log files","terms":{"de":"Ansehen, laden, löschen","en":"View, download, delete"}},
         {"id":"logclean","mount":"logging","kind":"danger","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Alte Protokolle löschen","en":"Delete old logs","terms":{"de":"","en":""}},
-        {"id":"loghttp","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Anfragen mitschreiben","en":"Log requests","terms":{"de":"","en":""}},
-        {"id":"logdb","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Datenbank mitschreiben","en":"Log database","terms":{"de":"","en":""}},
-        {"id":"logparser","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Lesen mitschreiben","en":"Log reading","terms":{"de":"","en":""}},
       ]},
       {"id":"wartung-system","de":"System","en":"System","level":"expert","scope":"account","audience":"admin","demoLocked":false,"rows":[
         {"id":"sysver","mount":"system","kind":"status","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Version","en":"Version","terms":{"de":"","en":""}},
