@@ -1,4 +1,10 @@
-import type { BusDistanceSource, BusGeometryReport, BusRouteFallback } from "../../types/bus";
+import type {
+  BusDistanceSource,
+  BusGeometrySource,
+  BusGeometryReport,
+  BusLineMiss,
+  BusRouteFallback,
+} from "../../types/bus";
 
 /**
  * The words of bus road routing (spec 2026-10-07-bus-domain-design §5, B3).
@@ -15,9 +21,21 @@ const SOURCE_KEY: Record<BusDistanceSource, string> = {
   user: "bus:distanceSource.user",
 };
 
-/** The i18n key naming what a ride's distance measures; null when it has none. */
-export function distanceSourceKey(source: BusDistanceSource | null): string | null {
-  return source === null ? null : SOURCE_KEY[source];
+/** A routed length read off the timetable's own line is the timetable's, not the road's. */
+const TIMETABLE_KEY = "bus:distanceSource.timetable";
+
+/**
+ * The i18n key naming what a ride's distance measures; null when it has none.
+ * A routed distance whose geometry came from the timetable (`transitous`) is
+ * "Fahrplan", not "Straße": the length is the line's, not a road route's.
+ */
+export function distanceSourceKey(
+  source: BusDistanceSource | null,
+  geometrySource?: BusGeometrySource | null
+): string | null {
+  if (source === null) return null;
+  if (source === "route" && geometrySource === "transitous") return TIMETABLE_KEY;
+  return SOURCE_KEY[source];
 }
 
 const FALLBACKS: readonly BusRouteFallback[] = [
@@ -37,6 +55,24 @@ export function fallbackReasonKey(reason: string | null): string {
   return `bus:routing.reason.${known ?? "provider_error"}`;
 }
 
+const LINE_MISSES: readonly BusLineMiss[] = [
+  "no_match",
+  "no_shape",
+  "rate_limited",
+  "timeout",
+  "unavailable",
+];
+
+/**
+ * The sentence for why the timetable line was not used; null when it was, or
+ * none was asked for. An unknown code (a newer server) reads as unavailable.
+ */
+export function lineMissKey(miss: string | null | undefined): string | null {
+  if (!miss || miss === "no_line") return null;
+  const known = LINE_MISSES.find((m) => m === miss);
+  return `bus:routing.lineMiss.${known ?? "unavailable"}`;
+}
+
 /**
  * The toast a save owes the user, or null when nothing went wrong. A missing
  * provider is not repeated here: the form said so once, plainly, before the
@@ -45,6 +81,16 @@ export function fallbackReasonKey(reason: string | null): string {
 export function saveGeometryNotice(
   report: BusGeometryReport | null
 ): { key: string; reasonKey: string } | null {
+  const miss = lineMissKey(report?.lineMiss);
+  if (report && miss && report.outcome === "routed") {
+    return { key: "bus:routing.savedRoadForLine", reasonKey: miss };
+  }
+  if (report && miss && report.outcome === "straight" && report.fallback === "no_provider") {
+    return { key: "bus:routing.savedStraightNoLine", reasonKey: miss };
+  }
+  if (report && miss && report.outcome === "kept") {
+    return { key: "bus:routing.savedKeptLine", reasonKey: miss };
+  }
   if (!report || report.fallback === null || report.fallback === "no_provider") return null;
   if (report.outcome === "straight") {
     return { key: "bus:routing.savedStraight", reasonKey: fallbackReasonKey(report.fallback) };

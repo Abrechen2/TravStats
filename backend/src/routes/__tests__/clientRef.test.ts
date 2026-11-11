@@ -137,6 +137,7 @@ describe("clientRef — create at most once", () => {
       outcome: "unchanged",
       geometrySource: "straight",
       fallback: null,
+      lineMiss: null,
     });
     expect(await prisma.busJourney.count({ where: { userId } })).toBe(1);
   });

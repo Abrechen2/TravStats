@@ -1,6 +1,12 @@
 // The mail-intake card loads its own settings; it has its own tests.
 vi.mock("../../components/MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
 vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
+vi.mock("../../lib/api/trackGap", () => ({
+  trackGapApi: {
+    get: vi.fn().mockResolvedValue({ minutes: 120, default: 120, min: 5, max: 720 }),
+    set: vi.fn(),
+  },
+}));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.

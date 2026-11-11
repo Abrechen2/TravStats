@@ -11,7 +11,11 @@ import type { RailTimes } from "./times";
 export type BusStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type BusRideKind = "intercity" | "shuttle" | "other";
 export type BusDistanceSource = "great_circle" | "user" | "route";
-export type BusGeometrySource = "straight" | "road" | "manual";
+export type BusGeometrySource = "straight" | "road" | "transitous" | "manual";
+
+/** Why the timetable's own line was not used — the server's `BUS_LINE_MISSES` (never `no_line`, which says nothing). */
+export type BusLineMiss =
+  "no_line" | "no_match" | "no_shape" | "rate_limited" | "timeout" | "unavailable";
 
 /** Why no road line came back — the server's `ROUTE_FALLBACK_REASONS`, never shown raw. */
 export type BusRouteFallback =
@@ -29,6 +33,8 @@ export interface BusGeometryReport {
   outcome: "unchanged" | "routed" | "straight" | "kept";
   geometrySource: BusGeometrySource;
   fallback: BusRouteFallback | null;
+  /** Why the timetable line (Transitous) was not used; null when it was or none was asked for. */
+  lineMiss?: BusLineMiss | null;
 }
 
 /** `GET /bus/routing` — whether this instance can give a ride a road line at all. */

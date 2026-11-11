@@ -18,7 +18,7 @@ it("refreshes a cached timetable response and preserves the last success on fail
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(await get(true)).toEqual({ ok: true, data: { value: 2 } });
   expect(await get()).toEqual({ ok: true, data: { value: 2 } });
-  expect(await get(true)).toEqual({ ok: false, reason: "failed" });
+  expect(await get(true)).toEqual({ ok: false, reason: "failed", status: 503 });
   expect(await get()).toEqual({ ok: true, data: { value: 2 } });
   expect(fetchMock).toHaveBeenCalledTimes(3);
 });

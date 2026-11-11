@@ -71,7 +71,7 @@ const tripResponse = z.object({
     })
   ),
 });
-type TripResponse = z.infer<typeof tripResponse>;
+export type TripResponse = z.infer<typeof tripResponse>;
 
 const toDate = (value: string | null | undefined): Date | null => {
   if (!value) return null;
@@ -92,6 +92,19 @@ function stopOf(p: Place): ProviderStop {
 type Miss = "unavailable" | "timedOut";
 const missOf = (reason: "failed" | "outOfTime"): Miss =>
   reason === "outOfTime" ? "timedOut" : "unavailable";
+
+/** What a trip request delivered, or why not (`status` 429 = rate limited). */
+export type TripMiss = { miss: Miss; status?: number };
+
+export async function fetchTripDetailed(
+  tripId: string,
+  deadline: RailDeadline | null
+): Promise<TripResponse | TripMiss> {
+  const url = `${TRANSITOUS_BASE_URL}/api/v6/trip?tripId=${encodeURIComponent(tripId)}`;
+  const res = await fetchRailJson("transitous", url, tripResponse, deadline);
+  if (!res.ok) return { miss: missOf(res.reason), status: res.status };
+  return res.data.legs.length > 0 ? res.data : { miss: "unavailable" };
+}
 
 async function fetchTrip(
   tripId: string,

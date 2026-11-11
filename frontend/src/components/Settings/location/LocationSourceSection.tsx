@@ -6,6 +6,7 @@ import { apiErrorMachineCode } from "../../../lib/apiError";
 import type { LocationProviderKind } from "../../../lib/api/locationProvider";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
 import { SectionCard } from "../SettingsShared";
+import TrackGapSetting from "./TrackGapSetting";
 import { SettingRows } from "../../ui/SettingRow";
 import {
   ChoiceControl,
@@ -149,6 +150,8 @@ export default function LocationSourceSection(): JSX.Element {
           ) : null}
           {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
         </SettingItem>
+
+        <TrackGapSetting locked={locked} />
 
         <SettingItem
           title={t("settings:location.dawlink.name")}

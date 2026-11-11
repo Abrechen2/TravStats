@@ -17,6 +17,8 @@ import {
 } from "../../services/tour/routing/resolveProvider";
 import { clearRouteAllState } from "../../services/bus/busRouteAgain";
 import { clearJobs, settleAllJobs } from "../../services/jobs/jobRegistry";
+import { __clearRailHttpCache } from "../../services/rail/lookup/railHttp";
+import { encodePolyline, mockFetch } from "../../services/rail/lookup/__tests__/railFetchMock";
 import { ROUTE_FALLBACK_REASONS } from "../../services/tour/routing/types";
 import type { RouteFailure, RouteProvider, RouteResult } from "../../services/tour/routing/types";
 
@@ -128,6 +130,7 @@ describe("Bus rides — road routing (B3)", () => {
         outcome: "routed",
         geometrySource: "road",
         fallback: null,
+        lineMiss: null,
       });
     });
 
@@ -151,6 +154,7 @@ describe("Bus rides — road routing (B3)", () => {
         outcome: "straight",
         geometrySource: "straight",
         fallback: "no_provider",
+        lineMiss: null,
       });
     });
 
@@ -189,6 +193,121 @@ describe("Bus rides — road routing (B3)", () => {
       const res = await create(base);
       expect(res.status).toBe(201);
       expect(res.body.meta.geometry.fallback).toBe("provider_error");
+    });
+  });
+
+  describe("the timetable's own line (Transitous)", () => {
+    const MID = { name: "Hongcheon", lat: 37.69, lon: 127.89 };
+    const SHAPE: Array<[number, number]> = [
+      [SEOUL.lon, SEOUL.lat],
+      [127.4, 37.6],
+      [MID.lon, MID.lat],
+      [128.3, 37.95],
+      [SOKCHO.lon, SOKCHO.lat],
+    ];
+    // 09:00 in Seoul is 00:00 UTC.
+    const departs = "2026-09-20T00:00:00Z";
+    const timetable = {
+      stopTimes: [{ place: { scheduledDeparture: departs }, tripId: "kb1", routeShortName: "N17" }],
+    };
+    const tripBody = {
+      legs: [
+        {
+          from: SEOUL,
+          to: SOKCHO,
+          intermediateStops: [MID],
+          legGeometry: { points: encodePolyline(SHAPE), precision: 6 },
+        },
+      ],
+    };
+
+    beforeEach(() => __clearRailHttpCache());
+
+    it("stores the matched trip's clipped geometry as transitous, its length as the route distance, and skips the road provider", async () => {
+      withProvider();
+      const mock = mockFetch([
+        [/stoptimes/, timetable],
+        [/api\/v6\/trip/, tripBody],
+      ]);
+      try {
+        const res = await create({ ...base, lineName: "N17" });
+        expect(res.status).toBe(201);
+        expect(route).not.toHaveBeenCalled();
+        expect(res.body.data.geometrySource).toBe("transitous");
+        expect(res.body.data.geometry.length).toBeGreaterThanOrEqual(4);
+        expect(res.body.data.distanceSource).toBe("route");
+        expect(res.body.meta.geometry).toMatchObject({
+          outcome: "routed",
+          geometrySource: "transitous",
+          lineMiss: null,
+        });
+      } finally {
+        mock.restore();
+      }
+    });
+
+    it("a 429 from Transitous falls back to the road line and says why, without a silent chord", async () => {
+      withProvider();
+      route.mockResolvedValue(roadBetween(SEOUL, SOKCHO));
+      const mock = mockFetch([[/stoptimes/, { error: "slow down" }, 429]]);
+      try {
+        const res = await create({ ...base, lineName: "N17" });
+        expect(res.status).toBe(201);
+        expect(res.body.data.geometrySource).toBe("road");
+        expect(res.body.meta.geometry).toMatchObject({
+          outcome: "routed",
+          geometrySource: "road",
+          lineMiss: "rate_limited",
+        });
+      } finally {
+        mock.restore();
+      }
+    });
+
+    it("no matching trip keeps the straight chord with both reasons when no road provider exists", async () => {
+      withoutProvider();
+      const mock = mockFetch([[/stoptimes/, { stopTimes: [] }]]);
+      try {
+        const res = await create({ ...base, lineName: "N17" });
+        expect(res.body.data.geometrySource).toBe("straight");
+        expect(res.body.meta.geometry).toMatchObject({
+          outcome: "straight",
+          fallback: "no_provider",
+          lineMiss: "no_match",
+        });
+      } finally {
+        mock.restore();
+      }
+    });
+
+    it("a changed line name asks again, and a failed re-ask keeps the stored timetable line", async () => {
+      withProvider();
+      const ok = mockFetch([
+        [/stoptimes/, timetable],
+        [/api\/v6\/trip/, tripBody],
+      ]);
+      let id: string;
+      try {
+        id = (await create({ ...base, lineName: "N17" })).body.data.id;
+      } finally {
+        ok.restore();
+      }
+      __clearRailHttpCache();
+      route.mockResolvedValue({ failure: "provider_error" });
+      const down = mockFetch([[/stoptimes/, {}, 503]]);
+      try {
+        const res = await patch(id, { lineName: "N18" });
+        expect(res.status).toBe(200);
+        expect(res.body.meta.geometry).toMatchObject({
+          outcome: "kept",
+          geometrySource: "transitous",
+          lineMiss: "unavailable",
+        });
+        expect(res.body.data.geometrySource).toBe("transitous");
+        expect(res.body.data.geometry.length).toBeGreaterThanOrEqual(4);
+      } finally {
+        down.restore();
+      }
     });
   });
 
@@ -235,6 +354,7 @@ describe("Bus rides — road routing (B3)", () => {
         outcome: "kept",
         geometrySource: "road",
         fallback: "rate_limited",
+        lineMiss: null,
       });
       expect(res.body.data.geometrySource).toBe("road");
       expect(res.body.data.geometry).toHaveLength(3);
@@ -305,6 +425,7 @@ describe("Bus rides — road routing (B3)", () => {
         outcome: "straight",
         geometrySource: "straight",
         fallback: "point_not_near_road",
+        lineMiss: null,
       });
       expect(res.body.data.geometrySource).toBe("straight");
     });

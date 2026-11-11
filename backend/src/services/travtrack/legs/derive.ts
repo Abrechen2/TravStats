@@ -321,7 +321,7 @@ function bridgedStops(
     const joins =
       chain !== undefined &&
       tail !== undefined &&
-      seg[0][0] - tail[0] > RECORDING_GAP_MS &&
+      seg[0][0] - tail[0] > (read.gapMs ?? RECORDING_GAP_MS) &&
       // A tombstone keeps only its second, so each removal counts as a one-second window (fail closed).
       !(read.removedAtMs ?? []).some((t) => t + REMOVED_WINDOW_MS > tail[0] && t < seg[0][0]) &&
       !nearZone(tail) &&

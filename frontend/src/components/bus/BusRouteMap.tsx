@@ -22,7 +22,8 @@ type RideLine = Pick<BusJourney, "geometry" | "geometrySource">;
 export function busLineCaptionKey(ride: RideLine): string {
   const drawn = Array.isArray(ride.geometry) && ride.geometry.length >= 2;
   if (!drawn) return "bus:detail.lineStraight";
-  return ride.geometrySource === "manual" ? "bus:detail.lineManual" : "bus:detail.lineRoad";
+  if (ride.geometrySource === "manual") return "bus:detail.lineManual";
+  return ride.geometrySource === "transitous" ? "bus:detail.lineTransit" : "bus:detail.lineRoad";
 }
 
 /**

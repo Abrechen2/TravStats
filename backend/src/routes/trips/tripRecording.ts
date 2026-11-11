@@ -35,6 +35,7 @@ import logger from "../../utils/logger";
 import { tripEntryTrack, type TrackOrigin } from "../../services/locationProvider/entryTrack";
 import { privacyCirclesFor } from "../../services/travtrack/privacyCircles";
 import { privacyCut, privacyCutBy } from "../../services/travtrack/privacyCut";
+import { trackGapMsFor } from "../../services/tripRecording/trackGap";
 import { devicesOnDay, privacySafeDevices } from "../../services/tripRecording/privacySafe";
 
 /**
@@ -264,8 +265,8 @@ async function loadDevices(
     tripClockZone(userId, trip),
   ]);
   const raw = pointsByDevice(entry.batches, zone);
-  const circles = await circlesFor(userId, raw);
-  const all = privacySafeDevices(raw, circles);
+  const [circles, gapMs] = await Promise.all([circlesFor(userId, raw), trackGapMsFor(userId)]);
+  const all = privacySafeDevices(raw, circles, gapMs);
   const devices = day === undefined ? all : devicesOnDay(all, zone, day);
   const meta = {
     origin: entry.origin,
@@ -273,7 +274,7 @@ async function loadDevices(
     alternatives: entry.alternatives,
     unchecked: entry.unchecked,
   };
-  return { zone, all, devices, circles, meta };
+  return { zone, all, devices, circles, gapMs, meta };
 }
 
 /** The circles the trip's lines must not show, scoped to the trip's first point. */
@@ -292,12 +293,17 @@ router.get("/trips/:id/recording", async (req: AuthRequest, res: Response, next:
     const userId = req.userId!;
     const trip = await loadOwnedTrip(req.params.id, userId);
     const { day, source } = tripRecordingQuerySchema.parse(req.query);
-    const { zone, all, devices, circles, meta } = await loadDevices(userId, trip, day, source);
+    const { zone, all, devices, circles, gapMs, meta } = await loadDevices(
+      userId,
+      trip,
+      day,
+      source
+    );
     const shown = devices.flatMap((d) => d.points).sort((a, b) => a[0] - b[0]);
     const first = shown[0];
     const last = shown[shown.length - 1];
     // The line leaves the jitter out; the count says how much (forgejo#319).
-    const clean = await withoutJitter(devices);
+    const clean = await withoutJitter(devices, gapMs);
     res.json({
       summary: {
         pointCount: shown.length,
@@ -336,8 +342,8 @@ router.get(
       const userId = req.userId!;
       const trip = await loadOwnedTrip(req.params.id, userId);
       const { source } = tripRecordingQuerySchema.parse(req.query);
-      const { devices, circles } = await loadDevices(userId, trip, undefined, source);
-      const segments = privacyCutBy(rawSegments(devices), circles, (p): [number, number] => [
+      const { devices, circles, gapMs } = await loadDevices(userId, trip, undefined, source);
+      const segments = privacyCutBy(rawSegments(devices, gapMs), circles, (p): [number, number] => [
         p[2],
         p[1],
       ]);

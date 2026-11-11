@@ -19,7 +19,11 @@ const BUS: LegTableDomain = {
   ns: "bus",
   serviceColumn: "line",
   service: (journey) => (journey as BusJourney).lineName,
-  distanceSourceKey: (journey) => distanceSourceKey((journey as BusJourney).distanceSource),
+  distanceSourceKey: (journey) =>
+    distanceSourceKey(
+      (journey as BusJourney).distanceSource,
+      (journey as BusJourney).geometrySource
+    ),
 };
 
 interface Props {

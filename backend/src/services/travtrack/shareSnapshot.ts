@@ -5,6 +5,7 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { simplifyDegrees } from "../schematicRouter";
 import { classifyPoint, type TripRecordingBounds } from "../tripRecording/bounds";
+import { trackGapMsOf } from "../tripRecording/trackGapBounds";
 import { privacySafeDevices } from "../tripRecording/privacySafe";
 import { rawSegments, type RecordingBreak, type StoredPoint } from "../tripRecording/segments";
 import { receivingMembers } from "../sharing/members";
@@ -85,7 +86,7 @@ export function simplifyWithin(lines: readonly TimedVertex[][], cap: number): Ti
 async function buildShareGeometry(db: Db, userId: string, bounds: TripRecordingBounds) {
   const window = { gte: new Date(bounds.fromMs), lt: new Date(bounds.untilMs) };
   const overlapping = { userId, fromAt: { lt: window.lt }, toAt: { gt: window.gte } };
-  const [rows, deleted, gaps, circles, home] = await Promise.all([
+  const [rows, deleted, gaps, circles, home, gapSettings] = await Promise.all([
     db.travTrackPoint.findMany({
       where: { userId, t: window },
       orderBy: [{ t: "asc" }, { seq: "asc" }],
@@ -99,6 +100,7 @@ async function buildShareGeometry(db: Db, userId: string, bounds: TripRecordingB
     }),
     privacyCirclesFor(userId, bounds.fromMs, db),
     homeCircle(db, userId),
+    db.userSettings.findUnique({ where: { userId }, select: { trackGapMinutes: true } }),
   ]);
   const deletedBreaks = deleted.map((d): RecordingBreak => [d.fromAt.getTime(), d.toAt.getTime()]);
   const byDevice = new Map<string | null, StoredPoint[]>();
@@ -110,6 +112,7 @@ async function buildShareGeometry(db: Db, userId: string, bounds: TripRecordingB
     byDevice.set(row.deviceId, list);
   }
   const allCircles = [...circles, ...(home ? [home] : [])];
+  const gapMs = trackGapMsOf(gapSettings?.trackGapMinutes);
   const devices = [...byDevice.entries()].map(([deviceId, points]) => ({
     deviceId,
     points,
@@ -121,7 +124,7 @@ async function buildShareGeometry(db: Db, userId: string, bounds: TripRecordingB
         .map((g): RecordingBreak => [g.fromAt.getTime(), g.toAt.getTime()]),
     ],
   }));
-  const lines = rawSegments(privacySafeDevices(devices, allCircles)).map((s) =>
+  const lines = rawSegments(privacySafeDevices(devices, allCircles, gapMs), gapMs).map((s) =>
     s.map((p): TimedVertex => [p[2], p[1], p[0]])
   );
   // The check that counts: on the final, simplified geometry.

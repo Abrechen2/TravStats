@@ -20,6 +20,12 @@ vi.mock("../../../../lib/api/locationProvider", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/locationProvider")>()),
   locationProviderApi: { get: getProvider, set: setProvider },
 }));
+vi.mock("../../../../lib/api/trackGap", () => ({
+  trackGapApi: {
+    get: vi.fn().mockResolvedValue({ minutes: 120, default: 120, min: 5, max: 720 }),
+    set: vi.fn(),
+  },
+}));
 const navigate = vi.hoisted(() => vi.fn());
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),

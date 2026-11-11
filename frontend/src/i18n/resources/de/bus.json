@@ -150,7 +150,8 @@
     "route": "Strecke",
     "lineRoad": "Linie: über das Straßennetz berechnet und gespeichert — der wahrscheinliche Weg, nicht aus dem Fahrplan.",
     "lineManual": "Linie: von Hand gezeichnet.",
-    "lineStraight": "Linie: Luftlinie zwischen den Terminals — nicht der Weg des Busses."
+    "lineStraight": "Linie: Luftlinie zwischen den Terminals — nicht der Weg des Busses.",
+    "lineTransit": "Linie: aus dem Fahrplan übernommen (Transitous) — der Weg dieser Fahrt zwischen Einstieg und Ausstieg."
   },
   "stats": {
     "loadError": "Die Bus-Statistik konnte nicht geladen werden.",
@@ -319,7 +320,8 @@
   "distanceSource": {
     "great_circle": "Luftlinie",
     "route": "Straße",
-    "user": "laut Ticket"
+    "user": "laut Ticket",
+    "timetable": "Fahrplan"
   },
   "routing": {
     "noProvider": "Ohne Routing-Dienst bleibt es bei der Luftlinie.",
@@ -357,7 +359,19 @@
       "rate_limited": "Das Kontingent des Routing-Dienstes ist aufgebraucht.",
       "auth": "Der Routing-Dienst hat den Schlüssel abgelehnt.",
       "untrustworthy": "Die Antwort des Routing-Dienstes passte nicht zu den Terminals und wurde verworfen."
-    }
+    },
+    "routedTimetable": "Linie aus dem Fahrplan übernommen: {{km}} km.",
+    "routedNoLine": "Über die Straße berechnet: {{km}} km. Die Linie aus dem Fahrplan fehlt: {{reason}}",
+    "savedRoadForLine": "Gespeichert. Die Linie konnte nicht aus dem Fahrplan übernommen werden: {{reason}} Gespeichert ist der wahrscheinliche Weg über die Straße.",
+    "savedStraightNoLine": "Gespeichert. Die Linie konnte nicht aus dem Fahrplan übernommen werden: {{reason}} Es bleibt bei der Luftlinie.",
+    "lineMiss": {
+      "no_match": "Zu Linie, Abfahrtszeit und Richtung gibt es keine Fahrt im Fahrplan.",
+      "no_shape": "Die Fahrt im Fahrplan hat keinen verwertbaren Linienverlauf.",
+      "rate_limited": "Der Fahrplan-Dienst (Transitous) bittet um weniger Anfragen; versuche es später noch einmal.",
+      "timeout": "Der Fahrplan-Dienst (Transitous) hat nicht rechtzeitig geantwortet.",
+      "unavailable": "Der Fahrplan-Dienst (Transitous) ist gerade nicht erreichbar."
+    },
+    "savedKeptLine": "Gespeichert. Die Linie konnte nicht neu aus dem Fahrplan geholt werden: {{reason}} Die gespeicherte Linie bleibt."
   },
   "import": {
     "title": "Busticket einlesen",
