@@ -30,6 +30,7 @@ vi.mock("../../location/StayScanSection", () => ({ default: () => null }));
 vi.mock("../../location/LocationSourceSection", () => ({
   default: () => null,
   DAWARICH_CONNECTION_PATH: "/settings/services?service=dawarich",
+  onTravTrackSource: (s: { kind: string } | null) => s?.kind === "travtrack",
 }));
 vi.mock("../../TripRecordingSection", () => ({ default: () => null }));
 vi.mock("../../TravTrackDiagnostics", () => ({ default: () => <div data-testid="diagnostics" /> }));
@@ -63,6 +64,11 @@ import { travTrackApi } from "../../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../../lib/api/travtrackImports";
 import { travTrackMonthsApi } from "../../../../lib/api/travtrackMonths";
 import { travTrackSourcesApi } from "../../../../lib/api/travtrackSources";
+import {
+  locationProviderApi,
+  type LocationProviderSettings,
+} from "../../../../lib/api/locationProvider";
+import { useLocationProviderStore } from "../../../../store/locationProviderStore";
 import { resetWriteQueue } from "../../../ui/settings/writeQueue";
 
 /**
@@ -115,6 +121,16 @@ async function confirmInDialogWith(amount: RegExp): Promise<HTMLElement> {
 const show = (ui: JSX.Element, url = "/") =>
   render(<MemoryRouter initialEntries={[url]}>{ui}</MemoryRouter>);
 
+const provider = (
+  kind: LocationProviderSettings["kind"],
+  dawarich: boolean
+): LocationProviderSettings => ({
+  kind,
+  rev: 0,
+  status: "ok",
+  choices: { none: true, travtrack: true, dawarich },
+});
+
 const ON = {
   version: 1 as const,
   offered: true,
@@ -138,6 +154,8 @@ beforeEach(() => {
   vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
   vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
   vi.spyOn(travTrackSourcesApi, "list").mockResolvedValue([]);
+  useLocationProviderStore.getState().reset();
+  vi.spyOn(locationProviderApi, "get").mockResolvedValue(provider("none", true));
 });
 afterEach(() => {
   cleanup();
@@ -326,6 +344,29 @@ describe("Quellen: other apps (expert) and token revocation", () => {
       await screen.findByRole("button", { name: /settings:tt\.sources\.dawarich\.jump/ })
     );
     expect(navigate).toHaveBeenCalledWith("/settings/services?service=dawarich", undefined);
+  });
+
+  it("hides the Dawarich jump and copy when TravTrack is the source and no Dawarich is linked", async () => {
+    vi.spyOn(locationProviderApi, "get").mockResolvedValue(provider("travtrack", false));
+    show(<TravTrackSourcesSection />);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /settings:tt\.sources\.dawarich\.jump/ })
+      ).toBeNull()
+    );
+    expect(screen.getByText("settings:tt.sources.files.name")).toBeInTheDocument();
+    expect(screen.queryByText("settings:location.history.copy.name")).toBeNull();
+  });
+
+  it("keeps the copy for a linked Dawarich while TravTrack is the source", async () => {
+    vi.spyOn(locationProviderApi, "get").mockResolvedValue(provider("travtrack", true));
+    show(<TravTrackSourcesSection />);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /settings:tt\.sources\.dawarich\.jump/ })
+      ).toBeNull()
+    );
+    expect(await screen.findByText("settings:location.history.copy.name")).toBeInTheDocument();
   });
 });
 
