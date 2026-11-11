@@ -82,7 +82,8 @@ describe("the settings search reads the registry", () => {
     expect(card.highlight).toBe("externalServices");
     // A row of the server's TravTrack switch scrolls to its own block.
     const tt = find("TravTrack anbieten").find((h) => h.rowId === "ttoffer")!;
-    expect(tt.highlight).toBe("features");
+    expect(tt.pageId).toBe("tt-bereit");
+    expect(tt.highlight).toBe("ttoffer");
   });
 });
 

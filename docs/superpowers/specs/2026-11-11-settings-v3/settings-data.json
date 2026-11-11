@@ -1039,70 +1039,6 @@
      ]
     },
     {
-     "id": "reisen-suggestions",
-     "de": "Vorschläge im Eingang",
-     "en": "Inbox suggestions",
-     "rows": [
-      {
-       "id": "avor",
-       "t": "toggle",
-       "v": true,
-       "dep": "noLocSource",
-       "inv": "A5 Stay suggestions",
-       "de": [
-        "Aufenthalte vorschlagen",
-        "Aus deinem Standortverlauf",
-        ""
-       ],
-       "en": [
-        "Suggest stays",
-        "From your location history",
-        ""
-       ],
-       "m": "suggestions",
-       "x": 0
-      },
-      {
-       "id": "immichbeleg",
-       "t": "toggle",
-       "v": true,
-       "dep": "noImmich",
-       "inv": "A5 Immich photos as place evidence",
-       "de": [
-        "Immich-Fotos als Beleg",
-        "",
-        ""
-       ],
-       "en": [
-        "Immich photos as evidence",
-        "",
-        ""
-       ],
-       "m": "suggestions",
-       "x": 0
-      },
-      {
-       "id": "kiort",
-       "t": "toggle",
-       "v": false,
-       "dep": "aiNotAllowed",
-       "inv": "A5 AI place-type classification",
-       "de": [
-        "Ortsart per KI erkennen",
-        "Nur Ortsnamen, keine Koordinaten",
-        ""
-       ],
-       "en": [
-        "Detect place type with AI",
-        "Place names only, no coordinates",
-        ""
-       ],
-       "m": "suggestions",
-       "x": 0
-      }
-     ]
-    },
-    {
      "id": "reisen-kalender",
      "de": "Kalender",
      "en": "Calendar",
@@ -5214,8 +5150,8 @@
    "s": [
     {
      "id": "tt-aufz-ttrecording",
-     "de": "Aufzeichnung",
-     "en": "Recording",
+     "de": "Gespeichert",
+     "en": "Stored",
      "rows": [
       {
        "id": "ttsum",
@@ -5230,6 +5166,26 @@
        ],
        "en": [
         "Stored",
+        "",
+        ""
+       ],
+       "m": "ttRecording",
+       "x": 0,
+       "d": 1
+      },
+      {
+       "id": "ttlast",
+       "t": "status",
+       "v": "heute 10:12",
+       "ve": "today 10:12",
+       "inv": "S4 Last point received (TravTrack summary)",
+       "de": [
+        "Zuletzt eingegangen",
+        "",
+        ""
+       ],
+       "en": [
+        "Last received",
         "",
         ""
        ],
@@ -5274,6 +5230,25 @@
        "d": 1
       },
       {
+       "id": "aufz",
+       "t": "toggle",
+       "v": true,
+       "inv": "A8 Trip recording",
+       "de": [
+        "Reisen aufzeichnen",
+        "Positionen aus der Companion-App",
+        "Aus: Der Server nimmt keine neuen Positionen an. Gespeicherte bleiben."
+       ],
+       "en": [
+        "Record trips",
+        "Positions from the Companion app",
+        "Off: the server accepts no new positions. Stored ones stay."
+       ],
+       "m": "ttRecording",
+       "x": 0,
+       "d": 1
+      },
+      {
        "id": "dawlink",
        "t": "link",
        "lnk": "services",
@@ -5289,25 +5264,6 @@
         "Your Dawarich connection",
         "",
         ""
-       ],
-       "m": "ttRecording",
-       "x": 0,
-       "d": 1
-      },
-      {
-       "id": "aufz",
-       "t": "toggle",
-       "v": true,
-       "inv": "A8 Trip recording",
-       "de": [
-        "Reisen aufzeichnen",
-        "Positionen aus der Companion-App",
-        "Aus: Der Server nimmt keine neuen Positionen an. Gespeicherte bleiben."
-       ],
-       "en": [
-        "Record trips",
-        "Positions from the Companion app",
-        "Off: the server accepts no new positions. Stored ones stay."
        ],
        "m": "ttRecording",
        "x": 0,
@@ -5374,7 +5330,7 @@
        ],
        "v": false,
        "m": "ttPlaces",
-       "x": 0,
+       "x": 1,
        "beta": "travTrack"
       }
      ]
@@ -5432,6 +5388,25 @@
      "en": "Stays",
      "rows": [
       {
+       "id": "avor",
+       "t": "toggle",
+       "v": true,
+       "dep": "noLocSource",
+       "inv": "A5 Stay suggestions (moved from Reisen, S4)",
+       "de": [
+        "Aufenthalte vorschlagen",
+        "Aus deinem Standortverlauf",
+        ""
+       ],
+       "en": [
+        "Suggest stays",
+        "From your location history",
+        ""
+       ],
+       "m": "ttDetect",
+       "x": 0
+      },
+      {
        "id": "stopps",
        "t": "toggle",
        "de": [
@@ -5447,57 +5422,29 @@
        "v": true,
        "m": "ttDetect",
        "x": 0
-      }
-     ]
-    },
-    {
-     "id": "tt-erk-feinabstimmung",
-     "de": "Feinabstimmung",
-     "en": "Fine-tuning",
-     "rows": [
+      },
       {
-       "id": "staedte",
-       "t": "toggle",
-       "v": false,
-       "inv": "A8 City lookup in monthly values",
+       "id": "posteingang",
+       "t": "link",
        "de": [
-        "Städte benennen",
-        "Orte ab 30 Minuten",
-        "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder."
+        "Offene Vorschläge im Posteingang",
+        "",
+        ""
        ],
        "en": [
-        "Name cities",
-        "Places from 30 minutes",
-        "Sends positions rounded to 1 km to the server's place search. Off removes the cities again."
+        "Open suggestions in the inbox",
+        "",
+        ""
        ],
        "m": "ttDetect",
        "x": 0
-      },
-      {
-       "id": "scanzeit",
-       "t": "select",
-       "x": 1,
-       "v": "7 Tage",
-       "ve": "7 days",
-       "inv": "A8 Scan period",
-       "de": [
-        "Zeitraum für „Jetzt suchen“",
-        "",
-        ""
-       ],
-       "en": [
-        "Period for “Search now”",
-        "",
-        ""
-       ],
-       "m": "ttDetect"
       }
      ]
     },
     {
      "id": "tt-erk-suchlauf",
      "de": "Suchlauf",
-     "en": "Scan",
+     "en": "Search",
      "rows": [
       {
        "id": "scan",
@@ -5514,6 +5461,25 @@
         "Search automatically",
         "Every 6 hours, also markets, parks, museums",
         "Finds arrive as inbox suggestions. Paused while Places or stay suggestions are off."
+       ],
+       "m": "ttDetect",
+       "x": 0
+      },
+      {
+       "id": "scaninfo",
+       "t": "status",
+       "v": "heute 03:00 · 2 neue Vorschläge",
+       "ve": "today 03:00 · 2 new suggestions",
+       "inv": "S4 Last stay search (dawarich_stay_scan result)",
+       "de": [
+        "Letzter Suchlauf",
+        "",
+        ""
+       ],
+       "en": [
+        "Last search",
+        "",
+        ""
        ],
        "m": "ttDetect",
        "x": 0
@@ -5543,25 +5509,126 @@
      ]
     },
     {
-     "id": "tt-erk-ttdetect",
-     "de": "Erkennung & Vorschläge",
-     "en": "Detection & suggestions",
+     "id": "tt-erk-belege",
+     "de": "Belege",
+     "en": "Evidence",
      "rows": [
       {
-       "id": "posteingang",
-       "t": "link",
+       "id": "immichbeleg",
+       "t": "toggle",
+       "v": true,
+       "dep": "noImmich",
+       "inv": "A5 Immich photos as place evidence",
        "de": [
-        "Offene Vorschläge im Posteingang",
-        "",
+        "Fotos als Beleg nutzen",
+        "Immich-Fotos zu einem Aufenthalt",
         ""
        ],
        "en": [
-        "Open suggestions in the inbox",
-        "",
+        "Use photos as evidence",
+        "Immich photos for a stay",
         ""
        ],
        "m": "ttDetect",
        "x": 0
+      }
+     ]
+    },
+    {
+     "id": "tt-erk-feinabstimmung",
+     "de": "Feinabstimmung",
+     "en": "Fine-tuning",
+     "rows": [
+      {
+       "id": "trackgap",
+       "t": "select",
+       "v": "2 Stunden",
+       "ve": "2 hours",
+       "o": [
+        "15 Minuten",
+        "30 Minuten",
+        "1 Stunde",
+        "2 Stunden",
+        "4 Stunden",
+        "12 Stunden"
+       ],
+       "oe": [
+        "15 minutes",
+        "30 minutes",
+        "1 hour",
+        "2 hours",
+        "4 hours",
+        "12 hours"
+       ],
+       "inv": "S4 Track gap (user_settings.track_gap_minutes 5-720, default 120)",
+       "de": [
+        "Track trennen ab",
+        "Pause, nach der eine Aufzeichnung ein neuer Track wird",
+        "Nur die Zeit zählt, nie die Strecke. Wie bei Dawarich."
+       ],
+       "en": [
+        "Split track after",
+        "A pause after which a recording becomes a new track",
+        "Only time counts, never distance. As in Dawarich."
+       ],
+       "m": "ttDetect",
+       "x": 0
+      },
+      {
+       "id": "staedte",
+       "t": "toggle",
+       "v": false,
+       "inv": "A8 City lookup in monthly values",
+       "de": [
+        "Städte benennen",
+        "Orte ab 30 Minuten",
+        "Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder."
+       ],
+       "en": [
+        "Name cities",
+        "Places from 30 minutes",
+        "Sends positions rounded to 1 km to the server's place search. Off removes the cities again."
+       ],
+       "m": "ttDetect",
+       "x": 1
+      },
+      {
+       "id": "kiort",
+       "t": "toggle",
+       "v": false,
+       "dep": "aiNotAllowed",
+       "inv": "A5 AI place-type classification",
+       "de": [
+        "Ortsart per KI erkennen",
+        "Nur Ortsnamen, keine Koordinaten",
+        ""
+       ],
+       "en": [
+        "Detect place type with AI",
+        "Place names only, no coordinates",
+        ""
+       ],
+       "m": "ttDetect",
+       "x": 1
+      },
+      {
+       "id": "scanzeit",
+       "t": "select",
+       "x": 1,
+       "v": "7 Tage",
+       "ve": "7 days",
+       "inv": "A8 Scan period",
+       "de": [
+        "Zeitraum für „Jetzt suchen“",
+        "",
+        ""
+       ],
+       "en": [
+        "Period for “Search now”",
+        "",
+        ""
+       ],
+       "m": "ttDetect"
       }
      ]
     }
@@ -5602,6 +5669,26 @@
        "beta": "travTrack"
       },
       {
+       "id": "dawimp",
+       "t": "status",
+       "v": "Fertig am 24. Okt · 1,2 Mio. Punkte · 3 Lücken",
+       "ve": "Done 24 Oct · 1.2 million points · 3 gaps",
+       "inv": "S4 Last Dawarich copy (travtrack_dawarich_import status)",
+       "de": [
+        "Letzte Übernahme",
+        "",
+        ""
+       ],
+       "en": [
+        "Last copy",
+        "",
+        ""
+       ],
+       "m": "ttSources",
+       "x": 0,
+       "beta": "travTrack"
+      },
+      {
        "id": "gpxtrack",
        "t": "link",
        "v": "auf der Track-Seite",
@@ -5616,6 +5703,30 @@
         "Import files",
         "GPX, GeoJSON, KML, TCX, Google Takeout",
         "Earlier imports can be removed one by one."
+       ],
+       "m": "ttSources",
+       "x": 0,
+       "beta": "travTrack"
+      },
+      {
+       "id": "ttimp",
+       "t": "list",
+       "items": [
+        [
+         "takeout-2025.zip",
+         "640.112 Punkte"
+        ]
+       ],
+       "inv": "S4 Earlier imports (travtrack_imports list)",
+       "de": [
+        "Bisherige Importe",
+        "",
+        ""
+       ],
+       "en": [
+        "Earlier imports",
+        "",
+        ""
        ],
        "m": "ttSources",
        "x": 0,
@@ -5648,14 +5759,7 @@
        ],
        "m": "ttSources",
        "beta": "travTrack"
-      }
-     ]
-    },
-    {
-     "id": "tt-daten-ttsources",
-     "de": "Quellen & Importe",
-     "en": "Sources & imports",
-     "rows": [
+      },
       {
        "id": "dawconn",
        "t": "link",
@@ -5770,6 +5874,43 @@
    ]
   },
   {
+   "id": "tt-bereit",
+   "g": "track",
+   "ad": 1,
+   "de": "Bereitstellung",
+   "en": "Provisioning",
+   "s": [
+    {
+     "id": "tt-bereit-travtrack",
+     "de": "TravTrack",
+     "en": "TravTrack",
+     "rows": [
+      {
+       "id": "ttoffer",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": true,
+       "beta": "travTrack",
+       "inv": "C1 TravTrack offered",
+       "de": [
+        "TravTrack anbieten",
+        "Aus: Die Seiten verschwinden für alle Konten. Gespeicherte Punkte bleiben.",
+        ""
+       ],
+       "en": [
+        "Offer TravTrack",
+        "Off: the pages disappear for every account. Stored points stay.",
+        ""
+       ],
+       "m": "ttoffer",
+       "x": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
    "id": "pl-plan",
    "g": "plan",
    "de": "Reisen planen",
@@ -5798,6 +5939,109 @@
        "m": "planning",
        "x": 0,
        "beta": "travPlan"
+      },
+      {
+       "id": "planshare",
+       "t": "link",
+       "lnk": "freunde",
+       "inv": "S4 Share plans with friends (pointer to Freunde & Teilen)",
+       "de": [
+        "Pläne mit Freunden teilen",
+        "Läuft über die Verbindung zu jedem Freund",
+        ""
+       ],
+       "en": [
+        "Share plans with friends",
+        "Works through the connection to each friend",
+        ""
+       ],
+       "m": "planning",
+       "x": 0,
+       "beta": "travPlan"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pl-bereit",
+   "g": "plan",
+   "ad": 1,
+   "de": "Bereitstellung",
+   "en": "Provisioning",
+   "s": [
+    {
+     "id": "pl-bereit-travplan",
+     "de": "TravPlan",
+     "en": "TravPlan",
+     "rows": [
+      {
+       "id": "tpoffer",
+       "t": "toggle",
+       "sc": "i",
+       "ad": 1,
+       "v": false,
+       "beta": "travPlan",
+       "inv": "C1 TravPlan offered",
+       "de": [
+        "Reisen planen anbieten",
+        "Aus: Die Seiten verschwinden für alle Konten. Pläne bleiben gespeichert.",
+        ""
+       ],
+       "en": [
+        "Offer trip planning",
+        "Off: the pages disappear for every account. Plans stay stored.",
+        ""
+       ],
+       "m": "tpoffer",
+       "x": 0
+      }
+     ]
+    },
+    {
+     "id": "pl-bereit-grenzen",
+     "de": "Grenzen",
+     "en": "Limits",
+     "rows": [
+      {
+       "id": "pl_ai",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "v": "10",
+       "inv": "C1 TravPlan daily limit, AI (travel_plan_config.aiDailyLimit)",
+       "de": [
+        "KI-Anfragen je Konto und Tag",
+        "",
+        ""
+       ],
+       "en": [
+        "AI requests per account and day",
+        "",
+        ""
+       ],
+       "m": "tpoffer"
+      },
+      {
+       "id": "pl_wx",
+       "t": "input",
+       "sc": "i",
+       "ad": 1,
+       "x": 1,
+       "v": "20",
+       "inv": "C1 TravPlan daily limit, weather (travel_plan_config.weatherDailyLimit)",
+       "de": [
+        "Wetter-Anfragen je Konto und Tag",
+        "",
+        ""
+       ],
+       "en": [
+        "Weather requests per account and day",
+        "",
+        ""
+       ],
+       "m": "tpoffer"
       }
      ]
     }
@@ -6219,75 +6463,6 @@
        ],
        "m": "features",
        "x": 0
-      }
-     ]
-    },
-    {
-     "id": "funktionen-features",
-     "de": "Was der Server anbietet",
-     "en": "What the server offers",
-     "rows": [
-      {
-       "id": "ttoffer",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "beta": "travTrack",
-       "inv": "C1 TravTrack offered",
-       "de": [
-        "TravTrack anbieten",
-        "Standort auf diesem Server speichern",
-        ""
-       ],
-       "en": [
-        "Offer TravTrack",
-        "Store location on this server",
-        ""
-       ],
-       "m": "features",
-       "x": 0
-      },
-      {
-       "id": "tpoffer",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": false,
-       "beta": "travPlan",
-       "inv": "C1 TravPlan offered",
-       "de": [
-        "Planen anbieten",
-        "",
-        "Aus behält alle Pläne, blendet sie nur aus."
-       ],
-       "en": [
-        "Offer planning",
-        "",
-        "Off keeps all plans, only hides them."
-       ],
-       "m": "features",
-       "x": 0
-      },
-      {
-       "id": "tplimits",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": "40 · 200",
-       "inv": "C1 TravPlan daily limits",
-       "de": [
-        "Planen: Anfragen pro Tag",
-        "KI · Wetter, je Konto",
-        ""
-       ],
-       "en": [
-        "Planning: requests per day",
-        "AI · weather, per account",
-        ""
-       ],
-       "m": "features"
       }
      ]
     }

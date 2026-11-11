@@ -162,6 +162,23 @@ describe("Standort → Aufenthalte finden", () => {
     expect(await screen.findByText(/settings:location\.stay\.result\.done/)).toBeInTheDocument();
   });
 
+  it("says in its own row how the last search ended, or that there was none", async () => {
+    api.state.mockResolvedValue(base);
+    const { unmount } = show();
+    expect(await screen.findByText("settings:location.stay.last.none")).toBeInTheDocument();
+    unmount();
+    api.state.mockResolvedValue({
+      ...base,
+      result: "succeeded",
+      finishedAt: "2026-11-01T03:00:00.000Z",
+      createdCount: 2,
+      pointCount: 40,
+    });
+    show();
+    expect(await screen.findByText(/settings:location\.stay\.result\.done/)).toBeInTheDocument();
+    expect(screen.getByText("settings:location.stay.last.name")).toBeInTheDocument();
+  });
+
   it("keeps the period (an expert row) out of the standard level", async () => {
     show();
     await scanButton();

@@ -7,6 +7,7 @@ export const PL_PLAN_PAGE: RegistryPage = {
   sections: [
       {"id":"pl-plan-planen","de":"Planen","en":"Planning","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"travplan","mount":"planning","kind":"toggle","level":"standard","scope":"account","audience":"all","beta":"travPlan","demoLocked":false,"de":"Reisen planen","en":"Plan trips","terms":{"de":"Ideen und Pläne vor der Reise Ausschalten behält deine Pläne.","en":"Ideas and plans before you go Turning off keeps your plans."}},
+        {"id":"planshare","mount":"planning","kind":"link","level":"standard","scope":"account","audience":"all","beta":"travPlan","demoLocked":false,"de":"Pläne mit Freunden teilen","en":"Share plans with friends","terms":{"de":"Läuft über die Verbindung zu jedem Freund","en":"Works through the connection to each friend"}},
       ]},
   ],
 };

@@ -42,7 +42,9 @@ export type AreaPageId =
   | "tt-aufz"
   | "tt-erk"
   | "tt-daten"
+  | "tt-bereit"
   | "pl-plan"
+  | "pl-bereit"
   | "allgemein"
   | "nutzer"
   | "funktionen"
@@ -191,6 +193,12 @@ const page = (
 
 /** TravTrack's pages wait for the server's answer: held data or an offering instance. */
 const TT = { when: "travTrackHeld" } as const;
+/**
+ * The source choice and the stay search work with Dawarich alone, so they stay
+ * where an account has a Dawarich source even if the server does not offer
+ * TravTrack (coordinator call, settings v3 S1/S4).
+ */
+const LOC = { when: "locationSourceHeld" } as const;
 
 export const AREA_PAGES: readonly AreaPageDef[] = [
   // ---- Mein Konto
@@ -230,21 +238,28 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   ]),
   page("ueber", "info", [mount("about", "about", "about")]),
   // ---- TravTrack (only where the server offers it, or the account holds data)
-  page("tt-aufz", "map-pin", [P("ttRecording", TT), P("ttPlaces", TT), P("ttZones", TT)]),
-  page("tt-erk", "sparkles", [P("ttDetect", TT)]),
+  page("tt-aufz", "map-pin", [P("ttRecording", LOC), P("ttPlaces", TT), P("ttZones", TT)]),
+  page("tt-erk", "sparkles", [P("ttDetect", LOC)]),
   page("tt-daten", "database", [
     P("ttSources", TT),
     P("ttExport", TT),
     P("ttDelete", TT),
     P("ttDiag", TT),
   ]),
+  // The server's switch for TravTrack is always reachable for an admin: it is
+  // where the pages above are switched on.
+  page("tt-bereit", "map-pin", [
+    A("travTrack", { as: "ttoffer", labelKey: ROWS_LABEL("server", "ttoffer") }),
+  ]),
   // ---- TravPlan (only where the instance offers it)
   page("pl-plan", "route", [P("planning", { when: "travPlanOffered" })]),
+  page("pl-bereit", "route", [
+    A("travTrack", { as: "tpoffer", labelKey: ROWS_LABEL("server", "tpoffer") }),
+  ]),
   // ---- Server (admin only). The pages whose rows sit inside a component that
   // draws several of the prototype's pages at once (E-Mail, Server-Verbindungen,
   // Datenschutz and Eigene Server inside the service catalogue; Adressen inside
-  // the general card; the TravTrack and TravPlan offers inside Funktionen) are
-  // built by phase S5, when those components are split.
+  // the general card) are built by phase S5, when those components are split.
   page("allgemein", "settings", [
     A("instance", {
       as: "general",

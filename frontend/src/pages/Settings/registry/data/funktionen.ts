@@ -13,10 +13,5 @@ export const FUNKTIONEN_PAGE: RegistryPage = {
         {"id":"laenderstd","mount":"features","kind":"select","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Ein Land zählt ab","en":"A country counts from","terms":{"de":"Konten können abweichen","en":"Accounts may differ"}},
         {"id":"importmodus","mount":"features","kind":"select","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Großer Import","en":"Big import","terms":{"de":"Hebt Upload-Grenzen für 24 h auf Schaltet sich von selbst ab. aus 24 h für alle 24 h für ein Konto","en":"Lifts upload limits for 24 h Turns itself off. off 24 h for all 24 h for one account"}},
       ]},
-      {"id":"funktionen-features","de":"Was der Server anbietet","en":"What the server offers","level":"standard","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"ttoffer","mount":"features","kind":"toggle","level":"standard","scope":"instance","audience":"admin","beta":"travTrack","demoLocked":false,"de":"TravTrack anbieten","en":"Offer TravTrack","terms":{"de":"Standort auf diesem Server speichern","en":"Store location on this server"}},
-        {"id":"tpoffer","mount":"features","kind":"toggle","level":"standard","scope":"instance","audience":"admin","beta":"travPlan","demoLocked":false,"de":"Planen anbieten","en":"Offer planning","terms":{"de":"Aus behält alle Pläne, blendet sie nur aus.","en":"Off keeps all plans, only hides them."}},
-        {"id":"tplimits","mount":"features","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Planen: Anfragen pro Tag","en":"Planning: requests per day","terms":{"de":"KI · Wetter, je Konto","en":"AI · weather, per account"}},
-      ]},
   ],
 };

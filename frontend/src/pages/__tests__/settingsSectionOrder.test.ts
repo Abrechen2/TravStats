@@ -27,7 +27,9 @@ describe("settings menu order", () => {
       "tt-aufz",
       "tt-erk",
       "tt-daten",
+      "tt-bereit",
       "pl-plan",
+      "pl-bereit",
       // Server
       "allgemein",
       "nutzer",

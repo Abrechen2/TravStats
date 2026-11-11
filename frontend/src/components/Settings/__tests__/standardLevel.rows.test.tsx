@@ -114,14 +114,10 @@ describe("standard level inside a section", () => {
     expect(lastHidden(report)).toBe(0);
   });
 
-  it("keeps the trip and stay switches and the two stay refinements — they are consent decisions", async () => {
+  it("keeps the trip suggestion switch — it is a consent decision", async () => {
     const report = renderReporting(<InboxSuggestionsSection />);
     await act(async () => {});
-    for (const row of ["rvor", "avor", "immichbeleg", "kiort"]) {
-      expect(
-        screen.getByRole("switch", { name: new RegExp(`settingsRows:trips\\.${row}\\.t`) })
-      ).toBeInTheDocument();
-    }
+    expect(screen.getByRole("switch", { name: /settingsRows:trips\.rvor\.t/ })).toBeInTheDocument();
     // Nothing in this section is left to the expert level: it reports none.
     expect(lastHidden(report)).toBe(-1);
   });

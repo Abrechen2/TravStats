@@ -13,11 +13,6 @@ export const REISEN_PAGE: RegistryPage = {
       {"id":"reisen-posteingang","de":"Posteingang","en":"Inbox","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"offenevor","mount":"suggestions","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Offene Vorschläge","en":"Open suggestions","terms":{"de":"","en":""}},
       ]},
-      {"id":"reisen-suggestions","de":"Vorschläge im Eingang","en":"Inbox suggestions","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"avor","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Aufenthalte vorschlagen","en":"Suggest stays","terms":{"de":"Aus deinem Standortverlauf","en":"From your location history"}},
-        {"id":"immichbeleg","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Immich-Fotos als Beleg","en":"Immich photos as evidence","terms":{"de":"","en":""}},
-        {"id":"kiort","mount":"suggestions","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
-      ]},
       {"id":"reisen-kalender","de":"Kalender","en":"Calendar","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"ics","mount":"calendarFeed","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Kalender-Abo","en":"Calendar feed","terms":{"de":"Deine Reisen in jeder Kalender-App Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers.","en":"Your trips in any calendar app You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address."}},
       ]},

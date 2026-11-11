@@ -1327,7 +1327,9 @@
       "sicherungen": "Backups",
       "wartung": "Maintenance",
       "stamm": "Reference data",
-      "unterkuenfte": "Stays"
+      "unterkuenfte": "Stays",
+      "tt-bereit": "Provisioning",
+      "pl-bereit": "Provisioning"
     },
     "menu": {
       "konto": "My account",
@@ -1691,6 +1693,11 @@
     "enrichmentPerNight": {
       "name": "Suggestions per night",
       "sub": "1–1000"
+    },
+    "planShare": {
+      "name": "Share plans with friends",
+      "sub": "Works through the connection to each friend",
+      "jump": "Friends"
     }
   },
   "location": {
@@ -1774,6 +1781,10 @@
         "offline": "The server isn't answering right now.",
         "generic": "The server didn't accept the search.",
         "jobFailed": "The search stopped on the way."
+      },
+      "last": {
+        "name": "Last search",
+        "none": "No search yet"
       }
     },
     "tt": {
@@ -1896,17 +1907,18 @@
         "value_one": "{{count}} point since {{since}}",
         "value_other": "{{count}} points since {{since}}"
       },
-      "lastSeen": "Last seen: {{at}}",
       "loadError": "I could not read what is stored.",
       "off": "TravTrack is off on this server: no new points arrive. Stored points stay, export and delete keep working.",
       "devices": {
         "name": "Devices",
-        "sub": "Pair and sign out under Profile & sign-in",
-        "jump": "To Profile & sign-in",
+        "sub": "Pair and sign out",
+        "jump": "Phones",
         "unnamed": "Unnamed device",
         "points_one": "{{count}} point",
         "points_other": "{{count}} points"
-      }
+      },
+      "lastSeenName": "Last received",
+      "lastSeenNone": "Nothing received yet"
     },
     "places": {
       "title": "Fixed places",
@@ -2051,6 +2063,14 @@
     },
     "diag": {
       "title": "Diagnostics"
+    },
+    "groups": {
+      "aufzeichnung": "Stored",
+      "quelle": "Source",
+      "aufenthalte": "Stays",
+      "suchlauf": "Search",
+      "belege": "Evidence",
+      "feinabstimmung": "Fine-tuning"
     }
   },
   "lodgingRatings": {

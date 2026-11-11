@@ -7,10 +7,10 @@ export const TT_DATEN_PAGE: RegistryPage = {
   sections: [
       {"id":"tt-daten-quellen","de":"Quellen","en":"Sources","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"dawcopy","mount":"ttSources","kind":"action","level":"standard","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Aus Dawarich übernehmen","en":"Copy from Dawarich","terms":{"de":"Ganz oder ein Zeitraum Braucht deine eigene Dawarich-Verbindung. Lässt sich anhalten und fortsetzen.","en":"All or a period Needs your own Dawarich connection. Can be paused and resumed."}},
+        {"id":"dawimp","mount":"ttSources","kind":"status","level":"standard","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Letzte Übernahme","en":"Last copy","terms":{"de":"","en":""}},
         {"id":"gpxtrack","mount":"ttSources","kind":"link","level":"standard","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Dateien importieren","en":"Import files","terms":{"de":"GPX, GeoJSON, KML, TCX, Google-Takeout Bisherige Importe lassen sich einzeln entfernen.","en":"GPX, GeoJSON, KML, TCX, Google Takeout Earlier imports can be removed one by one."}},
+        {"id":"ttimp","mount":"ttSources","kind":"list","level":"standard","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Bisherige Importe","en":"Earlier imports","terms":{"de":"","en":""}},
         {"id":"apps","mount":"ttSources","kind":"list","level":"expert","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Weitere Apps","en":"Other apps","terms":{"de":"OwnTracks und Overland Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal.","en":"OwnTracks and Overland These apps don't know your privacy zones; the server drops points inside. You see the key only once."}},
-      ]},
-      {"id":"tt-daten-ttsources","de":"Quellen & Importe","en":"Sources & imports","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"dawconn","mount":"ttSources","kind":"link","level":"standard","scope":"account","audience":"all","beta":"travTrack","demoLocked":false,"de":"Dawarich-Verbindung in Dienste","en":"Dawarich connection in Services","terms":{"de":"","en":""}},
       ]},
       {"id":"tt-daten-export","de":"Export","en":"Export","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[

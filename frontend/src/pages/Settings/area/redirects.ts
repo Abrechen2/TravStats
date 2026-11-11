@@ -74,8 +74,8 @@ const SERVICE_OF_SECTION: Readonly<Record<string, string>> = {
 /** Old admin section -> its place (§6.1). A page address without a hash drops it. */
 const ADMIN_TARGETS: Readonly<Record<string, Target>> = {
   instance: { page: "allgemein", section: "general" },
-  travTrack: { page: "funktionen", section: "features", match: "ttoffer" },
-  travPlan: { page: "funktionen", section: "features", match: "tpoffer" },
+  travTrack: { page: "tt-bereit", section: "ttoffer", match: "ttoffer" },
+  travPlan: { page: "pl-bereit", section: "tpoffer", match: "tpoffer" },
   shareLinks: { page: "funktionen", section: "shareLinksServer", match: "linkserlaubt" },
   importMode: { page: "funktionen", section: "features", match: "importmodus" },
   about: { page: "ueber" },
@@ -114,7 +114,7 @@ const OLD_PAGES: Readonly<Record<string, readonly AreaPageId[]>> = {
   loyalty: ["treue"],
   data: ["daten"],
   services: ["dienstek"],
-  server: ["allgemein", "funktionen", "buchungen"],
+  server: ["allgemein", "funktionen", "buchungen", "tt-bereit", "pl-bereit"],
   users: ["nutzer", "allgemein"],
   backups: ["sicherungen"],
   maintenance: ["wartung"],

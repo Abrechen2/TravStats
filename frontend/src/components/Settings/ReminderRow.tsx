@@ -5,7 +5,9 @@ import { ChoiceControl, SettingItem, useSettingWrite } from "../ui/settings";
 import {
   LEAD_CUSTOM,
   LEAD_OFF,
+  LEAD_STANDARD,
   hasOwnLead,
+  isStandardLead,
   leadChoiceOf,
   leadPatch,
   ownLeadLabel,
@@ -26,7 +28,9 @@ interface ReminderRowProps {
  * 24 h / 2 Tage. The channel is not here — one row above writes it to every
  * area, and this row never sends it (two queues writing the same field would
  * overwrite each other). A lead the select has no entry for (the server keeps
- * up to two presets and one own time of 1-168 h) is shown as "Eigene: N h" and
+ * up to two presets and one own time of 1-168 h) is shown as "Eigene: N h", except
+ * the server's default pair 24 h + 2 h, which every new account holds and which
+ * reads "24 h und 2 h (Standard)"; it is
  * kept until the person picks something else: looking at a row never rewrites it.
  */
 export default function ReminderRow({
@@ -52,6 +56,10 @@ export default function ReminderRow({
     { value: "2", label: t("settingsRows:notifications.lead.h2") },
     { value: "24", label: t("settingsRows:notifications.lead.h24") },
     { value: "48", label: t("settingsRows:notifications.lead.d2") },
+    // The server's default pair, as the standard choice while it is held (off too).
+    ...(isStandardLead(row)
+      ? [{ value: LEAD_STANDARD, label: t("settingsRows:notifications.lead.standard") }]
+      : []),
     // Kept while the area is off too: switching it on again must not cost the own time.
     ...(hasOwnLead(row)
       ? [
