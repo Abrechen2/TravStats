@@ -1,5 +1,5 @@
 import { api } from "./client";
-import { JobFailedError, JobLostError, waitForJob } from "./jobs";
+import { JobFailedError } from "./jobs";
 
 /**
  * The account's WebDAV sync of its own data export (forgejo#321) —
@@ -64,14 +64,6 @@ export interface WebdavSyncUpdate {
   keepVersions?: number;
 }
 
-export interface WebdavRunResult {
-  status: "ok" | "partial";
-  errorCode: string | null;
-  fileName: string | null;
-  sizeBytes: number | null;
-  deleted: number;
-}
-
 /** The i18n key for a failure code; an unknown one gets the generic line. */
 export function webdavErrorKey(code: string | null | undefined): string {
   return code && (WEBDAV_SYNC_ERROR_CODES as readonly string[]).includes(code)
@@ -92,8 +84,6 @@ export function webdavRequestErrorCode(err: unknown): string | null {
     : null;
 }
 
-export { JobLostError };
-
 export const webdavSyncApi = {
   get: async (): Promise<WebdavSyncStatus> => {
     const { data } = await api.get<WebdavSyncStatus>("/settings/webdav-sync");
@@ -102,10 +92,5 @@ export const webdavSyncApi = {
   update: async (payload: WebdavSyncUpdate): Promise<WebdavSyncStatus> => {
     const { data } = await api.put<WebdavSyncStatus>("/settings/webdav-sync", payload);
     return data;
-  },
-  /** Start a run and wait for its outcome; a failed run throws `JobFailedError`. */
-  runNow: async (): Promise<WebdavRunResult> => {
-    const { data } = await api.post<{ jobId: string }>("/settings/webdav-sync/run");
-    return waitForJob<WebdavRunResult>(data.jobId);
   },
 };

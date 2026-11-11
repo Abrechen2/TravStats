@@ -14,6 +14,7 @@ import { ensureAdminSettingsRow } from "../adminSettingsRow";
 import { resetIdentityCache } from "../federation/identity";
 import { storeNewKey } from "../federation/storeKey";
 import { refreshInstanceTuning } from "../instanceTuning";
+import { webdavTurnsOnWhenComplete } from "../instanceSettingsService";
 import { clearAvailabilityCache } from "../parsers/config";
 import { clearLlmAvailabilityCache } from "../parsers/llmAvailability";
 import { CONNECTION_IDS, getService } from "./catalogue";
@@ -150,6 +151,15 @@ export async function applyAdminUpdate(id: string, body: AdminUpdateBody): Promi
     }
   }
 
+  if (
+    service.id === "webdav" &&
+    adminData.webdavSyncEnabled === undefined &&
+    webdavTurnsOnWhenComplete(current ?? {}, adminData)
+  ) {
+    // "On when the address is entered" (settings v3 S6): no switch of its own.
+    adminData.webdavSyncEnabled = true;
+  }
+
   if (Object.keys(smtpPatch).length > 0) await applySmtp(smtpPatch);
   if (policyEdits.length > 0) await updatePolicy((p) => policyEdits.reduce((acc, e) => e(acc), p));
   if (Object.keys(adminData).length > 0) {
@@ -217,7 +227,13 @@ async function applySmtp(patch: Record<string, unknown>): Promise<void> {
       "VALIDATION_FAILED"
     );
   }
-  const data = { ...parsed.data, password: nextPassword };
+  // "On when the host is entered" (settings v3 S6): saving a complete sender
+  // turns mail on unless the caller says otherwise (the API still accepts it).
+  const data = {
+    ...parsed.data,
+    enabled: patch.enabled === undefined ? true : parsed.data.enabled,
+    password: nextPassword,
+  };
   await prisma.smtpConfig.upsert({
     where: { id: SMTP_CONFIG_ID },
     create: { id: SMTP_CONFIG_ID, ...data },

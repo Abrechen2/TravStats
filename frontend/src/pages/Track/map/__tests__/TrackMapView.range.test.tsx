@@ -301,7 +301,7 @@ describe("TrackMapView — long spans", () => {
     renderAt("/track");
     await screen.findByTestId("map-stub");
     const link = await screen.findByRole("link", { name: "track:photos.connect" });
-    expect(link.getAttribute("href")).toContain("/settings/services");
+    expect(link.getAttribute("href")).toContain("/settings/dienstek");
     expect(screen.getByText(/track:photos.failure.notConfigured/)).toBeInTheDocument();
     expect(screen.getByTestId("map-stub")).toHaveTextContent("0 photos");
   });

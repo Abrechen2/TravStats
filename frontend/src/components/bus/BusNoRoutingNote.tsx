@@ -15,7 +15,7 @@ export function BusNoRoutingNote({ testId }: { testId?: string }): JSX.Element {
     <p className="t-caption" data-testid={testId ?? "bus-no-routing"}>
       {t("bus:routing.noProvider")}{" "}
       {isAdmin ? (
-        <Link to="/admin?tab=externalServices" className="underline">
+        <Link to="/settings/dienste" className="underline">
           {t("bus:routing.setUp")}
         </Link>
       ) : (

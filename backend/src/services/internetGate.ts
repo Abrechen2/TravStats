@@ -4,18 +4,20 @@ import { prisma } from "../db";
  * The settings v3 master switch "the server may ask external services"
  * (`admin_settings.internet_enabled`, default on).
  *
- * It GATES six older admin columns and replaces none of them, so switching it
- * back on restores exactly what the admin had set:
+ * Since S6 it is the ONLY switch of the exchange-rate fallback, the rail
+ * timetable sources (Transitous, db-rest), the operator logos, the update check
+ * and the scheduled template sync: their own columns were dropped. One more
+ * reads through it, and keeps a column of its own because it is OFF by default
+ * (each call sends a place and a date to a third party):
  *
- * | column                         | with the master switch OFF                         |
- * |--------------------------------|----------------------------------------------------|
- * | `openDataEnabled`              | reads as off: Open-Meteo, Wikipedia, Overpass 409  |
- * | `operatorLogosOpenDataEnabled` | reads as off: no Wikidata/Commons lookup           |
- * | `fxCdnFallbackEnabled`         | reads as off AND no ECB call: a rate is "none"     |
- * | `railTransitousEnabled`        | reads as off: the rail lookup skips Transitous     |
- * | `railDbRestEnabled`            | reads as off: the rail lookup skips db-rest        |
- * | `updateCheckEnabled`           | reads as off: no GitHub release check, no          |
- * |                                | scheduled template sync (a manual sync still runs) |
+ * | gate                          | with the master switch OFF                         |
+ * |-------------------------------|----------------------------------------------------|
+ * | `openDataEnabled` (+ column)  | reads as off: Open-Meteo, Wikipedia, Overpass 409  |
+ * | exchange rates                | no ECB and no CDN call: a rate is "none"           |
+ * | Transitous, db-rest           | the rail lookup skips both                         |
+ * | operator logos                | no Wikidata/Commons lookup                         |
+ * | update check                  | no GitHub release check, no scheduled template     |
+ * |                               | sync (a manual sync still runs)                    |
  *
  * A settings object that carries no `internetEnabled` (an older row shape, a
  * test double) counts as ON: absent = the column default.
@@ -25,6 +27,11 @@ export function throughInternet(
   flag: boolean
 ): boolean {
   return flag && settings.internetEnabled !== false;
+}
+
+/** The master switch alone, for the calls that have no column of their own. */
+export function internetOn(settings: { internetEnabled?: boolean | null }): boolean {
+  return settings.internetEnabled !== false;
 }
 
 /** Whether the master switch is on. No settings row yet = a fresh instance = on. */

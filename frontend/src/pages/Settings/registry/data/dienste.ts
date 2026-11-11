@@ -23,8 +23,6 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"opensky","de":"OpenSky","en":"OpenSky","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
         {"id":"oskidI","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Client-ID des Servers","en":"Server client ID","terms":{"de":"Für alle Konten ohne eigene","en":"For every account without its own"}},
         {"id":"osksecI","kind":"secret","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Client-Secret des Servers","en":"Server client secret","terms":{"de":"","en":""}},
-        {"id":"oskuserI","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Benutzername des Servers","en":"Server username","terms":{"de":"Altes Anmeldeverfahren","en":"Legacy sign-in"}},
-        {"id":"oskpwI","kind":"secret","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Passwort des Servers","en":"Server password","terms":{"de":"Altes Anmeldeverfahren","en":"Legacy sign-in"}},
       ]},
       {"id":"adsbx","de":"ADS-B Exchange","en":"ADS-B Exchange","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
 
@@ -77,29 +75,19 @@ export const DIENSTE_PAGE: RegistryPage = {
 
       ]},
       {"id":"logos","de":"Logostream","en":"Logostream","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
-        {"id":"oplogos","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Logos von Betreibern suchen","en":"Look up operator logos","terms":{"de":"","en":""}},
         {"id":"logorefresh","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Logos neu laden","en":"Reload logos","terms":{"de":"Passiert auch jede Nacht","en":"Also happens every night"}},
       ]},
       {"id":"webdav","de":"WebDAV","en":"WebDAV","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"sync","rows":[
-        {"id":"wdsrv","kind":"toggle","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Server-Sicherungen hochladen","en":"Upload server backups","terms":{"de":"Jede gelungene Sicherung","en":"Every successful backup"}},
         {"id":"wdsrvurl","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Server: Adresse","en":"Server: address","terms":{"de":"","en":""}},
         {"id":"wdsrvuser","kind":"input","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Server: Benutzer","en":"Server: user","terms":{"de":"","en":""}},
         {"id":"wdsrvpw","kind":"secret","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Server: Passwort","en":"Server: password","terms":{"de":"Wird verschlüsselt gespeichert. Erst speichern, dann testen.","en":"Stored encrypted. Save first, then test."}},
         {"id":"wdpath","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Ordner für Server-Sicherungen","en":"Folder for server backups","terms":{"de":"","en":""}},
       ]},
       {"id":"railTimetables","de":"Transitous & db-rest","en":"Transitous & db-rest","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
-        {"id":"transitous","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Transitous","en":"Transitous","terms":{"de":"Fahrpläne aus offenen Daten","en":"Timetables from open data"}},
-        {"id":"dbrest","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"db-rest","en":"db-rest","terms":{"de":"Fahrpläne der Deutschen Bahn","en":"Deutsche Bahn timetables"}},
         {"id":"bahnkontakt","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Kontakt für Anfragen","en":"Contact for requests","terms":{"de":"Wird den Betreibern mitgeschickt","en":"Sent along to the operators"}},
       ]},
       {"id":"openData","de":"OpenStreetMap · Overpass","en":"OpenStreetMap · Overpass","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
 
-      ]},
-      {"id":"fx","de":"EZB-Kurse","en":"ECB rates","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
-        {"id":"fxcdn","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Ersatzquelle","en":"Fallback source","terms":{"de":"Wenn die EZB nicht antwortet","en":"When the ECB doesn't answer"}},
-      ]},
-      {"id":"updatesTemplates","de":"GitHub","en":"GitHub","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"inst","rows":[
-        {"id":"updcheck","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Nach neuen Versionen suchen","en":"Check for new versions","terms":{"de":"Fragt GitHub","en":"Asks GitHub"}},
       ]},
   ],
 };

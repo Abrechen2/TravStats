@@ -126,8 +126,8 @@ describe("Standort → Aufenthalte finden", () => {
   });
 
   it.each([
-    ["suggestionsDisabled", "/settings/trips"],
-    ["placesDisabled", "/settings/domains"],
+    ["suggestionsDisabled", "/settings/reisen"],
+    ["placesDisabled", "/settings/reisearten#domains"],
   ] as const)("a scan paused by %s says so and jumps to where it is lifted", async (reason, to) => {
     api.state.mockResolvedValue({ ...base, pausedReason: reason });
     show();

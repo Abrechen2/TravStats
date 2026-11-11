@@ -21,7 +21,6 @@ import { useWebdavEnabled } from "./useWebdavEnabled";
 
 type Interval = BackupScheduleSettings["backupInterval"];
 interface Draft extends Record<string, unknown> {
-  enabled: boolean;
   interval: Interval;
   retentionDays: string;
   zone: string;
@@ -29,7 +28,6 @@ interface Draft extends Record<string, unknown> {
 }
 
 const draftOf = (s: BackupScheduleSettings): Draft => ({
-  enabled: s.backupEnabled,
   interval: s.backupInterval,
   retentionDays: String(s.backupRetentionDays),
   zone: s.backupZone ?? "",
@@ -38,9 +36,10 @@ const draftOf = (s: BackupScheduleSettings): Draft => ({
 
 /**
  * Backups › Erweitert (design C6, settings v3 S5): the tuning of the automatic
- * backup — interval, retention, WebDAV clean-up, zone — as one group with one save. The form is drawn
- * only from a successful load — saving placeholder values would switch the
- * scheduled backups off (forgejo#363), so a failed load shows the failure and a
+ * backup — interval, retention, WebDAV clean-up, zone — as one group with one save.
+ * The backup itself has no switch any more (S6: always on). The form is drawn
+ * only from a successful load — saving placeholder values would change the
+ * rhythm and the retention (forgejo#363), so a failed load shows the failure and a
  * retry instead of a form.
  */
 export default function BackupsAutomatic(): JSX.Element {
@@ -84,7 +83,6 @@ function Form({
     saved: draftOf(settings),
     write: async (draft) => {
       const updated = await backupApi.updateBackupSettings({
-        backupEnabled: draft.enabled,
         backupInterval: draft.interval,
         backupRetentionDays: Number(draft.retentionDays),
         backupCloudRetention: draft.cloudRetention,
@@ -100,10 +98,7 @@ function Form({
   const daysInvalid = !Number.isInteger(days) || days < 1 || days > 365;
   const zones = useMemo(() => groupTimeZones(group.draft.zone || null), [group.draft.zone]);
   const { enabled: webdav, failed: webdavFailed } = useWebdavEnabled();
-  const off = !group.draft.enabled;
-  const offDep = { reason: t("settingsRows:backups.deps.autoOff") };
 
-  const auto = row("autobak");
   const every = row("baktakt");
   const keep = row("bakhalten");
   const zone = row("bakzone");
@@ -114,7 +109,6 @@ function Form({
         title={every.title}
         scope="allAccounts"
         changed={group.isChanged("interval")}
-        dependency={off ? offDep : undefined}
         control={
           <ChoiceControl<Interval>
             label={every.title}
@@ -167,7 +161,6 @@ function Form({
         title={zone.title}
         scope="allAccounts"
         changed={group.isChanged("zone")}
-        dependency={off ? offDep : undefined}
         control={
           <Select
             aria-label={zone.title}
@@ -196,18 +189,6 @@ function Form({
           </p>
         ) : null}
       </SettingItem>
-      <SettingItem
-        title={auto.title}
-        sub={auto.sub}
-        scope="allAccounts"
-        changed={group.isChanged("enabled")}
-        control={
-          <SwitchControl
-            checked={group.draft.enabled}
-            onChange={(next) => group.edit({ enabled: next })}
-          />
-        }
-      />
       <GroupFooter group={group} disabled={daysInvalid} />
     </div>
   );

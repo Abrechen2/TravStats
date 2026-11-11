@@ -220,7 +220,7 @@ describe("SmtpRows", () => {
       await waitFor(() => expect(mocks.adminOverview).toHaveBeenCalledTimes(2), WAIT);
     });
 
-    it("keeps 'Mails verschicken' and the removal for the expert level", async () => {
+    it("keeps the removal for the expert level; 'Mails verschicken' is gone (S6: a saved sender sends)", async () => {
       useSettingsLevelStore.setState({ level: "standard" });
       await show(<SmtpRows service={smtp} />);
       expect(screen.queryByText("settingsRows:services.rows.smtpon.t")).toBeNull();

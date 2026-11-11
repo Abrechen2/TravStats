@@ -28,7 +28,6 @@ import type { AdminSettings } from "../../prisma";
 
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
-  fxCdnFallbackEnabled?: boolean;
   parserOrder?: string;
   llmEnabled?: boolean;
   ollamaUrl?: string | null;
@@ -116,7 +115,6 @@ function providerIsCloud(settings: AdminSettings): boolean {
 function serializeParserSettings(settings: AdminSettings) {
   return {
     allowUserApiKeys: settings.allowUserApiKeys,
-    fxCdnFallbackEnabled: settings.fxCdnFallbackEnabled,
     allowUserFlightApiKeys: settings.allowUserFlightApiKeys,
     parserOrder: settings.parserOrder ?? "template_first",
     llmEnabled: settings.llmEnabled,
@@ -151,7 +149,6 @@ const parserSettingsSchema = z.object({
   // jsDelivr currency dataset. It sits with the other service settings
   // because it is the same kind of decision as the Ollama URL: which outside
   // service this instance is allowed to contact.
-  fxCdnFallbackEnabled: z.boolean().optional(),
   // Which reader looks at a booking document first, in every domain. Kept to
   // the two values the parsers understand, so an admin cannot save a word
   // that silently means "template_first" (`getParserOrder`).
@@ -217,7 +214,6 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
   try {
     const {
       allowUserApiKeys,
-      fxCdnFallbackEnabled,
       parserOrder,
       llmEnabled,
       ollamaUrl,
@@ -245,9 +241,6 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
 
     if (allowUserApiKeys !== undefined) {
       updateData.allowUserApiKeys = allowUserApiKeys;
-    }
-    if (fxCdnFallbackEnabled !== undefined) {
-      updateData.fxCdnFallbackEnabled = fxCdnFallbackEnabled;
     }
     if (parserOrder !== undefined) {
       updateData.parserOrder = parserOrder;

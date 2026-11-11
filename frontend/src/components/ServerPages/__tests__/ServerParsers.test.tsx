@@ -117,39 +117,15 @@ describe("Server › Buchungen lesen", () => {
     );
     expect(within(screen.getByTestId("llm-slot-off-google")).getByRole("link")).toHaveAttribute(
       "href",
-      "/settings/services#gemini"
+      "/settings/dienste#gemini"
     );
   });
 
-  it("names an unreachable Ollama and a missing model, never the server's own text", async () => {
+  it("has no Ollama check of its own: the card's test button on the services page does it (S6)", async () => {
     renderIt();
-    const check = await screen.findByRole("button", { name: "settingsRows:server.parsers.check" });
-    api.testOllamaConnection.mockResolvedValueOnce({
-      success: false,
-      error: "ECONNREFUSED 10.0.0.5",
-    });
-    await userEvent.click(check);
-    expect(
-      await screen.findByText("settingsRows:server.parsers.test_unreachable")
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/ECONNREFUSED/)).toBeNull();
-
-    api.testOllamaConnection.mockResolvedValueOnce({ success: true, warning: "model missing" });
-    await userEvent.click(check);
-    expect(await screen.findByText("settingsRows:server.parsers.testNoModel")).toBeInTheDocument();
-
-    api.testOllamaConnection.mockRejectedValueOnce(httpError());
-    await userEvent.click(check);
-    expect(await screen.findByText("settingsRows:server.parsers.test_failed")).toBeInTheDocument();
-  });
-
-  it("locks the check with its reason while no Ollama is set up", async () => {
-    api.getAdminParserSettings.mockResolvedValue(parser({ ollamaUrl: null, ollamaModel: null }));
-    renderIt();
-    expect(await screen.findByText("settingsRows:server.parsers.noOllama")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "settingsRows:server.parsers.check" })
-    ).toBeDisabled();
+    await screen.findByText("settingsRows:server.parsers.builtin");
+    expect(screen.queryByRole("button", { name: "settingsRows:server.parsers.check" })).toBeNull();
+    expect(api.testOllamaConnection).not.toHaveBeenCalled();
   });
 
   it("offers a retry when the settings cannot be loaded", async () => {

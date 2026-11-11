@@ -21,29 +21,16 @@ export type ServiceTemplate =
   | "model";
 
 /**
- * Cards the server's page keeps behind the expert level only: the granular
- * switches behind "Server darf externe Dienste abfragen" (settings v3 S2). Their
- * rows are removed by S6, when the six columns fold into the master switch.
+ * Cards the server's page keeps behind the expert level only: what is left of the
+ * calls behind "Server darf externe Dienste abfragen" once the master switch took
+ * over the exchange-rate fallback, the two rail sources, the operator logos and
+ * the update check (settings v3 S6): the rail contact address and the open-data
+ * switch, which stays because it is off by default.
  */
-export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set([
-  "railTimetables",
-  "openData",
-  "fx",
-  "updatesTemplates",
-]);
+export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set(["railTimetables", "openData"]);
 
-/** The switches the master internet switch gates, as `<card>.<field>` of the catalogue. */
-export const INTERNET_GATED_FIELDS: ReadonlySet<string> = new Set([
-  "railTimetables.transitous",
-  "railTimetables.dbRest",
-  "logos.operatorLogos",
-  "fx.cdnFallback",
-]);
-/** Cards whose "on" switch is one of those columns. */
-export const INTERNET_GATED_SWITCH_CARDS: ReadonlySet<string> = new Set([
-  "openData",
-  "updatesTemplates",
-]);
+/** Cards whose "on" switch the master internet switch gates. */
+export const INTERNET_GATED_SWITCH_CARDS: ReadonlySet<string> = new Set(["openData"]);
 
 /**
  * Cards that moved to a page of their own (settings v3 S5): E-Mail, Datenschutz,
@@ -188,11 +175,6 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: ["on", "instKey", "test"],
   },
   {
-    id: "fx",
-    group: "open",
-    use: ["always"],
-  },
-  {
     id: "webdav",
     group: "sync",
     use: ["mine", "allowConn", "on"],
@@ -214,11 +196,6 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   },
   {
     id: "usageStats",
-    group: "inst",
-    use: [],
-  },
-  {
-    id: "updatesTemplates",
     group: "inst",
     use: [],
   },

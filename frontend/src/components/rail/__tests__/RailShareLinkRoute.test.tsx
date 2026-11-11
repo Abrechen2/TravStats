@@ -73,7 +73,7 @@ describe("RailShareLinkRoute (forgejo#204)", () => {
     );
     expect(screen.getByRole("link", { name: "rail:shareLink.bookmarkletSetup" })).toHaveAttribute(
       "href",
-      "/settings/data?section=import"
+      "/settings/daten#import"
     );
 
     fireEvent.click(screen.getByRole("button", { name: "rail:shareLink.useDocument" }));

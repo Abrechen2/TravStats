@@ -1,4 +1,3 @@
-import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
 import TravTrackRecordingSection from "../../components/Settings/travtrack/TravTrackRecordingSection";
 import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrackPlacesSection";
 import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
@@ -193,9 +192,6 @@ export default function SettingsSectionSwitch({
       return <LodgingRatingsSection />;
     case "loyalty":
       return <LoyaltySection />;
-    case "mapAppearance":
-      // Map look, home page and lists: one section, three jump rows.
-      return <ViewsJumpCard />;
     case "comparisonConsent":
       return <CompareHandoverRow row="rangliste" withTitle />;
     case "encryptedGrants":

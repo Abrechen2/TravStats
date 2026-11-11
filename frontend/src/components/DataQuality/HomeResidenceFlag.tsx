@@ -4,7 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { HomeResidenceUnconfirmedDetails } from "../../types/dataQuality";
 
 /** Where the question is answered: the "Zuhause" settings section. */
-export const HOME_SETTINGS_PATH = "/settings?section=homeAirport";
+export const HOME_SETTINGS_PATH = "/settings/reisearten#homeAirport";
 
 /**
  * "Wohnort bestätigen und weitere Heimatflughäfen wählen?" — the one inbox

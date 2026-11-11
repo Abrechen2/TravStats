@@ -8,8 +8,15 @@ import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 import { backupZone, hostBackupZone } from "../../shared/time/schedulerZone";
 import { isValidZone } from "../../shared/time/zonedParts";
 
+/**
+ * Automatic backups cannot be switched off any more (settings v3 S6, Part A):
+ * only the rhythm, the retention and the zone are choices. The field stays in
+ * the answers, always true, and a `backupEnabled` in a request is ignored, so
+ * a client that still sends it keeps working.
+ */
+const AUTO_BACKUP_ALWAYS_ON = true;
+
 const backupSettingsSchema = z.object({
-  backupEnabled: z.boolean().optional(),
   backupCloudRetention: z.boolean().optional(),
   backupInterval: z.enum(["daily", "weekly", "monthly"]).optional(),
   backupRetentionDays: z.number().int().min(1).max(365).optional(),
@@ -43,7 +50,7 @@ router.get("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
   try {
     const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
     res.json({
-      backupEnabled: adminSettings?.backupEnabled ?? false,
+      backupEnabled: AUTO_BACKUP_ALWAYS_ON,
       backupInterval: adminSettings?.backupInterval ?? "weekly",
       backupRetentionDays: adminSettings?.backupRetentionDays ?? 30,
       backupCloudRetention: adminSettings?.backupCloudRetention ?? false,
@@ -57,7 +64,6 @@ router.get("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
 router.put("/backup-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const {
-      backupEnabled,
       backupInterval,
       backupRetentionDays,
       backupCloudRetention,
@@ -67,14 +73,12 @@ router.put("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
     let adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
 
     const updateData: {
-      backupEnabled?: boolean;
       backupInterval?: string;
       backupRetentionDays?: number;
       backupCloudRetention?: boolean;
       backupZone?: string | null;
     } = {};
 
-    if (backupEnabled !== undefined) updateData.backupEnabled = backupEnabled;
     if (backupInterval !== undefined) updateData.backupInterval = backupInterval;
     if (backupCloudRetention !== undefined) updateData.backupCloudRetention = backupCloudRetention;
     if (backupRetentionDays !== undefined) updateData.backupRetentionDays = backupRetentionDays;
@@ -93,7 +97,7 @@ router.put("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
 
     res.json({
       message: "Backup settings updated",
-      backupEnabled: adminSettings.backupEnabled,
+      backupEnabled: AUTO_BACKUP_ALWAYS_ON,
       backupInterval: adminSettings.backupInterval,
       backupRetentionDays: adminSettings.backupRetentionDays,
       backupCloudRetention: adminSettings.backupCloudRetention,

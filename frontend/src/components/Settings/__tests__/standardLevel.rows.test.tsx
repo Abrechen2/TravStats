@@ -126,7 +126,7 @@ describe("standard level inside a section", () => {
     const report = renderReporting(<BackupSection />);
     expect(await screen.findByText("settingsRows:data.srvbackup.t")).toBeInTheDocument();
     expect(screen.getByText("settingsRows:data.meine.t")).toBeInTheDocument();
-    // How often, versions to keep and "Jetzt hochladen" (settings v3).
-    expect(lastHidden(report)).toBe(3);
+    // How often and versions to keep (settings v3; "Jetzt hochladen" went in S6).
+    expect(lastHidden(report)).toBe(2);
   });
 });

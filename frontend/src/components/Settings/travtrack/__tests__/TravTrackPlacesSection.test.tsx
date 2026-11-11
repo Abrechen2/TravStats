@@ -213,7 +213,7 @@ describe("Feste Orte", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /settings:tt\.places\.changeHome/ })
     );
-    expect(navigate).toHaveBeenCalledWith("/settings/account#home", undefined);
+    expect(navigate).toHaveBeenCalledWith("/settings/reisearten#home", undefined);
     expect(screen.queryByRole("button", { name: /places\.remove: Zuhause/ })).toBeNull();
   });
 

@@ -72,6 +72,7 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
   try {
     const data = smtpUpdateSchema.parse(req.body);
     const encryptedPassword = data.password ? encryptApiKey(data.password) : undefined;
+    const sendsEnabled = req.body?.enabled === undefined ? true : data.enabled;
     const updateData = {
       host: data.host,
       port: data.port,
@@ -79,7 +80,9 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
       username: data.username,
       fromEmail: data.fromEmail,
       fromName: data.fromName,
-      enabled: data.enabled,
+      // "On when the host is entered" (settings v3 S6): a saved sender sends mail,
+      // unless the caller names `enabled` itself (the field stays accepted).
+      enabled: sendsEnabled,
       ...(encryptedPassword ? { password: encryptedPassword } : {}),
     };
     const config = await prisma.smtpConfig.upsert({
@@ -93,7 +96,7 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
         password: encryptApiKey(data.password ?? "") ?? "",
         fromEmail: data.fromEmail,
         fromName: data.fromName,
-        enabled: data.enabled,
+        enabled: sendsEnabled,
       },
       update: updateData,
     });

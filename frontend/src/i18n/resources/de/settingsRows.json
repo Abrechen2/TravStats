@@ -204,11 +204,6 @@
       "t": "Versionen behalten",
       "s": "1–30"
     },
-    "webdavjetzt": {
-      "t": "Jetzt hochladen",
-      "btn": "Jetzt hochladen",
-      "res": "Hochgeladen · gerade eben"
-    },
     "meine": {
       "t": "Alle meine Daten",
       "s": "JSON, ohne Passwörter und Schlüssel",
@@ -684,36 +679,12 @@
         "t": "Dein Client-Secret",
         "h": "Wird verschlüsselt gespeichert und nie wieder angezeigt."
       },
-      "oskuser": {
-        "t": "Dein Benutzername",
-        "s": "Altes Anmeldeverfahren"
-      },
-      "oskpw": {
-        "t": "Dein Passwort",
-        "s": "Altes Anmeldeverfahren"
-      },
       "oskidI": {
         "t": "Client-ID des Servers",
         "s": "Für alle Konten ohne eigene"
       },
       "osksecI": {
         "t": "Client-Secret des Servers"
-      },
-      "oskuserI": {
-        "t": "Benutzername des Servers",
-        "s": "Altes Anmeldeverfahren"
-      },
-      "oskpwI": {
-        "t": "Passwort des Servers",
-        "s": "Altes Anmeldeverfahren"
-      },
-      "transitous": {
-        "t": "Transitous",
-        "s": "Fahrpläne aus offenen Daten"
-      },
-      "dbrest": {
-        "t": "db-rest",
-        "s": "Fahrpläne der Deutschen Bahn"
       },
       "bahnkontakt": {
         "t": "Kontakt für Anfragen",
@@ -747,11 +718,6 @@
       "immnacht": {
         "t": "Fotos jede Nacht durchsehen",
         "s": "Findet Reisen, die noch fehlen"
-      },
-      "immmode": {
-        "t": "Fotos an Reisen",
-        "h": "Verknüpfen zeigt die Fotos aus Immich und kopiert nichts. Kopieren lädt die Originale auf diesen Server.",
-        "o": ["verknüpfen", "kopieren"]
       },
       "immvisit": {
         "t": "Besuchsfotos verknüpfen",
@@ -826,18 +792,11 @@
       "overpass": {
         "t": "Overpass-Adresse"
       },
-      "oplogos": {
-        "t": "Logos von Betreibern suchen"
-      },
       "logorefresh": {
         "t": "Logos neu laden",
         "s": "Passiert auch jede Nacht",
         "btn": "Neu laden",
         "res": "84 Logos neu · 1.210 geprüft"
-      },
-      "fxcdn": {
-        "t": "Ersatzquelle",
-        "s": "Wenn die EZB nicht antwortet"
       },
       "wdurl": {
         "t": "Adresse",
@@ -852,10 +811,6 @@
       "wdfolder": {
         "t": "Ordner"
       },
-      "wdsrv": {
-        "t": "Server-Sicherungen hochladen",
-        "s": "Jede gelungene Sicherung"
-      },
       "wdsrvurl": {
         "t": "Server: Adresse"
       },
@@ -868,10 +823,6 @@
       },
       "wdpath": {
         "t": "Ordner für Server-Sicherungen"
-      },
-      "smtpon": {
-        "t": "Mails verschicken",
-        "s": "Einladungen, Erinnerungen, neues Passwort"
       },
       "smtphost": {
         "t": "Mailserver"
@@ -952,10 +903,6 @@
         "s": "Einmal am Tag, ohne Namen",
         "h": "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus.",
         "o": ["nein", "ja"]
-      },
-      "updcheck": {
-        "t": "Nach neuen Versionen suchen",
-        "s": "Fragt GitHub"
       },
       "tplrepo": {
         "t": "Quelle der Buchungsvorlagen",
@@ -1119,10 +1066,6 @@
       "s": "Aus: Die Seiten verschwinden für alle Konten. Pläne bleiben gespeichert.",
       "h": "Aus behält alle Pläne, blendet sie nur aus."
     },
-    "laenderstd": {
-      "t": "Standard: wann zählt ein Land",
-      "s": "Konten können abweichen"
-    },
     "importmodus": {
       "t": "Großer Import",
       "s": "Hebt Upload-Grenzen für 24 h auf",
@@ -1146,9 +1089,6 @@
       "t": "Bekannte Vorlagen",
       "s": "Immer dabei"
     },
-    "olltest": {
-      "t": "Ollama prüfen"
-    },
     "sections": {
       "general": "Allgemein",
       "addresses": "Adressen",
@@ -1170,7 +1110,6 @@
     },
     "loadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
     "retry": "Erneut versuchen",
-    "running": "Läuft …",
     "groups": {
       "general": "Allgemein",
       "addresses": "Adressen",
@@ -1204,13 +1143,7 @@
     "parsers": {
       "templateFirst": "Vorlagen zuerst",
       "llmFirst": "KI zuerst",
-      "builtin": "Texterkennung (OCR) und Vorlagen",
-      "noOllama": "Braucht Ollama.",
-      "check": "Prüfen",
-      "testOk": "Erreichbar · gerade geprüft",
-      "testNoModel": "Erreichbar, aber das Modell {{model}} fehlt.",
-      "test_unreachable": "Ich erreiche Ollama nicht.",
-      "test_failed": "Ich konnte Ollama nicht prüfen."
+      "builtin": "Texterkennung (OCR) und Vorlagen"
     },
     "cloud": {
       "loading": "Ich lese, welche Anbieter an sind …",
@@ -1226,7 +1159,7 @@
     "internet": {
       "t": "Server darf externe Dienste abfragen",
       "s": "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
-      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
     },
     "l_tt": {
       "t": "TravTrack",
@@ -1305,10 +1238,6 @@
     }
   },
   "backups": {
-    "autobak": {
-      "t": "Automatisch sichern",
-      "s": "Um 02:00"
-    },
     "baktakt": {
       "t": "Intervall",
       "s": "Um 02:00"
@@ -1345,7 +1274,6 @@
     },
     "loadFailed": "Ich konnte die Einstellungen der Sicherung nicht laden.",
     "deps": {
-      "autoOff": "Wirkt erst mit „Automatisch sichern“.",
       "webdavOff": "Wirkt erst mit WebDAV-Kopie.",
       "webdavUnknown": "Wirkt nur mit WebDAV-Kopie. Ich kann ihren Stand gerade nicht lesen."
     },
@@ -1397,7 +1325,6 @@
     },
     "nowLine": "{{interval}} · {{days}} Tage aufbewahrt",
     "rhythm": "{{interval}} um 02:00 ({{zone}})",
-    "rhythmOff": "Aus: Der Server sichert nicht von selbst.",
     "stats": {
       "last": "Letzte erfolgreiche Sicherung",
       "next": "Nächste",
@@ -1417,15 +1344,6 @@
     "logtage": {
       "t": "Protokolle aufbewahren",
       "s": "1–90 Tage"
-    },
-    "loghttp": {
-      "t": "Anfragen mitschreiben"
-    },
-    "logdb": {
-      "t": "Datenbank mitschreiben"
-    },
-    "logparser": {
-      "t": "Lesen mitschreiben"
     },
     "logfiles": {
       "t": "Protokolldateien",

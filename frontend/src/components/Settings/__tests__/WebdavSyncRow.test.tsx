@@ -83,8 +83,8 @@ describe("WebdavSyncRow", () => {
     await renderRow();
     expect(await screen.findByText("settingsRows:data.webdaveigen.t")).toBeInTheDocument();
     expect(screen.queryByText("settingsRows:data.webdavvers.t")).toBeNull();
-    // Settings v3: how often and "Jetzt hochladen" are expert rows too; the
-    // last copy's result is its own standard row while the copy is on.
+    // Settings v3: how often is an expert row too; the last copy's result is its
+    // own standard row while the copy is on.
     expect(screen.queryByText("settingsRows:data.webdavtakt.t")).toBeNull();
     expect(screen.queryByText("settingsRows:data.webdavjetzt.t")).toBeNull();
     expect(screen.getByText("settingsRows:data.webdavlast.t")).toBeInTheDocument();
@@ -172,27 +172,12 @@ describe("WebdavSyncRow", () => {
     );
   });
 
-  it("reports a failed run with the share's reason and reloads the recorded result", async () => {
-    post.mockResolvedValue({ data: { jobId: "j" } });
+  it("has no 'Jetzt hochladen' any more, even at the expert level: the schedule uploads (S6)", async () => {
     await renderRow();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "settingsRows:data.webdavjetzt.btn" })
-    );
-    expect(await screen.findByRole("alert")).toHaveTextContent("settings:webdavSync.errors.auth");
-    await waitFor(() =>
-      expect(get.mock.calls.filter(([u]) => u === "/settings/webdav-sync").length).toBe(2)
-    );
-  });
-
-  it("says our own rate limit (429) as ours, not as the share's", async () => {
-    post.mockRejectedValue({ response: { status: 429, data: { error: "Too many requests" } } });
-    await renderRow();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "settingsRows:data.webdavjetzt.btn" })
-    );
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "settings:webdavSync.errors.rateLimited"
-    );
+    await screen.findByText("settingsRows:data.webdaveigen.t");
+    expect(screen.queryByText("settingsRows:data.webdavjetzt.t")).toBeNull();
+    expect(screen.queryByRole("button", { name: "settingsRows:data.webdavjetzt.btn" })).toBeNull();
+    expect(post).not.toHaveBeenCalled();
   });
 
   it("without a connection the toggle is locked, with the reason, and the jump leads to Services", async () => {
@@ -212,15 +197,12 @@ describe("WebdavSyncRow", () => {
     ).toBeInTheDocument();
   });
 
-  it("with the copy off, schedule and upload are locked with 'Wirkt erst mit WebDAV-Kopie'", async () => {
+  it("with the copy off, schedule and versions are locked with 'Wirkt erst mit WebDAV-Kopie'", async () => {
     respond({ ...STATUS, enabled: false });
     await renderRow();
     expect(
       (await screen.findAllByText("settings:blocks.dep.webdavOff.reason")).length
     ).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getByRole("button", { name: "settingsRows:data.webdavjetzt.btn" })
-    ).toBeDisabled();
   });
 
   it("does not draw rows it could not fill: a load failure is said, nothing is saveable", async () => {
@@ -233,9 +215,6 @@ describe("WebdavSyncRow", () => {
   it("locks every row in the demo account", async () => {
     demo = true;
     await renderRow();
-    expect(
-      await screen.findByRole("button", { name: "settingsRows:data.webdavjetzt.btn" })
-    ).toBeDisabled();
-    expect(screen.getAllByRole("switch")[0]).toBeDisabled();
+    expect((await screen.findAllByRole("switch"))[0]).toBeDisabled();
   });
 });

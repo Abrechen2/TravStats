@@ -225,11 +225,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("visibility"),
     P("deletion"),
   ]),
-  page("anzeige", "languages", [
-    P("display", { as: "language" }),
-    P("units"),
-    P("mapAppearance", { as: "views" }),
-  ]),
+  page("anzeige", "languages", [P("display", { as: "language" }), P("units")]),
   page("reisearten", "layers", [P("domains"), P("countryCounting"), P("home"), P("homeAirport")]),
   page("reisen", "route", [P("trips"), P("suggestions"), P("calendarFeed")]),
   page("fluege", "plane", [P("autoupdate"), P("features"), P("enrichment"), P("defaults")], {

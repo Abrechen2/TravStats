@@ -1230,11 +1230,6 @@
     },
     "save": "Save",
     "saving": "Saving …",
-    "runNow": "Sync now",
-    "running": "Syncing …",
-    "runOk": "Sync successful.",
-    "runPartial": "Uploaded, but old versions could not be deleted: {{reason}}",
-    "runLost": "Whether the sync finished is unknown. The last result above is being reloaded.",
     "loadError": "The WebDAV settings could not be loaded.",
     "saveError": "Saving failed.",
     "last": {
@@ -1282,24 +1277,6 @@
   },
   "travTrack": {
     "title": "TravTrack"
-  },
-  "views": {
-    "title": "Map, home & lists",
-    "map": {
-      "name": "Map look",
-      "sub": "Style, lines, labels",
-      "jump": "On the map"
-    },
-    "start": {
-      "name": "Home page",
-      "sub": "Travel types and map mode",
-      "jump": "On the home page"
-    },
-    "lists": {
-      "name": "Lists",
-      "sub": "Columns, sorting, page size",
-      "jump": "On each list"
-    }
   },
   "area": {
     "pages": {

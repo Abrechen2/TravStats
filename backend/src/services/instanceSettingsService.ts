@@ -72,13 +72,6 @@ export interface InstanceSettings {
    */
   countryThreshold: CountryTier;
   /**
-   * Which third parties the rail train-number lookup may ask (spec
-   * 2026-09-25-rail-domain): Transitous and db-rest. Both ON by default — the
-   * lookup runs only when a user presses its button — and admin-settable only.
-   */
-  railTransitousEnabled: boolean;
-  railDbRestEnabled: boolean;
-  /**
    * Base URL of a self-hosted OpenRailRouting, or null (the default): off.
    * No ENV fallback — a rail line routed on a host nobody configured in the
    * admin page would be a line nobody can explain.
@@ -91,12 +84,6 @@ export interface InstanceSettings {
    */
   openDataEnabled: boolean;
   /**
-   * May operator marks be looked up on Wikidata / Wikimedia Commons, server
-   * side (forgejo#323). ON by default: only a company name leaves the
-   * instance, never a place or a date. Admin-settable only.
-   */
-  operatorLogosOpenDataEnabled: boolean;
-  /**
    * Whether users may create public share links (forgejo#281). OFF by default:
    * a link hands travel data to anyone holding the URL. Switching it off
    * deletes every link (`updateInstanceSettings`). Admin-settable only.
@@ -104,7 +91,7 @@ export interface InstanceSettings {
   shareLinksEnabled: boolean;
   /**
    * Master switch "the server may ask external services" (settings v3). It gates
-   * the six columns named in `services/internetGate.ts`; they keep their own values.
+   * the outbound calls named in `services/internetGate.ts`.
    */
   internetEnabled: boolean;
 }
@@ -160,11 +147,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
-    operatorLogosOpenDataEnabled: row.operatorLogosOpenDataEnabled,
     shareLinksEnabled: row.shareLinksEnabled,
     internetEnabled: row.internetEnabled,
-    railTransitousEnabled: row.railTransitousEnabled,
-    railDbRestEnabled: row.railDbRestEnabled,
     railRoutingUrl: row.railRoutingUrl ?? null,
   };
 }
@@ -225,20 +209,11 @@ export async function updateInstanceSettings(
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
       }),
-      ...(patch.operatorLogosOpenDataEnabled !== undefined && {
-        operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
-      }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
       }),
       ...(patch.internetEnabled !== undefined && {
         internetEnabled: patch.internetEnabled,
-      }),
-      ...(patch.railTransitousEnabled !== undefined && {
-        railTransitousEnabled: patch.railTransitousEnabled,
-      }),
-      ...(patch.railDbRestEnabled !== undefined && {
-        railDbRestEnabled: patch.railDbRestEnabled,
       }),
       ...(patch.railRoutingUrl !== undefined && {
         railRoutingUrl: patch.railRoutingUrl || null,
@@ -310,6 +285,27 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
   };
 }
 
+/**
+ * "On when the address is entered" (settings v3 S6, Part A principle 3): the
+ * instance WebDAV copy has no switch of its own any more. A save that leaves
+ * address, user and password all present turns the sync on, unless the caller
+ * names `enabled` itself (the API still accepts it). An install that saved
+ * these fields earlier with the switch off is not touched until its next save.
+ */
+export function webdavTurnsOnWhenComplete(
+  stored: { webdavUrl?: unknown; webdavUsername?: unknown; webdavPasswordEncrypted?: unknown },
+  patch: { webdavUrl?: unknown; webdavUsername?: unknown; webdavPasswordEncrypted?: unknown }
+): boolean {
+  const touched =
+    patch.webdavUrl !== undefined ||
+    patch.webdavUsername !== undefined ||
+    patch.webdavPasswordEncrypted !== undefined;
+  if (!touched) return false;
+  const pick = (k: "webdavUrl" | "webdavUsername" | "webdavPasswordEncrypted") =>
+    patch[k] !== undefined ? patch[k] : stored[k];
+  return Boolean(pick("webdavUrl") && pick("webdavUsername") && pick("webdavPasswordEncrypted"));
+}
+
 export async function updateWebDAVSettings(
   patch: Partial<Omit<WebDAVSettings, "password">> & {
     password?: string | null;
@@ -324,17 +320,18 @@ export async function updateWebDAVSettings(
         ? null
         : encryptApiKey(patch.password);
 
+  const columns = {
+    ...(patch.url !== undefined && { webdavUrl: patch.url || null }),
+    ...(patch.username !== undefined && { webdavUsername: patch.username || null }),
+    ...(nextPasswordEncrypted !== undefined && { webdavPasswordEncrypted: nextPasswordEncrypted }),
+  };
   await prisma.adminSettings.update({
     where: { id: row.id },
     data: {
-      ...(patch.enabled !== undefined && { webdavSyncEnabled: patch.enabled }),
-      ...(patch.url !== undefined && { webdavUrl: patch.url || null }),
-      ...(patch.username !== undefined && {
-        webdavUsername: patch.username || null,
-      }),
-      ...(nextPasswordEncrypted !== undefined && {
-        webdavPasswordEncrypted: nextPasswordEncrypted,
-      }),
+      ...columns,
+      ...(patch.enabled !== undefined
+        ? { webdavSyncEnabled: patch.enabled }
+        : webdavTurnsOnWhenComplete(row, columns) && { webdavSyncEnabled: true }),
       ...(patch.backupPath !== undefined && {
         webdavBackupPath: patch.backupPath || "/TravStats/backups/",
       }),

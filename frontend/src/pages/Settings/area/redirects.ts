@@ -193,9 +193,7 @@ function settingsSectionTarget(raw: string, input: AddressInput): Target | undef
     case "dashboardAppearance":
       return { external: "/dashboard" };
     case "listAppearance":
-      return input.isDomainOn("flight")
-        ? { external: "/flights" }
-        : { page: "anzeige", section: "views" };
+      return { external: input.isDomainOn("flight") ? "/flights" : "/dashboard" };
     case "sharing":
       return { page: "freunde", section: "accounts" };
     case "comparisonConsent":
@@ -298,7 +296,7 @@ function settingsTarget(
   if (pageId && findAreaPage(pageId)) return { page: pageId };
   const oldOnly = pageId ? lookup(OLD_PAGES, pageId) : undefined;
   if (oldOnly) return { page: oldOnly[0] };
-  if (pageId === "views") return { page: "anzeige", section: "views" };
+  if (pageId === "views") return { page: "anzeige" };
   if (pageId === "privacy") return { page: "freunde" };
   if (pageId === "companions") return { page: "freunde", section: "companions" };
   if (pageId) return { page: DEFAULT_AREA_PAGE };

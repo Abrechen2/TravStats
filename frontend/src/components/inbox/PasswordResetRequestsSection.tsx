@@ -129,7 +129,7 @@ export default function PasswordResetRequestsSection(): JSX.Element | null {
                   lives in, or the deep link lands nowhere. */}
               <Button
                 variant="secondary"
-                onClick={() => navigate(`/admin?tab=general&section=users&user=${request.userId}`)}
+                onClick={() => navigate(`/settings/nutzer?user=${request.userId}#accounts`)}
               >
                 {t("dataQuality:passwordResets.openUser")}
               </Button>

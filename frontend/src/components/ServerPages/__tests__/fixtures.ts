@@ -7,7 +7,6 @@ export const instance = (over: Partial<InstanceSettings> = {}): InstanceSettings
   betaFeaturesEnabled: false,
   internetEnabled: true,
   openDataEnabled: false,
-  operatorLogosOpenDataEnabled: true,
   shareLinksEnabled: true,
   frontendUrl: "https://trav.example",
   publicUrl: null,
@@ -17,8 +16,6 @@ export const instance = (over: Partial<InstanceSettings> = {}): InstanceSettings
   photonUrl: "https://photon.example",
   nominatimUrl: "https://nominatim.example",
   countryThreshold: "transited",
-  railTransitousEnabled: true,
-  railDbRestEnabled: true,
   ...over,
 });
 

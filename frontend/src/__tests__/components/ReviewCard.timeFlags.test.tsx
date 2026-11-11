@@ -133,7 +133,7 @@ describe("time questions in the inbox", () => {
     ["lodging_stay", "l1", "Aufenthalt bearbeiten", "/lodging/l1?editStay=row-1"],
     ["rail_journey", null, "Bahnfahrt bearbeiten", "/rail/row-1?edit=1"],
     ["trip", null, "Reise bearbeiten", "/trips/row-1?edit=1"],
-    ["profile", null, "Profil bearbeiten", "/settings/account"],
+    ["profile", null, "Profil bearbeiten", "/settings/profil"],
   ] as const)("a %s opens its editor", (entityType, parentId, action, href) => {
     renderCard(timeFlag("time_zone_unresolved", entityType, parentId));
     expect(editorLink(action)).toHaveAttribute("href", href);
@@ -323,7 +323,10 @@ describe("a time question about a domain the reader switched off", () => {
     );
     expect(screen.queryByRole("link", { name: "Besuch bearbeiten" })).not.toBeInTheDocument();
     expect(screen.getByText(/Der Bereich „Orte“ ist ausgeschaltet/)).toBeInTheDocument();
-    expect(editorLink("Bereiche einstellen")).toHaveAttribute("href", "/settings#modules");
+    expect(editorLink("Bereiche einstellen")).toHaveAttribute(
+      "href",
+      "/settings/reisearten#domains"
+    );
   });
 
   it("keeps the editor link while the domain is on", () => {

@@ -2,7 +2,6 @@ import { useEffect, useState, type JSX } from "react";
 import { adminApi, type ImportModeState } from "../../lib/api";
 import { travplanApi } from "../../lib/api/travplan";
 import { travTrackApi } from "../../lib/api/travtrack";
-import { COUNTRY_TIER_CHOICES, type CountryTier } from "../../types/passport";
 import { formatDateTime } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
@@ -122,13 +121,6 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
     setPlanSaved(next.enabled);
     bump("travPlan");
   });
-  const country = useSettingWrite<CountryTier>(
-    "server:laenderstd",
-    settings.countryThreshold,
-    async (tier) => {
-      await patch({ countryThreshold: tier });
-    }
-  );
 
   const limits = useGroupSave<Limits>({
     id: "server-planlimits",
@@ -165,7 +157,6 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   const b = row("beta");
   const tt = row("ttoffer");
   const tp = row("tpoffer");
-  const cs = row("laenderstd");
   const limitItem = (key: keyof Limits, footer: boolean): JSX.Element => (
     <SettingItem
       expert
@@ -262,28 +253,7 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
         </>
       ) : null}
       {loadFailed ? <ErrorLine>{t("settingsRows:server.offersLoadFailed")}</ErrorLine> : null}
-      {showRest ? (
-        <>
-          <SettingItem
-            title={cs.title}
-            sub={cs.sub}
-            scope="allAccounts"
-            save={country}
-            control={
-              <ChoiceControl<CountryTier>
-                label={cs.title}
-                value={country.value}
-                options={COUNTRY_TIER_CHOICES.map((tier) => ({
-                  value: tier,
-                  label: t(`passport:tiers.${tier}`),
-                }))}
-                onChange={country.choose}
-              />
-            }
-          />
-          <ImportModeRow />
-        </>
-      ) : null}
+      {showRest ? <ImportModeRow /> : null}
     </div>
   );
 }

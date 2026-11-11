@@ -14,11 +14,11 @@ import { accountOverview, admin } from "./servicesFixtures";
 const cardOf = (id: string) => SERVICE_CARDS.find((c) => c.id === id)!;
 const acct = accountOverview().ownKeys[0];
 
-describe("the 31 cards", () => {
+describe("the 29 cards", () => {
   it("are the catalogue's entries in its seven groups (R7)", () => {
     const sizes = SERVICE_GROUPS.map((g) => SERVICE_CARDS.filter((c) => c.group === g).length);
     // The prototype's groups (settings v3 S5): Logostream sits with the maps, AISstream with flight data.
-    expect(sizes).toEqual([8, 5, 3, 7, 3, 2, 3]);
+    expect(sizes).toEqual([8, 5, 3, 7, 3, 1, 2]);
   });
 
   it("are the registry's service cards: the server's page lists them all but those with a page of their own", () => {
@@ -49,7 +49,7 @@ describe("the 31 cards", () => {
   });
 
   it("have no off switch where the catalogue says always on", () => {
-    for (const id of ["geocoder", "fx"]) {
+    for (const id of ["geocoder"]) {
       expect(cardOf(id).use).toEqual(["always"]);
     }
   });
@@ -61,7 +61,7 @@ describe("the 31 cards", () => {
 
 describe("cardStatus", () => {
   it("is 'always' for an always-on service whatever else is true", () => {
-    expect(cardStatus({ card: cardOf("fx"), isAdmin: false })).toBe("always");
+    expect(cardStatus({ card: cardOf("geocoder"), isAdmin: false })).toBe("always");
   });
 
   it("says 'rejected' only for a credential the last test really refused", () => {

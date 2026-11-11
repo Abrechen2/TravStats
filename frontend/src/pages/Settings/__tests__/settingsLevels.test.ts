@@ -15,8 +15,8 @@ const EXPERT_SECTIONS = {
   // moved to standard (settings redesign, package 3).
   // The TravTrack page's Diagnose is an expert section (web redesign, 2026-11-05).
   // Settings v3: the prototype makes the flight form defaults, the whole
-  // Kreuzfahrten page and the three view links expert.
-  settings: ["apitokens", "enrichment", "ttDiag", "defaults", "cruisePreferences", "mapAppearance"],
+  // Kreuzfahrten page expert.
+  settings: ["apitokens", "enrichment", "ttDiag", "defaults", "cruisePreferences"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -58,7 +58,6 @@ const PAGES = {
   ),
   display: personal("display", "units", "domains", "planning", "countryCounting"),
   trips: personal("trips", "suggestions", "sharing", "calendarFeed"),
-  views: personal("mapAppearance"),
   privacy: personal("shareLinks", "comparisonConsent", "encryptedGrants"),
   travtrack: personal(
     "ttRecording",

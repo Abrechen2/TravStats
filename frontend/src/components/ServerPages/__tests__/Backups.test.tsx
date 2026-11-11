@@ -60,7 +60,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   useBackupScheduleStore.setState({ saved: null });
   backup.getBackupSettings.mockResolvedValue({
-    backupEnabled: true,
     backupInterval: "weekly",
     backupRetentionDays: 30,
     backupCloudRetention: false,
@@ -287,17 +286,17 @@ describe("Sicherungen › Vorhandene", () => {
     expect(stats).toHaveTextContent("settingsRows:backups.rhythm");
   });
 
-  it("says the schedule is off instead of promising a next run", async () => {
+  it("has no off state: an old server answer with backupEnabled false still shows the rhythm (S6)", async () => {
     backup.getBackupSettings.mockResolvedValue({
       backupEnabled: false,
       backupInterval: "weekly",
       backupRetentionDays: 30,
-    });
+    } as never);
     renderExisting();
     await waitFor(() =>
-      expect(screen.getAllByText("settingsRows:backups.rhythmOff").length).toBeGreaterThan(0)
+      expect(screen.getAllByText("settingsRows:backups.nowLine").length).toBeGreaterThan(0)
     );
-    expect(document.body.textContent).not.toMatch(/backups\.rhythm(?!Off)/);
+    expect(document.body.textContent).not.toMatch(/backups\.rhythmOff/);
   });
 
   it("refreshes the summary when the tuning group below it saves a new schedule", async () => {

@@ -331,7 +331,7 @@ describe("StayEditor - loyalty programmes are managed in one place", () => {
   it("links the card picker to the central programme settings, in a new tab so the form survives", async () => {
     await renderEditor();
     const link = screen.getByTestId("stay-editor-membership-manage-link");
-    expect(link).toHaveAttribute("href", "/settings/loyalty");
+    expect(link).toHaveAttribute("href", "/settings/treue");
     expect(link).toHaveAttribute("target", "_blank");
   });
 });

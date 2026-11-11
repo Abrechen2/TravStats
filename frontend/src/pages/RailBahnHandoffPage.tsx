@@ -126,7 +126,7 @@ export default function RailBahnHandoffPage(): JSX.Element {
               {t("rail:bahnHandoff.toRail")}
             </Link>
             {SETUP_HINT.has(state.reason) && (
-              <Link to="/settings/data?section=import" className="underline">
+              <Link to="/settings/daten#import" className="underline">
                 {t("rail:bahnHandoff.toSetup")}
               </Link>
             )}

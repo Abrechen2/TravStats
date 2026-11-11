@@ -27,11 +27,11 @@ describe("the settings search reads the registry", () => {
   });
 
   it("finds an expert row, says so, and asks for it by ?expert=1 — never by changing the level", () => {
-    const hit = find("Altes Anmeldeverfahren").find((h) => h.rowId === "oskuser")!;
+    const hit = find("Kontakt für Anfragen").find((h) => h.rowId === "bahnkontakt")!;
     expect(hit).toBeDefined();
     expect(hit.expertOnly).toBe(true);
     expect(hit.href).toContain("expert=1");
-    expect(hit.href).toContain("service=opensky");
+    expect(hit.href).toContain("match=bahnkontakt");
   });
 
   it("finds a word that only a row's hint or help carries", () => {
@@ -57,7 +57,7 @@ describe("the settings search reads the registry", () => {
   it("does not offer the server's rows to an account without the permission", () => {
     expect(find("Anfragen pro Tag", admin).length).toBeGreaterThan(0);
     const onlyServer = (access: RegistryAccess) =>
-      find("wann zählt ein Land", access).filter((h) => h.pageId === "funktionen");
+      find("Großer Import", access).filter((h) => h.pageId === "funktionen");
     expect(onlyServer(admin).length).toBeGreaterThan(0);
     expect(onlyServer(user)).toEqual([]);
     expect(find("Mailserver", user).some((h) => h.pageId === "email")).toBe(false);

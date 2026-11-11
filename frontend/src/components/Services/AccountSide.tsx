@@ -15,7 +15,6 @@ import { serviceName } from "../ExternalServices/serviceText";
 import StravaConnectionCard from "../Settings/StravaConnectionCard";
 import PhotoJourneyNightlyScanCard from "../Settings/PhotoJourneyNightlyScanCard";
 import VisitPhotoImmichLink from "../Settings/VisitPhotoImmichLink";
-import ImmichModeRow from "./ImmichModeRow";
 import DawarichProviderHint from "../Settings/DawarichProviderHint";
 import FieldsGroup from "./FieldsGroup";
 import TestRow from "./TestRow";
@@ -238,7 +237,6 @@ export default function AccountSide({
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
     if (card.id === "immich") {
-      body.push(<ImmichModeRow key="mode" />);
       body.push(<PhotoJourneyNightlyScanCard key="nightly" />);
       body.push(<VisitPhotoImmichLink key="visit" connected />);
     }

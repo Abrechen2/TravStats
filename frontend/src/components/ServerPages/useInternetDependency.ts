@@ -13,7 +13,7 @@ export interface InternetDependency {
 
 /**
  * The reason a row cannot act while "Server darf externe Dienste abfragen" is
- * off (settings v3 S2): the switches behind it keep their value but do nothing,
+ * off (settings v3 S2): the switches behind it do nothing,
  * so the row says so instead of looking alive. `undefined` while the master
  * switch is on — and while the instance settings are not loaded yet, because a
  * reason that flashes up and goes is worse than none.

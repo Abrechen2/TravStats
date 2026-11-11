@@ -1,17 +1,8 @@
 import { useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
-import {
-  ActionControl,
-  ConfirmDialog,
-  ErrorLine,
-  SettingItem,
-  SettingWriteError,
-  StatusValue,
-  SwitchControl,
-  useSettingWrite,
-} from "../ui/settings";
-import { externalServicesApi, type AdminService } from "../../lib/api/externalServices";
+import { ActionControl, ConfirmDialog, ErrorLine, SettingItem, StatusValue } from "../ui/settings";
+import type { AdminService } from "../../lib/api/externalServices";
 import { formatDateTime } from "../../lib/displayFormat";
 import { useExpertRows } from "../Settings/frame/useExpertRows";
 import FieldsGroup from "./FieldsGroup";
@@ -41,7 +32,8 @@ function fieldValue(service: AdminService, key: string, changes: Record<string, 
 /**
  * Mail (SMTP) on its own page (settings v3 S5): the connection group with
  * "Speichern & testen", the check and the verdict of the last one; the "Mails
- * verschicken" switch and the removal are the expert rows.
+ * verschicken" switch is gone (S6: saving a sender turns mail on); the removal
+ * is the expert row.
  */
 export default function SmtpRows({ service }: { service: AdminService }): JSX.Element {
   const { t } = useTranslation(["settingsRows"]);
@@ -51,16 +43,7 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
-  const expert = useExpertRows(2);
-
-  const on = useSettingWrite<boolean>("services.smtp.on", service.enabled, async (v) => {
-    try {
-      await externalServicesApi.adminUpdate("smtp", { enabled: v });
-    } catch {
-      throw new SettingWriteError("rejected");
-    }
-    await admin?.reload();
-  });
+  const expert = useExpertRows(1);
 
   const test = async (changes: Record<string, unknown>): Promise<void> => {
     setBusy(true);
@@ -165,17 +148,6 @@ export default function SmtpRows({ service }: { service: AdminService }): JSX.El
           </StatusValue>
         }
       />
-      {expert ? (
-        <SettingItem
-          title={t("settingsRows:services.rows.smtpon.t")}
-          sub={t("settingsRows:services.rows.smtpon.s")}
-          scope="allAccounts"
-          expert
-          locked={demo}
-          save={on}
-          control={<SwitchControl checked={on.value} onChange={on.choose} />}
-        />
-      ) : null}
       {expert ? (
         <SettingItem
           title={t("settingsRows:services.rows.smtpdel.t")}

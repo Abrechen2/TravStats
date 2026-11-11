@@ -25,8 +25,6 @@ export interface InstanceSettings {
   internetEnabled?: boolean; // settings v3 master switch for external services; absent = on
   /** May the instance ask Open-Meteo, Wikipedia and OpenStreetMap for its users. */
   openDataEnabled: boolean;
-  /** May operator logos come from Wikidata / Commons, server side (forgejo#323). On by default. */
-  operatorLogosOpenDataEnabled: boolean;
   /** May users create public share links (forgejo#281). Off deletes every link. */
   shareLinksEnabled: boolean;
   frontendUrl: string | null;
@@ -42,9 +40,6 @@ export interface InstanceSettings {
   nominatimUrl: string;
   /** The instance's default for "a country counts as visited from …"; accounts may override it. Always resolved. */
   countryThreshold: CountryTier;
-  /** May the rail train lookup ask Transitous / db-rest (both on by default). */
-  railTransitousEnabled: boolean;
-  railDbRestEnabled: boolean;
   /** A self-hosted OpenRailRouting for rail lines; null = off. Absent before 2.7. */
   railRoutingUrl?: string | null;
 }
@@ -96,7 +91,6 @@ export interface InstanceSettingsPatch {
   betaFeaturesEnabled?: boolean;
   internetEnabled?: boolean;
   openDataEnabled?: boolean;
-  operatorLogosOpenDataEnabled?: boolean;
   shareLinksEnabled?: boolean;
   frontendUrl?: string;
   publicUrl?: string;
@@ -107,8 +101,6 @@ export interface InstanceSettingsPatch {
   photonUrl?: string;
   nominatimUrl?: string;
   countryThreshold?: CountryTier;
-  railTransitousEnabled?: boolean;
-  railDbRestEnabled?: boolean;
   /** "" switches OpenRailRouting off. */
   railRoutingUrl?: string;
 }
@@ -138,7 +130,6 @@ export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];
 export interface AdminParserSettingsResponse {
   allowUserApiKeys: boolean;
   allowUserFlightApiKeys?: boolean; // the flight-data half of "own keys"
-  fxCdnFallbackEnabled: boolean;
   /** Who reads a booking document first, in every domain. Absent on a
    *  backend older than 2.7 — treat a missing value as "template_first". */
   parserOrder?: ParserOrder;
@@ -416,7 +407,6 @@ export const adminApi = {
 
   updateAdminParserSettings: async (settings: {
     allowUserApiKeys?: boolean;
-    fxCdnFallbackEnabled?: boolean;
     parserOrder?: ParserOrder;
     llmEnabled?: boolean;
     ollamaUrl?: string | null;

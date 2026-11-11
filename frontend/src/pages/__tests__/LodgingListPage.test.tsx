@@ -842,7 +842,7 @@ describe("LodgingListPage", () => {
     renderListPage();
 
     const hubLink = await findNamed("link", /settings:import\.openHub/);
-    expect(hubLink).toHaveAttribute("href", "/settings/data?section=import");
+    expect(hubLink).toHaveAttribute("href", "/settings/daten#import");
     expect(screen.queryByText("lodging:import.csv.title")).not.toBeInTheDocument();
   });
 

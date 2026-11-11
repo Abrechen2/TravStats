@@ -17,8 +17,6 @@ export const DIENSTEK_PAGE: RegistryPage = {
       {"id":"opensky","de":"OpenSky","en":"OpenSky","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"flug","rows":[
         {"id":"oskid","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Deine Client-ID","en":"Your client ID","terms":{"de":"Statt der des Servers","en":"Instead of the server's"}},
         {"id":"osksec","kind":"secret","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Dein Client-Secret","en":"Your client secret","terms":{"de":"Wird verschlüsselt gespeichert und nie wieder angezeigt.","en":"Stored encrypted and never shown again."}},
-        {"id":"oskuser","kind":"input","level":"expert","scope":"account","audience":"all","demoLocked":true,"de":"Dein Benutzername","en":"Your username","terms":{"de":"Altes Anmeldeverfahren","en":"Legacy sign-in"}},
-        {"id":"oskpw","kind":"secret","level":"expert","scope":"account","audience":"all","demoLocked":true,"de":"Dein Passwort","en":"Your password","terms":{"de":"Altes Anmeldeverfahren","en":"Legacy sign-in"}},
       ]},
       {"id":"openai","de":"OpenAI","en":"OpenAI","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"ki","rows":[
 
@@ -36,7 +34,6 @@ export const DIENSTEK_PAGE: RegistryPage = {
         {"id":"immurl","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Adresse","en":"Address","terms":{"de":"Darf im eigenen Netz liegen.","en":"May be on your local network."}},
         {"id":"immkey","kind":"secret","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"API-Schlüssel","en":"API key","terms":{"de":"Aus Immich → Konto → API-Schlüssel","en":"From Immich → Account → API keys"}},
         {"id":"immnacht","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Fotos jede Nacht durchsehen","en":"Look through photos nightly","terms":{"de":"Findet Reisen, die noch fehlen","en":"Finds trips you haven't logged"}},
-        {"id":"immmode","kind":"choice","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Fotos an Reisen","en":"Photos on trips","terms":{"de":"Verknüpfen zeigt die Fotos aus Immich und kopiert nichts. Kopieren lädt die Originale auf diesen Server. verknüpfen kopieren","en":"Link shows photos from Immich and copies nothing. Copy downloads the originals to this server. link copy"}},
         {"id":"immvisit","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Besuchsfotos verknüpfen","en":"Link visit photos","terms":{"de":"Fotos zu deinen Orten suchen","en":"Find photos for your places"}},
       ]},
       {"id":"dawarich","de":"Dawarich","en":"Dawarich","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"foto","rows":[

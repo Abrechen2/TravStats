@@ -568,71 +568,6 @@
        "x": 1
       }
      ]
-    },
-    {
-     "id": "anzeige-views",
-     "de": "Karte, Start & Listen",
-     "en": "Map, home & lists",
-     "rows": [
-      {
-       "id": "karte",
-       "t": "link",
-       "v": "an der Karte",
-       "ve": "on the map",
-       "inv": "A9 Map appearance link + A3 Map theme",
-       "de": [
-        "Kartendarstellung",
-        "Stil, Linien, Beschriftungen",
-        ""
-       ],
-       "en": [
-        "Map look",
-        "Style, lines, labels",
-        ""
-       ],
-       "m": "views",
-       "x": 0
-      },
-      {
-       "id": "start",
-       "t": "link",
-       "v": "auf der Startseite",
-       "ve": "on the home page",
-       "inv": "A9 Dashboard link",
-       "de": [
-        "Startseite",
-        "Reisearten und Kartenart",
-        ""
-       ],
-       "en": [
-        "Home page",
-        "Travel types and map mode",
-        ""
-       ],
-       "m": "views",
-       "x": 0
-      },
-      {
-       "id": "listen",
-       "t": "link",
-       "v": "an jeder Liste",
-       "ve": "on each list",
-       "inv": "A9 Lists link",
-       "de": [
-        "Listen",
-        "Spalten, Sortierung, Seitengröße",
-        ""
-       ],
-       "en": [
-        "Lists",
-        "Columns, sorting, page size",
-        ""
-       ],
-       "m": "views",
-       "x": 0
-      }
-     ],
-     "x": 1
     }
    ]
   },
@@ -866,33 +801,17 @@
      "rows": [
       {
        "id": "laender",
-       "t": "select",
-       "v": "Wie der Server · durchreist",
-       "ve": "Server default · passed through",
-       "o": [
-        "Wie der Server",
-        "übernachtet",
-        "besucht",
-        "durchreist",
-        "umgestiegen"
-       ],
-       "oe": [
-        "Server default",
-        "stayed overnight",
-        "visited",
-        "passed through",
-        "changed planes"
-       ],
-       "inv": "A4 Country counting threshold",
+       "t": "status",
+       "inv": "A4 Countries counted (the threshold select was removed in S6: since forgejo#299 every country set foot in counts)",
        "de": [
-        "Ein Land zählt ab",
-        "",
-        "übernachtet: mindestens eine Nacht · besucht: ein Ort dort · durchreist: am Boden gewesen · umgestiegen: auch nur beim Umsteigen."
+        "Gezählte Länder",
+        "Besucht und mit Bodenkontakt, wie der Server sie zählt",
+        "Besucht: ein bestätigter Aufenthalt, Ortsbesuch, Ausflug nach der Landung, das Heimatland oder eine Reise hin und zurück. Bodenkontakt: jeder Beleg."
        ],
        "en": [
-        "A country counts from",
-        "",
-        "stayed overnight: at least one night · visited: a place there · passed through: on the ground · changed planes: even a connection."
+        "Countries counted",
+        "Visited and ground contact, as the server counts them",
+        "Visited: a confirmed stay, place visit, landing excursion, home country or a trip there and back. Ground contact: any evidence."
        ],
        "m": "countryCounting",
        "x": 0
@@ -2615,39 +2534,6 @@
         "",
         "Stored encrypted and never shown again."
        ]
-      },
-      {
-       "id": "oskuser",
-       "t": "input",
-       "inv": "A13 OpenSky username (expert)",
-       "de": [
-        "Dein Benutzername",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Your username",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "oskpw",
-       "t": "secret",
-       "inv": "A13 OpenSky password (expert)",
-       "de": [
-        "Dein Passwort",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Your password",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1
       }
      ]
     },
@@ -2819,30 +2705,6 @@
         ""
        ],
        "v": false
-      },
-      {
-       "id": "immmode",
-       "t": "choice",
-       "inv": "E immichDefaultMode (Owner: Empfehlung 16)",
-       "de": [
-        "Fotos an Reisen",
-        "",
-        "Verknüpfen zeigt die Fotos aus Immich und kopiert nichts. Kopieren lädt die Originale auf diesen Server."
-       ],
-       "en": [
-        "Photos on trips",
-        "",
-        "Link shows photos from Immich and copies nothing. Copy downloads the originals to this server."
-       ],
-       "o": [
-        "verknüpfen",
-        "kopieren"
-       ],
-       "oe": [
-        "link",
-        "copy"
-       ],
-       "v": "verknüpfen"
       },
       {
        "id": "immvisit",
@@ -3271,32 +3133,6 @@
        ],
        "m": "backup",
        "x": 0
-      },
-      {
-       "id": "webdavjetzt",
-       "t": "action",
-       "btn": [
-        "Jetzt hochladen",
-        "Upload now"
-       ],
-       "dep": "webdavOff",
-       "inv": "A11 Action: WebDAV Sync now",
-       "de": [
-        "Jetzt hochladen",
-        "",
-        ""
-       ],
-       "en": [
-        "Upload now",
-        "",
-        ""
-       ],
-       "res": [
-        "Hochgeladen · gerade eben",
-        "Uploaded · just now"
-       ],
-       "m": "backup",
-       "x": 1
       }
      ]
     },
@@ -4829,12 +4665,12 @@
        "de": [
         "Server darf externe Dienste abfragen",
         "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
-        "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+        "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
        ],
        "en": [
         "Server may ask external services",
         "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
-        "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+        "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. Services with their own key (flight data, AI, photos) are not affected."
        ],
        "m": "net",
        "x": 0
@@ -4957,26 +4793,6 @@
         "Show beta features",
         "For every account",
         "Opens: pairing phones, tours, planning, ship tracks, flight path upload, leaderboard, encrypted handover, calendar feed, sharing with other servers, TravTrack."
-       ],
-       "m": "features",
-       "x": 1
-      },
-      {
-       "id": "laenderstd",
-       "t": "select",
-       "sc": "i",
-       "ad": 1,
-       "v": "durchreist",
-       "ve": "passed through",
-       "de": [
-        "Standard: wann zählt ein Land",
-        "Konten können abweichen",
-        ""
-       ],
-       "en": [
-        "Default: when a country counts",
-        "Accounts may differ",
-        ""
        ],
        "m": "features",
        "x": 1
@@ -5153,25 +4969,6 @@
      "de": "Erweitert",
      "en": "Advanced",
      "rows": [
-      {
-       "id": "smtpon",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "de": [
-        "Mails verschicken",
-        "Einladungen, Erinnerungen, neues Passwort",
-        ""
-       ],
-       "en": [
-        "Send mail",
-        "Invitations, reminders, new password",
-        ""
-       ],
-       "m": "smtp",
-       "x": 1
-      },
       {
        "id": "smtpport",
        "t": "input",
@@ -5387,33 +5184,6 @@
         "Accounts may use their own keys",
         "",
         "Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored."
-       ],
-       "m": "parsers",
-       "x": 1
-      },
-      {
-       "id": "olltest",
-       "t": "action",
-       "sc": "i",
-       "ad": 1,
-       "btn": [
-        "Testen",
-        "Test"
-       ],
-       "inv": "C4 Action: Test Ollama connection",
-       "de": [
-        "Ollama prüfen",
-        "",
-        ""
-       ],
-       "en": [
-        "Check Ollama",
-        "",
-        ""
-       ],
-       "res": [
-        "Erreichbar · gerade geprüft",
-        "Reachable · just checked"
        ],
        "m": "parsers",
        "x": 1
@@ -5689,43 +5459,6 @@
         "",
         ""
        ]
-      },
-      {
-       "id": "oskuserI",
-       "t": "input",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky username, expert)",
-       "de": [
-        "Benutzername des Servers",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Server username",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1,
-       "v": ""
-      },
-      {
-       "id": "oskpwI",
-       "t": "secret",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Credential fields (OpenSky password, expert)",
-       "de": [
-        "Passwort des Servers",
-        "Altes Anmeldeverfahren",
-        ""
-       ],
-       "en": [
-        "Server password",
-        "Legacy sign-in",
-        ""
-       ],
-       "x": 1
       }
      ],
      "ad": 1
@@ -6376,24 +6109,6 @@
      ],
      "rows": [
       {
-       "id": "oplogos",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Logos: operator-logo lookup",
-       "de": [
-        "Logos von Betreibern suchen",
-        "",
-        ""
-       ],
-       "en": [
-        "Look up operator logos",
-        "",
-        ""
-       ],
-       "v": true
-      },
-      {
        "id": "logorefresh",
        "t": "action",
        "sc": "i",
@@ -6443,24 +6158,6 @@
       "on"
      ],
      "rows": [
-      {
-       "id": "wdsrv",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C6 WebDAV off-site sync + C3 WebDAV backupSync",
-       "de": [
-        "Server-Sicherungen hochladen",
-        "Jede gelungene Sicherung",
-        ""
-       ],
-       "en": [
-        "Upload server backups",
-        "Every successful backup",
-        ""
-       ],
-       "v": false
-      },
       {
        "id": "wdsrvurl",
        "t": "input",
@@ -6559,42 +6256,6 @@
      "use": [],
      "rows": [
       {
-       "id": "transitous",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Rail timetables: Transitous switch",
-       "de": [
-        "Transitous",
-        "Fahrpläne aus offenen Daten",
-        ""
-       ],
-       "en": [
-        "Transitous",
-        "Timetables from open data",
-        ""
-       ],
-       "v": true
-      },
-      {
-       "id": "dbrest",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 Rail timetables: db-rest switch",
-       "de": [
-        "db-rest",
-        "Fahrpläne der Deutschen Bahn",
-        ""
-       ],
-       "en": [
-        "db-rest",
-        "Deutsche Bahn timetables",
-        ""
-       ],
-       "v": true
-      },
-      {
        "id": "bahnkontakt",
        "t": "input",
        "sc": "i",
@@ -6642,88 +6303,6 @@
        "v": false
       }
      },
-     "ad": 1,
-     "x": 1
-    },
-    {
-     "id": "fx",
-     "cat": "open",
-     "svc": {
-      "n": [
-       "EZB-Kurse",
-       "ECB rates"
-      ],
-      "de": "Wechselkurse",
-      "en": "Exchange rates",
-      "st": [
-       "Immer an",
-       "Always on"
-      ],
-      "tone": "good"
-     },
-     "use": [
-      "always"
-     ],
-     "rows": [
-      {
-       "id": "fxcdn",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "inv": "C3 FX: CDN fallback switch",
-       "de": [
-        "Ersatzquelle",
-        "Wenn die EZB nicht antwortet",
-        ""
-       ],
-       "en": [
-        "Fallback source",
-        "When the ECB doesn't answer",
-        ""
-       ],
-       "v": true
-      }
-     ],
-     "ad": 1,
-     "x": 1
-    },
-    {
-     "id": "updatesTemplates",
-     "cat": "inst",
-     "svc": {
-      "n": [
-       "GitHub",
-       "GitHub"
-      ],
-      "de": "Neue Versionen und Vorlagen",
-      "en": "New versions and templates",
-      "st": [
-       "An",
-       "On"
-      ],
-      "tone": "good"
-     },
-     "use": [],
-     "rows": [
-      {
-       "id": "updcheck",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C4 Update check",
-       "de": [
-        "Nach neuen Versionen suchen",
-        "Fragt GitHub",
-        ""
-       ],
-       "en": [
-        "Check for new versions",
-        "Asks GitHub",
-        ""
-       ]
-      }
-     ],
      "ad": 1,
      "x": 1
     }
@@ -6936,26 +6515,6 @@
        "en": [
         "Time zone for 02:00",
         "",
-        ""
-       ],
-       "m": "automatic",
-       "x": 1
-      },
-      {
-       "id": "autobak",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "v": true,
-       "inv": "C6 Automatic backup",
-       "de": [
-        "Automatisch sichern",
-        "Um 02:00",
-        ""
-       ],
-       "en": [
-        "Back up automatically",
-        "At 02:00",
         ""
        ],
        "m": "automatic",
@@ -7628,66 +7187,6 @@
        ],
        "en": [
         "Delete old logs",
-        "",
-        ""
-       ],
-       "m": "logging"
-      },
-      {
-       "id": "loghttp",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": false,
-       "inv": "C7 Log HTTP requests",
-       "de": [
-        "Anfragen mitschreiben",
-        "",
-        ""
-       ],
-       "en": [
-        "Log requests",
-        "",
-        ""
-       ],
-       "m": "logging"
-      },
-      {
-       "id": "logdb",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": false,
-       "inv": "C7 Log DB queries",
-       "de": [
-        "Datenbank mitschreiben",
-        "",
-        ""
-       ],
-       "en": [
-        "Log database",
-        "",
-        ""
-       ],
-       "m": "logging"
-      },
-      {
-       "id": "logparser",
-       "t": "toggle",
-       "sc": "i",
-       "ad": 1,
-       "x": 1,
-       "v": false,
-       "inv": "C7 Log parser operations",
-       "de": [
-        "Lesen mitschreiben",
-        "",
-        ""
-       ],
-       "en": [
-        "Log reading",
         "",
         ""
        ],

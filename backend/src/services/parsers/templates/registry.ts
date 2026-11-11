@@ -8,7 +8,7 @@ import { createFsTemplateCache } from "./v2/cache";
 import { V2TemplateStore, type FetchJson } from "./v2/loader";
 import { effectiveTemplateRepo, type TemplateRepoOrigin } from "./v2/source";
 import { prisma } from "../../../db";
-import { throughInternet } from "../../internetGate";
+import { internetOn } from "../../internetGate";
 import { createDirSnapshot, DEFAULT_SNAPSHOT_DIR } from "./v2/snapshot";
 import type { V2Status } from "./v2/status";
 import type { TemplateDomain, TemplateEnvelope } from "./v2/envelope";
@@ -201,9 +201,9 @@ export class TemplateRegistry {
     try {
       const row = await prisma.adminSettings.findFirst({
         orderBy: { id: "asc" },
-        select: { updateCheckEnabled: true, internetEnabled: true },
+        select: { internetEnabled: true },
       });
-      if (row && !throughInternet(row, row.updateCheckEnabled)) {
+      if (row && !internetOn(row)) {
         logger.debug("template sync skipped: update checks or the internet are switched off");
         return;
       }

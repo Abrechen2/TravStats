@@ -101,7 +101,7 @@ describe("FlightsTablePage", () => {
     );
 
     const link = await findNamed("link", /settings:import.openHub/);
-    expect(link.getAttribute("href")).toBe("/settings/data?section=import");
+    expect(link.getAttribute("href")).toBe("/settings/daten#import");
   });
 
   // Review finding (Alex T7, round 1): nothing tested that the wiring

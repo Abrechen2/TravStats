@@ -6,7 +6,7 @@ import { isNotConfigured } from "./trackPhotos";
 import type { PhotosState } from "./useTrackPhotos";
 
 /** Settings → Dienste, where an Immich connection is made. */
-export const IMMICH_SETTINGS_PATH = "/settings/services?section=externalServices";
+export const IMMICH_SETTINGS_PATH = "/settings/dienstek#immich";
 
 /**
  * What the photo request answered, in words: loading, a failure as its own

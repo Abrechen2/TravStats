@@ -47,7 +47,6 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   backup: "settings:backup.title",
   import: "settings:import.title",
   externalServices: "settings:externalServices.title",
-  mapAppearance: "settings:views.title",
   comparisonConsent: "settings:privacy.comparisonConsent.title",
   encryptedGrants: "settings:privacy.encryptedGrants.title",
 };

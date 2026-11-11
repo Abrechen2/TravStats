@@ -13,7 +13,7 @@ import {
  */
 jest.mock("../wikidataOperator", () => ({ lookupOperatorMark: jest.fn() }));
 jest.mock("../../instanceSettingsService", () => ({
-  getInstanceSettings: async () => ({ operatorLogosOpenDataEnabled: true }),
+  getInstanceSettings: async () => ({ internetEnabled: true }),
 }));
 jest.mock("../../../utils/logger", () => ({
   __esModule: true,

@@ -30,7 +30,7 @@ describe("DashboardEmptyState (#237)", () => {
   it("routes to the import section, deep-linked", () => {
     renderIt();
     fireEvent.click(screen.getByRole("button", { name: "dashboard:empty.import" }));
-    expect(navigate).toHaveBeenCalledWith("/settings?section=import");
+    expect(navigate).toHaveBeenCalledWith("/settings/daten#import");
   });
 
   it("opens the add-flight flow via the callback, not a navigation", () => {
@@ -43,6 +43,6 @@ describe("DashboardEmptyState (#237)", () => {
   it("routes to the modules section to choose domains", () => {
     renderIt();
     fireEvent.click(screen.getByRole("button", { name: "dashboard:empty.chooseDomains" }));
-    expect(navigate).toHaveBeenCalledWith("/settings?section=modules");
+    expect(navigate).toHaveBeenCalledWith("/settings/reisearten#domains");
   });
 });

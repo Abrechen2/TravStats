@@ -148,7 +148,7 @@ describe("TrackPage", () => {
     expect(screen.queryByTestId("track-day-map-stub")).toBeNull();
     expect(
       within(start).getByRole("link", { name: "track:start.companion.action" })
-    ).toHaveAttribute("href", "/settings/travtrack#ttRecording");
+    ).toHaveAttribute("href", "/settings/tt-aufz#ttRecording");
     expect(
       within(start).getByRole("link", { name: "track:start.dawarich.action" })
     ).toHaveAttribute("href", "/track/imports");
@@ -215,7 +215,7 @@ describe("TrackPage", () => {
     }
     expect(screen.getByTestId("track-settings-link")).toHaveAttribute(
       "href",
-      "/settings/travtrack?from=2026-10-12&until=2026-10-12"
+      "/settings/tt-aufz?from=2026-10-12&until=2026-10-12"
     );
     expect(api.deleteDays).not.toHaveBeenCalled();
   });

@@ -47,14 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 33 pages, 118 groups and cards (40 of them service cards: 15 the account's, 25 the server's) and 284 rows", () => {
+  it("counts 33 pages, 115 groups and cards (38 of them service cards: 15 the account's, 23 the server's) and 262 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(33);
-    expect(sections).toHaveLength(118);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(40);
+    expect(sections).toHaveLength(115);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(38);
     expect(registryPage("dienstek")!.sections).toHaveLength(15);
-    expect(registryPage("dienste")!.sections).toHaveLength(25);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(284);
+    expect(registryPage("dienste")!.sections).toHaveLength(23);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(262);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -141,7 +141,7 @@ describe("the settings registry follows the settings v3 page model", () => {
       registryPage("dienstek")!
         .sections.find((s) => s.id === "opensky")!
         .rows.map((r) => r.id)
-    ).toEqual(["oskid", "osksec", "oskuser", "oskpw"]);
+    ).toEqual(["oskid", "osksec"]);
   });
 
   it("ties rows to real domains and real beta keys; tours and roadtrips are two domains", () => {
@@ -434,15 +434,10 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
     ]) {
       expect(cards, id).not.toContain(id);
     }
-    // The prototype's 21 cards, then the four whose switches the master switch folds (expert).
-    expect(cards).toHaveLength(25);
+    // The prototype's 21 cards, then the two that are left of the folded ones (expert).
+    expect(cards).toHaveLength(23);
     const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
-    expect(expertCards.map((c) => c.id)).toEqual([
-      "railTimetables",
-      "openData",
-      "fx",
-      "updatesTemplates",
-    ]);
+    expect(expertCards.map((c) => c.id)).toEqual(["railTimetables", "openData"]);
   });
 
   it("puts the master internet switch first on Funktionen, in Netz, as a standard row", () => {
@@ -455,10 +450,9 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
       "l_tt",
       "l_pl",
       "beta",
-      "laenderstd",
       "importmodus",
     ]);
-    for (const id of ["beta", "laenderstd", "importmodus"]) {
+    for (const id of ["beta", "importmodus"]) {
       expect(level("funktionen", id), id).toBe("expert");
     }
   });
@@ -498,9 +492,11 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
       "bakliste",
       "bakwdload",
     ]);
-    for (const id of ["baktakt", "bakhalten", "bakwddel", "bakzone", "autobak"]) {
+    for (const id of ["baktakt", "bakhalten", "bakwddel", "bakzone"]) {
       expect(level("sicherungen", id), id).toBe("expert");
     }
+    // Automatic backup has no switch since S6: it is always on.
+    expect(rowsOf("sicherungen")).not.toContain("autobak");
   });
 });
 

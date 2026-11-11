@@ -12,7 +12,6 @@ import { useExpertRows } from "../Settings/frame/useExpertRows";
 import { useRowCopy } from "../Settings/rowCopy";
 import Button from "../ui/Button";
 import {
-  ActionControl,
   ChoiceControl,
   ErrorLine,
   SettingItem,
@@ -81,9 +80,6 @@ export default function ServerParsers(): JSX.Element {
   return <div style={{ minHeight: 80 }} aria-busy="true" />;
 }
 
-type TestResult =
-  { status: "ok" | "warn"; model?: string } | { status: "unreachable" } | { status: "failed" };
-
 function Rows({
   settings,
   onSaved,
@@ -93,11 +89,10 @@ function Rows({
 }): JSX.Element {
   const { t } = useTranslation(["settingsRows"]);
   const row = useRowCopy("server");
-  const [testing, setTesting] = useState(false);
-  const [result, setResult] = useState<TestResult | null>(null);
-  // Who reads first, the cloud order, the accounts' own keys and the Ollama check
-  // are the tuning of this page (settings v3 S5).
-  const expert = useExpertRows(4);
+  // Who reads first, the cloud order and the accounts' own keys are the tuning of
+  // this page (settings v3 S5). The Ollama check is the card's own test button on
+  // the services page (S6).
+  const expert = useExpertRows(3);
   // One switch, two columns: accounts' own AI keys (parser settings) and their own
   // flight-data keys (API keys). If the second write fails the first is taken back,
   // so the switch never reads "on" for half of what it governs.
@@ -140,30 +135,11 @@ function Rows({
     },
   });
 
-  const runTest = async (): Promise<void> => {
-    if (!settings.ollamaUrl || !settings.ollamaModel) return;
-    setTesting(true);
-    setResult(null);
-    try {
-      const r = await adminApi.testOllamaConnection(settings.ollamaUrl, settings.ollamaModel);
-      if (!r.success) setResult({ status: "unreachable" });
-      else
-        setResult(r.warning ? { status: "warn", model: settings.ollamaModel } : { status: "ok" });
-    } catch (error) {
-      logger.error("Testing Ollama failed:", error);
-      setResult({ status: "failed" });
-    } finally {
-      setTesting(false);
-    }
-  };
-
   const first = row("leserfolge");
   const ai = row("kiaktiv");
   const cloud = row("cloudorder");
   const builtin = row("builtin");
   const keys = row("userkeys");
-  const test = row("olltest");
-  const hasOllama = Boolean(settings.ollamaUrl && settings.ollamaModel);
   // The two columns can differ (older data, a half-failed write): the row says which half holds.
   const mixed = settings.allowUserApiKeys !== (settings.allowUserFlightApiKeys ?? true);
   return (
@@ -253,44 +229,6 @@ function Rows({
                   ),
                 })}
               </p>
-            ) : null}
-          </SettingItem>
-          <SettingItem
-            title={test.title}
-            expert
-            scope="allAccounts"
-            dependency={
-              hasOllama ? undefined : { reason: t("settingsRows:server.parsers.noOllama") }
-            }
-            control={
-              <ActionControl
-                label={
-                  testing
-                    ? t("settingsRows:server.running")
-                    : t("settingsRows:server.parsers.check")
-                }
-                busy={testing}
-                onClick={() => void runTest()}
-              />
-            }
-          >
-            {result ? (
-              result.status === "ok" || result.status === "warn" ? (
-                <p
-                  role="status"
-                  className="t-caption"
-                  style={{
-                    margin: 0,
-                    color: result.status === "ok" ? "var(--ts-good)" : "var(--ts-warn)",
-                  }}
-                >
-                  {result.status === "ok"
-                    ? t("settingsRows:server.parsers.testOk")
-                    : t("settingsRows:server.parsers.testNoModel", { model: result.model })}
-                </p>
-              ) : (
-                <ErrorLine>{t(`settingsRows:server.parsers.test_${result.status}`)}</ErrorLine>
-              )
             ) : null}
           </SettingItem>
         </>

@@ -53,7 +53,6 @@ export type SettingsSectionId =
   | "backup"
   | "import"
   | "externalServices"
-  | "mapAppearance"
   | "comparisonConsent"
   | "encryptedGrants";
 
@@ -81,10 +80,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("domains"),
   section("planning"),
   section("countryCounting"),
-  // Where the map, the dashboard and the lists are set is on the map, the
-  // dashboard and the lists (rule 1 of the settings redesign).
-  // The prototype drops these three links; they stay reachable at the expert level until S6.
-  section("mapAppearance", "expert", { settings: 3 }),
   section("trips"),
   section("suggestions"),
   section("sharing"),
@@ -147,4 +142,4 @@ export const REMOVED_PAGES: Readonly<Record<string, string>> = {
 };
 
 /** Where Einstellungen → Bonusprogramme lives — the target of every loyalty link. */
-export const LOYALTY_SETTINGS_PATH = "/settings/loyalty";
+export const LOYALTY_SETTINGS_PATH = "/settings/treue";

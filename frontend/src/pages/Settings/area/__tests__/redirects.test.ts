@@ -164,9 +164,9 @@ describe("every address of design §6.2 lands where the table says", () => {
     expect(resolve("/settings", { lastPage: "no-such-page" }).to).toBe("/settings/reisearten");
   });
 
-  it("falls back to /flights only while flights are on, else to the display page", () => {
+  it("falls back to /flights only while flights are on, else to the dashboard", () => {
     const off = { isDomainOn: () => false };
-    expect(resolve("/settings/views#listAppearance", off).to).toBe("/settings/anzeige#views");
+    expect(resolve("/settings/views#listAppearance", off).to).toBe("/dashboard");
   });
 
   it("treats a malformed escape in the hash as no section, instead of throwing", () => {
@@ -314,8 +314,8 @@ describe("every page of the settings area before settings v3 still opens", () =>
     expect(resolve("/settings/sharing?match=linkserlaubt#shareLinks").to).toBe(
       "/settings/funktionen?match=linkserlaubt#sharing"
     );
-    expect(resolve("/settings/server?match=laenderstd#features").to).toBe(
-      "/settings/funktionen?match=laenderstd#features"
+    expect(resolve("/settings/server?match=importmodus#features").to).toBe(
+      "/settings/funktionen?match=importmodus#features"
     );
   });
 

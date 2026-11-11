@@ -11,7 +11,6 @@ export const BUCHUNGEN_PAGE: RegistryPage = {
         {"id":"leserfolge","mount":"parsers","kind":"choice","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Reihenfolge","en":"Order","terms":{"de":"Vorlagen lesen Flugmails in unter einer Sekunde. Vorlagen zuerst KI zuerst","en":"Templates read flight mails in under a second. Templates first AI first"}},
         {"id":"cloudorder","mount":"parsers","kind":"list","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Reihenfolge der KI-Anbieter","en":"Order of the AI providers","terms":{"de":"Ollama kommt immer zuerst Versucht wird nur, wer Schlüssel und Freigabe hat.","en":"Ollama always comes first Only providers with key and approval are tried."}},
         {"id":"userkeys","mount":"parsers","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Konten dürfen eigene Schlüssel nutzen","en":"Accounts may use their own keys","terms":{"de":"Gilt für KI und Flugdaten: Ein Konto kann seinen eigenen Schlüssel eintragen. Aus lässt nur den Server-Schlüssel gelten; bereits eingetragene Schlüssel bleiben gespeichert.","en":"Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored."}},
-        {"id":"olltest","mount":"parsers","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Ollama prüfen","en":"Check Ollama","terms":{"de":"","en":""}},
       ]},
   ],
 };

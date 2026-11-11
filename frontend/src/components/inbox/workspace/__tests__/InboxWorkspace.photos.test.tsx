@@ -257,7 +257,7 @@ describe("photo suggestions in the inbox", () => {
     expect(await screen.findByRole("button", { name: `${K}.scan` })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: `${K}.nightlyLink` })).toHaveAttribute(
       "href",
-      "/settings/services?section=externalServices"
+      "/settings/dienstek#immich"
     );
   });
 
@@ -266,7 +266,7 @@ describe("photo suggestions in the inbox", () => {
     expect(await screen.findByText(`${K}.empty.noImmich.title`)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: `${K}.empty.noImmich.link` })).toHaveAttribute(
       "href",
-      "/settings/services?section=externalServices"
+      "/settings/dienstek#immich"
     );
     expect(screen.queryByRole("button", { name: `${K}.scan` })).not.toBeInTheDocument();
   });

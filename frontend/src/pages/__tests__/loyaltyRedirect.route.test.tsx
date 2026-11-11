@@ -92,7 +92,7 @@ describe("the /loyalty route", () => {
         window.history.pushState({}, "", "/loyalty");
         const { unmount } = render(<App />);
         await waitFor(
-          () => expect(screen.getByTestId("settings-stub").textContent).toBe("/settings/loyalty"),
+          () => expect(screen.getByTestId("settings-stub").textContent).toBe("/settings/treue"),
           { timeout: 8000 }
         );
         expect(screen.queryByTestId("dashboard-stub")).toBeNull();

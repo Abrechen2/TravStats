@@ -135,7 +135,8 @@ export async function buildUsagePayload(): Promise<UsagePayload> {
       llm_parser:
         admin?.llmEnabled !== false &&
         Boolean(admin?.ollamaUrl || admin?.globalOpenaiApiKey || admin?.globalClaudeApiKey),
-      backups: Boolean(admin?.backupEnabled),
+      // Automatic backups are always on (settings v3 S6).
+      backups: true,
       webdav_sync: Boolean(admin?.webdavSyncEnabled),
       historical_enrichment: allUserSettings.some((s) => s.historicalEnrichmentEnabled === true),
       live_tracking: trackedFlight !== null,

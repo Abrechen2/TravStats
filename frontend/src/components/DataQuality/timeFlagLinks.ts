@@ -56,7 +56,7 @@ export function timeValueEditorPath(link: TimeRowLink, kind: TimeFlagKind): stri
     case "trip":
       return `/trips/${entityId}?${edit}`;
     case "profile":
-      return "/settings/account";
+      return "/settings/profil";
     case "cruise_stop":
       return parentId ? `/cruises/${parentId}?${edit}` : null;
     case "trip_stop":

@@ -18,10 +18,10 @@ function toBackupInterval(value: string | null | undefined): BackupInterval {
 let scheduledJob: ScheduledTask | null = null;
 
 /**
- * Read backup settings from AdminSettings DB row
+ * Read backup settings from AdminSettings DB row. Automatic backups are always on
+ * (settings v3 S6): there is no switch, only the rhythm, the retention and the zone.
  */
 async function getBackupSettings(): Promise<{
-  enabled: boolean;
   interval: "daily" | "weekly" | "monthly";
   retentionDays: number;
   /** The admin's zone for the cron expression; null = the host's (the default). */
@@ -29,7 +29,6 @@ async function getBackupSettings(): Promise<{
 }> {
   const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return {
-    enabled: adminSettings?.backupEnabled ?? false,
     interval: toBackupInterval(adminSettings?.backupInterval),
     retentionDays: adminSettings?.backupRetentionDays ?? 30,
     zone: adminSettings?.backupZone ?? null,
@@ -57,15 +56,7 @@ function getCronPattern(interval: "daily" | "weekly" | "monthly"): string {
  */
 async function checkAndRunBackup(): Promise<void> {
   try {
-    const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
-
-    if (!autoBackup) {
-      logger.debug({
-        operation: "backup_scheduler_skip",
-        message: "Auto backup is disabled",
-      });
-      return;
-    }
+    const { interval: backupInterval } = await getBackupSettings();
 
     // Check if there's already a running backup
     const runningBackup = await prisma.backup.findFirst({
@@ -126,18 +117,10 @@ export async function startScheduler(): Promise<void> {
     return;
   }
 
-  const { enabled: autoBackup, interval: backupInterval, zone } = await getBackupSettings();
-  // Adopted even while disabled, so `/health` and the admin page name the
+  const { interval: backupInterval, zone } = await getBackupSettings();
+  // Adopted before the schedule starts, so `/health` and the admin page name the
   // zone the NEXT schedule will use.
   setAdminBackupZone(zone);
-
-  if (!autoBackup) {
-    logger.info({
-      operation: "backup_scheduler_disabled",
-      message: "Auto backup is disabled, scheduler not started",
-    });
-    return;
-  }
 
   const cronPattern = getCronPattern(backupInterval);
 
@@ -200,11 +183,7 @@ export async function getScheduleStatus(): Promise<{
     return { running: false };
   }
 
-  const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
-
-  if (!autoBackup) {
-    return { running: false };
-  }
+  const { interval: backupInterval } = await getBackupSettings();
 
   return {
     running: true,

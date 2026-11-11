@@ -31,11 +31,6 @@ let cacheTimestamp = 0;
 function configFrom(
   settings: {
     logLevel?: string | null;
-    maxLogFileSize?: number | null;
-    maxLogFiles?: number | null;
-    logHttpRequests?: boolean | null;
-    logDatabaseQueries?: boolean | null;
-    logParserOperations?: boolean | null;
     logRetentionDays?: number | null;
     debugUntil?: Date | null;
   } | null
@@ -47,11 +42,14 @@ function configFrom(
     logLevel: stored,
     effectiveLogLevel: effective.level,
     logLevelSource: effective.source,
-    maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
-    maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
-    logHttpRequests: settings?.logHttpRequests ?? false,
-    logDatabaseQueries: settings?.logDatabaseQueries ?? false,
-    logParserOperations: settings?.logParserOperations ?? false,
+    maxLogFileSize: LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
+    maxLogFiles: LOGGING_DEFAULTS.MAX_LOG_FILES,
+    // Fixed since settings v3 S6: while the log is verbose (the 24 h button or a
+    // hand-picked level) every category is written; otherwise none of the opt-in
+    // ones. The fields stay in the answer for clients that still read them.
+    logHttpRequests: true,
+    logDatabaseQueries: true,
+    logParserOperations: true,
     logRetentionDays: settings?.logRetentionDays ?? LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
     debugUntil: settings?.debugUntil?.toISOString() ?? null,
   };
@@ -92,7 +90,7 @@ export async function getLoggingConfig(): Promise<LogConfig> {
 
 /** Store new settings and apply them to the running loggers at once. */
 export async function updateLoggingConfig(
-  updates: Partial<Omit<LogConfig, "effectiveLogLevel" | "logLevelSource" | "debugUntil">>,
+  updates: Partial<Pick<LogConfig, "logLevel" | "logRetentionDays">>,
   debugUntil?: Date | null
 ): Promise<LogConfig> {
   await prisma.adminSettings.update({
