@@ -4,6 +4,7 @@ import { registryPage, type RegistryArea } from "../registry";
 import type { MenuGroupDef, PageDef, SectionCondition, SectionDef } from "../surface";
 import type { IconName } from "../../../components/ui/Icon";
 import type { DomainKey } from "../../../shared/domains";
+import type { SettingsLevel } from "../../../store/settingsLevelStore";
 
 /**
  * The settings area (settings rebuild, package 1): ONE area for the account's
@@ -48,8 +49,14 @@ export type AreaPageId =
   | "allgemein"
   | "nutzer"
   | "funktionen"
+  | "email"
   | "buchungen"
+  | "dienste"
   | "sicherungen"
+  | "srvconn"
+  | "datenschutz"
+  | "adressen"
+  | "eigene"
   | "wartung"
   | "stamm";
 
@@ -98,6 +105,8 @@ interface MountOptions {
   matches?: readonly string[];
   /** A server-decided condition the mount waits for (TravTrack's, TravPlan's). */
   when?: SectionCondition;
+  /** An expert mount: a group only the expert level shows (Wartung's, the backups' tuning). */
+  level?: SettingsLevel;
 }
 
 const ABOUT_DEF: SectionDef<string> = {
@@ -129,6 +138,7 @@ function mount(
     fallbackAnchors: options.fallbackAnchors ?? [],
     matches: options.matches ?? [],
     ...(options.when ? { when: options.when } : {}),
+    ...(options.level ? { level: options.level } : {}),
     // Whatever the server side of a mount is, only an admin sees it.
     ...(source === "admin" ? { adminOnly: true } : {}),
     ...(source === "admin" ? { domain: adminPageDomain.get(component) } : {}),
@@ -144,9 +154,15 @@ const A = (id: AdminSectionId, options?: MountOptions & { as?: string }): AreaSe
  * The catalogue page is ONE mount: the 31 catalogue cards, each the target of
  * its own anchor (`#airlabs`), and every row of every card answers `?match=`.
  */
-const SERVICE_SECTIONS = registryPage("dienstek")?.sections ?? [];
-const SERVICE_ANCHORS = SERVICE_SECTIONS.map((s) => s.id);
-const SERVICE_ROWS = SERVICE_SECTIONS.flatMap((s) => s.rows.map((r) => r.id));
+const catalogueOf = (pageId: string): { anchors: string[]; rows: string[] } => {
+  const sections = registryPage(pageId)?.sections ?? [];
+  return {
+    anchors: sections.map((s) => s.id),
+    rows: sections.flatMap((s) => s.rows.map((r) => r.id)),
+  };
+};
+const ACCOUNT_SERVICES = catalogueOf("dienstek");
+const SERVER_SERVICES = catalogueOf("dienste");
 
 /** The headings of the server's mounts: `settingsRows:<page>.sections.<section>`. */
 const ROWS_LABEL = (page: string, section: string): string =>
@@ -202,7 +218,13 @@ const LOC = { when: "locationSourceHeld" } as const;
 
 export const AREA_PAGES: readonly AreaPageDef[] = [
   // ---- Mein Konto
-  page("profil", "user", [P("profile"), P("security"), P("apitokens"), P("deletion")]),
+  page("profil", "user", [
+    P("profile"),
+    P("security"),
+    P("apitokens"),
+    P("visibility"),
+    P("deletion"),
+  ]),
   page("anzeige", "languages", [
     P("display", { as: "language" }),
     P("units"),
@@ -230,7 +252,10 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   ]),
   page("telefone", "smartphone", [P("devices")]),
   page("dienstek", "globe", [
-    P("externalServices", { anchors: SERVICE_ANCHORS, matches: SERVICE_ROWS }),
+    P("externalServices", {
+      anchors: ACCOUNT_SERVICES.anchors,
+      matches: ACCOUNT_SERVICES.rows,
+    }),
   ]),
   page("daten", "database", [
     P("backup", { anchors: ["export"] }),
@@ -256,16 +281,11 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("pl-bereit", "route", [
     A("travTrack", { as: "tpoffer", labelKey: ROWS_LABEL("server", "tpoffer") }),
   ]),
-  // ---- Server (admin only). The pages whose rows sit inside a component that
-  // draws several of the prototype's pages at once (E-Mail, Server-Verbindungen,
-  // Datenschutz and Eigene Server inside the service catalogue; Adressen inside
-  // the general card) are built by phase S5, when those components are split.
+  // ---- Server (admin only). A mount is the component that draws a group of the
+  // prototype's page; the components that used to draw several pages at once (the
+  // general card, the service catalogue) were split in settings v3 S5.
   page("allgemein", "settings", [
-    A("instance", {
-      as: "general",
-      labelKey: ROWS_LABEL("server", "general"),
-      anchors: ["addresses", "passkeys"],
-    }),
+    A("instance", { as: "general", labelKey: ROWS_LABEL("server", "yourServer") }),
     A("users", { as: "access", labelKey: ROWS_LABEL("users", "access") }),
   ]),
   page("nutzer", "user", [
@@ -273,13 +293,54 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     A("invitations", { labelKey: ROWS_LABEL("users", "invitations") }),
   ]),
   page("funktionen", "sliders-horizontal", [
-    A("travTrack", { as: "features", labelKey: ROWS_LABEL("server", "features") }),
-    A("shareLinks", { as: "shareLinksServer" }),
+    A("travTrack", { as: "net", labelKey: ROWS_LABEL("server", "net") }),
+    A("travTrack", { as: "sharing", labelKey: ROWS_LABEL("server", "sharing") }),
+    A("travTrack", { as: "areas", labelKey: ROWS_LABEL("server", "areas") }),
+    A("travTrack", {
+      as: "features",
+      labelKey: ROWS_LABEL("server", "features"),
+      level: "expert",
+    }),
   ]),
+  page("email", "mail", [A("smtp", { as: "smtp", labelKey: ROWS_LABEL("server", "mailServer") })]),
   page("buchungen", "sparkles", [A("parsers", { labelKey: ROWS_LABEL("server", "parsers") })]),
+  page("dienste", "key-round", [
+    A("externalServices", {
+      anchors: SERVER_SERVICES.anchors,
+      matches: SERVER_SERVICES.rows,
+    }),
+  ]),
   page("sicherungen", "database", [
-    A("backups", { as: "automatic", labelKey: ROWS_LABEL("backups", "automatic") }),
-    A("backups", { labelKey: ROWS_LABEL("backups", "backups") }),
+    A("backups", { as: "backups", labelKey: ROWS_LABEL("backups", "backups") }),
+    A("backups", {
+      as: "automatic",
+      labelKey: ROWS_LABEL("backups", "automatic"),
+      level: "expert",
+    }),
+  ]),
+  // Only while the server connects to other servers (the switch on Funktionen).
+  page("srvconn", "link-2", [
+    A("federation", {
+      as: "connections",
+      labelKey: ROWS_LABEL("server", "connections"),
+      when: "federationOn",
+    }),
+  ]),
+  page("datenschutz", "shield", [
+    A("usageStats", { as: "stats", labelKey: ROWS_LABEL("server", "statistics") }),
+    A("push", { as: "push", labelKey: ROWS_LABEL("server", "notifications") }),
+  ]),
+  // The expert pages: every mount is expert, so the page is.
+  page("adressen", "globe", [
+    A("instance", {
+      as: "addresses",
+      labelKey: ROWS_LABEL("server", "addressesPage"),
+      anchors: ["passkeys"],
+      level: "expert",
+    }),
+  ]),
+  page("eigene", "anchor", [
+    A("templateRepo", { as: "own", labelKey: ROWS_LABEL("server", "ownServers"), level: "expert" }),
   ]),
   page("wartung", "clock", [
     A("logging", { labelKey: ROWS_LABEL("maintenance", "logging") }),

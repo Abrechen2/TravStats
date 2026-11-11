@@ -1,3 +1,4 @@
+import { ACCOUNT_CARDS } from "../../../components/Services/serviceCards";
 import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../../lib/mapRoutes";
 import { normalizeSectionId } from "../../../lib/sectionAliases";
 import type { DomainKey } from "../../../shared/domains";
@@ -62,26 +63,46 @@ interface Target {
   expert?: boolean;
 }
 
-const SERVICE_OF_SECTION: Readonly<Record<string, string>> = {
-  usageStats: "usageStats",
-  federation: "federation",
-  push: "push",
-  templateRepo: "updatesTemplates",
-  smtp: "smtp",
-  webdav: "webdav",
+/**
+ * The old admin sections that were cards of the service catalogue, and where
+ * their content is since settings v3 S5: the cards that got a page of their own,
+ * or the catalogue's server page for the rest.
+ */
+const SERVICE_TARGETS: Readonly<Record<string, Target>> = {
+  usageStats: { page: "datenschutz", section: "stats" },
+  federation: { page: "funktionen", section: "sharing", match: "fedon" },
+  push: { page: "datenschutz", section: "push" },
+  templateRepo: { page: "eigene", match: "tplrepo" },
+  smtp: { page: "email" },
+  webdav: { page: "dienste", service: "webdav" },
 };
+
+/** The catalogue cards that moved to a page of their own, by card id: `?service=` names them. */
+const MOVED_CARD_TARGETS: Readonly<Record<string, Target>> = {
+  smtp: { page: "email" },
+  push: { page: "datenschutz", section: "push" },
+  usageStats: { page: "datenschutz", section: "stats" },
+  federation: { page: "funktionen", section: "sharing", match: "fedon" },
+  geocoder: { page: "eigene", match: "photon" },
+  selfHostedRouting: { page: "eigene", match: "osrm" },
+  updatesTemplates: { page: "eigene", match: "tplrepo" },
+};
+
+/** The two pages of the service catalogue: the account's half and the server's. */
+const SERVICE_PAGES: ReadonlySet<string> = new Set(["dienstek", "dienste"]);
+const ACCOUNT_CARD_IDS: ReadonlySet<string> = new Set(ACCOUNT_CARDS.map((c) => c.id));
 
 /** Old admin section -> its place (§6.1). A page address without a hash drops it. */
 const ADMIN_TARGETS: Readonly<Record<string, Target>> = {
   instance: { page: "allgemein", section: "general" },
   travTrack: { page: "tt-bereit", section: "ttoffer", match: "ttoffer" },
   travPlan: { page: "pl-bereit", section: "tpoffer", match: "tpoffer" },
-  shareLinks: { page: "funktionen", section: "shareLinksServer", match: "linkserlaubt" },
+  shareLinks: { page: "funktionen", section: "sharing", match: "linkserlaubt" },
   importMode: { page: "funktionen", section: "features", match: "importmodus" },
   about: { page: "ueber" },
   users: { page: "nutzer", section: "accounts" },
   invitations: { page: "nutzer", section: "invitations" },
-  externalServices: { page: "dienstek" },
+  externalServices: { page: "dienste" },
   parsers: { page: "buchungen", section: "parsers" },
   backups: { page: "sicherungen" },
   timeModel: { page: "wartung", section: "timeModel" },
@@ -114,7 +135,17 @@ const OLD_PAGES: Readonly<Record<string, readonly AreaPageId[]>> = {
   loyalty: ["treue"],
   data: ["daten"],
   services: ["dienstek"],
-  server: ["allgemein", "funktionen", "buchungen", "tt-bereit", "pl-bereit"],
+  server: [
+    "allgemein",
+    "adressen",
+    "funktionen",
+    "email",
+    "buchungen",
+    "datenschutz",
+    "eigene",
+    "tt-bereit",
+    "pl-bereit",
+  ],
   users: ["nutzer", "allgemein"],
   backups: ["sicherungen"],
   maintenance: ["wartung"],
@@ -125,7 +156,7 @@ const OLD_PAGES: Readonly<Record<string, readonly AreaPageId[]>> = {
 /** The page id TravTrack replaced; its addresses live on in bookmarks and changelogs. */
 const OLD_LOCATION_PAGE = "location";
 
-const GEOCODER_TARGET: Target = { page: "dienstek", service: "geocoder", expert: true };
+const GEOCODER_TARGET: Target = { page: "eigene", match: "photon" };
 
 const first = (...values: Array<string | null | undefined>): string | null =>
   values.find((v) => v) ?? null;
@@ -147,8 +178,8 @@ function adminTarget(
     findAdminPage("instance")!;
   // Without a hash, the page stands for its first section (`/admin/parsers`).
   const id = owner && raw ? raw : page.sections[0].id;
-  const service = lookup(SERVICE_OF_SECTION, id);
-  if (service) return { page: "dienstek", service };
+  const service = lookup(SERVICE_TARGETS, id);
+  if (service) return service;
   return lookup(ADMIN_TARGETS, id) ?? { page: "allgemein", section: "general" };
 }
 
@@ -303,6 +334,23 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
 
   let page = target.page ?? DEFAULT_AREA_PAGE;
   let sectionId = target.section;
+  let matchRow = first(target.match, params.get("match"));
+  let service = first(target.service, SERVICE_PAGES.has(page) ? params.get("service") : null);
+  // A card of the catalogue names a place: the ones with a page of their own
+  // since settings v3 S5 send the address there, and a card only the server has
+  // is on the server's half, not the account's.
+  if (service && SERVICE_PAGES.has(page)) {
+    const moved = lookup(MOVED_CARD_TARGETS, service);
+    if (moved) {
+      page = moved.page ?? page;
+      sectionId = moved.section;
+      matchRow = moved.match ?? null;
+      service = null;
+    } else if (page === "dienstek" && !ACCOUNT_CARD_IDS.has(service)) {
+      if (input.isAdmin) page = "dienste";
+      else service = null;
+    }
+  }
   let adminOnly = fromAdmin && !input.isAdmin && page !== "ueber";
   let fallback = false;
   if (ADMIN_AREA_PAGES.has(page) && !input.isAdmin) {
@@ -319,12 +367,10 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
 
   const query = new URLSearchParams();
   if (fallback) return { to: `/settings/${page}`, adminOnly };
-  const service = first(target.service, page === "dienstek" ? params.get("service") : null);
   if (service) query.set("service", service);
   const user = page === "nutzer" ? params.get("user") : null;
   if (user) query.set("user", user);
-  const match = first(target.match, params.get("match"));
-  if (match) query.set("match", match);
+  if (matchRow) query.set("match", matchRow);
   if (target.expert || params.get("expert") === "1") query.set("expert", "1");
   // The map's gear carries the shown range to export and delete.
   if (page.startsWith("tt-")) {

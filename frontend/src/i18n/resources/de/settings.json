@@ -1329,7 +1329,13 @@
       "stamm": "Stammdaten",
       "unterkuenfte": "Unterkünfte",
       "tt-bereit": "Bereitstellung",
-      "pl-bereit": "Bereitstellung"
+      "pl-bereit": "Bereitstellung",
+      "email": "E-Mail",
+      "dienste": "Dienste",
+      "srvconn": "Server-Verbindungen",
+      "datenschutz": "Datenschutz",
+      "adressen": "Adressen & Passkeys",
+      "eigene": "Eigene Server"
     },
     "menu": {
       "konto": "Mein Konto",
@@ -1445,7 +1451,8 @@
         "jump": "Quelle wählen"
       },
       "aiNotAllowed": {
-        "reason": "Der Admin hat keine KI freigegeben."
+        "reason": "Der Admin hat keine KI freigegeben.",
+        "jump": "Zu den Diensten"
       },
       "noFederation": {
         "reason": "Der Admin hat andere Server nicht freigegeben."
@@ -1497,6 +1504,10 @@
       },
       "publicUrlMissing": {
         "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
+      },
+      "internet": {
+        "reason": "Aus, solange „Server darf externe Dienste abfragen“ ausgeschaltet ist.",
+        "jump": "Einschalten"
       }
     },
     "number": {
@@ -1698,6 +1709,18 @@
       "name": "Pläne mit Freunden teilen",
       "sub": "Läuft über die Verbindung zu jedem Freund",
       "jump": "Freunde"
+    },
+    "displayCurrency": {
+      "name": "Anzeigewährung",
+      "sub": "Wie Beträge angezeigt werden. Summen rechnest du weiter in der Basiswährung."
+    },
+    "planAi": {
+      "name": "KI-Vorschläge in Plänen",
+      "sub": "Die KI darf zu deinen Plänen Vorschläge machen"
+    },
+    "planWeather": {
+      "name": "Wetter in Plänen",
+      "sub": "Vorhersage zu den Orten und Tagen eines Plans"
     }
   },
   "location": {
@@ -2075,5 +2098,13 @@
   },
   "lodgingRatings": {
     "title": "Bewertung"
+  },
+  "visibility": {
+    "title": "Sichtbarkeit",
+    "findable": {
+      "label": "Für andere Server auffindbar",
+      "sub": "Menschen auf verbundenen Servern dürfen dir eine Freundschaftsanfrage schicken"
+    },
+    "loadFailed": "Ich konnte nicht lesen, ob du auffindbar bist."
   }
 }

@@ -117,6 +117,21 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...actual,
+    // Datenschutz reads the statistics consent and the push registration on mount.
+    usageStatsApi: {
+      ...actual.usageStatsApi,
+      get: vi.fn().mockResolvedValue({ consent: null, endpointConfigured: true, installId: null }),
+    },
+    pushRelayApi: {
+      ...actual.pushRelayApi,
+      get: vi.fn().mockResolvedValue({
+        pushEnabled: false,
+        pushRelayUrl: "https://push.example",
+        registered: false,
+        pausedUntil: null,
+        consentAt: null,
+      }),
+    },
     backupApi: {
       ...actual.backupApi,
       list: vi.fn().mockResolvedValue({ backups: [] }),
@@ -200,7 +215,7 @@ const renderAdmin = (entry = "/settings/allgemein") =>
   );
 
 /** The Server page's first section; awaiting it means the page has rendered. */
-const INSTANCE = "settingsRows:server.sections.general";
+const INSTANCE = "settingsRows:server.sections.yourServer";
 
 describe("SettingsPage, the server's pages — one page per menu entry, its sections as anchors", () => {
   beforeEach(() => {
@@ -258,6 +273,10 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
       .map((a) => a.getAttribute("href"));
     expect(pages).toContain("/settings/nutzer");
     expect(pages).toContain("/settings/wartung");
+    expect(pages).toContain("/settings/adressen");
+    expect(pages).toContain("/settings/eigene");
+    expect(pages).toContain("/settings/email");
+    expect(pages).toContain("/settings/dienste");
     expect(within(menu).queryAllByRole("button")).toHaveLength(0);
   }, 20_000); // renders the whole server area; over 5 s under a full parallel run
 
@@ -353,6 +372,11 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
     expect(pages).toContain("/settings/nutzer");
     expect(pages).not.toContain("/settings/wartung");
     expect(pages).not.toContain("/settings/stamm");
+    // The two other expert pages of the server area (settings v3 S5).
+    expect(pages).not.toContain("/settings/adressen");
+    expect(pages).not.toContain("/settings/eigene");
+    // Server-Verbindungen waits for the switch on Funktionen, which is off here.
+    expect(pages).not.toContain("/settings/srvconn");
     expect(document.querySelector('[data-expert-note="pages"]')).toHaveTextContent(
       "settings:level.morePages"
     );
@@ -367,15 +391,32 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
     await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
   });
 
-  // An old /admin link to a service card lands on that card of the services
-  // page, opened — the expert fields it holds are part of the card now.
-  it("opens the federation card an old /admin link names, on the services page", async () => {
+  // The federation card of the service catalogue is the switch on Funktionen and the
+  // page "Server-Verbindungen" (settings v3 S5); the old address lands on the switch.
+  it("sends an old /admin link to the federation card to its switch on Funktionen", async () => {
     renderAdmin("/admin?section=federation");
+    expect(await findNamed("region", "settingsRows:server.sections.sharing")).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.funktionen");
+    expect(document.querySelector('[data-service-card-id="federation"]')).toBeNull();
+  });
+
+  it("opens the server's own page of the catalogue, with the cards of the prototype", async () => {
+    renderAdmin("/admin/externalServices?service=immich");
     await waitFor(() =>
-      expect(document.querySelector('[data-service-card-id="federation"]')).toBeInTheDocument()
+      expect(document.querySelector('[data-service-card-id="immich"]')).toBeInTheDocument()
     );
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.dienstek");
-    expect(document.querySelector('[data-service-card="open"]')).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.dienste");
+    // The geocoder, the mail card and the others with a page of their own are not on the grid.
+    for (const id of [
+      "smtp",
+      "push",
+      "usageStats",
+      "federation",
+      "geocoder",
+      "selfHostedRouting",
+    ]) {
+      expect(document.querySelector(`[data-service-card-id="${id}"]`), id).toBeNull();
+    }
   });
 
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {

@@ -1329,7 +1329,13 @@
       "stamm": "Reference data",
       "unterkuenfte": "Stays",
       "tt-bereit": "Provisioning",
-      "pl-bereit": "Provisioning"
+      "pl-bereit": "Provisioning",
+      "email": "E-mail",
+      "dienste": "Services",
+      "srvconn": "Server connections",
+      "datenschutz": "Privacy",
+      "adressen": "Addresses & passkeys",
+      "eigene": "Own servers"
     },
     "menu": {
       "konto": "My account",
@@ -1445,7 +1451,8 @@
         "jump": "Choose source"
       },
       "aiNotAllowed": {
-        "reason": "Your admin hasn't enabled AI."
+        "reason": "Your admin hasn't enabled AI.",
+        "jump": "To the services"
       },
       "noFederation": {
         "reason": "Your admin hasn't allowed other servers."
@@ -1497,6 +1504,10 @@
       },
       "publicUrlMissing": {
         "reason": "Still missing. Until then invitations, e-mails and calendars point to localhost."
+      },
+      "internet": {
+        "reason": "Off while “Server may ask external services” is switched off.",
+        "jump": "Switch on"
       }
     },
     "number": {
@@ -1698,6 +1709,18 @@
       "name": "Share plans with friends",
       "sub": "Works through the connection to each friend",
       "jump": "Friends"
+    },
+    "displayCurrency": {
+      "name": "Display currency",
+      "sub": "How amounts are shown. Totals are still converted into the base currency."
+    },
+    "planAi": {
+      "name": "AI suggestions in plans",
+      "sub": "The AI may make suggestions for your plans"
+    },
+    "planWeather": {
+      "name": "Weather in plans",
+      "sub": "Forecast for the places and days of a plan"
     }
   },
   "location": {
@@ -2075,5 +2098,13 @@
   },
   "lodgingRatings": {
     "title": "Rating"
+  },
+  "visibility": {
+    "title": "Visibility",
+    "findable": {
+      "label": "Findable from other servers",
+      "sub": "People on connected servers may send you a friend request"
+    },
+    "loadFailed": "I couldn't read whether you are findable."
   }
 }

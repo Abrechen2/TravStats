@@ -77,6 +77,20 @@ vi.mock("@/lib/api/companions", async (importOriginal) => ({
   },
 }));
 
+// Profil › Sichtbarkeit asks whether other servers are allowed (settings v3 S5).
+vi.mock("@/lib/api/sharingRemote", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/sharingRemote")>()),
+  sharingRemoteApi: {
+    status: vi.fn().mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: false,
+    }),
+    getFindable: vi.fn().mockResolvedValue(false),
+    setFindable: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/twoFactor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/twoFactor")>();
   return {

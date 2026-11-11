@@ -78,7 +78,8 @@ export function pageLevel(page: PageDef): SettingsLevel {
 }
 
 /** The server-decided conditions a section may wait for (`SectionDef.when`). */
-export type SectionCondition = "travTrackHeld" | "travPlanOffered" | "locationSourceHeld";
+export type SectionCondition =
+  "travTrackHeld" | "travPlanOffered" | "locationSourceHeld" | "federationOn";
 
 export interface SectionVisibilityInput {
   level: SettingsLevel;

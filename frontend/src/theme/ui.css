@@ -411,3 +411,14 @@
     max-height: 90vh;
   }
 }
+
+/* The services grid (settings v3 S5): closed cards are tiles side by side; the open one takes the row. */
+.svc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--ts-space-md);
+  align-items: start;
+}
+.svc-grid > .svc-tile:has([data-service-card="open"]) {
+  grid-column: 1 / -1;
+}

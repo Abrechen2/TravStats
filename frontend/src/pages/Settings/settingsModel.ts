@@ -19,6 +19,7 @@ export type SettingsSectionId =
   | "deletion"
   | "planning"
   | "security"
+  | "visibility"
   | "devices"
   | "notifications"
   | "apitokens"
@@ -68,6 +69,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("profile"),
   section("home"),
   section("security"),
+  section("visibility"),
   // Behind its beta key; `?section=devices` still shows it, because a pairing
   // code has no other place to be minted while the key is closed.
   section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),

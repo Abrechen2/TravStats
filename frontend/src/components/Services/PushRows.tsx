@@ -10,7 +10,6 @@ import {
   InputControl,
   SettingItem,
   SettingWriteError,
-  StatusValue,
   SwitchControl,
   useSettingWrite,
 } from "../ui/settings";
@@ -22,11 +21,14 @@ const PRIVACY_URL = "https://www.abrechen2.de/travstats/datenschutz/";
 const when = (iso: string): string =>
   new Date(iso).toLocaleString(appLocale(), { timeZone: todayZoneNow() });
 
-/** Push: the switch with its consent text, the relay address (Expert), and the reset. */
+/**
+ * Push (Datenschutz › Mitteilungen): the switch with its consent text and the day
+ * it was given, the relay address and the reset (both Expert).
+ */
 export default function PushRows(): JSX.Element | null {
   const { t } = useTranslation(["settingsRows", "pushRelay"]);
   const demo = useDemoLock();
-  const expert = useExpertRows(1);
+  const expert = useExpertRows(2);
   const { data, setData, failed } = useLoaded<PushRelayState>(() => pushRelayApi.get());
   const [url, setUrl] = useState<string | null>(null);
   const [urlError, setUrlError] = useState(false);
@@ -75,15 +77,12 @@ export default function PushRows(): JSX.Element | null {
             {t("pushRelay:privacyLink")}
           </a>
         </div>
+        {data.pushEnabled && data.consentAt ? (
+          <p role="status" className="t-caption" style={{ margin: 0 }}>
+            {t("settingsRows:services.rows.pushconsent.t")}: {when(data.consentAt)}
+          </p>
+        ) : null}
       </SettingItem>
-      {data.pushEnabled && data.consentAt ? (
-        <SettingItem
-          title={t("settingsRows:services.rows.pushconsent.t")}
-          help={t("settingsRows:services.rows.pushconsent.h")}
-          scope="allAccounts"
-          control={<StatusValue>{when(data.consentAt)}</StatusValue>}
-        />
-      ) : null}
       {expert ? (
         <SettingItem
           title={t("settingsRows:services.rows.pushrelay.t")}
@@ -102,25 +101,28 @@ export default function PushRows(): JSX.Element | null {
           }
         />
       ) : null}
-      <SettingItem
-        title={t("settingsRows:services.rows.pushreset.t")}
-        sub={data.registered ? t("pushRelay:registered") : t("pushRelay:notRegistered")}
-        locked={demo}
-        control={
-          <ActionControl
-            danger
-            label={t("settingsRows:services.rows.pushreset.btn")}
-            busy={!data.registered && !pausedUntil}
-            onClick={() => setResetting(true)}
-          />
-        }
-      >
-        {pausedUntil ? (
-          <p className="t-caption" style={{ margin: 0 }}>
-            {t("pushRelay:pausedUntil", { time: when(pausedUntil) })}
-          </p>
-        ) : null}
-      </SettingItem>
+      {expert ? (
+        <SettingItem
+          title={t("settingsRows:services.rows.pushreset.t")}
+          expert
+          sub={data.registered ? t("pushRelay:registered") : t("pushRelay:notRegistered")}
+          locked={demo}
+          control={
+            <ActionControl
+              danger
+              label={t("settingsRows:services.rows.pushreset.btn")}
+              busy={!data.registered && !pausedUntil}
+              onClick={() => setResetting(true)}
+            />
+          }
+        >
+          {pausedUntil ? (
+            <p className="t-caption" style={{ margin: 0 }}>
+              {t("pushRelay:pausedUntil", { time: when(pausedUntil) })}
+            </p>
+          ) : null}
+        </SettingItem>
+      ) : null}
       <ConfirmDialog
         open={resetting}
         title={t("settingsRows:services.dialogs.pushreset.title")}

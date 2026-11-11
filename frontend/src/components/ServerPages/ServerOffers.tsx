@@ -14,6 +14,7 @@ import BetaFeatureList from "../Admin/BetaFeatureList";
 import Button from "../ui/Button";
 import { Select } from "../ui/Field";
 import {
+  ActionControl,
   ChoiceControl,
   ErrorLine,
   SettingItem,
@@ -45,7 +46,7 @@ export default function ServerOffers({ part = "all" }: { part?: OffersPart }): J
  * offer and TravPlan's offer with its limits each have a page of their own
  * ("Bereitstellung"), what is left is "Funktionen". `all` is the old page.
  */
-export type OffersPart = "all" | "rest" | "track" | "plan";
+export type OffersPart = "all" | "rest" | "track" | "plan" | "net" | "areas";
 
 /** Where the beta switch lives, for the Bereitstellung pages that do not draw it. */
 const BETA_SWITCH_PATH = "/settings/funktionen?match=beta";
@@ -66,6 +67,8 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   const showTrack = part === "all" || part === "track";
   const showPlan = part === "all" || part === "plan";
   const showRest = part === "all" || part === "rest";
+  const showNet = part === "net";
+  const showAreas = part === "areas";
   // The two plan limits are the expert rows of this page.
   const expert = useExpertRows(showPlan ? 2 : 0);
   const trackOffered = isFeatureVisible("travTrack");
@@ -100,6 +103,15 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   const beta = useSettingWrite<boolean>("server:beta", settings.betaFeaturesEnabled, async (on) => {
     await patch({ betaFeaturesEnabled: on });
   });
+  // Settings v3 S2: one switch for everything that asks the internet. A server
+  // answer without the field (an older backend) is an instance that still does.
+  const internet = useSettingWrite<boolean>(
+    "server:internet",
+    settings.internetEnabled !== false,
+    async (on) => {
+      await patch({ internetEnabled: on });
+    }
+  );
   const track = useSettingWrite<boolean>("server:ttoffer", trackSaved ?? false, async (on) => {
     const next = await travTrackApi.setConfig({ enabled: on });
     setTrackSaved(next.enabled);
@@ -149,6 +161,7 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
     },
   };
 
+  const net = row("internet");
   const b = row("beta");
   const tt = row("ttoffer");
   const tp = row("tpoffer");
@@ -176,8 +189,38 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
       ) : null}
     </SettingItem>
   );
+  const areaLink = (id: "l_tt" | "l_pl", to: string): JSX.Element => {
+    const copy = row(id);
+    return (
+      <SettingItem
+        title={copy.title}
+        sub={copy.sub}
+        scope="allAccounts"
+        control={<ActionControl label={copy.btn ?? copy.title} onClick={() => go(to)} />}
+      />
+    );
+  };
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      {showNet ? (
+        <SettingItem
+          title={net.title}
+          sub={net.sub}
+          help={net.help}
+          scope="allAccounts"
+          controlId="server-internet-switch"
+          save={internet}
+          control={
+            <SwitchControl checked={internet.value} onChange={internet.choose} label={net.title} />
+          }
+        />
+      ) : null}
+      {showAreas ? (
+        <>
+          {areaLink("l_tt", "/settings/tt-bereit")}
+          {areaLink("l_pl", "/settings/pl-bereit")}
+        </>
+      ) : null}
       {showRest ? (
         <SettingItem
           title={b.title}

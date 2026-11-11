@@ -21,6 +21,8 @@ import FederationPeerForm, { type PeerValues } from "../Admin/FederationPeerForm
 import FederationSetupChecklist, { CONTROL } from "../Admin/FederationSetupChecklist";
 import FederationAdmissionCards from "../Admin/FederationAdmissionCards";
 import FederationPeerList from "../Admin/FederationPeerList";
+import { useFederationStatus } from "../../store/federationStatusStore";
+import { useDialogCopy } from "../Settings/rowCopy";
 import { useLoaded } from "./useLoaded";
 import { useDemoLock } from "./useLockFor";
 
@@ -31,9 +33,19 @@ const NS = "federation";
  * Switches here are not the immediate rows of other cards: each call returns
  * the whole state, so they run one at a time (`busy`) and say their own failure.
  */
-export default function FederationRows(): JSX.Element | null {
+export default function FederationRows({
+  part = "all",
+}: {
+  /**
+   * `switch`: only "Mit anderen Servern verbinden" (Funktionen → Teilen).
+   * `connections`: everything but the switch (the page "Server-Verbindungen").
+   * `all`: the old card.
+   */
+  part?: "all" | "switch" | "connections";
+}): JSX.Element | null {
   const { t } = useTranslation(["settingsRows", "admin"]);
   const demo = useDemoLock();
+  const dialog = useDialogCopy();
   const { isFeatureVisible } = useBetaFeatures();
   const expert = useExpertRows(1);
   const tripSharingVisible = isFeatureVisible("federatedTripSharing");
@@ -47,6 +59,7 @@ export default function FederationRows(): JSX.Element | null {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [rotated, setRotated] = useState(false);
   const [confirmKey, setConfirmKey] = useState(false);
+  const [suspending, setSuspending] = useState<string | null>(null);
 
   // Every call answers with the whole state, so two at once would race: they run
   // one after the other, each reading the origin and the switch as they are THEN.
@@ -65,6 +78,8 @@ export default function FederationRows(): JSX.Element | null {
         // The next queued job reads this before React has rendered it.
         latest.current = { ...latest.current, state: next };
         setData(next);
+        // The menu shows "Server-Verbindungen" only while the switch is on.
+        useFederationStatus.getState().set(next.enabled);
         return true;
       } catch (error) {
         logger.error("A federation settings action failed:", error);
@@ -80,6 +95,8 @@ export default function FederationRows(): JSX.Element | null {
 
   if (failed) return <ErrorLine>{t("admin:federation.error.generic")}</ErrorLine>;
   if (!state) return null;
+  const showSwitch = part !== "connections";
+  const showRest = part !== "switch";
   const readOnly = state.source === "env";
   const shownOrigin = origin ?? state.origin ?? "";
   const lock =
@@ -95,7 +112,7 @@ export default function FederationRows(): JSX.Element | null {
 
   return (
     <>
-      {tripSharingVisible || isFeatureVisible("comparison") ? (
+      {showRest && (tripSharingVisible || isFeatureVisible("comparison")) ? (
         <FederationSetupChecklist
           tripSharing={tripSharingVisible}
           state={state}
@@ -104,27 +121,29 @@ export default function FederationRows(): JSX.Element | null {
           onError={setErrorKey}
         />
       ) : null}
-      <SettingItem
-        controlId={CONTROL.federation}
-        title={t("settingsRows:services.rows.fedon.t")}
-        sub={t("admin:federation.enabledSub")}
-        scope="allAccounts"
-        locked={lock}
-        control={
-          <SwitchControl
-            checked={state.enabled}
-            onChange={(on) =>
-              void run(() =>
-                federationAdminApi.update({
-                  enabled: on,
-                  origin: latest.current.origin ?? latest.current.state?.origin ?? "",
-                })
-              )
-            }
-          />
-        }
-      />
-      {expert || !state.origin ? (
+      {showSwitch ? (
+        <SettingItem
+          controlId={CONTROL.federation}
+          title={t("settingsRows:services.rows.fedon.t")}
+          sub={t("admin:federation.enabledSub")}
+          scope="allAccounts"
+          locked={lock}
+          control={
+            <SwitchControl
+              checked={state.enabled}
+              onChange={(on) =>
+                void run(() =>
+                  federationAdminApi.update({
+                    enabled: on,
+                    origin: latest.current.origin ?? latest.current.state?.origin ?? "",
+                  })
+                )
+              }
+            />
+          }
+        />
+      ) : null}
+      {(showRest && expert) || !state.origin ? (
         <SettingItem
           controlId={CONTROL.origin}
           title={t("settingsRows:services.rows.fedorigin.t")}
@@ -155,7 +174,7 @@ export default function FederationRows(): JSX.Element | null {
           }
         />
       ) : null}
-      {state.fingerprint && tripSharingVisible ? (
+      {showRest && state.fingerprint && tripSharingVisible ? (
         <SettingItem
           controlId="federation-trip-sharing"
           title={t("settingsRows:services.rows.fedtrips.t")}
@@ -170,44 +189,46 @@ export default function FederationRows(): JSX.Element | null {
           }
         />
       ) : null}
-      <SettingItem
-        title={t("settingsRows:services.rows.fedkey.t")}
-        help={t("settingsRows:services.rows.fedkey.h")}
-        scope="allAccounts"
-        locked={lock}
-        control={
-          <span id={CONTROL.key} tabIndex={-1}>
-            <ActionControl
-              label={t("settingsRows:services.rows.fedkey.btn")}
-              busy={busy}
-              onClick={() => (state.hasKey ? setConfirmKey(true) : void generate())}
-            />
-          </span>
-        }
-      >
-        {state.fingerprint ? (
-          <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("admin:federation.fingerprint")}
+      {showRest ? (
+        <SettingItem
+          title={t("settingsRows:services.rows.fedkey.t")}
+          help={t("settingsRows:services.rows.fedkey.h")}
+          scope="allAccounts"
+          locked={lock}
+          control={
+            <span id={CONTROL.key} tabIndex={-1}>
+              <ActionControl
+                label={t("settingsRows:services.rows.fedkey.btn")}
+                busy={busy}
+                onClick={() => (state.hasKey ? setConfirmKey(true) : void generate())}
+              />
+            </span>
+          }
+        >
+          {state.fingerprint ? (
+            <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+              <p className="t-caption" style={{ margin: 0 }}>
+                {t("admin:federation.fingerprint")}
+              </p>
+              <code className="break-all">{state.fingerprint}</code>
+              {state.publicKey ? (
+                <details>
+                  <summary className="t-label-mono cursor-pointer">
+                    {t("admin:federation.showPublicKey")}
+                  </summary>
+                  <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
+          {rotated ? (
+            <p role="status" className="t-caption" style={{ margin: 0 }}>
+              {t("admin:federation.rotatedHint")}
             </p>
-            <code className="break-all">{state.fingerprint}</code>
-            {state.publicKey ? (
-              <details>
-                <summary className="t-label-mono cursor-pointer">
-                  {t("admin:federation.showPublicKey")}
-                </summary>
-                <pre className="t-caption whitespace-pre-wrap break-all">{state.publicKey}</pre>
-              </details>
-            ) : null}
-          </div>
-        ) : null}
-        {rotated ? (
-          <p role="status" className="t-caption" style={{ margin: 0 }}>
-            {t("admin:federation.rotatedHint")}
-          </p>
-        ) : null}
-      </SettingItem>
-      {state.fingerprint ? (
+          ) : null}
+        </SettingItem>
+      ) : null}
+      {showRest && state.fingerprint ? (
         <>
           <FederationAdmissionCards
             disabled={Boolean(demo)}
@@ -223,7 +244,7 @@ export default function FederationRows(): JSX.Element | null {
               busy={busy}
               locked={Boolean(demo)}
               onVerify={(peer) => void run(() => federationAdminApi.verifyPeer(peer))}
-              onSuspend={(peer) => void run(() => federationAdminApi.suspendPeer(peer))}
+              onSuspend={(peer) => setSuspending(peer)}
             />
             <details data-testid="federation-advanced">
               <summary className="t-label-mono cursor-pointer">
@@ -265,17 +286,25 @@ export default function FederationRows(): JSX.Element | null {
       {errorKey ? <ErrorLine>{t(errorKey)}</ErrorLine> : null}
       <ConfirmDialog
         open={confirmKey}
-        title={t("admin:federation.rotateConfirm.title")}
-        affects={t("settingsRows:services.dialogs.fedkey.affects")}
-        amount={t("settingsRows:services.dialogs.fedkey.amount")}
-        after={t("admin:federation.rotateConfirm.message")}
-        confirmLabel={t("admin:federation.rotateConfirm.confirm")}
+        {...dialog("fedkey", { count: state.peers.filter((p) => p.enabled).length })}
         busy={busy}
         onConfirm={() => {
           setConfirmKey(false);
           void generate();
         }}
         onCancel={() => setConfirmKey(false)}
+      />
+      {/* Not trusting a server any more cuts both directions at once, so it asks. */}
+      <ConfirmDialog
+        open={suspending !== null}
+        {...dialog("peerremove", { name: suspending ?? "" })}
+        busy={busy}
+        onConfirm={() => {
+          const origin = suspending;
+          setSuspending(null);
+          if (origin) void run(() => federationAdminApi.suspendPeer(origin));
+        }}
+        onCancel={() => setSuspending(null)}
       />
     </>
   );

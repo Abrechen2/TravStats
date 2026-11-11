@@ -12,6 +12,11 @@ vi.mock("../../../hooks/useTravPlanVisible", () => ({ useTravPlanInstanceOn: () 
 const demo = vi.hoisted(() => ({ current: false }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.current }));
 const getProvider = vi.hoisted(() => vi.fn());
+const federation = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock("../../../lib/api/federationAdmin", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api/federationAdmin")>()),
+  federationAdminApi: federation,
+}));
 vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/locationProvider")>()),
   locationProviderApi: { get: getProvider, set: vi.fn() },
@@ -19,6 +24,8 @@ vi.mock("../../../lib/api/locationProvider", async (importOriginal) => ({
 
 import { dawarichSourceHeld, useSectionConditions } from "../useSectionConditions";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
+import { useAuthStore } from "../../../store/authStore";
+import { useFederationStatus } from "../../../store/federationStatusStore";
 
 const provider = (
   kind: LocationProviderSettings["kind"],
@@ -95,5 +102,66 @@ describe("useSectionConditions: the TravTrack area for an account on Dawarich al
     renderHook(() => useSectionConditions());
     await act(async () => {});
     expect(getProvider).not.toHaveBeenCalled();
+  });
+});
+
+describe("useSectionConditions: Server-Verbindungen waits for the federation switch (settings v3 S5)", () => {
+  const signIn = (isAdmin: boolean): void => {
+    useAuthStore.setState({ user: { id: "u1", username: "u", isAdmin } as never });
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    demo.current = false;
+    caps.current = NOT_OFFERED;
+    getProvider.mockResolvedValue(provider("none", false));
+    useLocationProviderStore.getState().reset();
+    useFederationStatus.setState({ enabled: null });
+  });
+  afterEach(() => {
+    cleanup();
+    useAuthStore.setState({ user: null });
+  });
+
+  it("is closed until the admin's answer is in, then follows it", async () => {
+    signIn(true);
+    federation.get.mockResolvedValue({ enabled: true });
+    const { result } = renderHook(() => useSectionConditions());
+    expect(result.current.federationOn).toBe(false);
+    await waitFor(() => expect(result.current.federationOn).toBe(true));
+  });
+
+  it("stays closed when the switch is off", async () => {
+    signIn(true);
+    federation.get.mockResolvedValue({ enabled: false });
+    const { result } = renderHook(() => useSectionConditions());
+    await waitFor(() => expect(federation.get).toHaveBeenCalled());
+    expect(result.current.federationOn).toBe(false);
+  });
+
+  it("stays closed, and does not ask the admin's endpoint, for an account that is no admin", async () => {
+    signIn(false);
+    useFederationStatus.setState({ enabled: true });
+    const { result } = renderHook(() => useSectionConditions());
+    await waitFor(() => expect(getProvider).toHaveBeenCalled());
+    await act(async () => {});
+    expect(result.current.federationOn).toBe(false);
+    expect(federation.get).not.toHaveBeenCalled();
+  });
+
+  it("stays closed when the answer could not be read: unknown is not on", async () => {
+    signIn(true);
+    federation.get.mockRejectedValue(new Error("down"));
+    const { result } = renderHook(() => useSectionConditions());
+    await waitFor(() => expect(federation.get).toHaveBeenCalled());
+    expect(result.current.federationOn).toBe(false);
+  });
+
+  it("follows the switch at once when it is turned off on Funktionen", async () => {
+    signIn(true);
+    federation.get.mockResolvedValue({ enabled: true });
+    const { result } = renderHook(() => useSectionConditions());
+    await waitFor(() => expect(result.current.federationOn).toBe(true));
+    act(() => useFederationStatus.getState().set(false));
+    expect(result.current.federationOn).toBe(false);
   });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { cardStatus } from "../cardStatus";
-import { SERVICE_CARDS, SERVICE_GROUPS } from "../serviceCards";
+import {
+  ACCOUNT_CARDS,
+  MOVED_TO_OWN_PAGE,
+  SERVER_CARDS,
+  SERVICE_CARDS,
+  SERVICE_GROUPS,
+} from "../serviceCards";
 import { UNREACHABLE_NOTE } from "../unreachable";
 import { registryPage } from "../../../pages/Settings/registry";
 import { accountOverview, admin } from "./servicesFixtures";
@@ -11,12 +17,26 @@ const acct = accountOverview().ownKeys[0];
 describe("the 31 cards", () => {
   it("are the catalogue's entries in its seven groups (R7)", () => {
     const sizes = SERVICE_GROUPS.map((g) => SERVICE_CARDS.filter((c) => c.group === g).length);
-    expect(sizes).toEqual([7, 7, 3, 5, 3, 3, 3]);
+    // The prototype's groups (settings v3 S5): Logostream sits with the maps, AISstream with flight data.
+    expect(sizes).toEqual([8, 5, 3, 7, 3, 2, 3]);
   });
 
-  it("are the registry's service cards, one for one", () => {
+  it("are the registry's service cards: the server's page lists them all but those with a page of their own", () => {
+    const server = registryPage("dienste")!.sections.map((s) => s.id);
+    expect([...server].sort()).toEqual(SERVER_CARDS.map((c) => c.id).sort());
+    const moved = SERVICE_CARDS.map((c) => c.id).filter((id) => !server.includes(id));
+    expect([...moved].sort()).toEqual([...MOVED_TO_OWN_PAGE].sort());
+  });
+
+  it("put on the account's page exactly the cards an account has something to do with (prototype own:1)", () => {
     const ids = registryPage("dienstek")!.sections.map((s) => s.id);
-    expect(SERVICE_CARDS.map((c) => c.id)).toEqual(ids);
+    expect(ACCOUNT_CARDS.map((c) => c.id).sort()).toEqual([...ids].sort());
+    // An own key for Gemini and Google Places came with the S2 backend.
+    for (const id of ["gemini", "googlePlaces"]) expect(ids).toContain(id);
+    // A card nobody can bring a key or a connection to is not the account's.
+    for (const id of ["adsbx", "adsblol", "aisstream", "aeroapi", "ollama", "logos"]) {
+      expect(ids).not.toContain(id);
+    }
   });
 
   it("give a connection 'accounts may connect' and a key 'allow own keys', never both (R7)", () => {

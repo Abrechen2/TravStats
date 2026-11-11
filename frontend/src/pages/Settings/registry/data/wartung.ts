@@ -6,25 +6,23 @@ export const WARTUNG_PAGE: RegistryPage = {
   ...{"id":"wartung","area":"server","de":"Wartung","en":"Maintenance","level":"expert","audience":"admin","demoLocked":false},
   sections: [
       {"id":"wartung-protokolle","de":"Protokolle","en":"Logs","level":"expert","scope":"account","audience":"admin","demoLocked":false,"rows":[
-        {"id":"debug","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Ausführlich protokollieren","en":"Verbose logging","terms":{"de":"Macht den Server langsamer","en":"Slows the server down"}},
-        {"id":"loglevel","mount":"logging","kind":"select","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Stufe","en":"Level","terms":{"de":"","en":""}},
-        {"id":"logtage","mount":"logging","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Aufheben","en":"Keep for","terms":{"de":"1–90 Tage","en":"1–90 days"}},
+        {"id":"loglevel","mount":"logging","kind":"select","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Protokoll-Stufe","en":"Log level","terms":{"de":"Gesetzt beim Start des Servers kann die Stufe hier nur teilweise geändert werden.","en":"When set at server start, the level can only be partly changed here."}},
+        {"id":"debug24","mount":"logging","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Ausführliches Protokoll für 24 h","en":"Verbose log for 24 h","terms":{"de":"Macht den Server langsamer Danach schaltet der Server von selbst auf die normale Stufe zurück.","en":"Slows the server down After that the server switches back to the normal level by itself."}},
+        {"id":"logtage","mount":"logging","kind":"input","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Protokolle aufbewahren","en":"Keep logs","terms":{"de":"1–90 Tage","en":"1–90 days"}},
         {"id":"logfiles","mount":"logging","kind":"link","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Protokolldateien","en":"Log files","terms":{"de":"Ansehen, laden, löschen","en":"View, download, delete"}},
         {"id":"logclean","mount":"logging","kind":"danger","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Alte Protokolle löschen","en":"Delete old logs","terms":{"de":"","en":""}},
-      ]},
-      {"id":"wartung-logging","de":"Protokoll","en":"Log","level":"expert","scope":"account","audience":"admin","demoLocked":false,"rows":[
         {"id":"loghttp","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Anfragen mitschreiben","en":"Log requests","terms":{"de":"","en":""}},
         {"id":"logdb","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Datenbank mitschreiben","en":"Log database","terms":{"de":"","en":""}},
         {"id":"logparser","mount":"logging","kind":"toggle","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Lesen mitschreiben","en":"Log reading","terms":{"de":"","en":""}},
       ]},
       {"id":"wartung-system","de":"System","en":"System","level":"expert","scope":"account","audience":"admin","demoLocked":false,"rows":[
         {"id":"sysver","mount":"system","kind":"status","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Version","en":"Version","terms":{"de":"","en":""}},
+        {"id":"tzreport","mount":"timeModel","kind":"status","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitmodell","en":"Time model","terms":{"de":"","en":""}},
+        {"id":"tzresolve","mount":"timeModel","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitzonen neu bestimmen","en":"Determine time zones again","terms":{"de":"Erst Probelauf, dann übernehmen","en":"Dry run first, then apply"}},
         {"id":"fulljson","mount":"system","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Alle Daten aller Konten","en":"All data of all accounts","terms":{"de":"JSON","en":"JSON"}},
         {"id":"enrich","mount":"system","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Flughafen nachladen","en":"Fetch an airport","terms":{"de":"Holt einen Flughafen, der im Katalog fehlt, aus der externen Quelle Gib den IATA-Code (3 Buchstaben) oder den ICAO-Code (4 Buchstaben) ein. Ist der Flughafen schon im Katalog, bleibt er unverändert.","en":"Pulls an airport missing from the catalogue from the external source Enter the IATA code (3 letters) or the ICAO code (4 letters). An airport already in the catalogue stays as it is."}},
         {"id":"reseed","mount":"system","kind":"danger","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Kataloge neu einlesen","en":"Re-read catalogues","terms":{"de":"Flughäfen, Airlines, Flugzeugtypen Höchstens dreimal pro Stunde. Selbst angelegte Einträge bleiben unberührt.","en":"Airports, airlines, aircraft types At most three times an hour. Entries you added stay untouched."}},
         {"id":"demodel","mount":"system","kind":"danger","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Demo-Konto löschen","en":"Delete demo account","terms":{"de":"","en":""}},
-        {"id":"tzreport","mount":"timeModel","kind":"status","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Umstellung der Zeiten","en":"Time conversion","terms":{"de":"","en":""}},
-        {"id":"tzresolve","mount":"timeModel","kind":"action","level":"expert","scope":"instance","audience":"admin","demoLocked":false,"de":"Zeitzonen neu bestimmen","en":"Determine time zones again","terms":{"de":"Erst Probelauf, dann übernehmen","en":"Dry run first, then apply"}},
       ]},
   ],
 };

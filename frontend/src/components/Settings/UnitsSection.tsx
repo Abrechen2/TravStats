@@ -6,7 +6,8 @@ import { ECB_CURRENCIES } from "../../shared/currencies";
 import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, useSettingWrite } from "../ui/settings";
 import { useSettingItem } from "../ui/settings/itemContext";
-import { saveBaseCurrency } from "../../store/confirmedSettings";
+import { saveBaseCurrency, saveSwitch } from "../../store/confirmedSettings";
+import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { UnitRow } from "./UnitRow";
 import { useExpertRows } from "./frame/useExpertRows";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
@@ -59,6 +60,12 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
   // "Basiswährung für Summen" is an expert row (settings v3).
   const showCurrency = useExpertRows(1);
   const currency = useSettingWrite<string>("units.baseCurrency", baseCurrency, saveBaseCurrency);
+  // "Anzeigewährung" (settings v3 `cur`): how amounts are SHOWN. Its own column;
+  // the sums keep converting into the base currency above, whatever is chosen here.
+  const shown = useSuggestionSwitchesStore((s) => s.displayCurrency);
+  const display = useSettingWrite<string>("units.displayCurrency", shown ?? baseCurrency, (next) =>
+    saveSwitch("displayCurrency", next)
+  );
 
   return (
     <SectionCard>
@@ -85,6 +92,13 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
           shortLabel={(value) => value}
           name={(value) => t(`settings:units.weightOptions.${value}`)}
           locked={isDemo}
+        />
+        <SettingItem
+          title={t("settings:rows.displayCurrency.name")}
+          sub={t("settings:rows.displayCurrency.sub")}
+          save={display}
+          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+          control={<CurrencyField value={display.value} onChange={display.choose} />}
         />
         {showCurrency && (
           <SettingItem

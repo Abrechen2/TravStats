@@ -44,6 +44,20 @@ vi.mock("@/lib/api/sharing", () => ({
   },
 }));
 
+// Profil › Sichtbarkeit asks whether other servers are allowed (settings v3 S5).
+vi.mock("@/lib/api/sharingRemote", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/sharingRemote")>()),
+  sharingRemoteApi: {
+    status: vi.fn().mockResolvedValue({
+      available: false,
+      reason: "switch-off",
+      origin: null,
+      peerAdmitted: false,
+    }),
+    getFindable: vi.fn().mockResolvedValue(false),
+    setFindable: vi.fn(),
+  },
+}));
 vi.mock("@/lib/api/twoFactor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/twoFactor")>();
   return {
@@ -422,10 +436,10 @@ describe("SettingsPage — the account/server boundary", () => {
     await pageTitle("anzeige");
   });
 
-  it("sends an admin on to the geocoder, a service card of Dienste", async () => {
+  it("sends an admin on to the geocoder, which has a place on Eigene Server since settings v3 S5", async () => {
     isAdmin = true;
     renderAt("/settings?tab=lodging&section=lodgingPreferences");
-    await pageTitle("dienstek");
+    await pageTitle("eigene");
     expect(screen.queryByText(ADMIN_ONLY_NOTICE)).toBeNull();
   });
 

@@ -22,6 +22,7 @@ export interface InstanceSettings {
   allowRegistration: boolean;
   /** Instance-wide gate for unfinished features — see config/betaFeatures.ts. */
   betaFeaturesEnabled: boolean;
+  internetEnabled?: boolean; // settings v3 master switch for external services; absent = on
   /** May the instance ask Open-Meteo, Wikipedia and OpenStreetMap for its users. */
   openDataEnabled: boolean;
   /** May operator logos come from Wikidata / Commons, server side (forgejo#323). On by default. */
@@ -39,11 +40,7 @@ export interface InstanceSettings {
   // unlike the nullable URL fields above. See `resolveGeocoderUrls()`.
   photonUrl: string;
   nominatimUrl: string;
-  /**
-   * The instance's starting point for "a country counts as visited from …".
-   * Any user may override it in their own settings; this is what applies until
-   * they do. Always resolved — there is no "unset" state to handle.
-   */
+  /** The instance's default for "a country counts as visited from …"; accounts may override it. Always resolved. */
   countryThreshold: CountryTier;
   /** May the rail train lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: boolean;
@@ -97,6 +94,7 @@ export interface InstanceSettingsPatch {
   maxUsers?: number;
   allowRegistration?: boolean;
   betaFeaturesEnabled?: boolean;
+  internetEnabled?: boolean;
   openDataEnabled?: boolean;
   operatorLogosOpenDataEnabled?: boolean;
   shareLinksEnabled?: boolean;
@@ -139,6 +137,7 @@ export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];
 
 export interface AdminParserSettingsResponse {
   allowUserApiKeys: boolean;
+  allowUserFlightApiKeys?: boolean; // the flight-data half of "own keys"
   fxCdnFallbackEnabled: boolean;
   /** Who reads a booking document first, in every domain. Absent on a
    *  backend older than 2.7 — treat a missing value as "template_first". */

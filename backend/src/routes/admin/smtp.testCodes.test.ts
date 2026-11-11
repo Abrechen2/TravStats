@@ -17,6 +17,7 @@ import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { encryptApiKey } from "../../utils/encryption";
 import { SMTP_CONFIG_ID } from "./smtp";
+import { loadAllTests } from "../../services/externalServices/tests";
 
 const form = {
   host: "smtp.example.com",
@@ -92,5 +93,19 @@ describe("admin/smtp — POST /test answers stable codes", () => {
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ success: false, code: "SMTP_PASSWORD_MISSING" });
     expect(testSmtpConnection).not.toHaveBeenCalled();
+  });
+
+  it("keeps the verdict of a test mail as the service's last test (Letzte Testmail)", async () => {
+    await prisma.externalServiceTest.deleteMany({ where: { userId: null, serviceId: "smtp" } });
+    testSmtpConnection.mockRejectedValueOnce(Object.assign(new Error("raw"), { code: "EAUTH" }));
+    await post({ ...form, password: "pw" });
+    const failed = await loadAllTests(null);
+    expect(failed.get("smtp")).toMatchObject({ ok: false, reason: "SMTP_AUTH" });
+
+    testSmtpConnection.mockResolvedValueOnce(undefined);
+    await post({ ...form, password: "pw" });
+    const passed = await loadAllTests(null);
+    expect(passed.get("smtp")).toMatchObject({ ok: true, reason: null });
+    await prisma.externalServiceTest.deleteMany({ where: { userId: null, serviceId: "smtp" } });
   });
 });

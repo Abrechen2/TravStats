@@ -35,6 +35,11 @@ interface SectionFrameProps {
   headingAbove?: string | null;
   /** A link named this section's expert rows: show them, and say why. */
   revealExpertRows?: boolean;
+  /**
+   * The page is an expert page opened at the standard level (a link, a bookmark):
+   * everything on it shows, and the page says so once — no note per section.
+   */
+  expertPage?: boolean;
   /** The section is expert-only: its heading carries the blue "Experte" pill. */
   expert?: boolean;
   /** A search hit landed here: the section is marked for a moment. */
@@ -60,6 +65,7 @@ export function SectionFrame({
   deepLinkedExpert = false,
   headingAbove = null,
   revealExpertRows = false,
+  expertPage = false,
   expert = false,
   highlighted = false,
   children,
@@ -92,7 +98,7 @@ export function SectionFrame({
     >
       {deepLinkedExpert && <DeepLinkedExpertNote />}
       {revealExpertRows && !deepLinkedExpert && <RevealedRowsNote />}
-      <RevealExpertRowsContext.Provider value={revealExpertRows}>
+      <RevealExpertRowsContext.Provider value={revealExpertRows || expertPage}>
         <HiddenRowsContext.Provider value={report}>
           <HeadingAboveContext.Provider value={headingAbove}>
             <ExpertSectionContext.Provider value={expert}>

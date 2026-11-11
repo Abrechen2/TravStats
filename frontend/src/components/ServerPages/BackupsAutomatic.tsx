@@ -36,7 +36,8 @@ const draftOf = (s: BackupScheduleSettings): Draft => ({
 });
 
 /**
- * Backups › Automatisch (design C6): one group with one save. The form is drawn
+ * Backups › Erweitert (design C6, settings v3 S5): the tuning of the automatic
+ * backup — interval, retention, WebDAV clean-up, zone — as one group with one save. The form is drawn
  * only from a successful load — saving placeholder values would switch the
  * scheduled backups off (forgejo#363), so a failed load shows the failure and a
  * retry instead of a form.
@@ -107,18 +108,6 @@ function Form({
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       <SettingItem
-        title={auto.title}
-        sub={auto.sub}
-        scope="allAccounts"
-        changed={group.isChanged("enabled")}
-        control={
-          <SwitchControl
-            checked={group.draft.enabled}
-            onChange={(next) => group.edit({ enabled: next })}
-          />
-        }
-      />
-      <SettingItem
         title={every.title}
         scope="allAccounts"
         changed={group.isChanged("interval")}
@@ -150,6 +139,24 @@ function Form({
             inputMode="numeric"
             value={group.draft.retentionDays}
             onChange={(next) => group.edit({ retentionDays: next })}
+          />
+        }
+      />
+      <SettingItem
+        title={cloud.title}
+        scope="allAccounts"
+        changed={group.isChanged("cloudRetention")}
+        dependency={
+          webdav === false
+            ? { reason: t("settingsRows:backups.deps.webdavOff") }
+            : webdavFailed && webdav === null
+              ? { reason: t("settingsRows:backups.deps.webdavUnknown") }
+              : undefined
+        }
+        control={
+          <SwitchControl
+            checked={group.draft.cloudRetention}
+            onChange={(next) => group.edit({ cloudRetention: next })}
           />
         }
       />
@@ -187,20 +194,14 @@ function Form({
         ) : null}
       </SettingItem>
       <SettingItem
-        title={cloud.title}
+        title={auto.title}
+        sub={auto.sub}
         scope="allAccounts"
-        changed={group.isChanged("cloudRetention")}
-        dependency={
-          webdav === false
-            ? { reason: t("settingsRows:backups.deps.webdavOff") }
-            : webdavFailed && webdav === null
-              ? { reason: t("settingsRows:backups.deps.webdavUnknown") }
-              : undefined
-        }
+        changed={group.isChanged("enabled")}
         control={
           <SwitchControl
-            checked={group.draft.cloudRetention}
-            onChange={(next) => group.edit({ cloudRetention: next })}
+            checked={group.draft.enabled}
+            onChange={(next) => group.edit({ enabled: next })}
           />
         }
       />

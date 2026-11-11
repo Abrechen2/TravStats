@@ -24,9 +24,9 @@ import {
   SettingItem,
   SwitchControl,
   useGroupSave,
-  useSettingWrite,
 } from "../ui/settings";
 import GroupFooter from "./GroupFooter";
+import MaintenanceDebug24 from "./MaintenanceDebug24";
 
 interface Draft extends Record<string, unknown> {
   level: LogLevelName;
@@ -152,14 +152,6 @@ function Rows({
       group.discard();
     },
   };
-  const verbose = useSettingWrite<boolean>(
-    "maintenance:debug",
-    config.logLevel === "debug",
-    async (on) => {
-      await adminApi.toggleDebugLogging(on);
-      await reload();
-    }
-  );
   const days = Number(group.draft.retentionDays);
   const daysInvalid = !Number.isInteger(days) || days < 1 || days > 90;
 
@@ -217,7 +209,6 @@ function Rows({
     }
   };
 
-  const debug = row("debug");
   const level = row("loglevel");
   const keep = row("logtage");
   const http = row("loghttp");
@@ -251,15 +242,6 @@ function Rows({
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       <SettingItem
-        title={debug.title}
-        sub={debug.sub}
-        scope="allAccounts"
-        expert
-        save={verbose}
-        dependency={pinnedDep}
-        control={<SwitchControl checked={verbose.value} onChange={verbose.choose} />}
-      />
-      <SettingItem
         title={level.title}
         help={t("admin:logging.help.levels")}
         scope="allAccounts"
@@ -275,6 +257,7 @@ function Rows({
           />
         }
       />
+      <MaintenanceDebug24 config={config} reload={reload} dependency={pinnedDep} />
       <SettingItem
         title={keep.title}
         sub={keep.sub}

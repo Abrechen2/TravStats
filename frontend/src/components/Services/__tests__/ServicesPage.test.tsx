@@ -27,6 +27,15 @@ vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
 vi.mock("../ImmichModeRow", () => ({ default: () => null }));
 vi.mock("../../Settings/DawarichProviderHint", () => ({ default: () => null }));
 
+// The master internet switch (settings v3 S2): on unless a test says it is off.
+let internetOff = false;
+vi.mock("../../ServerPages/useInternetDependency", () => ({
+  useInternetDependency: () =>
+    internetOff
+      ? { reason: "internet-off-reason", jump: { label: "internet-jump", onJump: () => {} } }
+      : undefined,
+}));
+
 const api = vi.hoisted(() => ({
   adminOverview: vi.fn(),
   adminUpdate: vi.fn(),
@@ -72,6 +81,7 @@ async function show(isAdmin: boolean): Promise<void> {
 
 describe("ServicesPage", () => {
   beforeEach(() => {
+    internetOff = false;
     vi.clearAllMocks();
     tours = true;
     useSettingsLevelStore.setState({ level: "expert" });
@@ -497,5 +507,216 @@ describe("ServicesPage", () => {
         }),
       WAIT
     );
+  });
+
+  describe("two pages since settings v3 S5", () => {
+    async function showSide(side: "account" | "server"): Promise<void> {
+      await act(async () => {
+        render(<ServicesPage isAdmin={side === "server"} side={side} />);
+      });
+    }
+    const ids = (): string[] =>
+      [...document.querySelectorAll("[data-service-card-id]")].map(
+        (el) => (el as HTMLElement).dataset.serviceCardId!
+      );
+
+    it("the account's page draws only the cards an account has something to do with, for an admin too", async () => {
+      await act(async () => {
+        render(<ServicesPage isAdmin={false} side="account" />);
+      });
+      await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
+      expect(ids()).toHaveLength(15);
+      for (const id of ["gemini", "googlePlaces", "customLlm", "webdav"])
+        expect(ids()).toContain(id);
+      for (const id of ["adsbx", "aeroapi", "logos", "geocoder", "smtp"]) {
+        expect(ids()).not.toContain(id);
+      }
+      expect(api.adminOverview).not.toHaveBeenCalled();
+    });
+
+    it("the server's page draws the prototype's grid in its groups, and the folded cards only at the expert level", async () => {
+      useSettingsLevelStore.setState({ level: "standard" });
+      await showSide("server");
+      await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
+      expect(ids()).toHaveLength(21);
+      for (const id of [
+        "smtp",
+        "push",
+        "usageStats",
+        "federation",
+        "geocoder",
+        "selfHostedRouting",
+      ]) {
+        expect(ids()).not.toContain(id);
+      }
+      for (const id of ["railTimetables", "openData", "fx", "updatesTemplates"]) {
+        expect(ids()).not.toContain(id);
+      }
+      // The groups of the prototype, in its order.
+      const headings = [...document.querySelectorAll("section[aria-label] > h3")].map(
+        (h) => h.textContent
+      );
+      expect(headings).toEqual([
+        "settingsRows:services.groups.flug",
+        "settingsRows:services.groups.ki",
+        "settingsRows:services.groups.foto",
+        "settingsRows:services.groups.karte",
+        "settingsRows:services.groups.sync",
+      ]);
+      cleanup();
+      useSettingsLevelStore.setState({ level: "expert" });
+      await showSide("server");
+      await waitFor(() => expect(ids()).toHaveLength(25), WAIT);
+      // Nothing of the account's half on the server's page.
+      expect(document.querySelector("[data-service-side='account']")).toBeNull();
+    });
+
+    it("with the master internet switch off, the rows behind it are locked with the reason", async () => {
+      internetOff = true;
+      api.adminOverview.mockResolvedValue(
+        adminOverview({
+          categories: [
+            {
+              id: "openData",
+              services: [
+                admin("openData", { level: "instance", allowAccountKeys: null, fields: [] }),
+                admin("railTimetables", {
+                  level: "instance",
+                  allowAccountKeys: null,
+                  fields: [
+                    { key: "transitous", kind: "switch", value: true, expert: false },
+                    { key: "contact", kind: "text", value: "", expert: true },
+                  ],
+                }),
+              ],
+            },
+          ],
+        })
+      );
+      await showSide("server");
+      const rail = await open("railTimetables");
+      await waitFor(() => expect(within(rail).getByText("internet-off-reason")).toBeTruthy(), WAIT);
+      // The switch cannot act; the address next to it can still be edited.
+      const locked = rail.querySelector("[data-locked]") as HTMLElement;
+      expect(locked).toBeTruthy();
+      expect(within(rail).getAllByText("internet-off-reason")).toHaveLength(1);
+      const dataSwitch = await open("openData");
+      expect(within(dataSwitch).getByText("internet-off-reason")).toBeTruthy();
+    });
+
+    describe("own keys for Gemini and Google Places (settings v3 S2)", () => {
+      const ownKey = (id: string) => ({
+        id,
+        recommended: null,
+        effectiveSource: "none" as const,
+        accountDisabled: false,
+        configured: false,
+        lastTest: null,
+        fields: [
+          { key: "apiKey", kind: "secret" as const, value: null, masked: true, expert: false },
+        ],
+      });
+      const typeAndSave = async (el: HTMLElement, key: string): Promise<void> => {
+        const mine = side(el, "account");
+        await userEvent.type(
+          within(mine).getByPlaceholderText("settings:blocks.secret.empty"),
+          key
+        );
+        await userEvent.click(
+          within(mine).getByRole("button", { name: "settingsRows:services.ui.saveAndTest" })
+        );
+      };
+
+      it("Google Places takes the account's own key through the account endpoint, never the server's", async () => {
+        api.accountOverview.mockResolvedValue(
+          accountOverview({ ownKeys: [ownKey("googlePlaces")] })
+        );
+        api.accountUpdate.mockResolvedValue({});
+        await showSide("account");
+        await typeAndSave(await open("googlePlaces"), "places-key-1");
+        await waitFor(
+          () =>
+            expect(api.accountUpdate).toHaveBeenCalledWith("googlePlaces", {
+              fields: { apiKey: "places-key-1" },
+            }),
+          WAIT
+        );
+        expect(api.adminUpdate).not.toHaveBeenCalled();
+      });
+
+      it("Gemini holds the consent AND the own key, and the key goes to the account endpoint", async () => {
+        api.accountOverview.mockResolvedValue(
+          accountOverview({
+            ownKeys: [ownKey("gemini")],
+            aiConsents: [{ id: "gemini", consentedAt: null }] as never,
+          })
+        );
+        api.accountUpdate.mockResolvedValue({});
+        await showSide("account");
+        const el = await open("gemini");
+        // The consent row is still there: sending booking text is the account's decision.
+        expect(
+          within(side(el, "account")).getByText("settingsRows:services.tpl.aiConsent.t")
+        ).toBeTruthy();
+        await typeAndSave(el, "gem-key-9");
+        await waitFor(
+          () =>
+            expect(api.accountUpdate).toHaveBeenCalledWith("gemini", {
+              fields: { apiKey: "gem-key-9" },
+            }),
+          WAIT
+        );
+      });
+
+      it("Gemini without an own key on offer (the admin forbade account keys) draws the consent alone", async () => {
+        api.accountOverview.mockResolvedValue(
+          accountOverview({ aiConsents: [{ id: "gemini", consentedAt: null }] as never })
+        );
+        await showSide("account");
+        const el = await open("gemini");
+        expect(
+          within(side(el, "account")).queryByPlaceholderText("settings:blocks.secret.empty")
+        ).toBeNull();
+        expect(
+          within(side(el, "account")).getByText("settingsRows:services.tpl.aiConsent.t")
+        ).toBeTruthy();
+      });
+
+      it("an AI card that takes no own key (OpenAI) still draws the consent alone", async () => {
+        api.accountOverview.mockResolvedValue(
+          accountOverview({
+            ownKeys: [ownKey("openai")],
+            aiConsents: [{ id: "openai", consentedAt: null }] as never,
+          })
+        );
+        await showSide("account");
+        const el = await open("openai");
+        expect(
+          within(side(el, "account")).queryByPlaceholderText("settings:blocks.secret.empty")
+        ).toBeNull();
+      });
+    });
+
+    it("with the master internet switch on, nothing is locked", async () => {
+      api.adminOverview.mockResolvedValue(
+        adminOverview({
+          categories: [
+            {
+              id: "openData",
+              services: [
+                admin("railTimetables", {
+                  level: "instance",
+                  allowAccountKeys: null,
+                  fields: [{ key: "transitous", kind: "switch", value: true, expert: false }],
+                }),
+              ],
+            },
+          ],
+        })
+      );
+      await showSide("server");
+      const rail = await open("railTimetables");
+      expect(within(rail).queryByText("internet-off-reason")).toBeNull();
+    });
   });
 });

@@ -113,6 +113,48 @@ export default function AccountSide({
       )
     : null;
 
+  /** The account's own key or connection as one group, and the check of it. */
+  const ownRows = (acct: AccountService): JSX.Element[] => {
+    const rows: JSX.Element[] = [];
+    if (acct.fields.length > 0) {
+      rows.push(
+        <FieldsGroup
+          key="fields"
+          id={`services.${card.id}.account`}
+          label={t("settingsRows:services.ui.accountGroup", { name })}
+          serviceId={card.id}
+          fields={acct.fields}
+          secretTemplate="ownKey"
+          tests={uses("test")}
+          lock={demo}
+          errorText={null}
+          write={async (changes) => {
+            // The refusal is worded on the card (`feedback`); the group keeps the draft.
+            const ok = await account.save(card.id, { fields: changes }, uses("test"));
+            if (!ok) throw new Error("save refused");
+            if (card.id === "dawarich") setDawarichSaved((n) => n + 1);
+          }}
+          onRemoveSecret={async (key) => {
+            await account.save(card.id, { fields: { [key]: "" } }, false);
+          }}
+        />
+      );
+    }
+    if (uses("test") && acct.configured && acct.effectiveSource === "account") {
+      rows.push(
+        <TestRow
+          key="test"
+          lastTest={acct.lastTest}
+          lock={demo}
+          name={name}
+          run={() => externalServicesApi.accountTest(card.id)}
+          onDone={() => account.reload()}
+        />
+      );
+    }
+    return rows;
+  };
+
   const body: JSX.Element[] = [];
   if (uses("aiConsent")) {
     const consented = consent?.consentedAt != null;
@@ -147,6 +189,9 @@ export default function AccountSide({
         ) : null}
       </SettingItem>
     );
+    // A cloud model an account may bring its own key for (Gemini, settings v3 S2): the
+    // consent above is still what lets reading bookings send text to it.
+    if (uses("ownKey") && service) body.push(...ownRows(service));
   } else if (service) {
     if (uses("mine")) {
       body.push(
@@ -161,41 +206,8 @@ export default function AccountSide({
       body.push(<Strava key="strava" onDisconnected={() => void account.reload()} />);
     } else if (card.id === "webdav") {
       body.push(<WebdavAccountRows key="webdav" />);
-    } else if (service.fields.length > 0) {
-      body.push(
-        <FieldsGroup
-          key="fields"
-          id={`services.${card.id}.account`}
-          label={t("settingsRows:services.ui.accountGroup", { name })}
-          serviceId={card.id}
-          fields={service.fields}
-          secretTemplate="ownKey"
-          tests={uses("test")}
-          lock={demo}
-          errorText={null}
-          write={async (changes) => {
-            // The refusal is worded on the card (`feedback`); the group keeps the draft.
-            const ok = await account.save(card.id, { fields: changes }, uses("test"));
-            if (!ok) throw new Error("save refused");
-            if (card.id === "dawarich") setDawarichSaved((n) => n + 1);
-          }}
-          onRemoveSecret={async (key) => {
-            await account.save(card.id, { fields: { [key]: "" } }, false);
-          }}
-        />
-      );
-    }
-    if (uses("test") && service.configured && service.effectiveSource === "account") {
-      body.push(
-        <TestRow
-          key="test"
-          lastTest={service.lastTest}
-          lock={demo}
-          name={name}
-          run={() => externalServicesApi.accountTest(card.id)}
-          onDone={() => account.reload()}
-        />
-      );
+    } else {
+      body.push(...ownRows(service));
     }
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);

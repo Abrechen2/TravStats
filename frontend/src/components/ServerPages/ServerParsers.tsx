@@ -8,6 +8,7 @@ import type {
 import { logger } from "../../lib/logger";
 import { resetHasLlmCache } from "../../hooks/useHasLlm";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useExpertRows } from "../Settings/frame/useExpertRows";
 import { useRowCopy } from "../Settings/rowCopy";
 import Button from "../ui/Button";
 import {
@@ -18,6 +19,7 @@ import {
   StatusValue,
   SwitchControl,
   useGroupSave,
+  useSettingWrite,
 } from "../ui/settings";
 import CloudOrderList from "./CloudOrderList";
 import { completeOrder } from "./cloudOrder";
@@ -93,6 +95,31 @@ function Rows({
   const row = useRowCopy("server");
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
+  // Who reads first, the cloud order, the accounts' own keys and the Ollama check
+  // are the tuning of this page (settings v3 S5).
+  const expert = useExpertRows(4);
+  // One switch, two columns: accounts' own AI keys (parser settings) and their own
+  // flight-data keys (API keys). If the second write fails the first is taken back,
+  // so the switch never reads "on" for half of what it governs.
+  const accountKeys = useSettingWrite<boolean>(
+    "server:userkeys",
+    // Either half on reads as on, so switching off always revokes both: "on only when both are"
+    // would leave an admin unable to withdraw the half that is still on.
+    settings.allowUserApiKeys || (settings.allowUserFlightApiKeys ?? true),
+    async (on) => {
+      const before = settings.allowUserApiKeys;
+      await adminApi.updateAdminParserSettings({ allowUserApiKeys: on });
+      try {
+        await adminApi.updateGlobalApiKeys({ allowUserFlightApiKeys: on });
+      } catch (error) {
+        await adminApi
+          .updateAdminParserSettings({ allowUserApiKeys: before })
+          .catch((e: unknown) => logger.error("Taking back the AI key switch failed:", e));
+        throw error;
+      }
+      onSaved(await adminApi.getAdminParserSettings());
+    }
+  );
 
   const group = useGroupSave<Draft>({
     id: "server-parsers",
@@ -134,26 +161,18 @@ function Rows({
   const ai = row("kiaktiv");
   const cloud = row("cloudorder");
   const builtin = row("builtin");
+  const keys = row("userkeys");
   const test = row("olltest");
   const hasOllama = Boolean(settings.ollamaUrl && settings.ollamaModel);
+  // The two columns can differ (older data, a half-failed write): the row says which half holds.
+  const mixed = settings.allowUserApiKeys !== (settings.allowUserFlightApiKeys ?? true);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       <SettingItem
-        title={first.title}
-        help={first.help}
+        title={builtin.title}
+        sub={builtin.sub}
         scope="allAccounts"
-        changed={group.isChanged("parserOrder")}
-        control={
-          <ChoiceControl<ParserOrder>
-            label={first.title}
-            value={group.draft.parserOrder}
-            options={[
-              { value: "template_first", label: t("settingsRows:server.parsers.templateFirst") },
-              { value: "llm_first", label: t("settingsRows:server.parsers.llmFirst") },
-            ]}
-            onChange={(next) => group.edit({ parserOrder: next })}
-          />
-        }
+        control={<StatusValue>{t("settingsRows:server.parsers.builtin")}</StatusValue>}
       />
       <SettingItem
         title={ai.title}
@@ -168,57 +187,114 @@ function Rows({
           />
         }
       />
-      <SettingItem
-        title={cloud.title}
-        sub={cloud.sub}
-        help={cloud.help}
-        scope="allAccounts"
-        changed={group.isChanged("providerOrder")}
-      >
-        <CloudOrderList
-          order={group.draft.providerOrder}
-          onChange={(next) => group.edit({ providerOrder: next })}
-        />
-      </SettingItem>
-      <SettingItem
-        title={builtin.title}
-        scope="allAccounts"
-        control={<StatusValue>{t("settingsRows:server.parsers.builtin")}</StatusValue>}
-      />
-      <GroupFooter group={group} />
-      <SettingItem
-        title={test.title}
-        scope="allAccounts"
-        dependency={hasOllama ? undefined : { reason: t("settingsRows:server.parsers.noOllama") }}
-        control={
-          <ActionControl
-            label={
-              testing ? t("settingsRows:server.running") : t("settingsRows:server.parsers.check")
+      {expert && group.draft.llmEnabled ? (
+        <>
+          <SettingItem
+            title={first.title}
+            help={first.help}
+            expert
+            scope="allAccounts"
+            changed={group.isChanged("parserOrder")}
+            control={
+              <ChoiceControl<ParserOrder>
+                label={first.title}
+                value={group.draft.parserOrder}
+                options={[
+                  {
+                    value: "template_first",
+                    label: t("settingsRows:server.parsers.templateFirst"),
+                  },
+                  { value: "llm_first", label: t("settingsRows:server.parsers.llmFirst") },
+                ]}
+                onChange={(next) => group.edit({ parserOrder: next })}
+              />
             }
-            busy={testing}
-            onClick={() => void runTest()}
           />
-        }
-      >
-        {result ? (
-          result.status === "ok" || result.status === "warn" ? (
-            <p
-              role="status"
-              className="t-caption"
-              style={{
-                margin: 0,
-                color: result.status === "ok" ? "var(--ts-good)" : "var(--ts-warn)",
-              }}
-            >
-              {result.status === "ok"
-                ? t("settingsRows:server.parsers.testOk")
-                : t("settingsRows:server.parsers.testNoModel", { model: result.model })}
-            </p>
-          ) : (
-            <ErrorLine>{t(`settingsRows:server.parsers.test_${result.status}`)}</ErrorLine>
-          )
-        ) : null}
-      </SettingItem>
+          <SettingItem
+            title={cloud.title}
+            sub={cloud.sub}
+            help={cloud.help}
+            expert
+            scope="allAccounts"
+            changed={group.isChanged("providerOrder")}
+          >
+            <CloudOrderList
+              order={group.draft.providerOrder}
+              onChange={(next) => group.edit({ providerOrder: next })}
+            />
+          </SettingItem>
+        </>
+      ) : null}
+      <GroupFooter group={group} />
+      {expert ? (
+        <>
+          <SettingItem
+            title={keys.title}
+            sub={keys.sub}
+            help={keys.help}
+            expert
+            scope="allAccounts"
+            save={accountKeys}
+            control={
+              <SwitchControl
+                checked={accountKeys.value}
+                onChange={accountKeys.choose}
+                label={keys.title}
+              />
+            }
+          >
+            {mixed ? (
+              <p role="status" className="t-caption" data-keys-mixed="" style={{ margin: 0 }}>
+                {t("settingsRows:server.userkeys.mixed", {
+                  only: t(
+                    settings.allowUserApiKeys
+                      ? "settingsRows:server.userkeys.onlyAi"
+                      : "settingsRows:server.userkeys.onlyFlights"
+                  ),
+                })}
+              </p>
+            ) : null}
+          </SettingItem>
+          <SettingItem
+            title={test.title}
+            expert
+            scope="allAccounts"
+            dependency={
+              hasOllama ? undefined : { reason: t("settingsRows:server.parsers.noOllama") }
+            }
+            control={
+              <ActionControl
+                label={
+                  testing
+                    ? t("settingsRows:server.running")
+                    : t("settingsRows:server.parsers.check")
+                }
+                busy={testing}
+                onClick={() => void runTest()}
+              />
+            }
+          >
+            {result ? (
+              result.status === "ok" || result.status === "warn" ? (
+                <p
+                  role="status"
+                  className="t-caption"
+                  style={{
+                    margin: 0,
+                    color: result.status === "ok" ? "var(--ts-good)" : "var(--ts-warn)",
+                  }}
+                >
+                  {result.status === "ok"
+                    ? t("settingsRows:server.parsers.testOk")
+                    : t("settingsRows:server.parsers.testNoModel", { model: result.model })}
+                </p>
+              ) : (
+                <ErrorLine>{t(`settingsRows:server.parsers.test_${result.status}`)}</ErrorLine>
+              )
+            ) : null}
+          </SettingItem>
+        </>
+      ) : null}
     </div>
   );
 }

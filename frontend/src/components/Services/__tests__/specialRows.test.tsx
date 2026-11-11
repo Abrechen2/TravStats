@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   testSmtp: vi.fn(),
   deleteSmtp: vi.fn(),
   adminUpdate: vi.fn(),
+  adminOverview: vi.fn(),
+  accountOverview: vi.fn(),
   pushGet: vi.fn(),
   pushUpdate: vi.fn(),
   pushReset: vi.fn(),
@@ -45,7 +47,11 @@ vi.mock("../../../lib/api", async (importOriginal) => ({
 }));
 vi.mock("../../../lib/api/externalServices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/externalServices")>()),
-  externalServicesApi: { adminUpdate: mocks.adminUpdate },
+  externalServicesApi: {
+    adminUpdate: mocks.adminUpdate,
+    adminOverview: mocks.adminOverview,
+    accountOverview: mocks.accountOverview,
+  },
 }));
 vi.mock("../../../lib/api/dawarich", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/dawarich")>()),
@@ -168,6 +174,66 @@ describe("SmtpRows", () => {
       await screen.findByText("settingsRows:services.ui.deleteFailed", undefined, WAIT)
     ).toBeInTheDocument();
   });
+  describe("on its own page (settings v3 S5)", () => {
+    it("says the last check was never made, instead of leaving the row empty", async () => {
+      await show(<SmtpRows service={{ ...smtp, lastTest: null }} />);
+      expect(screen.getByText("settingsRows:services.rows.mailstat.t")).toBeInTheDocument();
+      expect(screen.getByText("settingsRows:services.ui.neverTested")).toBeInTheDocument();
+    });
+
+    it("reads the last check from the service tests: when it was made and what it found", async () => {
+      const at = "2026-11-10T18:20:00Z";
+      await show(<SmtpRows service={{ ...smtp, lastTest: { at, ok: true, reason: null } }} />);
+      expect(screen.getByText(/settingsRows:services.ui.lastOk/)).toBeInTheDocument();
+      cleanup();
+      await show(
+        <SmtpRows service={{ ...smtp, lastTest: { at, ok: false, reason: "SMTP_AUTH" } }} />
+      );
+      expect(screen.getByText(/settingsRows:services.ui.lastFailed/)).toBeInTheDocument();
+      // The stored cause code is worded by the page, the transport's text never stored or shown.
+      expect(document.body.textContent).toContain("settingsRows:services.smtp.SMTP_AUTH");
+    });
+
+    it("reads the verdict again after a check, because the server keeps it", async () => {
+      mocks.adminOverview.mockResolvedValue({ categories: [], accountConnections: [] });
+      mocks.accountOverview.mockResolvedValue({
+        connections: [],
+        ownKeys: [],
+        aiConsents: [],
+        instanceProvided: [],
+        blocked: [],
+      });
+      mocks.testSmtp.mockResolvedValue({ success: true });
+      await act(async () => {
+        plainRender(
+          <MemoryRouter>
+            <ServicesProvider isAdmin>
+              <SmtpRows service={smtp} />
+            </ServicesProvider>
+          </MemoryRouter>
+        );
+      });
+      await waitFor(() => expect(mocks.adminOverview).toHaveBeenCalledTimes(1), WAIT);
+      await userEvent.click(
+        screen.getByRole("button", { name: "settingsRows:services.rows.smtptest.btn" })
+      );
+      await waitFor(() => expect(mocks.adminOverview).toHaveBeenCalledTimes(2), WAIT);
+    });
+
+    it("keeps 'Mails verschicken' and the removal for the expert level", async () => {
+      useSettingsLevelStore.setState({ level: "standard" });
+      await show(<SmtpRows service={smtp} />);
+      expect(screen.queryByText("settingsRows:services.rows.smtpon.t")).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "settingsRows:services.rows.smtpdel.btn" })
+      ).toBeNull();
+      // The connection itself — and its check — stay standard.
+      expect(
+        screen.getByRole("button", { name: "settingsRows:services.rows.smtptest.btn" })
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText(/port/i)).toBeNull();
+    });
+  });
 });
 
 describe("PushRows", () => {
@@ -213,6 +279,35 @@ describe("PushRows", () => {
     await userEvent.type(field, "http://nope.example");
     await userEvent.tab();
     expect(await screen.findByText("pushRelay:invalidUrl", undefined, WAIT)).toBeInTheDocument();
+  });
+
+  it("folds the consent into the switch: when it was given, not a row of its own", async () => {
+    mocks.pushGet.mockResolvedValue({
+      ...state,
+      pushEnabled: true,
+      consentAt: "2026-11-01T10:00:00Z",
+    });
+    await show(<PushRows />);
+    await screen.findByRole("switch");
+    await screen.findByText(/settingsRows:services.rows.pushconsent.t/);
+    // No second row titled by the consent: it is a line under the switch.
+    expect(screen.getAllByText(/settingsRows:services.rows.pushconsent.t/)).toHaveLength(1);
+    cleanup();
+    mocks.pushGet.mockResolvedValue({ ...state, pushEnabled: false, consentAt: null });
+    await show(<PushRows />);
+    await screen.findByRole("switch");
+    expect(screen.queryByText(/settingsRows:services.rows.pushconsent.t/)).toBeNull();
+  });
+
+  it("keeps the relay address and the reset for the expert level", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    mocks.pushGet.mockResolvedValue({ ...state, registered: true });
+    await show(<PushRows />);
+    await screen.findByRole("switch");
+    expect(screen.queryByDisplayValue("https://push.travstats.de")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "settingsRows:services.rows.pushreset.btn" })
+    ).toBeNull();
   });
 
   it("says when the reset fails and keeps the dialog open", async () => {

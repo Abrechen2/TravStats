@@ -429,17 +429,39 @@
       "amount_other": "{{count}} Flüge",
       "after": "Niemand kann sich mehr als Demo anmelden.",
       "confirm": "Löschen"
+    },
+    "userpw": {
+      "title": "Passwort neu setzen?",
+      "affects": "{{name}}",
+      "amount": "Ein Konto",
+      "after": "Das alte Passwort gilt nicht mehr. Das neue zeige ich dir einmal.",
+      "confirm": "Neu setzen"
+    },
+    "fedkey": {
+      "title": "Server-Schlüssel erneuern?",
+      "affects": "Die Verbindungen zu anderen Servern",
+      "amount_one": "{{count}} vertrauter Server",
+      "amount_other": "{{count}} vertraute Server",
+      "after": "Die Server sind getrennt, bis jeder den neuen Schlüssel bestätigt.",
+      "confirm": "Erneuern"
+    },
+    "peerremove": {
+      "title": "Server nicht mehr vertrauen?",
+      "affects": "{{name}}",
+      "amount": "Ein Server",
+      "after": "Es kommt nichts mehr von dort, und nichts geht mehr hin.",
+      "confirm": "Nicht mehr vertrauen"
     }
   },
   "services": {
     "groups": {
       "alle": "Alle",
       "flug": "Flugdaten",
-      "karte": "Karten & Routen",
+      "karte": "Karten & Orte",
       "foto": "Fotos & Standort",
       "ki": "KI",
       "open": "Offene Daten",
-      "sync": "Sync & Mail",
+      "sync": "Sicherung",
       "inst": "Instanz"
     },
     "tpl": {
@@ -847,7 +869,7 @@
         "s": "Einladungen, Erinnerungen, neues Passwort"
       },
       "smtphost": {
-        "t": "Server"
+        "t": "Mailserver"
       },
       "smtpuser": {
         "t": "Benutzer"
@@ -857,11 +879,11 @@
         "s": "Gmail und Outlook brauchen ein App-Passwort"
       },
       "smtpfrom": {
-        "t": "Absender",
+        "t": "Absenderadresse",
         "s": "Am besten aus derselben Domain"
       },
       "smtpport": {
-        "t": "Port",
+        "t": "Port und Verschlüsselung",
         "s": "587 mit STARTTLS, 465 mit TLS"
       },
       "smtptls": {
@@ -872,17 +894,18 @@
       },
       "smtptest": {
         "t": "Verbindung prüfen",
-        "btn": "Testen",
-        "res": "Testmail an mara@example.org verschickt"
+        "btn": "Prüfen",
+        "res": "Verbunden · gerade geprüft",
+        "s": "Meldet sich beim Mailserver an; es geht keine Mail raus"
       },
       "smtpdel": {
-        "t": "Zugangsdaten löschen",
+        "t": "Mailserver entfernen",
         "h": "Danach verschickt der Server gar keine Mails mehr.",
-        "btn": "Zugangsdaten löschen"
+        "btn": "Entfernen"
       },
       "pushon": {
-        "t": "Mitteilungen senden",
-        "s": "Über den Push-Dienst von TravStats",
+        "t": "Benachrichtigungen aufs Telefon",
+        "s": "Über den Push-Dienst von TravStats (Einwilligung beim Einschalten)",
         "h": "Aus: Der Server meldet sich nie beim Push-Dienst."
       },
       "pushconsent": {
@@ -890,15 +913,16 @@
         "h": "Der Push-Dienst erfährt die Kennung des Telefons und den Text der Mitteilung, sonst nichts."
       },
       "pushrelay": {
-        "t": "Adresse des Push-Dienstes",
+        "t": "Push-Dienst-Adresse",
         "h": "Eine andere Adresse meldet den Server neu an."
       },
       "pushreset": {
-        "t": "Anmeldung zurücksetzen",
+        "t": "Push zurücksetzen",
         "btn": "Zurücksetzen"
       },
       "fedon": {
-        "t": "Mit anderen Servern verbinden"
+        "t": "Mit anderen Servern verbinden",
+        "s": "Freunde auf anderen TravStats-Servern; jeder neue Server braucht deine Freigabe"
       },
       "fedtrips": {
         "t": "Reisen mit anderen Servern teilen"
@@ -914,12 +938,12 @@
         "res": "Schlüssel erzeugt · Fingerabdruck zeigen"
       },
       "fedpeers": {
-        "t": "Vertraute Server",
+        "t": "Verbundene Server",
         "h": "Eine eingelesene Datei vertraut noch niemandem, erst „Vertrauen“ tut es.",
         "btn": "Verbindungsdatei einlesen"
       },
       "nutzstat": {
-        "t": "Nutzungsstatistik senden",
+        "t": "Anonyme Nutzungsstatistik senden",
         "s": "Einmal am Tag, ohne Namen",
         "h": "Die Installations-ID steht in der Hilfe. Ist der Empfänger beim Start abgeschaltet, geht nichts raus.",
         "o": ["nein", "ja"]
@@ -931,6 +955,9 @@
       "tplrepo": {
         "t": "Quelle der Buchungsvorlagen",
         "s": "Leer: offizielle Quelle"
+      },
+      "mailstat": {
+        "t": "Letzte Prüfung"
       }
     },
     "ui": {
@@ -978,7 +1005,9 @@
       "fedNoOrigin": "Erst die Adresse dieses Servers eintragen.",
       "getKey": "Schlüssel für {{name}} besorgen ›",
       "immichMode": "Fotos verknüpfen oder kopieren",
-      "immichModeLoadFailed": "Ich konnte nicht lesen, wie neue Fotos standardmäßig übernommen werden."
+      "immichModeLoadFailed": "Ich konnte nicht lesen, wie neue Fotos standardmäßig übernommen werden.",
+      "introAccount": "Deine Verbindungen. Deine Daten. Deine Entscheidung. Hier trägst du eigene Schlüssel ein oder nutzt den Schlüssel des Servers.",
+      "introServer": "Verbinde die Dienste, die deinen Server weiterbringen. Was hier steht, gilt für alle Konten."
     },
     "status": {
       "needsConsent": "Wartet auf deine Zustimmung",
@@ -987,7 +1016,7 @@
       "viaServer": "Über den Server",
       "notSetUp": "Nicht eingerichtet",
       "off": "Aus",
-      "on": "An",
+      "on": "Aktiv",
       "notConnected": "Nicht verbunden",
       "connected": "Verbunden",
       "ready": "Bereit",
@@ -1021,28 +1050,24 @@
     },
     "dialogs": {
       "smtpdel": {
-        "title": "Mail-Zugangsdaten löschen?",
-        "affects": "Server, Benutzer und Passwort für den Mail-Versand",
-        "amount": "Ein Satz Zugangsdaten",
-        "after": "Danach verschickt der Server gar keine Mails mehr: keine Einladungen, keine Erinnerungen, kein neues Passwort.",
-        "confirm": "Zugangsdaten löschen"
+        "title": "Zugangsdaten löschen?",
+        "affects": "Den Mail-Zugang des Servers",
+        "amount": "Alle Konten",
+        "after": "Der Server verschickt keine Mails mehr: keine Erinnerungen, keine Einladungen, kein neues Passwort.",
+        "confirm": "Löschen"
       },
       "pushreset": {
-        "title": "Anmeldung beim Push-Dienst zurücksetzen?",
+        "title": "Push-Anmeldung zurücksetzen?",
         "affects": "Die Anmeldung dieses Servers beim Push-Dienst",
         "amount": "Eine Anmeldung",
         "after": "Der Server meldet sich bei der nächsten Mitteilung neu an. Die Telefone musst du nicht neu koppeln.",
-        "confirm": "Anmeldung zurücksetzen"
-      },
-      "fedkey": {
-        "affects": "Den Server-Schlüssel dieses Servers",
-        "amount": "Ein Schlüssel"
+        "confirm": "Zurücksetzen"
       }
     }
   },
   "server": {
     "instname": {
-      "t": "Name",
+      "t": "Servername",
       "s": "In Mails und Sicherungen"
     },
     "loginbilder": {
@@ -1052,13 +1077,13 @@
     },
     "puburl": {
       "t": "Öffentliche Adresse",
-      "s": "Für Einladungen, Mails und neue Passwörter",
+      "s": "Daraus werden alle anderen Adressen abgeleitet",
       "h": "Pflicht. Ohne sie zeigen Links auf localhost. Auch Kalender-Abos und der Rücksprung von Strava nutzen sie."
     },
     "pairurl": {
       "t": "Adresse für Telefone",
       "s": "Steht im Kopplungs-QR",
-      "h": "Leer: die Adresse, unter der du TravStats gerade offen hast. Passkeys nehmen sie, wenn keine erlaubten Adressen eingetragen sind."
+      "h": "Leer: wie die Öffentliche Adresse. Passkeys nehmen sie, wenn keine erlaubten Adressen eingetragen sind."
     },
     "lanurl": {
       "t": "Adresse im eigenen Netz",
@@ -1067,13 +1092,13 @@
     },
     "rpid": {
       "t": "Passkey-Domain",
-      "s": "Nur die Domain, keine IP",
-      "h": "Ändern macht jeden angelegten Passkey wertlos."
+      "s": "Eine Domain, für immer",
+      "h": "Ein Passkey gilt nur für die Domain, unter der er angelegt wurde. Ändern macht alle Passkeys unbrauchbar."
     },
     "origins": {
-      "t": "Erlaubte Adressen",
+      "t": "Erlaubte Passkey-Adressen",
       "s": "Eine pro Zeile, mit https und Port",
-      "h": "Die erste zählt. Mehrere nur mit derselben Domain. Leer: die Adresse für Telefone."
+      "h": "Die erste zählt. Mehrere nur mit derselben Domain. Eine reine IP-Adresse ist keine gültige Passkey-Domain."
     },
     "beta": {
       "t": "Beta-Funktionen zeigen",
@@ -1090,7 +1115,7 @@
       "h": "Aus behält alle Pläne, blendet sie nur aus."
     },
     "laenderstd": {
-      "t": "Ein Land zählt ab",
+      "t": "Standard: wann zählt ein Land",
       "s": "Konten können abweichen"
     },
     "importmodus": {
@@ -1099,21 +1124,22 @@
       "h": "Schaltet sich von selbst ab."
     },
     "leserfolge": {
-      "t": "Wer zuerst liest",
+      "t": "Reihenfolge",
       "h": "Vorlagen lesen Flugmails in unter einer Sekunde."
     },
     "kiaktiv": {
-      "t": "KI verwenden",
-      "s": "Lesen, Spalten zuordnen, Zusammenfassungen",
-      "h": "Aus: keine KI, auch wenn Ollama eingerichtet ist."
+      "t": "KI zum Lesen von Buchungen",
+      "s": "Ohne KI werden nur bekannte Vorlagen erkannt",
+      "h": "Was hingeht: der Text einer Mail oder PDF, höchstens 12.000 Zeichen, nur wenn die Vorlagen nichts finden."
     },
     "cloudorder": {
-      "t": "Reihenfolge der Cloud-KI",
+      "t": "Reihenfolge der KI-Anbieter",
       "s": "Ollama kommt immer zuerst",
       "h": "Versucht wird nur, wer Schlüssel und Freigabe hat."
     },
     "builtin": {
-      "t": "Immer dabei"
+      "t": "Bekannte Vorlagen",
+      "s": "Immer dabei"
     },
     "olltest": {
       "t": "Ollama prüfen"
@@ -1122,10 +1148,20 @@
       "general": "Allgemein",
       "addresses": "Adressen",
       "passkeys": "Passkeys",
-      "features": "Was der Server anbietet",
+      "features": "Erweitert",
       "ttoffer": "TravTrack",
       "tpoffer": "Reisen planen",
-      "parsers": "Buchungen lesen"
+      "parsers": "Buchungen lesen",
+      "yourServer": "Dein Server",
+      "net": "Netz",
+      "sharing": "Teilen",
+      "areas": "Bereiche",
+      "mailServer": "Mailserver",
+      "connections": "Verbindungen",
+      "statistics": "Statistik",
+      "notifications": "Mitteilungen",
+      "addressesPage": "Adressen & Passkeys",
+      "ownServers": "Eigene Server"
     },
     "loadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
     "retry": "Erneut versuchen",
@@ -1181,19 +1217,45 @@
       "up": "{{name}} nach oben",
       "down": "{{name}} nach unten",
       "enable": "unter Dienste anschalten"
+    },
+    "internet": {
+      "t": "Server darf externe Dienste abfragen",
+      "s": "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
+      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+    },
+    "l_tt": {
+      "t": "TravTrack",
+      "s": "Anbieten und Grenzen",
+      "btn": "Bereitstellung"
+    },
+    "l_pl": {
+      "t": "TravPlan",
+      "s": "Anbieten und Grenzen",
+      "btn": "Bereitstellung"
+    },
+    "userkeys": {
+      "t": "Konten dürfen eigene Schlüssel nutzen",
+      "h": "Gilt für KI und Flugdaten: Ein Konto kann seinen eigenen Schlüssel eintragen. Aus lässt nur den Server-Schlüssel gelten; bereits eingetragene Schlüssel bleiben gespeichert.",
+      "mixed": "Gerade gilt es nur für {{only}}. Ein- oder Ausschalten setzt beides.",
+      "onlyAi": "die KI",
+      "onlyFlights": "die Flugdaten"
     }
   },
   "users": {
     "maxnutzer": {
-      "t": "Höchstens Konten"
+      "t": "Höchstzahl Konten"
     },
     "registr": {
-      "t": "Anmelden ohne Einladung",
-      "h": "Dann kann sich jeder ein Konto anlegen, bis die Höchstzahl erreicht ist."
+      "t": "Registrierung",
+      "h": "Offen: Jeder kann sich ein Konto anlegen, bis die Höchstzahl erreicht ist.",
+      "o": {
+        "0": "Nur mit Einladung",
+        "1": "Offen"
+      }
     },
     "nutzerliste": {
       "t": "Konten",
-      "h": "Je Konto unter ⋯: sperren, Passwort neu setzen, zweiten Faktor zurücksetzen, löschen."
+      "h": "Je Konto: Passwort zurücksetzen, Zwei-Faktor zurücksetzen, sperren, löschen. Löschen verlangt das Eintippen des Namens."
     },
     "einlliste": {
       "t": "Einladungen",
@@ -1201,12 +1263,12 @@
       "h": "Per Mail geht nur, wenn der Server Mails verschickt."
     },
     "sections": {
-      "access": "Zugang",
+      "access": "Zugang & Konten",
       "accounts": "Konten",
       "invitations": "Einladungen"
     },
     "groups": {
-      "access": "Zugang"
+      "access": "Zugang & Konten"
     },
     "errors": {
       "range": "Ich nehme Werte von {{min}} bis {{max}}.",
@@ -1243,10 +1305,11 @@
       "s": "Um 02:00"
     },
     "baktakt": {
-      "t": "Wie oft"
+      "t": "Intervall",
+      "s": "Um 02:00"
     },
     "bakhalten": {
-      "t": "Aufheben",
+      "t": "Aufbewahren",
       "s": "1–365 Tage",
       "h": "Die letzte vollständige Sicherung bleibt immer."
     },
@@ -1254,13 +1317,14 @@
       "t": "Zeitzone für 02:00"
     },
     "bakwddel": {
-      "t": "Auch auf WebDAV aufräumen"
+      "t": "Alte Sicherungen auch auf WebDAV löschen"
     },
     "bakjetzt": {
-      "t": "Jetzt sichern"
+      "t": "Jetzt sichern",
+      "res": "Gesichert · gerade eben"
     },
     "bakliste": {
-      "t": "Sicherungen",
+      "t": "Vorhandene Sicherungen",
       "h": "Je Sicherung unter ⋯: herunterladen, hochladen, wiederherstellen, löschen."
     },
     "bakwdload": {
@@ -1268,11 +1332,11 @@
       "s": "Nach einem Umzug"
     },
     "sections": {
-      "automatic": "Automatisch",
-      "backups": "Vorhandene Sicherungen"
+      "automatic": "Erweitert",
+      "backups": "Sicherung"
     },
     "groups": {
-      "automatic": "Automatisch"
+      "automatic": "Erweitert"
     },
     "loadFailed": "Ich konnte die Einstellungen der Sicherung nicht laden.",
     "deps": {
@@ -1322,7 +1386,20 @@
       "rateLimited": "Ich spiele nur wenige Sicherungen pro Stunde zurück. Versuch es später noch einmal.",
       "failed": "Ich konnte die Sicherung nicht zurückspielen."
     },
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "baknow": {
+      "t": "Automatisch"
+    },
+    "nowLine": "{{interval}} · {{days}} Tage aufbewahrt",
+    "rhythm": "{{interval}} um 02:00 ({{zone}})",
+    "rhythmOff": "Aus: Der Server sichert nicht von selbst.",
+    "stats": {
+      "last": "Letzte erfolgreiche Sicherung",
+      "next": "Nächste",
+      "kept": "Aufbewahrt",
+      "keptCount_one": "{{count}} Sicherung",
+      "keptCount_other": "{{count}} Sicherungen"
+    }
   },
   "maintenance": {
     "debug": {
@@ -1330,10 +1407,10 @@
       "s": "Macht den Server langsamer"
     },
     "loglevel": {
-      "t": "Stufe"
+      "t": "Protokoll-Stufe"
     },
     "logtage": {
-      "t": "Aufheben",
+      "t": "Protokolle aufbewahren",
       "s": "1–90 Tage"
     },
     "loghttp": {
@@ -1407,14 +1484,14 @@
       "t": "Demo-Konto löschen"
     },
     "tzreport": {
-      "t": "Umstellung der Zeiten"
+      "t": "Zeitmodell"
     },
     "tzresolve": {
       "t": "Zeitzonen neu bestimmen",
       "s": "Erst Probelauf, dann übernehmen"
     },
     "sections": {
-      "logging": "Protokoll",
+      "logging": "Protokolle",
       "system": "System",
       "timeModel": "Zeitzonen"
     },
@@ -1433,7 +1510,16 @@
       "demo": "Ich konnte das Demo-Konto nicht löschen."
     },
     "nothingOld": "Keine Datei ist älter als die Aufbewahrung.",
-    "download": "Herunterladen"
+    "download": "Herunterladen",
+    "debug24": {
+      "t": "Ausführliches Protokoll für 24 h",
+      "s": "Macht den Server langsamer",
+      "h": "Danach schaltet der Server von selbst auf die normale Stufe zurück.",
+      "btn": "Einschalten",
+      "off": "Ausschalten",
+      "running": "Läuft bis {{until}} · noch {{hours}} h {{minutes}} min",
+      "failed": "Ich konnte das ausführliche Protokoll nicht umschalten."
+    }
   },
   "lodging": {
     "ratingcats": {
@@ -1451,6 +1537,15 @@
     "pushstate2": {
       "t": "Mitteilungen",
       "h": "Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt. Der Server muss sie außerdem senden dürfen."
+    }
+  },
+  "own": {
+    "sections": {
+      "places": "Orte",
+      "routes": "Routen",
+      "maps": "Karten",
+      "templates": "Vorlagen",
+      "rates": "Wechselkurse"
     }
   }
 }

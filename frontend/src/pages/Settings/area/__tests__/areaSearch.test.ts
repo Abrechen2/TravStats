@@ -57,11 +57,11 @@ describe("the settings search reads the registry", () => {
   it("does not offer the server's rows to an account without the permission", () => {
     expect(find("Anfragen pro Tag", admin).length).toBeGreaterThan(0);
     const onlyServer = (access: RegistryAccess) =>
-      find("Ein Land zählt ab", access).filter((h) => h.pageId === "funktionen");
+      find("wann zählt ein Land", access).filter((h) => h.pageId === "funktionen");
     expect(onlyServer(admin).length).toBeGreaterThan(0);
     expect(onlyServer(user)).toEqual([]);
-    expect(find("SMTP", user).some((h) => h.sectionId === "smtp")).toBe(false);
-    expect(find("SMTP", admin).some((h) => h.sectionId === "smtp")).toBe(true);
+    expect(find("Mailserver", user).some((h) => h.pageId === "email")).toBe(false);
+    expect(find("Mailserver", admin).some((h) => h.pageId === "email")).toBe(true);
   });
 
   it("leaves out a row of a closed beta gate and of a switched-off domain", () => {
@@ -96,11 +96,20 @@ describe("a row of the server's side of a service card", () => {
 });
 
 describe("which mount answers for a service card", () => {
-  it("gives a server-only card (geocoder) to the services section for an admin", () => {
-    expect(mountFor("dienstek", "geocoder", null, true)?.id).toBe("externalServices");
+  it("gives a server-only card (airlabs on the server's page) to the services section for an admin", () => {
+    expect(mountFor("dienste", "aeroapi", null, true)?.id).toBe("externalServices");
   });
 
-  it("gives the same card to the same section when the account is no admin", () => {
-    expect(mountFor("dienstek", "geocoder", null, false)?.id).toBe("externalServices");
+  it("gives an account no mount on the server's page, and its own keys on its own page", () => {
+    expect(mountFor("dienste", "aeroapi", null, false)).toBeUndefined();
+    expect(mountFor("dienstek", "airlabs", null, false)?.id).toBe("externalServices");
+  });
+
+  it("sends a card with a page of its own there: the geocoder's rows are on Eigene Server", () => {
+    const hit = find("Photon").find((h) => h.rowId === "photon")!;
+    expect(hit.pageId).toBe("eigene");
+    expect(hit.highlight).toBe("own");
+    // The account's page holds no card the account has nothing to do with.
+    expect(mountFor("dienstek", "geocoder", null, true)).toBeUndefined();
   });
 });
