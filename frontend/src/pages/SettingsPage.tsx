@@ -147,6 +147,7 @@ export default function SettingsPage(): JSX.Element {
   const conditions = useSectionConditions();
   const travTrackHeld = conditions.travTrackHeld === true;
   const travPlanOffered = conditions.travPlanOffered === true;
+  const locationSourceHeld = conditions.locationSourceHeld === true;
   const visible = useMemo(
     () =>
       current && !domainOff
@@ -156,12 +157,22 @@ export default function SettingsPage(): JSX.Element {
             // sections, with a note above, rather than an empty page.
             level: pageLevel(current) === "expert" ? "expert" : level,
             isGateOpen: isFeatureVisible,
-            conditions: { travTrackHeld, travPlanOffered },
+            conditions: { travTrackHeld, travPlanOffered, locationSourceHeld },
             isAdmin,
             deepLinked: named,
           })
         : { shown: [], hiddenExpert: 0, hiddenExpertSettings: 0, deepLinkedExpert: null },
-    [current, domainOff, level, isFeatureVisible, travTrackHeld, travPlanOffered, isAdmin, named]
+    [
+      current,
+      domainOff,
+      level,
+      isFeatureVisible,
+      travTrackHeld,
+      travPlanOffered,
+      locationSourceHeld,
+      isAdmin,
+      named,
+    ]
   );
   const inView = useSectionInView(visible.shown, "settings");
   // Every setting the standard level keeps off this page — whole expert

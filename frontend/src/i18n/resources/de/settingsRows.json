@@ -22,7 +22,8 @@
       "s": "Aus deinem Standortverlauf"
     },
     "immichbeleg": {
-      "t": "Immich-Fotos als Beleg"
+      "t": "Fotos als Beleg nutzen",
+      "s": "Immich-Fotos zu einem Aufenthalt"
     },
     "kiort": {
       "t": "Ortsart per KI erkennen",
@@ -145,7 +146,8 @@
       "h2": "2 h",
       "h24": "24 h",
       "d2": "2 Tage",
-      "own": "Eigene: {{hours}}"
+      "own": "Eigene: {{hours}}",
+      "standard": "24 h und 2 h (Standard)"
     }
   },
   "loyalty": {
@@ -1080,15 +1082,12 @@
     },
     "ttoffer": {
       "t": "TravTrack anbieten",
-      "s": "Standort auf diesem Server speichern"
+      "s": "Aus: Die Seiten verschwinden für alle Konten. Gespeicherte Punkte bleiben."
     },
     "tpoffer": {
-      "t": "Planen anbieten",
+      "t": "Reisen planen anbieten",
+      "s": "Aus: Die Seiten verschwinden für alle Konten. Pläne bleiben gespeichert.",
       "h": "Aus behält alle Pläne, blendet sie nur aus."
-    },
-    "tplimits": {
-      "t": "Planen: Anfragen pro Tag",
-      "s": "KI · Wetter, je Konto"
     },
     "laenderstd": {
       "t": "Ein Land zählt ab",
@@ -1124,6 +1123,8 @@
       "addresses": "Adressen",
       "passkeys": "Passkeys",
       "features": "Was der Server anbietet",
+      "ttoffer": "TravTrack",
+      "tpoffer": "Reisen planen",
       "parsers": "Buchungen lesen"
     },
     "loadFailed": "Ich konnte die Einstellungen des Servers nicht laden.",
@@ -1150,8 +1151,8 @@
     },
     "offersLoadFailed": "Ich konnte nicht lesen, ob TravTrack und Planen angeboten werden.",
     "limit": {
-      "ai": "KI-Anfragen",
-      "weather": "Wetter-Anfragen"
+      "ai": "KI-Anfragen je Konto und Tag",
+      "weather": "Wetter-Anfragen je Konto und Tag"
     },
     "importMode": {
       "off": "Aus",

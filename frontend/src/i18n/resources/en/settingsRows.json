@@ -22,7 +22,8 @@
       "s": "From your location history"
     },
     "immichbeleg": {
-      "t": "Immich photos as evidence"
+      "t": "Use photos as evidence",
+      "s": "Immich photos for a stay"
     },
     "kiort": {
       "t": "Detect place type with AI",
@@ -145,7 +146,8 @@
       "h2": "2 h",
       "h24": "24 h",
       "d2": "2 days",
-      "own": "Own: {{hours}}"
+      "own": "Own: {{hours}}",
+      "standard": "24 h and 2 h (default)"
     }
   },
   "loyalty": {
@@ -1080,15 +1082,12 @@
     },
     "ttoffer": {
       "t": "Offer TravTrack",
-      "s": "Store location on this server"
+      "s": "Off: the pages disappear for every account. Stored points stay."
     },
     "tpoffer": {
-      "t": "Offer planning",
+      "t": "Offer trip planning",
+      "s": "Off: the pages disappear for every account. Plans stay stored.",
       "h": "Off keeps all plans, only hides them."
-    },
-    "tplimits": {
-      "t": "Planning: requests per day",
-      "s": "AI · weather, per account"
     },
     "laenderstd": {
       "t": "A country counts from",
@@ -1124,6 +1123,8 @@
       "addresses": "Addresses",
       "passkeys": "Passkeys",
       "features": "What the server offers",
+      "ttoffer": "TravTrack",
+      "tpoffer": "Trip planning",
       "parsers": "Reading bookings"
     },
     "loadFailed": "I couldn't load the server's settings.",
@@ -1150,8 +1151,8 @@
     },
     "offersLoadFailed": "I couldn't read whether TravTrack and planning are offered.",
     "limit": {
-      "ai": "AI requests",
-      "weather": "Weather requests"
+      "ai": "AI requests per account and day",
+      "weather": "Weather requests per account and day"
     },
     "importMode": {
       "off": "Off",

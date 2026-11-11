@@ -1327,7 +1327,9 @@
       "sicherungen": "Sicherungen",
       "wartung": "Wartung",
       "stamm": "Stammdaten",
-      "unterkuenfte": "Unterkünfte"
+      "unterkuenfte": "Unterkünfte",
+      "tt-bereit": "Bereitstellung",
+      "pl-bereit": "Bereitstellung"
     },
     "menu": {
       "konto": "Mein Konto",
@@ -1691,6 +1693,11 @@
     "enrichmentPerNight": {
       "name": "Vorschläge pro Nacht",
       "sub": "1–1000"
+    },
+    "planShare": {
+      "name": "Pläne mit Freunden teilen",
+      "sub": "Läuft über die Verbindung zu jedem Freund",
+      "jump": "Freunde"
     }
   },
   "location": {
@@ -1774,6 +1781,14 @@
         "offline": "Der Server antwortet gerade nicht.",
         "generic": "Der Server hat die Suche nicht angenommen.",
         "jobFailed": "Die Suche ist unterwegs abgebrochen."
+      },
+      "last": {
+        "name": "Letzter Suchlauf",
+        "none": "Noch kein Suchlauf"
+      },
+      "areas": {
+        "name": "Märkte, Parks und Museen mitsuchen",
+        "scanOff": "Wirkt erst mit „Automatisch suchen“."
       }
     },
     "tt": {
@@ -1896,17 +1911,18 @@
         "value_one": "{{count}} Punkt seit {{since}}",
         "value_other": "{{count}} Punkte seit {{since}}"
       },
-      "lastSeen": "Zuletzt gesehen: {{at}}",
       "loadError": "Ich konnte nicht lesen, was gespeichert ist.",
       "off": "TravTrack ist auf diesem Server aus: Es kommen keine neuen Punkte an. Gespeichertes bleibt, Export und Löschen funktionieren weiter.",
       "devices": {
         "name": "Geräte",
-        "sub": "Koppeln und abmelden in Profil & Anmeldung",
-        "jump": "Zu Profil & Anmeldung",
+        "sub": "Koppeln und abmelden",
+        "jump": "Telefone",
         "unnamed": "Gerät ohne Namen",
         "points_one": "{{count}} Punkt",
         "points_other": "{{count}} Punkte"
-      }
+      },
+      "lastSeenName": "Zuletzt eingegangen",
+      "lastSeenNone": "Noch nichts eingegangen"
     },
     "places": {
       "title": "Feste Orte",
@@ -2051,6 +2067,14 @@
     },
     "diag": {
       "title": "Diagnose"
+    },
+    "groups": {
+      "aufzeichnung": "Gespeichert",
+      "quelle": "Quelle",
+      "aufenthalte": "Aufenthalte",
+      "suchlauf": "Suchlauf",
+      "belege": "Belege",
+      "feinabstimmung": "Feinabstimmung"
     }
   },
   "lodgingRatings": {

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type JSX } from "react";
+import { useCallback, useEffect, useRef, useState, type JSX, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { dawarichStaysApi, type StayScanState } from "../../../lib/api/dawarichStays";
 import { profileDateTime } from "../../../lib/profileInstant";
-import { SectionCard } from "../SettingsShared";
+import { SectionCard, SectionTitle } from "../SettingsShared";
 import { useExpertRows } from "../frame/useExpertRows";
 import { SettingRows } from "../../ui/SettingRow";
 import {
@@ -15,6 +15,7 @@ import {
   JobStatus,
   LinkButton,
   SettingItem,
+  StatusValue,
   SwitchControl,
   useGuardedNavigate,
   useSettingWrite,
@@ -54,11 +55,22 @@ const PAUSE_JUMPS: Record<string, { label: string; to: string } | undefined> = {
  * weiß nicht, ob es fertig wurde"), refused (places off, no connection, rate
  * limit). A paused scan says WHY it is paused and where to lift it.
  */
-export default function StayScanSection({ onScanned }: { onScanned?: () => void }): JSX.Element {
+export default function StayScanSection({
+  onScanned,
+  belege,
+  fineBefore,
+}: {
+  onScanned?: () => void;
+  /** The "Belege" group (the Immich evidence switch), drawn between the search and its tuning. */
+  belege?: ReactNode;
+  /** Rows that lead the "Feinabstimmung" group, ahead of the period and the areas. */
+  fineBefore?: ReactNode;
+}): JSX.Element {
   const { t } = useTranslation(["settings", "trips"]);
   const isDemo = useIsDemoAccount();
   const navigate = useGuardedNavigate();
-  const expert = useExpertRows(1);
+  // The search period and the areas switch are the expert rows of Feinabstimmung.
+  const expert = useExpertRows(2);
   const [state, setState] = useState<StayScanState | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [lookback, setLookback] = useState<(typeof LOOKBACKS)[number]>("7");
@@ -102,6 +114,23 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
       }
       await load();
       onScanned?.();
+    }
+  );
+
+  // "Märkte, Parks und Museen mitsuchen": markets and venues are one switch in
+  // the design; the server accepts them only while the search itself is on.
+  const areas = useSettingWrite<boolean>(
+    "location.stayScanAreas",
+    state ? (state.marketEnabled ?? false) && (state.venueEnabled ?? false) : false,
+    async (on) => {
+      setRefusal(null);
+      try {
+        await dawarichStaysApi.enableAreas(on);
+      } catch (err) {
+        setRefusal(stayErrorKey(err));
+        throw err;
+      }
+      await load();
     }
   );
 
@@ -176,24 +205,6 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
     job = { kind: "failed", reason: phase.reason, onRetry: () => void startScan() };
   } else if (serverRunning) {
     job = { kind: "running", what: t("settings:location.stay.result.running") };
-  } else if (result === "succeeded") {
-    job = {
-      kind: "done",
-      result: t("settings:location.stay.result.done", {
-        created: state?.createdCount ?? 0,
-        points: state?.pointCount ?? 0,
-        at: done,
-      }),
-    };
-  } else if (result === "partial") {
-    job = {
-      kind: "done",
-      result: t("settings:location.stay.result.partial", {
-        created: state?.createdCount ?? 0,
-        points: state?.pointCount ?? 0,
-        at: done,
-      }),
-    };
   } else if (result === "interrupted") {
     job = {
       kind: "failed",
@@ -210,168 +221,218 @@ export default function StayScanSection({ onScanned }: { onScanned?: () => void 
     };
   }
 
+  // "Letzter Suchlauf": how the last finished search ended, or that none has.
+  const lastRun =
+    result === "succeeded" || result === "partial"
+      ? t(`settings:location.stay.result.${result === "partial" ? "partial" : "done"}`, {
+          created: state?.createdCount ?? 0,
+          points: state?.pointCount ?? 0,
+          at: done,
+        })
+      : null;
+
   const stale =
     !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
   const coverageScope = state?.marketResult?.scope === "venues" ? "venues" : "markets";
   const coverage = state?.marketResult;
 
   return (
-    <SectionCard>
-      <SettingRows>
-        <SettingItem
-          title={t("settings:location.stay.scan.name")}
-          sub={t("settings:location.stay.scan.sub")}
-          help={[
-            t("settings:location.stay.scan.help"),
-            t(`trips:dawarichStays.${travtrack ? "travtrack.description" : "description"}`),
-            t("trips:dawarichStays.areas.description"),
-          ].join(" ")}
-          save={enabled}
-          locked={locked}
-          dependency={
-            cannotEnable
-              ? {
-                  reason: t(`settings:location.stay.pause.${cannotEnable}`),
-                  jump: jumpOf(cannotEnable),
-                }
-              : undefined
-          }
-          control={
-            // No switch before the server said what it is: a guessed "off" would
-            // let the user consent while only trying to look.
-            state ? (
-              <SwitchControl
-                checked={enabled.value}
-                label={t("settings:location.stay.scan.name")}
-                onChange={enabled.choose}
-              />
-            ) : undefined
-          }
-        >
-          {state?.enabled && pausedReason && pausedReason !== "disabled" ? (
-            <Dependency
-              reason={t(`settings:location.stay.pause.${pausedReason}`)}
-              jump={jumpOf(pausedReason)}
-            />
-          ) : null}
-          {state?.nextScanAt && state.enabled && !pausedReason ? (
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("settings:location.stay.next", { at: at(state.nextScanAt) })}
-            </p>
-          ) : null}
-          {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
-          {loadError ? (
-            <ErrorLine>
-              {t("settings:location.stay.loadError")}{" "}
-              <LinkButton onClick={() => void load()}>{t("settings:blocks.save.retry")}</LinkButton>
-            </ErrorLine>
-          ) : null}
-        </SettingItem>
-
-        {expert ? (
+    <>
+      <SectionCard>
+        <SectionTitle title={t("settings:tt.groups.suchlauf")} />
+        <SettingRows>
           <SettingItem
-            expert
-            title={t("settings:location.stay.period.name")}
+            title={t("settings:location.stay.scan.name")}
+            sub={t("settings:location.stay.scan.sub")}
+            help={[
+              t("settings:location.stay.scan.help"),
+              t(`trips:dawarichStays.${travtrack ? "travtrack.description" : "description"}`),
+              t("trips:dawarichStays.areas.description"),
+            ].join(" ")}
+            save={enabled}
             locked={locked}
-            control={
-              <ChoiceControl
-                value={lookback}
-                label={t("settings:location.stay.period.name")}
-                options={LOOKBACKS.map((days) => ({
-                  value: days,
-                  label: t("settings:location.stay.period.days", { count: Number(days) }),
-                }))}
-                onChange={setLookback}
-              />
+            dependency={
+              cannotEnable
+                ? {
+                    reason: t(`settings:location.stay.pause.${cannotEnable}`),
+                    jump: jumpOf(cannotEnable),
+                  }
+                : undefined
             }
-          />
-        ) : null}
-
-        <SettingItem
-          title={t("settings:location.stay.now.name")}
-          locked={locked}
-          dependency={
-            state && pausedReason
-              ? {
-                  reason: t(`settings:location.stay.pause.${pausedReason}`),
-                  jump: jumpOf(pausedReason),
-                }
-              : undefined
-          }
-          job={job ? <JobStatus job={job} /> : undefined}
-          control={
-            <>
-              <ActionControl
-                label={t(
-                  running ? "settings:location.stay.now.busy" : "settings:location.stay.now.label"
-                )}
-                busy={running || !state}
-                onClick={() => void startScan()}
+            control={
+              // No switch before the server said what it is: a guessed "off" would
+              // let the user consent while only trying to look.
+              state ? (
+                <SwitchControl
+                  checked={enabled.value}
+                  label={t("settings:location.stay.scan.name")}
+                  onChange={enabled.choose}
+                />
+              ) : undefined
+            }
+          >
+            {state?.enabled && pausedReason && pausedReason !== "disabled" ? (
+              <Dependency
+                reason={t(`settings:location.stay.pause.${pausedReason}`)}
+                jump={jumpOf(pausedReason)}
               />
-              <Link className="btn-secondary" to="/pending-updates?tab=dawarich">
-                {t("settings:location.stay.now.inbox")}
-              </Link>
-            </>
-          }
-        >
-          {state?.windowStart ? (
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("settings:location.stay.window", {
-                from: at(state.windowStart),
-                to: at(state.windowEnd),
-              })}
-            </p>
-          ) : null}
-          {state?.dataThrough ? (
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("settings:location.stay.dataThrough", { at: at(state.dataThrough) })}
-            </p>
-          ) : null}
-          {state?.finishedAt &&
-          ["succeeded", "partial"].includes(result ?? "") &&
-          !state.dataThrough ? (
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("settings:location.stay.noPoints")}
-            </p>
-          ) : null}
-          {stale ? (
-            <p className="t-caption" style={{ margin: 0 }}>
-              {t("settings:location.stay.stale")}
-            </p>
-          ) : null}
-          {coverage ? (
-            <div role="status" className="flex flex-col" style={{ gap: 2 }}>
+            ) : null}
+            {state?.nextScanAt && state.enabled && !pausedReason ? (
               <p className="t-caption" style={{ margin: 0 }}>
-                {t(`trips:dawarichStays.${coverageScope}.status.${coverage.status}`)}
+                {t("settings:location.stay.next", { at: at(state.nextScanAt) })}
               </p>
+            ) : null}
+            {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
+            {loadError ? (
+              <ErrorLine>
+                {t("settings:location.stay.loadError")}{" "}
+                <LinkButton onClick={() => void load()}>
+                  {t("settings:blocks.save.retry")}
+                </LinkButton>
+              </ErrorLine>
+            ) : null}
+          </SettingItem>
+
+          <SettingItem
+            title={t("settings:location.stay.last.name")}
+            control={<StatusValue>{lastRun ?? t("settings:location.stay.last.none")}</StatusValue>}
+          />
+          <SettingItem
+            title={t("settings:location.stay.now.name")}
+            locked={locked}
+            dependency={
+              state && pausedReason
+                ? {
+                    reason: t(`settings:location.stay.pause.${pausedReason}`),
+                    jump: jumpOf(pausedReason),
+                  }
+                : undefined
+            }
+            job={job ? <JobStatus job={job} /> : undefined}
+            control={
+              <>
+                <ActionControl
+                  label={t(
+                    running ? "settings:location.stay.now.busy" : "settings:location.stay.now.label"
+                  )}
+                  busy={running || !state}
+                  onClick={() => void startScan()}
+                />
+                <Link className="btn-secondary" to="/pending-updates?tab=dawarich">
+                  {t("settings:location.stay.now.inbox")}
+                </Link>
+              </>
+            }
+          >
+            {state?.windowStart ? (
               <p className="t-caption" style={{ margin: 0 }}>
-                {t("trips:dawarichStays.markets.coverage", {
-                  tiles: coverage.tiles,
-                  total: coverage.totalTiles,
+                {t("settings:location.stay.window", {
+                  from: at(state.windowStart),
+                  to: at(state.windowEnd),
                 })}
               </p>
-              {coverage.missingAreaCount ? (
+            ) : null}
+            {state?.dataThrough ? (
+              <p className="t-caption" style={{ margin: 0 }}>
+                {t("settings:location.stay.dataThrough", { at: at(state.dataThrough) })}
+              </p>
+            ) : null}
+            {state?.finishedAt &&
+            ["succeeded", "partial"].includes(result ?? "") &&
+            !state.dataThrough ? (
+              <p className="t-caption" style={{ margin: 0 }}>
+                {t("settings:location.stay.noPoints")}
+              </p>
+            ) : null}
+            {stale ? (
+              <p className="t-caption" style={{ margin: 0 }}>
+                {t("settings:location.stay.stale")}
+              </p>
+            ) : null}
+            {coverage ? (
+              <div role="status" className="flex flex-col" style={{ gap: 2 }}>
                 <p className="t-caption" style={{ margin: 0 }}>
-                  {t(`trips:dawarichStays.${coverageScope}.missing`, {
-                    count: coverage.missingAreaCount,
+                  {t(`trips:dawarichStays.${coverageScope}.status.${coverage.status}`)}
+                </p>
+                <p className="t-caption" style={{ margin: 0 }}>
+                  {t("trips:dawarichStays.markets.coverage", {
+                    tiles: coverage.tiles,
+                    total: coverage.totalTiles,
                   })}
                 </p>
-              ) : null}
-              {coverage.staleMapData ? (
+                {coverage.missingAreaCount ? (
+                  <p className="t-caption" style={{ margin: 0 }}>
+                    {t(`trips:dawarichStays.${coverageScope}.missing`, {
+                      count: coverage.missingAreaCount,
+                    })}
+                  </p>
+                ) : null}
+                {coverage.staleMapData ? (
+                  <p className="t-caption" style={{ margin: 0 }}>
+                    {t("trips:dawarichStays.markets.stale")}
+                  </p>
+                ) : null}
                 <p className="t-caption" style={{ margin: 0 }}>
-                  {t("trips:dawarichStays.markets.stale")}
+                  {t(`trips:dawarichStays.${coverageScope}.counts`, {
+                    created: coverage.createdCount,
+                    known: coverage.alreadyRecordedCount,
+                  })}
                 </p>
-              ) : null}
-              <p className="t-caption" style={{ margin: 0 }}>
-                {t(`trips:dawarichStays.${coverageScope}.counts`, {
-                  created: coverage.createdCount,
-                  known: coverage.alreadyRecordedCount,
-                })}
-              </p>
-            </div>
-          ) : null}
-        </SettingItem>
-      </SettingRows>
-    </SectionCard>
+              </div>
+            ) : null}
+          </SettingItem>
+        </SettingRows>
+      </SectionCard>
+      {belege}
+      {fineBefore || expert ? (
+        <SectionCard>
+          <SectionTitle title={t("settings:tt.groups.feinabstimmung")} />
+          <SettingRows>
+            {fineBefore}
+            {expert ? (
+              <SettingItem
+                expert
+                title={t("settings:location.stay.period.name")}
+                locked={locked}
+                control={
+                  <ChoiceControl
+                    value={lookback}
+                    label={t("settings:location.stay.period.name")}
+                    options={LOOKBACKS.map((days) => ({
+                      value: days,
+                      label: t("settings:location.stay.period.days", { count: Number(days) }),
+                    }))}
+                    onChange={setLookback}
+                  />
+                }
+              />
+            ) : null}
+
+            {expert ? (
+              <SettingItem
+                expert
+                title={t("settings:location.stay.areas.name")}
+                locked={locked}
+                save={areas}
+                dependency={
+                  state && !state.enabled
+                    ? { reason: t("settings:location.stay.areas.scanOff") }
+                    : undefined
+                }
+                control={
+                  state ? (
+                    <SwitchControl
+                      checked={areas.value}
+                      label={t("settings:location.stay.areas.name")}
+                      onChange={areas.choose}
+                    />
+                  ) : undefined
+                }
+              />
+            ) : null}
+          </SettingRows>
+        </SectionCard>
+      ) : null}
+    </>
   );
 }

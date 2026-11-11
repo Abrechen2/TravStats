@@ -130,6 +130,25 @@ describe("NotificationPreferences (one channel, one lead select per area)", () =
     expect(updatePreferences).not.toHaveBeenCalled();
   });
 
+  it("shows the server's default 24 h + 2 h as the standard choice, not as 'Eigene', and 36 h still as 'Eigene'", async () => {
+    await renderPage();
+    // bus keeps the pair every new account is created with.
+    expect(leadSelect("bus").value).toBe("standard");
+    expect(
+      within(leadSelect("bus")).getByRole("option", {
+        name: "settingsRows:notifications.lead.standard",
+      })
+    ).toBeTruthy();
+    expect(
+      within(leadSelect("bus")).queryByRole("option", {
+        name: "settingsRows:notifications.lead.own",
+      })
+    ).toBeNull();
+    expect(leadSelect("lodging").value).toBe("custom");
+    await new Promise((r) => setTimeout(r, 600));
+    expect(updatePreferences).not.toHaveBeenCalled();
+  });
+
   it("a custom lead survives switching the area off, and can be switched on again without losing it", async () => {
     await renderPage();
     await userEvent.selectOptions(leadSelect("lodging"), "off");

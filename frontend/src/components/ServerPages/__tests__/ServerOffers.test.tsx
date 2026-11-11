@@ -74,6 +74,8 @@ describe("Server › Was der Server anbietet", () => {
   it("refuses planning limits above the maximum with a number, and keeps Speichern off", async () => {
     render(<ServerOffers />);
     const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    // The draft follows the loaded value one render after the field appears.
+    await waitFor(() => expect(ai).toHaveValue(10));
     await userEvent.clear(ai);
     await userEvent.type(ai, "500");
     expect(screen.getByText("settingsRows:server.errors.limit")).toBeInTheDocument();
@@ -84,6 +86,8 @@ describe("Server › Was der Server anbietet", () => {
     plan.setConfig.mockRejectedValue(httpError(500));
     render(<ServerOffers />);
     const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    // The draft follows the loaded value one render after the field appears.
+    await waitFor(() => expect(ai).toHaveValue(10));
     await userEvent.clear(ai);
     await userEvent.type(ai, "40");
     await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
@@ -125,5 +129,39 @@ describe("Server › Was der Server anbietet", () => {
       await screen.findByRole("radio", { name: "settingsRows:server.importMode.all" })
     );
     expect(await screen.findByText("admin:importMode.saveFailed")).toBeInTheDocument();
+  });
+});
+
+describe("Server › Bereitstellung pages (settings v3 S4)", () => {
+  it("draws TravTrack's offer alone on its page, without the beta switch or the plan rows", async () => {
+    render(<ServerOffers part="track" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.ttoffer.t" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.beta.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.tpoffer.t" })).toBeNull();
+    expect(screen.queryByLabelText("settingsRows:server.limit.ai")).toBeNull();
+  });
+
+  it("draws the plan offer with the AI and weather limits as two rows of their own", async () => {
+    render(<ServerOffers part="plan" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.tpoffer.t" })
+    ).toBeInTheDocument();
+    const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    const weather = await screen.findByLabelText("settingsRows:server.limit.weather");
+    expect(ai.closest("[data-setting-row]")).not.toBe(weather.closest("[data-setting-row]"));
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
+  });
+
+  it("leaves both offers off Funktionen, which keeps the beta switch, the country default and the import mode", async () => {
+    render(<ServerOffers part="rest" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.beta.t" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.tpoffer.t" })).toBeNull();
+    expect(screen.queryByLabelText("settingsRows:server.limit.ai")).toBeNull();
+    expect(await screen.findByText("settingsRows:server.importmodus.t")).toBeInTheDocument();
   });
 });

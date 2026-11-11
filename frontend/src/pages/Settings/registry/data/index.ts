@@ -16,7 +16,9 @@ import { UEBER_PAGE } from "./ueber";
 import { TT_AUFZ_PAGE } from "./tt-aufz";
 import { TT_ERK_PAGE } from "./tt-erk";
 import { TT_DATEN_PAGE } from "./tt-daten";
+import { TT_BEREIT_PAGE } from "./tt-bereit";
 import { PL_PLAN_PAGE } from "./pl-plan";
+import { PL_BEREIT_PAGE } from "./pl-bereit";
 import { ALLGEMEIN_PAGE } from "./allgemein";
 import { NUTZER_PAGE } from "./nutzer";
 import { FUNKTIONEN_PAGE } from "./funktionen";
@@ -44,7 +46,9 @@ export const REGISTRY_PAGES: readonly RegistryPage[] = [
   TT_AUFZ_PAGE,
   TT_ERK_PAGE,
   TT_DATEN_PAGE,
+  TT_BEREIT_PAGE,
   PL_PLAN_PAGE,
+  PL_BEREIT_PAGE,
   ALLGEMEIN_PAGE,
   NUTZER_PAGE,
   FUNKTIONEN_PAGE,

@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
@@ -8,8 +8,7 @@ import type {
   LocationProviderSettings,
 } from "../../../lib/api/locationProvider";
 import { useLocationProviderStore } from "../../../store/locationProviderStore";
-import { SectionCard } from "../SettingsShared";
-import TrackGapSetting from "./TrackGapSetting";
+import { SectionCard, SectionTitle } from "../SettingsShared";
 import { SettingRows } from "../../ui/SettingRow";
 import {
   ChoiceControl,
@@ -62,7 +61,15 @@ function refusalKey(err: unknown): string | null {
  * reason and the jump to the connection, until that exists. A source that
  * stopped working stays shown as chosen, with a warning, never as a fallback.
  */
-export default function LocationSourceSection(): JSX.Element {
+export default function LocationSourceSection({
+  recording,
+  trailing,
+}: {
+  /** "Reisen aufzeichnen": drawn under the source, only while TravTrack is the source. */
+  recording?: ReactNode;
+  /** Rows that close the card (the devices pointer). */
+  trailing?: ReactNode;
+}): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
   const navigate = useGuardedNavigate();
@@ -121,6 +128,7 @@ export default function LocationSourceSection(): JSX.Element {
 
   return (
     <SectionCard>
+      <SectionTitle title={t("settings:tt.groups.quelle")} />
       <SettingRows>
         <SettingItem
           title={t("settings:location.source.name")}
@@ -165,7 +173,7 @@ export default function LocationSourceSection(): JSX.Element {
           {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
         </SettingItem>
 
-        <TrackGapSetting locked={locked} />
+        {state?.kind === "travtrack" ? recording : null}
 
         {dawarichHidden ? null : (
           <SettingItem
@@ -190,6 +198,7 @@ export default function LocationSourceSection(): JSX.Element {
             }
           />
         )}
+        {trailing}
       </SettingRows>
     </SectionCard>
   );

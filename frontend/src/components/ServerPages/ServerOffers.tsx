@@ -35,9 +35,16 @@ type Limits = Record<keyof typeof LIMIT_MAX, string>;
  * once and keep the user's choice when a write fails; the planning limits are a
  * small group of their own.
  */
-export default function ServerOffers(): JSX.Element {
-  return <InstanceGate>{(settings) => <Offers settings={settings} />}</InstanceGate>;
+export default function ServerOffers({ part = "all" }: { part?: OffersPart }): JSX.Element {
+  return <InstanceGate>{(settings) => <Offers settings={settings} part={part} />}</InstanceGate>;
 }
+
+/**
+ * Which rows of the page are drawn. Settings v3 splits the old page: TravTrack's
+ * offer and TravPlan's offer with its limits each have a page of their own
+ * ("Bereitstellung"), what is left is "Funktionen". `all` is the old page.
+ */
+export type OffersPart = "all" | "rest" | "track" | "plan";
 
 function focusBeta(): void {
   const el = document.getElementById("server-beta-switch");
@@ -45,13 +52,17 @@ function focusBeta(): void {
   el?.focus();
 }
 
-function Offers({ settings }: { settings: InstanceSettings }): JSX.Element {
+function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPart }): JSX.Element {
   const { t } = useTranslation(["settingsRows", "passport", "admin"]);
   const row = useRowCopy("server");
   const { isFeatureVisible } = useBetaFeatures();
   const patch = useInstanceStore((s) => s.patch);
   const bump = useCapabilitiesEpochStore((s) => s.bump);
-  const expert = useExpertRows(1);
+  const showTrack = part === "all" || part === "track";
+  const showPlan = part === "all" || part === "plan";
+  const showRest = part === "all" || part === "rest";
+  // The two plan limits are the expert rows of this page.
+  const expert = useExpertRows(showPlan ? 2 : 0);
   const trackOffered = isFeatureVisible("travTrack");
   const planOffered = isFeatureVisible("travPlan");
 
@@ -132,86 +143,106 @@ function Offers({ settings }: { settings: InstanceSettings }): JSX.Element {
   const b = row("beta");
   const tt = row("ttoffer");
   const tp = row("tpoffer");
-  const tl = row("tplimits");
   const cs = row("laenderstd");
+  const limitItem = (key: keyof Limits, footer: boolean): JSX.Element => (
+    <SettingItem
+      expert
+      title={t(`settingsRows:server.limit.${key}`)}
+      scope="allAccounts"
+      control={
+        <LimitInput
+          label={t(`settingsRows:server.limit.${key}`)}
+          value={limits.draft[key]}
+          invalid={limitProblem(key) !== undefined}
+          onChange={(next) => limits.edit({ [key]: next })}
+        />
+      }
+    >
+      {limitProblem(key) ? <ErrorLine>{limitProblem(key)}</ErrorLine> : null}
+      {footer ? (
+        <GroupFooter
+          group={limits}
+          disabled={limitProblem("ai") !== undefined || limitProblem("weather") !== undefined}
+        />
+      ) : null}
+    </SettingItem>
+  );
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-      <SettingItem
-        title={b.title}
-        sub={b.sub}
-        scope="allAccounts"
-        controlId="server-beta-switch"
-        save={beta}
-        control={<SwitchControl checked={beta.value} onChange={beta.choose} />}
-      >
-        {/* Derived from the registry, so it cannot drift from what the switch gates. */}
-        <BetaFeatureList />
-      </SettingItem>
-      <SettingItem
-        title={tt.title}
-        sub={tt.sub}
-        scope="allAccounts"
-        save={track}
-        dependency={trackOffered ? undefined : needsBeta}
-        control={<SwitchControl checked={track.value} onChange={track.choose} label={tt.title} />}
-      />
-      <SettingItem
-        title={tp.title}
-        help={tp.help}
-        scope="allAccounts"
-        save={plan}
-        dependency={planOffered ? undefined : needsBeta}
-        control={<SwitchControl checked={plan.value} onChange={plan.choose} label={tp.title} />}
-      />
-      {expert && planOffered && limitsSaved ? (
-        <SettingItem title={tl.title} sub={tl.sub} scope="allAccounts" expert>
-          <div className="flex flex-wrap items-start" style={{ gap: "var(--ts-space-lg)" }}>
-            {(["ai", "weather"] as const).map((key) => (
-              <label key={key} className="flex flex-col t-caption" style={{ gap: 4 }}>
-                {t(`settingsRows:server.limit.${key}`)}
-                <LimitInput
-                  value={limits.draft[key]}
-                  invalid={limitProblem(key) !== undefined}
-                  onChange={(next) => limits.edit({ [key]: next })}
-                />
-                {limitProblem(key) ? <ErrorLine>{limitProblem(key)!}</ErrorLine> : null}
-              </label>
-            ))}
-          </div>
-          <GroupFooter
-            group={limits}
-            disabled={limitProblem("ai") !== undefined || limitProblem("weather") !== undefined}
-          />
+      {showRest ? (
+        <SettingItem
+          title={b.title}
+          sub={b.sub}
+          scope="allAccounts"
+          controlId="server-beta-switch"
+          save={beta}
+          control={<SwitchControl checked={beta.value} onChange={beta.choose} />}
+        >
+          {/* Derived from the registry, so it cannot drift from what the switch gates. */}
+          <BetaFeatureList />
         </SettingItem>
       ) : null}
+      {showTrack ? (
+        <SettingItem
+          title={tt.title}
+          sub={tt.sub}
+          scope="allAccounts"
+          save={track}
+          dependency={trackOffered ? undefined : needsBeta}
+          control={<SwitchControl checked={track.value} onChange={track.choose} label={tt.title} />}
+        />
+      ) : null}
+      {showPlan ? (
+        <SettingItem
+          title={tp.title}
+          sub={tp.sub}
+          help={tp.help}
+          scope="allAccounts"
+          save={plan}
+          dependency={planOffered ? undefined : needsBeta}
+          control={<SwitchControl checked={plan.value} onChange={plan.choose} label={tp.title} />}
+        />
+      ) : null}
+      {showPlan && expert && planOffered && limitsSaved ? (
+        <>
+          {limitItem("ai", false)}
+          {limitItem("weather", true)}
+        </>
+      ) : null}
       {loadFailed ? <ErrorLine>{t("settingsRows:server.offersLoadFailed")}</ErrorLine> : null}
-      <SettingItem
-        title={cs.title}
-        sub={cs.sub}
-        scope="allAccounts"
-        save={country}
-        control={
-          <ChoiceControl<CountryTier>
-            label={cs.title}
-            value={country.value}
-            options={COUNTRY_TIER_CHOICES.map((tier) => ({
-              value: tier,
-              label: t(`passport:tiers.${tier}`),
-            }))}
-            onChange={country.choose}
+      {showRest ? (
+        <>
+          <SettingItem
+            title={cs.title}
+            sub={cs.sub}
+            scope="allAccounts"
+            save={country}
+            control={
+              <ChoiceControl<CountryTier>
+                label={cs.title}
+                value={country.value}
+                options={COUNTRY_TIER_CHOICES.map((tier) => ({
+                  value: tier,
+                  label: t(`passport:tiers.${tier}`),
+                }))}
+                onChange={country.choose}
+              />
+            }
           />
-        }
-      />
-      <ImportModeRow />
+          <ImportModeRow />
+        </>
+      ) : null}
     </div>
   );
 }
 
 function LimitInput({
+  label,
   value,
   invalid,
   onChange,
 }: {
+  label: string;
   value: string;
   invalid: boolean;
   onChange: (next: string) => void;
@@ -220,6 +251,7 @@ function LimitInput({
   return (
     <input
       type="number"
+      aria-label={label}
       min={0}
       inputMode="numeric"
       className="ts-control"

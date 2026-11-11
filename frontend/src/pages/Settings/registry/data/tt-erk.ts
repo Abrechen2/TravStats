@@ -6,18 +6,24 @@ export const TT_ERK_PAGE: RegistryPage = {
   ...{"id":"tt-erk","area":"track","de":"Erkennung & Vorschläge","en":"Detection & suggestions","level":"standard","audience":"all","demoLocked":false},
   sections: [
       {"id":"tt-erk-aufenthalte","de":"Aufenthalte","en":"Stays","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"avor","mount":"ttDetect","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Aufenthalte vorschlagen","en":"Suggest stays","terms":{"de":"Aus deinem Standortverlauf","en":"From your location history"}},
         {"id":"stopps","mount":"ttDetect","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Stopps benennen","en":"Name stops","terms":{"de":"Namen von Läden, Firmen und Hotels in der Nähe vorschlagen Aus: der Posteingang bietet keine Aufenthaltsvorschläge an.","en":"Suggest names of shops, companies and hotels nearby Off: the inbox offers no stay suggestions."}},
+        {"id":"posteingang","mount":"ttDetect","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Offene Vorschläge im Posteingang","en":"Open suggestions in the inbox","terms":{"de":"","en":""}},
       ]},
-      {"id":"tt-erk-feinabstimmung","de":"Feinabstimmung","en":"Fine-tuning","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"staedte","mount":"ttDetect","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Städte benennen","en":"Name cities","terms":{"de":"Orte ab 30 Minuten Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder.","en":"Places from 30 minutes Sends positions rounded to 1 km to the server's place search. Off removes the cities again."}},
-        {"id":"scanzeit","mount":"ttDetect","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Zeitraum für „Jetzt suchen“","en":"Period for “Search now”","terms":{"de":"","en":""}},
-      ]},
-      {"id":"tt-erk-suchlauf","de":"Suchlauf","en":"Scan","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+      {"id":"tt-erk-suchlauf","de":"Suchlauf","en":"Search","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
         {"id":"scan","mount":"ttDetect","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Automatisch suchen","en":"Search automatically","terms":{"de":"Alle 6 Stunden, auch Märkte, Parks, Museen Funde landen als Vorschlag im Eingang. Pausiert, solange Orte oder Aufenthaltsvorschläge aus sind.","en":"Every 6 hours, also markets, parks, museums Finds arrive as inbox suggestions. Paused while Places or stay suggestions are off."}},
+        {"id":"scaninfo","mount":"ttDetect","kind":"status","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Letzter Suchlauf","en":"Last search","terms":{"de":"","en":""}},
         {"id":"scanjetzt","mount":"ttDetect","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Jetzt suchen","en":"Search now","terms":{"de":"","en":""}},
       ]},
-      {"id":"tt-erk-ttdetect","de":"Erkennung & Vorschläge","en":"Detection & suggestions","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
-        {"id":"posteingang","mount":"ttDetect","kind":"link","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Offene Vorschläge im Posteingang","en":"Open suggestions in the inbox","terms":{"de":"","en":""}},
+      {"id":"tt-erk-belege","de":"Belege","en":"Evidence","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"immichbeleg","mount":"ttDetect","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Fotos als Beleg nutzen","en":"Use photos as evidence","terms":{"de":"Immich-Fotos zu einem Aufenthalt","en":"Immich photos for a stay"}},
+      ]},
+      {"id":"tt-erk-feinabstimmung","de":"Feinabstimmung","en":"Fine-tuning","level":"standard","scope":"account","audience":"all","demoLocked":false,"rows":[
+        {"id":"trackgap","mount":"ttDetect","kind":"select","level":"standard","scope":"account","audience":"all","demoLocked":false,"de":"Track trennen ab","en":"Split track after","terms":{"de":"Pause, nach der eine Aufzeichnung ein neuer Track wird Nur die Zeit zählt, nie die Strecke. Wie bei Dawarich. 15 Minuten 30 Minuten 1 Stunde 2 Stunden 4 Stunden 12 Stunden","en":"A pause after which a recording becomes a new track Only time counts, never distance. As in Dawarich. 15 minutes 30 minutes 1 hour 2 hours 4 hours 12 hours"}},
+        {"id":"staedte","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Städte benennen","en":"Name cities","terms":{"de":"Orte ab 30 Minuten Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder.","en":"Places from 30 minutes Sends positions rounded to 1 km to the server's place search. Off removes the cities again."}},
+        {"id":"kiort","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Ortsart per KI erkennen","en":"Detect place type with AI","terms":{"de":"Nur Ortsnamen, keine Koordinaten","en":"Place names only, no coordinates"}},
+        {"id":"scanzeit","mount":"ttDetect","kind":"select","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Zeitraum für „Jetzt suchen“","en":"Period for “Search now”","terms":{"de":"","en":""}},
+        {"id":"gelaende","mount":"ttDetect","kind":"toggle","level":"expert","scope":"account","audience":"all","demoLocked":false,"de":"Märkte, Parks und Museen mitsuchen","en":"Also search markets, parks and museums","terms":{"de":"","en":""}},
       ]},
   ],
 };

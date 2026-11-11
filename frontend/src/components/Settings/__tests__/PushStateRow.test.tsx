@@ -63,4 +63,28 @@ describe("PushStateRow (Telefone)", () => {
     expect(screen.getByText("settings:notifications.loadError")).toBeInTheDocument();
     expect(screen.queryByText("settings:notifications.pushStatus.ok")).toBeNull();
   });
+
+  it("reads the state again when the page regains focus, so a phone allowed meanwhile shows as ready", async () => {
+    getPreferences.mockResolvedValue({ push: { available: false, reason: "no_device_token" } });
+    await renderRow();
+    expect(
+      screen.getByText("settings:notifications.pushStatus.no_device_token")
+    ).toBeInTheDocument();
+    getPreferences.mockResolvedValue({ push: { available: true, reason: null } });
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.getByText("settings:notifications.pushStatus.ok")).toBeInTheDocument();
+    expect(getPreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the last answer on screen when the refresh at focus fails", async () => {
+    getPreferences.mockResolvedValue({ push: { available: true, reason: null } });
+    await renderRow();
+    getPreferences.mockImplementation(() => Promise.reject(new Error("503")));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.getByText("settings:notifications.pushStatus.ok")).toBeInTheDocument();
+  });
 });

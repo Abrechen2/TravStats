@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
@@ -20,19 +21,39 @@ const caps = vi.hoisted(() => ({
 }));
 vi.mock("../../../../hooks/useTravTrackVisible", () => ({
   useTravTrackCapabilities: () => caps.current,
+  travTrackSettingsVisible: (c: { hasData: boolean; enabled: boolean } | null) =>
+    c !== null && (c.hasData || c.enabled),
 }));
 const demo = vi.hoisted(() => ({ current: false }));
 vi.mock("../../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo.current }));
+vi.mock("../../../../hooks/useHasLlm", () => ({ useHasLlm: () => null }));
 const expert = vi.hoisted(() => ({ current: false }));
 vi.mock("../../frame/useExpertRows", () => ({ useExpertRows: () => expert.current }));
 vi.mock("../../TravTrackTripNote", () => ({ default: () => null }));
-vi.mock("../../location/StayScanSection", () => ({ default: () => null }));
+// The detect section hands its rows to the scan section as slots; draw them.
+vi.mock("../../location/StayScanSection", () => ({
+  default: ({ belege, fineBefore }: { belege?: ReactNode; fineBefore?: ReactNode }) => (
+    <>
+      {belege}
+      <h3>settings:tt.groups.feinabstimmung</h3>
+      {fineBefore}
+    </>
+  ),
+}));
 vi.mock("../../location/LocationSourceSection", () => ({
-  default: () => null,
+  default: ({ recording, trailing }: { recording?: ReactNode; trailing?: ReactNode }) => (
+    <>
+      {recording}
+      {trailing}
+    </>
+  ),
   DAWARICH_CONNECTION_PATH: "/settings/services?service=dawarich",
   onTravTrackSource: (s: { kind: string } | null) => s?.kind === "travtrack",
 }));
-vi.mock("../../TripRecordingSection", () => ({ default: () => null }));
+vi.mock("../../TripRecordingSection", () => ({
+  default: () => null,
+  TripRecordingRow: () => null,
+}));
 vi.mock("../../TravTrackDiagnostics", () => ({ default: () => <div data-testid="diagnostics" /> }));
 vi.mock("../../../../hooks/useTodayZone", () => ({
   useTodayZone: () => "UTC",
@@ -60,6 +81,8 @@ import TravTrackDeleteSection from "../TravTrackDeleteSection";
 import TravTrackExportSection from "../TravTrackExportSection";
 import TravTrackRecordingSection from "../TravTrackRecordingSection";
 import { dawarichCopyApi } from "../../../../lib/api/travtrackDawarichCopy";
+import { externalServicesApi } from "../../../../lib/api/externalServices";
+import { trackGapApi } from "../../../../lib/api/trackGap";
 import { travTrackApi } from "../../../../lib/api/travtrack";
 import { travTrackImportsApi } from "../../../../lib/api/travtrackImports";
 import { travTrackMonthsApi } from "../../../../lib/api/travtrackMonths";
@@ -154,6 +177,9 @@ beforeEach(() => {
   vi.spyOn(travTrackImportsApi, "list").mockResolvedValue([]);
   vi.spyOn(travTrackMonthsApi, "cityLookup").mockResolvedValue(false);
   vi.spyOn(travTrackSourcesApi, "list").mockResolvedValue([]);
+  // The stay switches check for an Immich, a text model and the track gap.
+  vi.spyOn(externalServicesApi, "accountOverview").mockResolvedValue({ connections: [] } as never);
+  vi.spyOn(trackGapApi, "get").mockResolvedValue({ minutes: 120, default: 120, min: 5, max: 720 });
   useLocationProviderStore.getState().reset();
   vi.spyOn(locationProviderApi, "get").mockResolvedValue(provider("none", true));
 });
@@ -171,7 +197,7 @@ describe("Aufzeichnung: what is stored", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /settings:tt\.recording\.devices\.jump/ })
     );
-    expect(navigate).toHaveBeenCalledWith("/settings/account#devices", undefined);
+    expect(navigate).toHaveBeenCalledWith("/settings/telefone", undefined);
   });
 
   it("keeps the stored count when last-seen is refused because TravTrack is off", async () => {
@@ -302,6 +328,7 @@ describe("Schutzzonen: list, add, edit, remove", () => {
 
 describe("Erkennung: city lookup", () => {
   it("writes the consent on its row and keeps the choice when the server refuses", async () => {
+    expert.current = true; // "Städte benennen" is an expert row (settings v3)
     const put = vi
       .spyOn(travTrackMonthsApi, "setCityLookup")
       .mockRejectedValueOnce(failure())
@@ -314,6 +341,64 @@ describe("Erkennung: city lookup", () => {
     expect(await screen.findByRole("button", { name: "settings:blocks.save.retry" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.retry" }));
     await waitFor(() => expect(put).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("Erkennung & Vorschläge: the design's groups (settings v3 S4)", () => {
+  it("draws Aufenthalte, Belege and Feinabstimmung with the stay switches where the design puts them", async () => {
+    expert.current = true;
+    show(<TravTrackDetectSection />);
+    for (const group of ["aufenthalte", "belege", "feinabstimmung"]) {
+      expect(await screen.findByText(`settings:tt.groups.${group}`)).toBeInTheDocument();
+    }
+    const suggest = screen.getByRole("switch", { name: /settingsRows:trips\.avor\.t/ });
+    const evidence = screen.getByRole("switch", { name: /settingsRows:trips\.immichbeleg\.t/ });
+    const ai = screen.getByRole("switch", { name: /settingsRows:trips\.kiort\.t/ });
+    const heading = (g: string) => screen.getByText(`settings:tt.groups.${g}`);
+    const after = (a: Node, b: Node) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(after(heading("aufenthalte"), suggest)).toBe(true);
+    expect(after(suggest, heading("belege"))).toBe(true);
+    expect(after(heading("belege"), evidence)).toBe(true);
+    expect(after(evidence, heading("feinabstimmung"))).toBe(true);
+    expect(after(heading("feinabstimmung"), ai)).toBe(true);
+  });
+
+  it("puts 'Track trennen ab' in Feinabstimmung at the standard level, and the AI place type at expert only", async () => {
+    show(<TravTrackDetectSection />);
+    expect(await screen.findByText("settings:location.trackGap.name")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /settingsRows:trips\.kiort\.t/ })).toBeNull();
+    expect(screen.queryByText("settings:location.tt.cities.name")).toBeNull();
+  });
+
+  it("keeps only what works without TravTrack for an account on Dawarich alone", async () => {
+    // The server does not offer TravTrack and the account holds none of its data.
+    caps.current = { ...ON, offered: false, enabled: false, active: false, hasData: false };
+    expert.current = true;
+    show(<TravTrackDetectSection />);
+    expect(
+      await screen.findByRole("switch", { name: /settingsRows:trips\.avor\.t/ })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /settingsRows:trips\.immichbeleg\.t/ })).toBeTruthy();
+    expect(screen.queryByText("settings:location.trackGap.name")).toBeNull();
+    expect(screen.queryByText("settings:tt.detect.stops.name")).toBeNull();
+    expect(screen.queryByText("settings:location.tt.cities.name")).toBeNull();
+  });
+});
+
+describe("Aufzeichnung: the stats header (settings v3 S4)", () => {
+  it("names the last point received as a row of its own, with the device", async () => {
+    vi.spyOn(travTrackApi, "summary").mockResolvedValue(HELD);
+    vi.spyOn(travTrackApi, "lastSeen").mockResolvedValue({
+      at: "2026-10-03T18:00:00.000Z",
+      deviceId: "phone-1",
+      deviceLabel: "iPhone von Mara",
+    } as never);
+    show(<TravTrackRecordingSection />);
+    const row = (await screen.findByText("settings:tt.recording.lastSeenName")).closest(
+      "[data-setting-row]"
+    ) as HTMLElement;
+    await waitFor(() => expect(within(row).getByText(/iPhone von Mara/)).toBeInTheDocument());
   });
 });
 

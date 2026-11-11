@@ -10,15 +10,15 @@ import {
 } from "../../../lib/api/travtrack";
 import { SettingRows } from "../../ui/SettingRow";
 import { JumpControl, SettingItem, StatusValue, useGuardedNavigate } from "../../ui/settings";
-import { SectionCard } from "../SettingsShared";
+import { SectionCard, SectionTitle } from "../SettingsShared";
 import LocationSourceSection from "../location/LocationSourceSection";
 import { RowFailure } from "../location/useRowAction";
-import TripRecordingSection from "../TripRecordingSection";
+import { TripRecordingRow } from "../TripRecordingSection";
 import TravTrackTripNote from "../TravTrackTripNote";
 
 const NS = "settings:tt.recording";
 /** Where a phone is paired and signed out (Profil & Anmeldung). */
-const PAIRING_PATH = "/settings/account#devices";
+const PAIRING_PATH = "/settings/telefone";
 
 /**
  * Settings → TravTrack → Aufzeichnung: what is stored (points, since, last
@@ -60,6 +60,7 @@ export default function TravTrackRecordingSection(): JSX.Element {
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {shown ? (
         <SectionCard>
+          <SectionTitle title={t("settings:tt.groups.aufzeichnung")} />
           <SettingRows>
             <SettingItem
               title={t(`${NS}.stored.name`)}
@@ -79,11 +80,6 @@ export default function TravTrackRecordingSection(): JSX.Element {
               {loadFailed ? (
                 <RowFailure error={t(`${NS}.loadError`)} onRetry={() => void load()} />
               ) : null}
-              {summary && lastSeen ? (
-                <p className="t-caption" style={{ margin: 0 }}>
-                  {t(`${NS}.lastSeen`, { at: formatDateTime(lastSeen.at) })}
-                </p>
-              ) : null}
               {caps.enabled ? null : (
                 <p
                   role="status"
@@ -97,37 +93,49 @@ export default function TravTrackRecordingSection(): JSX.Element {
               {caps.enabled ? <TravTrackTripNote /> : null}
             </SettingItem>
             <SettingItem
-              title={t(`${NS}.devices.name`)}
-              sub={t(`${NS}.devices.sub`)}
+              title={t(`${NS}.lastSeenName`)}
               control={
-                <JumpControl
-                  label={t(`${NS}.devices.jump`)}
-                  onJump={() => navigate(PAIRING_PATH)}
-                />
+                summary ? (
+                  <StatusValue>
+                    {lastSeen
+                      ? `${formatDateTime(lastSeen.at)}${lastSeen.deviceLabel ? ` · ${lastSeen.deviceLabel}` : ""}`
+                      : t(`${NS}.lastSeenNone`)}
+                  </StatusValue>
+                ) : undefined
               }
-            >
-              {summary && summary.devices.length > 0 ? (
-                <ul className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-                  {summary.devices.map((device, index) => (
-                    <li key={device.deviceId ?? `none-${index}`} className="t-body">
-                      {device.deviceId === null
-                        ? t(`${NS}.devices.unnamed`)
-                        : lastSeen?.deviceId === device.deviceId && lastSeen.deviceLabel
-                          ? lastSeen.deviceLabel
-                          : device.deviceId}{" "}
-                      <StatusValue>
-                        {t(`${NS}.devices.points`, { count: device.pointCount })}
-                      </StatusValue>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </SettingItem>
+            />
           </SettingRows>
         </SectionCard>
       ) : null}
-      <LocationSourceSection />
-      <TripRecordingSection />
+      <LocationSourceSection
+        recording={<TripRecordingRow />}
+        trailing={
+          <SettingItem
+            title={t(`${NS}.devices.name`)}
+            sub={t(`${NS}.devices.sub`)}
+            control={
+              <JumpControl label={t(`${NS}.devices.jump`)} onJump={() => navigate(PAIRING_PATH)} />
+            }
+          >
+            {summary && summary.devices.length > 0 ? (
+              <ul className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+                {summary.devices.map((device, index) => (
+                  <li key={device.deviceId ?? `none-${index}`} className="t-body">
+                    {device.deviceId === null
+                      ? t(`${NS}.devices.unnamed`)
+                      : lastSeen?.deviceId === device.deviceId && lastSeen.deviceLabel
+                        ? lastSeen.deviceLabel
+                        : device.deviceId}{" "}
+                    <StatusValue>
+                      {t(`${NS}.devices.points`, { count: device.pointCount })}
+                    </StatusValue>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </SettingItem>
+        }
+      />
     </div>
   );
 }

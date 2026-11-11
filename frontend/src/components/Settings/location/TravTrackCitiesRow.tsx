@@ -45,6 +45,7 @@ export default function TravTrackCitiesRow({
 
   return (
     <SettingItem
+      expert
       title={t(`${NS}.name`)}
       sub={t(`${NS}.sub`)}
       help={t(`${NS}.help`)}

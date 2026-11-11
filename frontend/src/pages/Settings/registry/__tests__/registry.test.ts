@@ -46,12 +46,12 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 25 pages, 98 groups and cards (31 of them service cards) and 265 rows", () => {
+  it("counts 27 pages, 98 groups and cards (31 of them service cards) and 273 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
-    expect(SETTINGS_REGISTRY).toHaveLength(25);
+    expect(SETTINGS_REGISTRY).toHaveLength(27);
     expect(sections).toHaveLength(98);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(31);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(265);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(273);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -251,23 +251,83 @@ describe("the area mounts what the registry lists", () => {
     expect(AREA_MENU.map((g) => g.id)).toEqual(["konto", "track", "plan", "server"]);
     const server = AREA_MENU.find((g) => g.id === "server")!;
     expect(server.pages.every((id) => findAreaPage(id)!.adminOnly)).toBe(true);
+    // The admin's "Bereitstellung" pages close the TravTrack and TravPlan areas.
+    const bereit = ["tt-bereit", "pl-bereit"];
     for (const id of ["konto", "track", "plan"]) {
       const group = AREA_MENU.find((g) => g.id === id)!;
-      expect(group.pages.every((p) => !findAreaPage(p)!.adminOnly)).toBe(true);
+      expect(
+        group.pages.every((p) => !findAreaPage(p)!.adminOnly || bereit.includes(p)),
+        id
+      ).toBe(true);
     }
     expect(AREA_MENU.find((g) => g.id === "track")!.pages).toEqual([
       "tt-aufz",
       "tt-erk",
       "tt-daten",
+      "tt-bereit",
     ]);
-    expect(AREA_MENU.find((g) => g.id === "plan")!.pages).toEqual(["pl-plan"]);
+    expect(AREA_MENU.find((g) => g.id === "plan")!.pages).toEqual(["pl-plan", "pl-bereit"]);
   });
 
   it("waits for the server's answer before the TravTrack and TravPlan pages show", () => {
+    // The source choice and the stay search also stay for an account on Dawarich alone.
+    const dawarichToo = new Set(["ttRecording", "ttDetect"]);
     for (const id of ["tt-aufz", "tt-erk", "tt-daten"]) {
-      for (const mount of findAreaPage(id)!.sections) expect(mount.when, id).toBe("travTrackHeld");
+      for (const mount of findAreaPage(id)!.sections) {
+        expect(mount.when, `${id}/${mount.id}`).toBe(
+          dawarichToo.has(mount.id) ? "locationSourceHeld" : "travTrackHeld"
+        );
+      }
+    }
+    // The server's switches wait for nothing: an admin switches TravTrack on there.
+    for (const id of ["tt-bereit", "pl-bereit"]) {
+      expect(findAreaPage(id)!.sections.map((m) => m.when)).toEqual([undefined]);
     }
     expect(findAreaPage("pl-plan")!.sections.map((m) => m.when)).toEqual(["travPlanOffered"]);
+  });
+});
+
+describe("TravTrack and TravPlan pages follow the prototype (settings v3 S4)", () => {
+  const where = (id: string) => {
+    for (const page of SETTINGS_REGISTRY)
+      for (const group of page.sections) {
+        const row = group.rows.find((r) => r.id === id);
+        if (row) return { page: page.id, group: group.id, row };
+      }
+    return undefined;
+  };
+
+  it("moves the stay switches from Reisen to Erkennung & Vorschläge, each in its prototype group", () => {
+    expect(where("avor")).toMatchObject({ page: "tt-erk", group: "tt-erk-aufenthalte" });
+    expect(where("immichbeleg")).toMatchObject({ page: "tt-erk", group: "tt-erk-belege" });
+    expect(where("kiort")).toMatchObject({ page: "tt-erk", group: "tt-erk-feinabstimmung" });
+    expect(where("kiort")!.row.level).toBe("expert");
+    expect(registryPage("reisen")!.sections.flatMap((g) => g.rows.map((r) => r.id))).not.toEqual(
+      expect.arrayContaining(["avor"])
+    );
+  });
+
+  it("lists 'Track trennen ab' as a standard row of Feinabstimmung", () => {
+    expect(where("trackgap")).toMatchObject({ page: "tt-erk", group: "tt-erk-feinabstimmung" });
+    expect(where("trackgap")!.row).toMatchObject({ level: "standard", mount: "ttDetect" });
+  });
+
+  it("gives TravTrack and TravPlan a Bereitstellung page each and leaves Funktionen without them", () => {
+    expect(where("ttoffer")).toMatchObject({ page: "tt-bereit" });
+    expect(where("tpoffer")).toMatchObject({ page: "pl-bereit", group: "pl-bereit-travplan" });
+    expect(where("pl_ai")).toMatchObject({ page: "pl-bereit", group: "pl-bereit-grenzen" });
+    expect(where("pl_wx")).toMatchObject({ page: "pl-bereit", group: "pl-bereit-grenzen" });
+    expect(where("tplimits")).toBeUndefined();
+    const funktionen = registryPage("funktionen")!.sections.flatMap((g) => g.rows.map((r) => r.id));
+    expect(funktionen).not.toEqual(expect.arrayContaining(["ttoffer"]));
+    expect(funktionen).not.toEqual(expect.arrayContaining(["tpoffer"]));
+  });
+
+  it("makes 'Unterkunft während der Buchung' and the search tuning expert rows", () => {
+    expect(where("unterkunft")!.row.level).toBe("expert");
+    expect(where("gelaende")!.row.level).toBe("expert");
+    expect(where("scanzeit")!.row.level).toBe("expert");
+    expect(where("staedte")!.row.level).toBe("expert");
   });
 });
 

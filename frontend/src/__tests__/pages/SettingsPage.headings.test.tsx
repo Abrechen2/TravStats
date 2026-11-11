@@ -2,7 +2,11 @@
 vi.mock("../../components/MailIntake/MailIntakeSettingsCard", () => ({ default: () => null }));
 // TravTrack's and TravPlan's pages wait for the server's answer: here it is yes.
 vi.mock("../../pages/Settings/useSectionConditions", () => ({
-  useSectionConditions: () => ({ travTrackHeld: true, travPlanOffered: true }),
+  useSectionConditions: () => ({
+    travTrackHeld: true,
+    travPlanOffered: true,
+    locationSourceHeld: true,
+  }),
 }));
 vi.mock("../../components/Settings/location/StayScanSection", () => ({ default: () => null }));
 vi.mock("../../lib/api/trackGap", () => ({

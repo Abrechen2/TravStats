@@ -80,7 +80,13 @@ export default function AdminSectionSwitch({
         </div>
       );
     case "travTrack":
-      return <ServerOffers />;
+      // TravTrack's offer and TravPlan's offer each have a "Bereitstellung" page
+      // (settings v3 S4); what is left is "Funktionen".
+      return (
+        <ServerOffers
+          part={mountId === "ttoffer" ? "track" : mountId === "tpoffer" ? "plan" : "rest"}
+        />
+      );
     case "parsers":
       return (
         <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>

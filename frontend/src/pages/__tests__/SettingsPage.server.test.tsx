@@ -2,6 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
+// The page asks where the account's location comes from (the TravTrack area stays
+// for an account on Dawarich alone, settings v3 S4); not the subject here.
+vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
+  locationProviderApi: {
+    get: vi.fn().mockResolvedValue({
+      kind: "none",
+      rev: 0,
+      status: "ok",
+      choices: { none: true, travtrack: false, dawarich: false },
+    }),
+    set: vi.fn(),
+  },
+}));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
