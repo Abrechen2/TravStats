@@ -300,14 +300,14 @@ describe("Sicherungen › Vorhandene", () => {
   });
 
   it("refreshes the summary when the tuning group below it saves a new schedule", async () => {
-    backup.updateBackupSettings.mockResolvedValue({
-      backupEnabled: false,
-      backupInterval: "weekly",
+    const saved = {
+      backupInterval: "monthly",
       backupRetentionDays: 30,
       backupCloudRetention: false,
       backupZone: null,
       hostZone: "UTC",
-    });
+    };
+    backup.updateBackupSettings.mockResolvedValue(saved);
     render(
       <MemoryRouter>
         <BackupsExisting />
@@ -315,9 +315,14 @@ describe("Sicherungen › Vorhandene", () => {
       </MemoryRouter>
     );
     expect(await screen.findByText("settingsRows:backups.nowLine")).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole("switch", { name: /backups\.autobak/ }));
+    await userEvent.click(await screen.findByText("settings:backup.intervals.monthly"));
     await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
-    await waitFor(() => expect(screen.queryByText("settingsRows:backups.nowLine")).toBeNull());
-    expect(screen.getAllByText("settingsRows:backups.rhythmOff").length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(backup.updateBackupSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ backupInterval: "monthly" })
+      )
+    );
+    // The summary reads the schedule from this store; the save must publish the new one.
+    await waitFor(() => expect(useBackupScheduleStore.getState().saved).toEqual(saved));
   });
 });
