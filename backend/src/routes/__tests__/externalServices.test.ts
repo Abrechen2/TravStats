@@ -72,13 +72,13 @@ describe("external services (forgejo#392)", () => {
       where: { id: rowId },
       data: {
         externalServicePolicy: {},
-        internetEnabled: true,
         globalAirlabsApiKey: encryptApiKey("instance-airlabs-key-123456"),
         globalImmichBaseUrl: null,
         globalImmichApiKey: null,
         llmOpenaiApiKey: null,
         llmOpenaiOptIn: false,
         globalAeroapiApiKey: null,
+        updateCheckEnabled: true,
         llmEnabled: true,
       },
     });
@@ -269,11 +269,11 @@ describe("external services (forgejo#392)", () => {
       }
     });
 
-    it("the GitHub release check honours the master internet switch and calls nothing when off", async () => {
+    it("the GitHub release check honours its admin switch and calls nothing when off", async () => {
       __resetUpdateCheckerCache();
       await prisma.adminSettings.update({
         where: { id: rowId },
-        data: { internetEnabled: false },
+        data: { updateCheckEnabled: false },
       });
       const fetchSpy = jest.spyOn(global, "fetch");
       expect(await getCachedLatestRelease()).toBeNull();

@@ -47,14 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 33 pages, 115 groups and cards (38 of them service cards: 15 the account's, 23 the server's) and 262 rows", () => {
+  it("counts 33 pages, 115 groups and cards (38 of them service cards: 15 the account's, 23 the server's) and 267 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(33);
     expect(sections).toHaveLength(115);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(38);
     expect(registryPage("dienstek")!.sections).toHaveLength(15);
     expect(registryPage("dienste")!.sections).toHaveLength(23);
-    expect(sections.flatMap((s) => s.rows)).toHaveLength(262);
+    expect(sections.flatMap((s) => s.rows)).toHaveLength(267);
   });
 
   it("lists the rows added after the first generation, so search can find them (forgejo#407)", () => {
@@ -441,10 +441,26 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
   });
 
   it("puts the master internet switch first on Funktionen, in Netz, as a standard row", () => {
-    expect(rowsOf("funktionen", "funktionen-netz")).toEqual(["internet"]);
+    // The five outbound switches follow it as expert rows (owner, 2026-11-12).
+    expect(rowsOf("funktionen", "funktionen-netz")).toEqual([
+      "internet",
+      "fxcdn",
+      "transitous",
+      "dbrest",
+      "oplogos",
+      "updcheck",
+    ]);
     expect(level("funktionen", "internet")).toBe("standard");
+    for (const id of ["fxcdn", "transitous", "dbrest", "oplogos", "updcheck"]) {
+      expect(level("funktionen", id)).toBe("expert");
+    }
     expect(rowsOf("funktionen")).toEqual([
       "internet",
+      "fxcdn",
+      "transitous",
+      "dbrest",
+      "oplogos",
+      "updcheck",
       "linkserlaubt",
       "fedon",
       "l_tt",

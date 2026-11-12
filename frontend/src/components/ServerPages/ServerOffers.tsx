@@ -25,7 +25,56 @@ import {
 import GroupFooter from "./GroupFooter";
 import InstanceGate from "./InstanceGate";
 import { useInstanceStore } from "./instanceStore";
+import { useInternetDependency } from "./useInternetDependency";
 import type { InstanceSettings } from "../../lib/api/admin";
+
+/**
+ * The five outbound switches that sit under the master internet switch as expert
+ * rows (settings v3, owner 2026-11-12): a service reaches out only when the master
+ * switch AND its own are on. `id` is the registry row and the copy key.
+ */
+const OUTBOUND_SWITCHES = [
+  { id: "fxcdn", column: "fxCdnFallbackEnabled" },
+  { id: "transitous", column: "railTransitousEnabled" },
+  { id: "dbrest", column: "railDbRestEnabled" },
+  { id: "oplogos", column: "operatorLogosOpenDataEnabled" },
+  { id: "updcheck", column: "updateCheckEnabled" },
+] as const;
+type OutboundField = (typeof OUTBOUND_SWITCHES)[number];
+
+/** One expert row: locked, with the reason, while the master switch is off. */
+function OutboundRow({
+  field,
+  settings,
+}: {
+  field: OutboundField;
+  settings: InstanceSettings;
+}): JSX.Element {
+  const row = useRowCopy("server");
+  const patch = useInstanceStore((s) => s.patch);
+  const internetOff = useInternetDependency();
+  const copy = row(field.id);
+  // A server answer without the field (an older backend) is a switch that is on.
+  const save = useSettingWrite<boolean>(
+    `server:${field.id}`,
+    settings[field.column] !== false,
+    async (on) => {
+      await patch({ [field.column]: on });
+    }
+  );
+  return (
+    <SettingItem
+      expert
+      title={copy.title}
+      sub={copy.sub}
+      help={copy.help}
+      scope="allAccounts"
+      save={save}
+      dependency={internetOff}
+      control={<SwitchControl checked={save.value} onChange={save.choose} label={copy.title} />}
+    />
+  );
+}
 
 const LIMIT_MAX = { ai: 100, weather: 200 } as const;
 type Limits = Record<keyof typeof LIMIT_MAX, string>;
@@ -69,7 +118,8 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
   const showNet = part === "net";
   const showAreas = part === "areas";
   // The two plan limits are the expert rows of this page.
-  const expert = useExpertRows(showPlan ? 2 : 0);
+  // On "Netz" the five outbound switches under the master switch are the expert rows.
+  const expert = useExpertRows(showPlan ? 2 : showNet ? OUTBOUND_SWITCHES.length : 0);
   const trackOffered = isFeatureVisible("travTrack");
   const planOffered = isFeatureVisible("travPlan");
 
@@ -206,6 +256,11 @@ function Offers({ settings, part }: { settings: InstanceSettings; part: OffersPa
           }
         />
       ) : null}
+      {showNet && expert
+        ? OUTBOUND_SWITCHES.map((field) => (
+            <OutboundRow key={field.id} field={field} settings={settings} />
+          ))
+        : null}
       {showAreas ? (
         <>
           {areaLink("l_tt", "/settings/tt-bereit")}

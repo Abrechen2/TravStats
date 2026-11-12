@@ -91,10 +91,19 @@ const instancePatchSchema = z.object({
   countryThreshold: z.enum(COUNTRY_TIERS).optional(),
   /** May the instance call open data services for its users (off by default). */
   openDataEnabled: z.boolean().optional(),
+  /** May operator logos come from Wikidata / Commons (on by default, forgejo#323). */
+  operatorLogosOpenDataEnabled: z.boolean().optional(),
   /** Master switch: may the server ask external services at all (on by default). */
   internetEnabled: z.boolean().optional(),
   /** May users create public share links (off by default; off deletes every link). */
   shareLinksEnabled: z.boolean().optional(),
+  /** May the rail lookup ask Transitous / db-rest (both on by default). */
+  railTransitousEnabled: z.boolean().optional(),
+  railDbRestEnabled: z.boolean().optional(),
+  /** May a rate the ECB cannot serve come from the jsDelivr dataset (on by default). */
+  fxCdnFallbackEnabled: z.boolean().optional(),
+  /** May the server ask GitHub for new releases (on by default). */
+  updateCheckEnabled: z.boolean().optional(),
   /** A self-hosted OpenRailRouting for rail lines; "" or null switches it off. */
   railRoutingUrl: railRoutingUrlField.nullable().optional(),
 });
@@ -175,10 +184,25 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
       }),
+      ...(patch.operatorLogosOpenDataEnabled !== undefined && {
+        operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
+      }),
+      ...(patch.fxCdnFallbackEnabled !== undefined && {
+        fxCdnFallbackEnabled: patch.fxCdnFallbackEnabled,
+      }),
+      ...(patch.updateCheckEnabled !== undefined && {
+        updateCheckEnabled: patch.updateCheckEnabled,
+      }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
       }),
       ...(patch.internetEnabled !== undefined && { internetEnabled: patch.internetEnabled }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
+      }),
       ...(patch.railRoutingUrl !== undefined && { railRoutingUrl: patch.railRoutingUrl }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });

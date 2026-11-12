@@ -1355,6 +1355,11 @@ model AdminSettings {
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
   allowUserFlightApiKeys Boolean @default(true) @map("allow_user_flight_api_keys")
 
+  // FX: whether a rate the ECB cannot serve may be fetched from the keyless
+  // jsDelivr currency dataset. On by default because it needs no key and is
+  // the only way to convert a currency outside the ECB's 30 — but a
+  // self-hoster gets to decide whether their instance talks to jsDelivr at all.
+  fxCdnFallbackEnabled Boolean @default(true) @map("fx_cdn_fallback_enabled")
 
   // FX: where the ECB reference rates come from (GitHub #391). Source ids are
   // "frankfurter" | "allratestoday" | "custom"; the fallback also knows "none".
@@ -1503,6 +1508,12 @@ model AdminSettings {
   /// up (2026-09-24).
   openDataEnabled Boolean @default(false) @map("open_data_enabled")
 
+  /// May operator marks (ferry lines, cruise lines, rail operators, coach and
+  /// rental companies) be looked up on Wikidata and Wikimedia Commons, server
+  /// side (forgejo#323). ON by default, unlike `openDataEnabled`: the request
+  /// carries only a company name the user wrote, never a place or a date, and
+  /// both sources are keyless. Off: the cards draw monograms.
+  operatorLogosOpenDataEnabled Boolean @default(true) @map("operator_logos_open_data_enabled")
 
   /// Whether users may create public share links (forgejo#281, D7). OFF by
   /// default: a link hands a person's travel data to anyone holding the URL.
@@ -1537,6 +1548,12 @@ model AdminSettings {
   /// values along that mapping, so no instance's headline moves.
   countryThreshold String @default("transited") @map("country_threshold")
 
+  /// May the rail train-number lookup ask Transitous (api.transitous.org) and
+  /// db-rest (v6.db.transport.rest) on its users' behalf. Both ON by default:
+  /// the lookup only runs when a user presses the button, and an admin whose
+  /// instance must not talk to third parties switches either off here.
+  railTransitousEnabled Boolean @default(true) @map("rail_transitous_enabled")
+  railDbRestEnabled     Boolean @default(true) @map("rail_db_rest_enabled")
   /// Base URL of a self-hosted OpenRailRouting (GraphHopper on the OSM rail
   /// network). Null = off, the default: a rail journey without a Transitous
   /// trace then keeps the straight line and says so. When set, such a journey
@@ -1600,13 +1617,15 @@ model AdminSettings {
   /// enabled / allowed, so an existing instance keeps today's behaviour.
   externalServicePolicy Json @default("{}") @map("external_service_policy")
 
+  /// Whether the server asks GitHub for new releases (forgejo#392). The check
+  /// had no switch before; on by default.
+  updateCheckEnabled Boolean @default(true) @map("update_check_enabled")
 
   /// Settings v3 master switch "the server may ask external services" (default
-  /// on). It decides alone whether the exchange-rate fallback, the rail timetable
-  /// sources (Transitous, db-rest), the operator logos, the update check and the
-  /// scheduled template sync reach out; their own switches were removed in S6.
-  /// `openDataEnabled` stays a column of its own (it is off by default, because
-  /// each of its calls sends a place and a date) and is gated by this one too.
+  /// on). It GATES six older columns without replacing them: `openDataEnabled`,
+  /// `operatorLogosOpenDataEnabled`, `fxCdnFallbackEnabled`, `railTransitousEnabled`,
+  /// `railDbRestEnabled`, `updateCheckEnabled`. Off = none of those calls leave
+  /// the server; the columns keep their values and apply again when it is on.
   /// See `services/internetGate.ts`.
   internetEnabled Boolean @default(true) @map("internet_enabled")
 

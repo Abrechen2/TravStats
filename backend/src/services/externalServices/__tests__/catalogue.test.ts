@@ -96,6 +96,8 @@ describe("external services catalogue", () => {
       ["aeroapi", "tracksEnabled"],
       ["adsblol", "apiKey"],
       ["logos", "apiKey"],
+      ["logos", "operatorLogos"],
+      ["fx", "cdnFallback"],
       ["ollama", "remoteOptIn"],
       ["customLlm", "apiKey"],
     ];

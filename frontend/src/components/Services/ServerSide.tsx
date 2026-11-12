@@ -21,7 +21,11 @@ import QuotaRow from "./QuotaRow";
 import TestRow from "./TestRow";
 import { ServerExtras, ownsEnabledSwitch, ownsFields } from "./serverExtras";
 import { useServices } from "./servicesContext";
-import { INTERNET_GATED_SWITCH_CARDS, type ServiceCardDef } from "./serviceCards";
+import {
+  INTERNET_GATED_SWITCH_CARDS,
+  OUTBOUND_EXPERT_FIELDS,
+  type ServiceCardDef,
+} from "./serviceCards";
 import { useDemoLock } from "./useLockFor";
 
 /** The "Alle Konten" switch rows of one service, each its own immediate write. */
@@ -214,6 +218,9 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
   const connection = data.accountConnections.find((c) => c.id === card.id);
   const feedback = admin.feedback[card.id];
   const name = serviceName(t, card.id);
+  const cardFields = (service?.fields ?? []).filter(
+    (f) => !OUTBOUND_EXPERT_FIELDS.has(`${card.id}.${f.key}`)
+  );
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }} data-service-side="server">
@@ -224,12 +231,12 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
         </p>
       </div>
       <SwitchRows card={card} service={service} connection={connection} />
-      {service && service.fields.length > 0 && !ownsFields(card.id) ? (
+      {service && cardFields.length > 0 && !ownsFields(card.id) ? (
         <FieldsGroup
           id={`services.${card.id}.server`}
           label={t("settingsRows:services.ui.serverGroup", { name })}
           serviceId={card.id}
-          fields={service.fields}
+          fields={cardFields}
           secretTemplate="instKey"
           tests={uses("test")}
           lock={demo}

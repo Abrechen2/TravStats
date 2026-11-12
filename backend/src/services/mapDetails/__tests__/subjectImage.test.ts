@@ -15,7 +15,7 @@ import { __resetWikimediaQueueForTests } from "../../operatorLogos/wikimedia";
  * request leaves the test.
  */
 
-const settings = { internetEnabled: true };
+const settings = { operatorLogosOpenDataEnabled: true };
 jest.mock("../../instanceSettingsService", () => ({
   getInstanceSettings: async () => settings,
 }));
@@ -87,7 +87,7 @@ describe("subject pictures", () => {
   const realFetch = global.fetch;
 
   beforeEach(async () => {
-    settings.internetEnabled = true;
+    settings.operatorLogosOpenDataEnabled = true;
     __resetSubjectImageCachesForTests();
     __resetWikimediaQueueForTests();
     await fs.rm(subjectImageCacheDir(), { recursive: true, force: true });
@@ -146,8 +146,8 @@ describe("subject pictures", () => {
     expect((await answerSubjectImage("vessel", "Color Fantasy")).picture).toBeNull();
   });
 
-  it("answers no picture, without asking, while the internet switch is off", async () => {
-    settings.internetEnabled = false;
+  it("answers no picture, without asking, while the instance switch is off", async () => {
+    settings.operatorLogosOpenDataEnabled = false;
     use(() => {
       throw new Error("must not ask");
     });

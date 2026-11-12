@@ -82,7 +82,7 @@ describe("Rail lookup API", () => {
 
   beforeEach(async () => {
     __clearRailHttpCache();
-    await updateInstanceSettings({ internetEnabled: true });
+    await updateInstanceSettings({ railTransitousEnabled: true, railDbRestEnabled: true });
   });
 
   afterEach(async () => {
@@ -94,7 +94,7 @@ describe("Rail lookup API", () => {
   });
 
   afterAll(async () => {
-    await updateInstanceSettings({ internetEnabled: true });
+    await updateInstanceSettings({ railTransitousEnabled: true, railDbRestEnabled: true });
     await prisma.user.deleteMany({ where: { id: { in: [userId, adminId] } } });
     await prisma.$disconnect();
   });
@@ -163,23 +163,26 @@ describe("Rail lookup API", () => {
       });
     });
 
-    it("lets an admin switch both timetable sources off with the master internet switch, and only an admin", async () => {
+    it("lets an admin switch a provider off, and only an admin", async () => {
       const denied = await request(app)
         .put("/api/v1/admin/instance-settings")
         .set("Cookie", cookie)
-        .send({ internetEnabled: false });
+        .send({ railDbRestEnabled: false });
       expect(denied.status).toBe(403);
 
       const res = await request(app)
         .put("/api/v1/admin/instance-settings")
         .set("Cookie", adminCookie)
-        .send({ internetEnabled: false });
+        .send({ railDbRestEnabled: false });
       expect(res.status).toBe(200);
-      expect(res.body.settings).toMatchObject({ internetEnabled: false });
+      expect(res.body.settings).toMatchObject({
+        railTransitousEnabled: true,
+        railDbRestEnabled: false,
+      });
       const providers = await request(app)
         .get("/api/v1/rail/lookup/providers")
         .set("Cookie", cookie);
-      expect(providers.body.data).toMatchObject({ transitous: false, dbRest: false });
+      expect(providers.body.data).toMatchObject({ transitous: true, dbRest: false });
     });
   });
 
@@ -223,7 +226,7 @@ describe("Rail lookup API", () => {
     });
 
     it("asks nobody when the admin switched Transitous off", async () => {
-      await updateInstanceSettings({ internetEnabled: false });
+      await updateInstanceSettings({ railTransitousEnabled: false });
       const m = mock([]);
       const res = await create(journey());
       expect(res.status).toBe(201);
@@ -279,7 +282,7 @@ describe("Rail lookup API", () => {
       fetchMock?.restore();
 
       __clearRailHttpCache();
-      await updateInstanceSettings({ internetEnabled: false });
+      await updateInstanceSettings({ railTransitousEnabled: false });
       mock([]);
       const off = await create(journey());
       expect(off.body.meta.geometry.fallback).toBe("providerDisabled");
@@ -375,7 +378,7 @@ describe("Rail lookup API", () => {
     it("re-cuts the stored line when a station moves along it and Transitous is off", async () => {
       tracedTrip();
       const created = (await create(journey())).body.data;
-      await updateInstanceSettings({ internetEnabled: false });
+      await updateInstanceSettings({ railTransitousEnabled: false });
 
       const res = await patch(created.id, { arrivalStation: station(FULDA) });
       expect(res.status).toBe(200);

@@ -101,7 +101,7 @@ describe("lookupTrain", () => {
 
   beforeEach(async () => {
     __clearRailHttpCache();
-    await updateInstanceSettings({ internetEnabled: true });
+    await updateInstanceSettings({ railTransitousEnabled: true, railDbRestEnabled: true });
   });
 
   afterEach(() => {
@@ -110,7 +110,7 @@ describe("lookupTrain", () => {
   });
 
   afterAll(async () => {
-    await updateInstanceSettings({ internetEnabled: true });
+    await updateInstanceSettings({ railTransitousEnabled: true, railDbRestEnabled: true });
     await prisma.railStation.deleteMany({ where: { sourceId: { startsWith: SOURCE } } });
     await prisma.$disconnect();
   });
@@ -214,18 +214,17 @@ describe("lookupTrain", () => {
     expect(m.calls.some((u) => u.includes("/locations/nearby"))).toBe(false);
   });
 
-  it("asks no provider while the admin has the master internet switch off", async () => {
-    await updateInstanceSettings({ internetEnabled: false });
+  it("asks no provider the admin switched off", async () => {
+    await updateInstanceSettings({ railTransitousEnabled: false });
     const m = mock([
       [/v6\.db\.transport\.rest\/stops\/8000105\/departures/, dbRestDepartures("2026-09-26")],
       [/v6\.db\.transport\.rest\/trips\//, dbRestTrip],
     ]);
     const answer = await ask();
 
-    expect(answer.attempts.map((a) => a.outcome)).toEqual(answer.attempts.map(() => "disabled"));
     expect(answer.attempts[0]).toEqual({ provider: "transitous", outcome: "disabled" });
-    expect(m.calls).toEqual([]);
-    expect(answer.match).toBeNull();
+    expect(m.calls.some((u) => u.includes("transitous"))).toBe(false);
+    expect(answer.match?.provider).toBe("db-rest");
   });
 
   it("does not ask the German service about a station outside Germany", async () => {

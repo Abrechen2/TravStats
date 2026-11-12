@@ -24,31 +24,43 @@ describe("GET /settings/instance-services", () => {
   });
 
   afterAll(async () => {
-    await updateInstanceSettings({ internetEnabled: true, railRoutingUrl: null });
+    await updateInstanceSettings({
+      railTransitousEnabled: true,
+      railDbRestEnabled: true,
+      railRoutingUrl: null,
+    });
     await prisma.user.deleteMany({ where: { username } });
     await prisma.$disconnect();
   });
 
   it("answers the admin's switches as three booleans", async () => {
-    await updateInstanceSettings({ internetEnabled: true, railRoutingUrl: ROUTER_URL });
+    await updateInstanceSettings({
+      railTransitousEnabled: true,
+      railDbRestEnabled: false,
+      railRoutingUrl: ROUTER_URL,
+    });
     const res = await request(app)
       .get("/api/v1/settings/instance-services")
       .set("Cookie", cookie)
       .expect(200);
-    expect(res.body).toEqual({ transitous: true, dbRest: true, openRailRouting: true });
+    expect(res.body).toEqual({ transitous: true, dbRest: false, openRailRouting: true });
     // The URL an admin set never reaches an account.
     expect(JSON.stringify(res.body)).not.toContain("10.11.12.13");
     expect(res.headers["cache-control"]).toContain("no-store");
     expect(res.headers["ratelimit-limit"] ?? res.headers["ratelimit-policy"]).toBeDefined();
   });
 
-  it("the two timetable sources read as off with the master internet switch off, and no rail router as off", async () => {
-    await updateInstanceSettings({ internetEnabled: false, railRoutingUrl: null });
+  it("no rail router configured reads as off", async () => {
+    await updateInstanceSettings({
+      railTransitousEnabled: false,
+      railDbRestEnabled: true,
+      railRoutingUrl: null,
+    });
     const res = await request(app)
       .get("/api/v1/settings/instance-services")
       .set("Cookie", cookie)
       .expect(200);
-    expect(res.body).toEqual({ transitous: false, dbRest: false, openRailRouting: false });
+    expect(res.body).toEqual({ transitous: false, dbRest: true, openRailRouting: false });
   });
 
   it("refuses an anonymous caller", async () => {

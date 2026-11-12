@@ -236,3 +236,56 @@ describe("Funktionen › Netz and Bereiche (settings v3 S5)", () => {
     expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
   });
 });
+
+describe("Funktionen › Netz — the five outbound switches as expert rows (settings v3, owner 2026-11-12)", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 450));
+  const FIVE: [string, string][] = [
+    ["fxcdn", "fxCdnFallbackEnabled"],
+    ["transitous", "railTransitousEnabled"],
+    ["dbrest", "railDbRestEnabled"],
+    ["oplogos", "operatorLogosOpenDataEnabled"],
+    ["updcheck", "updateCheckEnabled"],
+  ];
+
+  it("draws the five under the master switch for an expert and none at the standard level", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    for (const [id] of FIVE) {
+      const row = await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` });
+      expect(row).toHaveAttribute("aria-checked", "true");
+      expect(row).not.toBeDisabled();
+    }
+    cleanup();
+    useSettingsLevelStore.setState({ level: "standard" });
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    for (const [id] of FIVE) {
+      expect(screen.queryByRole("switch", { name: `settingsRows:server.${id}.t` })).toBeNull();
+    }
+  });
+
+  it("locks every row with the internet-off reason while the master switch is off, and keeps the stored value", async () => {
+    api.getInstanceSettings.mockResolvedValue(
+      answer({ internetEnabled: false, railTransitousEnabled: false })
+    );
+    renderOffers(<ServerOffers part="net" />);
+    for (const [id] of FIVE) {
+      const row = await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` });
+      expect(row).toBeDisabled();
+      expect(row).toHaveAttribute("aria-checked", id === "transitous" ? "false" : "true");
+    }
+    expect(screen.getAllByText("settings:blocks.dep.internet.reason")).toHaveLength(5);
+    await userEvent.click(screen.getByRole("switch", { name: "settingsRows:server.fxcdn.t" }));
+    await act(settle);
+    expect(api.updateInstanceSettings).not.toHaveBeenCalled();
+  });
+
+  it.each(FIVE)("saves %s as its own field and nothing else", async (id, column) => {
+    api.updateInstanceSettings.mockResolvedValue(answer({ [column]: false }));
+    renderOffers(<ServerOffers part="net" />);
+    await userEvent.click(
+      await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` })
+    );
+    await act(settle);
+    expect(api.updateInstanceSettings).toHaveBeenCalledWith({ [column]: false });
+  });
+});

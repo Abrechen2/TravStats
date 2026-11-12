@@ -21,7 +21,7 @@ import fs from "fs/promises";
 import path from "path";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../instanceSettingsService";
-import { internetOn } from "../internetGate";
+import { throughInternet } from "../internetGate";
 import { isServiceDisabledByAdmin } from "../externalServices/policy";
 import { normalizeProviderName } from "../rentalProviders/providerCatalog";
 import type { OperatorMarkImage } from "../operatorLogos/wikidataOperator";
@@ -224,7 +224,7 @@ export async function answerSubjectImage(
 ): Promise<SubjectImageAnswer> {
   if (subjectSearchName(kind, name) === "") return NONE;
   const instance = await getInstanceSettings();
-  if (!internetOn(instance)) return DISABLED;
+  if (!throughInternet(instance, instance.operatorLogosOpenDataEnabled)) return DISABLED;
   if (await isServiceDisabledByAdmin("logos")) return DISABLED;
   const key = subjectImageKey(kind, name);
   const cached = await readCache(key);

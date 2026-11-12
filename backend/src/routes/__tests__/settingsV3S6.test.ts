@@ -176,15 +176,14 @@ describe("settings v3 S6 — removed switches", () => {
   });
 
   describe("catalogue", () => {
-    it("has no field for the removed switches and no OpenSky username / password", () => {
+    it("keeps the five expert switches and has no OpenSky username / password", () => {
       const keys = (id: string): string[] => {
         const s = SERVICES.find((x) => x.id === id)!;
         return [...s.fields, ...s.accountFields].map((f) => f.key);
       };
-      expect(keys("railTimetables")).not.toEqual(expect.arrayContaining(["transitous"]));
-      expect(keys("railTimetables")).not.toContain("dbRest");
-      expect(keys("logos")).not.toContain("operatorLogos");
-      expect(keys("fx")).not.toContain("cdnFallback");
+      expect(keys("railTimetables")).toEqual(expect.arrayContaining(["transitous", "dbRest"]));
+      expect(keys("logos")).toContain("operatorLogos");
+      expect(keys("fx")).toContain("cdnFallback");
       expect(keys("opensky")).not.toContain("username");
       expect(keys("opensky")).not.toContain("password");
     });

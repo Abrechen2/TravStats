@@ -4,10 +4,10 @@ import path from "path";
 import { prisma } from "../db";
 
 /**
- * Migration 20261111200000 (settings v3 S6) drops the five granular outbound
- * switches. An admin who had switched ALL of them off wanted an install that
- * talks to nobody, so the master switch `internet_enabled` takes that over; any
- * other combination cannot be one switch and keeps the default (on).
+ * Migration 20261111200000 (settings v3 S6) drops six switches that became fixed
+ * defaults. The five granular outbound switches are NOT dropped (owner,
+ * 2026-11-12: expert rows): a partly-off set must come out as it went in, and the
+ * master switch must not be derived from them.
  *
  * The file is replayed against a SCRATCH schema holding the old shape with rows.
  */
@@ -42,8 +42,10 @@ const row = (id: number, values: boolean[]): string =>
      log_http_requests, log_database_queries, log_parser_operations, max_log_file_size, max_log_files)
    VALUES (${id}, true, ${values.join(", ")}, false, false, false, false, 10, 7)`;
 
-describe("migration 20261111200000 — the outbound switches fold into the internet switch", () => {
-  let after: { id: number; internet_enabled: boolean }[];
+type Kept = { id: number; internet_enabled: boolean } & Record<string, boolean>;
+
+describe("migration 20261111200000 — the five outbound switches survive", () => {
+  let after: Kept[];
   let columns: string[];
 
   beforeAll(async () => {
@@ -63,8 +65,8 @@ describe("migration 20261111200000 — the outbound switches fold into the inter
       await tx.$executeRawUnsafe(row(2, [false, true, false, false, false])); // one still on
       await tx.$executeRawUnsafe(row(3, [true, true, true, true, true])); // defaults
       for (const sql of statements()) await tx.$executeRawUnsafe(sql);
-      const rows = await tx.$queryRawUnsafe<{ id: number; internet_enabled: boolean }[]>(
-        `SELECT id, internet_enabled FROM admin_settings ORDER BY id`
+      const rows = await tx.$queryRawUnsafe<Kept[]>(
+        `SELECT id, internet_enabled, ${SWITCHES.join(", ")} FROM admin_settings ORDER BY id`
       );
       const cols = await tx.$queryRawUnsafe<{ column_name: string }[]>(
         `SELECT column_name FROM information_schema.columns
@@ -79,18 +81,24 @@ describe("migration 20261111200000 — the outbound switches fold into the inter
     await prisma.$disconnect();
   });
 
-  it("an install with every outbound switch off becomes an install with the internet switch off", () => {
-    expect(after.find((r) => r.id === 1)?.internet_enabled).toBe(false);
+  it("an install with every outbound switch off keeps them off and the master switch on", () => {
+    const r = after.find((x) => x.id === 1);
+    expect(r?.internet_enabled).toBe(true);
+    for (const c of SWITCHES) expect(r?.[c]).toBe(false);
   });
 
-  it("a partly switched set keeps the master switch on, and so do the defaults", () => {
-    expect(after.find((r) => r.id === 2)?.internet_enabled).toBe(true);
-    expect(after.find((r) => r.id === 3)?.internet_enabled).toBe(true);
+  it("a partly-off set comes out exactly as it went in, and so do the defaults", () => {
+    const r = after.find((x) => x.id === 2);
+    expect(r?.operator_logos_open_data_enabled).toBe(true);
+    for (const c of SWITCHES.filter((c) => c !== "operator_logos_open_data_enabled")) {
+      expect(r?.[c]).toBe(false);
+    }
+    expect(r?.internet_enabled).toBe(true);
+    for (const c of SWITCHES) expect(after.find((x) => x.id === 3)?.[c]).toBe(true);
   });
 
-  it("drops the eleven columns and leaves the rest of the table alone", () => {
+  it("drops the six columns and leaves the rest of the table alone", () => {
     for (const gone of [
-      ...SWITCHES,
       "backup_enabled",
       "log_http_requests",
       "log_database_queries",
@@ -100,6 +108,8 @@ describe("migration 20261111200000 — the outbound switches fold into the inter
     ]) {
       expect(columns).not.toContain(gone);
     }
-    expect(columns).toEqual(expect.arrayContaining(["id", "internet_enabled", "keep_me"]));
+    expect(columns).toEqual(
+      expect.arrayContaining(["id", "internet_enabled", "keep_me", ...SWITCHES])
+    );
   });
 });
