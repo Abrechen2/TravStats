@@ -227,9 +227,13 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     recommended: "free",
-    // Both sources run under the master internet switch alone (settings v3 S6).
-    alwaysOn: true,
-    fields: [admin("contact", "text", "railLookupContact", true)],
+    // Expert switches under the master internet switch (settings v3, owner 2026-11-12).
+    enabled: { kind: "adminColumns", columns: ["railTransitousEnabled", "railDbRestEnabled"] },
+    fields: [
+      admin("transitous", "switch", "railTransitousEnabled"),
+      admin("dbRest", "switch", "railDbRestEnabled"),
+      admin("contact", "text", "railLookupContact", true),
+    ],
   }),
   svc({
     id: "googlePlaces",
@@ -432,7 +436,10 @@ export const SERVICES: readonly ServiceDef[] = [
     keyless: true,
     recommended: "free",
     resolverProvider: "logostream",
-    fields: [admin("apiKey", "secret", "globalLogostreamApiKey")],
+    fields: [
+      admin("apiKey", "secret", "globalLogostreamApiKey"),
+      admin("operatorLogos", "switch", "operatorLogosOpenDataEnabled"),
+    ],
     tester: "logostream",
   }),
   svc({
@@ -442,9 +449,9 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     // The ECB lookup (Frankfurter) is what every stay and cost total converts
-    // through; only a currency code and a date leave the server. The public CDN
-    // fallback for currencies the ECB does not publish has no switch of its own
-    // any more: it runs under the master internet switch (settings v3 S6).
+    // through; only a currency code and a date leave the server. What an admin may
+    // decide is the public CDN fallback for currencies the ECB does not publish,
+    // and that stays its own (expert) switch under the master internet switch.
     alwaysOn: true,
     recommended: "free",
     fields: [
@@ -452,6 +459,7 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("primaryUrl", "url", "fxPrimaryCustomUrl"),
       admin("fallbackSource", "select", "fxFallbackSource", false, [...FX_FALLBACK_IDS]),
       admin("fallbackUrl", "url", "fxFallbackCustomUrl"),
+      admin("cdnFallback", "switch", "fxCdnFallbackEnabled"),
     ],
   }),
 
@@ -537,8 +545,7 @@ export const SERVICES: readonly ServiceDef[] = [
     level: "instance",
     credential: "url",
     keyless: true,
-    // The update check runs under the master internet switch alone (settings v3 S6).
-    alwaysOn: true,
+    enabled: { kind: "adminColumns", columns: ["updateCheckEnabled"] },
     fields: [admin("templateRepoUrl", "url", "templateRepoBaseUrl", true)],
   }),
 ];

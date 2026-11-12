@@ -43,16 +43,16 @@ describe("the bookings that could not record a price", () => {
     const lodging = await prisma.lodging.create({ data: { userId, name: "Hotel End To End" } });
     lodgingId = lodging.id;
 
-    // The master internet switch must be ON for the EGP case — that is the
-    // instance default, and this pins that the case depends on it.
+    // The CDN fallback must be ON for the EGP case — that is the instance
+    // default, and this pins that the case depends on it.
     const settings = await prisma.adminSettings.findFirst();
     if (settings) {
       await prisma.adminSettings.update({
         where: { id: settings.id },
-        data: { internetEnabled: true },
+        data: { fxCdnFallbackEnabled: true },
       });
     } else {
-      await prisma.adminSettings.create({ data: { internetEnabled: true } });
+      await prisma.adminSettings.create({ data: { fxCdnFallbackEnabled: true } });
     }
   });
 
@@ -133,11 +133,11 @@ describe("the bookings that could not record a price", () => {
     expect(res.body.data.totalPriceBase).toBeCloseTo(2902.67, 2);
   });
 
-  it("an admin who switched the internet off keeps nothing, not even the ECB", async () => {
+  it("an admin who switched the CDN off keeps the ECB and nothing else", async () => {
     const settings = await prisma.adminSettings.findFirst();
     await prisma.adminSettings.update({
       where: { id: settings!.id },
-      data: { internetEnabled: false },
+      data: { fxCdnFallbackEnabled: false },
     });
     try {
       ecb.mockResolvedValue(null);
@@ -150,12 +150,11 @@ describe("the bookings that could not record a price", () => {
       });
       expect(res.status).toBe(201);
       expect(res.body.data.fxSource).toBeNull();
-      expect(ecb).not.toHaveBeenCalled();
       expect(cdn).not.toHaveBeenCalled();
     } finally {
       await prisma.adminSettings.update({
         where: { id: settings!.id },
-        data: { internetEnabled: true },
+        data: { fxCdnFallbackEnabled: true },
       });
     }
   });

@@ -74,6 +74,11 @@ export async function resolveRate(from: string, to: string, date: string): Promi
     return null;
   }
 
+  // An unreadable settings row falls back to ON, matching the column's own
+  // default: a database hiccup should not silently narrow what can be
+  // converted, which would look to the user like currencies going missing.
+  if (settings && !settings.cdnFallbackEnabled) return null;
+
   if (budgetSpent()) {
     logger.warn({ from, to, date }, "FX chain budget spent before the CDN provider");
     return null;

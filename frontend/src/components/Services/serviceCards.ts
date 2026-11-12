@@ -29,6 +29,19 @@ export type ServiceTemplate =
  */
 export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set(["railTimetables", "openData"]);
 
+/**
+ * The four switch fields of the catalogue that are expert rows of "Funktionen ›
+ * Netz" (settings v3, owner 2026-11-12), next to the master switch they sit under.
+ * The service cards do not draw them a second time. (The fifth, the update check,
+ * is the "on" switch of a service that has no card.)
+ */
+export const OUTBOUND_EXPERT_FIELDS: ReadonlySet<string> = new Set([
+  "railTimetables.transitous",
+  "railTimetables.dbRest",
+  "logos.operatorLogos",
+  "fx.cdnFallback",
+]);
+
 /** Cards whose "on" switch the master internet switch gates. */
 export const INTERNET_GATED_SWITCH_CARDS: ReadonlySet<string> = new Set(["openData"]);
 

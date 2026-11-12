@@ -72,6 +72,13 @@ export interface InstanceSettings {
    */
   countryThreshold: CountryTier;
   /**
+   * Which third parties the rail train-number lookup may ask (spec
+   * 2026-09-25-rail-domain): Transitous and db-rest. Both ON by default — the
+   * lookup runs only when a user presses its button — and admin-settable only.
+   */
+  railTransitousEnabled: boolean;
+  railDbRestEnabled: boolean;
+  /**
    * Base URL of a self-hosted OpenRailRouting, or null (the default): off.
    * No ENV fallback — a rail line routed on a host nobody configured in the
    * admin page would be a line nobody can explain.
@@ -84,6 +91,19 @@ export interface InstanceSettings {
    */
   openDataEnabled: boolean;
   /**
+   * May operator marks be looked up on Wikidata / Wikimedia Commons, server
+   * side (forgejo#323). ON by default: only a company name leaves the
+   * instance, never a place or a date. Admin-settable only.
+   */
+  operatorLogosOpenDataEnabled: boolean;
+  /**
+   * May a rate the ECB cannot serve come from the keyless jsDelivr currency
+   * dataset, and may the server ask GitHub for new releases. Both ON by default,
+   * expert switches under the master switch (settings v3, owner 2026-11-12).
+   */
+  fxCdnFallbackEnabled: boolean;
+  updateCheckEnabled: boolean;
+  /**
    * Whether users may create public share links (forgejo#281). OFF by default:
    * a link hands travel data to anyone holding the URL. Switching it off
    * deletes every link (`updateInstanceSettings`). Admin-settable only.
@@ -91,7 +111,7 @@ export interface InstanceSettings {
   shareLinksEnabled: boolean;
   /**
    * Master switch "the server may ask external services" (settings v3). It gates
-   * the outbound calls named in `services/internetGate.ts`.
+   * the six columns named in `services/internetGate.ts`; they keep their own values.
    */
   internetEnabled: boolean;
 }
@@ -147,8 +167,13 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
+    operatorLogosOpenDataEnabled: row.operatorLogosOpenDataEnabled,
+    fxCdnFallbackEnabled: row.fxCdnFallbackEnabled,
+    updateCheckEnabled: row.updateCheckEnabled,
     shareLinksEnabled: row.shareLinksEnabled,
     internetEnabled: row.internetEnabled,
+    railTransitousEnabled: row.railTransitousEnabled,
+    railDbRestEnabled: row.railDbRestEnabled,
     railRoutingUrl: row.railRoutingUrl ?? null,
   };
 }
@@ -209,11 +234,26 @@ export async function updateInstanceSettings(
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
       }),
+      ...(patch.operatorLogosOpenDataEnabled !== undefined && {
+        operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
+      }),
+      ...(patch.fxCdnFallbackEnabled !== undefined && {
+        fxCdnFallbackEnabled: patch.fxCdnFallbackEnabled,
+      }),
+      ...(patch.updateCheckEnabled !== undefined && {
+        updateCheckEnabled: patch.updateCheckEnabled,
+      }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
       }),
       ...(patch.internetEnabled !== undefined && {
         internetEnabled: patch.internetEnabled,
+      }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
       }),
       ...(patch.railRoutingUrl !== undefined && {
         railRoutingUrl: patch.railRoutingUrl || null,

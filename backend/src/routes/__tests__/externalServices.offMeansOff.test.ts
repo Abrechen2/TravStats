@@ -66,10 +66,12 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
         routingProvider: "custom",
         routingCustomUrl: "https://osrm.example.com",
         railRoutingUrl: "https://rail.example.com",
+        operatorLogosOpenDataEnabled: true,
         webdavSyncEnabled: true,
         webdavUrl: "https://dav.example.com/dav",
         webdavUsername: "u",
         webdavPasswordEncrypted: encryptApiKey("pw-0123456789"),
+        fxCdnFallbackEnabled: true,
         openaiCompatBaseUrl: null,
       },
     });
@@ -217,13 +219,12 @@ describe("external services: off means off (selfHostedRouting, logos, webdav, al
       expect((await find("fx")).enabled).toBe(true);
     });
 
-    it("the FX CDN fallback has no switch of its own any more: the field is refused and fx stays on", async () => {
-      // It runs under the master internet switch alone (settings v3 S6).
-      const res = await adminPut("fx", { fields: { cdnFallback: false } });
-      expect(res.status).toBe(400);
+    it("the FX CDN fallback stays its own switch on the fx service", async () => {
+      await adminPut("fx", { fields: { cdnFallback: false } }).expect(200);
+      const row = await prisma.adminSettings.findUniqueOrThrow({ where: { id: rowId } });
+      expect(row.fxCdnFallbackEnabled).toBe(false);
       const fx = await find("fx");
       expect(fx.enabled).toBe(true);
-      expect(fx.fields.map((f: { key: string }) => f.key)).not.toContain("cdnFallback");
     });
   });
 

@@ -15,14 +15,14 @@ describe("template registry scheduled sync honours the admin's off switch", () =
     rowId = row ? row.id : (await prisma.adminSettings.create({ data: {} })).id;
   });
   afterAll(async () => {
-    await prisma.adminSettings.update({ where: { id: rowId }, data: { internetEnabled: true } });
+    await prisma.adminSettings.update({ where: { id: rowId }, data: { updateCheckEnabled: true } });
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 
   const run = async (enabled: boolean): Promise<string[]> => {
     await prisma.adminSettings.update({
       where: { id: rowId },
-      data: { internetEnabled: enabled },
+      data: { updateCheckEnabled: enabled },
     });
     const calls: string[] = [];
     const registry = new TemplateRegistry({
@@ -38,7 +38,7 @@ describe("template registry scheduled sync honours the admin's off switch", () =
     return calls;
   };
 
-  it("makes no request while the internet is switched off, and syncs again when on", async () => {
+  it("makes no request while update checks are switched off, and syncs again when on", async () => {
     expect(await run(false)).toEqual([]);
     expect((await run(true)).length).toBeGreaterThan(0);
   });

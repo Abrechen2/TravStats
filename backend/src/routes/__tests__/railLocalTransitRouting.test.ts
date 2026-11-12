@@ -117,6 +117,8 @@ describe("Tram and U-Bahn rides and the instance's OpenRailRouting", () => {
     jest.spyOn(railRouteCache, "get").mockResolvedValue(null);
     jest.spyOn(railRouteCache, "put").mockResolvedValue(undefined);
     await updateInstanceSettings({
+      railTransitousEnabled: true,
+      railDbRestEnabled: true,
       railRoutingUrl: ORR,
     });
   });

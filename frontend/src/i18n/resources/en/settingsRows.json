@@ -1159,7 +1159,32 @@
     "internet": {
       "t": "Server may ask external services",
       "s": "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
-      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. Services with their own key (flight data, AI, photos) are not affected."
+      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches below (expert) keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+    },
+    "fxcdn": {
+      "t": "Exchange-rate fallback",
+      "s": "When the ECB does not know a currency",
+      "h": "Then asks the public currency dataset on jsDelivr. Only a currency code and a date leave the server. Applies only while the switch above is on."
+    },
+    "transitous": {
+      "t": "Timetables: Transitous",
+      "s": "Rail train lookup with open timetable data",
+      "h": "The train-number lookup asks api.transitous.org when someone triggers it. Applies only while the switch above is on."
+    },
+    "dbrest": {
+      "t": "Timetables: db-rest",
+      "s": "Rail train lookup with Deutsche Bahn timetables",
+      "h": "The train-number lookup asks v6.db.transport.rest when someone triggers it. Applies only while the switch above is on."
+    },
+    "oplogos": {
+      "t": "Operator logos from Wikidata",
+      "s": "Ferry lines, railways, coach and rental companies",
+      "h": "Asks Wikidata and Wikimedia Commons for the logo; only the company name leaves the server. Off = the cards draw monograms. Applies only while the switch above is on."
+    },
+    "updcheck": {
+      "t": "Check for new versions",
+      "s": "Asks GitHub",
+      "h": "The scheduled template sync also runs only while this is on; a manual sync always works. Applies only while the switch above is on."
     },
     "l_tt": {
       "t": "TravTrack",

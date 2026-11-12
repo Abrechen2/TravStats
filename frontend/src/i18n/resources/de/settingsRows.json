@@ -1159,7 +1159,32 @@
     "internet": {
       "t": "Server darf externe Dienste abfragen",
       "s": "Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet",
-      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+      "h": "Aus schaltet ab: Wechselkurse der EZB, die Bahn-Fahrpläne (Transitous, db-rest), Betreiber-Logos aus Wikidata, offene Kartendaten (Wetter, Wikipedia, Overpass, Wetter in Plänen) und die Suche nach neuen Versionen. Die einzelnen Schalter darunter (Experte) behalten ihren Wert und gelten wieder, sobald du das hier einschaltest. Dienste mit eigenem Schlüssel (Flugdaten, KI, Fotos) sind nicht betroffen."
+    },
+    "fxcdn": {
+      "t": "Ersatzquelle für Wechselkurse",
+      "s": "Wenn die EZB eine Währung nicht kennt",
+      "h": "Fragt dann den öffentlichen Währungsdatensatz bei jsDelivr. Nur Währungscode und Datum verlassen den Server. Gilt nur, solange der Schalter oben an ist."
+    },
+    "transitous": {
+      "t": "Fahrpläne: Transitous",
+      "s": "Bahn-Zugsuche mit offenen Fahrplandaten",
+      "h": "Die Zugnummern-Suche fragt api.transitous.org, wenn jemand sie auslöst. Gilt nur, solange der Schalter oben an ist."
+    },
+    "dbrest": {
+      "t": "Fahrpläne: db-rest",
+      "s": "Bahn-Zugsuche mit den Fahrplänen der Deutschen Bahn",
+      "h": "Die Zugnummern-Suche fragt v6.db.transport.rest, wenn jemand sie auslöst. Gilt nur, solange der Schalter oben an ist."
+    },
+    "oplogos": {
+      "t": "Betreiber-Logos aus Wikidata",
+      "s": "Reedereien, Bahnen, Busunternehmen, Vermieter",
+      "h": "Fragt Wikidata und Wikimedia Commons nach dem Logo; nur der Firmenname verlässt den Server. Aus = die Karten zeigen Monogramme. Gilt nur, solange der Schalter oben an ist."
+    },
+    "updcheck": {
+      "t": "Nach neuen Versionen suchen",
+      "s": "Fragt GitHub",
+      "h": "Auch die regelmäßige Vorlagen-Synchronisation läuft nur, wenn das hier an ist; ein Abgleich von Hand funktioniert immer. Gilt nur, solange der Schalter oben an ist."
     },
     "l_tt": {
       "t": "TravTrack",

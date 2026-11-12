@@ -16,7 +16,7 @@ import { bestStringClaim, plainText } from "../wikidataOperator";
  * switch off. No request leaves the test.
  */
 
-const settings = { internetEnabled: true };
+const settings = { operatorLogosOpenDataEnabled: true };
 jest.mock("../../instanceSettingsService", () => ({
   getInstanceSettings: async () => settings,
 }));
@@ -99,7 +99,7 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
   let fetchMock: jest.Mock;
 
   beforeEach(async () => {
-    settings.internetEnabled = true;
+    settings.operatorLogosOpenDataEnabled = true;
     __resetOperatorMarkCachesForTests();
     __resetWikimediaQueueForTests();
     await fs.rm(operatorMarkCacheDir(), { recursive: true, force: true });
@@ -257,7 +257,7 @@ describe("resolveOperatorMark from Wikidata (forgejo#323)", () => {
   });
 
   it("asks nobody while the admin switch is off", async () => {
-    settings.internetEnabled = false;
+    settings.operatorLogosOpenDataEnabled = false;
     use(happy());
     expect(await resolveOperatorMark("ferry", "Stena Line")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
