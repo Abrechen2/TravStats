@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { MemoryRouter } from "react-router-dom";
 import CalendarFeedSection from "../CalendarFeedSection";
 import { calendarFeedApi } from "../../../lib/api/calendarFeed";
 
@@ -46,6 +47,13 @@ async function confirmDialog(name: string): Promise<void> {
   await userEvent.click(within(dialog).getByRole("button", { name }));
 }
 
+const renderFeed = () =>
+  render(
+    <MemoryRouter>
+      <CalendarFeedSection />
+    </MemoryRouter>
+  );
+
 describe("CalendarFeedSection", () => {
   const writeText = vi.fn();
 
@@ -70,7 +78,7 @@ describe("CalendarFeedSection", () => {
   });
 
   it("creates a link and shows it once, with copy and a webcal link", async () => {
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
     api.status.mockResolvedValue(live);
 
@@ -99,7 +107,7 @@ describe("CalendarFeedSection", () => {
       createdAt: "2030-05-20T10:00:00.000Z",
       reachableFromInternet: false,
     });
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
@@ -107,8 +115,20 @@ describe("CalendarFeedSection", () => {
     expect(screen.getByText("settings:calendarFeed.unreachable")).toBeTruthy();
   });
 
+  it("tells before the first link that the server has no public address, and not for a named one", async () => {
+    api.status.mockResolvedValue({ ...none, reachableFromInternet: false });
+    renderFeed();
+    expect(await screen.findByText("settings:blocks.dep.noPublicUrl.reason")).toBeTruthy();
+    cleanup();
+
+    api.status.mockResolvedValue(none);
+    renderFeed();
+    await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" });
+    expect(screen.queryByText("settings:blocks.dep.noPublicUrl.reason")).toBeNull();
+  });
+
   it("shows no reachability warning for a named address", async () => {
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
@@ -123,7 +143,7 @@ describe("CalendarFeedSection", () => {
       webcalUrl: URL_WEBCAL,
       reachableFromInternet: false,
     });
-    render(<CalendarFeedSection />);
+    renderFeed();
     const field = await screen.findByLabelText("settings:calendarFeed.urlLabel");
     expect((field as HTMLInputElement).value).toBe(URL_HTTPS);
     expect(screen.getByText("settings:calendarFeed.unreachable")).toBeTruthy();
@@ -137,14 +157,14 @@ describe("CalendarFeedSection", () => {
       webcalUrl: null,
       reachableFromInternet: true,
     });
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText("settings:calendarFeed.notRecoverable")).toBeTruthy();
     expect(screen.queryByLabelText("settings:calendarFeed.urlLabel")).toBeNull();
   });
 
   it("says the copy failed where there is no clipboard, and keeps the link selectable", async () => {
     Object.defineProperty(window, "isSecureContext", { value: false, configurable: true });
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
@@ -158,7 +178,7 @@ describe("CalendarFeedSection", () => {
 
   it("asks before replacing a live link, and does nothing when declined", async () => {
     api.status.mockResolvedValue(live);
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settings:calendarFeed.regenerate" })
     );
@@ -177,7 +197,7 @@ describe("CalendarFeedSection", () => {
 
   it("revokes a live link after asking", async () => {
     api.status.mockResolvedValue(live);
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText(/settings:calendarFeed.neverUsed/)).toBeTruthy();
     api.status.mockResolvedValue(none);
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.revoke" }));
@@ -188,7 +208,7 @@ describe("CalendarFeedSection", () => {
 
   it("says the feed is switched off when the server refuses with CALENDAR_FEED_DISABLED", async () => {
     api.issue.mockRejectedValue(refusal(409, "CALENDAR_FEED_DISABLED"));
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settingsRows:trips.ics.btn" })
     );
@@ -200,7 +220,7 @@ describe("CalendarFeedSection", () => {
   it("says a revoke failed instead of pretending it worked", async () => {
     api.status.mockResolvedValue(live);
     api.revoke.mockRejectedValue(refusal(500, "INTERNAL"));
-    render(<CalendarFeedSection />);
+    renderFeed();
     await userEvent.click(
       await screen.findByRole("button", { name: "settings:calendarFeed.revoke" })
     );
@@ -212,7 +232,7 @@ describe("CalendarFeedSection", () => {
 
   it("says when the state cannot be loaded, and loads it again on request", async () => {
     api.status.mockRejectedValueOnce(new Error("down"));
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText(/settings:calendarFeed.loadFailed/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "settings:calendarFeed.retry" }));
     expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
@@ -221,14 +241,14 @@ describe("CalendarFeedSection", () => {
 
   it("tells the reader the feed is not available when the instance has it off", async () => {
     api.status.mockResolvedValue({ ...none, enabled: false });
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText("settings:calendarFeed.unavailable")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "settingsRows:trips.ics.btn" })).toBeNull();
   });
 
   it("offers the shared demo account no button to mint a link", async () => {
     demo = true;
-    render(<CalendarFeedSection />);
+    renderFeed();
     expect(await screen.findByText("settingsRows:trips.ics.t")).toBeTruthy();
     // Locked means locked: the button is there, disabled, with the reason written under the row.
     const button = screen.getByRole("button", { name: "settingsRows:trips.ics.btn" });

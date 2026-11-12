@@ -171,7 +171,7 @@ export function PlanAdmin() {
     <>
       <PageHeader title={t("config")} meta={t("configMoved")} />
       <Card>
-        <PlanLink to="/admin/instance?section=travPlan&expert=1">{t("configOpenAdmin")}</PlanLink>
+        <PlanLink to="/settings/pl-bereit?match=tpoffer&expert=1">{t("configOpenAdmin")}</PlanLink>
       </Card>
     </>
   );

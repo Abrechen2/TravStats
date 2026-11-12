@@ -7,6 +7,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { TRIP_COLORS } from "../../lib/tripColors";
+import { useExpertRows } from "./frame/useExpertRows";
 import { saveAutoCreateTrips, saveSwitch } from "../../store/confirmedSettings";
 import { useRowCopy } from "./rowCopy";
 
@@ -27,6 +28,8 @@ export default function TripsSection(): JSX.Element {
   const { t } = useTranslation(["settings", "settingsRows"]);
   const row = useRowCopy("trips");
   const isDemo = useIsDemoAccount();
+  // "Farbe neuer Reisen" is an expert row (settings v3).
+  const showColor = useExpertRows(1);
   const savedAuto = useSettingsStore((s) => s.autoCreateTrips);
   const savedColor = useSuggestionSwitchesStore((s) => s.tripDefaultColor);
 
@@ -57,41 +60,44 @@ export default function TripsSection(): JSX.Element {
           locked={locked}
           control={<SwitchControl checked={auto.value} onChange={auto.choose} />}
         />
-        <SettingItem
-          title={colorCopy.title}
-          sub={colorCopy.sub}
-          save={color}
-          locked={locked}
-          control={
-            // Swatch and select stay on one line; the swatch alone must not
-            // wrap above the select on a narrower row (iPad, forgejo#321).
-            <span className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
-              <span
-                aria-hidden
-                data-testid="trips-default-color-swatch"
-                className="inline-block shrink-0 rounded-full"
-                style={{
-                  width: 20,
-                  height: 20,
-                  background: swatch ?? "transparent",
-                  border: swatch ? "none" : "1px dashed var(--ts-border-input)",
-                }}
-              />
-              <ChoiceControl<string>
-                label={colorCopy.title}
-                value={color.value}
-                onChange={color.choose}
-                options={[
-                  { value: AUTOMATIC, label: t("settings:trips.defaultColor.automatic") },
-                  ...TRIP_COLORS.map((c) => ({
-                    value: c as string,
-                    label: t(`settings:trips.defaultColor.colors.${c.slice(1)}`),
-                  })),
-                ]}
-              />
-            </span>
-          }
-        />
+        {showColor && (
+          <SettingItem
+            expert
+            title={colorCopy.title}
+            sub={colorCopy.sub}
+            save={color}
+            locked={locked}
+            control={
+              // Swatch and select stay on one line; the swatch alone must not
+              // wrap above the select on a narrower row (iPad, forgejo#321).
+              <span className="flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
+                <span
+                  aria-hidden
+                  data-testid="trips-default-color-swatch"
+                  className="inline-block shrink-0 rounded-full"
+                  style={{
+                    width: 20,
+                    height: 20,
+                    background: swatch ?? "transparent",
+                    border: swatch ? "none" : "1px dashed var(--ts-border-input)",
+                  }}
+                />
+                <ChoiceControl<string>
+                  label={colorCopy.title}
+                  value={color.value}
+                  onChange={color.choose}
+                  options={[
+                    { value: AUTOMATIC, label: t("settings:trips.defaultColor.automatic") },
+                    ...TRIP_COLORS.map((c) => ({
+                      value: c as string,
+                      label: t(`settings:trips.defaultColor.colors.${c.slice(1)}`),
+                    })),
+                  ]}
+                />
+              </span>
+            }
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

@@ -34,7 +34,7 @@ import { PLACE_RGB, rgbCss } from "./placeColors";
 const PlacesMap = lazy(() => import("./PlacesMap"));
 
 const NS = "settings:tt.places";
-const HOME_CHANGE_PATH = "/settings/account#home";
+const HOME_CHANGE_PATH = "/settings/reisearten#home";
 
 type Phase = "loading" | "ok" | "tooOld" | "failed";
 

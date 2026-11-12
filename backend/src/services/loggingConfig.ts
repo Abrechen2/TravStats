@@ -24,17 +24,15 @@ import { setRotationSizeMb } from "../utils/logging/fileStreams";
 export type LogConfig = LoggingConfigResponse;
 
 let configCache: LogConfig | null = null;
+/** The last `debugUntil` read successfully; what a failed read keeps armed. */
+let knownDebugUntil: string | null = null;
 let cacheTimestamp = 0;
 
 function configFrom(
   settings: {
     logLevel?: string | null;
-    maxLogFileSize?: number | null;
-    maxLogFiles?: number | null;
-    logHttpRequests?: boolean | null;
-    logDatabaseQueries?: boolean | null;
-    logParserOperations?: boolean | null;
     logRetentionDays?: number | null;
+    debugUntil?: Date | null;
   } | null
 ): LogConfig {
   const stored: LogLevelName = isLogLevel(settings?.logLevel) ? settings.logLevel : "info";
@@ -44,39 +42,67 @@ function configFrom(
     logLevel: stored,
     effectiveLogLevel: effective.level,
     logLevelSource: effective.source,
-    maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
-    maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
-    logHttpRequests: settings?.logHttpRequests ?? false,
-    logDatabaseQueries: settings?.logDatabaseQueries ?? false,
-    logParserOperations: settings?.logParserOperations ?? false,
+    maxLogFileSize: LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
+    maxLogFiles: LOGGING_DEFAULTS.MAX_LOG_FILES,
+    // Fixed since settings v3 S6: while the log is verbose (the 24 h button or a
+    // hand-picked level) every category is written; otherwise none of the opt-in
+    // ones. The fields stay in the answer for clients that still read them.
+    logHttpRequests: true,
+    logDatabaseQueries: true,
+    logParserOperations: true,
     logRetentionDays: settings?.logRetentionDays ?? LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
+    debugUntil: settings?.debugUntil?.toISOString() ?? null,
   };
 }
 
 /** Current configuration, cached for `CACHE_TTL.LOGGING_CONFIG`. */
 export async function getLoggingConfig(): Promise<LogConfig> {
   const now = Date.now();
-  if (configCache && now - cacheTimestamp < CACHE_TTL.LOGGING_CONFIG) return configCache;
+  const timerLapsed = configCache?.debugUntil && Date.parse(configCache.debugUntil) <= now;
+  if (configCache && !timerLapsed && now - cacheTimestamp < CACHE_TTL.LOGGING_CONFIG) {
+    return configCache;
+  }
 
   try {
-    const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+    let settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+    // The 24 h verbose timer has run out: back to `info` before anyone reads it.
+    if (settings?.debugUntil && settings.debugUntil.getTime() <= now) {
+      // Conditioned on the deadline that was read: a renewal or a hand-picked level that
+      // landed meanwhile is not overwritten (the update then matches nothing).
+      const { count } = await prisma.adminSettings.updateMany({
+        where: { id: settings.id, debugUntil: settings.debugUntil },
+        data: { logLevel: "info", debugUntil: null },
+      });
+      if (count > 0) logger.info({ operation: "debug_logging_expired" });
+      settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+    }
     configCache = configFrom(settings);
+    knownDebugUntil = configCache.debugUntil ?? null;
     cacheTimestamp = now;
     return configCache;
   } catch (error) {
     logger.error({ operation: "get_logging_config_failed", error });
-    // Not cached: the next call tries the database again.
-    return configFrom(null);
+    // Not cached: the next call tries the database again. The timer that was running stays
+    // known, so a failed expiry is retried rather than forgotten.
+    return { ...configFrom(null), debugUntil: knownDebugUntil };
   }
 }
 
 /** Store new settings and apply them to the running loggers at once. */
 export async function updateLoggingConfig(
-  updates: Partial<Omit<LogConfig, "effectiveLogLevel" | "logLevelSource">>
+  updates: Partial<Pick<LogConfig, "logLevel" | "logRetentionDays">>,
+  debugUntil?: Date | null
 ): Promise<LogConfig> {
   await prisma.adminSettings.update({
     where: { id: await ensureAdminSettingsRow() },
-    data: updates,
+    data: {
+      ...updates,
+      // Picking a quiet level by hand ends a running timer; a verbose one leaves it alone.
+      ...(updates.logLevel !== undefined && !isVerboseLevel(updates.logLevel)
+        ? { debugUntil: null }
+        : {}),
+      ...(debugUntil !== undefined ? { debugUntil } : {}),
+    },
   });
   invalidateCache();
   const applied = await applyLoggingConfig();
@@ -87,8 +113,44 @@ export async function updateLoggingConfig(
   return applied;
 }
 
+/** How long "verbose log" stays on before the server switches it off by itself. */
+export const DEBUG_LOGGING_HOURS = 24;
+
+/**
+ * Settings v3 `debug24`: on means `debug` for `DEBUG_LOGGING_HOURS` hours, then the
+ * server puts the level back to `info` on its own (a timer in this process, and the
+ * check on every config read and at boot, so a restart cannot leave it on). Off
+ * switches it at once. Turning it on again restarts the 24 hours.
+ */
 export async function toggleDebugLogging(enabled: boolean): Promise<LogConfig> {
-  return updateLoggingConfig({ logLevel: enabled ? "debug" : "info" });
+  return updateLoggingConfig(
+    { logLevel: enabled ? "debug" : "info" },
+    enabled ? new Date(Date.now() + DEBUG_LOGGING_HOURS * 3_600_000) : null
+  );
+}
+
+let debugTimer: NodeJS.Timeout | null = null;
+const DEBUG_EXPIRY_RETRY_MS = 60_000;
+
+/** (Re)arms the one timer that ends a running verbose period; never keeps the process alive. */
+function scheduleDebugExpiry(debugUntil: string | null | undefined): void {
+  if (debugTimer) clearTimeout(debugTimer);
+  debugTimer = null;
+  if (!debugUntil) return;
+  // Already past: the revert failed (database down), so wait before trying again.
+  const left = Date.parse(debugUntil) - Date.now();
+  const delay = left > 0 ? left : DEBUG_EXPIRY_RETRY_MS;
+  debugTimer = setTimeout(
+    () => {
+      debugTimer = null;
+      invalidateCache();
+      applyLoggingConfig().catch((error) =>
+        logger.error({ operation: "debug_logging_expiry_failed", error })
+      );
+    },
+    Math.min(delay, 2 ** 31 - 1)
+  );
+  debugTimer.unref();
 }
 
 /**
@@ -129,6 +191,7 @@ export async function applyLoggingConfig(): Promise<LogConfig> {
     httpRequests: wanted.http,
     databaseQueries: wanted.database,
   });
+  scheduleDebugExpiry(config.debugUntil);
   return config;
 }
 

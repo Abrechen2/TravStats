@@ -42,6 +42,7 @@ import { kickAdmissionDelivery } from "../../jobs/admissionDeliveryScheduler";
 import { uuidParamSchema } from "../../schemas/comparison";
 import { holdAllConnections } from "../../services/sharing/federation/connections/hooks";
 import { holdPeerMemberships } from "../../services/sharing/federation/lifecycle";
+import { removePeer } from "../../services/sharing/federation/removePeer";
 import {
   federationSettingsSchema,
   httpsOriginSchema,
@@ -376,6 +377,20 @@ router.post(
     });
     await holdPeerMemberships(origin, "peer-blocked");
     res.json({ suspended: true });
+  })
+);
+
+/**
+ * Stop trusting a server: the pin goes, the pairings with its people end, shared trips stay here as
+ * local copies and the queue towards it is dropped. Unlike `/peers/suspend` this does not come back
+ * by re-enabling — the server has to be pinned and admitted again.
+ */
+router.delete(
+  "/peers",
+  handle(async (req, res) => {
+    const { origin } = peerOriginSchema.parse({ origin: req.query.origin });
+    await requirePeer(origin);
+    res.json({ removed: true, ...(await removePeer(origin)) });
   })
 );
 

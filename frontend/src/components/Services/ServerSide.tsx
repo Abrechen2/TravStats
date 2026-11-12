@@ -15,12 +15,17 @@ import {
 } from "../../lib/api/externalServices";
 import AdminConsentDialog from "../ExternalServices/AdminConsentDialog";
 import { serviceName } from "../ExternalServices/serviceText";
+import { useInternetDependency } from "../ServerPages/useInternetDependency";
 import FieldsGroup from "./FieldsGroup";
 import QuotaRow from "./QuotaRow";
 import TestRow from "./TestRow";
 import { ServerExtras, ownsEnabledSwitch, ownsFields } from "./serverExtras";
 import { useServices } from "./servicesContext";
-import type { ServiceCardDef } from "./serviceCards";
+import {
+  INTERNET_GATED_SWITCH_CARDS,
+  OUTBOUND_EXPERT_FIELDS,
+  type ServiceCardDef,
+} from "./serviceCards";
 import { useDemoLock } from "./useLockFor";
 
 /** The "Alle Konten" switch rows of one service, each its own immediate write. */
@@ -36,6 +41,7 @@ function SwitchRows({
   const { t } = useTranslation(["settingsRows"]);
   const { admin } = useServices();
   const demo = useDemoLock();
+  const internet = useInternetDependency();
   const uses = (u: string): boolean => (card.use as readonly string[]).includes(u);
   const [consentOpen, setConsentOpen] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -105,25 +111,14 @@ function SwitchRows({
           control={<StatusValue>{t("settingsRows:services.status.always")}</StatusValue>}
         />
       ) : null}
-      {service && (uses("on") || uses("aiAllow")) && !ownsEnabledSwitch(card.id) ? (
+      {service && uses("aiAllow") && !ownsEnabledSwitch(card.id) ? (
         <SettingItem
-          title={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.t"
-              : "settingsRows:services.tpl.on.t"
-          )}
-          sub={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.s"
-              : "settingsRows:services.tpl.on.s"
-          )}
-          help={t(
-            uses("aiAllow")
-              ? "settingsRows:services.tpl.aiAllow.h"
-              : "settingsRows:services.tpl.on.h"
-          )}
+          title={t("settingsRows:services.tpl.aiAllow.t")}
+          sub={t("settingsRows:services.tpl.aiAllow.s")}
+          help={t("settingsRows:services.tpl.aiAllow.h")}
           scope="allAccounts"
           locked={demo}
+          dependency={INTERNET_GATED_SWITCH_CARDS.has(card.id) ? internet : undefined}
           save={cloud ? undefined : on}
           control={
             <SwitchControl
@@ -132,6 +127,33 @@ function SwitchRows({
                 if (cloud && next) setConsentOpen(true);
                 else if (cloud) void admin?.setEnabled(card.id, false);
                 else on.choose(next);
+              }}
+            />
+          }
+        />
+      ) : null}
+      {/* "Pausieren" (the prototype's card dialog): a service with something to pause. It starts
+          on by itself with its first key (ServerSide `write`), so there is no separate "on". */}
+      {service &&
+      uses("on") &&
+      !uses("aiAllow") &&
+      !ownsEnabledSwitch(card.id) &&
+      (service.configured || service.keyless || service.enabled) ? (
+        <SettingItem
+          title={t("settingsRows:services.tpl.pause.t")}
+          sub={t("settingsRows:services.tpl.pause.s")}
+          help={t("settingsRows:services.tpl.pause.h")}
+          scope="allAccounts"
+          locked={demo}
+          dependency={INTERNET_GATED_SWITCH_CARDS.has(card.id) ? internet : undefined}
+          save={cloud ? undefined : on}
+          control={
+            <SwitchControl
+              checked={cloud ? !service.enabled : !on.value}
+              onChange={(paused) => {
+                if (cloud && !paused) setConsentOpen(true);
+                else if (cloud) void admin?.setEnabled(card.id, false);
+                else on.choose(!paused);
               }}
             />
           }
@@ -196,6 +218,9 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
   const connection = data.accountConnections.find((c) => c.id === card.id);
   const feedback = admin.feedback[card.id];
   const name = serviceName(t, card.id);
+  const cardFields = (service?.fields ?? []).filter(
+    (f) => !OUTBOUND_EXPERT_FIELDS.has(`${card.id}.${f.key}`)
+  );
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }} data-service-side="server">
@@ -206,12 +231,12 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
         </p>
       </div>
       <SwitchRows card={card} service={service} connection={connection} />
-      {service && service.fields.length > 0 && !ownsFields(card.id) ? (
+      {service && cardFields.length > 0 && !ownsFields(card.id) ? (
         <FieldsGroup
           id={`services.${card.id}.server`}
           label={t("settingsRows:services.ui.serverGroup", { name })}
           serviceId={card.id}
-          fields={service.fields}
+          fields={cardFields}
           secretTemplate="instKey"
           tests={uses("test")}
           lock={demo}
@@ -223,6 +248,23 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
               throw new Error("consent declined");
             }
             if (!(await admin.write(card.id, changes, remote))) throw new Error("save refused");
+            // The first key switches the service on (the prototype's "auto-on"). A service that
+            // was configured before and is off was paused on purpose and stays paused; a cloud
+            // model still needs the admin's data-sharing confirmation, so it is asked for here.
+            const firstKey =
+              !service?.configured &&
+              !service?.enabled &&
+              uses("on") &&
+              Object.values(changes).some((v) => typeof v === "string" && v.length > 0);
+            if (firstKey) {
+              if (service?.consent !== undefined) {
+                if (await new Promise<boolean>((resolve) => setAsk(() => resolve))) {
+                  await admin.setEnabled(card.id, true, true);
+                }
+              } else {
+                await admin.setEnabled(card.id, true);
+              }
+            }
             if (uses("test")) await admin.test(card.id);
           }}
           onRemoveSecret={async (key) => {

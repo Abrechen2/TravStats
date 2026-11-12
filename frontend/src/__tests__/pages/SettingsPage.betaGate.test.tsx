@@ -160,6 +160,8 @@ vi.mock("../../components/Settings/DevicesSection", () => ({
 // DevicesSection is above — its own fetches on mount are irrelevant to
 // whether the beta gate mounts it at all.
 // Fetches the user's settings and facts on mount (home country, passport) — not the subject here.
+vi.mock("../../components/Settings/PassportRow", () => ({ default: () => null }));
+vi.mock("../../components/Settings/OpenSuggestionsRow", () => ({ default: () => null }));
 vi.mock("../../components/Settings/HomeSection", () => ({
   default: () => <div data-testid="home-section" />,
 }));
@@ -279,14 +281,14 @@ describe("SettingsPage — beta gate: devicePairing", () => {
 
   it("does not put Devices on the account page when the flag is OFF", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings/account");
+    renderSettings("/settings/profil");
     await screen.findByRole("region", { name: "settings:profile.title" });
     expect(devicesShown()).toBe(false);
   });
 
   it("puts Devices on the account page when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
-    renderSettings("/settings/account");
+    renderSettings("/settings/telefone");
     expect(await screen.findByTestId("devices-section")).toBeTruthy();
   });
 
@@ -314,7 +316,7 @@ describe("SettingsPage — beta gate: devicePairing", () => {
 
   it("leaves Devices off the account page when nothing names it", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
-    renderSettings("/settings/account");
+    renderSettings("/settings/profil");
     await screen.findByRole("region", { name: "settings:profile.title" });
     expect(screen.queryByTestId("devices-section")).toBeNull();
   });

@@ -6,8 +6,10 @@ import { ECB_CURRENCIES } from "../../shared/currencies";
 import { SettingRows } from "../ui/SettingRow";
 import { SettingItem, useSettingWrite } from "../ui/settings";
 import { useSettingItem } from "../ui/settings/itemContext";
-import { saveBaseCurrency } from "../../store/confirmedSettings";
+import { saveBaseCurrency, saveSwitch } from "../../store/confirmedSettings";
+import { useSuggestionSwitchesStore } from "../../store/suggestionSwitchesStore";
 import { UnitRow } from "./UnitRow";
+import { useExpertRows } from "./frame/useExpertRows";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
@@ -55,7 +57,15 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
   // Same 403 as the display card, and the same silent local write before the
   // beta audit of 2026-09-19.
   const isDemo = useIsDemoAccount();
+  // "Basiswährung für Summen" is an expert row (settings v3).
+  const showCurrency = useExpertRows(1);
   const currency = useSettingWrite<string>("units.baseCurrency", baseCurrency, saveBaseCurrency);
+  // "Anzeigewährung" (settings v3 `cur`): how amounts are SHOWN. Its own column;
+  // the sums keep converting into the base currency above, whatever is chosen here.
+  const shown = useSuggestionSwitchesStore((s) => s.displayCurrency);
+  const display = useSettingWrite<string>("units.displayCurrency", shown ?? baseCurrency, (next) =>
+    saveSwitch("displayCurrency", next)
+  );
 
   return (
     <SectionCard>
@@ -84,15 +94,25 @@ export default function UnitsSection({ units, baseCurrency }: UnitsSectionProps)
           locked={isDemo}
         />
         <SettingItem
-          title={t("settings:rows.currency.name")}
-          sub={t("settings:rows.currency.sub")}
-          // Why the choice is narrower than what you may RECORD in — the one
-          // question this field reliably raises.
-          help={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
-          save={currency}
+          title={t("settings:rows.displayCurrency.name")}
+          sub={t("settings:rows.displayCurrency.sub")}
+          save={display}
           locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
-          control={<CurrencyField value={currency.value} onChange={currency.choose} />}
+          control={<CurrencyField value={display.value} onChange={display.choose} />}
         />
+        {showCurrency && (
+          <SettingItem
+            expert
+            title={t("settings:rows.currency.name")}
+            sub={t("settings:rows.currency.sub")}
+            // Why the choice is narrower than what you may RECORD in — the one
+            // question this field reliably raises.
+            help={`${t("settings:rows.currency.help")} ${t("lodging:fx.baseCurrencyExplainer")}`}
+            save={currency}
+            locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+            control={<CurrencyField value={currency.value} onChange={currency.choose} />}
+          />
+        )}
       </SettingRows>
     </SectionCard>
   );

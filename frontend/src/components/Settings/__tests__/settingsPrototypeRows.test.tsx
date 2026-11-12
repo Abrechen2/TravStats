@@ -38,6 +38,8 @@ const CRUISE = { defaultLine: "", defaultCabinType: null, showCruiseArcs: true }
  */
 describe("settings prototype rows", () => {
   beforeEach(() => {
+    // The trip colour is an expert row (settings v3).
+    useSettingsLevelStore.setState({ level: "expert" });
     update.mockReset().mockResolvedValue({});
     toast.mockReset();
     useSuggestionSwitchesStore.setState({
@@ -45,7 +47,6 @@ describe("settings prototype rows", () => {
       cruiseSeaDaysCounted: true,
       liveTracking: true,
     });
-    useSettingsLevelStore.setState({ level: "standard" });
   });
   afterEach(() => {
     cleanup();

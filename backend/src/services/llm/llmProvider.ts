@@ -56,6 +56,7 @@ import { getAdminParserSettings, type AdminParserSettings } from "../parserSetti
 import logger from "../../utils/logger";
 import { accountConsentedTo, assertLlmCloudConsent, assertLlmEnabled } from "./llmGate";
 import { loadPolicy } from "../externalServices/policy";
+import { ownLlmKeys, pausedLlmKinds } from "./ownKeys";
 import {
   checkLlmBaseUrl,
   consentDestination,
@@ -210,21 +211,25 @@ function isFixedEndpointKind(kind: CloudProviderKind): kind is FixedEndpointKind
 /** A fixed-endpoint cloud slot (openai/anthropic/google): eligible with a key AND that slot's own consent. */
 function fixedEndpointChainTarget(
   kind: FixedEndpointKind,
-  admin: AdminParserSettings | null
+  admin: AdminParserSettings | null,
+  ownKey?: string | null
 ): LlmTarget | null {
   const key =
-    kind === "openai"
+    ownKey ||
+    (kind === "openai"
       ? admin?.llmOpenaiApiKey
       : kind === "anthropic"
         ? admin?.llmAnthropicApiKey
-        : admin?.llmGoogleApiKey;
+        : admin?.llmGoogleApiKey);
   const optIn =
     kind === "openai"
       ? admin?.llmOpenaiOptIn
       : kind === "anthropic"
         ? admin?.llmAnthropicOptIn
         : admin?.llmGoogleOptIn;
-  if (!key || !(optIn ?? false)) return null;
+  // An account's own key is a slot of its own: the admin's opt-in covers the INSTANCE key only
+  // (the account's consent, checked by the caller, is what lets documents go to its own key).
+  if (!key || !(ownKey || (optIn ?? false))) return null;
   const configuredModel =
     kind === "openai"
       ? admin?.llmOpenaiModel
@@ -324,9 +329,15 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
   const ollama = ollamaOff ? null : ollamaChainTarget(admin);
   if (ollama) chain.push(ollama);
 
+  // An account's own key for a cloud model (settings v3) goes ahead of the instance's, as for
+  // every resolver provider; the slot still needs the admin's opt-in below.
+  const ownKeys = options.userId !== undefined ? await ownLlmKeys(options.userId) : {};
+  const paused = options.userId !== undefined ? await pausedLlmKinds(options.userId) : [];
   for (const kind of parseProviderOrder(admin?.llmProviderOrder)) {
+    // An account that paused a model sends nothing to it, with its own key or the instance's.
+    if (kind !== "custom" && paused.includes(kind)) continue;
     const target = isFixedEndpointKind(kind)
-      ? fixedEndpointChainTarget(kind, admin)
+      ? fixedEndpointChainTarget(kind, admin, ownKeys[kind] ?? null)
       : customChainTarget(admin);
     if (target) chain.push(target);
   }

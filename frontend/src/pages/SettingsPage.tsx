@@ -37,7 +37,7 @@ import {
 import { resolveAddress } from "./Settings/area/redirects";
 import { readLastPage, writeLastPage } from "./Settings/area/lastPage";
 import { expertRowCount } from "./Settings/registry";
-import { pageLevel, sectionsOf } from "./Settings/surface";
+import { pageLevel, pageReachable, sectionsOf } from "./Settings/surface";
 import type { SettingsSectionId } from "./Settings/settingsModel";
 import type { AdminSectionId } from "./Admin/adminSections";
 import { ADMIN_SECTION_FRAME } from "./Admin/AdminSectionSwitch";
@@ -51,14 +51,21 @@ import { useDeepLinkScroll } from "./Admin/useDeepLinkScroll";
  * therefore drive `autoSaveState`. Elsewhere the sections save explicitly or
  * not at all, and the strip would promise something that never happens (UAT B8).
  */
-const AUTO_SAVED_PAGES = new Set(["account", "display", "domains", "flight", "cruise"]);
+const AUTO_SAVED_PAGES = new Set([
+  "profil",
+  "anzeige",
+  "reisearten",
+  "fluege",
+  "kreuzfahrten",
+  "pl-plan",
+]);
 
 /**
  * Auto-saved pages that ALSO carry a group with its own save button (the
  * profile). Their idle hint names the exception instead of promising that
  * everything saves itself.
  */
-const AUTO_SAVED_PAGES_WITH_BUTTONS = new Set(["account"]);
+const AUTO_SAVED_PAGES_WITH_BUTTONS = new Set(["profil"]);
 
 /** Locale key of the status line; only the idle hint differs per page. */
 export function autoSaveKey(pageId: string, state: AutoSaveState): string {
@@ -87,10 +94,13 @@ function namedAnchor(search: string, hash: string): string | null {
   }
 }
 
-/** Which of the two scope lines a page carries (design §5.7). */
+/**
+ * Which of the two scope lines a page carries (design §5.7). The services page
+ * used to carry a third ("your account; rows marked 'All accounts' are the
+ * server's"); since settings v3 S5 its two halves are two pages.
+ */
 function scopeLineKey(page: AreaPageDef): string {
-  if (page.adminOnly) return "settings:area.scope.instance";
-  return page.id === "services" ? "settings:area.scope.mixed" : "settings:area.scope.account";
+  return page.adminOnly ? "settings:area.scope.instance" : "settings:area.scope.account";
 }
 
 /**
@@ -129,7 +139,8 @@ export default function SettingsPage(): JSX.Element {
 
   // `?service=` names a card of the catalogue: it stands in for the section when
   // the address carries no hash, so an expert or server card opens by it alone.
-  const service = current?.id === "services" ? searchParams.get("service") : null;
+  const service =
+    current?.id === "dienstek" || current?.id === "dienste" ? searchParams.get("service") : null;
   const anchor = isCanonical ? (namedAnchor(location.search, location.hash) ?? service) : null;
   const match = isCanonical ? searchParams.get("match") : null;
   const namedMount = current ? mountFor(current.id, anchor, match, isAdmin) : undefined;
@@ -139,6 +150,9 @@ export default function SettingsPage(): JSX.Element {
   const domainOff = current?.domain && !isEnabled(current.domain) ? current.domain : null;
   const conditions = useSectionConditions();
   const travTrackHeld = conditions.travTrackHeld === true;
+  const travPlanOffered = conditions.travPlanOffered === true;
+  const locationSourceHeld = conditions.locationSourceHeld === true;
+  const federationOn = conditions.federationOn === true;
   const visible = useMemo(
     () =>
       current && !domainOff
@@ -148,12 +162,23 @@ export default function SettingsPage(): JSX.Element {
             // sections, with a note above, rather than an empty page.
             level: pageLevel(current) === "expert" ? "expert" : level,
             isGateOpen: isFeatureVisible,
-            conditions: { travTrackHeld },
+            conditions: { travTrackHeld, travPlanOffered, locationSourceHeld, federationOn },
             isAdmin,
             deepLinked: named,
           })
         : { shown: [], hiddenExpert: 0, hiddenExpertSettings: 0, deepLinkedExpert: null },
-    [current, domainOff, level, isFeatureVisible, travTrackHeld, isAdmin, named]
+    [
+      current,
+      domainOff,
+      level,
+      isFeatureVisible,
+      travTrackHeld,
+      travPlanOffered,
+      locationSourceHeld,
+      federationOn,
+      isAdmin,
+      named,
+    ]
   );
   const inView = useSectionInView(visible.shown, "settings");
   // Every setting the standard level keeps off this page — whole expert
@@ -201,8 +226,14 @@ export default function SettingsPage(): JSX.Element {
 
   const adminOnlyNotice = (location.state as { adminOnly?: unknown } | null)?.adminOnly === true;
   const reachablePages = AREA_PAGES.filter(
-    (p) => (!p.domain || isEnabled(p.domain)) && (!p.adminOnly || isAdmin)
+    (p) =>
+      (!p.domain || isEnabled(p.domain)) &&
+      (!p.adminOnly || isAdmin) &&
+      pageReachable(p, conditions)
   );
+  // A link into TravTrack or TravPlan where the server does not offer them: the
+  // page says so instead of drawing nothing (the answer may also still be pending).
+  const notOffered = !domainOff && !pageReachable(current, conditions);
   const inMenu = (p: AreaPageDef): boolean =>
     level === "expert" || pageLevel(p) === "standard" || p.id === current.id;
   const groups: SettingsMenuGroup[] = AREA_MENU.map((g) => ({
@@ -217,7 +248,7 @@ export default function SettingsPage(): JSX.Element {
         icon: p.icon,
         color: p.domain ? colorOf(p.domain) : undefined,
         indent: INDENTED_PAGES.has(p.id),
-        ...(p.id === "server" && publicUrlMissing
+        ...(p.id === "allgemein" && publicUrlMissing
           ? { warn: { label: t("settingsRows:server.publicUrlMissing") } }
           : {}),
       })),
@@ -267,6 +298,7 @@ export default function SettingsPage(): JSX.Element {
                 frame={frameOf(mount)}
                 deepLinkedExpert={visible.deepLinkedExpert === id && !isExpertPage}
                 revealExpertRows={named === id && searchParams.get("expert") === "1"}
+                expertPage={isExpertPage}
                 highlighted={highlighted === id}
               >
                 {body(mount)}
@@ -343,7 +375,7 @@ export default function SettingsPage(): JSX.Element {
               {t("settings:area.adminOnlyNotice")}
             </p>
           )}
-          {current.id === "server" && publicUrlMissing && (
+          {current.id === "allgemein" && publicUrlMissing && (
             <p
               role="status"
               data-public-url-warning=""
@@ -358,13 +390,17 @@ export default function SettingsPage(): JSX.Element {
               }}
             >
               <span>{t("settingsRows:server.publicUrlBanner")}</span>
-              <button type="button" className="btn-secondary" onClick={() => jump("addresses")}>
+              <button type="button" className="btn-secondary" onClick={() => jump("general")}>
                 {t("settingsRows:server.publicUrlBannerJump")}
               </button>
             </p>
           )}
           {domainOff ? (
             <DomainOffNotice domain={domainOff} />
+          ) : notOffered ? (
+            <p role="status" className="t-caption">
+              {t("settings:area.notOffered")}
+            </p>
           ) : isExpertPage ? (
             <ExpertPageNotice />
           ) : (

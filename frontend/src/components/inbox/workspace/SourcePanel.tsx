@@ -63,7 +63,7 @@ export default function SourcePanel({
       {showTripNotes && proposalInfo.home === "missing" && (
         <p role="status" className="t-caption text-(--ts-warn)">
           {t(`${TRIPS}.home.missing`)}{" "}
-          <Link className="underline" to="/settings?section=homeAirport">
+          <Link className="underline" to="/settings/reisearten#homeAirport">
             {t(`${TRIPS}.home.link`)}
           </Link>
         </p>

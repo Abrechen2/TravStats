@@ -25,9 +25,11 @@ const NOT_A_SERVICE = new Set([
   "publicUrl",
   "lanUrl",
   "shareLinksEnabled",
+  "internetEnabled", // settings v3 master switch over the services below, not a service itself
   "tripFederationEnabled", // second federation switch, own endpoint
   "betaFeaturesEnabled",
-  "backupEnabled", // local backup schedule, not an outbound service
+  "globalOpenskyUsername", // legacy basic-auth login: OpenSky stopped accepting it on 2026-03-18 (settings v3 S6)
+  "globalOpenskyPassword",
   "llmEnabled", // the AI master switch lives on the Parser page
   "pushInstanceId",
   "pushInstanceSecret",

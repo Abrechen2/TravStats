@@ -1,0 +1,84 @@
+import { useEffect, useState, type JSX } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
+import { notificationsApi, type NotificationPreferences } from "../../lib/api";
+import { logger } from "../../lib/logger";
+import { Dependency, SettingItem, StatusValue } from "../ui/settings";
+import { useDependency, useRowCopy } from "./rowCopy";
+
+type Push = NotificationPreferences["push"];
+
+/** "Mitteilungen an die App": whether a notification can reach a phone, and why not. */
+export function PushStateView({
+  push,
+  title,
+  help,
+}: {
+  push: Push;
+  title: string;
+  help?: string;
+}): JSX.Element {
+  const { t } = useTranslation(["settings"]);
+  const dependency = useDependency();
+  const reason = push.available ? "ok" : (push.reason ?? "no_relay");
+  return (
+    <SettingItem
+      title={title}
+      help={help}
+      control={<StatusValue>{t(`settings:notifications.pushStatus.${reason}`)}</StatusValue>}
+    >
+      {reason === "no_relay" ? <Dependency reason={dependency("noPush").reason} /> : null}
+    </SettingItem>
+  );
+}
+
+/**
+ * The same row on the phones page ("Mitteilungen", prototype `pushstate2`),
+ * which reads the state itself. An unreadable state is said, never drawn as
+ * "ready".
+ */
+export default function PushStateRow(): JSX.Element {
+  const { t } = useTranslation(["settings"]);
+  const copy = useRowCopy("devices")("pushstate2");
+  const [push, setPush] = useState<Push | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  // Read on mount and again whenever the page regains focus: the state changes
+  // on the phone (notifications allowed in iOS settings), outside this page, and
+  // a row that kept saying "not ready" until a reload would send the person
+  // back and forth. A refresh that fails keeps the last answer on screen.
+  useEffect(() => {
+    let alive = true;
+    const load = async (): Promise<void> => {
+      try {
+        const prefs = await notificationsApi.getPreferences();
+        if (alive) {
+          setPush(prefs.push);
+          setFailed(false);
+        }
+      } catch (error) {
+        logger.warn("Failed to load the push state", error);
+        if (alive) setFailed(true);
+      }
+    };
+    const onVisible = (): void => {
+      if (document.visibilityState === "visible") void load();
+    };
+    void load();
+    window.addEventListener("focus", load);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", load);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  if (push) return <PushStateView push={push} title={copy.title} help={copy.help} />;
+  return (
+    <SettingItem
+      title={copy.title}
+      error={failed ? t("settings:notifications.loadError") : undefined}
+      control={<StatusValue>…</StatusValue>}
+    />
+  );
+}

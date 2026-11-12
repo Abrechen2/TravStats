@@ -59,7 +59,7 @@ export function hitHref(
 ): string {
   const query = new URLSearchParams();
   // A service card of the catalogue opens by its id.
-  if (page.id === "services") query.set("service", section.id);
+  if (page.id === "dienstek") query.set("service", section.id);
   if (row) query.set("match", row.id);
   // Expert rows open for this visit without touching the saved level.
   const expert = row ? row.level === "expert" : section.level === "expert";

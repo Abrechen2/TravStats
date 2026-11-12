@@ -30,7 +30,8 @@ export const loyaltySectionId = (domain: LoyaltyDomain): string => `loyalty-${do
  * The hotel block IS the 2.6 hotel editor (`MembershipsSection`: chains,
  * single hotels, the stay editor's cards) — one editor for hotel cards, not a
  * second one beside it. The airline, cruise-line and rail blocks are
- * `LoyaltyCardSection`.
+ * `LoyaltyCardSection` (rental cards are listed there too, without a coverage
+ * list: the server stores them but gives them no coverage rule).
  */
 export default function LoyaltySection(): JSX.Element {
   const { t } = useTranslation(["loyalty"]);
@@ -44,26 +45,13 @@ export default function LoyaltySection(): JSX.Element {
   // 2.7.0-rc.20, that is the user's switch alone, as for the others.
   const railVisible = useDomainVisible("rail");
   const domains = useMemo(
-    () =>
-      LOYALTY_DOMAINS.filter(
-        // Rental cards are storable (the server knows the domain) but have no
-        // coverage rule yet — the rental spec names none — so no editor is
-        // offered rather than one whose figures would always read zero.
-        (d): d is Exclude<LoyaltyDomain, "rental"> =>
-          d !== "rental" && (d === "rail" ? railVisible : isEnabled(d))
-      ),
+    () => LOYALTY_DOMAINS.filter((d) => (d === "rail" ? railVisible : isEnabled(d))),
     [isEnabled, railVisible]
   );
 
   // A travel type that is off keeps its place on the page, with the reason and the way
   // to turn it on — a missing block would read as "no cards" rather than "switched off".
-  const offDomains = useMemo(
-    () =>
-      LOYALTY_DOMAINS.filter(
-        (d): d is Exclude<LoyaltyDomain, "rental"> => d !== "rental" && !domains.includes(d)
-      ),
-    [domains]
-  );
+  const offDomains = useMemo(() => LOYALTY_DOMAINS.filter((d) => !domains.includes(d)), [domains]);
   const go = useGuardedNavigate();
 
   const reload = useCallback(async (): Promise<void> => {
@@ -95,7 +83,7 @@ export default function LoyaltySection(): JSX.Element {
   const ofDomain = (domain: LoyaltyDomain): LoyaltyMembership[] =>
     cards.filter((c) => c.domain === domain);
 
-  const block = (domain: Exclude<LoyaltyDomain, "rental">): JSX.Element => {
+  const block = (domain: LoyaltyDomain): JSX.Element => {
     if (domain === "lodging") {
       return (
         <MembershipsSection
@@ -137,7 +125,7 @@ export default function LoyaltySection(): JSX.Element {
               reason: t("loyalty:domainOff", { area: t(`loyalty:sections.${domain}.title`) }),
               jump: {
                 label: t("loyalty:domainOffAction"),
-                onJump: () => go("/settings/domains"),
+                onJump: () => go("/settings/reisearten#domains"),
               },
             }}
           />

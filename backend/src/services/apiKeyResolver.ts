@@ -13,6 +13,7 @@ import { loadPolicy, loadPrefs, type OffReason } from "./externalServices/policy
 export type ApiProvider =
   | "openai"
   | "claude"
+  | "gemini"
   | "airlabs"
   | "aviationstack"
   | "aerodatabox"
@@ -77,6 +78,8 @@ export async function resolveApiKey(
         select: {
           openaiApiKey: true,
           claudeApiKey: true,
+          googleApiKey: true,
+          googlePlacesApiKey: true,
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
@@ -97,6 +100,15 @@ export async function resolveApiKey(
             break;
           case "claude":
             userKey = userSettings.claudeApiKey;
+            break;
+          case "gemini":
+            userKey = userSettings.googleApiKey;
+            break;
+          // Settings v3: an account may bring its own Places key; a lookup made for
+          // it uses that first, then the instance's (callers that name no user keep
+          // the instance key only).
+          case "googlePlaces":
+            userKey = userSettings.googlePlacesApiKey;
             break;
           case "airlabs":
             userKey = userSettings.airlabsApiKey;
@@ -145,6 +157,9 @@ export async function resolveApiKey(
         case "claude":
           globalKey = adminSettings.globalClaudeApiKey;
           break;
+        case "gemini":
+          globalKey = adminSettings.llmGoogleApiKey;
+          break;
         case "airlabs":
           globalKey = adminSettings.globalAirlabsApiKey;
           break;
@@ -168,8 +183,7 @@ export async function resolveApiKey(
         case "logostream":
           globalKey = adminSettings.globalLogostreamApiKey;
           break;
-        // Instance-wide like logostream: a map pin is a property of the place,
-        // not of who looked it up, so there is no per-user tier.
+        // The instance key; an account's own comes first (above) where the caller names it.
         case "googlePlaces":
           globalKey = adminSettings.globalGooglePlacesApiKey;
           break;
@@ -329,6 +343,8 @@ export async function hasApiKeyAccess(
         select: {
           openaiApiKey: true,
           claudeApiKey: true,
+          googleApiKey: true,
+          googlePlacesApiKey: true,
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
@@ -348,6 +364,12 @@ export async function hasApiKeyAccess(
             break;
           case "claude":
             hasUserKey = !!decryptApiKey(userSettings.claudeApiKey);
+            break;
+          case "gemini":
+            hasUserKey = !!decryptApiKey(userSettings.googleApiKey);
+            break;
+          case "googlePlaces":
+            hasUserKey = !!decryptApiKey(userSettings.googlePlacesApiKey);
             break;
           case "airlabs":
             hasUserKey = !!decryptApiKey(userSettings.airlabsApiKey);
@@ -394,6 +416,12 @@ export async function hasApiKeyAccess(
             break;
           case "claude":
             hasGlobalKey = !!decryptApiKey(adminSettings.globalClaudeApiKey);
+            break;
+          case "gemini":
+            hasGlobalKey = !!decryptApiKey(adminSettings.llmGoogleApiKey);
+            break;
+          case "googlePlaces":
+            hasGlobalKey = !!decryptApiKey(adminSettings.globalGooglePlacesApiKey);
             break;
           case "airlabs":
             hasGlobalKey = !!decryptApiKey(adminSettings.globalAirlabsApiKey);

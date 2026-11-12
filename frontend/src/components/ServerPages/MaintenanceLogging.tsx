@@ -22,26 +22,19 @@ import {
   ErrorLine,
   InputControl,
   SettingItem,
-  SwitchControl,
   useGroupSave,
-  useSettingWrite,
 } from "../ui/settings";
 import GroupFooter from "./GroupFooter";
+import MaintenanceDebug24 from "./MaintenanceDebug24";
 
 interface Draft extends Record<string, unknown> {
   level: LogLevelName;
   retentionDays: string;
-  http: boolean;
-  database: boolean;
-  parser: boolean;
 }
 
 const draftOf = (c: LoggingConfigResponse): Draft => ({
   level: c.logLevel,
   retentionDays: String(c.logRetentionDays),
-  http: c.logHttpRequests,
-  database: c.logDatabaseQueries,
-  parser: c.logParserOperations,
 });
 
 /** Files older than the retention are what "Alte Protokolle löschen" sweeps. */
@@ -131,9 +124,6 @@ function Rows({
       const { config: next } = await adminApi.updateLoggingConfig({
         ...(edited.has("level") ? { logLevel: draft.level } : {}),
         ...(edited.has("retentionDays") ? { logRetentionDays: Number(draft.retentionDays) } : {}),
-        ...(edited.has("http") ? { logHttpRequests: draft.http } : {}),
-        ...(edited.has("database") ? { logDatabaseQueries: draft.database } : {}),
-        ...(edited.has("parser") ? { logParserOperations: draft.parser } : {}),
       });
       // What was sent is saved; an edit made while the request was out stays recorded.
       for (const field of edited) if (field in draft) editedRef.current.delete(field);
@@ -152,14 +142,6 @@ function Rows({
       group.discard();
     },
   };
-  const verbose = useSettingWrite<boolean>(
-    "maintenance:debug",
-    config.logLevel === "debug",
-    async (on) => {
-      await adminApi.toggleDebugLogging(on);
-      await reload();
-    }
-  );
   const days = Number(group.draft.retentionDays);
   const daysInvalid = !Number.isInteger(days) || days < 1 || days > 90;
 
@@ -217,12 +199,8 @@ function Rows({
     }
   };
 
-  const debug = row("debug");
   const level = row("loglevel");
   const keep = row("logtage");
-  const http = row("loghttp");
-  const db = row("logdb");
-  const parser = row("logparser");
   const filesRow = row("logfiles");
   const clean = row("logclean");
   const old = sweepable(files, config.logRetentionDays);
@@ -236,29 +214,8 @@ function Rows({
       : asking
         ? dialog("logdel", { name: asking.file })
         : null;
-  const sw = (field: "http" | "database" | "parser", title: string, sub?: string): JSX.Element => (
-    <SettingItem
-      title={title}
-      sub={sub}
-      scope="allAccounts"
-      expert
-      changed={group.isChanged(field)}
-      control={
-        <SwitchControl checked={group.draft[field]} onChange={(next) => edit({ [field]: next })} />
-      }
-    />
-  );
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-      <SettingItem
-        title={debug.title}
-        sub={debug.sub}
-        scope="allAccounts"
-        expert
-        save={verbose}
-        dependency={pinnedDep}
-        control={<SwitchControl checked={verbose.value} onChange={verbose.choose} />}
-      />
       <SettingItem
         title={level.title}
         help={t("admin:logging.help.levels")}
@@ -275,6 +232,7 @@ function Rows({
           />
         }
       />
+      <MaintenanceDebug24 config={config} reload={reload} dependency={pinnedDep} />
       <SettingItem
         title={keep.title}
         sub={keep.sub}
@@ -293,9 +251,6 @@ function Rows({
           />
         }
       />
-      {sw("http", http.title)}
-      {sw("database", db.title)}
-      {sw("parser", parser.title)}
       <GroupFooter group={footer} disabled={daysInvalid} />
       <SettingItem title={filesRow.title} sub={filesRow.sub} scope="allAccounts" expert>
         {fileError ? <ErrorLine>{fileError}</ErrorLine> : null}

@@ -238,3 +238,32 @@ describe("Standort → Quelle and the Dawarich connection on one page", () => {
     await waitFor(() => expect(setProvider).toHaveBeenLastCalledWith("none"));
   });
 });
+
+describe("Quelle: rows handed in by the TravTrack page (settings v3 S4)", () => {
+  it("draws 'Reisen aufzeichnen' under the source only while TravTrack is the source", async () => {
+    getProvider.mockResolvedValue(state({ kind: "dawarich" }));
+    const { unmount } = render(
+      <MemoryRouter>
+        <LocationSourceSection recording={<p>recording-row</p>} trailing={<p>devices-row</p>} />
+      </MemoryRouter>
+    );
+    expect(await screen.findByRole("radio", { name: DAWARICH })).toBeChecked();
+    expect(screen.queryByText("recording-row")).toBeNull();
+    expect(screen.getByText("devices-row")).toBeInTheDocument();
+    unmount();
+    getProvider.mockResolvedValue(state({ kind: "travtrack" }));
+    render(
+      <MemoryRouter>
+        <LocationSourceSection recording={<p>recording-row</p>} />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("recording-row")).toBeInTheDocument();
+  });
+
+  it("no longer carries the track gap: it is a row of Erkennung → Feinabstimmung now", async () => {
+    getProvider.mockResolvedValue(state());
+    show();
+    await screen.findByRole("radio", { name: NONE });
+    expect(screen.queryByText("settings:location.trackGap.name")).toBeNull();
+  });
+});

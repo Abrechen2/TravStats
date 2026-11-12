@@ -20,8 +20,10 @@ import {
   ErrorLine,
   JobStatus,
   SettingItem,
+  useGuardedNavigate,
   type JobView,
 } from "../ui/settings";
+import BackupsSummary from "./BackupsSummary";
 import { MenuItem, RowMenu } from "./RowMenu";
 import { restoreOutcome, type RestoreOutcome } from "./restoreFailure";
 import { useWebdavEnabled } from "./useWebdavEnabled";
@@ -50,7 +52,8 @@ const formatSize = (bytes: string): string => {
  * nothing was written.
  */
 export default function BackupsExisting(): JSX.Element {
-  const { t } = useTranslation(["settingsRows", "admin", "common"]);
+  const { t } = useTranslation(["settingsRows", "admin", "common", "settings"]);
+  const go = useGuardedNavigate();
   const row = useRowCopy("backups");
   const dialog = useDialogCopy();
   const addToast = useToastStore((s) => s.addToast);
@@ -228,6 +231,7 @@ export default function BackupsExisting(): JSX.Element {
   const scopeAmount = (scope: Scope): string => t(`settingsRows:backups.restoreScope.${scope}`);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      <BackupsSummary backups={backups} />
       <SettingItem
         title={now.title}
         scope="allAccounts"
@@ -370,6 +374,21 @@ export default function BackupsExisting(): JSX.Element {
             onDownloaded={() => void load()}
           />
         </SettingItem>
+      ) : null}
+      {webdav === false ? (
+        // Fetching from WebDAV needs a WebDAV target: the row says so and goes to the service.
+        <SettingItem
+          title={fetchRow.title}
+          sub={fetchRow.sub}
+          scope="allAccounts"
+          dependency={{
+            reason: t("settings:blocks.dep.noWebdav.reason"),
+            jump: {
+              label: t("settings:blocks.dep.noWebdav.jump"),
+              onJump: () => go("/settings/dienste?service=webdav"),
+            },
+          }}
+        />
       ) : null}
       {restoreFailed ? (
         <ErrorLine>{t(`settingsRows:backups.restoreFailure.${restoreFailed}`)}</ErrorLine>

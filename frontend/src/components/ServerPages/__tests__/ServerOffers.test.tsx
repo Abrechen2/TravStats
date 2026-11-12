@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
 import ServerOffers from "../ServerOffers";
 import { resetInstanceStore } from "../instanceStore";
@@ -22,6 +24,13 @@ const track = vi.hoisted(() => ({ config: vi.fn(), setConfig: vi.fn() }));
 vi.mock("../../../lib/api/travtrack", () => ({ travTrackApi: track }));
 vi.mock("../../Admin/BetaFeatureList", () => ({ default: () => null }));
 vi.unmock("../../../store/settingsStore");
+
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => navigate,
+}));
+const renderOffers = (ui: ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 const status = { usable: false, reason: null };
 const answer = (over = {}) => ({ settings: instance(over), passkeyStatus: status });
@@ -46,7 +55,7 @@ afterEach(() => {
 describe("Server › Was der Server anbietet", () => {
   it("keeps the choice and offers a retry when the beta switch cannot be saved", async () => {
     api.updateInstanceSettings.mockRejectedValue(httpError());
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     const beta = await screen.findByRole("switch", { name: "settingsRows:server.beta.t" });
     expect(beta).toHaveAttribute("aria-checked", "true");
     await userEvent.click(beta);
@@ -63,7 +72,7 @@ describe("Server › Was der Server anbietet", () => {
   it("locks TravTrack with the reason and a jump while the beta switch is off", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: false });
     api.getInstanceSettings.mockResolvedValue(answer({ betaFeaturesEnabled: false }));
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     const track = await screen.findByRole("switch", { name: "settingsRows:server.ttoffer.t" });
     expect(track).toBeDisabled();
     expect(track).toHaveAttribute("aria-disabled", "true");
@@ -72,8 +81,10 @@ describe("Server › Was der Server anbietet", () => {
   });
 
   it("refuses planning limits above the maximum with a number, and keeps Speichern off", async () => {
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    // The draft follows the loaded value one render after the field appears.
+    await waitFor(() => expect(ai).toHaveValue(10));
     await userEvent.clear(ai);
     await userEvent.type(ai, "500");
     expect(screen.getByText("settingsRows:server.errors.limit")).toBeInTheDocument();
@@ -82,8 +93,10 @@ describe("Server › Was der Server anbietet", () => {
 
   it("keeps the typed limit and says so when the planning limits are refused", async () => {
     plan.setConfig.mockRejectedValue(httpError(500));
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    // The draft follows the loaded value one render after the field appears.
+    await waitFor(() => expect(ai).toHaveValue(10));
     await userEvent.clear(ai);
     await userEvent.type(ai, "40");
     await userEvent.click(screen.getByRole("button", { name: "settings:blocks.save.saveGroup" }));
@@ -97,14 +110,14 @@ describe("Server › Was der Server anbietet", () => {
 
   it("says the module switches could not be read, instead of drawing them off", async () => {
     track.config.mockRejectedValue(httpError());
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     expect(await screen.findByText("settingsRows:server.offersLoadFailed")).toBeInTheDocument();
   });
 
   it("lets an admin narrow an import mode that runs for everyone to one account", async () => {
     api.getImportMode.mockResolvedValue({ until: "2999-01-01T00:00:00Z", userId: null, hours: 24 });
     api.setImportMode.mockResolvedValue({ until: "2999-01-01T00:00:00Z", userId: "u1", hours: 24 });
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     await userEvent.click(
       await screen.findByRole("radio", { name: "settingsRows:server.importMode.one" })
     );
@@ -120,10 +133,159 @@ describe("Server › Was der Server anbietet", () => {
 
   it("reports a refused import mode and leaves it off", async () => {
     api.setImportMode.mockRejectedValue(httpError(500));
-    render(<ServerOffers />);
+    renderOffers(<ServerOffers />);
     await userEvent.click(
       await screen.findByRole("radio", { name: "settingsRows:server.importMode.all" })
     );
     expect(await screen.findByText("admin:importMode.saveFailed")).toBeInTheDocument();
+  });
+});
+
+describe("Server › Bereitstellung pages (settings v3 S4)", () => {
+  it("draws TravTrack's offer alone on its page, without the beta switch or the plan rows", async () => {
+    renderOffers(<ServerOffers part="track" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.ttoffer.t" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.beta.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.tpoffer.t" })).toBeNull();
+    expect(screen.queryByLabelText("settingsRows:server.limit.ai")).toBeNull();
+  });
+
+  it("draws the plan offer with the AI and weather limits as two rows of their own", async () => {
+    renderOffers(<ServerOffers part="plan" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.tpoffer.t" })
+    ).toBeInTheDocument();
+    const ai = await screen.findByLabelText("settingsRows:server.limit.ai");
+    const weather = await screen.findByLabelText("settingsRows:server.limit.weather");
+    expect(ai.closest("[data-setting-row]")).not.toBe(weather.closest("[data-setting-row]"));
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
+  });
+
+  it("leaves both offers off Funktionen, which keeps the beta switch, the country default and the import mode", async () => {
+    renderOffers(<ServerOffers part="rest" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.beta.t" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.tpoffer.t" })).toBeNull();
+    expect(screen.queryByLabelText("settingsRows:server.limit.ai")).toBeNull();
+    expect(await screen.findByText("settingsRows:server.importmodus.t")).toBeInTheDocument();
+  });
+
+  it("sends the lock's jump to the page that holds the beta switch, since the offer pages do not draw it", async () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: false });
+    api.getInstanceSettings.mockResolvedValue(answer({ betaFeaturesEnabled: false }));
+    renderOffers(<ServerOffers part="track" />);
+    await userEvent.click(await screen.findByRole("button", { name: /needsBetaJump/ }));
+    expect(navigate).toHaveBeenCalledWith("/settings/funktionen?match=beta", undefined);
+  });
+});
+
+describe("Funktionen › Netz and Bereiche (settings v3 S5)", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 450));
+
+  it("shows the master switch for the internet as on unless the server says it is off", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    expect(
+      await screen.findByRole("switch", { name: "settingsRows:server.internet.t" })
+    ).toHaveAttribute("aria-checked", "true");
+    cleanup();
+    resetInstanceStore();
+    api.getInstanceSettings.mockResolvedValue(answer({ internetEnabled: false }));
+    renderOffers(<ServerOffers part="net" />);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "settingsRows:server.internet.t" })
+      ).toHaveAttribute("aria-checked", "false")
+    );
+  });
+
+  it("writes internetEnabled alone and keeps the choice on its row when the write is refused", async () => {
+    api.updateInstanceSettings.mockRejectedValue(httpError(500));
+    renderOffers(<ServerOffers part="net" />);
+    const net = await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    await userEvent.click(net);
+    await act(settle);
+    expect(api.updateInstanceSettings).toHaveBeenCalledWith({ internetEnabled: false });
+    expect(net).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "settings:blocks.save.retry" })).toBeInTheDocument();
+  });
+
+  it("lists what the switch switches off in its help, so nobody has to guess", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    // The key-echo mock proves the help is asked for; the real words are pinned in the locale test.
+    expect(screen.getByText("settingsRows:server.internet.s")).toBeInTheDocument();
+  });
+
+  it("draws the TravTrack and TravPlan links as buttons to their Bereitstellung pages", async () => {
+    renderOffers(<ServerOffers part="areas" />);
+    const buttons = await screen.findAllByRole("button", { name: "settingsRows:server.l_tt.btn" });
+    await userEvent.click(buttons[0]);
+    expect(navigate).toHaveBeenCalledWith("/settings/tt-bereit", undefined);
+    await userEvent.click(screen.getByRole("button", { name: "settingsRows:server.l_pl.btn" }));
+    expect(navigate).toHaveBeenCalledWith("/settings/pl-bereit", undefined);
+  });
+
+  it("draws nothing of the other groups in the net and areas parts", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.beta.t" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "settingsRows:server.ttoffer.t" })).toBeNull();
+  });
+});
+
+describe("Funktionen › Netz — the five outbound switches as expert rows (settings v3, owner 2026-11-12)", () => {
+  const settle = () => new Promise((r) => setTimeout(r, 450));
+  const FIVE: [string, string][] = [
+    ["fxcdn", "fxCdnFallbackEnabled"],
+    ["transitous", "railTransitousEnabled"],
+    ["dbrest", "railDbRestEnabled"],
+    ["oplogos", "operatorLogosOpenDataEnabled"],
+    ["updcheck", "updateCheckEnabled"],
+  ];
+
+  it("draws the five under the master switch for an expert and none at the standard level", async () => {
+    renderOffers(<ServerOffers part="net" />);
+    for (const [id] of FIVE) {
+      const row = await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` });
+      expect(row).toHaveAttribute("aria-checked", "true");
+      expect(row).not.toBeDisabled();
+    }
+    cleanup();
+    useSettingsLevelStore.setState({ level: "standard" });
+    renderOffers(<ServerOffers part="net" />);
+    await screen.findByRole("switch", { name: "settingsRows:server.internet.t" });
+    for (const [id] of FIVE) {
+      expect(screen.queryByRole("switch", { name: `settingsRows:server.${id}.t` })).toBeNull();
+    }
+  });
+
+  it("locks every row with the internet-off reason while the master switch is off, and keeps the stored value", async () => {
+    api.getInstanceSettings.mockResolvedValue(
+      answer({ internetEnabled: false, railTransitousEnabled: false })
+    );
+    renderOffers(<ServerOffers part="net" />);
+    for (const [id] of FIVE) {
+      const row = await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` });
+      expect(row).toBeDisabled();
+      expect(row).toHaveAttribute("aria-checked", id === "transitous" ? "false" : "true");
+    }
+    expect(screen.getAllByText("settings:blocks.dep.internet.reason")).toHaveLength(5);
+    await userEvent.click(screen.getByRole("switch", { name: "settingsRows:server.fxcdn.t" }));
+    await act(settle);
+    expect(api.updateInstanceSettings).not.toHaveBeenCalled();
+  });
+
+  it.each(FIVE)("saves %s as its own field and nothing else", async (id, column) => {
+    api.updateInstanceSettings.mockResolvedValue(answer({ [column]: false }));
+    renderOffers(<ServerOffers part="net" />);
+    await userEvent.click(
+      await screen.findByRole("switch", { name: `settingsRows:server.${id}.t` })
+    );
+    await act(settle);
+    expect(api.updateInstanceSettings).toHaveBeenCalledWith({ [column]: false });
   });
 });

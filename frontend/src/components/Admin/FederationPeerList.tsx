@@ -10,13 +10,13 @@ export default function FederationPeerList({
   busy,
   locked,
   onVerify,
-  onSuspend,
+  onRemove,
 }: {
   peers: FederationPeer[];
   busy: boolean;
   locked: boolean;
   onVerify: (origin: string) => void;
-  onSuspend: (origin: string) => void;
+  onRemove: (origin: string) => void;
 }): JSX.Element {
   const { t } = useTranslation(["admin"]);
   const fmt = useDisplayFormat();
@@ -57,12 +57,8 @@ export default function FederationPeerList({
             >
               {t("federation.verify")}
             </Button>
-            <Button
-              variant="danger"
-              disabled={busy || !p.enabled || locked}
-              onClick={() => onSuspend(p.origin)}
-            >
-              {t("federation.suspend")}
+            <Button variant="danger" disabled={busy || locked} onClick={() => onRemove(p.origin)}>
+              {t("federation.remove")}
             </Button>
           </span>
         </li>

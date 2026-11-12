@@ -13,6 +13,17 @@ import { saveSwitch } from "../../store/confirmedSettings";
  * deleted on the trip's map. A refusal keeps the choice and offers a retry.
  */
 export default function TripRecordingSection(): JSX.Element {
+  return (
+    <SectionCard>
+      <SettingRows>
+        <TripRecordingRow />
+      </SettingRows>
+    </SectionCard>
+  );
+}
+
+/** The switch alone, for the page that draws it inside another card. */
+export function TripRecordingRow(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const isDemo = useIsDemoAccount();
   const saved = useSuggestionSwitchesStore((s) => s.tripRecording);
@@ -21,23 +32,19 @@ export default function TripRecordingSection(): JSX.Element {
   );
 
   return (
-    <SectionCard>
-      <SettingRows>
-        <SettingItem
-          title={t("settings:tripRecording.label")}
-          sub={t("settings:tripRecording.description")}
-          help={t("settings:tripRecording.more")}
-          save={write}
-          locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
-          control={
-            <SwitchControl
-              checked={write.value}
-              onChange={write.choose}
-              label={t("settings:tripRecording.label")}
-            />
-          }
+    <SettingItem
+      title={t("settings:tripRecording.label")}
+      sub={t("settings:tripRecording.description")}
+      help={t("settings:tripRecording.more")}
+      save={write}
+      locked={isDemo ? { why: "demo", reason: t("settings:blocks.lock.demo") } : undefined}
+      control={
+        <SwitchControl
+          checked={write.value}
+          onChange={write.choose}
+          label={t("settings:tripRecording.label")}
         />
-      </SettingRows>
-    </SectionCard>
+      }
+    />
   );
 }

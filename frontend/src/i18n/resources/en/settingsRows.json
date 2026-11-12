@@ -6,7 +6,7 @@
       "calendarFeed": "Calendar"
     },
     "autoreise": {
-      "t": "Group trips on import",
+      "t": "Create trips automatically",
       "s": "Same booking reference, one trip"
     },
     "reisefarbe": {
@@ -14,14 +14,16 @@
     },
     "rvor": {
       "t": "Suggest trips",
-      "h": "Off: nothing is computed. Your decisions stay."
+      "h": "Off: nothing is computed. Your decisions stay.",
+      "s": "From flights and stays that belong together"
     },
     "avor": {
       "t": "Suggest stays",
       "s": "From your location history"
     },
     "immichbeleg": {
-      "t": "Immich photos as evidence"
+      "t": "Use photos as evidence",
+      "s": "Immich photos for a stay"
     },
     "kiort": {
       "t": "Detect place type with AI",
@@ -33,6 +35,12 @@
       "h": "You see the link only once. Regenerating ends old subscriptions. Google Calendar needs a public server address.",
       "btn": "Create link",
       "res": "Link created · visible only now · Copy"
+    },
+    "offenevor": {
+      "t": "Open suggestions",
+      "off": "Off",
+      "count_one": "{{count}} in the inbox",
+      "count_other": "{{count}} in the inbox"
     }
   },
   "sharing": {
@@ -82,6 +90,9 @@
       "t": "Hand over encrypted",
       "s": "Full entries to another account",
       "btn": "Open"
+    },
+    "linksoff": {
+      "t": "Public links are off on this server. The admin can allow them."
     }
   },
   "notifications": {
@@ -90,7 +101,7 @@
       "domains": "Before you leave"
     },
     "erimail": {
-      "t": "Mail to",
+      "t": "Reminders to",
       "s": "Empty: no mail"
     },
     "pushstate": {
@@ -98,8 +109,7 @@
       "h": "Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."
     },
     "r_flight": {
-      "t": "Flight",
-      "h": "Plus one own time, whole hours from 1 to 168."
+      "t": "Flight"
     },
     "r_cruise": {
       "t": "Cruise"
@@ -124,6 +134,20 @@
     },
     "r_poi": {
       "t": "Places"
+    },
+    "rchan": {
+      "t": "Channel",
+      "both": "Both",
+      "mixed": "So far different per travel type. Your choice applies to all."
+    },
+    "leadSub": "Reminder before departure",
+    "lead": {
+      "off": "Off",
+      "h2": "2 h",
+      "h24": "24 h",
+      "d2": "2 days",
+      "own": "Own: {{hours}}",
+      "standard": "24 h and 2 h (default)"
     }
   },
   "loyalty": {
@@ -132,8 +156,8 @@
     },
     "tr_flight": {
       "t": "Airlines",
-      "h": "Suggestions from your flights show up here to accept.",
-      "btn": "Add card"
+      "btn": "Add card",
+      "s": "Suggestions from your flights show up here to accept."
     },
     "tr_hotel": {
       "t": "Hotels",
@@ -147,10 +171,16 @@
     "tr_cruise": {
       "t": "Cruise lines",
       "btn": "Add card"
+    },
+    "tr_rental": {
+      "t": "Rental cars",
+      "btn": "Add card"
     }
   },
   "data": {
-    "jump": { "label": "Parts of the Data page" },
+    "jump": {
+      "label": "Parts of the Data page"
+    },
     "sections": {
       "backup": "Backup",
       "export": "Take out",
@@ -173,11 +203,6 @@
     "webdavvers": {
       "t": "Versions to keep",
       "s": "1–30"
-    },
-    "webdavjetzt": {
-      "t": "Upload now",
-      "btn": "Upload now",
-      "res": "Uploaded · just now"
     },
     "meine": {
       "t": "All my data",
@@ -221,13 +246,15 @@
       "h": "Entries something else already points to stay; I'll say which."
     },
     "ubahn": {
-      "t": "Metro and tram",
-      "s": "Preselection, changeable per import",
-      "o": ["skip", "as rail journey"]
+      "t": "Metro and tram on rail import",
+      "o": ["Skip", "Import"]
     },
     "busleg": {
-      "t": "Bus legs",
-      "o": ["skip", "as bus ride"]
+      "t": "Bus legs on rail import",
+      "o": ["Skip", "Import"]
+    },
+    "webdavlast": {
+      "t": "Last own copy"
     }
   },
   "dialogs": {
@@ -397,24 +424,42 @@
       "amount_other": "{{count}} flights",
       "after": "No one can sign in as demo any more.",
       "confirm": "Delete"
+    },
+    "userpw": {
+      "title": "Set a new password?",
+      "affects": "{{name}}",
+      "amount": "One account",
+      "after": "The old password stops working. I show you the new one once.",
+      "confirm": "Set new"
+    },
+    "fedkey": {
+      "title": "Renew the server key?",
+      "affects": "The connections to other servers",
+      "amount_one": "{{count}} trusted server",
+      "amount_other": "{{count}} trusted servers",
+      "after": "They are cut off until each one confirms the new key.",
+      "confirm": "Renew"
+    },
+    "peerremove": {
+      "title": "Stop trusting this server?",
+      "affects": "{{name}}",
+      "amount": "One server",
+      "after": "Nothing comes from there any more, and nothing goes there.",
+      "confirm": "Stop trusting"
     }
   },
   "services": {
     "groups": {
       "alle": "All",
       "flug": "Flight data",
-      "karte": "Maps & routes",
+      "karte": "Maps & places",
       "foto": "Photos & location",
       "ki": "AI",
       "open": "Open data",
-      "sync": "Sync & mail",
+      "sync": "Backup",
       "inst": "Instance"
     },
     "tpl": {
-      "mine": {
-        "t": "Use for me",
-        "h": "If your admin switched the service off, it stays off."
-      },
       "ownKey": {
         "t": "Own key",
         "s": "Instead of the server's key",
@@ -469,6 +514,15 @@
       },
       "model": {
         "t": "Model"
+      },
+      "pause": {
+        "t": "Pause",
+        "s": "Paused: no requests, not even a test",
+        "h": "Applies to every account, even with its own key. The key and settings stay saved; the service runs again when you switch this off."
+      },
+      "pauseMine": {
+        "t": "Pause",
+        "h": "Switched off for your account. The key and connection stay saved. If your admin switched the service off, it stays off."
       }
     },
     "cards": {
@@ -625,36 +679,12 @@
         "t": "Your client secret",
         "h": "Stored encrypted and never shown again."
       },
-      "oskuser": {
-        "t": "Your username",
-        "s": "Legacy sign-in"
-      },
-      "oskpw": {
-        "t": "Your password",
-        "s": "Legacy sign-in"
-      },
       "oskidI": {
         "t": "Server client ID",
         "s": "For every account without its own"
       },
       "osksecI": {
         "t": "Server client secret"
-      },
-      "oskuserI": {
-        "t": "Server username",
-        "s": "Legacy sign-in"
-      },
-      "oskpwI": {
-        "t": "Server password",
-        "s": "Legacy sign-in"
-      },
-      "transitous": {
-        "t": "Transitous",
-        "s": "Timetables from open data"
-      },
-      "dbrest": {
-        "t": "db-rest",
-        "s": "Deutsche Bahn timetables"
       },
       "bahnkontakt": {
         "t": "Contact for requests",
@@ -688,11 +718,6 @@
       "immnacht": {
         "t": "Look through photos nightly",
         "s": "Finds trips you haven't logged"
-      },
-      "immmode": {
-        "t": "Photos on trips",
-        "h": "Link shows photos from Immich and copies nothing. Copy downloads the originals to this server.",
-        "o": ["verknüpfen", "kopieren"]
       },
       "immvisit": {
         "t": "Link visit photos",
@@ -767,18 +792,11 @@
       "overpass": {
         "t": "Overpass address"
       },
-      "oplogos": {
-        "t": "Look up operator logos"
-      },
       "logorefresh": {
         "t": "Reload logos",
         "s": "Also happens every night",
         "btn": "Reload",
         "res": "84 new logos · 1,210 checked"
-      },
-      "fxcdn": {
-        "t": "Fallback source",
-        "s": "When the ECB doesn't answer"
       },
       "wdurl": {
         "t": "Address",
@@ -793,10 +811,6 @@
       "wdfolder": {
         "t": "Folder"
       },
-      "wdsrv": {
-        "t": "Upload server backups",
-        "s": "Every successful backup"
-      },
       "wdsrvurl": {
         "t": "Server: address"
       },
@@ -810,12 +824,8 @@
       "wdpath": {
         "t": "Folder for server backups"
       },
-      "smtpon": {
-        "t": "Send mail",
-        "s": "Invitations, reminders, new password"
-      },
       "smtphost": {
-        "t": "Server"
+        "t": "Mail server"
       },
       "smtpuser": {
         "t": "User"
@@ -825,11 +835,11 @@
         "s": "Gmail and Outlook need an app password"
       },
       "smtpfrom": {
-        "t": "Sender",
+        "t": "Sender address",
         "s": "Ideally from the same domain"
       },
       "smtpport": {
-        "t": "Port",
+        "t": "Port and encryption",
         "s": "587 with STARTTLS, 465 with TLS"
       },
       "smtptls": {
@@ -840,17 +850,18 @@
       },
       "smtptest": {
         "t": "Check connection",
-        "btn": "Test",
-        "res": "Test mail sent to mara@example.org"
+        "btn": "Check",
+        "res": "Connected · just checked",
+        "s": "Signs in at the mail server; no mail is sent"
       },
       "smtpdel": {
-        "t": "Delete credentials",
+        "t": "Remove mail server",
         "h": "After that the server sends no mail at all.",
-        "btn": "Delete credentials"
+        "btn": "Remove"
       },
       "pushon": {
-        "t": "Send notifications",
-        "s": "Through the TravStats push service",
+        "t": "Notifications to the phone",
+        "s": "Through the TravStats push service (consent when you switch it on)",
         "h": "Off: the server never contacts the push service."
       },
       "pushconsent": {
@@ -862,11 +873,12 @@
         "h": "A different address registers the server again."
       },
       "pushreset": {
-        "t": "Reset registration",
+        "t": "Reset push",
         "btn": "Reset"
       },
       "fedon": {
-        "t": "Connect to other servers"
+        "t": "Connect to other servers",
+        "s": "Friends on other TravStats servers; every new server needs your approval"
       },
       "fedtrips": {
         "t": "Share trips with other servers"
@@ -882,23 +894,22 @@
         "res": "Key generated · show fingerprint"
       },
       "fedpeers": {
-        "t": "Trusted servers",
+        "t": "Connected servers",
         "h": "An imported file trusts no one yet; only “Trust” does.",
         "btn": "Import connection file"
       },
       "nutzstat": {
-        "t": "Send usage statistics",
+        "t": "Send anonymous usage statistics",
         "s": "Once a day, without names",
         "h": "The install ID is shown in the help. If the receiver is disabled at start, nothing is sent.",
         "o": ["nein", "ja"]
       },
-      "updcheck": {
-        "t": "Check for new versions",
-        "s": "Asks GitHub"
-      },
       "tplrepo": {
         "t": "Booking template source",
         "s": "Empty: official source"
+      },
+      "mailstat": {
+        "t": "Last check"
       }
     },
     "ui": {
@@ -946,7 +957,9 @@
       "fedNoOrigin": "Enter this server's address first.",
       "getKey": "Get a key for {{name}} ›",
       "immichMode": "Link or copy photos",
-      "immichModeLoadFailed": "I couldn't read how new photos are taken over by default."
+      "immichModeLoadFailed": "I couldn't read how new photos are taken over by default.",
+      "introAccount": "Your connections. Your data. Your decision. Enter your own keys here, or use the server's.",
+      "introServer": "Connect the services that take your server further. What is set here applies to every account."
     },
     "status": {
       "needsConsent": "Waiting for your consent",
@@ -955,7 +968,7 @@
       "viaServer": "Via the server",
       "notSetUp": "Not set up",
       "off": "Off",
-      "on": "On",
+      "on": "Active",
       "notConnected": "Not connected",
       "connected": "Connected",
       "ready": "Ready",
@@ -989,28 +1002,24 @@
     },
     "dialogs": {
       "smtpdel": {
-        "title": "Delete the mail credentials?",
-        "affects": "Server, user and password for sending mail",
-        "amount": "One set of credentials",
-        "after": "Afterwards the server sends no mail at all: no invitations, no reminders, no new password.",
-        "confirm": "Delete credentials"
+        "title": "Delete the credentials?",
+        "affects": "The server's mail access",
+        "amount": "All accounts",
+        "after": "The server sends no mail any more: no reminders, no invitations, no new password.",
+        "confirm": "Delete"
       },
       "pushreset": {
-        "title": "Reset the registration with the push service?",
+        "title": "Reset the push registration?",
         "affects": "This server's registration with the push service",
         "amount": "One registration",
         "after": "The server registers again with the next notification. You don't have to pair the phones again.",
-        "confirm": "Reset registration"
-      },
-      "fedkey": {
-        "affects": "This server's key",
-        "amount": "One key"
+        "confirm": "Reset"
       }
     }
   },
   "server": {
     "instname": {
-      "t": "Name",
+      "t": "Server name",
       "s": "In e-mails and backups"
     },
     "loginbilder": {
@@ -1020,13 +1029,13 @@
     },
     "puburl": {
       "t": "Public address",
-      "s": "For invitations, e-mails and password resets",
+      "s": "All other addresses are derived from it",
       "h": "Required. Without it, links point to localhost. Calendar feeds and the Strava return use it too."
     },
     "pairurl": {
       "t": "Address for phones",
       "s": "Goes into the pairing QR",
-      "h": "Empty: the address you have TravStats open at right now. Passkeys use it when no allowed addresses are set."
+      "h": "Empty: same as the public address. Passkeys use it when no allowed addresses are set."
     },
     "lanurl": {
       "t": "Local network address",
@@ -1035,13 +1044,13 @@
     },
     "rpid": {
       "t": "Passkey domain",
-      "s": "Domain only, no IP",
-      "h": "Changing it voids every passkey ever created."
+      "s": "One domain, forever",
+      "h": "A passkey only works on the domain it was created on. Changing it voids all passkeys."
     },
     "origins": {
-      "t": "Allowed addresses",
+      "t": "Allowed passkey addresses",
       "s": "One per line, with https and port",
-      "h": "The first one counts. Several only on the same domain. Empty: the address for phones."
+      "h": "The first one counts. Several only on the same domain. A bare IP address is not a valid passkey domain."
     },
     "beta": {
       "t": "Show beta features",
@@ -1050,19 +1059,12 @@
     },
     "ttoffer": {
       "t": "Offer TravTrack",
-      "s": "Store location on this server"
+      "s": "Off: the pages disappear for every account. Stored points stay."
     },
     "tpoffer": {
-      "t": "Offer planning",
+      "t": "Offer trip planning",
+      "s": "Off: the pages disappear for every account. Plans stay stored.",
       "h": "Off keeps all plans, only hides them."
-    },
-    "tplimits": {
-      "t": "Planning: requests per day",
-      "s": "AI · weather, per account"
-    },
-    "laenderstd": {
-      "t": "A country counts from",
-      "s": "Accounts may differ"
     },
     "importmodus": {
       "t": "Big import",
@@ -1070,35 +1072,44 @@
       "h": "Turns itself off."
     },
     "leserfolge": {
-      "t": "Who reads first",
+      "t": "Order",
       "h": "Templates read flight mails in under a second."
     },
     "kiaktiv": {
-      "t": "Use AI",
-      "s": "Reading, column mapping, summaries",
-      "h": "Off: no AI, even if Ollama is set up."
+      "t": "AI for reading bookings",
+      "s": "Without AI only known templates are recognised",
+      "h": "What is sent: the text of a mail or PDF, at most 12,000 characters, only when the templates find nothing."
     },
     "cloudorder": {
-      "t": "Cloud AI order",
+      "t": "Order of the AI providers",
       "s": "Ollama always comes first",
       "h": "Only providers with key and approval are tried."
     },
     "builtin": {
-      "t": "Always included"
-    },
-    "olltest": {
-      "t": "Check Ollama"
+      "t": "Known templates",
+      "s": "Always included"
     },
     "sections": {
       "general": "General",
       "addresses": "Addresses",
       "passkeys": "Passkeys",
-      "features": "What the server offers",
-      "parsers": "Reading bookings"
+      "features": "Advanced",
+      "ttoffer": "TravTrack",
+      "tpoffer": "Trip planning",
+      "parsers": "Reading bookings",
+      "yourServer": "Your server",
+      "net": "Network",
+      "sharing": "Sharing",
+      "areas": "Areas",
+      "mailServer": "Mail server",
+      "connections": "Connections",
+      "statistics": "Statistics",
+      "notifications": "Notifications",
+      "addressesPage": "Addresses & passkeys",
+      "ownServers": "Own servers"
     },
     "loadFailed": "I couldn't load the server's settings.",
     "retry": "Try again",
-    "running": "Running …",
     "groups": {
       "general": "General",
       "addresses": "Addresses",
@@ -1120,8 +1131,8 @@
     },
     "offersLoadFailed": "I couldn't read whether TravTrack and planning are offered.",
     "limit": {
-      "ai": "AI requests",
-      "weather": "Weather requests"
+      "ai": "AI requests per account and day",
+      "weather": "Weather requests per account and day"
     },
     "importMode": {
       "off": "Off",
@@ -1132,13 +1143,7 @@
     "parsers": {
       "templateFirst": "Templates first",
       "llmFirst": "AI first",
-      "builtin": "Text recognition (OCR) and templates",
-      "noOllama": "Needs Ollama.",
-      "check": "Check",
-      "testOk": "Reachable · just checked",
-      "testNoModel": "Reachable, but the model {{model}} is missing.",
-      "test_unreachable": "I can't reach Ollama.",
-      "test_failed": "I couldn't check Ollama."
+      "builtin": "Text recognition (OCR) and templates"
     },
     "cloud": {
       "loading": "Reading which providers are on …",
@@ -1150,6 +1155,53 @@
       "up": "{{name}} up",
       "down": "{{name}} down",
       "enable": "switch on under Services"
+    },
+    "internet": {
+      "t": "Server may ask external services",
+      "s": "Exchange rates, rail timetables, logos, open map data and the update check. Off = run without internet",
+      "h": "Off switches off: ECB exchange rates, rail timetables (Transitous, db-rest), operator logos from Wikidata, open map data (weather, Wikipedia, Overpass, weather in plans) and the check for new versions. The single switches below (expert) keep their value and apply again as soon as you switch this on. Services with their own key (flight data, AI, photos) are not affected."
+    },
+    "fxcdn": {
+      "t": "Exchange-rate fallback",
+      "s": "When the ECB does not know a currency",
+      "h": "Then asks the public currency dataset on jsDelivr. Only a currency code and a date leave the server. Applies only while the switch above is on."
+    },
+    "transitous": {
+      "t": "Timetables: Transitous",
+      "s": "Rail train lookup with open timetable data",
+      "h": "The train-number lookup asks api.transitous.org when someone triggers it. Applies only while the switch above is on."
+    },
+    "dbrest": {
+      "t": "Timetables: db-rest",
+      "s": "Rail train lookup with Deutsche Bahn timetables",
+      "h": "The train-number lookup asks v6.db.transport.rest when someone triggers it. Applies only while the switch above is on."
+    },
+    "oplogos": {
+      "t": "Operator logos from Wikidata",
+      "s": "Ferry lines, railways, coach and rental companies",
+      "h": "Asks Wikidata and Wikimedia Commons for the logo; only the company name leaves the server. Off = the cards draw monograms. Applies only while the switch above is on."
+    },
+    "updcheck": {
+      "t": "Check for new versions",
+      "s": "Asks GitHub",
+      "h": "The scheduled template sync also runs only while this is on; a manual sync always works. Applies only while the switch above is on."
+    },
+    "l_tt": {
+      "t": "TravTrack",
+      "s": "Offer and limits",
+      "btn": "Provisioning"
+    },
+    "l_pl": {
+      "t": "TravPlan",
+      "s": "Offer and limits",
+      "btn": "Provisioning"
+    },
+    "userkeys": {
+      "t": "Accounts may use their own keys",
+      "h": "Applies to AI and flight data: an account can enter its own key. Off lets only the server key count; keys already entered stay stored.",
+      "mixed": "Right now it only applies to {{only}}. Switching on or off sets both.",
+      "onlyAi": "AI",
+      "onlyFlights": "flight data"
     }
   },
   "users": {
@@ -1157,12 +1209,16 @@
       "t": "Maximum accounts"
     },
     "registr": {
-      "t": "Sign up without invitation",
-      "h": "Anyone can then create an account until the maximum is reached."
+      "t": "Registration",
+      "h": "Open: anyone can create an account until the maximum is reached.",
+      "o": {
+        "0": "Invitation only",
+        "1": "Open"
+      }
     },
     "nutzerliste": {
       "t": "Accounts",
-      "h": "Per account under ⋯: lock, set new password, reset second step, delete."
+      "h": "Per account: reset password, reset two-factor, lock, delete. Deleting asks you to type the name."
     },
     "einlliste": {
       "t": "Invitations",
@@ -1170,12 +1226,12 @@
       "h": "By e-mail only works if the server sends mail."
     },
     "sections": {
-      "access": "Access",
+      "access": "Access & accounts",
       "accounts": "Accounts",
       "invitations": "Invitations"
     },
     "groups": {
-      "access": "Access"
+      "access": "Access & accounts"
     },
     "errors": {
       "range": "I take values from {{min}} to {{max}}.",
@@ -1207,15 +1263,12 @@
     }
   },
   "backups": {
-    "autobak": {
-      "t": "Back up automatically",
+    "baktakt": {
+      "t": "Interval",
       "s": "At 02:00"
     },
-    "baktakt": {
-      "t": "How often"
-    },
     "bakhalten": {
-      "t": "Keep for",
+      "t": "Keep",
       "s": "1–365 days",
       "h": "The last full backup always stays."
     },
@@ -1223,13 +1276,14 @@
       "t": "Time zone for 02:00"
     },
     "bakwddel": {
-      "t": "Also clean up on WebDAV"
+      "t": "Also delete old backups on WebDAV"
     },
     "bakjetzt": {
-      "t": "Back up now"
+      "t": "Back up now",
+      "res": "Backed up · just now"
     },
     "bakliste": {
-      "t": "Backups",
+      "t": "Existing backups",
       "h": "Per backup under ⋯: download, upload, restore, delete."
     },
     "bakwdload": {
@@ -1237,15 +1291,14 @@
       "s": "After moving servers"
     },
     "sections": {
-      "automatic": "Automatic",
-      "backups": "Existing backups"
+      "automatic": "Advanced",
+      "backups": "Backup"
     },
     "groups": {
-      "automatic": "Automatic"
+      "automatic": "Advanced"
     },
     "loadFailed": "I couldn't load the backup settings.",
     "deps": {
-      "autoOff": "Only works with “Back up automatically”.",
       "webdavOff": "Only works with the WebDAV copy.",
       "webdavUnknown": "Only works with the WebDAV copy. I can't read its state right now."
     },
@@ -1291,7 +1344,19 @@
       "rateLimited": "I restore only a few backups an hour. Try again later.",
       "failed": "I couldn't restore the backup."
     },
-    "retry": "Try again"
+    "retry": "Try again",
+    "baknow": {
+      "t": "Automatic"
+    },
+    "nowLine": "{{interval}} · kept for {{days}} days",
+    "rhythm": "{{interval}} at 02:00 ({{zone}})",
+    "stats": {
+      "last": "Last successful backup",
+      "next": "Next",
+      "kept": "Kept",
+      "keptCount_one": "{{count}} backup",
+      "keptCount_other": "{{count}} backups"
+    }
   },
   "maintenance": {
     "debug": {
@@ -1299,20 +1364,11 @@
       "s": "Slows the server down"
     },
     "loglevel": {
-      "t": "Level"
+      "t": "Log level"
     },
     "logtage": {
-      "t": "Keep for",
+      "t": "Keep logs",
       "s": "1–90 days"
-    },
-    "loghttp": {
-      "t": "Log requests"
-    },
-    "logdb": {
-      "t": "Log database"
-    },
-    "logparser": {
-      "t": "Log reading"
     },
     "logfiles": {
       "t": "Log files",
@@ -1376,14 +1432,14 @@
       "t": "Delete demo account"
     },
     "tzreport": {
-      "t": "Time conversion"
+      "t": "Time model"
     },
     "tzresolve": {
       "t": "Determine time zones again",
       "s": "Dry run first, then apply"
     },
     "sections": {
-      "logging": "Log",
+      "logging": "Logs",
       "system": "System",
       "timeModel": "Time zones"
     },
@@ -1402,6 +1458,42 @@
       "demo": "I couldn't delete the demo account."
     },
     "nothingOld": "No file is older than the retention.",
-    "download": "Download"
+    "download": "Download",
+    "debug24": {
+      "t": "Verbose log for 24 h",
+      "s": "Slows the server down",
+      "h": "After that the server switches back to the normal level by itself.",
+      "btn": "Switch on",
+      "off": "Switch off",
+      "running": "Runs until {{until}} · {{hours}} h {{minutes}} min left",
+      "failed": "I couldn't switch the verbose log."
+    }
+  },
+  "lodging": {
+    "ratingcats": {
+      "t": "Rating categories",
+      "s": "What you rate stays on",
+      "h": "Your own categories join the standard ones. Deleting one changes no stay: it is just not asked for any more."
+    }
+  },
+  "devices": {
+    "pair": {
+      "t": "Pair a phone",
+      "s": "Shows a QR code for the Companion app",
+      "btn": "Show code"
+    },
+    "pushstate2": {
+      "t": "Notifications",
+      "h": "Ready as soon as one paired phone allows notifications. The server must also be allowed to send them."
+    }
+  },
+  "own": {
+    "sections": {
+      "places": "Places",
+      "routes": "Routes",
+      "maps": "Maps",
+      "templates": "Templates",
+      "rates": "Exchange rates"
+    }
   }
 }

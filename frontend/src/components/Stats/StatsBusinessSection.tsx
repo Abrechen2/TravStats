@@ -1,7 +1,8 @@
 import type { BusinessStats } from "../../types";
+import { useBaseMoney } from "../../hooks/useBaseMoney";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
-import { formatCurrency, formatDistance, formatHours, formatHoursValue } from "../../lib/units";
+import { formatDistance, formatHours, formatHoursValue } from "../../lib/units";
 import EvidenceTrigger from "./EvidenceTrigger";
 import CountingHelp from "./counting/CountingHelp";
 import { rankingKey } from "../../shared/evidence";
@@ -30,7 +31,7 @@ export default function StatsBusinessSection({
 }: StatsBusinessSectionProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const units = useSettingsStore((s) => s.units);
-  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const baseMoney = useBaseMoney();
   const lang = i18n.language;
   // The server names the month in English ("Mar"); the reader's language does.
   const monthIndex = businessStats.busiestMonth
@@ -62,15 +63,13 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerKm")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {businessStats.costPerKm === null
-              ? "—"
-              : formatCurrency(businessStats.costPerKm, baseCurrency)}
+            {businessStats.costPerKm === null ? "—" : baseMoney(businessStats.costPerKm)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {businessStats.costPerKm === null
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.costPerKmDesc", {
-                  cost: formatCurrency(businessStats.costPerKm, baseCurrency),
+                  cost: baseMoney(businessStats.costPerKm),
                 })}
           </p>
         </EvidenceTrigger>
@@ -92,15 +91,13 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerHour")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {businessStats.costPerHour === null
-              ? "—"
-              : formatCurrency(businessStats.costPerHour, baseCurrency)}
+            {businessStats.costPerHour === null ? "—" : baseMoney(businessStats.costPerHour)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {businessStats.costPerHour === null
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.costPerHourDesc", {
-                  cost: formatCurrency(businessStats.costPerHour, baseCurrency),
+                  cost: baseMoney(businessStats.costPerHour),
                 })}
           </p>
         </EvidenceTrigger>
@@ -122,15 +119,13 @@ export default function StatsBusinessSection({
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
             {/* Null is "nothing recorded", not "free" (forgejo#83). */}
-            {businessStats.totalCost === null
-              ? "—"
-              : formatCurrency(businessStats.totalCost, baseCurrency)}
+            {businessStats.totalCost === null ? "—" : baseMoney(businessStats.totalCost)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {businessStats.totalCost === null
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.totalCostDesc", {
-                  cost: formatCurrency(businessStats.totalCost, baseCurrency),
+                  cost: baseMoney(businessStats.totalCost),
                   distance: formatDistance(
                     businessStats.totalDistance,
                     units.distanceUnit,

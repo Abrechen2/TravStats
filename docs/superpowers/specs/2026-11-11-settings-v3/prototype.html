@@ -1,0 +1,793 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>TravStats Einstellungen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky top bar (search, view level), menu column + one settings page; rows = label left, control right.
+   Tokens follow the app's tokens.css (ink blue-black, amber accent); the light set is new. */
+:root{
+  --bg:#eceff2; --surface:#ffffff; --surface2:#f3f5f7; --tile:#e4e8ec;
+  --border:rgba(20,28,38,.13); --border-input:rgba(20,28,38,.28);
+  --text:#1a1e24; --bright:#0c0f13; --muted:rgba(26,30,36,.72); --faint:rgba(26,30,36,.6);
+  --accent:#9a5a00; --accent-text:#ffffff; --accent-soft:rgba(154,90,0,.11); --accent-line:rgba(154,90,0,.45);
+  --good:#0f7a6b; --bad:#b4281d; --info:#255f9e; --warn:#8a5a00; --beta:#6a3fb5;
+  --good-bg:rgba(15,122,107,.1); --bad-bg:rgba(180,40,29,.08); --warn-bg:rgba(138,90,0,.1); --info-bg:rgba(37,95,158,.09);
+  --hover:rgba(20,28,38,.05); --scrim:rgba(12,15,19,.5);
+  --ui:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --hit:36px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0d10; --surface:#14181d; --surface2:#101317; --tile:#1d232b;
+  --border:rgba(231,227,220,.12); --border-input:rgba(231,227,220,.3);
+  --text:#e7e3dc; --bright:#f6efe4; --muted:rgba(231,227,220,.74); --faint:rgba(231,227,220,.62);
+  --accent:#f0a947; --accent-text:#0b0d10; --accent-soft:rgba(240,169,71,.14); --accent-line:rgba(240,169,71,.45);
+  --good:#5ec2b2; --bad:#f2837a; --info:#7fadde; --warn:#e0a345; --beta:#bc8cff;
+  --good-bg:rgba(94,194,178,.12); --bad-bg:rgba(238,108,97,.12); --warn-bg:rgba(216,149,47,.12); --info-bg:rgba(111,160,214,.1);
+  --hover:rgba(231,227,220,.05); --scrim:rgba(0,0,0,.62); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b0d10; --surface:#14181d; --surface2:#101317; --tile:#1d232b;
+  --border:rgba(231,227,220,.12); --border-input:rgba(231,227,220,.3);
+  --text:#e7e3dc; --bright:#f6efe4; --muted:rgba(231,227,220,.74); --faint:rgba(231,227,220,.62);
+  --accent:#f0a947; --accent-text:#0b0d10; --accent-soft:rgba(240,169,71,.14); --accent-line:rgba(240,169,71,.45);
+  --good:#5ec2b2; --bad:#f2837a; --info:#7fadde; --warn:#e0a345; --beta:#bc8cff;
+  --good-bg:rgba(94,194,178,.12); --bad-bg:rgba(238,108,97,.12); --warn-bg:rgba(216,149,47,.12); --info-bg:rgba(111,160,214,.1);
+  --hover:rgba(231,227,220,.05); --scrim:rgba(0,0,0,.62); color-scheme:dark}
+@media (pointer:coarse){:root{--hit:44px}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+main:focus{outline:none}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14.5px;line-height:1.5}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.ico{width:16px;height:16px;flex:none}
+
+/* top bar */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.top .in{display:flex;align-items:center;gap:12px;max-width:1240px;margin:0 auto;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{font-weight:700;color:var(--bright);white-space:nowrap}
+.iconbtn.menu-btn{display:none}
+.search{position:relative;flex:1;max-width:520px;margin-left:auto}
+.search svg{position:absolute;left:11px;top:50%;translate:0 -50%;color:var(--faint);pointer-events:none}
+.search input{width:100%;height:var(--hit);background:var(--surface2);border:1px solid var(--border-input);border-radius:9px;padding:0 44px 0 34px}
+.search kbd{position:absolute;right:10px;top:50%;translate:0 -50%;font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--border-input);border-radius:5px;padding:0 6px}
+.hits{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border-input);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px;max-height:min(70vh,520px);overflow:auto;box-shadow:0 10px 30px var(--scrim)}
+.hit{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:0;padding:8px 10px;border-radius:8px;min-height:var(--hit)}
+.hit[aria-selected=true],.hit:hover{background:var(--accent-soft)}
+.hit b{font-weight:600;color:var(--bright)}
+.hit mark{background:none;color:var(--accent);font-weight:700}
+.hitnote{padding:6px 10px;font-size:12.5px;color:var(--faint)}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:3px;flex:none}
+.seg button{background:none;border:0;border-radius:6px;padding:0 12px;min-height:calc(var(--hit) - 8px);color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--tile);color:var(--bright);font-weight:600}
+.iconbtn{display:inline-grid;place-items:center;width:var(--hit);height:var(--hit);background:none;border:1px solid var(--border);border-radius:9px;color:var(--muted)}
+.iconbtn:hover{background:var(--hover)}
+
+.proto{background:var(--accent-soft);border-bottom:1px solid var(--border);color:var(--text);font-size:12.5px}
+.proto .in{max-width:1240px;margin:0 auto;padding-block:6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px;min-height:0}
+
+/* shell */
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);gap:36px;max-width:1240px;margin:0 auto;padding-block:24px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+nav.side{align-self:start;position:sticky;top:calc(70px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 90px);overflow:auto;padding-bottom:12px}
+nav .grp{display:flex;flex-direction:column;gap:2px}
+nav h2{font-size:12.5px;font-weight:600;color:var(--faint);padding:0 10px 4px}
+nav a{display:flex;align-items:center;gap:10px;min-height:var(--hit);padding:0 10px;border-radius:8px;color:var(--text);text-decoration:none}
+nav a:hover{background:var(--hover)}
+nav a[aria-current=page]{background:var(--tile);color:var(--bright);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+nav a.sub{margin-left:18px;min-height:calc(var(--hit) - 6px);font-size:14px}
+nav a .ico{opacity:.8}
+nav a .badge{margin-left:auto;font-size:11.5px;padding:0 7px;border-radius:999px;background:var(--warn-bg);color:var(--warn);border:1px solid var(--accent-line)}
+.more-note{font-size:12.5px;color:var(--faint);padding:2px 10px}
+.ver{font-family:var(--mono);font-size:11.5px;color:var(--faint);padding:0 10px}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:0}
+  .iconbtn.menu-btn{display:inline-grid}
+  .top .in{flex-wrap:wrap}
+  .search{order:5;flex:1 1 100%;max-width:none;margin-left:0}
+  .seg{margin-left:auto}
+  nav.side{position:fixed;z-index:35;inset:0 auto 0 0;width:min(320px,86vw);max-height:none;background:var(--surface);border-right:1px solid var(--border);padding:calc(16px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));translate:-105% 0;transition:translate .18s;visibility:hidden}
+  nav.side.open{translate:0 0;visibility:visible}
+  .brand{display:none}
+  .seg button{padding:0 9px}
+}
+.scrim{position:fixed;inset:0;z-index:34;background:var(--scrim)}
+@media (prefers-reduced-motion:reduce){nav.side{transition:none}}
+
+/* page */
+main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.head{display:flex;flex-direction:column;gap:8px}
+.crumb{font-size:13px;color:var(--faint)}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(26px,4vw,34px);line-height:1.15;color:var(--bright);text-wrap:balance}
+.scope{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13.5px;color:var(--muted)}
+.save-state{display:inline-flex;align-items:center;gap:6px;color:var(--good);min-height:20px}
+.toc{display:flex;flex-wrap:wrap;gap:6px}
+.toc a{font-size:13px;color:var(--muted);text-decoration:none;padding:5px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface)}
+.toc a:hover{border-color:var(--accent-line);color:var(--bright)}
+section.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;scroll-margin-top:84px}
+section.card>h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px 20px 8px;font-size:16px;font-weight:650;color:var(--bright)}
+section.danger{border-color:var(--bad)}
+section.danger>h2{color:var(--bad)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 20px;align-items:center;padding:14px 20px;border-top:1px solid var(--border)}
+section>h2+.row,section>h2+.card-note+.row{border-top:0}
+.row .t{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:500;color:var(--bright)}
+.row .s{grid-column:1;font-size:13.5px;color:var(--muted);max-width:62ch}
+.row .c{grid-row:1 / span 2;grid-column:2;display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap;max-width:380px}
+.row .full{grid-column:1 / -1}
+.row.blocked .c{opacity:.5}
+.row.hit-flash{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){.row.hit-flash{animation:none;background:var(--accent-soft)}}
+@media (max-width:620px){
+  .row{grid-template-columns:minmax(0,1fr);padding:14px 16px}
+  .row .c{grid-row:auto;grid-column:1;justify-content:flex-start;max-width:none;margin-top:6px}
+  .row .c .inp{width:100%}
+  section.card>h2{padding-inline:16px}
+}
+.help-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:0 2px;min-height:24px;font-size:13px;font-weight:400;color:var(--info);text-decoration:underline;text-underline-offset:3px}
+.help{font-size:13.5px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-width:68ch}
+
+.chip{font-size:12px;font-weight:500;padding:0 8px;line-height:20px;border-radius:999px;border:1px solid var(--border-input);color:var(--muted);white-space:nowrap}
+.chip.inst{color:var(--info);border-color:var(--info);background:var(--info-bg)}
+.chip.x{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}
+.chip.beta{color:var(--beta);border-color:var(--beta)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:2px 10px 2px 8px;border-radius:999px;white-space:nowrap;border:1px solid var(--border-input);color:var(--muted)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.good{color:var(--good);background:var(--good-bg);border-color:var(--good)}
+.pill.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
+.pill.bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad)}
+
+.inp{height:var(--hit);background:var(--surface2);border:1px solid var(--border-input);border-radius:8px;padding:0 11px;width:230px;max-width:100%}
+.inp:disabled{opacity:.6;cursor:not-allowed}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:var(--hit);padding:0 14px;border-radius:8px;border:1px solid var(--border-input);background:var(--surface);color:var(--bright);font-weight:500;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--bad);border-color:var(--bad);background:transparent}
+.btn.danger.solid{background:var(--bad);color:#fff}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.45;cursor:not-allowed;pointer-events:none}
+.tog{position:relative;flex:none;width:44px;height:var(--hit);background:none;border:0;padding:0}
+.tog::before{content:"";position:absolute;left:0;top:50%;translate:0 -50%;width:44px;height:24px;border-radius:999px;background:var(--tile);border:1px solid var(--border-input)}
+.tog::after{content:"";position:absolute;left:4px;top:50%;translate:0 -50%;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .15s}
+.tog[aria-checked=true]::before{background:var(--accent);border-color:var(--accent)}
+.tog[aria-checked=true]::after{left:24px;background:var(--accent-text)}
+.tog:disabled{cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){.tog::after{transition:none}}
+.onoff{font-size:13px;color:var(--muted);min-width:2.4em;text-align:right}
+.choice{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:3px;flex-wrap:wrap}
+.choice button{background:none;border:0;border-radius:6px;padding:0 12px;min-height:calc(var(--hit) - 8px);color:var(--muted)}
+.choice button[aria-pressed=true]{background:var(--tile);color:var(--bright);font-weight:600}
+.list{display:flex;flex-direction:column;gap:4px}
+.list .li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:14px}
+.list .li .caption{color:var(--muted);font-size:13px}
+.list .empty{padding:8px 12px;border:1px dashed var(--border-input);border-radius:8px;color:var(--muted);font-size:13.5px}
+.caption{font-size:13px;color:var(--muted)}
+.dep{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:6px 10px}
+.dep .btn{min-height:30px;padding:0 10px;font-size:13px}
+.done{display:inline-flex;align-items:center;gap:6px;color:var(--good);font-size:13.5px}
+.note{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border:1px dashed var(--border-input);border-radius:10px;color:var(--muted);font-size:14px}
+.svc-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.svc-filter button{border-radius:999px;border:1px solid var(--border-input);background:var(--surface);padding:0 13px;min-height:calc(var(--hit) - 6px);color:var(--muted)}
+.svc-filter button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.svc-filter .sep{flex:1}
+details.svc{border-top:1px solid var(--border)}
+details.svc:first-of-type{border-top:0}
+details.svc>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto 18px;gap:0 12px;padding:12px 20px;align-items:center;min-height:56px}
+details.svc>summary::-webkit-details-marker{display:none}
+details.svc>summary:hover{background:var(--hover)}
+details.svc>summary b{font-weight:600;color:var(--bright)}
+details.svc>summary .s{grid-column:1;font-size:13.5px;color:var(--muted)}
+details.svc>summary .pill{grid-row:1 / span 2;grid-column:2}
+details.svc>summary .chev{grid-row:1 / span 2;grid-column:3;color:var(--faint);transition:rotate .15s}
+details.svc[open]>summary .chev{rotate:90deg}
+details.svc[open]>summary{background:var(--surface2)}
+details.svc>.body{background:var(--surface2)}
+details.svc>.body .row{border-top:1px solid var(--border)}
+@media (max-width:620px){details.svc>summary{padding-inline:16px}}
+
+/* confirm dialog */
+dialog{border:1px solid var(--border-input);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(460px,calc(100vw - 32px));box-shadow:0 20px 60px var(--scrim)}
+dialog::backdrop{background:var(--scrim)}
+dialog form{display:flex;flex-direction:column;gap:12px;padding:22px}
+dialog h2{font-family:var(--serif);font-size:23px;font-weight:500;color:var(--bright)}
+dialog .subject{font-weight:600;color:var(--bright)}
+dialog .impact{font-weight:600;color:var(--bad)}
+dialog .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+dialog label{font-size:13.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+dialog .inp{width:100%}
+.toast{position:fixed;z-index:50;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;translate:-50% 0;max-width:calc(100vw - 32px);background:var(--bright);color:var(--bg);padding:10px 16px;border-radius:9px;font-size:14px;box-shadow:0 8px 24px var(--scrim)}
+
+/* v3 additions */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.stat b{font-size:20px;font-weight:650;color:var(--bright);font-variant-numeric:tabular-nums}
+.callout{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;font-size:14px;background:var(--info-bg);color:var(--text);border:1px solid var(--border)}
+.callout.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.callout .btn{margin-left:auto}
+.row .full{grid-column:1 / -1}
+.infoval{display:inline-flex;align-items:center;gap:7px;color:var(--bright);font-variant-numeric:tabular-nums}
+.infoval .dotp{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.infoval.warn .dotp{background:var(--warn)}.infoval.bad .dotp{background:var(--bad)}
+.inforow{background:var(--surface)}
+.auto{color:var(--muted)}.auto b{color:var(--bright);font-weight:500}
+.num{display:inline-flex;align-items:center;gap:8px}.num .inp{width:110px}
+.mono{font-family:var(--mono);font-size:13px}
+.secret{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.iconbtn.sm{width:32px;height:32px}
+.btn.sm{min-height:32px;padding:0 10px;font-size:13px}
+.err{color:var(--bad);font-size:13.5px;max-width:34ch}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+ul.list{list-style:none;margin:0;padding:0}
+.list .li{flex-wrap:wrap}
+.list .grow,.grow{flex:1;display:flex;flex-direction:column;min-width:0}
+.list .li .btn{flex:none}
+.list .li .caption{display:block}
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:8px 20px 20px}
+.svc-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);min-height:112px}
+.svc-card:hover{border-color:var(--accent-line)}
+.svc-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.svc-card b{color:var(--bright);font-weight:600}
+.svc-card .pill{margin-top:auto}
+@media (max-width:620px){.svc-grid{padding-inline:16px}}
+dialog form.wide{gap:4px}dialog:has(form.wide){width:min(560px,calc(100vw - 32px))}
+dialog .dlgrow{grid-template-columns:minmax(0,1fr) auto;padding:10px 0;border-top:1px solid var(--border);align-items:center}
+dialog .dlgfields{display:flex;flex-direction:column}
+dialog .dlgrow label{color:var(--text);font-size:14.5px;display:block}
+dialog .dlgfields.locked{opacity:.5}
+dialog .callout{margin:6px 0}
+.devtog{display:flex;align-items:center;gap:8px;padding:0 10px;min-height:var(--hit);font-size:13.5px;color:var(--muted)}
+.credit{margin-top:8px;color:var(--muted);font-size:14px}
+.wm{font-family:var(--mono);font-weight:800;font-variant-ligatures:none;color:var(--bright);text-decoration:none}
+.wm .a{color:var(--accent)}
+nav .ver{line-height:1.4}
+</style>
+
+<div class="top"><div class="in">
+  <button class="iconbtn menu-btn" id="menu-btn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="menu"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+  <span class="brand">TravStats</span>
+  <div class="search" role="search">
+    <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+    <label for="q" class="sr">Einstellungen durchsuchen</label>
+    <input id="q" type="search" placeholder="Einstellung suchen" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hits" aria-autocomplete="list">
+    <kbd aria-hidden="true">/</kbd>
+    <div class="hits" id="hits" role="listbox" hidden></div>
+  </div>
+  <div class="seg" role="group" aria-label="Ansicht"><button id="lv-std" aria-pressed="true">Standard</button><button id="lv-x" aria-pressed="false">Experte</button></div>
+  <button class="iconbtn" id="theme-btn" aria-label="Farbschema wechseln" title="Farbschema wechseln"><svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13 9.5A5.5 5.5 0 0 1 6.5 3 5.5 5.5 0 1 0 13 9.5Z"/></svg></button>
+</div></div>
+<div class="proto"><div class="in"><span>Prototyp · Stand v2.8.0 · Demowerte, nichts wird gespeichert · Schalter links unten: Als Admin ansehen</span></div></div>
+<div class="shell">
+  <nav class="side" id="menu" aria-label="Einstellungen"></nav>
+  <main id="page" tabindex="-1"></main>
+</div>
+<div id="scrim" class="scrim" hidden></div>
+<dialog id="dlg" aria-labelledby="dlg-title"><form method="dialog" id="dlg-form"></form></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+const ICONS = {account:"M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 6c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5",display:"M2 3h12M5 3c0 4 2 8 6 10M11 3c0 4-2 8-6 10M3 8h10",domains:"M8 2 14 5 8 8 2 5Zm-6 6 6 3 6-3M2 11l6 3 6-3",flight:"M2 9l12-5-3 9-3-3-3 2 1-3Z",cruise:"M2 11h12l-2 3H4ZM4 11V7h8v4M8 7V3",trips:"M3 13c3 0 3-10 6-10s2 7 4 7",sharing:"M5 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm6 2a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM1 14c0-2 2-3.5 4-3.5S9 12 9 14m1-3.5c2 0 5 1 5 3.5",notifications:"M4 11V7a4 4 0 0 1 8 0v4l1 2H3Zm3 3h2",travtrack:"M8 14s5-4.5 5-8A5 5 0 0 0 3 6c0 3.5 5 8 5 8Zm0-6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",loyalty:"M8 2l1.8 3.8 4.2.5-3 2.9.8 4.1L8 11.3 4.2 13.3 5 9.2 2 6.3l4.2-.5Z",data:"M3 4c0-1 2.2-2 5-2s5 1 5 2-2.2 2-5 2-5-1-5-2Zm0 0v8c0 1 2.2 2 5 2s5-1 5-2V4M3 8c0 1 2.2 2 5 2s5-1 5-2",services:"M6 2v4M10 2v4M4 6h8v3a4 4 0 0 1-8 0Zm4 7v2",server:"M2 3h12v4H2Zm0 6h12v4H2ZM5 5h.01M5 11h.01",users:"M6 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1 14c0-2.5 2.2-4 5-4s5 1.5 5 4m0-11a2.5 2.5 0 0 1 0 5m2 6c0-1.8-.8-3-2-3.6",backups:"M2 8a6 6 0 1 0 2-4.5M2 2v3h3M8 5v3l2 2",maintenance:"M10 2a4 4 0 0 0-3.8 5.2L2 11.5 4.5 14l4.3-4.2A4 4 0 0 0 14 6l-2.3 2.3-2-2L12 4a4 4 0 0 0-2-2Z",masterdata:"M2 3h12v10H2ZM2 7h12M6 7v6",about:"M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12ZM8 7v4M8 5h.01"};
+const DIALOGS={"replace": ["Inhalte ersetzen?", "Die Blätter Flüge, Unterkünfte und Orte in deinem Konto", "312 Einträge fehlen in der Datei und werden gelöscht. 540 kommen aus reise-export.xlsx.", "Diese Blätter enthalten nur noch, was in der Datei steht. Vorher lege ich eine Sicherung des ganzen Servers an.", "312 Einträge ersetzen", "ERSETZEN"], "ttdel": ["Tage löschen?", "Gespeicherte Positionen vom 03. bis 05.10.2026", "1.204 Punkte an 3 Tagen", "Die Tage bleiben leer, auch wenn ein Telefon sie später nachreicht.", "1.204 Punkte löschen", ""], "zoneadd": ["Schutzzone anlegen?", "Zuhause, 250 m", "86 Punkte liegen schon darin", "Sie werden gelöscht. Entfernen der Zone holt sie nicht zurück.", "Anlegen und 86 löschen", ""], "tokenrevoke": ["Schlüssel zurückziehen?", "Heimserver-Skript", "1 Schlüssel", "Das Werkzeug kommt sofort nicht mehr hinein.", "Zurückziehen", ""], "deviceout": ["Telefon abmelden?", "iPhone von Mara", "1 Telefon", "Es verliert sofort den Zugang und muss neu gekoppelt werden.", "Abmelden", ""], "codesnew": ["Neue Ersatzcodes?", "Deine bisherigen Ersatzcodes", "7 unbenutzte Codes", "Sie gelten nicht mehr. Die neuen zeige ich dir nur einmal.", "Neu erzeugen", ""], "icsnew": ["Neuen Kalender-Link erzeugen?", "Dein Kalender-Abo", "Jeder Kalender, der den alten Link nutzt", "Diese Kalender bekommen keine Reisen mehr.", "Neu erzeugen", ""], "shareend": ["Teilen beenden?", "jonas", "14 geteilte Reisen", "Sie bleiben als deine Kopie; Änderungen kommen nicht mehr nach.", "Beenden", ""], "merge": ["Ilka in Jonas aufgehen lassen?", "Ilka", "3 Einträge", "Sie nennen danach Jonas. Das lässt sich nicht zurücknehmen.", "Zusammenführen", ""], "unused": ["Unbenutzte Mitreisende löschen?", "Personen ohne Eintrag", "4 Personen", "Sie verschwinden aus allen Vorschlägen.", "4 löschen", ""], "linksoff": ["Öffentliche Links ausschalten?", "Alle Konten auf diesem Server", "9 Links von 3 Konten", "Ich lösche sie sofort. Wieder einschalten bringt sie nicht zurück.", "9 Links löschen", ""], "userdel": ["jonas löschen?", "Das Konto jonas mit allen Einträgen und Dateien", "96 Flüge, 11 Reisen", "Es lässt sich nur aus einer Sicherung zurückholen.", "Löschen", "JONAS"], "user2fa": ["Zweiten Faktor zurücksetzen?", "jonas", "1 Konto", "Es meldet sich wieder nur mit Passwort an, bis es den Faktor neu einrichtet.", "Zurücksetzen", ""], "userpw": ["Passwort neu setzen?", "jonas", "1 Konto", "Das alte Passwort gilt nicht mehr. Das neue zeige ich dir einmal.", "Neu setzen", ""], "userlock": ["jonas sperren?", "jonas", "1 Konto", "Es kann sich nicht mehr anmelden. Seine Daten bleiben.", "Sperren", ""], "invrevoke": ["Einladung zurückziehen?", "ilka@example.org", "1 Einladung", "Der Link gilt sofort nicht mehr.", "Zurückziehen", ""], "restore": ["Sicherung zurückspielen?", "01.11.2026 02:00, alles", "Alle Konten", "Was seitdem geändert wurde, ist weg. Ich sichere vorher den jetzigen Stand.", "Zurückspielen", "WIEDERHERSTELLEN"], "bakdel": ["Sicherung löschen?", "01.11.2026 02:00", "1,2 GB · auch auf WebDAV", "Die Kopie auf WebDAV lösche ich mit, wenn du es unten einschaltest.", "Löschen", ""], "smtpdel": ["Zugangsdaten löschen?", "Den Mail-Zugang des Servers", "Alle Konten", "Der Server verschickt keine Mails mehr: keine Erinnerungen, keine Einladungen, kein neues Passwort.", "Löschen", ""], "fedkey": ["Server-Schlüssel erneuern?", "Die Verbindungen zu anderen Servern", "2 vertraute Server", "Sie sind getrennt, bis jeder den neuen Schlüssel bestätigt.", "Erneuern", ""], "peerremove": ["Server nicht mehr vertrauen?", "reise.example.net", "4 geteilte Reisen", "Es kommt nichts mehr von dort, und nichts geht mehr hin. Geteilte Reisen bleiben als Kopie.", "Entfernen", ""], "reseed": ["Kataloge neu einlesen?", "Flughäfen, Airlines, Flugzeugtypen", "Etwa 14.000 Einträge; deine eigenen 12 bleiben", "Mitgelieferte Einträge sind auf dem neuen Stand. Das geht dreimal pro Stunde.", "Neu einlesen", "EINLESEN"], "rpid": ["Passkey-Domain ändern?", "Alle Passkeys aller Konten", "5 Passkeys", "Keiner funktioniert danach mehr; jeder muss neu angelegt werden.", "Ändern", "ÄNDERN"], "logclean": ["Alte Protokolle löschen?", "Protokolldateien älter als 7 Tage", "4 Dateien · 38 MB", "Sie lassen sich nicht mehr ansehen.", "Löschen", ""], "demodel": ["Demo-Konto löschen?", "Das Konto demo mit allen Einträgen", "30 Flüge, 4 Reisen", "Niemand kann sich mehr als Demo anmelden.", "Löschen", ""], "pushreset": ["Push-Anmeldung zurücksetzen?", "Die Anmeldung des Servers beim Push-Dienst", "2 gekoppelte Telefone", "Mitteilungen kommen erst wieder, wenn sich jedes Telefon neu meldet.", "Zurücksetzen", ""], "impundo": ["Import zurücknehmen?", "flugdaten.csv vom 21.10.2026", "48 Flüge", "Ich entferne sie. Flüge, auf die schon anderes verweist, bleiben; ich sage dir, welche.", "48 zurücknehmen", ""], "deleteacct": ["Konto löschen?", "Dein Konto mara mit allen Einträgen, Fotos und Dateien", "412 Flüge, 38 Reisen, 2.140 Fotos", "Nach 30 Tagen ist alles weg, auch für den Admin. Bis dahin kannst du dich anmelden und abbrechen.", "Konto löschen", "LÖSCHEN"], "leave": ["Änderungen verwerfen?", "Adressen auf der Seite Server", "1 geänderte Angabe", "Die Angaben stehen wieder wie zuletzt gespeichert.", "Verwerfen", ""],"pairqr":["Telefon koppeln","Scanne den Code in der Companion-App","","Der Code verfällt nach 5 Minuten.","Fertig",""]};
+/* ---------- settings model: areas konto / track / plan / server; S = standard, x = Experte ---------- */
+const R=(k,id,t,v,o={})=>({k,id,t,v,...o});
+const sw=(id,t,v,o)=>R("switch",id,t,v,o), seg=(id,t,opt,v,o)=>R("seg",id,t,v??opt[0],{opt,...o}), sel=(id,t,opt,v,o)=>R("select",id,t,v??opt[0],{opt,...o});
+const tx=(id,t,v="",o)=>R("text",id,t,v,o), num=(id,t,v,o)=>R("number",id,t,v,o), der=(id,t,v,o)=>R("derived",id,t,v,o), inf=(id,t,v,o)=>R("info",id,t,v,o);
+const act=(id,t,btn,o)=>R("action",id,t,"",{btn,...o}), lnk=(id,t,to,btn,o)=>R("link",id,t,"",{to,btn,...o}), lst=(id,t,items,o)=>R("list",id,t,"",{items,...o});
+const call=(id,t,o)=>R("callout",id,t,"",o);
+const FLIGHTSVC="airlabs.key|my.airlabs.key|aviationstack.key|my.aviationstack.key|aerodatabox.key|my.aerodatabox.key|aeroapi.key";
+const AIANY="ai&openai.key|ai&anthropic.key|ai&gemini.key|ai&ollama.url|ai&custom.url|ai&my.openai.key|ai&my.anthropic.key|ai&my.gemini.key";
+const KINDS=[["flights","Flüge","#f0a947"],["cruises","Kreuzfahrten","#4aa6b0"],["hotels","Unterkünfte","#5ec2b2"],["trains","Bahn","#a597e8"],["bus","Bus","#c28a5a"],["ferry","Fähre","#5aa0c2"],["rental","Mietwagen","#b0b05a"],["places","Orte","#e08caa"],["tours","Touren","#86ad70"],["roadtrips","Roadtrips","#7fa9d3"]];
+const CUR=["EUR","USD","GBP","CHF"];
+const P=(id,area,t,d,ico,rows,o={})=>({id,area,t,d,ico,rows,...o});
+
+const PAGES=[
+/* ===== Mein Konto ===== */
+P("profil","konto","Profil & Anmeldung","Dein Profil, deine Anmeldung und wer dich finden kann.","account",[
+ act("avatar","Profilbild","Datei wählen",{g:"Persönliche Angaben",s:"PNG oder JPG, bis 5 MB"}),
+ tx("vorname","Vorname","Mara",{g:"Persönliche Angaben"}), tx("nachname","Nachname","Ostend",{g:"Persönliche Angaben"}),
+ der("anzeige","Anzeigename","Mara Ostend",{g:"Persönliche Angaben",s:"Wie dich Freunde sehen"}),
+ inf("benutzer","Benutzername","mara",{g:"Persönliche Angaben",s:"Zum Anmelden, bleibt fest"}),
+ tx("email","E-Mail","mara@example.org",{g:"Persönliche Angaben",s:"Für ein neues Passwort"}),
+ R("date","pass","Reisepass gültig bis","",{g:"Persönliche Angaben",s:"Die Companion-App warnt 6 Monate vorher"}),
+ R("date","geburtstag","Geburtstag","",{g:"Persönliche Angaben",x:1,s:"Optional",h:"Schaltet den Erfolg „Geburtstagsflug“ frei."}),
+ act("password","Passwort","Ändern",{g:"Anmeldung & Sicherheit",res:"Passwort geändert"}),
+ sw("twofa","Zwei-Faktor-Anmeldung",false,{g:"Anmeldung & Sicherheit",s:"Code aus einer Authenticator-App zusätzlich zum Passwort",h:"API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."}),
+ act("codes","Ersatzcodes","Neu erzeugen",{g:"Anmeldung & Sicherheit",s:"Falls das Telefon fehlt",need:"twofa",needMsg:"Erst mit Zwei-Faktor-Anmeldung.",dlg:"codesnew",res:"10 neue Codes · nur jetzt sichtbar"}),
+ lst("passkeys","Passkeys",[{a:"iPad",b:"seit 12.08.2026"}],{g:"Anmeldung & Sicherheit",s:"Anmelden ohne Passwort",btn:"Passkey hinzufügen",add:[["Name des Geräts","text"]],rm:1,h:"Ein Passkey ersetzt Passwort und zweiten Faktor. Er gilt nur unter der Adresse, unter der du ihn angelegt hast."}),
+ lst("tokens","API-Schlüssel",[{a:"Heimserver-Skript",b:"lesen · seit 02.10.2026"}],{g:"Anmeldung & Sicherheit",x:1,s:"Für Skripte und Werkzeuge",btn:"Neuer Schlüssel",add:[["Name","text"]],acts:[["Zurückziehen","tokenrevoke",1]],rmOnAct:1,h:"Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen."}),
+ sw("findable","Für andere Server auffindbar",false,{g:"Sichtbarkeit",s:"Menschen auf verbundenen Servern dürfen dir eine Freundschaftsanfrage schicken",need:"fed",needMsg:"Der Admin hat andere Server nicht freigegeben."}),
+ act("delete","Konto löschen","Konto löschen",{g:"Konto verwalten",s:"Mit allen Einträgen, Fotos und Dateien",danger:1,dlg:"deleteacct"})]),
+P("anzeige","konto","Anzeige","Sprache, Zeit und Einheiten.","display",[
+ seg("lang","Sprache",["Deutsch","English"],"Deutsch",{g:"Sprache & Region"}),
+ der("tz","Zeitzone","Europe/Berlin (vom Gerät)",{g:"Sprache & Region",s:"Für Ortszeiten und Tageswerte"}),
+ sel("datefmt","Datumsformat",["08.11.2026","2026-11-08","11/08/2026"],0,{g:"Datum & Uhrzeit",s:"Tabellen zeigen immer 2026-11-08"}), seg("timefmt","Uhrzeit",["24 h","12 h"],0,{g:"Datum & Uhrzeit"}),
+ seg("dist","Entfernungen",["km","mi","sm"],0,{g:"Einheiten & Währung"}), seg("weight","Gepäck",["kg","lb"],0,{g:"Einheiten & Währung",s:"Für Freigepäck ohne Einheit",h:"Rechnet nichts um."}),
+ sel("cur","Anzeigewährung",CUR,0,{g:"Einheiten & Währung",s:"Wie Beträge angezeigt werden"}),
+ sel("basecur","Basiswährung für Summen",CUR,0,{g:"Einheiten & Währung",x:1,s:"Alle Kosten werden für Summen in diese Währung umgerechnet",h:"Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."})]),
+P("reisearten","konto","Reisearten","Dein Logbuch, deine Reisearten. Aktiviere, was zu dir passt.","domains",[
+ ...KINDS.map(([id,t,c],i)=>sw("d_"+id,t,i<3,{g:"Deine Reisearten",dot:c,beta:id==="tours"||id==="roadtrips"?1:0})),
+ act("farbenreset","Farben zurücksetzen","Zurücksetzen",{g:"Deine Reisearten",x:1,s:"Die Karte hat eigene Farben und bleibt, wie sie ist.",res:"Farben zurückgesetzt"}),
+ sel("country","Ein Land zählt ab",["Wie der Server","Bei Aufenthalt","Besucht","Durchreist","Auch beim Umsteigen"],0,{g:"Länder & Zuhause",s:"Server-Standard: Auch beim Umsteigen",h:"Bei Aufenthalt: mindestens eine Nacht. Besucht: ein Ort dort. Durchreist: am Boden gewesen. Auch beim Umsteigen: auch nur beim Umsteigen."}),
+ lst("home","Heimatort",[{a:"Leipzig",b:"seit 03/2021"},{a:"Halle",b:"2016–2021"}],{g:"Länder & Zuhause",s:"Von hier misst TravStats Entfernungen",btn:"Umgezogen",add:[["Ab Datum","date"],["Ort","text"]],fmt:v=>v[1],fmtb:v=>"ab "+v[0],h:"Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Heimatort ist auch dein Zuhause in der Companion-App."}),
+ lst("homeair","Heimatflughäfen",[{a:"LEJ",b:"Standard"},{a:"BER",b:""}],{g:"Länder & Zuhause",s:"Bis zu drei, einer als Standard",btn:"Flughafen hinzufügen",add:[["Ab Datum","date"],["IATA-Code","text"]],fmt:v=>v[1].toUpperCase(),fmtb:v=>"ab "+v[0],rm:1,h:"Sie gehören zum aktuellen Wohnort. Ziehst du um, bleiben die alten mit ihrem Zeitraum."}),
+ der("heimatland","Heimatland","Deutschland (aus dem Heimatort)",{g:"Länder & Zuhause",x:1,s:"Buchungsvorlagen von hier zuerst"})]),
+P("reisen","konto","Reisen & Vorschläge","Weniger sortieren, mehr Erinnerungen sammeln.","trips",[
+ sw("autotrip","Reisen automatisch anlegen",true,{g:"Reisen",s:"Gleiche Buchungsnummer, eine Reise"}),
+ sw("tripsug","Reisen vorschlagen",true,{g:"Reisen",s:"Aus Flügen und Unterkünften, die zusammengehören",h:"Aus: Es wird nichts mehr berechnet. Deine Entscheidungen bleiben."}),
+ sel("color","Farbe neuer Reisen",["Automatisch","Bernstein","Türkis","Mint","Violett","Rosa","Blau"],0,{g:"Reisen",x:1}),
+ inf("offenevor","Offene Vorschläge","4 im Posteingang",{g:"Posteingang",tone:"good"}),
+ act("ics","Kalender-Abo","Link erstellen",{g:"Kalender",beta:1,s:"Deine Reisen in jeder Kalender-App",need:"puburl",needMsg:"Dem Server fehlt eine öffentliche Adresse.",dlg:"icsnew",res:"Link erstellt · nur jetzt sichtbar",h:"Den Link siehst du nur beim Erstellen. Neu erzeugen beendet alte Abos. Google Kalender braucht eine öffentliche Adresse des Servers."})]),
+P("fluege","konto","Flüge","Aktuelle Flugdaten und passende Voreinstellungen.","flight",[
+ sw("live","Live-Updates",true,{g:"Live-Updates",s:"Ab 24 h vor Abflug bis zur Landung alle 15 Minuten: Verspätung, Gate, Annullierung",need:FLIGHTSVC,needMsg:"Braucht einen Flugdaten-Dienst.",needTo:"dienstek",needBtn:"Zu Dienste"}),
+ sw("approve","Änderungen erst bestätigen",true,{g:"Live-Updates",when:"live"}),
+ inf("offen","Offene Änderungen","2 offen, im Posteingang",{g:"Live-Updates",when:"live",tone:"warn"}),
+ num("expiry","Offene Änderungen verfallen nach",24,{g:"Live-Updates",x:1,u:"h",when:"live",s:"1 bis 168 Stunden"}),
+ sw("costs","Steuern und Gebühren erfassen",true,{g:"Was festgehalten wird",s:"Auch Geschäftsreise-Summen",h:"Preis und Währung gibt es immer."}),
+ sw("flugweg","Flugweg vom Telefon",true,{g:"Was festgehalten wird",s:"Die Companion-App zeichnet ihn auf",h:"Aus: Der Server nimmt keine Flugwege mehr an."}),
+ sw("kennz","Kennzeichen der Maschine",true,{g:"Was festgehalten wird",x:1,h:"Aus: nur Flugzeugtypen, keine einzelnen Maschinen."}),
+ sw("enrich","Ältere Flüge ergänzen",false,{g:"Ältere Flüge",x:1,s:"Aus Live-Flügen mit derselben Nummer",h:"Es entstehen nur Vorschläge im Posteingang."}),
+ num("enrichconf","Mindestübereinstimmung",60,{g:"Ältere Flüge",x:1,u:"%",when:"enrich"}), num("enrichmax","Vorschläge pro Nacht",50,{g:"Ältere Flüge",x:1,u:"/ Nacht",when:"enrich"}),
+ inf("enrichcand","Passende Flüge","12 lassen sich ergänzen",{g:"Ältere Flüge",x:1,when:"enrich"}),
+ sel("fklasse","Klasse",["keine","Economy","Premium Economy","Business","First"],0,{g:"Neue Flüge starten mit",x:1}),
+ tx("fairline","Airline","",{g:"Neue Flüge starten mit",x:1}),
+ sel("fanlass","Anlass",["keiner","Geschäftlich","Privat","Urlaub"],0,{g:"Neue Flüge starten mit",x:1,s:"Nur für Statistiken"})],{when:"d_flights"}),
+P("kreuzfahrten","konto","Kreuzfahrten","Voreinstellungen und Zählweise.","cruise",[
+ tx("klinie","Reederei","",{g:"Neue Kreuzfahrten starten mit",x:1}), sel("kkabine","Kabine",["keine","Innen","Meerblick","Balkon","Suite"],0,{g:"Neue Kreuzfahrten starten mit",x:1}),
+ sw("seetage","Seetage als Reisetage",true,{g:"Zählen",x:1,h:"Die Zahl der Seetage bleibt sichtbar."})],{when:"d_cruises",x:1}),
+P("treue","konto","Treueprogramme","Karten, die TravStats Flügen, Hotels und Fahrten zuordnet.","loyalty",[
+ lst("tr_flights","Airlines",[{a:"Miles & More",b:"•••• 4821 · Frequent Traveller"}],{g:"Karten",btn:"Karte hinzufügen",add:[["Programm","text"],["Nummer","text"]],fmt:v=>v[0],fmtb:v=>"•••• "+v[1].slice(-4),rm:1,s:"Vorschläge aus deinen Flügen erscheinen hier zum Übernehmen."}),
+ lst("tr_hotels","Hotels",[],{g:"Karten",when:"d_hotels",btn:"Karte hinzufügen",add:[["Programm","text"],["Nummer","text"]],fmt:v=>v[0],fmtb:v=>"•••• "+v[1].slice(-4),rm:1,s:"Ketten und einzelne Häuser"}),
+ lst("tr_trains","Bahn",[],{g:"Karten",when:"d_trains",btn:"Karte hinzufügen",add:[["Programm","text"],["Nummer","text"]],fmt:v=>v[0],fmtb:v=>"•••• "+v[1].slice(-4),rm:1}),
+ lst("tr_cruises","Reedereien",[],{g:"Karten",when:"d_cruises",btn:"Karte hinzufügen",add:[["Programm","text"],["Nummer","text"]],fmt:v=>v[0],fmtb:v=>"•••• "+v[1].slice(-4),rm:1})]),
+P("erinnerungen","konto","Erinnerungen","Rechtzeitig Bescheid wissen, bevor es losgeht.","notifications",[
+ der("remaddr","Erinnerungen an","= Profil-E-Mail",{g:"Wohin",s:"Leer: keine Mails"}),
+ seg("rchan","Kanal",["App","Mail","Beides"],"Beides",{g:"Wohin"}),
+ inf("pushstate","Mitteilungen an die App","1 Telefon bereit",{g:"Wohin",tone:"good",need:"push",needMsg:"Der Server sendet gerade keine Mitteilungen an die App.",s:"Bereit, sobald ein gekoppeltes Telefon Mitteilungen erlaubt."}),
+ ...[["flights","Flug"],["cruises","Kreuzfahrt"],["hotels","Unterkunft"],["trains","Bahn"],["bus","Bus"],["ferry","Fähre"],["rental","Mietwagen"],["roadtrips","Roadtrip"]].map(([id,t])=>sel("rem_"+id,t,["Aus","2 h","24 h","2 Tage"],"24 h",{g:"Vor der Abreise",when:"d_"+id,s:"Erinnerung vor Abreise"}))]),
+P("freunde","konto","Freunde & Teilen","Reisen verbinden. Du entscheidest, mit wem du teilst.","sharing",[
+ lst("friends","Freunde",[{a:"jonas",b:"teilt Reisen und Pläne · verbunden seit 03.2026"}],{g:"Freunde",btn:"Freund hinzufügen",add:[["Benutzername oder Adresse","text"]],fmt:v=>v[0],fmtb:()=>"Anfrage gesendet",acts:[["Trennen","shareend",1]],rmOnAct:1,s:"Vergleich, geteilte Reisen und Pläne laufen über eine Verbindung pro Freund.",h:"Zurückziehen beendet das Abgleichen. Schon Geteiltes bleibt als eigene Kopie."}),
+ lst("personen","Mitreisende",[{a:"Jonas",b:"14 Einträge"},{a:"Ilka",b:"3 Einträge"}],{g:"Mitreisende",s:"Personen in deinen Einträgen, auch ohne Konto",acts:[["Zusammenführen","merge"]],h:"Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen."}),
+ act("unused","Unbenutzte Personen löschen","Löschen",{g:"Mitreisende",dlg:"unused",res:"Aufgeräumt"}),
+ call("linksoff","Öffentliche Links sind auf diesem Server aus. Der Admin kann sie erlauben.",{g:"Öffentliche Links",when:"!links"}),
+ lst("linkliste","Deine Links",[{a:"Reise · Lissabon",b:"noch 6 Tage · 41 Aufrufe"}],{g:"Öffentliche Links",when:"links",s:"Erstellt an Flug, Reise oder Jahr",acts:[["Widerrufen","linksoff",1]],rmOnAct:1}),
+ act("rangliste","Rangliste","Öffnen",{g:"Vergleichen & übergeben",beta:1,s:"Wer deine Summen sieht"}),
+ act("verschl","Verschlüsselt übergeben","Öffnen",{g:"Vergleichen & übergeben",beta:1,s:"Ganze Einträge an ein anderes Konto"})]),
+P("telefone","konto","Telefone","Deine gekoppelten Telefone auf einen Blick.","account",[
+ lst("phones","Gekoppelte Telefone",[{a:"iPhone von Mara",b:"zuletzt heute, 09:41"}],{g:"Telefone",acts:[["Abmelden","deviceout",1]],rmOnAct:1,h:"Der Kopplungscode verfällt nach wenigen Minuten. Abmelden nimmt dem Telefon sofort den Zugang."}),
+ act("pair","Telefon koppeln","Code anzeigen",{g:"Telefone",dlg:"pairqr",s:"Zeigt einen QR-Code für die Companion-App"}),
+ inf("pushstate2","Mitteilungen","1 Telefon bereit",{g:"Mitteilungen",tone:"good",need:"push",needMsg:"Der Server sendet gerade keine Mitteilungen an die App."})]),
+P("dienstek","konto","Verbundene Dienste","Deine Verbindungen. Deine Daten. Deine Entscheidung.","services",[],{svcPage:1}),
+P("daten","konto","Daten","Deine Reisegeschichte gehört dir.","data",[
+ inf("srvbackup","Letzte Sicherung des Servers","heute 02:00 · 1,2 GB",{g:"Sicherung",tone:"good",s:"Darum kümmert sich der Admin"}),
+ sw("webdaveigen","Eigene Kopie auf WebDAV",false,{g:"Sicherung",s:"Dein Export, regelmäßig",need:"webdav.url|my.webdav.url",needMsg:"Noch kein WebDAV-Speicher verbunden.",needTo:"dienstek",needBtn:"Verbinden"}),
+ seg("webdavtakt","Wie oft",["täglich","wöchentlich"],"wöchentlich",{g:"Sicherung",x:1,when:"webdaveigen"}), num("webdavvers","Versionen behalten",7,{g:"Sicherung",x:1,when:"webdaveigen",s:"1–30"}),
+ inf("webdavlast","Letzte eigene Kopie","gestern 03:12 · erfolgreich",{g:"Sicherung",when:"webdaveigen",tone:"good"}),
+ act("meine","Alle meine Daten","Herunterladen",{g:"Mitnehmen",s:"JSON, ohne Passwörter und Schlüssel",res:"Fertig · Herunterladen",h:"Fotos und Dokumente sind nicht dabei."}),
+ act("excelexp","Excel-Tabelle","Erstellen",{g:"Mitnehmen",s:"Ein Blatt pro Reiseart",res:"Fertig · Herunterladen"}),
+ act("gpxzip","Aufzeichnungen","Herunterladen",{g:"Mitnehmen",when:"d_tours|d_roadtrips",s:"Alle Touren als GPX im ZIP",res:"Fertig · Herunterladen"}),
+ act("listen","Listen importieren","Datei wählen",{g:"Einlesen",s:"CSV, Flightradar24, andere Apps"}),
+ act("excelimp","Excel-Tabelle einlesen","Datei wählen",{g:"Einlesen",s:"Mit Vorschau",dlg:"replace",h:"Hinzufügen, Abgleichen oder Ersetzen. Ersetzen löscht, was in der Datei fehlt. Vorher lege ich eine Sicherung des ganzen Servers an."}),
+ act("gpxin","Aufzeichnungen einlesen","Dateien wählen",{g:"Einlesen",when:"d_tours|d_roadtrips",s:"GPX, TCX, FIT oder ZIP",h:"ZIP bis 500 Dateien und 200 MB, eine Aufzeichnung bis 15 MB."}),
+ lst("implog","Bisherige Importe",[{a:"flugdaten.csv",b:"21.10.2026 · 48 Flüge"}],{g:"Einlesen",s:"Ganz zurücknehmen",acts:[["Zurücknehmen","impundo",1]],rmOnAct:1,h:"Einträge, auf die schon anderes verweist, bleiben; ich sage, welche."}),
+ seg("ubahn","U-Bahn und Tram beim Bahn-Import",["Überspringen","Importieren"],0,{g:"Beim Import von bahn.de",x:1,when:"d_trains"}),
+ seg("busleg","Busabschnitte beim Bahn-Import",["Überspringen","Importieren"],0,{g:"Beim Import von bahn.de",x:1,when:"d_trains"})]),
+P("ueber","konto","Über TravStats","Version und Herkunft.","about",[
+ inf("ver","Version","2.8.0",{g:"Version"}), inf("build","Build","2.8.0-rc28+4f1c",{g:"Version",x:1}),
+ act("changelog","Changelog","Öffnen",{g:"Mehr"}), act("docs","Dokumentation","Öffnen",{g:"Mehr"})],{credit:1}),
+
+/* ===== TravTrack ===== */
+P("tt-aufz","track","Aufzeichnung & Orte","Wo du warst, bleibt auf deinem Server.","travtrack",[
+ sel("quelle","Standort kommt von",["Keine","TravTrack","Dawarich"],"TravTrack",{g:"Quelle",s:"Für Ländertage, Aufenthalte, Routen",h:"Umschalten verschiebt und löscht nichts. TravTrack speichert auf diesem Server. Dawarich geht nur mit deiner eigenen Dawarich-Verbindung."}),
+ sw("aufz","Reisen aufzeichnen",true,{g:"Quelle",s:"Positionen aus der Companion-App",when:"quelle=TravTrack",h:"Aus: Der Server nimmt keine neuen Positionen an. Gespeicherte bleiben."}),
+ lnk("dawlink","Deine Dawarich-Verbindung","dienstek","Verbindung öffnen",{g:"Quelle",when:"quelle=Dawarich",need:"my.dawarich.key",needMsg:"Dawarich ist für dich noch nicht verbunden. Bis dahin liest TravStats keine Positionen.",needTo:"dienstek",needBtn:"Verbinden"}),
+ lnk("geraete","Geräte","telefone","Telefone",{g:"Quelle",s:"Koppeln und abmelden"}),
+ lst("orte","Feste Orte",[{a:"Zuhause",b:"150 m · aus deinem Heimatort"},{a:"Arbeit",b:"200 m · Mo–Fr 08–18 Uhr"}],{g:"Feste Orte",btn:"Ort hinzufügen",add:[["Name","text"],["Radius in Metern","number"]],fmt:v=>v[0],fmtb:v=>v[1]+" m",rm:1,s:"Zuhause, Arbeit und andere Orte",h:"Alles innerhalb des Radius erscheint auf der Karte als ein Stopp mit dem Namen des Orts. Die einzelnen Punkte bleiben gespeichert."}),
+ sw("unterkunft","Unterkunft während der Buchung",false,{g:"Feste Orte",x:1,s:"Von Check-in bis Check-out zählt das Hotel als fester Ort",h:"Buchungen ohne Koordinaten werden übersprungen."}),
+ lst("zonen","Schutzzonen",[{a:"Zuhause",b:"250 m"},{a:"Büro",b:"100 m"}],{g:"Schutzzonen",btn:"Zone hinzufügen",add:[["Name","text"],["Radius in Metern","number"]],fmt:v=>v[0],fmtb:v=>v[1]+" m",rm:1,s:"Hier wird nichts gespeichert",h:"Eine neue Zone löscht Punkte, die schon darin liegen; vorher siehst du, wie viele. Entfernen holt nichts zurück."})],
+ {when:"offer_tt",stats:[["Gespeichert","18.204 Punkte","seit 03/2025 · 2 Telefone"],["Zuletzt eingegangen","heute 10:12","von iPhone von Mara"]]}),
+P("tt-erk","track","Erkennung & Vorschläge","Aus Punkten werden Aufenthalte und Orte.","travtrack",[
+ sw("staysug","Aufenthalte vorschlagen",true,{g:"Aufenthalte",s:"Aus deinem Standortverlauf",need:"hasloc",needMsg:"Wirkt erst mit einer Standortquelle.",needTo:"tt-aufz",needBtn:"Quelle wählen"}),
+ sw("stopps","Stopps benennen",true,{g:"Aufenthalte",s:"Namen von Läden, Firmen und Hotels in der Nähe vorschlagen",h:"Aus: der Posteingang bietet keine Aufenthaltsvorschläge an."}),
+ sw("scan","Automatisch suchen",false,{g:"Suchlauf",s:"Alle 6 Stunden, auch Märkte, Parks, Museen",need:"hasloc",needMsg:"Wirkt erst mit einer Standortquelle.",needTo:"tt-aufz",needBtn:"Quelle wählen",h:"Funde landen als Vorschlag im Posteingang. Pausiert, solange Aufenthaltsvorschläge aus sind."}),
+ inf("scaninfo","Letzter Suchlauf","heute 03:00 · 2 neue Vorschläge",{g:"Suchlauf",tone:"good"}),
+ act("scanjetzt","Jetzt suchen","Jetzt suchen",{g:"Suchlauf",need:"hasloc",needMsg:"Wirkt erst mit einer Standortquelle.",res:"Gestartet · Ergebnis im Posteingang"}),
+ sw("photoev","Fotos als Beleg nutzen",true,{g:"Belege",s:"Immich-Fotos zu einem Aufenthalt",need:"immich.key|my.immich.key",needMsg:"Immich ist nicht verbunden.",needTo:"dienstek",needBtn:"Verbinden"}),
+ sw("staedte","Städte benennen",false,{g:"Feinabstimmung",x:1,s:"Orte ab 30 Minuten",h:"Sendet auf 1 km gerundete Positionen an die Ortssuche des Servers. Aus entfernt die Städte wieder."}),
+ sw("aiplace","Ortsart per KI erkennen",false,{g:"Feinabstimmung",x:1,s:"Nur Ortsnamen, keine Koordinaten",need:AIANY,needMsg:"Der Admin hat keine KI freigegeben.",needTo:"dienstek"}),
+ sel("scanzeit","Zeitraum für „Jetzt suchen“",["7 Tage","14 Tage","30 Tage"],0,{g:"Feinabstimmung",x:1}),
+ sw("gelaende","Märkte, Parks und Museen mitsuchen",true,{g:"Feinabstimmung",x:1})],{when:"offer_tt"}),
+P("tt-daten","track","Daten & Quellen","Importieren, mitnehmen, löschen.","travtrack",[
+ act("dawcopy","Aus Dawarich übernehmen","Übernehmen",{g:"Quellen",s:"Ganz oder ein Zeitraum",need:"my.dawarich.key",needMsg:"Braucht deine eigene Dawarich-Verbindung. Die des Servers reicht dafür nicht.",needTo:"dienstek",needBtn:"Verbinden",res:"Gestartet · lässt sich anhalten"}),
+ inf("dawimp","Letzte Übernahme","Fertig am 24. Okt · 1,2 Mio. Punkte · 3 Lücken",{g:"Quellen",tone:"good"}),
+ act("gpxtrack","Dateien importieren","Dateien wählen",{g:"Quellen",s:"GPX, GeoJSON, KML, TCX, Google-Takeout"}),
+ lst("ttimp","Bisherige Importe",[{a:"takeout-2025.zip",b:"640.112 Punkte"},{a:"wanderung.gpx",b:"4.210 Punkte"}],{g:"Quellen",acts:[["Entfernen","impundo",1]],rmOnAct:1}),
+ lst("apps","Weitere Apps",[{a:"OwnTracks · Pixel",b:"seit 14.09.2026"}],{g:"Quellen",x:1,s:"OwnTracks und Overland",btn:"Schlüssel erstellen",add:[["Name der App","text"]],rm:1,h:"Diese Apps kennen deine Schutzzonen nicht; der Server verwirft Punkte darin. Den Schlüssel siehst du nur einmal."}),
+ act("ttexport","Verlauf exportieren","Exportieren",{g:"Export",s:"GPX oder JSON, Schutzzonen sind nie enthalten",res:"Fertig · Herunterladen",h:"Zeitraum, Anzahl der Punkte und Zeitzone siehst du vor dem Herunterladen."}),
+ act("ttdel","Zeitraum löschen","Tage löschen",{g:"Löschen",s:"Löscht alle Standortpunkte im Zeitraum endgültig, auch die aus Importen",danger:1,dlg:"ttdel",h:"Gelöschte Tage bleiben gelöscht, auch wenn ein Telefon sie später nachreicht. Logbuch-Einträge bleiben unberührt."}),
+ act("diag","Diagnose","Öffnen",{g:"Diagnose",x:1,s:"Warum Punkte fehlen",h:"Braucht das Diagnose-Protokoll in der Companion-App."})],{when:"offer_tt"}),
+P("tt-bereit","track","Bereitstellung","Ob dieser Server TravTrack anbietet.","server",[
+ sw("offer_tt","TravTrack anbieten",true,{g:"TravTrack",s:"Aus: Die Seiten verschwinden für alle Konten. Gespeicherte Punkte bleiben."}),
+ inf("tt_all","Gespeichert auf dem Server","24.511 Punkte · 3 Konten",{g:"TravTrack",tone:"good"})],{srv:1}),
+
+/* ===== TravPlan ===== */
+P("pl-plan","plan","Reisen planen","Ideen und Pläne vor der Reise.","trips",[
+ sw("travplan","Reisen planen",false,{g:"Planen",s:"Ideen und Pläne vor der Reise",h:"Ausschalten behält deine Pläne."}),
+ sw("planai","KI-Vorschläge in Plänen",true,{g:"Planen",when:"travplan",need:AIANY,needMsg:"Der Admin hat keine KI freigegeben.",needTo:"dienstek"}),
+ sw("planwx","Wetter in Plänen",true,{g:"Planen",when:"travplan"}),
+ lnk("planshare","Pläne mit Freunden teilen","freunde","Freunde",{g:"Planen",when:"travplan",s:"Läuft über die Verbindung zu jedem Freund"})],
+ {when:"offer_plan",stats:[["KI-Anfragen heute","3 von 10",""],["Wetter-Anfragen heute","5 von 20",""]]}),
+P("pl-bereit","plan","Bereitstellung","Ob dieser Server Planen anbietet und wie viel.","server",[
+ sw("offer_plan","Reisen planen anbieten",true,{g:"TravPlan",s:"Aus: Die Seiten verschwinden für alle Konten. Pläne bleiben gespeichert."}),
+ num("pl_ai","KI-Anfragen je Konto und Tag",10,{g:"Grenzen",x:1,when:"offer_plan"}), num("pl_wx","Wetter-Anfragen je Konto und Tag",20,{g:"Grenzen",x:1,when:"offer_plan"})],{srv:1}),
+
+/* ===== Server ===== */
+P("allgemein","server","Allgemein","Die wichtigsten Einstellungen für deinen Server.","server",[
+ tx("instname","Servername","TravStats",{g:"Dein Server",s:"In Mails und Sicherungen"}),
+ tx("puburl","Öffentliche Adresse","https://trav.example.org",{g:"Dein Server",s:"Daraus werden alle anderen Adressen abgeleitet"}),
+ call("puburlw","Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost.",{g:"Dein Server",when:"!puburl",tone:"warn"}),
+ seg("reg","Registrierung",["Nur mit Einladung","Offen"],0,{g:"Zugang & Konten"}), num("maxusers","Höchstzahl Konten",10,{g:"Zugang & Konten"}),
+ act("loginimg","Bilder der Anmeldeseite","Ändern",{g:"Zugang & Konten",x:1})]),
+P("nutzer","server","Nutzer","Konten und Einladungen.","users",[
+ lst("nutzerliste","Konten",[{a:"mara",b:"Admin · Zwei-Faktor an · zuletzt heute"},{a:"jonas",b:"Nutzer · Zwei-Faktor aus · zuletzt vor 3 Tagen"}],{g:"Konten",acts:[["Passwort zurücksetzen","userpw"],["Zwei-Faktor zurücksetzen","user2fa"],["Sperren","userlock"],["Löschen","userdel",1]]}),
+ lst("einlliste","Einladungen",[{a:"ilka@example.org",b:"gilt noch 6 Tage"}],{g:"Einladungen",s:"Ein Link gilt einmal und 7 Tage",btn:"Einladung erstellen",add:[["E-Mail-Adresse","text"]],fmt:v=>v[0],fmtb:()=>"gilt 7 Tage",acts:[["Zurückziehen","invrevoke",1]],rmOnAct:1})]),
+P("funktionen","server","Funktionen","Lege fest, was auf diesem Server möglich ist.","domains",[
+ sw("internet","Server darf externe Dienste abfragen",true,{g:"Netz",s:"Wechselkurse, Bahnfahrpläne, Logos, Offene Kartendaten und die Suche nach Updates. Aus = Betrieb ohne Internet"}),
+ sw("links","Öffentliche Links erlauben",false,{g:"Teilen",h:"Ausschalten zieht sofort alle Links aller Konten zurück."}),
+ sw("fed","Mit anderen Servern verbinden",false,{g:"Teilen",s:"Freunde auf anderen TravStats-Servern; jeder neue Server braucht deine Freigabe"}),
+ lnk("l_tt","TravTrack","tt-bereit","Bereitstellung",{g:"Bereiche",s:"Anbieten und Grenzen"}), lnk("l_pl","TravPlan","pl-bereit","Bereitstellung",{g:"Bereiche",s:"Anbieten und Grenzen"}),
+ sw("beta","Beta-Funktionen zeigen",false,{g:"Erweitert",x:1}),
+ sel("countrydef","Standard: wann zählt ein Land",["Auch beim Umsteigen","Bei Aufenthalt","Besucht","Durchreist"],0,{g:"Erweitert",x:1,s:"Konten können abweichen"}),
+ sel("importmodus","Großer Import",["Normal","Grenzen für 24 h aufheben"],0,{g:"Erweitert",x:1})]),
+P("email","server","E-Mail","Damit Einladungen und Erinnerungen ankommen.","notifications",[
+ tx("smtphost","Mailserver","smtp.example.org",{g:"Mailserver"}), tx("smtpuser","Benutzer","travstats",{g:"Mailserver"}), R("secret","smtppw","Passwort","demo-passwort",{g:"Mailserver"}),
+ tx("smtpfrom","Absenderadresse","reisen@example.org",{g:"Mailserver"}),
+ act("smtptest","Testmail senden","Testmail senden",{g:"Mailserver",res:"Gesendet · gerade eben"}),
+ inf("mailstat","Letzte Testmail","gestern 18:20 · zugestellt",{g:"Mailserver",tone:"good"}),
+ der("smtpport","Port und Verschlüsselung","587, STARTTLS (erkannt)",{g:"Erweitert",x:1}), der("smtpname","Absendername","= Servername",{g:"Erweitert",x:1}),
+ act("smtpdel","Mailserver entfernen","Entfernen",{g:"Erweitert",x:1,danger:1,dlg:"smtpdel"})]),
+P("buchungen","server","Buchungen lesen","Aus Buchungsbestätigungen werden Reiseeinträge.","data",[
+ inf("builtin","Bekannte Vorlagen","41 Anbieter · immer dabei",{g:"Lesen",tone:"good"}),
+ sw("ai","KI zum Lesen von Buchungen",true,{g:"Lesen",s:"Ohne KI werden nur bekannte Vorlagen erkannt",h:"Was hingeht: der Text einer Mail oder PDF, höchstens 12.000 Zeichen, nur wenn die Vorlagen nichts finden."}),
+ seg("order","Reihenfolge",["Vorlagen zuerst","KI zuerst"],0,{g:"Lesen",x:1,when:"ai"}),
+ lst("cloudorder","Reihenfolge der KI-Anbieter",[{a:"OpenAI"},{a:"Anthropic"},{a:"Google"},{a:"Eigener"}],{g:"Lesen",x:1,when:"ai",ord:1,s:"Ollama kommt immer zuerst"}),
+ sw("userkeys","Konten dürfen eigene Schlüssel nutzen",true,{g:"Lesen",x:1})]),
+P("dienste","server","Dienste","Verbinde die Dienste, die deinen Server weiterbringen.","services",[],{svcPage:1}),
+P("sicherungen","server","Sicherungen","Deine Reisegeschichte. Gut aufgehoben.","backups",[
+ inf("baknow","Automatisch","wöchentlich · 30 Tage aufbewahrt",{g:"Sicherung",tone:"good"}),
+ act("backupnow","Jetzt sichern","Jetzt sichern",{g:"Sicherung",res:"Gesichert · gerade eben"}),
+ lst("bakliste","Vorhandene Sicherungen",[{a:"heute 02:00",b:"1,2 GB"},{a:"01.11.2026 02:00",b:"1,2 GB"},{a:"25.10.2026 02:00",b:"1,1 GB"}],{g:"Sicherung",acts:[["Wiederherstellen","restore"],["Löschen","bakdel",1]],rmOnAct:0}),
+ act("bakwdload","Sicherungen von WebDAV holen","Holen",{g:"Sicherung",s:"Nach einem Umzug",need:"webdav.url",needMsg:"Noch kein WebDAV-Speicher verbunden.",needTo:"dienste",needBtn:"Verbinden"}),
+ sel("interval","Intervall",["täglich","wöchentlich","monatlich"],"wöchentlich",{g:"Erweitert",x:1,s:"Um 02:00"}), num("retention","Aufbewahren",30,{g:"Erweitert",x:1,u:"Tage"}),
+ sw("cloudprune","Alte Sicherungen auch auf WebDAV löschen",false,{g:"Erweitert",x:1}), der("zone","Zeitzone für 02:00","Europe/Berlin",{g:"Erweitert",x:1})],
+ {stats:[["Letzte erfolgreiche Sicherung","heute 02:00","1,2 GB"],["Nächste","Sonntag 02:00",""],["Aufbewahrt","3 Sicherungen",""]]}),
+P("srvconn","server","Server-Verbindungen","Vertrauensvolle Verbindungen zu anderen TravStats-Servern.","sharing",[
+ lst("requests","Anfragen",[{a:"Reisefreunde · https://reisen.example.org",b:"Fingerabdruck A7:3F:92:B1"}],{g:"Anfragen",acts:[["Zulassen","shareend"],["Ablehnen","shareend",1]],rmOnAct:1}),
+ lst("servers","Verbundene Server",[],{g:"Verbunden",acts:[["Trennen","peerremove",1]],empty:"Noch kein Server verbunden."}),
+ der("fedorigin","Adresse dieses Servers","= Öffentliche Adresse",{g:"Erweitert",x:1}),
+ act("fedkey","Server-Schlüssel","Neu erzeugen",{g:"Erweitert",x:1,danger:1,dlg:"fedkey"})],{when:"fed"}),
+P("datenschutz","server","Datenschutz","Du bestimmst, welche Daten deinen Server verlassen.","about",[
+ seg("stats","Anonyme Nutzungsstatistik senden",["Ja","Nein","Noch nicht entschieden"],2,{g:"Statistik",h:"Gesendet werden Version, Betriebssystem und Zähler ohne Inhalte. Keine Reisen, keine Namen, keine Adressen."}),
+ sw("push","Benachrichtigungen aufs Telefon",false,{g:"Mitteilungen",s:"Über den Push-Dienst von TravStats (Einwilligung beim Einschalten)"}),
+ tx("pushrelay","Push-Dienst-Adresse","https://push.travstats.de",{g:"Mitteilungen",x:1}),
+ act("pushreset","Push zurücksetzen","Zurücksetzen",{g:"Mitteilungen",x:1,danger:1,dlg:"pushreset"})]),
+P("adressen","server","Adressen & Passkeys","Adressen und Vertrauensbereiche für die Anmeldung.","server",[
+ der("phoneurl","Adresse für Telefone","= Öffentliche Adresse",{g:"Adressen",s:"Steht im Kopplungs-QR"}),
+ tx("lanurl","Adresse im eigenen Netz","",{g:"Adressen"}),
+ der("rpid","Passkey-Domain","trav.example.org",{g:"Passkeys",s:"Eine Domain, für immer",h:"Ein Passkey gilt nur für die Domain, unter der er angelegt wurde. Ändern macht alle Passkeys unbrauchbar."}),
+ lst("origins","Erlaubte Passkey-Adressen",[{a:"https://trav.example.org"}],{g:"Passkeys",btn:"Adresse hinzufügen",add:[["Adresse mit https","text"]],rm:1,h:"Eine pro Zeile, mit https und Port. Eine reine IP-Adresse ist keine gültige Passkey-Domain."})],{x:1}),
+P("eigene","server","Eigene Server","Eigene Infrastruktur statt öffentlicher Dienste.","server",[
+ tx("geo","Eigener Geo-Server","",{g:"Orte"}), tx("photon","Photon","",{g:"Orte"}), tx("nominatim","Nominatim","",{g:"Orte"}),
+ sel("routing","Routing",["Kein","OSRM","Valhalla"],0,{g:"Routen"}), tx("rail","OpenRailRouting","",{g:"Routen"}), tx("overpass","Overpass","",{g:"Karten"}),
+ tx("tplrepo","Vorlagen-Quelle","",{g:"Weitere"}), sel("fx","Wechselkurs-Quelle",["Frankfurter","EZB"],0,{g:"Weitere"})],{x:1}),
+P("wartung","server","Wartung","Diagnose und Werkzeuge für deinen Server.","maintenance",[
+ sel("loglevel","Protokoll-Stufe",["info","debug","warn"],0,{g:"Protokolle",h:"Gesetzt beim Start des Servers kann die Stufe hier nur teilweise geändert werden."}),
+ act("debug24","Ausführliches Protokoll für 24 h","Einschalten",{g:"Protokolle",s:"Macht den Server langsamer",res:"Läuft bis morgen 16:44"}),
+ num("logdays","Protokolle aufbewahren",7,{g:"Protokolle",u:"Tage"}), act("logfiles","Protokolldateien","Ansehen",{g:"Protokolle"}),
+ act("logclean","Alte Protokolle löschen","Löschen",{g:"Protokolle",danger:1,dlg:"logclean"}),
+ inf("sysver","Version","2.8.0",{g:"System"}), inf("tzreport","Zeitmodell","0 offene Fälle · letzte Prüfung gestern",{g:"System",tone:"good"}),
+ act("tzresolve","Zeitzonen neu bestimmen","Probelauf",{g:"System",s:"Erst Probelauf, dann übernehmen"}),
+ act("fulljson","Alle Daten aller Konten","Erstellen",{g:"System",s:"JSON",res:"Fertig · Herunterladen"}),
+ act("enrich_air","Flughafen nachladen","Nachladen",{g:"System",s:"Holt einen Flughafen, der im Katalog fehlt, aus der externen Quelle"}),
+ act("reseed","Kataloge neu einlesen","Neu einlesen",{g:"System",danger:1,dlg:"reseed",s:"Flughäfen, Airlines, Flugzeugtypen"}),
+ act("demodel","Demo-Konto löschen","Löschen",{g:"System",danger:1,dlg:"demodel"})],{x:1}),
+P("stamm","server","Stammdaten","Die Grundlagen deiner Reiseeinträge.","masterdata",
+ ["Fluggesellschaften","Flugzeugtypen","Flughäfen","Schiffe","Häfen","Hotelketten"].map((t,i)=>act("md"+i,t,"Öffnen",{g:"Kataloge"})),{x:1})
+];
+PAGES.find(p=>p.id==="sicherungen").stats[2][1]="3 Sicherungen";
+
+/* ---------- services: grp, own = account may connect its own, f = fields ---------- */
+const key=(o)=>({id:"key",t:"API-Schlüssel",k:"secret",...o});
+const SV=(id,n,grp,p,f,o={})=>({id,n,grp,p,f:f||[key()],...o});
+const SERVICES=[
+ SV("airlabs","AirLabs","Flugdaten","Flugpläne und Strecken",0,{own:1,quota:"412 von 1.000 Anfragen im Monat"}),
+ SV("aviationstack","Aviationstack","Flugdaten","Flugstatus",[key(),{id:"budget",t:"Anfragen pro Tag",k:"number",v:3,x:1,own:false}],{own:1,quota:"2 von 3 heute"}),
+ SV("aerodatabox","AeroDataBox","Flugdaten","Flüge und Maschinen",0,{own:1}),
+ SV("aeroapi","FlightAware AeroAPI","Flugdaten","Flugstatus und echte Flugwege",[key(),{id:"tarif",t:"Tarif",k:"select",opt:["Personal","Standard","Premium"],v:"Personal",x:1},{id:"limit",t:"Monatsgrenze in USD",k:"number",v:10,x:1}],{quota:"0,00 USD diesen Monat · TravStats hört vor der Grenze auf"}),
+ SV("opensky","OpenSky","Flugdaten","Positionen in der Luft",[{id:"client",t:"Client-ID",k:"text"},{id:"secret",t:"Client-Secret",k:"secret"}],{own:1}),
+ SV("adsbx","ADS-B Exchange","Flugdaten","Positionen in der Luft"), SV("adsblol","adsb.lol","Flugdaten","Positionen in der Luft, frei"), SV("aisstream","AISstream","Flugdaten","Schiffspositionen"),
+ SV("openai","OpenAI","KI","Buchungen automatisch erkennen",[key(),{id:"model",t:"Modell",k:"text",v:"gpt-4.1-mini",x:1}],{own:1,notice:"Buchungstexte werden an OpenAI gesendet."}),
+ SV("anthropic","Anthropic","KI","Buchungen automatisch erkennen",[key(),{id:"model",t:"Modell",k:"text",v:"claude-sonnet-4",x:1}],{own:1,notice:"Buchungstexte werden an Anthropic gesendet."}),
+ SV("gemini","Google Gemini","KI","Buchungen automatisch erkennen",[key(),{id:"model",t:"Modell",k:"text",v:"gemini-2.5-flash",x:1}],{own:1,notice:"Buchungstexte werden an Google gesendet."}),
+ SV("ollama","Ollama","KI","KI im eigenen Netz",[{id:"url",t:"Adresse",k:"text",v:"",x:1},{id:"model",t:"Textmodell",k:"text",v:"gemma3:12b",x:1},{id:"image",t:"Bildmodell",k:"text",v:"",x:1},{id:"ext",t:"Läuft außerhalb meines Netzes",k:"switch",v:false,x:1}],{x:1}),
+ SV("custom","Eigener Endpunkt","KI","Dein eigener KI-Anbieter",[{id:"url",t:"Adresse",k:"text",x:1},{id:"model",t:"Modell",k:"text",x:1},{id:"key",t:"API-Schlüssel",k:"secret",x:1}],{x:1,notice:"Buchungstexte werden an deinen Endpunkt gesendet."}),
+ SV("immich","Immich","Fotos & Standort","Fotos mit deinen Reisen verbinden",[{id:"url",t:"Adresse",k:"text"},key()],{own:1}),
+ SV("dawarich","Dawarich","Fotos & Standort","Standortverlauf für deine Reisen",[{id:"url",t:"Adresse",k:"text"},key()],{own:1}),
+ SV("strava","Strava","Fotos & Standort","Aktivitäten und Touren importieren",[{id:"client",t:"Client-ID",k:"text"},{id:"secret",t:"Client-Secret",k:"secret"}],{own:1}),
+ SV("placesapi","Google Places","Karten & Orte","Orte und Öffnungszeiten",0,{own:1}), SV("ors","OpenRouteService","Karten & Orte","Routen für Touren",0,{own:1}), SV("graphhopper","GraphHopper","Karten & Orte","Routen für Touren",0,{own:1}), SV("logos","Logos Premium","Karten & Orte","Logos für dein Logbuch"),
+ SV("webdav","WebDAV","Sicherung","Sicherungen an einem zweiten Ort",[{id:"url",t:"Adresse",k:"text"},{id:"user",t:"Benutzer",k:"text"},{id:"password",t:"Passwort",k:"secret"},{id:"folder",t:"Ordner",k:"text",v:"/TravStats/backups/",x:1}],{own:1})
+];
+const SEED={offer_tt:true,offer_plan:true,hasloc:true,"airlabs.key":"demo-airlabs","openai.key":"demo-openai","aviationstack.key":"x-invalid","immich.url":"https://photos.example.org","immich.key":"demo-immich","my.immich.url":"https://photos.example.org","my.immich.key":"demo-immich","srv.airlabs":true,"srv.openai":true,"srv.aviationstack":true,"srv.immich":false,push:false};
+const SEED_ERR={aviationstack:"Schlüssel abgelehnt"}, SEED_ACK=["openai"];
+/* ---------- engine: state, conditions, saving ---------- */
+const AREAS=[["konto","Mein Konto"],["track","TravTrack"],["plan","TravPlan"],["server","Server, nur Admin"]];
+let ACCT_SVC=false;
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fold=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const S={done:{},lvl:store.get("ts-level")==="expert"?"expert":"standard",page:"profil",admin:true,vals:{},over:new Set(),flash:{},show:new Set(),ack:new Set(),paused:new Set(),svcErr:{},svcTest:{},lists:{},reveal:new Set(),openHelp:new Set(),found:new Set(),svc:null,cat:"Alle",svcOnly:false};
+{const t=store.get("ts-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}
+const X=()=>S.lvl==="expert";
+const rowsOf=p=>p.rows||[];
+const ALL=[];PAGES.forEach(p=>rowsOf(p).forEach(r=>{ALL.push({p,r});if(r.k==="list")S.lists[r.id]=(r.items||[]).map(i=>({...i}));if(r.k!=="info"&&r.k!=="callout"&&r.k!=="link"&&r.k!=="action")S.vals[r.id]=r.v}));
+SERVICES.forEach(s=>s.f.forEach(f=>{S.vals[s.id+"."+f.id]=f.v??""}));
+Object.assign(S.vals,SEED);Object.assign(S.svcErr,SEED_ERR);SEED_ACK.forEach(a=>S.ack.add(a));S.done={};
+const val=id=>S.vals[id];
+const cond=c=>{if(!c)return true;return c.split("|").some(a=>a.split("&").every(t=>t.startsWith("!")?!val(t.slice(1)):t.includes("=")?val(t.split("=")[0])===t.split("=")[1]:!!val(t)))};
+let ACCT=false;const ks=s=>(ACCT?"my.":"")+s.id;
+const pageOn=p=>cond(p.when)&&(p.area!=="server"||S.admin);
+const pageShown=p=>pageOn(p)&&(X()||!p.x);
+const rowShown=r=>cond(r.when)&&(X()||!r.x||S.show.has(r.id));
+const isSvcOn=s=>{const p=ks(s)+".";return !!(S.vals[p+"key"]||S.vals[p+"client"]||(S.vals[p+"url"]&&!s.f.some(f=>f.id==="key")))};
+function svcStatus(s,acct){
+  ACCT=acct;
+  if(S.svcErr[ks(s)])return["bad","Fehler: "+S.svcErr[ks(s)]];
+  if(acct&&S.vals["no."+s.id])return["","Für mein Konto aus"];
+  if(acct&&!isSvcOn(s)&&S.vals["srv."+s.id])return["good","Server-Schlüssel wird genutzt"];
+  if(!isSvcOn(s))return["","Nicht eingerichtet"];
+  if(S.paused.has(ks(s)))return["warn","Pausiert"];
+  return["good","Aktiv"];
+}
+const I={
+ check:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8.5 3.2 3.2L13 4.8"/></svg>',
+ warn:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2 14.5 13.5h-13Z"/><path d="M8 6.5v3.2M8 11.7h.01"/></svg>',
+ info:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 5h.01"/></svg>',
+ chev:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>',
+ eye:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z"/><circle cx="8" cy="8" r="2"/></svg>',
+ up:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m4 10 4-4 4 4"/></svg>',
+ dn:'<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>'
+};
+const ico=n=>`<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[n]||ICONS.about}"/></svg>`;
+
+/* save: instant; rows whose id starts with "smtp" fail 1 in 10 and keep the old value */
+function save(id,v){
+  if(id.startsWith("smtp")&&Math.random()<.1){S.flash[id]={err:"Der Mailserver hat nicht geantwortet (Zeitüberschreitung). Der alte Wert bleibt."};render();return false}
+  S.vals[id]=v;if(id==="quelle")S.vals.hasloc=v!=="Keine";S.flash[id]={ok:1};clearTimeout(save.t[id]);save.t[id]=setTimeout(()=>{delete S.flash[id];const e=document.querySelector(`[data-fl="${CSS.escape(id)}"]`);if(e)e.innerHTML=""},2000);return true}
+save.t={};
+const flashHtml=id=>{const f=S.flash[id];return f?(f.ok?`<span class="done" data-fl="${esc(id)}">${I.check}Gespeichert</span>`:`<span class="err" data-fl="${esc(id)}" role="alert">${esc(f.err)}</span>`):`<span data-fl="${esc(id)}"></span>`};
+
+/* ---------- controls ---------- */
+function control(r){
+  const id=esc(r.id),v=val(r.id),lab=`aria-labelledby="lb-${id}"`;
+  switch(r.k){
+    case"switch":return `<span class="onoff" aria-hidden="true">${v?"An":"Aus"}</span><button class="tog" role="switch" aria-checked="${!!v}" ${lab} data-sw="${id}" data-k="sw:${id}"></button>`;
+    case"seg":return `<div class="choice" role="group" ${lab}>${r.opt.map(o=>`<button aria-pressed="${o===v}" data-seg="${id}" data-v="${esc(o)}" data-k="seg:${id}:${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    case"select":return `<select class="inp" id="in-${id}" ${lab} data-sel="${id}">${r.opt.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+    case"text":case"date":return `<input class="inp" id="in-${id}" ${r.k==="date"?'type="date"':""} value="${esc(v)}" ${lab} data-txt="${id}" ${r.ph?`placeholder="${esc(r.ph)}"`:""}>`;
+    case"number":return `<span class="num"><input class="inp" id="in-${id}" type="number" inputmode="numeric" value="${esc(v)}" ${lab} data-txt="${id}">${r.u?`<span class="caption">${esc(r.u)}</span>`:""}</span>`;
+    case"secret":return secretCtl(r.id,r.id,lab);
+    case"derived":{const o=S.over.has(r.id);return o?`<input class="inp" id="in-${id}" value="${esc(v===r.v?"":v)}" ${lab} data-txt="${id}" placeholder="${esc(r.v)}"><button class="btn" data-reset="${id}">Zurücksetzen</button>`:`<span class="auto">automatisch: <b>${esc(v)}</b></span>${X()?`<button class="linkbtn" data-over="${id}">Überschreiben</button>`:""}`}
+    case"link":return `<a class="btn" href="#${r.to}">${esc(r.btn||"Öffnen")}${I.chev}</a>`;
+    case"action":return S.done&&S.done[r.id]?`<span class="done">${I.check}${esc(S.done[r.id])}</span>`:`<button class="btn ${r.danger?"danger":""}" data-act="${id}">${esc(r.btn||r.t)}</button>`;
+    case"info":return `<span class="infoval ${r.tone||""}">${r.tone?'<span class="dotp"></span>':""}${esc(r.v)}</span>`;
+    case"list":return r.add?`<button class="btn" data-add="${id}">${esc(r.btn||"Hinzufügen")}</button>`:(r.btn?`<button class="btn" data-act="${id}">${esc(r.btn)}</button>`:"");
+  }return"";
+}
+function secretCtl(id,keyId,lab){
+  const v=val(keyId),has=!!v,rev=S.reveal.has(keyId);
+  if(has&&!S.reveal.has("edit:"+keyId))return `<span class="secret"><span class="mono">${rev?esc(v):"••••••••••"}</span><button class="iconbtn sm" aria-label="${rev?"Verbergen":"Anzeigen"}" aria-pressed="${rev}" data-eye="${esc(keyId)}">${I.eye}</button><button class="btn" data-chg="${esc(keyId)}">Ändern</button></span>`;
+  return `<input class="inp" type="password" autocomplete="new-password" id="in-${esc(keyId)}" placeholder="${has?"Neuen Wert eingeben":"Nicht gesetzt"}" ${lab||'aria-label="Wert"'} data-txt="${esc(keyId)}" data-secret="1">`;
+}
+function listBody(r){
+  const items=S.lists[r.id]||[];
+  if(!items.length)return `<div class="list full"><div class="empty">${esc(r.empty||"Noch nichts eingetragen.")}</div></div>`;
+  return `<ul class="list full">${items.map((it,i)=>`<li class="li"><span class="grow"><span>${esc(it.a)}</span>${it.b?`<span class="caption">${esc(it.b)}</span>`:""}</span>
+    ${r.ord?`<button class="iconbtn sm" aria-label="Nach oben" data-mv="${esc(r.id)}:${i}:-1" ${i===0?"disabled":""}>${I.up}</button><button class="iconbtn sm" aria-label="Nach unten" data-mv="${esc(r.id)}:${i}:1" ${i===items.length-1?"disabled":""}>${I.dn}</button>`:""}
+    ${(r.acts||[]).map(a=>`<button class="btn sm ${a[2]?"danger":""}" data-lact="${esc(r.id)}:${i}:${a[1]}">${esc(a[0])}</button>`).join("")}
+    ${r.rm?`<button class="btn sm danger" data-lrm="${esc(r.id)}:${i}">Entfernen</button>`:""}</li>`).join("")}</ul>`;
+}
+function row(r){
+  const need=r.need&&!cond(r.need)?r.needMsg:null;
+  const chips=[r.srv?'<span class="chip inst">Alle Konten</span>':"",r.x?'<span class="chip x">Experte</span>':"",r.beta?'<span class="chip beta">Beta</span>':"",S.found.has(r.id)&&!X()?'<span class="chip x">Von der Suche geöffnet</span>':""].join("");
+  if(r.k==="callout")return `<div class="row"><div class="callout ${r.tone||"info"} full" role="note">${r.tone==="warn"?I.warn:I.info}<span>${esc(r.t)}</span>${r.to?`<a class="btn" href="#${r.to}">${esc(r.btn)}</a>`:""}</div></div>`;
+  const open=S.openHelp.has(r.id);
+  return `<div class="row ${need?"blocked":""} ${r.k==="info"?"inforow":""}" id="row-${esc(r.id)}">
+    <div class="t">${r.dot?`<span class="dot" style="background:${r.dot}"></span>`:""}<span id="lb-${esc(r.id)}">${esc(r.t)}</span>${chips}</div>
+    ${r.s?`<div class="s">${esc(r.s)}</div>`:""}
+    <div class="c" ${need?'inert':""}>${control(r)}${r.k!=="info"&&r.k!=="link"&&r.k!=="action"?flashHtml(r.id):""}</div>
+    ${r.k==="list"?listBody(r):""}
+    ${need?`<div class="dep full" role="note">${I.warn}<span>${esc(r.needMsg)}</span>${r.needTo?`<a class="btn" href="#${r.needTo}">${esc(r.needBtn||"Öffnen")}</a>`:""}</div>`:""}
+    ${r.h?`<div class="full"><button class="help-btn" aria-expanded="${open}" data-help="${esc(r.id)}">${open?"Weniger":"Mehr erfahren"}</button>${open?`<div class="help">${esc(r.h)}</div>`:""}</div>`:""}
+  </div>`;
+}
+
+/* ---------- services (cards) ---------- */
+function svcCard(s,acct){
+  const[tone,txt]=svcStatus(s,acct);
+  return `<button class="svc-card" data-svc="${s.id}" data-acct="${acct?1:0}" data-k="svc:${s.id}"><span class="top"><b>${esc(s.n)}</b>${s.x?'<span class="chip x">Experte</span>':""}</span><span class="caption">${esc(s.p)}</span><span class="pill ${tone}">${esc(txt)}</span></button>`;
+}
+function servicesPage(p){
+  const acct=p.area==="konto";ACCT=acct;
+  let list=SERVICES.filter(s=>(acct?s.own:true)&&(X()||!s.x));
+  const cats=["Alle",...new Set(list.map(s=>s.grp))];
+  if(S.cat!=="Alle"&&!cats.includes(S.cat))S.cat="Alle";
+  if(S.svcOnly)list=list.filter(s=>isSvcOn(s));
+  const total=list.length;
+  let h=`<div class="svc-filter" role="group" aria-label="Gruppe">${cats.map(c=>`<button aria-pressed="${S.cat===c}" data-cat="${esc(c)}" data-k="cat:${esc(c)}">${esc(c)}</button>`).join("")}<span class="sep"></span><button aria-pressed="${S.svcOnly}" data-only="1" data-k="only">Nur eingerichtete</button></div>`;
+  const groups=[...new Set(list.map(s=>s.grp))].filter(g=>S.cat==="Alle"||g===S.cat);
+  for(const g of groups)h+=`<section class="card"><h2>${esc(g)}</h2><div class="svc-grid">${list.filter(s=>s.grp===g).map(s=>svcCard(s,acct)).join("")}</div></section>`;
+  if(!total)h+=`<div class="note">Kein Dienst passt zu diesem Filter. <button class="linkbtn" data-cat="Alle" data-only-off="1">Filter zurücksetzen</button></div>`;
+  return h;
+}
+function openService(id,acct){
+  const s=SERVICES.find(x=>x.id===id),[tone,txt]=svcStatus(s,acct);ACCT=acct;
+  const needAck=s.notice&&!S.ack.has(s.id)&&!acct;
+  const fields=s.f.filter(f=>(acct?f.own!==false:true)&&(X()||!f.x||S.show.has(s.id+"."+f.id)));
+  const srvKey=acct&&S.vals["srv."+s.id];S.vals["no."+s.id]=!!S.vals["no."+s.id];
+  let h=`<h2 id="dlg-title">${esc(s.n)}</h2><p class="caption" style="margin:0">${esc(s.p)}</p><div><span class="pill ${tone}">${esc(txt)}</span></div>`;
+  if(srvKey)h+=`<div class="row dlgrow"><span id="lb-nouse">Für mein Konto nicht nutzen</span><div class="c"><button class="tog" role="switch" aria-checked="${!!S.vals["no."+s.id]}" aria-labelledby="lb-nouse" data-dsw="no.${s.id}"></button></div></div>`;
+  if(s.quota)h+=`<div class="row dlgrow inforow"><span>Kontingent</span><span class="infoval">${esc(s.quota)}</span></div>`;
+  if(needAck)h+=`<div class="callout warn" role="note">${I.warn}<span>${esc(s.notice)} Jedes Konto kann das für sich abschalten.</span><button type="button" class="btn" data-ack="${s.id}">Verstanden</button></div>`;
+  h+=`<div class="dlgfields ${needAck?"locked":""}" ${needAck?"inert":""}>${fields.map(f=>{const k=ks(s)+"."+f.id,lb="lb-"+k.replace(/\W/g,"_");return `<div class="row dlgrow"><label id="${lb}" for="in-${esc(k)}">${esc(f.t)}${acct&&f.id==="key"?" (eigener)":""}</label><div class="c">${f.k==="secret"?secretCtl(k,k,`aria-labelledby="${lb}"`):f.k==="select"?`<select class="inp" id="in-${esc(k)}" data-dsel="${esc(k)}">${f.opt.map(o=>`<option ${o===val(k)?"selected":""}>${esc(o)}</option>`).join("")}</select>`:f.k==="switch"?`<button class="tog" role="switch" aria-checked="${!!val(k)}" aria-labelledby="${lb}" data-dsw="${esc(k)}"></button>`:`<input class="inp" id="in-${esc(k)}" ${f.k==="number"?'type="number"':""} value="${esc(val(k))}" data-dtxt="${esc(k)}">`}${f.u?`<span class="caption">${esc(f.u)}</span>`:""}</div></div>`}).join("")}
+    ${isSvcOn(s)?`<div class="row dlgrow"><span id="lb-pause">Pausieren</span><div class="c"><button class="tog" role="switch" aria-checked="${S.paused.has(ks(s))}" aria-labelledby="lb-pause" data-dpause="${s.id}"></button></div></div>`:""}
+    <div class="row dlgrow"><span class="caption grow" id="test-res" role="status">${S.svcTest[ks(s)]?esc(S.svcTest[ks(s)]):""}</span><button type="button" class="btn" data-test="${s.id}" ${isSvcOn(s)?"":"disabled"}>Verbindung testen</button></div></div>
+    <div class="actions"><button type="submit" class="btn primary" autofocus>Fertig</button></div>`;
+  S.svc=id;$("dlg-form").className="wide";$("dlg-form").innerHTML=h;$("dlg-form").onsubmit=e=>{e.preventDefault();$("dlg").close()};
+  if(!$("dlg").open)$("dlg").showModal();
+}
+
+/* ---------- menu, page ---------- */
+function counts(){let n=0,m=0;const add=(x)=>x?m++:n++;
+  PAGES.filter(p=>p.area!=="server"||S.admin).forEach(p=>{if(p.svcPage)return;rowsOf(p).forEach(r=>{if(["info","callout","link"].includes(r.k))return;add(p.x||r.x)})});
+  SERVICES.forEach(s=>s.f.forEach(f=>add(s.x||f.x)));return[n,m]}
+function renderMenu(){
+  let h="";
+  for(const[a,label]of AREAS){
+    const ps=PAGES.filter(p=>p.area===a&&pageShown(p));
+    const off=a==="track"?!val("offer_tt"):a==="plan"?!val("offer_plan"):false;
+    if(a==="server"&&!S.admin)continue;
+    if(!ps.length&&!off)continue;
+    h+=`<div class="grp"><h2>${label}</h2>`;
+    if(off)h+=`<span class="more-note">Dieser Server bietet ${a==="track"?"TravTrack":"TravPlan"} nicht an.</span>`;
+    for(const p of ps)h+=`<a href="#${p.id}" ${p.id===S.page?'aria-current="page"':""}>${ico(p.ico)}<span>${esc(p.t)}</span>${p.badge?`<span class="badge" title="${esc(p.badgeT||"")}">${p.badge}</span>`:""}</a>`;
+    const hid=PAGES.filter(p=>p.area===a&&pageOn(p)&&!pageShown(p)).length;
+    if(hid)h+=`<span class="more-note">${hid} weitere ${hid===1?"Seite":"Seiten"} in der Ansicht „Experte“</span>`;
+    h+=`</div>`;
+  }
+  const[n,m]=counts();
+  h+=`<div class="grp"><label class="devtog"><input type="checkbox" id="adm" ${S.admin?"checked":""}> Als Admin ansehen</label><span class="ver">TravStats 2.8.0 · Standard: ${n} Einstellungen · Experte: +${m}</span></div>`;
+  $("menu").innerHTML=h;
+  $("lv-std").setAttribute("aria-pressed",String(!X()));$("lv-x").setAttribute("aria-pressed",String(X()));
+}
+function page(){let p=PAGES.find(x=>x.id===S.page);if(!p||!pageOn(p))p=PAGES[0];return p}
+function renderPage(){
+  const act=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.k:null;
+  const p=page();
+  let h=`<div class="head"><span class="crumb">Einstellungen › ${esc(AREAS.find(a=>a[0]===p.area)[1].replace(", nur Admin",""))}</span><h1>${esc(p.t)}</h1><div class="scope"><span>${esc(p.d)}</span>${p.area==="server"||p.srv?'<span class="chip inst">Gilt für alle Konten</span>':""}</div></div>`;
+  if(p.x&&!X())h+=`<div class="note">Diese Seite gehört zur Ansicht „Experte“.</div>`;
+  if(p.stats)h+=`<div class="stats">${p.stats.map(s=>`<div class="stat"><span class="caption">${esc(s[0])}</span><b>${esc(s[1])}</b>${s[2]?`<span class="caption">${esc(s[2])}</span>`:""}</div>`).join("")}</div>`;
+  if(p.svcPage)h+=servicesPage(p);
+  else{
+    const groups=[];rowsOf(p).filter(rowShown).forEach(r=>{const g=r.g||"";let o=groups.find(x=>x[0]===g);if(!o)groups.push(o=[g,[]]);o[1].push(r)});
+    for(const[g,rs]of groups)h+=`<section class="card ${rs.every(r=>r.danger)?"danger":""}">${g?`<h2>${esc(g)}</h2>`:""}${rs.map(row).join("")}</section>`;
+    const hid=rowsOf(p).filter(r=>cond(r.when)&&r.x&&!X()&&!S.show.has(r.id)).length;
+    if(hid)h+=`<div class="note">${hid===1?"1 weitere Einstellung ist":hid+" weitere Einstellungen sind"} nur in der Ansicht „Experte“ zu sehen. <button class="btn" id="go-x">Experte anzeigen</button></div>`;
+  }
+  if(p.credit)h+=`<div class="credit">Ein Projekt von <a href="https://www.abrechen2.de/" class="wm" target="_blank" rel="noopener"><span class="a">&lt;</span>abrechen2<span class="a"> /&gt;</span></a></div>`;
+  $("page").innerHTML=h;
+  if(act){const el=$("page").querySelector(`[data-k="${CSS.escape(act)}"]`);if(el)el.focus({preventScroll:true})}
+}
+function render(){renderMenu();renderPage()}
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
+function setLevel(l){S.lvl=l;store.set("ts-level",l);render()}
+function closeMenu(){$("menu").classList.remove("open");$("scrim").hidden=true;$("menu-btn").setAttribute("aria-expanded","false")}
+function route(){
+  const[pg,anchor]=location.hash.slice(1).split(".");
+  if(PAGES.some(p=>p.id===pg))S.page=pg;
+  closeMenu();render();
+  if(anchor){const el=$("row-"+anchor);if(el){el.scrollIntoView({block:"center"});el.classList.add("hit-flash")}}else{window.scrollTo(0,0);$("page").focus({preventScroll:true})}
+}
+
+/* ---------- dialogs ---------- */
+function confirmDialog(d,onOk,danger=true){
+  const[title,subject,impact,conseq,label,word]=d;const dlg=$("dlg");
+  $("dlg-form").className="";
+  $("dlg-form").innerHTML=`<h2 id="dlg-title">${esc(title)}</h2><div class="subject">${esc(subject)}</div>${impact?`<div class="impact">${esc(impact)}</div>`:""}<p style="margin:0">${esc(conseq)}</p>${word?`<label>Zum Bestätigen „${esc(word)}“ eintippen<input class="inp" id="dlg-word" autocomplete="off" autocapitalize="off"></label>`:""}<div class="actions"><button type="button" class="btn" id="dlg-cancel" autofocus>Abbrechen</button><button type="submit" class="btn ${danger?"danger solid":"primary"}" id="dlg-ok" ${word?"disabled":""}>${esc(label)}</button></div>`;
+  if(word)$("dlg-word").addEventListener("input",e=>{$("dlg-ok").disabled=e.target.value.trim().toUpperCase()!==word.toUpperCase()});
+  $("dlg-cancel").onclick=()=>dlg.close();$("dlg-form").onsubmit=e=>{e.preventDefault();dlg.close();onOk()};dlg.showModal();
+}
+function formDialog(title,fields,onOk){
+  $("dlg-form").className="";
+  $("dlg-form").innerHTML=`<h2 id="dlg-title">${esc(title)}</h2>${fields.map((f,i)=>`<label>${esc(f[0])}<input class="inp" id="ff-${i}" ${f[1]==="date"?'type="date"':""} ${f[1]==="number"?'type="number"':""} ${i===0?"autofocus":""} required></label>`).join("")}<div class="actions"><button type="button" class="btn" id="dlg-cancel">Abbrechen</button><button type="submit" class="btn primary">Hinzufügen</button></div>`;
+  $("dlg-cancel").onclick=()=>$("dlg").close();$("dlg-form").onsubmit=e=>{e.preventDefault();const v=fields.map((_,i)=>$("ff-"+i).value.trim());$("dlg").close();onOk(v)};$("dlg").showModal();
+}
+function doAction(id){
+  const hit=ALL.find(x=>x.r.id===id);if(!hit)return;const r=hit.r;
+  const dd=r.dlg&&DIALOGS[r.dlg];
+  if(dd)return confirmDialog(dd,()=>finish(r),!!r.danger||!!dd[2]);
+  if(r.danger)return confirmDialog([r.t+"?",r.s||"",""," Das lässt sich nicht zurücknehmen.",r.btn||r.t,""],()=>finish(r));
+  finish(r);
+}
+function finish(r){if(r.res){S.done[r.id]=r.res;renderPage();return}toast(r.toast||"Im Prototyp nicht ausgeführt.")}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-sw],[data-seg],[data-act],[data-help],[data-over],[data-reset],[data-eye],[data-chg],[data-add],[data-lrm],[data-lact],[data-mv],[data-cat],[data-only],[data-only-off],[data-svc],[data-ack],[data-test],[data-dsw],[data-dpause],#go-x");
+  if(!t)return;const d=t.dataset;
+  if(t.id==="go-x")return setLevel("expert");
+  if(d.sw){save(d.sw,!val(d.sw));return render()}
+  if(d.seg){save(d.seg,d.v);return render()}
+  if(d.act)return doAction(d.act);
+  if(d.help){S.openHelp.has(d.help)?S.openHelp.delete(d.help):S.openHelp.add(d.help);return renderPage()}
+  if(d.over){S.over.add(d.over);return renderPage()}
+  if(d.reset){const r=ALL.find(x=>x.r.id===d.reset).r;S.over.delete(d.reset);S.vals[d.reset]=r.v;return renderPage()}
+  if(d.eye){S.reveal.has(d.eye)?S.reveal.delete(d.eye):S.reveal.add(d.eye);return S.svc?openService(S.svc,ACCT_SVC):renderPage()}
+  if(d.chg){S.reveal.add("edit:"+d.chg);return S.svc?openService(S.svc,ACCT_SVC):renderPage()}
+  if(d.add){const r=ALL.find(x=>x.r.id===d.add).r;return formDialog(r.btn||"Hinzufügen",r.add,v=>{S.lists[r.id].push({a:r.fmt?r.fmt(v):v[v.length-1],b:r.fmtb?r.fmtb(v):""});S.flash[r.id]={ok:1};renderPage();setTimeout(()=>{delete S.flash[r.id]},2000)})}
+  if(d.lrm){const[id,i]=d.lrm.split(":");S.lists[id].splice(+i,1);return renderPage()}
+  if(d.lact){const[id,i,k]=d.lact.split(":");const r=ALL.find(x=>x.r.id===id).r;const it=S.lists[id][+i];const dd=DIALOGS[k];return confirmDialog(dd?dd:[k+"?",it.a,"","",k,""],()=>{if(r.rmOnAct)S.lists[id].splice(+i,1);renderPage();toast("Im Prototyp nicht ausgeführt.")})}
+  if(d.mv){const[id,i,dl]=d.mv.split(":");const a=S.lists[id],j=+i+ +dl;[a[+i],a[j]]=[a[j],a[+i]];return renderPage()}
+  if(d.cat){S.cat=d.cat;if(d.onlyOff)S.svcOnly=false;return renderPage()}
+  if(d.onlyOff!==undefined&&d.only===undefined&&t.hasAttribute("data-only-off")){S.cat="Alle";S.svcOnly=false;return renderPage()}
+  if(d.only){S.svcOnly=!S.svcOnly;return renderPage()}
+  if(d.svc){ACCT_SVC=d.acct==="1";return openService(d.svc,ACCT_SVC)}
+  if(d.ack){S.ack.add(d.ack);return openService(d.ack,ACCT_SVC)}
+  if(d.dsw){S.vals[d.dsw]=!val(d.dsw);return openService(S.svc,ACCT_SVC)}
+  if(d.dpause){ACCT=ACCT_SVC;const k=(ACCT?"my.":"")+d.dpause;S.paused.has(k)?S.paused.delete(k):S.paused.add(k);return openService(S.svc,ACCT_SVC)}
+  if(d.test){ACCT=ACCT_SVC;const pk=(ACCT?"my.":"")+d.test,k=S.vals[pk+".key"]||S.vals[pk+".client"]||S.vals[pk+".url"]||"";const bad=/x/i.test(String(k));
+    if(bad){S.svcErr[pk]="Schlüssel abgelehnt";S.svcTest[pk]="Fehlgeschlagen: Der Anbieter hat den Schlüssel abgelehnt."}else{delete S.svcErr[pk];S.svcTest[pk]="Erreichbar · gerade geprüft"}
+    openService(d.test,ACCT_SVC);return renderPage()}
+});
+
+document.addEventListener("change",e=>{
+  const t=e.target,d=t.dataset;
+  if(d.sel){save(d.sel,t.value);render()}
+  else if(d.txt){if(d.secret){if(!t.value)return;save(d.txt,t.value);S.reveal.delete("edit:"+d.txt);if(S.svc){openService(S.svc,ACCT_SVC);renderPage()}else renderPage()}else{save(d.txt,t.value);const f=document.querySelector(`[data-fl="${CSS.escape(d.txt)}"]`);if(f&&S.flash[d.txt])f.outerHTML=flashHtml(d.txt);if(S.flash[d.txt]&&S.flash[d.txt].err)render()}}
+  else if(d.dtxt||d.dsel){const k=d.dtxt||d.dsel;if(t.dataset.secret){if(!t.value)return;S.vals[k]=t.value;S.reveal.delete("edit:"+k)}else S.vals[k]=t.value;delete S.svcErr[(ACCT_SVC?"my.":"")+S.svc];openService(S.svc,ACCT_SVC);renderPage()}
+  else if(t.id==="adm"){S.admin=t.checked;if(!S.admin&&page().area==="server")location.hash="#profil";render()}
+});
+document.addEventListener("input",e=>{const t=e.target;if(t.dataset&&t.dataset.dtxt&&t.dataset.secret){S.vals[t.dataset.dtxt]=t.value}});
+document.addEventListener("click",e=>{if(!e.target.closest(".search")){$("hits").hidden=true;$("q").setAttribute("aria-expanded","false")}});
+
+/* ---------- search ---------- */
+let hits=[],hsel=-1,showAll=false;
+const mark=(t,q)=>{const f=fold(t),i=f.indexOf(q);return i<0?esc(t):esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+esc(t.slice(i+q.length))};
+function search(){
+  const raw=$("q").value.trim(),q=fold(raw),box=$("hits");hits=[];hsel=-1;
+  if(q.length<2){box.hidden=true;$("q").setAttribute("aria-expanded","false");return}
+  for(const{p,r}of ALL){if(!pageOn(p)||!cond(r.when)||r.k==="callout")continue;const l=fold(r.t),tm=fold([r.s,r.h,p.t,r.g].join(" "));const rank=l.startsWith(q)?1:l.includes(q)?2:tm.includes(q)?3:null;if(rank)hits.push({p,r,rank,x:p.x||r.x})}
+  for(const s of SERVICES){if(S.admin||s.own){const l=fold(s.n),tm=fold(s.p+" "+s.grp);const rank=l.startsWith(q)?1:l.includes(q)?2:tm.includes(q)?3:null;if(rank)hits.push({p:PAGES.find(p=>p.svcPage&&(S.admin?p.area==="server":p.area==="konto")),r:{id:"svc-"+s.id,t:s.n,g:s.grp},rank,x:s.x,svc:s.id})}}
+  hits.sort((a,b)=>a.rank-b.rank);const shown=showAll?hits:hits.slice(0,8);
+  box.innerHTML=hits.length?shown.map((h,i)=>`<button class="hit" role="option" id="hit-${i}" aria-selected="false" data-i="${i}"><b>${mark(h.r.t,q)}</b><span class="caption">${esc(h.p.t)}${h.r.g?" › "+esc(h.r.g):""}${h.x?" (Experte)":""}</span></button>`).join("")+(hits.length>8&&!showAll?`<button class="hit" data-all="1"><span>Alle ${hits.length} Treffer anzeigen</span></button>`:"")+(hits.some(h=>h.x)&&!X()?`<span class="hitnote">Treffer aus der Ansicht „Experte“ öffnen sich, ohne deine Ansicht zu ändern.</span>`:""):`<span class="hitnote">Nichts gefunden für „${esc(raw)}“. Probier ein kürzeres Wort.</span>`;
+  box.hidden=false;$("q").setAttribute("aria-expanded","true");
+}
+function setSel(i){const o=[...$("hits").querySelectorAll("[role=option]")];if(!o.length)return;hsel=(i+o.length)%o.length;o.forEach((x,k)=>x.setAttribute("aria-selected",String(k===hsel)));$("q").setAttribute("aria-activedescendant",o[hsel].id);o[hsel].scrollIntoView({block:"nearest"})}
+function go(i){const h=hits[i];if(!h)return;$("hits").hidden=true;$("q").value="";if(h.x&&!X()){S.show.add(h.r.id);S.found.add(h.r.id)}
+  const t="#"+h.p.id+(h.svc?"":"."+h.r.id);if(location.hash===t)route();else location.hash=t;if(h.svc)setTimeout(()=>openService(h.svc,h.p.area==="konto"),50)}
+$("q").addEventListener("input",()=>{showAll=false;search()});
+$("q").addEventListener("keydown",e=>{if(e.key==="ArrowDown"){e.preventDefault();if($("hits").hidden)search();setSel(hsel+1)}else if(e.key==="ArrowUp"){e.preventDefault();setSel(hsel-1)}else if(e.key==="Enter"){if(hits.length){e.preventDefault();go(hsel>=0?hsel:0)}}else if(e.key==="Escape"){$("hits").hidden=true}});
+$("hits").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.all){showAll=true;return search()}go(+b.dataset.i)});
+document.addEventListener("keydown",e=>{if(e.key==="/"&&!/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)&&!document.querySelector("dialog[open]")){e.preventDefault();$("q").focus()}if(e.key==="Escape")closeMenu()});
+$("dlg").addEventListener("close",()=>{S.svc=null});
+$("lv-std").onclick=()=>setLevel("standard");$("lv-x").onclick=()=>setLevel("expert");
+$("menu-btn").onclick=()=>{const o=$("menu").classList.toggle("open");$("scrim").hidden=!o;$("menu-btn").setAttribute("aria-expanded",String(o));if(o)$("menu").querySelector("a").focus()};
+$("scrim").onclick=closeMenu;
+$("theme-btn").onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");const n=cur==="dark"?"light":"dark";document.documentElement.dataset.theme=n;store.set("ts-theme",n)};
+window.addEventListener("hashchange",route);
+route();
+</script>
+
+</body></html>

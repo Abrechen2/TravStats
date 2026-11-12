@@ -1,15 +1,12 @@
 import { z } from "./zod";
 
 /**
- * Schema for logging configuration
+ * Schema for logging configuration. The file size, the file count and the three
+ * category switches (HTTP, database, parser) are fixed since settings v3 S6 and
+ * no longer accepted: a request that still carries them has them dropped.
  */
 export const loggingConfigSchema = z.object({
   logLevel: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
-  maxLogFileSize: z.number().min(1).max(100).optional(), // 1-100 MB
-  maxLogFiles: z.number().min(1).max(30).optional(), // Keep 1-30 files
-  logHttpRequests: z.boolean().optional(),
-  logDatabaseQueries: z.boolean().optional(),
-  logParserOperations: z.boolean().optional(),
   logRetentionDays: z.number().min(1).max(90).optional(), // 1-90 days
 });
 

@@ -6,17 +6,16 @@ import { logger } from "../../lib/logger";
 import { profileWallClock } from "../../lib/profileInstant";
 import { token } from "../ui/tokens";
 import {
-  ActionControl,
   ChoiceControl,
   ErrorLine,
   InputControl,
   SettingItem,
+  StatusValue,
   SwitchControl,
   useGuardedNavigate,
   useSettingWrite,
 } from "../ui/settings";
 import {
-  JobLostError,
   webdavErrorKey,
   webdavRequestErrorCode,
   webdavSyncApi,
@@ -57,14 +56,14 @@ export default function WebdavSyncRow({
   const row = useRowCopy("data");
   const dependency = useDependency();
   const isDemo = useIsDemoAccount();
-  const levelExpert = useExpertRows(1);
+  // How often and versions to keep are expert rows (settings v3). "Jetzt hochladen"
+  // is gone (S6): the schedule uploads, and the last result is shown below.
+  const levelExpert = useExpertRows(2);
   const expert = alwaysExpert || levelExpert;
   const go = useGuardedNavigate();
   const [status, setStatus] = useState<WebdavSyncStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [busy, setBusy] = useState<"run" | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
-  const [runMessage, setRunMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [keepDraft, setKeepDraft] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -111,33 +110,6 @@ export default function WebdavSyncRow({
     send({ keepVersions: v })
   );
 
-  const runNow = async (): Promise<void> => {
-    setBusy("run");
-    setRunMessage(null);
-    try {
-      const result = await webdavSyncApi.runNow();
-      setRunMessage(
-        result.status === "ok"
-          ? { ok: true, text: row("webdavjetzt").res ?? t("settings:webdavSync.runOk") }
-          : {
-              ok: false,
-              text: t("settings:webdavSync.runPartial", {
-                reason: t(webdavErrorKey(result.errorCode)),
-              }),
-            }
-      );
-    } catch (err) {
-      setRunMessage({
-        ok: false,
-        text: err instanceof JobLostError ? t("settings:webdavSync.runLost") : errorText(err),
-      });
-    } finally {
-      setBusy(null);
-      // The recorded result is the truth either way; read it back.
-      void load();
-    }
-  };
-
   if (loadFailed) return <ErrorLine>{t("settings:webdavSync.loadError")}</ErrorLine>;
   if (!status) return null;
 
@@ -157,7 +129,7 @@ export default function WebdavSyncRow({
   const eigen = row("webdaveigen");
   const takt = row("webdavtakt");
   const vers = row("webdavvers");
-  const jetzt = row("webdavjetzt");
+  const last = row("webdavlast");
 
   return (
     <div
@@ -167,7 +139,7 @@ export default function WebdavSyncRow({
     >
       <SettingItem
         title={eigen.title}
-        sub={<LastResult status={status} fallback={eigen.sub} />}
+        sub={eigen.sub}
         help={eigen.help}
         save={enabled}
         locked={lock}
@@ -175,27 +147,30 @@ export default function WebdavSyncRow({
         dependency={
           configured || status.enabled
             ? undefined
-            : dependency("noWebdav", () => go("/settings/services#webdav"))
+            : dependency("noWebdav", () => go("/settings/dienstek#webdav"))
         }
         control={<SwitchControl checked={enabled.value} onChange={enabled.choose} />}
       />
-      <SettingItem
-        title={takt.title}
-        save={schedule}
-        locked={lock}
-        dependency={offDep}
-        control={
-          <ChoiceControl<WebdavSchedule>
-            label={takt.title}
-            value={schedule.value}
-            onChange={schedule.choose}
-            options={[
-              { value: "daily", label: t("settings:webdavSync.schedules.daily") },
-              { value: "weekly", label: t("settings:webdavSync.schedules.weekly") },
-            ]}
-          />
-        }
-      />
+      {expert && (
+        <SettingItem
+          title={takt.title}
+          expert
+          save={schedule}
+          locked={lock}
+          dependency={offDep}
+          control={
+            <ChoiceControl<WebdavSchedule>
+              label={takt.title}
+              value={schedule.value}
+              onChange={schedule.choose}
+              options={[
+                { value: "daily", label: t("settings:webdavSync.schedules.daily") },
+                { value: "weekly", label: t("settings:webdavSync.schedules.weekly") },
+              ]}
+            />
+          }
+        />
+      )}
       {expert && (
         <SettingItem
           title={vers.title}
@@ -219,31 +194,16 @@ export default function WebdavSyncRow({
           }
         />
       )}
-      <SettingItem
-        title={jetzt.title}
-        locked={lock}
-        dependency={offDep}
-        control={
-          <ActionControl
-            label={
-              busy === "run" || status.running
-                ? t("settings:webdavSync.running")
-                : (jetzt.btn ?? t("settings:webdavSync.runNow"))
-            }
-            busy={busy !== null || status.running}
-            onClick={() => void runNow()}
-          />
-        }
-      >
-        {runMessage &&
-          (runMessage.ok ? (
-            <p role="status" className="t-caption" style={{ color: token("good") }}>
-              {runMessage.text}
-            </p>
-          ) : (
-            <ErrorLine>{runMessage.text}</ErrorLine>
-          ))}
-      </SettingItem>
+      {status.enabled && (
+        <SettingItem
+          title={last.title}
+          control={
+            <StatusValue>
+              <LastResult status={status} />
+            </StatusValue>
+          }
+        />
+      )}
     </div>
   );
 }

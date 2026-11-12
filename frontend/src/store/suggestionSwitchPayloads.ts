@@ -27,6 +27,9 @@ export const SWITCH_PAYLOADS = {
   }),
   railImportBus: (bus: RailImportBus): Payload => ({ railImport: { bus } }),
   travPlan: (enabled: boolean): Payload => ({ travPlan: { enabled } }),
+  travPlanAi: (ai: boolean): Payload => ({ travPlan: { ai } }),
+  travPlanWeather: (weather: boolean): Payload => ({ travPlan: { weather } }),
+  displayCurrency: (displayCurrency: string): Payload => ({ displayCurrency }),
 } as const;
 
 export type SwitchKey = keyof typeof SWITCH_PAYLOADS;

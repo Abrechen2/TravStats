@@ -45,7 +45,10 @@ export async function saveSwitch<K extends SwitchKey>(
     const saves = store.getState().railImportSaves;
     store.setState({ railImportSaves: { ...saves, [group]: saves[group] + 1 } });
   }
-  if (key === "travPlan") useCapabilitiesEpochStore.getState().bump("travPlan");
+  // The plan capabilities carry the AI and weather switches too.
+  if (key === "travPlan" || key === "travPlanAi" || key === "travPlanWeather") {
+    useCapabilitiesEpochStore.getState().bump("travPlan");
+  }
 }
 
 export async function saveBaseCurrency(baseCurrency: string): Promise<void> {

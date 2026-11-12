@@ -11,7 +11,10 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demo
 
 import { generalSettingsWereSaved, useSettingsStore } from "../../../store/settingsStore";
 import { useRemoteSettingsStatus } from "../../../store/remoteSettingsStatus";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import ProfileSection from "../ProfileSection";
+
+vi.mock("../PassportRow", () => ({ default: () => null })); // its own tests
 
 /**
  * Profil: every field is found by the name beside it (AUD-026), the account name
@@ -40,6 +43,7 @@ function renderSection(): void {
 }
 
 beforeEach(() => {
+  useSettingsLevelStore.setState({ level: "expert" });
   demo.value = false;
   Object.assign(useSettingsStore.getState(), {
     setProfile,
@@ -181,5 +185,24 @@ describe("ProfileSection", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it("keeps the birthday behind the expert level, where the prototype puts it", () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    renderSection();
+    expect(screen.queryByLabelText("settings:profile.birthdate")).toBeNull();
+    expect(screen.getByLabelText("settings:profile.firstName")).toBeInTheDocument();
+  });
+
+  it("shows the display name friends see, built from the names as typed", () => {
+    renderSection();
+    expect(screen.getByText("settings:profile.display.name")).toBeInTheDocument();
+    expect(screen.getAllByText("Dennis Wittke").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("settings:profile.lastName"), {
+      target: { value: "Test" },
+    });
+    expect(
+      screen.getByText("Dennis Test", { selector: "[data-status-value]" })
+    ).toBeInTheDocument();
   });
 });

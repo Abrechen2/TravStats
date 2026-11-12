@@ -341,6 +341,38 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/currencies/display-rate",
+  summary: "The rate from your base currency to your display currency",
+  description:
+    "Totals are summed in the base currency; the display currency (Einstellungen › Einheiten) " +
+    "only changes how they are shown. `rate` multiplies a base amount; it is `1` when both are the " +
+    "same and `null` when no rate could be found (the client then shows the base amount in its own " +
+    "currency, never a guessed one). Rates come from the same FX chain as stay conversions.",
+  tags: ["Dashboard"],
+  responses: {
+    200: {
+      description: "Base, display currency and the rate",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              base: z.string().length(3),
+              display: z.string().length(3),
+              rate: z.number().nullable(),
+              rateDate: z.string().nullable().describe("YYYY-MM-DD of the rate; null when none"),
+              source: z.string().nullable(),
+            }),
+          }),
+        },
+      },
+    },
+    429: { description: "Rate limit exceeded", content: errorContent },
+  },
+});
+
 /**
  * "Which entries produced this number" — see
  * `docs/superpowers/specs/2026-09-18-evidence-panel-design.md`. Plumbing

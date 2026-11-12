@@ -1,265 +1,94 @@
-import { useState, type CSSProperties, type JSX, type ReactNode } from "react";
+import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useCoarsePointer } from "../../hooks/useCoarsePointer";
-import type {
-  NotificationPreferences,
-  ReminderChannel,
-  ReminderDomain,
-  ReminderDomainPrefs,
-} from "../../lib/api";
+import type { ReminderDomain, ReminderDomainPrefs } from "../../lib/api";
+import { ChoiceControl, SettingItem, useSettingWrite } from "../ui/settings";
 import {
-  Dependency,
-  ErrorLine,
-  SettingItem,
-  SwitchControl,
-  useGuardedNavigate,
-  useSettingWrite,
-} from "../ui/settings";
-import { checkCustomLead, customLead, isPreset } from "./reminderPrefs";
-import { useDependency, useRowCopy } from "./rowCopy";
-
-const CHIP_BASE: CSSProperties = {
-  minHeight: "var(--ts-size-touch-min)",
-  minWidth: "var(--ts-size-touch-min)",
-  padding: "0 14px",
-  borderRadius: "var(--ts-radius-button)",
-  fontSize: 14,
-};
-
-function Chip({
-  on,
-  disabled,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      disabled={disabled}
-      aria-disabled={disabled || undefined}
-      onClick={onClick}
-      style={{
-        ...CHIP_BASE,
-        border: `2px solid ${on ? "var(--ts-accent)" : "var(--ts-border)"}`,
-        background: on ? "var(--ts-surface2)" : "var(--ts-surface)",
-        color: on ? "var(--ts-text-bright)" : "var(--ts-text)",
-        fontWeight: on ? 800 : 500,
-        opacity: disabled ? 0.45 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function channelWith(channel: ReminderChannel, part: "app" | "mail"): ReminderChannel | null {
-  const app = channel !== "mail";
-  const mail = channel !== "app";
-  const next = { app: part === "app" ? !app : app, mail: part === "mail" ? !mail : mail };
-  // A reminder that goes nowhere is the switch's job, not a channel's.
-  if (!next.app && !next.mail) return null;
-  return next.app && next.mail ? "both" : next.app ? "app" : "mail";
-}
+  LEAD_CUSTOM,
+  LEAD_OFF,
+  LEAD_STANDARD,
+  hasOwnLead,
+  isStandardLead,
+  leadChoiceOf,
+  leadPatch,
+  ownLeadLabel,
+} from "./reminderPrefs";
+import { useRowCopy } from "./rowCopy";
 
 interface ReminderRowProps {
   domain: ReminderDomain;
   /** What the server holds for this area. */
   saved: ReminderDomainPrefs;
-  push: NotificationPreferences["push"];
-  mail: NotificationPreferences["mail"];
-  /** Is the area switched on (Reisearten)? The server never announces one that is off. */
-  domainOn: boolean;
   locked: boolean;
   /** Send this area's whole row; resolves once the server confirmed it. */
   write: (domain: ReminderDomain, row: ReminderDomainPrefs) => Promise<void>;
 }
 
 /**
- * One area of "Vor der Abreise" (design §4 A2): ON/off, lead times (24 h, 2 h
- * and one own time of whole hours 1-168) and where the reminder goes. The row
- * is one write: every chip keeps the user's pick when the server refuses, says
- * so with "Erneut versuchen" / "Verwerfen", and a pick made while a write is
- * open is sent after it, never before.
+ * One area of "Vor der Abreise" (settings v3 prototype): ONE select, Aus / 2 h /
+ * 24 h / 2 Tage. The channel is not here — one row above writes it to every
+ * area, and this row never sends it (two queues writing the same field would
+ * overwrite each other). A lead the select has no entry for (the server keeps
+ * up to two presets and one own time of 1-168 h) is shown as "Eigene: N h", except
+ * the server's default pair 24 h + 2 h, which every new account holds and which
+ * reads "24 h und 2 h (Standard)"; it is
+ * kept until the person picks something else: looking at a row never rewrites it.
  */
 export default function ReminderRow({
   domain,
   saved,
-  push,
-  mail,
-  domainOn,
   locked,
   write,
 }: ReminderRowProps): JSX.Element {
   const { t } = useTranslation(["settings", "settingsRows"]);
   const copyOf = useRowCopy("notifications");
-  const dependency = useDependency();
-  const go = useGuardedNavigate();
-  const coarse = useCoarsePointer();
-  const [draft, setDraft] = useState<string | undefined>(undefined);
   const w = useSettingWrite<ReminderDomainPrefs>(`notifications.${domain}`, saved, (value) =>
     write(domain, value)
   );
   const copy = copyOf(`r_${domain}`);
   const row = w.value;
-  const name = copy.title;
-
-  const custom = customLead(row.leadHours);
-  const customOn = draft !== undefined || custom !== null;
-  const check = draft !== undefined ? checkCustomLead(draft) : null;
-  const invalid = check !== null && !check.ok;
-  const errorId = `reminder-${domain}-error`;
-  const appBlocked = !push.available && push.reason === "no_device_token";
-  const mailBlocked = !mail.available;
+  const current = leadChoiceOf(row);
   const lock = locked
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
-  const choose = (patch: Partial<ReminderDomainPrefs>): void => w.choose({ ...row, ...patch });
 
-  const toggleLead = (hours: number): void => {
-    const next = row.leadHours.includes(hours)
-      ? row.leadHours.filter((h) => h !== hours)
-      : [...row.leadHours, hours];
-    choose({ leadHours: next.sort((a, b) => b - a) });
-  };
-  const toggleCustom = (): void => {
-    if (customOn) {
-      setDraft(undefined);
-      if (custom !== null) choose({ leadHours: row.leadHours.filter(isPreset) });
-    } else {
-      setDraft("");
-    }
-  };
-  const commitDraft = (): void => {
-    if (draft === undefined) return;
-    const result = checkCustomLead(draft);
-    if (!result.ok) return; // stays open with its message
-    setDraft(undefined);
-    if (result.hours === custom) return;
-    choose({ leadHours: [...row.leadHours.filter(isPreset), result.hours].sort((a, b) => b - a) });
-  };
-  const toggleChannel = (part: "app" | "mail"): void => {
-    const next = channelWith(row.channel, part);
-    if (next) choose({ channel: next });
-  };
-
-  if (!domainOn) {
-    return (
-      <SettingItem
-        title={name}
-        sub={t(`settings:notifications.domains.${domain}.what`)}
-        dependency={{
-          reason: t("settings:notifications.domainOff", { area: name }),
-          jump: {
-            label: t("settings:notifications.domainOffAction"),
-            onJump: () => go("/settings/domains"),
+  const options = [
+    { value: LEAD_OFF, label: t("settingsRows:notifications.lead.off") },
+    { value: "2", label: t("settingsRows:notifications.lead.h2") },
+    { value: "24", label: t("settingsRows:notifications.lead.h24") },
+    { value: "48", label: t("settingsRows:notifications.lead.d2") },
+    // The server's default pair, as the standard choice while it is held (off too).
+    ...(isStandardLead(row)
+      ? [{ value: LEAD_STANDARD, label: t("settingsRows:notifications.lead.standard") }]
+      : []),
+    // Kept while the area is off too: switching it on again must not cost the own time.
+    ...(hasOwnLead(row)
+      ? [
+          {
+            value: LEAD_CUSTOM,
+            label: t("settingsRows:notifications.lead.own", { hours: ownLeadLabel(row.leadHours) }),
           },
-        }}
-      />
-    );
-  }
+        ]
+      : []),
+  ];
 
   return (
     <SettingItem
-      title={name}
-      sub={t(`settings:notifications.domains.${domain}.what`)}
+      title={copy.title}
+      sub={t("settingsRows:notifications.leadSub")}
       help={copy.help}
       save={w}
       locked={lock}
       control={
-        <SwitchControl
-          checked={row.enabled}
-          onChange={(enabled) => choose({ enabled })}
-          label={t("settings:notifications.rowSwitch", { area: name })}
+        <ChoiceControl<string>
+          label={copy.title}
+          value={current}
+          options={options}
+          onChange={(next) => {
+            const patch = leadPatch(next);
+            if (patch) w.choose({ ...row, ...patch });
+          }}
         />
       }
-    >
-      <div
-        role="group"
-        aria-label={t("settings:notifications.whenGroup", { area: name })}
-        className="flex flex-wrap items-center"
-        style={{ gap: 8 }}
-      >
-        <Chip
-          on={row.leadHours.includes(24)}
-          disabled={!row.enabled || locked}
-          onClick={() => toggleLead(24)}
-        >
-          {t("settings:notifications.lead24")}
-        </Chip>
-        <Chip
-          on={row.leadHours.includes(2)}
-          disabled={!row.enabled || locked}
-          onClick={() => toggleLead(2)}
-        >
-          {t("settings:notifications.lead2")}
-        </Chip>
-        <Chip on={customOn} disabled={!row.enabled || locked} onClick={toggleCustom}>
-          {t("settings:notifications.leadCustom")}
-        </Chip>
-        {customOn && (
-          <span className="inline-flex items-center" style={{ gap: 6 }}>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={168}
-              step={1}
-              className="input"
-              style={{ width: 84, minHeight: coarse ? "var(--ts-size-touch-min)" : undefined }}
-              aria-label={t("settings:notifications.customHours", { area: name })}
-              aria-invalid={invalid}
-              aria-describedby={invalid ? errorId : undefined}
-              disabled={!row.enabled || locked}
-              value={draft ?? String(custom ?? "")}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitDraft}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitDraft();
-              }}
-            />
-            <span className="t-caption">{t("settings:notifications.hoursBefore")}</span>
-          </span>
-        )}
-      </div>
-      {check && !check.ok && (
-        <ErrorLine id={errorId}>
-          {t(`settings:notifications.customInvalid.${check.reason}`)}
-        </ErrorLine>
-      )}
-      <div
-        role="group"
-        aria-label={t("settings:notifications.whereGroup", { area: name })}
-        className="flex flex-wrap items-center"
-        style={{ gap: 8 }}
-      >
-        <Chip
-          on={row.channel !== "mail"}
-          disabled={locked || !row.enabled || (appBlocked && row.channel === "mail")}
-          onClick={() => toggleChannel("app")}
-        >
-          {t("settings:notifications.channelApp")}
-        </Chip>
-        <Chip
-          on={row.channel !== "app"}
-          disabled={locked || !row.enabled || (mailBlocked && row.channel === "app")}
-          onClick={() => toggleChannel("mail")}
-        >
-          {t("settings:notifications.channelMail")}
-        </Chip>
-      </div>
-      {row.enabled && row.channel !== "mail" && !push.available && push.reason === "no_relay" ? (
-        <Dependency reason={dependency("noPush").reason} />
-      ) : null}
-      {row.enabled && row.channel !== "app" && mailBlocked ? (
-        <Dependency reason={dependency("noMailAddr").reason} />
-      ) : null}
-    </SettingItem>
+    />
   );
 }

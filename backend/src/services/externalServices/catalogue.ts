@@ -152,17 +152,16 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "oauthClient",
     recommended: "free",
     getKeyUrl: "https://opensky-network.org/",
+    // The legacy username / password login is no longer a field (settings v3 S6):
+    // OpenSky stopped accepting basic authentication on 2026-03-18. The columns and
+    // the legacy routes stay until the Companion version that stops sending them is named.
     fields: [
       admin("clientId", "secret", "globalOpenskyClientId"),
       admin("clientSecret", "secret", "globalOpenskyClientSecret"),
-      admin("username", "secret", "globalOpenskyUsername", true),
-      admin("password", "secret", "globalOpenskyPassword", true),
     ],
     accountFields: [
       user("clientId", "secret", "openskyClientId"),
       user("clientSecret", "secret", "openskyClientSecret"),
-      user("username", "secret", "openskyUsername", true),
-      user("password", "secret", "openskyPassword", true),
     ],
     requiredFields: ["clientId", "clientSecret"],
     tester: "opensky",
@@ -228,6 +227,7 @@ export const SERVICES: readonly ServiceDef[] = [
     credential: "none",
     keyless: true,
     recommended: "free",
+    // Expert switches under the master internet switch (settings v3, owner 2026-11-12).
     enabled: { kind: "adminColumns", columns: ["railTransitousEnabled", "railDbRestEnabled"] },
     fields: [
       admin("transitous", "switch", "railTransitousEnabled"),
@@ -238,11 +238,13 @@ export const SERVICES: readonly ServiceDef[] = [
   svc({
     id: "googlePlaces",
     category: "mapsRoutes",
-    level: "instance",
+    // An account may bring its own key (settings v3); lookups made for that account use it first.
+    level: "instanceAndAccount",
     credential: "key",
     resolverProvider: "googlePlaces",
     getKeyUrl: "https://console.cloud.google.com/google/maps-apis",
     fields: [admin("apiKey", "secret", "globalGooglePlacesApiKey")],
+    accountFields: [user("apiKey", "secret", "googlePlacesApiKey")],
     requiredFields: ["apiKey"],
     tester: "googlePlaces",
   }),
@@ -347,8 +349,10 @@ export const SERVICES: readonly ServiceDef[] = [
   svc({
     id: "openai",
     category: "ai",
-    level: "instance",
+    // An account may bring its own key (settings v3 S5b), like Gemini.
+    level: "instanceAndAccount",
     credential: "key",
+    resolverProvider: "openai",
     getKeyUrl: "https://platform.openai.com/api-keys",
     ai: { kind: "openai" },
     enabled: { kind: "adminColumns", columns: ["llmOpenaiOptIn"] },
@@ -356,14 +360,17 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmOpenaiApiKey"),
       admin("model", "text", "llmOpenaiModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "openaiApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),
   svc({
     id: "anthropic",
     category: "ai",
-    level: "instance",
+    level: "instanceAndAccount",
     credential: "key",
+    // The resolver names Anthropic "claude".
+    resolverProvider: "claude",
     getKeyUrl: "https://console.anthropic.com/settings/keys",
     ai: { kind: "anthropic" },
     enabled: { kind: "adminColumns", columns: ["llmAnthropicOptIn"] },
@@ -371,14 +378,18 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmAnthropicApiKey"),
       admin("model", "text", "llmAnthropicModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "claudeApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),
   svc({
     id: "gemini",
     category: "ai",
-    level: "instance",
+    // An account may bring its own key (settings v3); the instance's consent
+    // switch below still decides whether the slot exists at all.
+    level: "instanceAndAccount",
     credential: "key",
+    resolverProvider: "gemini",
     getKeyUrl: "https://aistudio.google.com/app/apikey",
     ai: { kind: "google" },
     enabled: { kind: "adminColumns", columns: ["llmGoogleOptIn"] },
@@ -386,6 +397,7 @@ export const SERVICES: readonly ServiceDef[] = [
       admin("apiKey", "secret", "llmGoogleApiKey"),
       admin("model", "text", "llmGoogleModel", true),
     ],
+    accountFields: [user("apiKey", "secret", "googleApiKey")],
     requiredFields: ["apiKey"],
     tester: "llmCloud",
   }),
@@ -439,7 +451,7 @@ export const SERVICES: readonly ServiceDef[] = [
     // The ECB lookup (Frankfurter) is what every stay and cost total converts
     // through; only a currency code and a date leave the server. What an admin may
     // decide is the public CDN fallback for currencies the ECB does not publish,
-    // and that stays its own switch (the Parser page's "fxCdnFallbackEnabled").
+    // and that stays its own (expert) switch under the master internet switch.
     alwaysOn: true,
     recommended: "free",
     fields: [
@@ -546,7 +558,7 @@ export function getService(id: string): ServiceDef | undefined {
   return SERVICE_BY_ID.get(id);
 }
 
-/** The service that owns an `apiKeyResolver` provider id (openai/claude have none). */
+/** The service that owns an `apiKeyResolver` provider id . */
 export function serviceForResolverProvider(provider: string): ServiceDef | undefined {
   return SERVICES.find((s) => s.resolverProvider === provider);
 }

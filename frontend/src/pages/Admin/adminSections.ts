@@ -199,16 +199,13 @@ export function adminPageOfTab(tab: string | null): AdminPageId | undefined {
  * listed section's real content until it has been near the viewport once —
  * on a page with several of them, only what the reader scrolls to asks the server.
  * The server pages of the settings area load their own few requests at once.
+ * Since settings v3 S5 the mail, services, connections and privacy sections are
+ * each the content of a page of their own, not one of eight below the fold.
  */
 export const LAZY_ADMIN_SECTIONS: ReadonlySet<AdminSectionId> = new Set<AdminSectionId>([
   "shareLinks",
   "about",
-  "federation",
   "webdav",
-  "smtp",
-  "externalServices",
-  "usageStats",
-  "push",
   "shipsMasterData",
   "portsMasterData",
   "airlinesMasterData",

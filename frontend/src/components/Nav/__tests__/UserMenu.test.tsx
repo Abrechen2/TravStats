@@ -50,7 +50,7 @@ describe("UserMenu", () => {
     // overrides its implicit "link" role — so query the menu role, not the link.
     expect(screen.getByRole("menuitem", { name: "dashboard:settings" })).toHaveAttribute(
       "href",
-      "/settings/account"
+      "/settings/profil"
     );
     expect(screen.getByRole("menuitem", { name: "common:support.donate" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Discord" })).toHaveAttribute("target", "_blank");

@@ -36,6 +36,12 @@ export interface LoggingConfigResponse {
   logDatabaseQueries: boolean;
   logParserOperations: boolean;
   logRetentionDays: number;
+  /**
+   * Settings v3 "verbose log for 24 h": the ISO instant at which the server puts
+   * a verbose level back to `info`, or null while no timer runs. Absent on an
+   * older server.
+   */
+  debugUntil?: string | null;
 }
 
 export interface LogFileInfo {

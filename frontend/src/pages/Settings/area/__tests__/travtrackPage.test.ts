@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sectionsOf } from "../../surface";
+import { pageReachable, sectionsOf } from "../../surface";
 import { AREA_MENU, AREA_PAGES, findAreaPage } from "../areaModel";
 import { registryPage } from "../../registry";
 import { SETTINGS_SECTIONS } from "../../settingsModel";
@@ -18,25 +18,33 @@ const ORDER = [
   "ttDiag",
 ];
 
-describe("the TravTrack settings page", () => {
-  it("is in the menu as TravTrack at the place of Standort, in both languages", () => {
-    const account = AREA_MENU.find((g) => g.id === "account")!.pages;
-    expect(account).toContain("travtrack");
-    expect(account).not.toContain("location");
-    expect(account.indexOf("travtrack")).toBe(account.indexOf("notifications") + 1);
+const TT_PAGES = ["tt-aufz", "tt-erk", "tt-daten"] as const;
+/** The admin's "Bereitstellung" pages sit in the same areas (settings v3 S4). */
+const TT_MENU = [...TT_PAGES, "tt-bereit"] as const;
+const mountsOnTravTrackPages = (): string[] =>
+  TT_PAGES.flatMap((id) => findAreaPage(id)!.sections.map((s) => s.id));
+
+describe("the TravTrack settings pages", () => {
+  it("are the menu's TravTrack area, in both languages", () => {
+    expect(AREA_MENU.find((g) => g.id === "track")!.pages).toEqual([...TT_MENU]);
     expect(findAreaPage("location")).toBeUndefined();
-    expect(de.area.pages.travtrack).toBe("TravTrack");
-    expect(en.area.pages.travtrack).toBe("TravTrack");
+    expect(de.area.menu.track).toBe("TravTrack");
+    expect(en.area.menu.track).toBe("TravTrack");
+    for (const id of [...TT_MENU, "pl-bereit"] as const) {
+      expect(de.area.pages[id], id).toBeTruthy();
+      expect(en.area.pages[id], id).toBeTruthy();
+    }
     expect(Object.keys(de.area.pages)).not.toContain("location");
   });
 
-  it("holds the eight sections in the spec's order, in the registry and on the page", () => {
-    expect(registryPage("travtrack")!.sections.map((s) => s.id)).toEqual(ORDER);
-    expect(findAreaPage("travtrack")!.sections.map((s) => s.id)).toEqual(ORDER);
-    expect(AREA_PAGES.filter((p) => p.id === "travtrack")).toHaveLength(1);
+  it("hold the eight sections in the spec's order, in the registry and on the pages", () => {
+    const rows = TT_PAGES.flatMap((id) => registryPage(id)!.sections.flatMap((s) => s.rows));
+    expect([...new Set(rows.map((r) => r.mount))]).toEqual(ORDER);
+    expect(mountsOnTravTrackPages()).toEqual(ORDER);
+    expect(AREA_PAGES.filter((p) => p.area === "track")).toHaveLength(4);
   });
 
-  it("names every section in German and English", () => {
+  it("name every section in German and English", () => {
     for (const id of ORDER) {
       const key = SETTINGS_SECTIONS.find((s) => s.id === id)!.labelKey.replace("settings:", "");
       const at = (tree: unknown) =>
@@ -46,30 +54,70 @@ describe("the TravTrack settings page", () => {
     }
   });
 
-  it("hides Diagnose (Expert) at the standard level and shows it at expert", () => {
-    const page = findAreaPage("travtrack")!;
+  it("hide Diagnose (Expert) at the standard level and show it at expert", () => {
     const at = (level: "standard" | "expert") =>
-      sectionsOf(page, {
-        level,
-        isGateOpen: () => true,
-        isAdmin: false,
-        deepLinked: null,
-        conditions: { travTrackHeld: true },
-      });
-    expect(at("standard").shown).toEqual(ORDER.filter((id) => id !== "ttDiag"));
-    expect(at("standard").hiddenExpert).toBe(1);
-    expect(at("expert").shown).toEqual(ORDER);
+      TT_PAGES.flatMap(
+        (id) =>
+          sectionsOf(findAreaPage(id)!, {
+            level,
+            isGateOpen: () => true,
+            isAdmin: false,
+            deepLinked: null,
+            conditions: { travTrackHeld: true, locationSourceHeld: true },
+          }).shown
+      );
+    expect(at("standard")).toEqual(ORDER.filter((id) => id !== "ttDiag"));
+    expect(at("expert")).toEqual(ORDER);
   });
 
-  it("keeps the data sections off the page when TravTrack holds nothing, bar Aufzeichnung and Erkennung", () => {
-    const page = findAreaPage("travtrack")!;
-    const shown = sectionsOf(page, {
+  it("are not offered at all while the server does not offer TravTrack and the account holds nothing", () => {
+    const conditions = { travTrackHeld: false, locationSourceHeld: false };
+    for (const id of TT_PAGES) {
+      const page = findAreaPage(id)!;
+      expect(pageReachable(page, conditions), id).toBe(false);
+      expect(pageReachable(page, { travTrackHeld: true, locationSourceHeld: true }), id).toBe(true);
+      expect(
+        sectionsOf(page, {
+          level: "expert",
+          isGateOpen: () => true,
+          isAdmin: false,
+          deepLinked: null,
+          conditions,
+        }).shown,
+        id
+      ).toEqual([]);
+    }
+  });
+});
+
+describe("the TravTrack pages for an account on Dawarich alone", () => {
+  // The server does not offer TravTrack and the account holds none of its data,
+  // but its location source is Dawarich (or it has its own Dawarich connection).
+  const conditions = { travTrackHeld: false, locationSourceHeld: true };
+  const shown = (id: (typeof TT_PAGES)[number]): string[] =>
+    sectionsOf(findAreaPage(id)!, {
       level: "expert",
       isGateOpen: () => true,
       isAdmin: false,
       deepLinked: null,
-      conditions: { travTrackHeld: false },
+      conditions,
     }).shown;
-    expect(shown).toEqual(["ttRecording", "ttDetect"]);
+
+  it("keep the source choice and the stay search reachable, and nothing that needs TravTrack", () => {
+    expect(shown("tt-aufz")).toEqual(["ttRecording"]);
+    expect(shown("tt-erk")).toEqual(["ttDetect"]);
+    expect(shown("tt-daten")).toEqual([]);
+    expect(pageReachable(findAreaPage("tt-aufz")!, conditions)).toBe(true);
+    expect(pageReachable(findAreaPage("tt-erk")!, conditions)).toBe(true);
+    expect(pageReachable(findAreaPage("tt-daten")!, conditions)).toBe(false);
+  });
+});
+
+describe("the TravPlan settings page", () => {
+  it("shows only where the instance offers TravPlan", () => {
+    const page = findAreaPage("pl-plan")!;
+    expect(AREA_MENU.find((g) => g.id === "plan")!.pages).toEqual(["pl-plan", "pl-bereit"]);
+    expect(pageReachable(page, { travPlanOffered: false })).toBe(false);
+    expect(pageReachable(page, { travPlanOffered: true })).toBe(true);
   });
 });

@@ -1,4 +1,3 @@
-import ViewsJumpCard from "../../components/Settings/ViewsJumpCard";
 import TravTrackRecordingSection from "../../components/Settings/travtrack/TravTrackRecordingSection";
 import TravTrackPlacesSection from "../../components/Settings/travtrack/TravTrackPlacesSection";
 import TravTrackZonesSection from "../../components/Settings/travtrack/TravTrackZonesSection";
@@ -38,9 +37,11 @@ import CalendarFeedSection from "../../components/Settings/CalendarFeedSection";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
+import LodgingRatingsSection from "../../components/Settings/LodgingRatingsSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import ModuleSection from "../../components/Settings/ModuleSection";
 import PlanningSection from "../../components/Settings/PlanningSection";
+import VisibilitySection from "../../components/Settings/VisibilitySection";
 import ServicesPage from "../../components/Services/ServicesPage";
 import LegacyServiceSummary from "../../components/ExternalServices/LegacyServiceSummary";
 
@@ -82,6 +83,8 @@ export default function SettingsSectionSwitch({
       return <DeleteAccountSection />;
     case "security":
       return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;
+    case "visibility":
+      return <VisibilitySection />;
     case "apitokens":
       return <ApiTokensSection />;
     case "devices":
@@ -152,7 +155,8 @@ export default function SettingsSectionSwitch({
     case "ttDiag":
       return <TravTrackDiagSection />;
     case "externalServices":
-      return <ServicesPage isAdmin={isAdmin} />;
+      // The account's own page: its half of the catalogue, whoever is looking (an admin has the server's on "Dienste").
+      return <ServicesPage isAdmin={false} side="account" />;
     case "homeAirport":
       return <HomeAirportSection view="airports" />;
     case "defaults":
@@ -184,11 +188,10 @@ export default function SettingsSectionSwitch({
       );
     case "cruisePreferences":
       return <CruisePreferencesSection cruise={page.cruise} />;
+    case "lodgingRatings":
+      return <LodgingRatingsSection />;
     case "loyalty":
       return <LoyaltySection />;
-    case "mapAppearance":
-      // Map look, home page and lists: one section, three jump rows.
-      return <ViewsJumpCard />;
     case "comparisonConsent":
       return <CompareHandoverRow row="rangliste" withTitle />;
     case "encryptedGrants":

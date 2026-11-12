@@ -19,6 +19,7 @@ export type SettingsSectionId =
   | "deletion"
   | "planning"
   | "security"
+  | "visibility"
   | "devices"
   | "notifications"
   | "apitokens"
@@ -48,10 +49,10 @@ export type SettingsSectionId =
   | "defaults"
   | "enrichment"
   | "cruisePreferences"
+  | "lodgingRatings"
   | "backup"
   | "import"
   | "externalServices"
-  | "mapAppearance"
   | "comparisonConsent"
   | "encryptedGrants";
 
@@ -67,6 +68,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("profile"),
   section("home"),
   section("security"),
+  section("visibility"),
   // Behind its beta key; `?section=devices` still shows it, because a pairing
   // code has no other place to be minted while the key is closed.
   section("devices", "standard", { gate: "devicePairing", gateYieldsToLink: true }),
@@ -78,9 +80,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("domains"),
   section("planning"),
   section("countryCounting"),
-  // Where the map, the dashboard and the lists are set is on the map, the
-  // dashboard and the lists (rule 1 of the settings redesign).
-  section("mapAppearance"),
   section("trips"),
   section("suggestions"),
   section("sharing"),
@@ -106,9 +105,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDef[] = [
   section("homeAirport"),
   section("autoupdate", "standard", { expertRows: true }),
   section("features"),
-  section("defaults"),
+  // "Neue Flüge starten mit": class, airline, purpose and (coordinator's call) status.
+  section("defaults", "expert", { settings: 4 }),
   section("enrichment", "expert", { settings: 3 }),
-  section("cruisePreferences"),
+  // The whole Kreuzfahrten page is expert in the prototype.
+  section("cruisePreferences", "expert", { settings: 3 }),
+  section("lodgingRatings"),
   section("backup", "standard", { expertRows: true }),
   section("import"),
   section("externalServices", "standard", { expertRows: true, foldsRows: true }),
@@ -140,4 +142,4 @@ export const REMOVED_PAGES: Readonly<Record<string, string>> = {
 };
 
 /** Where Einstellungen → Bonusprogramme lives — the target of every loyalty link. */
-export const LOYALTY_SETTINGS_PATH = "/settings/loyalty";
+export const LOYALTY_SETTINGS_PATH = "/settings/treue";

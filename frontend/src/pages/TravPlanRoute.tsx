@@ -4,7 +4,7 @@ import { useTravPlanCapabilities } from "../hooks/useTravPlanVisible";
 import TravPlanPage from "./TravPlanPage";
 
 /** Where the account's TravPlan switch lives: Einstellungen → Darstellung → Reisearten. */
-const TRAVPLAN_SWITCH_PATH = "/settings/display";
+const TRAVPLAN_SWITCH_PATH = "/settings/pl-plan";
 
 /**
  * The account's own half (owner, 2026-10-27): an account that switched

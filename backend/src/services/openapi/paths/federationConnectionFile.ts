@@ -149,3 +149,42 @@ registry.registerPath({
     },
   },
 });
+
+registry.registerPath({
+  method: "delete",
+  path: "/admin/federation/peers",
+  summary: "Stop trusting a pinned server",
+  description:
+    "Admin only. Deletes the pin of the server named by the query `origin`: nothing is accepted " +
+    "from it and nothing is sent to it afterwards. The pairings with its people end, shared trips " +
+    "stay on this server as local copies, and the queue towards it is dropped. The other server is " +
+    "not told. Unlike `POST /admin/federation/peers/suspend` this is not undone by re-enabling: the " +
+    "server has to be pinned and verified again. Refusal: `COMPARISON_PEER_UNKNOWN` (404).",
+  tags,
+  request: { query: z.object({ origin: z.string().describe("The pinned server's https origin") }) },
+  responses: {
+    200: {
+      description: "Removed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            removed: z.literal(true),
+            pairings: z.number().int().describe("Pairings with people on that server that ended"),
+            trips: z
+              .number()
+              .int()
+              .describe(
+                "Trips that were shared through that server (they stay here as local copies)"
+              ),
+          }),
+        },
+      },
+    },
+    400: { description: "Not an https origin", content: errorContent },
+    403: { description: "Not an admin", content: errorContent },
+    404: {
+      description: "No such peer is pinned (`COMPARISON_PEER_UNKNOWN`)",
+      content: errorContent,
+    },
+  },
+});

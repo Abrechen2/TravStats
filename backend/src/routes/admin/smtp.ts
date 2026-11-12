@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { testSmtpConnection } from "../../services/emailService";
 import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
 import { smtpFailureCode } from "../../services/smtpFailure";
+import { recordTest } from "../../services/externalServices/tests";
 import logger from "../../utils/logger";
 
 export const SMTP_CONFIG_ID = 1 as const;
@@ -27,6 +28,22 @@ export const smtpUpdateSchema = smtpConfigSchema.extend({
 const smtpTestSchema = smtpConfigSchema.extend({ password: z.string().optional() });
 
 const smtpRouter = Router();
+
+/**
+ * Keep the verdict of a test mail with the service tests ("Letzte Testmail" on
+ * the E-Mail page, settings v3 S5). A failure to keep it must not turn a test
+ * that ran into one that did not, so it is logged and the answer stands.
+ */
+async function keepVerdict(ok: boolean, code: string | null): Promise<void> {
+  try {
+    await recordTest(null, "smtp", ok, code);
+  } catch (error) {
+    logger.warn({
+      operation: "smtp_test_verdict_not_kept",
+      error: { message: error instanceof Error ? error.message : "unknown" },
+    });
+  }
+}
 
 smtpRouter.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -55,6 +72,7 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
   try {
     const data = smtpUpdateSchema.parse(req.body);
     const encryptedPassword = data.password ? encryptApiKey(data.password) : undefined;
+    const sendsEnabled = req.body?.enabled === undefined ? true : data.enabled;
     const updateData = {
       host: data.host,
       port: data.port,
@@ -62,7 +80,9 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
       username: data.username,
       fromEmail: data.fromEmail,
       fromName: data.fromName,
-      enabled: data.enabled,
+      // "On when the host is entered" (settings v3 S6): a saved sender sends mail,
+      // unless the caller names `enabled` itself (the field stays accepted).
+      enabled: sendsEnabled,
       ...(encryptedPassword ? { password: encryptedPassword } : {}),
     };
     const config = await prisma.smtpConfig.upsert({
@@ -76,7 +96,7 @@ smtpRouter.put("/", async (req: AuthRequest, res: Response, next: NextFunction):
         password: encryptApiKey(data.password ?? "") ?? "",
         fromEmail: data.fromEmail,
         fromName: data.fromName,
-        enabled: data.enabled,
+        enabled: sendsEnabled,
       },
       update: updateData,
     });
@@ -147,6 +167,7 @@ smtpRouter.post(
         await testSmtpConnection({ ...data, password });
       } catch (error) {
         const code = smtpFailureCode(error);
+        await keepVerdict(false, code);
         logger.warn({
           operation: "smtp_test_failed",
           code,
@@ -155,6 +176,7 @@ smtpRouter.post(
         res.status(400).json({ success: false, code });
         return;
       }
+      await keepVerdict(true, null);
       res.json({ success: true });
     } catch (error) {
       next(error);

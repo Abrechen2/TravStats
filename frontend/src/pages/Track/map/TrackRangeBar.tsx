@@ -98,7 +98,7 @@ function CustomPicker({
 
 /** Where the TravTrack settings open with the shown range, for export and delete. */
 export function settingsHref(span: TrackSpan): string {
-  return `/settings/travtrack?from=${span.fromDay}&until=${span.toDay}`;
+  return `/settings/tt-aufz?from=${span.fromDay}&until=${span.toDay}`;
 }
 
 /**

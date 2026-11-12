@@ -28,6 +28,7 @@ vi.mock("../../../lib/api/companionData", () => ({
 }));
 
 import { resetWriteQueue } from "../../ui/settings/writeQueue";
+import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 import HomeSection from "../HomeSection";
 
 const settle = async (ms: number): Promise<void> => {
@@ -37,12 +38,11 @@ const settle = async (ms: number): Promise<void> => {
 };
 const country = (): HTMLSelectElement =>
   screen.getByLabelText("settings:home.country.name") as HTMLSelectElement;
-const passport = (): HTMLInputElement =>
-  screen.getByLabelText("settings:home.passport.name") as HTMLInputElement;
 
-/** Heimatland and Reisepass under Zuhause: the two facts beside the residence. */
+/** Heimatland under Heimatort: the one fact beside the residence, an expert row. */
 describe("HomeSection facts", () => {
   beforeEach(() => {
+    useSettingsLevelStore.setState({ level: "expert" });
     get.mockReset().mockResolvedValue({ homeCountry: "ES" });
     update.mockReset().mockResolvedValue({});
     getFacts.mockReset().mockResolvedValue({ homePlace: null, passportExpiry: "2030-05-01" });
@@ -54,10 +54,10 @@ describe("HomeSection facts", () => {
     vi.useRealTimers();
   });
 
-  it("shows the stored home country and passport date", async () => {
+  it("shows the stored home country (expert) and no passport row, which moved to Profil", async () => {
     render(<HomeSection />);
     await waitFor(() => expect(country().value).toBe("ES"));
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
+    expect(screen.queryByLabelText("settings:home.passport.name")).toBeNull();
     expect(within(country()).getByText("Deutschland").tagName).toBe("OPTION");
   });
 
@@ -86,52 +86,17 @@ describe("HomeSection facts", () => {
     expect(country().value).toBe("ES");
   });
 
+  it("hides the home country at the standard level and reports it as one hidden setting", async () => {
+    useSettingsLevelStore.setState({ level: "standard" });
+    render(<HomeSection />);
+    await act(async () => {});
+    expect(screen.queryByLabelText("settings:home.country.name")).toBeNull();
+  });
+
   it("a failed load locks the country row instead of showing an empty choice as the truth", async () => {
     get.mockRejectedValue(new Error("offline"));
     render(<HomeSection />);
     expect(await screen.findAllByText("settings:home.loadFailed")).not.toHaveLength(0);
     expect(country().disabled).toBe(true);
-  });
-
-  it("saves a changed passport date when the field is left, and shows the server's answer", async () => {
-    putFacts.mockResolvedValue({ homePlace: null, passportExpiry: "2031-01-02" });
-    render(<HomeSection />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
-    vi.useFakeTimers();
-    fireEvent.change(passport(), { target: { value: "2031-01-02" } });
-    fireEvent.blur(passport());
-    await settle(400);
-    expect(putFacts).toHaveBeenCalledWith({ passportExpiry: "2031-01-02" });
-  });
-
-  it("a refused passport save says so and keeps the typed day until Verwerfen", async () => {
-    putFacts.mockRejectedValue(new Error("500"));
-    render(<HomeSection />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
-    vi.useFakeTimers();
-    fireEvent.change(passport(), { target: { value: "2031-01-02" } });
-    fireEvent.blur(passport());
-    await settle(400);
-    expect(screen.getByRole("alert")).toHaveTextContent("settings:blocks.save.failed");
-    fireEvent.click(screen.getByRole("button", { name: "settings:blocks.save.discard" }));
-    expect(passport().value).toBe("2030-05-01");
-  });
-
-  it("does not clear the stored passport date when the field is left half-typed", async () => {
-    render(<HomeSection />);
-    await waitFor(() => expect(passport().value).toBe("2030-05-01"));
-    vi.useFakeTimers();
-    Object.defineProperty(passport(), "validity", { value: { badInput: true } });
-    passport().value = "";
-    fireEvent.blur(passport());
-    await settle(400);
-    expect(putFacts).not.toHaveBeenCalled();
-  });
-
-  it("a failed facts load locks the passport row and writes nothing", async () => {
-    getFacts.mockRejectedValue(new Error("offline"));
-    render(<HomeSection />);
-    await waitFor(() => expect(passport().disabled).toBe(true));
-    expect(putFacts).not.toHaveBeenCalled();
   });
 });

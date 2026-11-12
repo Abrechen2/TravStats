@@ -3,9 +3,9 @@ import type { DomainKey } from "../../../shared/domains";
 import type { SettingsLevel } from "../../../store/settingsLevelStore";
 
 /**
- * The settings registry (settings rebuild, package 1): every setting the area
- * can show, as data. Pages, sections and rows come from the designer's
- * `settings-data.json` (round 2) through
+ * The settings registry: every setting the area can show, as data. Pages,
+ * groups (`sections` here) and rows come from the settings v3 page model,
+ * `docs/superpowers/specs/2026-11-11-settings-v3/settings-data.json`, through
  * `frontend/scripts/generate-settings-registry.mjs`; nothing in `data/` is
  * edited by hand.
  *
@@ -41,6 +41,12 @@ export type SettingKind =
 export interface SettingsRow {
   /** Stable: links (`?match=`), tests and later the saved state carry it. */
   id: string;
+  /**
+   * The mounted section component that draws this row on its page (an id of
+   * `area/areaModel.ts`). Absent on the service catalogue, whose cards are
+   * answered by one mount.
+   */
+  mount?: string;
   kind: SettingKind;
   level: SettingsLevel;
   scope: SettingScope;
@@ -72,12 +78,16 @@ export interface RegistrySection {
   rows: readonly SettingsRow[];
 }
 
-export type RegistryGroup = "account" | "server" | "about";
+/**
+ * The four areas of the menu (settings v3): Mein Konto, TravTrack, TravPlan and
+ * the server's. The ids are the prototype's.
+ */
+export type RegistryArea = "konto" | "track" | "plan" | "server";
 
 export interface RegistryPage {
   /** The route: `/settings/<id>`. */
   id: string;
-  group: RegistryGroup;
+  area: RegistryArea;
   de: string;
   en: string;
   level: SettingsLevel;

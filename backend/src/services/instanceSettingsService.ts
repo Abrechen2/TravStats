@@ -97,11 +97,23 @@ export interface InstanceSettings {
    */
   operatorLogosOpenDataEnabled: boolean;
   /**
+   * May a rate the ECB cannot serve come from the keyless jsDelivr currency
+   * dataset, and may the server ask GitHub for new releases. Both ON by default,
+   * expert switches under the master switch (settings v3, owner 2026-11-12).
+   */
+  fxCdnFallbackEnabled: boolean;
+  updateCheckEnabled: boolean;
+  /**
    * Whether users may create public share links (forgejo#281). OFF by default:
    * a link hands travel data to anyone holding the URL. Switching it off
    * deletes every link (`updateInstanceSettings`). Admin-settable only.
    */
   shareLinksEnabled: boolean;
+  /**
+   * Master switch "the server may ask external services" (settings v3). It gates
+   * the six columns named in `services/internetGate.ts`; they keep their own values.
+   */
+  internetEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -156,7 +168,10 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
     operatorLogosOpenDataEnabled: row.operatorLogosOpenDataEnabled,
+    fxCdnFallbackEnabled: row.fxCdnFallbackEnabled,
+    updateCheckEnabled: row.updateCheckEnabled,
     shareLinksEnabled: row.shareLinksEnabled,
+    internetEnabled: row.internetEnabled,
     railTransitousEnabled: row.railTransitousEnabled,
     railDbRestEnabled: row.railDbRestEnabled,
     railRoutingUrl: row.railRoutingUrl ?? null,
@@ -222,8 +237,17 @@ export async function updateInstanceSettings(
       ...(patch.operatorLogosOpenDataEnabled !== undefined && {
         operatorLogosOpenDataEnabled: patch.operatorLogosOpenDataEnabled,
       }),
+      ...(patch.fxCdnFallbackEnabled !== undefined && {
+        fxCdnFallbackEnabled: patch.fxCdnFallbackEnabled,
+      }),
+      ...(patch.updateCheckEnabled !== undefined && {
+        updateCheckEnabled: patch.updateCheckEnabled,
+      }),
       ...(patch.shareLinksEnabled !== undefined && {
         shareLinksEnabled: patch.shareLinksEnabled,
+      }),
+      ...(patch.internetEnabled !== undefined && {
+        internetEnabled: patch.internetEnabled,
       }),
       ...(patch.railTransitousEnabled !== undefined && {
         railTransitousEnabled: patch.railTransitousEnabled,
@@ -301,6 +325,27 @@ export async function getWebDAVSettings(): Promise<WebDAVSettings> {
   };
 }
 
+/**
+ * "On when the address is entered" (settings v3 S6, Part A principle 3): the
+ * instance WebDAV copy has no switch of its own any more. A save that leaves
+ * address, user and password all present turns the sync on, unless the caller
+ * names `enabled` itself (the API still accepts it). An install that saved
+ * these fields earlier with the switch off is not touched until its next save.
+ */
+export function webdavTurnsOnWhenComplete(
+  stored: { webdavUrl?: unknown; webdavUsername?: unknown; webdavPasswordEncrypted?: unknown },
+  patch: { webdavUrl?: unknown; webdavUsername?: unknown; webdavPasswordEncrypted?: unknown }
+): boolean {
+  const touched =
+    patch.webdavUrl !== undefined ||
+    patch.webdavUsername !== undefined ||
+    patch.webdavPasswordEncrypted !== undefined;
+  if (!touched) return false;
+  const pick = (k: "webdavUrl" | "webdavUsername" | "webdavPasswordEncrypted") =>
+    patch[k] !== undefined ? patch[k] : stored[k];
+  return Boolean(pick("webdavUrl") && pick("webdavUsername") && pick("webdavPasswordEncrypted"));
+}
+
 export async function updateWebDAVSettings(
   patch: Partial<Omit<WebDAVSettings, "password">> & {
     password?: string | null;
@@ -315,17 +360,18 @@ export async function updateWebDAVSettings(
         ? null
         : encryptApiKey(patch.password);
 
+  const columns = {
+    ...(patch.url !== undefined && { webdavUrl: patch.url || null }),
+    ...(patch.username !== undefined && { webdavUsername: patch.username || null }),
+    ...(nextPasswordEncrypted !== undefined && { webdavPasswordEncrypted: nextPasswordEncrypted }),
+  };
   await prisma.adminSettings.update({
     where: { id: row.id },
     data: {
-      ...(patch.enabled !== undefined && { webdavSyncEnabled: patch.enabled }),
-      ...(patch.url !== undefined && { webdavUrl: patch.url || null }),
-      ...(patch.username !== undefined && {
-        webdavUsername: patch.username || null,
-      }),
-      ...(nextPasswordEncrypted !== undefined && {
-        webdavPasswordEncrypted: nextPasswordEncrypted,
-      }),
+      ...columns,
+      ...(patch.enabled !== undefined
+        ? { webdavSyncEnabled: patch.enabled }
+        : webdavTurnsOnWhenComplete(row, columns) && { webdavSyncEnabled: true }),
       ...(patch.backupPath !== undefined && {
         webdavBackupPath: patch.backupPath || "/TravStats/backups/",
       }),

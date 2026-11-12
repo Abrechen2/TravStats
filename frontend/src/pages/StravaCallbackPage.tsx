@@ -37,7 +37,7 @@ export default function StravaCallbackPage(): JSX.Element {
       .exchange({ code, state, scope: params.get("scope") ?? undefined })
       .then(() => {
         addToast("success", t("roadtrips:strava.callbackDone"));
-        navigate("/settings?section=externalServices", { replace: true });
+        navigate("/settings/dienstek#strava", { replace: true });
       })
       .catch((err: unknown) => {
         const kind = stravaFailureKind(err);
@@ -53,7 +53,7 @@ export default function StravaCallbackPage(): JSX.Element {
         {error ? (
           <>
             <p style={{ color: "var(--danger)" }}>{error}</p>
-            <Link to="/settings?section=externalServices" className="mt-4 inline-block underline">
+            <Link to="/settings/dienstek#strava" className="mt-4 inline-block underline">
               {t("roadtrips:strava.backToSettings")}
             </Link>
           </>

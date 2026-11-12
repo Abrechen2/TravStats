@@ -44,15 +44,15 @@ function FirstVisit(): JSX.Element | null {
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
           <JumpControl
             label={t("settings:firstVisit.language")}
-            onJump={() => navigate("/settings/display")}
+            onJump={() => navigate("/settings/anzeige")}
           />
           <JumpControl
             label={t("settings:firstVisit.home")}
-            onJump={() => navigate("/settings/account#home")}
+            onJump={() => navigate("/settings/reisearten#home")}
           />
           <JumpControl
             label={t("settings:firstVisit.location")}
-            onJump={() => navigate("/settings/travtrack#ttRecording")}
+            onJump={() => navigate("/settings/tt-aufz#ttRecording")}
           />
           <ActionControl label={t("settings:firstVisit.hide")} onClick={hide} />
         </div>

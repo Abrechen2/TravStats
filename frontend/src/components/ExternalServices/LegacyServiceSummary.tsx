@@ -18,9 +18,7 @@ type Summary = "active" | "attention" | "off";
 /** Where the full editor lives; `?service=` opens that row. */
 export function externalServiceLink(scope: Scope, serviceId: string): string {
   const id = encodeURIComponent(serviceId);
-  return scope === "admin"
-    ? `/admin/externalServices?service=${id}`
-    : `/settings/services?section=externalServices&service=${id}`;
+  return scope === "admin" ? `/settings/dienste?service=${id}` : `/settings/dienstek?service=${id}`;
 }
 
 function adminSummary(service: AdminService): Summary {

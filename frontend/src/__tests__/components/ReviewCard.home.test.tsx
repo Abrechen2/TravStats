@@ -45,11 +45,11 @@ describe("ReviewCard — the home question", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dein Zuhause" })).toHaveAttribute(
       "href",
-      "/settings?section=homeAirport"
+      "/settings/reisearten#homeAirport"
     );
     expect(screen.getByRole("link", { name: "Zuhause einrichten" })).toHaveAttribute(
       "href",
-      "/settings?section=homeAirport"
+      "/settings/reisearten#homeAirport"
     );
     // Not the fallback for a kind this build cannot render.
     expect(screen.queryByText(/kennt diese Version/)).toBeNull();

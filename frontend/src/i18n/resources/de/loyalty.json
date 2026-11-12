@@ -16,6 +16,10 @@
     "rail": {
       "title": "Bahn",
       "description": "Bonusprogramme deiner Bahnen, z. B. BahnBonus."
+    },
+    "rental": {
+      "title": "Mietwagen",
+      "description": "Kundenprogramme deiner Vermieter."
     }
   },
   "empty": "Noch keine Karten.",

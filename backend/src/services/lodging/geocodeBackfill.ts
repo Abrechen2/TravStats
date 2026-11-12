@@ -169,7 +169,10 @@ export interface ResolvedCoordinates {
  *
  * Never throws — every tier degrades to "no answer" internally.
  */
-async function resolveCoordinates(row: GeocodeSubject): Promise<ResolvedCoordinates | null> {
+async function resolveCoordinates(
+  row: GeocodeSubject,
+  userId: string
+): Promise<ResolvedCoordinates | null> {
   // The address belongs in the query, not just the city: it is the strongest
   // signal a text search has, and leaving it out is what let a Bavarian hotel
   // match its Roman namesake.
@@ -208,7 +211,8 @@ async function resolveCoordinates(row: GeocodeSubject): Promise<ResolvedCoordina
   });
   if (nominatim) return { lat: nominatim.lat, lon: nominatim.lon, source: "nominatim" };
 
-  const google = await findLodgingPlace(query);
+  // The account's own Places key is tried first (settings v3).
+  const google = await findLodgingPlace(query, userId);
   if (google) {
     const candidate: ResolvedCoordinates = {
       lat: google.lat,
@@ -301,7 +305,7 @@ export async function backfillMissingCoordinates(
         .update({ where: { id: row.id }, data: { geocodeAttemptedAt: new Date() } })
         .catch(() => undefined);
       try {
-        const coords = await resolveCoordinates(row);
+        const coords = await resolveCoordinates(row, userId);
         if (!coords) continue;
         // A provider answer is not a position until it is inside the world.
         // `Number(null)` is 0, and 0/0 is a real point in the Atlantic, so an

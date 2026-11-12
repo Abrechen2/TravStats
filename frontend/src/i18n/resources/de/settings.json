@@ -64,7 +64,14 @@
     "supportSub": "Ein Stern auf GitHub oder eine Spende hilft beim Weiterbauen.",
     "star": "Projekt auf GitHub",
     "donate": "Spenden via PayPal",
-    "madeBy": "Ein Projekt von"
+    "madeBy": "Ein Projekt von",
+    "changelog": {
+      "name": "Changelog"
+    },
+    "docs": {
+      "name": "Dokumentation"
+    },
+    "open": "Öffnen"
   },
   "profile": {
     "title": "Profil",
@@ -93,7 +100,11 @@
     "emailHelp": "Erinnerungen haben eine eigene Adresse unter Erinnerungen.",
     "emailBad": "Das sieht nicht wie eine E-Mail-Adresse aus. Ich speichere erst, wenn sie stimmt.",
     "birthdateSub": "Optional",
-    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei."
+    "birthdateHelp": "Schaltet den Erfolg „Geburtstagsflug“ frei.",
+    "display": {
+      "name": "Anzeigename",
+      "sub": "Wie dich Freunde sehen"
+    }
   },
   "homeAirport": {
     "title": "Heimatflughäfen",
@@ -146,9 +157,9 @@
       "overlap": "Der Umzug liegt vor einem Zeitraum, den es schon gibt. Ich habe die Liste neu geladen, bitte prüf das Datum."
     },
     "residenceRow": {
-      "name": "Wohnort",
+      "name": "Heimatort",
       "sub": "Von hier misst TravStats Entfernungen",
-      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Wohnort ist auch dein Heimatort in der Companion-App."
+      "help": "Ein Umzug beginnt einen neuen Zeitraum, nichts wird überschrieben. Alte Reisen zählen gegen den Wohnort ihres Tages. Der aktuelle Heimatort ist auch dein Zuhause in der Companion-App."
     },
     "airportsRow": {
       "name": "Heimatflughäfen",
@@ -1219,11 +1230,6 @@
     },
     "save": "Speichern",
     "saving": "Speichern …",
-    "runNow": "Jetzt abgleichen",
-    "running": "Gleicht ab …",
-    "runOk": "Abgleich erfolgreich.",
-    "runPartial": "Hochgeladen, aber alte Versionen ließen sich nicht löschen: {{reason}}",
-    "runLost": "Ob der Abgleich fertig wurde, ist unbekannt. Der letzte Stand oben wird neu geladen.",
     "loadError": "Die WebDAV-Einstellungen konnten nicht geladen werden.",
     "saveError": "Speichern fehlgeschlagen.",
     "last": {
@@ -1272,47 +1278,46 @@
   "travTrack": {
     "title": "TravTrack"
   },
-  "views": {
-    "title": "Karte, Start & Listen",
-    "map": {
-      "name": "Kartendarstellung",
-      "sub": "Stil, Linien, Beschriftungen",
-      "jump": "An der Karte"
-    },
-    "start": {
-      "name": "Startseite",
-      "sub": "Reisearten und Kartenart",
-      "jump": "Auf der Startseite"
-    },
-    "lists": {
-      "name": "Listen",
-      "sub": "Spalten, Sortierung, Seitengröße",
-      "jump": "An jeder Liste"
-    }
-  },
   "area": {
     "pages": {
-      "account": "Profil & Anmeldung",
-      "display": "Sprache & Einheiten",
-      "domains": "Reisearten",
-      "flight": "Flüge",
-      "cruise": "Kreuzfahrten",
-      "trips": "Reisen & Eingang",
-      "sharing": "Teilen",
-      "notifications": "Erinnerungen",
-      "travtrack": "TravTrack",
-      "loyalty": "Treueprogramme",
-      "data": "Daten",
-      "services": "Dienste",
-      "server": "Server",
-      "users": "Nutzer",
-      "backups": "Sicherungen",
-      "maintenance": "Wartung",
-      "masterdata": "Stammdaten",
-      "about": "Über TravStats"
+      "profil": "Profil & Anmeldung",
+      "anzeige": "Anzeige",
+      "reisearten": "Reisearten",
+      "reisen": "Reisen & Vorschläge",
+      "fluege": "Flüge",
+      "kreuzfahrten": "Kreuzfahrten",
+      "treue": "Treueprogramme",
+      "erinnerungen": "Erinnerungen",
+      "freunde": "Freunde & Teilen",
+      "telefone": "Telefone",
+      "dienstek": "Verbundene Dienste",
+      "daten": "Daten",
+      "ueber": "Über TravStats",
+      "tt-aufz": "Aufzeichnung & Orte",
+      "tt-erk": "Erkennung & Vorschläge",
+      "tt-daten": "Daten & Quellen",
+      "pl-plan": "Reisen planen",
+      "allgemein": "Allgemein",
+      "nutzer": "Nutzer",
+      "funktionen": "Funktionen",
+      "buchungen": "Buchungen lesen",
+      "sicherungen": "Sicherungen",
+      "wartung": "Wartung",
+      "stamm": "Stammdaten",
+      "unterkuenfte": "Unterkünfte",
+      "tt-bereit": "Bereitstellung",
+      "pl-bereit": "Bereitstellung",
+      "email": "E-Mail",
+      "dienste": "Dienste",
+      "srvconn": "Server-Verbindungen",
+      "datenschutz": "Datenschutz",
+      "adressen": "Adressen & Passkeys",
+      "eigene": "Eigene Server"
     },
     "menu": {
-      "account": "Dein Konto",
+      "konto": "Mein Konto",
+      "track": "TravTrack",
+      "plan": "TravPlan",
       "server": "Server · nur Admin"
     },
     "scope": {
@@ -1320,7 +1325,8 @@
       "mixed": "Gilt für dein Konto · Zeilen mit „Alle Konten“ gelten für den Server",
       "instance": "Gilt für alle Konten · nur Admin"
     },
-    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin."
+    "adminOnlyNotice": "Das gilt für alle Konten. Ändern kann es nur ein Admin.",
+    "notOffered": "Dieser Bereich wird auf diesem Server nicht angeboten."
   },
   "blocks": {
     "scope": {
@@ -1385,7 +1391,8 @@
     },
     "card": {
       "open": "Öffnen",
-      "close": "Schließen"
+      "close": "Schließen",
+      "done": "Fertig"
     },
     "oneShot": "Experten-Einstellung · nur für diesen Besuch sichtbar. Deine Stufe bleibt Standard.",
     "oneShotAlways": "Immer zeigen",
@@ -1422,7 +1429,8 @@
         "jump": "Quelle wählen"
       },
       "aiNotAllowed": {
-        "reason": "Der Admin hat keine KI freigegeben."
+        "reason": "Der Admin hat keine KI freigegeben.",
+        "jump": "Zu den Diensten"
       },
       "noFederation": {
         "reason": "Der Admin hat andere Server nicht freigegeben."
@@ -1432,7 +1440,7 @@
         "jump": "Adresse setzen"
       },
       "no2fa": {
-        "reason": "Erst mit zweitem Faktor."
+        "reason": "Erst mit Zwei-Faktor-Anmeldung."
       },
       "noSmtp": {
         "reason": "Der Server verschickt keine Mails.",
@@ -1453,7 +1461,7 @@
         "reason": "Wirkt erst mit WebDAV-Kopie."
       },
       "noMailAddr": {
-        "reason": "Mail geht erst mit einer Adresse oben."
+        "reason": "Mail geht erst mit einer Adresse."
       },
       "envPinned": {
         "reason": "Vom Server-Start festgelegt ({{name}}). Wirksam: {{value}}."
@@ -1474,6 +1482,10 @@
       },
       "publicUrlMissing": {
         "reason": "Fehlt noch. Bis dahin zeigen Einladungen, Mails und Kalender auf localhost."
+      },
+      "internet": {
+        "reason": "Aus, solange „Server darf externe Dienste abfragen“ ausgeschaltet ist.",
+        "jump": "Einschalten"
       }
     },
     "number": {
@@ -1547,8 +1559,8 @@
       "sub": "Für Ortszeiten und Tageswerte"
     },
     "dateFormat": {
-      "name": "Datum",
-      "sub": "Tabellen zeigen immer 2026-12-31"
+      "name": "Datumsformat",
+      "sub": "Tabellen zeigen immer 2026-11-08"
     },
     "timeFormat": {
       "name": "Uhrzeit"
@@ -1562,8 +1574,8 @@
       "help": "Rechnet nichts um."
     },
     "currency": {
-      "name": "Hauptwährung",
-      "sub": "Alle Summen in dieser Währung",
+      "name": "Basiswährung für Summen",
+      "sub": "Alle Kosten werden für Summen in diese Währung umgerechnet",
       "help": "Schon umgerechnete Beträge behalten ihren Wert. Kurse der EZB ab 1999."
     },
     "domainJump": "Einstellungen",
@@ -1591,7 +1603,7 @@
       "sub": "Nur für Statistiken"
     },
     "costTracking": {
-      "name": "Steuern und Gebühren",
+      "name": "Steuern und Gebühren erfassen",
       "sub": "Auch Geschäftsreise-Summen",
       "help": "Preis und Währung gibt es immer."
     },
@@ -1618,8 +1630,8 @@
       "name": "Passwort"
     },
     "twoFactor": {
-      "name": "Zweiter Faktor",
-      "sub": "Code aus einer Authenticator-App",
+      "name": "Zwei-Faktor-Anmeldung",
+      "sub": "Code aus einer Authenticator-App zusätzlich zum Passwort",
       "help": "API-Schlüssel umgehen den zweiten Faktor. Ein Passkey ersetzt Passwort und zweiten Faktor."
     },
     "backupCodes": {
@@ -1642,34 +1654,51 @@
       "help": "Ein Schlüssel umgeht den zweiten Faktor. Du siehst ihn nur beim Anlegen. Zurückziehen sperrt das Werkzeug sofort aus."
     },
     "liveUpdates": {
-      "name": "Live-Updates abrufen",
-      "sub": "Während ein Flug unterwegs ist",
+      "name": "Live-Updates",
+      "sub": "Ab 24 h vor Abflug bis zur Landung alle 15 Minuten: Verspätung, Gate, Annullierung",
       "noFlightData": "Braucht einen Flugdaten-Dienst.",
       "toServices": "Zu Dienste"
     },
     "approveUpdates": {
-      "name": "Updates erst nach Freigabe"
+      "name": "Änderungen erst bestätigen"
     },
     "updateExpiry": {
-      "name": "Offene Updates verwerfen nach",
+      "name": "Offene Änderungen verfallen nach",
       "sub": "1 bis 168 Stunden"
     },
     "openUpdates": {
-      "name": "Offene Updates",
+      "name": "Offene Änderungen",
       "count": "{{count}} offen"
     },
     "enrichment": {
       "name": "Ältere Flüge ergänzen",
       "sub": "Aus Live-Flügen mit derselben Nummer",
-      "help": "Es entstehen nur Vorschläge im Eingang."
+      "help": "Es entstehen nur Vorschläge im Posteingang."
     },
     "enrichmentConfidence": {
-      "name": "Mindestens sicher",
+      "name": "Mindestübereinstimmung",
       "sub": "0–100 %"
     },
     "enrichmentPerNight": {
       "name": "Vorschläge pro Nacht",
       "sub": "1–1000"
+    },
+    "planShare": {
+      "name": "Pläne mit Freunden teilen",
+      "sub": "Läuft über die Verbindung zu jedem Freund",
+      "jump": "Freunde"
+    },
+    "displayCurrency": {
+      "name": "Anzeigewährung",
+      "sub": "Wie Beträge angezeigt werden. Summen rechnest du weiter in der Basiswährung."
+    },
+    "planAi": {
+      "name": "KI-Vorschläge in Plänen",
+      "sub": "Die KI darf zu deinen Plänen Vorschläge machen"
+    },
+    "planWeather": {
+      "name": "Wetter in Plänen",
+      "sub": "Vorhersage zu den Orten und Tagen eines Plans"
     }
   },
   "location": {
@@ -1753,6 +1782,10 @@
         "offline": "Der Server antwortet gerade nicht.",
         "generic": "Der Server hat die Suche nicht angenommen.",
         "jobFailed": "Die Suche ist unterwegs abgebrochen."
+      },
+      "last": {
+        "name": "Letzter Suchlauf",
+        "none": "Noch kein Suchlauf"
       }
     },
     "tt": {
@@ -1875,17 +1908,18 @@
         "value_one": "{{count}} Punkt seit {{since}}",
         "value_other": "{{count}} Punkte seit {{since}}"
       },
-      "lastSeen": "Zuletzt gesehen: {{at}}",
       "loadError": "Ich konnte nicht lesen, was gespeichert ist.",
       "off": "TravTrack ist auf diesem Server aus: Es kommen keine neuen Punkte an. Gespeichertes bleibt, Export und Löschen funktionieren weiter.",
       "devices": {
         "name": "Geräte",
-        "sub": "Koppeln und abmelden in Profil & Anmeldung",
-        "jump": "Zu Profil & Anmeldung",
+        "sub": "Koppeln und abmelden",
+        "jump": "Telefone",
         "unnamed": "Gerät ohne Namen",
         "points_one": "{{count}} Punkt",
         "points_other": "{{count}} Punkte"
-      }
+      },
+      "lastSeenName": "Zuletzt eingegangen",
+      "lastSeenNone": "Noch nichts eingegangen"
     },
     "places": {
       "title": "Feste Orte",
@@ -2030,6 +2064,25 @@
     },
     "diag": {
       "title": "Diagnose"
+    },
+    "groups": {
+      "aufzeichnung": "Gespeichert",
+      "quelle": "Quelle",
+      "aufenthalte": "Aufenthalte",
+      "suchlauf": "Suchlauf",
+      "belege": "Belege",
+      "feinabstimmung": "Feinabstimmung"
     }
+  },
+  "lodgingRatings": {
+    "title": "Bewertung"
+  },
+  "visibility": {
+    "title": "Sichtbarkeit",
+    "findable": {
+      "label": "Für andere Server auffindbar",
+      "sub": "Menschen auf verbundenen Servern dürfen dir eine Freundschaftsanfrage schicken"
+    },
+    "loadFailed": "Ich konnte nicht lesen, ob du auffindbar bist."
   }
 }

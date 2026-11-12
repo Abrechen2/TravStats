@@ -126,6 +126,10 @@ export const federationAdminApi = {
   suspendPeer: async (origin: string): Promise<void> => {
     await api.post(`${BASE}/peers/suspend`, { origin });
   },
+  /** Stop trusting a server for good: the pin goes, shared trips stay here as local copies. */
+  removePeer: async (origin: string): Promise<void> => {
+    await api.delete(`${BASE}/peers`, { params: { origin } });
+  },
 };
 
 /** Refusal codes the admin federation API sends; each has its own copy. */

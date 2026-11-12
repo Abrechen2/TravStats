@@ -185,17 +185,11 @@ describe("getImmichConnection priority", () => {
 });
 
 describe("getImmichDefaultMode", () => {
-  it("returns the stored mode", async () => {
+  // Fixed at "link" since settings v3 S6: a stored "import" no longer decides.
+  it("is link whatever the account once stored, and never reads the settings row", async () => {
     userSettingsRow.mockResolvedValue({ immichDefaultMode: "import" });
-    await expect(getImmichDefaultMode("u1")).resolves.toBe("import");
-  });
-
-  it("defaults to link when unset or invalid", async () => {
-    userSettingsRow.mockResolvedValue({ immichDefaultMode: "nonsense" });
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
-
-    userSettingsRow.mockResolvedValue(null);
-    await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
+    expect(userSettingsRow).not.toHaveBeenCalled();
   });
 });
 

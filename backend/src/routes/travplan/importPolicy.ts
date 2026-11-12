@@ -4,7 +4,11 @@ import { authenticate, type AuthRequest } from "../../middleware/auth";
 import { assertEnabled, reserveUsage, configuration } from "../../services/travplan/store";
 import { accessiblePlan } from "../../services/travplan/access";
 import { parseState } from "../../services/travplan/upgrade";
-import { assertTravPlanForUser, assertTravPlanOffered } from "../../services/travplan/availability";
+import {
+  assertTravPlanForUser,
+  assertTravPlanOffered,
+  travPlanAiUserEnabled,
+} from "../../services/travplan/availability";
 import { withLlmRequestPolicy } from "../../services/llm/requestPolicy";
 const inputs = new Set([
   "/parse-email",
@@ -26,7 +30,10 @@ export function planningImportPolicy(req: AuthRequest, res: Response, next: Next
       await assertTravPlanForUser(req.userId!);
       const plan = await accessiblePlan(req.userId!, z.string().uuid().parse(trip));
       const state = parseState(plan.state);
-      const policy = req.get("X-TravPlan-AI") === "true" ? state.ai.policy : "disabled";
+      // The account's "AI in plans" switch (settings v3) is the same as not asking for AI.
+      const aiAsked =
+        req.get("X-TravPlan-AI") === "true" && (await travPlanAiUserEnabled(req.userId!));
+      const policy = aiAsked ? state.ai.policy : "disabled";
       if (policy !== "disabled")
         await reserveUsage(req.userId!, "ai", (await configuration()).aiDailyLimit);
       withLlmRequestPolicy(policy, () => next());

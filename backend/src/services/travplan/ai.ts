@@ -1,4 +1,5 @@
 import { assertAnchorsCurrent } from "./anchors";
+import { assertTravPlanAiForUser } from "./availability";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { assertLlmEnabled } from "../llm/llmGate";
@@ -15,6 +16,7 @@ export async function generateProposal(
   request: string
 ): Promise<PlanProposal> {
   await assertEnabled();
+  await assertTravPlanAiForUser(userId);
   await assertLlmEnabled();
   const plan = await ownedPlan(userId, tripId),
     state = parseState(plan.state);

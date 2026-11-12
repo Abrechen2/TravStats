@@ -831,7 +831,7 @@
     "unverified": "noch nicht geprüft",
     "outdated": "muss aktualisiert werden",
     "verify": "Prüfen",
-    "suspend": "Sperren",
+    "remove": "Trennen",
     "peerOrigin": "Adresse des anderen Servers",
     "peerKey": "Öffentlicher Schlüssel des anderen Servers",
     "peerFingerprint": "Fingerabdruck des anderen Servers",

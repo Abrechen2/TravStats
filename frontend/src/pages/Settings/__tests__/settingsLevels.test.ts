@@ -14,7 +14,9 @@ const EXPERT_SECTIONS = {
   // Country counting and the flight form defaults are ordinary choices and
   // moved to standard (settings redesign, package 3).
   // The TravTrack page's Diagnose is an expert section (web redesign, 2026-11-05).
-  settings: ["apitokens", "enrichment", "ttDiag"],
+  // Settings v3: the prototype makes the flight form defaults, the whole
+  // Kreuzfahrten page expert.
+  settings: ["apitokens", "enrichment", "ttDiag", "defaults", "cruisePreferences"],
   admin: [
     // "geocoder" left this list as a section, not as a level: its two
     // addresses are expert rows of Externe Dienste › Karten & Ortssuche now
@@ -56,7 +58,6 @@ const PAGES = {
   ),
   display: personal("display", "units", "domains", "planning", "countryCounting"),
   trips: personal("trips", "suggestions", "sharing", "calendarFeed"),
-  views: personal("mapAppearance"),
   privacy: personal("shareLinks", "comparisonConsent", "encryptedGrants"),
   travtrack: personal(
     "ttRecording",
@@ -87,9 +88,9 @@ describe("the standard/expert classification", () => {
     expect(expertOf(ADMIN_PAGES).sort()).toEqual([...EXPERT_SECTIONS.admin].sort());
   });
 
-  it("leaves every page of the account something at the standard level", () => {
+  it("leaves every page of the account something at the standard level, except Kreuzfahrten, which the prototype makes expert as a whole", () => {
     for (const page of AREA_PAGES.filter((p) => !p.adminOnly)) {
-      expect(pageLevel(page), page.id).toBe("standard");
+      expect(pageLevel(page), page.id).toBe(page.id === "kreuzfahrten" ? "expert" : "standard");
     }
   });
 
@@ -115,14 +116,12 @@ describe("the standard/expert classification", () => {
     ["account", ["profile", "security", "devices", "notifications"]],
     ["display", ["display", "units", "domains", "countryCounting"]],
     ["trips", ["trips", "suggestions", "sharing"]],
-    ["views", ["mapAppearance"]],
     ["privacy", ["shareLinks", "comparisonConsent", "encryptedGrants"]],
     // The stay scan is standard; detecting places as areas just runs, and its
     // two switches are expert rows inside it (forgejo#318).
     ["travtrack", ["ttRecording", "ttDetect"]],
     ["loyalty", ["loyalty"]],
-    ["flight", ["homeAirport", "autoupdate", "features", "defaults"]],
-    ["cruise", ["cruisePreferences"]],
+    ["flight", ["homeAirport", "autoupdate", "features"]],
     ["data", ["backup", "import"]],
     ["services", ["externalServices"]],
   ])("keeps the flow sections of %s at the standard level", (pageId, ids) => {
@@ -158,7 +157,8 @@ describe("level filtering", () => {
 
   // forgejo#321 prototype: the note counts settings, not sections.
   it("counts the settings the hidden expert sections hold", () => {
-    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(3);
+    // Enrichment holds three, the flight form defaults four (class, airline, purpose, status).
+    expect(shownAt(findPage("flight")!, "standard").hiddenExpertSettings).toBe(3 + 4);
     expect(shownAt(instance, "standard").hiddenExpertSettings).toBe(3 + 1);
     expect(shownAt(instance, "expert").hiddenExpertSettings).toBe(0);
   });
@@ -203,11 +203,13 @@ describe("level filtering", () => {
 });
 
 describe("package 3 — ordinary decisions are standard rows", () => {
-  it.each([
-    ["display", "countryCounting"],
-    ["flight", "defaults"],
-  ])("shows %s › %s at the standard level", (pageId, section) => {
-    expect(shownAt(findPage(pageId)!, "standard").shown).toContain(section);
+  it("shows display › countryCounting at the standard level", () => {
+    expect(shownAt(findPage("display")!, "standard").shown).toContain("countryCounting");
+  });
+
+  it("keeps 'Neue Flüge starten mit' (with the status default) expert, as the prototype has it", () => {
+    expect(shownAt(findPage("flight")!, "standard").shown).not.toContain("defaults");
+    expect(shownAt(findPage("flight")!, "expert").shown).toContain("defaults");
   });
 
   it("keeps polling, expiry and enrichment limits expert: the sections that hold them say so", () => {

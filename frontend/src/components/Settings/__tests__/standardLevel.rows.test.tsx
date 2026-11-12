@@ -29,6 +29,7 @@ vi.mock("../../../lib/api/webdavSync", async (importOriginal) => ({
 vi.mock("../../../lib/api/pendingUpdates", () => ({
   pendingUpdatesApi: { getAll: vi.fn().mockResolvedValue({ updates: [], count: 0 }) },
 }));
+vi.mock("../OpenSuggestionsRow", () => ({ default: () => null })); // its own tests
 import AutoUpdateSection from "../AutoUpdateSection";
 import InboxSuggestionsSection from "../InboxSuggestionsSection";
 import BackupSection from "../BackupSection";
@@ -113,14 +114,10 @@ describe("standard level inside a section", () => {
     expect(lastHidden(report)).toBe(0);
   });
 
-  it("keeps the trip and stay switches and the two stay refinements — they are consent decisions", async () => {
+  it("keeps the trip suggestion switch — it is a consent decision", async () => {
     const report = renderReporting(<InboxSuggestionsSection />);
     await act(async () => {});
-    for (const row of ["rvor", "avor", "immichbeleg", "kiort"]) {
-      expect(
-        screen.getByRole("switch", { name: new RegExp(`settingsRows:trips\\.${row}\\.t`) })
-      ).toBeInTheDocument();
-    }
+    expect(screen.getByRole("switch", { name: /settingsRows:trips\.rvor\.t/ })).toBeInTheDocument();
     // Nothing in this section is left to the expert level: it reports none.
     expect(lastHidden(report)).toBe(-1);
   });
@@ -129,6 +126,7 @@ describe("standard level inside a section", () => {
     const report = renderReporting(<BackupSection />);
     expect(await screen.findByText("settingsRows:data.srvbackup.t")).toBeInTheDocument();
     expect(screen.getByText("settingsRows:data.meine.t")).toBeInTheDocument();
-    expect(lastHidden(report)).toBe(1);
+    // How often and versions to keep (settings v3; "Jetzt hochladen" went in S6).
+    expect(lastHidden(report)).toBe(2);
   });
 });

@@ -14,6 +14,7 @@ import {
 import { forecastSchema } from "./schema";
 import { isRemote, planAccess, type PlanAccess, type PlanActor } from "./access";
 import { recordNotices } from "./members";
+import { assertInternetForPlanWeather, assertTravPlanWeatherForUser } from "./availability";
 import { parseState } from "./upgrade";
 import type { PlanState, PlanView } from "./types";
 const nullableNumbers = z.array(z.number().finite().nullable()).max(16);
@@ -37,6 +38,9 @@ export async function refreshForecast(
     row = access.row,
     state = parseState(row.state),
     payloadHash = hash({ type: "forecast", ...request });
+  // The forecast is fetched with the plan OWNER's quota, so the owner's switch decides.
+  await assertTravPlanWeatherForUser(isRemote(actor) ? access.ownerId : actor);
+  await assertInternetForPlanWeather();
   const receipt = await prisma.travelPlanMutation.findUnique({
     where: { planId_clientRef: { planId: row.id, clientRef: request.clientRef } },
   });

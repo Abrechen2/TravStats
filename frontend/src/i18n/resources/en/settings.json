@@ -64,7 +64,14 @@
     "supportSub": "A star on GitHub or a donation helps keep it going.",
     "star": "Project on GitHub",
     "donate": "Donate via PayPal",
-    "madeBy": "A project by"
+    "madeBy": "A project by",
+    "changelog": {
+      "name": "Changelog"
+    },
+    "docs": {
+      "name": "Documentation"
+    },
+    "open": "Open"
   },
   "profile": {
     "title": "Profile",
@@ -93,7 +100,11 @@
     "emailHelp": "Reminders use their own address under Reminders.",
     "emailBad": "That doesn't look like an e-mail address. I'll save once it does.",
     "birthdateSub": "Optional",
-    "birthdateHelp": "Unlocks the “Birthday flight” achievement."
+    "birthdateHelp": "Unlocks the “Birthday flight” achievement.",
+    "display": {
+      "name": "Display name",
+      "sub": "How friends see you"
+    }
   },
   "homeAirport": {
     "title": "Home airports",
@@ -148,7 +159,7 @@
     "residenceRow": {
       "name": "Home town",
       "sub": "Distances are measured from here",
-      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home is also your home in the Companion app."
+      "help": "A move starts a new period, nothing is overwritten. Old trips count against the home of their day. Your current home town is also your home in the Companion app."
     },
     "airportsRow": {
       "name": "Home airports",
@@ -1219,11 +1230,6 @@
     },
     "save": "Save",
     "saving": "Saving …",
-    "runNow": "Sync now",
-    "running": "Syncing …",
-    "runOk": "Sync successful.",
-    "runPartial": "Uploaded, but old versions could not be deleted: {{reason}}",
-    "runLost": "Whether the sync finished is unknown. The last result above is being reloaded.",
     "loadError": "The WebDAV settings could not be loaded.",
     "saveError": "Saving failed.",
     "last": {
@@ -1272,47 +1278,46 @@
   "travTrack": {
     "title": "TravTrack"
   },
-  "views": {
-    "title": "Map, home & lists",
-    "map": {
-      "name": "Map look",
-      "sub": "Style, lines, labels",
-      "jump": "On the map"
-    },
-    "start": {
-      "name": "Home page",
-      "sub": "Travel types and map mode",
-      "jump": "On the home page"
-    },
-    "lists": {
-      "name": "Lists",
-      "sub": "Columns, sorting, page size",
-      "jump": "On each list"
-    }
-  },
   "area": {
     "pages": {
-      "account": "Profile & sign-in",
-      "display": "Language & units",
-      "domains": "Travel types",
-      "flight": "Flights",
-      "cruise": "Cruises",
-      "trips": "Trips & inbox",
-      "sharing": "Sharing",
-      "notifications": "Reminders",
-      "travtrack": "TravTrack",
-      "loyalty": "Loyalty",
-      "data": "Data",
-      "services": "Services",
-      "server": "Server",
-      "users": "Users",
-      "backups": "Backups",
-      "maintenance": "Maintenance",
-      "masterdata": "Reference data",
-      "about": "About TravStats"
+      "profil": "Profile & sign-in",
+      "anzeige": "Display",
+      "reisearten": "Travel types",
+      "reisen": "Trips & suggestions",
+      "fluege": "Flights",
+      "kreuzfahrten": "Cruises",
+      "treue": "Loyalty programs",
+      "erinnerungen": "Reminders",
+      "freunde": "Friends & sharing",
+      "telefone": "Phones",
+      "dienstek": "Connected services",
+      "daten": "Data",
+      "ueber": "About TravStats",
+      "tt-aufz": "Recording & places",
+      "tt-erk": "Detection & suggestions",
+      "tt-daten": "Data & sources",
+      "pl-plan": "Plan trips",
+      "allgemein": "General",
+      "nutzer": "Users",
+      "funktionen": "Features",
+      "buchungen": "Reading bookings",
+      "sicherungen": "Backups",
+      "wartung": "Maintenance",
+      "stamm": "Reference data",
+      "unterkuenfte": "Stays",
+      "tt-bereit": "Provisioning",
+      "pl-bereit": "Provisioning",
+      "email": "E-mail",
+      "dienste": "Services",
+      "srvconn": "Server connections",
+      "datenschutz": "Privacy",
+      "adressen": "Addresses & passkeys",
+      "eigene": "Own servers"
     },
     "menu": {
-      "account": "Your account",
+      "konto": "My account",
+      "track": "TravTrack",
+      "plan": "TravPlan",
       "server": "Server · admin only"
     },
     "scope": {
@@ -1320,7 +1325,8 @@
       "mixed": "Applies to your account · rows marked “All accounts” apply to the server",
       "instance": "Applies to all accounts · admin only"
     },
-    "adminOnlyNotice": "This applies to all accounts. Only an admin can change it."
+    "adminOnlyNotice": "This applies to all accounts. Only an admin can change it.",
+    "notOffered": "This area is not offered on this server."
   },
   "blocks": {
     "scope": {
@@ -1385,7 +1391,8 @@
     },
     "card": {
       "open": "Open",
-      "close": "Close"
+      "close": "Close",
+      "done": "Done"
     },
     "oneShot": "Expert setting · visible for this visit only. Your level stays Standard.",
     "oneShotAlways": "Always show",
@@ -1422,7 +1429,8 @@
         "jump": "Choose source"
       },
       "aiNotAllowed": {
-        "reason": "Your admin hasn't enabled AI."
+        "reason": "Your admin hasn't enabled AI.",
+        "jump": "To the services"
       },
       "noFederation": {
         "reason": "Your admin hasn't allowed other servers."
@@ -1432,7 +1440,7 @@
         "jump": "Set address"
       },
       "no2fa": {
-        "reason": "Needs two-step sign-in first."
+        "reason": "Only with two-factor sign-in."
       },
       "noSmtp": {
         "reason": "The server doesn't send mail.",
@@ -1453,7 +1461,7 @@
         "reason": "Only works with the WebDAV copy."
       },
       "noMailAddr": {
-        "reason": "Mail needs an address above."
+        "reason": "Mail needs an address."
       },
       "envPinned": {
         "reason": "Pinned at server start ({{name}}). In effect: {{value}}."
@@ -1474,6 +1482,10 @@
       },
       "publicUrlMissing": {
         "reason": "Still missing. Until then invitations, e-mails and calendars point to localhost."
+      },
+      "internet": {
+        "reason": "Off while “Server may ask external services” is switched off.",
+        "jump": "Switch on"
       }
     },
     "number": {
@@ -1547,8 +1559,8 @@
       "sub": "For local times and daily values"
     },
     "dateFormat": {
-      "name": "Date",
-      "sub": "Tables always show 2026-12-31"
+      "name": "Date format",
+      "sub": "Tables always show 2026-11-08"
     },
     "timeFormat": {
       "name": "Time"
@@ -1562,8 +1574,8 @@
       "help": "Converts nothing."
     },
     "currency": {
-      "name": "Main currency",
-      "sub": "All totals in this currency",
+      "name": "Base currency for totals",
+      "sub": "All costs are converted into this currency for totals",
       "help": "Amounts already converted keep their value. ECB rates back to 1999."
     },
     "domainJump": "Settings",
@@ -1591,7 +1603,7 @@
       "sub": "Statistics only"
     },
     "costTracking": {
-      "name": "Taxes and fees",
+      "name": "Record taxes and fees",
       "sub": "Also business-travel totals",
       "help": "Price and currency are always there."
     },
@@ -1618,8 +1630,8 @@
       "name": "Password"
     },
     "twoFactor": {
-      "name": "Two-step sign-in",
-      "sub": "Code from an authenticator app",
+      "name": "Two-factor sign-in",
+      "sub": "A code from an authenticator app on top of your password",
       "help": "API keys bypass the second step. A passkey replaces both password and second step."
     },
     "backupCodes": {
@@ -1642,20 +1654,20 @@
       "help": "A key bypasses the second step. You see it only once. Revoking locks the tool out at once."
     },
     "liveUpdates": {
-      "name": "Fetch live updates",
-      "sub": "While a flight is under way",
+      "name": "Live updates",
+      "sub": "From 24 h before departure until landing, every 15 minutes: delay, gate, cancellation",
       "noFlightData": "Needs a flight data service.",
       "toServices": "Go to services"
     },
     "approveUpdates": {
-      "name": "Approve updates first"
+      "name": "Confirm changes first"
     },
     "updateExpiry": {
-      "name": "Drop open updates after",
+      "name": "Open changes expire after",
       "sub": "1 to 168 hours"
     },
     "openUpdates": {
-      "name": "Open updates",
+      "name": "Open changes",
       "count": "{{count}} open"
     },
     "enrichment": {
@@ -1664,12 +1676,29 @@
       "help": "Only creates suggestions in the inbox."
     },
     "enrichmentConfidence": {
-      "name": "Minimum confidence",
+      "name": "Minimum match",
       "sub": "0–100 %"
     },
     "enrichmentPerNight": {
       "name": "Suggestions per night",
       "sub": "1–1000"
+    },
+    "planShare": {
+      "name": "Share plans with friends",
+      "sub": "Works through the connection to each friend",
+      "jump": "Friends"
+    },
+    "displayCurrency": {
+      "name": "Display currency",
+      "sub": "How amounts are shown. Totals are still converted into the base currency."
+    },
+    "planAi": {
+      "name": "AI suggestions in plans",
+      "sub": "The AI may make suggestions for your plans"
+    },
+    "planWeather": {
+      "name": "Weather in plans",
+      "sub": "Forecast for the places and days of a plan"
     }
   },
   "location": {
@@ -1753,6 +1782,10 @@
         "offline": "The server isn't answering right now.",
         "generic": "The server didn't accept the search.",
         "jobFailed": "The search stopped on the way."
+      },
+      "last": {
+        "name": "Last search",
+        "none": "No search yet"
       }
     },
     "tt": {
@@ -1875,17 +1908,18 @@
         "value_one": "{{count}} point since {{since}}",
         "value_other": "{{count}} points since {{since}}"
       },
-      "lastSeen": "Last seen: {{at}}",
       "loadError": "I could not read what is stored.",
       "off": "TravTrack is off on this server: no new points arrive. Stored points stay, export and delete keep working.",
       "devices": {
         "name": "Devices",
-        "sub": "Pair and sign out under Profile & sign-in",
-        "jump": "To Profile & sign-in",
+        "sub": "Pair and sign out",
+        "jump": "Phones",
         "unnamed": "Unnamed device",
         "points_one": "{{count}} point",
         "points_other": "{{count}} points"
-      }
+      },
+      "lastSeenName": "Last received",
+      "lastSeenNone": "Nothing received yet"
     },
     "places": {
       "title": "Fixed places",
@@ -2030,6 +2064,25 @@
     },
     "diag": {
       "title": "Diagnostics"
+    },
+    "groups": {
+      "aufzeichnung": "Stored",
+      "quelle": "Source",
+      "aufenthalte": "Stays",
+      "suchlauf": "Search",
+      "belege": "Evidence",
+      "feinabstimmung": "Fine-tuning"
     }
+  },
+  "lodgingRatings": {
+    "title": "Rating"
+  },
+  "visibility": {
+    "title": "Visibility",
+    "findable": {
+      "label": "Findable from other servers",
+      "sub": "People on connected servers may send you a friend request"
+    },
+    "loadFailed": "I couldn't read whether you are findable."
   }
 }

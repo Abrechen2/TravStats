@@ -1,5 +1,7 @@
-import { useId, useState, type JSX, type ReactNode } from "react";
+import { useState, type JSX, type ReactNode } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import Dialog from "../Dialog";
+import { hasDirtyGroups, usePendingLeave } from "./leaveGuard";
 
 interface ServiceCardShellProps {
   title: ReactNode;
@@ -14,7 +16,12 @@ interface ServiceCardShellProps {
   children?: ReactNode;
 }
 
-/** B12: a service card, closed or open, or status only. */
+/**
+ * B12: a service card. Closed it is a tile — name, purpose, status pill. Opened (settings v3 S5b,
+ * as the prototype draws it) it is a dialog over the page, not a body that pushes the grid
+ * around: the card's settings, one "Fertig". An account that has nothing to set sees the tile
+ * without a button.
+ */
 export function ServiceCardShell({
   title,
   pills,
@@ -24,10 +31,9 @@ export function ServiceCardShell({
 }: ServiceCardShellProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [open, setOpen] = useState(defaultOpen);
-  // Once opened the body stays mounted (hidden when closed): its unsaved groups
-  // must not vanish, unasked, with a click on the chevron.
-  const [everOpened, setEverOpened] = useState(defaultOpen);
-  const bodyId = useId();
+  // Closing unmounts the card's forms; unsaved input asks first instead of vanishing.
+  usePendingLeave();
+  const dirty = open && hasDirtyGroups();
   const head = (
     <>
       <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ts-text-bright)" }}>{title}</span>
@@ -55,12 +61,9 @@ export function ServiceCardShell({
       ) : (
         <button
           type="button"
+          aria-haspopup="dialog"
           aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={() => {
-            setEverOpened(true);
-            setOpen((v) => !v);
-          }}
+          onClick={() => setOpen(true)}
           className="flex w-full flex-wrap items-center justify-between"
           style={{
             gap: "var(--ts-space-md)",
@@ -73,22 +76,26 @@ export function ServiceCardShell({
           }}
         >
           {head}
-          <span aria-hidden="true" style={{ color: "var(--ts-muted)" }}>
-            {open ? "⌃" : "⌄"}
-          </span>
-          <span className="sr-only">
-            {open ? t("settings:blocks.card.close") : t("settings:blocks.card.open")}
-          </span>
+          <span className="sr-only">{t("settings:blocks.card.open")}</span>
         </button>
       )}
-      {!statusOnly && (open || everOpened) ? (
-        <div
-          id={bodyId}
-          hidden={!open}
-          style={{ padding: "0 var(--ts-space-lg) var(--ts-space-lg)" }}
+      {!statusOnly ? (
+        <Dialog
+          open={open}
+          onClose={() => setOpen(false)}
+          title={title}
+          closeLabel={t("settings:blocks.card.close")}
+          dismissLabel={t("settings:blocks.card.done")}
+          maxWidth={680}
+          dirty={dirty}
         >
-          {children}
-        </div>
+          <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+            <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+              {pills}
+            </span>
+            {children}
+          </div>
+        </Dialog>
       ) : null}
     </section>
   );

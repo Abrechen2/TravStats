@@ -5,26 +5,33 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import {
   notificationsApi,
   type NotificationPreferences,
+  type ReminderChannel,
   type ReminderDomain,
   type ReminderDomainPrefs,
 } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import {
+  ChoiceControl,
   Dependency,
   InputControl,
   SettingItem,
-  StatusValue,
   useSettingWrite,
+  type ChoiceOption,
 } from "../ui/settings";
 import { SettingRows } from "../ui/SettingRow";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ReminderRow from "./ReminderRow";
+import { PushStateView } from "./PushStateRow";
 import { REMINDER_DOMAINS } from "./reminderPrefs";
 import { useDependency, useRowCopy } from "./rowCopy";
 
+/** The channel row's value while the areas disagree. */
+const MIXED = "mixed";
+
 /**
- * Reminders (design §4 A2), two sections: "Wohin" (the address, and whether the
- * app can be reached at all) and "Vor der Abreise" (one row per area).
+ * Reminders (settings v3), two sections: "Wohin" (the address, ONE channel for
+ * every area, and whether the app can be reached at all) and "Vor der Abreise"
+ * (one lead select per area that is switched on).
  *
  * Every row writes at once and keeps the user's pick when the server refuses
  * (B6). The page is never drawn from defaults while the server could not be
@@ -39,8 +46,6 @@ export default function NotificationPreferencesCards(): JSX.Element {
   const isDemo = useIsDemoAccount();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "loaded" | "failed">("loading");
-  // The address as typed, until the field is left.
-  const [emailDraft, setEmailDraft] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoadState("loading");
@@ -56,23 +61,27 @@ export default function NotificationPreferencesCards(): JSX.Element {
     void load();
   }, [load]);
 
-  const email = useSettingWrite<string | null>(
-    "notifications.email",
-    prefs?.notificationEmail ?? null,
-    async (value) =>
-      setPrefs(await notificationsApi.updatePreferences({ notificationEmail: value }))
-  );
-
   const writeDomain = useCallback(
     async (domain: ReminderDomain, value: ReminderDomainPrefs): Promise<void> => {
-      const updated = await notificationsApi.updatePreferences({ domains: { [domain]: value } });
-      // Only this area's row (and the channel availability): rows are written
+      // The lead and the on/off only: the channel is the shared row's to write,
+      // and sending a stale copy of it from here would undo that pick.
+      const updated = await notificationsApi.updatePreferences({
+        domains: { [domain]: { enabled: value.enabled, leadHours: value.leadHours } },
+      });
+      // Only this area's two fields (and the channel availability): rows are written
       // independently, so an answer to one must not undo another's confirmed state.
       setPrefs((current) =>
         current
           ? {
               ...current,
-              domains: { ...current.domains, [domain]: updated.domains[domain] },
+              domains: {
+                ...current.domains,
+                [domain]: {
+                  ...current.domains[domain],
+                  enabled: updated.domains[domain].enabled,
+                  leadHours: updated.domains[domain].leadHours,
+                },
+              },
               mail: updated.mail,
               push: updated.push,
             }
@@ -80,6 +89,50 @@ export default function NotificationPreferencesCards(): JSX.Element {
       );
     },
     []
+  );
+
+  // The address as typed, until the field is left.
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  // The reminder address is its own field, not the profile's (they are two stores).
+  const email = useSettingWrite<string | null>(
+    "notifications.email",
+    prefs?.notificationEmail ?? null,
+    async (value) =>
+      setPrefs(await notificationsApi.updatePreferences({ notificationEmail: value }))
+  );
+
+  const channels = prefs ? channelsOf(prefs) : [];
+  const sharedChannel = channels.length > 0 && channels.every((c) => c === channels[0]);
+  // One channel for every area: the server stores one per area, so the pick is
+  // written to all of them in ONE request.
+  const channel = useSettingWrite<ReminderChannel | typeof MIXED>(
+    "notifications.channel",
+    sharedChannel ? channels[0] : MIXED,
+    async (value) => {
+      if (value === MIXED || !prefs) return;
+      const areas = REMINDER_DOMAINS.filter((d) => prefs.domains[d] !== undefined);
+      const updated = await notificationsApi.updatePreferences({
+        domains: Object.fromEntries(areas.map((d) => [d, { channel: value }])),
+      });
+      setPrefs((current) =>
+        current
+          ? {
+              ...current,
+              domains: {
+                ...current.domains,
+                ...Object.fromEntries(
+                  areas.map((d) => [
+                    d,
+                    { ...current.domains[d], channel: updated.domains[d]?.channel ?? value },
+                  ])
+                ),
+              },
+              mail: updated.mail,
+              push: updated.push,
+            }
+          : updated
+      );
+    }
   );
 
   if (loadState === "failed") {
@@ -104,15 +157,33 @@ export default function NotificationPreferencesCards(): JSX.Element {
     setEmailDraft(null);
     email.choose(trimmed === "" ? null : trimmed);
   };
-  const mailCopy = row("erimail");
+  const addrCopy = row("erimail");
+  const channelCopy = row("rchan");
   const pushCopy = row("pushstate");
   const noRelay = !prefs.push.available && (prefs.push.reason ?? "no_relay") === "no_relay";
-  const pushWords = t(
-    `settings:notifications.pushStatus.${prefs.push.available ? "ok" : (prefs.push.reason ?? "no_relay")}`
-  );
+  const appBlocked = !prefs.push.available && prefs.push.reason === "no_device_token";
+  const mailBlocked = !prefs.mail.available;
   const lock = isDemo
     ? { why: "demo" as const, reason: t("settings:blocks.lock.demo") }
     : undefined;
+  const picked = channel.value;
+  const reachesApp = picked === "app" || picked === "both";
+  const reachesMail = picked === "mail" || picked === "both";
+  // An option that would add a channel nothing can reach stays off, the current one stays.
+  const option = (value: ReminderChannel, label: string): ChoiceOption<ReminderChannel> => {
+    const needsApp = value !== "mail";
+    const needsMail = value !== "app";
+    return {
+      value,
+      label,
+      disabled: value !== picked && ((needsApp && appBlocked) || (needsMail && mailBlocked)),
+    };
+  };
+  const areas = REMINDER_DOMAINS.filter(
+    // A server older than this web build sends no row for the newer areas; an
+    // area that is switched off has no reminders, so it has no row.
+    (domain) => prefs.domains[domain] !== undefined && isEnabled(domain)
+  );
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
@@ -120,8 +191,8 @@ export default function NotificationPreferencesCards(): JSX.Element {
         <SectionTitle title={t("settingsRows:notifications.sections.channel")} />
         <SettingRows>
           <SettingItem
-            title={mailCopy.title}
-            sub={mailCopy.sub}
+            title={addrCopy.title}
+            sub={addrCopy.sub}
             save={email}
             locked={lock}
             control={
@@ -141,35 +212,56 @@ export default function NotificationPreferencesCards(): JSX.Element {
             }
           />
           <SettingItem
-            title={pushCopy.title}
-            help={pushCopy.help}
-            control={<StatusValue>{pushWords}</StatusValue>}
+            title={channelCopy.title}
+            sub={picked === MIXED ? t("settingsRows:notifications.rchan.mixed") : channelCopy.sub}
+            save={channel}
+            locked={lock}
+            control={
+              <ChoiceControl<ReminderChannel | typeof MIXED>
+                label={channelCopy.title}
+                value={picked}
+                options={[
+                  option("app", t("settings:notifications.channelApp")),
+                  option("mail", t("settings:notifications.channelMail")),
+                  option("both", t("settingsRows:notifications.rchan.both")),
+                ]}
+                onChange={(next) => {
+                  if (next !== MIXED) channel.choose(next);
+                }}
+              />
+            }
           >
-            {noRelay ? <Dependency reason={dependency("noPush").reason} /> : null}
+            {reachesApp && noRelay ? <Dependency reason={dependency("noPush").reason} /> : null}
+            {(reachesMail || picked === MIXED) && mailBlocked ? (
+              <Dependency reason={dependency("noMailAddr").reason} />
+            ) : null}
+            {appBlocked ? (
+              <Dependency reason={t("settings:notifications.pushStatus.no_device_token")} />
+            ) : null}
           </SettingItem>
+          <PushStateView push={prefs.push} title={pushCopy.title} help={pushCopy.help} />
         </SettingRows>
       </SectionCard>
       <SectionCard>
         <SectionTitle title={t("settingsRows:notifications.sections.domains")} />
         <SettingRows>
-          {/* A server older than this web build sends no row for the newer areas; draw none rather than crash. */}
-          {REMINDER_DOMAINS.filter((domain) => prefs.domains[domain] !== undefined).map(
-            (domain) => (
-              <ReminderRow
-                key={domain}
-                domain={domain}
-                saved={prefs.domains[domain]}
-                push={prefs.push}
-                mail={prefs.mail}
-                domainOn={isEnabled(domain)}
-                locked={isDemo}
-                write={writeDomain}
-              />
-            )
-          )}
+          {areas.map((domain) => (
+            <ReminderRow
+              key={domain}
+              domain={domain}
+              saved={prefs.domains[domain]}
+              locked={isDemo}
+              write={writeDomain}
+            />
+          ))}
         </SettingRows>
         <p className="t-caption">{t("settings:notifications.carriedOver")}</p>
       </SectionCard>
     </div>
   );
+}
+
+/** The channel of every area the server sent. */
+function channelsOf(prefs: NotificationPreferences): ReminderChannel[] {
+  return REMINDER_DOMAINS.flatMap((d) => (prefs.domains[d] ? [prefs.domains[d].channel] : []));
 }

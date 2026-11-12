@@ -47,12 +47,12 @@ const fixture = (over: Record<string, unknown> = {}) => ({
   notifyBefore24h: true,
   notifyBefore2h: true,
   domains: {
-    flight: row(),
-    cruise: row({ leadHours: [24], channel: "mail" }),
-    rail: row({ enabled: false, leadHours: [], channel: "app" }),
+    flight: row({ leadHours: [2] }),
+    cruise: row({ leadHours: [24], channel: "both" }),
+    rail: row({ enabled: false, leadHours: [], channel: "both" }),
     bus: row(),
     ferry: row(),
-    lodging: row({ leadHours: [48, 24], channel: "app" }),
+    lodging: row({ leadHours: [36], channel: "both" }),
     rental: row(),
     roadtrip: row(),
     poi: row(),
@@ -65,7 +65,11 @@ const STORED = fixture();
 
 const domainRow = (d: string): HTMLElement =>
   screen.getByText(`settingsRows:notifications.r_${d}.t`).closest("[data-setting-row]")!;
-const chip = (d: string, name: string) => within(domainRow(d)).getByRole("button", { name });
+const leadSelect = (d: string): HTMLSelectElement =>
+  within(domainRow(d)).getByRole("combobox") as HTMLSelectElement;
+const channelRow = (): HTMLElement =>
+  screen.getByText("settingsRows:notifications.rchan.t").closest("[data-setting-row]")!;
+const channelButton = (name: string) => within(channelRow()).getByRole("radio", { name });
 const echo = (patch: { domains?: Record<string, object> }) => {
   const next = structuredClone(STORED) as typeof STORED & { domains: Record<string, object> };
   for (const [d, change] of Object.entries(patch.domains ?? {})) {
@@ -74,6 +78,7 @@ const echo = (patch: { domains?: Record<string, object> }) => {
   return next;
 };
 const WAIT = { timeout: 3000 };
+const ALL = ["flight", "cruise", "rail", "bus", "ferry", "lodging", "rental", "roadtrip", "poi"];
 
 async function renderPage(): Promise<void> {
   await act(async () => {
@@ -86,21 +91,11 @@ async function renderPage(): Promise<void> {
   await screen.findByText("settingsRows:notifications.r_flight.t");
 }
 
-describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
+describe("NotificationPreferences (one channel, one lead select per area)", () => {
   beforeEach(() => {
     getPreferences.mockReset().mockResolvedValue(STORED);
     updatePreferences.mockReset().mockImplementation(async (p) => echo(p));
-    enabledDomains = [
-      "flight",
-      "cruise",
-      "rail",
-      "bus",
-      "ferry",
-      "lodging",
-      "rental",
-      "roadtrip",
-      "poi",
-    ];
+    enabledDomains = [...ALL];
     demo = false;
   });
   afterEach(() => {
@@ -108,146 +103,171 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
     act(() => resetWriteQueue());
   });
 
-  it("an area that is switched off shows why, with a jump to Reisearten, and no controls", async () => {
+  it("an area that is switched off has no row (the prototype hides it)", async () => {
     enabledDomains = ["flight"];
     await renderPage();
-    const cruise = domainRow("cruise");
-    expect(within(cruise).queryByRole("switch")).toBeNull();
-    expect(within(cruise).getByText("settings:notifications.domainOff")).toBeTruthy();
+    expect(screen.queryByText("settingsRows:notifications.r_cruise.t")).toBeNull();
+    expect(leadSelect("flight")).toBeTruthy();
+  });
+
+  it("keeps the places reminder row, which the prototype forgot", async () => {
+    await renderPage();
+    expect(leadSelect("poi")).toBeTruthy();
+  });
+
+  it("draws each area's stored lead; a lead outside the list shows as 'Eigene' and is not rewritten by looking", async () => {
+    await renderPage();
+    expect(leadSelect("flight").value).toBe("2");
+    expect(leadSelect("cruise").value).toBe("24");
+    expect(leadSelect("rail").value).toBe("off");
+    expect(leadSelect("lodging").value).toBe("custom");
     expect(
-      within(cruise).getByRole("button", { name: /settings:notifications.domainOffAction/ })
+      within(leadSelect("lodging")).getByRole("option", {
+        name: "settingsRows:notifications.lead.own",
+      })
     ).toBeTruthy();
-    expect(within(domainRow("flight")).getByRole("switch")).toBeTruthy();
-  });
-
-  it("renders every area from the GET fixture, with no save button", async () => {
-    await renderPage();
-    expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
-    expect(within(domainRow("flight")).getByRole("switch")).toBeChecked();
-    expect(within(domainRow("rail")).getByRole("switch")).not.toBeChecked();
-    expect(chip("flight", "settings:notifications.lead24")).toHaveAttribute("aria-pressed", "true");
-    expect(chip("cruise", "settings:notifications.lead2")).toHaveAttribute("aria-pressed", "false");
-    expect(chip("cruise", "settings:notifications.channelMail")).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(within(domainRow("lodging")).getByRole("spinbutton")).toHaveValue(48);
-  });
-
-  it("the switch sends the area's row and shows 'Gespeichert' once the server confirmed", async () => {
-    await renderPage();
-    await userEvent.click(within(domainRow("rail")).getByRole("switch"));
-    await waitFor(
-      () =>
-        expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { rail: { enabled: true, leadHours: [], channel: "app" } },
-        }),
-      WAIT
-    );
-    expect(await within(domainRow("rail")).findByText("settings:blocks.save.saved")).toBeTruthy();
-  });
-
-  it("quick picks in one area go out as ONE write carrying the last state, sorted descending", async () => {
-    await renderPage();
-    await userEvent.click(chip("cruise", "settings:notifications.lead2"));
-    await userEvent.click(chip("cruise", "settings:notifications.channelApp"));
-    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1), WAIT);
-    expect(updatePreferences).toHaveBeenCalledWith({
-      domains: { cruise: { enabled: true, leadHours: [24, 2], channel: "both" } },
-    });
-  });
-
-  it("the last active channel chip cannot be switched off", async () => {
-    await renderPage();
-    await userEvent.click(chip("lodging", "settings:notifications.channelApp"));
     await new Promise((r) => setTimeout(r, 600));
     expect(updatePreferences).not.toHaveBeenCalled();
   });
 
-  it("Eigene: only 1-168 is sent, 24 and 2 are refused with a message, an existing custom lead is replaced", async () => {
+  it("shows the server's default 24 h + 2 h as the standard choice, not as 'Eigene', and 36 h still as 'Eigene'", async () => {
     await renderPage();
-    await userEvent.click(chip("flight", "settings:notifications.leadCustom"));
-    const field = within(domainRow("flight")).getByRole("spinbutton");
-    for (const bad of ["0", "169", "24", "2", ""]) {
-      await userEvent.clear(field);
-      if (bad) await userEvent.type(field, bad);
-      await userEvent.tab();
-      expect(within(domainRow("flight")).getByRole("alert")).toBeInTheDocument();
-    }
+    // bus keeps the pair every new account is created with.
+    expect(leadSelect("bus").value).toBe("standard");
+    expect(
+      within(leadSelect("bus")).getByRole("option", {
+        name: "settingsRows:notifications.lead.standard",
+      })
+    ).toBeTruthy();
+    expect(
+      within(leadSelect("bus")).queryByRole("option", {
+        name: "settingsRows:notifications.lead.own",
+      })
+    ).toBeNull();
+    expect(leadSelect("lodging").value).toBe("custom");
+    await new Promise((r) => setTimeout(r, 600));
     expect(updatePreferences).not.toHaveBeenCalled();
-    await userEvent.clear(field);
-    await userEvent.type(field, "12");
-    await userEvent.tab();
+  });
+
+  it("a custom lead survives switching the area off, and can be switched on again without losing it", async () => {
+    await renderPage();
+    await userEvent.selectOptions(leadSelect("lodging"), "off");
     await waitFor(
       () =>
         expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { flight: { enabled: true, leadHours: [24, 12, 2], channel: "both" } },
+          domains: { lodging: { enabled: false, leadHours: [36] } },
         }),
       WAIT
     );
-    const lodging = within(domainRow("lodging")).getByRole("spinbutton");
-    await userEvent.clear(lodging);
-    await userEvent.type(lodging, "72");
-    await userEvent.tab();
+  });
+
+  it("picking the 'Eigene' entry of an area that was switched off turns it on with its own lead", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({
+        domains: { ...STORED.domains, lodging: row({ enabled: false, leadHours: [36] }) },
+      })
+    );
+    await renderPage();
+    expect(leadSelect("lodging").value).toBe("off");
+    await userEvent.selectOptions(leadSelect("lodging"), "custom");
     await waitFor(
       () =>
         expect(updatePreferences).toHaveBeenCalledWith({
-          domains: { lodging: { enabled: true, leadHours: [72, 24], channel: "app" } },
+          domains: { lodging: { enabled: true, leadHours: [36] } },
         }),
       WAIT
     );
+  });
+
+  it("picking '2 Tage' sends 48 h as the area's only lead, and never the channel", async () => {
+    await renderPage();
+    await userEvent.selectOptions(leadSelect("cruise"), "48");
+    await waitFor(
+      () =>
+        expect(updatePreferences).toHaveBeenCalledWith({
+          domains: { cruise: { enabled: true, leadHours: [48] } },
+        }),
+      WAIT
+    );
+    expect(await within(domainRow("cruise")).findByText("settings:blocks.save.saved")).toBeTruthy();
+  });
+
+  it("picking a lead for an area that was off switches it on", async () => {
+    await renderPage();
+    await userEvent.selectOptions(leadSelect("rail"), "24");
+    await waitFor(
+      () =>
+        expect(updatePreferences).toHaveBeenCalledWith({
+          domains: { rail: { enabled: true, leadHours: [24] } },
+        }),
+      WAIT
+    );
+  });
+
+  it("the channel row is written to EVERY area in one request", async () => {
+    await renderPage();
+    await userEvent.click(channelButton("settings:notifications.channelMail"));
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1), WAIT);
+    const sent = updatePreferences.mock.calls[0][0] as { domains: Record<string, object> };
+    expect(Object.keys(sent.domains).sort()).toEqual([...ALL].sort());
+    for (const d of ALL) expect(sent.domains[d]).toEqual({ channel: "mail" });
+  });
+
+  it("areas that disagree on the channel show no pick and say so; the pick then applies to all", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({
+        domains: { ...STORED.domains, bus: row({ channel: "app" }) },
+      })
+    );
+    await renderPage();
+    expect(screen.getByText("settingsRows:notifications.rchan.mixed")).toBeTruthy();
+    for (const name of ["settings:notifications.channelApp", "settings:notifications.channelMail"])
+      expect(channelButton(name)).toHaveAttribute("aria-checked", "false");
   });
 
   it("an answer to one area does not undo another's confirmed state (out-of-order responses)", async () => {
     const pending: Array<(v: unknown) => void> = [];
     updatePreferences.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
     await renderPage();
-    await userEvent.click(within(domainRow("flight")).getByRole("switch"));
+    await userEvent.selectOptions(leadSelect("flight"), "off");
     await waitFor(() => expect(pending).toHaveLength(1), WAIT);
-    await userEvent.click(within(domainRow("bus")).getByRole("switch"));
+    await userEvent.selectOptions(leadSelect("bus"), "off");
     await waitFor(() => expect(pending).toHaveLength(2), WAIT);
     // The bus answer lands first; the flight answer, computed before it, lands last
     // and still carries the bus row as it was.
     await act(async () => pending[1](echo({ domains: { bus: { enabled: false } } })));
     await act(async () => pending[0](echo({ domains: { flight: { enabled: false } } })));
-    await waitFor(() => expect(within(domainRow("bus")).getByRole("switch")).not.toBeChecked());
-    // After the "Gespeichert" mark has faded the rows show what the page holds.
+    await waitFor(() => expect(leadSelect("bus").value).toBe("off"));
     await act(async () => {
       await new Promise((r) => setTimeout(r, 2700));
     });
-    expect(within(domainRow("bus")).getByRole("switch")).not.toBeChecked();
-    expect(within(domainRow("flight")).getByRole("switch")).not.toBeChecked();
+    expect(leadSelect("bus").value).toBe("off");
+    expect(leadSelect("flight").value).toBe("off");
   }, 15000);
 
-  it("an area that is off greys its chips", async () => {
-    await renderPage();
-    const chips = within(domainRow("rail"))
-      .getAllByRole("button")
-      .filter((b) => b.hasAttribute("aria-pressed"));
-    expect(chips).toHaveLength(5);
-    for (const b of chips) expect(b).toBeDisabled();
-  });
-
-  it("the mail chip is disabled when there is no address and says why", async () => {
-    getPreferences.mockResolvedValue(fixture({ mail: { available: false, reason: "no_email" } }));
-    await renderPage();
-    expect(chip("lodging", "settings:notifications.channelMail")).toBeDisabled();
-    expect(
-      within(domainRow("flight")).getByText("settings:blocks.dep.noMailAddr.reason")
-    ).toBeTruthy();
-  });
-
-  it("with no paired device the app chip is disabled; with no relay it stays usable and the row names the server's push switch (R2-11)", async () => {
+  it("with no address the page says why mail cannot be chosen", async () => {
     getPreferences.mockResolvedValue(
-      fixture({ push: { available: false, reason: "no_device_token" } })
+      fixture({ notificationEmail: null, mail: { available: false, reason: "no_email" } })
     );
     await renderPage();
-    expect(chip("cruise", "settings:notifications.channelApp")).toBeDisabled();
+    expect(within(channelRow()).getByText("settings:blocks.dep.noMailAddr.reason")).toBeTruthy();
+    expect(screen.getByLabelText("settingsRows:notifications.erimail.t")).toHaveValue("");
+  });
+
+  it("with no paired device the app option is off; with no relay it stays usable and the page names the server's push switch (R2-11)", async () => {
+    getPreferences.mockResolvedValue(
+      fixture({
+        push: { available: false, reason: "no_device_token" },
+        domains: Object.fromEntries(ALL.map((d) => [d, row({ channel: "mail" })])),
+      })
+    );
+    await renderPage();
+    expect(channelButton("settings:notifications.channelApp")).toBeDisabled();
     cleanup();
 
     getPreferences.mockResolvedValue(fixture({ push: { available: false, reason: "no_relay" } }));
     await renderPage();
-    expect(chip("flight", "settings:notifications.channelApp")).toBeEnabled();
+    expect(channelButton("settings:notifications.channelApp")).toBeEnabled();
     expect(screen.getAllByText("settings:blocks.dep.noPush.reason").length).toBeGreaterThan(1);
     expect(screen.getByText("settings:notifications.pushStatus.no_relay")).toBeInTheDocument();
   });
@@ -255,30 +275,37 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
   it("a refused write keeps the pick, says so, and 'Erneut versuchen' sends it again", async () => {
     updatePreferences.mockRejectedValueOnce(new Error("Network Error"));
     await renderPage();
-    const sw = within(domainRow("flight")).getByRole("switch");
-    await userEvent.click(sw);
+    await userEvent.selectOptions(leadSelect("flight"), "off");
     const alert = await within(domainRow("flight")).findByRole("alert", undefined, WAIT);
     expect(alert).toHaveTextContent("settings:blocks.save.failed");
-    expect(sw).not.toBeChecked();
+    expect(leadSelect("flight").value).toBe("off");
     expect(within(domainRow("bus")).queryByRole("alert")).toBeNull();
     await userEvent.click(
       within(alert).getByRole("button", { name: "settings:blocks.save.retry" })
     );
     await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(2), WAIT);
     expect(updatePreferences).toHaveBeenLastCalledWith({
-      domains: { flight: { enabled: false, leadHours: [24, 2], channel: "both" } },
+      domains: { flight: { enabled: false, leadHours: [2] } },
     });
   });
 
   it("'Verwerfen' brings the last saved state back", async () => {
     updatePreferences.mockRejectedValue(new Error("Network Error"));
     await renderPage();
-    await userEvent.click(within(domainRow("flight")).getByRole("switch"));
+    await userEvent.selectOptions(leadSelect("flight"), "off");
     const alert = await within(domainRow("flight")).findByRole("alert", undefined, WAIT);
     await userEvent.click(
       within(alert).getByRole("button", { name: "settings:blocks.save.discard" })
     );
-    expect(within(domainRow("flight")).getByRole("switch")).toBeChecked();
+    expect(leadSelect("flight").value).toBe("2");
+  });
+
+  it("a lead write carries no channel, so it cannot undo a channel pick still on its way", async () => {
+    await renderPage();
+    await userEvent.selectOptions(leadSelect("flight"), "24");
+    await waitFor(() => expect(updatePreferences).toHaveBeenCalledTimes(1), WAIT);
+    const sent = updatePreferences.mock.calls[0][0] as { domains: { flight: object } };
+    expect(sent.domains.flight).toEqual({ enabled: true, leadHours: [24] });
   });
 
   it("writes the address when the field is left, only if it changed, and a refusal keeps what was typed", async () => {
@@ -305,8 +332,7 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
   it("the demo account sees the preferences locked, with the reason", async () => {
     demo = true;
     await renderPage();
-    expect(within(domainRow("flight")).getByRole("switch")).toBeDisabled();
-    expect(screen.getByLabelText("settingsRows:notifications.erimail.t")).toBeDisabled();
+    expect(leadSelect("flight")).toBeDisabled();
     expect(screen.getAllByText("settings:blocks.lock.demo").length).toBeGreaterThan(0);
   });
 
@@ -320,7 +346,7 @@ describe("NotificationPreferences (reminders per area, rebuilt rows)", () => {
       );
     });
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
     getPreferences.mockResolvedValue(STORED);
     await userEvent.click(screen.getByRole("button"));
     await screen.findByText("settingsRows:notifications.r_flight.t");

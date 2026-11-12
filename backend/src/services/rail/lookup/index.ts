@@ -1,4 +1,5 @@
 import { getInstanceSettings } from "../../instanceSettingsService";
+import { throughInternet } from "../../internetGate";
 import { AppError } from "../../../middleware/errorHandler";
 import { resolveZone, zoneOf } from "../../../shared/time/zoneOf";
 import { instantToWallClock } from "../railJourneyWrite";
@@ -30,7 +31,10 @@ export interface RailProviderSwitches {
 
 export async function railProviderSwitches(): Promise<RailProviderSwitches> {
   const settings = await getInstanceSettings();
-  return { transitous: settings.railTransitousEnabled, dbRest: settings.railDbRestEnabled };
+  return {
+    transitous: throughInternet(settings, settings.railTransitousEnabled),
+    dbRest: throughInternet(settings, settings.railDbRestEnabled),
+  };
 }
 
 export interface RailLookupInput {

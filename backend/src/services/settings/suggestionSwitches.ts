@@ -49,8 +49,17 @@ export const staySuggestionsSettingsSchema = z
   .strict();
 
 export { tripRecordingSettingsSchema } from "../../schemas/tripRecording";
-export const travPlanSettingsSchema = z.object({ enabled: z.boolean() }).partial().strict();
+/**
+ * `ai` / `weather` (settings v3 `planai` / `planwx`): per account, on by default, and only
+ * meaningful while `enabled` is. Off refuses the AI proposal (`PLAN_AI_USER_DISABLED`) and the
+ * forecast refresh (`PLAN_WEATHER_USER_DISABLED`) and keeps every stored proposal and forecast.
+ */
+export const travPlanSettingsSchema = z
+  .object({ enabled: z.boolean(), ai: z.boolean(), weather: z.boolean() })
+  .partial()
+  .strict();
 type TripRecordingPatch = { enabled?: boolean };
+type TravPlanPatch = z.infer<typeof travPlanSettingsSchema>;
 type TripSuggestionsPatch = z.infer<typeof tripSuggestionsSettingsSchema>;
 type StaySuggestionsPatch = z.infer<typeof staySuggestionsSettingsSchema>;
 
@@ -62,6 +71,8 @@ export const SUGGESTION_SWITCH_SELECT = {
   staySuggestionsLlmPlaceClassification: true,
   tripRecordingEnabled: true,
   travPlanEnabled: true,
+  travPlanAiEnabled: true,
+  travPlanWeatherEnabled: true,
 } as const;
 
 export interface SuggestionSwitchColumns {
@@ -71,6 +82,8 @@ export interface SuggestionSwitchColumns {
   staySuggestionsLlmPlaceClassification: boolean;
   tripRecordingEnabled: boolean;
   travPlanEnabled: boolean;
+  travPlanAiEnabled: boolean;
+  travPlanWeatherEnabled: boolean;
 }
 
 /** The column defaults — what an account without a settings row is answered with. */
@@ -81,6 +94,8 @@ export const SUGGESTION_SWITCH_DEFAULTS: SuggestionSwitchColumns = {
   staySuggestionsLlmPlaceClassification: false,
   tripRecordingEnabled: true,
   travPlanEnabled: false,
+  travPlanAiEnabled: true,
+  travPlanWeatherEnabled: true,
 };
 
 export interface SuggestionSwitchesView {
@@ -89,7 +104,7 @@ export interface SuggestionSwitchesView {
   /** Whether the server stores the Companion's trip positions (forgejo#316). */
   tripRecording: { enabled: boolean };
   /** Whether this account uses TravPlan (owner, 2026-10-27). */
-  travPlan: { enabled: boolean };
+  travPlan: { enabled: boolean; ai: boolean; weather: boolean };
 }
 
 export function suggestionSwitchesView(record: SuggestionSwitchColumns): SuggestionSwitchesView {
@@ -101,7 +116,11 @@ export function suggestionSwitchesView(record: SuggestionSwitchColumns): Suggest
       llmPlaceClassification: record.staySuggestionsLlmPlaceClassification,
     },
     tripRecording: { enabled: record.tripRecordingEnabled },
-    travPlan: { enabled: record.travPlanEnabled },
+    travPlan: {
+      enabled: record.travPlanEnabled,
+      ai: record.travPlanAiEnabled,
+      weather: record.travPlanWeatherEnabled,
+    },
   };
 }
 
@@ -110,10 +129,12 @@ export function suggestionSwitchesUpdate(
   trip: TripSuggestionsPatch | undefined,
   stay: StaySuggestionsPatch | undefined,
   recording?: TripRecordingPatch,
-  travPlan?: TripRecordingPatch
+  travPlan?: TravPlanPatch
 ): Partial<SuggestionSwitchColumns> {
   return {
     ...(travPlan?.enabled !== undefined ? { travPlanEnabled: travPlan.enabled } : {}),
+    ...(travPlan?.ai !== undefined ? { travPlanAiEnabled: travPlan.ai } : {}),
+    ...(travPlan?.weather !== undefined ? { travPlanWeatherEnabled: travPlan.weather } : {}),
     ...(recording?.enabled !== undefined ? { tripRecordingEnabled: recording.enabled } : {}),
     ...(trip?.enabled !== undefined ? { tripSuggestionsEnabled: trip.enabled } : {}),
     ...(stay?.enabled !== undefined ? { staySuggestionsEnabled: stay.enabled } : {}),

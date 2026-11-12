@@ -1,9 +1,10 @@
+import { ACCOUNT_CARDS } from "../../../components/Services/serviceCards";
 import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../../lib/mapRoutes";
 import { normalizeSectionId } from "../../../lib/sectionAliases";
 import type { DomainKey } from "../../../shared/domains";
 import { ADMIN_PAGES, adminPageOfTab, findAdminPage } from "../../Admin/adminSections";
 import { REMOVED_PAGES, SECTION_ALIASES } from "../settingsModel";
-import { registryPage, SETTINGS_REGISTRY } from "../registry";
+import { SETTINGS_REGISTRY } from "../registry";
 import { lookup, pageOfSection } from "../surface";
 import {
   DEFAULT_AREA_PAGE,
@@ -30,7 +31,7 @@ const ADMIN_AREA_PAGES: ReadonlySet<string> = new Set(
 );
 
 /** Where an admin-only address sends an account that is not an admin. */
-const OWN_FALLBACK: Readonly<Record<string, AreaPageId>> = { backups: "data" };
+const OWN_FALLBACK: Readonly<Record<string, AreaPageId>> = { sicherungen: "daten" };
 
 export interface AddressInput {
   /** `/settings`, `/settings/<page>`, `/admin` or `/admin/<page>`. */
@@ -62,43 +63,100 @@ interface Target {
   expert?: boolean;
 }
 
-const SERVICE_OF_SECTION: Readonly<Record<string, string>> = {
-  usageStats: "usageStats",
-  federation: "federation",
-  push: "push",
-  templateRepo: "updatesTemplates",
-  smtp: "smtp",
-  webdav: "webdav",
+/**
+ * The old admin sections that were cards of the service catalogue, and where
+ * their content is since settings v3 S5: the cards that got a page of their own,
+ * or the catalogue's server page for the rest.
+ */
+const SERVICE_TARGETS: Readonly<Record<string, Target>> = {
+  usageStats: { page: "datenschutz", section: "stats" },
+  federation: { page: "funktionen", section: "sharing", match: "fedon" },
+  push: { page: "datenschutz", section: "push" },
+  templateRepo: { page: "eigene", match: "tplrepo" },
+  smtp: { page: "email" },
+  webdav: { page: "dienste", service: "webdav" },
 };
+
+/** The catalogue cards that moved to a page of their own, by card id: `?service=` names them. */
+const MOVED_CARD_TARGETS: Readonly<Record<string, Target>> = {
+  smtp: { page: "email" },
+  push: { page: "datenschutz", section: "push" },
+  usageStats: { page: "datenschutz", section: "stats" },
+  federation: { page: "funktionen", section: "sharing", match: "fedon" },
+  geocoder: { page: "eigene", match: "photon" },
+  selfHostedRouting: { page: "eigene", match: "osrm" },
+  updatesTemplates: { page: "eigene", match: "tplrepo" },
+};
+
+/** The two pages of the service catalogue: the account's half and the server's. */
+const SERVICE_PAGES: ReadonlySet<string> = new Set(["dienstek", "dienste"]);
+const ACCOUNT_CARD_IDS: ReadonlySet<string> = new Set(ACCOUNT_CARDS.map((c) => c.id));
 
 /** Old admin section -> its place (§6.1). A page address without a hash drops it. */
 const ADMIN_TARGETS: Readonly<Record<string, Target>> = {
-  instance: { page: "server", section: "general" },
-  travTrack: { page: "server", section: "features", match: "ttoffer" },
-  travPlan: { page: "server", section: "features", match: "tpoffer" },
-  shareLinks: { page: "sharing", section: "shareLinks", match: "linkserlaubt" },
-  importMode: { page: "server", section: "features", match: "importmodus" },
-  about: { page: "about" },
-  users: { page: "users", section: "accounts" },
-  invitations: { page: "users", section: "invitations" },
-  externalServices: { page: "services" },
-  parsers: { page: "server", section: "parsers" },
-  backups: { page: "backups" },
-  timeModel: { page: "maintenance", section: "timeModel" },
-  logging: { page: "maintenance", section: "logging" },
-  system: { page: "maintenance", section: "system" },
-  airlinesMasterData: { page: "masterdata", section: "catalogues", match: "md_airlines" },
-  aircraftMasterData: { page: "masterdata", section: "catalogues", match: "md_aircraft" },
-  airportsMasterData: { page: "masterdata", section: "catalogues", match: "md_airports" },
-  shipsMasterData: { page: "masterdata", section: "catalogues", match: "md_ships" },
-  portsMasterData: { page: "masterdata", section: "catalogues", match: "md_ports" },
-  lodgingChainsMasterData: { page: "masterdata", section: "catalogues", match: "md_chains" },
+  instance: { page: "allgemein", section: "general" },
+  travTrack: { page: "tt-bereit", section: "ttoffer", match: "ttoffer" },
+  travPlan: { page: "pl-bereit", section: "tpoffer", match: "tpoffer" },
+  shareLinks: { page: "funktionen", section: "sharing", match: "linkserlaubt" },
+  importMode: { page: "funktionen", section: "features", match: "importmodus" },
+  about: { page: "ueber" },
+  users: { page: "nutzer", section: "accounts" },
+  invitations: { page: "nutzer", section: "invitations" },
+  externalServices: { page: "dienste" },
+  parsers: { page: "buchungen", section: "parsers" },
+  backups: { page: "sicherungen" },
+  timeModel: { page: "wartung", section: "timeModel" },
+  logging: { page: "wartung", section: "logging" },
+  system: { page: "wartung", section: "system" },
+  airlinesMasterData: { page: "stamm", section: "airlinesMasterData", match: "md_airlines" },
+  aircraftMasterData: { page: "stamm", section: "aircraftMasterData", match: "md_aircraft" },
+  airportsMasterData: { page: "stamm", section: "airportsMasterData", match: "md_airports" },
+  shipsMasterData: { page: "stamm", section: "shipsMasterData", match: "md_ships" },
+  portsMasterData: { page: "stamm", section: "portsMasterData", match: "md_ports" },
+  lodgingChainsMasterData: { page: "stamm", section: "chains", match: "md_chains" },
+};
+
+/**
+ * The pages of the settings area before settings v3 (S1), and the pages their
+ * content now lives on, the one the bare address lands on first. A bookmark of
+ * `/settings/flight#autoupdate` looks for the section on these pages only, so a
+ * section id two old pages shared (`features`) still finds its own.
+ */
+const OLD_PAGES: Readonly<Record<string, readonly AreaPageId[]>> = {
+  account: ["profil", "reisearten", "telefone"],
+  display: ["anzeige"],
+  domains: ["reisearten", "pl-plan"],
+  flight: ["fluege", "reisearten"],
+  cruise: ["kreuzfahrten"],
+  trips: ["reisen"],
+  sharing: ["freunde", "funktionen"],
+  notifications: ["erinnerungen"],
+  travtrack: ["tt-aufz", "tt-erk", "tt-daten"],
+  loyalty: ["treue"],
+  data: ["daten"],
+  services: ["dienstek"],
+  server: [
+    "allgemein",
+    "adressen",
+    "funktionen",
+    "email",
+    "buchungen",
+    "datenschutz",
+    "eigene",
+    "tt-bereit",
+    "pl-bereit",
+  ],
+  users: ["nutzer", "allgemein"],
+  backups: ["sicherungen"],
+  maintenance: ["wartung"],
+  masterdata: ["stamm"],
+  about: ["ueber"],
 };
 
 /** The page id TravTrack replaced; its addresses live on in bookmarks and changelogs. */
 const OLD_LOCATION_PAGE = "location";
 
-const GEOCODER_TARGET: Target = { page: "services", service: "geocoder", expert: true };
+const GEOCODER_TARGET: Target = { page: "eigene", match: "photon" };
 
 const first = (...values: Array<string | null | undefined>): string | null =>
   values.find((v) => v) ?? null;
@@ -111,7 +169,7 @@ function adminTarget(
   const raw = normalizeSectionId(section);
   if (raw === "geocoder") return GEOCODER_TARGET;
   // The bare Administration address (§6.2) is the Server page, not its first card.
-  if (!pageSeg && !raw && (!tab || tab === "general")) return { page: "server" };
+  if (!pageSeg && !raw && (!tab || tab === "general")) return { page: "allgemein" };
   const owner = raw ? pageOfSection(ADMIN_PAGES, raw) : undefined;
   const page =
     owner ??
@@ -120,68 +178,81 @@ function adminTarget(
     findAdminPage("instance")!;
   // Without a hash, the page stands for its first section (`/admin/parsers`).
   const id = owner && raw ? raw : page.sections[0].id;
-  const service = lookup(SERVICE_OF_SECTION, id);
-  if (service) return { page: "services", service };
-  return lookup(ADMIN_TARGETS, id) ?? { page: "server", section: "general" };
+  const service = lookup(SERVICE_TARGETS, id);
+  if (service) return service;
+  return lookup(ADMIN_TARGETS, id) ?? { page: "allgemein", section: "general" };
 }
 
 /** Old personal sections whose place is not the first page that lists the id. */
 function settingsSectionTarget(raw: string, input: AddressInput): Target | undefined {
   switch (raw) {
     case "display":
-      return { page: "display", section: "language" };
+      return { page: "anzeige", section: "language" };
     case "mapAppearance":
       return { external: `/dashboard?${MAP_PANEL_PARAM}=${MAP_PANEL_ROUTES}` };
     case "dashboardAppearance":
       return { external: "/dashboard" };
     case "listAppearance":
-      return input.isDomainOn("flight")
-        ? { external: "/flights" }
-        : { page: "display", section: "views" };
+      return { external: input.isDomainOn("flight") ? "/flights" : "/dashboard" };
     case "sharing":
-      return { page: "sharing", section: "accounts" };
+      return { page: "freunde", section: "accounts" };
     case "comparisonConsent":
-      return { page: "sharing", section: "compare", match: "rangliste" };
+      return { page: "freunde", section: "compare", match: "rangliste" };
     case "encryptedGrants":
-      return { page: "sharing", section: "compare", match: "verschl" };
+      return { page: "freunde", section: "encryptedGrants", match: "verschl" };
     case "dawarich":
-      return { page: "services", service: "dawarich" };
+      return { page: "dienstek", service: "dawarich" };
     // The Standort page became TravTrack (web redesign, 2026-11-05): its four
     // sections, and the "history" section that was folded into the page, moved.
     case "locationProvider":
-      return { page: "travtrack", section: "ttRecording" };
+      return { page: "tt-aufz", section: "ttRecording" };
     case "tripRecording":
-      return { page: "travtrack", section: "ttRecording", match: "aufz" };
+      return { page: "tt-aufz", section: "ttRecording", match: "aufz" };
     case "stayScan":
-      return { page: "travtrack", section: "ttDetect" };
+      return { page: "tt-erk", section: "ttDetect" };
     case "travTrack":
-      return { page: "travtrack", section: "ttZones" };
+      return { page: "tt-aufz", section: "ttZones" };
     case "history":
-      return { page: "travtrack", section: "ttSources" };
+      return { page: "tt-daten", section: "ttSources" };
     case "notifications":
-      return { page: "notifications" };
+      return { page: "erinnerungen" };
     case "externalServices":
-      return { page: "services" };
+      return { page: "dienstek" };
     case "features":
-      return { page: "flight", section: "features" };
+      return { page: "fluege", section: "features" };
     case "lodgingPreferences":
-      return input.isAdmin ? GEOCODER_TARGET : { page: "display" };
+      return input.isAdmin ? GEOCODER_TARGET : { page: "anzeige" };
     case "admin":
-      return { page: input.isAdmin ? "server" : "account" };
+      return { page: input.isAdmin ? "allgemein" : "profil" };
     default:
       return undefined;
   }
 }
 
 /** The first page that lists an id as a section or an alias of one. */
-function ownerOfAnchor(anchor: string): string | undefined {
-  return SETTINGS_REGISTRY.map((p) => p.id).find((id) => validAnchors(id).has(anchor));
+function ownerOfAnchor(anchor: string, among?: readonly string[]): string | undefined {
+  return (among ?? SETTINGS_REGISTRY.map((p) => p.id)).find((id) => validAnchors(id).has(anchor));
+}
+
+/** The page among `pages` whose registry holds the row, and the mount that draws it. */
+function homeOfRow(
+  rowId: string,
+  pages: readonly string[]
+): { page: string; mount: string | undefined } | undefined {
+  for (const id of pages) {
+    for (const group of SETTINGS_REGISTRY.find((p) => p.id === id)?.sections ?? []) {
+      const row = group.rows.find((r) => r.id === rowId);
+      if (row) return { page: id, mount: row.mount };
+    }
+  }
+  return undefined;
 }
 
 function settingsTarget(
   pageSeg: string | undefined,
   section: string | null,
   tab: string | null,
+  match: string | null,
   input: AddressInput
 ): Target {
   // A removed page named without a section stands for the section that took
@@ -192,7 +263,23 @@ function settingsTarget(
   const raw = named ? (lookup(SECTION_ALIASES, named) ?? named) : null;
 
   // The old Standort page, named without a section, is the TravTrack page.
-  if (!named && (pageSeg ?? tab) === OLD_LOCATION_PAGE) return { page: "travtrack" };
+  if (!named && (pageSeg ?? tab) === OLD_LOCATION_PAGE) return { page: "tt-aufz" };
+
+  // A page of the area as it was before settings v3: its section is looked for
+  // on the pages its content moved to, and the page alone lands on the first.
+  const oldKey = pageSeg ?? tab ?? undefined;
+  const oldPages = oldKey ? lookup(OLD_PAGES, oldKey) : undefined;
+  if (oldPages && !findAreaPage(oldKey)) {
+    // A row the address names (`?match=`) decides the page: the old page's rows
+    // moved apart, and the section alone would pick the wrong half.
+    const home = match ? homeOfRow(match, oldPages) : undefined;
+    if (home) return { page: home.page, section: home.mount ?? raw ?? undefined };
+    const owner = raw ? ownerOfAnchor(raw, oldPages) : undefined;
+    if (owner) return { page: owner, section: raw ?? undefined };
+    // A section none of its pages holds (the old tables moved some across pages
+    // before) is looked up on its own, below; none named is the page itself.
+    if (!raw) return { page: oldPages[0] };
+  }
 
   if (raw) {
     // A page of the area that lists the id keeps it.
@@ -207,9 +294,11 @@ function settingsTarget(
 
   const pageId = pageSeg ?? tab ?? undefined;
   if (pageId && findAreaPage(pageId)) return { page: pageId };
-  if (pageId === "views") return { page: "display", section: "views" };
-  if (pageId === "privacy") return { page: "sharing" };
-  if (pageId === "companions") return { page: "sharing", section: "companions" };
+  const oldOnly = pageId ? lookup(OLD_PAGES, pageId) : undefined;
+  if (oldOnly) return { page: oldOnly[0] };
+  if (pageId === "views") return { page: "anzeige" };
+  if (pageId === "privacy") return { page: "freunde" };
+  if (pageId === "companions") return { page: "freunde", section: "companions" };
   if (pageId) return { page: DEFAULT_AREA_PAGE };
 
   const last = input.lastPage && findAreaPage(input.lastPage) ? input.lastPage : null;
@@ -238,12 +327,29 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
 
   const target = fromAdmin
     ? adminTarget(pageSeg, section, tab)
-    : settingsTarget(pageSeg, section, tab, input);
+    : settingsTarget(pageSeg, section, tab, params.get("match"), input);
   if (target.external) return { to: target.external, adminOnly: false };
 
   let page = target.page ?? DEFAULT_AREA_PAGE;
   let sectionId = target.section;
-  let adminOnly = fromAdmin && !input.isAdmin && page !== "about";
+  let matchRow = first(target.match, params.get("match"));
+  let service = first(target.service, SERVICE_PAGES.has(page) ? params.get("service") : null);
+  // A card of the catalogue names a place: the ones with a page of their own
+  // since settings v3 S5 send the address there, and a card only the server has
+  // is on the server's half, not the account's.
+  if (service && SERVICE_PAGES.has(page)) {
+    const moved = lookup(MOVED_CARD_TARGETS, service);
+    if (moved) {
+      page = moved.page ?? page;
+      sectionId = moved.section;
+      matchRow = moved.match ?? null;
+      service = null;
+    } else if (page === "dienstek" && !ACCOUNT_CARD_IDS.has(service)) {
+      if (input.isAdmin) page = "dienste";
+      else service = null;
+    }
+  }
+  let adminOnly = fromAdmin && !input.isAdmin && page !== "ueber";
   let fallback = false;
   if (ADMIN_AREA_PAGES.has(page) && !input.isAdmin) {
     // The next page of the account's own, with the line that says why.
@@ -251,21 +357,21 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
     fallback = true;
     adminOnly = true;
   }
-  // A page whose ONLY section bears its name is its address (`/settings/loyalty`).
-  const only = registryPage(page)?.sections;
-  if (fallback || (sectionId === page && only?.length === 1)) sectionId = undefined;
+  // A page drawing ONE mount: that mount's name is the page's address — unless a
+  // closed gate gives way to the name alone (Telefone: `?section=devices`).
+  const only = findAreaPage(page)?.sections;
+  const nameIsAddress = only?.length === 1 && sectionId === only[0].id && !only[0].gateYieldsToLink;
+  if (fallback || nameIsAddress) sectionId = undefined;
 
   const query = new URLSearchParams();
   if (fallback) return { to: `/settings/${page}`, adminOnly };
-  const service = first(target.service, page === "services" ? params.get("service") : null);
   if (service) query.set("service", service);
-  const user = page === "users" ? params.get("user") : null;
+  const user = page === "nutzer" ? params.get("user") : null;
   if (user) query.set("user", user);
-  const match = first(target.match, params.get("match"));
-  if (match) query.set("match", match);
+  if (matchRow) query.set("match", matchRow);
   if (target.expert || params.get("expert") === "1") query.set("expert", "1");
   // The map's gear carries the shown range to export and delete.
-  if (page === "travtrack") {
+  if (page.startsWith("tt-")) {
     for (const key of ["from", "until"]) {
       const value = params.get(key);
       if (value) query.set(key, value);

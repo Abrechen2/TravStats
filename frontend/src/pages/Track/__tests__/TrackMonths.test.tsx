@@ -115,7 +115,7 @@ describe("TrackMonths", () => {
     show();
     expect(await screen.findByRole("link", { name: "track:months.citiesOff" })).toHaveAttribute(
       "href",
-      "/settings/travtrack#ttRecording"
+      "/settings/tt-aufz#ttRecording"
     );
   });
 

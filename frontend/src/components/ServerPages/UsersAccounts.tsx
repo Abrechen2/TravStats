@@ -16,7 +16,7 @@ import { MenuItem, RowMenu } from "./RowMenu";
 import type { AdminUser } from "./types";
 import { useAdminAction } from "./useAdminAction";
 
-type Pending = { kind: "delete" | "lock" | "reset2fa"; user: AdminUser };
+type Pending = { kind: "delete" | "lock" | "reset2fa" | "resetpw"; user: AdminUser };
 
 /**
  * Users › Konten (design C2): every account with the actions that need an
@@ -71,6 +71,12 @@ export default function UsersAccounts(): JSX.Element {
   const confirm = async (): Promise<void> => {
     if (!pending) return;
     const { kind, user } = pending;
+    if (kind === "resetpw") {
+      // Nothing is changed yet: the dialog that follows generates or sets the password.
+      setPending(null);
+      setReset(user);
+      return;
+    }
     const ok =
       kind === "delete"
         ? await action.run("delete", async () => {
@@ -94,7 +100,13 @@ export default function UsersAccounts(): JSX.Element {
   const copy = row("nutzerliste");
   const asking = pending
     ? dialog(
-        pending.kind === "delete" ? "userdel" : pending.kind === "lock" ? "userlock" : "user2fa",
+        pending.kind === "delete"
+          ? "userdel"
+          : pending.kind === "lock"
+            ? "userlock"
+            : pending.kind === "resetpw"
+              ? "userpw"
+              : "user2fa",
         { name: pending.user.username, count: pending.user._count.flights }
       )
     : null;
@@ -185,7 +197,8 @@ export default function UsersAccounts(): JSX.Element {
                   <MenuItem
                     onClick={() => {
                       close();
-                      setReset(user);
+                      // The old password stops working with the new one, so it asks first.
+                      setPending({ kind: "resetpw", user });
                     }}
                   >
                     {t("admin:users.actions.resetPassword")}

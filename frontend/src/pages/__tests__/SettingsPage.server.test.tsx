@@ -2,6 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // The services page asks the parser whether a model is there (forgejo#321);
 // not the subject here.
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => null, resetHasLlmCache: () => {} }));
+// The page asks where the account's location comes from (the TravTrack area stays
+// for an account on Dawarich alone, settings v3 S4); not the subject here.
+vi.mock("@/lib/api/locationProvider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/locationProvider")>()),
+  locationProviderApi: {
+    get: vi.fn().mockResolvedValue({
+      kind: "none",
+      rev: 0,
+      status: "ok",
+      choices: { none: true, travtrack: false, dawarich: false },
+    }),
+    set: vi.fn(),
+  },
+}));
 // The version line under the settings menu asks the server (forgejo#321).
 vi.mock("@/lib/api/version", () => ({
   versionApi: { get: vi.fn().mockResolvedValue({ version: "2.7.0", buildVersion: "2.7.0" }) },
@@ -103,6 +117,21 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...actual,
+    // Datenschutz reads the statistics consent and the push registration on mount.
+    usageStatsApi: {
+      ...actual.usageStatsApi,
+      get: vi.fn().mockResolvedValue({ consent: null, endpointConfigured: true, installId: null }),
+    },
+    pushRelayApi: {
+      ...actual.pushRelayApi,
+      get: vi.fn().mockResolvedValue({
+        pushEnabled: false,
+        pushRelayUrl: "https://push.example",
+        registered: false,
+        pausedUntil: null,
+        consentAt: null,
+      }),
+    },
     backupApi: {
       ...actual.backupApi,
       list: vi.fn().mockResolvedValue({ backups: [] }),
@@ -173,7 +202,7 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
   }),
 }));
 
-const renderAdmin = (entry = "/settings/server") =>
+const renderAdmin = (entry = "/settings/allgemein") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
@@ -186,7 +215,7 @@ const renderAdmin = (entry = "/settings/server") =>
   );
 
 /** The Server page's first section; awaiting it means the page has rendered. */
-const INSTANCE = "settingsRows:server.sections.general";
+const INSTANCE = "settingsRows:server.sections.yourServer";
 
 describe("SettingsPage, the server's pages — one page per menu entry, its sections as anchors", () => {
   beforeEach(() => {
@@ -204,11 +233,10 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
   it("renders every section of the page at once, not only one picked section", async () => {
     renderAdmin();
 
-    // Three distinct sections of the Server page at once: a page that mounted
+    // Two distinct sections of the General page at once: a page that mounted
     // one picked section cannot pass this whichever one it picked.
     expect(await findNamed("region", INSTANCE)).toBeInTheDocument();
-    expect(getNamed("region", "settingsRows:server.sections.features")).toBeInTheDocument();
-    expect(getNamed("region", "settingsRows:server.sections.parsers")).toBeInTheDocument();
+    expect(getNamed("region", "settingsRows:users.sections.access")).toBeInTheDocument();
   });
 
   // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
@@ -223,7 +251,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     renderAdmin();
     await findNamed("region", INSTANCE);
 
-    for (const id of ["general", "features", "parsers"]) {
+    for (const id of ["general", "access"]) {
       expect(document.getElementById(`settings-${id}`)).not.toBeNull();
     }
   });
@@ -234,7 +262,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
 
     const chips = getNamed("navigation", "settings:sectionChips");
     const anchors = within(chips).getAllByRole("link");
-    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-features");
+    expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-access");
     expect(anchors.map((a) => a.getAttribute("href"))).toContain("#settings-general");
     // The old column picked a section with a button; none should remain here.
     expect(within(chips).queryAllByRole("button")).toHaveLength(0);
@@ -243,8 +271,12 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     const pages = within(menu)
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"));
-    expect(pages).toContain("/settings/users");
-    expect(pages).toContain("/settings/maintenance");
+    expect(pages).toContain("/settings/nutzer");
+    expect(pages).toContain("/settings/wartung");
+    expect(pages).toContain("/settings/adressen");
+    expect(pages).toContain("/settings/eigene");
+    expect(pages).toContain("/settings/email");
+    expect(pages).toContain("/settings/dienste");
     expect(within(menu).queryAllByRole("button")).toHaveLength(0);
   }, 20_000); // renders the whole server area; over 5 s under a full parallel run
 
@@ -252,8 +284,8 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/settings/server?match=importmodus#features");
-    await findNamed("region", INSTANCE);
+    renderAdmin("/settings/funktionen?match=importmodus#features");
+    await findNamed("region", "settingsRows:server.sections.features");
 
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
     expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("settings-features"));
@@ -263,7 +295,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
     const scrollSpy = vi.fn();
     Element.prototype.scrollIntoView = scrollSpy;
 
-    renderAdmin("/settings/server");
+    renderAdmin("/settings/allgemein");
     await findNamed("region", INSTANCE);
 
     expect(scrollSpy).not.toHaveBeenCalled();
@@ -272,7 +304,7 @@ describe("SettingsPage, the server's pages — one page per menu entry, its sect
   it("lands a pre-page /admin ?section= link on the page that holds it now", async () => {
     renderAdmin("/admin?tab=general&section=users");
     expect(await findNamed("region", "settingsRows:users.sections.accounts")).toBeInTheDocument();
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.users");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.nutzer");
   });
 });
 
@@ -300,19 +332,19 @@ describe("SettingsPage, the server's pages — the missing public address (B15)"
       },
       passkeyStatus: null,
     } as unknown as Awaited<ReturnType<typeof adminApi.getInstanceSettings>>);
-    renderAdmin("/settings/users");
+    renderAdmin("/settings/nutzer");
     await findNamed("region", "settingsRows:users.sections.accounts");
     // The menu entry carries the warn dot on every settings page, not only on its own.
     await waitFor(() => expect(document.querySelector("[data-warn-dot]")).not.toBeNull());
     cleanup();
 
-    renderAdmin("/settings/server");
+    renderAdmin("/settings/allgemein");
     await findNamed("region", INSTANCE);
     await waitFor(() => expect(document.querySelector("[data-public-url-warning]")).not.toBeNull());
   });
 
   it("stays quiet when the address is set", async () => {
-    renderAdmin("/settings/server");
+    renderAdmin("/settings/allgemein");
     await findNamed("region", INSTANCE);
     await waitFor(() => expect(document.querySelector("[data-warn-dot]")).toBeNull());
     expect(document.querySelector("[data-public-url-warning]")).toBeNull();
@@ -331,15 +363,20 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
   });
 
   it("keeps the expert pages out of the menu and says how many there are", async () => {
-    renderAdmin("/settings/server");
+    renderAdmin("/settings/allgemein");
     await findNamed("region", INSTANCE);
     const menu = document.querySelector("[data-settings-menu] nav") as HTMLElement;
     const pages = within(menu)
       .getAllByRole("link")
       .map((a) => a.getAttribute("href"));
-    expect(pages).toContain("/settings/users");
-    expect(pages).not.toContain("/settings/maintenance");
-    expect(pages).not.toContain("/settings/masterdata");
+    expect(pages).toContain("/settings/nutzer");
+    expect(pages).not.toContain("/settings/wartung");
+    expect(pages).not.toContain("/settings/stamm");
+    // The two other expert pages of the server area (settings v3 S5).
+    expect(pages).not.toContain("/settings/adressen");
+    expect(pages).not.toContain("/settings/eigene");
+    // Server-Verbindungen waits for the switch on Funktionen, which is off here.
+    expect(pages).not.toContain("/settings/srvconn");
     expect(document.querySelector('[data-expert-note="pages"]')).toHaveTextContent(
       "settings:level.morePages"
     );
@@ -347,22 +384,39 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
 
   it("shows the expert rows a search hit on a page's first section named (codex final review)", async () => {
     // The search links an expert row of the general section as
-    // `/settings/server?match=<row>&expert=1#general`; the request to show the
+    // `/settings/allgemein?match=<row>&expert=1#general`; the request to show the
     // rows must survive the canonical redirect of an older address, too.
     renderAdmin("/admin/instance?section=instance&expert=1");
     const instance = await findNamed("region", INSTANCE);
     await waitFor(() => expect(instance).toHaveTextContent("settings:level.revealedRows"));
   });
 
-  // An old /admin link to a service card lands on that card of the services
-  // page, opened — the expert fields it holds are part of the card now.
-  it("opens the federation card an old /admin link names, on the services page", async () => {
+  // The federation card of the service catalogue is the switch on Funktionen and the
+  // page "Server-Verbindungen" (settings v3 S5); the old address lands on the switch.
+  it("sends an old /admin link to the federation card to its switch on Funktionen", async () => {
     renderAdmin("/admin?section=federation");
+    expect(await findNamed("region", "settingsRows:server.sections.sharing")).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.funktionen");
+    expect(document.querySelector('[data-service-card-id="federation"]')).toBeNull();
+  });
+
+  it("opens the server's own page of the catalogue, with the cards of the prototype", async () => {
+    renderAdmin("/admin/externalServices?service=immich");
     await waitFor(() =>
-      expect(document.querySelector('[data-service-card-id="federation"]')).toBeInTheDocument()
+      expect(document.querySelector('[data-service-card-id="immich"]')).toBeInTheDocument()
     );
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.services");
-    expect(document.querySelector('[data-service-card="open"]')).toBeInTheDocument();
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.dienste");
+    // The geocoder, the mail card and the others with a page of their own are not on the grid.
+    for (const id of [
+      "smtp",
+      "push",
+      "usageStats",
+      "federation",
+      "geocoder",
+      "selfHostedRouting",
+    ]) {
+      expect(document.querySelector(`[data-service-card-id="${id}"]`), id).toBeNull();
+    }
   });
 
   it("opens an expert page a link names, with its sections and a note, not an empty page", async () => {
@@ -370,7 +424,7 @@ describe("SettingsPage, the server's pages — the standard level (forgejo#321)"
     expect(
       await findNamed("region", "settingsRows:maintenance.sections.logging")
     ).toBeInTheDocument();
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.maintenance");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.wartung");
     expect(document.querySelector('[role="status"]')).toHaveTextContent(
       "settings:level.expertPage"
     );
@@ -458,7 +512,7 @@ describe("LazyBody, the lazy section reveal (Wave C finding C3)", () => {
 describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C finding C1, follow-up)", () => {
   let resizeIO: FakeResizeObserverHandle;
   let scrollSpy: ReturnType<typeof vi.fn>;
-  const DEEP_LINK = "/settings/server?match=importmodus#features";
+  const DEEP_LINK = "/settings/funktionen?match=importmodus#features";
 
   beforeEach(() => {
     scrollSpy = vi.fn();
@@ -473,7 +527,7 @@ describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C 
 
   it("re-aligns the deep-linked section when ANY section's height changes, not only its own", async () => {
     renderAdmin(DEEP_LINK);
-    await findNamed("region", INSTANCE);
+    await findNamed("region", "settingsRows:server.sections.features");
 
     // The first scroll runs against placeholder heights, same as before.
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
@@ -495,7 +549,7 @@ describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C 
 
   it("cancels re-aligning on real user scroll input", async () => {
     renderAdmin(DEEP_LINK);
-    await findNamed("region", INSTANCE);
+    await findNamed("region", "settingsRows:server.sections.features");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -511,7 +565,7 @@ describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C 
 
   it("does not cancel on an unrelated key (only scroll-intent keys do)", async () => {
     renderAdmin(DEEP_LINK);
-    await findNamed("region", INSTANCE);
+    await findNamed("region", "settingsRows:server.sections.features");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -529,7 +583,7 @@ describe("SettingsPage, the server's pages — deep-link scroll aligner (Wave C 
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     renderAdmin(DEEP_LINK);
-    await findNamed("region", INSTANCE);
+    await findNamed("region", "settingsRows:server.sections.features");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -556,10 +610,10 @@ describe("SettingsPage, the server's pages — master data of a switched-off dom
     const ships = document.getElementById("settings-shipsMasterData") as HTMLElement;
     const notice = ships.querySelector("[data-domain-off]") as HTMLElement;
     expect(notice).toHaveAttribute("data-domain-off", "cruise");
-    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.masterdata");
+    expect(document.querySelector("h1")).toHaveTextContent("settings:area.pages.stamm");
     expect(within(notice).getByRole("link", { name: "settings:domainOff.action" })).toHaveAttribute(
       "href",
-      "/settings/domains#domains"
+      "/settings/reisearten#domains"
     );
     // The catalogue itself is not drawn while its domain is off.
     expect(document.querySelector("#settings-shipsMasterData-body")).toBeNull();

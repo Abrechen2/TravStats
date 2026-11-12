@@ -147,9 +147,14 @@ export async function buildAccountView(userId: string): Promise<{
     if (bringsKey) ownKeys.push(await view(service));
   }
 
+  const ownAiKeys = new Set<string>();
+  for (const service of AI_SERVICES) {
+    if (service.accountFields.length === 0) continue;
+    if (await accountHasCredential(service, userRow, userId)) ownAiKeys.add(service.id);
+  }
   const aiConsents = AI_SERVICES.flatMap((service) => {
     const kind = service.ai!.kind;
-    if (!isEnabledForConsent(service, state)) return [];
+    if (!isEnabledForConsent(service, state, ownAiKeys.has(service.id))) return [];
     const destination =
       kind === "custom"
         ? hostOf(state.admin?.openaiCompatBaseUrl)
@@ -190,7 +195,20 @@ export async function buildAccountView(userId: string): Promise<{
 }
 
 /** A cloud provider the admin has allowed (opt-in) — or a remote Ollama with its opt-in. */
-export function isEnabledForConsent(service: ServiceDef, state: AdminState): boolean {
+export function isEnabledForConsent(
+  service: ServiceDef,
+  state: AdminState,
+  accountHasOwnKey = false
+): boolean {
+  // An account's own key (settings v3) is allowed unless the admin switched the service off
+  // or forbade account keys for it; the instance's slot and key do not matter then.
+  if (
+    accountHasOwnKey &&
+    !state.policy.disabled.includes(service.id) &&
+    !state.policy.accountKeysForbidden.includes(service.id)
+  ) {
+    return true;
+  }
   if (service.ai?.kind === "ollama") {
     return state.admin?.llmOllamaOptIn === true && !state.policy.disabled.includes("ollama");
   }

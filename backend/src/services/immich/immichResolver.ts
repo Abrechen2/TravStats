@@ -124,10 +124,8 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
   }
 }
 
-export async function getImmichDefaultMode(userId: string): Promise<ImmichMode> {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { immichDefaultMode: true },
-  });
-  return settings?.immichDefaultMode === "import" ? "import" : "link";
+import { IMMICH_DEFAULT_MODE } from "./defaultMode";
+
+export async function getImmichDefaultMode(_userId: string): Promise<ImmichMode> {
+  return IMMICH_DEFAULT_MODE;
 }

@@ -8,7 +8,7 @@ import { toneOf, type CardStatus } from "./cardStatus";
 import { useCardStatusOf } from "./useCardStatusOf";
 import { UNREACHABLE_NOTE } from "./unreachable";
 import { useServices } from "./servicesContext";
-import type { ServiceCardDef } from "./serviceCards";
+import { hasAccountRows, type ServiceCardDef } from "./serviceCards";
 
 const TONE_COLOR = {
   good: "var(--ts-good)",
@@ -36,12 +36,6 @@ function Pill({ status }: { status: CardStatus }): JSX.Element {
   );
 }
 
-/** Whether the card has anything for the account itself to do. */
-const hasAccountRows = (card: ServiceCardDef): boolean =>
-  (["mine", "ownKey", "aiConsent", "allowConn"] as const).some((u) =>
-    (card.use as readonly string[]).includes(u)
-  );
-
 /**
  * One catalogue entry (B12): name, purpose and one status pill, closed. Open,
  * "Für dein Konto" on top and — for an admin — "Alle Konten" below it. An account
@@ -50,12 +44,18 @@ const hasAccountRows = (card: ServiceCardDef): boolean =>
 export default function ServiceCard({
   card,
   isAdmin,
+  side = "both",
   linked,
   hidden = false,
   accountGated = false,
 }: {
   card: ServiceCardDef;
   isAdmin: boolean;
+  /**
+   * Which half the page draws: the account's page (`account`) and the server's
+   * (`server`) are two pages since settings v3 S5; `both` is the old card.
+   */
+  side?: "account" | "server" | "both";
   /** Filtered out by the group chips; stays mounted. */
   hidden?: boolean;
   /** The account's half sits behind a beta key that is closed (tours); an admin keeps the server's. */
@@ -83,9 +83,9 @@ export default function ServiceCard({
     acct?.getKeyUrl ??
     admin?.data?.categories.flatMap((c) => c.services).find((s) => s.id === card.id)?.getKeyUrl ??
     null;
-  const accountRows = hasAccountRows(card) && !accountGated;
+  const accountRows = side !== "server" && hasAccountRows(card) && !accountGated;
   // Dawarich has no admin row in the catalogue, but the server's connection is still the admin's.
-  const serverRows = isAdmin && admin !== null;
+  const serverRows = side !== "account" && isAdmin && admin !== null;
 
   return (
     <div ref={ref} id={`service-${card.id}`} data-service-card-id={card.id} hidden={hidden}>
@@ -124,7 +124,7 @@ export default function ServiceCard({
               </a>
             </p>
           ) : null}
-          {accountGated ? null : <AccountSide card={card} service={acct} />}
+          {accountGated || side === "server" ? null : <AccountSide card={card} service={acct} />}
           {serverRows ? <ServerSide card={card} /> : null}
         </div>
       </ServiceCardShell>

@@ -131,7 +131,7 @@ export default function UserMenu({
             {name}
           </div>
           <Link
-            to="/settings/account"
+            to="/settings/profil"
             role="menuitem"
             onClick={() => setOpen(false)}
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
@@ -142,7 +142,7 @@ export default function UserMenu({
           </Link>
           {isAdmin && (
             <Link
-              to="/admin"
+              to="/settings/allgemein"
               role="menuitem"
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
