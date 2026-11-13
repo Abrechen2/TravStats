@@ -10,7 +10,11 @@ jest.mock("../../tour/routing/resolveProvider", () => ({ resolveRouteProvider: j
 jest.mock("../../../utils/sharedDemo", () => ({
   isSharedDemoUser: jest.fn().mockResolvedValue(false),
 }));
+jest.mock("../../rail/lookup", () => ({
+  railProviderSwitches: jest.fn().mockResolvedValue({ transitous: true, dbRest: true }),
+}));
 import { resolveRouteProvider } from "../../tour/routing/resolveProvider";
+import { railProviderSwitches } from "../../rail/lookup";
 import { fetchBusLine } from "../busRouting";
 
 // Augsburg-ish: Hbf -> Koenigsplatz -> Uni, the shape wiggles between the stops.
@@ -99,6 +103,21 @@ describe("bus line from Transitous", () => {
     const line = await fetchBusLine("u1", ride);
     expect(line).toMatchObject({ geometrySource: "transitous", fallback: null, lineMiss: null });
     expect(line.routedKm).toBeGreaterThan(3);
+  });
+
+  it("asks Transitous nothing when the admin switched it or the internet off (Codex, rc.29 review)", async () => {
+    (railProviderSwitches as jest.Mock).mockResolvedValueOnce({ transitous: false, dbRest: true });
+    mock = mockFetch([
+      [/stoptimes/, stopTimes("48")],
+      [/api\/v6\/trip/, trip()],
+    ]);
+    const line = await fetchBusLine("u1", ride);
+    expect(mock.userAgents).toHaveLength(0);
+    expect(line).toMatchObject({
+      geometrySource: "straight",
+      fallback: "no_provider",
+      lineMiss: null,
+    });
   });
 
   it("another line, another time or the opposite direction is no match and falls back to the road path with the reason", async () => {

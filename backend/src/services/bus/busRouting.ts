@@ -1,6 +1,7 @@
 import { Prisma } from "../../prisma";
 import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
+import { railProviderSwitches } from "../rail/lookup";
 import { readStoredLine } from "../rail/railGeometry";
 import { lineLengthKm, type LonLat } from "../rail/railGeometryMath";
 import { withTimeout } from "../tour/routing/autoRouteLegs";
@@ -87,12 +88,19 @@ export async function fetchBusLine(userId: string, ask: BusLineAsk): Promise<Bus
     // rides save as straight lines, and the routing endpoint reports "none".
     if (await isSharedDemoUser(userId)) return straight("no_provider");
     // The real line first; any miss is reported and the road path stands in.
-    const timetable = await lookupBusLine({
-      lineName: ask.lineName ?? null,
-      departureTime: ask.departureTime ?? null,
-      dep: { lat: ends.depLat, lon: ends.depLon },
-      arr: { lat: ends.arrLat, lon: ends.arrLon },
-    });
+    // The admin's Transitous switch (and the internet master switch) decide
+    // whether a stop and a time may leave the instance; off asks nothing. A
+    // ride without a line name never asks, so it does not read the switch.
+    const asksTimetable = Boolean(ask.lineName?.trim() && ask.departureTime);
+    const timetable =
+      asksTimetable && (await railProviderSwitches()).transitous
+        ? await lookupBusLine({
+            lineName: ask.lineName ?? null,
+            departureTime: ask.departureTime ?? null,
+            dep: { lat: ends.depLat, lon: ends.depLon },
+            arr: { lat: ends.arrLat, lon: ends.arrLon },
+          })
+        : ({ ok: false, miss: "no_line" } as const);
     if (timetable.ok) {
       return {
         geometry: timetable.geometry,
