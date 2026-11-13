@@ -39,7 +39,12 @@ import {
   useSaveOnce,
 } from "../form";
 import type { MissingStep } from "../form";
-import { PLACE_FIELD_MAX, placeFormFields, placePayload } from "./placeFormDraft";
+import {
+  PLACE_FIELD_MAX,
+  placeFormFields,
+  placePayload,
+  type PlaceFormLocation,
+} from "./placeFormDraft";
 import { assignPlaceToLists } from "./placeListAssign";
 import { PlaceListPartialNotice } from "./PlaceListPartialNotice";
 
@@ -59,6 +64,8 @@ interface Props {
   afterSaveFailedKey?: string;
   /** A new place's starting name — the text a list search found nothing for. */
   initialName?: string;
+  /** A new place's starting position (and address, if known) — e.g. a recorded stop. */
+  initialLocation?: PlaceFormLocation;
   /**
    * The list this place is created FOR (forgejo#230). The form says the place
    * goes there next, and leaves out its own list picker: the list page files
@@ -94,6 +101,7 @@ export function PlaceFormModal({
   onSaved,
   afterSaveFailedKey,
   initialName = "",
+  initialLocation,
   forList,
   onReload,
 }: Props): JSX.Element {
@@ -101,7 +109,7 @@ export function PlaceFormModal({
   const addToast = useToastStore((s) => s.addToast);
   const isEdit = place !== null;
 
-  const initial = placeFormFields(place, initialName);
+  const initial = placeFormFields(place, initialName, initialLocation);
   const [name, setName] = useState(initial.name);
   const [localName, setLocalName] = useState(initial.localName);
   const [category, setCategory] = useState<string>(initial.category);

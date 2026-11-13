@@ -773,6 +773,24 @@
       "searchLabel": "Search for a place",
       "searchName": "Place name",
       "searchSave": "Save as name"
+    },
+    "toPlaces": {
+      "open": "Add to Places",
+      "chosen": "Place: {{name}}",
+      "withVisit": "Record a visit on {{day}}",
+      "finish": "Add",
+      "saving": "Saving …",
+      "pick": "Use this place",
+      "none": "None of your places nearby has this name.",
+      "searchFailed": "Your places could not be searched.",
+      "searchLabel": "Search your places",
+      "search": "Search",
+      "new": "Create a new place",
+      "done": {
+        "linked": "{{name}} is in your places.",
+        "visit": "{{name}} is in your places and the visit is recorded.",
+        "visitExists": "{{name}} is in your places – a visit for that day already existed."
+      }
     }
   }
 }

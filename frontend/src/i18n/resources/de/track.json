@@ -773,6 +773,24 @@
       "searchLabel": "Ort suchen",
       "searchName": "Name des Ortes",
       "searchSave": "Als Namen speichern"
+    },
+    "toPlaces": {
+      "open": "In Orte übernehmen",
+      "chosen": "Ort: {{name}}",
+      "withVisit": "Besuch am {{day}} eintragen",
+      "finish": "Übernehmen",
+      "saving": "Wird gespeichert …",
+      "pick": "Diesen Ort wählen",
+      "none": "Kein eigener Ort in der Nähe mit diesem Namen.",
+      "searchFailed": "Deine Orte ließen sich nicht durchsuchen.",
+      "searchLabel": "Eigenen Ort suchen",
+      "search": "Suchen",
+      "new": "Neuen Ort anlegen",
+      "done": {
+        "linked": "{{name}} ist in deinen Orten.",
+        "visit": "{{name}} ist in deinen Orten, der Besuch ist eingetragen.",
+        "visitExists": "{{name}} ist in deinen Orten – für diesen Tag gab es schon einen Besuch."
+      }
     }
   }
 }

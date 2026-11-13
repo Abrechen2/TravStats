@@ -24,20 +24,31 @@ export interface PlaceFormFields {
   externalRef: string;
 }
 
+/** A position a new place starts at — e.g. a recorded stop (the form never invents one). */
+export interface PlaceFormLocation {
+  lat: number;
+  lon: number;
+  address?: string;
+}
+
 /**
  * What the form starts with: the stored place, or an empty wishlist entry.
  * `initialName` is the text a list search found nothing for (forgejo#230) —
  * the place the user was looking for, so they need not type it twice.
  */
-export function placeFormFields(place: Place | null, initialName = ""): PlaceFormFields {
+export function placeFormFields(
+  place: Place | null,
+  initialName = "",
+  initialLocation?: PlaceFormLocation
+): PlaceFormFields {
   return {
     name: place?.name ?? initialName,
     countryVisitKind: place?.countryVisitKind ?? "visit",
     localName: place?.localName ?? "",
     category: place?.category ?? "other",
-    lat: place?.lat ?? null,
-    lon: place?.lon ?? null,
-    address: place?.address ?? "",
+    lat: place?.lat ?? initialLocation?.lat ?? null,
+    lon: place?.lon ?? initialLocation?.lon ?? null,
+    address: place?.address ?? initialLocation?.address ?? "",
     city: place?.city ?? "",
     country: place?.country ?? "",
     notes: place?.notes ?? "",

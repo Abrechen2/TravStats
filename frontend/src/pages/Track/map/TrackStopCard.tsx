@@ -76,7 +76,7 @@ export default function TrackStopCard({
         {" · "}
         {durationText(stop.untilMs - stop.fromMs, t)}
       </p>
-      <TrackStopPlace stop={stop} onChanged={() => void onChanged()} />
+      <TrackStopPlace stop={stop} zone={zone} onChanged={() => void onChanged()} />
       {stay ? (
         <p
           className="t-caption"

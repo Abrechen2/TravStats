@@ -12,6 +12,7 @@ import {
 import { logger } from "../../../lib/logger";
 import { loadStopIdentity } from "../../../lib/travtrackStopIdentity";
 import TrackStopPlaceSearch from "./TrackStopPlaceSearch";
+import TrackStopToPlaces from "./TrackStopToPlaces";
 import { pillStyle } from "./trackMapStyle";
 
 /**
@@ -46,11 +47,18 @@ function useVisible<T extends Element>(): [React.RefObject<T | null>, boolean] {
   return [ref, seen];
 }
 
+/** The calendar day (`YYYY-MM-DD`) the stop began on, in the day's zone. */
+const stopDay = (ms: number, zone: string): string =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(ms);
+
 export default function TrackStopPlace({
   stop,
+  zone,
   onChanged,
 }: {
   stop: TravTrackStop;
+  /** The day's zone. Given only where "In Orte übernehmen" is offered (the stop card). */
+  zone?: string;
   /** Called after a name was stored or removed, so the day can be read again. */
   onChanged?: () => void;
 }): JSX.Element {
@@ -280,6 +288,15 @@ export default function TrackStopPlace({
           height={height}
           anchor={stop.anchor}
           onStore={(p) => void store(p)}
+        />
+      )}
+      {zone && (name !== null || probable) && (
+        <TrackStopToPlaces
+          name={name ?? probable?.name ?? ""}
+          lat={stop.place?.lat ?? stop.anchor.lat}
+          lon={stop.place?.lon ?? stop.anchor.lon}
+          day={stopDay(stop.fromMs, zone)}
+          height={height}
         />
       )}
       {failure && (
