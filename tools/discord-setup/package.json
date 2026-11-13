@@ -20,7 +20,7 @@
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "@vitest/mocker": "^5.0.0",
+    "@vitest/mocker": "^5.0.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vitest": "^4.1.11"
