@@ -269,6 +269,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackGaps",
   "travTrackLegModes",
   "travTrackStopPlaces",
+  "travTrackStopDismissals",
   "travTrackFixedPlaces",
   "travTrackPlaceSettings",
   // The phone's diagnostics log (spec 2026-10-29): owner only, never published.

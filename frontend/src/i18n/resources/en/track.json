@@ -791,6 +791,9 @@
         "visit": "{{name}} is in your places and the visit is recorded.",
         "visitExists": "{{name}} is in your places – a visit for that day already existed."
       }
-    }
+    },
+    "dismiss": "Only a wait",
+    "dismissed": "Hidden as a wait",
+    "restore": "Restore"
   }
 }

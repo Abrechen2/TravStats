@@ -64,6 +64,13 @@ export const stopSchema = z.object({
     })
     .nullable()
     .describe("The name of the stop: the owner's accepted one, else a fixed place or lodging"),
+  dismissed: z
+    .literal(true)
+    .optional()
+    .describe(
+      "Present when the owner marked the stop as only a wait (`PUT /travtrack/stops/dismissed`); " +
+        "absent otherwise. The stop is still listed so it can be restored; legs and figures are unchanged"
+    ),
   folded: z
     .object({ fixCount: z.number().int() })
     .nullable()
@@ -232,5 +239,38 @@ registry.registerPath({
       content: errorContent,
     },
     404: { description: "TRAVTRACK_STOP_NOT_FOUND: no stop under the span", content: errorContent },
+  },
+});
+
+const stopDismissBody = z.object({
+  fromMs: z.number().int().describe("Start of the stop, epoch milliseconds"),
+  untilMs: z.number().int().describe("End of the stop; at most two days after the start"),
+  dismissed: z.boolean().describe("true: only a wait; false: restore the stop"),
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/travtrack/stops/dismissed",
+  summary: "Dismiss a stop as only a wait, or restore it",
+  description:
+    "Bound to the span, not to a stop: it applies to every derived stop it covers by more " +
+    "than half, so a late point does not lose it. The stop stays in the day view, flagged " +
+    "`dismissed`; points, legs and totals never change. Repeating the request is harmless. " +
+    "Answers the recomputed stop, bare. Only while TravTrack is on.",
+  tags: ["TravTrack"],
+  request: { body: { content: { "application/json": { schema: stopDismissBody } } } },
+  responses: {
+    200: {
+      description: "The recomputed stop",
+      content: { "application/json": { schema: stopSchema } },
+    },
+    400: { description: "TRAVTRACK_STOP_INVALID: a bad span", content: errorContent },
+    401: { description: "Not signed in", content: errorContent },
+    403: {
+      description: "TRAVTRACK_DISABLED, a read-only token, or the demo",
+      content: errorContent,
+    },
+    404: { description: "TRAVTRACK_STOP_NOT_FOUND: no stop under the span", content: errorContent },
+    429: { description: "Too many requests", content: errorContent },
   },
 });

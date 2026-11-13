@@ -80,6 +80,7 @@ export async function buildTravTrackDataExport(
     gaps,
     legModes,
     stopPlaces,
+    stopDismissals,
     fixedPlaces,
     placeSettings,
   ] = await Promise.all([
@@ -136,6 +137,16 @@ export async function buildTravTrackDataExport(
       .then((rows) =>
         rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
       ),
+    // Stops the owner dismissed as only a wait (travtrack-stop-dismiss-wait), same encoding.
+    prisma.travTrackStopDismissal
+      .findMany({
+        where,
+        orderBy: { fromMs: "asc" },
+        select: { fromMs: true, untilMs: true, createdAt: true },
+      })
+      .then((rows) =>
+        rows.map((r) => ({ ...r, fromMs: r.fromMs.toString(), untilMs: r.untilMs.toString() }))
+      ),
     // Fixed places (spec 2026-11-05-travtrack-fixed-places): the circles, and the home entry's
     // radius, window and the lodging switch. Home's own point is the home setting's, not here.
     prisma.travTrackFixedPlace.findMany({
@@ -172,6 +183,7 @@ export async function buildTravTrackDataExport(
     gaps,
     legModes,
     stopPlaces,
+    stopDismissals,
     fixedPlaces,
     placeSettings,
   };

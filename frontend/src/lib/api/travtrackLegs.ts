@@ -56,6 +56,8 @@ export interface TravTrackStop {
   } | null;
   /** A run of fixes folded into one stop; null (or absent on an older server) when not folded. */
   folded?: { fixCount: number } | null;
+  /** Set (`true`) when the owner dismissed the stop as only a wait; absent on an older server. */
+  dismissed?: true;
 }
 
 export interface TravTrackStopCandidate {
@@ -138,4 +140,10 @@ export const travTrackLegsApi = {
     place: AcceptedStopPlace | null
   ): Promise<TravTrackStop> =>
     (await api.put<TravTrackStop>("/travtrack/stops/place", { ...span, place })).data,
+  /** Marks a stop as only a wait, or restores it. Answers the recomputed stop. */
+  setStopDismissed: async (
+    span: { fromMs: number; untilMs: number },
+    dismissed: boolean
+  ): Promise<TravTrackStop> =>
+    (await api.put<TravTrackStop>("/travtrack/stops/dismissed", { ...span, dismissed })).data,
 };

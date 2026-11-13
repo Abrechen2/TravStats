@@ -317,14 +317,16 @@ export default function TrackMapView(): JSX.Element {
   const stopList = useMemo<MapStop[]>(
     () =>
       loaded.flatMap((r) =>
-        (r.day.stops ?? []).map((s) => ({
-          date: r.date,
-          fromMs: s.fromMs,
-          lat: s.anchor.lat,
-          lon: s.anchor.lon,
-          selected: pick?.kind === "stop" && pick.date === r.date && pick.fromMs === s.fromMs,
-          stay: s.stayRef?.status ?? null,
-        }))
+        (r.day.stops ?? [])
+          .filter((s) => !s.dismissed)
+          .map((s) => ({
+            date: r.date,
+            fromMs: s.fromMs,
+            lat: s.anchor.lat,
+            lon: s.anchor.lon,
+            selected: pick?.kind === "stop" && pick.date === r.date && pick.fromMs === s.fromMs,
+            stay: s.stayRef?.status ?? null,
+          }))
       ),
     [loaded, pick]
   );
@@ -394,7 +396,9 @@ export default function TrackMapView(): JSX.Element {
     : highlight.length > 0
       ? `flight:${flight?.id ?? ""}`
       : "day";
-  const stopCount = long ? null : loaded.reduce((n, r) => n + (r.day.stops?.length ?? 0), 0);
+  const stopCount = long
+    ? null
+    : loaded.reduce((n, r) => n + (r.day.stops ?? []).filter((s) => !s.dismissed).length, 0);
   const closeLeg = () => {
     setPick(null);
     // "Ganzer Tag" also ends a "play this leg" window.

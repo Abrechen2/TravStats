@@ -5,10 +5,12 @@ import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import { travTrackStopPlaceLimiter } from "../../middleware/travTrackViewLimits";
 import {
+  travTrackStopDismissBodySchema,
   travTrackStopPlaceBodySchema,
   travTrackStopPlaceQuerySchema,
 } from "../../schemas/travtrackStopPlaces";
 import { setStopPlace } from "../../services/travtrack/stopPlaces/accept";
+import { setStopDismissed } from "../../services/travtrack/stopPlaces/dismiss";
 import { stopIdentityFor } from "../../services/travtrack/stopPlaces/identity";
 import logger from "../../utils/logger";
 import { travTrackTier } from "./gate";
@@ -54,6 +56,27 @@ router.put(
       const { fromMs, untilMs, place } = body.data;
       const stop = await setStopPlace(req.userId!, { fromMs, untilMs }, place);
       logger.info({ operation: "travtrack.stop.place", accepted: place !== null });
+      res.json(stop);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.put(
+  "/travtrack/stops/dismissed",
+  authenticate,
+  travTrackTier("on"),
+  requireWriteScope,
+  rejectDemo,
+  travTrackStopPlaceLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = travTrackStopDismissBodySchema.safeParse(req.body);
+      if (!body.success) throw invalid(body.error.issues[0]?.message);
+      const { fromMs, untilMs, dismissed } = body.data;
+      const stop = await setStopDismissed(req.userId!, { fromMs, untilMs }, dismissed);
+      logger.info({ operation: "travtrack.stop.dismissed", dismissed });
       res.json(stop);
     } catch (error) {
       next(error);

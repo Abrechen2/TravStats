@@ -51,6 +51,12 @@ export type Stop = {
   place: StopPlace | null;
   /** Set when the stop is a run of fixes folded into a fixed place or a lodging; null otherwise. */
   folded: { fixCount: number } | null;
+  /**
+   * Present (`true`) when the owner marked the stop as only a wait
+   * (`PUT /travtrack/stops/dismissed`). Absent otherwise, so a client that
+   * never heard of it reads every stop as before.
+   */
+  dismissed?: true;
 };
 
 export type StopPlace = {

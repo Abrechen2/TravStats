@@ -193,6 +193,7 @@ model User {
   travTrackGaps              TravTrackGap[]
   travTrackLegModes          TravTrackLegMode[]
   travTrackStopPlaces        TravTrackStopPlace[]
+  travTrackStopDismissals    TravTrackStopDismissal[]
   travTrackFixedPlaces       TravTrackFixedPlace[]
   travTrackPlaceSettings     TravTrackPlaceSettings?
   travTrackDiagnosticEvents  TravTrackDiagnosticEvent[]
@@ -6364,6 +6365,25 @@ model TravTrackStopPlace {
 
   @@unique([userId, fromMs, untilMs])
   @@map("travtrack_stop_places")
+}
+
+/// "This stop was only a wait" (travtrack-stop-dismiss-wait): the owner's
+/// correction that takes a stop off the day view's list of stops. Bound to the
+/// stop's time span like TravTrackStopPlace, never to points or a derived stop:
+/// it applies to every stop it covers by more than half, so a late point does
+/// not lose it. The points themselves are never touched; deleting the row
+/// restores the stop. Epoch milliseconds.
+model TravTrackStopDismissal {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  fromMs    BigInt   @map("from_ms")
+  untilMs   BigInt   @map("until_ms")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fromMs, untilMs])
+  @@map("travtrack_stop_dismissals")
 }
 
 /// A fixed place of the account's TravTrack day (spec

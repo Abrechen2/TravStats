@@ -37,3 +37,12 @@ export const travTrackStopPlaceBodySchema = z
       .describe("The accepted place; null removes the name from the stop"),
   })
   .refine(spanOk, SPAN_MESSAGE);
+
+export const travTrackStopDismissBodySchema = z
+  .object({
+    ...span,
+    dismissed: z
+      .boolean()
+      .describe("true marks the stop as only a wait; false takes that back and restores it"),
+  })
+  .refine(spanOk, SPAN_MESSAGE);

@@ -791,6 +791,9 @@
         "visit": "{{name}} ist in deinen Orten, der Besuch ist eingetragen.",
         "visitExists": "{{name}} ist in deinen Orten – für diesen Tag gab es schon einen Besuch."
       }
-    }
+    },
+    "dismiss": "Nur eine Wartezeit",
+    "dismissed": "Als Wartezeit ausgeblendet",
+    "restore": "Wiederherstellen"
   }
 }

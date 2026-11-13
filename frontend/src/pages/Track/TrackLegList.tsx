@@ -2,7 +2,14 @@ import type { JSX } from "react";
 import { alpha, token } from "../../components/ui/tokens";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { TravTrackLeg, TravTrackStop } from "../../lib/api/travtrackLegs";
+import { useState } from "react";
+import { trackErrorKey } from "../../lib/api/travtrack";
+import {
+  travTrackLegsApi,
+  type TravTrackLeg,
+  type TravTrackStop,
+} from "../../lib/api/travtrackLegs";
+import { logger } from "../../lib/logger";
 import TrackStopPlace from "./map/TrackStopPlace";
 import { durationText, legModeLabel, makeNumber, spanText } from "./map/trackLegFormat";
 import type { TrackSelection } from "./map/trackLegs";
@@ -34,6 +41,20 @@ export default function TrackLegList({
   const { t, i18n } = useTranslation(["track"]);
   const coarse = useCoarsePointer();
   const number = makeNumber(i18n.language);
+  const [restoreFailure, setRestoreFailure] = useState<string | null>(null);
+  const restore = async (stop: TravTrackStop) => {
+    setRestoreFailure(null);
+    try {
+      await travTrackLegsApi.setStopDismissed(
+        { fromMs: stop.fromMs, untilMs: stop.untilMs },
+        false
+      );
+      onStopPlaceChanged?.();
+    } catch (err: unknown) {
+      logger.warn("TravTrack stop could not be restored", err);
+      setRestoreFailure(trackErrorKey(err));
+    }
+  };
   const rows = [
     ...legs.map((leg) => ({ kind: "leg" as const, at: leg.fromMs, leg })),
     ...stops.map((stop) => ({ kind: "stop" as const, at: stop.fromMs, stop })),
@@ -67,6 +88,28 @@ export default function TrackLegList({
       </div>
       <ol className="flex flex-col gap-1" data-testid="track-legs">
         {rows.map((row) => {
+          if (row.kind === "stop" && row.stop.dismissed) {
+            // A wait the owner dismissed: not a stop any more, but one tap brings it back.
+            return (
+              <li key={`stop-${row.stop.fromMs}`} className="flex flex-wrap items-center gap-2">
+                <span className="t-caption tabular-nums">
+                  {spanText(row.stop.fromMs, row.stop.untilMs, zone, t)}
+                </span>
+                <span className="t-caption" data-testid="track-stop-dismissed">
+                  {t("track:stop.dismissed")}
+                </span>
+                <button
+                  type="button"
+                  className="underline t-caption"
+                  onClick={() => void restore(row.stop)}
+                  data-testid="track-stop-restore"
+                  style={{ minHeight: coarse ? 44 : 32 }}
+                >
+                  {t("track:stop.restore")}
+                </button>
+              </li>
+            );
+          }
           if (row.kind === "stop") {
             const on = selection?.kind === "stop" && here && selection.fromMs === row.stop.fromMs;
             return (
@@ -118,6 +161,11 @@ export default function TrackLegList({
           );
         })}
       </ol>
+      {restoreFailure && (
+        <p className="t-caption" role="alert" style={{ color: token("bad") }}>
+          {t(restoreFailure)}
+        </p>
+      )}
     </section>
   );
 }

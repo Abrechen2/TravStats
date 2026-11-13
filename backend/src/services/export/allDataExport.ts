@@ -273,6 +273,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
     "TravTrack history (beta): the `travtrack` section (`legModes`), accountExport.ts",
   travTrackStopPlaces:
     "TravTrack history (beta): the `travtrack` section (`stopPlaces`), accountExport.ts",
+  travTrackStopDismissals:
+    "TravTrack history (beta): the `travtrack` section (`stopDismissals`), accountExport.ts",
   travTrackFixedPlaces:
     "TravTrack history (beta): the `travtrack` section (`fixedPlaces`), accountExport.ts",
   travTrackPlaceSettings:

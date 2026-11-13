@@ -6,7 +6,7 @@ import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { trackErrorKey } from "../../../lib/api/travtrack";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
-import type { TravTrackStop } from "../../../lib/api/travtrackLegs";
+import { travTrackLegsApi, type TravTrackStop } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
 import { stayInboxHref, stayStatusColor } from "../TrackStays";
 import TrackStopPlace from "./TrackStopPlace";
@@ -54,6 +54,28 @@ export default function TrackStopCard({
       await onChanged();
     } catch (err: unknown) {
       logger.warn("TravTrack day could not be read after declining a stay", err);
+      setFailure("track:legs.reloadFailed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dismiss = async () => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await travTrackLegsApi.setStopDismissed({ fromMs: stop.fromMs, untilMs: stop.untilMs }, true);
+    } catch (err: unknown) {
+      logger.warn("TravTrack stop could not be dismissed", err);
+      setFailure(trackErrorKey(err));
+      setBusy(false);
+      return;
+    }
+    try {
+      await onChanged();
+      onClose();
+    } catch (err: unknown) {
+      logger.warn("TravTrack day could not be read after dismissing a stop", err);
       setFailure("track:legs.reloadFailed");
     } finally {
       setBusy(false);
@@ -120,6 +142,15 @@ export default function TrackStopCard({
             </button>
           </>
         )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void dismiss()}
+          data-testid="track-stop-dismiss"
+          style={pillStyle(false, coarse ? 44 : 36)}
+        >
+          {t("track:stop.dismiss")}
+        </button>
         <button
           type="button"
           className="underline"
