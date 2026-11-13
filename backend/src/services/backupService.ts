@@ -128,6 +128,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       backup = await prisma.backup.create({
         data: {
           type: options.type || "full",
+          scheduled: options.scheduled ?? false,
           status: "running",
           backupPath: finalArchivePath,
           dbBackupPath,
@@ -409,6 +410,8 @@ export async function cleanupOldBackups(): Promise<number> {
         lt: cutoffDate,
       },
       status: "completed",
+      // A backup made by hand is the admin's to delete, never retention's.
+      scheduled: true,
     },
   });
 

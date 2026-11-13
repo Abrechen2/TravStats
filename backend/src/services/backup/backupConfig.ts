@@ -12,6 +12,8 @@ export interface ExistingBackupRecord {
 export interface BackupOptions {
   type?: "full" | "partial";
   retentionDays?: number;
+  /** Made by the backup schedule; only such archives are pruned by retention. */
+  scheduled?: boolean;
   /** When provided, skip creating a new DB record and use this pre-created one. */
   existingRecord?: ExistingBackupRecord;
 }

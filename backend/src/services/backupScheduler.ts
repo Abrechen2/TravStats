@@ -80,7 +80,7 @@ async function checkAndRunBackup(): Promise<void> {
       interval: backupInterval,
     });
 
-    await createBackup({ type: "full" });
+    await createBackup({ type: "full", scheduled: true });
     // Retention only follows a successful local backup, never a failed dump.
     try {
       await cleanupOldBackups();

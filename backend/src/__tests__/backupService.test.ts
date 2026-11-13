@@ -270,6 +270,14 @@ describe("backupService", () => {
       expect(mockBackupDelete).toHaveBeenCalledWith({ where: { id: "old-2" } });
     });
 
+    it("prunes only archives the schedule made; a hand-made backup is never deleted by retention", async () => {
+      mockBackupFindMany.mockResolvedValue([]);
+      await cleanupOldBackups();
+      expect(mockBackupFindMany.mock.calls[0][0]).toMatchObject({
+        where: { status: "completed", scheduled: true },
+      });
+    });
+
     it("retains the last full archive even when expired", async () => {
       mockBackupFindMany.mockResolvedValue([MOCK_BACKUP]);
       mockExistsSync.mockReturnValue(true);

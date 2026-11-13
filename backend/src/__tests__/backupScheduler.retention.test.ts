@@ -53,3 +53,11 @@ it("names why retention failed instead of only that it did", async () => {
     expect.objectContaining({ operation: "backup_cleanup_failed", err: cause })
   );
 });
+
+it("marks the archive it makes as scheduled, so retention may prune it later", async () => {
+  mockCreate.mockResolvedValue("new");
+  await startScheduler();
+  const run = (mockSchedule.mock.calls[0] as unknown as [string, () => Promise<void>])[1];
+  await run();
+  expect(mockCreate).toHaveBeenCalledWith({ type: "full", scheduled: true });
+});

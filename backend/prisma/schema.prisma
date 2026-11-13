@@ -1702,6 +1702,10 @@ model AirportSeedingStatus {
 model Backup {
   id               String    @id @default(uuid())
   type             String    @default("full") // "full" | "partial"
+  /// Made by the backup schedule. Retention prunes only these: a backup made by hand (or before
+  /// this column existed) stays until the admin deletes it (rc.29 review: backups became always
+  /// on, and the first scheduled run would otherwise have pruned old hand-made archives).
+  scheduled        Boolean   @default(false)
   status           String    @default("pending") // "pending" | "running" | "completed" | "failed"
   backupPath       String    @map("backup_path") // Path to backup archive
   dbBackupPath     String?   @map("db_backup_path") // Path to database dump
