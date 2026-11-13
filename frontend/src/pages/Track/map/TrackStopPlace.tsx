@@ -142,6 +142,9 @@ export default function TrackStopPlace({
     accepted === undefined && stop.place && stop.place.source !== "accepted"
       ? stop.place.source
       : null;
+  // A suggested venue brings its own position; otherwise the stop's anchor stands in.
+  const transferPoint =
+    (name === null && identity?.candidates.find((c) => c.name === probable?.name)) || stop.anchor;
   const foldCount = stop.folded?.fixCount ?? 0;
 
   let body: JSX.Element;
@@ -292,9 +295,10 @@ export default function TrackStopPlace({
       )}
       {zone && (name !== null || probable) && (
         <TrackStopToPlaces
+          key={`${name ?? probable?.name ?? ""}|${stop.place?.lat ?? ""}|${stop.place?.lon ?? ""}`}
           name={name ?? probable?.name ?? ""}
-          lat={stop.place?.lat ?? stop.anchor.lat}
-          lon={stop.place?.lon ?? stop.anchor.lon}
+          lat={stop.place?.lat ?? transferPoint.lat}
+          lon={stop.place?.lon ?? transferPoint.lon}
           day={stopDay(stop.fromMs, zone)}
           height={height}
         />

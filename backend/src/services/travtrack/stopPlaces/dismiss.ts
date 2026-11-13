@@ -40,7 +40,8 @@ export async function setStopDismissed(
       update: {},
     });
   } else {
-    const hit = under((await derivedAround(userId, span)).stops, span);
+    const all = (await derivedAround(userId, span)).stops;
+    const hit = under(all, span);
     const stored = await prisma.travTrackStopDismissal.findMany({
       where: {
         userId,
@@ -49,16 +50,41 @@ export async function setStopDismissed(
       },
       select: { id: true, fromMs: true, untilMs: true },
     });
-    const drop = stored
-      .filter(
-        (r) =>
-          (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
-          hit.some(
-            (s) => overlapShare(s, { fromMs: Number(r.fromMs), untilMs: Number(r.untilMs) }) > 0.5
-          )
-      )
-      .map((r) => r.id);
-    await prisma.travTrackStopDismissal.deleteMany({ where: { userId, id: { in: drop } } });
+    const rowSpan = (r: { fromMs: bigint; untilMs: bigint }) => ({
+      fromMs: Number(r.fromMs),
+      untilMs: Number(r.untilMs),
+    });
+    const drop = stored.filter(
+      (r) =>
+        (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
+        hit.some((s) => overlapShare(s, rowSpan(r)) > 0.5)
+    );
+    // Late points may have split one dismissed stop into two: the row that held both must
+    // keep holding the one that is not being restored.
+    const keep = all.filter(
+      (s) =>
+        !hit.includes(s) &&
+        s.dismissed === true &&
+        drop.some((r) => overlapShare(s, rowSpan(r)) > 0.5)
+    );
+    await prisma.$transaction([
+      prisma.travTrackStopDismissal.deleteMany({
+        where: { userId, id: { in: drop.map((r) => r.id) } },
+      }),
+      ...keep.map((s) =>
+        prisma.travTrackStopDismissal.upsert({
+          where: {
+            userId_fromMs_untilMs: {
+              userId,
+              fromMs: BigInt(s.fromMs),
+              untilMs: BigInt(s.untilMs),
+            },
+          },
+          create: { userId, fromMs: BigInt(s.fromMs), untilMs: BigInt(s.untilMs) },
+          update: {},
+        })
+      ),
+    ]);
   }
   const hit = under((await derivedAround(userId, span)).stops, span);
   if (hit.length === 0) throw notFound();

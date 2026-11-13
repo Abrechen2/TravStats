@@ -100,6 +100,43 @@ describe("TravTrack — dismiss a stop", () => {
     expect(stops[0].dismissed).toBe(true);
   });
 
+  it("restoring one of two stops a late gap split keeps the other one dismissed", async () => {
+    // One dismissed span that, with the points as they are now, holds two stops.
+    await prisma.travTrackStopDismissal.create({
+      data: { userId, fromMs: BigInt(T0), untilMs: BigInt(T0 + 70 * MIN) },
+    });
+    await stand(0, 20);
+    for (const m of [22, 24, 26, 28]) {
+      await storePoint(userId, {
+        t: T0 + m * MIN,
+        lat: LAT0 + (m - 20) * 0.002,
+        lon: LON0,
+        accuracyM: 5,
+      });
+    }
+    for (let m = 30; m <= 60; m += 5) {
+      await storePoint(userId, {
+        t: T0 + m * MIN,
+        lat: LAT0 + 0.02,
+        lon: LON0,
+        accuracyM: 5,
+        motion: "stationary",
+      });
+    }
+    const stops = (await getDay()).body.stops as Array<{
+      fromMs: number;
+      untilMs: number;
+      dismissed?: true;
+    }>;
+    expect(stops).toHaveLength(2);
+    expect(stops.every((s) => s.dismissed === true)).toBe(true);
+    const res = await put({ fromMs: stops[0].fromMs, untilMs: stops[0].untilMs, dismissed: false });
+    expect(res.status).toBe(200);
+    const after = (await getDay()).body.stops as Array<{ dismissed?: true }>;
+    expect(after[0].dismissed).toBeUndefined();
+    expect(after[1].dismissed).toBe(true);
+  });
+
   it("is carried in the account export", async () => {
     await stand(0, 30);
     await put({ ...span, dismissed: true });
