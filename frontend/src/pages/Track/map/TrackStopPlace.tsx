@@ -11,6 +11,7 @@ import {
 } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
 import { loadStopIdentity } from "../../../lib/travtrackStopIdentity";
+import TrackStopPlaceSearch from "./TrackStopPlaceSearch";
 import { pillStyle } from "./trackMapStyle";
 
 /**
@@ -273,6 +274,14 @@ export default function TrackStopPlace({
   return (
     <div ref={ref} className="flex flex-col gap-1" data-testid="track-stop-place">
       {body}
+      {name === null && (
+        <TrackStopPlaceSearch
+          busy={busy}
+          height={height}
+          anchor={stop.anchor}
+          onStore={(p) => void store(p)}
+        />
+      )}
       {failure && (
         <p className="t-caption" role="alert" style={{ color: token("bad") }}>
           {t(failure)}

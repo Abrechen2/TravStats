@@ -767,7 +767,12 @@
       "fixed": "Fixed place",
       "lodging": "Lodging",
       "folded_one": "{{count}} position folded",
-      "folded_other": "{{count}} positions folded"
+      "folded_other": "{{count}} positions folded",
+      "search": "Search yourself",
+      "searchClose": "Hide search",
+      "searchLabel": "Search for a place",
+      "searchName": "Place name",
+      "searchSave": "Save as name"
     }
   }
 }

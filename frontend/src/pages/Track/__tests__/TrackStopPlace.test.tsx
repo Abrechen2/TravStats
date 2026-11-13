@@ -16,6 +16,18 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+vi.mock("../../../components/location/LocationInput", () => ({
+  LocationInput: ({ onChange }: { onChange: (s: unknown) => void }) => (
+    <div>
+      <button
+        data-testid="pick-hit"
+        onClick={() => onChange({ lat: 52.51, lon: 13.41, name: "Café Einstein" })}
+      />
+      <button data-testid="pick-pin" onClick={() => onChange({ lat: 52.52, lon: 13.42 })} />
+    </div>
+  ),
+}));
+
 import TrackLegList from "../TrackLegList";
 import { clearStopIdentityCache, loadStopIdentity } from "../../../lib/travtrackStopIdentity";
 
@@ -227,5 +239,58 @@ describe("TrackStopPlace — review fixes", () => {
     );
     renderList(stop());
     expect(await screen.findByTestId("track-stop-place-accept")).toBeInTheDocument();
+  });
+});
+
+describe("TrackStopPlace — search it yourself", () => {
+  beforeEach(() => {
+    legsApi.stopIdentity.mockReset();
+    legsApi.setStopPlace.mockReset();
+    clearStopIdentityCache();
+  });
+
+  it("offers 'Selbst suchen' when the lookup failed and stores the pick", async () => {
+    legsApi.stopIdentity.mockRejectedValue({ response: { status: 500, data: {} } });
+    legsApi.setStopPlace.mockResolvedValue(
+      stop({ place: { name: "Café Einstein", lat: 52.51, lon: 13.41, source: "accepted" } })
+    );
+    renderList(stop());
+    expect(await screen.findByText("track:stop.place.failed")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("track-stop-place-search-toggle"));
+    fireEvent.click(screen.getByTestId("pick-hit"));
+    fireEvent.click(screen.getByTestId("track-stop-place-search-save"));
+    await waitFor(() =>
+      expect(legsApi.setStopPlace).toHaveBeenCalledWith(
+        { fromMs: 1_000_000, untilMs: 1_000_000 + 40 * 60_000 },
+        { name: "Café Einstein", lat: 52.51, lon: 13.41 }
+      )
+    );
+    expect(await screen.findByTestId("track-stop-place-name")).toHaveTextContent("Café Einstein");
+  });
+
+  it("offers the search when there are no suggestions, and asks for a name after a map pin", async () => {
+    legsApi.stopIdentity.mockResolvedValue(identity({ probable: null, candidates: [] }));
+    legsApi.setStopPlace.mockResolvedValue(stop());
+    renderList(stop());
+    expect(await screen.findByTestId("track-stop-place-none")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("track-stop-place-search-toggle"));
+    fireEvent.click(screen.getByTestId("pick-pin"));
+    expect(screen.getByTestId("track-stop-place-search-save")).toBeDisabled();
+    fireEvent.change(screen.getByTestId("track-stop-place-search-name"), {
+      target: { value: "Parkplatz" },
+    });
+    fireEvent.click(screen.getByTestId("track-stop-place-search-save"));
+    await waitFor(() =>
+      expect(legsApi.setStopPlace).toHaveBeenCalledWith(expect.anything(), {
+        name: "Parkplatz",
+        lat: 52.52,
+        lon: 13.42,
+      })
+    );
+  });
+
+  it("does not offer the search once a name is stored", () => {
+    renderList(stop({ place: { name: "Hotel Adlon", lat: null, lon: null, source: "accepted" } }));
+    expect(screen.queryByTestId("track-stop-place-search-toggle")).toBeNull();
   });
 });

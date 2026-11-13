@@ -767,7 +767,12 @@
       "fixed": "Fester Ort",
       "lodging": "Unterkunft",
       "folded_one": "{{count}} Position zusammengefasst",
-      "folded_other": "{{count}} Positionen zusammengefasst"
+      "folded_other": "{{count}} Positionen zusammengefasst",
+      "search": "Selbst suchen",
+      "searchClose": "Suche ausblenden",
+      "searchLabel": "Ort suchen",
+      "searchName": "Name des Ortes",
+      "searchSave": "Als Namen speichern"
     }
   }
 }
