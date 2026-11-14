@@ -143,6 +143,25 @@ describe("TravTrack — a silence a logbook entry explains", () => {
     });
   });
 
+  it("a flight with only one known time (a recorder bound) explains no silence", async () => {
+    await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "FRA",
+        arrIata: "LIS",
+        depLat: 50.03,
+        depLon: 8.57,
+        arrLat: 38.77,
+        arrLon: -9.13,
+        flightNumber: "LH2",
+        departureTime: new Date("2026-10-12T08:00:00Z"),
+        status: "flown",
+      },
+    });
+    await flightDayPoints();
+    expect((await states()).some((c) => c.state === "entry")).toBe(false);
+  });
+
   it("an entry of a domain the account does not show does not fill", async () => {
     await settings(["lodging"]);
     await flight("2026-10-12T08:00:00Z", "2026-10-12T11:00:00Z");

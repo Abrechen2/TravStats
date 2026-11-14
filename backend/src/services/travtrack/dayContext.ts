@@ -57,6 +57,13 @@ export type DayContextEntry = Span & {
   suggestion?: "stay" | "journey";
 };
 
+/**
+ * Entries whose window is only a bound (a flight without both times: the recorder's window,
+ * +-30 min). They are listed, but they explain no silence (`dayEntryCoverage.ts`). Kept off
+ * the entry itself so the response shape does not change.
+ */
+export const BOUND_ONLY_ENTRIES = new WeakSet<DayContextEntry>();
+
 /** The part of `span` inside the day; an instant counts when it lies in it. */
 function clip(span: Span, window: Span): Span | null {
   const fromMs = Math.max(span.fromMs, window.fromMs);
@@ -106,17 +113,18 @@ async function logbookContext(
     const record = described.get(w.domain)?.get(w.id) ?? UNNAMED;
     const span = clip(record.span ?? w, window);
     if (!span) return [];
-    return [
-      {
-        kind: w.domain,
-        id: w.id,
-        label: record.label,
-        href: record.href,
-        anchor: anchorOf(record.pin, span, read),
-        unlabelled: false,
-        ...span,
-      },
-    ];
+    const entry: DayContextEntry = {
+      kind: w.domain,
+      id: w.id,
+      label: record.label,
+      href: record.href,
+      anchor: anchorOf(record.pin, span, read),
+      unlabelled: false,
+      ...span,
+    };
+    // A describer that can state the real span says so; for a flight, none means the window is a bound.
+    if (w.domain === "flight" && !record.span) BOUND_ONLY_ENTRIES.add(entry);
+    return [entry];
   });
 }
 

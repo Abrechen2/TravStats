@@ -1,4 +1,4 @@
-import type { DayContextEntry } from "./dayContext";
+import { BOUND_ONLY_ENTRIES, type DayContextEntry } from "./dayContext";
 import type { Span } from "./readSafe";
 
 /**
@@ -25,7 +25,13 @@ export function explainingEntries(
   context: readonly DayContextEntry[]
 ): Array<Span & CoverageEntryRef> {
   return context
-    .filter((e) => !NOT_AN_ENTRY.has(e.kind) && e.id !== null && e.untilMs > e.fromMs)
+    .filter(
+      (e) =>
+        !NOT_AN_ENTRY.has(e.kind) &&
+        !BOUND_ONLY_ENTRIES.has(e) &&
+        e.id !== null &&
+        e.untilMs > e.fromMs
+    )
     .map((e) => ({ fromMs: e.fromMs, untilMs: e.untilMs, domain: e.kind, id: e.id as string }))
     .sort((a, b) => a.fromMs - b.fromMs || a.id.localeCompare(b.id));
 }
