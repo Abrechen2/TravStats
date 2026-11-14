@@ -38,13 +38,17 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-/** One failed stored test is a fault; all passing is ready; none stored says nothing. */
+/**
+ * One failed stored test is a fault; all passing is ready; none stored says nothing.
+ * A ready answer is only as fresh as its OLDEST test, so one retested provider cannot
+ * keep the expired results of the others looking current.
+ */
 function fromTests(tests: readonly LastTest[]): Evaluation {
   if (tests.length === 0) return unknown;
+  const times = (list: readonly LastTest[]): number[] => list.map((t) => parseAt(t.at).getTime());
   const failed = tests.filter((t) => !t.ok);
-  const pool = failed.length > 0 ? failed : tests;
-  const at = new Date(Math.max(...pool.map((t) => parseAt(t.at).getTime())));
-  return failed.length > 0 ? needsAction(at) : ready(at);
+  if (failed.length > 0) return needsAction(new Date(Math.max(...times(failed))));
+  return ready(new Date(Math.min(...times(tests))));
 }
 
 function travtrackInUse(ctx: ReadinessContext): boolean {

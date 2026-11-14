@@ -139,7 +139,7 @@ async function loadInstance(now: Date): Promise<InstanceFacts> {
   };
 }
 
-async function loadAccount(userId: string): Promise<AccountFacts> {
+async function loadAccount(userId: string, now: Date): Promise<AccountFacts> {
   const [settings, user, flight, pairing, point, tests, mailAddress, senders, reminders] =
     await Promise.all([
       prisma.userSettings.findUnique({
@@ -155,7 +155,12 @@ async function loadAccount(userId: string): Promise<AccountFacts> {
       prisma.user.findUnique({ where: { id: userId }, select: { notificationEmail: true } }),
       prisma.flight.findFirst({ where: { userId }, select: { id: true } }),
       prisma.apiToken.findFirst({
-        where: { userId, revokedAt: null, deviceId: { not: null } },
+        where: {
+          userId,
+          revokedAt: null,
+          deviceId: { not: null },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
         select: { id: true },
       }),
       prisma.travTrackPoint.findFirst({ where: { userId }, select: { id: true } }),
@@ -188,6 +193,6 @@ export async function loadReadinessContext(
   isAdmin: boolean,
   now: Date = new Date()
 ): Promise<ReadinessContext> {
-  const [instance, account] = await Promise.all([loadInstance(now), loadAccount(userId)]);
+  const [instance, account] = await Promise.all([loadInstance(now), loadAccount(userId, now)]);
   return { now, userId, isAdmin, instance, account };
 }

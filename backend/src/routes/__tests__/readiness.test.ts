@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { appVersion } from "../../utils/version";
+import { generateApiToken } from "../../utils/apiTokens";
 import { resetDiskCache } from "../../services/readiness/context";
 
 /**
@@ -236,6 +237,42 @@ describe("Readiness API", () => {
     const stale = await smtp();
     expect(stale.status).toBe("unknown");
     expect(stale.checkedAt).not.toBeNull();
+  });
+
+  it("shows an admin's read or write token no admin item, and the admin scope does", async () => {
+    const bearer = async (scope: "read" | "write" | "admin"): Promise<string> => {
+      const tok = await generateApiToken();
+      await prisma.apiToken.create({
+        data: {
+          userId: adminId,
+          label: `rdy-${scope}`,
+          lookupHash: tok.lookupHash,
+          hash: tok.hash,
+          scope,
+        },
+      });
+      return `Bearer ${tok.plaintext}`;
+    };
+    const idsVia = async (auth: string): Promise<string[]> =>
+      ((await request(app).get(PATH).set("Authorization", auth)).body.items as Item[]).map(
+        (i) => i.id
+      );
+    expect((await idsVia(await bearer("write"))).some((id) => id.startsWith("admin."))).toBe(false);
+    expect((await idsVia(await bearer("read"))).some((id) => id.startsWith("admin."))).toBe(false);
+    expect(await idsVia(await bearer("admin"))).toContain("admin.smtp");
+    await prisma.apiToken.deleteMany({ where: { userId: adminId, label: { startsWith: "rdy-" } } });
+  });
+
+  it("does not let one retested provider keep other expired results looking fresh", async () => {
+    const at = (days: number) => new Date(Date.now() - days * 86_400_000);
+    await prisma.externalServiceTest.createMany({
+      data: [
+        { userId: null, serviceId: "opensky", ok: true, at: at(200) },
+        { userId: null, serviceId: "aeroapi", ok: true, at: at(0) },
+      ],
+    });
+    const keys = (await itemsOf(adminCookie)).find((i) => i.id === "admin.providerKeys")!;
+    expect(keys.status).toBe("unknown");
   });
 
   it("reports a missed scheduled backup as needing action and a recent one as ready", async () => {

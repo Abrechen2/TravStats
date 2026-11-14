@@ -34,8 +34,17 @@ router.use(authenticate);
 router.use(requireWriteScope);
 router.use(rejectDemoWrites);
 
-async function callerIsAdmin(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+/**
+ * Admin items are for an admin session. A token needs the admin scope on top of the
+ * flag, as in `requireAdmin`: a read or write token of an admin sees (and changes)
+ * what an ordinary account would.
+ */
+async function callerIsAdmin(req: AuthRequest): Promise<boolean> {
+  if (req.apiToken && req.apiToken.scope !== "admin") return false;
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId! },
+    select: { isAdmin: true },
+  });
   return user?.isAdmin === true;
 }
 
@@ -46,7 +55,7 @@ function itemNotFound(): AppError {
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    res.json(await buildReadinessView(userId, await callerIsAdmin(userId)));
+    res.json(await buildReadinessView(userId, await callerIsAdmin(req)));
   } catch (error) {
     next(error);
   }
@@ -59,7 +68,7 @@ router.post(
       const body = snoozeBodySchema.safeParse(req.body ?? {});
       if (!body.success) throw new AppError("Invalid snooze request", 400, undefined, "until");
       const userId = req.userId!;
-      const check = await findApplicableItem(userId, await callerIsAdmin(userId), req.params.id);
+      const check = await findApplicableItem(userId, await callerIsAdmin(req), req.params.id);
       if (!check) throw itemNotFound();
       const now = Date.now();
       const until = body.data.until ? new Date(body.data.until) : new Date(now + SNOOZE_DEFAULT_MS);
@@ -79,7 +88,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const check = await findApplicableItem(userId, await callerIsAdmin(userId), req.params.id);
+      const check = await findApplicableItem(userId, await callerIsAdmin(req), req.params.id);
       if (!check) throw itemNotFound();
       if (check.severity === "required") {
         throw new AppError(
@@ -101,7 +110,7 @@ router.delete(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const check = await findApplicableItem(userId, await callerIsAdmin(userId), req.params.id);
+      const check = await findApplicableItem(userId, await callerIsAdmin(req), req.params.id);
       if (!check) throw itemNotFound();
       await clearItemState(userId, check.id);
       res.status(204).end();
@@ -116,7 +125,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      if (!(await findApplicableNote(userId, await callerIsAdmin(userId), req.params.id))) {
+      if (!(await findApplicableNote(userId, await callerIsAdmin(req), req.params.id))) {
         throw new AppError("No such update note", 404, "READINESS_NOTE_NOT_FOUND");
       }
       await acknowledgeNote(userId, req.params.id);
