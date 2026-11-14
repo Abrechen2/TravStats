@@ -10,7 +10,7 @@ import { CRUISE_COLUMN_LAYOUT } from "../../Cruise/CruiseRow";
 /**
  * The width model the four logbooks share.
  *
- * CT106 audit, B01: the flights table summed fixed tracks past its own width,
+ * beta audit, B01: the flights table summed fixed tracks past its own width,
  * the one shrinkable column — the route — was laid out at 0px, and the actions
  * column sat outside a frame that clipped it. A layout test cannot see that in
  * jsdom, so what is pinned here is the arithmetic the browser relies on, and
@@ -89,7 +89,7 @@ describe("table width model", () => {
     });
   });
 
-  // CT106 design-6 R02: at the old 1200px list shell flights, stays and cruises
+  // beta design-6 R02: at the old 1200px list shell flights, stays and cruises
   // hid columns the reader had ticked on every screen size, and the hint to
   // widen the window was false. The logbook shell must hold every column.
   it.each(Object.entries(LOGBOOKS))(

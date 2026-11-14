@@ -141,7 +141,7 @@ describe("package document read by the model on request", () => {
   it("says why a provider failure produced no reading, instead of an empty success", async () => {
     llmGenerateChain.mockRejectedValue(
       new Error(
-        "connect ECONNREFUSED 192.168.178.155:11434 (http://192.168.178.155:11434/api/generate)"
+        "connect ECONNREFUSED 192.168.1.155:11434 (http://192.168.1.155:11434/api/generate)"
       )
     );
     const res = await parse({ pdfBase64: pdf, packageModel: true }).expect(200);

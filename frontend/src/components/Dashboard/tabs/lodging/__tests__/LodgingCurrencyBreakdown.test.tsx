@@ -44,7 +44,7 @@ describe("LodgingCurrencyBreakdown", () => {
     useSettingsStore.setState({ baseCurrency: "EUR" });
   });
 
-  // CT106 design-6 R04, the mixed case measured in a browser: every stay was
+  // beta design-6 R04, the mixed case measured in a browser: every stay was
   // priced but none converted, and the card said "In Basiswährung: 0 €"
   // beside a strip that correctly said "— · 3 not converted".
   it("shows a dash, not 0 €, as the base total when nothing could be converted", () => {

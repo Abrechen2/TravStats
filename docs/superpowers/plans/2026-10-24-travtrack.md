@@ -492,9 +492,9 @@ Repo `/home/claude/projekte/TravStatsCompanion`, branch `feat/travtrack-p2` off 
 
 **Files:** `adrs/0016-travtrack-everyday-capture.md` (results), board item.
 
-Before everyday recording is advertised or `travTrack` leaves the beta registry. Build a beta APK + TestFlight from `feat/travtrack-p2` against the Beta server (CT 106) with TravTrack switched on.
+Before everyday recording is advertised or `travTrack` leaves the beta registry. Build a beta APK + TestFlight from `feat/travtrack-p2` against the Beta server with TravTrack switched on.
 
-**Status 2026-10-26:** builds out (owner OK) — TestFlight build 61 (0.1.0, internal group only) and a release APK on the owner's Xiaomi, both from `feat/travtrack-p2` @ 839d98a5 against CT 106. The field day itself runs on the owner's time.
+**Status 2026-10-26:** builds out (owner OK) — TestFlight build 61 (0.1.0, internal group only) and a release APK on the owner's Xiaomi, both from `feat/travtrack-p2` @ 839d98a5 against the beta server. The field day itself runs on the owner's time.
 
 **Prod, 2026-10-26 (owner OK):** the owner's account on prod has the privacy zone „Zuhause" (250 m, as on the beta), and his Dawarich history 2006-10-01…2026-10-26 was copied into TravTrack (391,075 + 9,042 points stored, 825 dropped by the zone, 0 errors). Since then his iPhone records with TravTrack (build 66) and Dawarich side by side. Two binding consequences:
 
@@ -515,10 +515,10 @@ recording when he leaves home and STOPS it when he arrives, and points go up on
 an interval. TravTrack has to work the same way.
 
 **Order (binding):** (1) a test build of `feat/travtrack-p2` against the Beta
-(CT 106, `2.7.0-beta.26`, TravTrack on), (2) C8 on that build, (3) C9 on top of
+(`2.7.0-beta.26`, TravTrack on), (2) C8 on that build, (3) C9 on top of
 `feat/travtrack-p2` as `feat/travtrack-shortcuts`. Until (1) the owner's phone
 records nothing into TravTrack, so it comes first. Every build that leaves
-lisbeth — APK for testers, TestFlight, store — only with the owner's OK.
+The dev host — APK for testers, TestFlight, store — only with the owner's OK.
 
 **Contract: unchanged.** `POST /travtrack/points` (points, gaps), `/travtrack/zones`,
 `/location/capabilities` as in phase 2; no server work. A deliberate stop sends
@@ -955,7 +955,7 @@ An explicit copy the user starts. Dawarich is only read (rule 5), the provider d
 - After the copy: its days are dirty (projections); no stay, journey or trip detection over the copied span and no prompt (review focus 19). Stop → `paused`, resumable.
 
 - [ ] **Step 1: Failing tests** — "copies a two-month fake history day by day with the report per month"; "a truncated day is subdivided, an hour still truncated is listed and the import ends incomplete"; "Dawarich unreachable pauses with the checkpoint kept; resume stores nothing twice"; "a crash after a day's commit repeats nothing; a crash before it repeats that day as duplicates"; "a stale heartbeat reads as interrupted and resumes"; "a range deleted while the import runs stays empty"; "deleting the import while it runs cancels it: no later day stores a point"; "a point inside a zone or a deleted range is counted dropped"; "a Dawarich point equal to a Companion fix is a duplicate"; "the provider is unchanged"; "nothing is sent to Dawarich but GET /api/v1/points" (fetch spy); "the admin-global connection is refused"; "the copy creates no finding". Web: progress, pause/resume, the incomplete list.
-- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest dawarichImport travtrack.dawarichImport ingest openapi apiResponseShape --forceExit`, `npx vitest --run TravTrackSection localeKeyParity`). **Step 5:** Against the owner's Dawarich on the Beta server (CT 106), one real year: compare the report's totals with Dawarich's own count for that year and record both on the board item. Commit `feat(travtrack): copy the Dawarich history, and say how complete the copy is`.
+- [ ] **Step 2–4:** FAIL → implement → PASS (`npx jest dawarichImport travtrack.dawarichImport ingest openapi apiResponseShape --forceExit`, `npx vitest --run TravTrackSection localeKeyParity`). **Step 5:** Against the owner's Dawarich on the Beta server, one real year: compare the report's totals with Dawarich's own count for that year and record both on the board item. Commit `feat(travtrack): copy the Dawarich history, and say how complete the copy is`.
 
 ### Review Focus additions (append to the list at the top)
 

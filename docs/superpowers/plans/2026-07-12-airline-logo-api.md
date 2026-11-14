@@ -866,7 +866,7 @@ Run `gitnexus detect_changes` — expected scope: `airlineLogoService`, `logoCac
 
 ## Explicitly out of scope (deferred)
 
-- **Infisical**: the Infisical skills (`infisical-api`, `infisical-setup`) are now available in the session; storing the key in the CT 141 instance and injecting it as the env fallback is a separate, later step. It changes nothing in this code — only where the env var comes from. Primary key storage is the admin UI anyway (encrypted in `admin_settings`).
+- **Infisical**: the Infisical skills (`infisical-api`, `infisical-setup`) are now available in the session; storing the key in the secrets manager instance and injecting it as the env fallback is a separate, later step. It changes nothing in this code — only where the env var comes from. Primary key storage is the admin UI anyway (encrypted in `admin_settings`).
 - **`POST /test` endpoint for the logostream card**: the Task 1 probe validates the key manually; an in-UI tester can ride a later polish round.
 - **Flights-table redesign** (`icon` variant next to airline names, tail markers on the map): consumes this proxy; separate plan/branch.
 - **TravStatsApp**: the app authenticates with Bearer PATs; the proxy works for it unchanged once the app sends its token on image requests.

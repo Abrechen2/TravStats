@@ -5,7 +5,7 @@
 ## Deployment: Underworld (Produktionsserver)
 
 ```bash
-SERVER_IP="<UNDERWORLD_IP>"        # z.B. 192.168.178.xxx
+SERVER_IP="<UNDERWORLD_IP>"        # z.B. 192.168.1.xxx
 DEPLOY_PATH="/opt/travstats"       # Pfad auf dem Server
 
 # 1. Neues Image bauen und pushen (lokal, Docker Desktop muss laufen)

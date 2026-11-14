@@ -32,7 +32,7 @@
  *   DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \
  *     npx tsx backend/scripts/backfillDataIntegrityRc4.ts
  *
- *   # On a host (CT 100 prod / Norberts Unraid-2 / …):
+ *   # On a host (prod / an external NAS / …):
  *   docker exec TravStats npx tsx /app/backend/scripts/backfillDataIntegrityRc4.ts
  *
  *   Add --dry-run to preview without writing.

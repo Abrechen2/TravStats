@@ -127,7 +127,7 @@ describe("/settings/webdav-sync", () => {
     const userId = await makeUser();
     const res = await request(appFor(userId))
       .put("/settings/webdav-sync")
-      .send({ ...target, url: "http://192.168.178.202/dav" });
+      .send({ ...target, url: "http://192.168.1.202/dav" });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("blockedTarget");
     expect(await prisma.userWebdavSync.count({ where: { userId } })).toBe(0);
@@ -144,7 +144,7 @@ describe("/settings/webdav-sync", () => {
   it("accepts a LAN share from an admin and says so", async () => {
     const res = await request(appFor(await makeUser(true)))
       .put("/settings/webdav-sync")
-      .send({ ...target, url: "http://192.168.178.202/dav" });
+      .send({ ...target, url: "http://192.168.1.202/dav" });
     expect(res.status).toBe(200);
     expect(res.body.allowPrivateTargets).toBe(true);
   });

@@ -109,6 +109,6 @@ needed:
 ## Shipping
 
 Implement on `dev/v2.3`. Full build checks (backend + frontend tsc/lint/
-tests) before deploy. Ship as a new **beta** build to CT 106 (not a new RC —
+tests) before deploy. Ship as a new **beta** build to the beta server (not a new RC —
 the RC already cut today, 2.3.0-rc.1, stays as-is pending promotion; this
 lands in the *next* beta and rides along whenever v2.3 gets re-RC'd).

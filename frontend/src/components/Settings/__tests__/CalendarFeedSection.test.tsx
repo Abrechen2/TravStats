@@ -102,8 +102,8 @@ describe("CalendarFeedSection", () => {
 
   it("warns under the link when Google Calendar cannot reach its address, and only then", async () => {
     api.issue.mockResolvedValueOnce({
-      url: "http://192.168.178.120:3010/api/v1/calendar/ts_cal_abc.ics",
-      webcalUrl: "webcal://192.168.178.120:3010/api/v1/calendar/ts_cal_abc.ics",
+      url: "http://192.168.1.120:3010/api/v1/calendar/ts_cal_abc.ics",
+      webcalUrl: "webcal://192.168.1.120:3010/api/v1/calendar/ts_cal_abc.ics",
       createdAt: "2030-05-20T10:00:00.000Z",
       reachableFromInternet: false,
     });

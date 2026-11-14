@@ -1,7 +1,7 @@
 # Block 3 — Logbuch-Familie. Bericht
 
 Zweig `dev/design-system`, aufgesetzt auf Block 2. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 3.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 3.
 
 **Dieser Block ist teilweise geliefert.** Was fehlt, steht in §4 mit Grund —
 kein „später", sondern eine benannte Grenze mit einem Ratchet, der sie misst.

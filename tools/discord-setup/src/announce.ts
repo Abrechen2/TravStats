@@ -5,9 +5,9 @@ import { dirname, join } from "node:path";
 import { log } from "./log.js";
 
 // The three announce lanes mirror the release tiers (see docs/RELEASE_WORKFLOW.md):
-//   beta    — forward dev line, `-beta.N` builds on the Beta server (CT106)
-//   rc      — prod candidates, `-rc.N` validated on the RC Server (CT107)
-//   release — final `X.Y.Z`, promoted to prod (CT100)
+//   beta    — forward dev line, `-beta.N` builds on the Beta server
+//   rc      — prod candidates, `-rc.N` validated on the RC Server
+//   release — final `X.Y.Z`, promoted to prod
 export type AnnounceType = "beta" | "rc" | "release";
 
 const REPO_URL = "https://github.com/abrechen2/travstats";

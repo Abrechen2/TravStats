@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provision CT134 — public preview host in the DMZ (VLAN 20).
+# Provision the preview host — public preview host in the DMZ (VLAN 20).
 # Idempotent: safe to re-run. Never run against any other CTID.
 set -euo pipefail
 
@@ -8,7 +8,7 @@ CTID=134
 SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}")
 
 if [[ "$CTID" != "134" ]]; then
-  echo "refusing: this script only provisions CT134" >&2
+  echo "refusing: this script only provisions the preview container" >&2
   exit 1
 fi
 
@@ -19,7 +19,7 @@ else
       --hostname ct134-travstats-preview \
       --cores 4 --memory 8192 --swap 2048 \
       --rootfs ceph-nvme:30 \
-      --net0 name=eth0,bridge=vmbr2,ip=${CT_IP:?set CT_IP to the DMZ address for CT134 in CIDR form -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo},gw=${CT_GW:?set CT_GW to the DMZ gateway -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo} \
+      --net0 name=eth0,bridge=vmbr2,ip=${CT_IP:?set CT_IP to the DMZ address for the preview host in CIDR form -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo},gw=${CT_GW:?set CT_GW to the DMZ gateway -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo} \
       --unprivileged 1 --features nesting=1 \
       --onboot 1 --start 1"
 fi

@@ -107,7 +107,7 @@ export default function DomainSummaryCard({
         )
       : null;
 
-  // Under a year heading, only that year's figures (CT106 audit B03). The
+  // Under a year heading, only that year's figures (beta audit B03). The
   // lifetime KPIs used to stand here whatever year was chosen. A year without
   // events has no summary, and the card says so instead of printing zeros
   // that would read as measurements.

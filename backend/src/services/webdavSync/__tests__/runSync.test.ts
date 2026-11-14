@@ -486,7 +486,7 @@ describe("runWebdavSync", () => {
   });
 
   it("refuses a LAN share stored by an account that is no longer an admin", async () => {
-    const userId = await makeUser(false, { url: "http://192.168.178.202/dav" });
+    const userId = await makeUser(false, { url: "http://192.168.1.202/dav" });
     expect(await codeOf(runWebdavSync(userId))).toBe("blockedTarget");
     expect(createClient).not.toHaveBeenCalled();
     const row = await prisma.userWebdavSync.findUniqueOrThrow({ where: { userId } });
@@ -494,7 +494,7 @@ describe("runWebdavSync", () => {
   });
 
   it("lets an admin's sync reach a LAN share", async () => {
-    const userId = await makeUser(true, { url: "http://192.168.178.202/dav" });
+    const userId = await makeUser(true, { url: "http://192.168.1.202/dav" });
     expect((await runWebdavSync(userId)).status).toBe("ok");
   });
 

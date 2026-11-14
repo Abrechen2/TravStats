@@ -163,7 +163,7 @@ export function useStatsPeriod(
 /**
  * The page's period, with the year in the address bar (`?year=`).
  *
- * CT106 audit, B04: "Details →" from year 2005 opened the flights tab on 2026,
+ * beta audit, B04: "Details →" from year 2005 opened the flights tab on 2026,
  * because the year lived only in state. Picking a year replaces the history
  * entry rather than adding one — a row of pill clicks is not a trail the back
  * button should walk — while a link to another tab carries the year along.

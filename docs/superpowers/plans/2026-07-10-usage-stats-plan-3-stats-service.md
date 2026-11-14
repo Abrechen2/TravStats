@@ -4,7 +4,7 @@
 
 **Goal:** A standalone ingest + aggregate service that accepts anonymous pings, honours erasure requests, purges stale rows, and serves a cached public rollup.
 
-**Architecture:** Node + Express + Zod over `node:sqlite` (the Node built-in — no native dependency, no build toolchain, no Postgres). Runs as a systemd unit on CT133 bound to `127.0.0.1:8088`, exposed via the existing `travstats-web` Cloudflare tunnel as `stats.travstats.de`. Two tables: `installs` (one row per install, upserted) and `daily_active` (a growth-chart rollup that survives installs ageing out).
+**Architecture:** Node + Express + Zod over `node:sqlite` (the Node built-in — no native dependency, no build toolchain, no Postgres). Runs as a systemd unit on the web host bound to `127.0.0.1:8088`, exposed via the existing `travstats-web` Cloudflare tunnel as `stats.travstats.de`. Two tables: `installs` (one row per install, upserted) and `daily_active` (a growth-chart rollup that survives installs ageing out).
 
 **Tech Stack:** Node 24, Express 5, Zod, `node:sqlite`, `node-cron`, Vitest, systemd.
 
@@ -12,7 +12,7 @@
 
 - Spec: `docs/superpowers/specs/2026-07-10-anonymous-usage-stats-design.md`. **Read §3 (GDPR) and §7 before writing code.**
 - **New repository/directory: `D:\TravStats_Projekt\travstats-stats`** — a sibling of `TravStats` and `TravStatsWeb`, matching the `sublarr-stats` layout. It is *not* inside the TravStats repo.
-- **CT133 has 3.9 GB disk and 256 MB RAM and no Docker.** That budget is why `node:sqlite` (built-in) beats `better-sqlite3` (native build) and why Postgres is off the table. Do not add a native dependency.
+- **The web host has 3.9 GB disk and 256 MB RAM and no Docker.** That budget is why `node:sqlite` (built-in) beats `better-sqlite3` (native build) and why Postgres is off the table. Do not add a native dependency.
 - The payload contract is defined by `UsagePayload` in `backend/src/services/usageStats/payload.ts` (Plan 2, Task 4). The Zod schema here must accept exactly that shape.
 - **No IP is ever persisted.** Rate-limit keys are hashed and in-memory only.
 - `any` is FORBIDDEN. TypeScript `strict: true`.
@@ -32,7 +32,7 @@
 | `src/routes.ts` | **Create.** The four endpoints. |
 | `src/cron.ts` | **Create.** Daily rollup + retention purge. |
 | `src/app.ts` / `src/index.ts` | **Create.** Express wiring / process entry. |
-| `deploy/stats-setup.sh` | **Create.** Provision CT133 (systemd unit, no-IP-logging nginx). |
+| `deploy/stats-setup.sh` | **Create.** Provision the web host (systemd unit, no-IP-logging nginx). |
 | `deploy/DEPLOY.md` | **Create.** Runbook. |
 | `PRIVACY.md` | **Create.** Record of processing activities (GDPR Art. 30). |
 | `README.md` | **Create.** Payload contract, endpoints, run instructions. |
@@ -115,7 +115,7 @@ rests on it:
 node -e "const {DatabaseSync}=require('node:sqlite'); const db=new DatabaseSync(':memory:'); db.exec('CREATE TABLE t(a)'); console.log('node:sqlite OK');"
 ```
 Expected: `node:sqlite OK`. If this errors, the Node version is < 22 — stop and
-report rather than swapping in `better-sqlite3` (it needs a build toolchain CT133
+report rather than swapping in `better-sqlite3` (it needs a build toolchain the web host
 does not have).
 
 - [ ] **Step 2: Write the failing test**
@@ -1300,7 +1300,7 @@ git add -A && git commit -m "feat: add daily rollup and 180-day retention purge"
 
 ---
 
-### Task 6: Deploy to CT133 + the no-IP-logging guarantee
+### Task 6: Deploy to the web host + the no-IP-logging guarantee
 
 **Files:**
 - Create: `deploy/stats-setup.sh`, `deploy/DEPLOY.md`, `README.md`, `PRIVACY.md`
@@ -1313,16 +1313,16 @@ git add -A && git commit -m "feat: add daily rollup and 180-day retention purge"
 > in-code privacy guarantee is void if the reverse proxy logs the address. It must
 > be **verified on the live host**, not assumed from the config file.
 
-CT133 mirrors CT130 (`sublarr-stats`): Debian, nginx + cloudflared, ~3.9 GB disk,
+The web host mirrors the Sublarr stats host (`sublarr-stats`): Debian, nginx + cloudflared, ~3.9 GB disk,
 256 MB RAM, no Docker. The service runs as systemd + node, SQLite on disk.
 
 - [ ] **Step 1: Write `deploy/stats-setup.sh`**
 
-Runs **inside CT133**. Idempotent.
+Runs **inside the web host**. Idempotent.
 
 ```bash
 #!/usr/bin/env bash
-# Provision travstats-stats on CT133. Run inside the container.
+# Provision travstats-stats on the web host. Run inside the container.
 set -euo pipefail
 
 APP_DIR=/opt/travstats-stats
@@ -1421,7 +1421,7 @@ preserves existing ingress rules rather than overwriting them, which matters bec
 `travstats.de` and `www.travstats.de` already live on that tunnel.
 
 Then extend the CSP `connect-src` in
-`/etc/nginx/snippets/security-headers.conf` on CT133 to include
+`/etc/nginx/snippets/security-headers.conf` on the web host to include
 `https://stats.travstats.de`. Remember the project's `add_header` inheritance
 gotcha: a server-level header is silently dropped once any `location` block adds
 its own — so verify the header is actually present on the apex response afterwards.
@@ -1431,8 +1431,8 @@ its own — so verify the header is actually present on the apex response afterw
 ```bash
 cd D:/TravStats_Projekt/travstats-stats
 tar --exclude=node_modules --exclude=.git --exclude=stats.db -czf /tmp/travstats-stats-code.tar.gz .
-scp /tmp/travstats-stats-code.tar.gz root@<pve-node1>:/tmp/
-ssh root@<pve-node1> "pct push 133 /tmp/travstats-stats-code.tar.gz /tmp/travstats-stats-code.tar.gz && \
+scp /tmp/travstats-stats-code.tar.gz root@<proxmox-node>:/tmp/
+ssh root@<proxmox-node> "pct push 133 /tmp/travstats-stats-code.tar.gz /tmp/travstats-stats-code.tar.gz && \
   pct exec 133 -- bash /opt/travstats-stats/deploy/stats-setup.sh"
 curl -s https://stats.travstats.de/health
 ```
@@ -1447,7 +1447,7 @@ This is a verification step, not a configuration step. Run it and read the outpu
 curl -s -X POST https://stats.travstats.de/v1/ping -H 'Content-Type: application/json' -d '{"install_id":"ffffffffffffffffffffffffffffffff","version":"0.0.0","arch":"amd64","enabled_domains":["flight"],"users_bucket":"1","flights_bucket":"<50","cruises_bucket":"0","distance_km":{"flight":0,"cruise":0},"achievements":{"unlocked_total":0,"keys":[]},"features":{"llm_parser":false,"backups":false,"webdav_sync":false,"historical_enrichment":false,"live_tracking":false},"flight_api_providers":[],"locale":"de","reported_at":"2026-07-10T12:00:00.000Z"}'
 
 MY_IP=$(curl -s https://api.ipify.org)
-ssh root@<pve-node1> "pct exec 133 -- bash -c '
+ssh root@<proxmox-node> "pct exec 133 -- bash -c '
   grep -r \"$MY_IP\" /var/log/nginx/ 2>/dev/null && echo \"FAIL: nginx logged the IP\" || echo \"OK: nginx clean\"
   journalctl -u cloudflared --since \"10 minutes ago\" | grep -q \"$MY_IP\" && echo \"FAIL: cloudflared logged the IP\" || echo \"OK: cloudflared clean\"
   journalctl -u travstats-stats --since \"10 minutes ago\" | grep -q \"$MY_IP\" && echo \"FAIL: app logged the IP\" || echo \"OK: app clean\"
@@ -1458,7 +1458,7 @@ ssh root@<pve-node1> "pct exec 133 -- bash -c '
 curl -s -X DELETE https://stats.travstats.de/v1/install/ffffffffffffffffffffffffffffffff
 ```
 Expected: four `OK:` lines. **Any `FAIL:` line blocks the release** — fix the source
-and re-run before anything is announced. If `sqlite3` is not installed on CT133,
+and re-run before anything is announced. If `sqlite3` is not installed on the web host,
 install it or dump via `node -e`; do not skip the check.
 
 - [ ] **Step 6: Write `PRIVACY.md` (GDPR Art. 30) and `README.md`**
@@ -1478,7 +1478,7 @@ repo.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add -A && git commit -m "feat: add CT133 systemd deploy, no-IP-logging vhost and Art.30 record"
+git add -A && git commit -m "feat: add the web host systemd deploy, no-IP-logging vhost and Art.30 record"
 ```
 
 ---

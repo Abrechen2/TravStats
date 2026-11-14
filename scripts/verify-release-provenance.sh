@@ -123,7 +123,7 @@ fi
 #    not us. Pre-releases count for an RC; a final needs a real release.
 # ---------------------------------------------------------------------------
 # `--json` field names differ between gh releases (isLatest does not exist in
-# every version, and CT142 still runs gh 2.23.0), so fall back to the plain
+# every version, and the dev host still runs gh 2.23.0), so fall back to the plain
 # output, which has carried a `prerelease:` line for years. Asking for a field
 # the local gh does not know made this report a missing release for one that
 # was published minutes earlier.

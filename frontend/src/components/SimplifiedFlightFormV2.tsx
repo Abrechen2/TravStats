@@ -194,7 +194,7 @@ export default function SimplifiedFlightFormV2({
 
   return (
     <>
-      {/* The shared frame (CT106 design-6 recheck R01): it was two fixed DIVs
+      {/* The shared frame (beta design-6 recheck R01): it was two fixed DIVs
           with no dialog role, so focus stayed on the button behind it, Escape
           did nothing, Tab walked into the page, and "Abbrechen" sat below the
           90vh fold with no close control above it. Modal gives the role, the

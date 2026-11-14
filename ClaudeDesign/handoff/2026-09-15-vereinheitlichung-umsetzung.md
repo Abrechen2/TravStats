@@ -39,7 +39,7 @@ Companion.
 
 Drei der sieben Zusicherungen in `designWardens.test.ts` schlugen auf dieser
 Maschine an `51ea0549` fehl — an einem Commit, dessen eigene Standnotiz sie
-grün nennt. Beides stimmte: die Notiz entstand auf CT142. `rel()` schnitt den
+grün nennt. Beides stimmte: die Notiz entstand auf dem Dev-Host. `rel()` schnitt den
 Quellpfad mit `file.replace("<SRC>/", "")` ab, `join` trennt auf Windows mit
 Backslash, der Ersatz griff nie, und die Ratsche schlug in beide Richtungen
 zugleich aus.
@@ -420,7 +420,7 @@ darf (sonst wirkt jede gemerkte Wahl veraltet und wird gelöscht).
 | 5: Abschnitte-Menü auf allen Reitern, `StatsToolbar` | `883eeafb` |
 | Label folgt den **geladenen** Zahlen, nicht dem angefragten Jahr | `25fc5380` |
 
-Beta CT106 fährt `2.7.0-design.5`. Gemessen dort, angemeldet mit echtem
+Beta fährt `2.7.0-design.5`. Gemessen dort, angemeldet mit echtem
 Beta-Konto: eine Leiste auf allen vier Reitern, 2026 bleibt beim Reiterwechsel
 gewählt, Vergleich gegen 2025 auf Kreuzfahrten und Unterkünften, Seitenüberlauf 0.
 Abschnitt „Was eine Nacht kostet" aus: 47 → 38 Überschriften, Knopf „1 aus",

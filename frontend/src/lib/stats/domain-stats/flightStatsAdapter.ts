@@ -142,7 +142,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
 
 /**
  * One decimal, not whole hours: a single 90-minute flight rounded to "2 h" on
- * the overview while the flight tab said 1.5 (CT106 design-6 R09).
+ * the overview while the flight tab said 1.5 (beta design-6 R09).
  */
 function roundHours(hours: number): number {
   return Math.round(hours * 10) / 10;

@@ -128,7 +128,7 @@ export function calculateLodgingStats(
     }
 
     // A currency without a price is the editor's default, not a spend: a `?? 0`
-    // here turned "no prices yet" into a "0 €" card (CT106 design-6 R04).
+    // here turned "no prices yet" into a "0 €" card (beta design-6 R04).
     // A real 0 (an award stay) still opens its bucket.
     if (stay.currency && stay.totalPrice !== null) {
       spendByCurrency[stay.currency] = (spendByCurrency[stay.currency] ?? 0) + stay.totalPrice;

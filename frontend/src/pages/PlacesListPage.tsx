@@ -417,7 +417,7 @@ export default function PlacesListPage(): JSX.Element {
           and country sit behind "Filter". */}
       {/* The width is the shell's, as on the other three logbooks: an own
           max-width and padding in here put the title 24px right of theirs
-          (CT106 design-6 R07). Secondary actions first, the primary last. */}
+          (beta design-6 R07). Secondary actions first, the primary last. */}
       <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("places:list.title")}</h1>

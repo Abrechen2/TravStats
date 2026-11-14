@@ -233,7 +233,7 @@ describe("external services: consent binding and off-means-off follow-ups", () =
         .filter((l) => !l.trim().startsWith("--"))
         .join("\n");
       const cases: Array<[string, boolean]> = [
-        ["http://192.168.178.155:8000/v1", true],
+        ["http://192.168.1.155:8000/v1", true],
         ["http://localhost:11434/v1", true],
         ["http://[::1]:8000/v1", true],
         ["http://nas:8000/v1", true],

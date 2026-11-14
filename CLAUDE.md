@@ -98,7 +98,7 @@ git branch -d fix/<slug>
 ### RC-first rule (every release, no exceptions)
 
 > **Full pipeline + staging:** see **`docs/RELEASE_WORKFLOW.md`**. Since
-> 2026-07-04 the RC lands on the **RC Server** (CT106, a prod-DATA mirror)
+> 2026-07-04 the RC lands on the **RC Server** (a prod-data mirror)
 > FIRST — cloned via `scripts/stage-rc-from-prod.sh` — and only then on prod.
 > "RC Server" is the renamed role of the former beta server (host unchanged).
 
@@ -253,7 +253,7 @@ and carries no title. Configure it with a `forgejo:` block in
 **Which tracker.** GitHub is the published statement: it is what a stranger
 reads to judge whether the project is alive and honest, so it stays signal-only
 and free of internal detail. Forgejo is where the same finding can name a path
-under `~/projekte`, a container on `192.168.178.x`, or a passenger name off a
+under `~/projekte`, a container on `192.168.1.x`, or a passenger name off a
 test boarding pass. When a finding needs both, the GitHub issue is the short
 public one and links nowhere internal; the Forgejo issue carries the evidence.
 
@@ -905,7 +905,7 @@ Nicht gespiegelt, mit Absicht: `README.md` (gehoert dem Spiegel),
 `.claude/worktrees/*` (maschinenspezifisch).
 
 **Secrets gehoeren in keines von beiden** — dafuer ist Infisical zustaendig
-(CT 141, `<secrets-host>`).
+(self-hosted secrets manager).
 
 Vollstaendiges Konzept: `D:\Projekte\CC\docs\git-konzept.md`
 
@@ -918,8 +918,7 @@ https://www.abrechen2.de/** (EN `/en/`). The project keeps its own name and logo
 abrechen2 appears as the sender: "Ein Projekt von `<abrechen2 />`" / "A project
 by `<abrechen2 />`".
 
-- Brand guide: `\\CARDINAL\Unraid\Abrechen2-Brand` (`/mnt/user/Unraid/Abrechen2-Brand`
-  on Cardinal): logos, favicons, templates, fonts, `05_Brand-Guide/brand-guide.pdf`
+- Brand guide: the private abrechen2 brand folder (logos, favicons, templates, fonts, `brand-guide.pdf`)
 - Never typeset the logo in a font (JetBrains Mono turns `/>` into a ligature).
   Use the outlined SVG paths from `01_Logo/SVG`.
 - Only `<` and `/>` in the accent colour: Glut `#C2410C` on light, Signal-Orange

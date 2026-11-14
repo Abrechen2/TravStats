@@ -6,7 +6,7 @@
 
 ## 1. Why
 
-The public preview `beta.travstats.de` (CT134, beta slot) is where strangers
+The public preview `beta.travstats.de` (beta slot) is where strangers
 first meet TravStats. Its accounts carry 123 flights and 5 trips each; cruises,
 places and tours are empty, lodging exists only on `demo` (4 stays). Neither
 demo seeder creates places or tour routes, so every domain page except flights
@@ -18,7 +18,7 @@ The owner's decisions (2026-09-17):
 |---|---|
 | Which seed | Extend the **standard** demo seed (`seedDemoAccount.ts`, user `demo`), which `init.ts` runs on a first install — not a preview-only script |
 | Access | **Public and protected**: credentials shown on the login page of the public instance; account-level settings locked; data reset nightly |
-| Beta switch on CT134 | **On**, so tours are visible |
+| Beta switch on the preview host | **On**, so tours are visible |
 | Data shape | **Narrated trips plus bulk**: a handful of coherent trips where everything fits together, plus the existing random volume for statistics |
 | Approach | Typed seed modules through Prisma (not a JSON backup, not an API driver) |
 
@@ -168,7 +168,7 @@ When true, the login page shows a short line with
 install never displays credentials, even though a first install seeds the same
 demo user.
 
-## 5. CT134 rollout
+## 5. The preview host rollout
 
 1. Build `2.7.0-design.7` from `dev/design-system` and deploy it to the beta
    slot with `scripts/preview/deploy-preview.sh` (backup of DB and `.env` first,
@@ -177,11 +177,11 @@ demo user.
    switch on in `admin_settings`.
 3. Run the seed in the container once; it resets the existing `demo` row to
    `demo123` (section 2.4). `admin`, `alex` and `claude` are not touched.
-4. A cron entry on CT134 runs the seed in `preview-beta` nightly at 04:00 UTC and
+4. A cron entry on the preview host runs the seed in `preview-beta` nightly at 04:00 UTC and
    logs to `/opt/preview/beta/demo-reset.log`.
 5. Leitstand `expect` for the preview instance follows the deployed tag.
 
-CT106 gets `design.7` only on a separate owner request.
+The beta server gets `design.7` only on a separate owner request.
 
 ## 6. Tests
 
@@ -194,7 +194,7 @@ CT106 gets `design.7` only on a separate owner request.
 | Login hint | Vitest: hidden without the flag, shown with it, the button fills both fields |
 | Locked controls | Vitest: settings sections render the explanation instead of the control for `isDemo` |
 
-Browser check after the CT134 deploy: log in as `demo` from the hint, open each
+Browser check after the preview host deploy: log in as `demo` from the hint, open each
 logbook, a narrated trip with its tour on the map, the places checklists, and
 the security settings.
 

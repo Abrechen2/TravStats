@@ -238,7 +238,7 @@ logs at debug, and returns.
 **Stack:** Node 24 + Express + Zod, storage via **`node:sqlite`** (the Node
 built-in). No native dependency, no build toolchain, no Postgres.
 
-**Placement — mirroring the live `sublarr-stats` setup exactly:** CT133
+**Placement — mirroring the live `sublarr-stats` setup exactly:** the web host
 (`travstats.de`, DMZ, **3.9 GB disk / 256 MB RAM**, no Docker) is far too small
 for Docker + Postgres. So: a **systemd service** bound to `127.0.0.1:8088`,
 running as `www-data`, SQLite file at `/opt/travstats-stats/stats.db`, exposed as
@@ -304,7 +304,7 @@ An Astro page in TravStatsWeb fetching `GET /v1/aggregate` client-side.
   deployment-size distribution · **trophy rarity ranking**.
 - Charts follow the `dataviz` skill palette, theme-aware.
 
-**CT133's nginx CSP `connect-src` must be extended with
+**The web host's nginx CSP `connect-src` must be extended with
 `https://stats.travstats.de`**, in `/etc/nginx/snippets/security-headers.conf`.
 This is the same trap `sublarr-stats` hit. Note also the project's known
 `add_header` inheritance gotcha: a server-level header is silently dropped once
@@ -358,7 +358,7 @@ right shape here.
 **Target is 2.4.0.** This is a `feat:`, and the project rule maps `feat:` → minor,
 so `/deploy` auto-determines 2.4.0 with no override needed.
 
-**Sequencing.** `2.3.0-rc.3` is still awaiting promotion on the RC server (CT107).
+**Sequencing.** `2.3.0-rc.3` is still awaiting promotion on the RC server.
 `dev/usage-stats` branches from `main` and merges only **after** 2.3.0 is final.
 Per the project rules: merge `main` into the branch regularly, never rebase, and
 never touch `backend/VERSION` or `CHANGELOG.md` on the branch.
@@ -380,7 +380,7 @@ never touch `backend/VERSION` or `CHANGELOG.md` on the branch.
 - **A new deployable to maintain.** Accepted; kept deliberately tiny and isolated
   from the product database.
 - **Ping spoofing** inflating numbers. Mitigated, not eliminated. Accepted.
-- **Access-log IP leakage** on CT133 — the single highest-consequence
+- **Access-log IP leakage** on the web host — the single highest-consequence
   implementation detail in this design. It must be verified on the live host, not
   assumed from config.
 - **Prisma migration drift.** `schema.prisma` carries known pre-existing drift vs.

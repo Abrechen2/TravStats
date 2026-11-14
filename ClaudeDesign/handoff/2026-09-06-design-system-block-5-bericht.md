@@ -1,7 +1,7 @@
 # Block 5 — Statistik, Erfolge, Jahresrückblick. Bericht (teilweise)
 
 Zweig `dev/design-system`, aufgesetzt auf Block 4. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 5.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 5.
 
 **Drei der vier Punkte sind geliefert. Der Jahresrückblick ist nicht gebaut** —
 siehe §4.

@@ -14,7 +14,7 @@ function contrast(a: string, b: string): number {
 }
 
 /**
- * CT106 audit B09: the passport's "Belege zeigen" link measured 2.06:1 on the
+ * beta audit B09: the passport's "Belege zeigen" link measured 2.06:1 on the
  * paper — the pressed amber on #ebe7de, the composed row background. Links on
  * the paper read `paperAccent` now; this recomputes the pair against both the
  * paper itself and that darker composed shade, for small (11–12px) text.
@@ -23,7 +23,7 @@ describe("paper accent", () => {
   const accent = tokens.color.paperAccent;
   it.each([
     ["the paper", tokens.color.paper],
-    ["the composed row background measured on CT106", "#ebe7de"],
+    ["the composed row background measured on the beta server", "#ebe7de"],
   ])("reads at 4.5:1 or better on %s", (_label, background) => {
     expect(contrast(accent, background)).toBeGreaterThanOrEqual(4.5);
   });

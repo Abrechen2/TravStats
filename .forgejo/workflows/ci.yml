@@ -1,6 +1,6 @@
 name: CI (Forgejo)
 
-# Runs on the homelab Forgejo runner (CT 146, label `homelab-docker`,
+# Runs on the homelab Forgejo runner (label `homelab-docker`,
 # job image node:22-bookworm). The GitHub workflows in .github/workflows stay
 # authoritative on GitHub; because this directory exists, Forgejo ignores
 # .github/workflows entirely, so claude*.yml and security.yml never run here.

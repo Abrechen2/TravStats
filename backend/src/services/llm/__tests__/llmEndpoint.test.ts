@@ -15,7 +15,7 @@ describe("isLocalLlmHost", () => {
     "10.1.2.3",
     "172.16.0.9",
     "172.31.255.1",
-    "192.168.178.155",
+    "192.168.1.155",
     "169.254.1.1",
     "[::1]",
     "[fd12:3456::1]",
@@ -50,9 +50,9 @@ describe("checkLlmBaseUrl", () => {
   });
 
   it("accepts plain http on the LAN — where Ollama has always lived", () => {
-    expect(checkLlmBaseUrl("http://192.168.178.155:8000/v1")).toEqual({
+    expect(checkLlmBaseUrl("http://192.168.1.155:8000/v1")).toEqual({
       ok: true,
-      url: "http://192.168.178.155:8000/v1",
+      url: "http://192.168.1.155:8000/v1",
       isLocal: true,
     });
   });
@@ -100,7 +100,7 @@ describe("llmRefusalFor — the provider half", () => {
 
   it("needs no CLOUD opt-in for a LAN endpoint, only the slot being on", async () => {
     settings({
-      openaiCompatBaseUrl: "http://192.168.178.155:8000/v1",
+      openaiCompatBaseUrl: "http://192.168.1.155:8000/v1",
       openaiCompatModel: "qwen",
       llmCustomOptIn: true,
     });
@@ -120,7 +120,7 @@ describe("llmRefusalFor — the provider half", () => {
   });
 
   it("leaves the LAN Ollama every instance already has alone", async () => {
-    settings({ ollamaUrl: "http://192.168.178.155:11434", ollamaModel: "gemma3:12b" });
+    settings({ ollamaUrl: "http://192.168.1.155:11434", ollamaModel: "gemma3:12b" });
     await expect(llmRefusalFor()).resolves.toBeNull();
   });
 

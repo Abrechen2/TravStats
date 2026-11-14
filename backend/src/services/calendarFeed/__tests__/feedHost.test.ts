@@ -10,9 +10,9 @@ describe("calendar feed link host", () => {
   it("prefers a named frontend URL over an IP public URL", () => {
     expect(
       chooseFeedBaseUrl({
-        publicUrl: "http://192.168.178.120:3010/",
+        publicUrl: "http://192.168.1.120:3010/",
         frontendUrl: "https://trav.example.org",
-        requestUrl: "http://192.168.178.120:3010",
+        requestUrl: "http://192.168.1.120:3010",
       })
     ).toEqual({ baseUrl: "https://trav.example.org", reachableFromInternet: true });
   });
@@ -30,11 +30,11 @@ describe("calendar feed link host", () => {
   it("keeps the first address when none has a name, flagged when it is private", () => {
     expect(
       chooseFeedBaseUrl({
-        publicUrl: "http://192.168.178.120:3010",
+        publicUrl: "http://192.168.1.120:3010",
         frontendUrl: "http://[::1]:3000",
         requestUrl: "http://127.0.0.1:8000",
       })
-    ).toEqual({ baseUrl: "http://192.168.178.120:3010", reachableFromInternet: false });
+    ).toEqual({ baseUrl: "http://192.168.1.120:3010", reachableFromInternet: false });
     expect(
       chooseFeedBaseUrl({ publicUrl: null, frontendUrl: null, requestUrl: "http://localhost:8000" })
     ).toEqual({ baseUrl: "http://localhost:8000", reachableFromInternet: false });

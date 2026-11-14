@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import StatsTabStrip from "../StatsTabStrip";
 import { STATS_TAB_ARRIVAL } from "../../../lib/stats/statsTabArrival";
 
-// CT106 design-6 R05: "Details" on the overview switched the tab but kept
+// beta design-6 R05: "Details" on the overview switched the tab but kept
 // scrollY=1012, so the flight statistics opened mid-page with the year control
 // 874px above the fold.
 describe("StatsTabStrip — arriving from a Details link", () => {

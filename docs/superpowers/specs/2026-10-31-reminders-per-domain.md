@@ -9,9 +9,9 @@ Server part. Web page and Companion follow (order: server, web, Companion).
 | Server: prefs, claims, push/mail dispatch, backfill | server | done — 2.8.0-rc.6 |
 | Web: Settings → Benachrichtigungen per domain | web | done — 2.8.0-rc.6 |
 | `lodgingId` in lodging push data (Companion request) | server | done — 2.8.0-rc.7 |
-| App: open the stay from a lodging reminder via `lodgingId` | Companion | done — device-tested on CT107 rc.7 31.10. |
+| App: open the stay from a lodging reminder via `lodgingId` | Companion | done — device-tested on the RC server rc.7 31.10. |
 | App: iOS device check | Companion | open — in the combined build |
-| App: per-domain settings, push handling, local fallback | Companion | done — feat/reminders-per-domain, companion#111 (base rc/companion-2026-10-26); device-tested on CT107 rc.6 31.10. |
+| App: per-domain settings, push handling, local fallback | Companion | done — feat/reminders-per-domain, companion#111 (base rc/companion-2026-10-26); device-tested on the RC server rc.6 31.10. |
 
 ## Contract
 

@@ -108,7 +108,7 @@ export interface TableColumn {
    * the flights table on a 1440px screen summed its fixed tracks past the
    * table's width. The one shrinkable column, the ROUTE, got 0px; route and
    * time were drawn on top of each other, and the actions sat outside a frame
-   * that clipped them without a trace (CT106 audit, B01).
+   * that clipped them without a trace (beta audit, B01).
    */
   min: number;
   /** A share of the spare width. Omitted: the column stays at `min`. */
@@ -234,7 +234,7 @@ export function Table({
       const gap = parseFloat(style.columnGap) || 0;
       const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
       // Below 640px the CSS draws rows, not columns: nothing steps aside and
-      // nothing scrolls, so neither hint may be said (CT106 design-6 M01).
+      // nothing scrolls, so neither hint may be said (beta design-6 M01).
       const rowLayout = window.matchMedia?.("(max-width: 639px)").matches ?? false;
       const next = rowLayout
         ? new Set<string>()

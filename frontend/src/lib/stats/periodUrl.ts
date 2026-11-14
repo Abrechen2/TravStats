@@ -1,7 +1,7 @@
 /**
  * The statistics year, in the address bar.
  *
- * CT106 audit, B04: on the overview, year 2005 → "Details →" landed on the
+ * beta audit, B04: on the overview, year 2005 → "Details →" landed on the
  * flights tab showing 2026. The year lived only in component state, the detail
  * link carried only `?tab=`, and the page it opened picked the newest year
  * again. A period that does not survive a link is not a period the reader

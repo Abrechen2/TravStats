@@ -98,7 +98,7 @@ describe("LodgingMoneySection", () => {
   });
 
   // A 0 EUR average would read as "your nights were free" — and four "—"
-  // tiles with four empty rankings were most of a phone page (CT106 audit B12).
+  // tiles with four empty rankings were most of a phone page (beta audit B12).
   it("says once that nothing is priced instead of drawing empty figures", () => {
     render(<LodgingMoneySection stats={base} />);
     expect(screen.getByText(/lodging:stats\.money\.noPrices/)).toBeInTheDocument();

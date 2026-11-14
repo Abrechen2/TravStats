@@ -2,7 +2,7 @@
  * The time-of-day and day-of-week buckets are read on the DEPARTURE AIRPORT'S
  * clock, not on the clock of the machine running the engine.
  *
- * They were not. The 2026-09-19 integrity audit booted CT106 with
+ * They were not. The 2026-09-19 integrity audit booted the beta server with
  * TZ=Europe/Berlin and watched NOT_A_MORNING_PERSON leave two users and arrive
  * on a third, dated that day — the same flights, a different container. The
  * same boot under TZ=UTC moved nothing.

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The standard demo seed fills every domain with coherent trips (flights, stays, places, tours, journal, cruises) plus bulk data, the demo account cannot change its credentials or outbound connections, a public instance can show the demo login, and the public preview CT134 runs it with a nightly reset.
+**Goal:** The standard demo seed fills every domain with coherent trips (flights, stays, places, tours, journal, cruises) plus bulk data, the demo account cannot change its credentials or outbound connections, a public instance can show the demo login, and the public preview the preview host runs it with a nightly reset.
 
 **Architecture:** `seedDemoAccount.ts` stays the entry point and delegates to new modules under `backend/src/seedDemo/`. Account protection is one middleware (`rejectDemo` / `rejectDemoWrites`) mounted on the named routes, with `isDemo` carried in the auth payload so the UI can explain instead of offering a button that fails. The login hint rides on the unauthenticated `GET /api/v1/setup/status`.
 
@@ -1645,17 +1645,17 @@ git push origin dev/design-system && git push forgejo dev/design-system
 
 ---
 
-### Task 9: Build `2.7.0-design.7`, roll out to CT134, nightly reset
+### Task 9: Build `2.7.0-design.7`, roll out to the preview host, nightly reset
 
-**Files:** none in the repo except `roadmap.local.yaml` (main checkout, gitignored). Host facts: `CLAUDE.local.md` (pve-node1 `192.168.178.171`, CT134, slot dir `/opt/preview/beta`, containers `preview-beta`, `preview-beta-db`).
+**Files:** none in the repo except `roadmap.local.yaml` (main checkout, gitignored). Host facts: `CLAUDE.local.md` (the Proxmox node `192.168.1.171`, the preview host, slot dir `/opt/preview/beta`, containers `preview-beta`, `preview-beta-db`).
 
 - [ ] **Step 1: Build and push the image** — follow the `travstats-deploy` skill's beta build for tag `2.7.0-design.7` from `dev/design-system` (multi-arch as for design.6). Verify: `docker buildx imagetools inspect ghcr.io/abrechen2/travstats:2.7.0-design.7` lists amd64.
 
 - [ ] **Step 2: Back up and deploy**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c 'cd /opt/preview/beta && docker exec preview-beta-db pg_dump -U flights -d flights -Fc -f /tmp/pre-design7.dump && cp .env .env.bak-pre-design7 && cp docker-compose.yml docker-compose.yml.bak-pre-design7'"
-NODE1=192.168.178.171 bash scripts/preview/deploy-preview.sh beta 2.7.0-design.7
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.171 "pct exec 134 -- bash -c 'cd /opt/preview/beta && docker exec preview-beta-db pg_dump -U flights -d flights -Fc -f /tmp/pre-design7.dump && cp .env .env.bak-pre-design7 && cp docker-compose.yml docker-compose.yml.bak-pre-design7'"
+NODE1=192.168.1.171 bash scripts/preview/deploy-preview.sh beta 2.7.0-design.7
 ```
 
 Expected: `health: {… "version":"2.7.0-design.7"}`, `public: 200`.
@@ -1663,7 +1663,7 @@ Expected: `health: {… "version":"2.7.0-design.7"}`, `public: 200`.
 - [ ] **Step 3: Enable the flag and the beta switch**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c 'cd /opt/preview/beta && grep -q PUBLIC_DEMO_LOGIN docker-compose.yml || sed -i \"s|      APP_VERSION: \\\${IMAGE_TAG}|      APP_VERSION: \\\${IMAGE_TAG}\n      PUBLIC_DEMO_LOGIN: \\\"true\\\"|\" docker-compose.yml && grep -n PUBLIC_DEMO_LOGIN docker-compose.yml && docker compose up -d && docker exec preview-beta-db psql -U flights -d flights -c \"UPDATE admin_settings SET beta_features_enabled = true\"'"
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.171 "pct exec 134 -- bash -c 'cd /opt/preview/beta && grep -q PUBLIC_DEMO_LOGIN docker-compose.yml || sed -i \"s|      APP_VERSION: \\\${IMAGE_TAG}|      APP_VERSION: \\\${IMAGE_TAG}\n      PUBLIC_DEMO_LOGIN: \\\"true\\\"|\" docker-compose.yml && grep -n PUBLIC_DEMO_LOGIN docker-compose.yml && docker compose up -d && docker exec preview-beta-db psql -U flights -d flights -c \"UPDATE admin_settings SET beta_features_enabled = true\"'"
 curl -s https://beta.travstats.de/api/v1/setup/status
 ```
 
@@ -1672,7 +1672,7 @@ Expected: the grep prints the new line; `setup/status` contains `"publicDemoLogi
 - [ ] **Step 4: Seed once**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- docker exec preview-beta sh -c 'cd /app/backend && node dist/seedDemoAccount.js'"
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.171 "pct exec 134 -- docker exec preview-beta sh -c 'cd /app/backend && node dist/seedDemoAccount.js'"
 ```
 
 Expected: `✅ Demo seed complete` with every count > 0.
@@ -1680,10 +1680,10 @@ Expected: `✅ Demo seed complete` with every count > 0.
 - [ ] **Step 5: Nightly reset**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@192.168.178.171 "pct exec 134 -- bash -c 'echo \"0 4 * * * root docker exec preview-beta sh -c \\\"cd /app/backend && node dist/seedDemoAccount.js\\\" >> /opt/preview/beta/demo-reset.log 2>&1\" > /etc/cron.d/travstats-demo-reset && chmod 644 /etc/cron.d/travstats-demo-reset && cat /etc/cron.d/travstats-demo-reset'"
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.171 "pct exec 134 -- bash -c 'echo \"0 4 * * * root docker exec preview-beta sh -c \\\"cd /app/backend && node dist/seedDemoAccount.js\\\" >> /opt/preview/beta/demo-reset.log 2>&1\" > /etc/cron.d/travstats-demo-reset && chmod 644 /etc/cron.d/travstats-demo-reset && cat /etc/cron.d/travstats-demo-reset'"
 ```
 
-Expected: the file prints. The CT runs UTC (`date` inside CT134 to confirm).
+Expected: the file prints. The host runs UTC (check with `date` inside it).
 
 - [ ] **Step 6: Browser check at 1440×900** — on `https://beta.travstats.de/login`: hint visible, "Demo-Daten eintragen" fills both fields, login works; `/flights`, `/cruises`, `/lodging`, `/places` non-empty; `/trips` shows the six narrated trips; "Island – Ringstraße" shows its tour on the map; `/places/checklists/world-heritage` shows progress; Settings → Sicherheit shows the locked notice; changing the password is impossible. Screenshot each into `.playwright-mcp/`.
 

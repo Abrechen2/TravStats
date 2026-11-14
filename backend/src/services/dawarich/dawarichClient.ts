@@ -2,7 +2,7 @@
  * Read-only wrapper around the Dawarich REST API.
  *
  * Pinned to **Dawarich 1.9.2**, measured 2026-08-29 against the owner's own
- * running instance (`ct108-dawarich`) — not assumed. This is the ONLY file
+ * running instance (the self-hosted Dawarich) — not assumed. This is the ONLY file
  * that knows Dawarich's paths and payload shapes; when the contract shifts,
  * this file is the entire blast radius. Pull only — nothing here writes to
  * Dawarich.

@@ -2,7 +2,7 @@
 # Clone the Prod database into the RC Server (staging mirror), so a release
 # candidate can be validated against real prod data before it ships.
 #
-#   Prod (CT100, travstats-db)  --pg_dump-->  RC Server (CT107, travstats-db-rc)
+#   Prod (travstats-db)  --pg_dump-->  RC Server (travstats-db-rc)
 #
 # See docs/RELEASE_WORKFLOW.md, stage [3]. Run this BEFORE deploying an RC image
 # to the RC Server, so "the RC Server is always a copy of prod (data)" holds.
@@ -11,7 +11,7 @@
 # password is needed. This is DESTRUCTIVE on the RC-Server DB: it drops and
 # recreates every object from the prod dump. Prod is only ever READ.
 #
-# The defaults target the RC Server (CT107). They used to target CT106 — the
+# The defaults target the RC Server. They used to target the beta server — the
 # BETA server, which carries app-tester data that no prod clone may ever
 # overwrite — from back when the beta box doubled as the RC target. The rename
 # happened on 2026-07-04; these defaults did not follow, so every correct run
@@ -53,7 +53,7 @@ fi
 if [ "$CT_RC" = "$CT_BETA" ]; then
   echo "REFUSING: the restore target (CT$CT_RC) is the BETA server." >&2
   echo "  Beta carries the app testers' own data and is never a prod mirror." >&2
-  echo "  The RC Server is CT107 — run without CT_RC, or pass the right one." >&2
+  echo "  The RC Server is the default target — run without CT_RC, or pass the right one." >&2
   exit 2
 fi
 case "$DB_RC_CONTAINER" in
@@ -191,7 +191,7 @@ ssh_node "pct exec $CT_RC -- docker exec $DB_RC_CONTAINER pg_restore -U $DB_USER
 # the others — a single wide UPDATE would lose all three to the oldest column.
 #
 # RC_PUBLIC_URL is the RC's own address, however it is reached. Since 2026-09-08
-# that is NOT trav.abrechen2.de — that name serves prod now.
+# that is NOT the public instance name — that name serves prod now.
 RC_FRONTEND_URL="${RC_FRONTEND_URL:-${RC_PUBLIC_URL:-}}"
 
 set_rc_url() {  # $1 = column, $2 = value
@@ -247,7 +247,7 @@ ssh_node "pct exec $CT_RC -- sh -c 'docker exec $DB_RC_CONTAINER rm -f $DUMP $KE
 
 echo
 echo "Done. The RC Server now holds a copy of Prod data (migrated up by the app entrypoint)."
-# Derived, not hardcoded: this line used to print CT106's address, so it sent you
+# Derived, not hardcoded: this line used to print the beta server's address, so it sent you
 # to the BETA server to verify a restore that had happened on the RC Server.
 if [ -n "${RC_PUBLIC_URL:-}" ]; then
   echo "Next: verify ${RC_PUBLIC_URL%/}/health on CT$CT_RC, then run UAT."

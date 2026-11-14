@@ -65,7 +65,7 @@ describe("calculateLodgingStats", () => {
     expect(s.spendBaseTotal).toBe(614);
   });
 
-  it("opens no currency bucket for a stay that carries a currency but no price (CT106 design-6 R04)", () => {
+  it("opens no currency bucket for a stay that carries a currency but no price (beta design-6 R04)", () => {
     // The stay editor stores the currency with an empty price. Counting that
     // as 0 turned "no prices yet" into a "0 €" spend and an empty currency card.
     const s = calculateLodgingStats([

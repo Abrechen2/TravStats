@@ -1046,4 +1046,4 @@ git push origin dev/v2.3
 
 - [ ] **Step 5: Deploy as a new beta build**
 
-Invoke the `deploy` skill's beta flow ("deploy beta" / "beta bauen") to build and ship the next `2.3.0-beta.N` to CT 106, per `docs/RELEASE_WORKFLOW.md` and `.claude/skills/travstats-deploy/SKILL.md`.
+Invoke the `deploy` skill's beta flow ("deploy beta" / "beta bauen") to build and ship the next `2.3.0-beta.N` to the beta server, per `docs/RELEASE_WORKFLOW.md` and `.claude/skills/travstats-deploy/SKILL.md`.

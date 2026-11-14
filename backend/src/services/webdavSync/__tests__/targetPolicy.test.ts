@@ -27,7 +27,7 @@ describe("normalizeWebdavUrl — who may reach what (forgejo#321)", () => {
 
   it.each([
     ["http://10.0.0.5/dav", "blockedTarget"],
-    ["https://192.168.178.202/dav", "blockedTarget"],
+    ["https://192.168.1.202/dav", "blockedTarget"],
     ["https://127.0.0.1/dav", "blockedTarget"],
     ["https://169.254.169.254/latest/meta-data", "blockedTarget"],
     ["https://[::1]/dav", "blockedTarget"],
@@ -46,8 +46,8 @@ describe("normalizeWebdavUrl — who may reach what (forgejo#321)", () => {
   });
 
   it("lets an admin name a LAN share, over plain http too", () => {
-    expect(normalizeWebdavUrl("http://192.168.178.202:8080/dav/", admin)).toBe(
-      "http://192.168.178.202:8080/dav"
+    expect(normalizeWebdavUrl("http://192.168.1.202:8080/dav/", admin)).toBe(
+      "http://192.168.1.202:8080/dav"
     );
   });
 

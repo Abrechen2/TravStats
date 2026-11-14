@@ -65,7 +65,7 @@ describe("LodgingStatsSection hides the blocks the reader switched off", () => {
     expect(screen.queryByText("block:insights")).not.toBeInTheDocument();
   });
 
-  // CT106 audit B12: an empty currency card beside "no prices recorded".
+  // beta audit B12: an empty currency card beside "no prices recorded".
   it("leaves the currency breakdown out when no money is recorded", async () => {
     const { getLodgingStats } = await import("../../../lib/api/lodging");
     vi.mocked(getLodgingStats).mockResolvedValueOnce({

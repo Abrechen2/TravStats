@@ -563,7 +563,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // `localWallClockOf` the timeseries endpoint buckets on (#266). They used
     // to be `getHours()` / `getDay()` / `getMonth()`, which is the clock of
     // whatever machine ran the engine — see the red-eye block below for what
-    // that cost on CT106.
+    // that cost on the beta server.
     const depClock = flight.departureTime
       ? localWallClockOf(
           flight.departureTime,
@@ -657,7 +657,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     // The hour is resolved on the DEPARTURE AIRPORT'S clock, through the same
     // `localWallClockOf` the timeseries buckets on. It used to be
     // `departureTime.getHours()`, which reads the clock of whatever machine
-    // happened to run the engine: the 2026-09-19 integrity audit booted CT106
+    // happened to run the engine: the 2026-09-19 integrity audit booted the beta server
     // with TZ=Europe/Berlin and watched NOT_A_MORNING_PERSON leave two users
     // and arrive, dated that day, on a third — the same flights, a different
     // container. Under TZ=UTC nothing moved at all.

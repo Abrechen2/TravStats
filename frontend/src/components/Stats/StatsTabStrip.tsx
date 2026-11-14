@@ -20,7 +20,7 @@ interface Props {
  *
  * On a phone the strip scrolls sideways, and the active tab is brought into
  * view whenever it changes — a direct `/stats?tab=poi` used to open with the
- * Orte tab off the right edge while its content filled the page (CT106 audit
+ * Orte tab off the right edge while its content filled the page (beta audit
  * B06). Tabs keep their width and never wrap icon and label onto two lines.
  */
 export default function StatsTabStrip({ tabs, active, onSelect }: Props): JSX.Element {

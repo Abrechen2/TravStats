@@ -720,6 +720,6 @@ B and C, so "done" for this brief is A+B+C.
    without inventing trips.
 
 Not a decision but a flag: **Phase A migrates live user data.** It should land on
-the RC server against a prod mirror (`scripts/stage-rc-from-prod.sh`, CT 107)
+The RC server against a prod mirror (`scripts/stage-rc-from-prod.sh`)
 before it goes near production, and the expand/contract split in §6.3 exists so
 that a mistake there is recoverable.
