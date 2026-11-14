@@ -56,6 +56,8 @@ const BOOKKEEPING_INSTANTS = new Set([
   "requestedAt",
   "confirmedAt",
   "readAt",
+  // Readiness: when a stored test result that a check rests on was made.
+  "checkedAt",
   "undoneAt",
   // A scheduled job's own clock: when the nightly photo scan last ran for an
   // account and when it runs next (forgejo#94) — a server slot, no place's.

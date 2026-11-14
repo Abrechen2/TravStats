@@ -96,6 +96,7 @@ import "./countryFlags";
 import "./loginBackgrounds";
 import "./externalServices";
 import "./mailIntake";
+import "./readiness";
 import "./xlsxImport";
 import "./checkinImport";
 import "./settingsRouting";

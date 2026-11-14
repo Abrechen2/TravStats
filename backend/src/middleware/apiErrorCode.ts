@@ -3,6 +3,7 @@ import type { FlightTrackFileApiErrorCode } from "./flightTrackFileErrorCodes";
 import type { CompanionApiErrorCode } from "./companionErrorCodes";
 import type { ExternalServiceApiErrorCode } from "./externalServiceErrorCodes";
 import type { MailIntakeApiErrorCode } from "./mailIntakeErrorCodes";
+import type { ReadinessApiErrorCode } from "./readinessErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
@@ -300,6 +301,7 @@ export type ApiErrorCode =
   | CompanionApiErrorCode
   | ExternalServiceApiErrorCode // companions: rename, merge, delete; external services
   | MailIntakeApiErrorCode // mail intake (forgejo#313)
+  | ReadinessApiErrorCode // setup & readiness
   /** Tour track upload: a recording without timestamps cannot be placed in time. */
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */

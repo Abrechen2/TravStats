@@ -17,6 +17,7 @@ import { SMTP_CONFIG_ID } from "./smtp";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
 import { stampWhatsNewSeen } from "../../services/whatsNewStamp";
+import { appVersion } from "../../utils/version";
 import { revokeAllApiTokensForUser } from "../../services/revokeUserApiTokens";
 
 const router = Router();
@@ -57,6 +58,7 @@ router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction
           passwordHash,
           isAdmin: payload.isAdmin,
           notificationEmail: payload.notificationEmail,
+          readinessAckVersion: appVersion,
           invitedBy: req.userId,
         },
         select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },

@@ -180,6 +180,7 @@ import importRoutes from "./import";
 import pairingRoutes from "./pairing";
 import devicePushRoutes from "./devicePush";
 import appSettingsRoutes from "./appSettings";
+import readinessRoutes from "./readiness";
 import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
 import geoServerRoutes from "./geoServer";
@@ -616,6 +617,8 @@ export const apiMounts: ApiMount[] = [
   // The paired phone's push registration (TravStats#156).
   { id: "devicePush", base: "/api/v1/devices", router: devicePushRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
+  // Setup & readiness: what is missing now, what an update changed (spec 2026-11-14).
+  { id: "readiness", base: "/api/v1/readiness", router: readinessRoutes },
   { id: "geo-server", base: "/api/v1/geo-server", router: geoServerRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
   // Background jobs a long-running request started (backup, restore, import, scans).

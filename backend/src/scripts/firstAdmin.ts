@@ -1,3 +1,4 @@
+import { appVersion } from "../utils/version";
 import type { Db } from "../db";
 import { initialLocationProvider } from "../services/locationProvider/initialProvider";
 
@@ -12,7 +13,12 @@ export async function createFirstAdmin(
 ): Promise<{ id: string; username: string }> {
   return db.$transaction(async (tx) => {
     const user = await tx.user.create({
-      data: { username: input.username, passwordHash: input.passwordHash, isAdmin: true },
+      data: {
+        username: input.username,
+        passwordHash: input.passwordHash,
+        isAdmin: true,
+        readinessAckVersion: appVersion,
+      },
       select: { id: true, username: true },
     });
     await initialLocationProvider(tx, user.id);

@@ -87,6 +87,7 @@
     "openData.ts",
     "openapi.ts",
     "pairing.ts",
+    "readiness.ts",
     "parserTemplates.ts",
     "passwordReset.ts",
     "pdfParse.ts",

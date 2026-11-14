@@ -24,6 +24,7 @@ import { isSharedDemoAccount } from "../utils/sharedDemo";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import logger from "../utils/logger";
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
+import { appVersion } from "../utils/version";
 import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
 import {
   getAuthCookieOptions,
@@ -152,6 +153,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response, next: 
               username,
               passwordHash,
               isAdmin: isFirstUser,
+              readinessAckVersion: appVersion,
               invitedBy,
               notificationEmail: invitationEmail,
             },
