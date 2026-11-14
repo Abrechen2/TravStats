@@ -198,7 +198,7 @@ export const CHECK_CATALOGUE: readonly CheckCatalogueEntry[] = [
     severity: "recommended",
     titleKey: "checks.userMailForwarding.title",
     consequenceKey: "checks.userMailForwarding.consequence",
-    action: "/settings/dienstek?service=mailIntake",
+    action: "/settings/daten#daten-einlesen",
     maxAgeDays: null,
     blockedBy: "admin.bookingMailbox",
   }),
