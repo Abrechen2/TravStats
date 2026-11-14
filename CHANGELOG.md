@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.31.** No new migration.
+
 **Upgrading to 2.8.0-rc.30.** One new migration. Automatic backup retention now deletes only archives the schedule created; backups made by hand, and those taken before this version, are kept until you delete them.
 
 **Upgrading to 2.8.0-rc.29 — settings rebuilt, some switches gone.** Take a backup: twelve new migrations since rc.28. Automatic backups now always run, also where they were switched off; verbose logging always writes the HTTP, database and parser logs; the log-size and log-count limits, the old country threshold and the OpenSky username/password fields are removed (23 settings in all). The five outbound-traffic switches keep their values and now sit as expert rows under the internet master switch. Friends who were connected in two ways (comparison and trip sharing) are merged into one connection; nothing shared so far is lost.
@@ -125,6 +127,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **A night at home is one stay in TravTrack, not two gaps.** The day view now reads past midnight, and a silence that ends where it began (within about 100 m, or inside the same fixed place, at most 24 hours) continues the stay instead of showing as missing data.
+- **A stay at a fixed place carries its name at once,** also when the phone sent only a few seconds of fixes on arrival; today's open stay at Home shows as such.
+- **The timeline and the day's coverage follow the stays,** so a stay is no longer drawn as a gap beside itself.
+- **A confirmation that asks for no word no longer asks you to type its key** ("dialogs.peerremove.word" and others).
 - **Bus rides ask the timetable service only when it is allowed.** The internet switch and the Transitous switch now also hold for bus line lookups.
 - **Removing a server ends everything that ran over it.** Leaderboard friends, comparison grants, queued connection messages and open admission requests went on living and came back when the same server was added again.
 - **Backup retention no longer deletes backups made by hand.**
