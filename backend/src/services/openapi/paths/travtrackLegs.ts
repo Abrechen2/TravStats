@@ -71,6 +71,19 @@ export const stopSchema = z.object({
       "Present when the owner marked the stop as only a wait (`PUT /travtrack/stops/dismissed`); " +
         "absent otherwise. The stop is still listed so it can be restored; legs and figures are unchanged"
     ),
+  openStart: z
+    .literal(true)
+    .optional()
+    .describe(
+      "Present when the stay began before this day: `fromMs` is then the day's start. Absent otherwise"
+    ),
+  openEnd: z
+    .literal(true)
+    .optional()
+    .describe(
+      "Present when the stay goes on past the end shown: past the day (`untilMs` is then the day's " +
+        "end) or, on the current day, past the latest fix at a fixed place. Absent otherwise"
+    ),
   folded: z
     .object({ fixCount: z.number().int() })
     .nullable()

@@ -2,7 +2,7 @@ import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
 import { withoutBadVertices } from "./drawnFixes";
 import { dayContext, type DayContextEntry } from "./dayContext";
-import { travTrackLegs, type Leg, type Stop } from "./legs";
+import { STAY_CONTEXT_MS, travTrackLegs, type Leg, type Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
 
@@ -105,8 +105,11 @@ export function dayCoverage(
   return out;
 }
 
-function coverageOf(window: Span, read: SafeSpan): DayCoverage {
+function coverageOf(window: Span, read: SafeSpan, stops: readonly Stop[]): DayCoverage {
   return dayCoverage(window, [
+    // A stay the phone did not interrupt is covered, though it sent nothing while it lasted;
+    // a pause or a deletion still outranks it.
+    ...stops.map((s) => ({ fromMs: s.fromMs, untilMs: s.untilMs, state: "recorded" as const })),
     ...read.segments
       .filter((s) => s.length > 1)
       .map((s) => ({ fromMs: s[0][0], untilMs: s[s.length - 1][0], state: "recorded" as const })),
@@ -121,21 +124,28 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     fromMs: midnightOf(date, zone).getTime(),
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
-  const raw = await readSafeTravTrack(userId, window, DAY_POINT_CAP);
+  const [raw, wide] = await Promise.all([
+    readSafeTravTrack(userId, window, DAY_POINT_CAP),
+    // The evidence a stay across midnight rests on; a read cut short by its cap is not used.
+    readSafeTravTrack(
+      userId,
+      { fromMs: window.fromMs - STAY_CONTEXT_MS, untilMs: window.untilMs + STAY_CONTEXT_MS },
+      DAY_POINT_CAP * 3
+    ),
+  ]);
   // Bad fixes are not drawn, nor do they shape legs and stops (`drawnFixes.ts`).
   const read = withoutBadVertices(raw);
-  const [context, { legs, stops }] = await Promise.all([
-    dayContext(userId, window, read),
-    travTrackLegs(userId, window, read),
-  ]);
+  const context = wide.next === null ? withoutBadVertices(wide) : undefined;
+  const { legs, stops } = await travTrackLegs(userId, window, read, context, Date.now());
+  const dayContextEntries = await dayContext(userId, window, read, stops);
   return {
     date,
     zone,
     segments: read.segments,
     pointIds: read.segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? "")),
     pointDetails: pointDetailsOf(read.segments, read.rowOf),
-    coverage: coverageOf(window, read),
-    context,
+    coverage: coverageOf(window, read, stops),
+    context: dayContextEntries,
     legs,
     stops,
     pointCount: read.segments.reduce((n, s) => n + s.length, 0),

@@ -8,7 +8,7 @@ import { classRuns, modeOfSteps, settleStill, stepClass } from "./autoMode";
 import { entryModeOf, isBroadEntry, tightestWindow } from "./entries";
 import { legFigures } from "./figures";
 import { hasUsableMotion, modeFromSpeed } from "./speedMode";
-import { findFoldRuns, type FoldContext, type FoldRun } from "./fold";
+import { findFoldRuns, targetOf, type FoldContext, type FoldRun, type FoldTarget } from "./fold";
 import { STOP_MS } from "../dayMovement";
 import { RECORDING_GAP_MS } from "../../tripRecording/segments";
 import {
@@ -41,6 +41,8 @@ export type LegInputs = {
   places?: readonly StopPlaceRow[];
   /** Fixed places and lodging bookings a run of fixes folds into; none folds nothing. */
   fold?: FoldContext;
+  /** The day being read is the present one: the last stretch's stay is still going on. */
+  current?: boolean;
 };
 
 type Piece = {
@@ -194,22 +196,29 @@ function outsideFolds(
   return pieces.filter((p) => p.to > p.from && segment[p.to][0] - segment[p.from][0] >= STOP_MS);
 }
 
+/** The fold circles a stop may use: one centred inside a privacy zone would put a stop on the zone. */
+function clearFold(fold: FoldContext, read: SafeSpan): FoldContext {
+  const clear = (c: { lat: number; lon: number }) => !inPrivacyZone(c, read.circles);
+  return { places: fold.places.filter(clear), lodgings: fold.lodgings.filter(clear) };
+}
+
 /** The natural dwells, with every one a fold run covers replaced by that run. */
 function dwellsWithFolds(
   segment: readonly StoredPoint[],
   fold: FoldContext | undefined,
-  read: SafeSpan
+  read: SafeSpan,
+  /** The stretch ends the device's record: its last fixes may already show a stay. */
+  final = false
 ): FoldedDwell[] {
   const natural = findDwells(segment);
   if (!fold) return natural;
-  // A circle centred inside a privacy zone would put a stop on the zone: it folds nothing.
-  const clear = (c: { lat: number; lon: number }) => !inPrivacyZone(c, read.circles);
   const folds = findFoldRuns(
     segment,
-    { places: fold.places.filter(clear), lodgings: fold.lodgings.filter(clear) },
+    clearFold(fold, read),
     // Coarse fixes are neutral to a fold even in a stretch that holds nothing finer: a
     // kilometre-wide reading proves nothing about a 100 m circle.
-    isBadVertex
+    isBadVertex,
+    final
   );
   // What a fold leaves of a natural dwell (the stretch before and after it) is still a dwell if long enough.
   const kept = natural.flatMap((d) => outsideFolds(segment, d, folds));
@@ -218,26 +227,35 @@ function dwellsWithFolds(
   );
 }
 
+/** The place a fold target names. */
+function placeOfTarget(t: FoldTarget): StopPlace {
+  return t.source === "fixed"
+    ? {
+        name: t.place.name,
+        lat: t.place.lat,
+        lon: t.place.lon,
+        source: "fixed",
+        placeId: t.place.id,
+      }
+    : {
+        name: t.lodging.name,
+        lat: t.lodging.lat,
+        lon: t.lodging.lon,
+        source: "lodging",
+        lodgingStayId: t.lodging.stayId,
+      };
+}
+
 function foldedStop(
   run: FoldRun,
   accepted: StopPlace | null
 ): Pick<Stop, "anchor" | "place" | "folded"> {
   const t = run.target;
   const at = t.source === "fixed" ? t.place : t.lodging;
-  const named: StopPlace =
-    t.source === "fixed"
-      ? { name: t.place.name, lat: at.lat, lon: at.lon, source: "fixed", placeId: t.place.id }
-      : {
-          name: t.lodging.name,
-          lat: at.lat,
-          lon: at.lon,
-          source: "lodging",
-          lodgingStayId: t.lodging.stayId,
-        };
   // The name the owner accepted outranks a fixed place, which outranks a lodging.
   return {
     anchor: { lat: at.lat, lon: at.lon },
-    place: accepted ?? named,
+    place: accepted ?? placeOfTarget(t),
     folded: { fixCount: run.fixCount },
   };
 }
@@ -265,13 +283,18 @@ function stopOf(
 ): Stop | null {
   const span = { fromMs: segment[d.from][0], untilMs: segment[d.to][0] };
   const accepted = placeFor(span, inputs.places ?? []);
+  // A stop standing inside a valid fixed place or booking is named at once, whether or not a
+  // fold run qualified (a dwell that never reached `STOP_MS` inside the circle, for one).
+  const inside =
+    !d.fold && inputs.fold ? targetOf(segment[d.from], clearFold(inputs.fold, read)) : null;
   const shown = d.fold
     ? foldedStop(d.fold, accepted)
     : {
         anchor: { lat: segment[d.from][1], lon: segment[d.from][2] },
-        place: accepted,
+        place: accepted ?? (inside ? placeOfTarget(inside) : null),
         folded: null,
       };
+  const open = d.fold?.openEnd ? { openEnd: true as const } : {};
   // Segments are privacy-cut, so this is a second lock, not the first.
   if (inPrivacyZone(shown.anchor, read.circles)) return null;
   // A name whose position lies in or beside a zone would point into it; a name without a
@@ -288,10 +311,11 @@ function stopOf(
       place: null,
       folded: null,
       stayRef: stayFor(span, inputs.stays),
+      ...open,
     };
   }
   const place = hide ? null : shown.place;
-  return { ...span, ...shown, place, stayRef: stayFor(span, inputs.stays) };
+  return { ...span, ...shown, place, stayRef: stayFor(span, inputs.stays), ...open };
 }
 
 /**
@@ -305,7 +329,8 @@ function stopOf(
  */
 function bridgedStops(
   read: SafeSpan,
-  inputs: LegInputs
+  inputs: LegInputs,
+  isFinal: (segment: StoredPoint[]) => boolean
 ): Array<{ stop: Stop; chain: StoredPoint[][] }> {
   const deviceOf = (seg: readonly StoredPoint[]) => read.rowOf(seg[0])?.deviceId ?? "";
   const nearZone = (p: StoredPoint) =>
@@ -341,7 +366,7 @@ function bridgedStops(
   for (const chain of chains.filter((c) => c.length > 1)) {
     const joined = chain.flat();
     const bounds = chain.slice(1).map((s) => s[0][0]);
-    for (const d of dwellsWithFolds(joined, inputs.fold, read)) {
+    for (const d of dwellsWithFolds(joined, inputs.fold, read, isFinal(chain[chain.length - 1]))) {
       const first = joined[d.from][0];
       const last = joined[d.to][0];
       if (!bounds.some((b) => first < b && b <= last)) continue;
@@ -362,8 +387,19 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   const stops: Stop[] = [];
   const origin = new Map<Stop, StoredPoint[]>();
   const replaced = new Set<Stop>();
+  // The last stretch of each device: nothing follows it, so a stay at its end is still going.
+  const lastOf = new Map<string, StoredPoint[]>();
+  for (const seg of read.segments) {
+    const device = read.rowOf(seg[0])?.deviceId ?? "";
+    const held = lastOf.get(device);
+    if (seg.length > 0 && (!held || seg[0][0] > held[0][0])) lastOf.set(device, seg);
+  }
+  const isFinal = (seg: StoredPoint[]) =>
+    inputs.current === true &&
+    seg.length > 0 &&
+    lastOf.get(read.rowOf(seg[0])?.deviceId ?? "") === seg;
   read.segments.forEach((segment, segmentIndex) => {
-    const dwells = dwellsWithFolds(segment, inputs.fold, read);
+    const dwells = dwellsWithFolds(segment, inputs.fold, read, isFinal(segment));
     for (const d of dwells) {
       const stop = stopOf(segment, d, read, inputs);
       if (stop) {
@@ -404,7 +440,7 @@ export function deriveLegs(read: SafeSpan, inputs: LegInputs): { legs: Leg[]; st
   });
   // A bridged stop replaces the stops of ITS OWN chain's stretches (same device, same checks)
   // and spans what they covered; a stop from anywhere else is never merged into it.
-  const bridged = bridgedStops(read, inputs).map(({ stop: b, chain }) => {
+  const bridged = bridgedStops(read, inputs, isFinal).map(({ stop: b, chain }) => {
     const own = [...origin].filter(
       ([s, seg]) => chain.includes(seg) && s.fromMs < b.untilMs && b.fromMs < s.untilMs
     );

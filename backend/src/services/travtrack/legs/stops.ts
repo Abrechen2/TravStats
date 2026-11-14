@@ -2,6 +2,7 @@ import { isBadFix } from "../../locationEvidence/anomaly";
 import type { StoredPoint } from "../../tripRecording/segments";
 import { distanceM } from "../classify";
 import { STEP_M, STOP_MS } from "../dayMovement";
+import { stationarySilence } from "./fold";
 
 /**
  * Where a day's stretches stand still. The rule is `dayMovement.ts`'s own
@@ -45,6 +46,9 @@ export function badVertexIn(stretch: readonly StoredPoint[]): (p: StoredPoint) =
  */
 export const WANDER_M = 100;
 
+/** A stay carried over silences never reaches further than this from where it began. */
+export const SILENCE_ANCHOR_M = 150;
+
 const at = (p: StoredPoint) => ({ lat: p[1], lon: p[2] });
 
 /** A dwell as vertex indices into one segment, inclusive. */
@@ -61,15 +65,26 @@ export function findDwells(segment: readonly StoredPoint[]): Dwell[] {
       continue;
     }
     let j = i;
+    // The last fix that counts: a silence is judged from it, never from a neutral coarse one.
+    let good = i;
     while (
       j + 1 < n &&
       (bad(segment[j + 1]) ||
         distanceM(
           { lat: segment[i][1], lon: segment[i][2] },
           { lat: segment[j + 1][1], lon: segment[j + 1][2] }
-        ) < STEP_M)
-    )
+        ) < STEP_M ||
+        // A silence continues the stay only while it stays near where the dwell began: hops of
+        // 90 m each must not walk a "stay" across a city.
+        (stationarySilence(segment[good], segment[j + 1], []) &&
+          distanceM(
+            { lat: segment[i][1], lon: segment[i][2] },
+            { lat: segment[j + 1][1], lon: segment[j + 1][2] }
+          ) < SILENCE_ANCHOR_M))
+    ) {
       j += 1;
+      if (!bad(segment[j])) good = j;
+    }
     while (j > i && bad(segment[j])) j -= 1;
     if (segment[j][0] - segment[i][0] >= STOP_MS) out.push({ from: i, to: j });
     i = j + 1;

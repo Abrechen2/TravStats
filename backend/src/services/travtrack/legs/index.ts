@@ -98,28 +98,58 @@ async function staysIn(userId: string, window: Span): Promise<StayCandidate[]> {
   }));
 }
 
+/** How far past the day the evidence a stay may rest on is read. */
+export const STAY_CONTEXT_MS = 24 * 60 * 60_000;
+
+/** The stops that touch the day, clipped to it and flagged where the stay goes on past an edge. */
+export function clipStops(stops: readonly Stop[], window: Span): Stop[] {
+  return stops
+    .filter((s) => s.untilMs > window.fromMs && s.fromMs < window.untilMs)
+    .map((s) => ({
+      ...s,
+      fromMs: Math.max(s.fromMs, window.fromMs),
+      untilMs: Math.min(s.untilMs, window.untilMs),
+      ...(s.fromMs < window.fromMs ? { openStart: true as const } : {}),
+      ...(s.untilMs > window.untilMs ? { openEnd: true as const } : {}),
+    }));
+}
+
+/**
+ * `context` is the same account read over the day PLUS `STAY_CONTEXT_MS` either side
+ * (`readSafeTravTrack`, same privacy cut): legs come from the day alone, stops from the wider
+ * read, so a stay across midnight is one stay on both days, clipped to each.
+ */
 export async function travTrackLegs(
   userId: string,
   window: Span,
-  read: SafeSpan
+  read: SafeSpan,
+  context?: SafeSpan,
+  /** The wall clock; the day holding it is the current day, whose last stay is still going. */
+  nowMs?: number
 ): Promise<{ legs: Leg[]; stops: Stop[] }> {
   // The day the window opens on, on the profile clock: the home that was valid then folds it.
   const { zone } = await profileZoneOf(userId);
   const day = localDay(new Date(window.fromMs), zone);
+  const wide = context
+    ? { fromMs: window.fromMs - STAY_CONTEXT_MS, untilMs: window.untilMs + STAY_CONTEXT_MS }
+    : window;
   const [windows, overrides, stays, places, fold, dismissals] = await Promise.all([
-    movementWindows(userId, window),
-    overridesIn(userId, window),
-    staysIn(userId, window),
-    stopPlacesIn(userId, window),
-    foldContextFor(userId, window, day),
+    movementWindows(userId, wide),
+    overridesIn(userId, wide),
+    staysIn(userId, wide),
+    stopPlacesIn(userId, wide),
+    foldContextFor(userId, wide, day),
     dismissalsIn(userId, window),
   ]);
-  const derived = deriveLegs(read, { windows, overrides, stays, places, fold });
+  const current = nowMs !== undefined && nowMs >= window.fromMs && nowMs < window.untilMs;
+  const inputs = { windows, overrides, stays, places, fold, current };
+  const derived = deriveLegs(read, inputs);
+  const stops = context ? clipStops(deriveLegs(context, inputs).stops, window) : derived.stops;
   // Flagged, never removed: the stop stays in the list so it can be restored, and nothing
   // derived from the points (legs, distances, totals) changes.
   return {
     legs: derived.legs,
-    stops: derived.stops.map((s) =>
+    stops: stops.map((s) =>
       dismissals.some((d) => overlapShare(s, d) > 0.5) ? { ...s, dismissed: true as const } : s
     ),
   };

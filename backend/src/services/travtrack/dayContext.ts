@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
-import { haversineKm } from "../../shared/geo/haversine";
+import { localDay } from "../../shared/time/instant";
+import { profileZoneOf } from "../../shared/time/profileZone";
 import type { DomainKey } from "../../shared/domains";
-import { deriveHomePlace } from "../home/homePlace";
 import { loadVisibleDomains } from "../domainVisibility";
 import { staySuggestionsEnabled } from "../settings/suggestionSwitches";
 import {
@@ -12,9 +12,11 @@ import {
 import { parseJourneyEvidence } from "../locationEvidence/journeys/evidence";
 import { TRIP_RECORDING_TRIP_SELECT, tripSpanInstants } from "../tripRecording/bounds";
 import type { StoredPoint } from "../tripRecording/segments";
-import { inPrivacyZone } from "./classify";
+import { distanceM, inPrivacyZone } from "./classify";
 import { DAY_LABEL_DESCRIBERS, type Described, type Pin } from "./dayContextLabels";
 import { unlabelledStretches } from "./dayMovement";
+import type { Stop } from "./legs";
+import { foldContextFor, HOME_ID } from "./places/places";
 import type { SafeSpan, Span } from "./readSafe";
 
 /**
@@ -26,9 +28,8 @@ import type { SafeSpan, Span } from "./readSafe";
  *     adapters (`logbookWindows`, E7) and described by `dayContextLabels.ts`
  *     — a domain added there appears here without a line changed;
  *   - the trips spanning the day;
- *   - the stretches within 300 m of the home place, read from the
- *     privacy-safe points only, so a home that is also a zone shows no time
- *     at home;
+ *   - the stays at Home (the day's Home stops, so a home that is also a zone
+ *     shows no time at home);
  *   - the day's OPEN TravTrack questions (a stay, a journey's open runs),
  *     linked to their inbox card; answered, they are gone;
  *   - the moving stretches no entry covers: "unterwegs, ohne Eintrag",
@@ -39,8 +40,6 @@ import type { SafeSpan, Span } from "./readSafe";
  * A pin inside a privacy circle is not replaced by anything: the entry is
  * listed without an anchor. A trip frames the day and has none.
  */
-
-export const HOME_RADIUS_KM = 0.3;
 
 export type DayContextKind = DomainKey | "trip" | "home" | "suggestion" | "movement";
 
@@ -154,19 +153,41 @@ async function tripContext(userId: string, window: Span): Promise<DayContextEntr
   return out;
 }
 
-/** The stretches within `HOME_RADIUS_KM` of home, from the privacy-safe points only. */
-async function homeContext(userId: string, read: SafeSpan): Promise<DayContextEntry[]> {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { homePlace: true, data: true },
-  });
-  const home = (await deriveHomePlace(settings)).homePlace;
-  if (!home) return [];
-  const out: DayContextEntry[] = [];
+/**
+ * The day's time at Home. The Home stops come first, so the timeline and the stop list agree
+ * and a silence a stay covers is not a hole between two entries; a short run of fixes inside
+ * the home place's own radius (the one the stops fold with) that no Home stop covers is shown
+ * too, as before. An entry that is only an instant is not one.
+ */
+async function homeContext(
+  userId: string,
+  window: Span,
+  read: SafeSpan,
+  stops: readonly Stop[]
+): Promise<DayContextEntry[]> {
+  const out = stops
+    .filter((s) => s.place?.source === "fixed" && s.place.placeId === HOME_ID)
+    .filter((s) => s.untilMs > s.fromMs)
+    .map((s): DayContextEntry => ({
+      kind: "home",
+      id: null,
+      label: s.place?.name ?? "",
+      href: null,
+      anchor: s.anchor,
+      unlabelled: false,
+      fromMs: s.fromMs,
+      untilMs: s.untilMs,
+    }));
+  const { zone } = await profileZoneOf(userId);
+  const fold = await foldContextFor(userId, window, localDay(new Date(window.fromMs), zone));
+  const home = fold.places.find((p) => p.id === HOME_ID);
+  if (!home) return out;
+  const covered = (run: StoredPoint[]) =>
+    out.some((e) => e.fromMs <= run[run.length - 1][0] && run[0][0] <= e.untilMs);
   for (const segment of read.segments) {
     let run: StoredPoint[] = [];
     const flush = () => {
-      if (run.length > 1) {
+      if (run.length > 1 && !covered(run)) {
         out.push({
           kind: "home",
           id: null,
@@ -181,7 +202,7 @@ async function homeContext(userId: string, read: SafeSpan): Promise<DayContextEn
       run = [];
     };
     for (const p of segment) {
-      if (haversineKm({ lat: p[1], lon: p[2] }, home) <= HOME_RADIUS_KM) run.push(p);
+      if (distanceM({ lat: p[1], lon: p[2] }, home) <= home.radiusM) run.push(p);
       else flush();
     }
     flush();
@@ -280,13 +301,14 @@ const holdsMovement = (w: EntryWindow) => {
 export async function dayContext(
   userId: string,
   window: Span,
-  read: SafeSpan
+  read: SafeSpan,
+  stops: readonly Stop[] = []
 ): Promise<DayContextEntry[]> {
   const windows = await logbookWindows(userId, window);
   const [logbook, trips, home, suggestions] = await Promise.all([
     logbookContext(userId, window, windows, read),
     tripContext(userId, window),
-    homeContext(userId, read),
+    homeContext(userId, window, read, stops),
     suggestionContext(userId, window, read),
   ]);
   // Covered: every journey the logbook holds — shown or not — and every open journey question.

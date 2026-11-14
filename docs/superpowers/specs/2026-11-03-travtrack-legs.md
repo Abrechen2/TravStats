@@ -229,6 +229,8 @@ Frontend only (`TrackStopPlaceSearch.tsx`, shared `LocationInput`). Calls:
 | place | {name:string, lat:number\|null, lon:number\|null, source:"accepted"\|"fixed"\|"lodging", placeId?:string, lodgingStayId?:string} | nullable. Precedence accepted > fixed > lodging |
 | folded | {fixCount:int} | nullable (null when not folded) |
 | dismissed | `true` | optional, absent otherwise |
+| openStart | `true` | optional, absent otherwise (travtrack-stays, 2.8.0-rc.31): the stay began before this day; `fromMs` is the day's start |
+| openEnd | `true` | optional, absent otherwise: the stay goes on past the day (`untilMs` is the day's end) or, on the current day, past the latest fix at a fixed place |
 
 ### 5. Take a stop into Places (88f4fb6f5) - no server change, no new field
 Frontend only (`TrackStopToPlaces.tsx`, `PlaceFormModal` prefilled with stop name + position). Existing endpoints, enveloped family:
@@ -250,3 +252,12 @@ App: need not send it. It only affects how the server splits segments in respons
 
 ### 8. Hide Dawarich rows (24356f81b)
 Frontend only (settings sections `LocationSourceSection.tsx`, `TravTrackSourcesSection.tsx`). No API change. Existing `locationProvider` setting decides it.
+
+## As built — stays across silences and midnight (fix/travtrack-stays, target 2.8.0-rc.31)
+
+A phone at rest sends nothing, so a silence at one spot is a stay. No new endpoint, no field removed; `openStart`/`openEnd` are the only additions (section 4 above).
+
+- **Across midnight.** `GET /travtrack/day` derives its stops from the account's points of the day plus 24 h either side (same privacy cut, deleted ranges, pauses, tombstones, the 500 m zone buffer on a bridge). Stops are clipped to the day. Legs, segments and distances still come from the day alone. If the wider read hits its cap the day falls back to day-only stops.
+- **One rule** (`legs/fold.ts` `stationarySilence`): two fixes of one device, 15 min to 24 h apart, both with known accuracy of at most 50 m, and either `<= min(100, max(50, 2 * worse accuracy))` apart or both inside the same fixed place (radius + 100 m band, window holding). Used by dwells, fold runs and the bridge over a track-gap cut. Anything else (478 m at 3 m accuracy, poor accuracy, over 24 h) stays a gap.
+- **Named at once.** A stop whose first fix lies in a valid fixed place or booking carries that place (accepted > fixed > lodging); overlapping places: smaller radius, nearer centre, stable id. On the current day the last fixes inside a fixed place already show an open stay (`openEnd`).
+- **Coverage / timeline.** Stop spans count as `recorded`; the timeline's Home entries are the Home stops, plus runs inside the Home place's own radius that no stop covers.

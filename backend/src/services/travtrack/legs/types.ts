@@ -57,6 +57,13 @@ export type Stop = {
    * never heard of it reads every stop as before.
    */
   dismissed?: true;
+  /**
+   * `true` when the stay began before the day it is shown on (`fromMs` is then the day's start),
+   * or ends after it (`untilMs` is the day's end). Absent otherwise. Additive: a client that
+   * never heard of it draws the clipped span.
+   */
+  openStart?: true;
+  openEnd?: true;
 };
 
 export type StopPlace = {
