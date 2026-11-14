@@ -164,7 +164,11 @@ settings moved out of the environment, own Immich/Dawarich must be public).
   the source; the contract test checks the registry itself (ids, DE/EN keys, actions,
   evaluators, every note has `action` or `noAction`). Generating the "Upgrading to …" paragraphs
   from it is a later step.
-- **Severity per first check:** owner's answer below (§10).
+- **Severity per first check (owner, 2026-11-14: "ja mach erstmal"):** `required` (raises the
+  admin banner on a verified failure): scheduled backup failing or older than 2 days; disk
+  nearly full; public URL invalid or last external reachability test failed. `recommended`
+  (no banner): SMTP, off-site copy, provider keys, booking-mail mailbox. `unknown` never
+  raises the banner. Every account item is `recommended` in stage 1.
 
 ## 10. Left to the builder
 
