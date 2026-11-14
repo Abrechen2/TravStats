@@ -1,0 +1,123 @@
+{
+  "loading": "Wird geladen …",
+  "error": {
+    "title": "Der Zustand konnte nicht geladen werden.",
+    "body": "Das ist keine Entwarnung: ob etwas fehlt, ist gerade unbekannt. Prüfe die Verbindung zum Server und versuche es erneut.",
+    "retry": "Erneut versuchen"
+  },
+  "writeFailed": "Das ließ sich nicht speichern. Bitte versuche es erneut.",
+  "empty": "Nichts zu tun. Alles, was für dich gilt, ist bereit.",
+  "summary": {
+    "required": "Muss",
+    "new": "Neu in {{line}}",
+    "recommended": "Empfohlen",
+    "blocked": "Braucht den Admin",
+    "ready": "Bereit"
+  },
+  "group": {
+    "required": "Muss",
+    "new": "Neu in {{line}}",
+    "recommended": "Empfohlen",
+    "blocked": "Braucht den Admin",
+    "ready": "Bereit",
+    "parked": "Zurückgestellt oder nicht genutzt"
+  },
+  "unchecked": "ungeprüft",
+  "neverChecked": "Noch nicht geprüft.",
+  "checkedAt": "Geprüft am {{time}}",
+  "checkNow": "Jetzt prüfen",
+  "openAction": "Öffnen",
+  "scope": {
+    "server": "Server"
+  },
+  "snooze": "Morgen erinnern",
+  "optOut": "Nutze ich nicht",
+  "showAgain": "Wieder anzeigen",
+  "note": {
+    "ack": "Gelesen",
+    "settingsRemoved": {
+      "before": "Einige Einstellungen gibt es nicht mehr: Log-Größe und -Anzahl, die alte Länderschwelle und die OpenSky-Zugangsdaten.",
+      "after": "Die Einstellungen sind entfernt, TravStats arbeitet mit festen Werten weiter."
+    },
+    "backupsAlwaysOn": {
+      "before": "Automatische Sicherungen konnten ausgeschaltet sein.",
+      "after": "Das Sichern läuft jetzt immer."
+    },
+    "retentionScheduledOnly": {
+      "before": "Die Aufbewahrung löschte auch von Hand gemachte Sicherungen.",
+      "after": "Die Aufbewahrung löscht nur noch, was der Zeitplan angelegt hat; alles andere bleibt, bis du es löschst."
+    },
+    "friendsMerged": {
+      "before": "Freunde und Verbindungen zu anderen Servern waren getrennt.",
+      "after": "Jeder Freund ist jetzt eine Verbindung auf der Seite „Freunde“."
+    },
+    "servicesMovedOut": {
+      "before": "Dienste wurden über Umgebungsvariablen des Servers eingerichtet.",
+      "after": "Die Werte wurden beim ersten Start in die Einstellungen übernommen und werden dort verwaltet."
+    },
+    "ownServicesPublic": {
+      "before": "Ein eigener Immich- oder Dawarich-Server war auch im Heimnetz erreichbar.",
+      "after": "Verbindungen eines normalen Kontos müssen jetzt auf eine öffentliche Adresse zeigen."
+    }
+  },
+  "blockedHint": "Das kann nur der Admin dieses Servers ändern.",
+  "check": {
+    "smtp": {
+      "title": "E-Mail-Versand ist nicht eingerichtet",
+      "consequence": "Ohne Mailserver verschickt TravStats keine Einladungen, Passwort-Rücksetzungen und Erinnerungen per E-Mail."
+    },
+    "publicUrl": {
+      "title": "Öffentliche Adresse prüfen",
+      "consequence": "Ohne gültige, von außen erreichbare Adresse führen Links in Mails, Kopplungs-QR-Codes und das Teilen ins Leere."
+    },
+    "backup": {
+      "title": "Automatische Sicherung",
+      "consequence": "Ohne aktuelle Sicherung ist nach einem Plattenschaden alles verloren, was auf diesem Server liegt."
+    },
+    "diskSpace": {
+      "title": "Speicherplatz",
+      "consequence": "Ist der Datenträger voll, schlagen Sicherungen, Uploads und die Datenbank selbst fehl."
+    },
+    "offsiteCopy": {
+      "title": "Kopie außer Haus",
+      "consequence": "Eine Sicherung auf demselben Gerät übersteht dessen Verlust nicht."
+    },
+    "providerKeys": {
+      "title": "Schlüssel der Datendienste",
+      "consequence": "Ohne gültigen Schlüssel liefern Flugsuche und Live-Daten nichts, ohne dass es auffällt."
+    },
+    "bookingMailbox": {
+      "title": "Postfach für Buchungsmails",
+      "consequence": "Ist das Postfach nicht erreichbar, kommen weitergeleitete Buchungen nie an."
+    },
+    "domains": {
+      "title": "Reisearten wählen",
+      "consequence": "Ohne gewählte Reisearten zeigt TravStats nur leere Seiten."
+    },
+    "home": {
+      "title": "Zuhause festlegen",
+      "consequence": "TravTrack kennt ohne Zuhause weder Heimweg noch Abreise-Orte und erkennt Aufenthalte schlechter."
+    },
+    "phonePaired": {
+      "title": "Telefon koppeln",
+      "consequence": "Ohne gekoppeltes Telefon nimmt die Companion-App nichts auf und synchronisiert nichts."
+    },
+    "firstPosition": {
+      "title": "Erste Position empfangen",
+      "consequence": "Das Telefon ist gekoppelt, aber es ist noch keine Position angekommen."
+    },
+    "ownApiKeys": {
+      "title": "Eigene Schlüssel prüfen",
+      "consequence": "Ein abgelaufener eigener Schlüssel lässt Abfragen stillschweigend ausfallen."
+    },
+    "forwardingAddress": {
+      "title": "Weiterleitungsadresse einrichten",
+      "consequence": "Ohne Weiterleitung und erlaubten Absender landet keine Buchungsmail bei dir."
+    },
+    "notificationEmail": {
+      "title": "E-Mail für Erinnerungen",
+      "consequence": "Erinnerungen per E-Mail brauchen eine Adresse, an die sie gehen können."
+    }
+  },
+  "title": "Einrichtung & Zustand"
+}
