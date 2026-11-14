@@ -1,6 +1,7 @@
 import { AppError } from "../../../middleware/errorHandler";
 import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import { deriveDay } from "../dayDerivation";
+import { clipStops } from "../legs";
 import { daysOf, type LegSpan } from "../legs/setMode";
 import type { Stop } from "../legs/types";
 import { dayAfter, midnightOf } from "../range";
@@ -30,17 +31,18 @@ export async function resolveStays(userId: string, span: LegSpan): Promise<Resol
   let stay: Stop | null = null;
   let share = 0;
   for (const { day, zone } of await daysOf(userId, span)) {
-    const derived = await deriveDay(userId, {
+    const window = {
       fromMs: midnightOf(day, zone).getTime(),
       untilMs: midnightOf(dayAfter(day), zone).getTime(),
-    });
-    for (const w of derived.whole) all.set(`${w.fromMs}-${w.untilMs}`, w);
-    for (const p of derived.stops) {
-      const s = overlapShare(p, span);
+    };
+    const derived = await deriveDay(userId, window);
+    for (const w of derived.whole) {
+      all.set(`${w.fromMs}-${w.untilMs}`, w);
+      // Each stay's own clipped part, so stays that nest (two devices) are never mixed up.
+      const [p] = clipStops([w], window);
+      const s = p ? overlapShare(p, span) : 0;
       if (s <= 0.5 || s <= share) continue;
-      const whole = derived.whole.find((w) => w.fromMs <= p.fromMs && w.untilMs >= p.untilMs);
-      if (!whole) continue;
-      [part, stay, share] = [p, whole, s];
+      [part, stay, share] = [p, w, s];
     }
   }
   return { stay, all: [...all.values()], part };
