@@ -17,6 +17,7 @@
     "title": "What is recorded",
     "recorded": "Recorded",
     "noData": "No data",
+    "entry": "In the logbook",
     "deleted": "Deleted",
     "phonePaused": "Phone paused",
     "piece": "{{state}}, {{from}}–{{to}}"

@@ -121,7 +121,13 @@ export default function TrackMapAside({
           {days.map((r) => (
             <section key={r.date} className="flex flex-col gap-3">
               {multi && <h2 className="t-card-title">{formatDayLong(r.date, i18n.language)}</h2>}
-              {multi && <TrackCoverageBar coverage={r.day.coverage} zone={r.day.zone} />}
+              {multi && (
+                <TrackCoverageBar
+                  coverage={r.day.coverage}
+                  zone={r.day.zone}
+                  context={r.day.context}
+                />
+              )}
               {tab === "legs" ? (
                 (r.day.legs?.length ?? 0) + (r.day.stops?.length ?? 0) > 0 && (
                   <TrackLegList

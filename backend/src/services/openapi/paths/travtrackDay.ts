@@ -48,12 +48,17 @@ const day = z.object({
     .array(
       z.object({
         ...span,
-        state: z.enum(["recorded", "noData", "deleted", "phonePaused"]),
+        state: z.enum(["recorded", "noData", "deleted", "phonePaused", "entry"]),
+        entry: z
+          .object({ domain: z.string(), id: z.string() })
+          .optional()
+          .describe("On `entry` only: the logbook entry that explains the silence"),
       })
     )
     .describe(
       "The whole day in consecutive pieces. A privacy zone is never a state of its own: " +
-        "an hour inside one reads as noData."
+        "an hour inside one reads as noData. A noData stretch a logbook entry (flight, rail, bus, " +
+        "ferry, a lodging night …) covers is `entry` for that part."
     ),
   context: z
     .array(

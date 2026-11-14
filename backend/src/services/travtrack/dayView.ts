@@ -2,6 +2,7 @@ import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
 import { dayContext, type DayContextEntry } from "./dayContext";
 import { deriveDay } from "./dayDerivation";
+import { explainingEntries, fillWithEntries, type CoverageEntryRef } from "./dayEntryCoverage";
 import type { Leg, Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import type { SafeSpan, Span } from "./readSafe";
@@ -18,6 +19,8 @@ import type { SafeSpan, Span } from "./readSafe";
  *     `phonePaused` (the phone reported it could not record), `deleted` (the
  *     owner deleted it) or `noData`. A privacy zone is never a state of its
  *     own: an hour inside one reads like any hour without a fix.
+ *     A `noData` stretch a logbook entry covers is `entry` for that part, with
+ *     the entry's `{domain, id}` (`dayEntryCoverage.ts`); it adds no point and no km.
  *   - `legs` and `stops` — the day as journeys and dwells (`legs/`, spec
  *     2026-11-03-travtrack-legs), cut from the same privacy-safe segments;
  *     `ranges` index into `segments`.
@@ -29,8 +32,9 @@ import type { SafeSpan, Span } from "./readSafe";
  *     stretches no entry covers. This file keeps the geometry.
  */
 
-export type CoverageState = "recorded" | "noData" | "deleted" | "phonePaused";
-export type DayCoverage = Array<Span & { state: CoverageState }>;
+export type CoverageState = "recorded" | "noData" | "deleted" | "phonePaused" | "entry";
+/** An `entry` piece names the logbook entry that explains the silence in `entry`. */
+export type DayCoverage = Array<Span & { state: CoverageState; entry?: CoverageEntryRef }>;
 export type PointDetail = {
   speedMps: number | null;
   altitudeM: number | null;
@@ -73,7 +77,13 @@ export type TravTrackDay = {
   truncated: boolean;
 };
 
-const RANK: Record<CoverageState, number> = { noData: 0, recorded: 1, phonePaused: 2, deleted: 3 };
+const RANK: Record<CoverageState, number> = {
+  noData: 0,
+  entry: 0,
+  recorded: 1,
+  phonePaused: 2,
+  deleted: 3,
+};
 
 /** The day in consecutive pieces, the strongest state winning where several meet. */
 export function dayCoverage(
@@ -130,7 +140,11 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     segments: read.segments,
     pointIds: read.segments.map((s) => s.map((p) => read.rowOf(p)?.id ?? "")),
     pointDetails: pointDetailsOf(read.segments, read.rowOf),
-    coverage: coverageOf(window, read, stops),
+    // A silence a logbook entry covers reads as that entry, never as "no data".
+    coverage: fillWithEntries(
+      coverageOf(window, read, stops),
+      explainingEntries(dayContextEntries)
+    ) as DayCoverage,
     context: dayContextEntries,
     legs,
     stops,

@@ -17,6 +17,7 @@
     "title": "Was aufgezeichnet ist",
     "recorded": "Aufgezeichnet",
     "noData": "Keine Daten",
+    "entry": "Im Logbuch",
     "deleted": "Gelöscht",
     "phonePaused": "Telefon pausiert",
     "piece": "{{state}}, {{from}}–{{to}}"

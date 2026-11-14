@@ -269,3 +269,22 @@ A phone at rest sends nothing, so a silence at one spot is a stay. No new endpoi
 - **One rule** (`legs/fold.ts` `stationarySilence`): two fixes of one device, 15 min to 24 h apart, both with known accuracy of at most 50 m, and either `<= min(100, max(50, 2 * worse accuracy))` apart or both inside the same fixed place (radius + 100 m band, window holding). Used by dwells, fold runs and the bridge over a track-gap cut. Anything else (478 m at 3 m accuracy, poor accuracy, over 24 h) stays a gap.
 - **Named at once.** A stop whose first fix lies in a valid fixed place or booking carries that place (accepted > fixed > lodging); overlapping places: smaller radius, nearer centre, stable id. On the current day the last fixes inside a fixed place already show an open stay (`openEnd`).
 - **Coverage / timeline.** Stop spans count as `recorded`; the timeline's Home entries are the Home stops, plus runs inside the Home place's own radius that no stop covers.
+
+## Contract - a silence the logbook explains (feat/travtrack-logbook-gaps, target 2.8.0-rc.32)
+
+Additive. `GET /travtrack/day` `coverage[]` gains one state and one optional field:
+
+- `state: "entry"` - a stretch that would be `noData` and that a logbook entry covers.
+  `entry: { domain, id }` names the entry (`domain` is the `kind` of a `context[]` row, so
+  label, link and map anchor come from there). `entry` is present on `entry` pieces only.
+- Only `noData` is replaced. `recorded`, `phonePaused` and `deleted` time keeps its state; an
+  entry that overlaps recorded time fills just the parts without a fix. A stay (rc.31) still
+  reads `recorded`.
+- The entries are the `context[]` rows of a domain: the same adapters (`logbookWindows`), the
+  same visibility (a domain the account does not show explains nothing) and the same span as
+  the timeline row. An entry without a window, or an instant, explains nothing.
+- Overlapping entries: the earlier-starting one owns the overlap, then the smaller id. Adjacent
+  parts of one entry are one piece.
+- An entry adds no point, no leg, no stop and no distance; `segments`, `legs`, `stops` and
+  `pointCount` are exactly what they were. The entry's own line is NOT part of this contract.
+- Old clients: an unknown `state` is to be read as `noData`. Minimum server version: rc.32.

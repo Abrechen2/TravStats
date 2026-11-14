@@ -68,7 +68,16 @@ export interface PrivacyZoneInput {
 /** `[tMs, lat, lon, accuracyM]`, as the server stores a fix. */
 export type TrackPoint = [number, number, number, number | null];
 
-export type TrackCoverageState = "recorded" | "noData" | "deleted" | "phonePaused";
+/** `entry`: a silence a logbook entry (`TrackCoveragePiece.entry`) explains; older servers never send it. */
+export type TrackCoverageState = "recorded" | "noData" | "deleted" | "phonePaused" | "entry";
+
+export interface TrackCoveragePiece {
+  fromMs: number;
+  untilMs: number;
+  state: TrackCoverageState;
+  /** On `entry` only: the logbook entry explaining the silence (`domain` = a `context` entry's `kind`). */
+  entry?: { domain: string; id: string };
+}
 
 /**
  * One label of a day (TravTrack plan E10): a TravStats record — a domain's
@@ -100,7 +109,7 @@ export interface TravTrackDay {
   segments: TrackPoint[][];
   /** The stored point of each vertex, aligned with `segments`; absent on an older server. */
   pointIds?: string[][];
-  coverage: Array<{ fromMs: number; untilMs: number; state: TrackCoverageState }>;
+  coverage: TrackCoveragePiece[];
   context: TravTrackDayEntry[];
   pointCount: number;
   truncated: boolean;

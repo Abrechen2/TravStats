@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -46,5 +47,45 @@ describe("TrackCoverageBar", () => {
   it("draws nothing without a day", () => {
     const { container } = render(<TrackCoverageBar zone="UTC" coverage={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("TrackCoverageBar — a silence the logbook explains", () => {
+  it("names the entry and links to it instead of reading 'no data'", () => {
+    render(
+      <MemoryRouter>
+        <TrackCoverageBar
+          zone="Asia/Seoul"
+          coverage={[
+            { fromMs: D0, untilMs: D0 + 6 * H, state: "noData" },
+            {
+              fromMs: D0 + 6 * H,
+              untilMs: D0 + 9 * H,
+              state: "entry",
+              entry: { domain: "flight", id: "f1" },
+            },
+          ]}
+          context={[
+            {
+              kind: "flight",
+              id: "f1",
+              label: "KE1201",
+              href: "/flights/f1",
+              anchor: null,
+              unlabelled: false,
+              fromMs: D0 + 6 * H,
+              untilMs: D0 + 9 * H,
+            },
+          ]}
+        />
+      </MemoryRouter>
+    );
+    const piece = screen.getByRole("link");
+    expect(piece).toHaveAttribute("href", "/flights/f1");
+    expect(piece).toHaveAttribute("data-state", "entry");
+    expect(piece.getAttribute("aria-label")).toContain("track:timeline.flight");
+    expect(piece.getAttribute("aria-label")).toContain("KE1201");
+    expect(piece.getAttribute("aria-label")).not.toContain("coverage.noData");
+    expect(screen.getByText("track:coverage.entry")).toBeInTheDocument();
   });
 });

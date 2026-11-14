@@ -521,7 +521,11 @@ export default function TrackMapView(): JSX.Element {
     ) : null;
   const strip =
     span.kind === "day" && loaded[0] ? (
-      <TrackCoverageBar coverage={loaded[0].day.coverage} zone={loaded[0].day.zone} />
+      <TrackCoverageBar
+        coverage={loaded[0].day.coverage}
+        zone={loaded[0].day.zone}
+        context={loaded[0].day.context}
+      />
     ) : null;
 
   return (
