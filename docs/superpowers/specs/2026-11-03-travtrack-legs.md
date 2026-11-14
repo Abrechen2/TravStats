@@ -214,6 +214,14 @@ Errors:
 ### 2. Reading dismissed stops
 `GET /travtrack/day?date=` -> `stops: Stop[]` (ordered by fromMs). Dismissed stops are NOT removed; they are listed with `dismissed: true` (literal `true`, optional, absent otherwise). The app hides them from the stop list/map by filtering `s.dismissed === true`, and shows them (e.g. in a "dismissed" section with Restore) the same way. `legs` and all aggregates are unaffected. Range views use the same Stop schema where they carry stops (openapi `stopSchema`).
 
+### 2a. A stay across midnight is edited as ONE stay (fix/travtrack-stop-writes, after rc.31)
+The day view shows a night as two clipped parts (`openEnd` on the first day, `openStart` on the next). `PUT /travtrack/stops/place` and `PUT /travtrack/stops/dismissed` take exactly the (clipped) `{fromMs, untilMs}` the day returned for a part, from either day. Rule:
+- The server resolves the span to the WHOLE stay, derived the way the day view derives it (one shared derivation, `services/travtrack/dayDerivation.ts`: the day +-24 h of evidence, then clipped). The span matches the part it lies on by more than half.
+- The name / the dismissal is stored on the whole stay's span (not the clipped one) and read against the UNCLIPPED stay, so BOTH days show it, whichever part was edited. `place: null` and `dismissed: false` from either part undo it for the whole stay (the split-sibling rule of a row that held two stays still applies).
+- Response 200: the stay's part on the day the sent span lies in, same shape as a day-view stop (incl. `openStart`/`openEnd`).
+- Rows stored earlier (the span of an ordinary within-day stop) keep matching: a stay inside one day is its own whole stay, and a stored span covering more than half of a whole stay applies to it.
+- Not changed: `PUT /travtrack/legs/mode`. Legs come from the day alone, so a journey across midnight is one leg per day and a correction applies to the leg of the day it was sent for.
+
 ### 3. Search a stop's place yourself (c4957ce80) - no server change
 Frontend only (`TrackStopPlaceSearch.tsx`, shared `LocationInput`). Calls:
 - `GET /geo/search` (existing, enveloped `{success,data:PlaceSearchResult[]}`) for Photon search.

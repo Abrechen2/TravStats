@@ -1,10 +1,10 @@
 import { profileZoneOf } from "../../shared/time/profileZone";
 import type { StoredPoint } from "../tripRecording/segments";
-import { withoutBadVertices } from "./drawnFixes";
 import { dayContext, type DayContextEntry } from "./dayContext";
-import { STAY_CONTEXT_MS, travTrackLegs, type Leg, type Stop } from "./legs";
+import { deriveDay } from "./dayDerivation";
+import type { Leg, Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
-import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
+import type { SafeSpan, Span } from "./readSafe";
 
 /**
  * One day of the account's TravTrack history (TravTrack plan T6), on the
@@ -28,8 +28,6 @@ import { readSafeTravTrack, type SafeSpan, type Span } from "./readSafe";
  *     the time at home, the open TravTrack questions and the moving
  *     stretches no entry covers. This file keeps the geometry.
  */
-
-export const DAY_POINT_CAP = 50_000;
 
 export type CoverageState = "recorded" | "noData" | "deleted" | "phonePaused";
 export type DayCoverage = Array<Span & { state: CoverageState }>;
@@ -124,19 +122,7 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     fromMs: midnightOf(date, zone).getTime(),
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
-  const [raw, wide] = await Promise.all([
-    readSafeTravTrack(userId, window, DAY_POINT_CAP),
-    // The evidence a stay across midnight rests on; a read cut short by its cap is not used.
-    readSafeTravTrack(
-      userId,
-      { fromMs: window.fromMs - STAY_CONTEXT_MS, untilMs: window.untilMs + STAY_CONTEXT_MS },
-      DAY_POINT_CAP * 3
-    ),
-  ]);
-  // Bad fixes are not drawn, nor do they shape legs and stops (`drawnFixes.ts`).
-  const read = withoutBadVertices(raw);
-  const context = wide.next === null ? withoutBadVertices(wide) : undefined;
-  const { legs, stops } = await travTrackLegs(userId, window, read, context, Date.now());
+  const { raw, read, legs, stops } = await deriveDay(userId, window);
   const dayContextEntries = await dayContext(userId, window, read, stops);
   return {
     date,

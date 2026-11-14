@@ -101,6 +101,10 @@ async function staysIn(userId: string, window: Span): Promise<StayCandidate[]> {
 /** How far past the day the evidence a stay may rest on is read. */
 export const STAY_CONTEXT_MS = 24 * 60 * 60_000;
 
+/** A stop the owner dismissed: a stored span covers more than half of the WHOLE stay, before any clip. */
+const isDismissed = (stop: Stop, dismissals: readonly Span[]) =>
+  dismissals.some((d) => overlapShare(stop, d) > 0.5);
+
 /** The stops that touch the day, clipped to it and flagged where the stay goes on past an edge. */
 export function clipStops(stops: readonly Stop[], window: Span): Stop[] {
   return stops
@@ -126,7 +130,7 @@ export async function travTrackLegs(
   context?: SafeSpan,
   /** The wall clock; the day holding it is the current day, whose last stay is still going. */
   nowMs?: number
-): Promise<{ legs: Leg[]; stops: Stop[] }> {
+): Promise<{ legs: Leg[]; stops: Stop[]; whole: Stop[] }> {
   // The day the window opens on, on the profile clock: the home that was valid then folds it.
   const { zone } = await profileZoneOf(userId);
   const day = localDay(new Date(window.fromMs), zone);
@@ -139,18 +143,16 @@ export async function travTrackLegs(
     staysIn(userId, wide),
     stopPlacesIn(userId, wide),
     foldContextFor(userId, wide, day),
-    dismissalsIn(userId, window),
+    dismissalsIn(userId, wide),
   ]);
   const current = nowMs !== undefined && nowMs >= window.fromMs && nowMs < window.untilMs;
   const inputs = { windows, overrides, stays, places, fold, current };
   const derived = deriveLegs(read, inputs);
-  const stops = context ? clipStops(deriveLegs(context, inputs).stops, window) : derived.stops;
-  // Flagged, never removed: the stop stays in the list so it can be restored, and nothing
-  // derived from the points (legs, distances, totals) changes.
-  return {
-    legs: derived.legs,
-    stops: stops.map((s) =>
-      dismissals.some((d) => overlapShare(s, d) > 0.5) ? { ...s, dismissed: true as const } : s
-    ),
-  };
+  // `whole` are the stays as the points make them, unclipped, with the dismissal read against
+  // the whole stay: a row written from either part of a night shows on both days. The writes
+  // (`stopPlaces/`) resolve a span to a stay through them.
+  const whole = (context ? deriveLegs(context, inputs).stops : derived.stops).map((s) =>
+    isDismissed(s, dismissals) ? { ...s, dismissed: true as const } : s
+  );
+  return { legs: derived.legs, stops: context ? clipStops(whole, window) : whole, whole };
 }

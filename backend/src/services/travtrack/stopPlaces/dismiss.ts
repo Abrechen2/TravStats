@@ -1,52 +1,44 @@
 import { prisma } from "../../../db";
-import { AppError } from "../../../middleware/errorHandler";
 import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
-import { derivedAround, type LegSpan } from "../legs/setMode";
+import type { LegSpan } from "../legs/setMode";
 import type { Stop } from "../legs/types";
+import { resolveStays, stopNotFound } from "./resolve";
 
 /**
  * `PUT /travtrack/stops/dismissed` (travtrack-stop-dismiss-wait): mark a stop
  * as "only a wait" or take that back, and answer the recomputed stop. Like a
- * stop's accepted name it is bound to the span sent, not to a derived stop: it
- * applies to every stop it covers by more than half, so a late point does not
- * lose it. The day view still lists the stop, flagged `dismissed`, so the
+ * stop's accepted name it is bound to a span, not to a derived stop, so a late
+ * point does not lose it: the span stored is the WHOLE stay's (the span sent is
+ * a part of it as the day view clips it), and it covers every stop it holds by
+ * more than half. The day view still lists the stop, flagged `dismissed`, so the
  * owner can restore it; the points, legs and every figure are untouched.
  * Repeating the request changes nothing (one row per span). A span under no
  * stop is `TRAVTRACK_STOP_NOT_FOUND`; restoring drops the stored rows first
  * (the points may no longer make a stop) and then says so if none is there.
  */
 
-const under = (stops: readonly Stop[], span: LegSpan) =>
-  stops.filter((s) => overlapShare(s, span) > 0.5);
-
-const notFound = () => new AppError("No stop under that span", 404, "TRAVTRACK_STOP_NOT_FOUND");
-
 export async function setStopDismissed(
   userId: string,
   span: LegSpan,
   dismissed: boolean
 ): Promise<Stop> {
+  // The span is a part of a stay as the day view shows it; the dismissal belongs to the WHOLE
+  // stay (`resolve.ts`), so both days of a night show it and either part can restore it.
+  const { stay, all } = await resolveStays(userId, span);
   if (dismissed) {
-    if (under((await derivedAround(userId, span)).stops, span).length === 0) throw notFound();
+    if (stay === null) throw stopNotFound();
+    const [fromMs, untilMs] = [BigInt(stay.fromMs), BigInt(stay.untilMs)];
     await prisma.travTrackStopDismissal.upsert({
-      where: {
-        userId_fromMs_untilMs: {
-          userId,
-          fromMs: BigInt(span.fromMs),
-          untilMs: BigInt(span.untilMs),
-        },
-      },
-      create: { userId, fromMs: BigInt(span.fromMs), untilMs: BigInt(span.untilMs) },
+      where: { userId_fromMs_untilMs: { userId, fromMs, untilMs } },
+      create: { userId, fromMs, untilMs },
       update: {},
     });
   } else {
-    const all = (await derivedAround(userId, span)).stops;
-    const hit = under(all, span);
     const stored = await prisma.travTrackStopDismissal.findMany({
       where: {
         userId,
-        fromMs: { lt: BigInt(span.untilMs) },
-        untilMs: { gt: BigInt(span.fromMs) },
+        fromMs: { lt: BigInt(Math.max(span.untilMs, stay?.untilMs ?? 0)) },
+        untilMs: { gt: BigInt(Math.min(span.fromMs, stay?.fromMs ?? span.fromMs)) },
       },
       select: { id: true, fromMs: true, untilMs: true },
     });
@@ -57,13 +49,13 @@ export async function setStopDismissed(
     const drop = stored.filter(
       (r) =>
         (Number(r.fromMs) === span.fromMs && Number(r.untilMs) === span.untilMs) ||
-        hit.some((s) => overlapShare(s, rowSpan(r)) > 0.5)
+        (stay !== null && overlapShare(stay, rowSpan(r)) > 0.5)
     );
     // Late points may have split one dismissed stop into two: the row that held both must
     // keep holding the one that is not being restored.
     const keep = all.filter(
       (s) =>
-        !hit.includes(s) &&
+        !(s.fromMs === stay?.fromMs && s.untilMs === stay?.untilMs) &&
         s.dismissed === true &&
         drop.some((r) => overlapShare(s, rowSpan(r)) > 0.5)
     );
@@ -86,7 +78,7 @@ export async function setStopDismissed(
       ),
     ]);
   }
-  const hit = under((await derivedAround(userId, span)).stops, span);
-  if (hit.length === 0) throw notFound();
-  return hit.reduce((best, s) => (overlapShare(s, span) > overlapShare(best, span) ? s : best));
+  const { part } = await resolveStays(userId, span);
+  if (part === null) throw stopNotFound();
+  return part;
 }

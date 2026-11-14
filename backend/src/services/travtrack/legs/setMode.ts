@@ -5,10 +5,10 @@ import { profileZoneOf } from "../../../shared/time/profileZone";
 import { overlapShare } from "../../locationEvidence/journeys/entryWindows";
 import { dayAfter, midnightOf } from "../range";
 import { readSafeTravTrack } from "../readSafe";
-import { DAY_POINT_CAP } from "../dayView";
+import { DAY_POINT_CAP } from "../dayDerivation";
 import { withoutBadVertices } from "../drawnFixes";
 import { travTrackLegs } from "./index";
-import type { Leg, LegMode, Stop } from "./types";
+import type { Leg, LegMode } from "./types";
 
 /**
  * `PUT /travtrack/legs/mode` (spec 2026-11-03-travtrack-legs, §2/§3): store
@@ -24,16 +24,11 @@ import type { Leg, LegMode, Stop } from "./types";
 
 export type LegSpan = { fromMs: number; untilMs: number };
 
-/** The legs derived on the profile days the span touches — as `GET /travtrack/day` shows them. */
-async function legsAround(userId: string, span: LegSpan): Promise<Leg[]> {
-  return (await derivedAround(userId, span)).legs;
-}
-
-/** Legs and stops of the profile days the span touches, exactly as the day view derives them. */
-export async function derivedAround(
+/** The profile days a span touches, first to last (at most four). */
+export async function daysOf(
   userId: string,
   span: LegSpan
-): Promise<{ legs: Leg[]; stops: Stop[] }> {
+): Promise<{ day: string; zone: string }[]> {
   const { zone } = await profileZoneOf(userId);
   const first = localDay(new Date(span.fromMs), zone);
   const last = localDay(new Date(span.untilMs - 1), zone);
@@ -42,19 +37,24 @@ export async function derivedAround(
     d = dayAfter(d);
     days.push(d);
   }
+  return days.map((day) => ({ day, zone }));
+}
+
+/**
+ * The legs derived on the profile days the span touches, day by day, as `GET /travtrack/day`
+ * shows them: legs come from the day alone (a journey across midnight is one leg per day).
+ */
+async function legsAround(userId: string, span: LegSpan): Promise<Leg[]> {
   const legs: Leg[] = [];
-  const stops: Stop[] = [];
-  for (const day of days) {
+  for (const { day, zone } of await daysOf(userId, span)) {
     const window = {
       fromMs: midnightOf(day, zone).getTime(),
       untilMs: midnightOf(dayAfter(day), zone).getTime(),
     };
     const read = withoutBadVertices(await readSafeTravTrack(userId, window, DAY_POINT_CAP));
-    const derived = await travTrackLegs(userId, window, read);
-    legs.push(...derived.legs);
-    stops.push(...derived.stops);
+    legs.push(...(await travTrackLegs(userId, window, read)).legs);
   }
-  return { legs, stops };
+  return legs;
 }
 
 /** The leg the correction mostly lies on (it applies to every leg it covers by more than half). */
