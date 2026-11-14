@@ -99,7 +99,7 @@ describe("GET /api/v1/achievements — orphaned catalogue rows", () => {
       "FIRST_FLIGHT",
       "FOUR_SEASONS_YEAR",
     ]);
-    // The flag is what lets the page count the same fraction (CT106 design-6 R08).
+    // The flag is what lets the page count the same fraction (beta design-6 R08).
     const retired = Object.fromEntries(
       res.body.achievements.map((a: { code: string; isRetired: boolean }) => [a.code, a.isRetired])
     );

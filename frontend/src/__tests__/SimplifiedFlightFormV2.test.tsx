@@ -90,7 +90,7 @@ describe("SimplifiedFlightFormV2", () => {
     expect(screen.getByText(/flights:form\.title/i)).toBeInTheDocument();
   });
 
-  // #289 painted the page behind the form solid black; since the CT106
+  // #289 painted the page behind the form solid black; since the beta
   // design-6 recheck (R01) the form sits in the shared dialog frame, whose
   // scrim is a token. What must hold is that it IS a dialog: named, modal,
   // holding focus, and closing on Escape without anything else answering.

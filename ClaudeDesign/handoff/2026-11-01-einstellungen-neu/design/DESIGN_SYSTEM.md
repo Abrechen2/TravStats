@@ -194,7 +194,7 @@ The ten `max-w-*` values in use today collapse into these four.
 logbooks at 1200px. With every column ticked, flights need 1266px of page,
 stays 1272px and cruises 1212px, so at 1200px they hid ticked columns on any
 screen, and the hint telling the reader to widen the window was false
-(CT106 design-6 R02, owner decision). Places fit in 1200px but take the same
+(beta design-6 R02, owner decision). Places fit in 1200px but take the same
 width so the page does not jump between the logbook tabs.
 
 ### 4.3 Radius (`radius`)

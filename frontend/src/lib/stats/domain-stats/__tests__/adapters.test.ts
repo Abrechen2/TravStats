@@ -445,7 +445,7 @@ describe("stub adapters", () => {
   });
 });
 
-// CT106 audit B03: a year-scoped card printed the lifetime KPIs under the year.
+// beta audit B03: a year-scoped card printed the lifetime KPIs under the year.
 describe("summaryByYear", () => {
   it("flights: distance, time and airlines of that year only; undated flights in no year", () => {
     const stats = adaptFlight({
@@ -477,7 +477,7 @@ describe("summaryByYear", () => {
     ).toBe(23);
   });
 
-  // CT106 design-6 R09: a 90-minute flight is 1.5 h, not "2 h".
+  // beta design-6 R09: a 90-minute flight is 1.5 h, not "2 h".
   it("flights: flight time keeps its half hour", () => {
     const stats = adaptFlight({
       flights: [

@@ -3,7 +3,7 @@
  *
  * Default (env `FEDERATION_PRIVATE_PEERS` unset): a peer is a public https origin without port,
  * reached only at public addresses. An operator whose servers share a LAN opts in with a
- * comma-separated CIDR list (`192.168.178.0/24,fd00::/8`). Then a peer origin may be http and
+ * comma-separated CIDR list (`192.168.1.0/24,fd00::/8`). Then a peer origin may be http and
  * carry a port, and a host may resolve into a listed range. Loopback, link-local (cloud metadata
  * at 169.254.169.254 included), unspecified and multicast stay refused even if a CIDR covers them.
  */

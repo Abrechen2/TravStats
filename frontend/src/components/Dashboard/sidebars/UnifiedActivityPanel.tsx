@@ -116,7 +116,7 @@ export function UnifiedActivityPanel({
   }, [allItems]);
 
   // Escape closes it, as every other panel on the page does. The listener
-  // exists only while the panel is open (CT106 audit B02: Escape did nothing).
+  // exists only while the panel is open (beta audit B02: Escape did nothing).
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (event: KeyboardEvent): void => {
@@ -141,7 +141,7 @@ export function UnifiedActivityPanel({
     // `ts-activity-panel` (theme/ui.css): 320px beside the map, the whole
     // width below 640px. z-index above the floating "Hinzufügen" and the map
     // key (both 30) — at 20 the add button sat on this panel's close button,
-    // and a real tap there opened the add menu (CT106 audit B02).
+    // and a real tap there opened the add menu (beta audit B02).
     <div
       {...MAP_CHROME}
       className="ts-activity-panel"
@@ -269,7 +269,7 @@ export function UnifiedActivityPanel({
                 aria-label={t("common:buttons.details", { defaultValue: "Details" })}
                 title={t("common:buttons.details", { defaultValue: "Details" })}
                 // A 44px hit area around a small visible arrow: the bordered
-                // "→" alone measured 23×17px on a phone (CT106 audit B02).
+                // "→" alone measured 23×17px on a phone (beta audit B02).
                 className="flex shrink-0 items-center justify-center"
                 style={{
                   width: 44,

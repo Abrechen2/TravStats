@@ -32,9 +32,9 @@ describe("the admin's template repository URL (forgejo#309)", () => {
       ok: true,
       url: "https://git.example.org/raw/main",
     });
-    expect(checkTemplateRepoUrl("http://192.168.178.20:3000/raw/main")).toEqual({
+    expect(checkTemplateRepoUrl("http://192.168.1.20:3000/raw/main")).toEqual({
       ok: true,
-      url: "http://192.168.178.20:3000/raw/main",
+      url: "http://192.168.1.20:3000/raw/main",
     });
     expect(checkTemplateRepoUrl("http://forgejo.lan/raw")).toMatchObject({ ok: true });
     expect(checkTemplateRepoUrl("http://templates.example.org/raw")).toEqual({

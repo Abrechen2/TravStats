@@ -104,8 +104,8 @@ also kein „hier ist nichts", sondern „es ist noch nicht passiert". `nothing`
 hätte dem Leser eine Handlungsaufforderung geschuldet; ein Wartezustand nicht,
 weil der nächtliche Durchlauf ihn füllt. Die Shell-Liste geht damit auf 17.
 
-### Abgenommen auf dem Beta-Server CT106
-Auf Ansage des Owners auf **CT106** (`192.168.178.123:3010`) ausgerollt und
+### Abgenommen auf dem Beta-Server
+Auf Ansage des Owners auf dem **Beta-Server** (`192.168.1.123:3010`) ausgerollt und
 dort im Browser geprüft, gegen die **echten Beta-Daten**, nicht gegen den
 lokalen Demo-Seed.
 
@@ -120,7 +120,7 @@ lokalen Demo-Seed.
 - Bilder: `ClaudeDesign/screenshots/design-system/beta-ct106/`, je 1440×900 und
   390×844: Anmelden, Dashboard, Logbuch, Einstellungen, Reisepass, Posteingang.
 
-**Was auf CT106 verändert wurde und wie man es zurückdreht:**
+**Was auf dem Beta-Server verändert wurde und wie man es zurückdreht:**
 
 | Änderung | Rücknahme |
 |---|---|

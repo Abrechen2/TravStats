@@ -576,7 +576,7 @@ git commit -m "docs(changelog): record boot-race fix under [Unreleased]"
 
 ---
 
-## Task 7: End-to-end smoke test on Cardinal (CT 100)
+## Task 7: End-to-end smoke test on Cardinal
 
 **Goal:** Verify the fix on the production-shape stack BEFORE cutting an RC for Norbert's instance.
 
@@ -590,10 +590,10 @@ docker build --build-arg VERSION=$VERSION --platform linux/amd64 \
 docker push ghcr.io/abrechen2/travstats:$VERSION
 ```
 
-- [ ] **Step 2: Deploy to Cardinal (CT 100) with the temporary tag**
+- [ ] **Step 2: Deploy to Cardinal with the temporary tag**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 100 -- bash -c \
   'cd /opt/travstats && \
    sed -i \"s|image: ghcr.io/abrechen2/travstats:.*|image: ghcr.io/abrechen2/travstats:$VERSION|\" docker-compose.yml && \
    docker compose pull && docker compose up -d'"
@@ -602,7 +602,7 @@ ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
 - [ ] **Step 3: Watch the boot in real time**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 100 -- bash -c \
   'docker logs -f TravStats 2>&1 | grep -E \"wait-then-nginx|migrat|airport|listening|Backend ready\" | head -30'"
 ```
 
@@ -618,7 +618,7 @@ Expected:
 Wait 60 s, then:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 100 -- bash -c \
   'docker exec TravStats grep -c \"no live upstreams\" /var/log/nginx/error.log || echo 0'"
 ```
 
@@ -631,7 +631,7 @@ Visit `http://<prod-host>:3010/` (Cardinal). Login. Dashboard should show flight
 - [ ] **Step 6: Restore Cardinal to its previous RC**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node3> "pct exec 100 -- bash -c \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 100 -- bash -c \
   'cd /opt/travstats && git checkout docker-compose.yml && docker compose pull && docker compose up -d'"
 ```
 

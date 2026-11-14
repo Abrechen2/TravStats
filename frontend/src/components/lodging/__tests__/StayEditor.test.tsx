@@ -965,7 +965,7 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
     expect(screen.queryByTestId("companions-hint")).not.toBeInTheDocument();
   });
 
-  // CT106 design-6 R06: the dates and times carried only an aria-label, and the
+  // beta design-6 R06: the dates and times carried only an aria-label, and the
   // room/reference/companion/notes fields only a placeholder that disappears on
   // typing. Each control is now named by text that stays on screen.
   it("names every date, time and free-text field with a visible label", () => {

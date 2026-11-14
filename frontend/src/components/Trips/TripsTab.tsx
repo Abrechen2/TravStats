@@ -179,7 +179,7 @@ export default function TripsTab({
     <>
       {trips.length >= 2 && !mergeMode && (
         // Clean-up and merge are rare housekeeping. On a phone they sit
-        // behind "…", so the list starts sooner (CT106 audit B10).
+        // behind "…", so the list starts sooner (beta audit B10).
         <RareActions
           onCleanup={() => setShowCleanup(true)}
           onMerge={() => setMergeMode(true)}

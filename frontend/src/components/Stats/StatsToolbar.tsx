@@ -30,7 +30,7 @@ export default function StatsToolbar({ tab, years, period, visibility }: Props):
   return (
     // One row on a wide screen; on a phone the period bar takes the full
     // width and the section menu its own row. Side by side, the menu kept its
-    // width and squeezed twelve years into a 100px column 556px tall (CT106
+    // width and squeezed twelve years into a 100px column 556px tall (beta
     // audit B05). No horizontal padding: AppShell already draws the gutter,
     // and a second one is how the content shrank to 292px of a 390px screen.
     <div className="pt-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">

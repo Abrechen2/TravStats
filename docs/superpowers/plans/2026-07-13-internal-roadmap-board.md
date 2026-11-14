@@ -2166,8 +2166,8 @@ The first real run is also the acceptance test: the page must show what we alrea
 Create `roadmap.local.yaml` at the repo root. Port every table row of
 `ROADMAP.local.md` into an item and every narrative section into the `notes` of
 the item (or the `note` of the version) it belongs to. Fill `instances` from
-`CLAUDE.local.md` — six entries: prod (CT 100), rc (CT 107), beta (CT 106) and
-the three CT 134 preview slots.
+`CLAUDE.local.md` — six entries: prod, rc, beta and
+the three preview slots.
 
 Known state at the time of writing, to be reproduced exactly:
 

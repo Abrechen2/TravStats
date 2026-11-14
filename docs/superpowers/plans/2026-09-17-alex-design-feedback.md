@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The nine points the tester raised against the design beta (CT134, `2.7.0-design.6`) are fixed on `dev/design-system`, so the next build carries them.
+**Goal:** The nine points the tester raised against the design beta (`2.7.0-design.6`) are fixed on `dev/design-system`, so the next build carries them.
 
 **Architecture:** Eight small, independent frontend changes plus one larger one (client-side pagination in the four logbook lists). No backend change. Each point already has its cause located; this plan carries it.
 

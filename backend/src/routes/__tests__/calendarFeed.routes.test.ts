@@ -370,19 +370,19 @@ describe("calendar feed", () => {
     const before = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
     try {
       await updateInstanceSettings({
-        publicUrl: "http://192.168.178.120:3010",
+        publicUrl: "http://192.168.1.120:3010",
         frontendUrl: "https://trav.example.org",
       });
       const named = await request(app).post("/api/v1/calendar-feed").set("Cookie", owner.cookie);
       expect(named.body.data.url).toMatch(/^https:\/\/trav\.example\.org\/api\/v1\/calendar\//);
       expect(named.body.data.reachableFromInternet).toBe(true);
 
-      await updateInstanceSettings({ publicUrl: "http://192.168.178.120:3010", frontendUrl: null });
+      await updateInstanceSettings({ publicUrl: "http://192.168.1.120:3010", frontendUrl: null });
       const ip = await request(app)
         .post("/api/v1/calendar-feed")
         .set("Cookie", owner.cookie)
         .set("Host", "10.0.0.7:8000");
-      expect(ip.body.data.url).toMatch(/^http:\/\/192\.168\.178\.120:3010\//);
+      expect(ip.body.data.url).toMatch(/^http:\/\/192\.168\.1\.120:3010\//);
       expect(ip.body.data.reachableFromInternet).toBe(false);
     } finally {
       await updateInstanceSettings({

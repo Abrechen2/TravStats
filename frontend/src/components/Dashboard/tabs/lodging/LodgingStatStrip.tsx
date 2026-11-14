@@ -29,7 +29,7 @@ interface LodgingStatStripProps {
   /**
    * Cells to leave out because something beside the strip already shows them —
    * the period comparison above it carries stays, nights and houses, and the
-   * same three numbers twice in a row read as a mistake (CT106 audit B12).
+   * same three numbers twice in a row read as a mistake (beta audit B12).
    */
   omit?: readonly string[];
   /**
@@ -164,7 +164,7 @@ export function LodgingStatStrip({
     },
     // "0 €" only when a price of nothing was actually recorded. With no price
     // at all, or with prices that could not be converted into the base
-    // currency, a zero read as "all free" (CT106 audit B12, measured with
+    // currency, a zero read as "all free" (beta audit B12, measured with
     // three unconverted stays under "0 € Ausgaben").
     nothingConverted
       ? {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy an ALREADY-BUILT GHCR tag to a preview slot on CT134.
+# Deploy an ALREADY-BUILT GHCR tag to a preview slot on the preview host.
 # Never builds. Never targets any CT other than 134.
 #
 #   bash scripts/preview/deploy-preview.sh beta 2.3.0-beta.11
@@ -18,7 +18,7 @@ CTID="${CTID:-134}"
 DRY_RUN="${DRY_RUN:-0}"
 
 if [[ "$CTID" != "134" ]]; then
-  echo "refusing: preview deploys only target CT134 (got $CTID)" >&2
+  echo "refusing: preview deploys only target the preview container (got $CTID)" >&2
   exit 1
 fi
 

@@ -9,7 +9,7 @@
 # is now configured as the beta slot's admin-global Immich.
 #
 # Credentials are written ONLY to /opt/preview/immich-demo/CREDENTIALS.txt
-# (mode 0600) on CT134 — never printed, never committed to the repo.
+# (mode 0600) on the preview host — never printed, never committed to the repo.
 #
 # The live instance's OpenAPI spec is served at
 # http://immich-demo-server:2283/api/spec.json (note: `.json`, not the
@@ -30,7 +30,7 @@ NODE1="${NODE1:?set NODE1 to the Proxmox node that carries the DMZ bridge -- the
 CTID="${CTID:-134}"
 
 if [[ "$CTID" != "134" ]]; then
-  echo "refusing: this seed script only targets CT134 (got $CTID)" >&2
+  echo "refusing: this seed script only targets the preview container (got $CTID)" >&2
   exit 1
 fi
 

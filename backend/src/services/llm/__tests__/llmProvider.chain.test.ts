@@ -66,7 +66,7 @@ const req = {
 describe("resolveLlmChain: order, eligibility and skip-without-attempt", () => {
   it("Ollama first, then the cloud slots in the admin's priority order", async () => {
     settings({
-      ollamaUrl: "http://192.168.178.155:11434",
+      ollamaUrl: "http://192.168.1.155:11434",
       ollamaModel: "gemma3:12b",
       llmProviderOrder: "anthropic,openai,google,custom",
       llmAnthropicApiKey: "k1",

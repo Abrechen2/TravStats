@@ -220,7 +220,7 @@ export function planAchievementWrites(
         // with progress 25 → 24 and `unlockedAt` NULL — not because the
         // traveller had done anything, but because `lodgingStats/rhythm.ts`
         // divides the current year by the days elapsed so far, so the share
-        // falls on every night spent at home. The same boot on CT106 with
+        // falls on every night spent at home. The same boot on the beta server with
         // TZ=Europe/Berlin took `NOT_A_MORNING_PERSON` off two users and gave
         // it to a third, dated that day, because a process clock had moved.
         // The date is the one thing here a re-measurement cannot rebuild, and

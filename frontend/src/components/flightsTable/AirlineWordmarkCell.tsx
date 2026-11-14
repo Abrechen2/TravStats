@@ -31,7 +31,7 @@ export default function AirlineWordmarkCell({ flight }: { flight: Flight }): JSX
 
   // A tile the size of a logo, with the code in it. The name used to stand
   // here as text, and in a 48px column "Lufthansa" ran straight into the
-  // flight number next to it ("LufthansaLH2462", CT106 audit B01). The name
+  // flight number next to it ("LufthansaLH2462", beta audit B01). The name
   // stays for a screen reader and in the tooltip.
   const code = (iata || name || flight.flightNumber || "").slice(0, 3).toUpperCase();
   const fallback = (

@@ -9,7 +9,7 @@ import { parseYearParam, withYear } from "../../../lib/stats/periodUrl";
 import { useStatsCompareStore } from "../../../store/statsCompareStore";
 
 /**
- * CT106 audit, B04: year 2005 → "Details →" opened the flights tab on 2026.
+ * beta audit, B04: year 2005 → "Details →" opened the flights tab on 2026.
  * The year lived only in state, so any navigation reset it to the newest.
  */
 const YEARS = [2005, 2025, 2026];

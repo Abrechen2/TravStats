@@ -370,12 +370,12 @@ teilt, konnte nicht geladen werden."; `sharing:settings.errors.loadFailed` "Die 
 
 ## 10. Rollout from today's production state
 
-Production (CT 100) runs `2.7.0-rc.*` with sharing live and the beta switch on.
+Production runs `2.7.0-rc.*` with sharing live and the beta switch on.
 
 1. **Vocabulary migration** runs at boot. Expected to pass: every value written so far is in
    the lists (`shared|created|updated|deleted|left`; `trip` + seven entity names). If not, the
    migration raises with counts and the deploy stops before the app starts — the RC server
-   (CT 107, a prod-data mirror) runs it first, per the RC-first rule.
+   (a prod-data mirror) runs it first, per the RC-first rule.
 2. **Groups created before the consent rule** (a member brought in onward with no consent
    towards the others) keep existing; propagation has skipped the unconsented pairs since
    `fix/ct142-sharing`. New: the section shows such a member with **Zustimmung offen** and the

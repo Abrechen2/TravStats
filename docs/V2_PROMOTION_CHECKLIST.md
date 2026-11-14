@@ -23,8 +23,8 @@ note explaining why).
 - [ ] All hand-written migrations in `prisma/migrations/` are reviewed
   for forward-compat: do they run cleanly on
   - a fresh dev DB
-  - the existing prod DB (CT 100, dump-restored locally)
-  - the beta DB on CT 106
+  - the existing prod DB (dump-restored locally)
+  - the beta DB on the beta server
 - [ ] `post_v2_drift_fix` migration applied successfully against the
   prod-data dump
 - [ ] No `CREATE EXTENSION` statements that were silently introduced
@@ -32,7 +32,7 @@ note explaining why).
   on 2026-04-30 — do not regress). **Grandfathered exception:** the
   initial `20251120163643_init` migration carries
   `CREATE EXTENSION IF NOT EXISTS "postgis"` from V1 days. Both the
-  prod compose on CT 100 and the dev compose pin
+  prod compose on prod and the dev compose pin
   `postgis/postgis:15-3.4`, so the statement always succeeds. Schema
   uses no geometry types; the extension is unused but harmless.
   Cleanup (DROP EXTENSION + plain `postgres:15-alpine` pin) deferred
@@ -106,9 +106,9 @@ note explaining why).
 - [ ] `docs/V2_PROMOTION_CHECKLIST.md` itself is in sync with the
   branching workflow described in `CLAUDE.md`
 
-## 9. Beta-track validation (Cardinal CT 106)
+## 9. Beta-track validation (beta server)
 
-- [ ] `:2.0.0-beta.X` image deployed to CT 106
+- [ ] `:2.0.0-beta.X` image deployed to the beta server
 - [ ] At least one full user-flow tested on the beta with real data:
   - email import → flight + cruise parsing
   - dashboard navigation across all enabled tabs
@@ -122,7 +122,7 @@ V2 enters main as a Release Candidate, not a final tag. The first
 
 - [ ] `/deploy` runs cleanly after merge — RC tag pushed to GHCR + git
   + GH Pre-release
-- [ ] RC running on CT 100 (Underworld) for ≥48h with no regressions
+- [ ] RC running on prod (Underworld) for ≥48h with no regressions
 - [ ] User confirms promotion in writing (`mach den echten Release` /
   `final`) — only then does the final `:2.0.0` / `:latest` /
   `:stable` get cut via `docker buildx imagetools create`
@@ -131,7 +131,7 @@ V2 enters main as a Release Candidate, not a final tag. The first
 
 If V2 lands on prod and breaks anything that wasn't caught by §1–§9:
 
-1. `ssh root@<pve-node3> "pct exec 100 -- bash -c 'cd /opt/travstats
+1. `ssh root@<proxmox-node> "pct exec 100 -- bash -c 'cd /opt/travstats
    && APP_VERSION=1.5.0 docker compose pull && docker compose up -d'"`
 2. Confirm `/health` still returns 200 on the rollback tag.
 3. File a `gsd:debug` session against the regression and continue

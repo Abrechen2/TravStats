@@ -25,7 +25,7 @@ function phoneBlocks(css: string): string[] {
 /**
  * The map panel's phone offset lives in CSS (a media query), the clearance in
  * TypeScript. This holds the two together: the day one changes alone, the
- * collapsed panel sits on the map credit again (CT106 audit B02).
+ * collapsed panel sits on the map credit again (beta audit B02).
  */
 describe("map panel dock", () => {
   it("lifts the panel on a phone by exactly the attribution clearance", () => {

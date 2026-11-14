@@ -22,7 +22,7 @@ jest.mock("../../../db", () => ({
 jest.mock("dns/promises", () => ({ lookup: jest.fn() }));
 
 const ENV = "FEDERATION_PRIVATE_PEERS";
-const LAN = "http://192.168.178.187:3010";
+const LAN = "http://192.168.1.187:3010";
 const local = generateKeyPairSync("ed25519");
 const remote = generateKeyPairSync("ed25519");
 const remotePem = remote.publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -102,11 +102,11 @@ function redirectHttp() {
 describe("without FEDERATION_PRIVATE_PEERS (today's behaviour)", () => {
   it("refuses http, ports and private IP literals in every origin check", () => {
     expect(peerOriginAcceptable(LAN)).toBe(false);
-    expect(peerOriginAcceptable("https://192.168.178.187:3010")).toBe(false);
+    expect(peerOriginAcceptable("https://192.168.1.187:3010")).toBe(false);
     expect(peerOriginAcceptable("https://travstats.example.org")).toBe(true);
     expect(httpsOriginSchema.safeParse(LAN).success).toBe(false);
     expect(peerPinSchema.safeParse({ origin: LAN }).success).toBe(false);
-    expect(listedPrivateAddress("192.168.178.5")).toBe(false);
+    expect(listedPrivateAddress("192.168.1.5")).toBe(false);
   });
 
   it("refuses a LAN origin in a QR payload", () => {
@@ -124,7 +124,7 @@ describe("without FEDERATION_PRIVATE_PEERS (today's behaviour)", () => {
     await expect(exchange("https://1.2.3.4", { action: "ping" })).rejects.toBeInstanceOf(
       PeerRefusal
     );
-    jest.mocked(lookup).mockResolvedValue([{ address: "192.168.178.9", family: 4 }] as never);
+    jest.mocked(lookup).mockResolvedValue([{ address: "192.168.1.9", family: 4 }] as never);
     await expect(exchange("https://peer.lan.test", { action: "ping" })).rejects.toMatchObject({
       kind: "private-address",
     });
@@ -136,9 +136,9 @@ describe("without FEDERATION_PRIVATE_PEERS (today's behaviour)", () => {
   });
 });
 
-describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
+describe("with FEDERATION_PRIVATE_PEERS=192.168.1.0/24,fd00::/8", () => {
   beforeEach(() => {
-    process.env[ENV] = "192.168.178.0/24, fd00::/8, bogus, 10.0.0.0/99";
+    process.env[ENV] = "192.168.1.0/24, fd00::/8, bogus, 10.0.0.0/99";
   });
 
   it("accepts http and a port for a listed IP literal, in schemas, QR and file validation", () => {
@@ -155,11 +155,11 @@ describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
   });
 
   it("still insists on canonical origins and on listed IP literals", () => {
-    expect(peerOriginAcceptable("http://192.168.178.187:3010/")).toBe(false);
-    expect(peerOriginAcceptable("http://u:p@192.168.178.187:3010")).toBe(false);
-    expect(peerOriginAcceptable("http://192.168.178.187:3010/x")).toBe(false);
-    expect(peerOriginAcceptable("http://192.168.1.5:3010")).toBe(false); // private, not listed
-    expect(peerOriginAcceptable("ftp://192.168.178.5")).toBe(false);
+    expect(peerOriginAcceptable("http://192.168.1.187:3010/")).toBe(false);
+    expect(peerOriginAcceptable("http://u:p@192.168.1.187:3010")).toBe(false);
+    expect(peerOriginAcceptable("http://192.168.1.187:3010/x")).toBe(false);
+    expect(peerOriginAcceptable("http://192.168.7.5:3010")).toBe(false); // private, not listed
+    expect(peerOriginAcceptable("ftp://192.168.1.5")).toBe(false);
   });
 
   it("refuses loopback, link-local and metadata even when a CIDR covers them", () => {
@@ -184,17 +184,17 @@ describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
   });
 
   it("exchanges over plain http with the vetted address, an explicit port and the right Host", async () => {
-    setIdentity("http://192.168.178.20:3010");
+    setIdentity("http://192.168.1.20:3010");
     const options = redirectHttp();
     await expect(exchange(LAN, { action: "ping" })).resolves.toEqual({ ready: true });
-    expect(options[0]).toMatchObject({ hostname: "192.168.178.187" });
+    expect(options[0]).toMatchObject({ hostname: "192.168.1.187" });
     expect(lookup).not.toHaveBeenCalled();
-    expect(seen[0]?.preauth).toMatch(/^http:\/\/192\.168\.178\.20:3010 /);
+    expect(seen[0]?.preauth).toMatch(/^http:\/\/192\.168\.1\.20:3010 /);
   });
 
   it("exchanges with a DNS name whose answers all lie in the list, on its explicit port", async () => {
-    setIdentity("http://192.168.178.20:3010");
-    jest.mocked(lookup).mockResolvedValue([{ address: "192.168.178.187", family: 4 }] as never);
+    setIdentity("http://192.168.1.20:3010");
+    jest.mocked(lookup).mockResolvedValue([{ address: "192.168.1.187", family: 4 }] as never);
     const options = redirectHttp();
     await expect(exchange("http://nas.lan:3010", { action: "ping" })).resolves.toEqual({
       ready: true,
@@ -204,7 +204,7 @@ describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
 
   it("refuses a DNS name that mixes a listed private and an unlisted private address", async () => {
     jest.mocked(lookup).mockResolvedValue([
-      { address: "192.168.178.187", family: 4 },
+      { address: "192.168.1.187", family: 4 },
       { address: "10.1.2.3", family: 4 },
     ] as never);
     await expect(exchange("http://nas.lan:3010", { action: "ping" })).rejects.toMatchObject({
@@ -240,7 +240,7 @@ describe("with FEDERATION_PRIVATE_PEERS=192.168.178.0/24,fd00::/8", () => {
   it("accepts the envelope origin of a LAN peer in a signed packet's shape", () => {
     const shape = {
       origin: LAN,
-      destination: "http://192.168.178.20:3010",
+      destination: "http://192.168.1.20:3010",
       nonce: "a".repeat(64),
       time: 1,
       body: "{}",

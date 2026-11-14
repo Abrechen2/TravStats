@@ -123,7 +123,7 @@ export function StayEditorDatesSection({
 
       {datePrecision !== "NONE" && (
         // Named on screen, not by aria-label: two bare native pickers side by
-        // side did not say which end was which (CT106 design-6 R06). Marked
+        // side did not say which end was which (beta design-6 R06). Marked
         // required where the chosen precision demands them.
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field

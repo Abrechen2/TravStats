@@ -19,7 +19,7 @@ const achievement = (over: Partial<Achievement>): Achievement => ({
   ...over,
 });
 
-// CT106 design-6 R08: the page said "58 of 276", the stats overview 57.
+// beta design-6 R08: the page said "58 of 276", the stats overview 57.
 describe("countAchievements", () => {
   it("leaves an earned retired achievement out of the fraction and names it", () => {
     const counts = countAchievements([

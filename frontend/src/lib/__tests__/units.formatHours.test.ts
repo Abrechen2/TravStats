@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { formatHours } from "../units";
 
-// CT106 design-6 R09: the statistics printed one flight time four ways —
+// beta design-6 R09: the statistics printed one flight time four ways —
 // "2 h" on the overview card, "1.5 h" on a German page, "64 h" on the
 // scorecard and "374.7h" in the airline breakdown.
 describe("formatHours", () => {

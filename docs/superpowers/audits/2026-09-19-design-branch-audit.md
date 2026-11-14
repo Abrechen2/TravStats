@@ -19,7 +19,7 @@ Two cold-context audits of the frozen snapshot `97f4d0e6` (a read-only worktree 
 | 2 | High | Flight lookup spends the operator's RapidAPI quota for the demo. | Fixed `c8be1838`: `rejectDemoQuota` on both routes, as the bulk refresh already had. |
 | 3 | High | Every parse route reaches the admin's Ollama. | Ruled: the template parser stays available to the demo (it is the preview's showcase); the LLM fallback is skipped inside the three parsers (`3aca5678`), keyed on `isSharedDemoUser`; `POST /lodging-import/suggest-mapping`, a fourth Ollama caller, got `rejectDemo`. |
 | 4 | High | Lodging import spends the Google Places key. | Fixed `c8be1838`: `rejectDemo` on `/preview` and `/commit`. |
-| 5 | Medium | The global limiter's LAN skip is silently off behind a proxy presenting a private source. | Fixed `18282267`: skip only outside production. CT134 already names its proxy in `TRUST_PROXY` (real client IP in the log). |
+| 5 | Medium | The global limiter's LAN skip is silently off behind a proxy presenting a private source. | Fixed `18282267`: skip only outside production. The preview host already names its proxy in `TRUST_PROXY` (real client IP in the log). |
 | 6 | Medium | Evidence router unthrottled. | Fixed `18282267`: `statsLimiter`, 30/min per user — visible tonight as 429s in the probes. |
 | 7 | Medium | `GET /airports/:code` unauthenticated, writes the global catalogue on a miss. | Fixed `2aeb26c1` + `ab149e80`: `authenticate` + `rejectDemoWrites` on the route AND the write path closed in the handler (demo + unknown code → 404). Measured on the old code: the demo created a permanent `Airport` row through a GET. |
 | 8 | Low | `rejectDemoWrites` keys on the HTTP method. | Became concrete in #7; documented in the guard's comment. Not generalised. |
@@ -74,7 +74,7 @@ Left deliberately: the `rejectDemoQuota` message on the single flight lookup say
 
 ## 6. Deploy
 
-Image `ghcr.io/abrechen2/travstats:2.7.0-design.10` built from `cfee1fc5` (amd64, 1.95 GB), pushed. Backups on CT134 before the switch: `.env.bak-pre-design10`, `docker-compose.yml.bak-pre-design10`, `backups/pre-design10.dump` (1.4 MB, `pg_dump -Fc`). Deployed via `scripts/preview/deploy-preview.sh beta 2.7.0-design.10`: health `ok` at 02:16:22 UTC, all migrations applied (the cruise base-currency migration included), demo reseeded at 02:16:45 (173 flights, 24 cruises, 33 stays, 95 places). Public checks: `/api/v1/version` reports design.10; `POST /documents`, `GET /evidence/...` and `GET /airports/:code` answer 401 unauthenticated. Board: `preview-beta.expect = 2.7.0-design.10` with the rollback note; mirror pushed.
+Image `ghcr.io/abrechen2/travstats:2.7.0-design.10` built from `cfee1fc5` (amd64, 1.95 GB), pushed. Backups on the preview host before the switch: `.env.bak-pre-design10`, `docker-compose.yml.bak-pre-design10`, `backups/pre-design10.dump` (1.4 MB, `pg_dump -Fc`). Deployed via `scripts/preview/deploy-preview.sh beta 2.7.0-design.10`: health `ok` at 02:16:22 UTC, all migrations applied (the cruise base-currency migration included), demo reseeded at 02:16:45 (173 flights, 24 cruises, 33 stays, 95 places). Public checks: `/api/v1/version` reports design.10; `POST /documents`, `GET /evidence/...` and `GET /airports/:code` answer 401 unauthenticated. Board: `preview-beta.expect = 2.7.0-design.10` with the rollback note; mirror pushed.
 
 ## 7. Breaking tests
 

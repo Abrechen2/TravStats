@@ -113,7 +113,7 @@
  * The passport's country table, below 640px: every row becomes a card. The
  * country and its evidence span the card, the figures sit in two columns
  * under their own labels. The table was ~756px wide in a 292px scroll area,
- * with entries, days, period and airports off the right edge (CT106 audit
+ * with entries, days, period and airports off the right edge (beta audit
  * B08). One DOM for both layouts, so nothing is read twice.
  */
 @media (max-width: 639px) {
@@ -152,7 +152,7 @@
 /*
  * Summary tiles above a list, on a phone: one row that scrolls sideways
  * instead of three stacked cards that pushed the first trip below the fold
- * (CT106 audit B10). Above 640px the grid classes on the same element apply.
+ * (beta audit B10). Above 640px the grid classes on the same element apply.
  */
 @media (max-width: 639px) {
   .ts-insight-strip {
@@ -240,7 +240,7 @@
   /*
    * Visible sideways scroll, never clipping. `overflow: hidden` on the table
    * is what let the flights table cut off its actions column while the page
-   * itself reported no overflow at all (CT106 audit, B01).
+   * itself reported no overflow at all (beta audit, B01).
    */
   overflow-x: auto;
   overscroll-behavior-x: contain;

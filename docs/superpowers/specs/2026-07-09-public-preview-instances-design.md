@@ -19,7 +19,7 @@ anywhere. The only running non-prod instances are inside the secure LAN:
 | 107 | RC Server (prod-data mirror) | `<rc-host>:3010` | re-cloned from prod each round |
 
 None of these may host strangers. This design adds a fourth, **separate** host
-outside the LAN. It does not modify CT100, CT106 or CT107 in any way.
+outside the LAN. It does not modify prod, the beta server or the RC server in any way.
 
 ## 2. Goals
 
@@ -31,14 +31,14 @@ outside the LAN. It does not modify CT100, CT106 or CT107 in any way.
 
 ## 3. Non-goals
 
-- Replacing or re-pointing `<rc-hostname>` (CT106 keeps its current role).
+- Replacing or re-pointing `<rc-hostname>` (the beta server keeps its current role).
 - Auto-deploy on push. Deploys are explicit, on request.
 - Prod-representative LLM parse quality (see §7).
 - Scheduled data resets. Instance data persists until manually cleaned.
 
 ## 4. Host
 
-New unprivileged LXC **CT 134** on **pve-node1** — the only node carrying the
+New unprivileged LXC **The preview host** on **the Proxmox node** — the only node carrying the
 `vmbr2` bridge (`<dmz-node1>/24`, `bridge-ports nic0.20`, gateway
 `<dmz-gateway>`). VMID 134 is free; it was released when `travstats-wiki` was
 destroyed on 2026-05-02.
@@ -46,15 +46,15 @@ destroyed on 2026-05-02.
 | Setting | Value |
 |---|---|
 | Hostname | `ct134-travstats-preview` |
-| Node | pve-node1 (pinned — `vmbr2` exists nowhere else) |
+| Node | the Proxmox node (pinned — `vmbr2` exists nowhere else) |
 | Network | `vmbr2`, static `<preview-host>/24`, gw `<dmz-gateway>` |
 | Resources | 4 cores, 8 GB RAM, 30 GB `ceph-nvme` |
 | Features | unprivileged, `nesting=1` |
 | Docker | `get.docker.com` convenience script |
 | Base | Debian 12 |
 
-pve-node1 has 21 GB RAM available of 32 GB, and `ceph-nvme` has 807 GB free.
-The host is not HA-migratable, matching CT133's existing constraint.
+the Proxmox node has 21 GB RAM available of 32 GB, and `ceph-nvme` has 807 GB free.
+The host is not HA-migratable, matching the web host's existing constraint.
 
 ## 5. Stacks
 
@@ -70,15 +70,15 @@ weights dominate the memory budget.
 cloudflared (systemd)   one tunnel, three public hostnames
 ```
 
-Each `docker-compose.yml` derives from the CT106 beta compose, with these
+Each `docker-compose.yml` derives from the beta server compose, with these
 deltas:
 
-| Env | CT106 | Preview |
+| Env | The beta server | Preview |
 |---|---|---|
 | `OLLAMA_URL` | `http://<ollama-host>:11434` | `http://ollama:11434` |
 | `OLLAMA_MODEL` | `gemma3:12b` | `gemma3:4b` |
 | `POSTGRES_PASSWORD` | `flights` | generated per stack |
-| `FRONTEND_URL` | CT106 IP | the public hostname |
+| `FRONTEND_URL` | The beta server IP | the public hostname |
 
 `ALLOW_REGISTRATION=false`, `CREATE_DEMO_USER=false`, `SEED_AIRPORTS=false`
 and `TZ=UTC` carry over unchanged. Postgres ports are not published.
@@ -102,8 +102,8 @@ Hostnames are therefore flat:
 | `immich-beta.travstats.de` | `immich` | `dev/immich-albums` |
 | `poi-beta.travstats.de` | `poi` | `dev/hotels` |
 
-One `cloudflared` tunnel on CT134 with three public hostnames, each mapping to
-`http://localhost:<port>`. This mirrors CT133's setup.
+One `cloudflared` tunnel on the preview host with three public hostnames, each mapping to
+`http://localhost:<port>`. This mirrors the web host's setup.
 
 ### Verified Cloudflare state (2026-07-09)
 
@@ -123,7 +123,7 @@ rather than 403, which is misleading — do not read an empty tunnel list as
 
 The token therefore needs `Account → Cloudflare Tunnel → Edit` added before
 provisioning can create the tunnel. Until then the tunnel must be created by
-hand in the dashboard and its token handed to CT134.
+hand in the dashboard and its token handed to the preview host.
 
 The token's grants are all **zone-level** (`DNS Write`, `Zone Write`, `SSL and
 Certificates Write`, …). `Cloudflare Tunnel` is an **account-level**
@@ -132,7 +132,7 @@ calls 401. The fix is to add `Account → Cloudflare Tunnel → Edit` under
 *Account Resources*.
 
 The token also carries an **IP allowlist pinned to `87.138.182.241`**, which is
-currently the dev machine's WAN address. That address is dynamic — CT121 runs
+currently the dev machine's WAN address. That address is dynamic — the DDNS host runs
 `cloudflare-ddns` precisely because it changes. After the next reconnect the
 token will fail, and it will fail *looking like a permissions error*. Either
 widen the allowlist or expect to re-pin it.
@@ -146,24 +146,24 @@ not return 403. An empty tunnel list never means "no tunnels exist".
 ## 7. LLM parser
 
 > **STATUS 2026-07-09 — DISABLED IN PRODUCTION.** The shared Ollama below was
-> built and worked, but on pve-node1 (a shared Ceph/KVM cluster node) a booking
+> built and worked, but on the Proxmox node (a shared Ceph/KVM cluster node) a booking
 > parse measured **0.3 tokens/second** — every call exceeded the timeout and
 > fell back to the regex templates anyway, while pegging cores. The Ollama
-> container, model and volume were removed from CT134 and `USE_LLM_PARSER` set
+> container, model and volume were removed from the preview host and `USE_LLM_PARSER` set
 > to `false` on all three slots. Known airlines still parse instantly via
 > templates. The rest of this section documents the original design; re-enable
 > it only if the previews move to dedicated hardware (see §12 risk row).
 
 The DMZ has no route to the LAN, so the Mac mini's Ollama at
 `<ollama-host>:11434` is unreachable. Rather than punching a hole in exactly
-the isolation that makes public exposure acceptable, CT134 runs its own Ollama
+the isolation that makes public exposure acceptable, the preview host runs its own Ollama
 with `gemma3:4b` on CPU.
 
 **Consequence, and it is not cosmetic:** `gemma3:4b` is not `gemma3:12b`. Parse
 quality on the previews is not representative of production. A parser failure
 observed on a preview may be a model artifact rather than a code defect, and a
 parser success there does not certify the prod path. **Any parser bug reported
-against a preview must be reproduced on CT106 before it is filed.**
+against a preview must be reproduced on the beta server before it is filed.**
 
 `services/ollamaVisionParser.ts` reads `OLLAMA_URL` from the environment only,
 so the vision path follows automatically. `services/cruiseBookingParser.ts`
@@ -195,10 +195,10 @@ created live admin accounts before the guard was understood.)
 
 Data persists — no scheduled reset. This is a deliberate trade: a tester can
 stay on a bug across days, at the cost of drift and eventual manual cleanup.
-CT106 is the cautionary example, having accumulated 523 flights against prod's
+The beta server is the cautionary example, having accumulated 523 flights against prod's
 400.
 
-`scripts/stage-rc-from-prod.sh` must never target CT134. The script is
+`scripts/stage-rc-from-prod.sh` must never target the preview host. The script is
 destructive and clones prod data; on a public host that would be a breach.
 
 ## 9. Deploy
@@ -208,8 +208,8 @@ tag that **already exists on GHCR**, writes it into the slot's compose file,
 pulls, restarts, and health-checks the public URL.
 
 - **`beta` slot** — fed by the `:X.Y.Z-beta.N` image that `/deploy beta`
-  already builds and pushes. Deploying it to CT134 becomes an additional,
-  on-request target after the existing CT106 step. The existing
+  already builds and pushes. Deploying it to the preview host becomes an additional,
+  on-request target after the existing beta step. The existing
   `npm run announce beta` embed covers it; the announcement links the public
   URL.
 - **`immich` / `poi` slots** — these branches cut no `-beta.N` version. They
@@ -224,7 +224,7 @@ This keeps the `CLAUDE.local.md` rule that no image is built by GitHub Actions.
 - The host runs unreleased code and is reachable from the internet. It sits in
   VLAN 20, which has no route into the homelab LAN. That containment is the
   entire reason the arrangement is acceptable, and §7 exists to preserve it.
-- No secrets of value live on CT134: no prod DB credentials, no LAN API keys,
+- No secrets of value live on the preview host: no prod DB credentials, no LAN API keys,
   no flight-provider keys. Generated Postgres passwords are per-stack and
   worthless outside the host.
 - Registration is closed, so the public attack surface is the login form and
@@ -243,7 +243,7 @@ Provisioning is done when, for each of the three hostnames:
 5. `pct exec 134 -- docker exec <stack>-db psql -c 'select 1'` succeeds while
    no Postgres port is published to the host.
 
-Additionally, from inside CT134: `curl --max-time 5 http://<ollama-host>:11434`
+Additionally, from inside the preview host: `curl --max-time 5 http://<ollama-host>:11434`
 must **fail**. If it succeeds, the DMZ isolation is broken and the design's
 core assumption is void.
 
@@ -251,10 +251,10 @@ core assumption is void.
 
 | Risk | Mitigation |
 |---|---|
-| Parse results mislead (4b vs 12b) | §7 rule: reproduce on CT106 before filing |
+| Parse results mislead (4b vs 12b) | §7 rule: reproduce on the beta server before filing |
 | Instances drift and rot | Accepted; manual cleanup, revisit if painful |
-| pve-node1 is a single point of failure | Accepted; CT133 already has this property |
-| LXC shares pve-node1's kernel: a Docker escape plus an LXC escape puts public pre-release code on a LAN host with Ceph | **Accepted by the owner, 2026-07-09**, after being offered a KVM VM (own kernel, 0 EUR) and a dedicated mini-PC. Rationale: the network path is measured shut (CT134 reaches neither prod, node3, the beta, nor the LAN Ollama), the data is fake, and two independent escapes are required. Revisit if the previews ever hold real data or if a Docker/LXC escape CVE lands. |
+| the Proxmox node is a single point of failure | Accepted; the web host already has this property |
+| LXC shares the Proxmox node's kernel: a Docker escape plus an LXC escape puts public pre-release code on a LAN host with Ceph | **Accepted by the owner, 2026-07-09**, after being offered a KVM VM (own kernel, 0 EUR) and a dedicated mini-PC. Rationale: the network path is measured shut (the preview host reaches neither prod, node3, the beta, nor the LAN Ollama), the data is fake, and two independent escapes are required. Revisit if the previews ever hold real data or if a Docker/LXC escape CVE lands. |
 | Mutable `:preview-*` tags make "what is deployed?" ambiguous | Health endpoint reports the version; announce posts the commit |
 | A preview leaks a real user's data | Impossible by construction — no prod dump, demo seed only |
 
@@ -269,7 +269,7 @@ final task of the implementation plan.
 | Cloudflare token #3 (`cfat_igBB…`) — **the active one**, DNS + Tunnel | pasted in chat; `~/.cloudflare-travstats-token` | revoke after provisioning, reissue |
 | Cloudflare token #2 (`cfat_oiZ3…`) — Tunnel only, superseded | pasted in chat | revoke now, unused |
 | Cloudflare token #1 (`cfat_Syo…`) — DNS only, superseded | pasted in chat | revoke now, unused |
-| Cloudflare DDNS `API_KEY` (zone `abrechen2.de`) | plaintext in `/opt/cloudflare-ddns/docker-compose.yml` on CT121 | revoke, reissue as a scoped token, move out of the compose file into an env file with `0600` |
+| Cloudflare DDNS `API_KEY` (zone `abrechen2.de`) | plaintext in `/opt/cloudflare-ddns/docker-compose.yml` on the DDNS host | revoke, reissue as a scoped token, move out of the compose file into an env file with `0600` |
 
 Tokens #1 and #2 are already superseded and can be revoked immediately — they
 grant real access and nothing depends on them.
@@ -293,7 +293,7 @@ does not affect this design. Prod currently has no public hostname. Before the
 whether a LAN-resident prod should be publicly reachable at all — that is a
 larger decision than three demo instances and gets its own discussion.
 
-Separately, `CCProxmox/CLAUDE.md` lists CT101 (`sublarr`) and CT131
+Separately, `CCProxmox/CLAUDE.md` lists a retired host (`sublarr`) and a retired host
 (`sublarr-wiki-public`), neither of which exists in the cluster. Documentation
 drift, out of scope here, worth fixing.
 

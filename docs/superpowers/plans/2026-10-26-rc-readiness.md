@@ -89,7 +89,7 @@ voice notes, companion#9 watch workouts, bus line routes (real line course).
   (forgejo#318, companion#74); forgejo#321 after the RC.
 - A place visit dated without a time keeps counting from midnight of its day
   (`classifyVisit` unchanged).
-- CT147 gets DACH rail data and the tram/subway profiles.
+- the rail-routing host gets DACH rail data and the tram/subway profiles.
 - Privacy zones also cut the legacy recordings (`trip_recording_batches`,
   `flight_tracks`) when the account and WebDAV exports are written; stored rows
   stay, the admin full backup keeps everything (final Codex review, P1).

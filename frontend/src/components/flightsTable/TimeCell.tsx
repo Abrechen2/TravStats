@@ -60,7 +60,7 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
       // "Fr") differ in width in a proportional face, which shifted the row.
       // The values wrap as a group beside the label: planned + actual time plus
       // the UTC and +1 markers are wider than any sane column minimum
-      // (CT106 design-6 R03).
+      // (beta design-6 R03).
       <div
         className="flex items-baseline gap-2 font-mono text-[12.5px]"
         style={{ fontVariantNumeric: "tabular-nums" }}

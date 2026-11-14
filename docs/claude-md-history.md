@@ -19,8 +19,8 @@ three writers, and a plan computed against it minutes ago can be stale:
 | Writer | Route into `main` |
 |---|---|
 | The owner | Direct merge or push |
-| Claude sessions (PC, CT142) | Local merge on the owner's release decision, no PR |
-| ~~Paperclip agents~~ (CT 145, commits as `paperclip-bot`) — out of service since 2026-09-27 | Forgejo pull requests; merged only by the owner |
+| Claude sessions (PC, the dev host) | Local merge on the owner's release decision, no PR |
+| ~~Paperclip agents~~ (commits as `paperclip-bot`) — out of service since 2026-09-27 | Forgejo pull requests; merged only by the owner |
 
 On 2026-09-25 two Paperclip PRs were merged into `main` on Forgejo while a
 Claude session was integrating branches against the same `main`, and five
@@ -222,7 +222,7 @@ GitHub-Remote hatten.
 
 ## Git-Remotes — warum der Spiegel von jedem Rechner gepflegt wird (CLAUDE.md, Git-Remotes)
 
-**Warum die Regel existiert:** bis zum 25.08.2026 pushte nur CT142 in den
+**Warum die Regel existiert:** bis zum 25.08.2026 pushte nur der Dev-Host in den
 Spiegel, der PC kuratierte still seine eigene Fassung. Gemessen an dem Tag:
 `roadmap.local.yaml` hatte 50 gemeinsame Item-Ids, **120 nur auf dem PC und 18
 nur im Spiegel** — keine Seite war Obermenge, ein Kopieren haette also in jede

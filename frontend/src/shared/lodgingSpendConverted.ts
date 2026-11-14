@@ -5,7 +5,7 @@
  * recorded that nothing could convert, and no money recorded at all. Only the
  * first is a real total; the other two print "0 €", which reads as "all free"
  * — measured on the RC with three unconverted stays under "0 € Ausgaben"
- * (CT106 audit B12, design-6 R04). An award stay priced at a real 0 is still a
+ * (beta audit B12, design-6 R04). An award stay priced at a real 0 is still a
  * zero and must NOT be swept in with them.
  *
  * It lived in `frontend/src/lib/` until task 7b-3 and had no backend twin,

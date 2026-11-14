@@ -126,7 +126,7 @@ export default function ListFilterBar({
           />
           {/* On a phone the controls share ONE row that scrolls sideways; they
               used to wrap into two, pushing the first entry further down
-              (CT106 audit B10). From md they sit inline as before. */}
+              (beta audit B10). From md they sit inline as before. */}
           <div className="flex w-full min-w-0 items-center gap-2 md:contents">
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-none md:contents">
               {status && <FilterSelect config={status} />}

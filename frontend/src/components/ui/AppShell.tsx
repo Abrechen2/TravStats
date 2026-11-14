@@ -20,7 +20,7 @@ const MAX_WIDTH: Record<ShellWidth, string | undefined> = {
   /**
    * The four logbooks, whose column tables need more than `list` gives: at
    * 1200px flights, stays and cruises hid columns the reader had ticked, even
-   * on a 1920px screen (CT106 design-6 R02). Their own hint sends the reader
+   * on a 1920px screen (beta design-6 R02). Their own hint sends the reader
    * to a wider window, which only helps if the page can grow into it.
    */
   table: "var(--ts-width-table)",

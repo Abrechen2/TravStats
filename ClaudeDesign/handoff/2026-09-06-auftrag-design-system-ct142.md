@@ -1,10 +1,10 @@
-# Auftrag an CT142 — Designsystem im Web umsetzen (2.7.0)
+# Auftrag an den Dev-Host — Designsystem im Web umsetzen (2.7.0)
 
-Owner-Ansage 05.09.2026, spät: „Können wir das CT142 in Auftrag geben in einem
+Owner-Ansage 05.09.2026, spät: „Können wir das dem Dev-Host in Auftrag geben in einem
 Worktree, dann kann er alles selber zum Laufen bringen? Mit dem neuen Design,
 ohne Nachfragen, alles selber entscheiden, mit Fable."
 
-Das ist der Auftrag. Er ist so geschrieben, dass eine Sitzung auf CT142 ihn
+Das ist der Auftrag. Er ist so geschrieben, dass eine Sitzung auf dem Dev-Host ihn
 liest und ohne Rückfrage arbeitet. Wo etwas offen ist, steht hier, wie zu
 entscheiden ist. Wo etwas verboten ist, steht es unter „Nicht tun".
 
@@ -50,7 +50,7 @@ cd .worktrees/design-system
 - **Echte `node_modules`**, keine Junctions oder Symlinks in den Hauptbaum —
   Vite und tsc brechen daran, und `git worktree remove` löscht durch sie
   hindurch.
-- **Remotes auf CT142: `forgejo` und `github`, nie `origin`.** `origin` heißt
+- **Remotes auf dem Dev-Host: `forgejo` und `github`, nie `origin`.** `origin` heißt
   dort Forgejo und auf dem PC GitHub. Pushen nach jedem Commit:
   ```bash
   git push forgejo dev/design-system && git push github dev/design-system
@@ -234,7 +234,7 @@ gestellt.
 - Ent-gaten von Beta-Funktionen; das läuft auf `dev/v2.7` und ist Owner-Sache.
 - Das Merge nach `dev/v2.7` oder `main`.
 
-## 10. Startprompt für die Sitzung auf CT142
+## 10. Startprompt für die Sitzung auf dem Dev-Host
 
 Vom Owner am 05.09.2026 angefordert; in der Claude-App Host `ct142`, Projekt
 TravStats, Modell Fable wählen und diesen Text als erste Nachricht senden:

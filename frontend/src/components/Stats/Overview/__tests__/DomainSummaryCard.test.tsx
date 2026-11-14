@@ -108,7 +108,7 @@ describe("DomainSummaryCard", () => {
     expect(detailsLink).toHaveAttribute("href", "/stats?tab=cruise&year=all");
   });
 
-  // CT106 design-6 R09: one 1.5 h flight read "2 h" here and "1.5 h" on the
+  // beta design-6 R09: one 1.5 h flight read "2 h" here and "1.5 h" on the
   // detail tab. A duration keeps one decimal; a distance stays whole.
   it("keeps one decimal on a duration but none on a distance", () => {
     render(
@@ -135,7 +135,7 @@ describe("DomainSummaryCard", () => {
     expect(screen.getByText("1.5 stats:overviewCard.unit.h")).toBeInTheDocument();
   });
 
-  // CT106 audit, B04: year 2005 → "Details" opened the tab on 2026.
+  // beta audit, B04: year 2005 → "Details" opened the tab on 2026.
   it("carries the selected year into the tab it opens", () => {
     render(
       <DomainSummaryCard
@@ -230,7 +230,7 @@ describe("DomainSummaryCard", () => {
     expect(screen.getByText(/yearFilter\.vs/)).toBeInTheDocument();
   });
 
-  // CT106 audit B03: "Scope: 2005 · 1 flight" over the lifetime distance.
+  // beta audit B03: "Scope: 2005 · 1 flight" over the lifetime distance.
   describe("under a selected year", () => {
     const renderYear = (year: number): void => {
       render(
@@ -266,7 +266,7 @@ describe("DomainSummaryCard", () => {
     });
   });
 
-  // CT106 audit B11: the places card printed "viewpoint".
+  // beta audit B11: the places card printed "viewpoint".
   it("translates top items that are codes, not names", () => {
     const poiStats: DomainStats = {
       ...cruiseStats,

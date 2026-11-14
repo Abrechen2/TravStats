@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create the travstats-preview tunnel, configure ingress, point DNS at it,
-# and install cloudflared on CT134. Idempotent.
+# and install cloudflared on the preview host. Idempotent.
 set -euo pipefail
 
 TOKEN_FILE="${TOKEN_FILE:-$HOME/.cloudflare-travstats-token}"
@@ -59,7 +59,7 @@ for h in beta; do
   fi
 done
 
-# Install cloudflared on CT134 using the tunnel's connector token.
+# Install cloudflared on the preview host using the tunnel's connector token.
 ttok=$(cf "$API/accounts/$ACCT/cfd_tunnel/$id/token" \
   | python -c "import sys,json;print(json.load(sys.stdin)['result'])")
 

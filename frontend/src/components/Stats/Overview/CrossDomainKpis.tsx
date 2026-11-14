@@ -152,7 +152,7 @@ export default function CrossDomainKpis({
       value: achievements?.unlockedAchievements ?? 0,
       // Unlocks carry no year here, so under a year heading the tile says it
       // counts all years rather than implying they were earned in this one
-      // (CT106 audit B03).
+      // (beta audit B03).
       hint:
         [
           achievements && achievements.totalPoints > 0

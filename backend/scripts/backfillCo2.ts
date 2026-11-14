@@ -23,7 +23,7 @@
  *   DATABASE_URL=postgresql://flights_dev:dev_password_change_me_123@localhost:5433/flights_dev \
  *     npx tsx backend/scripts/backfillCo2.ts
  *
- *   # On a host (CT 100, …), the script ships inside the image:
+ *   # On a host (…), the script ships inside the image:
  *   docker exec TravStats npx tsx /app/backend/scripts/backfillCo2.ts
  *
  * Env / args

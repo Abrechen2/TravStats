@@ -142,7 +142,7 @@ describe("LodgingStatStrip", () => {
     expect(screen.queryByTestId("lodging-stat-strip-spend-sub")).not.toBeInTheDocument();
   });
 
-  // CT106 audit B12.
+  // beta audit B12.
   it("shows a dash, not 0, when no money is recorded at all", () => {
     render(
       <LodgingStatStrip

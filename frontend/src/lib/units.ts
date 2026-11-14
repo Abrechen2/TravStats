@@ -130,7 +130,7 @@ export function formatShortDistance(
  * A number of hours with one decimal in the reader's language: "1,5" on a
  * German page, "1.5" on an English one, "64" rather than "64,0". The flight
  * statistics printed the same figure as "2 h", "1.5 h", "64 h" and "374.7h"
- * on one tab (CT106 design-6 R09).
+ * on one tab (beta design-6 R09).
  */
 export function formatHoursValue(hours: number, language?: string): string {
   return hours.toLocaleString(localeForLanguage(language), { maximumFractionDigits: 1 });

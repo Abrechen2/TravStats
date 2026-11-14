@@ -16,7 +16,7 @@
 //     prod mirror, because `lodgingStats/rhythm.ts` divides the CURRENT year by
 //     the days elapsed so far, so the share drifts down every night spent at
 //     home.
-//   - `NOT_A_MORNING_PERSON` moved between users when CT106 booted with
+//   - `NOT_A_MORNING_PERSON` moved between users when the beta server booted with
 //     TZ=Europe/Berlin, purely because the process clock had moved.
 //
 // Both were real defects and both are fixed at the source (the departure clock

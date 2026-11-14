@@ -4,7 +4,7 @@
 
 **Goal:** Stand up three publicly reachable, demo-only TravStats instances on a new DMZ container so external testers can try features before they ship.
 
-**Architecture:** One unprivileged LXC (CT134) on pve-node1's `vmbr2` DMZ bridge runs three independent `docker compose` stacks — each an app container plus its own PostGIS — behind a single `cloudflared` tunnel with three flat hostnames. A fourth container serves a local Ollama so the DMZ never needs a route into the LAN. Deploys consume image tags that already exist on GHCR; nothing is built on the preview host.
+**Architecture:** One unprivileged LXC on the Proxmox node's `vmbr2` DMZ bridge runs three independent `docker compose` stacks — each an app container plus its own PostGIS — behind a single `cloudflared` tunnel with three flat hostnames. A fourth container serves a local Ollama so the DMZ never needs a route into the LAN. Deploys consume image tags that already exist on GHCR; nothing is built on the preview host.
 
 **Tech Stack:** Proxmox LXC (Debian 12.12), Docker Compose, PostGIS 15-3.4, Ollama (`gemma3:4b`), cloudflared (token-mode), Cloudflare API v4, bash.
 
@@ -12,12 +12,12 @@
 
 ## Global Constraints
 
-- **CT100, CT106 and CT107 are never touched.** No command in this plan may target them except read-only inspection.
-- **`scripts/stage-rc-from-prod.sh` must never target CT134.** It is destructive and clones prod data.
-- **CT134 lives on pve-node1 only.** `vmbr2` exists on no other node; do not enable HA migration.
-- **Never build an image on CT134.** Deploys pull pre-built tags from GHCR (`CLAUDE.local.md`: no GitHub Actions build; images are built locally and pushed).
-- **No secrets in the repo.** Cloudflare token stays at `~/.cloudflare-travstats-token` (`chmod 600`). Generated Postgres passwords live in `/opt/preview/<slot>/.env` on CT134 (`chmod 600`) and nowhere else.
-- **Preview parse quality is not prod-representative.** `gemma3:4b` ≠ `gemma3:12b`. A parser bug seen on a preview must be reproduced on CT106 before it is filed as an issue.
+- **prod, the beta server and the RC server are never touched.** No command in this plan may target them except read-only inspection.
+- **`scripts/stage-rc-from-prod.sh` must never target the preview host.** It is destructive and clones prod data.
+- **The preview host lives on the Proxmox node only.** `vmbr2` exists on no other node; do not enable HA migration.
+- **Never build an image on the preview host.** Deploys pull pre-built tags from GHCR (`CLAUDE.local.md`: no GitHub Actions build; images are built locally and pushed).
+- **No secrets in the repo.** Cloudflare token stays at `~/.cloudflare-travstats-token` (`chmod 600`). Generated Postgres passwords live in `/opt/preview/<slot>/.env` on the preview host (`chmod 600`) and nowhere else.
+- **Preview parse quality is not prod-representative.** `gemma3:4b` ≠ `gemma3:12b`. A parser bug seen on a preview must be reproduced on the beta server before it is filed as an issue.
 - **Registration stays off** on every preview: `ALLOW_REGISTRATION=false` (env bootstrap) **and** `allowRegistration=false` in instance settings (what `routes/auth.ts` reads at runtime).
 - **Cloudflare probe pitfalls:** `/user/tokens/verify` returns 401 for `cfat_` account-scoped tokens even when valid. The `cfd_tunnel` **list** endpoint returns `200` with an empty result when the token lacks tunnel permission — never read an empty list as "no tunnels exist". Probe with a real endpoint.
 
@@ -28,10 +28,10 @@
 | Cloudflare zone `travstats.de` | `8e34d30898073f3ee7e95bc0bdcb4022` |
 | Cloudflare account | `9a4d9c86ff53f151156fc1361af434cf` |
 | Token file | `~/.cloudflare-travstats-token` (DNS + Tunnel verified) |
-| pve-node1 | `<pve-node1>` |
-| pve-node3 (for CT100/106/107 reads) | `<pve-node3>` |
+| the Proxmox node | `<proxmox-node>` |
+| the Proxmox node (for prod/106/107 reads) | `<proxmox-node>` |
 | DMZ bridge | `vmbr2`, gateway `<dmz-gateway>` |
-| CT134 address | `<preview-host>/24` |
+| The preview host address | `<preview-host>/24` |
 | LXC template | `local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst` |
 | Ollama in LAN (must stay unreachable) | `<ollama-host>:11434` |
 | Backend seed module inside the image | `/app/backend/dist/seedDemoUser.js`, exports `seedDemoUser` |
@@ -44,11 +44,11 @@
 | `immich` | 3011 | `immich-beta.travstats.de` | `:preview-immich` (mutable) | `dev/immich-albums` |
 | `poi` | 3012 | `poi-beta.travstats.de` | `:preview-poi` (mutable) | `dev/hotels` |
 
-**SSH pattern:** `ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '<cmd>'"`
+**SSH pattern:** `ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '<cmd>'"`
 
 ---
 
-### Task 1: Provision CT134 and prove DMZ isolation
+### Task 1: Provision the preview host and prove DMZ isolation
 
 The isolation check is the whole justification for this host. If it fails, stop — the design's core assumption is void and the Ollama decision (Task 2) must be revisited.
 
@@ -56,7 +56,7 @@ The isolation check is the whole justification for this host. If it fails, stop 
 - Create: `scripts/preview/provision-ct134.sh`
 
 **Interfaces:**
-- Produces: a running CT134 with Docker, reachable at `<preview-host>`, and an external Docker network `preview-net`.
+- Produces: a running the preview host with Docker, reachable at `<preview-host>`, and an external Docker network `preview-net`.
 
 - [ ] **Step 1: Write the provisioning script**
 
@@ -64,16 +64,16 @@ Create `scripts/preview/provision-ct134.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# Provision CT134 — public preview host in the DMZ (VLAN 20).
+# Provision the preview host — public preview host in the DMZ (VLAN 20).
 # Idempotent: safe to re-run. Never run against any other CTID.
 set -euo pipefail
 
-NODE1="${NODE1:-<pve-node1>}"
+NODE1="${NODE1:-<proxmox-node>}"
 CTID=134
 SSH=(ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=no "root@${NODE1}")
 
 if [[ "$CTID" != "134" ]]; then
-  echo "refusing: this script only provisions CT134" >&2
+  echo "refusing: this script only provisions the preview host" >&2
   exit 1
 fi
 
@@ -109,12 +109,12 @@ echo "CT$CTID provisioned."
 bash scripts/preview/provision-ct134.sh
 ```
 
-Expected: `CT134 provisioned.` On a second run, `CT134 already exists — skipping create`.
+Expected: `Preview host provisioned.` On a second run, `Preview host already exists — skipping create`.
 
 - [ ] **Step 3: Verify Docker and the network exist**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- bash -c 'docker --version && docker network ls | grep preview-net'"
 ```
 
@@ -123,7 +123,7 @@ Expected: a Docker version line and a `preview-net` row.
 - [ ] **Step 4: The negative test — LAN must be unreachable**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- bash -c 'curl -s --max-time 5 http://<ollama-host>:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
 ```
 
@@ -135,7 +135,7 @@ Expected: `BLOCKED`.
 
 ```bash
 git add scripts/preview/provision-ct134.sh
-git commit -m "feat(preview): provision script for CT134 DMZ host"
+git commit -m "feat(preview): provision script for the preview host"
 ```
 
 ---
@@ -185,8 +185,8 @@ No `ports:` block — Ollama has no authentication and must never be reachable f
 
 ```bash
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/ollama/docker-compose.yml \
-  root@<pve-node1>:/tmp/ollama-compose.yml
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+  root@<proxmox-node>:/tmp/ollama-compose.yml
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct push 134 /tmp/ollama-compose.yml /opt/preview/ollama/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/ollama && docker compose up -d'"
 ```
@@ -194,7 +194,7 @@ ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
 - [ ] **Step 3: Pull the model**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- docker exec preview-ollama ollama pull gemma3:4b"
 ```
 
@@ -203,7 +203,7 @@ Expected: pull progress, ending in `success`. This downloads roughly 3.3 GB and 
 - [ ] **Step 4: Verify the model answers**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- docker exec preview-ollama \
      ollama run gemma3:4b 'Reply with exactly the word: ready' --verbose 2>/dev/null | head -1"
 ```
@@ -213,7 +213,7 @@ Expected: output containing `ready`.
 - [ ] **Step 5: Verify Ollama is NOT published to the host**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- bash -c 'curl -s --max-time 3 http://127.0.0.1:11434/ >/dev/null && echo PUBLISHED || echo INTERNAL_ONLY'"
 ```
 
@@ -230,7 +230,7 @@ git commit -m "feat(preview): shared Ollama (gemma3:4b) inside the DMZ"
 
 ### Task 3: The `beta` stack
 
-Uses a tag that already exists on GHCR, so this task needs no image build. Find the newest with `docker buildx imagetools inspect` or read it off CT106's compose (read-only).
+Uses a tag that already exists on GHCR, so this task needs no image build. Find the newest with `docker buildx imagetools inspect` or read it off the beta server's compose (read-only).
 
 **Files:**
 - Create: `scripts/preview/stacks/app/docker-compose.yml` (one template, parameterised by `.env`)
@@ -299,17 +299,17 @@ The DB is on the stack-private `default` network only. The app joins both so it 
 - [ ] **Step 2: Determine the current beta tag (read-only)**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node3> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 106 -- grep -m1 'image: ghcr' /opt/travstats-beta/docker-compose.yml"
 ```
 
 Expected: something like `image: ghcr.io/abrechen2/travstats:2.3.0-beta.11`. Use that tag below.
 
-- [ ] **Step 3: Write the stack's `.env` on CT134 with a generated password**
+- [ ] **Step 3: Write the stack's `.env` on the preview host with a generated password**
 
 ```bash
 TAG="<tag from Step 2>"
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '
   set -e
   PW=\$(openssl rand -hex 24)
   umask 077
@@ -331,8 +331,8 @@ Expected: `written`. The password is generated on the host and never printed.
 
 ```bash
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/app/docker-compose.yml \
-  root@<pve-node1>:/tmp/app-compose.yml
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+  root@<proxmox-node>:/tmp/app-compose.yml
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct push 134 /tmp/app-compose.yml /opt/preview/beta/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/beta && docker compose pull -q && docker compose up -d'"
 ```
@@ -340,7 +340,7 @@ ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
 - [ ] **Step 5: Verify health and that the DB port is closed**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '
   curl -sf --max-time 180 --retry 20 --retry-all-errors --retry-delay 3 http://127.0.0.1:3010/health && echo && \
   (curl -s --max-time 3 http://127.0.0.1:5432 >/dev/null 2>&1 && echo DB_EXPOSED || echo DB_CLOSED)'"
 ```
@@ -427,19 +427,19 @@ Create `scripts/preview/deploy-preview.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# Deploy an ALREADY-BUILT GHCR tag to a preview slot on CT134.
+# Deploy an ALREADY-BUILT GHCR tag to a preview slot on the preview host.
 # Never builds. Never targets any CT other than 134.
 #
 #   bash scripts/preview/deploy-preview.sh beta 2.3.0-beta.11
 #   bash scripts/preview/deploy-preview.sh immich preview-immich
 set -uo pipefail
 
-NODE1="${NODE1:-<pve-node1>}"
+NODE1="${NODE1:-<proxmox-node>}"
 CTID="${CTID:-134}"
 DRY_RUN="${DRY_RUN:-0}"
 
 if [[ "$CTID" != "134" ]]; then
-  echo "refusing: preview deploys only target CT134 (got $CTID)" >&2
+  echo "refusing: preview deploys only target the preview host (got $CTID)" >&2
   exit 1
 fi
 
@@ -545,12 +545,12 @@ docker push "ghcr.io/abrechen2/travstats:${tag}"
 echo "pushed ghcr.io/abrechen2/travstats:${tag} ($commit)"
 ```
 
-- [ ] **Step 2: Create the two `.env` files on CT134**
+- [ ] **Step 2: Create the two `.env` files on the preview host**
 
 ```bash
 for spec in "immich:3011:immich-beta.travstats.de" "poi:3012:poi-beta.travstats.de"; do
   slot="${spec%%:*}"; rest="${spec#*:}"; port="${rest%%:*}"; host="${rest##*:}"
-  ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
+  ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '
     set -e
     PW=\$(openssl rand -hex 24)
     umask 077
@@ -572,7 +572,7 @@ Expected: `immich written`, `poi written`.
 - [ ] **Step 3: Copy the compose template into both slots**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- bash -c 'cp /opt/preview/beta/docker-compose.yml /opt/preview/immich/ && \
                             cp /opt/preview/beta/docker-compose.yml /opt/preview/poi/ && ls /opt/preview/*/docker-compose.yml'"
 ```
@@ -636,7 +636,7 @@ Create `scripts/preview/seed-preview-users.sh`:
 # and printed ONCE so they can be moved into a password manager.
 set -euo pipefail
 
-NODE1="${NODE1:-<pve-node1>}"
+NODE1="${NODE1:-<proxmox-node>}"
 slot="${1:-}"
 case "$slot" in beta|immich|poi) ;; *) echo "usage: $0 <beta|immich|poi>" >&2; exit 2 ;; esac
 
@@ -681,7 +681,7 @@ Expected: three `username password` lines. Copy them into the password manager n
 - [ ] **Step 3: Verify login works and registration is closed**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '
   curl -s -o /dev/null -w \"login=%{http_code}\n\" -X POST http://127.0.0.1:3010/api/v1/auth/login \
     -H \"Content-Type: application/json\" \
     --data \"{\\\"username\\\":\\\"demo\\\",\\\"password\\\":\\\"\$(cut -d\\\" \\\" -f2 < <(grep ^demo /opt/preview/beta/USERS.txt))\\\"}\"
@@ -717,7 +717,7 @@ git commit -m "feat(preview): seed demo/alex/claude and close registration"
 
 **Interfaces:**
 - Consumes: running stacks on ports 3010/3011/3012.
-- Produces: a tunnel `travstats-preview`, three ingress rules, three proxied CNAMEs, and `cloudflared` running as a systemd service on CT134.
+- Produces: a tunnel `travstats-preview`, three ingress rules, three proxied CNAMEs, and `cloudflared` running as a systemd service on the preview host.
 
 - [ ] **Step 1: Write the tunnel setup script**
 
@@ -726,7 +726,7 @@ Create `scripts/preview/setup-tunnel.sh`:
 ```bash
 #!/usr/bin/env bash
 # Create the travstats-preview tunnel, configure ingress, point DNS at it,
-# and install cloudflared on CT134. Idempotent.
+# and install cloudflared on the preview host. Idempotent.
 set -euo pipefail
 
 TOKEN_FILE="${TOKEN_FILE:-$HOME/.cloudflare-travstats-token}"
@@ -734,7 +734,7 @@ TOKEN_FILE="${TOKEN_FILE:-$HOME/.cloudflare-travstats-token}"
 TOK=$(cat "$TOKEN_FILE")
 ZONE=8e34d30898073f3ee7e95bc0bdcb4022
 ACCT=9a4d9c86ff53f151156fc1361af434cf
-NODE1="${NODE1:-<pve-node1>}"
+NODE1="${NODE1:-<proxmox-node>}"
 API=https://api.cloudflare.com/client/v4
 NAME=travstats-preview
 
@@ -786,7 +786,7 @@ for h in beta immich-beta poi-beta; do
   fi
 done
 
-# Install cloudflared on CT134 using the tunnel's connector token.
+# Install cloudflared on the preview host using the tunnel's connector token.
 ttok=$(cf "$API/accounts/$ACCT/cfd_tunnel/$id/token" \
   | python -c "import sys,json;print(json.load(sys.stdin)['result'])")
 
@@ -854,7 +854,7 @@ No new files. This is the gate before anyone is invited.
 - [ ] **Step 1: Re-run the isolation negative test**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- bash -c 'curl -s --max-time 5 http://<ollama-host>:11434/ >/dev/null && echo REACHABLE || echo BLOCKED'"
 ```
 
@@ -865,7 +865,7 @@ Expected: `BLOCKED`. Docker installs iptables rules; this confirms none of them 
 ```bash
 for ct in 100 106 107; do
   echo -n "CT$ct image: "
-  ssh -i ~/.ssh/id_ed25519 root@<pve-node3> \
+  ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
     "pct exec $ct -- bash -c 'grep -m1 \"image: ghcr\" /opt/travstats*/docker-compose.yml'" 2>/dev/null || echo "?"
 done
 ```
@@ -893,7 +893,7 @@ Expected: `403` three times.
 - [ ] **Step 5: Confirm the parser reaches the DMZ Ollama**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- docker exec preview-beta sh -c 'curl -sf --max-time 10 http://ollama:11434/api/tags | head -c 120'"
 ```
 
@@ -904,25 +904,25 @@ Expected: a JSON body listing `gemma3:4b`.
 ### Task 9: Documentation
 
 **Files:**
-- Modify: `CLAUDE.local.md` (add CT134 to the topology table)
+- Modify: `CLAUDE.local.md` (add the preview host to the topology table)
 - Modify: `docs/RELEASE_WORKFLOW.md:26` (environments table — add a Preview row)
 - Modify: `.claude/skills/travstats-deploy/SKILL.md:144` (beta deploy step 4 — mention the optional preview target)
 
-- [ ] **Step 1: Add CT134 to `CLAUDE.local.md`**
+- [ ] **Step 1: Add the preview host to `CLAUDE.local.md`**
 
 Insert a row into the 3-tier topology table, and a short section below it:
 
 ```markdown
 | **Preview** | 134 | `<preview-host>:3010-3012` (DMZ) | `preview-beta` / `-immich` / `-poi` | je eigene | `/opt/preview/<slot>` | **öffentlich**, Demo-Daten, externe Tester |
 
-## Public Preview (CT134, DMZ — seit 2026-07-09)
+## Public Preview (DMZ — seit 2026-07-09)
 
 Drei öffentliche Demo-Instanzen, `beta.travstats.de`,
 `immich-beta.travstats.de`, `poi-beta.travstats.de`. Nur Demo-Daten,
 Registrierung zu, eigene Ollama (`gemma3:4b`) in der DMZ — **kein
 LAN-Zugriff**, deshalb ist Parse-Qualität dort nicht prod-repräsentativ.
 
-`scripts/stage-rc-from-prod.sh` NIEMALS gegen CT134 laufen lassen.
+`scripts/stage-rc-from-prod.sh` NIEMALS gegen the preview host laufen lassen.
 
     bash scripts/preview/deploy-preview.sh beta 2.3.0-beta.11
     bash scripts/preview/build-preview-image.sh immich && \
@@ -934,7 +934,7 @@ LAN-Zugriff**, deshalb ist Parse-Qualität dort nicht prod-repräsentativ.
 In the §1 Environments table, after the Beta row:
 
 ```markdown
-| **Preview** | CT134 (pve-node1, DMZ) | `beta.travstats.de`, `immich-beta.…`, `poi-beta.…` | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
+| **Preview** | The preview host (the Proxmox node, DMZ) | `beta.travstats.de`, `immich-beta.…`, `poi-beta.…` | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
 ```
 
 - [ ] **Step 3: Extend the beta-deploy step in the deploy skill**
@@ -953,7 +953,7 @@ In `.claude/skills/travstats-deploy/SKILL.md`, after step 4 of "Beta deploy", ad
 
 ```bash
 git add CLAUDE.local.md docs/RELEASE_WORKFLOW.md .claude/skills/travstats-deploy/SKILL.md
-git commit -m "docs: record CT134 public preview tier"
+git commit -m "docs: record the preview host public preview tier"
 ```
 
 Note: `CLAUDE.local.md` is gitignored. Verify with `git check-ignore -v CLAUDE.local.md`; if it is ignored, edit it but drop it from the `git add` line.
@@ -990,15 +990,15 @@ curl -s -o /dev/null -w "tunnel=%{http_code}\n" -H "Authorization: Bearer $TOK" 
 
 Expected: `dns=200` and `tunnel=200`. Do not use `/user/tokens/verify` — it returns 401 for account-scoped tokens regardless.
 
-- [ ] **Step 4: Rotate the CT121 DDNS key (owner decision required)**
+- [ ] **Step 4: Rotate the DDNS host DDNS key (owner decision required)**
 
-This key predates this work but was exposed during it. It sits in plaintext in `/opt/cloudflare-ddns/docker-compose.yml` on CT121 and covers the `abrechen2.de` zone.
+This key predates this work but was exposed during it. It sits in plaintext in `/opt/cloudflare-ddns/docker-compose.yml` on the DDNS host and covers the `abrechen2.de` zone.
 
-Ask the owner before touching CT121. If approved: issue a scoped token (`Zone → DNS → Edit` on `abrechen2.de`), move it out of the compose file into `/opt/cloudflare-ddns/.env` (`chmod 600`), reference it via `env_file:`, `docker compose up -d`, confirm the DDNS container logs a successful update, then revoke the old key.
+Ask the owner before touching the DDNS host. If approved: issue a scoped token (`Zone → DNS → Edit` on `abrechen2.de`), move it out of the compose file into `/opt/cloudflare-ddns/.env` (`chmod 600`), reference it via `env_file:`, `docker compose up -d`, confirm the DDNS container logs a successful update, then revoke the old key.
 
 - [ ] **Step 5: Delete the dead `sublarr-wiki` tunnel (optional cleanup)**
 
-Tunnel `38121002-2c8c-4f81-af5d-3a3d90565dc9` is `down` and points at CT131, which no longer exists. Removing it and correcting `CCProxmox/CLAUDE.md` (which still lists CT101 and CT131) is out of scope here but noted in spec §14.
+Tunnel `38121002-2c8c-4f81-af5d-3a3d90565dc9` is `down` and points at a retired host, which no longer exists. Removing it and correcting `CCProxmox/CLAUDE.md` (which still lists a retired host and a retired host) is out of scope here but noted in spec §14.
 
 ---
 
@@ -1092,7 +1092,7 @@ No `ports:` block anywhere. Immich must be reachable only from `preview-net` —
 Generate the DB password on the container; never print it.
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -s" <<'SH'
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -s" <<'SH'
 set -e
 mkdir -p /opt/preview/immich-demo
 umask 077
@@ -1102,8 +1102,8 @@ echo "env written"
 SH
 
 scp -i ~/.ssh/id_ed25519 scripts/preview/stacks/immich-demo/docker-compose.yml \
-  root@<pve-node1>:/tmp/immich-demo.yml
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+  root@<proxmox-node>:/tmp/immich-demo.yml
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct push 134 /tmp/immich-demo.yml /opt/preview/immich-demo/docker-compose.yml && \
    pct exec 134 -- bash -c 'cd /opt/preview/immich-demo && docker compose pull -q && docker compose up -d'"
 ```
@@ -1111,7 +1111,7 @@ ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
 Then wait for it to answer — first boot runs migrations and takes a minute or two:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- docker exec preview-immich sh -c 'wget -qO- --timeout=10 http://immich-demo-server:2283/api/server/ping'"
 ```
 
@@ -1119,7 +1119,7 @@ Expected: `{"res":"pong"}`. The TravStats app image has **no curl** — use `wge
 
 - [ ] **Step 4: Write the seed script**
 
-Create `scripts/preview/seed-immich-demo.sh`: it creates the admin account, mints an API key, and stores both in `/opt/preview/immich-demo/CREDENTIALS.txt` (mode 0600) on CT134.
+Create `scripts/preview/seed-immich-demo.sh`: it creates the admin account, mints an API key, and stores both in `/opt/preview/immich-demo/CREDENTIALS.txt` (mode 0600) on the preview host.
 
 Immich's API changes between releases. **Before relying on any endpoint below, check it against the running instance's live spec** at `http://immich-demo-server:2283/api/spec-json` (reachable from inside `preview-immich`). If an endpoint or field name differs, follow the spec, not this brief, and say so in your report.
 
@@ -1137,7 +1137,7 @@ Fetch two or three freely usable images (`https://picsum.photos/1200/800` serves
 Confirm:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> \
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> \
   "pct exec 134 -- docker exec preview-immich sh -c \
     'wget -qO- --header=\"x-api-key: <KEY>\" http://immich-demo-server:2283/api/albums'"
 ```
@@ -1155,7 +1155,7 @@ Verify through the app's own connection tester (the branch adds `immichTester.ts
 - [ ] **Step 7: Confirm Immich stayed private**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 root@<pve-node1> "pct exec 134 -- bash -c '
+ssh -i ~/.ssh/id_ed25519 root@<proxmox-node> "pct exec 134 -- bash -c '
   (curl -s --max-time 3 http://127.0.0.1:2283/ >/dev/null 2>&1 && echo HOST_EXPOSED || echo INTERNAL_ONLY)
   docker inspect immich-demo-server --format "{{json .HostConfig.PortBindings}}"
 '"

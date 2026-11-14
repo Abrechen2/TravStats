@@ -76,7 +76,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
   };
 
   // Without a single price the four tiles and four rankings were eight empty
-  // states in a row — most of an 8,000px phone page for one stay (CT106 audit
+  // states in a row — most of an 8,000px phone page for one stay (beta audit
   // B12). One sentence says it; award nights, which carry a value of their own,
   // still show.
   if (noPrices && stats.awardNights === 0) {

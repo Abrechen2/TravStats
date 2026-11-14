@@ -28,14 +28,14 @@ Sieben Blöcke: **drei fertig, vier teilweise.**
 | 6 Reisen, Reisepass, Werkzeuge | teilweise — Reisepass IST Papier, Posteingang auf `EmptyState`; Reisen/Werkzeuge offen | `…-block-6-bericht.md` |
 | 7 Aufräumen und Wächter | **Wächter fertig; `dark:` und die 12 Variablen zu**, Rest eingefroren | `…-block-7-bericht.md` |
 
-## ⚠ Auf CT106 (Beta) läuft der Design-Build
+## ⚠ Auf dem Beta-Server läuft der Design-Build
 
 Am 06.09. **auf ausdrückliche Ansage des Owners** („zum testen kannst bitte den
-BETA Server hernehmen CT106") dorthin ausgerollt und im Browser abgenommen,
+BETA Server hernehmen") dorthin ausgerollt und im Browser abgenommen,
 gegen die echten Beta-Daten.
 
 > **Achtung, widersprüchliche Notiz:** die PC-Übergabe von 12:15 schreibt
-> „CT106 (Beta) grundsätzlich nicht anfassen". Sie entstand nach dem Deploy
+> „Den Beta-Server grundsätzlich nicht anfassen". Sie entstand nach dem Deploy
 > (11:42) und ohne Kenntnis der Ansage. Die Ansage ist die jüngere Information;
 > die Regel als Dauerregel bleibt richtig.
 
@@ -45,7 +45,7 @@ gegen die echten Beta-Daten.
   `--build-arg`, damit der Tag nichts über einen Release behauptet.
 - **Zurückdrehen, ein Befehl:**
   ```bash
-  ssh -i ~/.ssh/id_ed25519 root@192.168.178.180 "pct exec 106 -- bash -c '
+  ssh -i ~/.ssh/id_ed25519 root@192.168.1.180 "pct exec 106 -- bash -c '
     cd /opt/travstats-beta &&
     cp docker-compose.yml.bak-before-2.7.0-design.1 docker-compose.yml &&
     docker compose up -d'"

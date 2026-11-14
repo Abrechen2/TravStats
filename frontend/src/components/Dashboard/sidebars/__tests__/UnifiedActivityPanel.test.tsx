@@ -103,7 +103,7 @@ describe("UnifiedActivityPanel", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  // CT106 audit B02: Escape did not close the panel, and its "×" was a
+  // beta audit B02: Escape did not close the panel, and its "×" was a
   // 10×26px glyph under the floating add button.
   it("closes on Escape and offers a full-size close button", async () => {
     const onClose = vi.fn();

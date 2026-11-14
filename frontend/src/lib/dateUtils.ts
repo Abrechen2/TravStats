@@ -3,7 +3,7 @@
  *
  * Round-4 decision E7 — ISO in tables, `DD.MM.YYYY` in prose. The four
  * logbooks printed four forms side by side ("Do 14.01.27", "2023-06-01",
- * "14.01.2027", "14.1.2027"; CT106 audit B11), and a localised date neither
+ * "14.01.2027", "14.1.2027"; beta audit B11), and a localised date neither
  * sorts by eye nor stays put when the language changes.
  *
  * Zone-free since phase 4 of the time model (ADR 0002): a day that belongs

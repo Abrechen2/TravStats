@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Table, type TableColumn } from "../Table";
 
-// CT106 design-6 M01: at 390px the lodging list, already collapsed into rows,
+// beta design-6 M01: at 390px the lodging list, already collapsed into rows,
 // still said "the table is wider than the view — scroll sideways" and that six
 // columns had stepped aside. Both sentences were computed from desktop column
 // minimums while CSS drew the phone layout.

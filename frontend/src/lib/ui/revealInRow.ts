@@ -7,7 +7,7 @@ import { useLayoutEffect, type RefObject } from "react";
  * `element.scrollIntoView()` would do it and also scroll every ancestor,
  * the window included, so opening `/stats?tab=poi` on a phone jumped the page
  * down to the tab strip. This moves `scrollLeft` alone, by the least amount
- * that shows the child with a little air (CT106 audit B06: the active tab sat
+ * that shows the child with a little air (beta audit B06: the active tab sat
  * off the right edge on a direct entry).
  */
 export function revealInRow(row: HTMLElement, child: HTMLElement, margin = 16): void {

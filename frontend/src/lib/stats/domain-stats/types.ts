@@ -48,7 +48,7 @@ export interface DomainSummary {
     /**
      * Set when the labels are CODES rather than names — place categories
      * ("viewpoint") — so the card translates them under this key prefix.
-     * The overview printed the raw code on a German page (CT106 audit B11).
+     * The overview printed the raw code on a German page (beta audit B11).
      */
     labelKeyPrefix?: string;
   };
@@ -61,7 +61,7 @@ export interface DomainSummary {
 /**
  * The same card figures, for one year only.
  *
- * CT106 audit B03: the overview filtered the event COUNT by the selected year
+ * beta audit B03: the overview filtered the event COUNT by the selected year
  * and then printed the lifetime KPIs under it — "Scope: 2005 · 1 flight" over
  * 387,859 km, the same number as for 2026. Every figure on a year-scoped card
  * now comes from here; what only exists for all years (badges, the lists a
