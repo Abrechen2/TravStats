@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.32.** No new migration.
+
 **Upgrading to 2.8.0-rc.31.** No new migration.
 
 **Upgrading to 2.8.0-rc.30.** One new migration. Automatic backup retention now deletes only archives the schedule created; backups made by hand, and those taken before this version, are kept until you delete them.
@@ -121,12 +123,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- **A silence your logbook explains shows that entry instead of "no data".** A flight, train, bus, ferry or hotel night that covers a gap in the TravTrack day view now names and links the entry; distances still come only from recorded points.
 - **TravTrack hides the Dawarich rows while TravTrack is the location source.**
 - **A recorded track splits only at a time gap,** whose length each account can set.
 - **A bahn.de regional train is named by its line,** not "Zug <number>".
 
 ### Fixed
 
+- **Naming or dismissing a night stay works from either day** and applies to the whole stay; in rc.31 it failed from the evening part and only hid the morning.
 - **A night at home is one stay in TravTrack, not two gaps.** The day view now reads past midnight, and a silence that ends where it began (within about 100 m, or inside the same fixed place, at most 24 hours) continues the stay instead of showing as missing data.
 - **A stay at a fixed place carries its name at once,** also when the phone sent only a few seconds of fixes on arrival; today's open stay at Home shows as such.
 - **The timeline and the day's coverage follow the stays,** so a stay is no longer drawn as a gap beside itself.
