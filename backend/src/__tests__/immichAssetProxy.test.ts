@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 import { Readable } from "stream";
 
-const resolveTrip = jest.fn(async () => ({ id: "trip-1" }));
+const resolveTrip = jest.fn(async (..._args: unknown[]) => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
 
 const findFirstLink =

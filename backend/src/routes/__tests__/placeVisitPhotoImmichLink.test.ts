@@ -107,7 +107,7 @@ describe("place-visit photos as Immich links", () => {
       (await prisma.placeVisitPhoto.findUniqueOrThrow({ where: { id: unmatched.id } })).filename
     ).toBe(unmatched.filename);
     // Never asked about: a photo without a checksum could only be matched by guessing.
-    expect(findAssetIdByChecksum).not.toHaveBeenCalledWith(null);
+    expect(findAssetIdByChecksum.mock.calls).not.toContainEqual([null]);
     expect(
       (await prisma.placeVisitPhoto.findUniqueOrThrow({ where: { id: unhashed.id } })).filename
     ).toBe(unhashed.filename);

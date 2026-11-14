@@ -49,7 +49,8 @@ jest.mock("../services/flightEnrichmentService", () => ({
   createHistoricalEnrichment: mockCreateHistoricalEnrichment,
 }));
 
-const mockApplyPendingUpdate = jest.fn<() => Promise<{ id: string } | null>>();
+const mockApplyPendingUpdate =
+  jest.fn<(id: string, userId: string) => Promise<{ id: string } | null>>();
 jest.mock("../services/pendingUpdateService", () => ({
   applyPendingUpdate: mockApplyPendingUpdate,
 }));

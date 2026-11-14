@@ -4,7 +4,7 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 const userSettingsRow =
   jest.fn<() => Promise<Partial<import("../generated/prisma/client").UserSettings> | null>>();
 /** The direct `userSettings.findUnique` — served from the same fixture. */
-const findUniqueUserSettings = jest.fn(async () => userSettingsRow());
+const findUniqueUserSettings = jest.fn(async (..._args: unknown[]) => userSettingsRow());
 const findFirstAdminSettings =
   jest.fn<() => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>>();
 

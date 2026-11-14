@@ -2,7 +2,7 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import express from "express";
 import request from "supertest";
 
-const resolveTrip = jest.fn(async () => ({ id: "trip-1" }));
+const resolveTrip = jest.fn(async (..._args: unknown[]) => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
 
 const findManyLinks =
@@ -102,7 +102,9 @@ const estimateAlbumImport =
   jest.fn<typeof import("../services/immich/immichImport").estimateAlbumImport>();
 const getImportJob =
   jest.fn<
-    () => Promise<Partial<
+    (
+      linkId: string
+    ) => Promise<Partial<
       NonNullable<
         Awaited<ReturnType<typeof import("../services/immich/immichImport").getImportJob>>
       >

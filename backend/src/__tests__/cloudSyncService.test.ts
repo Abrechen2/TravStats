@@ -82,13 +82,13 @@ const mockClient = {
   createDirectory: jest.fn<() => Promise<void>>(),
   putFileContents:
     jest.fn<(path: string, contents: Buffer, options?: object) => Promise<boolean>>(),
-  getFileContents: jest.fn<() => Promise<Buffer>>(),
+  getFileContents: jest.fn<(path: string, options?: unknown) => Promise<Buffer>>(),
   createReadStream:
     jest.fn<
       (p: string, o?: { callback?: (r: { headers: Headers }) => void }) => import("stream").Readable
     >(),
 };
-const mockCreateClient = jest.fn(() => mockClient);
+const mockCreateClient = jest.fn((..._args: unknown[]) => mockClient);
 jest.mock("webdav", () => ({
   createClient: mockCreateClient,
 }));

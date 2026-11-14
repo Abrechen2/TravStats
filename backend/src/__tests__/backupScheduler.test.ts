@@ -16,7 +16,7 @@ jest.mock("../services/backupService", () => ({
   createBackup: jest.fn(async () => ({})),
 }));
 
-const mockSchedule = jest.fn(() => ({ start: jest.fn(), stop: jest.fn() }));
+const mockSchedule = jest.fn((..._args: unknown[]) => ({ start: jest.fn(), stop: jest.fn() }));
 jest.mock("node-cron", () => ({ schedule: mockSchedule }));
 
 jest.mock("../utils/logger", () => ({
