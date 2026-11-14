@@ -171,3 +171,82 @@ night became a 144 m "unknown" leg that split one overnight stop, and four of si
   "no name found" are three different messages.
 - The stay-suggestions switch is not consulted for this lookup (it names TravTrack stops, not
   Dawarich stays); only the Immich-evidence switch is read.
+
+## Contract — stop editing and track gap (2.8.0-rc.29, 2026-11-14)
+
+Handed to the Companion on 2026-11-14. Companion phases: (a) dismiss/restore with a dismissed section in the day view, (b) own place search, (c) take a stop into Places; the track gap is an optional settings row.
+
+Source: forgejo/main c43b32009 (2.8.0-rc.30). All paths under `/api/v1`. Bare response family (ADR 0001, no `{success,data}` envelope).
+Spec `docs/superpowers/specs/2026-11-03-travtrack-legs.md`: has a "Contract" section (section 2) and "As built - stop places", but it does NOT mention dismiss, track-gap or "to Places". Those are only in OpenAPI (`services/openapi/paths/travtrackLegs.ts`, `paths/trackGap.ts`).
+
+### Versions (first internal RC containing the commit, via `git tag --contains`)
+| Commit | Change | First RC |
+|---|---|---|
+| 19e9eab9e | PUT /travtrack/stops/dismissed + `dismissed` flag | rc.29 |
+| 33cc11a67 | restore keeps split sibling dismissed | rc.29 |
+| c4957ce80 | search a stop's place yourself | rc.29 (frontend only) |
+| 88f4fb6f5 | take stop into Places | rc.29 (frontend only) |
+| 87442f862 | folded stop drawn as place point | rc.25 (frontend only) |
+| 4cdcb4a0e | /settings/track-gap + gap-only splitting | rc.29 |
+| 24356f81b | hide Dawarich rows | rc.29 (frontend only) |
+Min server for an app using any server-side item: **2.8.0-rc.29**. Dismiss is additive: an older server just never sends `dismissed`.
+
+### 1. PUT /travtrack/stops/dismissed
+Auth: cookie/JWT `authenticate`; `requireWriteScope` (read-only token -> 403); `rejectDemo` (demo -> 403); TravTrack tier `on` (instance must have TravTrack enabled); rate limiter `travTrackStopPlaceLimiter` (429).
+Request (JSON):
+| Field | Type | Rules |
+|---|---|---|
+| fromMs | int >= 0 | stop start, epoch ms |
+| untilMs | int >= 0 | must be > fromMs, span <= 2 days |
+| dismissed | boolean | true = only a wait; false = restore |
+Semantics: bound to the span, not a stop id. Applies to every derived stop the span overlaps by > 50%. Idempotent (one row per user/from/until). Points, legs, distances, totals unchanged.
+Response 200: the recomputed `Stop` (best-overlap one), see section 4. After `dismissed:true` it carries `dismissed: true`; after `false` the field is absent.
+Restore (33cc11a67): drops stored rows overlapping the span; if late points had split one dismissed stop into two, the sibling not covered by the restore span stays dismissed (re-stored under its own span). Restore of a span with no stop under it -> 404.
+Errors:
+| Status | Code | When |
+|---|---|---|
+| 400 | TRAVTRACK_STOP_INVALID | bad span / body (message = first zod issue) |
+| 401 | (auth) | not signed in |
+| 403 | TRAVTRACK_DISABLED | TravTrack off on instance (also read-only token / demo, codes from the generic middleware) |
+| 404 | TRAVTRACK_STOP_NOT_FOUND | no stop under the span (also after restore if the points no longer make a stop) |
+| 429 | rate limit | |
+
+### 2. Reading dismissed stops
+`GET /travtrack/day?date=` -> `stops: Stop[]` (ordered by fromMs). Dismissed stops are NOT removed; they are listed with `dismissed: true` (literal `true`, optional, absent otherwise). The app hides them from the stop list/map by filtering `s.dismissed === true`, and shows them (e.g. in a "dismissed" section with Restore) the same way. `legs` and all aggregates are unaffected. Range views use the same Stop schema where they carry stops (openapi `stopSchema`).
+
+### 3. Search a stop's place yourself (c4957ce80) - no server change
+Frontend only (`TrackStopPlaceSearch.tsx`, shared `LocationInput`). Calls:
+- `GET /geo/search` (existing, enveloped `{success,data:PlaceSearchResult[]}`) for Photon search.
+- Then the existing `PUT /travtrack/stops/place` body `{fromMs, untilMs, place: {name: string 1..200, lat?: number|null (-90..90), lon?: number|null (-180..180)} | null}`; `place:null` removes the accepted name. Same gating/errors as section 1 (TRAVTRACK_STOP_INVALID 400, TRAVTRACK_STOP_NOT_FOUND 404). Response 200: recomputed `Stop` with `place.source = "accepted"`.
+- Related read: `GET /travtrack/stops/place?lat&lon&fromMs&untilMs` (tier on, 400 TRAVTRACK_STOP_INVALID) returns the identity candidates (not changed by these commits).
+
+### 4. Stop shape (openapi `stopSchema`, `legs/types.ts`)
+| Field | Type | Null/optional |
+|---|---|---|
+| fromMs, untilMs | int | |
+| anchor | {lat:number, lon:number} | |
+| stayRef | {id:string, status:string} | nullable |
+| place | {name:string, lat:number\|null, lon:number\|null, source:"accepted"\|"fixed"\|"lodging", placeId?:string, lodgingStayId?:string} | nullable. Precedence accepted > fixed > lodging |
+| folded | {fixCount:int} | nullable (null when not folded) |
+| dismissed | `true` | optional, absent otherwise |
+
+### 5. Take a stop into Places (88f4fb6f5) - no server change, no new field
+Frontend only (`TrackStopToPlaces.tsx`, `PlaceFormModal` prefilled with stop name + position). Existing endpoints, enveloped family:
+- `GET /places?q=&limit=20` (find own place by stop name; client filters by distance to `anchor`)
+- `POST /places` (create via PlaceFormModal; `createPlace`)
+- `GET /places/:id` (re-read before adding a visit, to avoid a duplicate)
+- `POST /places/:id/visits` body `{visitedAt: "YYYY-MM-DD"}` (optional, only if the user ticks "with visit"; skipped client-side when a visit that day exists)
+There is NO link between stop and place on the server: nothing is stored on the stop. The accepted name stays a separate `PUT /travtrack/stops/place`. The app must implement the duplicate-visit check itself.
+
+### 6. Folded stop as place point (87442f862) - no server change
+Client-only drawing rule. The stop payload already carries the coordinates: `stop.anchor.{lat,lon}`; for folded stops (`folded != null`) the server sets `anchor` to the fixed place / lodging position (`derive.ts foldedStop`), and `place.lat/lon` equal it. The web replaces the raw fixes with `[fromMs, anchor.lat, anchor.lon, null]` and `[untilMs, ...]` inside the stop's [fromMs, untilMs]; raw `segments` still carry every fix (Points layer / inspector read raw). Use `anchor`, not `place.lat/lon` (`place` may be an accepted name with null coordinates).
+
+### 7. GET/PUT /settings/track-gap (4cdcb4a0e, rc.29)
+Auth: normal authenticated settings router; `settingsLimiter`; read-only token and the shared demo account may not PUT (403). Not TravTrack-tier gated.
+PUT body (strict, no extra keys): `{ minutes: int }`, 5..720. Else 400 `VALIDATION_FAILED`.
+GET and PUT 200 response: `{ minutes:int, default:int (120), min:int (5), max:int (720) }`, all non-null. Unset/invalid stored value reads as the default (clamped).
+Consumers (server side, per user): `routes/trips/tripRecording.ts` (`GET /trips/:id/recording`, GPX export) via `trackGapMsFor`; `services/tripRecording/privacySafe.ts` splitting; TravTrack month/read paths (`months/gapChange`, `readSafe`, `shareSnapshot`). A track is cut ONLY where the phone recorded nothing for longer than this gap (the old 50 km distance split is gone). A change invalidates stored month values (`monthsOnTrackGapChanged`); stored points are never changed.
+App: need not send it. It only affects how the server splits segments in responses, so the app should just render the segments it gets. Showing/editing is optional (a settings row reading `min/max/default` from GET).
+
+### 8. Hide Dawarich rows (24356f81b)
+Frontend only (settings sections `LocationSourceSection.tsx`, `TravTrackSourcesSection.tsx`). No API change. Existing `locationProvider` setting decides it.
