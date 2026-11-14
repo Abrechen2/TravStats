@@ -175,3 +175,59 @@ settings moved out of the environment, own Immich/Dawarich must be public).
 File and module names, the exact endpoint shape, how upgrade history is stored (a table or an
 admin_settings field), the visual layout within the existing settings design system, and how
 snoozes are stored.
+
+## 11. Stage 1 contract (coordinator, 2026-11-14)
+
+Router `routes/readiness.ts`, mounted at `/api/v1/readiness`, authenticated, **bare** response
+family (ADR 0001, like settings). All fields below are always present; `null` where stated.
+
+`GET /api/v1/readiness` → 200
+```
+{
+  runningVersion: string,                    // backend/VERSION
+  summary: { required: number, recommended: number, unknown: number,
+             newNotes: number, blockedByAdmin: number, ready: number },
+  items: Array<{
+    id: string, revision: number,
+    scope: "admin" | "user",                 // admin items only reach admins
+    severity: "required" | "recommended",
+    status: "ready" | "needsAction" | "unknown",
+    checkedAt: string | null,                // ISO; evidence time of the stored result
+    titleKey: string, consequenceKey: string, // i18n keys, namespace "readiness"
+    action: string | null,                   // settings address for resolveAddress; null for a
+                                             // user item blocked by an admin item
+    blockedBy: string | null,                // admin item id; for ordinary accounts no detail
+    optOutAllowed: boolean,                  // false for every "required" item
+    userState: null | { kind: "snoozed", until: string } | { kind: "optedOut" }
+  }>,                                        // only items whose appliesWhen holds
+  notes: Array<{
+    id: string, version: string, audience: "admin" | "user",
+    beforeKey: string, afterKey: string,
+    action: null | { kind: "check", checkId: string } | { kind: "address", address: string },
+    noActionReason: string | null,           // exactly one of action / noActionReason is non-null
+    acknowledged: boolean,
+    open: boolean                            // check-backed: until the check is ready;
+                                             // otherwise until acknowledged
+  }>                                         // versions in (account's ackVersion, runningVersion]
+}
+```
+
+Writes (each 204, 404 for an unknown or non-applicable id, 400 on a bad body):
+- `POST /items/:id/snooze` `{ until?: string }` — default +1 day, at most +30 days.
+- `POST /items/:id/opt-out` — 409 when `optOutAllowed` is false.
+- `DELETE /items/:id/state` — clears snooze / opt-out.
+- `POST /notes/:id/ack` — acknowledges one note; a check-backed note stays `open` regardless.
+
+States are stored per account, per item id and revision; a raised revision ignores old rows.
+Demo account: GET works, writes 403 like other demo writes.
+
+Persistence (builder picks names): an item-state table (account, item id, revision, kind,
+until); the account's last acknowledged version (existing accounts `2.7.0`, new accounts the
+running version at creation, as `whatsNewStamp.ts` does); the instance's upgrade history;
+stored outcome + time of the SMTP test and the external reachability test where none is
+stored today.
+
+Ownership: the backend owns ids, revisions, evaluation and the catalogue; the frontend owns the
+DE/EN copy under the `readiness` namespace. The contract test covers both sides: every key the
+catalogue names exists in DE and EN, every `action` and note address resolves through
+`resolveAddress`.
