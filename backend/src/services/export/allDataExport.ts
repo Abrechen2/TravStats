@@ -212,6 +212,10 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  readinessItemStates:
+    "snoozes and opt-outs of setup checks, tied to this server's check revisions; a restored account re-evaluates",
+  readinessNoteAcks:
+    "read marks of this server's update notes; a restored account sees the notes for its own versions again",
   comparisonDevices: "public device identities, re-enrol after restore",
   localConnectionsLow:
     "friendships with other accounts on this server: the other side is not this user's data and ids are re-keyed on restore; friends re-confirm",

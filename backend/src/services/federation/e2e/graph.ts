@@ -202,6 +202,9 @@ export const NON_TRAVEL_RELATIONS = [
   // Reminder settings and the sent-ledger: notification bookkeeping, never shared travel data.
   "reminderPreferences",
   "reminderClaims",
+  // Setup & readiness snoozes and note read marks: per-server bookkeeping, never travel data.
+  "readinessItemStates",
+  "readinessNoteAcks",
   "settings",
   "analyticsEvents",
   "createdInvitations",
