@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
@@ -57,12 +57,23 @@ export default function ReadinessSection(): JSX.Element {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [writeFailed, setWriteFailed] = useState(false);
 
+  // Only the newest read may land: two quick writes start two reads, and the
+  // older answer arriving last would bring a cleared item back.
+  const readSeq = useRef(0);
+  const [tick, setTick] = useState(0);
   const reload = useCallback(async (): Promise<void> => {
+    const mine = ++readSeq.current;
     try {
-      setLoad({ state: "ok", data: await fetchReadiness() });
+      const data = await fetchReadiness();
+      if (mine === readSeq.current) setLoad({ state: "ok", data });
     } catch {
-      setLoad({ state: "error" });
+      if (mine === readSeq.current) setLoad({ state: "error" });
     }
+  }, []);
+  // A snooze ends by itself: re-evaluate once a minute so an open page notices.
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(timer);
   }, []);
   useEffect(() => {
     void reload();
@@ -96,7 +107,8 @@ export default function ReadinessSection(): JSX.Element {
 
   const groups = useMemo(
     () => (load.state === "ok" ? groupReadiness(load.data, isAdmin, now().getTime()) : null),
-    [load, isAdmin]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick re-reads the clock
+    [load, isAdmin, tick]
   );
 
   if (load.state === "loading") {
