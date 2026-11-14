@@ -10,6 +10,7 @@ import { useSectionInView } from "../hooks/useSectionInView";
 import { useEffectiveSettingsLevel } from "../store/settingsLevelStore";
 import PasswordModal from "../components/Settings/PasswordModal";
 import AboutSection from "../components/Settings/AboutSection";
+import ReadinessSection from "../components/Settings/readiness/ReadinessSection";
 import { SettingsLayout } from "../components/Settings/frame/SettingsLayout";
 import { SectionFrame } from "../components/Settings/frame/SectionFrame";
 import { ExpertPageNotice, PageExpertNote } from "../components/Settings/frame/ExpertNote";
@@ -269,6 +270,7 @@ export default function SettingsPage(): JSX.Element {
     if (mount.source === "admin")
       return <AdminSectionBody section={mount.component as AdminSectionId} mountId={mount.id} />;
     if (mount.source === "about") return <AboutSection />;
+    if (mount.source === "readiness") return <ReadinessSection />;
     return <SettingsSectionSwitch section={mount.component as SettingsSectionId} page={page} />;
   };
   const frameOf = (mount: AreaSectionDef): "own" | "card" => {

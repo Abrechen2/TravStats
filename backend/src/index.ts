@@ -325,6 +325,11 @@ if (process.env.NODE_ENV !== "test") {
         logger.warn({ operation: "server_start_country_index_warm_error", error })
       );
 
+    // The instance's upgrade history for the readiness page (never throws).
+    void import("./services/readiness/state").then(({ recordRunningVersion }) =>
+      recordRunningVersion()
+    );
+
     // Service credentials and addresses that used to come from the environment move
     // into the instance settings once (forgejo#392); after that only the settings count.
     try {

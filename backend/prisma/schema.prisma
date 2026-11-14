@@ -67,6 +67,14 @@ model User {
   /// Default off: nobody appears in another server's lookup without saying yes.
   federationFindable        Boolean                      @default(false) @map("federation_findable")
   invitedBy                 String?                      @map("invited_by")
+  /// The last release whose readiness update notes this account has been shown
+  /// (setup & readiness, spec 2026-11-14 §9). Existing accounts start at 2.7.0, the
+  /// last final release; new accounts at the running version (set at creation,
+  /// like `whatsNewSeenVersion`). Notes of versions above it, up to the running
+  /// one, are listed.
+  readinessAckVersion       String                       @default("2.7.0") @map("readiness_ack_version")
+  readinessItemStates       ReadinessItemState[]
+  readinessNoteAcks         ReadinessNoteAck[]
   createdAt                 DateTime                     @default(now()) @map("created_at")
   // Email notification preferences
   notificationEmail         String?                      @map("notification_email")
@@ -1469,8 +1477,13 @@ model AdminSettings {
   // freshly paired phone knows the externally reachable origin instead of the
   // LAN address the browser happened to be on. `lanUrl` is an optional
   // secondary hint for on-network clients.
-  publicUrl String? @map("public_url")
-  lanUrl    String? @map("lan_url")
+  publicUrl           String?   @map("public_url")
+  /// Last external reachability test of `publicUrl` (readiness check `admin.publicUrl`).
+  /// The URL it tested is kept: a result for another address is no evidence for this one.
+  publicUrlCheckedAt  DateTime? @map("public_url_checked_at")
+  publicUrlCheckOk    Boolean?  @map("public_url_check_ok")
+  publicUrlCheckedUrl String?   @map("public_url_checked_url")
+  lanUrl              String?   @map("lan_url")
 
   /// WebAuthn relying-party identity. Explicit rather than derived from the
   /// request Host: a credential is bound to this value forever, so guessing it
@@ -1574,11 +1587,6 @@ model AdminSettings {
   // === LOGGING CONFIGURATION ===
   // Log level for file output (error | warn | info | debug | trace)
   logLevel String @default("info") @map("log_level")
-
-
-
-
-
 
   // Log retention in days (auto-delete older logs)
   logRetentionDays Int @default(7) @map("log_retention_days")
@@ -7157,4 +7165,45 @@ model LodgingRatingCategory {
 
   @@index([userId])
   @@map("lodging_rating_categories")
+}
+
+/// A snooze or "nutze ich nicht" on one readiness item (spec 2026-11-14 §3.3, §11).
+/// One row per account and item; `revision` is the check's revision when it was set, and a
+/// row whose revision is lower than the check's current one is ignored.
+model ReadinessItemState {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  itemId    String    @map("item_id")
+  revision  Int
+  /// `snoozed` | `optedOut`
+  kind      String
+  /// End of a snooze; null for an opt-out.
+  until     DateTime?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@map("readiness_item_states")
+}
+
+/// An account has read one informational update note.
+model ReadinessNoteAck {
+  id     String   @id @default(uuid())
+  userId String   @map("user_id")
+  noteId String   @map("note_id")
+  at     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@map("readiness_note_acks")
+}
+
+/// The versions this instance has run, first start of each (spec §3.2).
+model InstanceVersionHistory {
+  version     String   @id
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+
+  @@map("instance_version_history")
 }

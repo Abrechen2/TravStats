@@ -124,6 +124,7 @@ router.post("/initialize", authLimiter, async (req: Request, res: Response, next
           username,
           passwordHash,
           isAdmin: true,
+          readinessAckVersion: appVersion,
         },
       });
       // TravTrack where it is on, else nothing (TravTrack plan T8). On a fresh

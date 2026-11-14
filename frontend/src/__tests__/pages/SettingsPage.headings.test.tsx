@@ -167,6 +167,11 @@ vi.mock("../../components/Settings/AboutSection", () => ({
   default: () => <section>about</section>,
 }));
 
+// The readiness page reads its own endpoint; the tests read the navigation.
+vi.mock("../../components/Settings/readiness/ReadinessSection", () => ({
+  default: () => <section>readiness</section>,
+}));
+
 vi.mock("@/lib/api/stats", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/stats")>();
   return {

@@ -35,6 +35,7 @@ import enPassport from "./resources/en/passport.json";
 import enSpecialFlights from "./resources/en/specialFlights.json";
 import enImmich from "./resources/en/immich.json";
 import enWhatsNew from "./resources/en/whatsNew.json";
+import enReadiness from "./resources/en/readiness.json";
 import enUsageStats from "./resources/en/usageStats.json";
 import enPushRelay from "./resources/en/pushRelay.json";
 import enSettingsRows from "./resources/en/settingsRows.json";
@@ -83,6 +84,7 @@ import dePassport from "./resources/de/passport.json";
 import deSpecialFlights from "./resources/de/specialFlights.json";
 import deImmich from "./resources/de/immich.json";
 import deWhatsNew from "./resources/de/whatsNew.json";
+import deReadiness from "./resources/de/readiness.json";
 import deUsageStats from "./resources/de/usageStats.json";
 import dePushRelay from "./resources/de/pushRelay.json";
 import deSettingsRows from "./resources/de/settingsRows.json";
@@ -153,6 +155,7 @@ const resources = {
     specialFlights: enSpecialFlights,
     immich: enImmich,
     whatsNew: enWhatsNew,
+    readiness: enReadiness,
     usageStats: enUsageStats,
     pushRelay: enPushRelay,
     settingsRows: enSettingsRows,
@@ -204,6 +207,7 @@ const resources = {
     specialFlights: deSpecialFlights,
     immich: deImmich,
     whatsNew: deWhatsNew,
+    readiness: deReadiness,
     usageStats: deUsageStats,
     pushRelay: dePushRelay,
     settingsRows: deSettingsRows,
@@ -264,6 +268,7 @@ i18n.use(initReactI18next).init({
     "specialFlights",
     "immich",
     "whatsNew",
+    "readiness",
     "usageStats",
     "pushRelay",
     "settingsRows",

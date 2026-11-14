@@ -24,6 +24,9 @@ const NOT_A_SERVICE = new Set([
   "frontendUrl",
   "publicUrl",
   "lanUrl",
+  "publicUrlCheckedAt", // stored result of the public-URL reachability test (setup & readiness), not a service
+  "publicUrlCheckOk",
+  "publicUrlCheckedUrl",
   "shareLinksEnabled",
   "internetEnabled", // settings v3 master switch over the services below, not a service itself
   "tripFederationEnabled", // second federation switch, own endpoint

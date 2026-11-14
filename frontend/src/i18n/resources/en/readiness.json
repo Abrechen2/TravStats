@@ -1,0 +1,125 @@
+{
+  "loading": "Loading …",
+  "error": {
+    "title": "The status could not be loaded.",
+    "body": "This is not an all-clear: whether anything is missing is unknown right now. Check the connection to the server and try again.",
+    "retry": "Try again"
+  },
+  "writeFailed": "That could not be saved. Please try again.",
+  "empty": "Nothing to do. Everything that applies to you is ready.",
+  "summary": {
+    "required": "Required",
+    "new": "New in {{line}}",
+    "recommended": "Recommended",
+    "blocked": "Needs the admin",
+    "ready": "Ready"
+  },
+  "group": {
+    "required": "Required",
+    "new": "New in {{line}}",
+    "recommended": "Recommended",
+    "blocked": "Needs the admin",
+    "ready": "Ready",
+    "parked": "Snoozed or not used"
+  },
+  "unchecked": "unchecked",
+  "neverChecked": "Not checked yet.",
+  "checkedAt": "Checked on {{time}}",
+  "checkNow": "Check now",
+  "openAction": "Open",
+  "scope": {
+    "server": "Server"
+  },
+  "snooze": "Remind me tomorrow",
+  "optOut": "I do not use this",
+  "showAgain": "Show again",
+  "note": {
+    "ack": "Got it"
+  },
+  "blockedHint": "Only this server's admin can change this.",
+  "title": "Setup & status",
+  "checks": {
+    "adminSmtp": {
+      "title": "E-mail sending is not set up",
+      "consequence": "Without a mail server TravStats cannot send invitations, password resets or reminders by e-mail."
+    },
+    "adminPublicUrl": {
+      "title": "Check the public address",
+      "consequence": "Without a valid address that is reachable from outside, links in mails, pairing QR codes and sharing lead nowhere."
+    },
+    "adminBackup": {
+      "title": "Automatic backup",
+      "consequence": "Without a recent backup a disk failure loses everything stored on this server."
+    },
+    "adminDisk": {
+      "title": "Disk space",
+      "consequence": "When the disk is full, backups, uploads and the database itself fail."
+    },
+    "adminOffsite": {
+      "title": "Copy off site",
+      "consequence": "A backup on the same machine does not survive losing that machine."
+    },
+    "adminProviderKeys": {
+      "title": "Data service keys",
+      "consequence": "Without a valid key, flight search and live data return nothing, and nobody notices."
+    },
+    "adminBookingMailbox": {
+      "title": "Booking mailbox",
+      "consequence": "When the mailbox is unreachable, forwarded bookings never arrive."
+    },
+    "userDomains": {
+      "title": "Choose your travel types",
+      "consequence": "Without chosen travel types TravStats shows only empty pages."
+    },
+    "userHome": {
+      "title": "Set your home",
+      "consequence": "Without a home TravTrack knows neither the way home nor departure places, and recognises stays less well."
+    },
+    "userPhonePaired": {
+      "title": "Pair a phone",
+      "consequence": "Without a paired phone the Companion app records and syncs nothing."
+    },
+    "userFirstPosition": {
+      "title": "Receive the first position",
+      "consequence": "The phone is paired, but no position has arrived yet."
+    },
+    "userApiKeys": {
+      "title": "Check your own keys",
+      "consequence": "An expired key of your own makes lookups fail without a word."
+    },
+    "userMailForwarding": {
+      "title": "Set up the forwarding address",
+      "consequence": "Without forwarding and an allowed sender, no booking mail reaches you."
+    },
+    "userNotificationEmail": {
+      "title": "E-mail for reminders",
+      "consequence": "Reminders by e-mail need an address to go to."
+    }
+  },
+  "notes": {
+    "v280SettingsRemoved": {
+      "before": "Some settings are gone: log size and count, the old country threshold and the OpenSky credentials.",
+      "after": "They are removed, TravStats keeps running on fixed values."
+    },
+    "v280BackupsAlwaysOn": {
+      "before": "Automatic backups could be switched off.",
+      "after": "They now always run."
+    },
+    "v280RetentionScheduledOnly": {
+      "before": "Retention also deleted backups made by hand.",
+      "after": "It now deletes only what the schedule created; everything else stays until you delete it."
+    },
+    "v280FriendsMerged": {
+      "before": "Friends and connections to other servers were separate.",
+      "after": "Each friend is now one connection on the Friends page."
+    },
+    "v280ExternalServicesMoved": {
+      "before": "Services were configured through server environment variables.",
+      "after": "The values were copied into the settings on first start and are managed there."
+    },
+    "v280OwnServersPublic": {
+      "before": "Your own Immich or Dawarich server could be reached on the home network.",
+      "after": "An ordinary account's connection must now point at a public address."
+    }
+  }
+}
