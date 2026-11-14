@@ -45,7 +45,7 @@ destroyed on 2026-05-02.
 
 | Setting | Value |
 |---|---|
-| Hostname | `ct134-travstats-preview` |
+| Hostname | `travstats-preview` |
 | Node | the Proxmox node (pinned — `vmbr2` exists nowhere else) |
 | Network | `vmbr2`, static `<preview-host>/24`, gw `<dmz-gateway>` |
 | Resources | 4 cores, 8 GB RAM, 30 GB `ceph-nvme` |

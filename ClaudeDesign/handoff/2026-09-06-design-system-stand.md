@@ -6,7 +6,7 @@ parallelen Sitzung auf dem PC überschrieben wurde, während hier gearbeitet
 wurde — eine Datei, die zwei Rechner gleichzeitig schreiben, ist keine
 Übergabe. Hier kann sie nur per Commit verschwinden.
 
-Auftrag: `ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md`.
+Auftrag: `ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md`.
 Sieben Blöcke: **drei fertig, vier teilweise.**
 
 ## Stand
@@ -53,7 +53,7 @@ gegen die echten Beta-Daten.
 - **Login dort:** `claude-uat` / `DesignUAT2026!` — das Passwort dieses **einen**
   Kontos wurde gesetzt, weil keine Zugangsdatei existierte. `admin`, `dennis`,
   `demo`, `flighttest` unberührt.
-- Bilder: `ClaudeDesign/screenshots/design-system/beta-ct106/`.
+- Bilder: `ClaudeDesign/screenshots/design-system/beta/`.
 - Auf dem Server gemessen: Hanken Grotesk lädt selbst gehostet (kein
   Google-Fonts-Aufruf), `--ts-domain-cruise` = `#4aa6b0`, null Konsolenfehler.
 

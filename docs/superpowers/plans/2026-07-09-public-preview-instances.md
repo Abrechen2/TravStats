@@ -53,14 +53,14 @@
 The isolation check is the whole justification for this host. If it fails, stop — the design's core assumption is void and the Ollama decision (Task 2) must be revisited.
 
 **Files:**
-- Create: `scripts/preview/provision-ct134.sh`
+- Create: `scripts/preview/provision-preview-host.sh`
 
 **Interfaces:**
 - Produces: a running the preview host with Docker, reachable at `<preview-host>`, and an external Docker network `preview-net`.
 
 - [ ] **Step 1: Write the provisioning script**
 
-Create `scripts/preview/provision-ct134.sh`:
+Create `scripts/preview/provision-preview-host.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -81,7 +81,7 @@ if "${SSH[@]}" "pct status $CTID" >/dev/null 2>&1; then
   echo "CT$CTID already exists — skipping create"
 else
   "${SSH[@]}" "pct create $CTID local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst \
-      --hostname ct134-travstats-preview \
+      --hostname travstats-preview \
       --cores 4 --memory 8192 --swap 2048 \
       --rootfs ceph-nvme:30 \
       --net0 name=eth0,bridge=vmbr2,ip=<preview-host>/24,gw=<dmz-gateway> \
@@ -106,7 +106,7 @@ echo "CT$CTID provisioned."
 - [ ] **Step 2: Run it**
 
 ```bash
-bash scripts/preview/provision-ct134.sh
+bash scripts/preview/provision-preview-host.sh
 ```
 
 Expected: `Preview host provisioned.` On a second run, `Preview host already exists — skipping create`.
@@ -134,7 +134,7 @@ Expected: `BLOCKED`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/preview/provision-ct134.sh
+git add scripts/preview/provision-preview-host.sh
 git commit -m "feat(preview): provision script for the preview host"
 ```
 

@@ -2785,7 +2785,7 @@ Commit: `ef62a8f8ba1817a2df03c96451eb806d95aa4102`. 2908 versionierte Dateien. D
 | `scripts/preview/build-preview-image.sh` | 782 |
 | `scripts/preview/deploy-preview.sh` | 2134 |
 | `scripts/preview/deploy-preview.test.sh` | 1740 |
-| `scripts/preview/provision-ct134.sh` | 1658 |
+| `scripts/preview/provision-preview-host.sh` | 1658 |
 | `scripts/preview/seed-immich-demo.sh` | 5758 |
 | `scripts/preview/seed-preview-users.sh` | 2464 |
 | `scripts/preview/setup-tunnel.sh` | 3732 |

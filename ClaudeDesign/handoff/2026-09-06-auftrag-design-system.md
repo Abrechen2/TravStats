@@ -236,12 +236,12 @@ gestellt.
 
 ## 10. Startprompt für die Sitzung auf dem Dev-Host
 
-Vom Owner am 05.09.2026 angefordert; in der Claude-App Host `ct142`, Projekt
+Vom Owner am 05.09.2026 angefordert; in der Claude-App Host `dev`, Projekt
 TravStats, Modell Fable wählen und diesen Text als erste Nachricht senden:
 
 ```
 Lies /home/claude/UEBERGABE.md und danach den dort genannten Auftrag
-ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md auf dem Zweig dev/v2.7
+ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md auf dem Zweig dev/v2.7
 (git fetch forgejo zuerst). Richte den Worktree .worktrees/design-system mit dem
 Zweig dev/design-system von forgejo/dev/v2.7 ein, wie im Auftrag beschrieben, und
 arbeite die sieben Blöcke in der angegebenen Reihenfolge ab.

@@ -1,7 +1,7 @@
 # Block 7 — Aufräumen und Wächter. Bericht (Wächter fertig, Aufräumen offen)
 
 Zweig `dev/design-system`. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 7.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 7.
 
 **Die vier Wächter stehen und sind grün.** Vorgezogen, weil sie messen, was die
 Blöcke 3–6 noch abzuarbeiten haben — ein Aufräumen ohne Wächter ist eine

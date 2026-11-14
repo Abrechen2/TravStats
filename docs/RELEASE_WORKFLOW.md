@@ -6,7 +6,7 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 
 > **Terminology (3-tier, since 2026-07-04):** three non-prod roles, split so a
 > hotfix RC can be validated without disturbing the forward feature line:
-> - **Beta** — the beta server (`ct106-travstats-beta`, `<rc-hostname>`). Rolling home
+> - **Beta** — the beta server (`travstats-beta`, `<rc-hostname>`). Rolling home
 >   of the **forward dev line** (`dev/vX.Y`, e.g. 2.3.0) and the external
 >   Mobile-App testers. Its own persistent data — **never** prod-cloned.
 > - **RC Server** — a dedicated CT, a **prod-data mirror**. Validates the
@@ -25,7 +25,7 @@ promoted to prod. Prod only ever runs **final** tags — an RC never touches pro
 | **Local Dev** | dev machine | `8000` / `3000` | dev DB `:5433` (`flights_dev`) | Build, TDD, rehearse migrations |
 | **Beta** | the beta server | `<beta-host>:3010`, `<rc-hostname>` | `travstats-db-beta` | Forward dev line + external app testers; own persistent data, rolling |
 | **Preview** | the preview host (DMZ) | `beta.travstats.de` (the `immich` slot retired 2026-08-01, `poi` 2026-10-02) | own, per slot | Public demo instances for external testers; demo data only, never a prod dump |
-| **RC Server** | the RC server (`ct107-travstats-rc`) | `<rc-host>:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
+| **RC Server** | the RC server (`travstats-rc`) | `<rc-host>:3010` | `travstats-db-rc` | **Prod-data mirror** — validate the imminent release before promote; re-cloned each round |
 | **Prod** | prod (HA) | `<prod-host>:3010` | `travstats-db` (`flights`) | Real users; **final tags only**, on promote |
 | **Web** | the web host | `travstats.de` | — | Marketing/Wiki, `version.ts` kept in lockstep |
 | **External** | Norbert (Unraid) | `<nas-host>:3080` | own | Third-party user, pulls final `:latest` only |

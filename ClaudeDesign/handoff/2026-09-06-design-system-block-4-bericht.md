@@ -1,7 +1,7 @@
 # Block 4 — Dashboard und Karten. Bericht
 
 Zweig `dev/design-system`, aufgesetzt auf Block 3. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 4.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 4.
 
 **Der Kern ist geliefert: Legende und Routen stimmen mit den Domänenfarben der
 App überein.** Was offen bleibt, steht in §4.

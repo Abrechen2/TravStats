@@ -1,7 +1,7 @@
 # Block 2 — Primitive. Bericht
 
 Zweig `dev/design-system`, aufgesetzt auf Block 1. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 2.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 2.
 
 ---
 

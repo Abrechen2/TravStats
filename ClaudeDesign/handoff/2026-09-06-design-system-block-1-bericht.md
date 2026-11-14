@@ -2,7 +2,7 @@
 
 Zweig `dev/design-system`, Commit `e64ee51c`, aufgesetzt auf
 `forgejo/dev/v2.7` (`5fa30087`). Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 1.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 1.
 
 ---
 

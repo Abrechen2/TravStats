@@ -24,7 +24,7 @@ Die bisherige Beta zeigt gleichzeitig einen unvollständigen Umbau: Viele Farben
 |---|---|
 | Laufende interne Design-Beta | Am 15.09. über Versionsendpunkt als `2.7.0-design.3` festgestellt. |
 | Designbranch | `dev/design-system`, Referenzcommit `51ea054925efc5add4d77fd7192915aac48ad3f5` vom 06.09.; am 15.09. mit dem GitHub-Branch abgeglichen. |
-| Acht Bilder unter `referenzen/` | Bereits vorhandene Aufnahmen aus `ClaudeDesign/screenshots/design-system/beta-ct106/`. Historische Beta-Aufnahmen vom Implementierungsstand 06.09., keine neu aufgenommenen Screenshots vom 15.09. |
+| Acht Bilder unter `referenzen/` | Bereits vorhandene Aufnahmen aus `ClaudeDesign/screenshots/design-system/beta/`. Historische Beta-Aufnahmen vom Implementierungsstand 06.09., keine neu aufgenommenen Screenshots vom 15.09. |
 | Tokens und Systembeschreibung | Unveränderte Kopien aus `design/` dieses Referenzcommits. Die Systembeschreibung enthält ältere Aussagen; Korrekturen dazu stehen unten. |
 | Umsetzung laut damaligem Bericht | Sieben Blöcke: drei fertig, vier teilweise. Offene Bereiche betreffen unter anderem Kopfzeile, Detailseiten, mobile Kartenbedienung, Reisen/Werkzeuge und Jahresrückblick. Das ist ein Implementierungsbericht, keine vollständige heutige Funktionsabnahme. |
 | Neuere Fehlerkorrekturen | Auf `main`, `fix/audit-round-2` und weiteren Branches vorhanden. Sie sind nicht automatisch im älteren Design-Build enthalten. Screenshots dieses Builds dürfen korrigierte fachliche Fehler nicht zum neuen Sollzustand machen. |

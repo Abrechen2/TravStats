@@ -1,7 +1,7 @@
 # Block 6 — Reisen, Reisepass, Posteingang, Werkzeuge. Bericht (angefangen)
 
 Zweig `dev/design-system`. Auftrag:
-`ClaudeDesign/handoff/2026-09-06-auftrag-design-system-ct142.md` §4, Block 6.
+`ClaudeDesign/handoff/2026-09-06-auftrag-design-system.md` §4, Block 6.
 
 **Ein Punkt ist geliefert. Der Rest des Blocks ist nicht angefasst.**
 
@@ -117,7 +117,7 @@ lokalen Demo-Seed.
   `"Hanken Grotesk", system-ui, …` (also die selbst gehostete Schrift, ohne
   Google-Fonts-Aufruf), `--ts-domain-cruise` ist `#4aa6b0`, **null
   Konsolenfehler** auf der Anmeldeseite.
-- Bilder: `ClaudeDesign/screenshots/design-system/beta-ct106/`, je 1440×900 und
+- Bilder: `ClaudeDesign/screenshots/design-system/beta/`, je 1440×900 und
   390×844: Anmelden, Dashboard, Logbuch, Einstellungen, Reisepass, Posteingang.
 
 **Was auf dem Beta-Server verändert wurde und wie man es zurückdreht:**
