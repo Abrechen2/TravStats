@@ -138,6 +138,7 @@ beforeEach(() => {
     baseUrl: "https://immich.lan",
     apiKey: "k",
     source: "user",
+    allowPrivate: true,
   });
   linkFindUnique.mockResolvedValue({
     id: "link-1",

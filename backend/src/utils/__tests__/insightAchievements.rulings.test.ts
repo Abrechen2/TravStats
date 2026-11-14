@@ -53,7 +53,13 @@ describe("PORT_REUNION_3 counts port calls only", () => {
       cruiseIds: ["a", "b", "c"],
     });
     // … the badge does not.
-    const ctx = { rows, toursVisible: false, linked: new Map(), userBirthday: undefined };
+    const ctx = {
+      rows,
+      toursVisible: false,
+      linked: new Map(),
+      facts: new Map(),
+      userBirthday: undefined,
+    };
     expect(foldCruiseInsightStats(ctx).cruisePortCruisesMax).toBe(1);
   });
 
@@ -61,7 +67,13 @@ describe("PORT_REUNION_3 counts port calls only", () => {
     const rows = ["2020", "2021", "2022"].map((y, i) =>
       fromHamburg(`c${i}`, `${y}-06-01`, [call(2, "OSL", `${y}-06-02`)])
     );
-    const ctx = { rows, toursVisible: false, linked: new Map(), userBirthday: undefined };
+    const ctx = {
+      rows,
+      toursVisible: false,
+      linked: new Map(),
+      facts: new Map(),
+      userBirthday: undefined,
+    };
     expect(foldCruiseInsightStats(ctx).cruisePortCruisesMax).toBe(3);
   });
 });

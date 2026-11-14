@@ -262,7 +262,7 @@ describe("POST /settings/immich/test", () => {
   });
 
   /**
-   * AUD-087. A shared key — admin-global or ENV — is one the caller has never
+   * AUD-087. A shared key — admin-global — is one the caller has never
    * seen. Before this binding, naming your own server and omitting the key had
    * the instance-wide credential delivered to it, with no admin right and no
    * knowledge of the key needed.
@@ -272,6 +272,7 @@ describe("POST /settings/immich/test", () => {
       baseUrl: "https://immich.lan",
       apiKey: "instance-wide-secret",
       source: "global" as const,
+      allowPrivate: true,
     };
 
     it("refuses to spend an admin-global key on a target the caller chose", async () => {
@@ -285,18 +286,6 @@ describe("POST /settings/immich/test", () => {
       expect(res.body.error).toBe("keyRequired");
       // The point of the finding: the key must not leave the instance at all,
       // so the outbound call is never made — a non-200 alone would not prove it.
-      expect(testImmichConnection).not.toHaveBeenCalled();
-    });
-
-    it("refuses an ENV-provided key just the same", async () => {
-      getImmichConnection.mockResolvedValue({ ...shared, source: "env" });
-
-      const res = await request(makeApp(immichSettingsRouter))
-        .post("/immich/test")
-        .send({ baseUrl: "https://attacker.example" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe("keyRequired");
       expect(testImmichConnection).not.toHaveBeenCalled();
     });
 

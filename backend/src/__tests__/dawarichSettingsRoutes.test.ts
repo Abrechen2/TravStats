@@ -123,18 +123,6 @@ describe("POST /settings/dawarich/test", () => {
       expect(testDawarichConnection).not.toHaveBeenCalled();
     });
 
-    it("refuses an ENV-provided key just the same", async () => {
-      getDawarichConnection.mockResolvedValue({ ...SHARED, source: "env" });
-
-      const res = await request(makeApp())
-        .post("/dawarich/test")
-        .send({ baseUrl: "https://attacker.example" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe("keyRequired");
-      expect(testDawarichConnection).not.toHaveBeenCalled();
-    });
-
     it("still tests the shared connection at its OWN address", async () => {
       getDawarichConnection.mockResolvedValue(SHARED);
       testDawarichConnection.mockResolvedValue({ success: true, message: "Connected" });

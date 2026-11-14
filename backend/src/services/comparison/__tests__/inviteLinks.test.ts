@@ -43,7 +43,11 @@ app.use(express.json());
 app.use("/api/v1/comparison", comparison);
 app.use(errorHandler);
 
-const SCOPE = { groups: ["trips"], domains: ["ferry"], year: null };
+const SCOPE = {
+  groups: ["trips" as const],
+  domains: ["ferry" as const],
+  year: null,
+};
 const LOCAL = "https://self.invite-links.test";
 const FAR = "https://far.invite-links.test";
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "invite-links-"));

@@ -11,6 +11,7 @@ describe("routeStraightRide", () => {
       [ends.arrLon, ends.arrLat],
     ],
     geometrySource: "road",
+    lineMiss: null,
     routedKm: 180,
     fallback: null,
   };

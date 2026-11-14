@@ -87,7 +87,7 @@ export class FakeMailbox implements MailFetcher {
     return run(session);
   }
 
-  async watch(): Promise<void> {
+  async watch(_c?: unknown, _onNew?: () => void, _signal?: AbortSignal): Promise<void> {
     return undefined;
   }
 }

@@ -131,7 +131,7 @@ describe("asking and confirming", () => {
       .spyOn(a.transport, "tripShareExchange")
       .mockImplementation((origin, body) =>
         body.kind === "connect-request"
-          ? Promise.reject(new a.security.PeerRefusal("timeout"))
+          ? Promise.reject(new a.security.PeerRefusal("unreachable"))
           : real(origin, body)
       );
     await expectCode(

@@ -270,7 +270,7 @@ describe("chain: lookupFlightDetails", () => {
 
   /** Routes axios by host so a test states what each provider answers. */
   const serve = (answers: { airlabs?: unknown; adsbx?: unknown; adsblol?: unknown }) =>
-    mockedAxios.get.mockImplementation(async (url: string) => {
+    mockedAxios.get.mockImplementation((async (url: string) => {
       const key = url.includes("airlabs")
         ? "airlabs"
         : url.includes("rapidapi")
@@ -279,7 +279,7 @@ describe("chain: lookupFlightDetails", () => {
       const answer = answers[key];
       if (answer instanceof Error) throw answer;
       return answer ?? { data: { response: [], ac: [] } };
-    });
+    }) as never);
 
   const adsbCalls = () =>
     mockedAxios.get.mock.calls
@@ -389,9 +389,8 @@ describe("wrapper: an ADS-B answer is never today's aircraft for another day", (
     const { lookupFlightWithHistorical } = await import("../services/flightLookup");
     keys.adsblol = "lol-key";
     // Local 'tomorrow' that happens to be the UTC day of the ADS-B request.
-    mockedAxios.get.mockImplementation(async (url: string) =>
-      url.includes("adsb.lol") ? { data: { ac: [plane] } } : { data: { response: [] } }
-    );
+    mockedAxios.get.mockImplementation((async (url: string) =>
+      url.includes("adsb.lol") ? { data: { ac: [plane] } } : { data: { response: [] } }) as never);
     keys.aviationstack = "av"; // something that answers by date, so the wrapper reaches the cascade
     // A zone where the UTC day of "now" is the user's tomorrow (or yesterday).
     const clientTimezone =

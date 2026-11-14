@@ -17,7 +17,7 @@ app.use(errorHandler);
 const ORIGIN = "https://me.switch-on.test";
 let rowId: number;
 
-const put = (body: unknown) => request(app).put("/api/v1/admin/federation").send(body);
+const put = (body: object) => request(app).put("/api/v1/admin/federation").send(body);
 async function reset(data: Record<string, unknown> = {}) {
   await prisma.adminSettings.update({
     where: { id: rowId },

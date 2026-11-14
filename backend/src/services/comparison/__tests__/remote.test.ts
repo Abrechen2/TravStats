@@ -414,6 +414,9 @@ describe("pulling a remote friend's totals", () => {
     username: "x",
     displayName: "X",
     createdAt: new Date(),
+    theirStatus: null,
+    theirStatusAt: null,
+    inviteSwitches: null,
   });
   beforeEach(() =>
     // Checked just now: the queued exchange answers below are all aggregate replies, and a cached

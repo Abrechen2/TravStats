@@ -57,11 +57,11 @@ beforeEach(() => {
 });
 
 describe.each(REMINDER_DOMAINS)("%s reminder", (domain) => {
-  it.each([
+  it.each<[ReminderChannel, boolean, boolean]>([
     ["app", false, true],
     ["mail", true, false],
     ["both", true, true],
-  ] as const)("channel %s: mail=%s push=%s", async (channel, mail, push) => {
+  ])("channel %s: mail=%s push=%s", async (channel, mail, push) => {
     const { args, sendMail } = due(domain, channel);
     await sendDueReminder(args);
     expect(sendMail).toHaveBeenCalledTimes(mail ? 1 : 0);
