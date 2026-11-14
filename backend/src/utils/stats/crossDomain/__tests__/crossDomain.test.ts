@@ -256,7 +256,9 @@ describe("computeNightsByCountry", () => {
         night("rail", "r2"),
         night("sea", "c1"),
       ],
-      (source, id) => ({ "hotel:s1": "IT", "rail:r1": "IT" })[`${source}:${id}`] ?? null
+      (source, id) =>
+        (({ "hotel:s1": "IT", "rail:r1": "IT" }) as Record<string, string>)[`${source}:${id}`] ??
+        null
     );
     expect(out?.countries).toEqual([{ country: "IT", hotel: 2, rail: 1, bus: 0, total: 3 }]);
     expect(out?.unattributed).toEqual({ hotel: 0, sea: 1, rail: 1, bus: 0, air: 0 });

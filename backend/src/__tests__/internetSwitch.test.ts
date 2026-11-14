@@ -87,11 +87,11 @@ describe("internet master switch gates the six external-service columns", () => 
   it("operatorLogosOpenDataEnabled: no Wikidata or Commons lookup while the master switch is off", async () => {
     await set({ operatorLogosOpenDataEnabled: true, internetEnabled: false });
     const fetchSpy = jest.spyOn(globalThis, "fetch");
-    expect(await answerOperatorMark("airline", "Zzyzx Test Airways")).toEqual({
+    expect(await answerOperatorMark("bus", "Zzyzx Test Airways")).toEqual({
       mark: null,
       pending: false,
     });
-    expect(await answerSubjectImage("airline", "Zzyzx Test Airways")).toMatchObject({
+    expect(await answerSubjectImage("vehicle", "Zzyzx Test Airways")).toMatchObject({
       disabled: true,
     });
     expect(fetchSpy).not.toHaveBeenCalled();

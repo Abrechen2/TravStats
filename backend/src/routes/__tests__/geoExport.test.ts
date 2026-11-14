@@ -119,7 +119,7 @@ describe("GPX/KML export (forgejo#402)", () => {
     expect(body).not.toContain(NASTY);
   };
 
-  describe.each([
+  describe.each<[string, () => string, () => string, number]>([
     [
       "flight track",
       () => `/api/v1/flights/${id.flight}/track/export`,
@@ -150,7 +150,7 @@ describe("GPX/KML export (forgejo#402)", () => {
       () => `/api/v1/ferry/${id.ferryBare}/line/export`,
       1,
     ],
-  ] as const)("%s", (_label, path, barePath, segments) => {
+  ])("%s", (_label, path, barePath, segments) => {
     it("gives the owner a valid GPX file with the name escaped", async () => {
       const res = await get(path());
       expect(res.status).toBe(200);

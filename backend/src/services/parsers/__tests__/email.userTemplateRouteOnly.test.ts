@@ -57,7 +57,9 @@ const leg = (dep: string, arr: string, flightNumber?: string) => ({
 });
 
 describe("user template with route-only legs", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it("declines a multi-leg user-template result without flight numbers", async () => {
     (applyUserTemplate as jest.Mock).mockReturnValue([leg("FRA", "HRG"), leg("HRG", "FRA")]);

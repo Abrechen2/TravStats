@@ -91,6 +91,7 @@ beforeEach(() => {
     baseUrl: "https://immich.lan",
     apiKey: "k",
     source: "user",
+    allowPrivate: true,
   });
   findFirstLink.mockResolvedValue({
     id: LINK_ID,

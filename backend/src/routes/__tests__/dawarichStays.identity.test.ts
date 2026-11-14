@@ -140,7 +140,12 @@ beforeEach(async () => {
     degraded: false,
   });
   places.mockResolvedValue({ results: [cafe], degraded: false });
-  connection.mockResolvedValue({ baseUrl: "http://immich.test", apiKey: "k", source: "user" });
+  connection.mockResolvedValue({
+    baseUrl: "http://immich.test",
+    apiKey: "k",
+    source: "user",
+    allowPrivate: true,
+  });
   searchAssetsByDate = jest.fn(async () => ({
     assets: [photo("near", 38.7107, "Lisboa"), photo("far", 38.75, "Lisboa")],
     truncated: false,

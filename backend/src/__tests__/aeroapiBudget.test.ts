@@ -139,7 +139,9 @@ describe("AeroAPI rate limit", () => {
     __resetAeroapiRateForTests();
     jest.useFakeTimers();
   });
-  afterAll(() => jest.useRealTimers());
+  afterAll(() => {
+    jest.useRealTimers();
+  });
 
   it("waits for the oldest slot to age out when that fits the patience, and not otherwise", async () => {
     for (let i = 0; i < AEROAPI_RATE_LIMIT_PER_MINUTE; i++) {

@@ -284,7 +284,7 @@ describe("runBulkRefresh", () => {
       ...listWhere,
       departureTime: expect.objectContaining({}),
     });
-    expect((countWhere as { OR: unknown[] }).OR).toEqual(
+    expect((countWhere as unknown as { OR: unknown[] }).OR).toEqual(
       expect.arrayContaining([{ aircraft: null }, { aircraft: "" }])
     );
   });

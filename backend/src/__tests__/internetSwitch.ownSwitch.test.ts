@@ -80,11 +80,11 @@ describe("a service's own switch still counts while the master internet switch i
   it("operator logos: master on + switch off makes no Wikidata or Commons request", async () => {
     await set({ operatorLogosOpenDataEnabled: false, internetEnabled: true });
     const fetchSpy = jest.spyOn(globalThis, "fetch");
-    expect(await answerOperatorMark("airline", "Zzyzx Test Airways")).toEqual({
+    expect(await answerOperatorMark("bus", "Zzyzx Test Airways")).toEqual({
       mark: null,
       pending: false,
     });
-    expect(await answerSubjectImage("airline", "Zzyzx Test Airways")).toMatchObject({
+    expect(await answerSubjectImage("vehicle", "Zzyzx Test Airways")).toMatchObject({
       disabled: true,
     });
     expect(fetchSpy).not.toHaveBeenCalled();

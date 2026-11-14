@@ -112,6 +112,16 @@ jobs:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - name: Install dependencies
         run: cd backend && npm ci
+      # restoreOlderArchive.test.ts refuses to skip under CI when pg_dump/psql are
+      # missing. node:22-bookworm has neither, and bookworm's own client is 15,
+      # which refuses to dump the 16 server, so the client comes from PGDG.
+      - name: PostgreSQL 16 client tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends postgresql-common ca-certificates >/dev/null
+          /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          apt-get install -y -qq --no-install-recommends postgresql-client-16 >/dev/null
+          pg_dump --version
       # jest.globalSetup.ts refuses any database host that is not local, because
       # the suite deletes every user; there is deliberately no override. Here the
       # job runs in a container and the job-local PostGIS service is reachable as

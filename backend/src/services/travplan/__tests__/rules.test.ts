@@ -3,7 +3,7 @@ import { emptyState, bookingSchema } from "../schema";
 import { applyOperation, applyProposal } from "../operations";
 import { checkPlan, deriveBudget, transferFingerprint } from "../rules";
 import type { PlanState } from "../types";
-function booking(state: PlanState, kind: "flight" | "hotel", reference: string) {
+function booking(state: PlanState, kind: "flight" | "hotel" | "ferry", reference: string) {
   const b = bookingSchema.parse({
     id: randomUUID(),
     kind,
@@ -38,7 +38,15 @@ describe("Travel planning invariants", () => {
   it("separates total booked costs and remaining payment", () => {
     let s = booking(booking(emptyState(), "flight", "A"), "hotel", "B");
     s.costs = [
-      { id: randomUUID(), title: "Food", kind: "estimate", amount: 350, paid: 0, currency: "EUR" },
+      {
+        id: randomUUID(),
+        title: "Food",
+        kind: "estimate",
+        amount: 350,
+        paid: 0,
+        currency: "EUR",
+        splitMemberIds: [],
+      },
     ];
     expect(deriveBudget(s)).toMatchObject({ total: 1810, booked: 1460, paid: 1040, due: 420 });
   });
@@ -52,6 +60,7 @@ describe("Travel planning invariants", () => {
         amount: null,
         paid: 0,
         currency: "EUR",
+        splitMemberIds: [],
       },
       {
         id: randomUUID(),
@@ -60,6 +69,7 @@ describe("Travel planning invariants", () => {
         amount: 10,
         paid: 0,
         currency: "USD",
+        splitMemberIds: [],
       },
     ];
     expect(deriveBudget(s)).toMatchObject({ unknown: 1, otherCurrencies: ["USD"] });

@@ -17,7 +17,7 @@ app.use(errorHandler);
 const ORIGIN = "https://me.services-switch.test";
 let rowId: number;
 
-const put = (body: unknown) =>
+const put = (body: object) =>
   request(app).put("/api/v1/admin/external-services/federation").send(body);
 const row = () =>
   prisma.adminSettings.findUniqueOrThrow({

@@ -159,7 +159,12 @@ function makeApp(): express.Express {
   return app;
 }
 
-const CONN = { baseUrl: "https://immich.lan", apiKey: "k", source: "user" as const };
+const CONN = {
+  baseUrl: "https://immich.lan",
+  apiKey: "k",
+  source: "user" as const,
+  allowPrivate: true,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();

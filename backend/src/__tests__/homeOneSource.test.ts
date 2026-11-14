@@ -3,6 +3,7 @@ import request from "supertest";
 
 import app from "../index";
 import { prisma } from "../db";
+import type { Prisma } from "../prisma";
 import { homeCircle } from "../services/travtrack/shareNarrow";
 
 /**
@@ -36,8 +37,15 @@ describe("home as one source", () => {
   const setData = (periods: unknown[], homePlace: unknown = null) =>
     prisma.userSettings.upsert({
       where: { userId },
-      update: { data: { homePeriods: periods }, homePlace: homePlace as never },
-      create: { userId, data: { homePeriods: periods }, homePlace: homePlace as never },
+      update: {
+        data: { homePeriods: periods } as unknown as Prisma.InputJsonValue,
+        homePlace: homePlace as never,
+      },
+      create: {
+        userId,
+        data: { homePeriods: periods } as unknown as Prisma.InputJsonValue,
+        homePlace: homePlace as never,
+      },
     });
   const get = () => request(app).get("/api/v1/settings/personal").set("Cookie", cookie).expect(200);
   const put = (body: object) =>

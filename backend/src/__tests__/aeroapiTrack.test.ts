@@ -52,13 +52,13 @@ const instance = (over: object = {}) => ({
 
 /** AeroAPI as the sweep sees it: the flight list for a number, the track for an id. */
 function serve(options: { flights?: object[]; track?: object | Error } = {}) {
-  mockedAxios.get.mockImplementation(async (url: string) => {
+  mockedAxios.get.mockImplementation((async (url: string) => {
     if (url.endsWith("/track")) {
       if (options.track instanceof Error) throw options.track;
       return { data: options.track ?? { positions } };
     }
     return { data: { flights: options.flights ?? [instance()] } };
-  });
+  }) as never);
 }
 const httpError = (status: number) =>
   Object.assign(new Error(`HTTP ${status}`), { response: { status } });

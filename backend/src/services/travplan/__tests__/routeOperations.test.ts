@@ -80,7 +80,7 @@ describe("route operations", () => {
       source: null,
     };
     state.items.push(item);
-    state.stationLinks.push({ stationId: b.id, tripStopId: uid() });
+    state.stationLinks.push({ stationId: b.id, tripStopId: uid(), created: [] });
     const next = apply(state, { type: "remove", collection: "stations", id: b.id });
     expect(next.stations.map((s) => s.id)).toEqual([a.id, c.id]);
     expect(next.stages).toHaveLength(0);

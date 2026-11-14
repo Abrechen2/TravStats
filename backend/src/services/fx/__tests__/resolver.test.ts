@@ -31,7 +31,12 @@ describe("resolveRate", () => {
 
   it("falls to the CDN only when the ECB has nothing AND the switch is on", async () => {
     ecb.mockResolvedValue(null);
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     cdn.mockResolvedValue({ rate: 0.0195, source: "cdn" });
     expect(await resolveRate("EGP", "EUR", "2026-03-04")).toEqual({
       rate: 0.0195,
@@ -41,14 +46,24 @@ describe("resolveRate", () => {
 
   it("respects an admin who switched the CDN off", async () => {
     ecb.mockResolvedValue(null);
-    settings.mockResolvedValue({ cdnFallbackEnabled: false, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: false,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     expect(await resolveRate("EGP", "EUR", "2026-03-04")).toBeNull();
     expect(cdn).not.toHaveBeenCalled();
   });
 
   it("returns null rather than throwing when both are dead", async () => {
     ecb.mockResolvedValue(null);
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     cdn.mockRejectedValue(new Error("ENOTFOUND"));
     await expect(resolveRate("EGP", "EUR", "2026-03-04")).resolves.toBeNull();
   });
@@ -57,7 +72,12 @@ describe("resolveRate", () => {
     // A dead provider must not take the chain down with it — that is the whole
     // point of asking a second one.
     ecb.mockRejectedValue(new Error("socket hang up"));
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     cdn.mockResolvedValue({ rate: 0.0195, source: "cdn" });
     expect(await resolveRate("EGP", "EUR", "2026-03-04")).toEqual({
       rate: 0.0195,
@@ -98,7 +118,12 @@ describe("convertToBase", () => {
     // The whole reason `source` exists: a stay converted through the CDN must
     // never be shown as an official ECB rate.
     ecb.mockResolvedValue(null);
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     cdn.mockResolvedValue({ rate: 0.017284254, source: "cdn" });
     const out = await convertToBase(11662, "EGP", "EUR", new Date("2026-03-04"));
     expect(out?.source).toBe("cdn");
@@ -107,7 +132,12 @@ describe("convertToBase", () => {
 
   it("returns null when no provider has a rate — never throws", async () => {
     ecb.mockResolvedValue(null);
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P0, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P0,
+      fallbackUrl: null,
+    });
     cdn.mockResolvedValue(null);
     expect(await convertToBase(11662, "AED", "EUR", new Date("2023-04-30"))).toBeNull();
   });
@@ -147,7 +177,12 @@ describe("resolveRate with a chosen ECB source (#391)", () => {
   });
 
   it("asks the chosen primary first and stops there when it answers", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: F,
+    });
     ecb.mockResolvedValue({ rate: 0.9, source: "ecb" });
     expect(await resolveRate("USD", "EUR", "2024-01-02")).toEqual({ rate: 0.9, source: "ecb" });
     expect(ecb).toHaveBeenCalledTimes(1);
@@ -156,7 +191,12 @@ describe("resolveRate with a chosen ECB source (#391)", () => {
   });
 
   it("tries the fallback source only after the primary failed, and still reports ecb", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: F,
+    });
     ecb.mockRejectedValueOnce(new Error("timeout"));
     ecb.mockResolvedValueOnce({ rate: 0.8, source: "ecb" });
     expect(await resolveRate("USD", "EUR", "2024-01-02")).toEqual({ rate: 0.8, source: "ecb" });
@@ -165,7 +205,12 @@ describe("resolveRate with a chosen ECB source (#391)", () => {
   });
 
   it("goes primary -> fallback -> CDN when both ECB sources fail", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: F,
+    });
     ecb.mockResolvedValue(null);
     cdn.mockResolvedValue({ rate: 0.0195, source: "cdn" });
     expect(await resolveRate("EGP", "EUR", "2024-01-02")).toEqual({ rate: 0.0195, source: "cdn" });
@@ -174,14 +219,24 @@ describe("resolveRate with a chosen ECB source (#391)", () => {
   });
 
   it("makes one ECB request when no fallback is chosen", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: false, primaryUrl: P, fallbackUrl: null });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: false,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: null,
+    });
     ecb.mockResolvedValue(null);
     expect(await resolveRate("USD", "EUR", "2024-01-02")).toBeNull();
     expect(ecb).toHaveBeenCalledTimes(1);
   });
 
   it("does not ask the same source twice when fallback equals primary", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: false, primaryUrl: P, fallbackUrl: P });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: false,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: P,
+    });
     ecb.mockResolvedValue(null);
     await resolveRate("USD", "EUR", "2024-01-02");
     expect(ecb).toHaveBeenCalledTimes(1);
@@ -201,7 +256,12 @@ describe("resolveRate with a chosen ECB source (#391)", () => {
   });
 
   it("hands each provider no more time than is left of the chain budget", async () => {
-    settings.mockResolvedValue({ cdnFallbackEnabled: true, primaryUrl: P, fallbackUrl: F });
+    settings.mockResolvedValue({
+      cdnFallbackEnabled: true,
+      internetEnabled: true,
+      primaryUrl: P,
+      fallbackUrl: F,
+    });
     ecb.mockResolvedValue(null);
     cdn.mockResolvedValue(null);
     await resolveRate("EGP", "EUR", "2024-01-02");

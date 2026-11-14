@@ -28,7 +28,7 @@ jest.mock("../services/airportLookup", () => ({
   enrichAirportMetadata: jest.fn(async () => false),
 }));
 
-const keySourceMock = { value: "global" as "user" | "global" | "env" };
+const keySourceMock = { value: "global" as "user" | "global" };
 const apiKeyResolverMock = {
   getApiKey: jest.fn(async (_provider: string, _userId?: string) => null as string | null),
   // The lookup resolves key AND source in one read; the mock serves the key from getApiKey.
@@ -317,11 +317,10 @@ describe("lookupFlightAeroapi — the budget guard (forgejo#409)", () => {
     expect(outcomes.all()).toEqual([{ provider: "aeroapi", outcome: "quota" }]);
   });
 
-  it.each([
+  it.each<["user" | "global", string | undefined]>([
     ["user", "user-1"],
     ["global", undefined],
-    ["env", undefined],
-  ] as const)(
+  ])(
     "bills by the source of the very key it sends: %s key → ownKeyOfUser %s",
     async (source, expectedOwner) => {
       onlyAeroapiKey();
