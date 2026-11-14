@@ -39,6 +39,7 @@ export type AreaPageId =
   | "telefone"
   | "dienstek"
   | "daten"
+  | "einrichtung"
   | "ueber"
   | "tt-aufz"
   | "tt-erk"
@@ -61,7 +62,7 @@ export type AreaPageId =
   | "stamm";
 
 /** Whose component draws the mount. `about` is the shared Über-TravStats card. */
-export type MountSource = "personal" | "admin" | "about";
+export type MountSource = "personal" | "admin" | "about" | "readiness";
 
 export interface AreaSectionDef extends SectionDef<string> {
   source: MountSource;
@@ -115,6 +116,12 @@ const ABOUT_DEF: SectionDef<string> = {
   level: "standard",
 };
 
+const READINESS_DEF: SectionDef<string> = {
+  id: "readiness",
+  labelKey: "readiness:title",
+  level: "standard",
+};
+
 function mount(
   id: string,
   source: MountSource,
@@ -126,7 +133,9 @@ function mount(
       ? personalDefs.get(component)
       : source === "admin"
         ? adminDefs.get(component)
-        : ABOUT_DEF;
+        : source === "readiness"
+          ? READINESS_DEF
+          : ABOUT_DEF;
   if (!base) throw new Error(`settings area: no ${source} section "${component}"`);
   return {
     ...base,
@@ -257,6 +266,7 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
     P("backup", { anchors: ["export"] }),
     P("import", { anchors: ["railImport"] }),
   ]),
+  page("einrichtung", "shield", [mount("readiness", "readiness", "readiness")]),
   page("ueber", "info", [mount("about", "about", "about")]),
   // ---- TravTrack (only where the server offers it, or the account holds data)
   page("tt-aufz", "map-pin", [P("ttRecording", LOC), P("ttPlaces", TT), P("ttZones", TT)]),

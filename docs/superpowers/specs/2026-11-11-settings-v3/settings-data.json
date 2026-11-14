@@ -2168,6 +2168,39 @@
       ]
     },
     {
+      "id": "einrichtung",
+      "g": "konto",
+      "de": "Einrichtung & Zustand",
+      "en": "Setup & status",
+      "s": [
+        {
+          "id": "einrichtung-zustand",
+          "de": "Einrichtung & Zustand",
+          "en": "Setup & status",
+          "rows": [
+            {
+              "id": "readiness",
+              "t": "status",
+              "inv": "Setup readiness page",
+              "de": [
+                "Einrichtung & Zustand",
+                "",
+                "Was noch fehlt und was sich nach einem Update geändert hat."
+              ],
+              "en": [
+                "Setup & status",
+                "",
+                "What is still missing and what changed after an update."
+              ],
+              "m": "readiness",
+              "x": 0,
+              "d": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "ueber",
       "g": "konto",
       "de": "Über TravStats",

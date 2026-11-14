@@ -22,6 +22,7 @@ describe("settings menu order", () => {
       "telefone",
       "dienstek",
       "daten",
+      "einrichtung",
       "ueber",
       // TravTrack, TravPlan
       "tt-aufz",
