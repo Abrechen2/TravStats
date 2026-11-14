@@ -70,26 +70,41 @@ export interface DialogCopy {
   word?: string;
 }
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 /**
  * B9 copy: the designer's confirmation (`settingsRows:dialogs.<id>`), with its
  * numbers filled in. `count` selects the plural form of "Wie viel" and of the
- * button, which names the amount.
+ * button, which names the amount. A dialog without a `word` asks for none:
+ * whether it has one is asked of i18next, because a missing key comes back as
+ * its own name without the namespace, and that name was drawn as the word to type.
  */
+export function dialogCopyOf(
+  t: Translate,
+  exists: Exists,
+  id: string,
+  vars: Record<string, unknown> & { count?: number } = {}
+): DialogCopy {
+  const k = (part: string): string => t(`settingsRows:dialogs.${id}.${part}`, vars);
+  const wordKey = `settingsRows:dialogs.${id}.word`;
+  const word = exists(wordKey) ? t(wordKey, vars) : "";
+  return {
+    title: k("title"),
+    affects: k("affects"),
+    amount: k("amount"),
+    after: k("after"),
+    confirmLabel: k("confirm"),
+    ...(word ? { word } : {}),
+  };
+}
+
 export function useDialogCopy(): (
   id: string,
   vars?: Record<string, unknown> & { count?: number }
 ) => DialogCopy {
-  const { t } = useTranslation(["settingsRows"]);
-  return (id, vars = {}) => {
-    const k = (part: string): string => t(`settingsRows:dialogs.${id}.${part}`, vars);
-    const word = t(`settingsRows:dialogs.${id}.word`, { ...vars, defaultValue: "" });
-    return {
-      title: k("title"),
-      affects: k("affects"),
-      amount: k("amount"),
-      after: k("after"),
-      confirmLabel: k("confirm"),
-      ...(word && !word.startsWith("settingsRows:") ? { word } : {}),
-    };
-  };
+  const { t, i18n } = useTranslation(["settingsRows"]);
+  // Without `exists` (the suite's key-echo mock) no dialog asks for a word.
+  const exists: Exists =
+    typeof i18n?.exists === "function" ? (key) => i18n.exists(key) : () => false;
+  return (id, vars = {}) => dialogCopyOf(t, exists, id, vars);
 }

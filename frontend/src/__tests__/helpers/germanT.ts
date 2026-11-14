@@ -36,12 +36,22 @@ export const germanT: TFunction = instance.t.bind(instance) as TFunction;
 /** A `useTranslation` stand-in for `vi.mock("…/hooks/useTranslation")`. */
 export function germanUseTranslation(): {
   t: TFunction;
-  i18n: { language: string; changeLanguage: () => Promise<void>; isInitialized: boolean };
+  i18n: {
+    language: string;
+    changeLanguage: () => Promise<void>;
+    isInitialized: boolean;
+    exists: (key: string) => boolean;
+  };
   ready: boolean;
 } {
   return {
     t: germanT,
-    i18n: { language: "de", changeLanguage: async () => {}, isInitialized: true },
+    i18n: {
+      language: "de",
+      changeLanguage: async () => {},
+      isInitialized: true,
+      exists: (key) => instance.exists(key),
+    },
     ready: true,
   };
 }
