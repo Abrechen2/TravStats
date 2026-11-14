@@ -158,7 +158,7 @@ describe("Track layer rows are switches", () => {
     expect(heat).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "track:map.layers.routes" })).toBeChecked();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    heat.focus();
+    act(() => heat.focus());
     expect(heat).toHaveFocus();
     // jsdom has no native Space activation; the click a Space press makes is what counts.
     fireEvent.click(heat);

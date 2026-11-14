@@ -26,7 +26,7 @@ describe("Abrechen2Credit", () => {
 
   it("links to the English site for an English reader", () => {
     render(<Abrechen2Credit />);
-    const link = screen.getByRole("link", { name: "A project by abrechen2" });
+    const link = screen.getByRole("link", { name: /A project by\s*abrechen2/ });
     expect(link).toHaveAttribute("href", "https://www.abrechen2.de/en/");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
