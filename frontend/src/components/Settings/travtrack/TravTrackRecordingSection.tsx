@@ -17,8 +17,11 @@ import { TripRecordingRow } from "../TripRecordingSection";
 import TravTrackTripNote from "../TravTrackTripNote";
 
 const NS = "settings:tt.recording";
-/** Where a phone is paired and signed out (Profil & Anmeldung). */
-const PAIRING_PATH = "/settings/telefone";
+/**
+ * Where a phone is paired and signed out. The hash is load-bearing: a closed
+ * pairing gate gives way only to a link that names the section.
+ */
+const PAIRING_PATH = "/settings/telefone#devices";
 
 /**
  * Settings → TravTrack → Aufzeichnung: what is stored (points, since, last

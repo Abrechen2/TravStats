@@ -218,6 +218,29 @@ describe("ServicesPage", () => {
       );
     });
 
+    it("a refused switch-on after the first key is said, and no test runs (Codex, rc.29 review)", async () => {
+      api.adminUpdate.mockImplementation(async (_id: string, body: { enabled?: boolean }) => {
+        if (body.enabled === true) throw new Error("refused");
+        return {};
+      });
+      api.adminTest.mockResolvedValue({ ok: true, reason: null, usedQuota: false, lastTest: null });
+      api.adminOverview.mockResolvedValue(
+        withServer({
+          configured: false,
+          enabled: false,
+          fields: [{ key: "apiKey", kind: "secret", value: null, masked: true, expert: false }],
+        })
+      );
+      await show(true);
+      await typeServerKey("first-key");
+      await waitFor(
+        () => expect(api.adminUpdate).toHaveBeenCalledWith("airlabs", { enabled: true }),
+        WAIT
+      );
+      expect(await screen.findByText(/errors\.network/, undefined, WAIT)).toBeInTheDocument();
+      expect(api.adminTest).not.toHaveBeenCalled();
+    });
+
     it("a key added to a service that was paused on purpose does not switch it back on", async () => {
       api.adminUpdate.mockResolvedValue({});
       api.adminTest.mockResolvedValue({ ok: true, reason: null, usedQuota: false, lastTest: null });

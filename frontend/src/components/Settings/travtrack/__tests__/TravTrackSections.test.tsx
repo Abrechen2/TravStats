@@ -197,7 +197,8 @@ describe("Aufzeichnung: what is stored", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /settings:tt\.recording\.devices\.jump/ })
     );
-    expect(navigate).toHaveBeenCalledWith("/settings/telefone", undefined);
+    // Named by its hash, or the closed beta gate hides the phones (Codex, rc.29 review).
+    expect(navigate).toHaveBeenCalledWith("/settings/telefone#devices", undefined);
   });
 
   it("keeps the stored count when last-seen is refused because TravTrack is off", async () => {

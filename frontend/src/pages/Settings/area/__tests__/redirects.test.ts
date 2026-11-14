@@ -336,6 +336,17 @@ describe("every page of the settings area before settings v3 still opens", () =>
     expect(resolve("/settings/server#passkeys").to).toBe("/settings/adressen#passkeys");
   });
 
+  it("reads a card named by the old hash like one named by ?service= (Codex, rc.29 review)", () => {
+    expect(resolve("/settings/services#geocoder").to).toBe("/settings/eigene?match=photon");
+    expect(resolve("/settings/services#selfHostedRouting").to).toBe("/settings/eigene?match=osrm");
+    expect(resolve("/settings/services#federation").to).toBe(
+      "/settings/funktionen?match=fedon#sharing"
+    );
+    expect(resolve("/settings/services#immich").to).toBe("/settings/dienstek?service=immich");
+    // The exchange-rate card is gone; its setting is a row of its own.
+    expect(resolve("/settings/services?service=fx").to).toBe("/settings/eigene?match=fxsrc");
+  });
+
   it("sends a card that has a page of its own there, and a server-only card to the server's page", () => {
     // A bookmark of the catalogue's geocoder or mail card from before the split.
     expect(resolve("/settings/dienstek?service=geocoder").to).toBe("/settings/eigene?match=photon");

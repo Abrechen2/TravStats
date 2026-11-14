@@ -1,4 +1,4 @@
-import { ACCOUNT_CARDS } from "../../../components/Services/serviceCards";
+import { ACCOUNT_CARDS, SERVICE_CARDS } from "../../../components/Services/serviceCards";
 import { MAP_PANEL_PARAM, MAP_PANEL_ROUTES } from "../../../lib/mapRoutes";
 import { normalizeSectionId } from "../../../lib/sectionAliases";
 import type { DomainKey } from "../../../shared/domains";
@@ -86,11 +86,17 @@ const MOVED_CARD_TARGETS: Readonly<Record<string, Target>> = {
   geocoder: { page: "eigene", match: "photon" },
   selfHostedRouting: { page: "eigene", match: "osrm" },
   updatesTemplates: { page: "eigene", match: "tplrepo" },
+  fx: { page: "eigene", match: "fxsrc" },
 };
 
 /** The two pages of the service catalogue: the account's half and the server's. */
 const SERVICE_PAGES: ReadonlySet<string> = new Set(["dienstek", "dienste"]);
 const ACCOUNT_CARD_IDS: ReadonlySet<string> = new Set(ACCOUNT_CARDS.map((c) => c.id));
+/** Every id an old services link may carry as its hash (`/settings/services#geocoder`). */
+const CARD_HASH_IDS: ReadonlySet<string> = new Set([
+  ...SERVICE_CARDS.map((c) => c.id),
+  ...Object.keys(MOVED_CARD_TARGETS),
+]);
 
 /** Old admin section -> its place (§6.1). A page address without a hash drops it. */
 const ADMIN_TARGETS: Readonly<Record<string, Target>> = {
@@ -333,7 +339,15 @@ export function resolveAddress(input: AddressInput): ResolvedAddress {
   let page = target.page ?? DEFAULT_AREA_PAGE;
   let sectionId = target.section;
   let matchRow = first(target.match, params.get("match"));
-  let service = first(target.service, SERVICE_PAGES.has(page) ? params.get("service") : null);
+  // Before settings v3 a card was named by the hash as well as by `?service=`;
+  // a page of today's area keeps its own anchors.
+  const legacy = !fromAdmin && !(pageSeg && findAreaPage(pageSeg));
+  const cardHash = legacy && hashSection && CARD_HASH_IDS.has(hashSection) ? hashSection : null;
+  let service = first(
+    target.service,
+    SERVICE_PAGES.has(page) ? first(params.get("service"), cardHash) : null
+  );
+  if (service && service === cardHash && sectionId === cardHash) sectionId = undefined;
   // A card of the catalogue names a place: the ones with a page of their own
   // since settings v3 S5 send the address there, and a card only the server has
   // is on the server's half, not the account's.

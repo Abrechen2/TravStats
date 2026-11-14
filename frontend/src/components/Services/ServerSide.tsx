@@ -257,13 +257,16 @@ export default function ServerSide({ card }: { card: ServiceCardDef }): JSX.Elem
               uses("on") &&
               Object.values(changes).some((v) => typeof v === "string" && v.length > 0);
             if (firstKey) {
+              // A refused switch-on keeps its line on the card: no test runs to clear it.
+              let refused: string | null = null;
               if (service?.consent !== undefined) {
                 if (await new Promise<boolean>((resolve) => setAsk(() => resolve))) {
-                  await admin.setEnabled(card.id, true, true);
+                  refused = await admin.setEnabled(card.id, true, true);
                 }
               } else {
-                await admin.setEnabled(card.id, true);
+                refused = await admin.setEnabled(card.id, true);
               }
+              if (refused) throw new Error("switch-on refused");
             }
             if (uses("test")) await admin.test(card.id);
           }}
