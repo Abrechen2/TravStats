@@ -155,6 +155,27 @@ describe("WebGLGuard (forgejo#332)", () => {
       }
     });
 
+    it("tells its owner before the replacement mounts, so state about the old map can be reset", () => {
+      vi.useFakeTimers();
+      try {
+        const onRebuild = vi.fn();
+        stubGetContext({ getExtension: () => ({ loseContext: () => {} }) });
+        render(
+          <WebGLGuard onRebuild={onRebuild}>
+            <canvas data-testid="map-canvas" />
+          </WebGLGuard>
+        );
+        act(() => lose());
+        expect(onRebuild).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(WEBGL_REMOUNT_DELAY_MS + 1);
+        });
+        expect(onRebuild).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("ignores a context lost by something outside the guard", () => {
       renderMap();
       const stray = document.createElement("canvas");

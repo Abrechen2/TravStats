@@ -68,6 +68,11 @@ export function arcAtTime(arc: ArcDatum, t: number | null): ArcDatum {
   if (t === null || !tl) return arc;
   const k = countUpTo(tl.times, t);
   if (k === arc.count) return arc;
+  // A recorded line stands for ONE flight but quotes its route's count: only the
+  // numbers move, the flight it belongs to stays.
+  if (arc.recorded) {
+    return { ...arc, count: k, flownCount: tl.flown[k], scheduledCount: tl.scheduled[k] };
+  }
   return {
     ...arc,
     count: k,

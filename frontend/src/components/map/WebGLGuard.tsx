@@ -129,12 +129,21 @@ function WebGLLostNotice({
 export default function WebGLGuard({
   children,
   className,
+  onRebuild,
 }: {
   children: ReactNode;
   /** Replaces the default notice box classes where the map has its own frame. */
   className?: string;
+  /**
+   * Called when a lost map is thrown away, before its replacement mounts. A
+   * guard that wraps only the map (not the state around it) lets the owner
+   * reset what describes the OLD map — "loaded", "already fitted".
+   */
+  onRebuild?: () => void;
 }): JSX.Element {
   const [ok, setOk] = useState(probeWebGL2);
+  const onRebuildRef = useRef(onRebuild);
+  onRebuildRef.current = onRebuild;
   const [phase, setPhase] = useState<Phase>("ok");
   const [generation, setGeneration] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -142,6 +151,7 @@ export default function WebGLGuard({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const rebuild = useCallback((): void => {
+    onRebuildRef.current?.();
     setOk(probeWebGL2());
     setGeneration((g) => g + 1);
     setPhase("ok");

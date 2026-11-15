@@ -72,6 +72,20 @@ describe("live playback timeline", () => {
     expect(arcAtTime(fra, null)).toBe(fra);
   });
 
+  it("recounts a recorded line's route count too, without swapping its own flight (Codex review)", () => {
+    const { arcsData } = buildGlobeArcData(FLIGHTS, 1, false, 1, undefined, true);
+    const base = arcsData.find((a) => a.departure.iata === "FRA")!;
+    const recorded = {
+      ...base,
+      recorded: "solid" as const,
+      flightIds: ["b"],
+      visibleFrom: day(8),
+    };
+    const at = arcAtTime(recorded, day(9));
+    expect(at.count).toBe(2);
+    expect(at.flightIds).toEqual(["b"]);
+  });
+
   it("splits flown from scheduled as of the cursor", () => {
     const flights = [
       flight("a", FRA, JFK, iso(2)),

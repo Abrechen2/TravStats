@@ -235,7 +235,11 @@ export function buildGlobeArcData(
         // Never before the route itself shows: a recording is drawn beside its
         // route's arc, not instead of it.
         ...(visibleFrom !== undefined
-          ? { visibleFrom: Math.max(timeOf.get(flightId) ?? visibleFrom, visibleFrom) }
+          ? {
+              visibleFrom: Math.max(timeOf.get(flightId) ?? visibleFrom, visibleFrom),
+              // its route's counts, as of the cursor, for the hover card
+              timeline: live?.timeline,
+            }
           : {}),
       });
     }
