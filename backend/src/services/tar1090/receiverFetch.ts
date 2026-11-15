@@ -61,6 +61,11 @@ export const MAX_TOTAL_POINTS = 400_000;
 export const MAX_WINDOW_MS = 2 * 86_400_000;
 /** The whole fetch, every file included. */
 export const FETCH_DEADLINE_MS = 60_000;
+let deadlineMs = FETCH_DEADLINE_MS;
+/** Test hook: a slow-drip test cannot wait a minute. */
+export function __setFetchDeadlineForTests(ms: number | null): void {
+  deadlineMs = ms ?? FETCH_DEADLINE_MS;
+}
 const DAY_MS = 86_400_000;
 /** Legs of two day files this close are one flight that crossed midnight UTC. */
 const JOIN_GAP_MS = 15 * 60_000;
@@ -138,20 +143,38 @@ async function fetchTraceFile(
   if (timeLeft <= 0) return { kind: "failed", reason: "timeout" };
   try {
     assertTargetAllowed(url, receiver.policy);
+    const limit = Math.max(1, Math.min(MAX_FILE_BYTES, budget.bytesLeft));
     const response = await axios.get(url, {
+      // `timeout` only covers an idle socket; the signal cuts the WHOLE transfer
+      // at the deadline, so a receiver dripping bytes cannot outlive it.
       timeout: Math.min(TIMEOUT_MS, timeLeft),
+      signal: AbortSignal.timeout(timeLeft),
       maxRedirects: 0,
-      maxContentLength: Math.max(1, Math.min(MAX_FILE_BYTES, budget.bytesLeft)),
+      // Counted on the bytes actually received, after decompression - never on
+      // the Content-Length a receiver announces.
+      maxContentLength: limit,
+      maxBodyLength: limit,
+      responseType: "arraybuffer",
       headers: { Accept: "application/json" },
       validateStatus: (status) => status === 200 || status === 404,
       ...axiosAgentsFor(receiver.policy),
     });
     if (response.status === 404) return { kind: "missing" };
-    const length = Number(response.headers?.["content-length"]);
-    // Content-Length is absent on chunked/gzipped answers; the parsed size stands in.
-    budget.bytesLeft -=
-      Number.isFinite(length) && length > 0 ? length : JSON.stringify(response.data).length;
-    const parsed = parseTrace(response.data);
+    const raw: unknown = response.data;
+    let body: unknown = raw;
+    if (Buffer.isBuffer(raw) || raw instanceof ArrayBuffer) {
+      const bytes = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+      budget.bytesLeft -= bytes.length;
+      try {
+        body = JSON.parse(bytes.toString("utf-8"));
+      } catch {
+        return { kind: "failed", reason: "bad_trace" };
+      }
+    } else {
+      // Not a byte body (an adapter that already parsed it): size it by its JSON.
+      budget.bytesLeft -= JSON.stringify(raw)?.length ?? 0;
+    }
+    const parsed = parseTrace(body);
     if (parsed.ok) {
       budget.pointsLeft -= parsed.legs.reduce((n, leg) => n + leg.points.length, 0);
       if (budget.pointsLeft < 0) return { kind: "failed", reason: "too_large" };
@@ -160,8 +183,17 @@ async function fetchTraceFile(
     return { kind: "legs", legs: parsed.legs, registration: parsed.registration };
   } catch (error) {
     if (isPrivateTargetRefusal(error)) return { kind: "failed", reason: "private_target" };
-    if (/maxContentLength/i.test((error as { message?: string }).message ?? "")) {
+    if (/maxContentLength|maxBodyLength/i.test((error as { message?: string }).message ?? "")) {
+      // At least the limit was received; spend it so the next file cannot get it again.
+      budget.bytesLeft = 0;
       return { kind: "failed", reason: "too_large" };
+    }
+    if (
+      axios.isCancel(error) ||
+      (error as { name?: string }).name === "AbortError" ||
+      (error as { code?: string }).code === "ERR_CANCELED"
+    ) {
+      return { kind: "failed", reason: "timeout" };
     }
     const kind = classifyProviderError(error);
     if (kind === "auth") return { kind: "failed", reason: "auth" };
@@ -216,7 +248,7 @@ export async function fetchReceiverTrack(
     return { ok: false, reason: "window_too_long" };
   }
   const budget: Budget = {
-    deadlineAt: Date.now() + FETCH_DEADLINE_MS,
+    deadlineAt: Date.now() + deadlineMs,
     bytesLeft: MAX_TOTAL_BYTES,
     pointsLeft: MAX_TOTAL_POINTS,
   };
