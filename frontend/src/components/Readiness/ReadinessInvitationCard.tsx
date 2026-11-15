@@ -100,11 +100,13 @@ export default function ReadinessInvitationCard({
       data-testid="readiness-invitation"
       className="fixed flex flex-col"
       style={{
-        // Bottom-LEFT: the map's key and domain filter sit bottom-right, the
-        // next-up cards top-right, and toasts bottom-centre. Capped at 360 so
-        // it stops short of the key at 820 px.
+        // Bottom-CENTRE: the dashboard's map panel sits bottom-left (the card
+        // covered it there), its key and domain filter bottom-right, the time
+        // bar top-centre. Toasts share the bottom-centre but are short-lived.
+        // Capped at 360 so it stays clear of both corners at 820 px.
         bottom: "var(--ts-space-lg)",
-        left: "var(--ts-space-lg)",
+        left: "50%",
+        transform: "translateX(-50%)",
         width: "min(360px, calc(100vw - 2 * var(--ts-space-lg)))",
         gap: "var(--ts-space-sm)",
         padding: "var(--ts-space-md)",
