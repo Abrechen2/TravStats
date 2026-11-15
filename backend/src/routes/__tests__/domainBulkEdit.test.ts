@@ -347,6 +347,25 @@ describe("POST /<domain>/bulk-edit", () => {
     expect(retry.body.data.summary).toEqual({ updated: 1, unchanged: 1, failed: 0 });
   });
 
+  it("takes the version claim back when the write fails, so the retry is not a conflict", async () => {
+    const a = await MAKE.rail(userId);
+    const base = ((await READ.rail(a.id))?.updatedAt as Date).toISOString();
+    // Postgres refuses a NUL byte in text: a real failure of the write itself.
+    const bad = await send("rail", {
+      ids: [a.id],
+      tags: { mode: "add", values: ["a\u0000b"] },
+      baseVersions: { [a.id]: base },
+    });
+    expect(bad.body.data.results).toEqual([{ id: a.id, status: "failed", code: "UPDATE_FAILED" }]);
+    expect(((await READ.rail(a.id))?.updatedAt as Date).toISOString()).toBe(base);
+    const retry = await send("rail", {
+      ids: [a.id],
+      tags: { mode: "add", values: ["ok"] },
+      baseVersions: { [a.id]: base },
+    });
+    expect(retry.body.data.results).toEqual([{ id: a.id, status: "updated" }]);
+  });
+
   it("refuses more than 200 ids and a repeated id", async () => {
     const a = await MAKE.rail(userId);
     expect(

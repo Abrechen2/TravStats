@@ -142,8 +142,20 @@ function planFor(
   return Object.keys(data).length === 0 && companionIds === null ? null : { data, companionIds };
 }
 
-async function writePlan(spec: DomainSpec, row: Row, plan: Plan): Promise<void> {
-  await prisma.$transaction(async (tx: DbTransaction) => {
+/**
+ * One row, one transaction. The version claim sits INSIDE it, so a write the
+ * database then refuses takes the claim back and the retry still meets the
+ * version the client read. False when the row moved on (nothing written).
+ */
+async function writePlan(
+  spec: DomainSpec,
+  userId: string,
+  row: Row,
+  plan: Plan,
+  base: string | undefined
+): Promise<boolean> {
+  return prisma.$transaction(async (tx: DbTransaction) => {
+    if (!(await claimed(spec, userId, row.id, base, tx))) return false;
     if (plan.companionIds !== null && spec.links) {
       await replaceCompanionLinks(
         linksOf(tx, spec.links.delegate) as never,
@@ -162,11 +174,12 @@ async function writePlan(spec: DomainSpec, row: Row, plan: Plan): Promise<void> 
     }
     // The whole edit is propagated once, after the last row (a generic delegate, so no scanner mark).
     await delegateOf(tx, spec.delegate).update({ where: { id: row.id }, data });
+    return true;
   });
 }
 
 /** The stay's own update derives its status, copies the trip's share group and propagates. */
-async function writeStay(userId: string, row: Row, plan: Plan): Promise<void> {
+async function writeStay(userId: string, row: Row, plan: Plan): Promise<true> {
   const patch: Record<string, unknown> = { ...plan.data };
   await updateStayRecord(
     userId,
@@ -175,6 +188,7 @@ async function writeStay(userId: string, row: Row, plan: Plan): Promise<void> {
     "typed",
     false
   );
+  return true;
 }
 
 async function loadPersons(
@@ -199,12 +213,13 @@ async function claimed(
   spec: DomainSpec,
   userId: string,
   id: string,
-  base: string | undefined
+  base: string | undefined,
+  db: Pick<typeof prisma, "$queryRawUnsafe"> = prisma
 ): Promise<boolean> {
   if (base === undefined) return true;
   const entity = syncEntity(spec.syncEntity);
   if (!entity) throw new Error(`bulk edit: ${spec.syncEntity} is not a sync entity`);
-  return claimVersion(entity, id, userId, base);
+  return claimVersion(entity, id, userId, base, db);
 }
 
 export async function bulkEditDomain(
@@ -249,12 +264,16 @@ export async function bulkEditDomain(
       continue;
     }
     try {
-      if (!(await claimed(spec, userId, id, edit.baseVersions?.[id]))) {
+      const base = edit.baseVersions?.[id];
+      // A stay is written by its own update, which opens its own transaction:
+      // its claim comes first, outside it.
+      const wrote = spec.ownWrite
+        ? (await claimed(spec, userId, id, base)) && (await writeStay(userId, row, plan))
+        : await writePlan(spec, userId, row, plan, base);
+      if (!wrote) {
         results.push({ id, status: "failed", code: "VERSION_CONFLICT" });
         continue;
       }
-      if (spec.ownWrite) await writeStay(userId, row, plan);
-      else await writePlan(spec, row, plan);
       written.push(id);
       if (row.tripId) touchedTrips.add(row.tripId as string);
       if (plan.data.tripId) touchedTrips.add(plan.data.tripId as string);

@@ -12,6 +12,10 @@ import { useServerPagination } from "../table/useServerPagination";
 import { useTableHints } from "../ui/useTableHints";
 import { FilterField } from "../table/ListFilterBar";
 import { FieldError } from "../form";
+import { useRowSelection } from "../bulkEdit/useRowSelection";
+import DomainBulkBar, { BulkStartButton } from "../bulkEdit/DomainBulkBar";
+import BulkRowCheck from "../bulkEdit/BulkRowCheck";
+import { stayBulkRow } from "../bulkEdit/bulkRows";
 import { StayEditor } from "./StayEditor";
 import { StayDeleteConfirm } from "./StayDeleteConfirm";
 import { StayStatusPill } from "./StayStatusPill";
@@ -171,6 +175,12 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
     onChanged?.();
   };
 
+  // forgejo#405 A4: an explicit selection for the bulk edit.
+  const selection = useRowSelection();
+  const bulkRows = useMemo(() => rows.map(stayBulkRow), [rows]);
+  const refreshSelection = selection.refresh;
+  useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
+
   const columns = useMemo<TableColumn[]>(
     () =>
       COLUMNS.map((column) => ({
@@ -222,20 +232,23 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
       trip: stay.trip?.name ?? "—",
       status: lifecycle ? <StayStatusPill status={lifecycle} /> : "—",
       actions: (
-        <RowActions>
-          <RowActionButton
-            icon="edit"
-            label={t("common:buttons.edit")}
-            testId={`stay-view-edit-${stay.id}`}
-            onClick={() => setEditing(stay)}
-          />
-          <RowActionButton
-            icon="delete"
-            label={t("common:buttons.delete")}
-            testId={`stay-view-delete-${stay.id}`}
-            onClick={() => setToDelete(stay)}
-          />
-        </RowActions>
+        <>
+          <BulkRowCheck selection={selection} rows={[stayBulkRow(stay)]} />
+          <RowActions>
+            <RowActionButton
+              icon="edit"
+              label={t("common:buttons.edit")}
+              testId={`stay-view-edit-${stay.id}`}
+              onClick={() => setEditing(stay)}
+            />
+            <RowActionButton
+              icon="delete"
+              label={t("common:buttons.delete")}
+              testId={`stay-view-delete-${stay.id}`}
+              onClick={() => setToDelete(stay)}
+            />
+          </RowActions>
+        </>
       ),
     };
   };
@@ -338,6 +351,18 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         </div>
       ) : (
         <>
+          <div className="mb-3 flex justify-end">
+            <BulkStartButton selection={selection} />
+          </div>
+          <DomainBulkBar
+            domain="stay"
+            selection={selection}
+            pageRows={bulkRows}
+            onApplied={() => {
+              reload();
+              onChanged?.();
+            }}
+          />
           <TablePagination {...pagination} allowAll={false} placement="top" />
           <Table columns={columns} label={t("lodging:stayView.title")} {...tableHints}>
             {rows.map((stay) => {

@@ -590,7 +590,7 @@ export const pdfParseLimiter = importLimit({
  * up to 20 flights, so ~1000 flights/hour for bulk email imports. Bulk edit
  * has a bucket of its own: sharing this one let a few edit rounds lock imports out.
  */
-const batchLimiter = (message: string) =>
+export const batchLimiter = (message: string) =>
   importLimit({
     windowMs: 60 * 60 * 1000,
     max: patAwareMax(50),
@@ -601,9 +601,6 @@ const batchLimiter = (message: string) =>
   });
 export const batchCreationLimiter = batchLimiter("Too many batch requests, please try again later");
 export const bulkEditLimiter = batchLimiter("Too many bulk edits, please try again later");
-/** One bucket per domain's bulk edit (forgejo#405 A4): a rail clean-up must not lock cruises out. */
-export const makeDomainBulkEditLimiter = () =>
-  batchLimiter("Too many bulk edits, please try again later");
 
 /**
  * Rate limiter for user-supplied FILE uploads. Named for its first consumer

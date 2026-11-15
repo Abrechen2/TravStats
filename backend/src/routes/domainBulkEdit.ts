@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
-import { makeDomainBulkEditLimiter } from "../middleware/rateLimit";
+import { batchLimiter } from "../middleware/rateLimit";
 import {
   BULK_EDIT_PATHS,
   domainBulkEditSchema,
@@ -23,7 +23,8 @@ const router = Router();
 
 for (const [domain, path] of Object.entries(BULK_EDIT_PATHS) as Array<[BulkDomain, string]>) {
   const schema = domainBulkEditSchema(domain);
-  const limiter = makeDomainBulkEditLimiter();
+  const limiter = // One bucket per domain: a rail clean-up must not lock cruises out.
+    batchLimiter("Too many bulk edits, please try again later");
   router.post(
     path,
     authenticate,

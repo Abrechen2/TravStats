@@ -1,5 +1,11 @@
 import { z } from "./zod";
 import { RAIL_TRAVEL_CLASSES } from "./rail";
+import {
+  BULK_FIELDS,
+  DOMAIN_BULK_MAX,
+  type BulkDomain,
+  type BulkField,
+} from "../shared/bulkEditFields";
 
 /**
  * `POST /<domain>/bulk-edit` (forgejo#405 A4): the flights bulk edit
@@ -15,32 +21,14 @@ import { RAIL_TRAVEL_CLASSES } from "./rail";
  * moved on answers `failed / VERSION_CONFLICT` and is not written.
  */
 
-export const DOMAIN_BULK_MAX = 200;
-
-export const BULK_DOMAINS = ["rail", "bus", "ferry", "rental", "cruise", "stay"] as const;
-export type BulkDomain = (typeof BULK_DOMAINS)[number];
-
-export const BULK_FIELD_NAMES = [
-  "trip",
-  "tags",
-  "companions",
-  "status",
-  "operator",
-  "serviceClass",
-] as const;
-export type BulkField = (typeof BULK_FIELD_NAMES)[number];
-
-/** Which fields each domain's bulk edit takes — also what the web modal offers. */
-export const BULK_FIELDS: Record<BulkDomain, readonly BulkField[]> = {
-  rail: ["trip", "tags", "companions", "status", "operator", "serviceClass"],
-  bus: ["trip", "tags", "companions", "status", "operator", "serviceClass"],
-  ferry: ["trip", "tags", "companions", "status", "operator", "serviceClass"],
-  rental: ["trip", "tags", "companions", "status"],
-  cruise: ["trip", "tags", "companions", "status"],
-  // A stay has no tags (its house has); its overall rating is derived from the
-  // category ratings, so it is not offered here.
-  stay: ["trip", "companions", "status"],
-};
+export {
+  BULK_DOMAINS,
+  BULK_FIELDS,
+  BULK_FIELD_NAMES,
+  DOMAIN_BULK_MAX,
+  type BulkDomain,
+  type BulkField,
+} from "../shared/bulkEditFields";
 
 export const BULK_EDIT_PATHS: Record<BulkDomain, string> = {
   rail: "/rail/bulk-edit",
