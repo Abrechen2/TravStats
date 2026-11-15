@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import { useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
@@ -31,22 +31,39 @@ function failureOf(error: unknown): "timeout" | "rateLimited" | "forbidden" | "g
  * answer for the new one. Every outcome has its own sentence; a failed request
  * is never shown as "unreachable" and an unreachable address never as an error.
  */
-export default function PublicUrlCheck({ unsaved }: { unsaved: boolean }): JSX.Element {
+export default function PublicUrlCheck({
+  unsaved,
+  savedUrl,
+}: {
+  unsaved: boolean;
+  /** The address the server holds; a result belongs to exactly one of these. */
+  savedUrl: string;
+}): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const coarse = useCoarsePointer();
   const demo = useIsDemoAccount();
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // A result for an address the field no longer holds would read as an answer
+  // about the new one: drop it on any edit or save, and ignore a late arrival.
+  const current = useRef(savedUrl);
+  useEffect(() => {
+    current.current = savedUrl;
+    setOutcome(null);
+  }, [savedUrl, unsaved]);
 
   const run = async (): Promise<void> => {
+    const asked = current.current;
     setBusy(true);
     setOutcome(null);
     try {
       const result = await adminApi.checkPublicUrl();
+      if (asked !== current.current) return;
       setOutcome({ kind: "result", result });
       // A stored result changes the readiness item; the shell re-reads once.
       void refreshReadinessShell();
     } catch (error) {
+      if (asked !== current.current) return;
       setOutcome({ kind: "failed", reason: failureOf(error) });
     } finally {
       setBusy(false);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 
@@ -30,7 +30,7 @@ afterEach(cleanup);
 describe("Erreichbarkeit prüfen", () => {
   it("shows ok with the time", async () => {
     api.checkPublicUrl.mockResolvedValue(result());
-    render(<PublicUrlCheck unsaved={false} />);
+    render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
     await click();
     expect(await screen.findByRole("status")).toHaveTextContent("settings:publicUrlCheck.ok");
   });
@@ -46,7 +46,7 @@ describe("Erreichbarkeit prüfen", () => {
     "NOT_THIS_INSTANCE",
   ])("names its own sentence for %s", async (code) => {
     api.checkPublicUrl.mockResolvedValue(result({ ok: false, errorCode: code, httpStatus: 502 }));
-    render(<PublicUrlCheck unsaved={false} />);
+    render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
     await click();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       `settings:publicUrlCheck.error.${code}`
@@ -55,7 +55,7 @@ describe("Erreichbarkeit prüfen", () => {
 
   it("says the check did not finish when the request times out on the client", async () => {
     api.checkPublicUrl.mockRejectedValue(new AxiosError("t", "ECONNABORTED"));
-    render(<PublicUrlCheck unsaved={false} />);
+    render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
     await click();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "settings:publicUrlCheck.failed.timeout"
@@ -64,7 +64,7 @@ describe("Erreichbarkeit prüfen", () => {
 
   it("separates a rate limit from a refusal and from a generic failure", async () => {
     api.checkPublicUrl.mockRejectedValueOnce(httpFail(429));
-    render(<PublicUrlCheck unsaved={false} />);
+    render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
     await click();
     expect(await screen.findByRole("alert")).toHaveTextContent("failed.rateLimited");
     api.checkPublicUrl.mockRejectedValueOnce(httpFail(403));
@@ -76,8 +76,27 @@ describe("Erreichbarkeit prüfen", () => {
   });
 
   it("is off while the address has unsaved edits and says why", () => {
-    render(<PublicUrlCheck unsaved />);
+    render(<PublicUrlCheck unsaved savedUrl="https://a.example" />);
     expect(screen.getByRole("button", { name: "settings:publicUrlCheck.button" })).toBeDisabled();
     expect(screen.getByText("settings:publicUrlCheck.saveFirst")).toBeInTheDocument();
+  });
+
+  it("drops a result when the address is edited afterwards", async () => {
+    api.checkPublicUrl.mockResolvedValue(result());
+    const view = render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
+    await click();
+    expect(await screen.findByRole("status")).toBeInTheDocument();
+    view.rerender(<PublicUrlCheck unsaved savedUrl="https://a.example" />);
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("ignores a late answer for an address that changed meanwhile", async () => {
+    let answer!: (v: unknown) => void;
+    api.checkPublicUrl.mockReturnValue(new Promise((r) => (answer = r)));
+    const view = render(<PublicUrlCheck unsaved={false} savedUrl="https://a.example" />);
+    await click();
+    view.rerender(<PublicUrlCheck unsaved={false} savedUrl="https://b.example" />);
+    await act(async () => answer(result()));
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

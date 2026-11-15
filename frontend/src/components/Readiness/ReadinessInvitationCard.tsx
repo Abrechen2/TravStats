@@ -53,10 +53,9 @@ export default function ReadinessInvitationCard({
   const invitation = useReadinessShellStore((s) => s.invitation);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [snoozed, setSnoozed] = useState(false);
 
   const onPage = location.pathname.startsWith(READINESS_PAGE_PATH);
-  if (!invitation?.show || !invitation.reason || blocked || demo || onPage || snoozed) return null;
+  if (!invitation?.show || !invitation.reason || blocked || demo || onPage) return null;
 
   const snooze = async (): Promise<void> => {
     setBusy(true);
@@ -71,7 +70,7 @@ export default function ReadinessInvitationCard({
       return;
     }
     setBusy(false);
-    setSnoozed(true);
+    useReadinessShellStore.getState().hideInvitation();
     void refreshReadinessShell();
   };
 

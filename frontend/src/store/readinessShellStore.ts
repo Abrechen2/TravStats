@@ -25,6 +25,8 @@ interface ReadinessShellState {
   refresh: () => Promise<void>;
   /** Re-read on focus, but not more often than {@link FOCUS_REFRESH_MIN_MS}. */
   refreshOnFocus: (nowMs: number) => Promise<void>;
+  /** Optimistic: a snooze succeeded; the next read replaces this either way. */
+  hideInvitation: () => void;
   reset: () => void;
 }
 
@@ -52,6 +54,10 @@ export const useReadinessShellStore = create<ReadinessShellState>((set, get) => 
     const last = get().lastReadAt;
     if (last !== null && nowMs - last < FOCUS_REFRESH_MIN_MS) return;
     await get().refresh();
+  },
+  hideInvitation: () => {
+    const current = get().invitation;
+    if (current) set({ invitation: { ...current, show: false } });
   },
   reset: () => {
     readSeq++;

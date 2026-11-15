@@ -114,6 +114,17 @@ describe("readiness page", () => {
     expect(markInvitationSeen).not.toHaveBeenCalled();
   });
 
+  it("does not mark the invitation seen when the page itself failed to load", async () => {
+    vi.mocked(fetchReadiness).mockRejectedValue(new Error("500"));
+    render(
+      <MemoryRouter>
+        <ReadinessSection />
+      </MemoryRouter>
+    );
+    await screen.findByText("readiness:error.title");
+    expect(markInvitationSeen).not.toHaveBeenCalled();
+  });
+
   it("still renders the page when invitation/seen fails", async () => {
     vi.mocked(markInvitationSeen).mockRejectedValueOnce(new Error("500"));
     show(response([item({ id: "a" })]));

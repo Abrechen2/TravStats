@@ -83,7 +83,10 @@ function Groups({ settings }: { settings: InstanceSettings }): JSX.Element {
           />
         }
       >
-        <PublicUrlCheck unsaved={general.isChanged("frontendUrl")} />
+        <PublicUrlCheck
+          unsaved={general.isChanged("frontendUrl")}
+          savedUrl={settings.frontendUrl ?? ""}
+        />
       </SettingItem>
       <GroupFooter group={general} disabled={invalid} />
     </section>

@@ -142,6 +142,18 @@ describe("invitation card actions", () => {
     expect(fetchReadiness).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the card again when a later read says show=true (the snooze is not remembered locally)", async () => {
+    vi.mocked(snoozeInvitation).mockResolvedValue(undefined);
+    vi.mocked(fetchReadiness).mockResolvedValue({
+      invitation: invitation(),
+      banner: { show: false, itemIds: [] },
+    } as never);
+    useReadinessShellStore.setState({ invitation: invitation() });
+    mount();
+    await userEvent.click(screen.getByRole("button", { name: "readiness:snooze" }));
+    expect(await screen.findByTestId("readiness-invitation")).toBeInTheDocument();
+  });
+
   it("keeps the card and says so when the snooze fails with a 500", async () => {
     vi.mocked(snoozeInvitation).mockRejectedValue(new Error("500"));
     useReadinessShellStore.setState({ invitation: invitation() });

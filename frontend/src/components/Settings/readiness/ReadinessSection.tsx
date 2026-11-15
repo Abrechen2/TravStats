@@ -83,12 +83,14 @@ export default function ReadinessSection(): JSX.Element {
   }, [reload]);
 
   // Opening the page ends the invitation card for what it showed (spec §12):
-  // once per open, never for the demo account (a write it would refuse). A
-  // failure is only logged: the page itself is the destination, and the worst
-  // case is a card that comes back once more.
+  // once per open, never for the demo account (a write it would refuse), and
+  // only once the page has actually loaded — a failed read showed nothing, so
+  // it must not count as seen. A failed write is only logged: the worst case
+  // is a card that comes back once more.
   const seenSent = useRef(false);
+  const loaded = load.state === "ok";
   useEffect(() => {
-    if (demo || seenSent.current) return;
+    if (demo || !loaded || seenSent.current) return;
     seenSent.current = true;
     void (async () => {
       try {
@@ -98,7 +100,7 @@ export default function ReadinessSection(): JSX.Element {
         logger.warn("readiness invitation seen failed", error);
       }
     })();
-  }, [demo]);
+  }, [demo, loaded]);
 
   const write = async (action: () => Promise<void>): Promise<void> => {
     setWriteFailed(false);
