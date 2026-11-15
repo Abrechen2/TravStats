@@ -12,43 +12,28 @@
  * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
-import axios from "axios";
-import { findOrCreateAirport } from "./airportLookup";
 import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
 import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
 import { fillFromAdsb, isAdsb, lookupAdsbIfToday, lookupAfterMiss } from "./flightLookup/adsbChain";
+import { mapAirlabsResult } from "./flightLookup/providerMapping";
+import {
+  logLookupStart,
+  lookupViaAviationstack,
+  resolveAviationstackGate,
+} from "./flightLookup/aviationstackLookup";
 import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 import {
-  classifyProviderError,
   LookupOutcomeLog,
   type FlightDataProvider,
   type ProviderFailure,
 } from "./flightLookup/providerOutcome";
-import {
-  convertAviationstackTimeToUtc,
-  convertAirlabsTimeToUtc,
-  getAirportTimezone,
-  toLocalDateString,
-} from "../utils/timezone";
+import { getAirportTimezone, toLocalDateString } from "../utils/timezone";
 import { dayDiff, getAirlineName, parseFlightNumber } from "./flightLookup/fieldReaders";
-import { toProviderFlightNumber } from "../schemas/flight";
 import logger from "../utils/logger";
-import {
-  isInLiveWindow,
-  currentUtcDay,
-  hasAviationstackBudget,
-  recordAviationstackCall,
-  getAviationstackCallCountToday,
-  isAviationstackCooledDown,
-  markAviationstack429,
-  aviationstackCooldownUntil,
-  isAviationstackDateFilterRestricted,
-  markAviationstackDateFilterRestricted,
-} from "./flightLookup/aviationstackBudget";
 import { lookupFlightByNumber, type FlightData } from "./flightLookup/airlabs";
-import type { AirportInfo, AviationstackApiResponse } from "./flightLookup/providerTypes";
+import type { AirportInfo } from "./flightLookup/providerTypes";
 
 export { lookupFlightByNumber };
 export type { FlightData };
@@ -159,253 +144,12 @@ export async function lookupFlightDetails(
 
   // Get OpenSky credentials with priority resolution
   const openSkyCredentials = await getOpenSkyCredentials(userId);
-
-  // Aviationstack gating — multiple guards to protect the Free-tier budget:
-  //   (1) admin has a key configured
-  //   (2) not in 429 cooldown (set when quota actually exceeded)
-  //   (3) flight is in the live window (±3h of departure or in flight)
-  //   (4) we haven't yet used today's configured budget
-  // If the caller didn't pass a departureTime (manual ad-hoc lookup via UI),
-  // treat as "live" so on-demand user actions still reach Aviationstack.
   const aviationstackKey = await getApiKey("aviationstack", userId);
-  const inLiveWindow = departureTime ? isInLiveWindow(departureTime, arrivalTime) : true;
-  const budgetOk = aviationstackKey ? await hasAviationstackBudget() : false;
-  // Once the plan is known to reject the `flight_date` filter, a lookup for
-  // another day can't be served — skip up-front instead of burning a budget
-  // call on a guaranteed 403.
-  //
-  // UNLESS THE FLIGHT IS IN THE AIR RIGHT NOW. This used to read "non-today
-  // lookups can't be served at all (real-time queries only cover today)", and
-  // for an overnight flight that is simply wrong: it departed yesterday and is
-  // aboard the real-time feed this minute, because it has not landed. The
-  // date-less query below is exactly the one the free plan still allows, and
-  // the `aviationstack_date_mismatch` guard after it discards an answer that
-  // turns out to belong to another service day. Both were already here; only
-  // this gate stopped them being reached.
-  //
-  // What that cost, measured on the owner's account 2026-09-03: LX93
-  // GRU→ZRH, departing the 2nd and landing the 3rd. Its two arrival checks
-  // (arrival −60 min and +30 min) both ran on the 3rd, both were refused here
-  // with `date_filter_restricted`, and the flight kept no actual times at all
-  // — while the short hop beside it, whose checks all fell on its departure
-  // day, got its own. Every long-haul leg fails the same way.
-  //
-  // `inLiveWindow` is what makes this safe rather than a hole: it is already a
-  // precondition of `aviationstackAvailable`, it spans in-flight through two
-  // hours past scheduled arrival, and outside it nothing changes at all.
-  // Deliberately NOT `inLiveWindow`, which defaults to true when the caller
-  // passes no departureTime — that default means "ad-hoc lookup from the UI",
-  // and a user typing a date from last May is asking a historical question
-  // that the free plan genuinely cannot answer. The exception here needs a
-  // MEASURED position in the air, so it asks for a departure time and gets one.
-  const flyingRightNow = departureTime ? isInLiveWindow(departureTime, arrivalTime) : false;
-  const requestedDateIsToday = !date || date === currentUtcDay();
-  const dateFilterBlocked =
-    isAviationstackDateFilterRestricted() && !requestedDateIsToday && !flyingRightNow;
-  const aviationstackAvailable =
-    !!aviationstackKey &&
-    !isAviationstackCooledDown() &&
-    inLiveWindow &&
-    budgetOk &&
-    !dateFilterBlocked;
-
-  let skipReason: string | undefined;
-  if (aviationstackKey && !aviationstackAvailable) {
-    if (isAviationstackCooledDown()) skipReason = "cooldown";
-    else if (!inLiveWindow) skipReason = "outside_live_window";
-    else if (!budgetOk) skipReason = "daily_budget_exceeded";
-    else if (dateFilterBlocked) skipReason = "date_filter_restricted";
-  }
-
-  logger.debug({ flightNumber: trimmedNumber, date, operation: "lookup_start" });
-  logger.info(
-    {
-      hasAviationstack: !!aviationstackKey,
-      aviationstackAvailable,
-      aviationstackSkipReason: skipReason,
-      aviationstackCallsToday: getAviationstackCallCountToday(),
-      hasOpenSky: !!openSkyCredentials,
-      operation: "lookup_start",
-    },
-    `Looking up flight (apis: ${aviationstackAvailable ? "aviationstack" : ""}${openSkyCredentials ? "+opensky" : ""} +airlabs)`
-  );
-  if (aviationstackAvailable) {
-    // Up to two attempts: the second fires only when the first reveals a
-    // Free-tier date-filter restriction on a same-day lookup — the retry
-    // drops `flight_date` (real-time queries stay allowed on the Free plan).
-    let omitDateFilter = isAviationstackDateFilterRestricted();
-    for (let attempt = 0; attempt < 2; attempt++) {
-      // Record the call up-front — even failures count against the daily budget,
-      // because Aviationstack bills 429s too in the Free tier.
-      recordAviationstackCall();
-      // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
-      // Use HTTPS + params to avoid signature/order issues
-      const params: Record<string, string> = {
-        access_key: aviationstackKey,
-        limit: "1",
-      };
-      // Unpadded IATA form for the same reason as AirLabs (see
-      // toProviderFlightNumber) — providers do not carry leading zeros.
-      const providerNumber = toProviderFlightNumber(trimmedNumber) ?? trimmedNumber;
-      if (/^[A-Za-z]{2}\d+/.test(providerNumber)) {
-        params.flight_iata = providerNumber;
-      } else {
-        params.flight_icao = providerNumber;
-      }
-      if (date && !omitDateFilter) {
-        params.flight_date = date;
-      }
-
-      try {
-        const response = await axios.get("https://api.aviationstack.com/v1/flights", {
-          params,
-          timeout: 6000,
-        });
-        const json = response.data as AviationstackApiResponse;
-        let result = json.data?.[0];
-
-        // A date-less (real-time) query returns the latest known flight for
-        // the number — guard against it belonging to a different service day.
-        if (result && date && omitDateFilter && result.flight_date && result.flight_date !== date) {
-          const operation = "aviationstack_date_mismatch";
-          logger.warn(
-            { operation },
-            "Aviationstack real-time result is for another day — discarding"
-          );
-          logger.debug({
-            flightNumber: trimmedNumber,
-            date,
-            resultDate: result.flight_date,
-            operation,
-          });
-          result = undefined;
-        }
-
-        outcomes?.record("aviationstack", result ? "ok" : "no_match");
-        if (result) {
-          const departureCode = result.departure?.iata || result.departure?.icao;
-          const arrivalCode = result.arrival?.iata || result.arrival?.icao;
-
-          const [departureAirport, arrivalAirport] = await Promise.all([
-            departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-            arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-          ]);
-
-          // Convert Aviationstack times from local airport time to UTC
-          const departureTimeRaw = result.departure?.estimated || result.departure?.scheduled;
-          const arrivalTimeRaw = result.arrival?.estimated || result.arrival?.scheduled;
-          const actualDepartureRaw = result.departure?.actual;
-          const actualArrivalRaw = result.arrival?.actual;
-
-          const [departureTimeUtc, arrivalTimeUtc, actualDepartureUtc, actualArrivalUtc] =
-            await Promise.all([
-              departureTimeRaw && departureCode
-                ? convertAviationstackTimeToUtc(departureTimeRaw, departureCode)
-                : Promise.resolve(departureTimeRaw || null),
-              arrivalTimeRaw && arrivalCode
-                ? convertAviationstackTimeToUtc(arrivalTimeRaw, arrivalCode)
-                : Promise.resolve(arrivalTimeRaw || null),
-              actualDepartureRaw && departureCode
-                ? convertAviationstackTimeToUtc(actualDepartureRaw, departureCode)
-                : Promise.resolve(actualDepartureRaw || null),
-              actualArrivalRaw && arrivalCode
-                ? convertAviationstackTimeToUtc(actualArrivalRaw, arrivalCode)
-                : Promise.resolve(actualArrivalRaw || null),
-            ]);
-
-          // Merge per-flight fields (gate/terminal) onto the airport record.
-          // findOrCreateAirport only supplies static metadata (name/lat/lon); the
-          // API is the sole source of live gate/terminal. Before this merge, those
-          // fields were silently dropped when the airport object shadowed them.
-          const departureWithLive: AirportInfo | undefined = departureAirport
-            ? {
-                iata: departureAirport.iata ?? undefined,
-                icao: departureAirport.icao ?? undefined,
-                name: departureAirport.name,
-                lat: departureAirport.lat,
-                lon: departureAirport.lon,
-                terminal: result.departure?.terminal,
-                gate: result.departure?.gate,
-              }
-            : undefined;
-          const arrivalWithLive: AirportInfo | undefined = arrivalAirport
-            ? {
-                iata: arrivalAirport.iata ?? undefined,
-                icao: arrivalAirport.icao ?? undefined,
-                name: arrivalAirport.name,
-                lat: arrivalAirport.lat,
-                lon: arrivalAirport.lon,
-                terminal: result.arrival?.terminal,
-                gate: result.arrival?.gate,
-              }
-            : undefined;
-
-          return {
-            source: "aviationstack",
-            airline: result.airline?.name,
-            // Caller's spelling — see the AirLabs mapping: echoing the
-            // provider's unpadded form would auto-rename a stored "EK051".
-            flightNumber: trimmedNumber,
-            aircraft: result.aircraft?.icao || result.aircraft?.iata,
-            departure: departureWithLive,
-            arrival: arrivalWithLive,
-            departureTime: departureTimeUtc || undefined,
-            arrivalTime: arrivalTimeUtc || undefined,
-            actualDeparture: actualDepartureUtc || undefined,
-            actualArrival: actualArrivalUtc || undefined,
-          };
-        }
-        break; // no usable result — fall through to the other providers
-      } catch (err) {
-        const errResponse = (
-          err as {
-            response?: { status?: number; data?: { error?: { code?: string } } };
-          }
-        )?.response;
-        const status = errResponse?.status;
-        if (status === 429) {
-          // Quota exhausted — back off for an hour so we don't burn through the
-          // free tier's monthly budget on rapid-fire retries.
-          markAviationstack429();
-          outcomes?.record("aviationstack", "quota");
-          logger.warn({
-            operation: "aviationstack_rate_limited",
-            message: "Aviationstack returned 429 — backing off for 1 hour",
-            context: { cooldownUntil: aviationstackCooldownUntil()?.toISOString() },
-          });
-          break;
-        }
-        if (
-          status === 403 &&
-          errResponse?.data?.error?.code === "function_access_restricted" &&
-          !omitDateFilter &&
-          date
-        ) {
-          // The plan rejects the `flight_date` filter (Free tier). Remember it
-          // for the process lifetime; retry without the filter when the
-          // requested date is today (real-time data still matches). Past or
-          // future dates can't be served — fall through to other providers.
-          markAviationstackDateFilterRestricted();
-          logger.warn(
-            { operation: "aviationstack_date_filter_restricted" },
-            "Aviationstack plan rejects the flight_date filter — skipping it from now on"
-          );
-          if (date === currentUtcDay()) {
-            omitDateFilter = true;
-            continue;
-          }
-          outcomes?.record("aviationstack", "plan_restricted");
-          break;
-        }
-        logger.error({
-          operation: "aviationstack_lookup",
-          message: "Aviationstack lookup failed",
-          error: err instanceof Error ? err.message : String(err),
-        });
-        outcomes?.record("aviationstack", classifyProviderError(err));
-        break;
-      }
-    }
+  const gate = await resolveAviationstackGate(aviationstackKey, date, departureTime, arrivalTime);
+  logLookupStart(trimmedNumber, date, gate, !!openSkyCredentials);
+  if (gate.available && aviationstackKey) {
+    const served = await lookupViaAviationstack(aviationstackKey, trimmedNumber, date, outcomes);
+    if (served) return served;
   }
 
   // AeroDataBox tertiary fallback — covers the last 365 days plus
@@ -442,7 +186,7 @@ export async function lookupFlightDetails(
   // only ones, and both have already been tried with the correct date
   // at this point. Ad-hoc UI lookups (no departureTime) still treat
   // AirLabs as the live-window fallback.
-  if (departureTime && !inLiveWindow) {
+  if (departureTime && !gate.inLiveWindow) {
     logger.info(
       { operation: "lookup_no_result" },
       "No data found from any API (outside live window, AirLabs skipped)"
@@ -450,7 +194,17 @@ export async function lookupFlightDetails(
     return null;
   }
 
-  // Fallback to AirLabs (live window, or ad-hoc lookup with no departureTime)
+  return lookupViaAirlabs(trimmedNumber, date, userId, openSkyCredentials, outcomes);
+}
+
+/** AirLabs (live window, or ad-hoc lookup with no departureTime), ADS-B filled in. */
+async function lookupViaAirlabs(
+  trimmedNumber: string,
+  date: string | undefined,
+  userId: string | undefined,
+  openSkyCredentials: Awaited<ReturnType<typeof getOpenSkyCredentials>>,
+  outcomes: LookupOutcomeLog | undefined
+): Promise<FlightLookupResult | null> {
   logger.info({ api: "airlabs", operation: "fallback_airlabs" }, "Falling back to AirLabs");
   const fallbackDate = date ? new Date(date) : undefined;
   // `userId` is not optional decoration here: `lookupFlightByNumber` resolves
@@ -463,79 +217,7 @@ export async function lookupFlightDetails(
   if (!flights.length) {
     return lookupAfterMiss(trimmedNumber, date, openSkyCredentials, adsb, outcomes);
   }
-
-  const first = flights[0];
-  const departureCode = first.departure.iata || first.departure.icao;
-  const arrivalCode = first.arrival.iata || first.arrival.icao;
-
-  const [departureAirport, arrivalAirport] = await Promise.all([
-    departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-    arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-  ]);
-
-  // Convert AirLabs times to UTC (AirLabs may return UTC or local times)
-  const departureTimeRaw = first.departure.scheduledTime || first.departure.actualTime;
-  const arrivalTimeRaw = first.arrival.scheduledTime || first.arrival.actualTime;
-  const actualDepartureRaw = first.departure.actualTime;
-  const actualArrivalRaw = first.arrival.actualTime;
-
-  const [departureTimeUtc, arrivalTimeUtc, actualDepartureUtc, actualArrivalUtc] =
-    await Promise.all([
-      departureTimeRaw
-        ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
-        : Promise.resolve(null),
-      arrivalTimeRaw ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode) : Promise.resolve(null),
-      actualDepartureRaw
-        ? convertAirlabsTimeToUtc(actualDepartureRaw, departureCode)
-        : Promise.resolve(null),
-      actualArrivalRaw
-        ? convertAirlabsTimeToUtc(actualArrivalRaw, arrivalCode)
-        : Promise.resolve(null),
-    ]);
-
-  // Merge per-flight fields (gate/terminal) onto the airport record.
-  // findOrCreateAirport only supplies static metadata (name/lat/lon); the API
-  // is the sole source of live gate/terminal. Before this merge, those fields
-  // were silently dropped when the airport object shadowed them.
-  const departureWithLive: AirportInfo | undefined = departureAirport
-    ? {
-        iata: departureAirport.iata ?? undefined,
-        icao: departureAirport.icao ?? undefined,
-        name: departureAirport.name,
-        lat: departureAirport.lat,
-        lon: departureAirport.lon,
-        terminal: first.departure.terminal,
-        gate: first.departure.gate,
-      }
-    : undefined;
-  const arrivalWithLive: AirportInfo | undefined = arrivalAirport
-    ? {
-        iata: arrivalAirport.iata ?? undefined,
-        icao: arrivalAirport.icao ?? undefined,
-        name: arrivalAirport.name,
-        lat: arrivalAirport.lat,
-        lon: arrivalAirport.lon,
-        terminal: first.arrival.terminal,
-        gate: first.arrival.gate,
-      }
-    : undefined;
-
-  const airlabsResult: FlightLookupResult = {
-    source: "airlabs",
-    airline:
-      first.airline ||
-      (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) ||
-      first.airlineIcao,
-    flightNumber: first.flightNumber,
-    aircraft: first.aircraft || first.aircraftIcao,
-    departure: departureWithLive,
-    arrival: arrivalWithLive,
-    departureTime: departureTimeUtc || undefined,
-    arrivalTime: arrivalTimeUtc || undefined,
-    actualDeparture: actualDepartureUtc || undefined,
-    actualArrival: actualArrivalUtc || undefined,
-  };
-  return fillFromAdsb(airlabsResult, adsb);
+  return fillFromAdsb(await mapAirlabsResult(flights[0]), adsb);
 }
 
 export interface LookupWithHistoricalResult {
