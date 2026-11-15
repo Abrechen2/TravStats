@@ -5,6 +5,7 @@ import * as path from "path";
 import logger from "../../utils/logger";
 import { DATABASE_URL } from "../../utils/database";
 import { DOCKER_DB_CONTAINER } from "./backupConfig";
+import { EXTENSION_SCHEMA_EXCLUDES, isNonSuperuserRole } from "./dbRole";
 
 const execAsync = promisify(exec);
 
@@ -47,6 +48,10 @@ export async function createDatabaseDump(
 ): Promise<void> {
   const dbUrl = targetDatabaseUrl || DATABASE_URL;
   const dbInfo = parseDatabaseUrl(dbUrl);
+  // A non-superuser cannot read the tiger/topology extension schemas (pg_dump
+  // would stop with "permission denied for schema tiger"); the restore leaves
+  // those extensions in place anyway (forgejo#415 N5).
+  const extra = (await isNonSuperuserRole(dbInfo)) ? EXTENSION_SCHEMA_EXCLUDES : [];
 
   // Check if we're in Docker or if database is in Docker
   const isDocker = process.env.DOCKER === "true";
@@ -257,7 +262,13 @@ export async function createDatabaseDump(
       // Continue with local pg_dump - this is expected if Docker is not available
     }
 
-    return runDumpTo("pg_dump", localPgDumpArgs(dbInfo), dbInfo.password, outputPath, "pg_dump");
+    return runDumpTo(
+      "pg_dump",
+      localPgDumpArgs(dbInfo, extra),
+      dbInfo.password,
+      outputPath,
+      "pg_dump"
+    );
   }
 
   if (dockerAvailable) {
@@ -273,6 +284,7 @@ export async function createDatabaseDump(
         "-F",
         "p",
         ...DUMP_CLEAN_ARGS,
+        ...extra,
         dbInfo.database,
       ],
       dbInfo.password,
@@ -282,7 +294,13 @@ export async function createDatabaseDump(
   }
 
   // Direct connection (no Docker): spawn without a shell to prevent command injection
-  return runDumpTo("pg_dump", localPgDumpArgs(dbInfo), dbInfo.password, outputPath, "pg_dump");
+  return runDumpTo(
+    "pg_dump",
+    localPgDumpArgs(dbInfo, extra),
+    dbInfo.password,
+    outputPath,
+    "pg_dump"
+  );
 }
 
 // See the note above spawnRestore in backupRestore.ts: without --clean a dump only
@@ -290,7 +308,7 @@ export async function createDatabaseDump(
 // success (audit finding AUD-007).
 const DUMP_CLEAN_ARGS = ["--clean", "--if-exists"];
 
-function localPgDumpArgs(dbInfo: ReturnType<typeof parseDatabaseUrl>): string[] {
+function localPgDumpArgs(dbInfo: ReturnType<typeof parseDatabaseUrl>, extra: string[]): string[] {
   return [
     "-h",
     dbInfo.host,
@@ -301,6 +319,7 @@ function localPgDumpArgs(dbInfo: ReturnType<typeof parseDatabaseUrl>): string[] 
     "-F",
     "p",
     ...DUMP_CLEAN_ARGS,
+    ...extra,
     dbInfo.database,
   ];
 }

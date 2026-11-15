@@ -10,6 +10,12 @@ jest.mock("child_process", () => ({
   spawn: (...args: unknown[]) => spawnMock(...args),
 }));
 
+const nonSuperuserMock = jest.fn();
+jest.mock("../dbRole", () => ({
+  ...jest.requireActual("../dbRole"),
+  isNonSuperuserRole: (...args: unknown[]) => nonSuperuserMock(...args),
+}));
+
 import { createDatabaseDump } from "../backupDatabase";
 
 function fakeChild(output: string, code: number) {
@@ -30,6 +36,7 @@ function fakeChild(output: string, code: number) {
 
 describe("createDatabaseDump", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dumpargs-"));
+  beforeEach(() => nonSuperuserMock.mockResolvedValue(false));
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   it("passes --clean --if-exists exactly once (the Windows docker copy repeated them)", async () => {
@@ -47,5 +54,18 @@ describe("createDatabaseDump", () => {
       /pg_dump exited with code 1/
     );
     expect(fs.existsSync(out)).toBe(false);
+  });
+
+  it("skips the tiger/topology schemas an ordinary role cannot read, and only then (N5)", async () => {
+    nonSuperuserMock.mockResolvedValueOnce(true);
+    spawnMock.mockReturnValueOnce(fakeChild("-- dump", 0));
+    await createDatabaseDump(path.join(dir, "n.sql"), "postgresql://u:p@localhost:5432/db");
+    const args = (spawnMock.mock.calls.at(-1)?.[1] ?? []) as string[];
+    expect(args.join(" ")).toContain("-N tiger -N tiger_data -N topology");
+
+    spawnMock.mockReturnValueOnce(fakeChild("-- dump", 0));
+    await createDatabaseDump(path.join(dir, "s.sql"), "postgresql://u:p@localhost:5432/db");
+    const superArgs = (spawnMock.mock.calls.at(-1)?.[1] ?? []) as string[];
+    expect(superArgs).not.toContain("-N");
   });
 });

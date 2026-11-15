@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import * as fs from "fs";
+import { Transform } from "stream";
 import logger from "../../utils/logger";
 
 /** What psql prints just before a migration's SQL (`restoreMigrations.ts`), so a failure can name it. */
@@ -49,6 +50,119 @@ export const CLEAN_SCHEMA_PREAMBLE = [
   "GRANT USAGE ON SCHEMA public TO PUBLIC;",
   "",
 ].join("\n");
+
+/**
+ * The restore preamble for an app role that is NOT a superuser (forgejo#415 N5).
+ *
+ * `DROP SCHEMA public CASCADE` takes postgis with it, and only a superuser can
+ * `CREATE EXTENSION postgis` again (it is not a trusted extension). So this
+ * variant keeps the schema and every extension (postgis, `spatial_ref_sys`,
+ * pg_trgm, unaccent, fuzzystrmatch) and drops just what the app created: the
+ * relations, standalone sequences, functions/aggregates and enum/domain/range
+ * types in `public` that are not members of an extension. The dump then lands
+ * in the same emptied schema the superuser variant produces. An object owned by
+ * another role fails the DROP, and the single transaction rolls everything back.
+ */
+export const SOFT_CLEAN_SCHEMA_PREAMBLE = [
+  "SET client_min_messages = warning;",
+  `DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT c.oid, c.relkind, n.nspname, c.relname
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r','p','v','m','f','S','c')
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass
+                      AND d.objid = c.oid AND d.deptype IN ('e','i','a'))
+    ORDER BY CASE c.relkind WHEN 'v' THEN 0 WHEN 'm' THEN 0 WHEN 'S' THEN 2 WHEN 'c' THEN 3 ELSE 1 END
+  LOOP
+    EXECUTE format('DROP %s IF EXISTS %I.%I CASCADE',
+      CASE r.relkind WHEN 'v' THEN 'VIEW' WHEN 'm' THEN 'MATERIALIZED VIEW' WHEN 'f' THEN 'FOREIGN TABLE'
+                     WHEN 'S' THEN 'SEQUENCE' WHEN 'c' THEN 'TYPE' ELSE 'TABLE' END,
+      r.nspname, r.relname);
+  END LOOP;
+  FOR r IN
+    SELECT p.oid::regprocedure AS sig, p.prokind
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass
+                      AND d.objid = p.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('DROP %s IF EXISTS %s CASCADE',
+      CASE r.prokind WHEN 'a' THEN 'AGGREGATE' WHEN 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END, r.sig);
+  END LOOP;
+  FOR r IN
+    SELECT t.oid, n.nspname, t.typname
+    FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public' AND t.typtype IN ('e','d','r')
+      AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_type'::regclass
+                      AND d.objid = t.oid AND d.deptype = 'e')
+  LOOP
+    EXECUTE format('DROP TYPE IF EXISTS %I.%I CASCADE', r.nspname, r.typname);
+  END LOOP;
+END $$;`,
+  "",
+].join("\n");
+
+const EXTENSION_SCHEMAS = "(?:tiger|tiger_data|topology)";
+/** Statements that need ownership of an extension or its schemas; the extensions stay in place. */
+const SKIPPED_STATEMENTS = [
+  /^DROP EXTENSION IF EXISTS /,
+  /^COMMENT ON EXTENSION /,
+  new RegExp(`^(?:DROP|CREATE) SCHEMA (?:IF EXISTS )?${EXTENSION_SCHEMAS};`),
+  new RegExp(`^ALTER SCHEMA ${EXTENSION_SCHEMAS} OWNER TO `),
+  new RegExp(`^COMMENT ON SCHEMA ${EXTENSION_SCHEMAS} `),
+  new RegExp(`^SELECT pg_catalog\\.setval\\('${EXTENSION_SCHEMAS}\\.`),
+];
+/** Reference/config data owned by an extension, identical on every install. */
+const SKIPPED_COPY = new RegExp(`^COPY (?:public\\.spatial_ref_sys|${EXTENSION_SCHEMAS}\\.)`);
+
+/**
+ * Line filter for a dump replayed by a non-superuser. `pg_dump --clean` emits
+ * `DROP EXTENSION postgis`, `COMMENT ON EXTENSION` and the data of the
+ * extensions' own tables, none of which a non-owner may run. The extensions are
+ * left exactly as they are. COPY row data is passed through untouched (a data
+ * row can never start a statement, because the state machine is inside COPY).
+ */
+export function createNonSuperuserDumpFilter(): Transform {
+  let rest = "";
+  let inCopy = false;
+  let skippingCopy = false;
+  const filterLine = (line: string): string | null => {
+    if (inCopy) {
+      const wasSkipping = skippingCopy;
+      if (line === "\\.") {
+        inCopy = false;
+        skippingCopy = false;
+      }
+      return wasSkipping ? null : line;
+    }
+    if (line.startsWith("COPY ") && line.endsWith("FROM stdin;")) {
+      inCopy = true;
+      skippingCopy = SKIPPED_COPY.test(line);
+      return skippingCopy ? null : line;
+    }
+    return SKIPPED_STATEMENTS.some((re) => re.test(line)) ? null : line;
+  };
+  const emit = (text: string, final: boolean): string => {
+    const lines = (rest + text).split("\n");
+    rest = final ? "" : (lines.pop() ?? "");
+    let out = "";
+    for (const line of lines) {
+      const kept = filterLine(line);
+      if (kept !== null) out += kept + "\n";
+    }
+    return out;
+  };
+  return new Transform({
+    transform(chunk: Buffer, _enc, cb) {
+      cb(null, emit(chunk.toString("utf8"), false));
+    },
+    flush(cb) {
+      cb(null, rest ? emit("", true).replace(/\n$/, "") : "");
+    },
+  });
+}
 
 /**
  * psql's stderr without the archive's row data. A failing COPY quotes the row
@@ -112,7 +226,8 @@ export function feedPsql(
   env: NodeJS.ProcessEnv,
   dumpPath: string,
   preamble: string,
-  epilogue = ""
+  epilogue = "",
+  filter?: Transform
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -182,7 +297,16 @@ export function feedPsql(
       settle(new Error(`Could not read the archive's database.sql: ${error.message}`));
     });
     proc.stdin.write(preamble);
-    input.pipe(proc.stdin, { end: false });
-    input.on("end", () => proc.stdin.end(epilogue));
+    if (filter) {
+      filter.on("error", (error) => {
+        proc.kill();
+        settle(new Error(`Could not filter the archive's database.sql: ${error.message}`));
+      });
+      input.pipe(filter).pipe(proc.stdin, { end: false });
+      filter.on("end", () => proc.stdin.end(epilogue));
+    } else {
+      input.pipe(proc.stdin, { end: false });
+      input.on("end", () => proc.stdin.end(epilogue));
+    }
   });
 }
