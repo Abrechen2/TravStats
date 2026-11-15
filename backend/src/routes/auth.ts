@@ -421,12 +421,12 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: Ne
 // Logout
 router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Revoke THIS cookie's token server-side first: clearing the cookie alone
-    // leaves a copied one valid until expiry (forgejo#412 N4). If the write
-    // fails the user is told, rather than shown a logout that did not happen.
-    await revokeSessionToken(req.cookies?.auth_token as string | undefined);
-    // Clear the auth cookie (use same options as when setting it)
+    // Revoke THIS cookie's token server-side: clearing the cookie alone leaves
+    // a copied one valid until expiry (forgejo#412 N4).
+    // The cookie is cleared first, so this browser is signed out even when the
+    // revocation write fails; that failure then answers 5xx instead of "ok".
     res.clearCookie("auth_token", getAuthCookieOptions(req));
+    await revokeSessionToken(req.cookies?.auth_token as string | undefined);
 
     res.json({ message: "Logged out successfully" });
   } catch (error) {

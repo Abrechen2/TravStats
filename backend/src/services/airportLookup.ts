@@ -400,6 +400,10 @@ async function downloadCsvIndex(): Promise<Map<string, ExternalAirportData>> {
     operation: "airport_lookup_csv_download",
     message: "Downloading OurAirports CSV data",
   });
+  // Checked again right before the request: the first lookup may have been
+  // pending while an admin switched the service off.
+  const block = await egressBlock(AIRPORT_DATA_SERVICE);
+  if (block) throw new ExternalFetchError("blocked", `Outbound access is blocked (${block})`);
   const response = await fetch(`https://davidmegginson.github.io/ourairports-data/airports.csv`, {
     signal: AbortSignal.timeout(CSV_FETCH_TIMEOUT_MS),
   });

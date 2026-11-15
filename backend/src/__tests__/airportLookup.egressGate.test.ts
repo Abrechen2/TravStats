@@ -52,6 +52,21 @@ describe("airport egress is gated by the catalogue (forgejo#392)", () => {
     expect(fetchSpy).toHaveBeenCalled();
   });
 
+  it("a service switched off while the first request is pending stops the CSV fallback", async () => {
+    fetchSpy.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("airport-data")) {
+        await savePolicy({ ...savedPolicy, disabled: [...savedPolicy.disabled, "airportData"] });
+        return new Response("{}", { status: 200 });
+      }
+      return new Response("id,ident\n");
+    });
+    await expect(lookupOrCreateAirport("ZQB")).resolves.toEqual({
+      status: "unavailable",
+      reason: "blocked",
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("the catalogue download guard throws a named error when the service is off", async () => {
     await savePolicy({ ...savedPolicy, disabled: [...savedPolicy.disabled, "airportData"] });
     await expect(assertEgressAllowed("airportData")).rejects.toMatchObject({
