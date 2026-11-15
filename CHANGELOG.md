@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.34.** One new migration: two columns on the user table for the setup invitation (which notes were seen, and "remind me tomorrow").
+
 **Upgrading to 2.8.0-rc.33.** One new migration: the setup & readiness tables (snoozes and read marks per account, the instance's version history, the stored result of the public-URL check). Every existing account starts as having seen 2.7.0, so the 2.8.0 notes that concern it appear once on the new page.
 
 **Upgrading to 2.8.0-rc.32.** No new migration.
@@ -29,6 +31,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Added
 
 - **Einrichtung & Zustand** (Settings → Mein Konto): one page that says what is missing and what an update changed that needs action — for admins the server (backups, disk, public URL, mail, off-site copy, service keys, booking mailbox), for every account its own setup (areas, home, phone pairing and first position, own keys, mail forwarding, reminder address). Each item names the consequence and links to the setting; it clears when the setting is fixed, can be snoozed for a day, and an optional item can be marked "nutze ich nicht". A check that has not been tested yet says so instead of claiming all is well.
+- **The setup page comes to you.** After an update with notes that concern you, or while a required item fails, a small card at the bottom of the screen offers "Jetzt ansehen" or "Morgen erinnern"; it waits until the what's-new window and the telemetry question are done. When a required server item is proven to fail, admins see a banner at the top that stays until the item is fixed.
+- **"Erreichbarkeit prüfen" next to the public address** (Administration → Server): checks that the address really reaches this server, not another instance, and says why when it does not (no address, outbound traffic off, timeout, DNS, TLS, connection, HTTP status, a different server). The same check runs daily at 05:35 UTC.
 - **Settings follow one model in four areas:** Mein Konto, TravTrack, TravPlan and Server. Every row says what it does, the Standard/Expert switch decides what is shown, and old settings links still land on the right page. External services open in one dialog per service, can be paused per account, and an account may bring its own OpenAI or Anthropic key where the admin allows it. A display currency converts totals for viewing, and a server connection can be removed from the settings.
 - **A Freunde page** (`/freunde`, forgejo#416): each friend is one connection, compared side by side in statistics and achievements, with an invitation link that also works for a friend on another server. A new server asks the admin to be admitted with one click instead of exchanging connection files.
 - **Tours are an area of their own,** with their own statistics, badges and comparison, and can be shared like trips — stops, legs and recorded tracks included.
