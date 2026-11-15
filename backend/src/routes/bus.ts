@@ -19,7 +19,7 @@ import {
 import { mergeBusJourney } from "../services/bus/busJourneyWrite";
 import { withBusCo2 } from "../services/co2/rideDto";
 import { withBusTimes } from "../services/bus/timesDto";
-import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
+import { propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import {
   busGeometryColumns,
   busGeometryReport,
@@ -51,7 +51,13 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import ticketRoutes from "./bus/tickets";
-import { railListSummaryFromGroups } from "../shared/listSummary";
+import {
+  readLogbookPage,
+  STATION_GROUP_BY,
+  STATION_GROUP_ORDER,
+  summariseStationGroups,
+} from "../services/transport/logbookPage";
+import { deleteTransportEntry } from "../services/transport/deleteEntry";
 
 /**
  * Bus rides — one row per coach ride (spec
@@ -163,37 +169,36 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
     const where = await buildBusWhere(query, userId);
-    const [total, data, counted] = await Promise.all([
-      prisma.busJourney.count({ where }),
-      prisma.busJourney.findMany({
-        where,
-        include: BUS_INCLUDE,
-        orderBy: [primaryOrder(query), { id: query.order }],
-        take: limit,
-        skip: offset,
-      }),
-      // The summary strip counts the whole filtered list, not this page — grouped in
-      // SQL, so the work is the distinct (operator, stations) combinations.
-      prisma.busJourney.groupBy({
-        by: ["operator", "depStationName", "arrStationName"],
-        where,
-        _count: { _all: true },
-        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
-      }),
-    ]);
-    res.json({
-      success: true,
-      data: data.map((r) => withBusCo2(withBusTimes(r))),
-      // `railListSummary` reads operator and the two station names — the columns a bus row shares.
-      meta: {
-        total,
-        limit,
-        offset,
-        summary: railListSummaryFromGroups(
-          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
-        ),
-      },
-    });
+    // The summary reads operator and the two station names — the columns a bus row shares.
+    res.json(
+      await readLogbookPage(
+        {
+          count: () => prisma.busJourney.count({ where }),
+          page: () =>
+            prisma.busJourney.findMany({
+              where,
+              include: BUS_INCLUDE,
+              orderBy: [primaryOrder(query), { id: query.order }],
+              take: limit,
+              skip: offset,
+            }),
+          // The summary strip counts the whole filtered list, not this page.
+          summarised: () =>
+            prisma.busJourney.groupBy({
+              by: [...STATION_GROUP_BY],
+              where,
+              _count: { _all: true },
+              orderBy: [...STATION_GROUP_ORDER],
+            }),
+        },
+        {
+          limit,
+          offset,
+          mapRow: (r) => withBusCo2(withBusTimes(r)),
+          summarise: summariseStationGroups,
+        }
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -451,17 +456,24 @@ router.post(
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const existing = await prisma.busJourney.findFirst({
-      where: { id: req.params.id, userId },
-      select: { id: true, tripId: true },
-    });
-    if (!existing) throw new AppError("Bus ride not found", 404);
-    await prisma.$transaction(async (tx) => {
-      const gone = await shareSnapshot(tx, "bus", existing.id);
-      await tx.busJourney.delete({ where: { id: existing.id } });
-      await propagateDelete(tx, userId, gone);
-    });
-    await restatusTrips([existing.tripId]);
+    await deleteTransportEntry(
+      {
+        shareType: "bus",
+        find: (id, owner) =>
+          prisma.busJourney.findFirst({
+            where: { id, userId: owner },
+            select: { id: true, tripId: true },
+          }),
+        notFound: () => new AppError("Bus ride not found", 404),
+        remove: async (tx, id) => {
+          // share-exempt: deleteTransportEntry propagates the removal
+          await tx.busJourney.delete({ where: { id } });
+          return true;
+        },
+      },
+      req.params.id,
+      userId
+    );
     res.status(204).send();
   } catch (err) {
     next(err);
