@@ -19,14 +19,57 @@ services:
     image: postgis/postgis:15-3.4
     container_name: travstats-db
     restart: unless-stopped
+    # forgejo#415 N5: the app does NOT connect as a superuser. POSTGRES_USER is
+    # the bootstrap superuser, used only while the volume is first initialised;
+    # the wrapper below drops a one-off init script that creates the ordinary
+    # role `flights` (same name and password as before, so DATABASE_URL is
+    # unchanged), makes it owner of the database and installs the extensions
+    # the migrations need (postgis is not "trusted", so only a superuser can
+    # create it — doing it here is why the migrations then run without one).
+    # The script is written from here, not mounted, because this file is
+    # installed on its own with a single `curl -O`.
+    #
+    # The bootstrap superuser must not share the app's secret: the init script
+    # ends by deleting the password of `postgres`, so it can no longer log in over
+    # the network at all (md5/scram need a password); it stays reachable only
+    # from inside the container (`docker exec travstats-db psql -U postgres`,
+    # local socket). Anyone holding DB_PASSWORD gets the ordinary role only.
+    #
+    # EXISTING installs are untouched: initdb scripts run only on an empty
+    # volume, and the old `flights` superuser keeps working. To drop its
+    # privileges by hand: `ALTER ROLE flights NOSUPERUSER;` (see SECURITY.md).
+    # Backup and restore work either way: for an ordinary role the restore keeps
+    # postgis and the other extensions in place and drops only the app's own
+    # objects (backend/src/services/backup/restorePsql.ts).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat > /docker-entrypoint-initdb.d/20-app-role.sh <<'SCRIPT'
+        #!/bin/sh
+        set -e
+        psql -v ON_ERROR_STOP=1 -v pw="$$APP_DB_PASSWORD" -v db="$$POSTGRES_DB" -v su="$$POSTGRES_USER" \
+          --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<'SQL'
+        CREATE ROLE flights LOGIN PASSWORD :'pw' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+        CREATE EXTENSION IF NOT EXISTS postgis;
+        CREATE EXTENSION IF NOT EXISTS unaccent;
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        ALTER DATABASE :"db" OWNER TO flights;
+        ALTER SCHEMA public OWNER TO flights;
+        ALTER ROLE :"su" PASSWORD NULL;
+        SQL
+        SCRIPT
+        chmod 755 /docker-entrypoint-initdb.d/20-app-role.sh
+        exec docker-entrypoint.sh postgres
     environment:
       POSTGRES_DB: flights
-      POSTGRES_USER: flights
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     volumes:
       - travstats-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flights"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flights"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,7 +95,7 @@ services:
   # Turn it off with the "KI-Parser" switch under Admin → Parser: that stops
   # every model call.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.24.0
     container_name: travstats-ollama
     restart: unless-stopped
     volumes:

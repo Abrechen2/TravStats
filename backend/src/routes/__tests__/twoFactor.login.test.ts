@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { encryptSecret } from "../../services/twoFactor/totpService";
 import { generateRecoveryCodes } from "../../services/twoFactor/recoveryCodeService";
+import { LOGIN_LOCK_THRESHOLD } from "../../services/auth/loginThrottle";
 
 // Sixteen base32 characters = 10 bytes: the size otplib 12's generateSecret()
 // wrote for every account enrolled before the otplib 13 upgrade. Keep it this
@@ -36,6 +37,7 @@ describe("login with two-factor", () => {
   let userId: string;
 
   beforeEach(async () => {
+    await prisma.loginThrottle.deleteMany({});
     userId = await makeUserWithTwoFactor("twoFactorLogin");
   });
 
@@ -258,5 +260,91 @@ describe("login with two-factor", () => {
 
     const row = await prisma.user.findUnique({ where: { id: userId } });
     expect(row?.twoFactorToken).toBeNull();
+  });
+
+  // forgejo#415 N10: the counter used to live in a Map, so a restart (or a second
+  // instance) handed the attacker five fresh guesses. A previous process is
+  // simulated by writing the count it would have left behind.
+  it("keeps the wrong-code count across a restart", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const cookies = cookiesOf(login);
+
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 4 } });
+
+    const res = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookies)
+      .send({ code: "000000" });
+    expect(res.status).toBe(401);
+
+    const row = await prisma.user.findUnique({ where: { id: userId } });
+    expect(row?.twoFactorToken).toBeNull();
+  });
+
+  it("gives a freshly issued challenge a fresh attempt budget", async () => {
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 4 } });
+    await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const row = await prisma.user.findUnique({ where: { id: userId } });
+    expect(row?.twoFactorAttempts).toBe(0);
+  });
+
+  it("refuses even a correct code once the attempt budget is spent but the token survived", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const cookies = cookiesOf(login);
+    // A process that died between counting the fifth miss and clearing the token.
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 5 } });
+
+    const res = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookies)
+      .send({ code: codeFor(SECRET) });
+    expect(res.status).toBe(401);
+    expect(cookiesOf(res).join(";")).not.toContain("auth_token=");
+  });
+
+  // forgejo#415 follow-up: a fresh challenge refilled the five-guess budget, so a
+  // client holding the password could cycle login + guesses without limit.
+  it("locks the account when wrong codes are spread over many fresh challenges", async () => {
+    const wrongPerChallenge = 2;
+    const cycles = Math.ceil(LOGIN_LOCK_THRESHOLD / wrongPerChallenge);
+    for (let c = 0; c < cycles; c++) {
+      const login = await request(app)
+        .post("/api/v1/auth/login")
+        .send({ username: "twoFactorLogin", password: "password123" });
+      expect(login.status).toBe(200);
+      for (let i = 0; i < wrongPerChallenge; i++) {
+        const res = await request(app)
+          .post("/api/v1/auth/2fa/verify")
+          .set("Cookie", cookiesOf(login))
+          .send({ code: "000000" });
+        expect(res.status).toBe(401);
+      }
+    }
+    const locked = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    expect(locked.status).toBe(429);
+  });
+
+  it("clears the failure streak once the second factor is proven", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookiesOf(login))
+      .send({ code: "000000" });
+    const ok = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookiesOf(login))
+      .send({ code: codeFor(SECRET) });
+    expect(ok.status).toBe(200);
+    expect(await prisma.loginThrottle.count({ where: { usernameKey: `u:${userId}` } })).toBe(0);
   });
 });

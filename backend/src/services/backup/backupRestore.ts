@@ -14,7 +14,14 @@ import { parseDatabaseUrl } from "./backupDatabase";
 import { AppError } from "../../middleware/errorHandler";
 import { encryptionKeyFingerprint } from "../../utils/encryption";
 import { runSyncSchemaCheck } from "../sync/schemaCheck";
-import { CLEAN_SCHEMA_PREAMBLE, PsqlRestoreError, feedPsql } from "./restorePsql";
+import {
+  CLEAN_SCHEMA_PREAMBLE,
+  PsqlRestoreError,
+  SOFT_CLEAN_SCHEMA_PREAMBLE,
+  createNonSuperuserDumpFilter,
+  feedPsql,
+} from "./restorePsql";
+import { isNonSuperuserRole } from "./dbRole";
 import { sweepAfterFilesRestore } from "../files/restoreSweep";
 import {
   listLocalMigrations,
@@ -268,8 +275,22 @@ async function runRestorePsql(
 ): Promise<void> {
   const env = { ...process.env, PGPASSWORD: dbInfo.password };
   // Spawn with array args, never a shell string (no interpolation).
+  // An ordinary role cannot recreate postgis, so it keeps the extensions and
+  // drops only its own objects; a superuser keeps the original clean-slate path
+  // (forgejo#415 N5).
+  const nonSuperuser = await isNonSuperuserRole(dbInfo);
   const run = (cmd: string, args: string[]): Promise<void> =>
-    feedPsql(cmd, args, env, dumpPath, CLEAN_SCHEMA_PREAMBLE, epilogue);
+    nonSuperuser
+      ? feedPsql(
+          cmd,
+          args,
+          env,
+          dumpPath,
+          SOFT_CLEAN_SCHEMA_PREAMBLE,
+          epilogue,
+          createNonSuperuserDumpFilter()
+        )
+      : feedPsql(cmd, args, env, dumpPath, CLEAN_SCHEMA_PREAMBLE, epilogue);
   const direct = (): Promise<void> =>
     run("psql", [
       ...PSQL_STRICT,

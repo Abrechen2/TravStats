@@ -20,7 +20,7 @@ services:
 
   # Ollama LLM Server (for AI-powered email parsing)
   ollama-dev:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.24.0
     container_name: travstats-ollama-dev
     restart: unless-stopped
     env_file:

@@ -116,6 +116,10 @@ model User {
   // was right, the second factor is still outstanding.
   twoFactorToken            String?                      @unique @map("two_factor_token")
   twoFactorTokenExpiry      DateTime?                    @map("two_factor_token_expiry")
+  // Wrong codes against the CURRENT challenge. Reset whenever a challenge is
+  // issued; persisted so a restart or a second instance cannot refill the
+  // guessing budget (forgejo#415 N10).
+  twoFactorAttempts         Int                          @default(0) @map("two_factor_attempts")
   twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
   webauthnCredentials       WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
@@ -7224,4 +7228,18 @@ model InstanceVersionHistory {
   firstSeenAt DateTime @default(now()) @map("first_seen_at")
 
   @@map("instance_version_history")
+}
+
+/// Consecutive failed password logins per username (forgejo#415 N3), on top of
+/// the per-IP limiter. Keyed by the lower-cased username and kept for names that
+/// do not exist too, so the lockout cannot be used to tell them apart. A window
+/// is bounded (`lockedUntil`), so an attacker can delay a real user, never
+/// lock them out for good.
+model LoginThrottle {
+  usernameKey     String   @id @map("username_key")
+  failures        Int      @default(0)
+  lastFailureAt   DateTime @default(now()) @map("last_failure_at")
+  lockedUntil     DateTime? @map("locked_until")
+
+  @@map("login_throttles")
 }
