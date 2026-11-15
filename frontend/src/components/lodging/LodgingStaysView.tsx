@@ -328,6 +328,16 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
         )}
       </div>
 
+      {/* Outside the list states: a reload must not unmount the result dialog. */}
+      <DomainBulkBar
+        domain="stay"
+        selection={selection}
+        pageRows={bulkRows}
+        onApplied={() => {
+          reload();
+          onChanged?.();
+        }}
+      />
       {loadError ? (
         <ListLoadFailed
           title={t("lodging:stayView.loadError")}
@@ -354,15 +364,6 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
           <div className="mb-3 flex justify-end">
             <BulkStartButton selection={selection} />
           </div>
-          <DomainBulkBar
-            domain="stay"
-            selection={selection}
-            pageRows={bulkRows}
-            onApplied={() => {
-              reload();
-              onChanged?.();
-            }}
-          />
           <TablePagination {...pagination} allowAll={false} placement="top" />
           <Table columns={columns} label={t("lodging:stayView.title")} {...tableHints}>
             {rows.map((stay) => {

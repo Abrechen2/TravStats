@@ -145,6 +145,27 @@ describe("DomainBulkEditModal", () => {
     expect(screen.getByTestId("bulk-failed-c")).toBeInTheDocument();
   });
 
+  it("retries a stay whose write failed after its claim from the version the server names", async () => {
+    edit
+      .mockResolvedValueOnce({
+        results: [
+          { id: "a", status: "failed", code: "UPDATE_FAILED", version: "2026-05-01T00:00:00.001Z" },
+        ],
+        summary: { updated: 0, unchanged: 0, failed: 1 },
+      })
+      .mockResolvedValueOnce({
+        results: [{ id: "a", status: "updated" }],
+        summary: { updated: 1, unchanged: 0, failed: 0 },
+      });
+    const user = userEvent.setup();
+    await renderModal("stay", [ROWS[0]]);
+    await user.click(screen.getByRole("radio", { name: "bulkEdit:mode.statusCancel" }));
+    await user.click(confirm());
+    await user.click(await screen.findByRole("button", { name: /bulkEdit:result\.retryFailed/ }));
+    await waitFor(() => expect(edit).toHaveBeenCalledTimes(2));
+    expect(edit.mock.calls[1][1].baseVersions).toEqual({ a: "2026-05-01T00:00:00.001Z" });
+  });
+
   it("says the outcome is unknown when no answer arrives, and retries safely", async () => {
     edit
       .mockRejectedValueOnce(Object.assign(new Error("Network Error"), { isAxiosError: true }))

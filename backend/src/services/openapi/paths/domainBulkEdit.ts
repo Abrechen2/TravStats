@@ -23,6 +23,12 @@ const result = z.object({
     .enum(BULK_RESULT_CODES)
     .optional()
     .describe("Why this row failed; absent unless `status` is `failed`"),
+  version: z
+    .string()
+    .optional()
+    .describe(
+      "A stay whose write failed after its version claim: the version it is at now, for the retry's `baseVersions`"
+    ),
 });
 
 const answer = z.object({

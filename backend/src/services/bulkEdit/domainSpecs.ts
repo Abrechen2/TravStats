@@ -32,15 +32,20 @@ export interface DomainSpec {
   classColumn: string | null;
   /** Rental: edited fields are protected from a later mail import. */
   protectsEdits: boolean;
+  /**
+   * Cruises and stays are CALENDAR-day facts and read "today" on the profile's
+   * day anchor; a ride or a rental is a real instant and reads the clock.
+   */
+  dayAnchored: boolean;
   /** The status a CANCELLED row goes back to, from the dates it carries. */
-  reinstated: (row: Row, now: Date) => string;
+  reinstated: (row: Row, now: Date | undefined) => string;
   /** The stay is written through its own update, which derives and propagates itself. */
   ownWrite: boolean;
 }
 
 const date = (row: Row, key: string): Date | null => (row[key] as Date | null | undefined) ?? null;
 
-const rideStatus = (row: Row, now: Date): string =>
+const rideStatus = (row: Row, now: Date | undefined): string =>
   deriveRailStatus({
     departureTime: row.departureTime as Date,
     arrivalTime: date(row, "arrivalTime"),
@@ -73,6 +78,7 @@ const transport = (
   operatorColumn: "operator",
   classColumn,
   protectsEdits: false,
+  dayAnchored: false,
   reinstated: rideStatus,
   ownWrite: false,
 });
@@ -112,6 +118,7 @@ export const DOMAIN_SPECS: Record<BulkDomain, DomainSpec> = {
     operatorColumn: null,
     classColumn: null,
     protectsEdits: true,
+    dayAnchored: false,
     reinstated: (row, now) =>
       deriveRentalStatus({
         pickupTime: row.pickupTime as Date,
@@ -133,6 +140,7 @@ export const DOMAIN_SPECS: Record<BulkDomain, DomainSpec> = {
     operatorColumn: null,
     classColumn: null,
     protectsEdits: false,
+    dayAnchored: true,
     reinstated: (row, now) =>
       deriveCruiseStatus({
         startDate: date(row, "startDate"),
@@ -152,6 +160,7 @@ export const DOMAIN_SPECS: Record<BulkDomain, DomainSpec> = {
     operatorColumn: null,
     classColumn: null,
     protectsEdits: false,
+    dayAnchored: true,
     reinstated: (row, now) =>
       deriveLodgingStatus({
         checkIn: date(row, "checkIn"),

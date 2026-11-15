@@ -29,6 +29,8 @@ export interface DomainBulkEditResult {
   status: "updated" | "unchanged" | "failed";
   /** Present only for `failed`. */
   code?: BulkResultCode;
+  /** A stay whose write failed after its version claim: the version to retry from. */
+  version?: string;
 }
 
 export interface DomainBulkEditAnswer {

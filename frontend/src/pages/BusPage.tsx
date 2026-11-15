@@ -291,6 +291,13 @@ export default function BusPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="bus"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed title={t("bus:loadError")} onRetry={reload} log={loadFailure} />
         ) : loading && rides.length === 0 ? (
@@ -312,12 +319,6 @@ export default function BusPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <DomainBulkBar
-              domain="bus"
-              selection={selection}
-              pageRows={bulkRows}
-              onApplied={() => void reload()}
-            />
             <TablePagination {...pagination} allowAll={false} placement="top" />
             <Table columns={columns} label={t("bus:title")} {...tableHints}>
               {rides.map((ride) => (

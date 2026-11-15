@@ -133,7 +133,10 @@ export default function DomainBulkEditModal({
     setSending(true);
     setRequestError(null);
     try {
-      const chosen = rows.filter((r) => only.includes(r.id));
+      // A stay whose write failed after its claim has moved to a new version: retry from that.
+      const chosen = rows
+        .filter((r) => only.includes(r.id))
+        .map((r) => ({ ...r, updatedAt: results?.get(r.id)?.version ?? r.updatedAt }));
       const answer = await domainBulkEditApi.edit(
         domain,
         bulkEditRequest(effective, fields, chosen)

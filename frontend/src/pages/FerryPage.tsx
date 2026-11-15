@@ -295,6 +295,13 @@ export default function FerryPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="ferry"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed title={t("ferry:loadError")} onRetry={reload} log={loadFailure} />
         ) : loading && rides.length === 0 ? (
@@ -316,12 +323,6 @@ export default function FerryPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <DomainBulkBar
-              domain="ferry"
-              selection={selection}
-              pageRows={bulkRows}
-              onApplied={() => void reload()}
-            />
             <TablePagination {...pagination} allowAll={false} placement="top" />
             <Table columns={columns} label={t("ferry:title")} {...tableHints}>
               {rides.map((ride) => (

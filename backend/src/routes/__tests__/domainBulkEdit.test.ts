@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { BULK_EDIT_PATHS, type BulkDomain } from "../../schemas/domainBulkEdit";
+import * as propagation from "../../services/sharing/propagate";
 import {
   makeAccount,
   sharedPair,
@@ -441,6 +442,24 @@ describe("POST /<domain>/bulk-edit — sharing", () => {
       expect(await prisma.shareNotice.count({ where: { userId: ben.id } })).toBe(0);
     }
   );
+
+  it("takes the row's write back when its propagation fails, and says so", async () => {
+    const spy = jest
+      .spyOn(propagation, "propagateWrite")
+      .mockRejectedValueOnce(new Error("share is down"));
+    try {
+      const res = await send("rail", { ids: [ids().rail], status: { mode: "cancel" } });
+      expect(res.body.data.results).toEqual([
+        { id: ids().rail, status: "failed", code: "UPDATE_FAILED" },
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await prisma.railJourney.findUniqueOrThrow({ where: { id: ids().rail } })).status).toBe(
+      "completed"
+    );
+    expect((await bens.rail()).status).toBe("completed");
+  });
 
   it("taking a rail journey out of the shared trip tells the member, exactly as the single edit does", async () => {
     await send("rail", { ids: [ids().rail], trip: { mode: "clear" } }).expect(200);

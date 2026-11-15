@@ -318,6 +318,13 @@ export default function RentalsPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="rental"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed
             title={t("rental:loadError")}
@@ -341,12 +348,6 @@ export default function RentalsPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <DomainBulkBar
-              domain="rental"
-              selection={selection}
-              pageRows={bulkRows}
-              onApplied={() => void reload()}
-            />
             <TablePagination {...pagination} allowAll={false} placement="top" />
             <Table columns={columns} label={t("rental:title")} {...tableHints}>
               {rentals.map((rental) => (

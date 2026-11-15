@@ -468,6 +468,13 @@ export default function CruisesPage(): JSX.Element {
           resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="cruise"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadError ? (
           // A failed read with a way forward (forgejo#247), not a dead end.
           <ListLoadFailed
@@ -492,12 +499,6 @@ export default function CruisesPage(): JSX.Element {
           </div>
         ) : (
           <>
-            <DomainBulkBar
-              domain="cruise"
-              selection={selection}
-              pageRows={bulkRows}
-              onApplied={() => void reload()}
-            />
             <TablePagination {...pagination} allowAll={false} placement="top" />
             <Table columns={visibleColumns} label={t("list.title")} {...tableHints}>
               {cruises.map((c) => (
