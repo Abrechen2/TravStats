@@ -162,24 +162,6 @@ export interface ParserConfigWithSettings {
   adminSettings: AdminParserSettings | undefined;
 }
 
-/**
- * Get parser config with user and admin settings merged
- * User settings take precedence over admin settings
- * Returns config ready to pass to getParserConfig
- */
-export async function getParserConfigWithSettings(
-  userId: string
-): Promise<ParserConfigWithSettings> {
-  const userSettings = await getUserParserSettings(userId);
-  const adminSettings = await getAdminParserSettings();
-
-  // Return both userSettings and adminSettings for getParserConfig
-  return {
-    userSettings: userSettings || undefined,
-    adminSettings: adminSettings || undefined,
-  };
-}
-
 export interface AdminFxSettings {
   cdnFallbackEnabled: boolean;
   /** `admin_settings.internet_enabled`; false = no FX call leaves the server. */

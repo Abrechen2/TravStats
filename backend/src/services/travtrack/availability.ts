@@ -56,10 +56,6 @@ export async function travTrackInstanceOnIn(tx: DbTransaction): Promise<boolean>
   return (await travTrackConfig(tx)).enabled;
 }
 
-export async function assertTravTrackOn(): Promise<void> {
-  if (!(await travTrackInstanceOn())) throw disabled();
-}
-
 /**
  * Whether this account holds anything TravTrack stored for it: points, zones,
  * reported gaps, deleted spans and points, file imports or a live ingest token. One `EXISTS` per table, the

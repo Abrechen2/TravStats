@@ -4,6 +4,7 @@ import type { DetectTripsResult } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { detectionSourceKey } from "../../lib/tripDetectionSource";
 import DetectReviewModal from "./DetectReviewModal";
+import { logger } from "../../lib/logger";
 
 interface Props {
   /** Called after a successful link to refresh the trip list. */
@@ -23,14 +24,15 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
 
   useEffect(() => {
     let cancelled = false;
-    tripsApi
-      .detect({ dryRun: true })
-      .then((r) => {
+    void (async () => {
+      try {
+        const r = await tripsApi.detect({ dryRun: true });
         if (!cancelled) setResult(r);
-      })
-      .catch(() => {
-        // Silent: detection is opportunistic, never blocks the page.
-      });
+      } catch (error) {
+        // Detection is opportunistic and never blocks the page, but the failure is logged.
+        logger.warn("Failed to detect trip proposals", error);
+      }
+    })();
     return () => {
       cancelled = true;
     };

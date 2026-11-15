@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { geoOrthographic, geoPath, geoGraticule10 } from "d3-geo";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { loadWorldCountries } from "../lib/geo/worldCountries";
+import { logger } from "../lib/logger";
 
 interface GlobeLoaderProps {
   /** Diameter of the globe in px. Whirl rings extend ~20% beyond this. */
@@ -72,13 +73,15 @@ export function GlobeLoader({
 
     let countries: FeatureCollection<Geometry> | null = null;
     let cancelled = false;
-    loadWorldCountries()
-      .then((fc) => {
+    void (async () => {
+      try {
+        const fc = await loadWorldCountries();
         if (!cancelled) countries = fc;
-      })
-      .catch(() => {
-        // Fail soft — globe still spins as sphere + graticule.
-      });
+      } catch (error) {
+        // Fail soft — globe still spins as sphere + graticule — but not silently.
+        logger.warn("Failed to load the world countries for the loader globe", error);
+      }
+    })();
 
     const start = performance.now();
     const speed = 32; // deg/s

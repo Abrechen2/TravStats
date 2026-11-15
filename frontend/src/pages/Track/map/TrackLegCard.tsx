@@ -62,7 +62,13 @@ export default function TrackLegCard({
         .getState()
         .addToast("error", t("track:legs.modeFailed", { reason: t(trackErrorKey(err)) }), 8000);
       // The leg is gone (re-derived after late points): read the day so the stale one goes.
-      if (apiErrorMachineCode(err) === "TRAVTRACK_LEG_NOT_FOUND") await onChanged().catch(() => {});
+      if (apiErrorMachineCode(err) === "TRAVTRACK_LEG_NOT_FOUND") {
+        try {
+          await onChanged();
+        } catch (refreshError) {
+          logger.warn("Failed to re-read the day after a vanished TravTrack leg", refreshError);
+        }
+      }
       setBusy(false);
       return;
     }

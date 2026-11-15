@@ -20,8 +20,6 @@ import { resetWriteQueue, DEBOUNCE_MS } from "../../ui/settings/writeQueue";
 const SETTINGS = {
   enabled: true,
   requireApproval: true,
-  checkInterval: 15,
-  onlyDuringFlight: true,
   expiryHours: 24,
 };
 

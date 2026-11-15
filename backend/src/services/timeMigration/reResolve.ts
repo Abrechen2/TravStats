@@ -392,8 +392,3 @@ export async function applyReResolve(
   dryRuns.delete(dryRunId);
   return { dryRunId, applied, skippedChanged };
 }
-
-/** Test seam. */
-export function clearDryRuns(): void {
-  dryRuns.clear();
-}

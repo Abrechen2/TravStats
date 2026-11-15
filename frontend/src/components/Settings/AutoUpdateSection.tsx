@@ -18,8 +18,6 @@ import { NumberSettingRow } from "./NumberSettingRow";
 export interface AutoUpdateSettings {
   enabled: boolean;
   requireApproval: boolean;
-  checkInterval: number;
-  onlyDuringFlight: boolean;
   expiryHours: number;
 }
 

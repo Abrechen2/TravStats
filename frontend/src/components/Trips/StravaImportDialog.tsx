@@ -5,6 +5,7 @@ import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
 import { stravaApi, stravaFailureKind, type StravaActivity } from "../../lib/api/strava";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { logger } from "../../lib/logger";
 
 const DAY_MS = 86_400_000;
 
@@ -118,12 +119,15 @@ export function useStravaConnected(): boolean {
   const [connected, setConnected] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    stravaApi
-      .status()
-      .then((s) => !cancelled && setConnected(s.connected))
-      .catch(() => {
-        // Not being able to ask is the same as not connected for a button.
-      });
+    void (async () => {
+      try {
+        const s = await stravaApi.status();
+        if (!cancelled) setConnected(s.connected);
+      } catch (error) {
+        // Not being able to ask is the same as not connected for a button — logged, not hidden.
+        logger.warn("Failed to read the Strava connection status", error);
+      }
+    })();
     return () => {
       cancelled = true;
     };

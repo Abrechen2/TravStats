@@ -253,7 +253,13 @@ export default function NavigationBar(): JSX.Element {
               onReportBug={canReportBug ? () => setDiagnosticModalOpen(true) : undefined}
               isAdmin={isAdmin}
               onLogout={() => {
-                handleLogout().catch(() => undefined);
+                void (async () => {
+                  try {
+                    await handleLogout();
+                  } catch (error) {
+                    logger.error("Logout failed", error);
+                  }
+                })();
               }}
             />
           </div>

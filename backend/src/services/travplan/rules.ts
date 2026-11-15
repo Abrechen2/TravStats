@@ -1,6 +1,6 @@
 import { instantMinute } from "./temporal";
 import { isSuppressed, routeCoveredNights, routeFindings } from "./routeRules";
-import type { PlanBooking, PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
+import type { PlanBooking, PlanBudget, PlanFinding, PlanState } from "./types";
 export function transferFingerprint(state: PlanState, fromId: string, toId: string): string {
   const from = state.items.find((i) => i.id === fromId),
     to = state.items.find((i) => i.id === toId),
@@ -314,11 +314,5 @@ export function packingSuggestions(state: PlanState): string[] {
     (code) =>
       !state.packing.some((p) => p.category === "suggestion:" + code) &&
       !state.decisions.some((d) => d.id === "packing:" + code)
-  );
-}
-export function transferNeedsReview(state: PlanState, transfer: PlanTransfer): boolean {
-  return (
-    transfer.status === "organized" &&
-    transfer.fingerprint !== transferFingerprint(state, transfer.fromId, transfer.toId)
   );
 }

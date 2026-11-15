@@ -79,13 +79,3 @@ export function measuredDurationMinutes(
     flight.arrTimeSemantics as FlightTimeSemantics
   );
 }
-
-/** What the API puts on the wire: whole minutes, or null. */
-export function roundedMeasuredDurationMinutes(
-  flight: FlightDurationRow,
-  depTz: string | null,
-  arrTz: string | null
-): number | null {
-  const minutes = measuredDurationMinutes(flight, depTz, arrTz);
-  return minutes === null ? null : Math.round(minutes);
-}

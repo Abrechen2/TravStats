@@ -64,13 +64,3 @@ export function SkeletonTable({ rows = 8 }: { rows?: number }): JSX.Element {
     </div>
   );
 }
-
-export function SkeletonStatCards(): JSX.Element {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {[0, 1, 2, 3].map((i) => (
-        <SkeletonCard key={i} className="h-24" />
-      ))}
-    </div>
-  );
-}

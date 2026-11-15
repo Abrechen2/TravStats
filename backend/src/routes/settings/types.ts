@@ -41,12 +41,9 @@ export interface SettingsDataJson {
   };
   map?: {
     mapStyle?: string;
-    zoomLevel?: number;
-    markerStyle?: string;
     routeColor?: string;
   };
   notifications?: {
-    emailNotifications?: boolean;
     flightReminder?: string;
     checkInReminder?: boolean;
     featureUpdates?: boolean;
@@ -66,8 +63,6 @@ export interface SettingsDataJson {
 export interface AutoUpdateResponseSettings {
   enabled: boolean;
   requireApproval: boolean;
-  checkInterval: number;
-  onlyDuringFlight: boolean;
   expiryHours: number;
 }
 
@@ -92,7 +87,6 @@ export interface SettingsResponse extends SettingsDataJson {
     followsDevice: boolean;
   };
   autoUpdate: AutoUpdateResponseSettings;
-  boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
   /** Read-only server capabilities, independent of the account selection. */
@@ -181,13 +175,10 @@ export interface UserSettingsUpdateData {
   data?: Prisma.InputJsonValue;
   autoUpdateEnabled?: boolean;
   autoUpdateRequireApproval?: boolean;
-  autoUpdateCheckInterval?: number;
-  autoUpdateOnlyDuringFlight?: boolean;
   autoUpdateExpiryHours?: number;
   historicalEnrichmentEnabled?: boolean;
   historicalEnrichmentMinConfidence?: number;
   historicalEnrichmentMaxPerDay?: number;
-  boardingPassParserStrategy?: string | null;
   enabledDomains?: string[];
   baseCurrency?: string;
   displayCurrency?: string | null;
@@ -286,12 +277,9 @@ export const defaultSettings = {
   },
   map: {
     mapStyle: "osm",
-    zoomLevel: 3,
-    markerStyle: "pin",
     routeColor: "#2563eb",
   },
   notifications: {
-    emailNotifications: true,
     flightReminder: "24h",
     checkInReminder: true,
     featureUpdates: true,

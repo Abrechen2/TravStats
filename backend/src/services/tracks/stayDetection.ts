@@ -54,11 +54,6 @@ function distanceM(a: Point, b: Point): number {
   return haversineKm({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }) * 1000;
 }
 
-/** The window: the profile's minimum stay, or `STAY_WINDOW_STEPS` sampling steps. */
-export function stayWindowMs(fixes: readonly StayFix[], profile: JitterProfile): number {
-  return runPaced(stayWindowMsPaced(fixes, profile));
-}
-
 function* stayWindowMsPaced(fixes: readonly StayFix[], profile: JitterProfile): Paced<number> {
   const steps = new Float64Array(Math.max(0, fixes.length - 1));
   let count = 0;

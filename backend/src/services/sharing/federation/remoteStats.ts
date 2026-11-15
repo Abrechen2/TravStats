@@ -16,7 +16,6 @@ import { prisma, type DbTransaction } from "../../../db";
 import logger from "../../../utils/logger";
 import { exchange } from "../../federation/security";
 import {
-  STATS_LEVELS,
   STATS_PAGE_SIZE,
   statsReplySchema,
   type StatsLevel,
@@ -345,5 +344,3 @@ function unexpected(userId: string, remoteId: string): unknown {
     kind: "unexpected-reply",
   });
 }
-
-export const STATS_LEVEL_VALUES: readonly StatsLevel[] = STATS_LEVELS;

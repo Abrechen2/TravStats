@@ -214,13 +214,15 @@ export default function PlacesListPage(): JSX.Element {
   // page: a missing filter is an inconvenience, a blank list page is not.
   useEffect(() => {
     let cancelled = false;
-    listPlaceLists(true)
-      .then((rows) => {
+    void (async () => {
+      try {
+        const rows = await listPlaceLists(true);
         if (!cancelled) setLists(rows);
-      })
-      .catch(() => {
+      } catch (error) {
+        logger.warn("Failed to load the place lists for the filter", error);
         if (!cancelled) setLists([]);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };

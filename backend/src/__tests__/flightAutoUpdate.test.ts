@@ -27,8 +27,6 @@ describe("Flight Auto-Update Service", () => {
         data: {},
         autoUpdateEnabled: true,
         autoUpdateRequireApproval: true,
-        autoUpdateCheckInterval: 15,
-        autoUpdateOnlyDuringFlight: true,
         autoUpdateExpiryHours: 24,
       },
     });
@@ -224,7 +222,7 @@ describe("Flight Auto-Update Service", () => {
   });
 
   describe("checkAndUpdateFlightsForUser", () => {
-    it("should not create update for inactive flight when onlyDuringFlight is true", async () => {
+    it("should not create update for inactive flight (the check follows the flight window)", async () => {
       // Create a future flight
       const futureFlight = await prisma.flight.create({
         data: {

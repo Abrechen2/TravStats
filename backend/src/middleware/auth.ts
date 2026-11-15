@@ -4,7 +4,7 @@ import { isSessionRevoked } from "../utils/revokedSessions";
 import { AppError } from "./errorHandler";
 import { JWT_SECRET } from "../utils/jwtSecret";
 import { prisma } from "../db";
-import { securityLogger } from "../utils/logger";
+import logger, { securityLogger } from "../utils/logger";
 import { requestPathForLog } from "../utils/logging/requestPath";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 import {
@@ -301,12 +301,20 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   // reject the request; this is just bookkeeping for the user's "are
   // any of my tokens stale?" UI.
   if (shouldTouchLastUsed(token.lastUsedAt)) {
-    void prisma.apiToken
-      .update({
-        where: { id: token.id },
-        data: { lastUsedAt: new Date(), lastUsedIp: req.ip ?? null },
-      })
-      .catch(() => undefined);
+    void (async () => {
+      try {
+        await prisma.apiToken.update({
+          where: { id: token.id },
+          data: { lastUsedAt: new Date(), lastUsedIp: req.ip ?? null },
+        });
+      } catch (error) {
+        logger.warn({
+          operation: "api_token_last_used_failed",
+          tokenId: token.id,
+          errorName: error instanceof Error ? error.name : "unknown",
+        });
+      }
+    })();
   }
 }
 

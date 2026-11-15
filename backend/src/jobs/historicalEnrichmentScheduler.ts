@@ -349,10 +349,3 @@ export function stopHistoricalEnrichmentScheduler(): void {
   schedulerTask = null;
   schedulerRunning = false;
 }
-
-/**
- * Check if scheduler is running
- */
-export function isHistoricalEnrichmentSchedulerRunning(): boolean {
-  return schedulerRunning;
-}

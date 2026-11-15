@@ -59,19 +59,6 @@ export function getDefaultTextFallbackChain(): TextProvider[] {
 }
 
 /**
- * Parse fallback chain from string (comma-separated)
- */
-export function parseFallbackChain<T extends string>(
-  chain: string | undefined,
-  defaultChain: T[]
-): T[] {
-  if (!chain) return defaultChain;
-
-  const providers = chain.split(",").map((p) => p.trim()) as T[];
-  return providers.length > 0 ? providers : defaultChain;
-}
-
-/**
  * Get parser configuration
  * @param userId - Optional user ID for template lookup
  */

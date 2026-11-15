@@ -47,8 +47,6 @@ export const DEFAULT_AIRPORT_COLOR: [number, number, number] = [251, 191, 36];
 // flat-map port markers + cruise routes so ports read identically on both
 // maps. Was sky-400 [56,189,248], a different blue outside the palette.
 export const DEFAULT_PORT_COLOR: [number, number, number] = [111, 160, 214];
-export const DEFAULT_MARKER_RADIUS_PX = 5;
-
 /**
  * Resolve a flight arc's render color for the globe.
  *

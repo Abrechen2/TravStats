@@ -661,16 +661,6 @@ export async function deleteDocument(userId: string, id: string): Promise<void> 
   );
 }
 
-/**
- * The stored files of documents about to disappear with their entries. The
- * foreign keys cascade the ROWS; the bytes need this. Call before the delete,
- * remove after it succeeds — so a failed delete never loses a file.
- */
-export async function storedNamesFor(where: Prisma.DocumentWhereInput): Promise<string[]> {
-  const rows = await prisma.document.findMany({ where, select: { storedName: true } });
-  return rows.map((r) => r.storedName);
-}
-
 /** Removes the files of rows already deleted — each only once no other row names it. */
 export async function removeStoredFiles(storedNames: readonly string[]): Promise<void> {
   await releaseDocumentFiles(storedNames);

@@ -83,15 +83,6 @@ export async function lodgingStaysCoveredBy(
   return { lodgingIds: [...lodgingIds], stayIds };
 }
 
-/** The hotels with at least one stay this card counts (see above). */
-export async function lodgingIdsCoveredBy(
-  userId: string,
-  membershipId: string,
-  year?: number
-): Promise<string[]> {
-  return (await lodgingStaysCoveredBy(userId, membershipId, year)).lodgingIds;
-}
-
 /**
  * The flights this card counts, among those `where` already selects. The year
  * is left to the flight list's own local-calendar filter, which reads the same

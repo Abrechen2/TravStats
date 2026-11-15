@@ -175,15 +175,3 @@ export function geoLine(format: GeoFormat, line: GeoLine): string {
     `${geometry}</Placemark>\n`
   );
 }
-
-/** A whole small document (one track, no waypoints) as one string. */
-export function geoDocument(
-  format: GeoFormat,
-  name: string,
-  lines: readonly GeoLine[],
-  desc?: string | null
-): string {
-  return (
-    geoHead(format, name, desc) + lines.map((l) => geoLine(format, l)).join("") + geoFoot(format)
-  );
-}

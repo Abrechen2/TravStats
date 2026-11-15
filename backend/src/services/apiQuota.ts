@@ -172,8 +172,3 @@ export function getAllProviderQuotas(userId?: string): Record<ApiProvider, Provi
   }
   return out;
 }
-
-/** Test helper. */
-export function __resetApiQuotaForTests(): void {
-  observed.clear();
-}

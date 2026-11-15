@@ -18,6 +18,7 @@ import { readFileSync } from "fs";
 
 import { buildPassport, type PassportFlight } from "../services/stats/passport";
 import { isoCountryCode } from "../utils/continents";
+import { COUNTABLE_FLIGHT_STATUSES } from "../shared/flightCounting";
 
 type Section = Record<string, string[]>;
 
@@ -130,7 +131,7 @@ const portCalls = (ex.PORTS ?? []).flatMap((row) => {
 // --- the OLD rule, as `buildPassport` implemented it before the rework -----
 // "a country counts if a flight began OR ended there", plus ports and places.
 // Lodging was not a parameter at all. Reproduced here only to name the delta.
-const FLOWN = new Set(["flown", "historical"]);
+const FLOWN = new Set<string>(COUNTABLE_FLIGHT_STATUSES);
 const oldCountries = new Set<string>();
 for (const f of flights) {
   if (!FLOWN.has(f.status)) continue;

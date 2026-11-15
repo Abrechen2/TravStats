@@ -77,17 +77,6 @@ export const planDocPutSchema = z.strictObject({
 });
 export const planExportSchema = z.strictObject({ kind: z.literal("plan-export"), ...onPlan });
 
-export const PLAN_PROXY_KINDS = [
-  "plan-read",
-  "plan-mutate",
-  "plan-collab",
-  "plan-notices-read",
-  "plan-doc-list",
-  "plan-doc-get",
-  "plan-doc-put",
-  "plan-export",
-] as const;
-
 export const PLAN_PACKETS = [
   planInviteSchema,
   planJoinSchema,

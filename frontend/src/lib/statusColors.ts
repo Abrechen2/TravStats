@@ -48,15 +48,3 @@ export const CRUISE_STATUS_PAST_COLOR: Rgb = rgb(tokens.domainColor.cruise);
 
 /** Planned cruises: `info`, the same as a planned flight. Was cyan `#22d3ee`. */
 export const CRUISE_STATUS_PLANNED_COLOR: Rgb = rgb(tokens.color.info);
-
-/**
- * NOT IMPLEMENTED: the dash on a planned stroke.
- *
- * `tokens.json → map` asks for `dashed info`, and a dash is how the whole
- * system says "provisional" — the pending pill is dashed, an unconfirmed row
- * is dashed. deck.gl's `PathLayer` and `ArcLayer` have no dash without
- * `PathStyleExtension`, which does not apply to arcs at all, so the planned
- * routes are drawn solid in `info` for now. The colour carries the meaning;
- * the dash is an open item for whoever gives the globe its own pass.
- */
-export const PLANNED_STROKE_IS_DASHED = false;

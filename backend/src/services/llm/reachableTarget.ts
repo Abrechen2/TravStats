@@ -4,6 +4,7 @@ import {
   type LlmTarget,
   type ResolveLlmTargetOptions,
 } from "./llmProvider";
+import logger from "../../utils/logger";
 
 /**
  * The first slot of the fallback chain that answers — not merely the first slot.
@@ -47,16 +48,22 @@ function probe(target: LlmTarget): Promise<boolean> {
   const key = keyOf(target);
   const running = inFlight.get(key);
   if (running) return running;
-  const started = llmProbe(target)
-    .then((result) => result.reachable)
-    // `llmProbe` swallows its own errors; a rejection here would only be a bug
-    // in it, and a probe that did not answer is a slot that is not reachable.
-    .catch(() => false)
-    .then((reachable) => {
-      probes.set(key, { reachable, at: Date.now() });
-      return reachable;
-    })
-    .finally(() => inFlight.delete(key));
+  const started = (async (): Promise<boolean> => {
+    let reachable = false;
+    try {
+      reachable = (await llmProbe(target)).reachable;
+    } catch (error) {
+      // `llmProbe` swallows its own errors; a rejection here would only be a bug
+      // in it, and a probe that did not answer is a slot that is not reachable.
+      logger.warn({
+        operation: "llm_slot_probe_failed",
+        errorName: error instanceof Error ? error.name : "unknown",
+      });
+    }
+    probes.set(key, { reachable, at: Date.now() });
+    inFlight.delete(key);
+    return reachable;
+  })();
   inFlight.set(key, started);
   return started;
 }

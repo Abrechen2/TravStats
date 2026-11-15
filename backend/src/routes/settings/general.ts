@@ -145,8 +145,6 @@ const settingsSchema = z
     map: z
       .object({
         mapStyle: z.enum(["osm", "satellite"]).optional(),
-        zoomLevel: z.number().min(1).max(18).optional(),
-        markerStyle: z.enum(["pin", "circle", "custom"]).optional(),
         routeColor: z
           .string()
           .regex(/^#[0-9a-fA-F]{3,8}$/, "Must be a hex color")
@@ -156,7 +154,6 @@ const settingsSchema = z
       .optional(),
     notifications: z
       .object({
-        emailNotifications: z.boolean().optional(),
         flightReminder: z.enum(["off", "24h", "48h"]).optional(),
         checkInReminder: z.boolean().optional(),
         featureUpdates: z.boolean().optional(),
@@ -167,8 +164,6 @@ const settingsSchema = z
       .object({
         enabled: z.boolean().optional(),
         requireApproval: z.boolean().optional(),
-        checkInterval: z.number().min(5).max(1440).optional(), // 5 minutes to 24 hours
-        onlyDuringFlight: z.boolean().optional(),
         expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
       })
       .partial()
@@ -205,10 +200,6 @@ const settingsSchema = z
         showCruiseArcs: z.boolean().optional(),
       })
       .partial()
-      .optional(),
-    boardingPassParserStrategy: z
-      .enum(["parser-only", "parser-with-api", "api-only"])
-      .nullable()
       .optional(),
     enabledDomains: z
       .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
@@ -315,10 +306,7 @@ function buildSettingsResponse(
     data: Prisma.JsonValue;
     autoUpdateEnabled: boolean;
     autoUpdateRequireApproval: boolean;
-    autoUpdateCheckInterval: number;
-    autoUpdateOnlyDuringFlight: boolean;
     autoUpdateExpiryHours: number;
-    boardingPassParserStrategy: string | null;
     historicalEnrichmentEnabled: boolean | null;
     historicalEnrichmentMinConfidence: number | null;
     historicalEnrichmentMaxPerDay: number | null;
@@ -354,11 +342,8 @@ function buildSettingsResponse(
     autoUpdate: {
       enabled: record.autoUpdateEnabled ?? false,
       requireApproval: record.autoUpdateRequireApproval ?? true,
-      checkInterval: record.autoUpdateCheckInterval ?? 15,
-      onlyDuringFlight: record.autoUpdateOnlyDuringFlight ?? true,
       expiryHours: record.autoUpdateExpiryHours ?? 24,
     },
-    boardingPassParserStrategy: record.boardingPassParserStrategy,
     historicalEnrichment: {
       enabled: record.historicalEnrichmentEnabled ?? false,
       minConfidence: record.historicalEnrichmentMinConfidence ?? 60,
@@ -443,11 +428,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
           // Initialize auto-update settings with defaults
           autoUpdateEnabled: false,
           autoUpdateRequireApproval: true,
-          autoUpdateCheckInterval: 15,
-          autoUpdateOnlyDuringFlight: true,
           autoUpdateExpiryHours: 24,
-          // Initialize boarding pass parser strategy (null = auto)
-          boardingPassParserStrategy: null,
           // Initialize historical enrichment settings with defaults
           historicalEnrichmentEnabled: false,
           historicalEnrichmentMinConfidence: 60,
@@ -587,7 +568,6 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     // Extract direct fields from payload since they're not part of JSON data
     const {
-      boardingPassParserStrategy,
       autoUpdate: _autoUpdate,
       historicalEnrichment: _historicalEnrichment,
       ...payloadWithoutDirectFields
@@ -647,12 +627,6 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       if ("requireApproval" in payload.autoUpdate) {
         updateData.autoUpdateRequireApproval = payload.autoUpdate.requireApproval;
       }
-      if (payload.autoUpdate.checkInterval !== undefined) {
-        updateData.autoUpdateCheckInterval = payload.autoUpdate.checkInterval;
-      }
-      if ("onlyDuringFlight" in payload.autoUpdate) {
-        updateData.autoUpdateOnlyDuringFlight = payload.autoUpdate.onlyDuringFlight;
-      }
       if (payload.autoUpdate.expiryHours !== undefined) {
         updateData.autoUpdateExpiryHours = payload.autoUpdate.expiryHours;
       }
@@ -660,8 +634,6 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       // Preserve existing auto-update settings if not in payload
       updateData.autoUpdateEnabled = existing.autoUpdateEnabled;
       updateData.autoUpdateRequireApproval = existing.autoUpdateRequireApproval;
-      updateData.autoUpdateCheckInterval = existing.autoUpdateCheckInterval;
-      updateData.autoUpdateOnlyDuringFlight = existing.autoUpdateOnlyDuringFlight;
       updateData.autoUpdateExpiryHours = existing.autoUpdateExpiryHours;
     }
 
@@ -689,11 +661,6 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.historicalEnrichmentEnabled = existing.historicalEnrichmentEnabled;
       updateData.historicalEnrichmentMinConfidence = existing.historicalEnrichmentMinConfidence;
       updateData.historicalEnrichmentMaxPerDay = existing.historicalEnrichmentMaxPerDay;
-    }
-
-    // Handle boarding pass parser strategy
-    if (boardingPassParserStrategy !== undefined) {
-      updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
 
     // Handle enabled domains (multi-domain foundation)
@@ -741,14 +708,10 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         // Initialize auto-update settings with defaults
         autoUpdateEnabled: payload.autoUpdate?.enabled ?? false,
         autoUpdateRequireApproval: payload.autoUpdate?.requireApproval ?? true,
-        autoUpdateCheckInterval: payload.autoUpdate?.checkInterval ?? 15,
-        autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
         historicalEnrichmentEnabled: payload.historicalEnrichment?.enabled ?? false,
         historicalEnrichmentMinConfidence: payload.historicalEnrichment?.minConfidence ?? 60,
         historicalEnrichmentMaxPerDay: payload.historicalEnrichment?.maxPerDay ?? 50,
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
-        // Initialize boarding pass parser strategy (null = auto)
-        boardingPassParserStrategy: boardingPassParserStrategy ?? null,
         enabledDomains: enabledDomains ?? ["flight"],
         baseCurrency: baseCurrency ?? "EUR",
         displayCurrency: displayCurrency ?? null,

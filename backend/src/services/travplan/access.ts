@@ -78,12 +78,6 @@ export type PlanActor = string | RemoteActor;
 
 export const isRemote = (actor: PlanActor): actor is RemoteActor => typeof actor !== "string";
 
-/** The account that pays for quota and owns the records an act touches: the owner for a remote member. */
-export async function quotaUserOf(actor: PlanActor, tripId: string): Promise<string> {
-  if (!isRemote(actor)) return actor;
-  return (await planAccess(actor, tripId)).ownerId;
-}
-
 export async function planAccess(actor: PlanActor, tripId: string) {
   const row = await prisma.travelPlan.findFirst({
     where: { tripId },

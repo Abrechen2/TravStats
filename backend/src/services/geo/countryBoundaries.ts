@@ -388,8 +388,3 @@ export function getCountryBoundaryIndex(): Promise<CountryBoundaryIndex> {
   });
   return cached;
 }
-
-/** Test seam — drops the memoised index so a fixture can replace it. */
-export function resetCountryBoundaryIndexForTests(): void {
-  cached = null;
-}

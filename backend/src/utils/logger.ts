@@ -220,13 +220,6 @@ export function setCategoryFileEnabled(category: FileCategory, enabled: boolean)
   return false;
 }
 
-/** Categories whose own file is attached right now. */
-export function attachedCategoryFiles(): string[] {
-  return [...categoryLoggers.entries()]
-    .filter(([, entry]) => entry.fileEntryId !== null)
-    .map(([category]) => category);
-}
-
 /** Generate a request correlation id. */
 export function generateRequestId(): string {
   return `req-${uuidv4().substring(0, 8)}`;

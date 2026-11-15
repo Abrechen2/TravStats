@@ -6,8 +6,6 @@ import { foldField, optionalText, wallClockOrDay } from "./wallClockInput";
 
 export const FERRY_STATUSES = ["scheduled", "in_progress", "completed", "cancelled"] as const;
 export const FERRY_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
-export const FERRY_DISTANCE_SOURCES = ["great_circle", "user"] as const;
-export const FERRY_GEOMETRY_SOURCES = ["straight", "manual"] as const;
 export const FERRY_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
 export const ferryStationSchema = z.object({

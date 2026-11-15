@@ -301,9 +301,18 @@ export async function backfillMissingCoordinates(
       // "this row had its turn", not "this row succeeded". A failure that did
       // not move the row would leave it at the head of the queue for ever,
       // which is the bug.
-      await prisma.lodging
-        .update({ where: { id: row.id }, data: { geocodeAttemptedAt: new Date() } })
-        .catch(() => undefined);
+      try {
+        await prisma.lodging.update({
+          where: { id: row.id },
+          data: { geocodeAttemptedAt: new Date() },
+        });
+      } catch (error) {
+        logger.warn({
+          operation: "lodging_geocode_attempt_stamp_failed",
+          lodgingId: row.id,
+          errorName: error instanceof Error ? error.name : "unknown",
+        });
+      }
       try {
         const coords = await resolveCoordinates(row, userId);
         if (!coords) continue;

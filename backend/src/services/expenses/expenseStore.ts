@@ -110,11 +110,6 @@ export async function listExpenses(userId: string, scope: ExpenseScope): Promise
   });
 }
 
-/** One expense as every response carries it — after a write that touched its documents. */
-export async function readExpense(expenseId: string): Promise<ExpenseRow> {
-  return prisma.tripExpense.findUniqueOrThrow({ where: { id: expenseId }, select: EXPENSE_SELECT });
-}
-
 /** A write's row, and what became of its exchange rate. */
 export interface ExpenseWrite {
   row: ExpenseRow;

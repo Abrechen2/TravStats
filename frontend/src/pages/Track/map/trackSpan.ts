@@ -33,8 +33,6 @@ export interface TrackSpan {
 
 export type SpanPreset = "today" | "yesterday" | "week" | "month" | "year" | "custom";
 
-/** Days a range read may cover (the server's `TRAVTRACK_RANGE_MAX_DAYS`). */
-export const RANGE_MAX_DAYS = 400;
 /** The longest span the replay plays and the photo layer asks for. */
 export const REPLAY_MAX_DAYS = 7;
 

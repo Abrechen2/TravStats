@@ -50,10 +50,15 @@ export default function SetupPage(): JSX.Element {
   const [demoError, setDemoError] = useState("");
 
   useEffect(() => {
-    setupApi
-      .getStatus()
-      .then((status) => setDemoAccountAvailable(status.demoAccountAvailable === true))
-      .catch(() => setDemoAccountAvailable(false));
+    void (async () => {
+      try {
+        const status = await setupApi.getStatus();
+        setDemoAccountAvailable(status.demoAccountAvailable === true);
+      } catch (error) {
+        logger.warn("Failed to read the setup status", error);
+        setDemoAccountAvailable(false);
+      }
+    })();
   }, []);
 
   const handleDemoLogin = async (): Promise<void> => {

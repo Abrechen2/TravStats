@@ -159,10 +159,6 @@ export function allHomeAirports(periods: readonly HomePeriod[]): string[] {
   return codes;
 }
 
-export function hasUnconfirmedResidence(periods: readonly HomePeriod[]): boolean {
-  return periods.some((p) => !p.residenceConfirmed);
-}
-
 // ─── The old shape ────────────────────────────────────────────────────────────
 
 export function sortHistory(history: HomeAirportEntry[]): HomeAirportEntry[] {

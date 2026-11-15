@@ -30,10 +30,3 @@ registry.register(new FallbackParser()); // Always last
 export function parseBCBP(barcodeData: string): BoardingPassData | null {
   return registry.parse(barcodeData);
 }
-
-/**
- * Get the parser registry instance (for advanced usage)
- */
-export function getParserRegistry(): ParserRegistry {
-  return registry;
-}

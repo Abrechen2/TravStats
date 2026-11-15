@@ -564,4 +564,4 @@ export async function parseLodgingBookingText(
   }
 }
 
-export const LODGING_DEFAULT_TYPE = LODGING_TYPES[0]; // "hotel"
+// "hotel"

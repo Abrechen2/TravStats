@@ -169,7 +169,17 @@ export async function resolveCataloguedProviderLogo(
   const cached = await readCached(provider.id);
   if (cached) {
     if (Date.now() - cached.fetchedAt > LOGO_MAX_AGE_MS) {
-      void resolveFresh(provider).catch(() => undefined);
+      void (async () => {
+        try {
+          await resolveFresh(provider);
+        } catch (error) {
+          logger.warn({
+            operation: "rental_provider_logo_refresh_failed",
+            providerId: provider.id,
+            errorName: error instanceof Error ? error.name : "unknown",
+          });
+        }
+      })();
     }
     return cached.logo;
   }

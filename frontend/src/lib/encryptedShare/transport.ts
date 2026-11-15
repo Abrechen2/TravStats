@@ -11,6 +11,7 @@ import {
   type Manifest,
 } from "./crypto";
 import { pinnedDevices, checkFreshness } from "./vault";
+import { logger } from "../logger";
 export interface Asset {
   key: string;
   kind: string;
@@ -166,7 +167,11 @@ export async function publish(
     const manifest = await sealed.finish(indexStart, parts - indexStart);
     await post(`/${context.id}/finish`, manifest);
   } catch (error) {
-    await api.delete(`/encrypted-share/sealed/${context.id}`).catch(() => undefined);
+    try {
+      await api.delete(`/encrypted-share/sealed/${context.id}`);
+    } catch (cleanupError) {
+      logger.warn("Failed to remove the half-uploaded sealed share", cleanupError);
+    }
     throw error;
   }
 }

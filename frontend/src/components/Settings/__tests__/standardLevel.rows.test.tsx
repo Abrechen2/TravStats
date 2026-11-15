@@ -44,8 +44,6 @@ import { useSettingsLevelStore } from "../../../store/settingsLevelStore";
 const autoUpdate = {
   enabled: true,
   requireApproval: true,
-  checkInterval: 15,
-  onlyDuringFlight: true,
   expiryHours: 24,
 };
 

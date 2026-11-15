@@ -45,8 +45,6 @@ export interface Co2Estimate {
 }
 
 export type Co2Mode = "rail" | "bus" | "ferry" | "cruise" | "rental";
-export const CO2_MODES: readonly Co2Mode[] = ["rail", "bus", "ferry", "cruise", "rental"];
-
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 function usableKm(km: number | null | undefined): km is number {

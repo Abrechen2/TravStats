@@ -56,8 +56,3 @@ export const CRUISE_GEOMETRY = {
   BATCH_SIZE: 100, // the server's own cap (routes/cruises.ts, geometryBatchSchema)
   TIMEOUT_MS: 60000, // a cold 100-cruise batch, with room to spare
 } as const;
-
-// ========== BOARDING PASS OCR ==========
-export const BOARDING_PASS_OCR = {
-  DEFAULT_TIMEOUT_MS: 10000, // 10 seconds
-} as const;

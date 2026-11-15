@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usageStatsApi } from "../lib/api";
+import { logger } from "../lib/logger";
 
 /**
  * Decides whether the telemetry consent step should appear, and when.
@@ -66,20 +67,21 @@ export function useTelemetryConsentStep({
     }
     setLoaded(false);
     let cancelled = false;
-    void usageStatsApi
-      .get()
-      .then((status) => {
+    void (async () => {
+      try {
+        const status = await usageStatsApi.get();
         if (!cancelled) {
           setUnanswered(status.consent === "unset");
           setLoaded(true);
         }
-      })
-      .catch(() => {
+      } catch (error) {
+        logger.warn("Failed to read the usage-stats consent", error);
         if (!cancelled) {
           setUnanswered(false);
           setLoaded(true);
         }
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
