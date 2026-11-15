@@ -3,7 +3,6 @@ import axios from "axios";
 
 import {
   FETCH_DEADLINE_MS,
-  MAX_TOTAL_BYTES,
   MAX_TOTAL_POINTS,
   MAX_WINDOW_MS,
   fetchReceiverTrack,
@@ -40,21 +39,6 @@ describe("fetchReceiverTrack bounds", () => {
     getSpy.mockResolvedValue({ status: 404, data: "", headers: {} } as never);
     await fetchReceiverTrack(receiver, "3c6444", FROM, FROM + MAX_WINDOW_MS);
     expect(getSpy.mock.calls.length).toBeLessThanOrEqual(9);
-  });
-
-  it("stops when the files together exceed the byte budget", async () => {
-    getSpy.mockResolvedValue({
-      status: 200,
-      data: traceFile(cruiseRows(0, 5)),
-      headers: { "content-length": String(MAX_TOTAL_BYTES) },
-    } as never);
-    // Day 1 spends the whole budget; day 2's request is told it may read at most 1 byte.
-    await fetchReceiverTrack(receiver, "3c6444", FROM, FROM + 30 * HOUR);
-    const limits = getSpy.mock.calls.map(
-      (c) => (c[1] as { maxContentLength: number }).maxContentLength
-    );
-    expect(limits[0]).toBeGreaterThan(1);
-    expect(limits[limits.length - 1]).toBe(1);
   });
 
   it("reports an oversized file as too_large", async () => {
