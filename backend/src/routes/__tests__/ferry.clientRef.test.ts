@@ -130,7 +130,17 @@ describe("ferry clientRef", () => {
       },
     });
     const payload = { ...body, documentIds: [doc.id], clientRef: "ferry:rollback" };
-    const spy = jest.spyOn(documents, "linkDocumentsInTx").mockResolvedValueOnce(0);
+    // The receipt is filed elsewhere between the ownership check and the create.
+    const real = documents.takeDocumentIds;
+    const spy = jest.spyOn(documents, "takeDocumentIds").mockImplementationOnce(async (user, b) => {
+      const ids = await real(user, b);
+      const trip = await prisma.trip.create({ data: { userId: users[0], name: "elsewhere" } });
+      await prisma.document.update({
+        where: { id: doc.id },
+        data: { tripId: trip.id, linkedAt: new Date() },
+      });
+      return ids;
+    });
     try {
       await post(payload).expect(409);
     } finally {
@@ -138,6 +148,8 @@ describe("ferry clientRef", () => {
     }
     expect(await prisma.ferryJourney.count({ where: { userId: users[0] } })).toBe(0);
     expect(await prisma.clientWriteRef.count({ where: { userId: users[0] } })).toBe(0);
+    // The other filing is undone, so the same request may be retried.
+    await prisma.document.update({ where: { id: doc.id }, data: { tripId: null, linkedAt: null } });
     await post(payload).expect(201);
   });
 });
