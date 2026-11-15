@@ -84,7 +84,9 @@ registry.registerPath({
   method: "post",
   path: "/settings/tokens/purge-old",
   summary: "Remove all revoked and expired API tokens of the caller",
+  description: "`?devices=1` limits it to paired phones (tokens with a device id).",
   tags: ["API Tokens"],
+  request: { query: z.object({ devices: z.literal("1").optional() }) },
   responses: {
     200: {
       description: "Number of tokens removed",

@@ -158,8 +158,9 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
  * routes share; an active token is never old, so no removal can cut off a
  * working phone or script.
  */
-const oldTokenWhere = (userId: string, at: Date) => ({
+const oldTokenWhere = (userId: string, at: Date, devicesOnly = false) => ({
   userId,
+  ...(devicesOnly ? { deviceId: { not: null } } : {}),
   OR: [{ revokedAt: { not: null } }, { expiresAt: { lte: at } }],
 });
 
@@ -203,12 +204,16 @@ router.delete("/:id/purge", async (req: AuthRequest, res: Response, next: NextFu
   }
 });
 
-/** Remove every revoked or expired token of the caller in one go. */
+/**
+ * Remove every revoked or expired token of the caller in one go. With
+ * `?devices=1` only paired phones: the phone list must not take script keys
+ * with it that it never showed.
+ */
 router.post("/purge-old", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.userId) throw new AppError("Unauthorized", 401);
     const { count } = await prisma.apiToken.deleteMany({
-      where: oldTokenWhere(req.userId, new Date()),
+      where: oldTokenWhere(req.userId, new Date(), req.query.devices === "1"),
     });
     securityLogger.info({
       operation: "security_event",

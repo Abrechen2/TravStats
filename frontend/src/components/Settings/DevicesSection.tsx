@@ -248,7 +248,7 @@ export default function DevicesSection(): JSX.Element {
     });
     if (!confirmed) return;
     try {
-      await apiTokensApi.removeOld();
+      await apiTokensApi.removeOld({ devicesOnly: true });
       void reload();
     } catch (err) {
       logger.error("Failed to remove old devices", err);

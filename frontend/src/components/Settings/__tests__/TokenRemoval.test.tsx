@@ -161,7 +161,7 @@ describe("DevicesSection removal of old phones", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "settings:devices.removeAllDialog.confirm" })
     );
-    await waitFor(() => expect(api.removeOld).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(api.removeOld).toHaveBeenCalledWith({ devicesOnly: true }));
   });
 
   it("tells the user when removing a phone fails", async () => {

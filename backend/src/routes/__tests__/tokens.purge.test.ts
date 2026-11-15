@@ -109,6 +109,17 @@ describe("DELETE /settings/tokens/:id/purge and POST /settings/tokens/purge-old"
     expect(await prisma.apiToken.findUnique({ where: { id: foreign } })).not.toBeNull();
   });
 
+  it("with ?devices=1 removes only old phones and leaves old script keys", async () => {
+    const phone = await token(a.id, "phone", { revokedAt: PAST, deviceId: "p1" });
+    const script = await token(a.id, "script", { revokedAt: PAST });
+    const res = await request(app)
+      .post("/api/v1/settings/tokens/purge-old?devices=1")
+      .set("Cookie", a.cookie);
+    expect(res.body).toEqual({ removed: 1 });
+    expect(await prisma.apiToken.findUnique({ where: { id: phone } })).toBeNull();
+    expect(await prisma.apiToken.findUnique({ where: { id: script } })).not.toBeNull();
+  });
+
   it("answers removed: 0 when nothing is old", async () => {
     await token(a.id, "live");
     const res = await request(app)

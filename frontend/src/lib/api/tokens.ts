@@ -60,9 +60,13 @@ export const apiTokensApi = {
     await api.delete(`/settings/tokens/${id}/purge`);
   },
 
-  /** Remove every revoked or expired token of the caller; resolves with how many went. */
-  removeOld: async (): Promise<number> => {
-    const { data } = await api.post<{ removed: number }>("/settings/tokens/purge-old");
+  /** Remove every revoked or expired token of the caller (`devicesOnly`: paired phones only); resolves with how many went. */
+  removeOld: async (opts: { devicesOnly?: boolean } = {}): Promise<number> => {
+    const { data } = await api.post<{ removed: number }>(
+      "/settings/tokens/purge-old",
+      undefined,
+      opts.devicesOnly ? { params: { devices: "1" } } : undefined
+    );
     return data.removed;
   },
 };
