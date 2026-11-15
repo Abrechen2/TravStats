@@ -1190,7 +1190,8 @@
       "googlePlaces": "Place search and place details",
       "transitous": "Find trains by number and station",
       "photon": "Place search while typing",
-      "nominatim": "Turn addresses into coordinates"
+      "nominatim": "Turn addresses into coordinates",
+      "tar1090": "Past flights' track from your own receiver"
     },
     "count_one": "1 service",
     "count_other": "{{count}} services",

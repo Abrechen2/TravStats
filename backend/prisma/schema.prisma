@@ -1024,6 +1024,8 @@ model UserSettings {
 
   // Immich connection (base URL plain, API key encrypted at application level)
   immichBaseUrl     String? @map("immich_base_url")
+  // Own tar1090/readsb receiver (forgejo#408 phase 3): base URL, plain.
+  tar1090BaseUrl String? @map("tar1090_base_url")
   immichApiKey      String? @map("immich_api_key")
   immichDefaultMode String  @default("link") @map("immich_default_mode")
 
@@ -1353,6 +1355,8 @@ model AdminSettings {
 
   // Global Immich connection (base URL plain, API key encrypted)
   globalImmichBaseUrl String? @map("global_immich_base_url")
+  // Own tar1090/readsb receiver (forgejo#408 phase 3), instance-wide address.
+  globalTar1090BaseUrl String? @map("global_tar1090_base_url")
   globalImmichApiKey  String? @map("global_immich_api_key")
 
   // Global Dawarich connection (base URL plain, API key encrypted, Phase 3b)

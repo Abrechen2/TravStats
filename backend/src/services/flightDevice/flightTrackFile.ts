@@ -19,7 +19,7 @@ import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
  * shared reader unchanged. A KMZ is stored as `kml`: it is one, zipped.
  */
 
-export type FlightTrackFileFormat = Exclude<FlightTrackSource, "companion" | "aeroapi">;
+export type FlightTrackFileFormat = Exclude<FlightTrackSource, "companion" | "aeroapi" | "readsb">;
 
 export interface FlightTrackFile {
   format: FlightTrackFileFormat;

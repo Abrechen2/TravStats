@@ -49,13 +49,21 @@ export interface AdsbAircraft {
 }
 
 export type AdsbResult =
-  | { status: "ok"; provider: AdsbProvider; aircraft: AdsbAircraft }
+  /** `fetchedAt`: ISO time of the upstream request (a cached answer keeps its original). */
+  | { status: "ok"; provider: AdsbProvider; aircraft: AdsbAircraft; fetchedAt: string }
   | { status: "no_match"; provider: AdsbProvider }
   | { status: "failed"; provider: AdsbProvider; reason: ProviderFailureKind }
   /** Not configured / switched off: no request was made. */
   | { status: "disabled"; provider: AdsbProvider };
 
-/** Header adsb.lol reads its optional key from. UNVERIFIED against adsb.lol's docs (forgejo#408 Open). */
+/**
+ * Header adsb.lol reads its optional key from. STILL UNVERIFIED (checked 2026-11-15):
+ * https://api.adsb.lol/docs names no auth scheme, and the API source
+ * (github.com/adsblol/api, src/adsb_api/app.py) says only "In the future, you
+ * will require an API key which you can get by feeding to adsb.lol" - no header
+ * is read anywhere yet. `api-auth` is kept as the placeholder; the key is
+ * harmless today because the API ignores it.
+ */
 export const ADSBLOL_KEY_HEADER = "api-auth";
 const ADSB_LOL_BASE = "https://api.adsb.lol/v2";
 const ADSBX_HOST = "adsbexchange-com1.p.rapidapi.com";
@@ -207,7 +215,7 @@ export async function lookupAdsbV2(endpoint: AdsbEndpoint, query: AdsbQuery): Pr
     });
     const aircraft = pickAircraft(response.data);
     const result: AdsbResult = aircraft
-      ? { status: "ok", provider, aircraft }
+      ? { status: "ok", provider, aircraft, fetchedAt: new Date().toISOString() }
       : { status: "no_match", provider };
     cache.set(cacheKey, result);
     return result;

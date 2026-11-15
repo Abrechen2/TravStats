@@ -93,13 +93,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 29 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 30 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(29),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(30),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(29);
+    expect(SERVICE_CARDS).toHaveLength(30);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -660,10 +660,18 @@ describe("ServicesPage", () => {
         render(<ServicesPage isAdmin={false} side="account" />);
       });
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(15);
-      for (const id of ["gemini", "googlePlaces", "customLlm", "webdav"])
+      expect(ids()).toHaveLength(18);
+      for (const id of [
+        "gemini",
+        "googlePlaces",
+        "customLlm",
+        "webdav",
+        "adsbx",
+        "adsblol",
+        "tar1090",
+      ])
         expect(ids()).toContain(id);
-      for (const id of ["adsbx", "aeroapi", "logos", "geocoder", "smtp"]) {
+      for (const id of ["aeroapi", "logos", "geocoder", "smtp"]) {
         expect(ids()).not.toContain(id);
       }
       expect(api.adminOverview).not.toHaveBeenCalled();
@@ -673,7 +681,7 @@ describe("ServicesPage", () => {
       useSettingsLevelStore.setState({ level: "standard" });
       await showSide("server");
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(21);
+      expect(ids()).toHaveLength(22);
       for (const id of [
         "smtp",
         "push",
@@ -701,7 +709,7 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(23), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(24), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });

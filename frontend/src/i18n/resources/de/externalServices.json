@@ -692,6 +692,16 @@
       "getKeyUrl": "https://aisstream.io/apikeys",
       "getKeyLabel": "Schlüssel bei AISStream holen",
       "quotaLine": "2 gleichzeitige Verbindungen"
+    },
+    "tar1090": {
+      "name": "Eigener Empfänger (tar1090)",
+      "purpose": "Flugspur vergangener Flüge von deinem eigenen ADS-B-Empfänger",
+      "why": "Holt die Spur eines Flugs aus der Verlaufsdatei deines tar1090/readsb, wenn das Flugzeug dort empfangen wurde.",
+      "cost": "Kostenlos, selbst gehostet.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt zwischen TravStats und deinem Empfänger; nur die ICAO24-Kennung des Flugzeugs und der Tag werden abgefragt.",
+      "quotaLine": "eigener Server",
+      "adminPurpose": "Adresse des Empfängers der Instanz (LAN erlaubt); Konten können ihren eigenen öffentlichen eintragen"
     }
   },
   "alwaysOn": {

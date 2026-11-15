@@ -120,7 +120,8 @@ const alreadyRecorded = () =>
  * the passenger's recording without being asked to be replaced — the phone's
  * upload has no way to know a line it never saw is there.
  */
-const yieldsToUpload = (existing: { source: string }) => existing.source === "aeroapi";
+const yieldsToUpload = (existing: { source: string }) =>
+  existing.source === "aeroapi" || existing.source === "readsb";
 
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -152,7 +153,7 @@ async function writeTrack(
       // uploads racing over it must not both pass the check above and the
       // second silently overwrite the first passenger recording.
       const { count } = await prisma.flightTrack.updateMany({
-        where: { flightId: flight.id, source: "aeroapi" },
+        where: { flightId: flight.id, source: { in: ["aeroapi", "readsb"] } },
         data,
       });
       if (count === 0) throw alreadyRecorded();

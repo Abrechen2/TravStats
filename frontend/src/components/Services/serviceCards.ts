@@ -95,12 +95,17 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   {
     id: "adsbx",
     group: "flug",
-    use: ["on", "instKey", "test", "quota"],
+    use: ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
   },
   {
     id: "adsblol",
     group: "flug",
-    use: ["on", "instKey", "test", "quota"],
+    use: ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
+  },
+  {
+    id: "tar1090",
+    group: "flug",
+    use: ["mine", "on", "instKey"],
   },
   {
     id: "aisstream",

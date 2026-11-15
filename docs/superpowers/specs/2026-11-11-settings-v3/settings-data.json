@@ -1664,6 +1664,50 @@
           ]
         },
         {
+          "id": "adsbx",
+          "cat": "flug",
+          "svc": {
+            "n": ["ADS-B Exchange", "ADS-B Exchange"],
+            "de": "Positionen in der Luft",
+            "en": "Positions in the air",
+            "st": ["Nicht eingerichtet", "Not set up"],
+            "tone": "muted"
+          },
+          "use": ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
+          "rows": []
+        },
+        {
+          "id": "adsblol",
+          "cat": "flug",
+          "svc": {
+            "n": ["ADS-B Lol", "ADS-B Lol"],
+            "de": "Positionen in der Luft, frei",
+            "en": "Positions in the air, free",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
+          "rows": [],
+          "ov": {
+            "on": {
+              "v": false
+            }
+          }
+        },
+        {
+          "id": "tar1090",
+          "cat": "flug",
+          "svc": {
+            "n": ["Eigener Empfänger (tar1090)", "Own receiver (tar1090)"],
+            "de": "Flugspuren vom eigenen Empfänger",
+            "en": "Tracks from your own receiver",
+            "st": ["Nicht eingerichtet", "Not set up"],
+            "tone": "muted"
+          },
+          "use": ["mine", "on", "instKey"],
+          "rows": []
+        },
+        {
           "id": "openai",
           "cat": "ki",
           "svc": {
@@ -3831,7 +3875,7 @@
             "st": ["Nicht eingerichtet", "Not set up"],
             "tone": "muted"
           },
-          "use": ["on", "instKey", "test", "quota"],
+          "use": ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
           "rows": [],
           "ad": 1
         },
@@ -3845,13 +3889,27 @@
             "st": ["Aus", "Off"],
             "tone": "muted"
           },
-          "use": ["on", "instKey", "test", "quota"],
+          "use": ["ownKey", "mine", "on", "instKey", "allowKeys", "test", "quota"],
           "rows": [],
           "ov": {
             "on": {
               "v": false
             }
           },
+          "ad": 1
+        },
+        {
+          "id": "tar1090",
+          "cat": "flug",
+          "svc": {
+            "n": ["Eigener Empfänger (tar1090)", "Own receiver (tar1090)"],
+            "de": "Flugspuren vom eigenen Empfänger",
+            "en": "Tracks from your own receiver",
+            "st": ["Nicht eingerichtet", "Not set up"],
+            "tone": "muted"
+          },
+          "use": ["mine", "on", "instKey"],
+          "rows": [],
           "ad": 1
         },
         {

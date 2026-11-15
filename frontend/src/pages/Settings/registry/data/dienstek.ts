@@ -18,6 +18,15 @@ export const DIENSTEK_PAGE: RegistryPage = {
         {"id":"oskid","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Deine Client-ID","en":"Your client ID","terms":{"de":"Statt der des Servers","en":"Instead of the server's"}},
         {"id":"osksec","kind":"secret","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Dein Client-Secret","en":"Your client secret","terms":{"de":"Wird verschlüsselt gespeichert und nie wieder angezeigt.","en":"Stored encrypted and never shown again."}},
       ]},
+      {"id":"adsbx","de":"ADS-B Exchange","en":"ADS-B Exchange","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"flug","rows":[
+
+      ]},
+      {"id":"adsblol","de":"ADS-B Lol","en":"ADS-B Lol","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"flug","rows":[
+
+      ]},
+      {"id":"tar1090","de":"Eigener Empfänger (tar1090)","en":"Own receiver (tar1090)","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"flug","rows":[
+
+      ]},
       {"id":"openai","de":"OpenAI","en":"OpenAI","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"ki","rows":[
 
       ]},
