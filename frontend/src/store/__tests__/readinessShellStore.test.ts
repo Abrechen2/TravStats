@@ -9,7 +9,7 @@ vi.mock("../../lib/api/readiness", () => ({ fetchReadiness: vi.fn() }));
 
 const answer = (show: boolean) =>
   ({
-    invitation: { show, reason: show ? "update" : null, snoozedUntil: null },
+    invitation: { show, reason: show ? "update" : null, snoozedUntil: null, keys: [] },
     banner: { show: false, itemIds: [] },
   }) as never;
 

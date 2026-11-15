@@ -61,12 +61,30 @@ export async function loadInvitationState(userId: string): Promise<InvitationSta
   };
 }
 
-/** The seen set is REPLACED by the keys shown now, so a key that resolved and returns is new again. */
+/** Replaces the seen set (keys shown now), so a key that resolved and returns is new again. */
 export async function markInvitationSeen(userId: string, keys: readonly string[]): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
-    data: { readinessInvitationSeen: [...keys] },
+    data: { readinessInvitationSeen: [...new Set(keys)] },
   });
+}
+
+/**
+ * Adds the keys the viewer rendered to the seen set. Only keys that are current
+ * count: a key the server never offered, or one that resolved meanwhile, is
+ * dropped, and a key added after the viewer's GET is never covered by it.
+ */
+export async function addInvitationSeen(
+  userId: string,
+  rendered: readonly string[],
+  currentKeys: readonly string[]
+): Promise<void> {
+  const current = new Set(currentKeys);
+  const { seen } = await loadInvitationState(userId);
+  const next = new Set(seen);
+  for (const k of rendered) if (current.has(k)) next.add(k);
+  if (next.size === seen.size) return;
+  await markInvitationSeen(userId, [...next]);
 }
 
 export async function snoozeInvitation(userId: string, until: Date): Promise<void> {

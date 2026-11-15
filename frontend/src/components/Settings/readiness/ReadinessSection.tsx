@@ -89,18 +89,20 @@ export default function ReadinessSection(): JSX.Element {
   // is a card that comes back once more.
   const seenSent = useRef(false);
   const loaded = load.state === "ok";
+  const renderedKeys = load.state === "ok" ? load.data.invitation.keys : undefined;
   useEffect(() => {
     if (demo || !loaded || seenSent.current) return;
     seenSent.current = true;
     void (async () => {
       try {
-        await markInvitationSeen();
+        // The keys of the response that was rendered, not whatever the server holds by now.
+        await markInvitationSeen(renderedKeys ?? []);
         await refreshReadinessShell();
       } catch (error) {
         logger.warn("readiness invitation seen failed", error);
       }
     })();
-  }, [demo, loaded]);
+  }, [demo, loaded, renderedKeys]);
 
   const write = async (action: () => Promise<void>): Promise<void> => {
     setWriteFailed(false);

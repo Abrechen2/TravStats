@@ -62,7 +62,7 @@ const response = (items: ReadinessItem[], notes: ReadinessNote[] = []): Readines
   summary: { required: 0, recommended: 0, unknown: 0, newNotes: 0, blockedByAdmin: 0, ready: 0 },
   items,
   notes,
-  invitation: { show: false, reason: null, snoozedUntil: null },
+  invitation: { show: false, reason: null, snoozedUntil: null, keys: [] },
   banner: { show: false, itemIds: [] },
 });
 
@@ -105,6 +105,13 @@ describe("readiness page", () => {
       </MemoryRouter>
     );
     await waitFor(() => expect(markInvitationSeen).toHaveBeenCalledTimes(1));
+  });
+
+  it("posts the keys of the response it rendered to invitation/seen", async () => {
+    const res = response([item({ id: "a" })]);
+    res.invitation = { show: true, reason: "required", snoozedUntil: null, keys: ["a", "n.1"] };
+    show(res);
+    await waitFor(() => expect(markInvitationSeen).toHaveBeenCalledWith(["a", "n.1"]));
   });
 
   it("does not write invitation/seen for the demo account", async () => {

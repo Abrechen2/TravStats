@@ -58,6 +58,7 @@ export const readinessResponseSchema = z.object({
     show: z.boolean(),
     reason: z.enum(["update", "required"]).nullable(),
     snoozedUntil: z.string().datetime().nullable(),
+    keys: z.array(z.string()),
   }),
   banner: z.object({ show: z.boolean(), itemIds: z.array(z.string()) }),
 });
@@ -86,3 +87,8 @@ export const readinessIdParamsSchema = z.object({ id: z.string().min(1).max(128)
 export const snoozeBodySchema = z
   .object({ until: z.string().datetime({ offset: true }).optional() })
   .strict();
+
+/** `POST /readiness/invitation/seen`: the keys the page rendered (optional; none = all current keys). */
+export const invitationSeenBodySchema = z.object({
+  keys: z.array(z.string().min(1).max(200)).max(100).optional(),
+});

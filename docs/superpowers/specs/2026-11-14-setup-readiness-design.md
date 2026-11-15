@@ -242,7 +242,8 @@ Additive to §11. Two packages: **S2a** server (reachability producer, invitatio
 invitation: {
   show: boolean,                  // false while snoozed or nothing new
   reason: "update" | "required" | null,   // "update" wins when both apply
-  snoozedUntil: string | null     // ISO
+  snoozedUntil: string | null,    // ISO
+  keys: string[]                  // the invitation keys behind the card (see below)
 },
 banner: {
   show: boolean,                  // admins only; always false for other accounts
@@ -255,8 +256,14 @@ banner: {
 - `banner` ignores snoozes ("until it is resolved", §4.3); `unknown` never raises it (§9).
 
 Writes (204; demo 403 like other demo writes):
-- `POST /readiness/invitation/seen`: stores the current invitation keys as seen. The web
-  calls it when the page is opened, so a visit ends the card for what was shown.
+- `POST /readiness/invitation/seen`: optional body `{ keys: string[] }` (at most 100, zod; 400 on
+  a bad body). With `keys` the server stores the union of the seen set and (`keys` ∩ current
+  keys), so a key that appeared after the viewer's GET stays unseen. Without a body it stores
+  all current keys (replacing the set). The web sends the `invitation.keys` of the response it
+  rendered, once when the page is opened.
+- `GET /readiness` drops seen keys that are no longer current (item resolved, note closed) and
+  writes only when the set changes, so a key that fails again before the next visit is new and
+  shows the card.
 - `POST /readiness/invitation/snooze`: "Morgen erinnern", +1 day.
 
 Persistence: two columns on `users` (seen keys as text[], snoozed-until timestamp).

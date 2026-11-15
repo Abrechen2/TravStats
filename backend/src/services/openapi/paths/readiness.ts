@@ -9,6 +9,7 @@ import {
   readinessIdParamsSchema,
   readinessResponseSchema,
   snoozeBodySchema,
+  invitationSeenBodySchema,
 } from "../../../schemas/readiness";
 
 const tags = ["Readiness"];
@@ -105,10 +106,16 @@ registry.registerPath({
   path: "/readiness/invitation/seen",
   summary: "Mark what the invitation card showed as seen",
   description:
-    "Stores the current invitation keys (open notes, required items that need action) as seen, " +
-    "replacing the earlier set. The page calls it once per open.",
+    "With `keys` (the `invitation.keys` of the GET the page rendered, at most 100): adds those " +
+    "that are still current to the seen set; a key added since stays unseen. Without a body: " +
+    "stores all current keys, replacing the earlier set. The page calls it once per open.",
   tags,
-  responses: { 204: { description: "Stored" }, 403: demoRefused },
+  request: { body: { content: { "application/json": { schema: invitationSeenBodySchema } } } },
+  responses: {
+    204: { description: "Stored" },
+    400: { description: "`keys` is not a list of at most 100 strings", content: errorContent },
+    403: demoRefused,
+  },
 });
 
 registry.registerPath({

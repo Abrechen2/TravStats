@@ -19,6 +19,7 @@ const invitation = (over = {}) => ({
   show: true,
   reason: "update" as "update" | "required" | null,
   snoozedUntil: null,
+  keys: [],
   ...over,
 });
 

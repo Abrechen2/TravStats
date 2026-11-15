@@ -4,7 +4,7 @@ import { rejectDemoWrites } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { settingsLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
-import { snoozeBodySchema } from "../schemas/readiness";
+import { invitationSeenBodySchema, snoozeBodySchema } from "../schemas/readiness";
 import {
   buildReadinessView,
   invitationKeys,
@@ -13,6 +13,7 @@ import {
 } from "../services/readiness/evaluate";
 import {
   acknowledgeNote,
+  addInvitationSeen,
   clearItemState,
   markInvitationSeen,
   setItemState,
@@ -69,9 +70,13 @@ router.post(
   "/invitation/seen",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const body = invitationSeenBodySchema.safeParse(req.body ?? {});
+      if (!body.success) throw new AppError("Invalid seen request", 400, undefined, "keys");
       const view = await buildReadinessView(req.userId!, await callerIsAdmin(req));
       const { noteKeys, itemKeys } = invitationKeys(view.items, view.notes);
-      await markInvitationSeen(req.userId!, [...noteKeys, ...itemKeys]);
+      const current = [...noteKeys, ...itemKeys];
+      if (body.data.keys) await addInvitationSeen(req.userId!, body.data.keys, current);
+      else await markInvitationSeen(req.userId!, current);
       res.status(204).end();
     } catch (error) {
       next(error);

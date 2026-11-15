@@ -22,6 +22,7 @@ interface Invitation {
   show: boolean;
   reason: "update" | "required" | null;
   snoozedUntil: string | null;
+  keys: string[];
 }
 interface View {
   invitation: Invitation;
@@ -135,7 +136,7 @@ describe("Readiness stage 2", () => {
   describe("invitation", () => {
     it("shows a new update note as reason update, and not again once seen", async () => {
       const first = await view(userCookie);
-      expect(first.invitation).toEqual({ show: true, reason: "update", snoozedUntil: null });
+      expect(first.invitation).toMatchObject({ show: true, reason: "update", snoozedUntil: null });
       expect(
         (await request(app).post("/api/v1/readiness/invitation/seen").set("Cookie", userCookie))
           .status
@@ -213,6 +214,74 @@ describe("Readiness stage 2", () => {
       });
       await request(app).post("/api/v1/readiness/invitation/seen").set("Cookie", adminCookie);
       expect((await view(adminCookie)).invitation.show).toBe(false);
+    });
+
+    it("a seen item that resolved and fails again shows the card again", async () => {
+      await prisma.user.update({
+        where: { id: adminId },
+        data: { readinessAckVersion: appVersion },
+      });
+      await prisma.backup.create({
+        data: { scheduled: true, status: "failed", backupPath: "/x" },
+      });
+      await request(app).post("/api/v1/readiness/invitation/seen").set("Cookie", adminCookie);
+      expect((await view(adminCookie)).invitation.show).toBe(false);
+      // it resolves, the page is opened once (the stale key is dropped), then it fails again
+      await prisma.backup.deleteMany({});
+      expect((await view(adminCookie)).invitation.keys).toEqual([]);
+      const row = await prisma.user.findUniqueOrThrow({ where: { id: adminId } });
+      expect(row.readinessInvitationSeen).toEqual([]);
+      await prisma.backup.create({
+        data: { scheduled: true, status: "failed", backupPath: "/x" },
+      });
+      expect((await view(adminCookie)).invitation).toMatchObject({
+        show: true,
+        reason: "required",
+      });
+    });
+
+    it("a key added between the GET and the seen POST stays unseen", async () => {
+      await prisma.user.update({
+        where: { id: adminId },
+        data: { readinessAckVersion: appVersion },
+      });
+      const rendered = (await view(adminCookie)).invitation.keys;
+      expect(rendered).toEqual([]);
+      await prisma.backup.create({
+        data: { scheduled: true, status: "failed", backupPath: "/x" },
+      });
+      const res = await request(app)
+        .post("/api/v1/readiness/invitation/seen")
+        .set("Cookie", adminCookie)
+        .send({ keys: rendered });
+      expect(res.status).toBe(204);
+      expect((await view(adminCookie)).invitation.show).toBe(true);
+    });
+
+    it("seen with keys stores the rendered ones that are current and ignores the rest", async () => {
+      const v = await view(userCookie);
+      expect(v.invitation.keys.length).toBeGreaterThan(0);
+      await request(app)
+        .post("/api/v1/readiness/invitation/seen")
+        .set("Cookie", userCookie)
+        .send({ keys: [...v.invitation.keys, "no.such.key"] })
+        .expect(204);
+      const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(new Set(row.readinessInvitationSeen)).toEqual(new Set(v.invitation.keys));
+    });
+
+    it("seen answers 400 for a bad body", async () => {
+      for (const body of [
+        { keys: "x" },
+        { keys: [1] },
+        { keys: Array.from({ length: 101 }, (_, i) => `k${i}`) },
+      ]) {
+        const res = await request(app)
+          .post("/api/v1/readiness/invitation/seen")
+          .set("Cookie", userCookie)
+          .send(body);
+        expect(res.status).toBe(400);
+      }
     });
 
     it("an unknown item never makes a key", async () => {

@@ -65,6 +65,8 @@ export interface ReadinessInvitation {
   /** "update" wins when both apply. */
   reason: "update" | "required" | null;
   snoozedUntil: string | null;
+  /** The keys behind the card; sent back to `invitation/seen`. */
+  keys: string[];
 }
 
 /** Stage 2 (§12): the admin banner. Admins only; ignores snoozes. */
@@ -106,9 +108,9 @@ export async function acknowledgeReadinessNote(id: string): Promise<void> {
   await api.post(`/readiness/notes/${encodeURIComponent(id)}/ack`);
 }
 
-/** The page was opened: what the card showed counts as seen. */
-export async function markInvitationSeen(): Promise<void> {
-  await api.post("/readiness/invitation/seen");
+/** The page was opened: the keys it rendered count as seen (none: everything current). */
+export async function markInvitationSeen(keys?: string[]): Promise<void> {
+  await api.post("/readiness/invitation/seen", keys ? { keys } : undefined);
 }
 
 /** "Morgen erinnern" on the invitation card (+1 day, server side). */

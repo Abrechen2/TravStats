@@ -13,6 +13,7 @@ import { CHECKS } from "./registry";
 import {
   loadAccountState,
   loadInvitationState,
+  markInvitationSeen,
   recordRunningVersion,
   type AccountReadinessState,
   type InvitationState,
@@ -55,6 +56,8 @@ export interface ReadinessInvitation {
   show: boolean;
   reason: "update" | "required" | null;
   snoozedUntil: string | null;
+  /** The keys behind the card; the page sends back what it rendered (`invitation/seen`). */
+  keys: string[];
 }
 
 export interface ReadinessBanner {
@@ -149,12 +152,13 @@ export function invitationOf(
 ): ReadinessInvitation {
   const snoozed = state.snoozedUntil !== null && state.snoozedUntil > now;
   const snoozedUntil = snoozed ? state.snoozedUntil!.toISOString() : null;
-  if (snoozed) return { show: false, reason: null, snoozedUntil };
   const { noteKeys, itemKeys } = invitationKeys(items, notes);
+  const keys = [...noteKeys, ...itemKeys];
+  if (snoozed) return { show: false, reason: null, snoozedUntil, keys };
   const fresh = (k: string) => !state.seen.has(k);
-  if (noteKeys.some(fresh)) return { show: true, reason: "update", snoozedUntil };
-  if (itemKeys.some(fresh)) return { show: true, reason: "required", snoozedUntil };
-  return { show: false, reason: null, snoozedUntil };
+  if (noteKeys.some(fresh)) return { show: true, reason: "update", snoozedUntil, keys };
+  if (itemKeys.some(fresh)) return { show: true, reason: "required", snoozedUntil, keys };
+  return { show: false, reason: null, snoozedUntil, keys };
 }
 
 /** Admins only; ignores snoozes ("until it is resolved") and never counts `unknown` (§9). */
@@ -244,12 +248,23 @@ export async function buildReadinessView(
     if (open) summary.newNotes++;
   }
 
+  // A seen key that is no longer current (the item resolved, the note closed) is
+  // forgotten, so it is new again when it returns. Written only when it changes.
+  const { noteKeys, itemKeys } = invitationKeys(items, notes);
+  const current = new Set([...noteKeys, ...itemKeys]);
+  const kept = [...invitationState.seen].filter((k) => current.has(k));
+  let seen = invitationState.seen;
+  if (kept.length !== seen.size) {
+    await markInvitationSeen(userId, kept);
+    seen = new Set(kept);
+  }
+
   return {
     runningVersion: buildVersion,
     summary,
     items,
     notes,
-    invitation: invitationOf(items, notes, invitationState, now),
+    invitation: invitationOf(items, notes, { ...invitationState, seen }, now),
     banner: bannerOf(items, isAdmin),
   };
 }
