@@ -3,6 +3,7 @@ import path from "path";
 import { TooManyRecordsError } from "../../checkinImport/types";
 import { parseFlightLogCsv, dayOf, clockOf, iataIn } from "../csvFlightLog";
 import { parsePolarsteps } from "../polarsteps";
+import { MAX_APP_RECORDS } from "../types";
 import { parseTripit } from "../tripit";
 
 /** Every fixture is SYNTHETIC — see the header of each reader. */
@@ -226,6 +227,15 @@ describe("Polarsteps", () => {
       })
     );
     expect(out.trips[0]).toMatchObject({ startDay: "2026-03-09", endDay: "2026-03-11" });
+  });
+
+  it("counts trips toward the record cap, so a file of many step-less trips is refused", () => {
+    const step = { name: "a", start_time: 1773061200, location: { lat: 38.7, lon: -9.1 } };
+    const many = Array.from({ length: MAX_APP_RECORDS }, (_, i) => ({
+      name: `t${i}`,
+      all_steps: i === 0 ? [step] : [],
+    }));
+    expect(() => parsePolarsteps(JSON.stringify(many))).toThrow(TooManyRecordsError);
   });
 
   it("refuses JSON that is not a trip, and text that is not JSON", () => {

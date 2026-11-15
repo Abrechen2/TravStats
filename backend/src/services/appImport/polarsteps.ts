@@ -130,7 +130,8 @@ export function parsePolarsteps(raw: string): AppParse {
     out.rejects.push({ sheet: "places", row: 1, label: "#1", reason: "invalid_file" });
     return out;
   }
-  if (steps.length > MAX_APP_RECORDS) throw new TooManyRecordsError(MAX_APP_RECORDS);
+  // Trips are records too: a file of many step-less trips must not slip past the cap.
+  if (steps.length + trips.length > MAX_APP_RECORDS) throw new TooManyRecordsError(MAX_APP_RECORDS);
 
   readTrips(
     trips.flatMap((t) => (t.success ? [t.data] : [])),
