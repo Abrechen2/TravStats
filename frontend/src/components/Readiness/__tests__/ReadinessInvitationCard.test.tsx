@@ -41,6 +41,21 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+describe("invitation card actions", () => {
+  it("renders 'Jetzt ansehen' with the primary-button skin, not the dark-on-dark text link", () => {
+    useReadinessShellStore.setState({ invitation: invitation() });
+    mount();
+    const link = screen.getByRole("link", { name: "readiness:invitation.view" });
+    expect(link).toHaveAttribute("data-variant", "primary");
+    expect(link).toHaveClass("ts-button");
+    expect(link.style.background).toBe("var(--ts-accent)");
+    expect(link).not.toHaveClass("underline");
+    const secondary = screen.getByRole("button", { name: "readiness:snooze" });
+    expect(secondary).toHaveAttribute("data-variant", "secondary");
+    expect(secondary.style.height).toBe(link.style.height);
+  });
+});
+
 describe("invitation card visibility", () => {
   it("shows with the update copy", () => {
     useReadinessShellStore.setState({ invitation: invitation() });

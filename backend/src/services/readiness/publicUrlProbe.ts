@@ -14,6 +14,7 @@
 import { randomBytes } from "crypto";
 import { prisma } from "../../db";
 import { internetAllowed } from "../internetGate";
+import { getEffectivePublicUrl } from "./effectivePublicUrl";
 
 export const PUBLIC_URL_PROBE_TIMEOUT_MS = 10_000;
 export const PROBE_QUERY_PARAM = "probe";
@@ -166,18 +167,19 @@ export async function probePublicUrl(
 export async function runPublicUrlCheck(now: Date = new Date()): Promise<PublicUrlCheckResult> {
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
-    select: { id: true, publicUrl: true },
+    select: { id: true },
   });
-  if (!settings?.publicUrl) return outcome(now, null, "NO_PUBLIC_URL");
-  if (!(await internetAllowed())) return outcome(now, settings.publicUrl, "OUTBOUND_DISABLED");
-  const result = await probePublicUrl(settings.publicUrl, now);
+  const publicUrl = await getEffectivePublicUrl();
+  if (!settings || !publicUrl) return outcome(now, null, "NO_PUBLIC_URL");
+  if (!(await internetAllowed())) return outcome(now, publicUrl, "OUTBOUND_DISABLED");
+  const result = await probePublicUrl(publicUrl, now);
   if (result.errorCode === "NO_PUBLIC_URL") return result;
   await prisma.adminSettings.update({
     where: { id: settings.id },
     data: {
       publicUrlCheckedAt: now,
       publicUrlCheckOk: result.ok,
-      publicUrlCheckedUrl: settings.publicUrl,
+      publicUrlCheckedUrl: publicUrl,
     },
   });
   return result;

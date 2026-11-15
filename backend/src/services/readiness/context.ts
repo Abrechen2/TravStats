@@ -9,6 +9,7 @@ import { prisma } from "../../db";
 import { BACKUP_BASE_DIR } from "../backup/backupConfig";
 import { loadAllTests } from "../externalServices/tests";
 import type { LastTest } from "../externalServices/types";
+import { getEffectivePublicUrl } from "./effectivePublicUrl";
 
 export interface InstanceFacts {
   smtp: { enabled: boolean } | null;
@@ -110,6 +111,7 @@ async function loadInstance(now: Date): Promise<InstanceFacts> {
     prisma.travTrackConfig.findUnique({ where: { id: "default" } }),
     readDisk(now),
   ]);
+  const publicUrl = await getEffectivePublicUrl();
   const providerTests = new Map<string, LastTest>();
   for (const id of PROVIDER_SERVICE_IDS) {
     const t = tests.get(id);
@@ -118,7 +120,7 @@ async function loadInstance(now: Date): Promise<InstanceFacts> {
   return {
     smtp: smtp ? { enabled: smtp.enabled } : null,
     smtpTest: tests.get("smtp") ?? null,
-    publicUrl: admin?.publicUrl ?? null,
+    publicUrl,
     publicUrlCheck:
       admin?.publicUrlCheckedAt && admin.publicUrlCheckOk !== null
         ? {

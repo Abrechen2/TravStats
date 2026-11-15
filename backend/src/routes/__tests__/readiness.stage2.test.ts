@@ -38,7 +38,11 @@ describe("Readiness stage 2", () => {
   let adminId: string;
   let userId: string;
   let adminSettingsId: number;
-  let original: { publicUrl: string | null; internetEnabled: boolean } | null = null;
+  let original: {
+    publicUrl: string | null;
+    frontendUrl: string | null;
+    internetEnabled: boolean;
+  } | null = null;
   let fetchSpy: jest.SpyInstance;
 
   const view = async (cookie: string): Promise<View> =>
@@ -83,7 +87,11 @@ describe("Readiness stage 2", () => {
       (await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } })) ??
       (await prisma.adminSettings.create({ data: {} }));
     adminSettingsId = row.id;
-    original = { publicUrl: row.publicUrl, internetEnabled: row.internetEnabled };
+    original = {
+      publicUrl: row.publicUrl,
+      frontendUrl: row.frontendUrl,
+      internetEnabled: row.internetEnabled,
+    };
   });
 
   beforeEach(async () => {
@@ -105,6 +113,7 @@ describe("Readiness stage 2", () => {
       where: { id: adminSettingsId },
       data: {
         publicUrl: PUBLIC_URL,
+        frontendUrl: null,
         internetEnabled: true,
         publicUrlCheckedAt: null,
         publicUrlCheckOk: null,
@@ -465,10 +474,38 @@ describe("Readiness stage 2", () => {
       });
     });
 
+    it("probes the address the Server page edits (frontendUrl) when public_url is null", async () => {
+      await prisma.adminSettings.update({
+        where: { id: adminSettingsId },
+        data: { publicUrl: null, frontendUrl: PUBLIC_URL },
+      });
+      stubHealth({});
+      const res = await check();
+      expect(res.body).toMatchObject({ ok: true, url: PUBLIC_URL, errorCode: null });
+      expect(await stored()).toMatchObject({ publicUrlCheckedUrl: PUBLIC_URL });
+      const item = (await view(adminCookie)).items.find((i) => i.id === "admin.publicUrl");
+      expect(item?.status).toBe("ready");
+    });
+
+    it("a stored result reads unknown once the Server page's address changes", async () => {
+      await prisma.adminSettings.update({
+        where: { id: adminSettingsId },
+        data: { frontendUrl: PUBLIC_URL },
+      });
+      stubHealth({});
+      await check();
+      await prisma.adminSettings.update({
+        where: { id: adminSettingsId },
+        data: { frontendUrl: "https://other.example.test" },
+      });
+      const item = (await view(adminCookie)).items.find((i) => i.id === "admin.publicUrl");
+      expect(item?.status).toBe("unknown");
+    });
+
     it("answers NO_PUBLIC_URL without a request and stores nothing", async () => {
       await prisma.adminSettings.update({
         where: { id: adminSettingsId },
-        data: { publicUrl: null },
+        data: { publicUrl: null, frontendUrl: null },
       });
       const res = await check();
       expect(res.body).toMatchObject({

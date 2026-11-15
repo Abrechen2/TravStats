@@ -11,6 +11,26 @@ import Button from "../ui/Button";
 
 export const READINESS_PAGE_PATH = "/settings/einrichtung";
 
+/** Both actions share one height, so the pair reads as a pair. */
+const BUTTON_HEIGHT = (coarse: boolean): number => (coarse ? 44 : 36);
+
+/** Mirrors the `primary` skin in `ui/Button.tsx`, for a link. */
+const PRIMARY_LINK_STYLE = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 var(--ts-space-xl)",
+  borderRadius: "var(--ts-radius-button)",
+  fontWeight: 700,
+  fontSize: 16,
+  fontFamily: "var(--ts-font-ui)",
+  whiteSpace: "nowrap",
+  textDecoration: "none",
+  background: "var(--ts-accent)",
+  color: "var(--ts-accent-text)",
+  border: "1px solid var(--ts-accent)",
+} as const;
+
 interface SurfaceState {
   /** `checked` from `useWhatsNew`. */
   whatsNewChecked: boolean;
@@ -80,11 +100,12 @@ export default function ReadinessInvitationCard({
       data-testid="readiness-invitation"
       className="fixed flex flex-col"
       style={{
-        right: "var(--ts-space-lg)",
+        // Bottom-LEFT: the map's key and domain filter sit bottom-right, the
+        // next-up cards top-right, and toasts bottom-centre. Capped at 360 so
+        // it stops short of the key at 820 px.
         bottom: "var(--ts-space-lg)",
         left: "var(--ts-space-lg)",
-        maxWidth: 420,
-        marginLeft: "auto",
+        width: "min(360px, calc(100vw - 2 * var(--ts-space-lg)))",
         gap: "var(--ts-space-sm)",
         padding: "var(--ts-space-md)",
         background: "var(--ts-surface2, var(--ts-tile))",
@@ -101,19 +122,23 @@ export default function ReadinessInvitationCard({
         </p>
       )}
       <div className="flex flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+        {/* A Link that wears the primary button's skin. The old text link used
+            --ts-accent-text, which is the label colour FOR an accent fill, so it
+            drew dark on the dark card. */}
         <Link
           to={READINESS_PAGE_PATH}
-          className="underline"
-          style={{
-            minHeight: coarse ? 44 : 32,
-            display: "inline-flex",
-            alignItems: "center",
-            color: "var(--ts-accent-text)",
-          }}
+          className="ts-button"
+          data-variant="primary"
+          style={{ ...PRIMARY_LINK_STYLE, height: BUTTON_HEIGHT(coarse) }}
         >
           {t("readiness:invitation.view")}
         </Link>
-        <Button variant="secondary" disabled={busy} onClick={() => void snooze()}>
+        <Button
+          variant="secondary"
+          style={{ height: BUTTON_HEIGHT(coarse) }}
+          disabled={busy}
+          onClick={() => void snooze()}
+        >
           {t("readiness:snooze")}
         </Button>
       </div>
