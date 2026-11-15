@@ -23,10 +23,11 @@ import en from "../../../i18n/resources/en/training.json";
  * source-scanning guard ages, so it names exactly what it looks for).
  */
 
-const SOURCE = readFileSync(
-  resolve(__dirname, "../../../components/Training/EmailAnnotation.tsx"),
-  "utf-8"
-);
+// The view is the shell plus the parts split out of it (forgejo#386 REF-15) —
+// the guard reads both, or a literal moved into a part would escape it.
+const SOURCE = ["EmailAnnotation.tsx", "EmailAnnotationParts.tsx"]
+  .map((file) => readFileSync(resolve(__dirname, "../../../components/Training", file), "utf-8"))
+  .join("\n");
 
 describe("the annotation view's remaining copy", () => {
   it("carries no hard-coded label text", () => {
