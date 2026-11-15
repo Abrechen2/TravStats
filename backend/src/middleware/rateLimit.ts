@@ -590,7 +590,7 @@ export const pdfParseLimiter = importLimit({
  * up to 20 flights, so ~1000 flights/hour for bulk email imports. Bulk edit
  * has a bucket of its own: sharing this one let a few edit rounds lock imports out.
  */
-const batchLimiter = (message: string) =>
+export const batchLimiter = (message: string) =>
   importLimit({
     windowMs: 60 * 60 * 1000,
     max: patAwareMax(50),

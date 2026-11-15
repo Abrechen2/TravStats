@@ -1,0 +1,101 @@
+{
+  "start": "Edit several",
+  "stop": "Stop selecting",
+  "selected": "{{count}} {{noun}} selected",
+  "selectPage": "Select all on this page",
+  "clearSelection": "Clear selection",
+  "selectOne": "Select {{name}}",
+  "edit": "Edit {{count}} {{noun}} …",
+  "title": "Edit {{count}} {{noun}} together",
+  "intro": "What you choose here applies to all {{count}} selected entries ({{noun}}). Anything left on “keep” stays as it is.",
+  "confirm": "Apply to {{count}} {{noun}}",
+  "tripPick": "Choose a trip",
+  "tripPickPlaceholder": "– please choose –",
+  "tripsFailed": "The trips could not be loaded.",
+  "requestFailed": "The change was not accepted.",
+  "outcomeUnknown": "It is unclear whether anything changed – the answer never arrived. Retrying never changes anything twice; reloading the list shows the current state.",
+  "reloadList": "Reload list",
+  "field": {
+    "trip": "Trip",
+    "tags": "Tags",
+    "companions": "Companions",
+    "status": "Status",
+    "operator": "Operator",
+    "serviceClass": "Class"
+  },
+  "mode": {
+    "keep": "keep",
+    "add": "add",
+    "replace": "replace",
+    "tripSet": "assign",
+    "tripClear": "remove assignment",
+    "statusCancel": "mark as cancelled",
+    "statusReinstate": "undo cancellation",
+    "textSet": "set",
+    "textClear": "remove"
+  },
+  "noun": {
+    "rail_one": "train ride",
+    "rail_other": "train rides",
+    "bus_one": "bus ride",
+    "bus_other": "bus rides",
+    "ferry_one": "ferry crossing",
+    "ferry_other": "ferry crossings",
+    "rental_one": "car rental",
+    "rental_other": "car rentals",
+    "cruise_one": "cruise",
+    "cruise_other": "cruises",
+    "stay_one": "stay",
+    "stay_other": "stays"
+  },
+  "missing": {
+    "nothing": "choose a change",
+    "trip": "the trip",
+    "tags": "at least one tag",
+    "companions": "at least one person",
+    "status": "the status",
+    "operator": "the operator",
+    "serviceClass": "the class",
+    "tooMany": "at most {{max}} at a time (selected: {{count}})"
+  },
+  "preview": {
+    "title": "Before applying",
+    "nothing": "Nothing to change is chosen yet.",
+    "tripSet": "Assigned to “{{name}}”.",
+    "tripGain": "Without a trip so far, they get it: {{count}} {{noun}}.",
+    "tripReplace": "A different trip is replaced for: {{count}} {{noun}}.",
+    "tripClear": "The trip assignment is removed from: {{count}} {{noun}}.",
+    "tagsAdd": "Added: {{values}} – existing tags stay. Changes for: {{count}} {{noun}}.",
+    "tagsReplace": "Replaced: the tags become {{values}}. Changes for: {{count}} {{noun}}.",
+    "tagsClear": "Replaced by nothing: all tags are removed from: {{count}} {{noun}}.",
+    "companionsAdd": "Added: {{values}} – existing companions stay. Changes for: {{count}} {{noun}}.",
+    "companionsReplace": "Replaced: companions become {{values}}. Changes for: {{count}} {{noun}}.",
+    "companionsClear": "Replaced by nobody: all companions are removed from: {{count}} {{noun}}.",
+    "lost": "These are dropped: {{values}}",
+    "already": "Already so and unchanged: {{count}} {{noun}}.",
+    "status": {
+      "cancel": "Marked as cancelled: {{count}} {{noun}}.",
+      "reinstate": "The cancellation is undone (the status follows the date) for: {{count}} {{noun}}."
+    },
+    "operator": {
+      "set": "The operator becomes “{{value}}” for: {{count}} {{noun}}.",
+      "clear": "The operator is removed from: {{count}} {{noun}}."
+    },
+    "serviceClass": {
+      "set": "The class becomes “{{value}}” for: {{count}} {{noun}}.",
+      "clear": "The class is removed from: {{count}} {{noun}}."
+    }
+  },
+  "result": {
+    "summary": "{{updated}} changed · {{unchanged}} unchanged · {{failed}} failed",
+    "failedTitle_one": "This entry was not changed:",
+    "failedTitle_other": "These {{count}} entries were not changed:",
+    "retryFailed_one": "Retry the failed one",
+    "retryFailed_other": "Retry the {{count}} failed ones",
+    "code": {
+      "NOT_FOUND": "no longer exists",
+      "UPDATE_FAILED": "could not be saved",
+      "VERSION_CONFLICT": "was changed elsewhere in the meantime – reload the list and choose again"
+    }
+  }
+}

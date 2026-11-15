@@ -59,18 +59,18 @@ export async function assertTripOwned(userId: string, edit: FlightBulkEdit): Pro
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "trip");
 }
 
-interface Person {
+export interface Person {
   id: string;
   displayName: string;
 }
 
-interface NamedPerson {
+export interface NamedPerson {
   canonical: string;
   spelling: string;
 }
 
 /** One person per canonical name, in first-seen order, keeping the first spelling. */
-function people(names: readonly string[]): NamedPerson[] {
+export function people(names: readonly string[]): NamedPerson[] {
   const seen = new Set<string>();
   const out: NamedPerson[] = [];
   for (const raw of names) {
@@ -87,7 +87,7 @@ function people(names: readonly string[]): NamedPerson[] {
  * find-or-create for the names that have no row yet (with the spelling they
  * were written in). Existing people keep their display name.
  */
-async function directory(
+export async function directory(
   userId: string,
   names: readonly NamedPerson[]
 ): Promise<Map<string, Person>> {
@@ -122,8 +122,8 @@ interface Plan {
   companionIds: string[] | null;
 }
 
-function companionPlan(
-  flight: FlightRow,
+export function companionPlan(
+  flight: { companions: string[] },
   edit: NonNullable<FlightBulkEdit["companions"]>,
   persons: Map<string, Person>,
   typed: readonly NamedPerson[]

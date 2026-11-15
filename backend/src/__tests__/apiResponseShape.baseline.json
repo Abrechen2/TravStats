@@ -203,6 +203,7 @@
     "cruises/tracks.ts",
     "currencies.ts",
     "dataQualityFlags.ts",
+    "domainBulkEdit.ts",
     "dawarichStays.ts",
     "documents.ts",
     "documents/extractValues.ts",

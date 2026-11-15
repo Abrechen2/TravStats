@@ -1,0 +1,101 @@
+{
+  "start": "Mehrere bearbeiten",
+  "stop": "Auswahl beenden",
+  "selected": "{{count}} {{noun}} ausgewählt",
+  "selectPage": "Alle auf dieser Seite auswählen",
+  "clearSelection": "Auswahl aufheben",
+  "selectOne": "{{name}} auswählen",
+  "edit": "Für {{count}} {{noun}} bearbeiten …",
+  "title": "{{count}} {{noun}} gemeinsam bearbeiten",
+  "intro": "Was du hier wählst, gilt für alle {{count}} ausgewählten Einträge ({{noun}}). Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+  "confirm": "Für {{count}} {{noun}} übernehmen",
+  "tripPick": "Reise auswählen",
+  "tripPickPlaceholder": "– bitte wählen –",
+  "tripsFailed": "Die Reisen konnten nicht geladen werden.",
+  "requestFailed": "Die Änderung wurde nicht angenommen.",
+  "outcomeUnknown": "Ob etwas geändert wurde, ist unklar – die Antwort kam nicht an. Erneut versuchen ändert nichts doppelt; die Liste neu zu laden zeigt den Stand.",
+  "reloadList": "Liste neu laden",
+  "field": {
+    "trip": "Reise",
+    "tags": "Tags",
+    "companions": "Mitreisende",
+    "status": "Status",
+    "operator": "Betreiber",
+    "serviceClass": "Klasse"
+  },
+  "mode": {
+    "keep": "nicht ändern",
+    "add": "ergänzen",
+    "replace": "ersetzen",
+    "tripSet": "zuordnen",
+    "tripClear": "Zuordnung entfernen",
+    "statusCancel": "als storniert markieren",
+    "statusReinstate": "Storno aufheben",
+    "textSet": "setzen",
+    "textClear": "entfernen"
+  },
+  "noun": {
+    "rail_one": "Zugfahrt",
+    "rail_other": "Zugfahrten",
+    "bus_one": "Busfahrt",
+    "bus_other": "Busfahrten",
+    "ferry_one": "Fährfahrt",
+    "ferry_other": "Fährfahrten",
+    "rental_one": "Mietwagen",
+    "rental_other": "Mietwagen",
+    "cruise_one": "Kreuzfahrt",
+    "cruise_other": "Kreuzfahrten",
+    "stay_one": "Aufenthalt",
+    "stay_other": "Aufenthalte"
+  },
+  "missing": {
+    "nothing": "eine Änderung wählen",
+    "trip": "die Reise",
+    "tags": "mindestens ein Tag",
+    "companions": "mindestens eine Person",
+    "status": "den Status",
+    "operator": "den Betreiber",
+    "serviceClass": "die Klasse",
+    "tooMany": "höchstens {{max}} auf einmal (ausgewählt: {{count}})"
+  },
+  "preview": {
+    "title": "Vor dem Übernehmen",
+    "nothing": "Noch ist nichts zum Ändern gewählt.",
+    "tripSet": "Zuordnung zu „{{name}}“.",
+    "tripGain": "Bisher ohne Reise, bekommen sie neu: {{count}} {{noun}}.",
+    "tripReplace": "Eine andere Reise wird ersetzt bei: {{count}} {{noun}}.",
+    "tripClear": "Die Reisezuordnung wird entfernt bei: {{count}} {{noun}}.",
+    "tagsAdd": "Ergänzt werden: {{values}} – vorhandene Tags bleiben. Ändert sich bei: {{count}} {{noun}}.",
+    "tagsReplace": "Ersetzt: Die Tags werden zu {{values}}. Ändert sich bei: {{count}} {{noun}}.",
+    "tagsClear": "Ersetzt durch nichts: Alle Tags fallen weg bei: {{count}} {{noun}}.",
+    "companionsAdd": "Ergänzt werden: {{values}} – vorhandene Mitreisende bleiben. Ändert sich bei: {{count}} {{noun}}.",
+    "companionsReplace": "Ersetzt: Mitreisende werden {{values}}. Ändert sich bei: {{count}} {{noun}}.",
+    "companionsClear": "Ersetzt durch niemanden: Alle Mitreisenden fallen weg bei: {{count}} {{noun}}.",
+    "lost": "Dabei fallen weg: {{values}}",
+    "already": "Schon so und unverändert: {{count}} {{noun}}.",
+    "status": {
+      "cancel": "Als storniert markiert werden: {{count}} {{noun}}.",
+      "reinstate": "Das Storno wird aufgehoben (der Status folgt dem Datum) bei: {{count}} {{noun}}."
+    },
+    "operator": {
+      "set": "Der Betreiber wird „{{value}}“ bei: {{count}} {{noun}}.",
+      "clear": "Der Betreiber wird entfernt bei: {{count}} {{noun}}."
+    },
+    "serviceClass": {
+      "set": "Die Klasse wird „{{value}}“ bei: {{count}} {{noun}}.",
+      "clear": "Die Klasse wird entfernt bei: {{count}} {{noun}}."
+    }
+  },
+  "result": {
+    "summary": "{{updated}} geändert · {{unchanged}} unverändert · {{failed}} fehlgeschlagen",
+    "failedTitle_one": "Dieser Eintrag wurde nicht geändert:",
+    "failedTitle_other": "Diese {{count}} Einträge wurden nicht geändert:",
+    "retryFailed_one": "Den fehlgeschlagenen erneut versuchen",
+    "retryFailed_other": "Die {{count}} fehlgeschlagenen erneut versuchen",
+    "code": {
+      "NOT_FOUND": "nicht mehr vorhanden",
+      "UPDATE_FAILED": "konnte nicht gespeichert werden",
+      "VERSION_CONFLICT": "wurde inzwischen woanders geändert – Liste neu laden und erneut wählen"
+    }
+  }
+}

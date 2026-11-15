@@ -1,3 +1,7 @@
+import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
+import { busFerryBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
@@ -222,6 +226,12 @@ export default function FerryPage(): JSX.Element {
   const hasActiveFilter = search.length > 0 || statusFilter !== "all" || yearFilter !== "all";
   const add = t("ferry:add");
 
+  // forgejo#405 A4: an explicit selection for the bulk edit.
+  const selection = useRowSelection();
+  const bulkRows = useMemo(() => rides.map(busFerryBulkRow), [rides]);
+  const refreshSelection = selection.refresh;
+  useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
+
   return (
     <AppShell width="table">
       <LogbookTabs />
@@ -229,6 +239,7 @@ export default function FerryPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("ferry:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
+            <BulkStartButton selection={selection} />
             <ColumnPicker
               columns={FERRY_COLUMN_IDS.map((id) => ({
                 id,
@@ -284,6 +295,13 @@ export default function FerryPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="ferry"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed title={t("ferry:loadError")} onRetry={reload} log={loadFailure} />
         ) : loading && rides.length === 0 ? (
@@ -314,18 +332,21 @@ export default function FerryPage(): JSX.Element {
                   columns={columns}
                   onOpen={(): void => void navigate(`/ferry/${ride.id}`)}
                   actions={
-                    <RowActions>
-                      <RowActionButton
-                        icon="edit"
-                        label={t("ferry:edit")}
-                        onClick={(): void => setEditing({ journey: ride })}
-                      />
-                      <RowActionButton
-                        icon="delete"
-                        label={t("ferry:delete")}
-                        onClick={(): void => setToDelete(ride)}
-                      />
-                    </RowActions>
+                    <>
+                      <BulkRowCheck selection={selection} rows={[busFerryBulkRow(ride)]} />
+                      <RowActions>
+                        <RowActionButton
+                          icon="edit"
+                          label={t("ferry:edit")}
+                          onClick={(): void => setEditing({ journey: ride })}
+                        />
+                        <RowActionButton
+                          icon="delete"
+                          label={t("ferry:delete")}
+                          onClick={(): void => setToDelete(ride)}
+                        />
+                      </RowActions>
+                    </>
                   }
                 />
               ))}

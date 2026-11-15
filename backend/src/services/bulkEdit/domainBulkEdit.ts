@@ -1,0 +1,330 @@
+import { prisma, type DbTransaction } from "../../db";
+import { AppError } from "../../middleware/errorHandler";
+import logger from "../../utils/logger";
+import { dayAnchorNowFor } from "../../shared/time/profileZone";
+import { recheckAchievements } from "../../utils/achievements";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
+import { restatusTrips } from "../trip/restatusTrips";
+import { replaceCompanionLinks } from "../transport/companionLinks";
+import { updateStayRecord, type UpdateStayData } from "../lodging/stayWrites";
+import { claimVersion } from "../sync/versionPrecondition";
+import { syncEntity } from "../sync/entities";
+import {
+  addValues,
+  companionPlan,
+  directory,
+  people,
+  type NamedPerson,
+  type Person,
+} from "../flights/bulkEdit";
+import type { BulkDomain, DomainBulkEdit } from "../../schemas/domainBulkEdit";
+import { DOMAIN_SPECS, type DomainSpec, type Row } from "./domainSpecs";
+
+/**
+ * The bulk edit of forgejo#217 for every other domain (forgejo#405 A4): rail,
+ * bus, ferry, rental, cruise and stays. Same contract as
+ * `services/flights/bulkEdit.ts`:
+ *
+ * - One unit of work per row (one transaction, one result), so a failure on one
+ *   row never rolls back another and the answer names the ones that failed.
+ * - Every mode is idempotent: a retry reaches a row that in fact went through
+ *   and answers `unchanged`.
+ * - The rows are read in one query; every diff is computed in memory and only a
+ *   row that changes is written.
+ * - A row the caller does not own answers `NOT_FOUND`, exactly as one that does
+ *   not exist — nothing tells the two apart. A trip that is not theirs refuses
+ *   the whole request before anything is written.
+ *
+ * On top of that: a client that read a row at version V sends it in
+ * `baseVersions`; the row is claimed with the sync precondition's own atomic
+ * UPDATE (`claimVersion`, forgejo#141) and answers `VERSION_CONFLICT` instead
+ * of being overwritten when it moved on.
+ */
+
+export type BulkStatus = "updated" | "unchanged" | "failed";
+export type BulkCode = "NOT_FOUND" | "UPDATE_FAILED" | "VERSION_CONFLICT";
+
+export interface BulkResult {
+  id: string;
+  status: BulkStatus;
+  code?: BulkCode;
+  /**
+   * A stay whose write failed after its version claim has moved on with no
+   * content change (its own update opens its own transaction, so the claim
+   * cannot be taken back). The version its claim left it at, for the retry's base.
+   */
+  version?: string;
+}
+
+interface Plan {
+  data: Record<string, unknown>;
+  companionIds: string[] | null;
+}
+
+/** The slice of a Prisma delegate the engine uses; the generated types cannot be unified across tables. */
+interface RowDelegate {
+  findMany(args: unknown): Promise<Row[]>;
+  update(args: unknown): Promise<unknown>;
+}
+interface LinkDelegate {
+  deleteMany(args: { where: Record<string, string> }): Promise<unknown>;
+  createMany(args: {
+    data: Array<{ companionId: string; position: number } & Record<string, string | number>>;
+    skipDuplicates: true;
+  }): Promise<unknown>;
+}
+
+const delegateOf = (c: object, name: string): RowDelegate =>
+  (c as unknown as Record<string, RowDelegate>)[name];
+const linksOf = (c: object, name: string): LinkDelegate =>
+  (c as unknown as Record<string, LinkDelegate>)[name];
+
+const sameList = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
+
+/** The columns of a rental that a later mail import must not overwrite. */
+const EDIT_PROTECTED = ["tripId", "tags", "companions"] as const;
+
+export async function assertTripOwned(userId: string, edit: DomainBulkEdit): Promise<void> {
+  if (edit.trip?.mode !== "set") return;
+  const trip = await prisma.trip.findFirst({
+    where: { id: edit.trip.tripId, userId },
+    select: { id: true },
+  });
+  if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "trip");
+}
+
+function planFor(
+  spec: DomainSpec,
+  row: Row,
+  edit: DomainBulkEdit,
+  persons: Map<string, Person>,
+  typed: readonly NamedPerson[],
+  now: Date | undefined
+): Plan | null {
+  const data: Record<string, unknown> = {};
+  if (edit.trip) {
+    const tripId = edit.trip.mode === "set" ? edit.trip.tripId : null;
+    if (tripId !== ((row.tripId as string | null) ?? null)) data.tripId = tripId;
+  }
+  if (edit.tags && spec.tagsColumn) {
+    const current = (row.tags as string[]) ?? [];
+    const tags =
+      edit.tags.mode === "add"
+        ? addValues(current, edit.tags.values)
+        : addValues([], edit.tags.values);
+    if (!sameList(tags, current)) data.tags = tags;
+  }
+  let companionIds: string[] | null = null;
+  if (edit.companions) {
+    const plan = companionPlan(
+      { companions: (row.companions as string[]) ?? [] },
+      edit.companions,
+      persons,
+      typed
+    );
+    companionIds = plan.companionIds;
+    if (plan.companions) data.companions = plan.companions;
+  }
+  if (edit.status) {
+    const current = row.status as string;
+    if (edit.status.mode === "cancel" && current !== "cancelled") data.status = "cancelled";
+    if (edit.status.mode === "reinstate" && current === "cancelled") {
+      data.status = spec.reinstated(row, now);
+    }
+  }
+  if (edit.operator && spec.operatorColumn) {
+    const value = edit.operator.mode === "set" ? edit.operator.value : null;
+    if (value !== ((row[spec.operatorColumn] as string | null) ?? null)) {
+      data[spec.operatorColumn] = value;
+    }
+  }
+  if (edit.serviceClass && spec.classColumn) {
+    const value = edit.serviceClass.mode === "set" ? edit.serviceClass.value : null;
+    if (value !== ((row[spec.classColumn] as string | null) ?? null)) {
+      data[spec.classColumn] = value;
+    }
+  }
+  return Object.keys(data).length === 0 && companionIds === null ? null : { data, companionIds };
+}
+
+/**
+ * One row, one transaction. The version claim sits INSIDE it, so a write the
+ * database then refuses takes the claim back and the retry still meets the
+ * version the client read. False when the row moved on (nothing written).
+ */
+async function writePlan(
+  spec: DomainSpec,
+  userId: string,
+  row: Row,
+  plan: Plan,
+  base: string | undefined,
+  shares: boolean
+): Promise<boolean> {
+  return prisma.$transaction(
+    async (tx: DbTransaction) => {
+      if (!(await claimed(spec, userId, row.id, base, tx))) return false;
+      // Trip, status and the ride's own facts reach the members' copies; tags and
+      // companions are private. Inside the row's transaction, like every single
+      // edit: a propagation that fails takes the row's write back with it.
+      const before = shares ? await shareSnapshot(tx, spec.shareEntity, row.id) : undefined;
+      if (plan.companionIds !== null && spec.links) {
+        await replaceCompanionLinks(
+          linksOf(tx, spec.links.delegate) as never,
+          spec.links.column,
+          row.id,
+          plan.companionIds.map((id) => ({ id }))
+        );
+      }
+      const data = { ...plan.data };
+      if (spec.protectsEdits) {
+        const touched = EDIT_PROTECTED.filter((k) => k in data);
+        if (touched.length > 0) {
+          const had = (row.userEditedFields as string[]) ?? [];
+          data.userEditedFields = addValues(had, touched);
+        }
+      }
+      // A generic delegate, so the write-path scanner does not see it; the propagation follows.
+      await delegateOf(tx, spec.delegate).update({ where: { id: row.id }, data });
+      if (shares) await propagateWrite(tx, userId, spec.shareEntity, row.id, before);
+      return true;
+      // Propagation may touch several accounts' copies: the budget it has everywhere else.
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}
+
+/** The stay's own update derives its status, copies the trip's share group and propagates. */
+async function writeStay(userId: string, row: Row, plan: Plan): Promise<true> {
+  const patch: Record<string, unknown> = { ...plan.data };
+  await updateStayRecord(
+    userId,
+    row as unknown as Parameters<typeof updateStayRecord>[1],
+    patch as UpdateStayData,
+    "typed",
+    false
+  );
+  return true;
+}
+
+async function loadPersons(
+  userId: string,
+  spec: DomainSpec,
+  edit: DomainBulkEdit,
+  rows: readonly Row[],
+  typed: readonly NamedPerson[]
+): Promise<Map<string, Person>> {
+  // Stays keep the names only; nobody is created for them.
+  if (!edit.companions || !spec.links) return new Map();
+  return directory(userId, [
+    ...typed,
+    ...(edit.companions.mode === "add"
+      ? rows.flatMap((r) => people((r.companions as string[]) ?? []))
+      : []),
+  ]);
+}
+
+/** Moves the row's version only when the client's base is still current. */
+async function claimed(
+  spec: DomainSpec,
+  userId: string,
+  id: string,
+  base: string | undefined,
+  db: Pick<typeof prisma, "$queryRawUnsafe"> = prisma
+): Promise<boolean> {
+  if (base === undefined) return true;
+  const entity = syncEntity(spec.syncEntity);
+  if (!entity) throw new Error(`bulk edit: ${spec.syncEntity} is not a sync entity`);
+  return claimVersion(entity, id, userId, base, db);
+}
+
+/**
+ * Where a claimed version stands: the claim moves `updated_at` exactly one
+ * millisecond past the base. Computed, never re-read — a re-read could return a
+ * concurrent editor's version, and a retry from one nobody saw would overwrite it.
+ */
+const claimedVersion = (base: string): string => new Date(Date.parse(base) + 1).toISOString();
+
+export async function bulkEditDomain(
+  userId: string,
+  domain: BulkDomain,
+  edit: DomainBulkEdit
+): Promise<BulkResult[]> {
+  const spec = DOMAIN_SPECS[domain];
+  await assertTripOwned(userId, edit);
+  const rows = await delegateOf(prisma, spec.delegate).findMany({
+    where: { id: { in: edit.ids }, userId },
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const typed = edit.companions ? people(edit.companions.values) : [];
+  const persons = await loadPersons(userId, spec, edit, rows, typed);
+  const now = spec.dayAnchored ? await dayAnchorNowFor(userId) : undefined;
+
+  const sharedFields = Boolean(edit.trip || edit.status || edit.operator || edit.serviceClass);
+  const written: string[] = [];
+  const touchedTrips = new Set<string>();
+  const results: BulkResult[] = [];
+
+  for (const id of edit.ids) {
+    const row = byId.get(id);
+    if (!row) {
+      results.push({ id, status: "failed", code: "NOT_FOUND" });
+      continue;
+    }
+    const plan = planFor(spec, row, edit, persons, typed, now);
+    if (!plan) {
+      results.push({ id, status: "unchanged" });
+      continue;
+    }
+    try {
+      const base = edit.baseVersions?.[id];
+      // A stay is written by its own update, which opens its own transaction:
+      // its claim comes first, outside it.
+      const wrote = spec.ownWrite
+        ? (await claimed(spec, userId, id, base)) && (await writeStay(userId, row, plan))
+        : await writePlan(spec, userId, row, plan, base, sharedFields);
+      if (!wrote) {
+        results.push({ id, status: "failed", code: "VERSION_CONFLICT" });
+        continue;
+      }
+      written.push(id);
+      if (row.tripId) touchedTrips.add(row.tripId as string);
+      if (plan.data.tripId) touchedTrips.add(plan.data.tripId as string);
+      results.push({ id, status: "updated" });
+    } catch (err: unknown) {
+      logger.error({
+        operation: "domain_bulk_edit_failed",
+        domain,
+        userId,
+        id,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      const base = edit.baseVersions?.[id];
+      const version = spec.ownWrite && base ? claimedVersion(base) : undefined;
+      results.push({ id, status: "failed", code: "UPDATE_FAILED", ...(version && { version }) });
+    }
+  }
+
+  // A failed status recompute does not undo the rows that went through; it is
+  // logged and the trip catches up on its next change.
+  if (written.length > 0) {
+    await restatusTrips([...touchedTrips]).catch((err: unknown) =>
+      logger.error({
+        operation: "domain_bulk_edit_trip_status_failed",
+        domain,
+        userId,
+        error: err instanceof Error ? err.message : "Unknown error",
+      })
+    );
+    if (spec.ownWrite) {
+      await recheckAchievements(userId, "lodging").catch((err: unknown) =>
+        logger.error({
+          operation: "domain_bulk_edit_achievements_failed",
+          userId,
+          error: err instanceof Error ? err.message : "Unknown error",
+        })
+      );
+    }
+  }
+  return results;
+}

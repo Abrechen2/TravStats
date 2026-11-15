@@ -93,15 +93,17 @@ async function changedFieldsSince(
 }
 
 /** Moves the version forward where it still equals `base`; true when it did. */
-async function claimVersion(
+export async function claimVersion(
   entity: SyncEntity,
   id: string,
   userId: string,
-  base: string
+  base: string,
+  /** A transaction, so a write that then fails takes the claim back with it (bulk edit). */
+  db: Pick<typeof prisma, "$queryRawUnsafe"> = prisma
 ): Promise<boolean> {
   // `table` and `ownerSql` come from the static entity registry, never from
   // the request; the three values are bound parameters.
-  const claimed = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+  const claimed = await db.$queryRawUnsafe<Array<{ id: string }>>(
     `UPDATE "${entity.table}" t
        SET updated_at = t.updated_at + interval '1 millisecond'
      WHERE t.id = $1 AND ${entity.ownerSql}

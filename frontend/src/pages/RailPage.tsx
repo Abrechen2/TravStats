@@ -1,3 +1,7 @@
+import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
+import { railBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
@@ -253,6 +257,15 @@ export default function RailPage(): JSX.Element {
   };
   const hasActiveFilter = search.length > 0 || statusFilter !== "all" || yearFilter !== "all";
 
+  // forgejo#405 A4: an explicit selection for the bulk edit.
+  const selection = useRowSelection();
+  const bulkRows = useMemo(
+    () => entries.flatMap((entry) => entry.legs.map(railBulkRow)),
+    [entries]
+  );
+  const refreshSelection = selection.refresh;
+  useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
+
   return (
     <AppShell width="table">
       <LogbookTabs />
@@ -260,6 +273,7 @@ export default function RailPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("rail:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
+            <BulkStartButton selection={selection} />
             <ColumnPicker
               columns={RAIL_COLUMN_IDS.map((id) => ({
                 id,
@@ -325,6 +339,13 @@ export default function RailPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="rail"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed
             title={t("rail:loadError")}
@@ -361,20 +382,23 @@ export default function RailPage(): JSX.Element {
                       void navigate(single ? `/rail/${single.id}` : `/rail/connection/${entry.id}`)
                     }
                     actions={
-                      single ? (
-                        <RowActions>
-                          <RowActionButton
-                            icon="edit"
-                            label={t("rail:edit")}
-                            onClick={(): void => setEditing({ journey: single })}
-                          />
-                          <RowActionButton
-                            icon="delete"
-                            label={t("rail:delete")}
-                            onClick={(): void => setToDelete(single)}
-                          />
-                        </RowActions>
-                      ) : null
+                      <>
+                        <BulkRowCheck selection={selection} rows={entry.legs.map(railBulkRow)} />
+                        {single ? (
+                          <RowActions>
+                            <RowActionButton
+                              icon="edit"
+                              label={t("rail:edit")}
+                              onClick={(): void => setEditing({ journey: single })}
+                            />
+                            <RowActionButton
+                              icon="delete"
+                              label={t("rail:delete")}
+                              onClick={(): void => setToDelete(single)}
+                            />
+                          </RowActions>
+                        ) : null}
+                      </>
                     }
                   />
                 );

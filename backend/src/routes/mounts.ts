@@ -33,6 +33,7 @@ import flightTrackLineRoutes from "./flights/trackLines";
 import flightObservedTimesRoutes from "./flights/observedTimes";
 import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
+import domainBulkEditRoutes from "./domainBulkEdit";
 import upcomingRoutes from "./upcoming";
 import searchRoutes from "./search";
 import dawarichStayRoutes from "./dawarichStays";
@@ -292,6 +293,9 @@ export const apiMounts: ApiMount[] = [
   // Trip, tags and companions over a selection (forgejo#217) — before
   // `flights` too, for the same reason.
   { id: "flights.bulkEdit", base: "/api/v1/flights", router: flightBulkEditRoutes },
+  // The same for rail, bus, ferry, rentals, cruises and stays (forgejo#405 A4);
+  // full paths on /api/v1, BEFORE the domain routers whose '/:id' would take "bulk-edit".
+  { id: "domainBulkEdit", base: "/api/v1", router: domainBulkEditRoutes },
   // Recorded lines for the map (forgejo#312) — before `flights`, same reason.
   { id: "flights.trackLines", base: "/api/v1/flights", router: flightTrackLineRoutes },
   { id: "flights", base: "/api/v1/flights", router: flightRoutes },

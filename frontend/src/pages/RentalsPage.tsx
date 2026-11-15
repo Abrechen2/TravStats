@@ -1,3 +1,7 @@
+import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
+import { rentalBulkRow } from "../components/bulkEdit/bulkRows";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
@@ -231,6 +235,12 @@ export default function RentalsPage(): JSX.Element {
   const hasActiveFilter =
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
+  // forgejo#405 A4: an explicit selection for the bulk edit.
+  const selection = useRowSelection();
+  const bulkRows = useMemo(() => rentals.map(rentalBulkRow), [rentals]);
+  const refreshSelection = selection.refresh;
+  useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
+
   return (
     <AppShell width="table">
       <LogbookTabs />
@@ -238,6 +248,7 @@ export default function RentalsPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("rental:title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
+            <BulkStartButton selection={selection} />
             <ColumnPicker
               columns={RENTAL_COLUMN_IDS.map((id) => ({
                 id,
@@ -307,6 +318,13 @@ export default function RentalsPage(): JSX.Element {
           resultLabel={loading || loadFailed ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="rental"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadFailed ? (
           <ListLoadFailed
             title={t("rental:loadError")}
@@ -339,18 +357,21 @@ export default function RentalsPage(): JSX.Element {
                   columns={columns}
                   onOpen={(): void => void navigate(`/rentals/${rental.id}`)}
                   actions={
-                    <RowActions>
-                      <RowActionButton
-                        icon="edit"
-                        label={t("rental:edit")}
-                        onClick={(): void => setEditing({ rental })}
-                      />
-                      <RowActionButton
-                        icon="delete"
-                        label={t("rental:delete")}
-                        onClick={(): void => setToDelete(rental)}
-                      />
-                    </RowActions>
+                    <>
+                      <BulkRowCheck selection={selection} rows={[rentalBulkRow(rental)]} />
+                      <RowActions>
+                        <RowActionButton
+                          icon="edit"
+                          label={t("rental:edit")}
+                          onClick={(): void => setEditing({ rental })}
+                        />
+                        <RowActionButton
+                          icon="delete"
+                          label={t("rental:delete")}
+                          onClick={(): void => setToDelete(rental)}
+                        />
+                      </RowActions>
+                    </>
                   }
                 />
               ))}

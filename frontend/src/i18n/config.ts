@@ -13,6 +13,7 @@ import enCommon from "./resources/en/common.json";
 import enDashboard from "./resources/en/dashboard.json";
 import enSettings from "./resources/en/settings.json";
 import enFlights from "./resources/en/flights.json";
+import enBulkEdit from "./resources/en/bulkEdit.json";
 import enAuth from "./resources/en/auth.json";
 import enAdmin from "./resources/en/admin.json";
 import enTraining from "./resources/en/training.json";
@@ -62,6 +63,7 @@ import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
 import deSettings from "./resources/de/settings.json";
 import deFlights from "./resources/de/flights.json";
+import deBulkEdit from "./resources/de/bulkEdit.json";
 import deAuth from "./resources/de/auth.json";
 import deAdmin from "./resources/de/admin.json";
 import deTraining from "./resources/de/training.json";
@@ -132,6 +134,7 @@ const resources = {
     dashboard: enDashboard,
     settings: enSettings,
     flights: enFlights,
+    bulkEdit: enBulkEdit,
     auth: enAuth,
     admin: enAdmin,
     training: enTraining,
@@ -184,6 +187,7 @@ const resources = {
     dashboard: deDashboard,
     settings: deSettings,
     flights: deFlights,
+    bulkEdit: deBulkEdit,
     auth: deAuth,
     admin: deAdmin,
     training: deTraining,
@@ -246,6 +250,7 @@ i18n.use(initReactI18next).init({
     "dashboard",
     "settings",
     "flights",
+    "bulkEdit",
     "auth",
     "admin",
     "training",

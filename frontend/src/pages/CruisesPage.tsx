@@ -1,3 +1,7 @@
+import { useRowSelection } from "../components/bulkEdit/useRowSelection";
+import DomainBulkBar, { BulkStartButton } from "../components/bulkEdit/DomainBulkBar";
+import BulkRowCheck from "../components/bulkEdit/BulkRowCheck";
+import { cruiseBulkRow } from "../components/bulkEdit/bulkRows";
 import AppShell from "../components/ui/AppShell";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -370,6 +374,12 @@ export default function CruisesPage(): JSX.Element {
   const hasActiveFilter =
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
+  // forgejo#405 A4: an explicit selection for the bulk edit.
+  const selection = useRowSelection();
+  const bulkRows = useMemo(() => cruises.map(cruiseBulkRow), [cruises]);
+  const refreshSelection = selection.refresh;
+  useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
+
   return (
     <AppShell width="table">
       <LogbookTabs />
@@ -379,6 +389,7 @@ export default function CruisesPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
+            <BulkStartButton selection={selection} />
             <ColumnPicker
               columns={CRUISE_COLUMN_IDS.map((id) => ({
                 id,
@@ -457,6 +468,13 @@ export default function CruisesPage(): JSX.Element {
           resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: total })}
         />
 
+        {/* Outside the list states: a reload must not unmount the result dialog. */}
+        <DomainBulkBar
+          domain="cruise"
+          selection={selection}
+          pageRows={bulkRows}
+          onApplied={() => void reload()}
+        />
         {loadError ? (
           // A failed read with a way forward (forgejo#247), not a dead end.
           <ListLoadFailed
@@ -490,12 +508,15 @@ export default function CruisesPage(): JSX.Element {
                   columns={visibleColumns}
                   onOpen={() => navigate(`/cruises/${c.id}`)}
                   actions={
-                    <CruiseRowActions
-                      cruise={c}
-                      onEdit={setEditingCruise}
-                      onDuplicate={startDuplicate}
-                      onDelete={() => setCruiseToDelete(c)}
-                    />
+                    <>
+                      <BulkRowCheck selection={selection} rows={[cruiseBulkRow(c)]} />
+                      <CruiseRowActions
+                        cruise={c}
+                        onEdit={setEditingCruise}
+                        onDuplicate={startDuplicate}
+                        onDelete={() => setCruiseToDelete(c)}
+                      />
+                    </>
                   }
                 />
               ))}
