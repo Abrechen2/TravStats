@@ -96,6 +96,304 @@ async function applyEmailRegexPostProcessing(
   return preferNamedAirports(routed, combinedText, airportsInCityOf);
 }
 
+type Logger = typeof logger;
+
+/** What every step of the email chain reads; built once in `parseEmail`. */
+interface EmailChainContext {
+  subject: string;
+  text: string;
+  cleanedText: string;
+  html: string | undefined;
+  config: ParserConfig;
+  /** The document every candidate is judged against (see `parseEmail`). */
+  evidenceSource: string;
+  shouldLog: boolean;
+  log: Logger;
+  textLog: Logger;
+  startTime: number;
+}
+
+/** What the chain learned on its way, read by the tail of `parseEmail`. */
+interface EmailChainState {
+  errors: Array<{ provider: TextProvider; error: string }>;
+  /**
+   * A provider that ran to completion and found no booking, if one did.
+   *
+   * Kept apart from `errors` because the two mean opposite things: an entry in
+   * `errors` is a provider that could not do its job, while this is a provider
+   * that did it and answered "there is no flight in this mail". Only the first
+   * kind justifies failing the request — see the tail of `parseEmail`.
+   */
+  parsedWithoutFlights: TextProvider | null;
+  /**
+   * The admin configured a model and it could not be asked — unreachable, or
+   * it failed mid-parse. Only then is an empty answer uncertain: "no flight in
+   * this mail" from the templates alone, while the reader that might have
+   * found one was down, used to come back as a plain empty list (silent-
+   * failure review 2026-09-26, finding 8). An instance without a model
+   * configured is not "unreachable" — nothing was supposed to be asked.
+   */
+  llmUnreachable: boolean;
+}
+
+/** Step 0: user-derived regex templates (before HTML-selector templates). */
+async function tryUserTemplate(ctx: EmailChainContext): Promise<ParserResult | null> {
+  const { config, subject, cleanedText, log } = ctx;
+  if (!config.userId) return null;
+  // The From: header is extracted from the raw text first so that
+  // email-address-based template detection is unaffected by cleaning.
+  const fromMatch = /^From:\s*(.+)$/im.exec(ctx.text);
+  const fromAddress = fromMatch ? fromMatch[1].trim() : "";
+  // "flight", named rather than implied: this parser reads flight mails, and
+  // a template derived for another domain would be applied as if its
+  // patterns were flight numbers and airport codes.
+  const userTemplate = await findMatchingTemplate(
+    config.userId,
+    "flight",
+    fromAddress,
+    subject,
+    cleanedText
+  );
+  if (!userTemplate) return null;
+  const userResults = applyUserTemplate(userTemplate, subject, cleanedText);
+  const bestConfidence = userResults[0]?.parserConfidence ?? 0;
+  // The same decline the generic reader applies: a multi-leg result made of
+  // route-only legs is a positional guess. The chain carries on instead.
+  if (hasRouteOnlyLegsInMultiLegDocument(userResults as ParsedBooking[])) {
+    log.info(
+      { templateName: userTemplate.name, flights: userResults.length },
+      "[Parser Factory] User-derived template declined: route-only legs in a multi-leg result"
+    );
+    return null;
+  }
+  if (bestConfidence < 80) return null;
+  log.info(
+    { templateName: userTemplate.name, flights: userResults.length, confidence: bestConfidence },
+    "[Parser Factory] User-derived template matched (confidence >=80%)"
+  );
+  return {
+    flights: keepOnlyFlightsWithEvidence(
+      userResults as ParsedBooking[],
+      "regex",
+      ctx.evidenceSource
+    ),
+    provider: "regex" as const,
+    fallbackUsed: false,
+  };
+}
+
+/** The provider call every chain step makes, with the per-user reference date. */
+function runTextParser(parser: ReturnType<typeof getTextParserInstance>, ctx: EmailChainContext) {
+  return parser.parseEmail(ctx.subject, ctx.cleanedText, ctx.html, undefined, {
+    referenceDate: ctx.config.referenceDate,
+    ...(ctx.config.userId ? { userId: ctx.config.userId } : {}),
+  });
+}
+
+/** Try Ollama first (before templates) when explicitly configured. */
+async function tryOllamaFirst(
+  ctx: EmailChainContext,
+  state: EmailChainState
+): Promise<ParserResult | null> {
+  try {
+    const ollamaParser = getTextParserInstance("ollama", ctx.config);
+    const ollamaAvail = await checkProviderAvailability(ollamaParser);
+    if (!ollamaAvail.available) {
+      state.llmUnreachable = true;
+      logger.info(
+        `[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`
+      );
+      return null;
+    }
+    logger.info("[Parser Factory] Ollama configured — trying LLM before templates");
+    const ollamaFlights = await runTextParser(ollamaParser, ctx);
+    if (ollamaFlights && ollamaFlights.length > 0) {
+      const finalFlights = await applyEmailRegexPostProcessing(
+        ollamaFlights,
+        ctx.subject,
+        ctx.cleanedText,
+        ctx.html
+      );
+      logger.info(
+        { flightCount: finalFlights.length },
+        "[Parser Factory] Ollama succeeded — skipping templates"
+      );
+      return {
+        flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama", ctx.evidenceSource),
+        provider: "ollama" as const,
+        fallbackUsed: false,
+      };
+    }
+    state.parsedWithoutFlights = "ollama";
+    logger.info("[Parser Factory] Ollama returned no flights — falling back to templates");
+  } catch (err) {
+    state.llmUnreachable = true;
+    logger.warn(
+      `[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+  return null;
+}
+
+/** Template-Parser (HTML-selector based templates). */
+async function tryTemplateParser(ctx: EmailChainContext): Promise<ParserResult | null> {
+  const templateParser = new TemplateParser();
+  const templateAvail = await templateParser.checkAvailability();
+  if (!templateAvail.available) return null;
+  const reading = await templateParser.read(
+    ctx.subject,
+    ctx.cleanedText,
+    ctx.html,
+    ctx.config.userId
+  );
+  // A template that recognises its own sender's cancellation or change
+  // notice ends the chain: the regex below would read the cancelled
+  // flight's lines and propose them as a booking.
+  if (reading.nonBooking) {
+    logger.info("[Parser Factory] Template recognised a non-booking — no flights");
+    return { flights: [], provider: "regex" as const, fallbackUsed: false };
+  }
+  const templateResults = reading.flights;
+  if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
+    logger.info(
+      {
+        confidence: templateResults[0].parserConfidence,
+        parserTemplate: templateResults[0].parserTemplate,
+      },
+      "[Parser Factory] Template parser matched with sufficient confidence"
+    );
+    return {
+      flights: keepOnlyFlightsWithEvidence(templateResults, "regex", ctx.evidenceSource),
+      provider: "regex" as const,
+      fallbackUsed: false,
+    };
+  }
+  return null;
+}
+
+function logSkippedProvider(ctx: EmailChainContext, provider: TextProvider, reason?: string) {
+  if (ctx.shouldLog) {
+    ctx.textLog.debug({ operation: "text_parser_skipped", context: { provider, reason } });
+  } else {
+    logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${reason}`);
+  }
+}
+
+function logProviderAttempt(ctx: EmailChainContext, provider: TextProvider) {
+  if (ctx.shouldLog) {
+    ctx.textLog.info({
+      operation: "text_parse_attempt",
+      context: {
+        provider,
+        textLength: ctx.cleanedText.length,
+        htmlLength: ctx.html ? ctx.html.length : 0,
+      },
+    });
+  } else {
+    logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
+  }
+}
+
+function logProviderComplete(
+  ctx: EmailChainContext,
+  provider: TextProvider,
+  fallbackUsed: boolean,
+  flights: ParsedBooking[],
+  parseDuration: number
+) {
+  const quality = calculateParserQuality(flights);
+  if (ctx.shouldLog) {
+    ctx.log.info({
+      operation: "parse_email_complete",
+      context: {
+        provider,
+        fallbackUsed,
+        quality,
+        flightCount: flights.length,
+        totalDuration: Date.now() - ctx.startTime,
+        parseDuration,
+      },
+    });
+  } else {
+    logger.info(
+      { provider, fallbackUsed, quality, flightCount: flights.length },
+      `[Parser Factory] Email parse complete with: ${provider}${fallbackUsed ? " (fallback)" : ""}`
+    );
+  }
+}
+
+/** One provider of the chain: a result, or null to carry on with the next. */
+async function tryChainProvider(
+  ctx: EmailChainContext,
+  state: EmailChainState,
+  provider: TextProvider,
+  llmConfigured: boolean
+): Promise<ParserResult | null> {
+  try {
+    const parser = getTextParserInstance(provider, ctx.config);
+    const availability = await checkProviderAvailability(parser);
+    if (!availability.available) {
+      logSkippedProvider(ctx, provider, availability.reason);
+      state.errors.push({ provider, error: availability.reason || "Unavailable" });
+      if (provider === "ollama" && llmConfigured) state.llmUnreachable = true;
+      return null;
+    }
+
+    const parseStartTime = Date.now();
+    logProviderAttempt(ctx, provider);
+    const flights = await runTextParser(parser, ctx);
+    const parseDuration = Date.now() - parseStartTime;
+
+    if (!flights || flights.length === 0) {
+      // Finding no booking is an ANSWER, not a failure. Throwing here put the
+      // provider in `errors`, and once the chain was exhausted the caller was
+      // told every parser had failed — HTTP 500 for a marketing mail that
+      // simply contains no flight (Forgejo #35). Carry on to the next
+      // provider; the tail decides what an empty result means.
+      state.parsedWithoutFlights = provider;
+      return null;
+    }
+
+    const finalFlights = await applyEmailRegexPostProcessing(
+      flights,
+      ctx.subject,
+      ctx.cleanedText,
+      ctx.html
+    );
+    const fallbackUsed = ctx.config.textProvider !== provider;
+    logProviderComplete(ctx, provider, fallbackUsed, finalFlights, parseDuration);
+
+    // The generic regex reader pairs by position, so losing one of its legs
+    // makes the rest suspect; the other providers read each leg on its own.
+    const gate = provider === "regex" ? keepAllOrNoneWithEvidence : keepOnlyFlightsWithEvidence;
+    return {
+      flights: gate(finalFlights, provider, ctx.evidenceSource),
+      provider,
+      fallbackUsed,
+    };
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    if (ctx.shouldLog) {
+      ctx.textLog.warn({
+        operation: "text_parse_failed",
+        context: {
+          provider,
+          error: errorMsg,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      });
+    } else {
+      logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
+    }
+    state.errors.push({ provider, error: errorMsg });
+    if (provider === "ollama") state.llmUnreachable = true;
+
+    // Invalidate cache for this provider
+    deleteAvailabilityCacheEntry(`${provider}-default`);
+    return null;
+  }
+}
+
 /**
  * Parse email using regex/template-based parsing only
  */
@@ -105,28 +403,8 @@ export async function parseEmail(
   html: string | undefined,
   config: ParserConfig
 ): Promise<ParserResult> {
-  const errors: Array<{ provider: TextProvider; error: string }> = [];
-
-  /**
-   * A provider that ran to completion and found no booking, if one did.
-   *
-   * Kept apart from `errors` because the two mean opposite things: an entry in
-   * `errors` is a provider that could not do its job, while this is a provider
-   * that did it and answered "there is no flight in this mail". Only the first
-   * kind justifies failing the request — see the tail of this function.
-   */
-  let parsedWithoutFlights: TextProvider | null = null;
-
-  /**
-   * The admin configured a model and it could not be asked — unreachable, or
-   * it failed mid-parse. Only then is an empty answer uncertain: "no flight in
-   * this mail" from the templates alone, while the reader that might have
-   * found one was down, used to come back as a plain empty list (silent-
-   * failure review 2026-09-26, finding 8). An instance without a model
-   * configured is not "unreachable" — nothing was supposed to be asked.
-   */
+  const state: EmailChainState = { errors: [], parsedWithoutFlights: null, llmUnreachable: false };
   const llmConfigured = llmTargetOf(config) !== null && config.textFallbacks.includes("ollama");
-  let llmUnreachable = false;
   const shouldLog = await shouldLogParserOperations();
   const log = shouldLog ? parserFactoryLogger : logger;
   const textLog = shouldLog ? parserTextLogger : logger;
@@ -134,10 +412,7 @@ export async function parseEmail(
 
   // Clean the plain-text body before any parsing so parsers see the same
   // filtered content that the annotation view shows (URLs, HTML fragments removed,
-  // whitespace normalised).  The From: header is extracted from the raw text first
-  // so that email-address-based template detection is unaffected.
-  const fromMatch = /^From:\s*(.+)$/im.exec(text);
-  const fromAddress = fromMatch ? fromMatch[1].trim() : "";
+  // whitespace normalised).
   const cleanedText = cleanEmailBody(text);
 
   // The document every candidate is judged against, built from the CLEANED
@@ -151,6 +426,18 @@ export async function parseEmail(
   // strips tags (attributes and all) and bare URLs, so the gate judges the
   // words on the page. `evidenceSourceHtml.test.ts` pins both directions.
   const evidenceSource = combinedSource(subject, cleanedText, html && cleanEmailBody(html));
+  const ctx: EmailChainContext = {
+    subject,
+    text,
+    cleanedText,
+    html,
+    config,
+    evidenceSource,
+    shouldLog,
+    log,
+    textLog,
+    startTime,
+  };
 
   if (shouldLog) {
     log.info({
@@ -164,49 +451,8 @@ export async function parseEmail(
     });
   }
 
-  // Step 0: User-derived regex templates (before HTML-selector templates)
-  if (config.userId) {
-    // "flight", named rather than implied: this parser reads flight mails, and
-    // a template derived for another domain would be applied as if its
-    // patterns were flight numbers and airport codes.
-    const userTemplate = await findMatchingTemplate(
-      config.userId,
-      "flight",
-      fromAddress,
-      subject,
-      cleanedText
-    );
-    if (userTemplate) {
-      const userResults = applyUserTemplate(userTemplate, subject, cleanedText);
-      const bestConfidence = userResults[0]?.parserConfidence ?? 0;
-      // The same decline the generic reader applies: a multi-leg result made of
-      // route-only legs is a positional guess. The chain carries on instead.
-      if (hasRouteOnlyLegsInMultiLegDocument(userResults as ParsedBooking[])) {
-        log.info(
-          { templateName: userTemplate.name, flights: userResults.length },
-          "[Parser Factory] User-derived template declined: route-only legs in a multi-leg result"
-        );
-      } else if (bestConfidence >= 80) {
-        log.info(
-          {
-            templateName: userTemplate.name,
-            flights: userResults.length,
-            confidence: bestConfidence,
-          },
-          "[Parser Factory] User-derived template matched (confidence >=80%)"
-        );
-        return {
-          flights: keepOnlyFlightsWithEvidence(
-            userResults as ParsedBooking[],
-            "regex",
-            evidenceSource
-          ),
-          provider: "regex" as const,
-          fallbackUsed: false,
-        };
-      }
-    }
-  }
+  const fromUserTemplate = await tryUserTemplate(ctx);
+  if (fromUserTemplate) return fromUserTemplate;
 
   // Whether the LLM gets the first look is an ADMIN SETTING now, and the same
   // one in all four domains (`getParserOrder`). It used to be hardcoded here
@@ -219,214 +465,38 @@ export async function parseEmail(
     llmTargetOf(config) !== null &&
     config.textFallbacks.includes("ollama") &&
     (await getParserOrder()) === "llm_first";
-
   if (ollamaConfigured) {
-    // Try Ollama first (before templates) when explicitly configured
-    try {
-      const ollamaParser = getTextParserInstance("ollama", config);
-      const ollamaAvail = await checkProviderAvailability(ollamaParser);
-      if (ollamaAvail.available) {
-        logger.info("[Parser Factory] Ollama configured — trying LLM before templates");
-        const ollamaFlights = await ollamaParser.parseEmail(subject, cleanedText, html, undefined, {
-          referenceDate: config.referenceDate,
-          ...(config.userId ? { userId: config.userId } : {}),
-        });
-        if (ollamaFlights && ollamaFlights.length > 0) {
-          const finalFlights = await applyEmailRegexPostProcessing(
-            ollamaFlights,
-            subject,
-            cleanedText,
-            html
-          );
-          logger.info(
-            { flightCount: finalFlights.length },
-            "[Parser Factory] Ollama succeeded — skipping templates"
-          );
-          return {
-            flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama", evidenceSource),
-            provider: "ollama" as const,
-            fallbackUsed: false,
-          };
-        }
-        parsedWithoutFlights = "ollama";
-        logger.info("[Parser Factory] Ollama returned no flights — falling back to templates");
-      } else {
-        llmUnreachable = true;
-        logger.info(
-          `[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`
-        );
-      }
-    } catch (err) {
-      llmUnreachable = true;
-      logger.warn(
-        `[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
+    const fromOllama = await tryOllamaFirst(ctx, state);
+    if (fromOllama) return fromOllama;
   }
 
-  // Template-Parser (HTML-selector based templates)
-  const templateParser = new TemplateParser();
-  const templateAvail = await templateParser.checkAvailability();
-  if (templateAvail.available) {
-    const reading = await templateParser.read(subject, cleanedText, html, config.userId);
-    // A template that recognises its own sender's cancellation or change
-    // notice ends the chain: the regex below would read the cancelled
-    // flight's lines and propose them as a booking.
-    if (reading.nonBooking) {
-      logger.info("[Parser Factory] Template recognised a non-booking — no flights");
-      return { flights: [], provider: "regex" as const, fallbackUsed: false };
-    }
-    const templateResults = reading.flights;
-    if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
-      logger.info(
-        {
-          confidence: templateResults[0].parserConfidence,
-          parserTemplate: templateResults[0].parserTemplate,
-        },
-        "[Parser Factory] Template parser matched with sufficient confidence"
-      );
-      return {
-        flights: keepOnlyFlightsWithEvidence(templateResults, "regex", evidenceSource),
-        provider: "regex" as const,
-        fallbackUsed: false,
-      };
-    }
-  }
+  const fromTemplates = await tryTemplateParser(ctx);
+  if (fromTemplates) return fromTemplates;
 
   // Regex provider chain (ollama already tried above if configured, skip it here)
   const providerChain: TextProvider[] = ollamaConfigured
     ? config.textFallbacks.filter((p) => p !== "ollama")
     : config.textFallbacks;
-
-  // Try each provider in order
   for (const provider of providerChain) {
-    try {
-      const parser = getTextParserInstance(provider, config);
-
-      // Check availability first
-      const availability = await checkProviderAvailability(parser);
-      if (!availability.available) {
-        if (shouldLog) {
-          textLog.debug({
-            operation: "text_parser_skipped",
-            context: { provider, reason: availability.reason },
-          });
-        } else {
-          logger.debug(
-            `[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`
-          );
-        }
-        errors.push({ provider, error: availability.reason || "Unavailable" });
-        if (provider === "ollama" && llmConfigured) llmUnreachable = true;
-        continue;
-      }
-
-      // Try parsing
-      const parseStartTime = Date.now();
-      if (shouldLog) {
-        textLog.info({
-          operation: "text_parse_attempt",
-          context: { provider, textLength: cleanedText.length, htmlLength: html ? html.length : 0 },
-        });
-      } else {
-        logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
-      }
-
-      const flights = await parser.parseEmail(subject, cleanedText, html, undefined, {
-        referenceDate: config.referenceDate,
-        ...(config.userId ? { userId: config.userId } : {}),
-      });
-      const parseDuration = Date.now() - parseStartTime;
-
-      if (!flights || flights.length === 0) {
-        // Finding no booking is an ANSWER, not a failure. Throwing here put the
-        // provider in `errors`, and once the chain was exhausted the caller was
-        // told every parser had failed — HTTP 500 for a marketing mail that
-        // simply contains no flight (Forgejo #35). Carry on to the next
-        // provider; the tail decides what an empty result means.
-        parsedWithoutFlights = provider;
-        continue;
-      }
-
-      const finalFlights = await applyEmailRegexPostProcessing(flights, subject, cleanedText, html);
-      const finalProvider = provider;
-      const finalFallbackUsed = config.textProvider !== provider;
-
-      const finalQuality = calculateParserQuality(finalFlights);
-      const totalDuration = Date.now() - startTime;
-
-      if (shouldLog) {
-        log.info({
-          operation: "parse_email_complete",
-          context: {
-            provider: finalProvider,
-            fallbackUsed: finalFallbackUsed,
-            quality: finalQuality,
-            flightCount: finalFlights.length,
-            totalDuration,
-            parseDuration,
-          },
-        });
-      } else {
-        logger.info(
-          {
-            provider: finalProvider,
-            fallbackUsed: finalFallbackUsed,
-            quality: finalQuality,
-            flightCount: finalFlights.length,
-          },
-          `[Parser Factory] Email parse complete with: ${finalProvider}${finalFallbackUsed ? " (fallback)" : ""}`
-        );
-      }
-
-      // The generic regex reader pairs by position, so losing one of its legs
-      // makes the rest suspect; the other providers read each leg on its own.
-      const gate =
-        finalProvider === "regex" ? keepAllOrNoneWithEvidence : keepOnlyFlightsWithEvidence;
-      return {
-        flights: gate(finalFlights, finalProvider, evidenceSource),
-        provider: finalProvider,
-        fallbackUsed: finalFallbackUsed,
-      };
-    } catch (error: unknown) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      if (shouldLog) {
-        textLog.warn({
-          operation: "text_parse_failed",
-          context: {
-            provider,
-            error: errorMsg,
-            stack: error instanceof Error ? error.stack : undefined,
-          },
-        });
-      } else {
-        logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
-      }
-      errors.push({ provider, error: errorMsg });
-      if (provider === "ollama") llmUnreachable = true;
-
-      // Invalidate cache for this provider
-      deleteAvailabilityCacheEntry(`${provider}-default`);
-
-      // Continue to next provider
-      continue;
-    }
+    const result = await tryChainProvider(ctx, state, provider, llmConfigured);
+    if (result) return result;
   }
 
   // A provider read the mail and found nothing in it. That is a result, and the
   // route renders it as an empty list; the import modal then says "no flight
   // found" instead of "email parsing failed". Only a chain in which nothing ran
   // reaches the throw below.
-  if (parsedWithoutFlights) {
+  if (state.parsedWithoutFlights) {
     return {
       flights: [],
-      provider: parsedWithoutFlights,
-      fallbackUsed: config.textProvider !== parsedWithoutFlights,
-      ...(llmUnreachable ? { llmUnreachable: true } : {}),
+      provider: state.parsedWithoutFlights,
+      fallbackUsed: config.textProvider !== state.parsedWithoutFlights,
+      ...(state.llmUnreachable ? { llmUnreachable: true } : {}),
     };
   }
 
   // All providers failed
+  const { errors } = state;
   const totalDuration = Date.now() - startTime;
   if (shouldLog) {
     log.error({
