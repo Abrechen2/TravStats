@@ -550,6 +550,13 @@ benefit the owner asked for. Revisit only on the owner's wish.
 - [ ] **Step 5:** Device check on the iPhone (start and stop from a Shortcuts automation with the app closed), result in ADR 0017.
 - [ ] **Step 6:** Commit `feat(location): start and stop everyday recording from Shortcuts`.
 
+### Companion "Track" area (owner, 2026-10-30)
+
+App-only reading area on top of the Phase 2 API. Contract and phase table
+(T1 day · T2 calendar · T3 months/explored · T4 export, plus the two server
+gaps S-T1 moves and S-T2 calendar flags):
+`docs/superpowers/specs/2026-10-30-companion-track-area.md`.
+
 ### After C9: capture scope (owner, 2026-10-26)
 
 Start simple: **record everything is the default.** No manual accuracy setting and no per-type profiles yet; they come once there is field experience. The later concept — all sources, triggers and per-type profiles (flight, cruise, ferry, rail, bus, roadtrip, workout, everyday) — is the board at https://claude.ai/artifact/FS93X8kqman2wrCDEwZuLC.
