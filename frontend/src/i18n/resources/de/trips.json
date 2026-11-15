@@ -951,6 +951,14 @@
       "stale": "Die Liste wurde inzwischen auf einem anderen Gerät geändert und neu geladen. Deine Änderung wurde nicht übernommen – bitte noch einmal ausführen.",
       "staleReloadFailed": "Die Liste wurde inzwischen auf einem anderen Gerät geändert, konnte aber nicht neu geladen werden. Deine Änderung wurde nicht übernommen. Lade die Seite neu.",
       "saveFailed": "Nicht gespeichert. Bitte versuche es erneut."
+    },
+    "categoryLabel": "Kategorie",
+    "categoryPlaceholder": "Kategorie (optional)",
+    "quantityLabel": "Anzahl",
+    "scopeLabel": "Für wen",
+    "scope": {
+      "personal": "Persönlich",
+      "shared": "Gemeinsam"
     }
   }
 }

@@ -951,6 +951,14 @@
       "stale": "The list was changed on another device in the meantime and has been reloaded. Your change was not applied – please do it again.",
       "staleReloadFailed": "The list was changed on another device in the meantime but could not be reloaded. Your change was not applied. Reload the page.",
       "saveFailed": "Not saved. Please try again."
+    },
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "Category (optional)",
+    "quantityLabel": "Quantity",
+    "scopeLabel": "For whom",
+    "scope": {
+      "personal": "Personal",
+      "shared": "Shared"
     }
   }
 }

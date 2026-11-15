@@ -8,10 +8,51 @@ import { api } from "./client";
  * `routes/settings/personal.ts`.
  */
 
+/** `{server, subjectId}` of a person; the web only passes it through. */
+export interface PackingPrincipal {
+  server: string;
+  subjectId: string;
+}
+
+/**
+ * One item of the single packing store, rich shape (`?shape=rich`, forgejo#398).
+ * `done` is what TravPlan calls `packed`. A write sends every field back as it
+ * was read: a field the web leaves out would be reset to its default.
+ */
 export interface PackingItem {
   id: string;
   label: string;
   done: boolean;
+  category: string;
+  quantity: number;
+  scope: "personal" | "shared";
+  note: string;
+  manual: boolean;
+  ownerPrincipal: PackingPrincipal | null;
+  assigneePrincipal: PackingPrincipal | null;
+}
+
+export const PACKING_MAX_CATEGORY = 40;
+export const PACKING_MAX_QUANTITY = 100;
+
+/** A new item with the store's defaults. */
+export function newPackingItem(
+  label: string,
+  extra: Partial<Pick<PackingItem, "category" | "quantity" | "scope">> = {}
+): PackingItem {
+  return {
+    id: newMutationId(),
+    label,
+    done: false,
+    category: "",
+    quantity: 1,
+    scope: "personal",
+    note: "",
+    manual: true,
+    ownerPrincipal: null,
+    assigneePrincipal: null,
+    ...extra,
+  };
 }
 
 export interface PackingList {
@@ -42,7 +83,9 @@ export function isPackingStale(error: unknown): boolean {
 
 export const packingApi = {
   get: async (tripId: string): Promise<PackingList> => {
-    const { data } = await api.get<PackingList>(`/trips/${tripId}/packing`);
+    const { data } = await api.get<PackingList>(`/trips/${tripId}/packing`, {
+      params: { shape: "rich" },
+    });
     return data;
   },
   put: async (
@@ -51,11 +94,11 @@ export const packingApi = {
     baseRev: number,
     mutationId: string
   ): Promise<PackingList> => {
-    const { data } = await api.put<PackingList>(`/trips/${tripId}/packing`, {
-      items,
-      baseRev,
-      mutationId,
-    });
+    const { data } = await api.put<PackingList>(
+      `/trips/${tripId}/packing`,
+      { items, baseRev, mutationId },
+      { params: { shape: "rich" } }
+    );
     return data;
   },
 };

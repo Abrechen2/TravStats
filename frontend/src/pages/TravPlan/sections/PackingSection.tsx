@@ -39,7 +39,8 @@ function PackingList({ ctx }: { ctx: PlanCtx }) {
               {p.quantity} × {p.label}
               <small className="t-caption">
                 {" "}
-                · {p.category} · {t("options." + p.scope)}
+                · {p.category ? p.category + " · " : ""}
+                {t("options." + p.scope)}
               </small>
             </PlanCheck>
           </PlanGrow>

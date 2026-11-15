@@ -3,8 +3,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import {
   PACKING_MAX_ITEMS,
   PACKING_MAX_LABEL,
-  isPackingStale,
+  PACKING_MAX_CATEGORY,
+  PACKING_MAX_QUANTITY,
   newMutationId,
+  newPackingItem,
+  isPackingStale,
   packingApi,
   type PackingItem,
   type PackingList,
@@ -19,9 +22,10 @@ import { isTripFinished } from "./tripFinished";
 type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
 
 /**
- * The trip's packing list (`TripPackingList`, forgejo#398) — the list the
- * Companion edits offline and sends whole. Not TravPlan's `state.packing`:
- * the two lists are separate stores until the owner decides otherwise (H13).
+ * The trip's packing list (`TripPackingList`, forgejo#398) — the one store the
+ * Companion and TravPlan share, read and written in the rich shape. The server
+ * hands this card the owner's projection: shared items plus the owner's own
+ * personal ones, never a co-planner's.
  *
  * Every change is a whole-list PUT naming the `rev` it started from. A 409
  * means another device wrote first: the list is read again and the user is
@@ -42,6 +46,9 @@ export default function TripPackingCard({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [draft, setDraft] = useState("");
+  const [category, setCategory] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [scope, setScope] = useState<"personal" | "shared">("personal");
   const [open, setOpen] = useState(false);
   const finished = isTripFinished(endDate, todayIn(useTodayZone()));
   // A write whose answer never arrived may have been applied. Its retry reuses
@@ -67,6 +74,9 @@ export default function TripPackingCard({
     setList(null);
     setNotice(null);
     setDraft("");
+    setCategory("");
+    setQuantity(1);
+    setScope("personal");
     unanswered.current = null;
     void load();
   }, [load]);
@@ -87,7 +97,11 @@ export default function TripPackingCard({
       setList(await packingApi.put(tripId, write.items, write.baseRev, write.mutationId));
       unanswered.current = null;
       setNotice(null);
-      if (write.fromDraft) setDraft("");
+      if (write.fromDraft) {
+        setDraft("");
+        setCategory("");
+        setQuantity(1);
+      }
       return true;
     } catch (error) {
       const answered = axios.isAxiosError(error) && error.response !== undefined;
@@ -118,11 +132,17 @@ export default function TripPackingCard({
     event.preventDefault();
     const label = draft.trim();
     if (!label || !list) return;
-    const item: PackingItem = { id: newMutationId(), label, done: false };
+    const item = newPackingItem(label, {
+      category: category.trim().slice(0, PACKING_MAX_CATEGORY),
+      quantity: Math.min(PACKING_MAX_QUANTITY, Math.max(1, Math.trunc(quantity) || 1)),
+      scope,
+    });
     await send([...list.items, item], true);
   };
 
   const items = list?.items ?? [];
+  const itemText = (item: PackingItem): string =>
+    item.quantity > 1 ? `${item.quantity} × ${item.label}` : item.label;
   const full = items.length >= PACKING_MAX_ITEMS;
   const doneCount = items.filter((i) => i.done).length;
 
@@ -149,7 +169,7 @@ export default function TripPackingCard({
                   className="break-words"
                   style={{ textDecoration: item.done ? "line-through" : undefined }}
                 >
-                  {item.label}
+                  {itemText(item)}
                 </li>
               ))}
             </ul>
@@ -216,7 +236,12 @@ export default function TripPackingCard({
                         className="min-w-0 break-words"
                         style={{ textDecoration: item.done ? "line-through" : undefined }}
                       >
-                        {item.label}
+                        {itemText(item)}
+                        <small className="t-caption">
+                          {item.category ? ` · ${item.category}` : ""}
+                          {` · ${t(`trips:packing.scope.${item.scope}`)}`}
+                          {item.note ? ` · ${item.note}` : ""}
+                        </small>
                       </span>
                     </label>
                     <button
@@ -243,6 +268,38 @@ export default function TripPackingCard({
                 placeholder={t("trips:packing.addPlaceholder")}
                 onChange={(e) => setDraft(e.target.value)}
               />
+              <input
+                className="input"
+                style={{ flex: "1 1 120px", minHeight: "var(--ts-size-touch-min)" }}
+                value={category}
+                maxLength={PACKING_MAX_CATEGORY}
+                disabled={busy || full}
+                aria-label={t("trips:packing.categoryLabel")}
+                placeholder={t("trips:packing.categoryPlaceholder")}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+              <input
+                className="input"
+                type="number"
+                min={1}
+                max={PACKING_MAX_QUANTITY}
+                style={{ flex: "0 0 80px", minHeight: "var(--ts-size-touch-min)" }}
+                value={quantity}
+                disabled={busy || full}
+                aria-label={t("trips:packing.quantityLabel")}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+              />
+              <select
+                className="input"
+                style={{ flex: "0 0 auto", minHeight: "var(--ts-size-touch-min)" }}
+                value={scope}
+                disabled={busy || full}
+                aria-label={t("trips:packing.scopeLabel")}
+                onChange={(e) => setScope(e.target.value as "personal" | "shared")}
+              >
+                <option value="personal">{t("trips:packing.scope.personal")}</option>
+                <option value="shared">{t("trips:packing.scope.shared")}</option>
+              </select>
               <button
                 type="submit"
                 className="btn-secondary"
