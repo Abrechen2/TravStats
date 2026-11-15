@@ -87,7 +87,7 @@ span, not to points).
 | W3    | Web       | "replay this journey", "show its points"; optional accuracy filter; speed-scale presets                                          | done — fix/travtrack-w3 6d8aa52a4                                                                          |
 | C1    | Companion | native TravTrack history map on the existing `/day` + `/stays` contract (date navigation, coverage, bottom-sheet timeline)       | done — Track tab existed (T1); feat/travtrack-legs b25d7ea3 reads legs/stops                               |
 | C2    | Companion | legs in the bottom sheet, leg card, tap ↔ highlight, mode correction (needs S1)                                                  | done — companion#118 (feat/travtrack-legs 0a3d91eb); Xiaomi run on rc.21 passed; iOS in the combined build |
-| C3    | Companion | stay review from the map marker, point popup, stay filter                                                                        | open                                                                                                       |
+| C3    | Companion | stay review from the map marker, point popup, stay filter                                                                        | done — companion#122 (feat/travtrack-stops a3d451f3, stacked on #119); Xiaomi run on rc.33 passed (stays across midnight, needs rc.32+); coverage `entry` not drawn yet |
 
 UI shape (W1, C1/C2): a clickable mock-up is shown to the owner before W1 and C2 start;
 S1 and C1 do not wait for it.
