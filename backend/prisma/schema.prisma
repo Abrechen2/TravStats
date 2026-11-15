@@ -28,167 +28,167 @@ datasource db {
 }
 
 model User {
-  mailIntakeSources         MailIntakeSource[]
-  mailIntakeAddress         MailIntakeAddress?
-  mailIntakeSenders         MailIntakeSender[]
-  mailIntakeMessages        MailIntakeMessage[]
-  comparisonDevices         ComparisonDevice[]
-  comparisonPublications    ComparisonPublication[]
-  comparisonLinks           ComparisonLink[]
-  comparisonAudits          ComparisonAudit[]
-  comparisonInvites         ComparisonInvite[]
-  comparisonCircles         ComparisonCircle[]
-  leaderboardConsentsOwned  LeaderboardConsent[]         @relation("LeaderboardConsentOwner")
-  leaderboardConsentsViewed LeaderboardConsent[]         @relation("LeaderboardConsentViewer")
-  leaderboardRemotes        LeaderboardRemote[]
-  leaderboardInvites        LeaderboardInvite[]
-  federationAdmissions      FederationAdmissionRequest[]
-  leaderboardBoards         LeaderboardBoard[]
-  id                        String                       @id @default(uuid())
-  devicePushes              DevicePush[]
-  reminderPreferences       ReminderPreference[]
-  reminderClaims            ReminderClaim[]
-  clientWriteRefs           ClientWriteRef[]
-  travelPlanUsage           TravelPlanUsage[]
-  travelPlanMembers         TravelPlanMember[]           @relation("TravelPlanMemberUser")
-  username                  String                       @unique
-  passwordHash              String                       @map("password_hash")
+  mailIntakeSources               MailIntakeSource[]
+  mailIntakeAddress               MailIntakeAddress?
+  mailIntakeSenders               MailIntakeSender[]
+  mailIntakeMessages              MailIntakeMessage[]
+  comparisonDevices               ComparisonDevice[]
+  comparisonPublications          ComparisonPublication[]
+  comparisonLinks                 ComparisonLink[]
+  comparisonAudits                ComparisonAudit[]
+  comparisonInvites               ComparisonInvite[]
+  comparisonCircles               ComparisonCircle[]
+  leaderboardConsentsOwned        LeaderboardConsent[]         @relation("LeaderboardConsentOwner")
+  leaderboardConsentsViewed       LeaderboardConsent[]         @relation("LeaderboardConsentViewer")
+  leaderboardRemotes              LeaderboardRemote[]
+  leaderboardInvites              LeaderboardInvite[]
+  federationAdmissions            FederationAdmissionRequest[]
+  leaderboardBoards               LeaderboardBoard[]
+  id                              String                       @id @default(uuid())
+  devicePushes                    DevicePush[]
+  reminderPreferences             ReminderPreference[]
+  reminderClaims                  ReminderClaim[]
+  clientWriteRefs                 ClientWriteRef[]
+  travelPlanUsage                 TravelPlanUsage[]
+  travelPlanMembers               TravelPlanMember[]           @relation("TravelPlanMemberUser")
+  username                        String                       @unique
+  passwordHash                    String                       @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
   // (#241). Columns on User rather than keys in the UserSettings JSON blob
   // where profilePicture lives: the header renders the name on every page from
   // the /auth/me payload, and reading it out of settings would make the header
   // wait for a second fetch and flash the username first. Both optional — a
   // logbook does not need your name.
-  firstName                 String?                      @map("first_name")
-  lastName                  String?                      @map("last_name")
-  isAdmin                   Boolean                      @default(false) @map("is_admin")
-  isActive                  Boolean                      @default(true) @map("is_active")
+  firstName                       String?                      @map("first_name")
+  lastName                        String?                      @map("last_name")
+  isAdmin                         Boolean                      @default(false) @map("is_admin")
+  isActive                        Boolean                      @default(true) @map("is_active")
   /// Opt-in to being found by users of connected servers (simplified setup 2026-11-02, forgejo#301).
   /// Default off: nobody appears in another server's lookup without saying yes.
-  federationFindable        Boolean                      @default(false) @map("federation_findable")
-  invitedBy                 String?                      @map("invited_by")
+  federationFindable              Boolean                      @default(false) @map("federation_findable")
+  invitedBy                       String?                      @map("invited_by")
   /// The last release whose readiness update notes this account has been shown
   /// (setup & readiness, spec 2026-11-14 §9). Existing accounts start at 2.7.0, the
   /// last final release; new accounts at the running version (set at creation,
   /// like `whatsNewSeenVersion`). Notes of versions above it, up to the running
   /// one, are listed.
-  readinessAckVersion       String                       @default("2.7.0") @map("readiness_ack_version")
+  readinessAckVersion             String                       @default("2.7.0") @map("readiness_ack_version")
   /// Invitation card (readiness stage 2, spec 2026-11-14 §12): the keys (open
   /// note ids, required needsAction item ids) the account has already been shown,
   /// and the "remind me tomorrow" time. Neither is a record of travel.
-  readinessInvitationSeen   String[]                     @default([]) @map("readiness_invitation_seen")
-  readinessInvitationSnoozedUntil DateTime?              @map("readiness_invitation_snoozed_until")
-  readinessItemStates       ReadinessItemState[]
-  readinessNoteAcks         ReadinessNoteAck[]
-  createdAt                 DateTime                     @default(now()) @map("created_at")
+  readinessInvitationSeen         String[]                     @default([]) @map("readiness_invitation_seen")
+  readinessInvitationSnoozedUntil DateTime?                    @map("readiness_invitation_snoozed_until")
+  readinessItemStates             ReadinessItemState[]
+  readinessNoteAcks               ReadinessNoteAck[]
+  createdAt                       DateTime                     @default(now()) @map("created_at")
   // Email notification preferences
-  notificationEmail         String?                      @map("notification_email")
-  notifyBefore24h           Boolean                      @default(false) @map("notify_before_24h")
-  notifyBefore2h            Boolean                      @default(false) @map("notify_before_2h")
+  notificationEmail               String?                      @map("notification_email")
+  notifyBefore24h                 Boolean                      @default(false) @map("notify_before_24h")
+  notifyBefore2h                  Boolean                      @default(false) @map("notify_before_2h")
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
-  birthdate                 DateTime?                    @map("birthdate")
+  birthdate                       DateTime?                    @map("birthdate")
   /// ADR 0002 phase 2 (dual-write): the birthday as a floating calendar day —
   /// no zone, it means the same day everywhere. `birthdate` keeps its old
   /// meaning (UTC midnight) until phase 6 drops it.
-  birthDay                  DateTime?                    @map("birth_day") @db.Date
+  birthDay                        DateTime?                    @map("birth_day") @db.Date
   /// day | unknown — how much of `birthDay` the user actually gave.
-  birthPrecision            String?                      @map("birth_precision")
-  resetToken                String?                      @unique @map("reset_token")
-  resetTokenExpiry          DateTime?                    @map("reset_token_expiry")
-  mustChangePassword        Boolean                      @default(false) @map("must_change_password")
-  changeToken               String?                      @unique @map("change_token")
-  changeTokenExpiry         DateTime?                    @map("change_token_expiry")
+  birthPrecision                  String?                      @map("birth_precision")
+  resetToken                      String?                      @unique @map("reset_token")
+  resetTokenExpiry                DateTime?                    @map("reset_token_expiry")
+  mustChangePassword              Boolean                      @default(false) @map("must_change_password")
+  changeToken                     String?                      @unique @map("change_token")
+  changeTokenExpiry               DateTime?                    @map("change_token_expiry")
   // Bumped by every password change and reset. A session carries the epoch it
   // was minted under, and `authenticate` refuses anything older — see
   // middleware/auth.ts. A counter rather than a timestamp because `iat` has
   // second resolution, which would leave a one-second window open.
-  sessionEpoch              Int                          @default(0) @map("session_epoch")
+  sessionEpoch                    Int                          @default(0) @map("session_epoch")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
   // one holds a secret that has been shown as a QR code but not yet confirmed
   // by a first correct code, so an abandoned setup never locks anyone out.
-  twoFactorSecret           String?                      @map("two_factor_secret")
-  twoFactorPendingSecret    String?                      @map("two_factor_pending_secret")
-  twoFactorEnabledAt        DateTime?                    @map("two_factor_enabled_at")
+  twoFactorSecret                 String?                      @map("two_factor_secret")
+  twoFactorPendingSecret          String?                      @map("two_factor_pending_secret")
+  twoFactorEnabledAt              DateTime?                    @map("two_factor_enabled_at")
   // Short-lived login challenge, hashed like changeToken above: the password
   // was right, the second factor is still outstanding.
-  twoFactorToken            String?                      @unique @map("two_factor_token")
-  twoFactorTokenExpiry      DateTime?                    @map("two_factor_token_expiry")
+  twoFactorToken                  String?                      @unique @map("two_factor_token")
+  twoFactorTokenExpiry            DateTime?                    @map("two_factor_token_expiry")
   // Wrong codes against the CURRENT challenge. Reset whenever a challenge is
   // issued; persisted so a restart or a second instance cannot refill the
   // guessing budget (forgejo#415 N10).
-  twoFactorAttempts         Int                          @default(0) @map("two_factor_attempts")
-  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
-  webauthnCredentials       WebAuthnCredential[]
+  twoFactorAttempts               Int                          @default(0) @map("two_factor_attempts")
+  twoFactorRecoveryCodes          TwoFactorRecoveryCode[]
+  webauthnCredentials             WebAuthnCredential[]
   // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
   // Used to gate quota-burning admin actions like bulk historical refresh so
   // the dev demo can't drain a real RapidAPI key by accident.
-  isDemo                    Boolean                      @default(false) @map("is_demo")
-  flights                   Flight[]
-  receiptUploads            ReceiptUpload[]
-  userAchievements          UserAchievement[]
-  settings                  UserSettings?
-  externalServiceTests      ExternalServiceTest[]
-  webdavSync                UserWebdavSync?
-  analyticsEvents           AnalyticsEvent[]
-  createdInvitations        Invitation[]                 @relation("CreatedInvitations")
-  usedInvitations           Invitation[]                 @relation("UsedInvitations")
-  trainingData              TrainingData[]
-  parserTemplates           ParserTemplate[]
-  pendingFlightUpdates      PendingFlightUpdate[]
-  pendingUpdateStats        PendingUpdateStatistics?
-  parseLogs                 ParseTrainingLog[]
-  trips                     Trip[]
-  tourRoutes                TripRoute[]
-  tripExpenses              TripExpense[]
-  bookings                  Booking[]
-  cruises                   Cruise[]
-  railJourneys              RailJourney[]
-  busJourneys               BusJourney[]
-  ferryJourneys             FerryJourney[]
-  rentalBookings            RentalBooking[]
-  apiTokens                 ApiToken[]
-  pairingCodes              PairingCode[]
-  publicShareLinks          PublicShareLink[]
-  lodgings                  Lodging[]
-  lodgingStays              LodgingStay[]
-  lodgingRatingCategories   LodgingRatingCategory[]
-  loyaltyMemberships        LoyaltyMembership[]
-  lodgingChains             LodgingChain[]
-  places                    Place[]
-  placeCategories           PlaceCategoryDef[]
-  placeExternalRefs         PlaceExternalRef[]
-  placeCaptures             PlaceCapture[]
-  placeVisits               PlaceVisit[]
-  visitPhotoRefusals        VisitPhotoRefusal[]
-  placeLists                PlaceList[]
-  importBatches             ImportBatch[]
-  companions                Companion[]
+  isDemo                          Boolean                      @default(false) @map("is_demo")
+  flights                         Flight[]
+  receiptUploads                  ReceiptUpload[]
+  userAchievements                UserAchievement[]
+  settings                        UserSettings?
+  externalServiceTests            ExternalServiceTest[]
+  webdavSync                      UserWebdavSync?
+  analyticsEvents                 AnalyticsEvent[]
+  createdInvitations              Invitation[]                 @relation("CreatedInvitations")
+  usedInvitations                 Invitation[]                 @relation("UsedInvitations")
+  trainingData                    TrainingData[]
+  parserTemplates                 ParserTemplate[]
+  pendingFlightUpdates            PendingFlightUpdate[]
+  pendingUpdateStats              PendingUpdateStatistics?
+  parseLogs                       ParseTrainingLog[]
+  trips                           Trip[]
+  tourRoutes                      TripRoute[]
+  tripExpenses                    TripExpense[]
+  bookings                        Booking[]
+  cruises                         Cruise[]
+  railJourneys                    RailJourney[]
+  busJourneys                     BusJourney[]
+  ferryJourneys                   FerryJourney[]
+  rentalBookings                  RentalBooking[]
+  apiTokens                       ApiToken[]
+  pairingCodes                    PairingCode[]
+  publicShareLinks                PublicShareLink[]
+  lodgings                        Lodging[]
+  lodgingStays                    LodgingStay[]
+  lodgingRatingCategories         LodgingRatingCategory[]
+  loyaltyMemberships              LoyaltyMembership[]
+  lodgingChains                   LodgingChain[]
+  places                          Place[]
+  placeCategories                 PlaceCategoryDef[]
+  placeExternalRefs               PlaceExternalRef[]
+  placeCaptures                   PlaceCapture[]
+  placeVisits                     PlaceVisit[]
+  visitPhotoRefusals              VisitPhotoRefusal[]
+  placeLists                      PlaceList[]
+  importBatches                   ImportBatch[]
+  companions                      Companion[]
   /// Trip sharing (design 2026-10-09): companions of OTHER users linked to
   /// this account, consents asked and given, groups started, notices.
-  linkedAsCompanion         Companion[]                  @relation("CompanionLinkedUser")
-  shareConsentsAsked        ShareConsent[]               @relation("ShareConsentRequester")
-  localConnectionsLow       LocalConnection[]            @relation("LocalConnectionLow")
-  localConnectionsHigh      LocalConnection[]            @relation("LocalConnectionHigh")
-  shareConsentsGiven        ShareConsent[]               @relation("ShareConsentTarget")
+  linkedAsCompanion               Companion[]                  @relation("CompanionLinkedUser")
+  shareConsentsAsked              ShareConsent[]               @relation("ShareConsentRequester")
+  localConnectionsLow             LocalConnection[]            @relation("LocalConnectionLow")
+  localConnectionsHigh            LocalConnection[]            @relation("LocalConnectionHigh")
+  shareConsentsGiven              ShareConsent[]               @relation("ShareConsentTarget")
   /// Federated trip sharing (spec 2026-10-20, F-S4b): this account's pairings with people on
   /// other servers, and the invitation codes it issued.
-  remoteShareAccounts       RemoteShareAccount[]
-  tripShareInvites          TripShareInvite[]
-  tripShareRosterConsents   TripShareRosterConsent[]
-  tripShareWithheld         TripShareWithheld[]
-  shareGroupsCreated        TripShareGroup[]
-  shareNotices              ShareNotice[]                @relation("ShareNoticeRecipient")
-  shareNoticesActed         ShareNotice[]                @relation("ShareNoticeActor")
-  photoJourneys             PhotoJourney[]
-  tripSuggestionAnswers     TripSuggestionDecision[]
-  dataQualityFlags          DataQualityFlag[]
-  countryDays               CountryDay[]
-  dawarichStayScan          DawarichStayScan?
-  dawarichStays             DawarichStay[]
-  dawarichSweepState        DawarichSweepState?
+  remoteShareAccounts             RemoteShareAccount[]
+  tripShareInvites                TripShareInvite[]
+  tripShareRosterConsents         TripShareRosterConsent[]
+  tripShareWithheld               TripShareWithheld[]
+  shareGroupsCreated              TripShareGroup[]
+  shareNotices                    ShareNotice[]                @relation("ShareNoticeRecipient")
+  shareNoticesActed               ShareNotice[]                @relation("ShareNoticeActor")
+  photoJourneys                   PhotoJourney[]
+  tripSuggestionAnswers           TripSuggestionDecision[]
+  dataQualityFlags                DataQualityFlag[]
+  countryDays                     CountryDay[]
+  dawarichStayScan                DawarichStayScan?
+  dawarichStays                   DawarichStay[]
+  dawarichSweepState              DawarichSweepState?
 
   documents Document[]
   notes     Note[]
@@ -2171,6 +2171,7 @@ model Trip {
   tripShareInvites TripShareInvite[]
   recordingBatches TripRecordingBatch[]
   packingList      TripPackingList?
+  packingMutations PackingMutation[]
   mergedFrom       MergedTripRedirect[]
 
   documents              Document[]
@@ -6029,19 +6030,22 @@ model LeaderboardBoardMember {
 
 // Plans are separate from travel evidence. Dates never promote an intention.
 model TravelPlan {
-  id        String               @id @default(uuid())
-  createRef String               @unique @map("create_ref")
-  tripId    String               @unique @map("trip_id")
-  revision  Int                  @default(1)
-  state     Json
-  createdAt DateTime             @default(now()) @map("created_at")
-  updatedAt DateTime             @updatedAt @map("updated_at")
-  trip      Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  mutations TravelPlanMutation[]
-  proposals TravelPlanProposal[]
-  members   TravelPlanMember[]
-  notices   TravelPlanNotice[]
-  documents TravelPlanDocument[]
+  id                String               @id @default(uuid())
+  createRef         String               @unique @map("create_ref")
+  tripId            String               @unique @map("trip_id")
+  revision          Int                  @default(1)
+  state             Json
+  /// When `state.packing` was folded into the trip's packing list (forgejo#398);
+  /// null until then. `state.packing` stays as read-only history afterwards.
+  packingMigratedAt DateTime?            @map("packing_migrated_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  trip              Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  mutations         TravelPlanMutation[]
+  proposals         TravelPlanProposal[]
+  members           TravelPlanMember[]
+  notices           TravelPlanNotice[]
+  documents         TravelPlanDocument[]
 
   @@map("travel_plans")
 }
@@ -6697,6 +6701,26 @@ model UserWebdavSync {
   @@map("user_webdav_syncs")
 }
 
+/// What one actor's packing write answered (forgejo#398). Keyed by trip, actor
+/// and the client's mutation id, so a resend from any of two devices is answered
+/// from here instead of being refused as stale; `lastMutationId` on the list
+/// only ever remembers the latest write.
+model PackingMutation {
+  id         String   @id @default(uuid())
+  tripId     String   @map("trip_id")
+  /// `<server>:<subjectId>` of the principal that wrote.
+  actor      String
+  mutationId String   @map("mutation_id")
+  result     Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, actor, mutationId])
+  @@index([createdAt])
+  @@map("packing_mutations")
+}
+
 /// A trip's packing list (Companion audit 2026-10-23; was device-only, D12).
 /// One row per trip, the items as one JSON array: the list is small (≤ 200
 /// items) and is always read and written whole. `rev` is raised on every
@@ -6707,7 +6731,9 @@ model TripPackingList {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")
   tripId         String   @unique @map("trip_id")
-  /// `[{id, label, done}]`, in the list's order.
+  /// The list's order. Stored rich (forgejo#398): `{id, label, done, category,
+  /// quantity, scope, note, manual, ownerPrincipal, assigneePrincipal}`; a row
+  /// written before that holds `{id, label, done}` and is read with the defaults.
   items          Json
   rev            Int      @default(1)
   lastMutationId String?  @map("last_mutation_id")
@@ -7227,10 +7253,10 @@ model InstanceVersionHistory {
 /// is bounded (`lockedUntil`), so an attacker can delay a real user, never
 /// lock them out for good.
 model LoginThrottle {
-  usernameKey     String   @id @map("username_key")
-  failures        Int      @default(0)
-  lastFailureAt   DateTime @default(now()) @map("last_failure_at")
-  lockedUntil     DateTime? @map("locked_until")
+  usernameKey   String    @id @map("username_key")
+  failures      Int       @default(0)
+  lastFailureAt DateTime  @default(now()) @map("last_failure_at")
+  lockedUntil   DateTime? @map("locked_until")
 
   @@map("login_throttles")
 }

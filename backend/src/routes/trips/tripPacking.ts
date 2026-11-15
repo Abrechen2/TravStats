@@ -1,15 +1,17 @@
 import { Router, Response, NextFunction } from "express";
 
-import { prisma } from "../../db";
-import { Prisma } from "../../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { rejectDemoWrites } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import {
-  PACKING_MAX_ITEMS,
+  PACKING_SHAPE_RICH,
   putPackingListSchema,
-  type PackingItem,
+  putRichPackingListSchema,
+  type RichPackingItem,
 } from "../../schemas/companionData";
+import { sameServerAccount, type PackingViewer } from "../../services/packing/items";
+import { readVisible, writeVisible } from "../../services/packing/store";
+import { assertAssignable } from "../../services/travplan/packingBridge";
 import { resolveTrip } from "./resolveTrip";
 
 /**
@@ -25,51 +27,27 @@ import { resolveTrip } from "./resolveTrip";
  * answer was lost carries the same `mutationId` and is answered from the row,
  * not refused as stale.
  *
- * Private to its owner; nothing that shares a trip selects this table. Bare
- * responses, like every trip router (ADR 0001).
+ * One store since forgejo#398: TravPlan reads and writes this same list. The
+ * default shape stays `{id, label, done}` for the Companion versions already
+ * installed; `?shape=rich` carries the full items. A legacy write merges by id
+ * and never wipes a field it does not know or an item its caller cannot see.
+ * Only the trip's owner reaches these routes; other plan members work through
+ * the plan. Bare responses, like every trip router (ADR 0001).
  */
 
 const router = Router();
 router.use("/trips/:id/packing", authenticate, requireWriteScope, rejectDemoWrites);
 
-interface PackingListPayload {
-  items: PackingItem[];
-  rev: number;
-  updatedAt: string | null;
-  /** Only on a PUT: true when this write had already been applied. */
-  replayed?: boolean;
-}
-
-type StoredList = { items: Prisma.JsonValue; rev: number; updatedAt: Date };
-
-const toPayload = (row: StoredList | null): PackingListPayload => ({
-  items: row ? (row.items as unknown as PackingItem[]) : [],
-  rev: row?.rev ?? 0,
-  updatedAt: row ? row.updatedAt.toISOString() : null,
+const isRich = (req: AuthRequest): boolean => req.query.shape === PACKING_SHAPE_RICH;
+const ownerViewer = (userId: string): PackingViewer => ({
+  principal: sameServerAccount(userId),
+  isTripOwner: true,
 });
-
-const SELECT = { items: true, rev: true, updatedAt: true, lastMutationId: true } as const;
-
-function stale(rev: number): AppError {
-  return new AppError(
-    "The packing list changed since it was read",
-    409,
-    "PACKING_LIST_STALE",
-    undefined,
-    {
-      rev,
-    }
-  );
-}
 
 router.get("/trips/:id/packing", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const trip = await resolveTrip(req.userId!, req.params.id);
-    const row = await prisma.tripPackingList.findUnique({
-      where: { tripId: trip.id },
-      select: SELECT,
-    });
-    res.json(toPayload(row));
+    res.json(await readVisible(trip.id, ownerViewer(req.userId!), isRich(req)));
   } catch (error) {
     next(error);
   }
@@ -77,7 +55,8 @@ router.get("/trips/:id/packing", async (req: AuthRequest, res: Response, next: N
 
 router.put("/trips/:id/packing", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const parsed = putPackingListSchema.safeParse(req.body);
+    const rich = isRich(req);
+    const parsed = (rich ? putRichPackingListSchema : putPackingListSchema).safeParse(req.body);
     if (!parsed.success) {
       throw new AppError(
         parsed.error.issues[0]?.message ?? "Invalid packing list",
@@ -88,68 +67,25 @@ router.put("/trips/:id/packing", async (req: AuthRequest, res: Response, next: N
     const userId = req.userId!;
     const trip = await resolveTrip(userId, req.params.id);
     const { items, baseRev, mutationId } = parsed.data;
-    const json = items as unknown as Prisma.InputJsonValue;
-
-    const current = await prisma.tripPackingList.findUnique({
-      where: { tripId: trip.id },
-      select: SELECT,
-    });
-    if (current?.lastMutationId === mutationId) {
-      res.json({ ...toPayload(current), replayed: true });
-      return;
-    }
-    // Over the adding limit only while it does not grow: a merged list may be long.
-    const storedCount = Array.isArray(current?.items) ? current.items.length : 0;
-    if (items.length > PACKING_MAX_ITEMS && items.length > storedCount) {
-      throw new AppError(`At most ${PACKING_MAX_ITEMS} items`, 400, "PACKING_LIST_INVALID");
-    }
-
-    if (baseRev === 0) {
-      if (current) throw stale(current.rev);
-      try {
-        const created = await prisma.tripPackingList.create({
-          data: { userId, tripId: trip.id, items: json, rev: 1, lastMutationId: mutationId },
-          select: SELECT,
-        });
-        res.json(toPayload(created));
-      } catch (error) {
-        // Another write created the list a moment earlier. If it was this very
-        // write — a resend racing its own first send — the winner IS this
-        // write's result: answer it as applied, not as stale.
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          const winner = await prisma.tripPackingList.findUnique({
-            where: { tripId: trip.id },
-            select: SELECT,
-          });
-          if (winner?.lastMutationId === mutationId) {
-            res.json({ ...toPayload(winner), replayed: true });
-            return;
-          }
-          throw stale(winner?.rev ?? 1);
-        }
-        throw error;
-      }
-      return;
-    }
-
-    // Compare and replace in one statement: the row is written only while it
-    // still has the rev the client saw.
-    const { count } = await prisma.tripPackingList.updateMany({
-      where: { tripId: trip.id, rev: baseRev },
-      data: { items: json, rev: { increment: 1 }, lastMutationId: mutationId },
-    });
-    const after = await prisma.tripPackingList.findUnique({
-      where: { tripId: trip.id },
-      select: SELECT,
-    });
-    if (count === 0) {
-      if (after?.lastMutationId === mutationId) {
-        res.json({ ...toPayload(after), replayed: true });
-        return;
-      }
-      throw stale(after?.rev ?? 0);
-    }
-    res.json(toPayload(after));
+    if (rich)
+      await assertAssignable(
+        trip.id,
+        userId,
+        (items as RichPackingItem[]).flatMap((i) =>
+          i.scope === "shared" && i.assigneePrincipal ? [i.assigneePrincipal] : []
+        )
+      );
+    res.json(
+      await writeVisible({
+        tripId: trip.id,
+        ownerId: userId,
+        viewer: ownerViewer(userId),
+        items,
+        baseRev,
+        mutationId,
+        rich,
+      })
+    );
   } catch (error) {
     next(error);
   }

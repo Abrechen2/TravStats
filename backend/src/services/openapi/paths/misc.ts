@@ -483,6 +483,16 @@ const versionInfo = registry.register(
             "own zone data differs still displays the server's `local`/`offset` as sent " +
             "(ADR 0002 D3). Null only on a runtime built without ICU."
         ),
+      capabilities: z
+        .object({
+          packingSingleStore: z
+            .boolean()
+            .describe(
+              "TravPlan and the trip share one packing list (forgejo#398): a client stops copying " +
+                "the trip's list into the plan"
+            ),
+        })
+        .describe("What this server does that a client may rely on; a missing key means false"),
     })
     .openapi("VersionInfo")
 );

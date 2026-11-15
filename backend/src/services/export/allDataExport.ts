@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { buildTravTrackDataExport } from "../travtrack/accountExport";
 import { withZoneCutRecordings } from "./zoneCutRecordings";
 import { PUBLIC_STAY_SELECT, publicEvidence } from "../dawarich/stays/publicStay";
+import { normalizeItems, projectFor, sameServerAccount } from "../packing/items";
 
 /**
  * What `GET /admin/export/all-data` carries per user — kept here so the route
@@ -371,8 +372,36 @@ export function withPublicStays<T extends { dawarichStays: Array<{ evidence: unk
   user: T
 ): T {
   return {
-    ...user,
+    ...ownPackingOnly(user),
     dawarichStays: user.dawarichStays.map((s) => ({ ...s, evidence: publicEvidence(s.evidence) })),
+  };
+}
+
+/**
+ * A trip's list also holds what plan members keep for themselves (forgejo#398):
+ * the export carries the shared items and the account's own personal ones only,
+ * in the stored (rich) shape.
+ */
+function ownPackingOnly<T>(user: T): T {
+  const record = user as unknown as {
+    id?: string;
+    trips?: Array<{ packingList?: { items: unknown } | null }>;
+  };
+  if (!record.id || !Array.isArray(record.trips)) return user;
+  const viewer = { principal: sameServerAccount(record.id), isTripOwner: true };
+  return {
+    ...user,
+    trips: record.trips.map((trip) =>
+      trip.packingList
+        ? {
+            ...trip,
+            packingList: {
+              ...trip.packingList,
+              items: projectFor(normalizeItems(trip.packingList.items), viewer),
+            },
+          }
+        : trip
+    ),
   };
 }
 

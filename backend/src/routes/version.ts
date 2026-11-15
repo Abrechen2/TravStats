@@ -37,6 +37,9 @@ router.get("/version", async (_req, res, next) => {
       // Absent only on a Node built without ICU — then there is no zone
       // database to name, and null says so rather than inventing a release.
       tzdata: process.versions.tz ?? null,
+      // What this server can do that a client may rely on (forgejo#398). A client that
+      // does not find a key treats it as false: an older server.
+      capabilities: { packingSingleStore: true },
     });
   } catch (error) {
     next(error);
