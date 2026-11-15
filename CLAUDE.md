@@ -536,6 +536,19 @@ enforced, and merely practised** below.
   `window.isSecureContext` — the server only knows its configured origins, so an
   instance reached over plain-http LAN would otherwise show a button the browser
   can never honour (found in beta UAT).
+- **Outbound calls go through the external-services catalogue** —
+  `backend/src/services/externalServices/catalogue.ts` names every service a
+  server reaches, with its `enabled` binding (admin column, policy, env), and a
+  call that bypasses it is a bug (forgejo#392 found two: airport-data.com and
+  the OurAirports CSV). Two kinds of default, by owner decision 2026-11-15:
+  **accounts and paid or personal-data services are off until switched on**
+  (AI providers, Immich, Dawarich, Strava, federation, usage stats, ADS-B
+  feeds); **public data the app needs to work is infrastructure and on by
+  default** — airport data, rail/bus timetables (Transitous, db-rest), the
+  geocoder, map tiles, logos, flags and the FX fallback — each still with its
+  switch and under the internet master switch. A default of "off" for the
+  second kind would silently remove airport search, bus lines and maps on every
+  existing instance. A new service picks its kind explicitly in the catalogue.
 - **Every `/api` response is `Cache-Control: no-store` by default** — one
   middleware in `index.ts`, mounted above the health route. This is a security
   boundary, not a perf tweak: beta UAT caught Cloudflare caching an
