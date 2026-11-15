@@ -40,3 +40,21 @@ describe("a flight write stores the registration normalised", () => {
     ).toBeNull();
   });
 });
+
+describe("flights without a registration (forgejo#303)", () => {
+  it("counts them apart: never a hull, never in the distinct total", () => {
+    const ranking = computeAircraftRanking([
+      hull("D-AIXA"),
+      hull(null),
+      hull("  "),
+      hull("D-AIXA"),
+    ]);
+    expect(ranking.total).toBe(1);
+    expect(ranking.aircraft).toHaveLength(1);
+    expect(ranking.withoutRegistration).toBe(2);
+  });
+
+  it("reports zero (not a missing figure) when every flight has a registration", () => {
+    expect(computeAircraftRanking([hull("D-AIXA")]).withoutRegistration).toBe(0);
+  });
+});

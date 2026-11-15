@@ -29,16 +29,26 @@ export interface AircraftRow {
   departureTime: Date | null;
 }
 
+/**
+ * `withoutRegistration` counts the rows with no (usable) registration — kept
+ * apart from the hulls, never folded into one as "unknown" and never into
+ * `total` (abstention is a result). Callers that pre-filter to registered
+ * rows get 0 and add the count of the rest themselves.
+ */
 export function computeAircraftRanking(
   flights: ReadonlyArray<AircraftRow>
 ): AircraftRankingResponse {
   const buckets = new Map<string, AircraftRankingItem>();
+  let withoutRegistration = 0;
   for (const f of flights) {
     // Only flights carrying a registration appear, so this reflects the
     // AeroDataBox-enriched rows rather than the whole logbook.
     // One airframe, one key (`shared/aircraftRegistration`).
     const reg = normalizeRegistration(f.aircraftRegistration);
-    if (!reg) continue;
+    if (!reg) {
+      withoutRegistration += 1;
+      continue;
+    }
     const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
     const isoDate = f.departureTime ? f.departureTime.toISOString() : null;
     const existing = buckets.get(reg);
@@ -69,5 +79,5 @@ export function computeAircraftRanking(
   }
 
   const aircraft = Array.from(buckets.values()).sort((a, b) => b.count - a.count);
-  return { aircraft, total: aircraft.length };
+  return { aircraft, total: aircraft.length, withoutRegistration };
 }

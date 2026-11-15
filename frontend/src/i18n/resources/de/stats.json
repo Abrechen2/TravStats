@@ -29,8 +29,8 @@
       "poi_other": "{{count}} Orte",
       "roadtrip_one": "{{count}} Roadtrip",
       "roadtrip_other": "{{count}} Roadtrips",
-      "tour_one": "{{count}} Tagestour",
-      "tour_other": "{{count}} Tagestouren",
+      "tour_one": "{{count}} Tour",
+      "tour_other": "{{count}} Touren",
       "rail_one": "{{count}} Zugfahrt",
       "rail_other": "{{count}} Zugfahrten",
       "rental_one": "{{count}} Mietwagen",
@@ -38,9 +38,7 @@
       "bus_one": "{{count}} Busfahrt",
       "bus_other": "{{count}} Busfahrten",
       "ferry_one": "{{count}} Fährüberfahrt",
-      "ferry_other": "{{count}} Fährüberfahrten",
-      "tour_one": "{{count}} Tour",
-      "tour_other": "{{count}} Touren"
+      "ferry_other": "{{count}} Fährüberfahrten"
     },
     "help": {
       "experiences": {
@@ -838,11 +836,24 @@
     "topN": "Top {{n}} Airlines"
   },
   "aircraftRanking": {
-    "title": "Häufigste Flugzeuge (Hulls)",
+    "title": "Flugzeuge (nach Kennung)",
     "noData": "Noch keine Flüge mit Kennung",
     "hint": "Trag eine Flugnummer per Lookup ein, um Heckkennungen zu erfassen.",
     "loading": "Lädt...",
-    "topN": "Top {{n}} Flugzeuge"
+    "distinct_one": "{{count}} verschiedenes Flugzeug geflogen",
+    "distinct_other": "{{count}} verschiedene Flugzeuge geflogen",
+    "withoutRegistration_one": "{{count}} Flug ohne Kennung ist nicht mitgezählt – die Zahl ist also ein Mindestwert.",
+    "withoutRegistration_other": "{{count}} Flüge ohne Kennung sind nicht mitgezählt – die Zahl ist also ein Mindestwert.",
+    "showAll": "Alle {{count}} anzeigen",
+    "showLess": "Weniger anzeigen",
+    "col": {
+      "registration": "Kennung",
+      "type": "Typ",
+      "airline": "Airline",
+      "flights": "Flüge",
+      "first": "Erster Flug",
+      "last": "Letzter Flug"
+    }
   },
   "countryDist": {
     "title": "Länder-Verteilung (Start und Ziel)",

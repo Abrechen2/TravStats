@@ -82,9 +82,8 @@ router.get(
 // ─── Aircraft (tail number) ─────────────────────────────────────────────────
 
 // GET /api/v1/stats/aircraft — top tail numbers ("Hulls" tab).
-// Excludes flights without registration so the ranking only reflects
-// AeroDataBox-enriched rows. The per-user index on
-// (user_id, aircraft_registration) makes this cheap.
+// Only registration-bearing (AeroDataBox-enriched) rows form hulls; the rest
+// are reported as `withoutRegistration`, never as an "unknown" aircraft.
 router.get(
   "/aircraft",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -94,7 +93,9 @@ router.get(
         where: {
           userId,
           ...countableFlightWhere(),
-          aircraftRegistration: { not: null },
+          // No registration filter: the unregistered rows are COUNTED (kept
+          // apart from the hulls, forgejo#303), in the same single query the
+          // composed page answers from.
         },
         select: {
           aircraftRegistration: true,

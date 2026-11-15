@@ -16,7 +16,13 @@ export interface AircraftRankingItem {
 
 export interface AircraftRankingResponse {
   aircraft: AircraftRankingItem[];
+  /** Distinct airframes ranked — not the flight count. */
   total: number;
+  /**
+   * Counted flights with no registration on file; never an "unknown aircraft".
+   * Absent from an older server, which then states nothing about them.
+   */
+  withoutRegistration?: number;
 }
 
 export interface AircraftProfileFlight {

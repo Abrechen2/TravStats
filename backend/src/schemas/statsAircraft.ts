@@ -59,6 +59,15 @@ export const aircraftRankingResponseSchema = z.object({
         "Only flights carrying a registration appear here, so this is a count of " +
         "the rows above and nothing wider.",
     }),
+  withoutRegistration: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Counted flights that carry no registration. They are NOT unknown " +
+        "aircraft and add nothing to `total`: the airframe is simply not on file, " +
+        "so a distinct-aircraft figure is a lower bound by exactly this many flights.",
+    }),
 });
 
 export const aircraftProfileFlightSchema = z.object({
