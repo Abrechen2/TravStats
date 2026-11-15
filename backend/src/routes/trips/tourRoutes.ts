@@ -328,7 +328,7 @@ router.patch(
         where: { id: routeId },
         select: { kind: true, tourDate: true, startOdometerKm: true, endOdometerKm: true },
       });
-      assertTourOdometerOrder(current, body);
+      assertTourOdometerOrder(current, body); // early 400; re-checked under the row lock below
       const day = tourDayColumns({ date, startTime }, current.kind, current);
 
       // The photos come off their stations in the same transaction as the
@@ -336,6 +336,16 @@ router.patch(
       const [route, detachedStationPhotos] = await prisma.$transaction(
         async (tx) => {
           const detached = detach ? await detach(tx) : 0;
+          // Two concurrent PATCHes of one reading each each pass the check
+          // against the old pair; the row lock makes the second see the first.
+          await tx.$queryRaw`SELECT id FROM trip_routes WHERE id = ${routeId} FOR UPDATE`;
+          assertTourOdometerOrder(
+            await tx.tripRoute.findUniqueOrThrow({
+              where: { id: routeId },
+              select: { startOdometerKm: true, endOdometerKm: true },
+            }),
+            body
+          );
           const before = await shareSnapshot(tx, "roadtrip", routeId);
           const updated = await tx.tripRoute.update({
             where: { id: routeId },

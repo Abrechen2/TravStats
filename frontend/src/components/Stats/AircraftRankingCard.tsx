@@ -34,6 +34,11 @@ export default function AircraftRankingCard({
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">{t("stats:aircraftRanking.title")}</h3>
         <p className="text-sm text-gray-500">{t("stats:aircraftRanking.noData")}</p>
+        {withoutRegistration > 0 && (
+          <p className="text-xs text-gray-500" data-testid="aircraft-unregistered">
+            {t("stats:aircraftRanking.withoutRegistration", { count: withoutRegistration })}
+          </p>
+        )}
         <p className="text-xs text-gray-400">{t("stats:aircraftRanking.hint")}</p>
       </div>
     );

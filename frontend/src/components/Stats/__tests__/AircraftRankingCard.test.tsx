@@ -58,3 +58,14 @@ describe("the aircraft section (forgejo#303)", () => {
     expect(screen.getByText("D-AB12")).toBeInTheDocument();
   });
 });
+
+describe("the aircraft section with no registration at all (forgejo#303)", () => {
+  it("still states how many flights lack one", () => {
+    render(
+      <MemoryRouter>
+        <AircraftRankingCard aircraft={{ aircraft: [], total: 0, withoutRegistration: 5 }} />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId("aircraft-unregistered")).toBeInTheDocument();
+  });
+});
