@@ -8,12 +8,12 @@ ADS-B Exchange from his own receiver since 2026-10-29.
 Both speak the readsb "v2" JSON (`{ ac: [{ hex, flight, r, t, lat, lon, alt_baro, gs, track, seen, … }], now }`),
 so ONE adapter serves both; only base URL and auth differ.
 
-| | adsb.lol | ADS-B Exchange |
-|---|---|---|
-| Base | `https://api.adsb.lol/v2` | `https://adsbexchange-com1.p.rapidapi.com/v2` (RapidAPI) |
-| Auth | none | `X-RapidAPI-Key` + `X-RapidAPI-Host` (key per instance/user, like AeroDataBox) |
-| Lookups used | `/callsign/{cs}`, `/hex/{hex}`, `/reg/{reg}` | same paths |
-| Time window | **now only** (aircraft currently airborne/seen) | **now only** |
+|              | adsb.lol                                        | ADS-B Exchange                                                                 |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| Base         | `https://api.adsb.lol/v2`                       | `https://adsbexchange-com1.p.rapidapi.com/v2` (RapidAPI)                       |
+| Auth         | none                                            | `X-RapidAPI-Key` + `X-RapidAPI-Host` (key per instance/user, like AeroDataBox) |
+| Lookups used | `/callsign/{cs}`, `/hex/{hex}`, `/reg/{reg}`    | same paths                                                                     |
+| Time window  | **now only** (aircraft currently airborne/seen) | **now only**                                                                   |
 
 Neither has a by-date endpoint through these APIs. They therefore join the chain like AirLabs:
 live/ad-hoc only, **never** in `flightProviderAvailability().byDate`. Historical traces
@@ -36,8 +36,8 @@ terms and storage need their own decision (see Open).
      `ADSBX_RAPIDAPI_KEY`), resolver kind `adsbx`. No key = off.
    - adsb.lol: keyless (an optional key slot exists, see Open), so an explicit admin switch `adsbLolEnabled` (admin_settings,
      default `false`) — **schema change foreseen**: one migration adding the column.
-   Both appear in Admin → API-Schlüssel with a DE/EN line saying what they unlock
-   („nur Flüge, die gerade in der Luft sind“).
+     Both appear in Admin → API-Schlüssel with a DE/EN line saying what they unlock
+     („nur Flüge, die gerade in der Luft sind“).
 4. Quota/rate limiting reuse `apiQuota` (adsb.lol: be polite, ≤ 1 request/s per instance,
    cache answers 60 s in the existing NodeCache).
 5. OpenAPI, settings allowlist (`diagnostics/settingsAllowlist.ts`), usage-stats payload and
@@ -52,12 +52,12 @@ string).
 
 ## Phases
 
-| Phase | Side | State |
-|---|---|---|
-| 1 adapter + chain + opt-in | server + admin UI | built (feat/adsb-providers, efe789c41) |
-| 2 live position for the cockpit/web (server half) | server | built (fix/adsb-p23): `GET /flights/:id/live-position`. Companion half: see "Phase 2 contract" |
-| 3 historical tracks, REDESIGNED: the user's own tar1090/readsb receiver | server + Settings | built (fix/adsb-p23): `POST /flights/:id/track/receiver`, catalogue entry `tar1090` |
-| per-user key cards (ADS-B Exchange, adsb.lol) in Settings → Dienste | web | built (fix/adsb-p23) |
+| Phase                                                                   | Side              | State                                                                                          |
+| ----------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------- |
+| 1 adapter + chain + opt-in                                              | server + admin UI | built (feat/adsb-providers, efe789c41)                                                         |
+| 2 live position for the cockpit/web (server half)                       | server            | built (fix/adsb-p23): `GET /flights/:id/live-position`. Companion half: see "Phase 2 contract" |
+| 3 historical tracks, REDESIGNED: the user's own tar1090/readsb receiver | server + Settings | built (fix/adsb-p23): `POST /flights/:id/track/receiver`, catalogue entry `tar1090`            |
+| per-user key cards (ADS-B Exchange, adsb.lol) in Settings → Dienste     | web               | built (fix/adsb-p23)                                                                           |
 
 ### Deviations from the original plan
 
@@ -121,7 +121,10 @@ upload replaces a `readsb` line without asking.
 Failure codes, one each: `RECEIVER_OFF`, `RECEIVER_NOT_CONFIGURED`, `RECEIVER_NO_AIRCRAFT` (no/invalid hex),
 `RECEIVER_NO_SCHEDULE`, `RECEIVER_NOT_FOUND` (no file for that aircraft/day), `RECEIVER_OUTSIDE_WINDOW`,
 `RECEIVER_AUTH` (401/403), `RECEIVER_TIMEOUT`, `RECEIVER_UNREACHABLE`, `RECEIVER_ERROR` (other HTTP/transport),
-`RECEIVER_BAD_TRACE` (200 that is not a trace file), `PRIVATE_TARGET`, `TRACK_ALREADY_RECORDED`.
+`RECEIVER_BAD_TRACE` (200 that is not a trace file), `RECEIVER_WINDOW_TOO_LONG` (schedule over 2 days), `RECEIVER_TOO_LARGE`, `PRIVATE_TARGET`, `TRACK_ALREADY_RECORDED`.
+
+Bounds of one fetch (security review): window at most 2 days (so at most 3 days x 3 files), 60 MB and 400 000 fixes
+across all files, 60 s overall deadline (reported as `RECEIVER_TIMEOUT`).
 
 Trace format source: wiedehopf/readsb `README-json.md` (trace_full / trace_recent) and tar1090's
 `html/script.js` (`processTraceData`): `{ icao, r, t, timestamp, trace: [[secs, lat, lon, alt|"ground"|null, gs,

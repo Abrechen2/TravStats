@@ -354,4 +354,15 @@ describe("POST /flights/:id/track/receiver", () => {
     expect(res.status).toBe(422);
     expect(res.body.code).toBe("RECEIVER_OUTSIDE_WINDOW");
   });
+
+  it("refuses a bogus schedule spanning days before fetching a single file", async () => {
+    const long = await prisma.flight.update({
+      where: { id: flightId },
+      data: { arrivalTime: new Date(DEPARTURE + 400 * 86_400_000) },
+    });
+    const res = await post(long.id);
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("RECEIVER_WINDOW_TOO_LONG");
+    expect(urls).toHaveLength(0);
+  });
 });

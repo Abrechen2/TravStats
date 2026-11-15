@@ -308,7 +308,8 @@ registry.registerPath({
     "`readsb`) is replaced without it. Each way it can fail has its own code: " +
     "RECEIVER_OFF, RECEIVER_NOT_CONFIGURED, RECEIVER_NO_AIRCRAFT, RECEIVER_NO_SCHEDULE, " +
     "RECEIVER_NOT_FOUND, RECEIVER_OUTSIDE_WINDOW, RECEIVER_AUTH, RECEIVER_TIMEOUT, " +
-    "RECEIVER_UNREACHABLE, RECEIVER_ERROR, RECEIVER_BAD_TRACE, PRIVATE_TARGET.",
+    "RECEIVER_UNREACHABLE, RECEIVER_ERROR, RECEIVER_BAD_TRACE, RECEIVER_TOO_LARGE, RECEIVER_WINDOW_TOO_LONG, PRIVATE_TARGET. " +
+    "A fetch is bounded: window up to 2 days, 60 MB and 400 000 fixes in total, 60 s overall.",
   tags: ["Flights"],
   request: {
     params: flightParams,
@@ -332,7 +333,8 @@ registry.registerPath({
       content: errorContent,
     },
     422: {
-      description: "RECEIVER_NO_AIRCRAFT, RECEIVER_NO_SCHEDULE or RECEIVER_OUTSIDE_WINDOW",
+      description:
+        "RECEIVER_NO_AIRCRAFT, RECEIVER_NO_SCHEDULE, RECEIVER_OUTSIDE_WINDOW or RECEIVER_WINDOW_TOO_LONG",
       content: errorContent,
     },
     429: { description: "Rate limited", content: errorContent },

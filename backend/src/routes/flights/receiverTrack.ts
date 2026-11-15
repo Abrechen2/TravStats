@@ -73,6 +73,16 @@ const REASON_ERRORS: Record<ReceiverReason, { status: number; code: string; mess
     code: "RECEIVER_ERROR",
     message: "The receiver answered with an error",
   },
+  window_too_long: {
+    status: 422,
+    code: "RECEIVER_WINDOW_TOO_LONG",
+    message: "The flight's schedule spans too long to be one flight",
+  },
+  too_large: {
+    status: 502,
+    code: "RECEIVER_TOO_LARGE",
+    message: "The receiver's trace files are larger than one flight can need",
+  },
   bad_trace: {
     status: 502,
     code: "RECEIVER_BAD_TRACE",
