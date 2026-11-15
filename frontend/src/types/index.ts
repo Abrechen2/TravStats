@@ -729,24 +729,7 @@ export interface SeatStats {
   avgRowNumber: number | null;
 }
 
-export interface ParseLogAirlineStat {
-  airline: string;
-  total: number;
-  hits: number;
-  hitRate: number;
-  commonMissingFields: string[];
-}
-
-export interface ParseLogStats {
-  totalLogs: number;
-  overallHitRate: number;
-  byAirline: ParseLogAirlineStat[];
-}
-
-export interface PromoteCorrectionsResult {
-  promoted: number;
-  message: string;
-}
+export type { ParseLogAirlineStat, ParseLogStats, PromoteCorrectionsResult } from "./parseLogs";
 
 export interface AirlineRankingItem {
   airline: string;
