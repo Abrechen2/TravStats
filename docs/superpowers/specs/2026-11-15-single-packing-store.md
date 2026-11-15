@@ -118,7 +118,7 @@ remapped. Re-running changes nothing.
 - **P3 (web):** the trip card reads/writes `?shape=rich` and sends every rich field back as read; its add form
   carries category, quantity and scope (note and assignee are not editable on the card, they round-trip).
   The plan UI already reads the filtered rich projection through the plan view; plan packing writes now send
-  `basePackingRev` (local plans only; not to a host on another server) and a 409 reloads the view and shows
+  `basePackingRev` (also forwarded to a host on another server, which checks its own list) and a 409 reloads the view and shows
   `PLAN_REVISION_CONFLICT`. No automatic replay of a refused plan edit: the user re-applies it on the fresh list.
 - **P3 export fix:** `travelPlan.state.packing` is no longer exported (it can hold co-planners' personal items);
   the owner's projection travels as the trip's `packingList`. This supersedes the Export line above.

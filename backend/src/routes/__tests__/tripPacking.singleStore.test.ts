@@ -199,6 +199,39 @@ describe("single packing store - trip routes", () => {
     expect(res.body.code).toBe("PACKING_ASSIGNEE_UNKNOWN");
   });
 
+  it("keeps an assignee who left the plan on an unchanged item, so the card can still edit the list", async () => {
+    const gone = { server: "local", subjectId: "left-the-plan" };
+    await prisma.tripPackingList.create({
+      data: {
+        tripId,
+        userId: ownerId,
+        rev: 1,
+        items: [rich("a", "Tent", { scope: "shared", assigneePrincipal: gone })],
+      },
+    });
+    const res = await put(
+      {
+        items: [rich("a", "Tent", { scope: "shared", assigneePrincipal: gone, done: true })],
+        baseRev: 1,
+        mutationId: "m-edit",
+      },
+      "rich"
+    ).expect(200);
+    expect(res.body.items[0].done).toBe(true);
+    // a NEW assignment to the same person is still refused
+    await put(
+      {
+        items: [
+          rich("a", "Tent", { scope: "shared", assigneePrincipal: gone, done: true }),
+          rich("b", "Stove", { scope: "shared", assigneePrincipal: gone }),
+        ],
+        baseRev: 2,
+        mutationId: "m-new",
+      },
+      "rich"
+    ).expect(400);
+  });
+
   it("announces packingSingleStore in /version capabilities", async () => {
     const res = await request(app).get("/api/v1/version").expect(200);
     expect(res.body.capabilities).toEqual({ packingSingleStore: true });

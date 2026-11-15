@@ -116,13 +116,13 @@ const http = () => (isRemotePlanMode() ? remotePlanHttp : api);
 /**
  * A packing change names the list rev the view was drawn at: the Companion writes the same list
  * without touching the plan's revision, so only this check keeps the web from overwriting it
- * unseen (forgejo#398). Not sent to a host on another server, which owns its own list.
+ * unseen (forgejo#398). A host on another server checks it against its own list.
  */
 function basePackingRev(plan: PlanView, operation: PlanOperation): { basePackingRev?: number } {
   const touchesPacking =
     (operation.type === "upsert" || operation.type === "remove") &&
     operation.collection === "packing";
-  if (!touchesPacking || plan.packingRev === undefined || isRemotePlanMode()) return {};
+  if (!touchesPacking || plan.packingRev === undefined) return {};
   return { basePackingRev: plan.packingRev };
 }
 export const travplanApi = {
