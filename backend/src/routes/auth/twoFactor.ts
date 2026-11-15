@@ -12,6 +12,12 @@ import {
   verifyTwoFactorSchema,
   disableTwoFactorSchema,
 } from "../../schemas/twoFactor";
+import {
+  clearLoginFailures,
+  loginLockRemainingSeconds,
+  recordLoginFailure,
+  throttleKey,
+} from "../../services/auth/loginThrottle";
 import { comparePassword } from "../../utils/password";
 import {
   generateSecret,
@@ -163,6 +169,18 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
       throw new AppError("Two-factor challenge expired", 401);
     }
 
+    // Same per-account budget as the password: wrong codes across fresh challenges add up.
+    const throttle = throttleKey(user, user.username);
+    const lockSeconds = await loginLockRemainingSeconds(throttle);
+    if (lockSeconds > 0) {
+      res.setHeader("Retry-After", String(lockSeconds));
+      return res.status(429).json({
+        error: "Too many failed sign-in attempts for this account. Try again later.",
+        code: "RATE_LIMITED",
+        retryAfterSeconds: lockSeconds,
+      });
+    }
+
     const accepted = payload.code
       ? verifyCode(decryptSecret(user.twoFactorSecret), payload.code)
       : await consumeRecoveryCode(user.id, payload.recoveryCode!);
@@ -182,6 +200,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
       });
       const attempts = charged[0]?.twoFactorAttempts ?? MAX_VERIFY_ATTEMPTS;
       logger.warn({ operation: "two_factor_verify_failed", userId: user.id, attempts });
+      await recordLoginFailure(throttle, { ip: req.ip, reason: "invalid_two_factor_code" });
 
       if (attempts >= MAX_VERIFY_ATTEMPTS) {
         await prisma.user.updateMany({
@@ -204,6 +223,7 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
       data: { twoFactorToken: null, twoFactorTokenExpiry: null, twoFactorAttempts: 0 },
     });
     if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);
+    await clearLoginFailures(throttle);
     res.clearCookie("twofa_token", { path: "/" });
 
     // A proven second factor is not a licence to skip a due password change.

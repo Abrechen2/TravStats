@@ -75,12 +75,17 @@ export async function recordLoginFailure(
 
   const lockMs = lockDurationMs(failures);
   if (lockMs > 0) {
-    // Scoped to the count THIS request saw: a later, longer lock written by a
-    // concurrent request is never overwritten, and a row a successful login has
-    // just deleted is simply not found (updateMany does not throw).
+    // Monotonic, never conditioned on the exact count: a concurrent failure that
+    // bumped the count must not make this write match nothing (fail-open). The
+    // lock only ever moves later; a row a successful login has just deleted is
+    // simply not found (updateMany does not throw).
+    const lockedUntil = new Date(now.getTime() + lockMs);
     await prisma.loginThrottle.updateMany({
-      where: { usernameKey: key, failures },
-      data: { lockedUntil: new Date(now.getTime() + lockMs) },
+      where: {
+        usernameKey: key,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lt: lockedUntil } }],
+      },
+      data: { lockedUntil },
     });
   } else if (failures === 1) {
     // A new window starts: drop rows whose window is long over, so the table

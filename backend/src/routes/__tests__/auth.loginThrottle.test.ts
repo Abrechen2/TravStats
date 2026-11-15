@@ -117,4 +117,14 @@ describe("per-account login backoff", () => {
     );
     expect(lockDurationMs(10_000)).toBe(LOGIN_LOCK_MAX_MS);
   });
+
+  it("still locks when failures arrive concurrently (lock write is not tied to an exact count)", async () => {
+    const results = await Promise.all(
+      Array.from({ length: LOGIN_LOCK_THRESHOLD * 2 }, () => login(VICTIM, "wrong-password"))
+    );
+    expect(results.every((r) => r.status === 401 || r.status === 429)).toBe(true);
+    const row = await prisma.loginThrottle.findUnique({ where: { usernameKey: `u:${victimId}` } });
+    expect(row?.lockedUntil).not.toBeNull();
+    expect((await login(VICTIM, PASSWORD)).status).toBe(429);
+  });
 });

@@ -276,8 +276,10 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
       throw new AppError("This account has been deactivated", 403, "ACCOUNT_DEACTIVATED");
     }
 
-    // The password was right: the streak ends here, whatever step comes next.
-    await clearLoginFailures(throttle);
+    // The password was right. Without two-factor the streak ends here; with it the
+    // streak survives until the second factor is proven, or a client holding the
+    // password could refresh its code-guessing budget by requesting new challenges.
+    if (!user.twoFactorEnabledAt) await clearLoginFailures(throttle);
 
     // Two-factor: the password was right, so the session is withheld until the
     // second factor arrives. Same shape as the mustChangePassword branch below —
