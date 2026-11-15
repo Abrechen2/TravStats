@@ -4,9 +4,14 @@
  */
 import type { PlanView } from "../../../travplan/types";
 
-/** The ETag of a plan view: its revision and the member it was drawn for. */
-export const planEtag = (view: Pick<PlanView, "revision" | "self">): string =>
-  `"${view.revision}-${view.self?.memberId ?? ""}"`;
+/**
+ * The ETag of a plan view: its revision, the packing list's revision and the member it was drawn
+ * for. The packing list is its own row (the Companion writes it without touching the plan's
+ * revision), so a tag on the plan revision alone let the 30 s poll answer 304 over a changed list.
+ * One function for the local route, the host and (through the host's reply) the member side.
+ */
+export const planEtag = (view: Pick<PlanView, "revision" | "self" | "packingRev">): string =>
+  `"${view.revision}-${view.packingRev ?? 0}-${view.self?.memberId ?? ""}"`;
 
 export const REMOTE_WRITES_PER_MINUTE = 120;
 export const REMOTE_READS_PER_MINUTE = 600;
