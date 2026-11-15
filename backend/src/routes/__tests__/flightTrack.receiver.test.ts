@@ -266,4 +266,92 @@ describe("POST /flights/:id/track/receiver", () => {
     expect(res.body.code).toBe(code);
     expect(await prisma.flightTrack.findUnique({ where: { flightId } })).toBeNull();
   });
+
+  describe("a flight across midnight UTC", () => {
+    const NIGHT = Date.parse("2026-10-12T23:30:00Z");
+    let nightId: string;
+    const day2 = (url: string) => url.includes("/2026/10/13/");
+
+    beforeEach(async () => {
+      nightId = (
+        await prisma.flight.create({
+          data: {
+            userId,
+            depIata: "FRA",
+            arrIata: "JFK",
+            depLat: 50,
+            depLon: 8,
+            arrLat: 40.6,
+            arrLon: -73.8,
+            flightNumber: "LH400",
+            aircraftModeS: HEX,
+            departureTime: new Date(NIGHT),
+            arrivalTime: new Date(NIGHT + 3_600_000),
+            status: "flown",
+          },
+        })
+      ).id;
+    });
+
+    it("joins the two day files into one line", async () => {
+      respond = (url) =>
+        day2(url)
+          ? { status: 200, data: traceFile(cruiseRows(0, 30), { timestamp: DAY_START_S + 86_400 }) }
+          : url.includes("/2026/10/12/")
+            ? { status: 200, data: traceFile(cruiseRows(84_600, 30)) }
+            : { status: 404, data: "" };
+      const res = await post(nightId);
+      expect(res.status).toBe(201);
+      expect(res.body.track.pointCount).toBe(60);
+    });
+
+    it("does not truncate when the receiver serves the same file for both days", async () => {
+      respond = (url) =>
+        url.includes("/data/traces/")
+          ? { status: 200, data: traceFile(cruiseRows(84_600, 90)) }
+          : { status: 404, data: "" };
+      const res = await post(nightId);
+      expect(res.status).toBe(201);
+      expect(res.body.track.pointCount).toBe(90);
+    });
+
+    it("reports a failed day instead of storing half a flight over a complete server line", async () => {
+      const columns = flightTrackColumns(
+        Array.from({ length: 10 }, (_, i) => ({ t: NIGHT + i * 60_000, lat: 51, lon: 8 + i * 0.1 }))
+      )!;
+      await prisma.flightTrack.create({
+        data: { ...columns, flightId: nightId, source: "aeroapi", uploadId: "aeroapi:y" },
+      });
+      respond = (url) =>
+        day2(url)
+          ? codeError("ECONNABORTED")
+          : url.includes("/2026/10/12/")
+            ? { status: 200, data: traceFile(cruiseRows(84_600, 30)) }
+            : { status: 404, data: "" };
+      const res = await post(nightId);
+      expect(res.status).toBe(504);
+      expect(res.body.code).toBe("RECEIVER_TIMEOUT");
+      expect(
+        (await prisma.flightTrack.findUniqueOrThrow({ where: { flightId: nightId } })).source
+      ).toBe("aeroapi");
+    });
+  });
+
+  it("refuses a leg that spans the flight but holds no fix during it", async () => {
+    // The flight flew 10:00-11:00Z (window 09:30-11:30); fixes only at 09:00-09:10 and 12:00-12:10, one leg.
+    const day = await prisma.flight.update({
+      where: { id: flightId },
+      data: {
+        departureTime: new Date("2026-10-12T10:00:00Z"),
+        arrivalTime: new Date("2026-10-12T11:00:00Z"),
+      },
+    });
+    respond = () => ({
+      status: 200,
+      data: traceFile([...cruiseRows(32_400, 10, 0), ...cruiseRows(43_200, 10, 0)]),
+    });
+    const res = await post(day.id);
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("RECEIVER_OUTSIDE_WINDOW");
+  });
 });

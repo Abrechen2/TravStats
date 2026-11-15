@@ -54,6 +54,9 @@ const MAX_BYTES = 30 * 1024 * 1024;
 const DAY_MS = 86_400_000;
 /** Legs of two day files this close are one flight that crossed midnight UTC. */
 const JOIN_GAP_MS = 15 * 60_000;
+/** How far around the schedule window a leg is kept (delays, taxiing). */
+const LEG_MARGIN_BEFORE_MS = 3 * 3_600_000;
+const LEG_MARGIN_AFTER_MS = 6 * 3_600_000;
 
 export type ReceiverResolution =
   { ok: true; receiver: Receiver } | { ok: false; reason: "off" | "not_configured" };
@@ -141,15 +144,26 @@ async function fetchTraceFile(receiver: Receiver, url: string): Promise<FileOutc
   }
 }
 
-/** Joins the last leg of one day with the first of the next when the aircraft kept flying across midnight. */
+/**
+ * Legs of several day files as one list: whole-leg duplicates dropped (the
+ * receiver's own `data/traces` file is the same file for every day asked), and
+ * a leg that starts within the previous day's last leg, or shortly after it, is
+ * the same flight across midnight UTC and is merged by time.
+ */
 export function joinAcrossDays(days: readonly TraceLeg[][]): TraceLeg[] {
   const out: TraceLeg[] = [];
+  const seen = new Set<string>();
   days.forEach((legs, index) => {
     legs.forEach((leg, i) => {
+      const key = `${leg.points[0].t}:${leg.points.length}`;
+      if (seen.has(key)) return;
+      seen.add(key);
       const prev = out[out.length - 1];
       const gap = prev ? leg.points[0].t - prev.points[prev.points.length - 1].t : Infinity;
-      if (index > 0 && i === 0 && prev && gap >= 0 && gap <= JOIN_GAP_MS) {
-        prev.points = [...prev.points, ...leg.points];
+      if (index > 0 && i === 0 && prev && gap <= JOIN_GAP_MS) {
+        const byTime = new Map<number, FlightTrackPoint>();
+        for (const point of [...prev.points, ...leg.points]) byTime.set(point.t, point);
+        prev.points = [...byTime.values()].sort((x, y) => x.t - y.t);
       } else {
         out.push({ points: [...leg.points] });
       }
@@ -169,16 +183,16 @@ export async function fetchReceiverTrack(
   const lastDay = Math.floor(toMs / DAY_MS) * DAY_MS;
   const dayLegs: TraceLeg[][] = [];
   let registration: string | null = null;
-  let failure: ReceiverReason | null = null;
   let anyFile = false;
 
   for (let day = firstDay; day <= lastDay; day += DAY_MS) {
     let found = false;
+    let dayFailure: ReceiverReason | null = null;
     for (const url of traceUrls(receiver.baseUrl, hex, day)) {
       const outcome = await fetchTraceFile(receiver, url);
       if (outcome.kind === "missing") continue;
       if (outcome.kind === "failed") {
-        failure ??= outcome.reason;
+        dayFailure ??= outcome.reason;
         // A refused address or a dead host will not answer better on the next file.
         if (outcome.reason === "private_target" || outcome.reason === "unreachable") {
           return { ok: false, reason: outcome.reason };
@@ -191,13 +205,19 @@ export async function fetchReceiverTrack(
       anyFile = true;
       break;
     }
-    if (!found && dayLegs.length === 0 && day === lastDay && !failure) {
-      return { ok: false, reason: "not_found" };
-    }
+    // A day that failed (not merely missing) makes the line incomplete: a
+    // partial track must not replace a complete one, so the reason is reported.
+    if (!found && dayFailure) return { ok: false, reason: dayFailure };
   }
-  if (!anyFile) return { ok: false, reason: failure ?? "not_found" };
+  if (!anyFile) return { ok: false, reason: "not_found" };
 
   const leg = pickLegInWindow(joinAcrossDays(dayLegs), fromMs, toMs);
-  if (!leg || leg.points.length < 2) return { ok: false, reason: "outside_window" };
-  return { ok: true, points: leg.points, registration };
+  // The leg must hold fixes DURING the flight window, not merely span it (a gap
+  // over the whole flight is no evidence), and keeps only a bounded margin around it.
+  const points = leg?.points.filter(
+    (p) => p.t >= fromMs - LEG_MARGIN_BEFORE_MS && p.t <= toMs + LEG_MARGIN_AFTER_MS
+  );
+  const inWindow = points?.filter((p) => p.t >= fromMs && p.t <= toMs).length ?? 0;
+  if (!points || inWindow < 2) return { ok: false, reason: "outside_window" };
+  return { ok: true, points, registration };
 }
