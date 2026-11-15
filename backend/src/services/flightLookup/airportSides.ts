@@ -30,3 +30,11 @@ export async function resolveAirportSides(
     blocked: blockedOf(dep) || blockedOf(arr),
   };
 }
+
+/**
+ * Hits whose airports are missing because the airport source was blocked. A provider adapter keeps
+ * such a hit out of its cache whether or not the caller passed an outcome log.
+ */
+const incompleteHits = new WeakSet<object>();
+export const markIncompleteHit = (hit: object): void => void incompleteHits.add(hit);
+export const isIncompleteHit = (hit: object): boolean => incompleteHits.has(hit);

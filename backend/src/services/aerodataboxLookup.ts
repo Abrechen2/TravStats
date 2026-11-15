@@ -22,7 +22,11 @@
 import axios from "axios";
 import NodeCache from "node-cache";
 import { enrichAirportMetadata } from "./airportLookup";
-import { resolveAirportSides } from "./flightLookup/airportSides";
+import {
+  isIncompleteHit,
+  markIncompleteHit,
+  resolveAirportSides,
+} from "./flightLookup/airportSides";
 import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
@@ -344,7 +348,7 @@ export async function lookupFlightAerodatabox(
     );
 
     const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
-    if (!outcomes?.hasFailure("aerodatabox")) cache.set(cacheKey, result, ttl);
+    if (!isIncompleteHit(result)) cache.set(cacheKey, result, ttl);
     outcomes?.record("aerodatabox", "ok");
     return result;
   } catch (error: unknown) {
@@ -467,7 +471,7 @@ async function mapToLookupResult(
     ? normalizeFlightNumber(marketing?.number ?? fallbackFlightNumber)
     : normalizeFlightNumber(flight.number ?? fallbackFlightNumber);
 
-  return {
+  const hit: FlightLookupResult = {
     airline,
     flightNumber: visibleFlightNumber,
     aircraft: flight.aircraft?.model || flight.aircraft?.reg,
@@ -520,6 +524,8 @@ async function mapToLookupResult(
     baggageBelt: flight.arrival?.baggageBelt ?? null,
     checkInDesk: flight.departure?.checkInDesk ?? null,
   };
+  if (sides.blocked) markIncompleteHit(hit);
+  return hit;
 }
 
 /** Test-only helper: wipe the in-memory cache between unit tests. */

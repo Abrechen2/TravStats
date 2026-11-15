@@ -21,7 +21,11 @@
 
 import axios from "axios";
 import NodeCache from "node-cache";
-import { resolveAirportSides } from "./flightLookup/airportSides";
+import {
+  isIncompleteHit,
+  markIncompleteHit,
+  resolveAirportSides,
+} from "./flightLookup/airportSides";
 import { resolveApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import { requestAeroapiCall } from "./aeroapiBudget";
@@ -331,7 +335,7 @@ export async function lookupFlightAeroapi(
       },
       "AeroAPI returned data"
     );
-    if (!outcomes?.hasFailure("aeroapi")) cache.set(cacheKey, result, ttl);
+    if (!isIncompleteHit(result)) cache.set(cacheKey, result, ttl);
     outcomes?.record("aeroapi", "ok");
     return result;
   } catch (error: unknown) {
@@ -400,7 +404,7 @@ async function mapToLookupResult(
     ? (getAirlineName(flight.operator_iata) ?? undefined)
     : undefined;
 
-  return {
+  const hit: FlightLookupResult = {
     // The user's spelling, as the other adapters keep it.
     flightNumber: requestedNumber,
     airline: isCodeshare ? undefined : operatorName,
@@ -442,6 +446,8 @@ async function mapToLookupResult(
     runwayArrivalTime: toDate(flight.actual_on),
     baggageBelt: flight.baggage_claim ?? null,
   };
+  if (sides.blocked) markIncompleteHit(hit);
+  return hit;
 }
 
 /** Test-only helper: wipe the in-memory cache between unit tests. */
