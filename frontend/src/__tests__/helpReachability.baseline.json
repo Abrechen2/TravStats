@@ -1,7 +1,6 @@
 {
   "titleOnly": {
     "components/Globe/GlobeTimeHistogram.tsx": { "count": 1, "why": "control-name" },
-    "components/Stats/AircraftRankingCard.tsx": { "count": 1, "why": "expansion" },
     "components/Stats/AirlineRankingCard.tsx": { "count": 1, "why": "truncation" },
     "components/Stats/CountryDistributionCard.tsx": { "count": 1, "why": "truncation" },
     "components/Stats/Overview/CrossDomainActivityChart.tsx": { "count": 1, "why": "chart-value" },

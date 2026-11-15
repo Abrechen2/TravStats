@@ -101,7 +101,7 @@ function WebGLLostNotice({
           type="button"
           onClick={onRetry}
           className="cursor-pointer rounded-sm border px-3 py-1 text-xs"
-          style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+          style={{ borderColor: "var(--ts-border-button)", color: "var(--text-primary)" }}
         >
           {t("map:webglLostRetry")}
         </button>
