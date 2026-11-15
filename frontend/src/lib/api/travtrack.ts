@@ -389,13 +389,3 @@ export function routeShareErrorKey(err: unknown): string {
         : "sharing:route.errors.network";
   }
 }
-
-/** The i18n key for a failed TravTrack call; a refusal by name, anything else generic. */
-export function travTrackErrorKey(err: unknown): string {
-  switch (apiErrorMachineCode(err)) {
-    case "TRAVTRACK_DISABLED":
-      return "admin:travTrack.errors.disabled";
-    default:
-      return "admin:travTrack.errors.saveFailed";
-  }
-}

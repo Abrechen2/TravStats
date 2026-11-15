@@ -43,11 +43,6 @@ export function isLlmProviderKind(value: unknown): value is LlmProviderKind {
   return typeof value === "string" && (LLM_PROVIDER_KINDS as readonly string[]).includes(value);
 }
 
-/** The admin's configured kind, with an unknown/legacy value read as Ollama. */
-export function activeProviderKind(raw: string | null | undefined): LlmProviderKind {
-  return isLlmProviderKind(raw) ? raw : "ollama";
-}
-
 /** The four kinds a fallback chain may carry after Ollama — each needs its own consent. */
 export const CLOUD_PROVIDER_KINDS = ["openai", "anthropic", "google", "custom"] as const;
 export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];

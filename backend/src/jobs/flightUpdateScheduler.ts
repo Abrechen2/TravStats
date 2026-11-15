@@ -111,13 +111,6 @@ export function stopFlightUpdateScheduler(): void {
 }
 
 /**
- * Check if scheduler is running
- */
-export function isSchedulerRunning(): boolean {
-  return schedulerRunning;
-}
-
-/**
  * Run the update check manually (for testing or immediate execution)
  */
 export async function runManualUpdateCheck(): Promise<{

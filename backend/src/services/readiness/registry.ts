@@ -4,7 +4,7 @@
  * Pattern: `services/sharing/shareTypes.ts` — an exhaustive mapping plus a test
  * (`__tests__/readiness.contract.test.ts`).
  */
-import { CHECK_CATALOGUE, type CheckId } from "../../shared/readinessCatalogue";
+import { CHECK_CATALOGUE } from "../../shared/readinessCatalogue";
 import { CHECK_IMPLS } from "./checkImpls";
 import type { RegisteredCheck } from "./types";
 
@@ -12,9 +12,3 @@ export const CHECKS: readonly RegisteredCheck[] = CHECK_CATALOGUE.map((entry) =>
   ...entry,
   ...CHECK_IMPLS[entry.id],
 }));
-
-const BY_ID = new Map<CheckId, RegisteredCheck>(CHECKS.map((c) => [c.id, c]));
-
-export function getCheck(id: string): RegisteredCheck | undefined {
-  return BY_ID.get(id as CheckId);
-}

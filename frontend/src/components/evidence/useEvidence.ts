@@ -194,15 +194,13 @@ export function useEvidence(scope?: EvidenceScopeParams): UseEvidenceResult {
       setError(null);
       return;
     }
-    fetchPage(kind, key, 0).catch(() => {
-      // fetchPage never rejects — it catches internally — but a lint-visible
-      // promise still needs a handler.
-    });
+    // fetchPage catches internally and sets `error`; `void` states that it is not awaited.
+    void fetchPage(kind, key, 0);
   }, [isOpen, kind, key, fetchPage]);
 
   const loadMore = useCallback(() => {
     if (!kind || !key || loading) return;
-    fetchPage(kind, key, entries.length).catch(() => {});
+    void fetchPage(kind, key, entries.length);
   }, [kind, key, loading, entries.length, fetchPage]);
 
   return {

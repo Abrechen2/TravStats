@@ -10,7 +10,6 @@
  */
 
 import { prisma } from "../../db";
-import { Prisma } from "../../prisma";
 import { airportDisplayName } from "../../utils/airportDisplay";
 import {
   legacyHistoryOf,
@@ -22,7 +21,6 @@ import {
 } from "../../utils/homeAirport";
 import { getCachedAirports } from "../airportCache";
 import type { AirportData } from "../airportLookup";
-import { defaultSettings } from "../../routes/settings/types";
 
 /** The settings keys this module owns. */
 export const HOME_PERIODS_KEY = "homePeriods";
@@ -87,29 +85,4 @@ export async function loadHomePeriods(userId: string): Promise<HomePeriod[]> {
     select: { data: true },
   });
   return homePeriodsFromData(settings?.data);
-}
-
-/**
- * Store the periods AND the legacy mirror. The mirror is written every time,
- * never derived lazily, so an older server after a rollback — or anything that
- * reads the raw blob — sees the same primary airports the periods name.
- */
-export async function saveHomePeriods(
-  userId: string,
-  periods: readonly HomePeriod[],
-  db: Pick<typeof prisma, "userSettings"> = prisma
-): Promise<void> {
-  const existing = await db.userSettings.findUnique({
-    where: { userId },
-    select: { data: true },
-  });
-  const home = {
-    [HOME_PERIODS_KEY]: periods,
-    [LEGACY_HISTORY_KEY]: legacyHistoryOf(periods),
-  };
-  await db.userSettings.upsert({
-    where: { userId },
-    update: { data: { ...asObject(existing?.data), ...home } as unknown as Prisma.InputJsonValue },
-    create: { userId, data: { ...defaultSettings, ...home } as unknown as Prisma.InputJsonValue },
-  });
 }

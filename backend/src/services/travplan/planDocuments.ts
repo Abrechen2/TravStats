@@ -13,6 +13,7 @@ import { DOCUMENT_MAX_BYTES } from "../documents/documentFormats";
 import { planAccess, type PlanActor } from "./access";
 import { parseState } from "./upgrade";
 import type { Document } from "../../prisma";
+import logger from "../../utils/logger";
 
 /** Spec §6.5: uploads up to 20 MB each, at most 50 documents per plan per member. */
 export const PLAN_DOCUMENT_MAX_BYTES = Math.min(20 * 1024 * 1024, DOCUMENT_MAX_BYTES);
@@ -158,7 +159,15 @@ export async function uploadPlanDocument(
       });
     } catch (error) {
       // An upload that cannot be shown must not stay behind: a retry would meet its own bytes.
-      await deleteDocument(access.ownerId, document.id).catch(() => undefined);
+      try {
+        await deleteDocument(access.ownerId, document.id);
+      } catch (cleanupError) {
+        logger.warn({
+          operation: "plan_document_cleanup_failed",
+          documentId: document.id,
+          errorName: cleanupError instanceof Error ? cleanupError.name : "unknown",
+        });
+      }
       throw error;
     }
   }

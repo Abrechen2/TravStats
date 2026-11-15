@@ -102,11 +102,6 @@ export async function snapshotFx(
   };
 }
 
-/** The snapshot, or null when there is none. */
-export function snapshotOrNull(outcome: FxSnapshotOutcome): FxSnapshot | null {
-  return outcome.status === "snapshotted" ? outcome.snapshot : null;
-}
-
 /**
  * The currency every total is reported in for this user. Lived in
  * `routes/lodging.ts` until flights needed it too (#267) — a route is not a

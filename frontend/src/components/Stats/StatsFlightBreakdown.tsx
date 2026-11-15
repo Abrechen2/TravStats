@@ -4,6 +4,7 @@ import { formatHours, formatHoursValue } from "../../lib/units";
 import EvidenceTrigger from "./EvidenceTrigger";
 import CountingHelp from "./counting/CountingHelp";
 import { rankingKey } from "../../shared/evidence";
+import { isCountableFlightStatus } from "../../shared/flightCounting";
 import type { AirlineBreakdownRow } from "./airlineBreakdown";
 
 /** Every ranking dimension wired below is `allTime`-only — see `rankingEvidence.ts` on the backend. */
@@ -265,7 +266,7 @@ export default function StatsFlightBreakdown({
                       background:
                         // A recorded-after-the-fact flight happened too: not
                         // the danger colour, which belongs to a cancellation.
-                        status === "flown" || status === "historical"
+                        isCountableFlightStatus(status)
                           ? "var(--success)"
                           : status === "scheduled"
                             ? "var(--accent)"

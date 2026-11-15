@@ -35,7 +35,3 @@ export function stopUsageStatsScheduler(): void {
   scheduledJob = null;
   logger.info("usage-stats scheduler stopped");
 }
-
-export function isUsageStatsSchedulerRunning(): boolean {
-  return scheduledJob !== null;
-}

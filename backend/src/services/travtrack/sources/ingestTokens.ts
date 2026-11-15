@@ -115,9 +115,6 @@ export function isKnownGoodIngestToken(token: string): boolean {
 export const looksLikeIngestToken = (v: unknown): v is string =>
   typeof v === "string" && TOKEN_SHAPE.test(v);
 
-export const isIngestTokenKind = (v: unknown): v is IngestTokenKind =>
-  (INGEST_TOKEN_KINDS as readonly unknown[]).includes(v);
-
 export type IngestTokenListing = {
   id: string;
   kind: IngestTokenKind;

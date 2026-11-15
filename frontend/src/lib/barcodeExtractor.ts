@@ -47,38 +47,6 @@ export async function extractBarcodeFromImage(image: File | string): Promise<str
 }
 
 /**
- * Extract barcode with format information
- */
-export async function extractBarcodeWithFormat(
-  image: File | string
-): Promise<BarcodeExtractionResult | null> {
-  try {
-    const imageData = await loadImageData(image);
-    if (!imageData) {
-      return null;
-    }
-
-    // Try QR code
-    const qrResult = await tryQRCode(imageData);
-    if (qrResult) {
-      return { data: qrResult, format: "QR" };
-    }
-
-    // Try ZXing formats
-    const zxingResult = await tryZXingFormats(imageData);
-    if (zxingResult) {
-      // ZXing doesn't always return format, default to Aztec (most common for boarding passes)
-      return { data: zxingResult, format: "Aztec" };
-    }
-
-    return null;
-  } catch (error) {
-    logger.error("[Barcode Extractor] Error extracting barcode with format:", error);
-    return null;
-  }
-}
-
-/**
  * Load image and convert to ImageData
  */
 async function loadImageData(image: File | string): Promise<ImageData | null> {
@@ -180,26 +148,4 @@ async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
     logger.debug("[Barcode Extractor] ZXing extraction error:", error);
     return null;
   }
-}
-
-/**
- * Check if string looks like barcode data (quick heuristic)
- */
-export function looksLikeBarcodeData(data: string): boolean {
-  if (!data || data.length < 10) return false;
-
-  // Common patterns:
-  // - IATA BCBP starts with M1, M2
-  // - Contains airline codes (2-3 letters)
-  // - Contains airport codes (3 letters)
-  // - Contains dates/numbers
-
-  const barcodePatterns = [
-    /^M[12]/, // IATA BCBP
-    /[A-Z]{2}\d{1,4}/, // Flight numbers
-    /[A-Z]{3}/, // Airport codes
-    /\d{3}/, // Julian dates
-  ];
-
-  return barcodePatterns.some((pattern) => pattern.test(data));
 }

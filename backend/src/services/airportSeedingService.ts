@@ -577,10 +577,3 @@ export async function getSeedingStatus(): Promise<{
     error: latestStatus.error ?? undefined,
   };
 }
-
-/**
- * Check if seeding is currently in progress
- */
-export function isSeedingInProgress(): boolean {
-  return seedingInProgress;
-}

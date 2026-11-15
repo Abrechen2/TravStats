@@ -6,7 +6,7 @@
  * widens it to "everything"; a row whose scope is missing or does not parse is read as "not
  * shared" (`readScope`), so a damaged scope fails closed.
  */
-import { prisma, type DbTransaction } from "../../db";
+import { type DbTransaction } from "../../db";
 import { METRIC_GROUPS } from "../../shared/comparisonMetrics";
 import type { LeaderboardScope } from "../../schemas/comparison";
 import { loadVisibleDomains } from "../domainVisibility";
@@ -98,16 +98,4 @@ export async function storeScope(
     where: { id: existing.id },
     data: { scope: scopeJson(scope), decidedAt: now },
   });
-}
-
-/** The owner's stored scope for one viewer, as a reader may use it (null: none or damaged). */
-export async function readStoredScope(
-  ownerId: string,
-  viewer: ScopeViewer
-): Promise<unknown | null> {
-  const row = await prisma.leaderboardConsent.findUnique({
-    where: whereOf(ownerId, viewer),
-    select: { scope: true },
-  });
-  return row?.scope ?? null;
 }

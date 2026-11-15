@@ -104,10 +104,15 @@ export default function EmailImportTab({
 
   useEffect(() => {
     if (!modelReads) return;
-    api
-      .get<Capabilities>("/parser-capabilities")
-      .then(({ data }) => setLlm(llmStateOf(data)))
-      .catch(() => setLlm({ kind: "unknown" }));
+    void (async () => {
+      try {
+        const { data } = await api.get<Capabilities>("/parser-capabilities");
+        setLlm(llmStateOf(data));
+      } catch (error) {
+        logger.warn("Failed to read the parser capabilities", error);
+        setLlm({ kind: "unknown" });
+      }
+    })();
   }, [modelReads]);
 
   const handleFile = useCallback(

@@ -94,7 +94,18 @@ export async function sendDueReminder(due: DueReminder): Promise<void> {
     await due.sendMail();
     await markSent(claim);
   } catch (error) {
-    if (claim) await releaseClaim(claim).catch(() => undefined);
+    if (claim) {
+      try {
+        await releaseClaim(claim);
+      } catch (releaseError) {
+        // The claim stays held until its lease runs out: say so.
+        logger.error({
+          operation: "reminder_scheduler_release_failed",
+          domain,
+          errorName: releaseError instanceof Error ? releaseError.name : "unknown",
+        });
+      }
+    }
     logger.error({
       operation: "reminder_scheduler_send_failed",
       domain,

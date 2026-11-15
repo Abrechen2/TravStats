@@ -20,14 +20,6 @@ export const API_LIMITS = {
 } as const;
 
 /**
- * UI Configuration
- */
-export const UI_CONFIG = {
-  /** Minimum screen width for XL breakpoint (matches Tailwind xl:) */
-  XL_BREAKPOINT: 1280,
-} as const;
-
-/**
  * Date & Time Formats
  * Note: LOCALE is now dynamic based on user language setting
  * Use getDateLocale() helper function to get the current locale
@@ -60,23 +52,3 @@ export function getDateLocale(): string {
   }
   return "en-US"; // Default to English
 }
-
-/**
- * Export Formats
- */
-export const EXPORT_FORMATS = {
-  CSV: "csv",
-  GEOJSON: "geojson",
-  PDF: "pdf",
-  KML: "kml",
-  JSON: "json",
-} as const;
-
-/**
- * Storage Keys for localStorage
- */
-export const STORAGE_KEYS = {
-  THEME: "theme",
-  USER_SETTINGS: "user-settings",
-  CONTEXTUAL_HINTS: "contextual-hints",
-} as const;

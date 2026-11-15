@@ -76,7 +76,3 @@ export function payloadOfPastedLink(text: string): string | null {
   if (!/\/freunde\/einladung$/.test(head)) return null;
   return text.trim().slice(at + 1);
 }
-
-/** Whether the invitation is already past its end — the server decides, the page only warns. */
-export const isExpired = (payload: InviteLinkPayload, now: number): boolean =>
-  Date.parse(payload.expiresAt) <= now;

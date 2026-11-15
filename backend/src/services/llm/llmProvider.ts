@@ -274,8 +274,6 @@ export function serializeProviderOrder(order: readonly CloudProviderKind[]): str
   return order.join(",");
 }
 
-export const DEFAULT_PROVIDER_ORDER = CLOUD_PROVIDER_KINDS.join(",");
-
 /**
  * Fail closed on the account (forgejo#392): a cloud target stays only for an
  * account that consented to it, or for an explicit `systemTask`. A caller

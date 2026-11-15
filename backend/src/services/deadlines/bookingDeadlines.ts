@@ -124,14 +124,6 @@ export async function resolveOnlineCheckInColumns(
   return { onlineCheckInOpensAt: instant?.utc ?? null, onlineCheckInZone: instant?.zone ?? null };
 }
 
-/** `input` without the deadline keys — for paths that spread a body into a Prisma write. */
-export function withoutDeadlineInput<T extends DeadlineInput>(
-  input: T
-): Omit<T, "freeCancellationUntil" | "paymentDueOn"> {
-  const { freeCancellationUntil: _c, paymentDueOn: _p, ...rest } = input;
-  return rest;
-}
-
 /**
  * Whether resolved deadline columns change nothing on the stored row — so a
  * form re-sending what it read is no edit (the rental's `userEditedFields`).

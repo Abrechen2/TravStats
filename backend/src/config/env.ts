@@ -176,13 +176,3 @@ export function validateEnv(): EnvConfig {
     throw error;
   }
 }
-
-/**
- * Get validated environment configuration
- */
-export function getEnv(): EnvConfig {
-  if (!validatedEnv) {
-    return validateEnv();
-  }
-  return validatedEnv;
-}

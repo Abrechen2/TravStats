@@ -51,24 +51,6 @@ export const CATALOGUE_REFS = {
 export const CRUISE_STOP_REFS = { portId: "port" } as const;
 export const CRUISE_LEG_REFS = { fromPortId: "fromPort", toPortId: "toPort" } as const;
 
-/**
- * The pseudo-facts the adapters add (`adapters/*.ts`): a stay's house, a cruise's port calls and
- * legs, the entries a timeline stop wraps. `lodging` replaces the house's `catalogueChainId`
- * with `chain`, its name.
- */
-export const PSEUDO_FACTS = {
-  flight: [],
-  lodgingStay: ["lodging"],
-  cruise: ["stops", "legs"],
-  rail: [],
-  bus: [],
-  ferry: [],
-  rental: [],
-  roadtrip: ["stations", "routeLegs"],
-  tour: ["stations", "routeLegs", "tracks"],
-  stop: ["sourceRef", "lodgingStayRef"],
-} as const satisfies Readonly<Record<ShareEntity, readonly string[]>>;
-
 export const stationRef = z.strictObject({
   sourceId: z.string().max(200).nullable(),
   uic: z.string().max(40).nullable(),

@@ -199,16 +199,6 @@ export async function isDebugEnabled(): Promise<boolean> {
   return isVerboseLevel((await getLoggingConfig()).effectiveLogLevel);
 }
 
-export async function shouldLogHttpRequests(): Promise<boolean> {
-  const config = await getLoggingConfig();
-  return config.logHttpRequests && isVerboseLevel(config.effectiveLogLevel);
-}
-
-export async function shouldLogDatabaseQueries(): Promise<boolean> {
-  const config = await getLoggingConfig();
-  return config.logDatabaseQueries && isVerboseLevel(config.effectiveLogLevel);
-}
-
 export async function shouldLogParserOperations(): Promise<boolean> {
   const config = await getLoggingConfig();
   return config.logParserOperations && isVerboseLevel(config.effectiveLogLevel);

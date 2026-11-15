@@ -24,19 +24,6 @@ import type { InsightStay, LodgingInsights, PriceTrend, TripBase } from "./types
 
 export type { InsightStay, LodgingInsights } from "./types";
 
-/** The evidence keys these insights serve (`shared/evidenceMeasuresInsights.ts`). */
-export const LODGING_INSIGHT_MEASURES = [
-  "lodgingWeekendNights",
-  "lodgingWeekdayNights",
-  "lodgingBusinessNights",
-  "lodgingReturnHouseCount",
-  "lodgingSleepStyleNights",
-  "lodgingCalendarWeekNights",
-  "lodgingCompletedTripBaseCount",
-  "lodgingPriceComparisonCount",
-  "lodgingCalendarMonthCount",
-] as const;
-
 function stayRef(p: PreparedStay): EntryRef {
   return {
     domain: "lodging",

@@ -49,8 +49,6 @@ export const WEB_PREF_SECTIONS = {
 
 export type WebPrefSection = keyof typeof WEB_PREF_SECTIONS;
 
-export const WEB_PREF_SECTION_NAMES = Object.keys(WEB_PREF_SECTIONS) as WebPrefSection[];
-
 export function isWebPrefSection(name: string): name is WebPrefSection {
   return Object.prototype.hasOwnProperty.call(WEB_PREF_SECTIONS, name);
 }

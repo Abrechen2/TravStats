@@ -2,6 +2,7 @@ import type { ParserConfig } from "./types";
 import { getParserConfig } from "./config";
 import { llmTargetOf } from "./llmTarget";
 import { llmProbe, ollamaTarget, type LlmTarget } from "../llm/llmProvider";
+import logger from "../../utils/logger";
 
 /**
  * ONE answer to "could the LLM have read this document?", for every domain.
@@ -111,13 +112,23 @@ function refreshProbeIfStale(target: LlmTarget): void {
 
   // The probe asks whether the endpoint answers at all (`/api/tags` or
   // `/models`), whichever provider it is.
-  const probe = llmProbe(target)
-    .then((result) => recordLlmProbe(url, result.reachable))
-    // `llmProbe` already swallows its own errors, but an unhandled
-    // rejection from a background task would take the process down. A probe
-    // that failed to answer is a probe that answered "not reachable".
-    .catch(() => recordLlmProbe(url, false))
-    .finally(() => inFlightProbes.delete(url));
+  const probe = (async () => {
+    // `llmProbe` already swallows its own errors, but an unhandled rejection
+    // from a background task would take the process down. A probe that failed
+    // to answer is a probe that answered "not reachable" — and is logged.
+    try {
+      const result = await llmProbe(target);
+      recordLlmProbe(url, result.reachable);
+    } catch (error) {
+      logger.warn({
+        operation: "llm_probe_failed",
+        errorName: error instanceof Error ? error.name : "unknown",
+      });
+      recordLlmProbe(url, false);
+    } finally {
+      inFlightProbes.delete(url);
+    }
+  })();
 
   inFlightProbes.set(url, probe);
 }

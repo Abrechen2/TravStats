@@ -209,7 +209,15 @@ async function runAccount(
       // The name only: a message could carry a query's values.
       errorName: error instanceof Error ? error.name : "unknown",
     });
-    await recordFailure(userId, now).catch(() => undefined);
+    try {
+      await recordFailure(userId, now);
+    } catch (recordError) {
+      logger.error({
+        operation: "travtrack_projections_failure_unrecorded",
+        userId,
+        errorName: recordError instanceof Error ? recordError.name : "unknown",
+      });
+    }
     return { failed: true, questions: 0, days: 0 };
   }
 }

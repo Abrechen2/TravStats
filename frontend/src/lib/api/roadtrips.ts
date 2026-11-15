@@ -94,24 +94,3 @@ export const roadtripsApi = {
     return data.route;
   },
 };
-
-/** A station as the list endpoint wants it back, from what the detail returned. */
-export function toStationInput(station: RoadtripStation): StationInput {
-  return {
-    id: station.id,
-    title: station.title,
-    // A route station always has a coordinate — the station and assign
-    // endpoints both refuse one without — so there is nothing to invent here.
-    lat: station.lat as number,
-    lon: station.lon as number,
-    startDate: station.startDate,
-    endDate: station.endDate,
-    notes: station.notes,
-    night:
-      station.state === "stay" && station.lodgingStayId
-        ? { kind: "stay", lodgingStayId: station.lodgingStayId }
-        : station.state === "free"
-          ? { kind: "free" }
-          : { kind: "pass" },
-  };
-}

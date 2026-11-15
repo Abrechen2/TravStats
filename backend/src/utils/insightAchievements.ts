@@ -324,9 +324,6 @@ const MEASURE: Record<string, keyof InsightAchievementStats> = {
   tour_ascent_m: "tourAscentM",
 };
 
-/** The requirement types this module answers — the seeds are checked against it. */
-export const INSIGHT_REQUIREMENT_TYPES: readonly string[] = Object.keys(MEASURE);
-
 /**
  * The badge's progress; `SKIP` when its source failed this run (the planner
  * then leaves the stored row alone); `null` when it is not one of these

@@ -42,16 +42,6 @@ export interface RentalAchievementStats {
   rentalLongestDays: number;
 }
 
-export const EMPTY_RENTAL_STATS: RentalAchievementStats = {
-  rentalCount: 0,
-  rentalOneWayCount: 0,
-  rentalOdometerDocumented: 0,
-  rentalOdometerKm: 0,
-  rentalCountries: 0,
-  rentalCompanies: 0,
-  rentalLongestDays: 0,
-};
-
 export const RENTAL_BADGE_SELECT = {
   id: true,
   provider: true,

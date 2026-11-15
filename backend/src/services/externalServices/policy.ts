@@ -69,10 +69,6 @@ export async function updatePolicy(
   });
 }
 
-export async function savePolicy(policy: ExternalServicePolicy): Promise<void> {
-  await updatePolicy(() => policy);
-}
-
 export async function loadPrefs(userId: string): Promise<ExternalServicePrefs> {
   const row = await prisma.userSettings.findUnique({
     where: { userId },

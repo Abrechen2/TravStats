@@ -21,6 +21,7 @@ const TEXT_ON_PHOTO = { textShadow: "0 1px 16px rgba(0,0,0,0.9), 0 0 3px rgba(0,
 import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
+import { logger } from "../lib/logger";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -63,10 +64,15 @@ export default function LoginPage(): JSX.Element {
   // invitation lands directly on /register?token=…). Fail-open on error,
   // matching RegisterPage's convention: worst case is the old behaviour.
   useEffect(() => {
-    authApi
-      .getRegistrationStatus()
-      .then((r) => setRegistrationEnabled(r.registrationEnabled))
-      .catch(() => setRegistrationEnabled(true));
+    void (async () => {
+      try {
+        const r = await authApi.getRegistrationStatus();
+        setRegistrationEnabled(r.registrationEnabled);
+      } catch (error) {
+        logger.warn("Failed to read the registration status", error);
+        setRegistrationEnabled(true);
+      }
+    })();
   }, []);
 
   // Ask before drawing the button: on an insecure origin WebAuthn is impossible
@@ -79,20 +85,30 @@ export default function LoginPage(): JSX.Element {
   // the button appeared without being able to work. isSecureContext is the
   // browser's own verdict about the page we are actually on.
   useEffect(() => {
-    passkeyApi
-      .availability()
-      .then((r) => setPasskeysAvailable(r.available && window.isSecureContext !== false))
-      .catch(() => setPasskeysAvailable(false));
+    void (async () => {
+      try {
+        const r = await passkeyApi.availability();
+        setPasskeysAvailable(r.available && window.isSecureContext !== false);
+      } catch (error) {
+        logger.warn("Failed to read the passkey availability", error);
+        setPasskeysAvailable(false);
+      }
+    })();
   }, []);
 
   // A public demo instance prints its shared login (PUBLIC_DEMO_LOGIN). Any
   // other install never does, although it seeds the same demo account.
   const [publicDemoLogin, setPublicDemoLogin] = useState(false);
   useEffect(() => {
-    setupApi
-      .getStatus()
-      .then((s) => setPublicDemoLogin(s.publicDemoLogin === true))
-      .catch(() => setPublicDemoLogin(false));
+    void (async () => {
+      try {
+        const s = await setupApi.getStatus();
+        setPublicDemoLogin(s.publicDemoLogin === true);
+      } catch (error) {
+        logger.warn("Failed to read the setup status", error);
+        setPublicDemoLogin(false);
+      }
+    })();
   }, []);
 
   /**

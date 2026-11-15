@@ -74,8 +74,3 @@ export function findRentalProvider(typed: string | null | undefined): RentalProv
   }
   return null;
 }
-
-/** Test seam: re-read the file on next use. */
-export function __resetRentalProvidersForTests(): void {
-  cache = null;
-}

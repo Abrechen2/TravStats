@@ -145,8 +145,3 @@ export async function recordRunningVersion(): Promise<void> {
     );
   }
 }
-
-/** Test seam. */
-export function resetHistoryFlag(): void {
-  historyRecorded = false;
-}

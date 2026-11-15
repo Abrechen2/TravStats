@@ -123,23 +123,3 @@ export async function tickCuratedItem(itemId: string, visitedAt?: string | null)
 export async function untickCuratedItem(itemId: string): Promise<void> {
   await api.delete(`/place-lists/curated/items/${itemId}/tick`);
 }
-
-export const placeListsApi = {
-  list: listPlaceLists,
-  get: getPlaceList,
-  create: createPlaceList,
-  update: updatePlaceList,
-  remove: deletePlaceList,
-  addPlace: addPlaceToList,
-  removePlace: removePlaceFromList,
-  reorder: reorderPlaceList,
-  curated: {
-    list: listCuratedChecklists,
-    progress: getCuratedProgress,
-    suggestions: getCuratedSuggestions,
-    subscribe: subscribeChecklist,
-    unsubscribe: unsubscribeChecklist,
-    tick: tickCuratedItem,
-    untick: untickCuratedItem,
-  },
-};

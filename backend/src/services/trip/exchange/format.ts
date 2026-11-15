@@ -25,15 +25,6 @@ import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
-/**
- * What this build WRITES. Version 1 had no bus rides, version 2 no ferry
- * crossings; a file is stamped with the lowest version that can carry it
- * (`tripFileVersionFor`), so an importer that predates a key refuses the file
- * by name ("format version 3 is not supported", 422) instead of importing the
- * trip without those journeys — and a trip without them stays readable by
- * every older importer. Version 4 added `roadtrips` (forgejo#404, spec §6.8).
- */
-export const TRIP_FILE_VERSION = 4;
 /** What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`), 3 (no `roadtrips`) and 4. */
 export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4] as const;
 

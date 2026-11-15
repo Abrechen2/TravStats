@@ -40,6 +40,7 @@ import { queueResync } from "./resync";
 
 export { userRef };
 import { serveOnce, takeSeq } from "./streams";
+import logger from "../../../utils/logger";
 
 /** Remote members who are on the trip (the roster's people on other servers). */
 export const ON_TRIP = ["active", "unreachable", "suspended"];
@@ -91,7 +92,18 @@ export async function queueRoster(tx: DbTransaction, groupId: string): Promise<n
   await tx.$queryRaw`SELECT 1 FROM trip_share_groups WHERE id = ${groupId} FOR NO KEY UPDATE`;
   const group = await tx.tripShareGroup.findUnique({ where: { id: groupId } });
   if (!group?.federatedRef || group.homeOrigin) return 0;
-  const identity = await loadIdentity().catch(() => null);
+  let identity: Awaited<ReturnType<typeof loadIdentity>> | null;
+  try {
+    identity = await loadIdentity();
+  } catch (error) {
+    // A roster that cannot be queued is a peer left stale: say so, do not read it as "no identity".
+    logger.error({
+      operation: "federation_roster_identity_failed",
+      groupId,
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
+    return 0;
+  }
   if (!identity) return 0;
   const federated = { id: group.id, federatedRef: group.federatedRef };
   const members = await homeRoster(tx, federated, identity.origin);
