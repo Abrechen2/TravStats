@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { adminApi, type PublicUrlCheckResult } from "../../lib/api/admin";
+import { publicUrlCheckApi, type PublicUrlCheckResult } from "../../lib/api/publicUrlCheck";
 import { profileDateTime } from "../../lib/profileInstant";
 import { refreshReadinessShell } from "../../store/readinessShellStore";
 import Button from "../ui/Button";
@@ -57,7 +57,7 @@ export default function PublicUrlCheck({
     setBusy(true);
     setOutcome(null);
     try {
-      const result = await adminApi.checkPublicUrl();
+      const result = await publicUrlCheckApi.checkPublicUrl();
       if (asked !== current.current) return;
       setOutcome({ kind: "result", result });
       // A stored result changes the readiness item; the shell re-reads once.

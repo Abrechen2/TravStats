@@ -6,7 +6,7 @@ import { AxiosError } from "axios";
 import PublicUrlCheck from "../PublicUrlCheck";
 
 const api = vi.hoisted(() => ({ checkPublicUrl: vi.fn() }));
-vi.mock("../../../lib/api/admin", () => ({ adminApi: api }));
+vi.mock("../../../lib/api/publicUrlCheck", () => ({ publicUrlCheckApi: api }));
 vi.mock("../../../store/readinessShellStore", () => ({
   refreshReadinessShell: vi.fn().mockResolvedValue(undefined),
 }));
