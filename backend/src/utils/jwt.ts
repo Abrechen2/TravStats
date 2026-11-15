@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { JWT_SECRET } from "./jwtSecret";
 
@@ -24,12 +25,19 @@ export const generateToken = (userId: string, epoch = 0): string => {
     algorithm: "HS256",
     expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"],
   };
-  return jwt.sign({ userId, epoch }, JWT_SECRET, options);
+  // `jti` names this one token so logout can revoke it alone (forgejo#412 N4).
+  // Cookies minted before it existed carry none and simply cannot be revoked
+  // individually; they expire on their own.
+  return jwt.sign({ userId, epoch, jti: crypto.randomUUID() }, JWT_SECRET, options);
 };
 
-export const verifyToken = (token: string): { userId: string; epoch?: number } => {
+export const verifyToken = (
+  token: string
+): { userId: string; epoch?: number; jti?: string; exp?: number } => {
   return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as {
     userId: string;
     epoch?: number;
+    jti?: string;
+    exp?: number;
   };
 };

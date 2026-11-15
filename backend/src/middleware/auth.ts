@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { isSessionRevoked } from "../utils/revokedSessions";
 import { AppError } from "./errorHandler";
 import { JWT_SECRET } from "../utils/jwtSecret";
 import { prisma } from "../db";
@@ -88,7 +89,25 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     const decoded = jwt.verify(cookieToken, JWT_SECRET, { algorithms: ["HS256"] }) as {
       userId: string;
       epoch?: number;
+      jti?: string;
     };
+
+    // A signed-out session: the cookie may have been copied before logout
+    // (forgejo#412 N4). Only this token is refused, never the user's others.
+    if (decoded.jti && (await isSessionRevoked(decoded.jti))) {
+      securityLogger.warn({
+        operation: "security_event",
+        message: "Authentication failed: Session was signed out",
+        context: {
+          eventType: "auth_failure",
+          reason: "session_signed_out",
+          userId: decoded.userId,
+          ip: req.ip,
+          path: requestPathForLog(req),
+        },
+      });
+      throw new AppError("Session expired - please sign in again", 401);
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

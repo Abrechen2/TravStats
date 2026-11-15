@@ -1,3 +1,4 @@
+import { egressBlock } from "./externalServices/egress";
 import { zoneOf } from "../shared/time/zoneOf";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
@@ -74,7 +75,7 @@ export function missCacheSizeForTests(): number {
 }
 
 /** Why an external lookup could not give an answer (as opposed to "no such airport"). */
-export type AirportLookupFailureReason = "timeout" | "network" | "http_error";
+export type AirportLookupFailureReason = "timeout" | "network" | "http_error" | "blocked";
 
 export type AirportLookupResult =
   | { status: "found"; airport: AirportData }
@@ -85,6 +86,8 @@ type ExternalLookup =
   | { status: "found"; data: ExternalAirportData }
   | { status: "not_found" }
   | { status: "unavailable"; reason: AirportLookupFailureReason };
+
+const AIRPORT_DATA_SERVICE = "airportData";
 
 class ExternalFetchError extends Error {
   constructor(
@@ -436,6 +439,12 @@ function loadCsvIndex(): Promise<Map<string, ExternalAirportData>> {
  * with the reason, so the caller can tell the user to retry.
  */
 async function fetchFromExternalAPI(code: string): Promise<ExternalLookup> {
+  // Both hosts below belong to the "airportData" catalogue service. When the
+  // admin (or the master internet switch) says no, nothing is sent and the
+  // caller hears "blocked" — not "no such airport" (forgejo#392).
+  if (await egressBlock(AIRPORT_DATA_SERVICE)) {
+    return { status: "unavailable", reason: "blocked" };
+  }
   // Versuche zuerst die kostenlose Airport-Codes API
   try {
     const response = await fetch(`https://www.airport-data.com/api/ap_info.json?iata=${code}`, {

@@ -570,6 +570,17 @@
       "getKeyLabel": "Open-Meteo",
       "quotaLine": "faire Nutzung"
     },
+    "airportData": {
+      "name": "Flughafen-Daten",
+      "purpose": "airport-data.com, OurAirports",
+      "why": "Findet unbekannte Flughäfen per Code und lädt bei Bedarf den Flughafen-Katalog.",
+      "cost": "Kostenlos.",
+      "quota": "–",
+      "dataOut": "Flughafen-Code (IATA/ICAO).",
+      "getKeyUrl": "https://ourairports.com/data/",
+      "getKeyLabel": "OurAirports",
+      "quotaLine": "–"
+    },
     "logos": {
       "name": "Airline- & Betreiber-Logos",
       "purpose": "kiwi.com, Daisycon, Wikimedia; logostream optional",

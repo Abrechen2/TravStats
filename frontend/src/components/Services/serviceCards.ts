@@ -27,7 +27,11 @@ export type ServiceTemplate =
  * the update check (settings v3 S6): the rail contact address and the open-data
  * switch, which stays because it is off by default.
  */
-export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set(["railTimetables", "openData"]);
+export const FOLDED_INTO_INTERNET: ReadonlySet<string> = new Set([
+  "railTimetables",
+  "openData",
+  "airportData",
+]);
 
 /**
  * The four switch fields of the catalogue that are expert rows of "Funktionen ›
@@ -179,6 +183,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
   },
   {
     id: "openData",
+    group: "open",
+    use: ["on"],
+  },
+  {
+    id: "airportData",
     group: "open",
     use: ["on"],
   },

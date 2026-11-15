@@ -43,6 +43,7 @@
     "timeout": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen oder manuell auswählen.",
     "network": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage ist vom Server aus nicht erreichbar. Bitte später erneut versuchen oder manuell auswählen.",
     "http_error": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage hat einen Fehler gemeldet. Bitte später erneut versuchen oder manuell auswählen.",
+    "blocked": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage ist vom Administrator oder durch den Internet-Schalter abgeschaltet. Bitte manuell auswählen.",
     "unknown": "Der Flughafen {{code}} ist nicht im Katalog, und die Online-Abfrage ist gerade nicht verfügbar. Bitte später erneut versuchen oder manuell auswählen."
   }
 }

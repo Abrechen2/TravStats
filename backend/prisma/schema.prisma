@@ -452,6 +452,19 @@ model PairingCode {
   @@map("pairing_codes")
 }
 
+/// A browser session that was signed out (forgejo#412 N4). The session JWT carries a `jti`;
+/// logout stores it here until the token's own `exp`, and `authenticate` refuses it meanwhile.
+/// Per token on purpose: `sessionEpoch` is per user and would sign out every other browser.
+/// Rows past `expiresAt` mean nothing (the signature check already refuses the token) and are pruned.
+model RevokedSession {
+  jti       String   @id
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("revoked_sessions")
+}
+
 /// A personal calendar subscription (forgejo#310): `GET /api/v1/calendar/<token>.ics`
 /// answers the user's upcoming entries to any calendar app that holds the URL.
 /// One per user — regenerating replaces the row, revoking deletes it, and the

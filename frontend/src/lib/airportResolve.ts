@@ -19,9 +19,14 @@ export type AirportResolution =
   | { kind: "failed"; code: string; reason?: AirportLookupReason };
 
 /** Why the server's online airport lookup was unavailable (503 body `reason`). */
-export type AirportLookupReason = "timeout" | "network" | "http_error" | "unknown";
+export type AirportLookupReason = "timeout" | "network" | "http_error" | "blocked" | "unknown";
 
-const LOOKUP_REASONS: ReadonlySet<string> = new Set(["timeout", "network", "http_error"]);
+const LOOKUP_REASONS: ReadonlySet<string> = new Set([
+  "timeout",
+  "network",
+  "http_error",
+  "blocked",
+]);
 
 /**
  * The reason carried by a 503 `AIRPORT_LOOKUP_UNAVAILABLE`, or null for any

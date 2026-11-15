@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { revokeSessionToken } from "../utils/revokedSessions";
 import { initialLocationProvider } from "../services/locationProvider/initialProvider";
 import type { User } from "../prisma";
 import { takeUserCountLock } from "../utils/userCountLock";
@@ -418,11 +419,19 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: Ne
 });
 
 // Logout
-router.post("/logout", (req: Request, res: Response) => {
-  // Clear the auth cookie (use same options as when setting it)
-  res.clearCookie("auth_token", getAuthCookieOptions(req));
+router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Revoke THIS cookie's token server-side first: clearing the cookie alone
+    // leaves a copied one valid until expiry (forgejo#412 N4). If the write
+    // fails the user is told, rather than shown a logout that did not happen.
+    await revokeSessionToken(req.cookies?.auth_token as string | undefined);
+    // Clear the auth cookie (use same options as when setting it)
+    res.clearCookie("auth_token", getAuthCookieOptions(req));
 
-  res.json({ message: "Logged out successfully" });
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Change Password (requires authentication)
