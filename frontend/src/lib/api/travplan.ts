@@ -113,6 +113,18 @@ export interface PlanDeletePreview {
  * (`remotePlans.ts`): this server proxies them to the host.
  */
 const http = () => (isRemotePlanMode() ? remotePlanHttp : api);
+/**
+ * A packing change names the list rev the view was drawn at: the Companion writes the same list
+ * without touching the plan's revision, so only this check keeps the web from overwriting it
+ * unseen (forgejo#398). A host on another server checks it against its own list.
+ */
+function basePackingRev(plan: PlanView, operation: PlanOperation): { basePackingRev?: number } {
+  const touchesPacking =
+    (operation.type === "upsert" || operation.type === "remove") &&
+    operation.collection === "packing";
+  if (!touchesPacking || plan.packingRev === undefined) return {};
+  return { basePackingRev: plan.packingRev };
+}
 export const travplanApi = {
   places: async (q: string, language: "de" | "en", kind: "any" | "port" = "any") =>
     (await http().get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
@@ -205,6 +217,7 @@ export const travplanApi = {
         baseRevision: plan.revision,
         clientRef,
         operation,
+        ...basePackingRev(plan, operation),
       })
     ).data,
   propose: async (id: string, request: string) =>

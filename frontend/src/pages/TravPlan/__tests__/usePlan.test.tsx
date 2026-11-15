@@ -76,6 +76,38 @@ describe("travel-plan request lifecycle", () => {
     expect(result.current.error).toBe("errors.PLAN_CONFLICT");
     expect(result.current.busy).toBe(false);
   });
+  it("reloads the shared packing list and says so when the Companion wrote it first (forgejo#398)", async () => {
+    const plan = { ...planFixture(), packingRev: 2 };
+    const fresh = planFixture("trip-one", 1);
+    fresh.packingRev = 5;
+    fresh.state.packing = [
+      {
+        id: "from-app",
+        label: "Charger",
+        category: "",
+        quantity: 1,
+        packed: false,
+        scope: "shared",
+        note: "",
+        manual: true,
+        ownerMemberId: null,
+      },
+    ];
+    mocks.get.mockResolvedValueOnce(plan).mockResolvedValueOnce(fresh);
+    mocks.write.mockRejectedValue({
+      response: { status: 409, data: { error: { code: "PLAN_REVISION_CONFLICT" } } },
+    });
+    const { result } = renderHook(() => usePlan("trip-one"));
+    await waitFor(() => expect(result.current.plan).toEqual(plan));
+    await act(async () => {
+      expect(await result.current.mutate({ type: "remove", collection: "packing", id: "x" })).toBe(
+        false
+      );
+    });
+    expect(result.current.plan?.packingRev).toBe(5);
+    expect(result.current.plan?.state.packing.map((p) => p.label)).toEqual(["Charger"]);
+    expect(result.current.error).toBe("errors.PLAN_REVISION_CONFLICT");
+  });
   it("keeps the last readable plan after a network error and allows an explicit retry", async () => {
     const plan = planFixture();
     mocks.get.mockResolvedValue(plan);

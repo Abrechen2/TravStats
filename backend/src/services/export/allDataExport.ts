@@ -385,14 +385,17 @@ export function withPublicStays<T extends { dawarichStays: Array<{ evidence: unk
 function ownPackingOnly<T>(user: T): T {
   const record = user as unknown as {
     id?: string;
-    trips?: Array<{ packingList?: { items: unknown } | null }>;
+    trips?: Array<{
+      packingList?: { items: unknown } | null;
+      travelPlan?: { state?: unknown } | null;
+    }>;
   };
   if (!record.id || !Array.isArray(record.trips)) return user;
   const viewer = { principal: sameServerAccount(record.id), isTripOwner: true };
   return {
     ...user,
-    trips: record.trips.map((trip) =>
-      trip.packingList
+    trips: record.trips.map((trip) => {
+      const withList = trip.packingList
         ? {
             ...trip,
             packingList: {
@@ -400,9 +403,22 @@ function ownPackingOnly<T>(user: T): T {
               items: projectFor(normalizeItems(trip.packingList.items), viewer),
             },
           }
-        : trip
-    ),
+        : trip;
+      return withoutPlanPacking(withList);
+    }),
   };
+}
+
+/**
+ * `travelPlan.state.packing` is read-only history since the single store: it was written while
+ * the plan still kept its own list, so it can hold what co-planners packed for themselves, and
+ * the account's own share is already exported as the trip's `packingList`.
+ */
+function withoutPlanPacking<T extends { travelPlan?: { state?: unknown } | null }>(trip: T): T {
+  const state = trip.travelPlan?.state;
+  if (!trip.travelPlan || !state || typeof state !== "object" || !("packing" in state)) return trip;
+  const { packing: _legacy, ...rest } = state as Record<string, unknown>;
+  return { ...trip, travelPlan: { ...trip.travelPlan, state: rest } };
 }
 
 /**

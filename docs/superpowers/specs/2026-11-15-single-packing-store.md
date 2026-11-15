@@ -88,7 +88,7 @@ remapped. Re-running changes nothing.
 |---|---|---|---|
 | P1 | server | schema (items JSON shape, `packing_mutations`), legacy merge PUT, rich GET/PUT, privacy, capability flag | built (f9327f31b + f2f6481d7) |
 | P2 | server | migration B → A, TravPlan operations on A, `state.packing` read-only | built (f9327f31b + f2f6481d7) |
-| P3 | web | TravPlan packing UI and trip packing card read/write A (rich) | open |
+| P3 | web | TravPlan packing UI and trip packing card read/write A (rich) | built (see commits on fix/packing-web) |
 | P4 | Companion | stop A → B copy when `packingSingleStore`; optional rich fields in the app | open |
 | P5 | server | drop `state.packing` from the plan schema | open |
 
@@ -115,6 +115,15 @@ remapped. Re-running changes nothing.
 - **Capability** is `capabilities: { packingSingleStore: true }` in `GET /api/v1/version`.
 - **Export**: the account export carries the owner's projection of each trip's list in the rich shape;
   `travelPlan.state.packing` (read-only history) is still exported as stored.
+- **P3 (web):** the trip card reads/writes `?shape=rich` and sends every rich field back as read; its add form
+  carries category, quantity and scope (note and assignee are not editable on the card, they round-trip).
+  The plan UI already reads the filtered rich projection through the plan view; plan packing writes now send
+  `basePackingRev` (also forwarded to a host on another server, which checks its own list) and a 409 reloads the view and shows
+  `PLAN_REVISION_CONFLICT`. No automatic replay of a refused plan edit: the user re-applies it on the fresh list.
+- **P3 export fix:** `travelPlan.state.packing` is no longer exported (it can hold co-planners' personal items);
+  the owner's projection travels as the trip's `packingList`. This supersedes the Export line above.
+- **Known gap:** the plan view's ETag is `revision-member`, so the 30 s poll does not notice a Companion write to
+  the list (the plan revision does not move); `basePackingRev` turns that into a visible 409 instead of an overwrite.
 - Receipts older than 30 days are pruned on the next write of that trip.
 
 ## Tests that must exist

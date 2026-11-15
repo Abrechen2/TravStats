@@ -21,10 +21,19 @@ vi.mock("../../../lib/api/companionData", async () => {
 import TripPackingCard from "../TripPackingCard";
 import { isTripFinished } from "../tripFinished";
 
+const rich = {
+  category: "",
+  quantity: 1,
+  scope: "personal" as const,
+  note: "",
+  manual: true,
+  ownerPrincipal: null,
+  assigneePrincipal: null,
+};
 const list = (rev: number, labels: Array<[string, boolean]>) => ({
   rev,
   updatedAt: "2026-10-30T10:00:00.000Z",
-  items: labels.map(([label, done], i) => ({ id: `i${i}`, label, done })),
+  items: labels.map(([label, done], i) => ({ id: `i${i}`, label, done, ...rich })),
 });
 const stale = () =>
   Object.assign(new Error("409"), {
@@ -47,12 +56,74 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     await waitFor(() => expect(put).toHaveBeenCalled());
     const [tripId, items, baseRev, mutationId] = put.mock.calls[0];
     expect(tripId).toBe("t1");
-    expect(items).toEqual([{ id: "i0", label: "Passport", done: true }]);
+    expect(items).toEqual([{ id: "i0", label: "Passport", done: true, ...rich }]);
     expect(baseRev).toBe(3);
     expect(typeof mutationId).toBe("string");
     await waitFor(() =>
       expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true)
     );
+  });
+
+  it("sends every rich field back unchanged, so a tick cannot reset a shared item's assignee or note", async () => {
+    const assignee = { server: "local", subjectId: "u2" };
+    get.mockReset().mockResolvedValue({
+      rev: 2,
+      updatedAt: null,
+      items: [
+        {
+          id: "s1",
+          label: "Tent",
+          done: false,
+          category: "Camping",
+          quantity: 2,
+          scope: "shared",
+          note: "4 person",
+          manual: false,
+          ownerPrincipal: null,
+          assigneePrincipal: assignee,
+        },
+      ],
+    });
+    put.mockResolvedValue(list(3, [["Tent", true]]));
+    render(<TripPackingCard tripId="t1" />);
+    expect(await screen.findByText(/2 × Tent/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(put).toHaveBeenCalled());
+    expect(put.mock.calls[0][1]).toEqual([
+      {
+        id: "s1",
+        label: "Tent",
+        done: true,
+        category: "Camping",
+        quantity: 2,
+        scope: "shared",
+        note: "4 person",
+        manual: false,
+        ownerPrincipal: null,
+        assigneePrincipal: assignee,
+      },
+    ]);
+  });
+
+  it("adds an item with the chosen category, quantity and scope", async () => {
+    get.mockReset().mockResolvedValue(list(1, []));
+    put.mockResolvedValue(list(2, []));
+    render(<TripPackingCard tripId="t1" />);
+    await userEvent.type(await screen.findByLabelText("trips:packing.addLabel"), "Sunscreen");
+    await userEvent.type(screen.getByLabelText("trips:packing.categoryLabel"), "Beach");
+    const qty = screen.getByLabelText("trips:packing.quantityLabel");
+    await userEvent.clear(qty);
+    await userEvent.type(qty, "3");
+    await userEvent.selectOptions(screen.getByLabelText("trips:packing.scopeLabel"), "shared");
+    await userEvent.click(screen.getByRole("button", { name: "trips:packing.add" }));
+    await waitFor(() => expect(put).toHaveBeenCalled());
+    expect(put.mock.calls[0][1][0]).toMatchObject({
+      label: "Sunscreen",
+      category: "Beach",
+      quantity: 3,
+      scope: "shared",
+      manual: true,
+    });
   });
 
   it("reloads and says so when the app changed the list first, instead of overwriting it", async () => {
@@ -152,7 +223,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     it("leaves an upcoming or running trip fully editable", async () => {
       render(<TripPackingCard tripId="t1" endDate="2999-01-01" />);
       expect(await screen.findByRole("checkbox")).toBeInTheDocument();
-      expect(screen.getByRole("textbox")).toBeInTheDocument();
+      expect(screen.getByLabelText("trips:packing.addLabel")).toBeInTheDocument();
     });
   });
 

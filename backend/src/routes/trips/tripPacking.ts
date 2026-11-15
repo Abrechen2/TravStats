@@ -9,7 +9,7 @@ import {
   putRichPackingListSchema,
   type RichPackingItem,
 } from "../../schemas/companionData";
-import { sameServerAccount, type PackingViewer } from "../../services/packing/items";
+import { samePrincipal, sameServerAccount, type PackingViewer } from "../../services/packing/items";
 import { readVisible, writeVisible } from "../../services/packing/store";
 import { assertAssignable } from "../../services/travplan/packingBridge";
 import { resolveTrip } from "./resolveTrip";
@@ -67,14 +67,29 @@ router.put("/trips/:id/packing", async (req: AuthRequest, res: Response, next: N
     const userId = req.userId!;
     const trip = await resolveTrip(userId, req.params.id);
     const { items, baseRev, mutationId } = parsed.data;
-    if (rich)
+    if (rich) {
+      // An assignee who left the plan stays on the items already assigned to them: the check
+      // applies to a NEW assignment only, or one stale assignment would block every edit.
+      const stored = new Map(
+        ((await readVisible(trip.id, ownerViewer(userId), true)).items as RichPackingItem[]).map(
+          (i) => [i.id, i]
+        )
+      );
       await assertAssignable(
         trip.id,
         userId,
         (items as RichPackingItem[]).flatMap((i) =>
-          i.scope === "shared" && i.assigneePrincipal ? [i.assigneePrincipal] : []
+          i.scope === "shared" &&
+          i.assigneePrincipal &&
+          !(
+            stored.get(i.id)?.scope === "shared" &&
+            samePrincipal(stored.get(i.id)?.assigneePrincipal ?? null, i.assigneePrincipal)
+          )
+            ? [i.assigneePrincipal]
+            : []
         )
       );
+    }
     res.json(
       await writeVisible({
         tripId: trip.id,
