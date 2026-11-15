@@ -13,7 +13,7 @@ const result = z.object({
   flightId: z.string().uuid(),
   status: z.enum(BULK_EDIT_RESULT_STATUSES),
   code: z
-    .enum(["FLIGHT_NOT_FOUND", "UPDATE_FAILED"])
+    .enum(["FLIGHT_NOT_FOUND", "UPDATE_FAILED", "VERSION_CONFLICT"])
     .optional()
     .describe("Why this flight failed; absent unless `status` is `failed`"),
 });

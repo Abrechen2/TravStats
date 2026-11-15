@@ -33,6 +33,8 @@ export const flightBulkEditSchema = z
       .optional(),
     tags: listEdit(z.string().trim().min(1).max(40)).optional(),
     companions: listEdit(z.string().trim().min(1).max(100)).optional(),
+    /** id -> the `updatedAt` the client read the flight at; a flight that moved on answers `VERSION_CONFLICT`. */
+    baseVersions: z.record(z.string().uuid(), z.iso.datetime({ offset: true })).optional(),
   })
   .refine((body) => body.trip || body.tags || body.companions, {
     message: "Name at least one of trip, tags or companions",

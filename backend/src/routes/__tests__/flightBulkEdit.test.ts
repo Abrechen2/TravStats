@@ -4,6 +4,8 @@ import app from "../../index";
 import { observeQueries, prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import * as propagation from "../../services/sharing/propagate";
+import { makeAccount, sharedPair, wipeShareTestAccounts } from "./sharingFixtures";
 
 /**
  * forgejo#217 — trip, tags and companions over an explicit selection. One
@@ -265,5 +267,78 @@ describe("POST /flights/bulk-edit", () => {
         "Bo",
       ]);
     });
+  });
+});
+
+describe("POST /flights/bulk-edit — propagation and versions (followups-1)", () => {
+  let anna: Awaited<ReturnType<typeof makeAccount>>;
+  let ben: Awaited<ReturnType<typeof makeAccount>>;
+  let pair: Awaited<ReturnType<typeof sharedPair>>;
+
+  const send = (body: object) =>
+    request(app).post("/api/v1/flights/bulk-edit").set("Cookie", anna.cookie).send(body);
+
+  beforeEach(async () => {
+    await wipeShareTestAccounts();
+    anna = await makeAccount("anna");
+    ben = await makeAccount("ben");
+    pair = await sharedPair(anna, ben);
+  });
+
+  afterAll(async () => {
+    await wipeShareTestAccounts();
+  });
+
+  it("a failed share propagation fails the flight and takes its trip change back", async () => {
+    const spy = jest
+      .spyOn(propagation, "propagateWrite")
+      .mockRejectedValueOnce(new Error("share is down"));
+    try {
+      const res = await send({ flightIds: [pair.full.flight.id], trip: { mode: "clear" } });
+      expect(res.status).toBe(200);
+      expect(res.body.results).toEqual([
+        { flightId: pair.full.flight.id, status: "failed", code: "UPDATE_FAILED" },
+      ]);
+      expect(res.body.summary.failed).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+    const row = await prisma.flight.findUniqueOrThrow({ where: { id: pair.full.flight.id } });
+    expect(row.tripId).toBe(pair.full.trip.id);
+  });
+
+  it("answers VERSION_CONFLICT for a flight that moved on and writes the others", async () => {
+    const stale = pair.full.flight;
+    const fresh = await prisma.flight.create({
+      data: {
+        userId: anna.id,
+        flightNumber: "LH2",
+        depIata: "MUC",
+        arrIata: "FRA",
+        depLat: 48.35,
+        depLon: 11.79,
+        arrLat: 50.03,
+        arrLon: 8.56,
+        departureTime: new Date("2026-11-03T06:00:00Z"),
+        arrivalTime: new Date("2026-11-03T07:05:00Z"),
+        status: "scheduled",
+        dataSource: "manual",
+      },
+    });
+    const staleBase = stale.updatedAt.toISOString();
+    const freshBase = fresh.updatedAt.toISOString();
+    await prisma.$executeRawUnsafe(`UPDATE "flights" SET notes = 'moved' WHERE id = $1`, stale.id);
+    const res = await send({
+      flightIds: [stale.id, fresh.id],
+      tags: { mode: "add", values: ["x"] },
+      baseVersions: { [stale.id]: staleBase, [fresh.id]: freshBase },
+    });
+    expect(res.body.results).toEqual([
+      { flightId: stale.id, status: "failed", code: "VERSION_CONFLICT" },
+      { flightId: fresh.id, status: "updated" },
+    ]);
+    expect((await prisma.flight.findUniqueOrThrow({ where: { id: stale.id } })).tags).not.toContain(
+      "x"
+    );
   });
 });

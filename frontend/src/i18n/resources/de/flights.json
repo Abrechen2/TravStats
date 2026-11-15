@@ -750,7 +750,8 @@
       "retryFailed_other": "Die {{count}} fehlgeschlagenen erneut versuchen",
       "code": {
         "FLIGHT_NOT_FOUND": "nicht mehr vorhanden",
-        "UPDATE_FAILED": "konnte nicht gespeichert werden"
+        "UPDATE_FAILED": "konnte nicht gespeichert werden",
+        "VERSION_CONFLICT": "wurde inzwischen woanders geändert – Liste neu laden und erneut wählen"
       }
     },
     "outcomeUnknown": "Ob etwas geändert wurde, ist unklar – die Antwort kam nicht an. Erneut versuchen ändert nichts doppelt; die Liste neu zu laden zeigt den Stand.",

@@ -750,7 +750,8 @@
       "retryFailed_other": "Try the {{count}} failed ones again",
       "code": {
         "FLIGHT_NOT_FOUND": "no longer exists",
-        "UPDATE_FAILED": "could not be saved"
+        "UPDATE_FAILED": "could not be saved",
+        "VERSION_CONFLICT": "was changed elsewhere in the meantime – reload the list and choose again"
       }
     },
     "outcomeUnknown": "Whether anything changed is unknown – the answer did not arrive. Trying again changes nothing twice; reloading the list shows where things stand.",

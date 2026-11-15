@@ -28,7 +28,7 @@ export interface FlightBulkEditResult {
   flightId: string;
   status: "updated" | "unchanged" | "failed";
   /** Present only for `failed`. */
-  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED";
+  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED" | "VERSION_CONFLICT";
 }
 
 export interface FlightBulkEditAnswer {

@@ -1,5 +1,7 @@
-import { prisma } from "../../db";
-import { propagateWrites, shareSnapshots } from "../sharing/propagate";
+import { prisma, type DbTransaction } from "../../db";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
+import { claimVersion } from "../sync/versionPrecondition";
+import { syncEntity } from "../sync/entities";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { canonicalizeCompanionName } from "../../utils/companionName";
@@ -34,7 +36,7 @@ export interface BulkEditResult {
   flightId: string;
   status: BulkEditStatus;
   /** Why it failed: `FLIGHT_NOT_FOUND`, or `UPDATE_FAILED` for anything the database refused. */
-  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED";
+  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED" | "VERSION_CONFLICT";
 }
 
 /** Union in order: what the flight has, then what is new. Exact-match dedupe. */
@@ -178,23 +180,48 @@ function planFor(
   return Object.keys(data).length === 0 ? null : { data, companionIds };
 }
 
-async function writePlan(userId: string, flightId: string, plan: Plan): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    if (plan.companionIds !== null) {
-      await tx.flightCompanion.deleteMany({ where: { flightId } });
-      if (plan.companionIds.length > 0) {
-        await tx.flightCompanion.createMany({
-          data: linkRowsFor(plan.companionIds).map((row) => ({ ...row, flightId })),
-          skipDuplicates: true,
-        });
+/**
+ * One flight, one transaction. The version claim and the share propagation sit
+ * INSIDE it: a propagation that fails takes the flight's write (and its claim)
+ * back, so the row answers `failed` instead of silently leaving the members'
+ * copies behind. False when the flight moved on since the client read it.
+ */
+async function writePlan(
+  userId: string,
+  flightId: string,
+  plan: Plan,
+  base: string | undefined
+): Promise<boolean> {
+  return prisma.$transaction(
+    async (tx: DbTransaction) => {
+      if (base !== undefined) {
+        const entity = syncEntity("flight");
+        if (!entity) throw new Error("bulk edit: flight is not a sync entity");
+        if (!(await claimVersion(entity, flightId, userId, base, tx))) return false;
       }
-    }
-    // share-exempt: bulkEditFlights propagates the moved flights once for the whole edit; tags and companions are private
-    await tx.flight.update({
-      where: { id: flightId, userId },
-      data: { ...plan.data, lastModifiedBy: "user" },
-    });
-  });
+      // A trip change moves a flight into or out of a shared trip, which the
+      // other members' copies must follow; tags and companions are private.
+      const moves = plan.data.tripId !== undefined;
+      const before = moves ? await shareSnapshot(tx, "flight", flightId) : undefined;
+      if (plan.companionIds !== null) {
+        await tx.flightCompanion.deleteMany({ where: { flightId } });
+        if (plan.companionIds.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(plan.companionIds).map((row) => ({ ...row, flightId })),
+            skipDuplicates: true,
+          });
+        }
+      }
+      // share-exempt: propagated just below, inside this transaction, when the trip moved; tags and companions are private
+      await tx.flight.update({
+        where: { id: flightId, userId },
+        data: { ...plan.data, lastModifiedBy: "user" },
+      });
+      if (moves) await propagateWrite(tx, userId, "flight", flightId, before);
+      return true;
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 export async function bulkEditFlights(
@@ -217,14 +244,6 @@ export async function bulkEditFlights(
       ])
     : new Map<string, Person>();
 
-  // A trip change moves a flight into or out of a shared trip, which the other
-  // members' copies must follow; tags and companions are private and propagate
-  // nothing. Snapshotted and propagated ONCE for the whole edit — per flight
-  // it doubled the queries of a 200-flight edit (the scale test's bound).
-  const moving = edit.trip ? rows.map((r) => r.id) : [];
-  const before = await shareSnapshots(prisma, "flight", moving);
-  const moved: string[] = [];
-
   const touchedTrips = new Set<string>();
   const results: BulkEditResult[] = [];
   for (const flightId of edit.flightIds) {
@@ -239,11 +258,14 @@ export async function bulkEditFlights(
       continue;
     }
     try {
-      await writePlan(userId, flightId, plan);
+      const wrote = await writePlan(userId, flightId, plan, edit.baseVersions?.[flightId]);
+      if (!wrote) {
+        results.push({ flightId, status: "failed", code: "VERSION_CONFLICT" });
+        continue;
+      }
       if (plan.data.tripId !== undefined) {
         if (flight.tripId) touchedTrips.add(flight.tripId);
         if (plan.data.tripId) touchedTrips.add(plan.data.tripId);
-        moved.push(flightId);
       }
       results.push({ flightId, status: "updated" });
     } catch (err: unknown) {
@@ -256,15 +278,6 @@ export async function bulkEditFlights(
       results.push({ flightId, status: "failed", code: "UPDATE_FAILED" });
     }
   }
-  // Like the status below, a failed propagation does not undo the member's own
-  // edits; it is logged, and the copies catch up on the flight's next change.
-  await propagateWrites(prisma, userId, "flight", moved, before).catch((err: unknown) =>
-    logger.error({
-      operation: "flight_bulk_edit_share_propagation_failed",
-      userId,
-      error: err instanceof Error ? err.message : "Unknown error",
-    })
-  );
   // A trip's status follows its flights. A failed recompute does not undo the
   // edits that went through; it is logged and corrected on the trip's next change.
   for (const tripId of touchedTrips) {
