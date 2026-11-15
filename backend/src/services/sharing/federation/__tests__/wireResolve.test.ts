@@ -151,8 +151,19 @@ describe("resolving a wire entry against this server's catalogue", () => {
     const open = await prisma.airport.create({
       data: { name: "New Field", icao: `Q${tag.slice(0, 3)}`, iata: null, lat: 1, lon: 1 },
     });
+    // A random two-letter stem plus "X" collided with the seeded catalogue now and
+    // then (ABX is Albury), so the code is picked from those nothing holds yet.
+    const freeIata = async () => {
+      for (const a of "0123456789") {
+        for (const b of "0123456789") {
+          const code = `${a}${b}X`;
+          if (!(await prisma.airport.findFirst({ where: { iata: code } }))) return code;
+        }
+      }
+      throw new Error("no free test IATA code");
+    };
     const byIata = await prisma.airport.create({
-      data: { name: "Iata Only", iata: `${tag.slice(0, 2)}X`, lat: 2, lon: 2 },
+      data: { name: "Iata Only", iata: await freeIata(), lat: 2, lon: 2 },
     });
     made.airports.push(closed.id, open.id, byIata.id);
     const airport = (icao: string | null, iata: string | null) => ({
@@ -175,7 +186,7 @@ describe("resolving a wire entry against this server's catalogue", () => {
           pickupLon: 1,
           pickupTimezone: "Europe/Lisbon",
           returnStationName: "B",
-          returnAirport: airport("ZZZZ", `${tag.slice(0, 2)}X`),
+          returnAirport: airport("ZZZZ", byIata.iata),
           returnLat: 2,
           returnLon: 2,
           returnTimezone: "Europe/Lisbon",
