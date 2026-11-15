@@ -7,7 +7,7 @@ import {
   flightsForBackend,
   readStoredAnnotation,
   segmentsOf,
-  shiftMarksAfter,
+  removeFlightMarks,
 } from "../emailAnnotationModel";
 
 /** The pure parts of the annotation view, split out of it (forgejo#386 REF-15). */
@@ -31,13 +31,16 @@ describe("segmentsOf", () => {
   });
 });
 
-describe("shiftMarksAfter", () => {
-  it("moves marks of later flights up one index and keeps the removed flight's marks", () => {
-    const shifted = shiftMarksAfter(
+describe("removeFlightMarks", () => {
+  it("drops the removed flight's marks and moves later flights up one index", () => {
+    const shifted = removeFlightMarks(
       [mark(0, 1, "a", 0), mark(2, 3, "b", 1), mark(4, 5, "c", 2)],
       1
     );
-    expect(shifted.map((m) => m.flightIndex)).toEqual([0, 1, 1]);
+    expect(shifted.map((m) => [m.text, m.flightIndex])).toEqual([
+      ["a", 0],
+      ["c", 1],
+    ]);
   });
 });
 

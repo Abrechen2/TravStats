@@ -426,6 +426,9 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
     }
     summary[OUTCOME_COUNTER[result.outcome]]++;
     summary.results.push(result);
+    // A flight deleted since the scan made no provider-side demand worth
+    // pacing after; it always skipped the wait.
+    if (result.reason === "flight_deleted") continue;
 
     // Pace between calls — but skip the wait on the last one.
     if (i < candidates.length - 1) {

@@ -226,6 +226,25 @@ describe("runBulkRefresh", () => {
     expect(prismaMock.flight.update).not.toHaveBeenCalled();
   });
 
+  it("does not wait the pacing delay after a flight deleted between scan and write", async () => {
+    jest.useFakeTimers();
+    try {
+      prismaMock.flight.findMany.mockResolvedValue([
+        { id: "gone", flightNumber: "LH8", departureTime: new Date(Date.now() - 86400000) },
+        { id: "gone2", flightNumber: "LH9", departureTime: new Date(Date.now() - 86400000) },
+      ]);
+      prismaMock.flight.findUnique.mockResolvedValue(null);
+      flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+        flights: [{ airlineIata: "LH" }],
+      });
+      // No timer is advanced: a pacing wait would leave this pending forever.
+      const summary = await runBulkRefresh(USER_ID);
+      expect(summary.noData).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("writes the aircraft type and the actual times the same response carried", async () => {
     prismaMock.flight.findMany.mockResolvedValue([
       { id: "f1", flightNumber: "LX93", departureTime: new Date(Date.now() - 2 * 86400000) },

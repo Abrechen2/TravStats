@@ -21,7 +21,7 @@ import {
   convertStoredFlights,
   readStoredAnnotation,
   flightsForBackend,
-  shiftMarksAfter,
+  removeFlightMarks,
 } from "./emailAnnotationModel";
 import FlightGroundTruth from "./FlightGroundTruth";
 import type { WorkshopDomain } from "../../shared/annotationLabels";
@@ -215,8 +215,8 @@ export default function EmailAnnotation({
   const handleRemoveFlight = (index: number) => {
     if (flights.length > 1) {
       setFlights(flights.filter((_, i) => i !== index));
-      // The removed flight's marks stay; the ones behind it move up an index.
-      setAnnotations(shiftMarksAfter(annotations, index));
+      // The removed flight's marks go with it; the ones behind it move up an index.
+      setAnnotations(removeFlightMarks(annotations, index));
     }
   };
 

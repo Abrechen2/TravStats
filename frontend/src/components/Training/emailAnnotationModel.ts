@@ -102,16 +102,18 @@ export function annotateFailureCode(error: unknown): string | undefined {
 }
 
 /**
- * Marks of the flights behind a removed one move up by one index. The removed
- * flight's own marks are kept — that is what the editor has always done.
+ * The marks after a flight is removed: its own marks go with it (they labelled
+ * values of a flight that no longer exists) and the marks of the flights behind
+ * it move up by one index. Marks without a flight stay.
  */
-export function shiftMarksAfter(annotations: TextMark[], removedIndex: number): TextMark[] {
-  return annotations.map((a) => {
-    if (a.flightIndex !== undefined && a.flightIndex > removedIndex) {
-      return { ...a, flightIndex: a.flightIndex - 1 };
-    }
-    return a;
-  });
+export function removeFlightMarks(annotations: TextMark[], removedIndex: number): TextMark[] {
+  return annotations
+    .filter((a) => a.flightIndex !== removedIndex)
+    .map((a) =>
+      a.flightIndex !== undefined && a.flightIndex > removedIndex
+        ? { ...a, flightIndex: a.flightIndex - 1 }
+        : a
+    );
 }
 
 export interface TextSegment {
