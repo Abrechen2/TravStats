@@ -141,10 +141,6 @@ router.post(
  * ONE successful login or MAX_VERIFY_ATTEMPTS failures, whichever comes first.
  */
 const MAX_VERIFY_ATTEMPTS = 5;
-/** Attempts per challenge hash. In memory: a challenge lives five minutes, and
- *  this instance runs one Node process per container. */
-const attemptsByChallenge = new Map<string, number>();
-
 router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = verifyTwoFactorSchema.parse(req.body);
@@ -171,28 +167,32 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
       // not force the password to be retyped. After MAX_VERIFY_ATTEMPTS the
       // challenge is destroyed, so the five-minute window is not an unlimited
       // guessing budget.
-      const attempts = (attemptsByChallenge.get(hashed) ?? 0) + 1;
-      attemptsByChallenge.set(hashed, attempts);
+      // Counted in the database (forgejo#415 N10): a restart or a second
+      // instance must not refill the budget. The increment is atomic, and is
+      // scoped to THIS challenge so a newer one is not charged for an old guess.
+      const charged = await prisma.user.updateManyAndReturn({
+        where: { id: user.id, twoFactorToken: hashed },
+        data: { twoFactorAttempts: { increment: 1 } },
+        select: { twoFactorAttempts: true },
+      });
+      const attempts = charged[0]?.twoFactorAttempts ?? MAX_VERIFY_ATTEMPTS;
       logger.warn({ operation: "two_factor_verify_failed", userId: user.id, attempts });
 
       if (attempts >= MAX_VERIFY_ATTEMPTS) {
-        attemptsByChallenge.delete(hashed);
         await prisma.user.updateMany({
           where: { id: user.id, twoFactorToken: hashed },
-          data: { twoFactorToken: null, twoFactorTokenExpiry: null },
+          data: { twoFactorToken: null, twoFactorTokenExpiry: null, twoFactorAttempts: 0 },
         });
       }
       throw new AppError("That code is not right", 401);
     }
-    attemptsByChallenge.delete(hashed);
-
     // Burn the challenge CONDITIONALLY: `updateMany` scoped to the token value
     // means two requests racing on one challenge produce exactly one winner, the
     // same guarantee consumeRecoveryCode relies on. A plain update would let both
     // proceed and mint two sessions from one challenge.
     const burned = await prisma.user.updateMany({
       where: { id: user.id, twoFactorToken: hashed },
-      data: { twoFactorToken: null, twoFactorTokenExpiry: null },
+      data: { twoFactorToken: null, twoFactorTokenExpiry: null, twoFactorAttempts: 0 },
     });
     if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);
     res.clearCookie("twofa_token", { path: "/" });

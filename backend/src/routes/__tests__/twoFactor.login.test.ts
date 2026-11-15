@@ -259,4 +259,34 @@ describe("login with two-factor", () => {
     const row = await prisma.user.findUnique({ where: { id: userId } });
     expect(row?.twoFactorToken).toBeNull();
   });
+
+  // forgejo#415 N10: the counter used to live in a Map, so a restart (or a second
+  // instance) handed the attacker five fresh guesses. A previous process is
+  // simulated by writing the count it would have left behind.
+  it("keeps the wrong-code count across a restart", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const cookies = cookiesOf(login);
+
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 4 } });
+
+    const res = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookies)
+      .send({ code: "000000" });
+    expect(res.status).toBe(401);
+
+    const row = await prisma.user.findUnique({ where: { id: userId } });
+    expect(row?.twoFactorToken).toBeNull();
+  });
+
+  it("gives a freshly issued challenge a fresh attempt budget", async () => {
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 4 } });
+    await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const row = await prisma.user.findUnique({ where: { id: userId } });
+    expect(row?.twoFactorAttempts).toBe(0);
+  });
 });
