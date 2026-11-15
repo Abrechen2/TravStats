@@ -33,6 +33,7 @@
  * | 04:40 | Dawarich country-day sweep |
  * | 04:55 | nightly photo-journey scan (opt-in accounts) |
  * | every :25 | document sweep |
+ * | 05:35 | public-URL reachability check (publicUrlCheckScheduler.ts) |
  *
  * The ordering is not just about avoiding contention. Two of those jobs write
  * the very columns these checks read, and reading them first would produce

@@ -5,9 +5,11 @@
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
+  publicUrlCheckResponseSchema,
   readinessIdParamsSchema,
   readinessResponseSchema,
   snoozeBodySchema,
+  invitationSeenBodySchema,
 } from "../../../schemas/readiness";
 
 const tags = ["Readiness"];
@@ -96,5 +98,50 @@ registry.registerPath({
     204: { description: "Acknowledged" },
     403: demoRefused,
     404: { description: "READINESS_NOTE_NOT_FOUND", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/readiness/invitation/seen",
+  summary: "Mark what the invitation card showed as seen",
+  description:
+    "With `keys` (the `invitation.keys` of the GET the page rendered, at most 100): adds those " +
+    "that are still current to the seen set; a key added since stays unseen. Without a body: " +
+    "stores all current keys, replacing the earlier set. The page calls it once per open.",
+  tags,
+  request: { body: { content: { "application/json": { schema: invitationSeenBodySchema } } } },
+  responses: {
+    204: { description: "Stored" },
+    400: { description: "`keys` is not a list of at most 100 strings", content: errorContent },
+    403: demoRefused,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/readiness/invitation/snooze",
+  summary: "Hide the invitation card for one day",
+  tags,
+  responses: { 204: { description: "Snoozed for one day" }, 403: demoRefused },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/admin/public-url/check",
+  summary: "Probe the instance's own public URL now",
+  description:
+    "Requests `<publicUrl>/health` with a one-time nonce (10 s timeout, redirects not followed). " +
+    "It is ok only for a 2xx answer with `status: ok` that echoes the nonce, so a public name " +
+    "pointing at another instance reads `NOT_THIS_INSTANCE`. `NO_PUBLIC_URL` and " +
+    "`OUTBOUND_DISABLED` store nothing; every other outcome is stored and feeds the " +
+    "`admin.publicUrl` readiness item. Always 200: a probe that could not run says why in `errorCode`.",
+  tags: ["Admin"],
+  responses: {
+    200: {
+      description: "The probe's outcome",
+      content: { "application/json": { schema: publicUrlCheckResponseSchema } },
+    },
+    403: { description: "Not an admin", content: errorContent },
   },
 });

@@ -54,6 +54,32 @@ export const readinessResponseSchema = z.object({
   }),
   items: z.array(readinessItemSchema),
   notes: z.array(readinessNoteSchema),
+  invitation: z.object({
+    show: z.boolean(),
+    reason: z.enum(["update", "required"]).nullable(),
+    snoozedUntil: z.string().datetime().nullable(),
+    keys: z.array(z.string()),
+  }),
+  banner: z.object({ show: z.boolean(), itemIds: z.array(z.string()) }),
+});
+
+export const publicUrlCheckResponseSchema = z.object({
+  ok: z.boolean(),
+  checkedAt: z.string().datetime(),
+  url: z.string().nullable(),
+  httpStatus: z.number().int().nullable(),
+  errorCode: z
+    .enum([
+      "NO_PUBLIC_URL",
+      "OUTBOUND_DISABLED",
+      "TIMEOUT",
+      "DNS",
+      "TLS",
+      "CONNECTION",
+      "HTTP_STATUS",
+      "NOT_THIS_INSTANCE",
+    ])
+    .nullable(),
 });
 
 export const readinessIdParamsSchema = z.object({ id: z.string().min(1).max(128) });
@@ -61,3 +87,8 @@ export const readinessIdParamsSchema = z.object({ id: z.string().min(1).max(128)
 export const snoozeBodySchema = z
   .object({ until: z.string().datetime({ offset: true }).optional() })
   .strict();
+
+/** `POST /readiness/invitation/seen`: the keys the page rendered (optional; none = all current keys). */
+export const invitationSeenBodySchema = z.object({
+  keys: z.array(z.string().min(1).max(200)).max(100).optional(),
+});

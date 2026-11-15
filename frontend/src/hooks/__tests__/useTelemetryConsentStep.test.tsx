@@ -107,4 +107,27 @@ describe("useTelemetryConsentStep", () => {
     await waitFor(() => expect(mocks.get).toHaveBeenCalled());
     expect(result.current.shouldShow).toBe(false);
   });
+
+  it("is not settled until the consent question has loaded (the readiness card waits for it)", async () => {
+    let answer!: (v: unknown) => void;
+    mocks.get.mockReturnValue(new Promise((r) => (answer = r)));
+    const { result } = renderHook(() =>
+      useTelemetryConsentStep({ isAdminSession: true, ...AFTER_WHATS_NEW })
+    );
+    expect(result.current.settled).toBe(false);
+    await act(async () => answer(status("granted")));
+    expect(result.current.settled).toBe(true);
+  });
+
+  it("is settled for a non-admin and after a failed read", async () => {
+    const plain = renderHook(() =>
+      useTelemetryConsentStep({ isAdminSession: false, ...AFTER_WHATS_NEW })
+    );
+    await waitFor(() => expect(plain.result.current.settled).toBe(true));
+    mocks.get.mockRejectedValue(new Error("down"));
+    const admin = renderHook(() =>
+      useTelemetryConsentStep({ isAdminSession: true, ...AFTER_WHATS_NEW })
+    );
+    await waitFor(() => expect(admin.result.current.settled).toBe(true));
+  });
 });

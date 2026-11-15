@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import ReadinessSection from "../ReadinessSection";
 import {
   fetchReadiness,
+  markInvitationSeen,
   optOutReadinessItem,
   snoozeReadinessItem,
   type ReadinessItem,
@@ -14,12 +15,14 @@ import {
 import { groupReadiness } from "../readinessModel";
 import { useAuthStore } from "../../../../store/authStore";
 
-vi.mock("../../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => false }));
+const demoFlag = vi.hoisted(() => ({ on: false }));
+vi.mock("../../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => demoFlag.on }));
 vi.mock("../../../../lib/api/readiness", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../lib/api/readiness")>();
   return {
     ...actual,
     fetchReadiness: vi.fn(),
+    markInvitationSeen: vi.fn().mockResolvedValue(undefined),
     snoozeReadinessItem: vi.fn().mockResolvedValue(undefined),
     optOutReadinessItem: vi.fn().mockResolvedValue(undefined),
     clearReadinessItemState: vi.fn().mockResolvedValue(undefined),
@@ -59,6 +62,8 @@ const response = (items: ReadinessItem[], notes: ReadinessNote[] = []): Readines
   summary: { required: 0, recommended: 0, unknown: 0, newNotes: 0, blockedByAdmin: 0, ready: 0 },
   items,
   notes,
+  invitation: { show: false, reason: null, snoozedUntil: null, keys: [] },
+  banner: { show: false, itemIds: [] },
 });
 
 function setUser(isAdmin: boolean): void {
@@ -82,7 +87,55 @@ const groupOf = (id: string): string | null =>
 describe("readiness page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    demoFlag.on = false;
     setUser(true);
+  });
+
+  it("tells the server the invitation was seen exactly once per open, even across re-renders", async () => {
+    vi.mocked(fetchReadiness).mockResolvedValue(response([item({ id: "a" })]));
+    const view = render(
+      <MemoryRouter>
+        <ReadinessSection />
+      </MemoryRouter>
+    );
+    await screen.findByText("readiness:check.a.title");
+    view.rerender(
+      <MemoryRouter>
+        <ReadinessSection />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(markInvitationSeen).toHaveBeenCalledTimes(1));
+  });
+
+  it("posts the keys of the response it rendered to invitation/seen", async () => {
+    const res = response([item({ id: "a" })]);
+    res.invitation = { show: true, reason: "required", snoozedUntil: null, keys: ["a", "n.1"] };
+    show(res);
+    await waitFor(() => expect(markInvitationSeen).toHaveBeenCalledWith(["a", "n.1"]));
+  });
+
+  it("does not write invitation/seen for the demo account", async () => {
+    demoFlag.on = true;
+    show(response([item({ id: "a" })]));
+    await screen.findByText("readiness:check.a.title");
+    expect(markInvitationSeen).not.toHaveBeenCalled();
+  });
+
+  it("does not mark the invitation seen when the page itself failed to load", async () => {
+    vi.mocked(fetchReadiness).mockRejectedValue(new Error("500"));
+    render(
+      <MemoryRouter>
+        <ReadinessSection />
+      </MemoryRouter>
+    );
+    await screen.findByText("readiness:error.title");
+    expect(markInvitationSeen).not.toHaveBeenCalled();
+  });
+
+  it("still renders the page when invitation/seen fails", async () => {
+    vi.mocked(markInvitationSeen).mockRejectedValueOnce(new Error("500"));
+    show(response([item({ id: "a" })]));
+    expect(await screen.findByText("readiness:check.a.title")).toBeInTheDocument();
   });
 
   it("orders the groups muss, neu, empfohlen, Braucht den Admin, bereit", async () => {

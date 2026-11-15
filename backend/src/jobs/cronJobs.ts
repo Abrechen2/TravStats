@@ -120,6 +120,12 @@ export const CRON_JOBS: CronJob[] = [
     start: async () => (await import("./syncRetentionScheduler")).startSyncRetentionScheduler(),
     stop: async () => (await import("./syncRetentionScheduler")).stopSyncRetentionScheduler(),
   },
+  // Public-URL reachability probe for the readiness check, daily 05:35 (spec 2026-11-14 §12).
+  {
+    name: "public_url_check",
+    start: async () => (await import("./publicUrlCheckScheduler")).startPublicUrlCheckScheduler(),
+    stop: async () => (await import("./publicUrlCheckScheduler")).stopPublicUrlCheckScheduler(),
+  },
   // TravTrack diagnostics log retention, daily 03:40 and once now.
   {
     name: "travtrack_diagnostics_retention",

@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useRowCopy } from "../Settings/rowCopy";
 import { InputControl, SettingItem, useGroupSave } from "../ui/settings";
 import { addressProblem } from "./fieldChecks";
+import PublicUrlCheck from "./PublicUrlCheck";
 import GroupFooter from "./GroupFooter";
 import InstanceGate from "./InstanceGate";
 import { useInstanceStore } from "./instanceStore";
@@ -81,7 +82,12 @@ function Groups({ settings }: { settings: InstanceSettings }): JSX.Element {
             onChange={(next) => general.edit({ frontendUrl: next })}
           />
         }
-      />
+      >
+        <PublicUrlCheck
+          unsaved={general.isChanged("frontendUrl")}
+          savedUrl={settings.frontendUrl ?? ""}
+        />
+      </SettingItem>
       <GroupFooter group={general} disabled={invalid} />
     </section>
   );

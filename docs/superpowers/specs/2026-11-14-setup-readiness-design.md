@@ -231,3 +231,68 @@ Ownership: the backend owns ids, revisions, evaluation and the catalogue; the fr
 DE/EN copy under the `readiness` namespace. The contract test covers both sides: every key the
 catalogue names exists in DE and EN, every `action` and note address resolves through
 `resolveAddress`.
+
+## 12. Stage 2 contract (coordinator, 2026-11-15)
+
+Additive to §11. Two packages: **S2a** server (reachability producer, invitation state) and
+**S2b** web (invitation card, admin banner, check button).
+
+`GET /api/v1/readiness` gains two always-present fields:
+```
+invitation: {
+  show: boolean,                  // false while snoozed or nothing new
+  reason: "update" | "required" | null,   // "update" wins when both apply
+  snoozedUntil: string | null,    // ISO
+  keys: string[]                  // the invitation keys behind the card (see below)
+},
+banner: {
+  show: boolean,                  // admins only; always false for other accounts
+  itemIds: string[]               // required admin items with status "needsAction"
+}
+```
+- *Invitation keys* = ids of open notes + ids of `required` items with `needsAction` that the
+  viewer sees and has not snoozed. `show` is true when a key exists that is not in the
+  account's seen set and the account is not snoozed. `unknown` is never a key.
+- `banner` ignores snoozes ("until it is resolved", §4.3); `unknown` never raises it (§9).
+
+Writes (204; demo 403 like other demo writes):
+- `POST /readiness/invitation/seen`: optional body `{ keys: string[] }` (at most 100, zod; 400 on
+  a bad body). With `keys` the server stores the union of the seen set and (`keys` ∩ current
+  keys), so a key that appeared after the viewer's GET stays unseen. Without a body it stores
+  all current keys (replacing the set). The web sends the `invitation.keys` of the response it
+  rendered, once when the page is opened.
+- `GET /readiness` drops seen keys that are no longer current (item resolved, note closed) and
+  writes only when the set changes, so a key that fails again before the next visit is new and
+  shows the card.
+- `POST /readiness/invitation/snooze`: "Morgen erinnern", +1 day.
+
+Persistence: two columns on `users` (seen keys as text[], snoozed-until timestamp).
+
+Reachability producer (admin.publicUrl):
+- `POST /api/v1/admin/public-url/check` (admin; cookie or admin-scope token; rate limited) →
+  200 `{ ok: boolean, checkedAt: string, url: string | null, httpStatus: number | null,
+  errorCode: null | "NO_PUBLIC_URL" | "OUTBOUND_DISABLED" | "TIMEOUT" | "DNS" | "TLS" |
+  "CONNECTION" | "HTTP_STATUS" | "NOT_THIS_INSTANCE" }`.
+- Probe: `GET <publicUrl>/health`, 10 s timeout, redirects not followed. It is ok only when
+  the answer is 2xx, has `status: "ok"`, and the instance identifies itself as this one: the
+  check sends a one-time nonce, and `/health` echoes it only when it holds it. A mere version
+  match is not enough, because prod and the RC can run the same version.
+- `NO_PUBLIC_URL` and `OUTBOUND_DISABLED` store no result, so the item stays `unknown`. Every
+  other outcome stores `publicUrlCheckedAt`, `publicUrlCheckOk` and `publicUrlCheckedUrl`.
+- A daily scheduled run (once, off the hour, UTC) runs the same probe when a public URL is
+  set and outbound traffic is allowed. Never on login or on `GET /readiness`.
+- The evaluator reads the stored result as today. A stored URL that differs from the current
+  public URL reads as `unknown`.
+
+Web (S2b):
+- **Invitation card**, not a modal, in the app shell. It shows when `invitation.show`, but
+  only after the WhatsNewModal and the telemetry consent step have settled, and never at the
+  same time as either. Buttons: "Jetzt ansehen" (→ `/settings/einrichtung`) and "Morgen
+  erinnern" (snooze). Copy by `reason`. No question, no consent.
+- **Admin banner**: a thin bar above the content while `banner.show`. It names the count and
+  links to the page, and it has no close button.
+- The page calls `invitation/seen` once per open.
+- On the public-URL setting row, the admin gets a button "Erreichbarkeit prüfen". It shows the
+  result, with DE/EN copy per `errorCode`.
+- Refresh `GET /readiness` on login, on focus (at most every 10 min) and after any readiness
+  write. No polling loop.

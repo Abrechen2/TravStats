@@ -42,6 +42,14 @@ vi.mock("../lib/api/lodging", async (importActual) => {
   const actual = await importActual<typeof import("../lib/api/lodging")>();
   return { ...actual, getRatingCategories: () => new Promise<never>(() => {}) };
 });
+// App mounts the readiness shell (invitation card, admin banner), which reads
+// `GET /readiness` once the session is confirmed. Same rule as above: the read stays pending,
+// so an App-level route test neither reaches the network nor settles state outside act(), and
+// the shell shows nothing. A test about readiness mocks this module with its own data.
+vi.mock("../lib/api/readiness", async (importActual) => {
+  const actual = await importActual<typeof import("../lib/api/readiness")>();
+  return { ...actual, fetchReadiness: () => new Promise<never>(() => {}) };
+});
 // Every place glyph asks for the user's own place categories. Same rule as above: a test that
 // draws a place neither reaches the network nor settles a state update outside act(), so the
 // list stays pending and the built-in glyphs show. A test about the categories mocks this module.
