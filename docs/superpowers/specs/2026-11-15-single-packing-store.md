@@ -86,8 +86,8 @@ remapped. Re-running changes nothing.
 
 | Phase | Side | What | State |
 |---|---|---|---|
-| P1 | server | schema (items JSON shape, `packing_mutations`), legacy merge PUT, rich GET/PUT, privacy, capability flag | built (SHA_PLACEHOLDER) |
-| P2 | server | migration B → A, TravPlan operations on A, `state.packing` read-only | built (SHA_PLACEHOLDER) |
+| P1 | server | schema (items JSON shape, `packing_mutations`), legacy merge PUT, rich GET/PUT, privacy, capability flag | built (f9327f31b + f2f6481d7) |
+| P2 | server | migration B → A, TravPlan operations on A, `state.packing` read-only | built (f9327f31b + f2f6481d7) |
 | P3 | web | TravPlan packing UI and trip packing card read/write A (rich) | open |
 | P4 | Companion | stop A → B copy when `packingSingleStore`; optional rich fields in the app | open |
 | P5 | server | drop `state.packing` from the plan schema | open |
