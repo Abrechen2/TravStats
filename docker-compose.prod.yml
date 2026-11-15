@@ -29,6 +29,12 @@ services:
     # The script is written from here, not mounted, because this file is
     # installed on its own with a single `curl -O`.
     #
+    # The bootstrap superuser must not share the app's secret: the init script
+    # ends by deleting the password of `postgres`, so it can no longer log in over
+    # the network at all (md5/scram need a password); it stays reachable only
+    # from inside the container (`docker exec travstats-db psql -U postgres`,
+    # local socket). Anyone holding DB_PASSWORD gets the ordinary role only.
+    #
     # EXISTING installs are untouched: initdb scripts run only on an empty
     # volume, and the old `flights` superuser keeps working. To drop its
     # privileges by hand: `ALTER ROLE flights NOSUPERUSER;` (see SECURITY.md).
@@ -42,7 +48,7 @@ services:
         cat > /docker-entrypoint-initdb.d/20-app-role.sh <<'SCRIPT'
         #!/bin/sh
         set -e
-        psql -v ON_ERROR_STOP=1 -v pw="$$APP_DB_PASSWORD" -v db="$$POSTGRES_DB" \
+        psql -v ON_ERROR_STOP=1 -v pw="$$APP_DB_PASSWORD" -v db="$$POSTGRES_DB" -v su="$$POSTGRES_USER" \
           --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<'SQL'
         CREATE ROLE flights LOGIN PASSWORD :'pw' NOSUPERUSER NOCREATEDB NOCREATEROLE;
         CREATE EXTENSION IF NOT EXISTS postgis;
@@ -50,6 +56,7 @@ services:
         CREATE EXTENSION IF NOT EXISTS pg_trgm;
         ALTER DATABASE :"db" OWNER TO flights;
         ALTER SCHEMA public OWNER TO flights;
+        ALTER ROLE :"su" PASSWORD NULL;
         SQL
         SCRIPT
         chmod 755 /docker-entrypoint-initdb.d/20-app-role.sh

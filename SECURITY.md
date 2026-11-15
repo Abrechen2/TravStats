@@ -103,7 +103,7 @@
 
 - Per-account login backoff on top of the per-IP limiter: 10 consecutive failures lock one username for 30 s, doubling per further failure up to 15 min, reset on success; attempts made while locked do not extend it, so a real user is delayed, never locked out for good
 - The two-factor attempt counter is stored per challenge in the database (five wrong codes destroy it), so a restart does not refill it
-- A fresh `docker-compose.prod.yml` install runs the app as the ordinary role `flights`, not a superuser; the bootstrap superuser `postgres` only creates the extensions at first start. An existing install keeps its old superuser role; to drop it: `ALTER ROLE flights NOSUPERUSER;` (postgis, unaccent and pg_trgm already exist there, so the migrations need nothing more). Backup and restore detect the role: an ordinary role keeps the extensions in place and the restore drops only the app's own tables, types, sequences and functions, so no superuser is needed after install
+- A fresh `docker-compose.prod.yml` install runs the app as the ordinary role `flights`, not a superuser; the bootstrap superuser `postgres` only creates the extensions at first start and then loses its password (reachable only through `docker exec`, never over the network, and never with the app's secret). An existing install keeps its old superuser role; to drop it: `ALTER ROLE flights NOSUPERUSER;` (postgis, unaccent and pg_trgm already exist there, so the migrations need nothing more). Backup and restore detect the role: an ordinary role keeps the extensions in place and the restore drops only the app's own tables, types, sequences and functions, so no superuser is needed after install
 
 ### Logging & Monitoring
 

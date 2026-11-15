@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import * as fs from "fs";
 import { Transform } from "stream";
+import { StringDecoder } from "string_decoder";
 import logger from "../../utils/logger";
 
 /** What psql prints just before a migration's SQL (`restoreMigrations.ts`), so a failure can name it. */
@@ -125,6 +126,7 @@ const SKIPPED_COPY = new RegExp(`^COPY (?:public\\.spatial_ref_sys|${EXTENSION_S
  * row can never start a statement, because the state machine is inside COPY).
  */
 export function createNonSuperuserDumpFilter(): Transform {
+  const decoder = new StringDecoder("utf8");
   let rest = "";
   let inCopy = false;
   let skippingCopy = false;
@@ -156,10 +158,12 @@ export function createNonSuperuserDumpFilter(): Transform {
   };
   return new Transform({
     transform(chunk: Buffer, _enc, cb) {
-      cb(null, emit(chunk.toString("utf8"), false));
+      // A multibyte character split across two chunks must not be decoded half by half.
+      cb(null, emit(decoder.write(chunk), false));
     },
     flush(cb) {
-      cb(null, rest ? emit("", true).replace(/\n$/, "") : "");
+      const tail = decoder.end();
+      cb(null, rest || tail ? emit(tail, true).replace(/\n$/, "") : "");
     },
   });
 }

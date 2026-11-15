@@ -5,7 +5,7 @@ import {
   createNonSuperuserDumpFilter,
 } from "../restorePsql";
 
-async function filtered(chunks: string[]): Promise<string> {
+async function filtered(chunks: (string | Buffer)[]): Promise<string> {
   const filter = createNonSuperuserDumpFilter();
   const out: string[] = [];
   filter.on("data", (d: Buffer) => out.push(d.toString()));
@@ -55,6 +55,17 @@ describe("dump filter for a non-superuser restore (forgejo#415 N5)", () => {
     const out = await filtered([DUMP]);
     expect(out).toContain("1\tDROP EXTENSION IF EXISTS postgis;");
     expect(out).toContain("2\tCOPY public.spatial_ref_sys (srid) FROM stdin;");
+  });
+
+  it("keeps a multibyte character that arrives split across two chunks", async () => {
+    const bytes = Buffer.from(
+      "COPY public.notes (id, body) FROM stdin;\n1\tMünchen 日本\n\\.\n",
+      "utf8"
+    );
+    for (let cut = 1; cut < bytes.length; cut++) {
+      const out = await filtered([bytes.subarray(0, cut), bytes.subarray(cut)]);
+      expect(out).toBe(bytes.toString("utf8"));
+    }
   });
 
   it("gives the same result when the dump arrives in arbitrary chunks", async () => {

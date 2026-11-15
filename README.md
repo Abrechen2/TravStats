@@ -142,7 +142,9 @@ open http://localhost:3000/setup
 
 A fresh install runs the app as an ordinary Postgres role (`flights`), not a
 superuser: a one-time init script in the compose file creates the role and the
-PostGIS extension. An install made with an older compose file keeps its
+PostGIS extension, then deletes the password of the bootstrap `postgres`
+account, so `DB_PASSWORD` opens the ordinary role only (`postgres` stays
+reachable from inside the container via `docker exec`). An install made with an older compose file keeps its
 superuser role and works unchanged; to switch it over, run once
 `docker exec travstats-db psql -U flights -d flights -c "ALTER ROLE flights NOSUPERUSER;"`.
 Backup and restore work with either kind of role.
