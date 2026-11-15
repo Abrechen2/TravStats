@@ -6,6 +6,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import Toggletip from "../ui/Toggletip";
 import { Abrechen2Credit } from "../Brand/Abrechen2Credit";
+import { logger } from "../../lib/logger";
 
 const REPO_URL = "https://github.com/Abrechen2/TravStats";
 const CHANGELOG_URL = `${REPO_URL}/blob/main/CHANGELOG.md`;
@@ -23,17 +24,18 @@ export default function AboutSection(): JSX.Element {
   const [appVersion, setAppVersion] = useState<string>(pkgVersion);
   const [buildVersion, setBuildVersion] = useState<string>("");
   useEffect(() => {
-    api
-      .get<{ version: string; buildVersion?: string }>("/version")
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await api.get<{ version: string; buildVersion?: string }>("/version");
         if (data?.version && data.version !== "unknown") setAppVersion(data.version);
         if (data?.buildVersion && data.buildVersion !== "unknown") {
           setBuildVersion(data.buildVersion);
         }
-      })
-      .catch(() => {
-        // stick with package.json fallback
-      });
+      } catch (error) {
+        // Stick with the package.json fallback, and say why in the log.
+        logger.warn("Failed to read the server version", error);
+      }
+    })();
   }, []);
 
   const showBuild = buildVersion && buildVersion !== appVersion;

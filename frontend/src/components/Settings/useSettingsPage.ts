@@ -22,8 +22,6 @@ export type { AutoSaveState };
 interface AutoUpdateSettings {
   enabled: boolean;
   requireApproval: boolean;
-  checkInterval: number;
-  onlyDuringFlight: boolean;
   expiryHours: number;
 }
 
@@ -94,8 +92,6 @@ export function useSettingsPage() {
   const [autoUpdateSettings, setAutoUpdateSettings] = useState<AutoUpdateSettings>({
     enabled: false,
     requireApproval: true,
-    checkInterval: 15,
-    onlyDuringFlight: true,
     expiryHours: 24,
   });
 
@@ -144,8 +140,6 @@ export function useSettingsPage() {
       setAutoUpdateSettings({
         enabled: settings.autoUpdate?.enabled ?? false,
         requireApproval: settings.autoUpdate?.requireApproval ?? true,
-        checkInterval: settings.autoUpdate?.checkInterval ?? 15,
-        onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
         expiryHours: settings.autoUpdate?.expiryHours ?? 24,
       });
       setHistoricalEnrichmentSettings({

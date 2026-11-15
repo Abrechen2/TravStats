@@ -37,8 +37,6 @@ const REAL = {
   autoUpdate: {
     enabled: true,
     requireApproval: false,
-    checkInterval: 45,
-    onlyDuringFlight: false,
     expiryHours: 72,
   },
   historicalEnrichment: { enabled: true, minConfidence: 85, maxPerDay: 200 },

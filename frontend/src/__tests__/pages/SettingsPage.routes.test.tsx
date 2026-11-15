@@ -276,8 +276,6 @@ vi.mock("../../components/Settings/useSettingsPage", () => ({
     autoUpdateSettings: {
       enabled: false,
       requireApproval: true,
-      checkInterval: 15,
-      onlyDuringFlight: true,
       expiryHours: 24,
     },
     setAutoUpdateSettings: vi.fn(),

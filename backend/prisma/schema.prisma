@@ -1155,16 +1155,7 @@ model UserSettings {
   /// `scanned` only: how many new findings the run wrote.
   photoJourneyLastScanCreated Int?      @map("photo_journey_last_scan_created")
   autoUpdateRequireApproval   Boolean   @default(true) @map("auto_update_require_approval")
-  autoUpdateCheckInterval     Int       @default(15) @map("auto_update_check_interval") // minutes
-  autoUpdateOnlyDuringFlight  Boolean   @default(true) @map("auto_update_only_during_flight")
   autoUpdateExpiryHours       Int       @default(24) @map("auto_update_expiry_hours")
-
-  // Boarding pass parser strategy
-  // null = auto (LLM wenn verfügbar, sonst basierend auf Verfügbarkeit)
-  // "parser-only" = Nur Frontend-Parser, kein API-Call
-  // "parser-with-api" = Parser + API zur Validierung
-  // "api-only" = Direkt API verwenden
-  boardingPassParserStrategy String? @map("boarding_pass_parser_strategy")
 
   // Historical enrichment settings (Beta)
   historicalEnrichmentEnabled       Boolean @default(false) @map("historical_enrichment_enabled")
