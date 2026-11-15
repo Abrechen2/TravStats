@@ -6,6 +6,8 @@
 export type CompanionAppApiErrorCode =
   | "PACKING_LIST_INVALID" // a packing list that breaks its limits or repeats an item id (400)
   | "PACKING_LIST_STALE" // the list changed since the caller's `baseRev`; the body carries the stored one (409)
+  | "PACKING_ID_CONFLICT" // an item id the caller cannot see is already in the list (409)
+  | "PACKING_ASSIGNEE_UNKNOWN" // a shared item assigned to someone who is not on the trip (400)
   | "PERSONAL_SETTINGS_INVALID" // home place or passport expiry malformed (400)
   | "HOME_PERIOD_OVERLAP" // a move that does not start after the running home period (409)
   | "HOME_PERIODS_INVALID" // home periods that break their rules (400)

@@ -57,7 +57,8 @@ export async function previewPlanDelete(
       stages: state.stages.length,
       variants: state.variants.length,
       tasks: state.tasks.length,
-      packing: state.packing.length,
+      // The list belongs to the trip, which a plan delete keeps (forgejo#398).
+      packing: 0,
       receipts,
       proposals,
     },

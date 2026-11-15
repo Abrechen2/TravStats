@@ -24,6 +24,36 @@ export const packingItemSchema = z.object({
 
 export type PackingItem = z.infer<typeof packingItemSchema>;
 
+/**
+ * Who a packing item belongs to, or who brings it (forgejo#398). `server` is
+ * `"local"` for an account on this server and the peer's origin for a member
+ * from another server; `subjectId` is the account's id or the connection's
+ * channel. A remote member needs no `User` row here.
+ */
+export const packingPrincipalSchema = z.object({
+  server: z.string().trim().min(1).max(300),
+  subjectId: z.string().trim().min(1).max(200),
+});
+export type PackingPrincipal = z.infer<typeof packingPrincipalSchema>;
+
+/**
+ * The stored item (`?shape=rich`). `ownerPrincipal` null = the trip's owner (all
+ * items before members); `assigneePrincipal` null = nobody brings it yet.
+ */
+export const richPackingItemSchema = packingItemSchema.extend({
+  category: z.string().trim().max(40).default(""),
+  quantity: z.number().int().min(1).max(100).default(1),
+  scope: z.enum(["personal", "shared"]).default("personal"),
+  note: z.string().trim().max(1000).default(""),
+  manual: z.boolean().default(true),
+  ownerPrincipal: packingPrincipalSchema.nullable().default(null),
+  assigneePrincipal: packingPrincipalSchema.nullable().default(null),
+});
+export type RichPackingItem = z.infer<typeof richPackingItemSchema>;
+
+/** `GET/PUT ...?shape=rich` (an unset or other value is the legacy shape). */
+export const PACKING_SHAPE_RICH = "rich";
+
 export const putPackingListSchema = z.object({
   // No item cap here: the cap depends on the stored list (`tripPacking.ts` —
   // over PACKING_MAX_ITEMS only while it does not grow), because a trip merge
@@ -41,6 +71,15 @@ export const putPackingListSchema = z.object({
 });
 
 export type PutPackingList = z.infer<typeof putPackingListSchema>;
+
+export const putRichPackingListSchema = putPackingListSchema.extend({
+  items: z
+    .array(richPackingItemSchema)
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
+      message: "Every item id appears once",
+    }),
+});
+export type PutRichPackingList = z.infer<typeof putRichPackingListSchema>;
 
 export const homePlaceSchema = z.object({
   name: z.string().trim().min(1).max(200),

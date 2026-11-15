@@ -290,14 +290,10 @@ describe("TravPlan co-planners on the same server", () => {
         .sort();
     expect(await labels(owner)).toEqual(["Owner passport", "Tent"]);
     expect(await labels(editor)).toEqual(["Editor insulin", "Tent"]);
-    const stored = await prisma.travelPlan.findFirstOrThrow({ where: { tripId: plan.tripId } });
-    const rows = (
-      stored.state as unknown as { packing: { label: string; ownerMemberId: string }[] }
-    ).packing;
-    const ownerMember = await prisma.travelPlanMember.findFirstOrThrow({
-      where: { plan: { tripId: plan.tripId }, kind: "owner" },
-    });
-    expect(rows.find((p) => p.label === "Owner passport")?.ownerMemberId).toBe(ownerMember.id);
+    // One store (forgejo#398): the owner's personal item sits in the trip's list, owned by the trip owner (null).
+    const list = await prisma.tripPackingList.findUniqueOrThrow({ where: { tripId: plan.tripId } });
+    const rows = list.items as unknown as { label: string; ownerPrincipal: unknown }[];
+    expect(rows.find((p) => p.label === "Owner passport")?.ownerPrincipal).toBeNull();
     // The editor cannot reach the owner's item, by id, as if it did not exist.
     const foreign = (mine.value as { id: string }).id;
     const removed = await write(
@@ -524,11 +520,14 @@ describe("TravPlan co-planners on the same server", () => {
       const done = await undo(plan.tripId, mine.body.revision, mine.body.lastMutationId, editor);
       expect(done.status).toBe(200);
       const stored = await prisma.travelPlan.findFirstOrThrow({ where: { tripId: plan.tripId } });
-      const state = stored.state as unknown as {
-        packing: { label: string }[];
-        memberNotes: { text: string }[];
-      };
-      expect(state.packing.map((p) => p.label)).toEqual(["Owner passport"]);
+      const state = stored.state as unknown as { memberNotes: { text: string }[] };
+      // The packing is the trip's list now: the owner's item stays there whatever the snapshot held.
+      const list = await prisma.tripPackingList.findUniqueOrThrow({
+        where: { tripId: plan.tripId },
+      });
+      expect((list.items as unknown as { label: string }[]).map((p) => p.label)).toEqual([
+        "Owner passport",
+      ]);
       expect(state.memberNotes.map((n) => n.text)).toEqual(["Owner secret"]);
       // ... and the editor's response does not show them.
       expect(done.body.state.packing).toEqual([]);

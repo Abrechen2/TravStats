@@ -23,6 +23,16 @@ import {
 import { activeMemberIds, recordNotices, shareWithAllMembers } from "./members";
 import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
+import {
+  applyPackingOperation,
+  fullPlanPacking,
+  isPackingOperation,
+  ownerPlanPacking,
+  planPackingFor,
+  undoPackingChange,
+  type PackingTouch,
+} from "./packingBridge";
+import { ensurePackingMigrated } from "./packingMigration";
 import { scheduleRoute } from "./routeSchedule";
 import { compareVariants } from "./variants";
 import { todayIn } from "../../shared/time/clock";
@@ -36,6 +46,7 @@ import type {
   PlanSummary,
   PlanLastMutation,
   PlanMemberShare,
+  PlanPacking,
 } from "./types";
 export { canonical, hash };
 export const asJson = (value: unknown): Prisma.InputJsonValue =>
@@ -74,12 +85,15 @@ export function viewFor(
   row: Omit<TravelPlan, "state"> & { state: unknown },
   name: string,
   access: Pick<PlanAccess, "member" | "isOwner">,
-  lastMutation?: PlanLastMutation
+  lastMutation?: PlanLastMutation,
+  /** The trip's packing list as this member sees it; the plan JSON's own is history. */
+  packing?: PlanPacking[]
 ): PlanView {
   const visible = visibleState(parseState(row.state), {
     memberId: access.member.id,
     isOwner: access.isOwner,
   });
+  if (packing) visible.packing = packing;
   const drawn = view({ ...row, state: visible }, name, lastMutation?.id);
   drawn.self = selfOf(access);
   if (lastMutation) drawn.lastMutation = lastMutation;
@@ -128,10 +142,29 @@ export async function ownedPlan(userId: string, tripId: string) {
   if (!plan) throw new AppError("Plan not found", 404, "PLAN_NOT_FOUND");
   return plan;
 }
+/** The packing as `access` sees it, after the plan's own has been folded into the trip's list. */
+export async function packingOf(
+  access: Pick<PlanAccess, "row" | "ownerId" | "member">,
+  client: Parameters<typeof planPackingFor>[0] = prisma
+): Promise<PlanPacking[]> {
+  if (!access.row.packingMigratedAt) await ensurePackingMigrated(access.row.id);
+  return planPackingFor(client, {
+    planId: access.row.id,
+    tripId: access.row.tripId,
+    ownerId: access.ownerId,
+    memberId: access.member.id,
+  });
+}
 export async function readPlan(actor: PlanActor, tripId: string): Promise<PlanView> {
   const access = await planAccess(actor, tripId);
   const row = access.row;
-  return viewFor(row, row.trip.name, access, await lastMutationOf(row.id, row.revision));
+  return viewFor(
+    row,
+    row.trip.name,
+    access,
+    await lastMutationOf(row.id, row.revision),
+    await packingOf(access)
+  );
 }
 export async function listPlans(userId: string): Promise<PlanSummary[]> {
   // Extract only list metadata in PostgreSQL; do not load hundreds of full plans into Node.
@@ -161,6 +194,13 @@ export async function listPlans(userId: string): Promise<PlanSummary[]> {
   `;
 }
 export async function createPlan(userId: string, input: unknown): Promise<PlanView> {
+  const created = await createPlanRow(userId, input);
+  // A plan made on a trip that already has a list shows that list from the start.
+  const args = { planId: created.id, tripId: created.tripId, ownerId: userId };
+  await ensurePackingMigrated(created.id);
+  return { ...created, state: { ...created.state, packing: await ownerPlanPacking(prisma, args) } };
+}
+async function createPlanRow(userId: string, input: unknown): Promise<PlanView> {
   await assertEnabled();
   const body = createPlanSchema.parse(input);
   const prior = await prisma.travelPlan.findFirst({
@@ -331,7 +371,16 @@ export async function writePlan(
   const previous = await replay();
   if (previous) return previous;
   const prepared = new Map<string, PreparedExecution>();
+  // The plan's own packing is folded into the trip's list before anything reads either.
+  if (!owned.packingMigratedAt) await ensurePackingMigrated(owned.id);
   const initial = parseState(owned.state);
+  // Authorisation of a packing change looks at EVERY item (a hidden one is "not found").
+  if (isPackingOperation(body.operation))
+    initial.packing = await fullPlanPacking(prisma, {
+      planId: owned.id,
+      tripId,
+      ownerId: userId,
+    });
   if (owned.revision !== body.baseRevision)
     throw new AppError("Plan has changed", 409, "PLAN_REVISION_CONFLICT");
   const operation = authorizeOperation(
@@ -394,7 +443,15 @@ export async function writePlan(
         throw new AppError("Plan changed during this edit", 409, "PLAN_REVISION_CONFLICT");
       const before = parseState(row.state);
       let name = row.trip.name,
-        next: PlanState;
+        next: PlanState,
+        packingTouch: PackingTouch | undefined;
+      const packingContext = {
+        tx,
+        planId: row.id,
+        tripId,
+        ownerId: userId,
+        memberId: actor.memberId,
+      };
       if (operation.type === "undo") {
         const change = await tx.travelPlanMutation.findFirst({
           where: { id: operation.mutationId, planId: row.id, revision: row.revision },
@@ -405,6 +462,9 @@ export async function writePlan(
         const saved = change.before as unknown as { state: PlanState; name: string };
         next = constrainUndo(before, parseState(saved.state), actor, change);
         name = saved.name;
+        // A packing change is undone on the trip's list, and only while nobody wrote to it since.
+        const savedPacking = (change.before as unknown as { packing?: PackingTouch }).packing;
+        if (savedPacking) packingTouch = await undoPackingChange(packingContext, savedPacking);
         // Records in the logbook are not part of the plan's undo: withdraw the station instead.
         if (canonical(next.stationLinks) !== canonical(before.stationLinks))
           throw new AppError(
@@ -464,6 +524,9 @@ export async function writePlan(
         const withdrawal = await withdrawStation(tx, userId, tripId, before, operation.stationId);
         afterCommit = withdrawal.afterCommit;
         next = applyWithdraw(before, operation.stationId, withdrawal);
+      } else if (isPackingOperation(operation)) {
+        packingTouch = await applyPackingOperation(packingContext, operation);
+        next = before;
       } else if (operation.type === "member_note") {
         next = applyMemberNote(before, actor.memberId, operation.text);
       } else if (operation.type === "refresh_existing") {
@@ -516,7 +579,9 @@ export async function writePlan(
       const result = viewFor(
         { ...row, state: asJson(next) as Prisma.JsonValue, revision: row.revision + 1 },
         name,
-        access
+        access,
+        undefined,
+        await planPackingFor(tx, { ...packingContext, ownerId: userId })
       );
       const receipt = await tx.travelPlanMutation.create({
         data: {
@@ -525,7 +590,11 @@ export async function writePlan(
           payloadHash,
           baseRevision: row.revision,
           revision: result.revision,
-          before: asJson({ state: before, name: row.trip.name }),
+          before: asJson({
+            state: before,
+            name: row.trip.name,
+            ...(packingTouch ? { packing: packingTouch } : {}),
+          }),
           result: asJson(result),
           actorMemberId: actor.memberId,
           summary: summaryOf(operation),

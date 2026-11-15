@@ -126,7 +126,8 @@ export const transferSchema = z
   .strict();
 export const packingSchema = z
   .object({
-    id,
+    // Not a uuid: the list is the trip's, and the Companion names its own items (forgejo#398).
+    id: z.string().trim().min(1).max(64),
     label: text(120).min(1),
     category: text(40),
     quantity: z.number().int().min(1).max(100),

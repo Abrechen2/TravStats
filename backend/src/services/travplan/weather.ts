@@ -9,6 +9,7 @@ import {
   asJson,
   hash,
   viewFor,
+  packingOf,
   assertEnabled,
 } from "./store";
 import { forecastSchema } from "./schema";
@@ -140,6 +141,7 @@ export async function commitWeather(
   payloadHash: string
 ): Promise<PlanView> {
   const row = access.row;
+  const packing = await packingOf(access);
   return prisma.$transaction(async (tx) => {
     const changed = await tx.travelPlan.updateMany({
       where: { id: row.id, revision: request.baseRevision },
@@ -150,7 +152,9 @@ export async function commitWeather(
     const result = viewFor(
       { ...row, revision: row.revision + 1, state: asJson(next) },
       row.trip.name,
-      access
+      access,
+      undefined,
+      packing
     );
     const mutation = await tx.travelPlanMutation.create({
       data: {

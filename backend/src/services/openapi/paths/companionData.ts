@@ -7,6 +7,8 @@ import {
   homePlaceSchema,
   packingItemSchema,
   putPackingListSchema,
+  putRichPackingListSchema,
+  richPackingItemSchema,
   putPersonalSettingsSchema,
 } from "../../../schemas/companionData";
 
@@ -23,18 +25,32 @@ const packingList = z.object({
   replayed: z.boolean().optional().describe("PUT only: this mutationId had been applied before"),
 });
 
+const richPackingList = packingList.extend({ items: z.array(richPackingItemSchema) });
+
 const tripId = z.object({ id: z.string().describe("Trip id") });
+const shape = z.object({
+  shape: z
+    .enum(["rich"])
+    .optional()
+    .describe(
+      "`rich`: the full items (category, quantity, scope, note, owner and assignee principals). " +
+        "Without it the legacy `{id, label, done}` items, as installed Companion apps read them"
+    ),
+});
 
 registry.registerPath({
   method: "get",
   path: "/trips/{id}/packing",
   summary: "A trip's packing list",
+  description:
+    "The one list of the trip (TravPlan reads the same), as the caller sees it: the shared " +
+    "items and the caller's own personal ones.",
   tags: ["Trips"],
-  request: { params: tripId },
+  request: { params: tripId, query: shape },
   responses: {
     200: {
       description: "The list (empty with rev 0 when none)",
-      content: { "application/json": { schema: packingList } },
+      content: { "application/json": { schema: packingList.or(richPackingList) } },
     },
     404: { description: "No such trip of this user", content: errorContent },
   },
@@ -48,17 +64,33 @@ registry.registerPath({
     `The whole list, at most ${PACKING_MAX_ITEMS} items (a list a trip merge made longer may ` +
     "be written back as long as it does not grow). `baseRev` is the rev the edit started " +
     "from; a list that moved on answers 409 PACKING_LIST_STALE with the stored `rev`. A resend " +
-    "with the same `mutationId` is answered from the stored list (`replayed: true`).",
+    "with the same `mutationId` is answered from a stored receipt of that actor " +
+    "(`replayed: true`), also after another device wrote in between. Without `shape=rich` the " +
+    "write merges by id: label and done update, every other field is kept; an id missing from " +
+    "the body deletes only an item the caller can see; an id of an item the caller cannot see " +
+    "answers 409 PACKING_ID_CONFLICT. With `shape=rich` the items replace the caller's own view " +
+    "(scope and assignee change only here; PACKING_ASSIGNEE_UNKNOWN for someone not on the trip).",
   tags: ["Trips"],
   request: {
     params: tripId,
-    body: { content: { "application/json": { schema: putPackingListSchema } } },
+    query: shape,
+    body: {
+      content: {
+        "application/json": { schema: putPackingListSchema.or(putRichPackingListSchema) },
+      },
+    },
   },
   responses: {
-    200: { description: "Stored", content: { "application/json": { schema: packingList } } },
+    200: {
+      description: "Stored",
+      content: { "application/json": { schema: packingList.or(richPackingList) } },
+    },
     400: { description: "PACKING_LIST_INVALID", content: errorContent },
     404: { description: "TRIP_NOT_FOUND: no such trip of this user", content: errorContent },
-    409: { description: "PACKING_LIST_STALE; `rev` names the stored list", content: errorContent },
+    409: {
+      description: "PACKING_LIST_STALE (`rev` names the stored list) or PACKING_ID_CONFLICT",
+      content: errorContent,
+    },
   },
 });
 

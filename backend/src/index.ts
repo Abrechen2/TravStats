@@ -359,6 +359,17 @@ if (process.env.NODE_ENV !== "test") {
       logger.error({ operation: "server_start_sync_schema_check_error", error });
     }
 
+    // Plans written before the single packing list (forgejo#398) still hold their
+    // packing in the plan JSON; fold it into the trips' lists once. A plan that
+    // fails here is retried when it is next opened.
+    try {
+      const { migrateAllPlanPacking } = await import("./services/travplan/packingMigration");
+      const folded = await migrateAllPlanPacking();
+      if (folded) logger.info({ operation: "server_start_packing_migration", folded });
+    } catch (error) {
+      logger.error({ operation: "server_start_packing_migration_error", error });
+    }
+
     // Ensure achievement definitions are present (idempotent upsert)
     try {
       const { ensureAchievements } = await import("./data/achievements");

@@ -15,6 +15,7 @@ import {
   createPlan,
   listPlans,
   ownedPlan,
+  packingOf,
   readPlan,
   writePlan,
 } from "../services/travplan/store";
@@ -258,8 +259,10 @@ router.get(
   "/trips/:tripId/plan/packing-suggestions",
   authenticate,
   route(async (req, res) => {
-    const plan = await accessiblePlan(req.userId!, tripId(req));
-    res.json({ suggestions: packingSuggestions(parseState(plan.state)) });
+    const access = await planAccess(req.userId!, tripId(req));
+    // Whether a suggestion is already on the list is read from the trip's list, as the member sees it.
+    const state = { ...parseState(access.row.state), packing: await packingOf(access) };
+    res.json({ suggestions: packingSuggestions(state) });
   })
 );
 router.get(
