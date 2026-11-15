@@ -261,7 +261,7 @@ router.get(
   route(async (req, res) => {
     const access = await planAccess(req.userId!, tripId(req));
     // Whether a suggestion is already on the list is read from the trip's list, as the member sees it.
-    const state = { ...parseState(access.row.state), packing: await packingOf(access) };
+    const state = { ...parseState(access.row.state), packing: (await packingOf(access)).items };
     res.json({ suggestions: packingSuggestions(state) });
   })
 );

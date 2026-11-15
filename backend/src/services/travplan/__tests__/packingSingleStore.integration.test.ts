@@ -269,6 +269,50 @@ describe("TravPlan packing is the trip's one list", () => {
   });
 });
 
+describe("edge cases of the shared list", () => {
+  it("refuses a plan packing change drawn from a list the Companion has since written (basePackingRev)", async () => {
+    const plan = await newPlan();
+    const seen = await call("get", `/trips/${plan.tripId}/plan`, owner);
+    await call("put", `/trips/${plan.tripId}/packing`, owner, {
+      items: [{ id: "c1", label: "Charger", done: false }],
+      baseRev: 0,
+      mutationId: "c-1",
+    }).expect(200);
+    const res = await call("post", `/trips/${plan.tripId}/plan/mutations`, owner, {
+      clientRef: randomUUID(),
+      baseRevision: seen.body.revision,
+      basePackingRev: seen.body.packingRev,
+      operation: packing("Hat", "personal"),
+    });
+    expect([res.status, res.body.code]).toEqual([409, "PLAN_REVISION_CONFLICT"]);
+    expect(labels(await storedItems(plan.tripId))).toEqual(["Charger"]);
+  });
+
+  it("removes a Companion-named (non-uuid) item and reads a list longer than the plan's own cap", async () => {
+    const plan = await newPlan();
+    const items = Array.from({ length: 205 }, (_, n) => ({
+      id: `c${n}`,
+      label: `Item ${n}`,
+      done: false,
+    }));
+    // A merged trip may hold more than 200 (the merge drops nothing).
+    await prisma.tripPackingList.create({
+      data: { userId: owner, tripId: plan.tripId, items, rev: 1 },
+    });
+    const read = await call("get", `/trips/${plan.tripId}/plan`, owner);
+    expect(read.status).toBe(200);
+    expect(read.body.state.packing).toHaveLength(205);
+    const removed = await write(
+      plan.tripId,
+      read.body.revision,
+      { type: "remove", collection: "packing", id: "c3" },
+      owner
+    );
+    expect(removed.status).toBe(200);
+    expect(removed.body.state.packing).toHaveLength(204);
+  });
+});
+
 describe("folding state.packing into the trip's list", () => {
   const legacyEntry = (id: string, label: string, extra: object = {}) => ({
     id,
@@ -327,6 +371,37 @@ describe("folding state.packing into the trip's list", () => {
     expect(
       (await prisma.tripPackingList.findUniqueOrThrow({ where: { tripId: plan.tripId } })).rev
     ).toBe(rev);
+  });
+
+  it("does not fold a co-planner's item into the owner's item of the same id and label", async () => {
+    const plan = await newPlan();
+    await join(plan.tripId);
+    const member = await prisma.travelPlanMember.findFirstOrThrow({
+      where: { planId: plan.id, userId: editor },
+    });
+    const row = await prisma.travelPlan.findUniqueOrThrow({ where: { id: plan.id } });
+    await prisma.tripPackingList.create({
+      data: {
+        userId: owner,
+        tripId: plan.tripId,
+        items: [{ id: "d", label: "Pills", done: false }],
+        rev: 1,
+      },
+    });
+    await prisma.travelPlan.update({
+      where: { id: plan.id },
+      data: {
+        state: {
+          ...(row.state as object),
+          packing: [legacyEntry("d", "Pills", { ownerMemberId: member.id })],
+        },
+        packingMigratedAt: null,
+      },
+    });
+    await ensurePackingMigrated(plan.id);
+    expect(await planLabels(plan.tripId, owner)).toEqual(["Pills"]);
+    expect(await planLabels(plan.tripId, editor)).toEqual(["Pills"]);
+    expect((await storedItems(plan.tripId)).map((i) => i.label)).toEqual(["Pills", "Pills"]);
   });
 
   it("keeps a co-planner's personal item theirs and publishes nothing", async () => {

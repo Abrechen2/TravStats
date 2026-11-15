@@ -463,7 +463,8 @@ const operationSchema = z.discriminatedUnion("type", [
         "stations",
         "stages",
       ]),
-      id,
+      // Not a uuid for a packing item: the Companion names its own (forgejo#398).
+      id: z.string().trim().min(1).max(64),
     })
     .strict(),
   z
@@ -533,7 +534,12 @@ const operationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("proposal"), proposalId: id }).strict(),
 ]);
 export const writeSchema = z
-  .object({ clientRef: id, baseRevision: z.number().int().min(1), operation: operationSchema })
+  .object({
+    clientRef: id,
+    baseRevision: z.number().int().min(1),
+    basePackingRev: z.number().int().min(0).optional(),
+    operation: operationSchema,
+  })
   .strict();
 export const createPlanSchema = z
   .object({

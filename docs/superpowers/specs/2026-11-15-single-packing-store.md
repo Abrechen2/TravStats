@@ -86,11 +86,36 @@ remapped. Re-running changes nothing.
 
 | Phase | Side | What | State |
 |---|---|---|---|
-| P1 | server | schema (items JSON shape, `packing_mutations`), legacy merge PUT, rich GET/PUT, privacy, capability flag | open |
-| P2 | server | migration B → A, TravPlan operations on A, `state.packing` read-only | open |
+| P1 | server | schema (items JSON shape, `packing_mutations`), legacy merge PUT, rich GET/PUT, privacy, capability flag | built (SHA_PLACEHOLDER) |
+| P2 | server | migration B → A, TravPlan operations on A, `state.packing` read-only | built (SHA_PLACEHOLDER) |
 | P3 | web | TravPlan packing UI and trip packing card read/write A (rich) | open |
 | P4 | Companion | stop A → B copy when `packingSingleStore`; optional rich fields in the app | open |
 | P5 | server | drop `state.packing` from the plan schema | open |
+
+### Deviations from the contract (as built)
+
+- **Principal of a local account** is `{server: "local", subjectId: <userId>}`; of a remote member
+  `{server: <connection.origin>, subjectId: <connection.channel>}`; of a member whose connection is gone
+  `{server: "plan-member", subjectId: <memberId>}` (matches nobody, so the item stays hidden, never published).
+- **Trip owner's own personal items store `ownerPrincipal: null`** (canonical); an owner as assignee of a shared
+  item is stored explicitly (null assignee means nobody).
+- **Packing rev check on plan operations** is a compare-and-swap under the list's row lock inside the write.
+  A client may add optional `basePackingRev` to the plan write (and reads `packingRev` from the view); a mismatch
+  answers 409 `PLAN_REVISION_CONFLICT`. Both additive; the frontend types mirror was updated (types only).
+- **Undo of a packing change** stores the list before-image and the rev after the change in the receipt's `before`
+  JSON; it is refused with 409 `PLAN_UNDO_STALE` once the list's rev moved on (e.g. a Companion write).
+- **Plan item ids** for packing are free strings (1-64 chars) in the plan schema (add/remove), because the
+  Companion names its own items.
+- **Migration** is guarded by a new column `travel_plans.packing_migrated_at`; it runs lazily before a plan's
+  packing is read/written/deleted and once at boot. Copy identity = same id AND same label AND the plan item is
+  the owner's own personal item; same id otherwise gets a deterministic new id; same label other id is kept.
+- **Rich PUT via the trip route** stays owner-only; a shared item's assignee must be the owner or an active plan
+  member (400 `PACKING_ASSIGNEE_UNKNOWN`). New code `PACKING_ID_CONFLICT` (409).
+- **Plan delete** no longer reports/removes packing (the list belongs to the trip); `removes.packing` is 0.
+- **Capability** is `capabilities: { packingSingleStore: true }` in `GET /api/v1/version`.
+- **Export**: the account export carries the owner's projection of each trip's list in the rich shape;
+  `travelPlan.state.packing` (read-only history) is still exported as stored.
+- Receipts older than 30 days are pruned on the next write of that trip.
 
 ## Tests that must exist
 

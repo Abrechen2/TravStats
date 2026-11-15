@@ -112,13 +112,16 @@ export function toPlanItem(item: RichPackingItem, people: PlanPeople): PlanPacki
 export async function planPackingFor(
   client: Client,
   args: { planId: string; tripId: string; ownerId: string; memberId: string }
-): Promise<PlanPacking[]> {
+): Promise<{ items: PlanPacking[]; rev: number }> {
   const [people, list] = await Promise.all([
     loadPlanPeople(client, args.planId, args.ownerId),
     loadList(client, args.tripId),
   ]);
   const viewer = viewerOf(people, args.memberId);
-  return projectFor(list.items, viewer).map((item) => toPlanItem(item, people));
+  return {
+    items: projectFor(list.items, viewer).map((item) => toPlanItem(item, people)),
+    rev: list.rev,
+  };
 }
 
 /** Every item, hidden ones included: for the authorisation check only, never drawn. */
@@ -160,11 +163,20 @@ interface CommandContext {
 /** An upsert or remove on the list, with the compare-and-swap on its rev under the row lock. */
 export async function applyPackingOperation(
   ctx: CommandContext,
-  operation: PackingOperation
+  operation: PackingOperation,
+  basePackingRev?: number
 ): Promise<PackingTouch> {
   const people = await loadPlanPeople(ctx.tx, ctx.planId, ctx.ownerId);
   const viewer = viewerOf(people, ctx.memberId);
   const list = await loadList(ctx.tx, ctx.tripId, true);
+  // A client that drew the list at some rev says so: a list that moved on since (the Companion
+  // writes it without touching the plan's revision) is refused, not overwritten.
+  if (basePackingRev !== undefined && basePackingRev !== list.rev)
+    throw new AppError(
+      "The packing list changed; refresh before applying this edit",
+      409,
+      "PLAN_REVISION_CONFLICT"
+    );
   const index = (id: string) => list.items.findIndex((i) => i.id === id);
   let next: RichPackingItem[];
   if (operation.type === "remove") {
@@ -245,7 +257,7 @@ export async function undoPackingChange(
 export async function ownerPlanPacking(
   client: Client,
   args: { planId: string; tripId: string; ownerId: string }
-): Promise<PlanPacking[]> {
+): Promise<{ items: PlanPacking[]; rev: number }> {
   const people = await loadPlanPeople(client, args.planId, args.ownerId);
   return planPackingFor(client, { ...args, memberId: people.ownerMemberId });
 }

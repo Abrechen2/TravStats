@@ -317,6 +317,8 @@ export interface VariantComparison {
   obsoleteStageIds: string[];
 }
 export interface PlanView {
+  /** Rev of the trip's packing list as drawn in `state.packing` (forgejo#398). */
+  packingRev?: number;
   id: string;
   tripId: string;
   name: string;
@@ -465,6 +467,8 @@ export interface PlaceholderMatch {
 export interface PlanWrite {
   clientRef: string;
   baseRevision: number;
+  /** The `packingRev` the client drew; a packing change on a list that moved on is refused. */
+  basePackingRev?: number;
   operation: PlanOperation;
 }
 

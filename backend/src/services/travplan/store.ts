@@ -87,14 +87,18 @@ export function viewFor(
   access: Pick<PlanAccess, "member" | "isOwner">,
   lastMutation?: PlanLastMutation,
   /** The trip's packing list as this member sees it; the plan JSON's own is history. */
-  packing?: PlanPacking[]
+  packing?: { items: PlanPacking[]; rev: number }
 ): PlanView {
   const visible = visibleState(parseState(row.state), {
     memberId: access.member.id,
     isOwner: access.isOwner,
   });
-  if (packing) visible.packing = packing;
   const drawn = view({ ...row, state: visible }, name, lastMutation?.id);
+  // Set after the parse: the list may be longer than the plan JSON's own cap.
+  if (packing) {
+    drawn.state.packing = packing.items;
+    drawn.packingRev = packing.rev;
+  }
   drawn.self = selfOf(access);
   if (lastMutation) drawn.lastMutation = lastMutation;
   return drawn;
@@ -146,7 +150,7 @@ export async function ownedPlan(userId: string, tripId: string) {
 export async function packingOf(
   access: Pick<PlanAccess, "row" | "ownerId" | "member">,
   client: Parameters<typeof planPackingFor>[0] = prisma
-): Promise<PlanPacking[]> {
+): Promise<{ items: PlanPacking[]; rev: number }> {
   if (!access.row.packingMigratedAt) await ensurePackingMigrated(access.row.id);
   return planPackingFor(client, {
     planId: access.row.id,
@@ -198,7 +202,12 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
   // A plan made on a trip that already has a list shows that list from the start.
   const args = { planId: created.id, tripId: created.tripId, ownerId: userId };
   await ensurePackingMigrated(created.id);
-  return { ...created, state: { ...created.state, packing: await ownerPlanPacking(prisma, args) } };
+  const packing = await ownerPlanPacking(prisma, args);
+  return {
+    ...created,
+    packingRev: packing.rev,
+    state: { ...created.state, packing: packing.items },
+  };
 }
 async function createPlanRow(userId: string, input: unknown): Promise<PlanView> {
   await assertEnabled();
@@ -525,7 +534,7 @@ export async function writePlan(
         afterCommit = withdrawal.afterCommit;
         next = applyWithdraw(before, operation.stationId, withdrawal);
       } else if (isPackingOperation(operation)) {
-        packingTouch = await applyPackingOperation(packingContext, operation);
+        packingTouch = await applyPackingOperation(packingContext, operation, body.basePackingRev);
         next = before;
       } else if (operation.type === "member_note") {
         next = applyMemberNote(before, actor.memberId, operation.text);

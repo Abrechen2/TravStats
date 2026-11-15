@@ -56,7 +56,9 @@ export function mergePlanPacking(
       assigneePrincipal: b.scope === "shared" ? principal : null,
     });
     const at = next.findIndex((a) => a.id === b.id);
-    if (at >= 0 && isPlainCopy(next[at]) && sameLabel(next[at].label, b.label)) {
+    // Only the owner's own item can be the Companion's copy of the owner's list item.
+    const ownersOwn = b.scope === "personal" && principal === null;
+    if (at >= 0 && ownersOwn && isPlainCopy(next[at]) && sameLabel(next[at].label, b.label)) {
       // The same item twice: the Companion copied the list into the plan.
       next[at] = {
         ...rich,
