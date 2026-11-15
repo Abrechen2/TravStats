@@ -148,6 +148,7 @@ import placesRouter from "./places";
 import placeCategoriesRouter from "./placeCategories";
 import xlsxImportRouter from "./xlsxImport";
 import checkinImportRouter from "./checkinImport";
+import appImportRouter from "./appImport";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
 import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
@@ -574,6 +575,7 @@ export const apiMounts: ApiMount[] = [
   { id: "placeCategories", base: "/api/v1/place-categories", router: placeCategoriesRouter },
   { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },
   { id: "checkinImport", base: "/api/v1/checkin-import", router: checkinImportRouter },
+  { id: "appImport", base: "/api/v1/app-import", router: appImportRouter },
   // Curated checklists mount FIRST on the same path: '/curated' would
   // otherwise be captured by the lists router's '/:id' and answered 404.
   { id: "placeLists.curated", base: "/api/v1/place-lists/curated", router: curatedListsRouter },

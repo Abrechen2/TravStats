@@ -28,7 +28,8 @@
     "bookings": "Bookings",
     "placeLists": "Place lists",
     "placeListEntries": "List entries",
-    "documents": "Documents"
+    "documents": "Documents",
+    "other": "Not imported"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
@@ -349,7 +350,15 @@
       "missing_arrival_station": "The arrival station is missing.",
       "missing_departure_time": "The departure time is missing.",
       "cancelled": "The ride was cancelled and is not imported.",
-      "unsupported_mode": "The mode “{{mode}}” is not imported."
+      "unsupported_mode": "The mode “{{mode}}” is not imported.",
+      "unsupported_object": "Bookings of the kind “{{kind}}” are not imported.",
+      "unsupported_event": "This calendar entry is neither a flight nor a stay and is not imported.",
+      "invalid_record": "The entry is incomplete or not in the expected format.",
+      "missing_airport_code": "An airport code (IATA, three letters) is missing for the start or the destination.",
+      "missing_flight_number": "The flight number is missing, so this flight was not imported. You can enter it by hand.",
+      "missing_name": "The name is missing.",
+      "missing_coordinates": "Latitude and longitude are missing.",
+      "domain_off": "This area is switched off for your account – not imported."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
@@ -398,7 +407,8 @@
       "port_not_found": "port not in the catalogue — left empty",
       "chain_not_found": "chain not in the catalogue — imported without a chain",
       "roadtrip_not_linked": "Roadtrip not found in the account – applied without a roadtrip",
-      "sea_route_failed": "sea route could not be calculated — imported as a straight line"
+      "sea_route_failed": "sea route could not be calculated — imported as a straight line",
+      "time_unknown": "Only the date is known – created without a time of day"
     },
     "outcomeUnknown": "The server no longer reports how the import ended. Check your entries before importing the file again."
   }

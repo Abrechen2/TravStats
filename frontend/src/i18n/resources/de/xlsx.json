@@ -28,7 +28,8 @@
     "bookings": "Buchungen",
     "placeLists": "Ortslisten",
     "placeListEntries": "Listeneinträge",
-    "documents": "Dokumente"
+    "documents": "Dokumente",
+    "other": "Nicht importiert"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -349,7 +350,15 @@
       "missing_arrival_station": "Der Ankunftsbahnhof fehlt.",
       "missing_departure_time": "Die Abfahrtszeit fehlt.",
       "cancelled": "Die Fahrt war storniert und wird nicht importiert.",
-      "unsupported_mode": "Die Verkehrsart „{{mode}}“ wird nicht importiert."
+      "unsupported_mode": "Die Verkehrsart „{{mode}}“ wird nicht importiert.",
+      "unsupported_object": "Buchungen der Art „{{kind}}“ werden nicht importiert.",
+      "unsupported_event": "Dieser Kalendereintrag ist kein Flug und keine Unterkunft und wird nicht importiert.",
+      "invalid_record": "Der Eintrag ist unvollständig oder hat nicht das erwartete Format.",
+      "missing_airport_code": "Es fehlt ein Flughafen-Code (IATA, drei Buchstaben) für Start oder Ziel.",
+      "missing_flight_number": "Die Flugnummer fehlt – dieser Flug wurde nicht importiert. Du kannst ihn von Hand eintragen.",
+      "missing_name": "Der Name fehlt.",
+      "missing_coordinates": "Es fehlen Breiten- und Längengrad.",
+      "domain_off": "Dieser Bereich ist in deinem Konto ausgeschaltet – nicht importiert."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {
@@ -398,7 +407,8 @@
       "port_not_found": "Hafen nicht im Katalog – bleibt leer",
       "chain_not_found": "Kette nicht im Katalog – ohne Kette übernommen",
       "roadtrip_not_linked": "Roadtrip im Konto nicht gefunden – ohne Roadtrip übernommen",
-      "sea_route_failed": "Seeweg konnte nicht berechnet werden – als gerade Linie übernommen"
+      "sea_route_failed": "Seeweg konnte nicht berechnet werden – als gerade Linie übernommen",
+      "time_unknown": "Nur das Datum bekannt – ohne Uhrzeit angelegt"
     },
     "outcomeUnknown": "Der Server meldet nicht mehr, wie der Import ausgegangen ist. Bitte deine Einträge prüfen, bevor du die Datei erneut importierst."
   }

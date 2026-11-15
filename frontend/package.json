@@ -34,6 +34,7 @@
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "exceljs": "^4.4.0",
+    "fflate": "0.8.3",
     "framer-motion": "^14.14.0",
     "html2canvas": "^1.4.1",
     "i18next": "^26.7.2",

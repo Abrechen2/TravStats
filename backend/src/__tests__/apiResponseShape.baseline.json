@@ -188,6 +188,7 @@
   "enveloped": [
     "aircraft.ts",
     "airlines.ts",
+    "appImport.ts",
     "backup.ts",
     "bus.ts",
     "bus/entrySuggestions.ts",

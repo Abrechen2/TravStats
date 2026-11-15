@@ -1,0 +1,60 @@
+{
+  "_comment": "SYNTHETIC: built from TripIt's documented API object model, not from a real account export.",
+  "Trip": { "id": "1", "display_name": "Synthetic trip" },
+  "AirObject": [
+    {
+      "id": "10",
+      "supplier_conf_num": "ABC123",
+      "Segment": [
+        {
+          "StartDateTime": {
+            "date": "2026-03-01",
+            "time": "10:05:00",
+            "timezone": "Europe/Berlin",
+            "utc_offset": "+01:00"
+          },
+          "EndDateTime": {
+            "date": "2026-03-01",
+            "time": "12:20:00",
+            "timezone": "America/New_York",
+            "utc_offset": "-05:00"
+          },
+          "start_airport_code": "FRA",
+          "end_airport_code": "JFK",
+          "marketing_airline": "Lufthansa",
+          "marketing_airline_code": "LH",
+          "marketing_flight_number": "400",
+          "aircraft_display_name": "Boeing 747-8",
+          "seats": "12A",
+          "service_class": "Business"
+        }
+      ]
+    },
+    { "id": "11", "Segment": "not an object" }
+  ],
+  "LodgingObject": {
+    "id": "20",
+    "supplier_name": "Synthetic Grand Hotel",
+    "StartDateTime": { "date": "2026-03-01" },
+    "EndDateTime": { "date": "2026-03-05" },
+    "Address": {
+      "address": "1 Test Street",
+      "city": "New York",
+      "country": "US",
+      "latitude": "40.75",
+      "longitude": "-73.99"
+    }
+  },
+  "RailObject": {
+    "id": "30",
+    "Segment": {
+      "StartDateTime": { "date": "2026-03-06", "time": "08:00:00" },
+      "EndDateTime": { "date": "2026-03-06", "time": "10:00:00" },
+      "start_station_name": "Alpha Hbf",
+      "end_station_name": "Beta Hbf",
+      "carrier_name": "Synthetic Rail",
+      "train_number": "5"
+    }
+  },
+  "CarObject": { "id": "40", "supplier_name": "Synthetic Rentals" }
+}

@@ -720,6 +720,34 @@
         "network": "Der Server ist nicht erreichbar. Es wurde nichts geändert – bitte versuche es erneut.",
         "applyFailed": "Das Übernehmen ist fehlgeschlagen. Importiere die Datei noch einmal – bereits Übernommenes wird erkannt.",
         "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut."
+      },
+      "appImport": {
+        "title": "Aus TripIt, Polarsteps oder einem Flugtagebuch",
+        "description": "Lade deinen Export hoch – TripIt (JSON oder iCal), Polarsteps (der ZIP-Download oder trip.json) oder JetLovers, FlightMemory, Logmyflight (CSV). Vor dem Speichern siehst du, was angelegt wird: Flüge, Fahrten, Unterkünfte, Orte. Schon Vorhandenes wird erkannt und nicht doppelt eingetragen; Einträge, die nicht passen, stehen mit Grund darunter.",
+        "uploadLabel": "Export-Datei wählen",
+        "sourceLabel": "Quelle",
+        "sources": {
+          "tripit": "TripIt",
+          "polarsteps": "Polarsteps",
+          "jetlovers": "JetLovers",
+          "flightmemory": "FlightMemory",
+          "logmyflight": "Logmyflight"
+        },
+        "previewing": "Die Datei wird gelesen …",
+        "nothing": "In der Datei wurde nichts gefunden, das sich importieren lässt. Es wurde nichts geändert.",
+        "someSkipped_one": "{{count}} Eintrag wird nicht importiert (siehe unten). Die übrigen kannst du übernehmen.",
+        "someSkipped_other": "{{count}} Einträge werden nicht importiert (siehe unten). Die übrigen kannst du übernehmen.",
+        "nothingImportable": "Aus dieser Datei kann nichts importiert werden.",
+        "failed": "Die Datei konnte nicht gelesen werden. Ist es der Export der gewählten Quelle? Es wurde nichts geändert.",
+        "network": "Der Server ist nicht erreichbar. Es wurde nichts geändert – bitte versuche es erneut.",
+        "applyFailed": "Das Übernehmen ist fehlgeschlagen. Importiere die Datei noch einmal – bereits Übernommenes wird erkannt.",
+        "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
+        "zip": {
+          "notZip": "Die Datei ist kein lesbares ZIP-Archiv. Wähle den Polarsteps-Download oder eine entpackte trip.json.",
+          "noTrip": "Im Archiv liegt keine trip.json – ist es der Daten-Download von Polarsteps?",
+          "tooLarge": "Die trip.json im Archiv ist zu groß für den Import.",
+          "invalid": "Eine trip.json im Archiv konnte nicht gelesen werden."
+        }
       }
     },
     "preview": {

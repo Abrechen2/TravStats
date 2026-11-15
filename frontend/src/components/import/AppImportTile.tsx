@@ -1,0 +1,281 @@
+import { useCallback, useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
+import {
+  APP_IMPORT_MAX_CHARS,
+  APP_IMPORT_MAX_RECORDS,
+  AppImportError,
+  sendAppImport,
+  type AppImportFailure,
+  type AppImportSource,
+} from "../../lib/api/appImport";
+import type { ImportOutcome } from "../../lib/xlsx/importClient";
+import { logger } from "../../lib/logger";
+import { PolarstepsZipError, polarstepsTextFromZip } from "../../lib/import/polarstepsZip";
+import { SheetRows } from "../Settings/SpreadsheetSection";
+import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
+
+type Phase = "idle" | "reading" | "previewed" | "applying" | "applied" | "unknown";
+const BYTES_PER_MB = 1_000_000;
+const SOURCES: readonly AppImportSource[] = [
+  "tripit",
+  "polarsteps",
+  "jetlovers",
+  "flightmemory",
+  "logmyflight",
+];
+/** What each source's export looks like on disk. */
+const ACCEPT: Record<AppImportSource, string> = {
+  tripit: ".json,.ics,.txt",
+  polarsteps: ".zip,.json,.txt",
+  jetlovers: ".csv,.txt",
+  flightmemory: ".csv,.txt",
+  logmyflight: ".csv,.txt",
+};
+
+/** A reason code from the server -> its sentence. `unsupported_object:car` carries its kind. */
+function reasonCopy(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  message: string | undefined
+): string {
+  const code = message ?? "";
+  if (code.startsWith("unsupported_object:")) {
+    return t("xlsx:import.errors.unsupported_object", {
+      kind: code.slice("unsupported_object:".length),
+    });
+  }
+  return t(`xlsx:import.errors.${code}`, { defaultValue: code });
+}
+
+/**
+ * TripIt / Polarsteps / JetLovers / FlightMemory / Logmyflight export -> flights,
+ * rail rides, lodging, places (forgejo#401).
+ *
+ * The file is read here as text and parsed on the server; a first request
+ * (dry run) shows what would happen, and only a second one, over the SAME held
+ * text, writes. Rows the server cannot read stay visible with their reason —
+ * they are skipped, they never block the readable ones.
+ */
+export function AppImportTile({ onImported }: { onImported?: () => void }): JSX.Element {
+  const { t } = useTranslation(["settings", "xlsx"]);
+  const [source, setSource] = useState<AppImportSource>("tripit");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [held, setHeld] = useState<{ source: AppImportSource; text: string } | null>(null);
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const failureCopy = useCallback(
+    (kind: AppImportFailure, applying: boolean): string => {
+      switch (kind) {
+        case "tooMany":
+          return t("xlsx:import.importTooManyRows", { max: APP_IMPORT_MAX_RECORDS });
+        case "network":
+          return t("settings:import.tile.appImport.network");
+        case "rateLimited":
+          return t("settings:import.tile.appImport.rateLimited");
+        case "outcomeUnknown":
+          return t("xlsx:import.outcomeUnknown");
+        case "invalid":
+          return t("settings:import.tile.appImport.failed");
+        default:
+          return t(
+            applying
+              ? "settings:import.tile.appImport.applyFailed"
+              : "settings:import.tile.appImport.failed"
+          );
+      }
+    },
+    [t]
+  );
+
+  const reset = useCallback((): void => {
+    setPhase("idle");
+    setHeld(null);
+    setOutcome(null);
+  }, []);
+
+  const handleFile = useCallback(
+    async (file: File): Promise<void> => {
+      setError(null);
+      setOutcome(null);
+      setHeld(null);
+      setPhase("reading");
+      try {
+        // A Polarsteps download is a ZIP: unpack the trips here, send only those.
+        const text =
+          source === "polarsteps" && /\.zip$/i.test(file.name)
+            ? polarstepsTextFromZip(new Uint8Array(await file.arrayBuffer()), APP_IMPORT_MAX_CHARS)
+            : await file.text();
+        if (text.length > APP_IMPORT_MAX_CHARS) {
+          setError(
+            t("settings:import.parserErrors.tooLarge", {
+              size: (text.length / BYTES_PER_MB).toFixed(1),
+              max: APP_IMPORT_MAX_CHARS / BYTES_PER_MB,
+            })
+          );
+          setPhase("idle");
+          return;
+        }
+        const result = await sendAppImport(source, text, true);
+        setHeld({ source, text });
+        setOutcome(result);
+        setPhase("previewed");
+      } catch (err: unknown) {
+        // The sentence is the user's; the cause belongs in the log.
+        logger.error("AppImportTile: preview failed", err);
+        setError(
+          err instanceof PolarstepsZipError
+            ? t(`settings:import.tile.appImport.zip.${err.kind}`)
+            : failureCopy(err instanceof AppImportError ? err.kind : "failed", false)
+        );
+        setPhase("idle");
+      }
+    },
+    [source, t, failureCopy]
+  );
+
+  const handleApply = useCallback(async (): Promise<void> => {
+    if (!held) return;
+    setError(null);
+    setPhase("applying");
+    try {
+      setOutcome(await sendAppImport(held.source, held.text, false));
+      setPhase("applied");
+      onImported?.();
+    } catch (err: unknown) {
+      logger.error("AppImportTile: apply failed", err);
+      setError(failureCopy(err instanceof AppImportError ? err.kind : "failed", true));
+      // Unknown outcome: the first job may still be writing, and a second one
+      // alongside it could enter the same rides twice — so no retry from here,
+      // the user starts over once the import log shows the result.
+      // Any other failure is final, and a retry re-sends exactly what was
+      // previewed (the server recognises what a half-finished run wrote).
+      const unknown = err instanceof AppImportError && err.kind === "outcomeUnknown";
+      setPhase(unknown ? "unknown" : "previewed");
+    }
+  }, [held, onImported, failureCopy]);
+
+  const sheets = outcome?.sheets ?? [];
+  const errorRows = sheets.flatMap((s) =>
+    s.rows.filter((r) => r.action === "error").map((r) => ({ ...r, sheet: s.key }))
+  );
+  const creatable = sheets.reduce((n, s) => n + s.created, 0);
+  const total = sheets.reduce((n, s) => n + s.created + s.updated + s.skipped + s.errors, 0);
+  const busy = phase === "reading" || phase === "applying";
+
+  return (
+    <ImportTileShell
+      title={t("settings:import.tile.appImport.title")}
+      description={t("settings:import.tile.appImport.description")}
+      picker={
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex items-center gap-2">
+            <span className="t-caption">{t("settings:import.tile.appImport.sourceLabel")}</span>
+            <select
+              value={source}
+              disabled={busy}
+              onChange={(e) => setSource(e.target.value as AppImportSource)}
+              data-testid="app-import-source"
+              className="rounded-md border border-[var(--border)] bg-transparent px-2 py-1 text-sm"
+            >
+              {SOURCES.map((s) => (
+                <option key={s} value={s}>
+                  {t(`settings:import.tile.appImport.sources.${s}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ImportFilePicker
+            label={t("settings:import.tile.appImport.uploadLabel")}
+            accept={ACCEPT[source]}
+            disabled={busy}
+            onFile={(file) => void handleFile(file)}
+          />
+        </div>
+      }
+      errorBlock={error ? <ImportErrorBlock message={error} /> : undefined}
+      statusBlock={
+        phase === "reading" ? (
+          <p className="t-caption">{t("settings:import.tile.appImport.previewing")}</p>
+        ) : undefined
+      }
+    >
+      {outcome &&
+        (phase === "previewed" ||
+          phase === "applying" ||
+          phase === "applied" ||
+          phase === "unknown") && (
+          <div className="space-y-2 text-xs" data-testid="app-import-outcome">
+            {total === 0 ? (
+              <p>{t("settings:import.tile.appImport.nothing")}</p>
+            ) : (
+              <>
+                <p style={{ color: "var(--text-muted)" }}>
+                  {phase === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
+                </p>
+                {sheets.map((s) => (
+                  <div key={s.key}>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
+                      <span style={{ color: "var(--text-muted)" }}>
+                        {t("xlsx:import.counts", {
+                          created: s.created,
+                          updated: s.updated,
+                          skipped: s.skipped,
+                          errors: s.errors,
+                        })}
+                      </span>
+                    </div>
+                    <SheetRows sheet={s} t={t} />
+                  </div>
+                ))}
+                {errorRows.length > 0 && (
+                  <div className="mt-2 space-y-1" style={{ color: "var(--ts-bad)" }}>
+                    <p>
+                      {t("settings:import.tile.appImport.someSkipped", { count: errorRows.length })}
+                    </p>
+                    {errorRows.map((r) => (
+                      <p key={`${r.sheet}-${r.row}`}>
+                        {t("xlsx:import.rowError", {
+                          row: r.row,
+                          label: r.label,
+                          message: reasonCopy(t, r.message),
+                        })}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {(phase === "previewed" || phase === "applying") && creatable === 0 && (
+                  <p>{t("settings:import.tile.appImport.nothingImportable")}</p>
+                )}
+              </>
+            )}
+            {(phase === "previewed" || phase === "applying") && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleApply()}
+                  disabled={creatable === 0 || phase === "applying"}
+                  className="btn-secondary"
+                >
+                  {phase === "applying" ? t("xlsx:import.applying") : t("xlsx:import.apply")}
+                </button>
+                <button
+                  type="button"
+                  onClick={reset}
+                  disabled={phase === "applying"}
+                  className="btn-secondary"
+                >
+                  {t("xlsx:import.cancel")}
+                </button>
+              </div>
+            )}
+            {(phase === "applied" || phase === "unknown") && (
+              <button type="button" onClick={reset} className="btn-secondary">
+                {t("xlsx:import.choose")}
+              </button>
+            )}
+          </div>
+        )}
+    </ImportTileShell>
+  );
+}

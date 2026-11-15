@@ -1,0 +1,3 @@
+Date,Flight No.,Airline,From,To,Dep. Time,Arr. Time,Aircraft Type,Reg.,Seat,Class,Comments
+03/01/2026,LH 400,Lufthansa,FRA,JFK,10:05 AM,12:20 PM,Boeing 747-8,D-ABYA,12A,Business,US month-first dates
+03/22/2026,UA 901,United,JFK,FRA,6:30 PM,7:45 AM,,,,Economy,Second row
