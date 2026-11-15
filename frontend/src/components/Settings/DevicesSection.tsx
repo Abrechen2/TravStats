@@ -20,6 +20,8 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
+import { apiErrorCode } from "../../lib/apiError";
+import { isOldToken } from "../../lib/tokenAge";
 import { formatDateTime } from "../../lib/displayFormat";
 import { useBlockConfirm } from "./useBlockConfirm";
 import PushStateRow from "./PushStateRow";
@@ -207,6 +209,53 @@ export default function DevicesSection(): JSX.Element {
     }
   };
 
+  const removeFailure = (err: unknown, fallbackKey: "remove" | "removeAll"): void => {
+    setError(
+      apiErrorCode(err) === "TOKEN_STILL_ACTIVE"
+        ? t("settings:devices.errors.removeActive")
+        : t(`settings:devices.errors.${fallbackKey}`)
+    );
+  };
+
+  const handleRemove = async (id: string, label: string): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:devices.removeDialog.title"),
+      affects: label,
+      amount: t("settings:devices.removeDialog.amount"),
+      after: t("settings:devices.removeDialog.after"),
+      confirmLabel: t("settings:devices.removeDialog.confirm"),
+    });
+    if (!confirmed) return;
+    try {
+      await apiTokensApi.remove(id);
+      void reload();
+    } catch (err) {
+      logger.error("Failed to remove device", err);
+      await reload();
+      removeFailure(err, "remove");
+    }
+  };
+
+  const oldCount = devices.filter((dev) => isOldToken(dev)).length;
+
+  const handleRemoveOld = async (): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:devices.removeAllDialog.title"),
+      affects: t("settings:devices.title"),
+      amount: t("settings:devices.removeAllDialog.amount", { count: oldCount }),
+      after: t("settings:devices.removeAllDialog.after"),
+      confirmLabel: t("settings:devices.removeAllDialog.confirm"),
+    });
+    if (!confirmed) return;
+    try {
+      await apiTokensApi.removeOld();
+      void reload();
+    } catch (err) {
+      logger.error("Failed to remove old devices", err);
+      removeFailure(err, "removeAll");
+    }
+  };
+
   const remainingSeconds = session
     ? Math.ceil((new Date(session.expiresAt).getTime() - now) / 1000)
     : 0;
@@ -225,6 +274,13 @@ export default function DevicesSection(): JSX.Element {
             <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               {t("settings:devices.existingTitle")}
             </h3>
+            {!isDemo && !loadFailed && oldCount > 0 && (
+              <div className="mb-2">
+                <LinkButton onClick={() => void handleRemoveOld()}>
+                  {t("settings:devices.removeAllButton")}
+                </LinkButton>
+              </div>
+            )}
             {loadFailed ? (
               <LinkButton onClick={() => void reload()}>
                 {t("settings:blocks.save.retry")}
@@ -246,7 +302,7 @@ export default function DevicesSection(): JSX.Element {
                     style={{
                       background: "var(--bg-elevated)",
                       border: "1px solid var(--color-border)",
-                      opacity: dev.revokedAt ? 0.5 : 1,
+                      opacity: isOldToken(dev) ? 0.5 : 1,
                     }}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -269,6 +325,9 @@ export default function DevicesSection(): JSX.Element {
                           {dev.lastUsedIp &&
                             ` · ${t("settings:devices.ip", { ip: dev.lastUsedIp })}`}
                           {dev.revokedAt && ` · ${t("settings:devices.revoked")}`}
+                          {!dev.revokedAt &&
+                            isOldToken(dev) &&
+                            ` · ${t("settings:devices.expired")}`}
                         </div>
                       </div>
                     </div>
@@ -276,7 +335,21 @@ export default function DevicesSection(): JSX.Element {
                     (via /settings/tokens, guarded for the demo account) — the
                     section-level notice above already explains the lock, so
                     this action is simply not offered rather than repeated. */}
-                    {!dev.revokedAt && !isDemo && (
+                    {isOldToken(dev) && !isDemo && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(dev.id, dev.label)}
+                        className="ml-3 px-3 py-1.5 text-xs rounded-md"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-border)",
+                          color: "var(--danger)",
+                        }}
+                      >
+                        {t("settings:devices.removeButton")}
+                      </button>
+                    )}
+                    {!isOldToken(dev) && !isDemo && (
                       <button
                         type="button"
                         onClick={() => handleUnpair(dev.id, dev.label)}

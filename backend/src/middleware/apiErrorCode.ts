@@ -345,6 +345,7 @@ export type ApiErrorCode =
   | "TRIP_RECORDING_NO_SPAN" // trip recording: the trip has no first or last day to bound the points (422)
   | "RECORDING_UPLOAD_ID_REUSED" // trip recording: uploadId already stored under another trip (409)
   | "UNSUPPORTED_UPLOAD_TYPE" // a file type the upload route does not take (400)
+  | "TOKEN_STILL_ACTIVE" // removing an API token that is neither revoked nor expired: revoke it first (409)
   | CompanionAppApiErrorCode // packing lists and personal settings (companionAppErrorCodes.ts)
   | LocationProviderApiErrorCode // choosing the location provider (locationProviderErrorCodes.ts)
   /** Observed takeoff/landing (forgejo#194): a time in the future (400). */

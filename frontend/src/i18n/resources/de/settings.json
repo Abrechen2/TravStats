@@ -908,17 +908,36 @@
     "neverUsed": "Noch nie benutzt",
     "ip": "IP {{ip}}",
     "revoked": "Abgemeldet",
+    "expired": "Abgelaufen",
     "unpairButton": "Abmelden",
+    "removeButton": "Entfernen",
+    "removeAllButton": "Alle alten entfernen",
     "errors": {
       "load": "Ich konnte die Telefone nicht laden.",
       "start": "Ich konnte die Kopplung nicht starten.",
-      "unpair": "Ich konnte das Telefon nicht abmelden."
+      "unpair": "Ich konnte das Telefon nicht abmelden.",
+      "remove": "Ich konnte das Telefon nicht entfernen.",
+      "removeAll": "Ich konnte die alten Telefone nicht entfernen.",
+      "removeActive": "Dieses Telefon ist noch verbunden. Melde es zuerst ab."
     },
     "unpairDialog": {
       "title": "Telefon abmelden?",
       "amount": "1 Telefon",
       "after": "Es verliert sofort den Zugang und muss neu gekoppelt werden.",
       "confirm": "Abmelden"
+    },
+    "removeDialog": {
+      "title": "Telefon entfernen?",
+      "amount": "1 Telefon",
+      "after": "Der Eintrag verschwindet aus der Liste. Das Telefon hat schon keinen Zugang mehr.",
+      "confirm": "Entfernen"
+    },
+    "removeAllDialog": {
+      "title": "Alte Telefone entfernen?",
+      "amount_one": "1 abgemeldetes oder abgelaufenes Telefon",
+      "amount_other": "{{count}} abgemeldete oder abgelaufene Telefone",
+      "after": "Aktive Telefone bleiben verbunden.",
+      "confirm": "Alle entfernen"
     }
   },
   "apiTokens": {
@@ -939,7 +958,10 @@
     "lastUsed": "Zuletzt: {{when}}",
     "neverUsed": "Noch nie benutzt",
     "revoked": "Widerrufen",
+    "expired": "Abgelaufen",
     "revokeButton": "Widerrufen",
+    "removeButton": "Entfernen",
+    "removeAllButton": "Alle alten entfernen",
     "justCreatedTitle": "Token erstellt",
     "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
     "copy": "Kopieren",
@@ -950,7 +972,10 @@
       "create": "Ich konnte den Schlüssel nicht anlegen.",
       "revoke": "Ich konnte den Schlüssel nicht zurückziehen.",
       "labelRequired": "Ich brauche einen Namen für den Schlüssel.",
-      "technicalDetail": "Technische Details"
+      "technicalDetail": "Technische Details",
+      "remove": "Ich konnte den Schlüssel nicht entfernen.",
+      "removeAll": "Ich konnte die alten Schlüssel nicht entfernen.",
+      "removeActive": "Dieser Schlüssel ist noch aktiv. Ziehe ihn zuerst zurück."
     },
     "scopesShort": {
       "read": "Lesen",
@@ -962,6 +987,19 @@
       "amount": "1 Schlüssel",
       "after": "Das Werkzeug kommt sofort nicht mehr hinein.",
       "confirm": "Zurückziehen"
+    },
+    "removeDialog": {
+      "title": "Schlüssel entfernen?",
+      "amount": "1 Schlüssel",
+      "after": "Der Eintrag verschwindet aus der Liste. Der Schlüssel war schon unbrauchbar.",
+      "confirm": "Entfernen"
+    },
+    "removeAllDialog": {
+      "title": "Alte Schlüssel entfernen?",
+      "amount_one": "1 zurückgezogener oder abgelaufener Schlüssel",
+      "amount_other": "{{count}} zurückgezogene oder abgelaufene Schlüssel",
+      "after": "Aktive Schlüssel bleiben bestehen.",
+      "confirm": "Alle entfernen"
     }
   },
   "security": {
