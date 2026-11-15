@@ -207,6 +207,183 @@ export async function countBulkRefreshCandidates(userId: string): Promise<number
   return prisma.flight.count({ where: bulkRefreshWhere(userId) });
 }
 
+type BulkRefreshResult = BulkRefreshSummary["results"][number];
+type FlightMatch = Awaited<ReturnType<typeof lookupFlightWithHistorical>>["flights"][number];
+
+interface FlightPatch {
+  aircraftRegistration?: string;
+  aircraftModeS?: string;
+  isCodeshare?: boolean;
+  airlineIata?: string;
+  airlineIcao?: string;
+  operatingAirlineIata?: string;
+  operatingAirlineIcao?: string;
+  aircraft?: string;
+  actualDeparture?: Date;
+  actualArrival?: Date;
+}
+
+type CurrentRow = NonNullable<Awaited<ReturnType<typeof readCurrentRow>>>;
+
+/**
+ * Re-read the row to inspect current NULLs — avoids overwriting values the
+ * user typed manually between candidate-discovery and patch-write.
+ */
+function readCurrentRow(flightId: string) {
+  return prisma.flight.findUnique({
+    where: { id: flightId },
+    select: {
+      aircraftRegistration: true,
+      aircraftModeS: true,
+      isCodeshare: true,
+      airlineIata: true,
+      airlineIcao: true,
+      operatingAirlineIata: true,
+      operatingAirlineIcao: true,
+      aircraft: true,
+      actualDeparture: true,
+      actualArrival: true,
+    },
+  });
+}
+
+/** The fields of `match` that fill a gap in `current` — never an overwrite. */
+function fillGaps(
+  current: CurrentRow,
+  match: FlightMatch
+): { patch: FlightPatch; fieldsUpdated: string[] } {
+  const patch: FlightPatch = {};
+  const fieldsUpdated: string[] = [];
+
+  if (!current.aircraftRegistration && match.aircraftRegistration) {
+    patch.aircraftRegistration = match.aircraftRegistration;
+    fieldsUpdated.push("aircraftRegistration");
+  }
+  if (!current.aircraftModeS && match.aircraftModeS) {
+    patch.aircraftModeS = match.aircraftModeS;
+    fieldsUpdated.push("aircraftModeS");
+  }
+  if (current.isCodeshare === null && match.isCodeshare !== undefined) {
+    patch.isCodeshare = match.isCodeshare;
+    fieldsUpdated.push("isCodeshare");
+  }
+  if (!current.airlineIata && match.airlineIata) {
+    patch.airlineIata = match.airlineIata;
+    fieldsUpdated.push("airlineIata");
+  }
+  if (!current.airlineIcao && match.airlineIcao) {
+    patch.airlineIcao = match.airlineIcao;
+    fieldsUpdated.push("airlineIcao");
+  }
+
+  /**
+   * The aircraft TYPE and the two actual times, which the provider has
+   * been returning in the same response all along and this function
+   * threw away.
+   *
+   * Reported by the owner on 2026-09-03: three recently flown flights
+   * with no aircraft and no actual times, and "refreshing the backlog
+   * changed nothing here". It had in fact changed something — the
+   * registrations HB-AZD, HB-JNG and D-ABYT were all written by an
+   * earlier run. The one response carried the model beside the
+   * registration (`aerodataboxLookup.ts` maps `aircraft.model || reg`),
+   * and only five fields were ever copied out of it.
+   *
+   * `!current.aircraft` is deliberately falsy-tested rather than
+   * null-checked: that column holds "" as often as NULL, and a
+   * `=== null` here would refuse to fill exactly the rows that prompted
+   * the report.
+   *
+   * The times are filled on the same never-overwrite terms as everything
+   * else. A stored actual time came from a live check or from the user;
+   * a later provider answer is not better evidence about a departure
+   * that already happened.
+   */
+  if (!current.aircraft && match.aircraft) {
+    patch.aircraft = match.aircraft;
+    fieldsUpdated.push("aircraft");
+  }
+  // Nested, not top-level: the provider result is flattened into
+  // `FlightData` on its way here, and the two actual times land beside
+  // the scheduled ones inside `departure`/`arrival`. They are already
+  // UTC — `parseAerodataboxUtc` reads the `.utc` member of the
+  // provider's payload, never the local one.
+  if (!current.actualDeparture && match.departure?.actualTime) {
+    patch.actualDeparture = new Date(match.departure.actualTime);
+    fieldsUpdated.push("actualDeparture");
+  }
+  if (!current.actualArrival && match.arrival?.actualTime) {
+    patch.actualArrival = new Date(match.arrival.actualTime);
+    fieldsUpdated.push("actualArrival");
+  }
+  return { patch, fieldsUpdated };
+}
+
+/** Write what the provider's first match fills in, and say what happened. */
+async function patchFromMatch(
+  candidate: BulkRefreshCandidate,
+  match: FlightMatch
+): Promise<BulkRefreshResult> {
+  const base = { flightId: candidate.id, flightNumber: candidate.flightNumber };
+  const current = await readCurrentRow(candidate.id);
+  if (!current) {
+    // Flight was deleted between scan and write — skip silently.
+    return { ...base, outcome: "no_data", reason: "flight_deleted" };
+  }
+
+  const { patch, fieldsUpdated } = fillGaps(current, match);
+  if (fieldsUpdated.length > 0) {
+    await prisma.flight.update({ where: { id: candidate.id }, data: patch });
+    return { ...base, outcome: "updated", fieldsUpdated };
+  }
+  // The provider answered and every field it could have filled was
+  // already filled. This used to be counted as `no_data`, which reads
+  // as "the API has nothing on this leg" — the opposite of what
+  // happened. Its own outcome, so the UI can say which it was.
+  return { ...base, outcome: "already_complete" };
+}
+
+/** One candidate: look it up and turn the answer into a result row. */
+async function refreshCandidate(
+  candidate: BulkRefreshCandidate,
+  userId: string
+): Promise<BulkRefreshResult> {
+  const base = { flightId: candidate.id, flightNumber: candidate.flightNumber };
+  const { flights, unavailableReason, providerFailures } = await lookupFlightWithHistorical(
+    candidate.flightNumber,
+    candidate.departureTime,
+    userId,
+    candidate.depIata ?? candidate.depIcao ?? undefined
+  );
+
+  if (unavailableReason === "provider_failed") {
+    return {
+      ...base,
+      outcome: "failed",
+      reason: "provider_failed",
+      providerFailures: providerFailures ?? [],
+    };
+  }
+  if (unavailableReason || flights.length === 0) {
+    return {
+      ...base,
+      outcome: "no_data",
+      // The provider's own word for it where there is one — a missing key
+      // and an unknown leg are different answers and were the same number.
+      reason: unavailableReason ?? "no_match",
+    };
+  }
+  // Pick the first match — provider already filtered by date.
+  return patchFromMatch(candidate, flights[0]);
+}
+
+const OUTCOME_COUNTER = {
+  updated: "updated",
+  no_data: "noData",
+  already_complete: "alreadyComplete",
+  failed: "failed",
+} as const;
+
 /**
  * Run one batch. Caller is expected to:
  *   1. authenticate the user
@@ -228,186 +405,27 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
 
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[i];
-
+    let result: BulkRefreshResult;
     try {
-      const { flights, unavailableReason, providerFailures } = await lookupFlightWithHistorical(
-        candidate.flightNumber,
-        candidate.departureTime,
-        userId,
-        candidate.depIata ?? candidate.depIcao ?? undefined
-      );
-
-      if (unavailableReason === "provider_failed") {
-        summary.failed++;
-        summary.results.push({
-          flightId: candidate.id,
-          flightNumber: candidate.flightNumber,
-          outcome: "failed",
-          reason: "provider_failed",
-          providerFailures: providerFailures ?? [],
-        });
-      } else if (unavailableReason || flights.length === 0) {
-        summary.noData++;
-        summary.results.push({
-          flightId: candidate.id,
-          flightNumber: candidate.flightNumber,
-          outcome: "no_data",
-          // The provider's own word for it where there is one — a missing key
-          // and an unknown leg are different answers and were the same number.
-          reason: unavailableReason ?? "no_match",
-        });
-      } else {
-        // Pick the first match — provider already filtered by date.
-        const match = flights[0];
-        const patch: {
-          aircraftRegistration?: string;
-          aircraftModeS?: string;
-          isCodeshare?: boolean;
-          airlineIata?: string;
-          airlineIcao?: string;
-          operatingAirlineIata?: string;
-          operatingAirlineIcao?: string;
-          aircraft?: string;
-          actualDeparture?: Date;
-          actualArrival?: Date;
-        } = {};
-        const fieldsUpdated: string[] = [];
-
-        // Re-read the row to inspect current NULLs — avoids overwriting
-        // values the user typed manually between candidate-discovery and
-        // patch-write.
-        const current = await prisma.flight.findUnique({
-          where: { id: candidate.id },
-          select: {
-            aircraftRegistration: true,
-            aircraftModeS: true,
-            isCodeshare: true,
-            airlineIata: true,
-            airlineIcao: true,
-            operatingAirlineIata: true,
-            operatingAirlineIcao: true,
-            aircraft: true,
-            actualDeparture: true,
-            actualArrival: true,
-          },
-        });
-
-        if (!current) {
-          // Flight was deleted between scan and write — skip silently.
-          summary.noData++;
-          summary.results.push({
-            flightId: candidate.id,
-            flightNumber: candidate.flightNumber,
-            outcome: "no_data",
-            reason: "flight_deleted",
-          });
-          continue;
-        }
-
-        if (!current.aircraftRegistration && match.aircraftRegistration) {
-          patch.aircraftRegistration = match.aircraftRegistration;
-          fieldsUpdated.push("aircraftRegistration");
-        }
-        if (!current.aircraftModeS && match.aircraftModeS) {
-          patch.aircraftModeS = match.aircraftModeS;
-          fieldsUpdated.push("aircraftModeS");
-        }
-        if (current.isCodeshare === null && match.isCodeshare !== undefined) {
-          patch.isCodeshare = match.isCodeshare;
-          fieldsUpdated.push("isCodeshare");
-        }
-        if (!current.airlineIata && match.airlineIata) {
-          patch.airlineIata = match.airlineIata;
-          fieldsUpdated.push("airlineIata");
-        }
-        if (!current.airlineIcao && match.airlineIcao) {
-          patch.airlineIcao = match.airlineIcao;
-          fieldsUpdated.push("airlineIcao");
-        }
-
-        /**
-         * The aircraft TYPE and the two actual times, which the provider has
-         * been returning in the same response all along and this function
-         * threw away.
-         *
-         * Reported by the owner on 2026-09-03: three recently flown flights
-         * with no aircraft and no actual times, and "refreshing the backlog
-         * changed nothing here". It had in fact changed something — the
-         * registrations HB-AZD, HB-JNG and D-ABYT were all written by an
-         * earlier run. The one response carried the model beside the
-         * registration (`aerodataboxLookup.ts` maps `aircraft.model || reg`),
-         * and only five fields were ever copied out of it.
-         *
-         * `!current.aircraft` is deliberately falsy-tested rather than
-         * null-checked: that column holds "" as often as NULL, and a
-         * `=== null` here would refuse to fill exactly the rows that prompted
-         * the report.
-         *
-         * The times are filled on the same never-overwrite terms as everything
-         * else. A stored actual time came from a live check or from the user;
-         * a later provider answer is not better evidence about a departure
-         * that already happened.
-         */
-        if (!current.aircraft && match.aircraft) {
-          patch.aircraft = match.aircraft;
-          fieldsUpdated.push("aircraft");
-        }
-        // Nested, not top-level: the provider result is flattened into
-        // `FlightData` on its way here, and the two actual times land beside
-        // the scheduled ones inside `departure`/`arrival`. They are already
-        // UTC — `parseAerodataboxUtc` reads the `.utc` member of the
-        // provider's payload, never the local one.
-        if (!current.actualDeparture && match.departure?.actualTime) {
-          patch.actualDeparture = new Date(match.departure.actualTime);
-          fieldsUpdated.push("actualDeparture");
-        }
-        if (!current.actualArrival && match.arrival?.actualTime) {
-          patch.actualArrival = new Date(match.arrival.actualTime);
-          fieldsUpdated.push("actualArrival");
-        }
-
-        if (fieldsUpdated.length > 0) {
-          await prisma.flight.update({
-            where: { id: candidate.id },
-            data: patch,
-          });
-          summary.updated++;
-          summary.results.push({
-            flightId: candidate.id,
-            flightNumber: candidate.flightNumber,
-            outcome: "updated",
-            fieldsUpdated,
-          });
-        } else {
-          // The provider answered and every field it could have filled was
-          // already filled. This used to be counted as `no_data`, which reads
-          // as "the API has nothing on this leg" — the opposite of what
-          // happened. Its own outcome, so the UI can say which it was.
-          summary.alreadyComplete++;
-          summary.results.push({
-            flightId: candidate.id,
-            flightNumber: candidate.flightNumber,
-            outcome: "already_complete",
-          });
-        }
-      }
+      result = await refreshCandidate(candidate, userId);
     } catch (error) {
-      summary.failed++;
-      summary.results.push({
+      result = {
         flightId: candidate.id,
         flightNumber: candidate.flightNumber,
         outcome: "failed",
         error: error instanceof Error ? error.message : "Unknown error",
-      });
+      };
       logger.warn(
         {
           operation: "bulk_flight_refresh_item_failed",
           flightId: candidate.id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: result.error,
         },
         "Bulk refresh failed for one flight"
       );
     }
+    summary[OUTCOME_COUNTER[result.outcome]]++;
+    summary.results.push(result);
 
     // Pace between calls — but skip the wait on the last one.
     if (i < candidates.length - 1) {
