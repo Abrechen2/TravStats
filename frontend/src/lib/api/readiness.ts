@@ -59,11 +59,28 @@ export interface ReadinessSummary {
   ready: number;
 }
 
+/** Stage 2 (§12): the invitation card. `show` is false while snoozed or when nothing is new. */
+export interface ReadinessInvitation {
+  show: boolean;
+  /** "update" wins when both apply. */
+  reason: "update" | "required" | null;
+  snoozedUntil: string | null;
+}
+
+/** Stage 2 (§12): the admin banner. Admins only; ignores snoozes. */
+export interface ReadinessBanner {
+  show: boolean;
+  /** Required admin items that need action. */
+  itemIds: string[];
+}
+
 export interface ReadinessResponse {
   runningVersion: string;
   summary: ReadinessSummary;
   items: ReadinessItem[];
   notes: ReadinessNote[];
+  invitation: ReadinessInvitation;
+  banner: ReadinessBanner;
 }
 
 export async function fetchReadiness(): Promise<ReadinessResponse> {
@@ -87,4 +104,14 @@ export async function clearReadinessItemState(id: string): Promise<void> {
 
 export async function acknowledgeReadinessNote(id: string): Promise<void> {
   await api.post(`/readiness/notes/${encodeURIComponent(id)}/ack`);
+}
+
+/** The page was opened: what the card showed counts as seen. */
+export async function markInvitationSeen(): Promise<void> {
+  await api.post("/readiness/invitation/seen");
+}
+
+/** "Morgen erinnern" on the invitation card (+1 day, server side). */
+export async function snoozeInvitation(): Promise<void> {
+  await api.post("/readiness/invitation/snooze");
 }

@@ -9,15 +9,18 @@ import {
   acknowledgeReadinessNote,
   clearReadinessItemState,
   fetchReadiness,
+  markInvitationSeen,
   optOutReadinessItem,
   snoozeReadinessItem,
   type ReadinessItem,
   type ReadinessNote,
   type ReadinessResponse,
 } from "../../../lib/api/readiness";
+import { logger } from "../../../lib/logger";
 import { profileDateTime } from "../../../lib/profileInstant";
 import { resolveAddress } from "../../../pages/Settings/area/redirects";
 import { now } from "../../../shared/time";
+import { refreshReadinessShell } from "../../../store/readinessShellStore";
 import { useAuthStore } from "../../../store/authStore";
 import Button from "../../ui/Button";
 import Chip from "../../ui/Chip";
@@ -79,6 +82,26 @@ export default function ReadinessSection(): JSX.Element {
     void reload();
   }, [reload]);
 
+  // Opening the page ends the invitation card for what it showed (spec §12):
+  // once per open, never for the demo account (a write it would refuse), and
+  // only once the page has actually loaded — a failed read showed nothing, so
+  // it must not count as seen. A failed write is only logged: the worst case
+  // is a card that comes back once more.
+  const seenSent = useRef(false);
+  const loaded = load.state === "ok";
+  useEffect(() => {
+    if (demo || !loaded || seenSent.current) return;
+    seenSent.current = true;
+    void (async () => {
+      try {
+        await markInvitationSeen();
+        await refreshReadinessShell();
+      } catch (error) {
+        logger.warn("readiness invitation seen failed", error);
+      }
+    })();
+  }, [demo, loaded]);
+
   const write = async (action: () => Promise<void>): Promise<void> => {
     setWriteFailed(false);
     try {
@@ -88,6 +111,7 @@ export default function ReadinessSection(): JSX.Element {
       return;
     }
     await reload();
+    void refreshReadinessShell();
   };
 
   const hrefOf = useCallback(

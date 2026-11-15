@@ -2085,5 +2085,28 @@
       "sub": "People on connected servers may send you a friend request"
     },
     "loadFailed": "I couldn't read whether you are findable."
+  },
+  "publicUrlCheck": {
+    "button": "Check reachability",
+    "checking": "Checking …",
+    "saveFirst": "Save the address first. The saved one is what gets checked.",
+    "ok": "Reachable. Checked at {{time}}.",
+    "error": {
+      "NO_PUBLIC_URL": "No public address is saved, so there was nothing to check.",
+      "OUTBOUND_DISABLED": "Outbound network traffic is switched off, so nothing was checked.",
+      "TIMEOUT": "No answer within 10 seconds.",
+      "DNS": "The name of the address could not be resolved.",
+      "TLS": "The certificate of the address was not accepted.",
+      "CONNECTION": "The connection to the address could not be made.",
+      "HTTP_STATUS": "The address answered with error status {{status}}.",
+      "NOT_THIS_INSTANCE": "A different server answers at this address, not this one.",
+      "unknown": "The check failed."
+    },
+    "failed": {
+      "timeout": "The server did not answer in time. The check did not finish.",
+      "rateLimited": "Too many checks in a short time. Please wait a moment.",
+      "forbidden": "Only admins can check reachability.",
+      "generic": "The check could not be started. Please try again."
+    }
   }
 }

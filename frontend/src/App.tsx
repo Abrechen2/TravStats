@@ -16,6 +16,11 @@ import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { HomeRedirect, railHandoffRoutes } from "./pages/railHandoffRoutes";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
+import { useReadinessRefresh } from "./hooks/useReadinessRefresh";
+import ReadinessBanner from "./components/Readiness/ReadinessBanner";
+import ReadinessInvitationCard, {
+  invitationBlocked,
+} from "./components/Readiness/ReadinessInvitationCard";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import { useSetupRedirect } from "./hooks/useSetupRedirect";
 import { useWebPrefsSync } from "./hooks/useWebPrefsSync";
@@ -110,6 +115,10 @@ function AppContent() {
     whatsNewChecked,
     whatsNewOpen: shouldShow,
   });
+
+  // The invitation card and the admin banner (readiness stage 2): one read on
+  // login, one on focus (throttled), one after each readiness write.
+  useReadinessRefresh(sessionConfirmed);
 
   // Sync language from settings store to i18n
   useEffect(() => {
@@ -215,9 +224,20 @@ function AppContent() {
         <Toast />
         <AirportSeedingBanner />
         <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
+        {sessionConfirmed && <ReadinessBanner />}
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />
+        {sessionConfirmed && (
+          <ReadinessInvitationCard
+            blocked={invitationBlocked({
+              whatsNewChecked,
+              whatsNewOpen: shouldShow,
+              consentSettled: consentStep.settled,
+              consentOpen: consentStep.shouldShow,
+            })}
+          />
+        )}
         <DemoBetaNotice
           sessionConfirmed={sessionConfirmed}
           whatsNewChecked={whatsNewChecked}
