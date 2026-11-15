@@ -13,6 +13,7 @@ import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { ensureTourDomainEnabled } from "../../services/domainVisibility";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
+import { assertTourOdometerOrder } from "../../services/tour/odometerOrder";
 import { recomputeLegs } from "../../services/tour/legRecompute";
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
@@ -274,6 +275,7 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createRouteSchema.parse(req.body);
+      assertTourOdometerOrder(null, body);
       await ensureTourDomainEnabled(userId);
 
       const last = await prisma.tripRoute.findFirst({
@@ -324,8 +326,9 @@ router.patch(
       const detach = await assertKindFields(userId, routeId, { ...body, detachStationPhotos });
       const current = await prisma.tripRoute.findUniqueOrThrow({
         where: { id: routeId },
-        select: { kind: true, tourDate: true },
+        select: { kind: true, tourDate: true, startOdometerKm: true, endOdometerKm: true },
       });
+      assertTourOdometerOrder(current, body);
       const day = tourDayColumns({ date, startTime }, current.kind, current);
 
       // The photos come off their stations in the same transaction as the
