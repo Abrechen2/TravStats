@@ -8,6 +8,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { buildTrackLayers, tooltipOf, type TrackLayerInput } from "./trackMapLayers";
 import { linesBounds, type LonLat } from "./trackGeometry";
 import TrackFogLayer, { type FogStatus } from "./TrackFogLayer";
+import { reuseMapsEnabled } from "../../../lib/mapReuse";
 
 const FRAME_PADDING = { top: 40, right: 24, bottom: 40, left: 24 };
 
@@ -125,7 +126,7 @@ export default function TrackRangeMap(props: TrackRangeMapProps): JSX.Element | 
     >
       <MapGL
         ref={mapRef}
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         initialViewState={{
           bounds,
           fitBoundsOptions: { padding: props.fitPadding ?? FRAME_PADDING },

@@ -41,6 +41,7 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "./routeEditorState";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -623,7 +624,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       onPointerUp={onMarqueeEnd}
     >
       <MapGL
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         ref={mapRef}
         initialViewState={INITIAL_VIEW}
         mapStyle={mapStyle}

@@ -3,6 +3,7 @@
 // reference them without import cycles.
 
 import type { Quartile } from "./heatmapUtils";
+import type { ArcTimeline } from "./arcTimeline";
 import type { Rgb } from "../../lib/cruiseColor";
 import type { JourneyRouteHover } from "../map/cards/journeys/journeyLayerCards";
 import type { CruiseStatus } from "../../types/cruise";
@@ -69,6 +70,14 @@ export interface ArcDatum {
    * a route arc.
    */
   recorded?: "solid" | "gap";
+  /**
+   * Live playback only (forgejo#352): epoch ms at which this arc first shows —
+   * the departure of the route's `minRouteCount`-th flight, or a recorded
+   * line's own flight. The GPU hides the arc before it. Absent outside live mode.
+   */
+  visibleFrom?: number;
+  /** Live playback only: per-flight times behind `count`/`flightIds`, oldest first. */
+  timeline?: ArcTimeline;
 }
 
 export interface PointDatum {

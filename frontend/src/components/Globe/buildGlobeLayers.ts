@@ -8,7 +8,13 @@
 // it would have used inline; nothing in here depends on render scope.
 
 import { ColumnLayer, PathLayer } from "@deck.gl/layers";
-import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
+import {
+  DataFilterExtension,
+  PathStyleExtension,
+  type DataFilterExtensionProps,
+  type PathStyleExtensionProps,
+} from "@deck.gl/extensions";
+import { arcAtTime, GPU_MINUTE_CEIL, GPU_MINUTE_FLOOR, gpuMinute } from "./arcTimeline";
 import {
   RECORDED_GAP_ALPHA_SHARE,
   RECORDED_GAP_DASH,
@@ -95,6 +101,12 @@ function pickingCoordToLngLat(
   return [0, 0];
 }
 
+/**
+ * Hides every arc that has not been flown yet, on the GPU. One shared
+ * instance: the live cursor moves ten times a second and only uniforms change.
+ */
+const arcTimeFilter = new DataFilterExtension({ filterSize: 1 });
+
 export interface BuildGlobeLayersOptions {
   arcsData: ArcDatum[];
   antipodalArcs: ArcDatum[];
@@ -121,6 +133,12 @@ export interface BuildGlobeLayersOptions {
   flightColorConfig: FlightColorConfig;
   /** User multiplier on flight-arc line width (1 = default). */
   arcWidthScale: number;
+  /**
+   * Live playback cursor (epoch ms), or null outside live mode. The arcs were
+   * aggregated once for the whole logbook (forgejo#352): this hides the ones
+   * not flown yet and lets hover/pin report the count as of this moment.
+   */
+  liveTime?: number | null;
 }
 
 /**
@@ -144,19 +162,20 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     isOverNative,
     flightColorConfig,
     arcWidthScale,
+    liveTime = null,
   } = opts;
   // A pointer over a native dot/line belongs to that layer, not to an arc
   // passing under it.
   const hoverArc = (info: PickingInfo<ArcDatum>): void => {
     if (isOverNative && info.x != null && info.y != null && isOverNative(info.x, info.y)) return;
-    onArcHover(info);
+    onArcHover(info.object ? { ...info, object: arcAtTime(info.object, liveTime) } : info);
   };
   const pinArc = (info: PickingInfo<ArcDatum>): void => {
     const object = info.object;
     if (!object) return;
     if (isOverNative && info.x != null && info.y != null && isOverNative(info.x, info.y)) return;
     const anchor = pickingCoordToLngLat(info.coordinate, object.waypoints);
-    setPinned({ kind: "arc", data: object, anchorLngLat: anchor });
+    setPinned({ kind: "arc", data: arcAtTime(object, liveTime), anchorLngLat: anchor });
     // No flyToArc here. The popup is anchored to the click coordinate, so
     // flying the camera away from where the user tapped is an anti-pattern,
     // and stacking a 1.5 s flyTo on top of the popup mount + globe re-render
@@ -220,7 +239,18 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       highlightColor: [255, 255, 255, 180],
       onHover: hoverArc,
       onClick: pinArc,
-      extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true }), occlusionExt],
+      extensions: [
+        new PathStyleExtension({ dash: true, highPrecisionDash: true }),
+        occlusionExt,
+        arcTimeFilter,
+      ],
+      // forgejo#352: hide not-yet-flown arcs on the GPU while live playback runs.
+      getFilterValue: (d: ArcDatum) => gpuMinute(d.visibleFrom ?? 0, "ceil"),
+      filterRange: [
+        GPU_MINUTE_FLOOR,
+        liveTime === null ? GPU_MINUTE_CEIL : gpuMinute(liveTime, "floor"),
+      ],
+      filterEnabled: liveTime !== null,
       getDashArray: (d: ArcDatum) =>
         d.recorded === "gap"
           ? RECORDED_GAP_DASH
@@ -232,6 +262,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       ...occlusionProps,
     } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
       PathStyleExtensionProps<ArcDatum> &
+      DataFilterExtensionProps<ArcDatum> &
       EarthOcclusionExtensionProps),
     // Antipodal routes (>= ANTIPODAL_DISTANCE_KM) — flat surface
     // line at altitude 0, narrower than normal arcs and slightly
@@ -256,9 +287,18 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       highlightColor: [255, 255, 255, 180],
       onHover: hoverArc,
       onClick: pinArc,
-      extensions: [occlusionExt],
+      extensions: [occlusionExt, arcTimeFilter],
+      // forgejo#352: hide not-yet-flown arcs on the GPU while live playback runs.
+      getFilterValue: (d: ArcDatum) => gpuMinute(d.visibleFrom ?? 0, "ceil"),
+      filterRange: [
+        GPU_MINUTE_FLOOR,
+        liveTime === null ? GPU_MINUTE_CEIL : gpuMinute(liveTime, "floor"),
+      ],
+      filterEnabled: liveTime !== null,
       ...occlusionProps,
-    } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & EarthOcclusionExtensionProps),
+    } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
+      DataFilterExtensionProps<ArcDatum> &
+      EarthOcclusionExtensionProps),
     // NOTE: IATA / UN-LOCODE labels are intentionally NOT a deck.gl
     // TextLayer here. deck.gl 9's billboard TextLayer/IconLayer does not
     // render under MapLibre's globe projection in interleaved mode (the

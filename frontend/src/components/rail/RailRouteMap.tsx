@@ -17,6 +17,7 @@ import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RailJourney } from "../../types/rail";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 /** Degrees of margin around the line, so the stations never sit on the frame. */
 const BOUNDS_PAD_DEG = 0.3;
@@ -68,7 +69,7 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
         data-testid="rail-route-map"
       >
         <MapGL
-          reuseMaps
+          reuseMaps={reuseMapsEnabled()}
           initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
           mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}

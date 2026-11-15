@@ -8,6 +8,7 @@ import type { Layer, MapViewState } from "@deck.gl/core";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Lodging } from "../../types/lodging";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 interface LodgingMiniMapProps {
   lodging: Lodging;
@@ -69,7 +70,7 @@ export function LodgingMiniMap({ lodging, onSetLocation }: LodgingMiniMapProps):
   return (
     <div className="relative h-40 w-full overflow-hidden rounded-md border border-[var(--color-border)]">
       <MapGL
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         initialViewState={initialView}
         mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}

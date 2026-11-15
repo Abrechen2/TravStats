@@ -6,7 +6,7 @@ import {
   type EarthOcclusionExtensionProps,
 } from "./Globe/EarthOcclusionExtension";
 import { createCursorMux, useNativeGlobe } from "./Globe/native/useNativeGlobe";
-import { DeckGLOverlay } from "./Globe/DeckGLOverlay";
+import { DeckGLOverlay } from "./map/DeckGLOverlay";
 import { arcBaseOffsetM } from "./Globe/arcUtils";
 import { heatLegendRanges, type Quartile } from "./Globe/heatmapUtils";
 import {
@@ -369,13 +369,26 @@ export default function GlobeView({
     monthBuckets,
     cruiseLegDatesByCruise,
     filteredFlights,
+    arcFlights,
+    arcTimeline,
   } = useGlobeTimeSlider(flights, cruises);
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
   const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(
-    () => buildGlobeArcData(filteredFlights, minRouteCount, lite, altitudeFactor, arcBaseOffset),
-    [filteredFlights, minRouteCount, lite, altitudeFactor, arcBaseOffset]
+    () =>
+      buildGlobeArcData(
+        arcFlights,
+        minRouteCount,
+        lite,
+        altitudeFactor,
+        arcBaseOffset,
+        arcTimeline
+      ),
+    [arcFlights, minRouteCount, lite, altitudeFactor, arcBaseOffset, arcTimeline]
   );
+  // The cursor in live playback, as epoch ms; the GPU filter and every
+  // recount read it (forgejo#352). Null in off / filter mode.
+  const liveTime = arcTimeline && sliderCurrent ? sliderCurrent.getTime() : null;
 
   const airportPoints = useMemo<PointDatum[]>(
     () => buildAirportPoints(filteredFlights),
@@ -429,9 +442,10 @@ export default function GlobeView({
         cruisePaths,
         portPoints,
         arcsData,
-        antipodalArcs
+        antipodalArcs,
+        liveTime
       ),
-    [filteredFlights, airportPoints, cruisePaths, portPoints, arcsData, antipodalArcs]
+    [filteredFlights, airportPoints, cruisePaths, portPoints, arcsData, antipodalArcs, liveTime]
   );
 
   // Re-center: fly back to the initial overview pose. Useful after the
@@ -562,6 +576,7 @@ export default function GlobeView({
         setPinned,
         flightColorConfig,
         arcWidthScale: flightRouteWidth,
+        liveTime,
       }),
       // The caller's layers that could not go native (heatmaps, polygons, icon
       // and station-label layers). They DO get the occlusion extension every
@@ -583,6 +598,7 @@ export default function GlobeView({
       flightColorConfig,
       flightRouteWidth,
       onPinHover,
+      liveTime,
     ]
   );
   const layers = useMemo(
@@ -623,7 +639,13 @@ export default function GlobeView({
         style={{ width: "100%", height: "100%" }}
       >
         {mapReady && (
-          <DeckGLOverlay layers={layers} onHover={handleDeckHover} getCursor={getDeckCursor} />
+          <DeckGLOverlay
+            layers={layers}
+            interleaved
+            onHover={handleDeckHover}
+            getCursor={getDeckCursor}
+            handleCursor={false}
+          />
         )}
       </MapGL>
 

@@ -11,6 +11,7 @@ import { railBounds } from "../rail/RailRouteMap";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { BusJourney } from "../../types/bus";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 type RideLine = Pick<BusJourney, "geometry" | "geometrySource">;
 
@@ -58,7 +59,7 @@ export function BusRouteMap({ ride }: { ride: BusJourney }): JSX.Element | null 
         data-testid="bus-route-map"
       >
         <MapGL
-          reuseMaps
+          reuseMaps={reuseMapsEnabled()}
           initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
           mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}

@@ -22,6 +22,7 @@ import {
 } from "../layers/recordedFlightPaths";
 import type { ArcDatum } from "./globeLayerTypes";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { buildTimeline, type TimelineEvent } from "./arcTimeline";
 import {
   ANTIPODAL_DISTANCE_KM,
   calculateDistance,
@@ -80,7 +81,14 @@ export function buildGlobeArcData(
   minRouteCount: number,
   lite: boolean,
   altitudeFactor: number,
-  baseOffsetM: number = ARC_BASE_OFFSET_M
+  baseOffsetM: number = ARC_BASE_OFFSET_M,
+  /**
+   * Live playback (forgejo#352): keep each route's flight times on its datum so
+   * the GPU can hide a route until its first flight and the UI can recount at
+   * any time. Every flight passed in must carry a parseable departure time —
+   * `useGlobeTimeSlider` hands over only those, as live mode hides the rest.
+   */
+  withTimeline = false
 ): GlobeArcData {
   interface RouteAcc {
     count: number;
@@ -105,8 +113,10 @@ export function buildGlobeArcData(
     scheduledCount: number;
     // Recorded flights (forgejo#312) — the same rule as routesLayer.ts.
     recordings: RouteRecordings;
+    events: TimelineEvent[];
   }
   const routes = new Map<string, RouteAcc>();
+  const timeOf = new Map<string, number>();
   for (const flight of flights) {
     const coords = flight.geometry?.coordinates;
     if (!coords || coords.length < 2) continue;
@@ -158,7 +168,20 @@ export function buildGlobeArcData(
         flownCount: isFlown ? 1 : 0,
         scheduledCount: isScheduled ? 1 : 0,
         recordings: addRecording(emptyRecordings(), flight),
+        events: [],
       });
+    }
+    if (withTimeline) {
+      const t = Date.parse(flight.properties?.departureTime ?? "");
+      if (Number.isFinite(t)) {
+        timeOf.set(flight.properties.id, t);
+        routes.get(key)?.events.push({
+          t,
+          id: flight.properties.id,
+          flown: isFlown,
+          scheduled: isScheduled,
+        });
+      }
     }
   }
   const counts = Array.from(routes.values()).map((r) => r.count);
@@ -174,6 +197,12 @@ export function buildGlobeArcData(
     // appears visually, but without the polar-ring artifact a high-
     // altitude arc would produce.
     const quartile = getQuartile(r.count, thresholds);
+    // Live playback: the route shows from its minRouteCount-th flight on, which
+    // is exactly when the old per-tick re-aggregation first let it through.
+    const live = withTimeline ? buildTimeline(r.events) : null;
+    const visibleFrom = live ? live.timeline.times[Math.max(minRouteCount, 1) - 1] : undefined;
+    if (live && visibleFrom === undefined) continue;
+    const timed = live ? { visibleFrom, timeline: live.timeline } : {};
     // Pure-scheduled (never flown) → "scheduled"; everything else
     // (historical-only, mixed, regular past-only) collapses to "past" —
     // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
@@ -203,6 +232,11 @@ export function buildGlobeArcData(
         waypoints: path.map(([lon, lat]): [number, number, number] => [lon, lat, 0]),
         flightIds: [flightId],
         recorded: gap ? "gap" : "solid",
+        // Never before the route itself shows: a recording is drawn beside its
+        // route's arc, not instead of it.
+        ...(visibleFrom !== undefined
+          ? { visibleFrom: Math.max(timeOf.get(flightId) ?? visibleFrom, visibleFrom) }
+          : {}),
       });
     }
     if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
@@ -217,7 +251,7 @@ export function buildGlobeArcData(
           baseOffsetM
         ),
         count: r.count,
-        flightIds: r.flightIds,
+        flightIds: live ? live.flightIds : r.flightIds,
         departure: r.departure,
         arrival: r.arrival,
         color: getHeatmapColor(r.count, thresholds),
@@ -226,6 +260,7 @@ export function buildGlobeArcData(
         status,
         flownCount: r.flownCount,
         scheduledCount: r.scheduledCount,
+        ...timed,
       });
       continue;
     }
@@ -241,7 +276,7 @@ export function buildGlobeArcData(
         baseOffsetM
       ),
       count: r.count,
-      flightIds: r.flightIds,
+      flightIds: live ? live.flightIds : r.flightIds,
       departure: r.departure,
       arrival: r.arrival,
       color: getHeatmapColor(r.count, thresholds),
@@ -250,6 +285,7 @@ export function buildGlobeArcData(
       status,
       flownCount: r.flownCount,
       scheduledCount: r.scheduledCount,
+      ...timed,
     });
   }
   return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };

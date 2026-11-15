@@ -12,6 +12,7 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { allTrackLines, flightTrackBounds, flightTrackPieces } from "./flightTrackPaths";
 import { flightTrackGreatCircle } from "./flightTrackGreatCircle";
 import type { AirportPosition } from "./flownVsGreatCircle";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 type Line = Array<[number, number]>;
 
@@ -103,7 +104,7 @@ export function FlightTrackMap({
       data-testid="flight-track-map"
     >
       <MapGL
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         // The attribution sits over the bottom edge of this small map; framed
         // with the plain 24 px, a north-bound flight began under it (CJU→GMP
         // started at Jeju, hidden). The bottom inset clears it.

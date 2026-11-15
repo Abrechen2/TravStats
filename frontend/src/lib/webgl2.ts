@@ -14,7 +14,11 @@
 function hasWebGL2(): boolean {
   try {
     const canvas = document.createElement("canvas");
-    return canvas.getContext("webgl2") !== null;
+    const gl = canvas.getContext("webgl2");
+    // Released at once: this probe lives for the whole page and used to keep a
+    // context of the browser's 8-16 for nothing (forgejo#332).
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    return gl !== null;
   } catch {
     // A jsdom or SSR environment has no canvas at all. Answering "no" is the
     // safe side: it opens the flat map, which degrades further on its own.
@@ -54,4 +58,23 @@ export function isWebGLInitError(error: unknown): boolean {
     error.name === "GPUInitializationError" ||
     /WebGL2? is required|Failed to initialize WebGL/i.test(error.message)
   );
+}
+
+/**
+ * Gives a canvas's WebGL2 context back to the browser now instead of when the
+ * garbage collector gets to it. deck.gl finalizes a standalone overlay but
+ * never calls `loseContext`, so every flat map visited left one live context
+ * behind (measured: one more per route in a production build) until Chrome hit
+ * its limit and started dropping the OLDEST ones — which can be a map on
+ * screen. A canvas that has no WebGL2 context is left alone.
+ */
+export function releaseWebGL2Context(canvas: HTMLCanvasElement | null | undefined): void {
+  if (!canvas) return;
+  try {
+    // Returns the context the canvas already has; creates nothing new when it
+    // has a WebGL2 one, and a canvas with a 2D context yields null.
+    canvas.getContext("webgl2")?.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch {
+    // Already gone with its canvas: nothing left to release.
+  }
 }
