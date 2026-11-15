@@ -21,7 +21,11 @@
 
 import axios from "axios";
 import NodeCache from "node-cache";
-import { findOrCreateAirport } from "./airportLookup";
+import {
+  isIncompleteHit,
+  markIncompleteHit,
+  resolveAirportSides,
+} from "./flightLookup/airportSides";
 import { resolveApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import { requestAeroapiCall } from "./aeroapiBudget";
@@ -321,7 +325,7 @@ export async function lookupFlightAeroapi(
       return null;
     }
 
-    const result = await mapToLookupResult(picked, normalized);
+    const result = await mapToLookupResult(picked, normalized, outcomes);
     logger.info(
       {
         api: "aeroapi",
@@ -331,7 +335,7 @@ export async function lookupFlightAeroapi(
       },
       "AeroAPI returned data"
     );
-    cache.set(cacheKey, result, ttl);
+    if (!isIncompleteHit(result)) cache.set(cacheKey, result, ttl);
     outcomes?.record("aeroapi", "ok");
     return result;
   } catch (error: unknown) {
@@ -378,15 +382,18 @@ export async function lookupFlightAeroapi(
  */
 async function mapToLookupResult(
   flight: AeroapiFlight,
-  requestedNumber: string
+  requestedNumber: string,
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightLookupResult> {
   const departureCode = flight.origin?.code_iata || flight.origin?.code_icao || undefined;
   const arrivalCode = flight.destination?.code_iata || flight.destination?.code_icao || undefined;
 
-  const [departureAirport, arrivalAirport] = await Promise.all([
-    departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-    arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-  ]);
+  const sides = await resolveAirportSides(departureCode, arrivalCode);
+  const departureAirport = sides.departure;
+  const arrivalAirport = sides.arrival;
+  // Not "airport not found": the airport source was blocked. Say so, and keep this half-empty
+  // answer out of the cache, so the next lookup after the block is lifted draws the airports.
+  if (sides.blocked) outcomes?.record("aeroapi", "blocked");
 
   // AeroAPI answers with the operating flight. When the user asked by a
   // partner's number, the ident differs from the request.
@@ -397,7 +404,7 @@ async function mapToLookupResult(
     ? (getAirlineName(flight.operator_iata) ?? undefined)
     : undefined;
 
-  return {
+  const hit: FlightLookupResult = {
     // The user's spelling, as the other adapters keep it.
     flightNumber: requestedNumber,
     airline: isCodeshare ? undefined : operatorName,
@@ -439,6 +446,8 @@ async function mapToLookupResult(
     runwayArrivalTime: toDate(flight.actual_on),
     baggageBelt: flight.baggage_claim ?? null,
   };
+  if (sides.blocked) markIncompleteHit(hit);
+  return hit;
 }
 
 /** Test-only helper: wipe the in-memory cache between unit tests. */

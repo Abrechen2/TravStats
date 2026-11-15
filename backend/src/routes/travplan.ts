@@ -42,6 +42,7 @@ import {
 import { planVersusActual } from "../services/travplan/actual/planActual";
 import { accessiblePlan, assertOwner, planAccess } from "../services/travplan/access";
 import { planActualLimiter } from "../middleware/planActualLimit";
+import { planEtag } from "../services/sharing/federation/plans/shared";
 const router = Router();
 const uuid = z.string().uuid();
 const writeGuard = [authenticate, requireWriteScope, rejectDemo];
@@ -158,7 +159,7 @@ router.get(
     const result = await readPlan(req.userId!, tripId(req));
     // Per principal: the view leaves out other members' personal parts, so one revision is two
     // different bodies for two members. A client sends it back as If-None-Match; 304 = unchanged.
-    res.setHeader("ETag", '"' + result.revision + "-" + (result.self?.memberId ?? "") + '"');
+    res.setHeader("ETag", planEtag(result));
     res.json(result);
   })
 );

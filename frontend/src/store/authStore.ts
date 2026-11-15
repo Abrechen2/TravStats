@@ -8,6 +8,8 @@ import { forgetQuotaRefusals } from "../lib/bulkRefreshRefusal";
 import { clearStopIdentityCache } from "../lib/travtrackStopIdentity";
 import { clearAllStationDrafts } from "../lib/roadtrip/stationDraftStore";
 import { clearBahnHandoff } from "../lib/rail/bahnHandoff";
+import i18n from "../i18n/config";
+import { useToastStore } from "./toastStore";
 
 interface AuthState {
   user: User | null;
@@ -74,6 +76,13 @@ export const useAuthStore = create<AuthState>()(
             await authApi.logout();
           } catch (error) {
             logger.error("Logout error:", error);
+            // The user is signed out HERE either way; but when the server could not end the
+            // session, the cookie may still be valid there — say so. A 401 is the server
+            // already having dropped it (an expired session), nothing to warn about.
+            const status = (error as { response?: { status?: number } })?.response?.status;
+            if (status !== 401) {
+              useToastStore.getState().addToast("error", i18n.t("errors:logoutServerFailed"), 8000);
+            }
           } finally {
             // Clear local user state regardless of API result
             useDashboardCountsStore.getState().reset();

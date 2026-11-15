@@ -32,11 +32,13 @@
     "quota": "{{provider}}: Kontingent oder Anfragelimit erreicht – bitte später erneut versuchen.",
     "timeout": "{{provider}}: keine Antwort (Zeitüberschreitung).",
     "plan_restricted": "{{provider}}: Dein Tarif erlaubt diese Abfrage nicht.",
-    "provider_error": "{{provider}}: Fehler beim Anbieter."
+    "provider_error": "{{provider}}: Fehler beim Anbieter.",
+    "blocked": "{{provider}}: Flughafendaten konnten nicht geladen werden, weil der ausgehende Zugriff gesperrt ist (Einstellungen → Externe Dienste)."
   },
   "lookupRateLimited": "Zu viele Flugsuchen in kurzer Zeit. Bitte warte einen Moment und versuche es dann erneut.",
   "lookupDemoForbidden": "Im Demo-Konto ist die Flugsuche abgeschaltet, um das API-Kontingent zu schonen. Bitte trage den Flug manuell ein.",
   "lookupFailed": "Die Flugsuche ist fehlgeschlagen. Bitte versuche es später erneut oder trage den Flug manuell ein.",
+  "logoutServerFailed": "Du wurdest auf diesem Gerät abgemeldet, aber der Server konnte die Sitzung nicht beenden. Die Sitzung kann dort noch gültig sein – melde dich bei Bedarf auf einem anderen Gerät ab oder ändere dein Passwort.",
   "airportNotInCatalogue": "Flughafen {{code}} ist nicht im Katalog – bitte manuell auswählen.",
   "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen.",
   "airportLookupUnavailable": {

@@ -22,13 +22,15 @@ export interface FlightBulkEditInput {
   trip?: { mode: "set"; tripId: string } | { mode: "clear" };
   tags?: { mode: ListEditMode; values: string[] };
   companions?: { mode: ListEditMode; values: string[] };
+  /** id -> the `updatedAt` the client read the flight at; a flight that moved on answers VERSION_CONFLICT. */
+  baseVersions?: Record<string, string>;
 }
 
 export interface FlightBulkEditResult {
   flightId: string;
   status: "updated" | "unchanged" | "failed";
   /** Present only for `failed`. */
-  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED";
+  code?: "FLIGHT_NOT_FOUND" | "UPDATE_FAILED" | "VERSION_CONFLICT";
 }
 
 export interface FlightBulkEditAnswer {

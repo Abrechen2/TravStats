@@ -131,6 +131,36 @@ describe("FlightBulkEditModal", () => {
     expect(screen.getByTestId("bulk-failed-c")).toBeInTheDocument();
   });
 
+  it("sends each flight's version as baseVersions and names a VERSION_CONFLICT row", async () => {
+    edit.mockResolvedValueOnce({
+      results: [
+        { flightId: "a", status: "updated" },
+        { flightId: "b", status: "failed", code: "VERSION_CONFLICT" },
+      ],
+      summary: { updated: 1, unchanged: 0, failed: 1 },
+    });
+    const user = userEvent.setup();
+    const { onApplied } = renderModal(vi.fn(), vi.fn(), [
+      flight("a", { updatedAt: "2026-11-01T10:00:00.000Z" }),
+      flight("b", { updatedAt: "2026-11-01T11:00:00.000Z" }),
+    ]);
+    await user.click(screen.getByRole("radio", { name: "flights:bulk.tripClear" }));
+    await user.click(confirmButton());
+
+    expect(edit).toHaveBeenCalledWith({
+      flightIds: ["a", "b"],
+      trip: { mode: "clear" },
+      baseVersions: { a: "2026-11-01T10:00:00.000Z", b: "2026-11-01T11:00:00.000Z" },
+    });
+    expect(await screen.findByTestId("bulk-failed-b")).toHaveTextContent(
+      "flights:bulk.result.code.VERSION_CONFLICT"
+    );
+    // Even with nothing written the list reloads, so the user sees the flight as it now is.
+    expect(onApplied).toHaveBeenCalledTimes(1);
+    // A moved-on flight is not offered for a blind retry.
+    expect(screen.queryByRole("button", { name: /flights:bulk\.result\.retryFailed/ })).toBeNull();
+  });
+
   it("keeps the draft and offers a retry when the whole request fails", async () => {
     edit
       .mockRejectedValueOnce(Object.assign(new Error("Network Error"), { isAxiosError: true }))

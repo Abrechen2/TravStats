@@ -179,7 +179,7 @@ registry.registerPath({
     "`scheduledLocal` (its own wall clock) beside the UTC `scheduledTime`. When no " +
     "flight came back because a provider failed, the answer is " +
     "`error: LOOKUP_PROVIDER_FAILED` with `providerFailures` " +
-    "(auth | quota | timeout | plan_restricted | provider_error per provider) — never " +
+    "(auth | quota | timeout | plan_restricted | provider_error | blocked per provider) — never " +
     "a plain 'not found'. `tz` is the asker's IANA zone and decides what 'today' is.",
   tags: parseTag,
   request: {

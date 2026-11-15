@@ -53,8 +53,16 @@ export function bulkEditGaps(
   return gaps;
 }
 
-export function bulkEditRequest(draft: BulkEditDraft, flightIds: string[]): FlightBulkEditInput {
+export function bulkEditRequest(
+  draft: BulkEditDraft,
+  flightIds: string[],
+  versions: Readonly<Record<string, string | undefined>> = {}
+): FlightBulkEditInput {
   const input: FlightBulkEditInput = { flightIds };
+  const base = Object.fromEntries(
+    flightIds.flatMap((id) => (versions[id] ? [[id, versions[id] as string] as const] : []))
+  );
+  if (Object.keys(base).length > 0) input.baseVersions = base;
   if (draft.trip.mode === "set") input.trip = { mode: "set", tripId: draft.trip.tripId };
   if (draft.trip.mode === "clear") input.trip = { mode: "clear" };
   if (draft.tags.mode !== "keep") input.tags = { mode: draft.tags.mode, values: draft.tags.values };

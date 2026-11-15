@@ -32,11 +32,13 @@
     "quota": "{{provider}}: quota or rate limit reached – please try again later.",
     "timeout": "{{provider}}: no answer (timed out).",
     "plan_restricted": "{{provider}}: your plan does not allow this query.",
-    "provider_error": "{{provider}}: provider error."
+    "provider_error": "{{provider}}: provider error.",
+    "blocked": "{{provider}}: airport data could not be loaded because outbound access is blocked (Settings → External services)."
   },
   "lookupRateLimited": "Too many flight searches in a short time. Please wait a moment and try again.",
   "lookupDemoForbidden": "Flight search is switched off for the demo account to protect the API quota. Please enter the flight manually.",
   "lookupFailed": "The flight search failed. Please try again later or enter the flight manually.",
+  "logoutServerFailed": "You were signed out on this device, but the server could not end the session. It may still be valid there – sign out on another device or change your password if that matters.",
   "airportNotInCatalogue": "Airport {{code}} is not in the catalogue – please pick it manually.",
   "airportLoadFailedCode": "Airport {{code}} could not be loaded – please try again or pick it manually.",
   "airportLookupUnavailable": {

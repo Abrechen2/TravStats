@@ -16,6 +16,10 @@ jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 jest.mock("../services/airportLookup", () => ({
+  lookupOrCreateAirport: jest.fn(async (code: string) => ({
+    status: "found",
+    airport: { iata: code, icao: `${code}`, name: `${code} International`, lat: 0, lon: 0 },
+  })),
   findOrCreateAirport: jest.fn(async (code: string) => ({
     iata: code,
     icao: code,
@@ -74,6 +78,7 @@ import {
   __resetAerodataboxCacheForTests,
 } from "../services/aerodataboxLookup";
 import logger from "../utils/logger";
+import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
 import {
   lookupFlightWithHistorical,
   __resetAviationstackBudgetForTests,
@@ -243,6 +248,37 @@ describe("lookupFlightAerodatabox", () => {
     // Operator-specific metadata still comes from the operator entry
     expect(result?.aircraftRegistration).toBe("D-AIHB");
     expect(result?.callsign).toBe("DLH400");
+  });
+
+  it("reports a blocked airport source as its own outcome, not as a missing airport", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          number: "LH 400",
+          codeshareStatus: "isOperator",
+          airline: { name: "Lufthansa", iata: "LH" },
+          departure: { airport: { iata: "FRA" }, scheduledTime: { utc: "2024-01-15 17:30Z" } },
+          arrival: { airport: { iata: "JFK" }, scheduledTime: { utc: "2024-01-16 02:30Z" } },
+        },
+      ],
+    });
+    const { lookupOrCreateAirport } = jest.requireMock("../services/airportLookup") as {
+      lookupOrCreateAirport: jest.Mock<() => Promise<unknown>>;
+    };
+    lookupOrCreateAirport.mockResolvedValueOnce({ status: "unavailable", reason: "blocked" });
+    const outcomes = new LookupOutcomeLog();
+
+    const result = await lookupFlightAerodatabox(
+      "LH400",
+      "2024-01-15",
+      undefined,
+      undefined,
+      outcomes
+    );
+
+    expect(result?.departure).toBeUndefined();
+    expect(outcomes.failures()).toEqual([{ provider: "aerodatabox", outcome: "blocked" }]);
   });
 
   it("maps Cancelled and Diverted statuses to statusOverride", async () => {

@@ -122,13 +122,23 @@ export default function FlightBulkEditModal({
     setSending(true);
     setRequestError(null);
     try {
-      const answer = await flightBulkEditApi.edit(bulkEditRequest(effective, flightIds));
+      const answer = await flightBulkEditApi.edit(
+        bulkEditRequest(
+          effective,
+          flightIds,
+          Object.fromEntries(flights.map((f) => [f.id, f.updatedAt]))
+        )
+      );
       setResults((prev) => {
         const next = new Map(prev ?? []);
         for (const r of answer.results) next.set(r.flightId, r);
         return next;
       });
-      if (answer.summary.updated > 0) onApplied();
+      // A moved-on flight (or one a lost-answer retry finds already written) means the list
+      // is stale: reload it so the user sees where things stand and the next send has its versions.
+      if (answer.summary.updated > 0 || answer.results.some((r) => r.code === "VERSION_CONFLICT")) {
+        onApplied();
+      }
     } catch (err: unknown) {
       logger.warn({ err }, "FlightBulkEditModal: bulk edit failed");
       // No answer, or a server error: some flights may have changed before it

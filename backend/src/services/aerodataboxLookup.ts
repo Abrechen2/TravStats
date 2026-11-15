@@ -21,7 +21,12 @@
 
 import axios from "axios";
 import NodeCache from "node-cache";
-import { enrichAirportMetadata, findOrCreateAirport } from "./airportLookup";
+import { enrichAirportMetadata } from "./airportLookup";
+import {
+  isIncompleteHit,
+  markIncompleteHit,
+  resolveAirportSides,
+} from "./flightLookup/airportSides";
 import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
@@ -329,7 +334,7 @@ export async function lookupFlightAerodatabox(
       return null;
     }
 
-    const result = await mapToLookupResult(picked.operator, picked.marketing, normalized);
+    const result = await mapToLookupResult(picked.operator, picked.marketing, normalized, outcomes);
 
     logger.info(
       {
@@ -343,7 +348,7 @@ export async function lookupFlightAerodatabox(
     );
 
     const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
-    cache.set(cacheKey, result, ttl);
+    if (!isIncompleteHit(result)) cache.set(cacheKey, result, ttl);
     outcomes?.record("aerodatabox", "ok");
     return result;
   } catch (error: unknown) {
@@ -404,15 +409,18 @@ function mapAerodataboxStatus(status: string | undefined): "cancelled" | "divert
 async function mapToLookupResult(
   flight: AerodataboxFlight,
   marketing: AerodataboxFlight | undefined,
-  fallbackFlightNumber: string
+  fallbackFlightNumber: string,
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightLookupResult> {
   const departureCode = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
   const arrivalCode = flight.arrival?.airport?.iata || flight.arrival?.airport?.icao;
 
-  const [departureAirport, arrivalAirport] = await Promise.all([
-    departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-    arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-  ]);
+  const sides = await resolveAirportSides(departureCode, arrivalCode);
+  const departureAirport = sides.departure;
+  const arrivalAirport = sides.arrival;
+  // Not "airport not found": the airport source was blocked. Say so, and keep this half-empty
+  // answer out of the cache, so the next lookup after the block is lifted draws the airports.
+  if (sides.blocked) outcomes?.record("aerodatabox", "blocked");
 
   // Backfill airport-level metadata (shortName, municipalityName) when
   // AeroDataBox surfaces them and the local row is still missing those
@@ -463,7 +471,7 @@ async function mapToLookupResult(
     ? normalizeFlightNumber(marketing?.number ?? fallbackFlightNumber)
     : normalizeFlightNumber(flight.number ?? fallbackFlightNumber);
 
-  return {
+  const hit: FlightLookupResult = {
     airline,
     flightNumber: visibleFlightNumber,
     aircraft: flight.aircraft?.model || flight.aircraft?.reg,
@@ -516,6 +524,8 @@ async function mapToLookupResult(
     baggageBelt: flight.arrival?.baggageBelt ?? null,
     checkInDesk: flight.departure?.checkInDesk ?? null,
   };
+  if (sides.blocked) markIncompleteHit(hit);
+  return hit;
 }
 
 /** Test-only helper: wipe the in-memory cache between unit tests. */
