@@ -1,6 +1,8 @@
 {
   "_comment": "SYNTHETIC: built from Polarsteps' documented data download (trip.json with all_steps), not from a real account export.",
   "name": "Synthetic Portugal",
+  "start_date": 1773014400,
+  "end_date": 1773273600,
   "all_steps": [
     {
       "name": "Lisbon",

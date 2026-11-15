@@ -723,7 +723,7 @@
       },
       "appImport": {
         "title": "From TripIt, Polarsteps or a flight diary",
-        "description": "Upload your export – TripIt (JSON or iCal), Polarsteps (trip.json) or JetLovers, FlightMemory, Logmyflight (CSV). Before anything is saved you see what will be created: flights, rides, stays, places. What you already have is recognised and not entered twice; entries that do not fit are listed below with the reason.",
+        "description": "Upload your export – TripIt (JSON or iCal), Polarsteps (the ZIP download or trip.json) or JetLovers, FlightMemory, Logmyflight (CSV). Before anything is saved you see what will be created: flights, rides, stays, places. What you already have is recognised and not entered twice; entries that do not fit are listed below with the reason.",
         "uploadLabel": "Choose export file",
         "sourceLabel": "Source",
         "sources": {
@@ -741,7 +741,13 @@
         "failed": "The file could not be read. Is it the export of the selected source? Nothing was changed.",
         "network": "The server cannot be reached. Nothing was changed – please try again.",
         "applyFailed": "Applying failed. Import the file again – what was already applied is recognised.",
-        "rateLimited": "Too many imports in a short time. Please wait a moment and try again."
+        "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
+        "zip": {
+          "notZip": "The file is not a readable ZIP archive. Choose the Polarsteps download or an unpacked trip.json.",
+          "noTrip": "The archive holds no trip.json – is it the Polarsteps data download?",
+          "tooLarge": "The trip.json in the archive is too large to import.",
+          "invalid": "A trip.json in the archive could not be read."
+        }
       }
     },
     "preview": {

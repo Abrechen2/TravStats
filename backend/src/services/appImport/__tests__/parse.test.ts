@@ -175,6 +175,59 @@ describe("Polarsteps", () => {
     expect(out.rejects.map((r) => r.reason)).toEqual(["missing_coordinates", "invalid_record"]);
   });
 
+  it("reads one trip per Polarsteps trip with its local days, from the steps when the dates are absent", () => {
+    const out = parsePolarsteps(fixture("polarsteps.json"));
+    expect(out.trips).toEqual([
+      expect.objectContaining({
+        name: "Synthetic Portugal",
+        startDay: "2026-03-09",
+        endDay: "2026-03-12",
+      }),
+    ]);
+    const noDates = parsePolarsteps(
+      JSON.stringify([
+        {
+          name: "B",
+          all_steps: [{ name: "x", start_time: 1773061200, location: { lat: 1, lon: 2 } }],
+        },
+        { all_steps: [] },
+      ])
+    );
+    expect(noDates.trips[0]).toMatchObject({
+      name: "B",
+      startDay: "2026-03-09",
+      endDay: "2026-03-09",
+    });
+    expect(noDates.rejects.map((r) => [r.sheet, r.reason])).toContainEqual([
+      "trips",
+      "missing_name",
+    ]);
+  });
+
+  it("takes a trip's days from each end step's own zone, so the last local day is not lost", () => {
+    // 2026-03-10T20:00Z is already 03-11 in Tokyo; the first step is 03-09 in Lisbon.
+    const out = parsePolarsteps(
+      JSON.stringify({
+        name: "Across zones",
+        all_steps: [
+          {
+            name: "a",
+            start_time: 1773061200,
+            timezone_id: "Europe/Lisbon",
+            location: { lat: 38.7, lon: -9.1 },
+          },
+          {
+            name: "b",
+            start_time: 1773172800,
+            timezone_id: "Asia/Tokyo",
+            location: { lat: 35.6, lon: 139.7 },
+          },
+        ],
+      })
+    );
+    expect(out.trips[0]).toMatchObject({ startDay: "2026-03-09", endDay: "2026-03-11" });
+  });
+
   it("refuses JSON that is not a trip, and text that is not JSON", () => {
     expect(parsePolarsteps(fixture("polarsteps-malformed.json")).rejects[0].reason).toBe(
       "invalid_file"

@@ -35,7 +35,9 @@ export type AppSheetKey =
   | "lodgingStays"
   | "places"
   | "placeVisits"
+  | "trips"
   | "rail"
+  | "bus"
   /** Records of a kind no importer sheet models (a TripIt car rental, an iCal meeting). */
   | "other";
 
@@ -68,6 +70,16 @@ export interface FlightRecord {
   notes?: string;
 }
 
+/** A trip the source names (Polarsteps): created once, found again by name + days. */
+export interface TripRecord {
+  row: number;
+  label: string;
+  name: string;
+  /** `YYYY-MM-DD` — the trip's first and last local day, when the source knows them. */
+  startDay?: string;
+  endDay?: string;
+}
+
 /** A row of an importer sheet plus where it came from. */
 export interface SheetRecord {
   row: number;
@@ -89,6 +101,7 @@ export interface AppParse {
   flights: FlightRecord[];
   /** Rail segments, in the check-in importers' shape (stations resolved later). */
   rides: CheckinRide[];
+  trips: TripRecord[];
   lodging: SheetRecord[];
   lodgingStays: SheetRecord[];
   places: SheetRecord[];
@@ -100,6 +113,7 @@ export function emptyParse(): AppParse {
   return {
     flights: [],
     rides: [],
+    trips: [],
     lodging: [],
     lodgingStays: [],
     places: [],

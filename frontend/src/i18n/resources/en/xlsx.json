@@ -355,9 +355,10 @@
       "unsupported_event": "This calendar entry is neither a flight nor a stay and is not imported.",
       "invalid_record": "The entry is incomplete or not in the expected format.",
       "missing_airport_code": "An airport code (IATA, three letters) is missing for the start or the destination.",
-      "missing_flight_number": "The flight number is missing – a new flight needs one.",
+      "missing_flight_number": "The flight number is missing, so this flight was not imported. You can enter it by hand.",
       "missing_name": "The name is missing.",
-      "missing_coordinates": "Latitude and longitude are missing."
+      "missing_coordinates": "Latitude and longitude are missing.",
+      "domain_off": "This area is switched off for your account – not imported."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

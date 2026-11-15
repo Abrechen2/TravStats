@@ -41,11 +41,76 @@ const step = z
 
 const tripDoc = z
   .object({
+    start_date: num.nullish(),
+    end_date: num.nullish(),
     name: z.string().nullish(),
     all_steps: z.array(z.unknown()).optional(),
     steps: z.array(z.unknown()).optional(),
   })
   .passthrough();
+
+type TripDoc = z.infer<typeof tripDoc>;
+
+/**
+ * One trip record per Polarsteps trip: its name and local first/last day. The
+ * dates come from `start_date` / `end_date`, else from the earliest and latest
+ * step; a trip with neither is still created, without dates. The day is read
+ * in the zone of the trip's first step (UTC when it names none).
+ */
+function readTrips(docs: TripDoc[], out: AppParse): void {
+  const seen = new Set<string>();
+  docs.forEach((t, index) => {
+    const row = index + 1;
+    const name = t.name?.trim();
+    if (!name) {
+      out.rejects.push({ sheet: "trips", row, label: `#${row}`, reason: "missing_name" });
+      return;
+    }
+    // Each step's own local day (the zone of the step, as its visit is read),
+    // so a trip across zones does not lose its last day.
+    const stepDays = (t.all_steps ?? t.steps ?? []).flatMap((s) => {
+      const r = step.safeParse(s);
+      if (!r.success || r.data.start_time == null || !Number.isFinite(r.data.start_time)) return [];
+      const instant = new Date(r.data.start_time * 1000);
+      if (Number.isNaN(instant.getTime())) return [];
+      const lat = r.data.location?.lat;
+      const lon = r.data.location?.lon;
+      const zone =
+        r.data.timezone_id && isValidZone(r.data.timezone_id)
+          ? r.data.timezone_id
+          : lat != null && lon != null && Number.isFinite(lat) && Number.isFinite(lon)
+            ? zoneOf({ lat, lon })
+            : null;
+      return [
+        {
+          epoch: r.data.start_time,
+          zone: zone ?? "UTC",
+          day: instantToWallClock(instant, zone ?? "UTC").slice(0, 10),
+        },
+      ];
+    });
+    stepDays.sort((x, y) => x.epoch - y.epoch);
+    const dayAt = (epoch: number | null | undefined, zone: string): string | undefined => {
+      if (epoch == null || !Number.isFinite(epoch)) return undefined;
+      const instant = new Date(epoch * 1000);
+      return Number.isNaN(instant.getTime())
+        ? undefined
+        : instantToWallClock(instant, zone).slice(0, 10);
+    };
+    const first = stepDays[0];
+    const last = stepDays[stepDays.length - 1];
+    const startDay = dayAt(t.start_date, first?.zone ?? "UTC") ?? first?.day;
+    const endDay = dayAt(t.end_date, last?.zone ?? "UTC") ?? last?.day;
+    if (startDay && endDay && endDay < startDay) {
+      out.rejects.push({ sheet: "trips", row, label: name, reason: "invalid_date" });
+      return;
+    }
+    const key = [name, startDay, endDay].join("|").toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.trips.push({ row, label: name, name, startDay, endDay });
+  });
+}
 
 export function parsePolarsteps(raw: string): AppParse {
   const out = emptyParse();
@@ -66,6 +131,11 @@ export function parsePolarsteps(raw: string): AppParse {
     return out;
   }
   if (steps.length > MAX_APP_RECORDS) throw new TooManyRecordsError(MAX_APP_RECORDS);
+
+  readTrips(
+    trips.flatMap((t) => (t.success ? [t.data] : [])),
+    out
+  );
 
   const placeSeen = new Set<string>();
   steps.forEach((s, index) => {

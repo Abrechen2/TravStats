@@ -17,6 +17,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+import { strToU8, zipSync } from "fflate";
 import { AppImportTile } from "../AppImportTile";
 import { AppImportError } from "../../../lib/api/appImport";
 
@@ -127,5 +128,47 @@ describe("AppImportTile — failures reach the user as themselves", () => {
     await waitFor(() => expect(screen.getByText("xlsx:import.outcomeUnknown")).toBeInTheDocument());
     // No second job alongside one that may still be writing.
     expect(screen.queryByText("xlsx:import.apply")).toBeNull();
+  });
+});
+
+describe("AppImportTile — Polarsteps ZIP", () => {
+  function pickZip(files: Record<string, string>, name = "polarsteps.zip"): void {
+    const bytes = zipSync(
+      Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)]))
+    );
+    const file = new File([bytes], name, { type: "application/zip" });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: () =>
+        Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    });
+    fireEvent.change(screen.getByLabelText("settings:import.tile.appImport.uploadLabel"), {
+      target: { files: [file] },
+    });
+  }
+
+  it("unpacks the download in the browser and sends only the trips as JSON text", async () => {
+    send.mockResolvedValueOnce(OUTCOME);
+    render(<AppImportTile />);
+    fireEvent.change(screen.getByTestId("app-import-source"), { target: { value: "polarsteps" } });
+    pickZip({
+      "trip/a_1/trip.json": JSON.stringify({ name: "A", all_steps: [] }),
+      "trip/a_1/photo.jpg": "x".repeat(1000),
+    });
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect(send).toHaveBeenCalledWith(
+      "polarsteps",
+      JSON.stringify([{ name: "A", all_steps: [] }]),
+      true
+    );
+  });
+
+  it("says so when the archive holds no trip, and sends nothing", async () => {
+    render(<AppImportTile />);
+    fireEvent.change(screen.getByTestId("app-import-source"), { target: { value: "polarsteps" } });
+    pickZip({ "user/user.json": "{}" });
+    await waitFor(() =>
+      expect(screen.getByText("settings:import.tile.appImport.zip.noTrip")).toBeInTheDocument()
+    );
+    expect(send).not.toHaveBeenCalled();
   });
 });

@@ -20,7 +20,7 @@ const rowOutcome = z.object({
         "A code. For `error` the reason the record was refused: `invalid_file`, " +
         "`invalid_record`, `invalid_date`, `missing_airport_code`, `missing_flight_number`, " +
         "`missing_name`, `missing_coordinates`, `unknown_airport`, `unknown_station`, " +
-        "`unsupported_event`, `unsupported_object:<car|transport|...>`, or a code of the " +
+        "`domain_off` (the area is switched off for the account), `unsupported_event`, `unsupported_object:<car|transport|...>`, or a code of the " +
         "spreadsheet import (`flight_needs_route`, `ambiguous_place`, ...). For `skip`: " +
         "`exists` (already stored) or `duplicate_in_file`.",
     }),
@@ -34,7 +34,7 @@ registry.registerPath({
   description:
     "Reads a TripIt export (API JSON or iCal feed), a Polarsteps `trip.json`, or a JetLovers, " +
     "FlightMemory or Logmyflight CSV, and imports it through the spreadsheet import in add " +
-    "mode: flights, rail rides, lodging and stays, places and visits. Entries already stored " +
+    "mode: flights, rail rides, lodging and stays, places and visits, and one trip per Polarsteps trip (found again by name and days). Rows of an area the account has switched off are not written (`domain_off`). Entries already stored " +
     "are recognised by the spreadsheet import's natural key and skipped; a record that cannot " +
     "be used is returned as an `error` row with its reason, never dropped. Flight clocks are " +
     "read as the airports' wall clocks. The formats of the five sources are built from their " +

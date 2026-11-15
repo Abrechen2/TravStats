@@ -65,12 +65,16 @@ describe("app import (forgejo#401)", () => {
     });
     await prisma.user.deleteMany({ where: { username: USER } });
     userId = (await prisma.user.create({ data: { username: USER, passwordHash: "x" } })).id;
+    await prisma.userSettings.create({
+      data: { userId, enabledDomains: ["flight", "lodging", "poi", "rail", "bus"], data: {} },
+    });
   });
   afterAll(async () => {
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.railJourney.deleteMany({ where: { userId } });
     await prisma.lodging.deleteMany({ where: { userId } });
     await prisma.place.deleteMany({ where: { userId } });
+    await prisma.trip.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { username: USER } });
     await prisma.railStation.deleteMany({ where: { uic: { in: ["8999001", "8999002"] } } });
     await prisma.$disconnect();
@@ -176,13 +180,25 @@ describe("app import (forgejo#401)", () => {
     const preview = await run("polarsteps", "polarsteps.json", true);
     expect(sheet(preview, "places")).toMatchObject({ created: 1, errors: 2 });
     expect(sheet(preview, "placeVisits")).toMatchObject({ created: 2, errors: 0 });
+    expect(sheet(preview, "trips")).toMatchObject({ created: 1, errors: 0 });
+    expect(await prisma.trip.count({ where: { userId } })).toBe(0);
     await run("polarsteps", "polarsteps.json", false);
+    // One trip with the source's name and days, and its visits are on it.
+    const trip = await prisma.trip.findFirstOrThrow({ where: { userId } });
+    expect(trip.name).toBe("Synthetic Portugal");
+    expect(trip.startDay?.toISOString().slice(0, 10)).toBe("2026-03-09");
+    expect(trip.endDay?.toISOString().slice(0, 10)).toBe("2026-03-12");
+    const visits = await prisma.placeVisit.findMany({ where: { userId } });
+    expect(visits.map((v) => v.tripId)).toEqual([trip.id, trip.id]);
     const place = await prisma.place.findFirstOrThrow({ where: { userId } });
     expect(place).toMatchObject({ name: "Praça do Comércio", visited: true, isoCountryCode: "PT" });
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(2);
     const again = await run("polarsteps", "polarsteps.json", false);
     expect(sheet(again, "places")).toMatchObject({ created: 0, skipped: 1 });
     expect(sheet(again, "placeVisits")).toMatchObject({ created: 0 });
+    // The same name + days is the same trip: found, not created again.
+    expect(sheet(again, "trips")).toMatchObject({ created: 0, skipped: 1 });
+    expect(await prisma.trip.count({ where: { userId } })).toBe(1);
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(2);
   });
 
@@ -197,5 +213,61 @@ describe("app import (forgejo#401)", () => {
         expect.objectContaining({ action: "error", message: "invalid_file" }),
       ]);
     }
+  });
+
+  describe("areas that are switched off", () => {
+    let flightOnly: string;
+    beforeAll(async () => {
+      await prisma.user.deleteMany({ where: { username: "appimportflightonly" } });
+      flightOnly = (
+        await prisma.user.create({ data: { username: "appimportflightonly", passwordHash: "x" } })
+      ).id;
+      await prisma.userSettings.create({
+        data: { userId: flightOnly, enabledDomains: ["flight"], data: {} },
+      });
+    });
+    afterAll(async () => {
+      await prisma.flight.deleteMany({ where: { userId: flightOnly } });
+      await prisma.user.deleteMany({ where: { id: flightOnly } });
+    });
+    const runOff = (source: AppSource, file: string, dryRun: boolean) =>
+      runAppImport(flightOnly, { source, text: fixture(file), dryRun });
+
+    it("TripIt: stays and rail rides of an area that is off are listed as domain_off and never written", async () => {
+      for (const dryRun of [true, false]) {
+        const out = await runOff("tripit", "tripit.json", dryRun);
+        expect(out.sheets.find((s) => s.key === "lodging")!.rows).toEqual([
+          expect.objectContaining({ action: "error", message: "domain_off" }),
+        ]);
+        expect(out.sheets.find((s) => s.key === "lodgingStays")!.rows[0].message).toBe(
+          "domain_off"
+        );
+        expect(out.sheets.find((s) => s.key === "rail")!.rows[0].message).toBe("domain_off");
+        // the flight, whose area is on, is still imported
+        expect(out.sheets.find((s) => s.key === "flights")).toMatchObject({ created: 1 });
+      }
+      expect(await prisma.lodging.count({ where: { userId: flightOnly } })).toBe(0);
+      expect(await prisma.railJourney.count({ where: { userId: flightOnly } })).toBe(0);
+      expect(await prisma.flight.count({ where: { userId: flightOnly } })).toBe(1);
+    });
+
+    it("Polarsteps: places, visits and the trip are domain_off for an account without places", async () => {
+      const out = await runOff("polarsteps", "polarsteps.json", false);
+      for (const key of ["places", "placeVisits", "trips"]) {
+        expect(
+          out.sheets
+            .find((s) => s.key === key)!
+            .rows.every(
+              (r) =>
+                r.message === "domain_off" ||
+                r.message === "missing_coordinates" ||
+                r.message === "invalid_record"
+            )
+        ).toBe(true);
+        expect(out.sheets.find((s) => s.key === key)!.created).toBe(0);
+      }
+      expect(await prisma.place.count({ where: { userId: flightOnly } })).toBe(0);
+      expect(await prisma.trip.count({ where: { userId: flightOnly } })).toBe(0);
+    });
   });
 });

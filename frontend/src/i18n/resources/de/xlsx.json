@@ -355,9 +355,10 @@
       "unsupported_event": "Dieser Kalendereintrag ist kein Flug und keine Unterkunft und wird nicht importiert.",
       "invalid_record": "Der Eintrag ist unvollständig oder hat nicht das erwartete Format.",
       "missing_airport_code": "Es fehlt ein Flughafen-Code (IATA, drei Buchstaben) für Start oder Ziel.",
-      "missing_flight_number": "Die Flugnummer fehlt – ein neuer Flug braucht sie.",
+      "missing_flight_number": "Die Flugnummer fehlt – dieser Flug wurde nicht importiert. Du kannst ihn von Hand eintragen.",
       "missing_name": "Der Name fehlt.",
-      "missing_coordinates": "Es fehlen Breiten- und Längengrad."
+      "missing_coordinates": "Es fehlen Breiten- und Längengrad.",
+      "domain_off": "Dieser Bereich ist in deinem Konto ausgeschaltet – nicht importiert."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

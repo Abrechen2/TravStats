@@ -10,6 +10,7 @@ import {
 } from "../../lib/api/appImport";
 import type { ImportOutcome } from "../../lib/xlsx/importClient";
 import { logger } from "../../lib/logger";
+import { PolarstepsZipError, polarstepsTextFromZip } from "../../lib/import/polarstepsZip";
 import { SheetRows } from "../Settings/SpreadsheetSection";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
@@ -25,7 +26,7 @@ const SOURCES: readonly AppImportSource[] = [
 /** What each source's export looks like on disk. */
 const ACCEPT: Record<AppImportSource, string> = {
   tripit: ".json,.ics,.txt",
-  polarsteps: ".json,.txt",
+  polarsteps: ".zip,.json,.txt",
   jetlovers: ".csv,.txt",
   flightmemory: ".csv,.txt",
   logmyflight: ".csv,.txt",
@@ -99,7 +100,11 @@ export function AppImportTile({ onImported }: { onImported?: () => void }): JSX.
       setHeld(null);
       setPhase("reading");
       try {
-        const text = await file.text();
+        // A Polarsteps download is a ZIP: unpack the trips here, send only those.
+        const text =
+          source === "polarsteps" && /\.zip$/i.test(file.name)
+            ? polarstepsTextFromZip(new Uint8Array(await file.arrayBuffer()), APP_IMPORT_MAX_CHARS)
+            : await file.text();
         if (text.length > APP_IMPORT_MAX_CHARS) {
           setError(
             t("settings:import.parserErrors.tooLarge", {
@@ -117,7 +122,11 @@ export function AppImportTile({ onImported }: { onImported?: () => void }): JSX.
       } catch (err: unknown) {
         // The sentence is the user's; the cause belongs in the log.
         logger.error("AppImportTile: preview failed", err);
-        setError(failureCopy(err instanceof AppImportError ? err.kind : "failed", false));
+        setError(
+          err instanceof PolarstepsZipError
+            ? t(`settings:import.tile.appImport.zip.${err.kind}`)
+            : failureCopy(err instanceof AppImportError ? err.kind : "failed", false)
+        );
         setPhase("idle");
       }
     },

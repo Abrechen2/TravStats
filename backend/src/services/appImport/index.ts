@@ -16,6 +16,8 @@ import {
 } from "../xlsxImport/types";
 import { buildSheets } from "../checkinImport/toSheets";
 import { buildFlightRows } from "./build";
+import { enabledDomainsOf, gateDomains } from "./gate";
+import { importTrips } from "./trips";
 import { parseFlightLogCsv } from "./csvFlightLog";
 import { parsePolarsteps } from "./polarsteps";
 import { parseTripit } from "./tripit";
@@ -66,7 +68,7 @@ export async function runAppImport(
   userId: string,
   opts: { source: AppSource; text: string; dryRun: boolean }
 ): Promise<ImportOutcome> {
-  const parsed = parseAppFile(opts.source, opts.text);
+  const parsed = gateDomains(parseAppFile(opts.source, opts.text), await enabledDomainsOf(userId));
   parsed.lodging = await withoutStoredLodging(userId, parsed.lodging);
   const flights = await buildFlightRows(parsed.flights);
   const rail = await buildSheets(parsed.rides);
@@ -92,10 +94,14 @@ export async function runAppImport(
   }
   // Add mode only: an app's export must never overwrite what the user has
   // since edited on an entry they already have.
+  // Trips first: the visits find their trip by its days.
+  const tripRows = await importTrips(userId, parsed.trips, opts.dryRun);
   const results: SheetOutcome[] =
     sheets.length > 0
       ? await importSheets(sheets, { userId, dryRun: opts.dryRun, mode: "add" })
       : [];
+
+  if (tripRows.length > 0) results.push(summarise("trips", tripRows));
 
   const extra: Array<{ sheet: string; row: RowOutcome }> = [
     ...parsed.rejects,
