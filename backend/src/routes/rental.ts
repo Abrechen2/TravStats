@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import { idsInLocalYear } from "../services/transport/localYear";
-import { propagateDelete, shareSnapshot } from "../services/sharing/propagate";
+import { readLogbookPage } from "../services/transport/logbookPage";
+import { deleteTransportEntry } from "../services/transport/deleteEntry";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -19,7 +20,6 @@ import { withRentalReadFields } from "../services/rental/rentalDto";
 import {
   RENTAL_INCLUDE,
   createRentalRow,
-  restatusTrips,
   updateRentalRow,
 } from "../services/rental/rentalRowWrite";
 import { rentalYear } from "../shared/rentalCounting";
@@ -147,33 +147,35 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = query.offset ?? 0;
     const where = await buildWhere(query, userId);
     const column = query.sort === "created" ? "createdAt" : "pickupTime";
-    const [total, data, counted] = await Promise.all([
-      prisma.rentalBooking.count({ where }),
-      prisma.rentalBooking.findMany({
-        where,
-        include: RENTAL_INCLUDE,
-        orderBy: [{ [column]: query.order }, { id: query.order }],
-        take: limit,
-        skip: offset,
-      }),
-      // The summary strip counts the whole filtered list, not this page.
-      prisma.rentalBooking.findMany({
-        where,
-        select: {
-          provider: true,
-          status: true,
-          pickupTime: true,
-          returnTime: true,
-          pickupTimezone: true,
-          returnTimezone: true,
+    res.json(
+      await readLogbookPage(
+        {
+          count: () => prisma.rentalBooking.count({ where }),
+          page: () =>
+            prisma.rentalBooking.findMany({
+              where,
+              include: RENTAL_INCLUDE,
+              orderBy: [{ [column]: query.order }, { id: query.order }],
+              take: limit,
+              skip: offset,
+            }),
+          // The summary strip counts the whole filtered list, not this page.
+          summarised: () =>
+            prisma.rentalBooking.findMany({
+              where,
+              select: {
+                provider: true,
+                status: true,
+                pickupTime: true,
+                returnTime: true,
+                pickupTimezone: true,
+                returnTimezone: true,
+              },
+            }),
         },
-      }),
-    ]);
-    res.json({
-      success: true,
-      data: data.map(withRentalReadFields),
-      meta: { total, limit, offset, summary: rentalListSummary(counted) },
-    });
+        { limit, offset, mapRow: withRentalReadFields, summarise: rentalListSummary }
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -246,17 +248,24 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const existing = await prisma.rentalBooking.findFirst({
-      where: { id: req.params.id, userId },
-      select: { id: true, tripId: true },
-    });
-    if (!existing) throw new AppError("Rental not found", 404, "RENTAL_NOT_FOUND");
-    await prisma.$transaction(async (tx) => {
-      const gone = await shareSnapshot(tx, "rental", existing.id);
-      await tx.rentalBooking.delete({ where: { id: existing.id } });
-      await propagateDelete(tx, userId, gone);
-    });
-    await restatusTrips(existing.tripId);
+    await deleteTransportEntry(
+      {
+        shareType: "rental",
+        find: (id, owner) =>
+          prisma.rentalBooking.findFirst({
+            where: { id, userId: owner },
+            select: { id: true, tripId: true },
+          }),
+        notFound: () => new AppError("Rental not found", 404, "RENTAL_NOT_FOUND"),
+        remove: async (tx, id) => {
+          // share-exempt: deleteTransportEntry propagates the removal
+          await tx.rentalBooking.delete({ where: { id } });
+          return true;
+        },
+      },
+      req.params.id,
+      userId
+    );
     res.status(204).send();
   } catch (err) {
     next(err);

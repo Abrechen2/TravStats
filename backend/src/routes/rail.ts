@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
+import { propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
 
 import { prisma, type DbTransaction } from "../db";
@@ -53,7 +53,13 @@ import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailCo2 } from "../services/co2/rideDto";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
-import { railListSummaryFromGroups } from "../shared/listSummary";
+import {
+  readLogbookPage,
+  STATION_GROUP_BY,
+  STATION_GROUP_ORDER,
+  summariseStationGroups,
+} from "../services/transport/logbookPage";
+import { deleteTransportEntry } from "../services/transport/deleteEntry";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -255,36 +261,35 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = query.offset ?? 0;
     const where = await buildRailWhere(query, userId);
 
-    const [total, data, counted] = await Promise.all([
-      prisma.railJourney.count({ where }),
-      prisma.railJourney.findMany({
-        where,
-        include: RAIL_INCLUDE,
-        orderBy: [primaryOrder(query), { id: query.order }],
-        take: limit,
-        skip: offset,
-      }),
-      // The summary strip counts the whole filtered list, not this page — grouped in
-      // SQL, so the work is the distinct (operator, stations) combinations.
-      prisma.railJourney.groupBy({
-        by: ["operator", "depStationName", "arrStationName"],
-        where,
-        _count: { _all: true },
-        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
-      }),
-    ]);
-    res.json({
-      success: true,
-      data: data.map((j) => withRailSource(withStationShortCodes(withRailCo2(withRailTimes(j))))),
-      meta: {
-        total,
-        limit,
-        offset,
-        summary: railListSummaryFromGroups(
-          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
-        ),
-      },
-    });
+    res.json(
+      await readLogbookPage(
+        {
+          count: () => prisma.railJourney.count({ where }),
+          page: () =>
+            prisma.railJourney.findMany({
+              where,
+              include: RAIL_INCLUDE,
+              orderBy: [primaryOrder(query), { id: query.order }],
+              take: limit,
+              skip: offset,
+            }),
+          // The summary strip counts the whole filtered list, not this page.
+          summarised: () =>
+            prisma.railJourney.groupBy({
+              by: [...STATION_GROUP_BY],
+              where,
+              _count: { _all: true },
+              orderBy: [...STATION_GROUP_ORDER],
+            }),
+        },
+        {
+          limit,
+          offset,
+          mapRow: (j) => withRailSource(withStationShortCodes(withRailCo2(withRailTimes(j)))),
+          summarise: summariseStationGroups,
+        }
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -670,17 +675,24 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const existing = await prisma.railJourney.findFirst({
-      where: { id: req.params.id, userId },
-      select: { id: true, tripId: true },
-    });
-    if (!existing) throw new AppError("Rail journey not found", 404);
-    await prisma.$transaction(async (tx) => {
-      const gone = await shareSnapshot(tx, "rail", existing.id);
-      await tx.railJourney.delete({ where: { id: existing.id } });
-      await propagateDelete(tx, userId, gone);
-    });
-    await restatusTrips([existing.tripId]);
+    await deleteTransportEntry(
+      {
+        shareType: "rail",
+        find: (id, owner) =>
+          prisma.railJourney.findFirst({
+            where: { id, userId: owner },
+            select: { id: true, tripId: true },
+          }),
+        notFound: () => new AppError("Rail journey not found", 404),
+        remove: async (tx, id) => {
+          // share-exempt: deleteTransportEntry propagates the removal
+          await tx.railJourney.delete({ where: { id } });
+          return true;
+        },
+      },
+      req.params.id,
+      userId
+    );
     res.status(204).send();
   } catch (err) {
     next(err);

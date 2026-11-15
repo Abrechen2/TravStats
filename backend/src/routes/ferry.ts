@@ -28,24 +28,25 @@ import {
 import { withFerryCo2 } from "../services/co2/rideDto";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
-import {
-  propagateDelete,
-  propagateWrite,
-  shareSnapshot,
-  SHARE_TX_TIMEOUT_MS,
-} from "../services/sharing/propagate";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../services/sharing/propagate";
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { idsInLocalYear } from "../services/transport/localYear";
 import { linkCompanions, replaceCompanionLinks } from "../services/transport/companionLinks";
 import { fxColumnsOnEdit } from "../services/transport/fxOnEdit";
-import { linkDocumentsInTx, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import { requestedBaseVersion, sendVersionConflict } from "../services/sync/versionPrecondition";
-import { railListSummaryFromGroups } from "../shared/listSummary";
+import {
+  readLogbookPage,
+  STATION_GROUP_BY,
+  STATION_GROUP_ORDER,
+  summariseStationGroups,
+} from "../services/transport/logbookPage";
+import { deleteTransportEntry } from "../services/transport/deleteEntry";
 
 export const FERRY_INCLUDE = {
   trip: { select: { id: true, name: true, color: true } },
@@ -182,37 +183,36 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
     const where = await buildFerryWhere(query, userId);
-    const [total, data, counted] = await Promise.all([
-      prisma.ferryJourney.count({ where }),
-      prisma.ferryJourney.findMany({
-        where,
-        include: FERRY_INCLUDE,
-        orderBy: [primaryOrder(query), { id: query.order }],
-        take: limit,
-        skip: offset,
-      }),
-      // The summary strip counts the whole filtered list, not this page — grouped in
-      // SQL, so the work is the distinct (operator, stations) combinations.
-      prisma.ferryJourney.groupBy({
-        by: ["operator", "depStationName", "arrStationName"],
-        where,
-        _count: { _all: true },
-        orderBy: [{ operator: "asc" }, { depStationName: "asc" }, { arrStationName: "asc" }],
-      }),
-    ]);
-    res.json({
-      success: true,
-      data: data.map((r) => withFerryCo2(withFerryTimes(r))),
-      // `railListSummary` reads operator and the two station names — the columns a ferry row shares.
-      meta: {
-        total,
-        limit,
-        offset,
-        summary: railListSummaryFromGroups(
-          counted.map(({ _count, ...names }) => ({ ...names, count: _count._all }))
-        ),
-      },
-    });
+    // The summary reads operator and the two station names — the columns a ferry row shares.
+    res.json(
+      await readLogbookPage(
+        {
+          count: () => prisma.ferryJourney.count({ where }),
+          page: () =>
+            prisma.ferryJourney.findMany({
+              where,
+              include: FERRY_INCLUDE,
+              orderBy: [primaryOrder(query), { id: query.order }],
+              take: limit,
+              skip: offset,
+            }),
+          // The summary strip counts the whole filtered list, not this page.
+          summarised: () =>
+            prisma.ferryJourney.groupBy({
+              by: [...STATION_GROUP_BY],
+              where,
+              _count: { _all: true },
+              orderBy: [...STATION_GROUP_ORDER],
+            }),
+        },
+        {
+          limit,
+          offset,
+          mapRow: (r) => withFerryCo2(withFerryTimes(r)),
+          summarise: summariseStationGroups,
+        }
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -299,13 +299,9 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
       await claim(tx, created.id);
       // On a shared trip: copied to the other members (design 2026-10-09).
       await propagateWrite(tx, userId, "ferry", created.id);
-      const linked = await linkDocumentsInTx(tx, userId, documentIds, {
-        type: "ferryJourney",
-        id: created.id,
-      });
-      if (linked !== new Set(documentIds).size) {
-        throw new AppError("A document was linked elsewhere during creation", 409);
-      }
+      // Same call, same rollback as rail, bus and rental: a receipt filed
+      // elsewhere in the meantime fails the create instead of dropping it.
+      await fileReceipts(tx, userId, documentIds, { type: "ferryJourney", id: created.id });
       return tx.ferryJourney.findUniqueOrThrow({
         where: { id: created.id },
         include: FERRY_INCLUDE,
@@ -419,38 +415,41 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const existing = await prisma.ferryJourney.findFirst({
-      where: { id: req.params.id, userId },
-      select: { id: true, tripId: true },
-    });
-    if (!existing) throw new AppError("Ferry ride not found", 404);
-    const baseVersion = requestedBaseVersion(req);
-    try {
-      await prisma.$transaction(
-        async (tx) => {
-          const gone = await shareSnapshot(tx, "ferry", existing.id);
+    let baseVersion: string | null = null;
+    const outcome = await deleteTransportEntry(
+      {
+        shareType: "ferry",
+        find: (id, owner) =>
+          prisma.ferryJourney.findFirst({
+            where: { id, userId: owner },
+            select: { id: true, tripId: true },
+          }),
+        notFound: () => new AppError("Ferry ride not found", 404),
+        remove: async (tx, id) => {
+          // Read after the 404 check, as before: a bad version on a missing ride is a 404.
+          baseVersion = requestedBaseVersion(req);
+          // share-exempt: deleteTransportEntry propagates the removal
           const deleted = await tx.ferryJourney.deleteMany({
             where: {
-              id: existing.id,
+              id,
               userId,
               ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
             },
           });
-          if (deleted.count !== 1) throw new FerryVersionMoved();
-          // The others keep their copies and are told (decision 3).
-          await propagateDelete(tx, userId, gone);
+          return deleted.count === 1;
         },
-        { timeout: SHARE_TX_TIMEOUT_MS }
-      );
-    } catch (err) {
-      if (!(err instanceof FerryVersionMoved)) throw err;
+      },
+      req.params.id,
+      userId,
+      { timeout: SHARE_TX_TIMEOUT_MS }
+    );
+    if (outcome.kind === "missed") {
       // Only a base version can make a found row miss; without one it was a
       // racing delete, and the crossing is simply gone.
       if (baseVersion === null) throw new AppError("Ferry ride not found", 404);
-      await answerMovedVersion(res, userId, existing.id, baseVersion);
+      await answerMovedVersion(res, userId, outcome.id, baseVersion);
       return;
     }
-    await restatusTrips([existing.tripId]);
     res.status(204).send();
   } catch (err) {
     next(err);
