@@ -3,6 +3,7 @@ import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { createRoadtripSchema } from "../../schemas/roadtrip";
+import { assertTourOdometerOrder } from "../../services/tour/odometerOrder";
 import { travelledKm } from "../../services/tour/tourDistance";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import {
@@ -76,6 +77,7 @@ router.post(
     try {
       const userId = req.userId!;
       const { tripId, ...body } = createRoadtripSchema.parse(req.body);
+      assertTourOdometerOrder(null, body);
       if (tripId != null) await resolveTrip(userId, tripId);
 
       const last = await prisma.tripRoute.findFirst({

@@ -79,4 +79,24 @@ describe("GET /api/v1/stats/aircraft", () => {
     expect(parsed.success ? null : parsed.error.issues).toBeNull();
     expect(res.body.aircraft).toHaveLength(1);
   });
+
+  it("reports flights without a registration apart from the distinct aircraft (forgejo#303)", async () => {
+    const flight = {
+      airline: "Lufthansa",
+      aircraft: "Airbus A320neo",
+      depLat: 50,
+      depLon: 8,
+      arrLat: 40,
+      arrLon: -73,
+      departureTime: new Date("2026-05-01T06:00:00.000Z"),
+    };
+    mockFindMany.mockResolvedValue([
+      { ...flight, aircraftRegistration: "D-AIZP" },
+      { ...flight, aircraftRegistration: null },
+      { ...flight, aircraftRegistration: null },
+    ]);
+    const res = await request(app).get("/api/v1/stats/aircraft");
+    expect(res.body).toMatchObject({ total: 1, withoutRegistration: 2 });
+    expect(mockFindMany.mock.calls[0][0].where).not.toHaveProperty("aircraftRegistration");
+  });
 });

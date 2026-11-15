@@ -389,6 +389,8 @@ export type ApiErrorCode =
   /** A full station list was written against a station set that has changed
    *  since the writer read it (a station added or removed elsewhere — the
    *  phone). Nothing was written; read the roadtrip again and merge. */
+  /** A section's end odometer below its start one, on the merged row. `field` is `endOdometerKm`. */
+  | "TOUR_ODOMETER_REVERSED"
   | "ROADTRIP_STATIONS_CHANGED"
   /** A recording offered for a leg does not come near both of its stops (409). */
   | "TRACK_DOES_NOT_COVER_LEG"
