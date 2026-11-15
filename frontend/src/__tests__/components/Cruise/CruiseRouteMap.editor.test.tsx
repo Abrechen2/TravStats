@@ -29,7 +29,12 @@ vi.mock("react-map-gl/maplibre", async () => {
       // mount only
       // eslint-disable-next-line react-hooks/exhaustive-deps -- stub registers the load callback once on mount, on purpose
     }, []);
-    return <div data-testid="map-instance">{children}</div>;
+    return (
+      <div data-testid="map-instance">
+        <canvas data-testid="map-canvas" />
+        {children}
+      </div>
+    );
   };
 
   return {
@@ -149,5 +154,32 @@ describe("CruiseRouteMap — the route editor is a dialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getAllByTestId("map-instance")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "cruise:routeEditor.edit" })).toBeTruthy();
+  });
+
+  // forgejo#332 (Codex review): a lost WebGL context rebuilds the MAP. The guard
+  // used to wrap the whole component, so the rebuild threw away an open route
+  // edit with it.
+  it("rebuilds only the map when its WebGL context is lost, and keeps the editor open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<CruiseRouteMap cruise={cruise} />);
+      flushPendingLoads();
+      fireEvent.click(screen.getByRole("button", { name: "cruise:routeEditor.edit" }));
+      await screen.findByRole("dialog");
+
+      fireEvent(screen.getByTestId("map-canvas"), new Event("webglcontextlost"));
+      expect(screen.getByTestId("webgl-lost")).toBeTruthy();
+      expect(screen.getByRole("dialog")).toBeTruthy();
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByRole("dialog")).toBeTruthy();
+      expect(screen.getByTestId("map-canvas")).toBeTruthy();
+      // a new map was built and is waiting to report that it loaded
+      expect(pendingLoads).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

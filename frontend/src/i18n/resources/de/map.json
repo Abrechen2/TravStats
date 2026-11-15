@@ -1,5 +1,8 @@
 {
   "webglUnavailable": "Dein Browser kann gerade keine 3D-Karte erzeugen. Prüfe die Hardwarebeschleunigung oder starte den Browser neu.",
+  "webglLost": "Die Kartengrafik wurde unterbrochen. Die Karte wird neu aufgebaut …",
+  "webglLostGaveUp": "Die Kartengrafik ist mehrfach ausgefallen. Prüfe die Hardwarebeschleunigung oder schließe andere Tabs mit 3D-Karten.",
+  "webglLostRetry": "Karte neu laden",
   "loadFailed": {
     "rentals": "Die Mietwagen konnten nicht geladen werden.",
     "buses": "Die Busfahrten konnten nicht geladen werden.",

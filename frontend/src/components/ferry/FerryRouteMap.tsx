@@ -11,6 +11,7 @@ import { railBounds } from "../rail/RailRouteMap";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { FerryJourney } from "../../types/ferry";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 /** Which line the map draws, so the caption can say so. */
 export type FerryLineKind = "seaRoute" | "drawn" | "straight";
@@ -62,7 +63,7 @@ export function FerryRouteMap({ ride }: { ride: FerryJourney }): JSX.Element | n
         data-testid="ferry-route-map"
       >
         <MapGL
-          reuseMaps
+          reuseMaps={reuseMapsEnabled()}
           initialViewState={{ bounds: railBounds(line.path), fitBoundsOptions: { padding: 24 } }}
           mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}

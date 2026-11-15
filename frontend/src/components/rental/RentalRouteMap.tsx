@@ -11,6 +11,7 @@ import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RentalBooking } from "../../types/rental";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 /**
  * The detail page's map of one rental (rental spec §6, D1 a): one ringed
@@ -49,7 +50,7 @@ export function RentalRouteMap({ rental }: { rental: RentalBooking }): JSX.Eleme
         data-testid="rental-route-map"
       >
         <MapGL
-          reuseMaps
+          reuseMaps={reuseMapsEnabled()}
           initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
           mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}

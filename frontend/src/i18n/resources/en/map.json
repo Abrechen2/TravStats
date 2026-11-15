@@ -1,5 +1,8 @@
 {
   "webglUnavailable": "Your browser cannot create a 3D map right now. Check hardware acceleration or restart the browser.",
+  "webglLost": "The map graphics were interrupted. Rebuilding the map …",
+  "webglLostGaveUp": "The map graphics failed repeatedly. Check hardware acceleration or close other tabs with 3D maps.",
+  "webglLostRetry": "Reload map",
   "loadFailed": {
     "rentals": "The rental cars could not be loaded.",
     "buses": "The bus rides could not be loaded.",

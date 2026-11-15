@@ -13,6 +13,7 @@ import {
   type ExploredBox,
   type ExploredCell,
 } from "../../lib/api/travtrack";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 /** The server's one resolution (plan L1): every cell is a zoom-14 tile. */
 const ZOOM = 14;
@@ -186,7 +187,7 @@ export default function TrackExploredMap(): JSX.Element {
         aria-label={t("track:explored.map")}
       >
         <MapGL
-          reuseMaps
+          reuseMaps={reuseMapsEnabled()}
           initialViewState={{ longitude: 10, latitude: 30, zoom: 1 }}
           attributionControl={{ compact: true }}
           mapStyle={mapStyle}

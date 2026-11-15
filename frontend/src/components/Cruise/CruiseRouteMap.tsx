@@ -41,6 +41,8 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "./routeEditorState";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
+import WebGLGuard from "../map/WebGLGuard";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -603,6 +605,14 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     didFit.current = true;
   }, [mapLoaded, bboxPoints, editMode]);
 
+  // The guard wraps ONLY the map: a lost context rebuilds it without touching
+  // the editor state above, so a route being edited survives (Codex review).
+  // What described the old map is reset: a new one has not loaded or fitted.
+  const onMapRebuilt = useCallback((): void => {
+    setMapLoaded(false);
+    didFit.current = false;
+  }, []);
+
   const barButton = BAR_BUTTON;
 
   /**
@@ -622,47 +632,49 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       onPointerMove={onMarqueeMove}
       onPointerUp={onMarqueeEnd}
     >
-      <MapGL
-        reuseMaps
-        ref={mapRef}
-        initialViewState={INITIAL_VIEW}
-        mapStyle={mapStyle}
-        style={{ position: "absolute", inset: "0" }}
-        onLoad={(): void => setMapLoaded(true)}
-        onMove={(evt): void => {
-          const nextZoom = Math.round(evt.viewState.zoom);
-          setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
-        }}
-      >
-        {mapLoaded && (
-          <DeckGLOverlay
-            layers={layers}
-            getTooltip={getTooltip}
-            onClick={handleMapClick}
-            onReady={keepDeck}
-          />
-        )}
-        {editing && editorState && (
-          <RouteEditorOverlay
-            state={editorState}
-            onDragStart={onEditorDragStart}
-            onDrag={onEditorDrag}
-            onSelect={onEditorSelect}
-            onRemove={onEditorRemove}
-            onNudge={onEditorNudge}
-            onUndo={onEditorUndo}
-            onRedo={onEditorRedo}
-            nudgeStep={nudgeStep}
-            removeLabel={t("cruise:routeEditor.removeHandle")}
-            handleLabel={(index): string =>
-              isEndpoint(editorState, index)
-                ? t("cruise:routeEditor.endpoint")
-                : t("cruise:routeEditor.handle", { index: index + 1 })
-            }
-          />
-        )}
-        <SharedMapOverlays />
-      </MapGL>
+      <WebGLGuard onRebuild={onMapRebuilt}>
+        <MapGL
+          reuseMaps={reuseMapsEnabled()}
+          ref={mapRef}
+          initialViewState={INITIAL_VIEW}
+          mapStyle={mapStyle}
+          style={{ position: "absolute", inset: "0" }}
+          onLoad={(): void => setMapLoaded(true)}
+          onMove={(evt): void => {
+            const nextZoom = Math.round(evt.viewState.zoom);
+            setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
+          }}
+        >
+          {mapLoaded && (
+            <DeckGLOverlay
+              layers={layers}
+              getTooltip={getTooltip}
+              onClick={handleMapClick}
+              onReady={keepDeck}
+            />
+          )}
+          {editing && editorState && (
+            <RouteEditorOverlay
+              state={editorState}
+              onDragStart={onEditorDragStart}
+              onDrag={onEditorDrag}
+              onSelect={onEditorSelect}
+              onRemove={onEditorRemove}
+              onNudge={onEditorNudge}
+              onUndo={onEditorUndo}
+              onRedo={onEditorRedo}
+              nudgeStep={nudgeStep}
+              removeLabel={t("cruise:routeEditor.removeHandle")}
+              handleLabel={(index): string =>
+                isEndpoint(editorState, index)
+                  ? t("cruise:routeEditor.endpoint")
+                  : t("cruise:routeEditor.handle", { index: index + 1 })
+              }
+            />
+          )}
+          <SharedMapOverlays />
+        </MapGL>
+      </WebGLGuard>
       {marquee && (
         <div
           data-testid="route-marquee"

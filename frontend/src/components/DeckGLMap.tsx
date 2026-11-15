@@ -55,6 +55,7 @@ import {
   NATIVE_AIRPORT_CIRCLE_ID,
 } from "./NativeRoutesLayer";
 import type { DeckGLMapProps } from "./map/deckGLMapProps";
+import { reuseMapsEnabled } from "../lib/mapReuse";
 
 // Small delay before the click tooltip appears — just enough for the flyTo
 // to start so the card doesn't flash at the old anchor, then it rides the
@@ -593,7 +594,7 @@ export function DeckGLMap({
     <div className="relative w-full h-full">
       <MapGL
         ref={mapRef}
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         initialViewState={initialViewState}
         mapStyle={flatStyle}
         style={{ position: "absolute", inset: "0" }}

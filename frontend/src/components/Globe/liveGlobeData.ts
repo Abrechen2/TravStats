@@ -8,6 +8,7 @@ import {
 } from "./arcUtils";
 import { getQuartile } from "./heatmapUtils";
 import type { ArcDatum, CruisePathDatum, PointDatum } from "./globeLayerTypes";
+import { countVisibleRoutes } from "./arcTimeline";
 
 /**
  * Live-mode head marker: in live slider mode, the single most recent flight
@@ -80,6 +81,10 @@ export interface GlobeLiveStats {
 /**
  * Live stats overlay: derived from the same slider-filtered data as the
  * layers, so the numbers move in lockstep with the time slider.
+ *
+ * `liveTime` is set while live playback runs: the arcs then hold the WHOLE
+ * logbook (the GPU hides the unflown ones, forgejo#352), so the route count is
+ * taken as of that moment instead of being the arrays' length.
  */
 export function computeGlobeLiveStats(
   filteredFlights: readonly GeoJSONFeature[],
@@ -87,7 +92,8 @@ export function computeGlobeLiveStats(
   cruisePaths: readonly CruisePathDatum[],
   portPoints: readonly PointDatum[],
   arcsData: readonly ArcDatum[],
-  antipodalArcs: readonly ArcDatum[]
+  antipodalArcs: readonly ArcDatum[],
+  liveTime: number | null = null
 ): GlobeLiveStats {
   let flightKm = 0;
   for (const f of filteredFlights) {
@@ -105,7 +111,10 @@ export function computeGlobeLiveStats(
   const cruiseCount = new Set(cruisePaths.map((c) => c.cruiseId)).size;
   return {
     flights: filteredFlights.length,
-    routes: arcsData.filter((a) => !a.recorded).length + antipodalArcs.length,
+    routes:
+      liveTime === null
+        ? arcsData.filter((a) => !a.recorded).length + antipodalArcs.length
+        : countVisibleRoutes(arcsData, liveTime) + countVisibleRoutes(antipodalArcs, liveTime),
     flightKm: Math.round(flightKm),
     cruises: cruiseCount,
     ports: portPoints.length,

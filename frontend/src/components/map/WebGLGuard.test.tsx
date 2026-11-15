@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useEffect, type JSX } from "react";
 vi.unmock("../../lib/webgl2");
 
-import WebGLGuard from "./WebGLGuard";
+import WebGLGuard, {
+  WEBGL_LOSS_WINDOW_MS,
+  WEBGL_MAX_LOSSES,
+  WEBGL_REMOUNT_DELAY_MS,
+} from "./WebGLGuard";
 
 function Boom({ error }: { error: Error }): never {
   throw error;
@@ -74,5 +79,110 @@ describe("WebGLGuard (forgejo#332)", () => {
         </WebGLGuard>
       )
     ).toThrow("unrelated");
+  });
+
+  describe("a context lost while the map runs (forgejo#332)", () => {
+    // A stand-in for a map: owns a canvas, counts how often it is built and
+    // torn down, the way react-map-gl's Map does with maplibre's map.remove().
+    function renderMap(): { mounts: () => number; unmounts: () => number } {
+      let mounts = 0;
+      let unmounts = 0;
+      function FakeMap(): JSX.Element {
+        useEffect(() => {
+          mounts += 1;
+          return () => {
+            unmounts += 1;
+          };
+        }, []);
+        return <canvas data-testid="map-canvas" />;
+      }
+      stubGetContext({ getExtension: () => ({ loseContext: () => {} }) });
+      render(
+        <WebGLGuard>
+          <FakeMap />
+        </WebGLGuard>
+      );
+      return { mounts: () => mounts, unmounts: () => unmounts };
+    }
+    const lose = (): void => {
+      fireEvent(screen.getByTestId("map-canvas"), new Event("webglcontextlost"));
+    };
+
+    it("says so instead of leaving a dead canvas, then rebuilds the map", () => {
+      vi.useFakeTimers();
+      try {
+        const map = renderMap();
+        expect(map.mounts()).toBe(1);
+        act(() => lose());
+        expect(screen.getByTestId("webgl-lost").textContent).toContain("map:webglLost");
+        expect(screen.queryByTestId("map-canvas")).toBeNull();
+        expect(map.unmounts()).toBe(1);
+        act(() => {
+          vi.advanceTimersByTime(WEBGL_REMOUNT_DELAY_MS + 1);
+        });
+        expect(screen.queryByTestId("webgl-lost")).toBeNull();
+        expect(screen.getByTestId("map-canvas")).toBeTruthy();
+        expect(map.mounts()).toBe(2);
+        // the dead map was released, the new one is the only one alive
+        expect(map.mounts() - map.unmounts()).toBe(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stops rebuilding after repeated losses and offers a button instead", () => {
+      vi.useFakeTimers();
+      try {
+        const map = renderMap();
+        for (let i = 0; i < WEBGL_MAX_LOSSES - 1; i++) {
+          act(() => lose());
+          act(() => {
+            vi.advanceTimersByTime(WEBGL_REMOUNT_DELAY_MS + 1);
+          });
+        }
+        act(() => lose());
+        expect(screen.getByTestId("webgl-lost").textContent).toContain("map:webglLostGaveUp");
+        act(() => {
+          vi.advanceTimersByTime(WEBGL_LOSS_WINDOW_MS);
+        });
+        expect(screen.queryByTestId("map-canvas")).toBeNull();
+        expect(map.mounts()).toBe(WEBGL_MAX_LOSSES);
+        fireEvent.click(screen.getByRole("button"));
+        expect(screen.getByTestId("map-canvas")).toBeTruthy();
+        expect(map.mounts()).toBe(WEBGL_MAX_LOSSES + 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("tells its owner before the replacement mounts, so state about the old map can be reset", () => {
+      vi.useFakeTimers();
+      try {
+        const onRebuild = vi.fn();
+        stubGetContext({ getExtension: () => ({ loseContext: () => {} }) });
+        render(
+          <WebGLGuard onRebuild={onRebuild}>
+            <canvas data-testid="map-canvas" />
+          </WebGLGuard>
+        );
+        act(() => lose());
+        expect(onRebuild).not.toHaveBeenCalled();
+        act(() => {
+          vi.advanceTimersByTime(WEBGL_REMOUNT_DELAY_MS + 1);
+        });
+        expect(onRebuild).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("ignores a context lost by something outside the guard", () => {
+      renderMap();
+      const stray = document.createElement("canvas");
+      document.body.appendChild(stray);
+      fireEvent(stray, new Event("webglcontextlost"));
+      expect(screen.queryByTestId("webgl-lost")).toBeNull();
+      expect(screen.getByTestId("map-canvas")).toBeTruthy();
+    });
   });
 });

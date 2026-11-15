@@ -46,7 +46,6 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import Toggletip from "../components/ui/Toggletip";
-import WebGLGuard from "../components/map/WebGLGuard";
 
 /** A cruise day at its port, in the user's format — never moved by the reader's zone. */
 const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
@@ -390,9 +389,7 @@ export default function CruiseDetailPage(): JSX.Element {
           )}
 
           <DetailSection title={t("detail.route")}>
-            <WebGLGuard>
-              <CruiseRouteMap key={geometryVersion} cruise={cruise} />
-            </WebGLGuard>
+            <CruiseRouteMap key={geometryVersion} cruise={cruise} />
           </DetailSection>
 
           {cruise.companions.length > 0 && (

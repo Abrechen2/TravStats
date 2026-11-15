@@ -12,6 +12,11 @@ import {
   type MonthBucket,
 } from "./timeSliderUtils";
 
+const safeTime = (iso: string | null | undefined): number | null => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? t : null;
+};
+
 export function useGlobeTimeSlider(flights: GeoJSONFeature[], cruises: Cruise[]) {
   // don't re-render the whole component. The store mode drives whether
   // flights / cruise legs / ports get filtered before they reach the
@@ -57,7 +62,20 @@ export function useGlobeTimeSlider(flights: GeoJSONFeature[], cruises: Cruise[])
     if (!sliderFilterStart || !sliderFilterEnd) return flights;
     return flights.filter((f) => flightVisibleFilter(f, sliderFilterStart, sliderFilterEnd));
   }, [flights, sliderMode, sliderCurrent, sliderFilterStart, sliderFilterEnd]);
+
+  // Live playback (forgejo#352): the arcs are aggregated ONCE over every dated
+  // flight and the GPU hides what has not departed yet, instead of re-filtering,
+  // re-aggregating and re-tessellating ten times a second. `arcFlights` therefore
+  // does not depend on the cursor; `filteredFlights` still does and feeds every
+  // number that is read off the screen (stats card, histogram, airports).
+  const arcTimeline = sliderMode === "live" && sliderCurrent !== null;
+  const arcFlights = useMemo<GeoJSONFeature[]>(
+    () => (arcTimeline ? flights.filter((f) => safeTime(f.properties.departureTime) !== null) : []),
+    [flights, arcTimeline]
+  );
   return {
+    arcTimeline,
+    arcFlights: arcTimeline ? arcFlights : filteredFlights,
     sliderMode,
     sliderCurrent,
     sliderFilterStart,

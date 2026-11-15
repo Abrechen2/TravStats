@@ -5,6 +5,7 @@ import { SharedMapOverlays } from "../../../components/map/SharedMapOverlays";
 import { useBasemapStyle } from "../../../components/map/useBasemapStyle";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PlanStation } from "../../../lib/api/travplan";
+import { reuseMapsEnabled } from "../../../lib/mapReuse";
 
 /**
  * MapLibre cannot read CSS custom properties, so the token is resolved to the colour the page is
@@ -68,7 +69,7 @@ export default function RouteMap({
       }}
     >
       <MapGL
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         initialViewState={
           bounds
             ? { bounds, fitBoundsOptions: { padding: FIT_PADDING, maxZoom: MAX_ZOOM } }

@@ -4,7 +4,7 @@ import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { type MapRef } from "react-map-gl/maplibre";
-import { DeckGLOverlay } from "./TripMapDeckOverlay";
+import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -48,6 +48,7 @@ import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
 import { buildTripCruisePaths } from "./tripCruisePaths";
 import { buildTripFlightArcs } from "./tripMapFlightArcs";
 import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
+import { reuseMapsEnabled } from "../../lib/mapReuse";
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -100,6 +101,8 @@ interface TripMapProps {
 // entirely even though it lists `tourGeometries` correctly.
 const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
 const NO_EXTRA_POINTS: readonly LngLat[] = [];
+/** The trip map is fingertip-sized: a wider pick than the 5 px every other map uses. */
+const TRIP_PICKING_RADIUS = 8;
 
 export default function TripMap({
   trip,
@@ -681,7 +684,7 @@ export default function TripMap({
     >
       <MapGL
         ref={mapRef}
-        reuseMaps
+        reuseMaps={reuseMapsEnabled()}
         initialViewState={INITIAL_VIEW}
         mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
@@ -709,6 +712,8 @@ export default function TripMap({
             getTooltip={getTooltip}
             isOverNative={isOverNative}
             interleaved={projection === "globe"}
+            pickingRadius={TRIP_PICKING_RADIUS}
+            handleCursor
           />
         )}
         <SharedMapOverlays />

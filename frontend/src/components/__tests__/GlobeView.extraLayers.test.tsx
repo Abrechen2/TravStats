@@ -98,7 +98,12 @@ vi.mock("react-map-gl/maplibre", () => {
     return ref.current;
   }
 
-  return { __esModule: true, default: MockMapGL, useControl };
+  return {
+    __esModule: true,
+    default: MockMapGL,
+    useControl,
+    useMap: () => ({ current: undefined }),
+  };
 });
 
 vi.mock("@deck.gl/mapbox", () => {

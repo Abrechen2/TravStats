@@ -1,5 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+// First: zod must not probe for `eval` (CSP), see the file.
+import "./lib/zodConfig";
 import App from "./App.tsx";
 import "./index.css";
 // MapLibre's stylesheet is what gives DOM overlays (<Marker>, Popup) their
