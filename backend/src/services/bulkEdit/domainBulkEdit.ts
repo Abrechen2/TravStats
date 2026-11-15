@@ -3,7 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { recheckAchievements } from "../../utils/achievements";
-import { propagateWrite, shareSnapshot } from "../sharing/propagate";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 import { replaceCompanionLinks } from "../transport/companionLinks";
 import { updateStayRecord, type UpdateStayData } from "../lodging/stayWrites";
@@ -51,7 +51,7 @@ export interface BulkResult {
   /**
    * A stay whose write failed after its version claim has moved on with no
    * content change (its own update opens its own transaction, so the claim
-   * cannot be taken back). The version it is at now, for the retry's base.
+   * cannot be taken back). The version its claim left it at, for the retry's base.
    */
   version?: string;
 }
@@ -161,33 +161,37 @@ async function writePlan(
   base: string | undefined,
   shares: boolean
 ): Promise<boolean> {
-  return prisma.$transaction(async (tx: DbTransaction) => {
-    if (!(await claimed(spec, userId, row.id, base, tx))) return false;
-    // Trip, status and the ride's own facts reach the members' copies; tags and
-    // companions are private. Inside the row's transaction, like every single
-    // edit: a propagation that fails takes the row's write back with it.
-    const before = shares ? await shareSnapshot(tx, spec.shareEntity, row.id) : undefined;
-    if (plan.companionIds !== null && spec.links) {
-      await replaceCompanionLinks(
-        linksOf(tx, spec.links.delegate) as never,
-        spec.links.column,
-        row.id,
-        plan.companionIds.map((id) => ({ id }))
-      );
-    }
-    const data = { ...plan.data };
-    if (spec.protectsEdits) {
-      const touched = EDIT_PROTECTED.filter((k) => k in data);
-      if (touched.length > 0) {
-        const had = (row.userEditedFields as string[]) ?? [];
-        data.userEditedFields = addValues(had, touched);
+  return prisma.$transaction(
+    async (tx: DbTransaction) => {
+      if (!(await claimed(spec, userId, row.id, base, tx))) return false;
+      // Trip, status and the ride's own facts reach the members' copies; tags and
+      // companions are private. Inside the row's transaction, like every single
+      // edit: a propagation that fails takes the row's write back with it.
+      const before = shares ? await shareSnapshot(tx, spec.shareEntity, row.id) : undefined;
+      if (plan.companionIds !== null && spec.links) {
+        await replaceCompanionLinks(
+          linksOf(tx, spec.links.delegate) as never,
+          spec.links.column,
+          row.id,
+          plan.companionIds.map((id) => ({ id }))
+        );
       }
-    }
-    // The whole edit is propagated once, after the last row (a generic delegate, so no scanner mark).
-    await delegateOf(tx, spec.delegate).update({ where: { id: row.id }, data });
-    if (shares) await propagateWrite(tx, userId, spec.shareEntity, row.id, before);
-    return true;
-  });
+      const data = { ...plan.data };
+      if (spec.protectsEdits) {
+        const touched = EDIT_PROTECTED.filter((k) => k in data);
+        if (touched.length > 0) {
+          const had = (row.userEditedFields as string[]) ?? [];
+          data.userEditedFields = addValues(had, touched);
+        }
+      }
+      // A generic delegate, so the write-path scanner does not see it; the propagation follows.
+      await delegateOf(tx, spec.delegate).update({ where: { id: row.id }, data });
+      if (shares) await propagateWrite(tx, userId, spec.shareEntity, row.id, before);
+      return true;
+      // Propagation may touch several accounts' copies: the budget it has everywhere else.
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /** The stay's own update derives its status, copies the trip's share group and propagates. */
@@ -234,18 +238,12 @@ async function claimed(
   return claimVersion(entity, id, userId, base, db);
 }
 
-/** The row's version right now; undefined when it cannot be read. */
-async function versionOf(spec: DomainSpec, id: string): Promise<string | undefined> {
-  try {
-    const [row] = await delegateOf(prisma, spec.delegate).findMany({
-      where: { id },
-      select: { updatedAt: true },
-    });
-    return row ? (row.updatedAt as Date).toISOString() : undefined;
-  } catch {
-    return undefined;
-  }
-}
+/**
+ * Where a claimed version stands: the claim moves `updated_at` exactly one
+ * millisecond past the base. Computed, never re-read — a re-read could return a
+ * concurrent editor's version, and a retry from one nobody saw would overwrite it.
+ */
+const claimedVersion = (base: string): string => new Date(Date.parse(base) + 1).toISOString();
 
 export async function bulkEditDomain(
   userId: string,
@@ -301,8 +299,8 @@ export async function bulkEditDomain(
         id,
         error: err instanceof Error ? err.message : "Unknown error",
       });
-      const version =
-        spec.ownWrite && edit.baseVersions?.[id] ? await versionOf(spec, id) : undefined;
+      const base = edit.baseVersions?.[id];
+      const version = spec.ownWrite && base ? claimedVersion(base) : undefined;
       results.push({ id, status: "failed", code: "UPDATE_FAILED", ...(version && { version }) });
     }
   }
