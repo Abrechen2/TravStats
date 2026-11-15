@@ -29,6 +29,8 @@ import {
   type CreatedApiToken,
 } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
+import { apiErrorCode } from "../../lib/apiError";
+import { isOldToken } from "../../lib/tokenAge";
 import { formatDateTime } from "../../lib/displayFormat";
 import { useBlockConfirm } from "./useBlockConfirm";
 
@@ -139,6 +141,53 @@ export default function ApiTokensSection(): JSX.Element {
     }
   };
 
+  const removeFailure = (err: unknown, fallbackKey: "remove" | "removeAll"): void => {
+    const message =
+      apiErrorCode(err) === "TOKEN_STILL_ACTIVE"
+        ? t("settings:apiTokens.errors.removeActive")
+        : t(`settings:apiTokens.errors.${fallbackKey}`);
+    fail(message, err);
+  };
+
+  const handleRemove = async (id: string, label: string): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:apiTokens.removeDialog.title"),
+      affects: label,
+      amount: t("settings:apiTokens.removeDialog.amount"),
+      after: t("settings:apiTokens.removeDialog.after"),
+      confirmLabel: t("settings:apiTokens.removeDialog.confirm"),
+    });
+    if (!confirmed) return;
+    try {
+      await apiTokensApi.remove(id);
+      void reload();
+    } catch (err) {
+      logger.error("Failed to remove API token", err);
+      await reload();
+      removeFailure(err, "remove");
+    }
+  };
+
+  const oldCount = tokens.filter((tok) => isOldToken(tok)).length;
+
+  const handleRemoveOld = async (): Promise<void> => {
+    const confirmed = await askConfirm({
+      title: t("settings:apiTokens.removeAllDialog.title"),
+      affects: t("settings:apiTokens.title"),
+      amount: t("settings:apiTokens.removeAllDialog.amount", { count: oldCount }),
+      after: t("settings:apiTokens.removeAllDialog.after"),
+      confirmLabel: t("settings:apiTokens.removeAllDialog.confirm"),
+    });
+    if (!confirmed) return;
+    try {
+      await apiTokensApi.removeOld();
+      void reload();
+    } catch (err) {
+      logger.error("Failed to remove old API tokens", err);
+      removeFailure(err, "removeAll");
+    }
+  };
+
   const copyPlaintext = async (): Promise<void> => {
     if (!justCreated) return;
     try {
@@ -185,13 +234,18 @@ export default function ApiTokensSection(): JSX.Element {
           {loadFailed && (
             <LinkButton onClick={() => void reload()}>{t("settings:blocks.save.retry")}</LinkButton>
           )}
+          {!isDemo && !loadFailed && oldCount > 0 && (
+            <LinkButton onClick={() => void handleRemoveOld()}>
+              {t("settings:apiTokens.removeAllButton")}
+            </LinkButton>
+          )}
           {loadFailed ? null : loading ? (
             <p className="t-caption">{t("common:loading.title")}</p>
           ) : tokens.length === 0 ? (
             <p className="t-caption">{t("settings:apiTokens.empty")}</p>
           ) : (
             tokens.map((tok) => (
-              <div key={tok.id} style={{ opacity: tok.revokedAt ? 0.55 : 1 }}>
+              <div key={tok.id} style={{ opacity: isOldToken(tok) ? 0.55 : 1 }}>
                 <SettingRow
                   title={tok.label}
                   sub={
@@ -205,10 +259,24 @@ export default function ApiTokensSection(): JSX.Element {
                     </span>
                   }
                   control={
-                    tok.revokedAt ? (
-                      <Pill color={token("muted")} dashed>
-                        {t("settings:apiTokens.revoked")}
-                      </Pill>
+                    isOldToken(tok) ? (
+                      <>
+                        <Pill color={token("muted")} dashed>
+                          {tok.revokedAt
+                            ? t("settings:apiTokens.revoked")
+                            : t("settings:apiTokens.expired")}
+                        </Pill>
+                        {!isDemo && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(tok.id, tok.label)}
+                            className="btn-secondary"
+                            style={{ color: "var(--ts-bad)" }}
+                          >
+                            {t("settings:apiTokens.removeButton")}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <>
                         <Pill color={tok.scope === "read" ? token("good") : token("accent")}>

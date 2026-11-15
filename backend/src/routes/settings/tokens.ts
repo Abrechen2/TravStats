@@ -153,4 +153,78 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
   }
 });
 
+/**
+ * "Old" = revoked, or expired as of `at`. The one definition both removal
+ * routes share; an active token is never old, so no removal can cut off a
+ * working phone or script.
+ */
+const oldTokenWhere = (userId: string, at: Date, devicesOnly = false) => ({
+  userId,
+  ...(devicesOnly ? { deviceId: { not: null } } : {}),
+  OR: [{ revokedAt: { not: null } }, { expiresAt: { lte: at } }],
+});
+
+/**
+ * Permanently remove ONE revoked or expired token (and so its phone entry).
+ * An active token is refused with TOKEN_STILL_ACTIVE: revoking comes first.
+ *
+ * A calendar feed this token issued is deleted with it (FK cascade). That
+ * loses nothing: `issuerAlive` in the feed service already treats a revoked
+ * or expired issuer as the end of the feed, so the URL was dead before.
+ */
+router.delete("/:id/purge", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) throw new AppError("Unauthorized", 401);
+    const { id } = req.params;
+    const token = await prisma.apiToken.findUnique({ where: { id } });
+    if (!token || token.userId !== req.userId) {
+      throw new AppError("Token not found", 404);
+    }
+    // The guard is part of the delete, not a check before it: a token that
+    // was un-revoked or re-dated between the read and the delete stays.
+    const { count } = await prisma.apiToken.deleteMany({
+      where: { id, ...oldTokenWhere(req.userId, new Date()) },
+    });
+    if (count === 0) {
+      throw new AppError(
+        "Token is still active; revoke it before removing it",
+        409,
+        "TOKEN_STILL_ACTIVE"
+      );
+    }
+    securityLogger.info({
+      operation: "security_event",
+      message: "API token removed",
+      context: { eventType: "pat_removed", tokenId: id, userId: req.userId, ip: req.ip },
+    });
+    res.json({ removed: 1 });
+  } catch (err) {
+    logger.error({ message: "Failed to remove API token", err });
+    next(err);
+  }
+});
+
+/**
+ * Remove every revoked or expired token of the caller in one go. With
+ * `?devices=1` only paired phones: the phone list must not take script keys
+ * with it that it never showed.
+ */
+router.post("/purge-old", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) throw new AppError("Unauthorized", 401);
+    const { count } = await prisma.apiToken.deleteMany({
+      where: oldTokenWhere(req.userId, new Date(), req.query.devices === "1"),
+    });
+    securityLogger.info({
+      operation: "security_event",
+      message: "Old API tokens removed",
+      context: { eventType: "pat_removed_bulk", userId: req.userId, count, ip: req.ip },
+    });
+    res.json({ removed: count });
+  } catch (err) {
+    logger.error({ message: "Failed to remove old API tokens", err });
+    next(err);
+  }
+});
+
 export default router;

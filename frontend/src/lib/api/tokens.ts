@@ -54,4 +54,19 @@ export const apiTokensApi = {
     const { data } = await api.delete<ApiToken>(`/settings/tokens/${id}`);
     return data;
   },
+
+  /** Permanently remove one revoked or expired token; an active one is refused with `TOKEN_STILL_ACTIVE`. */
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/settings/tokens/${id}/purge`);
+  },
+
+  /** Remove every revoked or expired token of the caller (`devicesOnly`: paired phones only); resolves with how many went. */
+  removeOld: async (opts: { devicesOnly?: boolean } = {}): Promise<number> => {
+    const { data } = await api.post<{ removed: number }>(
+      "/settings/tokens/purge-old",
+      undefined,
+      opts.devicesOnly ? { params: { devices: "1" } } : undefined
+    );
+    return data.removed;
+  },
 };

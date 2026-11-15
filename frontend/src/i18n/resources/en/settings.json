@@ -908,17 +908,36 @@
     "neverUsed": "Never used",
     "ip": "IP {{ip}}",
     "revoked": "Signed out",
+    "expired": "Expired",
     "unpairButton": "Sign out",
+    "removeButton": "Remove",
+    "removeAllButton": "Remove all old ones",
     "errors": {
       "load": "I couldn't load the phones.",
       "start": "I couldn't start the pairing.",
-      "unpair": "I couldn't sign the phone out."
+      "unpair": "I couldn't sign the phone out.",
+      "remove": "I could not remove the phone.",
+      "removeAll": "I could not remove the old phones.",
+      "removeActive": "This phone is still connected. Sign it out first."
     },
     "unpairDialog": {
       "title": "Sign out phone?",
       "amount": "1 phone",
       "after": "It loses access at once and must be paired again.",
       "confirm": "Sign out"
+    },
+    "removeDialog": {
+      "title": "Remove phone?",
+      "amount": "1 phone",
+      "after": "The entry disappears from the list. The phone has no access any more anyway.",
+      "confirm": "Remove"
+    },
+    "removeAllDialog": {
+      "title": "Remove old phones?",
+      "amount_one": "1 signed-out or expired phone",
+      "amount_other": "{{count}} signed-out or expired phones",
+      "after": "Active phones stay connected.",
+      "confirm": "Remove all"
     }
   },
   "apiTokens": {
@@ -939,7 +958,10 @@
     "lastUsed": "Last used: {{when}}",
     "neverUsed": "Never used",
     "revoked": "Revoked",
+    "expired": "Expired",
     "revokeButton": "Revoke",
+    "removeButton": "Remove",
+    "removeAllButton": "Remove all old ones",
     "justCreatedTitle": "Token created",
     "justCreatedWarning": "Copy this token NOW — it will not be shown again. Only the hash is persisted.",
     "copy": "Copy",
@@ -950,7 +972,10 @@
       "create": "I couldn't create the key.",
       "revoke": "I couldn't revoke the key.",
       "labelRequired": "I need a name for the key.",
-      "technicalDetail": "Technical details"
+      "technicalDetail": "Technical details",
+      "remove": "I could not remove the key.",
+      "removeAll": "I could not remove the old keys.",
+      "removeActive": "This key is still active. Revoke it first."
     },
     "scopesShort": {
       "read": "Read",
@@ -962,6 +987,19 @@
       "amount": "1 key",
       "after": "The tool is locked out at once.",
       "confirm": "Revoke"
+    },
+    "removeDialog": {
+      "title": "Remove key?",
+      "amount": "1 key",
+      "after": "The entry disappears from the list. The key was already unusable.",
+      "confirm": "Remove"
+    },
+    "removeAllDialog": {
+      "title": "Remove old keys?",
+      "amount_one": "1 revoked or expired key",
+      "amount_other": "{{count}} revoked or expired keys",
+      "after": "Active keys stay in place.",
+      "confirm": "Remove all"
     }
   },
   "security": {

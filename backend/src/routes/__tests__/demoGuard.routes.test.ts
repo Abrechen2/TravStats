@@ -68,6 +68,8 @@ describe("demo account guard", () => {
     ["/api/v1/pairing/start", "post", {}],
     ["/api/v1/settings/tokens", "post", { name: "x", scope: "read" }],
     ["/api/v1/settings/tokens/00000000-0000-0000-0000-000000000000", "delete", {}],
+    ["/api/v1/settings/tokens/00000000-0000-0000-0000-000000000000/purge", "delete", {}],
+    ["/api/v1/settings/tokens/purge-old", "post", {}],
     ["/api/v1/settings/api-keys", "put", {}],
     ["/api/v1/settings/api-keys/test/aerodatabox", "post", {}],
     ["/api/v1/settings/immich", "put", { baseUrl: "http://10.0.0.1" }],

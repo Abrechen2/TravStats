@@ -61,3 +61,36 @@ registry.registerPath({
     },
   },
 });
+
+registry.registerPath({
+  method: "delete",
+  path: "/settings/tokens/{id}/purge",
+  summary: "Permanently remove a revoked or expired API token",
+  description:
+    "Also drops the paired-phone entry the token carries. An active token is refused with 409 " +
+    "`TOKEN_STILL_ACTIVE` (revoke it first); a foreign id answers 404. A calendar feed the token " +
+    "issued goes with it — it was already dead once the token was revoked or expired.",
+  tags: ["API Tokens"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Removed",
+      content: { "application/json": { schema: z.object({ removed: z.number().int() }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/tokens/purge-old",
+  summary: "Remove all revoked and expired API tokens of the caller",
+  description: "`?devices=1` limits it to paired phones (tokens with a device id).",
+  tags: ["API Tokens"],
+  request: { query: z.object({ devices: z.literal("1").optional() }) },
+  responses: {
+    200: {
+      description: "Number of tokens removed",
+      content: { "application/json": { schema: z.object({ removed: z.number().int() }) } },
+    },
+  },
+});
