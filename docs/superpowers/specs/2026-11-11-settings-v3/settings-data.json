@@ -4316,6 +4316,26 @@
           },
           "ad": 1,
           "x": 1
+        },
+        {
+          "id": "airportData",
+          "cat": "open",
+          "svc": {
+            "n": ["Flughafen-Daten", "Airport data"],
+            "de": "Unbekannte Flughäfen aus offenen Daten",
+            "en": "Unknown airports from open data",
+            "st": ["An", "On"],
+            "tone": "muted"
+          },
+          "use": ["on"],
+          "rows": [],
+          "ov": {
+            "on": {
+              "v": true
+            }
+          },
+          "ad": 1,
+          "x": 1
         }
       ]
     },

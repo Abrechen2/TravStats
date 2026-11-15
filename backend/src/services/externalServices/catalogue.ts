@@ -429,6 +429,18 @@ export const SERVICES: readonly ServiceDef[] = [
     fields: [admin("marketOverpassUrl", "url", "marketOverpassUrl", true)],
   }),
   svc({
+    // Two outbound hosts, one switch: the airport-data.com lookup of an unknown
+    // airport code and the OurAirports CSV (lookup index and catalogue seeding).
+    // Only an airport code leaves the server. On by default, like the services
+    // it replaced silently before (forgejo#392): an instance that never opened
+    // the page keeps resolving unknown airports; an admin can switch it off.
+    id: "airportData",
+    category: "openData",
+    level: "instance",
+    credential: "none",
+    keyless: true,
+  }),
+  svc({
     id: "logos",
     category: "openData",
     level: "instance",

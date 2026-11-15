@@ -89,5 +89,8 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"openData","de":"OpenStreetMap · Overpass","en":"OpenStreetMap · Overpass","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
 
       ]},
+      {"id":"airportData","de":"Flughafen-Daten","en":"Airport data","level":"expert","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"open","rows":[
+
+      ]},
   ],
 };

@@ -1,3 +1,4 @@
+import { assertEgressAllowed } from "./services/externalServices/egress";
 import { createPrismaClient } from "./prismaClient";
 import { altitudeMetresFromFeet } from "./shared/airportAltitude";
 import logger from "./utils/logger";
@@ -113,6 +114,10 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
       operation: "seed_airports_download",
       message: "CSV file not found, downloading from OurAirports.com",
     });
+    // The download is an outbound call of the "airportData" catalogue service: an admin
+    // who switched it off (or the master internet switch) gets a named failure, not a fetch.
+    await assertEgressAllowed("airportData");
+
     const downloadUrl = "https://davidmegginson.github.io/ourairports-data/airports.csv";
 
     try {

@@ -60,6 +60,7 @@ describe("POST /pairing/claim — what the phone is told when a code does not wo
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/expired/i);
+    expect(res.body.code).toBe("PAIRING_CODE_EXPIRED");
     expect(res.body.error).not.toMatch(/different TravStats instance/i);
   });
 

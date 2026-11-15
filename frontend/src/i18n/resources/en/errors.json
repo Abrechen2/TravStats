@@ -43,6 +43,7 @@
     "timeout": "Airport {{code}} is not in the catalogue, and the online lookup did not answer in time. Please try again later or pick it manually.",
     "network": "Airport {{code}} is not in the catalogue, and the online lookup cannot be reached from the server. Please try again later or pick it manually.",
     "http_error": "Airport {{code}} is not in the catalogue, and the online lookup reported an error. Please try again later or pick it manually.",
+    "blocked": "Airport {{code}} is not in the catalogue, and the online lookup is switched off by the administrator or the internet switch. Please pick it manually.",
     "unknown": "Airport {{code}} is not in the catalogue, and the online lookup is unavailable right now. Please try again later or pick it manually."
   }
 }

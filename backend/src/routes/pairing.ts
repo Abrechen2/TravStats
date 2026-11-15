@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
-import { AppError } from "../middleware/errorHandler";
+import { AppError, type ApiErrorCode } from "../middleware/errorHandler";
 import { pairingClaimLimiter } from "../middleware/rateLimit";
 import { prisma } from "../db";
 import { claimPairingSchema, statusPairingSchema } from "../schemas/pairing";
@@ -51,6 +51,12 @@ const PAIRING_CLAIM_MESSAGES: Record<PairingClaimFailure, string> = {
     "This server has no such pairing code. It was most likely issued by a different TravStats instance — check the server address the app is using.",
   expired: "This pairing code has expired. Generate a new one and try again.",
   alreadyClaimed: "This pairing code has already been used. Generate a new one.",
+};
+
+const PAIRING_CLAIM_CODES: Record<PairingClaimFailure, ApiErrorCode> = {
+  unknown: "PAIRING_CODE_UNKNOWN",
+  expired: "PAIRING_CODE_EXPIRED",
+  alreadyClaimed: "PAIRING_CODE_USED",
 };
 
 const router = Router();
@@ -149,7 +155,11 @@ router.post(
         // restored database can hand out someone else's (forgejo#115). Saying
         // "expired" there sends the user to wait for a new code that will fail
         // exactly the same way.
-        throw new AppError(PAIRING_CLAIM_MESSAGES[claim.outcome], 400);
+        throw new AppError(
+          PAIRING_CLAIM_MESSAGES[claim.outcome],
+          400,
+          PAIRING_CLAIM_CODES[claim.outcome]
+        );
       }
       const userId = claim.userId;
 

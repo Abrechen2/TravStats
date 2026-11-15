@@ -10,7 +10,7 @@ const unavailable = (reason?: unknown) => ({
 });
 
 describe("resolveAirportByCode — 503 AIRPORT_LOOKUP_UNAVAILABLE", () => {
-  it.each(["timeout", "network", "http_error"] as const)(
+  it.each(["timeout", "network", "http_error", "blocked"] as const)(
     "carries the reason %s to the message",
     async (reason) => {
       vi.mocked(airportsApi.getByCode).mockRejectedValue(unavailable(reason));

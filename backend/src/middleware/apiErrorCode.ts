@@ -628,4 +628,9 @@ export type ApiErrorCode =
   | "ENRICH_NO_REFERENCE"
   | "ENRICH_CONFIDENCE_LOW"
   /** The admin country-day sweep is already running (forgejo#397, 409). */
-  | "SWEEP_RUNNING";
+  | "SWEEP_RUNNING"
+  /** `POST /pairing/claim` missed (400): the code is unknown to this instance, lapsed
+   *  after its ten minutes, or was already used. Long-lived device tokens are unaffected. */
+  | "PAIRING_CODE_UNKNOWN"
+  | "PAIRING_CODE_EXPIRED"
+  | "PAIRING_CODE_USED";
