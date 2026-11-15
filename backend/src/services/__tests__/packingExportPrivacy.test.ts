@@ -33,4 +33,38 @@ describe("account export of a trip's packing list", () => {
     ]);
     expect(exported.trips[1].packingList).toBeNull();
   });
+
+  it("does not carry a plan's stored state.packing, which can hold a co-planner's personal items", () => {
+    const user = {
+      id: "owner-1",
+      dawarichStays: [],
+      trips: [
+        {
+          packingList: { rev: 1, items: [{ id: "a", label: "Pass", done: false }] },
+          travelPlan: {
+            id: "plan-1",
+            revision: 3,
+            state: {
+              destination: "Lisbon",
+              packing: [
+                {
+                  id: "c",
+                  label: "Her insulin",
+                  scope: "personal",
+                  ownerMemberId: "member-2",
+                  packed: false,
+                },
+              ],
+              tasks: [],
+            },
+          },
+        },
+      ],
+    };
+    const exported = withPublicStays(user);
+    const state = exported.trips[0].travelPlan?.state as Record<string, unknown>;
+    expect("packing" in state).toBe(false);
+    expect(state.destination).toBe("Lisbon");
+    expect(JSON.stringify(exported)).not.toContain("Her insulin");
+  });
 });
