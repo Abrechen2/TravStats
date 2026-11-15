@@ -114,6 +114,7 @@ export async function directory(
 
 interface FlightRow {
   id: string;
+  updatedAt: Date;
   tripId: string | null;
   tags: string[];
   companions: string[];
@@ -231,7 +232,7 @@ export async function bulkEditFlights(
   await assertTripOwned(userId, edit);
   const rows = await prisma.flight.findMany({
     where: { id: { in: edit.flightIds }, userId },
-    select: { id: true, tripId: true, tags: true, companions: true },
+    select: { id: true, tripId: true, tags: true, companions: true, updatedAt: true },
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
 
@@ -254,6 +255,13 @@ export async function bulkEditFlights(
     }
     const plan = planFor(flight, edit, persons, typed);
     if (!plan) {
+      // Nothing to write, but a client that read an older version is told so rather than
+      // "unchanged": its picture of the flight is stale (no claim — nothing is written).
+      const base = edit.baseVersions?.[flightId];
+      if (base !== undefined && flight.updatedAt.toISOString() !== new Date(base).toISOString()) {
+        results.push({ flightId, status: "failed", code: "VERSION_CONFLICT" });
+        continue;
+      }
       results.push({ flightId, status: "unchanged" });
       continue;
     }

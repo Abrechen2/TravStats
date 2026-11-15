@@ -307,6 +307,20 @@ describe("POST /flights/bulk-edit — propagation and versions (followups-1)", (
     expect(row.tripId).toBe(pair.full.trip.id);
   });
 
+  it("answers VERSION_CONFLICT, not unchanged, for a stale flight that already has the wanted values", async () => {
+    const stale = pair.full.flight;
+    const staleBase = stale.updatedAt.toISOString();
+    await prisma.$executeRawUnsafe(`UPDATE "flights" SET notes = 'moved' WHERE id = $1`, stale.id);
+    const res = await send({
+      flightIds: [stale.id],
+      trip: { mode: "set", tripId: pair.full.trip.id },
+      baseVersions: { [stale.id]: staleBase },
+    });
+    expect(res.body.results).toEqual([
+      { flightId: stale.id, status: "failed", code: "VERSION_CONFLICT" },
+    ]);
+  });
+
   it("answers VERSION_CONFLICT for a flight that moved on and writes the others", async () => {
     const stale = pair.full.flight;
     const fresh = await prisma.flight.create({

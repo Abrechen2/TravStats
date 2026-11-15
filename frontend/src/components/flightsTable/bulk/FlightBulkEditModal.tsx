@@ -122,7 +122,13 @@ export default function FlightBulkEditModal({
     setSending(true);
     setRequestError(null);
     try {
-      const answer = await flightBulkEditApi.edit(bulkEditRequest(effective, flightIds));
+      const answer = await flightBulkEditApi.edit(
+        bulkEditRequest(
+          effective,
+          flightIds,
+          Object.fromEntries(flights.map((f) => [f.id, f.updatedAt]))
+        )
+      );
       setResults((prev) => {
         const next = new Map(prev ?? []);
         for (const r of answer.results) next.set(r.flightId, r);

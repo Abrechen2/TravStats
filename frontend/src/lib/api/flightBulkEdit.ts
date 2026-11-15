@@ -22,6 +22,8 @@ export interface FlightBulkEditInput {
   trip?: { mode: "set"; tripId: string } | { mode: "clear" };
   tags?: { mode: ListEditMode; values: string[] };
   companions?: { mode: ListEditMode; values: string[] };
+  /** id -> the `updatedAt` the client read the flight at; a flight that moved on answers VERSION_CONFLICT. */
+  baseVersions?: Record<string, string>;
 }
 
 export interface FlightBulkEditResult {

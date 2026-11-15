@@ -31,6 +31,8 @@ export interface Airport {
 
 export interface Flight extends FlightProviderData {
   id: string;
+  /** The row's version (the bulk edit's `baseVersions`); absent on rows built client-side. */
+  updatedAt?: string;
   userId: string;
   airline: string;
   airlineIata?: string;
