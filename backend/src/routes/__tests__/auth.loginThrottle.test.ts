@@ -7,7 +7,6 @@ import {
   LOGIN_LOCK_MAX_MS,
   LOGIN_LOCK_THRESHOLD,
   lockDurationMs,
-  throttleKey,
 } from "../../services/auth/loginThrottle";
 
 /**
@@ -23,12 +22,14 @@ const login = (username: string, password: string) =>
   request(app).post("/api/v1/auth/login").send({ username, password });
 
 describe("per-account login backoff", () => {
+  let victimId = "";
   beforeAll(async () => {
     for (const username of [VICTIM, BYSTANDER]) {
       await prisma.user.deleteMany({ where: { username } });
-      await prisma.user.create({
+      const created = await prisma.user.create({
         data: { username, passwordHash: await hashPassword(PASSWORD) },
       });
+      if (username === VICTIM) victimId = created.id;
     }
   });
 
@@ -61,14 +62,14 @@ describe("per-account login backoff", () => {
   it("lets the account in again once the window has passed, and a success resets the streak", async () => {
     for (let i = 0; i < LOGIN_LOCK_THRESHOLD; i++) await login(VICTIM, "wrong-password");
     await prisma.loginThrottle.update({
-      where: { usernameKey: throttleKey(VICTIM) },
+      where: { usernameKey: `u:${victimId}` },
       data: { lockedUntil: new Date(Date.now() - 1000) },
     });
 
     const ok = await login(VICTIM, PASSWORD);
     expect(ok.status).toBe(200);
     expect(
-      await prisma.loginThrottle.findUnique({ where: { usernameKey: throttleKey(VICTIM) } })
+      await prisma.loginThrottle.findUnique({ where: { usernameKey: `u:${victimId}` } })
     ).toBeNull();
   });
 
@@ -80,13 +81,32 @@ describe("per-account login backoff", () => {
     expect((await login(VICTIM, PASSWORD)).status).toBe(200);
   });
 
-  it("counts a case variant of the name against the same account, and unknown names too", async () => {
-    for (let i = 0; i < LOGIN_LOCK_THRESHOLD; i++) await login(VICTIM.toUpperCase(), "wrong");
-    expect((await login(VICTIM, PASSWORD)).status).toBe(429);
+  it("keys the counter on the resolved account: case-variant usernames do not share a lock", async () => {
+    const lower = "throttle-case-415";
+    const upper = "THROTTLE-CASE-415";
+    for (const username of [lower, upper]) {
+      await prisma.user.deleteMany({ where: { username } });
+      await prisma.user.create({ data: { username, passwordHash: await hashPassword(PASSWORD) } });
+    }
+    try {
+      for (let i = 0; i < LOGIN_LOCK_THRESHOLD; i++) await login(lower, "wrong");
+      expect((await login(lower, PASSWORD)).status).toBe(429);
+      // The other account is a different row and is neither locked nor cleared by it.
+      expect((await login(upper, PASSWORD)).status).toBe(200);
+      expect((await login(lower, PASSWORD)).status).toBe(429);
+    } finally {
+      await prisma.user.deleteMany({ where: { username: { in: [lower, upper] } } });
+    }
+  });
 
-    for (let i = 0; i < LOGIN_LOCK_THRESHOLD; i++) await login("no-such-user-415", "wrong");
+  it("throttles unknown names too, without storing the submitted text", async () => {
+    const ghost = "no-such-user-415-Secret";
+    for (let i = 0; i < LOGIN_LOCK_THRESHOLD; i++) await login(ghost, "wrong");
     // Same answer as for a real locked account: the lock does not reveal existence.
-    expect((await login("no-such-user-415", "wrong")).status).toBe(429);
+    expect((await login(ghost, "wrong")).status).toBe(429);
+    const rows = await prisma.loginThrottle.findMany();
+    expect(rows.map((r) => r.usernameKey).join(",")).not.toMatch(/secret/i);
+    expect(rows.every((r) => r.usernameKey.startsWith("n:"))).toBe(true);
   });
 
   it("bounds the lock window so an attacker cannot lock a user out for good", () => {

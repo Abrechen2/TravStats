@@ -18,6 +18,7 @@ import {
   clearLoginFailures,
   loginLockRemainingSeconds,
   recordLoginFailure,
+  throttleKey,
 } from "../services/auth/loginThrottle";
 import { verifyReauthAssertion } from "../services/webauthn/reauth";
 import { removeAccount } from "../services/account/removeAccount";
@@ -236,12 +237,18 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
   try {
     const { username, password } = loginSchema.parse(req.body);
 
-    // Per-account backoff (forgejo#415 N3). Asked BEFORE bcrypt, for existing and
-    // unknown names alike, so a locked name costs the server nothing and the
-    // answer does not reveal whether the account exists.
-    const lockSeconds = await loginLockRemainingSeconds(username);
+    const user = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    // Per-account backoff (forgejo#415 N3), keyed on the resolved account (or a
+    // hash of an unknown name). Asked BEFORE bcrypt, for existing and unknown
+    // names alike, so a locked account costs nothing and the answer does not
+    // reveal whether it exists.
+    const throttle = throttleKey(user, username);
+    const lockSeconds = await loginLockRemainingSeconds(throttle);
     if (lockSeconds > 0) {
-      logger.warn({ operation: "auth_login_locked", username, ip: req.ip });
+      logger.warn({ operation: "auth_login_locked", subject: throttle, ip: req.ip });
       res.setHeader("Retry-After", String(lockSeconds));
       return res.status(429).json({
         error: "Too many failed sign-in attempts for this account. Try again later.",
@@ -250,14 +257,10 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
       });
     }
 
-    // Find user — always run bcrypt to prevent timing-based username enumeration
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
-
+    // Always run bcrypt to prevent timing-based username enumeration
     const isValid = await comparePassword(password, user?.passwordHash ?? DUMMY_BCRYPT_HASH);
     if (!user || !isValid) {
-      await recordLoginFailure(username, { ip: req.ip, reason: "invalid_credentials" });
+      await recordLoginFailure(throttle, { ip: req.ip, reason: "invalid_credentials" });
       // The code, not the prose, is what the login form reads — it has to say
       // this in the reader's language (forgejo#88 finding 3).
       throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
@@ -274,7 +277,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
     }
 
     // The password was right: the streak ends here, whatever step comes next.
-    await clearLoginFailures(username);
+    await clearLoginFailures(throttle);
 
     // Two-factor: the password was right, so the session is withheld until the
     // second factor arrives. Same shape as the mustChangePassword branch below —

@@ -157,6 +157,11 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
     if (!user.twoFactorSecret) {
       throw new AppError("Two-factor is not enabled for this account", 401);
     }
+    // An exhausted budget ends the challenge even when the process stopped
+    // before it could clear the token (forgejo#415 N10).
+    if (user.twoFactorAttempts >= MAX_VERIFY_ATTEMPTS) {
+      throw new AppError("Two-factor challenge expired", 401);
+    }
 
     const accepted = payload.code
       ? verifyCode(decryptSecret(user.twoFactorSecret), payload.code)
@@ -191,7 +196,11 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
     // same guarantee consumeRecoveryCode relies on. A plain update would let both
     // proceed and mint two sessions from one challenge.
     const burned = await prisma.user.updateMany({
-      where: { id: user.id, twoFactorToken: hashed },
+      where: {
+        id: user.id,
+        twoFactorToken: hashed,
+        twoFactorAttempts: { lt: MAX_VERIFY_ATTEMPTS },
+      },
       data: { twoFactorToken: null, twoFactorTokenExpiry: null, twoFactorAttempts: 0 },
     });
     if (burned.count !== 1) throw new AppError("Two-factor challenge expired", 401);

@@ -289,4 +289,20 @@ describe("login with two-factor", () => {
     const row = await prisma.user.findUnique({ where: { id: userId } });
     expect(row?.twoFactorAttempts).toBe(0);
   });
+
+  it("refuses even a correct code once the attempt budget is spent but the token survived", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ username: "twoFactorLogin", password: "password123" });
+    const cookies = cookiesOf(login);
+    // A process that died between counting the fifth miss and clearing the token.
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorAttempts: 5 } });
+
+    const res = await request(app)
+      .post("/api/v1/auth/2fa/verify")
+      .set("Cookie", cookies)
+      .send({ code: codeFor(SECRET) });
+    expect(res.status).toBe(401);
+    expect(cookiesOf(res).join(";")).not.toContain("auth_token=");
+  });
 });
