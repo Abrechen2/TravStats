@@ -38,6 +38,13 @@ interface UseTelemetryConsentStepParams {
 
 interface UseTelemetryConsentStepResult {
   shouldShow: boolean;
+  /**
+   * The consent question has been decided one way or the other: not an admin,
+   * answered, or failed to load. While false the step may still appear, so
+   * anything that must never share the screen with it (the readiness card)
+   * waits for this.
+   */
+  settled: boolean;
   /** Closes the step for this session. Persisting the answer is the card's job. */
   close: () => void;
 }
@@ -49,20 +56,29 @@ export function useTelemetryConsentStep({
 }: UseTelemetryConsentStepParams): UseTelemetryConsentStepResult {
   const [unanswered, setUnanswered] = useState(false);
   const [closed, setClosed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!isAdminSession) {
       setUnanswered(false);
+      setLoaded(true);
       return;
     }
+    setLoaded(false);
     let cancelled = false;
     void usageStatsApi
       .get()
       .then((status) => {
-        if (!cancelled) setUnanswered(status.consent === "unset");
+        if (!cancelled) {
+          setUnanswered(status.consent === "unset");
+          setLoaded(true);
+        }
       })
       .catch(() => {
-        if (!cancelled) setUnanswered(false);
+        if (!cancelled) {
+          setUnanswered(false);
+          setLoaded(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -73,6 +89,7 @@ export function useTelemetryConsentStep({
 
   return {
     shouldShow: unanswered && !closed && whatsNewChecked && !whatsNewOpen,
+    settled: loaded && whatsNewChecked && !whatsNewOpen,
     close,
   };
 }

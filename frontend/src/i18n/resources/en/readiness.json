@@ -121,5 +121,20 @@
       "before": "Your own Immich or Dawarich server could be reached on the home network.",
       "after": "An ordinary account's connection must now point at a public address."
     }
+  },
+  "invitation": {
+    "label": "Setup & status",
+    "title": "There is something to review",
+    "reason": {
+      "update": "The update changed something you should check.",
+      "required": "Something you need still has a setup step missing."
+    },
+    "view": "View now",
+    "snoozeFailed": "The reminder could not be saved. Please try again."
+  },
+  "banner": {
+    "text_one": "{{count}} server setup item needs you.",
+    "text_other": "{{count}} server setup items need you.",
+    "link": "Open setup"
   }
 }

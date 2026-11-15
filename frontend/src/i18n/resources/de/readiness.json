@@ -121,5 +121,20 @@
       "before": "Ein eigener Immich- oder Dawarich-Server war auch im Heimnetz erreichbar.",
       "after": "Verbindungen eines normalen Kontos müssen jetzt auf eine öffentliche Adresse zeigen."
     }
+  },
+  "invitation": {
+    "label": "Einrichtung & Zustand",
+    "title": "Es gibt etwas zu prüfen",
+    "reason": {
+      "update": "Mit dem Update hat sich etwas geändert, das du prüfen solltest.",
+      "required": "Für etwas, das du brauchst, fehlt noch eine Einrichtung."
+    },
+    "view": "Jetzt ansehen",
+    "snoozeFailed": "Die Erinnerung ließ sich nicht speichern. Bitte versuche es erneut."
+  },
+  "banner": {
+    "text_one": "{{count}} Einrichtung am Server braucht dich.",
+    "text_other": "{{count}} Einrichtungen am Server brauchen dich.",
+    "link": "Einrichtung öffnen"
   }
 }

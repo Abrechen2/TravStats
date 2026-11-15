@@ -2085,5 +2085,28 @@
       "sub": "Menschen auf verbundenen Servern dürfen dir eine Freundschaftsanfrage schicken"
     },
     "loadFailed": "Ich konnte nicht lesen, ob du auffindbar bist."
+  },
+  "publicUrlCheck": {
+    "button": "Erreichbarkeit prüfen",
+    "checking": "Prüfe …",
+    "saveFirst": "Speichere die Adresse zuerst. Geprüft wird die gespeicherte.",
+    "ok": "Erreichbar. Geprüft um {{time}}.",
+    "error": {
+      "NO_PUBLIC_URL": "Es ist keine öffentliche Adresse gespeichert, also gab es nichts zu prüfen.",
+      "OUTBOUND_DISABLED": "Ausgehender Netzverkehr ist abgeschaltet, deshalb wurde nichts geprüft.",
+      "TIMEOUT": "Keine Antwort innerhalb von 10 Sekunden.",
+      "DNS": "Der Name der Adresse ließ sich nicht auflösen.",
+      "TLS": "Das Zertifikat der Adresse wurde nicht akzeptiert.",
+      "CONNECTION": "Die Verbindung zur Adresse kam nicht zustande.",
+      "HTTP_STATUS": "Die Adresse antwortete mit dem Fehlerstatus {{status}}.",
+      "NOT_THIS_INSTANCE": "Unter dieser Adresse antwortet ein anderer Server, nicht dieser.",
+      "unknown": "Die Prüfung ist fehlgeschlagen."
+    },
+    "failed": {
+      "timeout": "Der Server hat nicht rechtzeitig geantwortet. Die Prüfung wurde nicht abgeschlossen.",
+      "rateLimited": "Zu viele Prüfungen in kurzer Zeit. Bitte warte einen Moment.",
+      "forbidden": "Nur Admins dürfen die Erreichbarkeit prüfen.",
+      "generic": "Die Prüfung ließ sich nicht starten. Bitte versuche es erneut."
+    }
   }
 }
