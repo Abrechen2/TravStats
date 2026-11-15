@@ -140,7 +140,7 @@ describe("FlightBulkEditModal", () => {
       summary: { updated: 1, unchanged: 0, failed: 1 },
     });
     const user = userEvent.setup();
-    renderModal(vi.fn(), vi.fn(), [
+    const { onApplied } = renderModal(vi.fn(), vi.fn(), [
       flight("a", { updatedAt: "2026-11-01T10:00:00.000Z" }),
       flight("b", { updatedAt: "2026-11-01T11:00:00.000Z" }),
     ]);
@@ -155,6 +155,8 @@ describe("FlightBulkEditModal", () => {
     expect(await screen.findByTestId("bulk-failed-b")).toHaveTextContent(
       "flights:bulk.result.code.VERSION_CONFLICT"
     );
+    // Even with nothing written the list reloads, so the user sees the flight as it now is.
+    expect(onApplied).toHaveBeenCalledTimes(1);
     // A moved-on flight is not offered for a blind retry.
     expect(screen.queryByRole("button", { name: /flights:bulk\.result\.retryFailed/ })).toBeNull();
   });
