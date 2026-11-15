@@ -188,6 +188,8 @@ export type ObservedTimes = z.infer<typeof observedTimesSchema>;
  * `csv` being Flightradar24's track export. A KMZ is stored as `kml`. `aeroapi`
  * is the line FlightAware recorded, fetched by the server (forgejo#409); it
  * fills a flight that has no recording of its own and yields to any upload.
+ * `readsb` is the line fetched from the user's own tar1090 receiver (forgejo#408
+ * phase 3) and follows the same rule.
  */
 export const FLIGHT_TRACK_SOURCES = [
   "companion",
@@ -197,6 +199,7 @@ export const FLIGHT_TRACK_SOURCES = [
   "fit",
   "csv",
   "aeroapi",
+  "readsb",
 ] as const;
 export type FlightTrackSource = (typeof FLIGHT_TRACK_SOURCES)[number];
 

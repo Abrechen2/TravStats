@@ -28,6 +28,7 @@ const trackMeta = z.object({
     .describe(
       "`companion` from the phone; the file format for an uploaded file (forgejo#312); " +
         "`aeroapi` for the line FlightAware recorded, fetched by the server (forgejo#409; an upload replaces it without `replace`); " +
+        "`readsb` for the line fetched from the user's own tar1090 receiver (forgejo#408; same rule); " +
         "`travtrack` / `dawarich` for a line drawn from that provider's points (not stored)"
     ),
   uploadId: z
@@ -280,6 +281,136 @@ registry.registerPath({
     403: { description: "Read-only token", content: errorContent },
     404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
     422: { description: "Not this flight's airport or schedule", content: errorContent },
+    429: { description: "Rate limited", content: errorContent },
+  },
+});
+
+const receiverAnswer = z.object({
+  track: z.object({
+    id: z.string().uuid(),
+    flightId: z.string().uuid(),
+    source: z.literal("readsb"),
+    pointCount: z.number().int(),
+    distanceKm: z.number(),
+  }),
+  registration: z.string().nullable().describe("The aircraft registration the trace file names"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/flights/{id}/track/receiver",
+  summary: "Fetch the flight's line from the account's own tar1090 / readsb receiver",
+  description:
+    "Looks the aircraft up by the flight's ICAO24 hex (`aircraftModeS`) in the receiver's " +
+    "globe_history / trace files for the flight's UTC day(s), cuts the leg that overlaps the " +
+    "schedule and stores it as the flight's recording (`source: readsb`). Optional body " +
+    "`{ replace: true }` to overwrite a passenger recording; a server line (`aeroapi`, " +
+    "`readsb`) is replaced without it. Each way it can fail has its own code: " +
+    "RECEIVER_OFF, RECEIVER_NOT_CONFIGURED, RECEIVER_NO_AIRCRAFT, RECEIVER_NO_SCHEDULE, " +
+    "RECEIVER_NOT_FOUND, RECEIVER_OUTSIDE_WINDOW, RECEIVER_AUTH, RECEIVER_TIMEOUT, " +
+    "RECEIVER_UNREACHABLE, RECEIVER_ERROR, RECEIVER_BAD_TRACE, RECEIVER_TOO_LARGE, RECEIVER_WINDOW_TOO_LONG, PRIVATE_TARGET. " +
+    "A fetch is bounded: window up to 2 days, 60 MB and 400 000 fixes in total, 60 s overall.",
+  tags: ["Flights"],
+  request: {
+    params: flightParams,
+    body: {
+      content: {
+        "application/json": { schema: z.object({ replace: z.boolean().optional() }).strict() },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "A server line was replaced",
+      content: { "application/json": { schema: receiverAnswer } },
+    },
+    201: { description: "Stored", content: { "application/json": { schema: receiverAnswer } } },
+    400: { description: "VALIDATION_FAILED or PRIVATE_TARGET", content: errorContent },
+    403: { description: "Read-only token, or the shared demo account", content: errorContent },
+    404: { description: "FLIGHT_NOT_FOUND or RECEIVER_NOT_FOUND", content: errorContent },
+    409: {
+      description: "TRACK_ALREADY_RECORDED, RECEIVER_OFF or RECEIVER_NOT_CONFIGURED",
+      content: errorContent,
+    },
+    422: {
+      description:
+        "RECEIVER_NO_AIRCRAFT, RECEIVER_NO_SCHEDULE, RECEIVER_OUTSIDE_WINDOW or RECEIVER_WINDOW_TOO_LONG",
+      content: errorContent,
+    },
+    429: { description: "Rate limited", content: errorContent },
+    502: {
+      description: "RECEIVER_AUTH, RECEIVER_UNREACHABLE, RECEIVER_ERROR or RECEIVER_BAD_TRACE",
+      content: errorContent,
+    },
+    504: { description: "RECEIVER_TIMEOUT", content: errorContent },
+  },
+});
+
+const livePosition = registry.register(
+  "FlightLivePosition",
+  z.discriminatedUnion("status", [
+    z.object({
+      status: z.literal("ok"),
+      position: z.object({
+        lat: z.number(),
+        lon: z.number(),
+        altBaro: z.number().nullable().describe("Barometric altitude in feet; null on the ground"),
+        onGround: z.boolean(),
+        groundSpeed: z.number().nullable().describe("Knots"),
+        track: z.number().nullable().describe("Degrees true"),
+        seenSeconds: z.number().nullable().describe("Seconds since the last message"),
+      }),
+      source: z.enum(["adsbx", "adsblol"]),
+      fetchedAt: z
+        .string()
+        .datetime()
+        .describe("When the provider was asked (a cached answer keeps its time)"),
+      icao24: z.string().nullable(),
+      registration: z.string().nullable(),
+    }),
+    z.object({
+      status: z.literal("unavailable"),
+      reason: z.enum([
+        "not_live_window",
+        "no_schedule",
+        "no_provider",
+        "no_identifier",
+        "no_hit",
+        "no_position",
+        "provider_error",
+      ]),
+      failures: z
+        .array(
+          z.object({
+            provider: z.string(),
+            outcome: z.enum(["auth", "quota", "timeout", "plan_restricted", "provider_error"]),
+          })
+        )
+        .optional()
+        .describe("With `provider_error`: which provider failed and how"),
+    }),
+  ])
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/flights/{id}/live-position",
+  summary: "Where the flight's aircraft is right now (ADS-B community providers)",
+  description:
+    "For the Companion cockpit and the web flight page to poll (answers are cached 60 s; " +
+    "30 requests a minute). Looks the aircraft up by ICAO24 hex, else registration, else " +
+    "callsign at the enabled ADS-B providers (adsb.lol, ADS-B Exchange - both opt-in). " +
+    "`status: unavailable` is a normal 200 with one stable reason: not_live_window (outside " +
+    "departure - 1 h .. arrival + 3 h, or cancelled), no_schedule, no_provider (none enabled), " +
+    "no_identifier, no_hit, no_position, provider_error (+ `failures`).",
+  tags: ["Flights"],
+  request: { params: flightParams },
+  responses: {
+    200: {
+      description: "Position or reason",
+      content: { "application/json": { schema: livePosition } },
+    },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
   },
 });

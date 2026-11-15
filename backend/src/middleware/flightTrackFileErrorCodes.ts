@@ -28,4 +28,18 @@ export type FlightTrackFileApiErrorCode =
   /** The admin chose AeroAPI's custom tier without a monthly budget above zero
    *  (forgejo#409, `routes/admin/aeroapi.ts`) — parked here for the same
    *  reason as the codes above: `errorHandler.ts` is at its size limit. */
-  | "AEROAPI_BUDGET_REQUIRED";
+  | "AEROAPI_BUDGET_REQUIRED"
+  /** Own-receiver track (forgejo#408 phase 3): one code per reason it cannot be had. */
+  | "RECEIVER_OFF"
+  | "RECEIVER_NOT_CONFIGURED"
+  | "RECEIVER_NO_AIRCRAFT"
+  | "RECEIVER_NO_SCHEDULE"
+  | "RECEIVER_NOT_FOUND"
+  | "RECEIVER_OUTSIDE_WINDOW"
+  | "RECEIVER_AUTH"
+  | "RECEIVER_TIMEOUT"
+  | "RECEIVER_UNREACHABLE"
+  | "RECEIVER_ERROR"
+  | "RECEIVER_BAD_TRACE"
+  | "RECEIVER_WINDOW_TOO_LONG"
+  | "RECEIVER_TOO_LARGE";

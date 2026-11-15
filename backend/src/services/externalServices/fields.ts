@@ -12,7 +12,12 @@ import { encryptUnlessMasked } from "../../utils/maskedKey";
 import { parseOwnGeoUrl } from "../geo/ownServerConfig";
 import { checkLlmBaseUrl } from "../llm/llmEndpoint";
 import { DawarichError, normalizeDawarichBaseUrl } from "../dawarich/errors";
-import type { TargetPolicy } from "../egress/privateTargets";
+import {
+  assertTargetAllowed,
+  isPrivateTargetRefusal,
+  PRIVATE_TARGET_CODE,
+  type TargetPolicy,
+} from "../egress/privateTargets";
 import { ImmichError, normalizeImmichBaseUrl } from "../immich/types";
 import { normalizeRelayUrl } from "../../schemas/pushAdmin";
 import { normalizeFxCustomUrl } from "../fx/fxSources";
@@ -114,6 +119,33 @@ function normalizeUrl(
     } catch (error) {
       throw urlRefusal(error, "Invalid Dawarich URL", field.key);
     }
+  }
+  if (service.id === "tar1090") {
+    // Own receiver: an admin (and the instance tier) may name a LAN host; an
+    // ordinary account reaches public addresses only (forgejo#411 rule).
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(raw);
+    } catch {
+      throw bad("Must be a valid http(s) URL", field.key);
+    }
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      throw bad("Must be a valid http(s) URL", field.key);
+    }
+    try {
+      assertTargetAllowed(raw, policy);
+    } catch (error) {
+      if (isPrivateTargetRefusal(error)) {
+        throw new AppError(
+          "Address not reachable for this account",
+          400,
+          PRIVATE_TARGET_CODE,
+          field.key
+        );
+      }
+      throw error;
+    }
+    return raw.replace(/\/+$/, "");
   }
   if (field.column === "pushRelayUrl") {
     const relay = normalizeRelayUrl(raw);

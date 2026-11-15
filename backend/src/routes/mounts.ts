@@ -29,6 +29,8 @@ import passkeyRoutes from "./auth/passkeys";
 import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import flightTrackRoutes from "./flights/track";
+import flightLivePositionRoutes from "./flights/livePosition";
+import flightReceiverTrackRoutes from "./flights/receiverTrack";
 import flightTrackLineRoutes from "./flights/trackLines";
 import flightObservedTimesRoutes from "./flights/observedTimes";
 import flightBookingRoutes from "./flights/booking";
@@ -302,6 +304,8 @@ export const apiMounts: ApiMount[] = [
   { id: "flights", base: "/api/v1/flights", router: flightRoutes },
   // What a paired phone sends about a flight (forgejo#193/#194) — satellites
   // at the same prefix, the `cruises.tracks` pattern: flights.ts is frozen.
+  { id: "flights.livePosition", base: "/api/v1/flights", router: flightLivePositionRoutes },
+  { id: "flights.receiverTrack", base: "/api/v1/flights", router: flightReceiverTrackRoutes },
   { id: "flights.track", base: "/api/v1/flights", router: flightTrackRoutes },
   { id: "flights.observedTimes", base: "/api/v1/flights", router: flightObservedTimesRoutes },
   // A flight's booking and its segments (forgejo#218/#219).

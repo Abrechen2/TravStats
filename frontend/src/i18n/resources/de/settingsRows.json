@@ -1015,6 +1015,10 @@
         "after": "Der Server meldet sich bei der nächsten Mitteilung neu an. Die Telefone musst du nicht neu koppeln.",
         "confirm": "Zurücksetzen"
       }
+    },
+    "tar1090": {
+      "n": "Eigener Empfänger (tar1090)",
+      "p": "Flugspuren vom eigenen Empfänger"
     }
   },
   "server": {

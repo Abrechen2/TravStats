@@ -703,6 +703,16 @@
       "getKeyUrl": "https://aisstream.io/apikeys",
       "getKeyLabel": "Get a key from AISStream",
       "quotaLine": "2 simultaneous connections"
+    },
+    "tar1090": {
+      "name": "Own receiver (tar1090)",
+      "purpose": "Track of past flights from your own ADS-B receiver",
+      "why": "Fetches a flight's track from the history files of your tar1090/readsb when the aircraft was received there.",
+      "cost": "Free, self-hosted.",
+      "quota": "None.",
+      "dataOut": "Stays between TravStats and your receiver; only the aircraft's ICAO24 code and the day are requested.",
+      "quotaLine": "your own server",
+      "adminPurpose": "The instance's receiver address (LAN allowed); accounts can enter their own public one"
     }
   },
   "alwaysOn": {

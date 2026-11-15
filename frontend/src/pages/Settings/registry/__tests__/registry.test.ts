@@ -47,13 +47,13 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 117 groups and cards (39 of them service cards: 15 the account's, 24 the server's) and 268 rows", () => {
+  it("counts 34 pages, 121 groups and cards (43 of them service cards: 18 the account's, 25 the server's) and 268 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    expect(sections).toHaveLength(117);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(39);
-    expect(registryPage("dienstek")!.sections).toHaveLength(15);
-    expect(registryPage("dienste")!.sections).toHaveLength(24);
+    expect(sections).toHaveLength(121);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(43);
+    expect(registryPage("dienstek")!.sections).toHaveLength(18);
+    expect(registryPage("dienste")!.sections).toHaveLength(25);
     expect(sections.flatMap((s) => s.rows)).toHaveLength(268);
   });
 
@@ -435,7 +435,7 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
       expect(cards, id).not.toContain(id);
     }
     // The prototype's 21 cards, then the three that are left of the folded ones (expert).
-    expect(cards).toHaveLength(24);
+    expect(cards).toHaveLength(25);
     const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
     expect(expertCards.map((c) => c.id)).toEqual(["railTimetables", "openData", "airportData"]);
   });

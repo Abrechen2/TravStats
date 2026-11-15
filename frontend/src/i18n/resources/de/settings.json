@@ -1256,7 +1256,8 @@
       "googlePlaces": "Ortssuche und Ortsdetails",
       "transitous": "Züge nach Nummer und Bahnhof suchen",
       "photon": "Ortssuche beim Tippen",
-      "nominatim": "Adressen in Koordinaten umwandeln"
+      "nominatim": "Adressen in Koordinaten umwandeln",
+      "tar1090": "Flugspur vergangener Flüge vom eigenen Empfänger"
     },
     "count_one": "1 Dienst",
     "count_other": "{{count}} Dienste",
