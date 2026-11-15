@@ -28,6 +28,9 @@ import { appVersion } from "../utils/version";
  * noticed when somebody looks at the timestamps.
  */
 export function healthHandler(req: Request, res: Response): void {
+  // `query` is always set by Express; the optional chain keeps a direct handler call
+  // (the health tests pass a bare object) answering the same fields as before.
+  const probeCandidate = req.query?.[PROBE_QUERY_PARAM];
   const timezone = zoneSelfCheckResult();
   const timezoneLookup = timezone === null ? "pending" : timezone.ok ? "ok" : "failed";
   const sync = syncSchemaCheckResult();
@@ -41,8 +44,6 @@ export function healthHandler(req: Request, res: Response): void {
     // Only when the caller holds a one-time nonce this process issued (the public-URL
     // reachability check, readiness spec §12): proof that THIS instance answered, which a
     // version match cannot give, since prod and the RC can run the same one.
-    ...(redeemProbeNonce(req.query[PROBE_QUERY_PARAM]) && {
-      probe: req.query[PROBE_QUERY_PARAM] as string,
-    }),
+    ...(redeemProbeNonce(probeCandidate) && { probe: probeCandidate as string }),
   });
 }
