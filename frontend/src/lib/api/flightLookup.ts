@@ -5,7 +5,7 @@ import { todayZoneNow } from "../../hooks/useTodayZone";
 /** A provider that could not answer, as the server names it. */
 export interface LookupProviderFailure {
   provider: "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
-  outcome: "auth" | "quota" | "timeout" | "plan_restricted" | "provider_error";
+  outcome: "auth" | "quota" | "timeout" | "plan_restricted" | "provider_error" | "blocked";
 }
 
 /** One airport side of a lookup hit. */

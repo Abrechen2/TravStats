@@ -21,7 +21,7 @@
 
 import axios from "axios";
 import NodeCache from "node-cache";
-import { findOrCreateAirport } from "./airportLookup";
+import { resolveAirportSides } from "./flightLookup/airportSides";
 import { resolveApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import { requestAeroapiCall } from "./aeroapiBudget";
@@ -321,7 +321,7 @@ export async function lookupFlightAeroapi(
       return null;
     }
 
-    const result = await mapToLookupResult(picked, normalized);
+    const result = await mapToLookupResult(picked, normalized, outcomes);
     logger.info(
       {
         api: "aeroapi",
@@ -331,7 +331,7 @@ export async function lookupFlightAeroapi(
       },
       "AeroAPI returned data"
     );
-    cache.set(cacheKey, result, ttl);
+    if (!outcomes?.hasFailure("aeroapi")) cache.set(cacheKey, result, ttl);
     outcomes?.record("aeroapi", "ok");
     return result;
   } catch (error: unknown) {
@@ -378,15 +378,18 @@ export async function lookupFlightAeroapi(
  */
 async function mapToLookupResult(
   flight: AeroapiFlight,
-  requestedNumber: string
+  requestedNumber: string,
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightLookupResult> {
   const departureCode = flight.origin?.code_iata || flight.origin?.code_icao || undefined;
   const arrivalCode = flight.destination?.code_iata || flight.destination?.code_icao || undefined;
 
-  const [departureAirport, arrivalAirport] = await Promise.all([
-    departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-    arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-  ]);
+  const sides = await resolveAirportSides(departureCode, arrivalCode);
+  const departureAirport = sides.departure;
+  const arrivalAirport = sides.arrival;
+  // Not "airport not found": the airport source was blocked. Say so, and keep this half-empty
+  // answer out of the cache, so the next lookup after the block is lifted draws the airports.
+  if (sides.blocked) outcomes?.record("aeroapi", "blocked");
 
   // AeroAPI answers with the operating flight. When the user asked by a
   // partner's number, the ident differs from the request.

@@ -18,6 +18,10 @@ jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 jest.mock("../services/airportLookup", () => ({
+  lookupOrCreateAirport: jest.fn(async (code: string) => ({
+    status: "found",
+    airport: { iata: code, icao: `I${code}`, name: `${code} International`, lat: 1, lon: 2 },
+  })),
   findOrCreateAirport: jest.fn(async (code: string) => ({
     iata: code,
     icao: `I${code}`,
@@ -88,7 +92,7 @@ import { lookupFlightAeroapi, __resetAeroapiCacheForTests } from "../services/ae
 import { __resetAerodataboxCacheForTests } from "../services/aerodataboxLookup";
 import { lookupFlightDetails, __resetAviationstackBudgetForTests } from "../services/flightLookup";
 import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
-import { findOrCreateAirport } from "../services/airportLookup";
+import { lookupOrCreateAirport } from "../services/airportLookup";
 import { testAeroapiKey } from "../services/apiKeyTesterAeroapi";
 import { getAirlineName } from "../services/flightLookup/fieldReaders";
 import logger from "../utils/logger";
@@ -171,8 +175,8 @@ describe("lookupFlightAeroapi", () => {
     const result = await lookupFlightAeroapi("LH400", "2026-10-05");
 
     expect(result).not.toBeNull();
-    expect(findOrCreateAirport).toHaveBeenCalledWith("FRA");
-    expect(findOrCreateAirport).toHaveBeenCalledWith("JFK");
+    expect(lookupOrCreateAirport).toHaveBeenCalledWith("FRA");
+    expect(lookupOrCreateAirport).toHaveBeenCalledWith("JFK");
     expect(result).toMatchObject({
       flightNumber: "LH400",
       airlineIata: "LH",
@@ -191,6 +195,26 @@ describe("lookupFlightAeroapi", () => {
     expect(result?.runwayDepartureTime).toEqual(new Date("2026-10-05T12:38:00Z"));
     expect(result?.runwayArrivalTime).toEqual(new Date("2026-10-05T20:49:00Z"));
     expect(result?.statusOverride).toBeUndefined();
+  });
+
+  it("reports a blocked airport source as its own outcome, not as a missing airport, and does not cache the half answer", async () => {
+    onlyAeroapiKey();
+    respondWith(fixture.flights);
+    (lookupOrCreateAirport as jest.Mock<typeof lookupOrCreateAirport>).mockResolvedValueOnce({
+      status: "unavailable",
+      reason: "blocked",
+    });
+    const outcomes = new LookupOutcomeLog();
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05", undefined, undefined, outcomes);
+
+    expect(result?.departure).toBeUndefined();
+    expect(outcomes.failures()).toEqual([{ provider: "aeroapi", outcome: "blocked" }]);
+
+    // Not cached: the next lookup asks again and now draws both airports.
+    respondWith(fixture.flights);
+    const again = await lookupFlightAeroapi("LH400", "2026-10-05");
+    expect(again?.departure?.iata).toBe("FRA");
   });
 
   it("reads the requested date in the ORIGIN's zone, not in UTC", async () => {

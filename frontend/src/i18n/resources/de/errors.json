@@ -32,7 +32,8 @@
     "quota": "{{provider}}: Kontingent oder Anfragelimit erreicht – bitte später erneut versuchen.",
     "timeout": "{{provider}}: keine Antwort (Zeitüberschreitung).",
     "plan_restricted": "{{provider}}: Dein Tarif erlaubt diese Abfrage nicht.",
-    "provider_error": "{{provider}}: Fehler beim Anbieter."
+    "provider_error": "{{provider}}: Fehler beim Anbieter.",
+    "blocked": "{{provider}}: Flughafendaten konnten nicht geladen werden, weil der ausgehende Zugriff gesperrt ist (Einstellungen → Externe Dienste)."
   },
   "lookupRateLimited": "Zu viele Flugsuchen in kurzer Zeit. Bitte warte einen Moment und versuche es dann erneut.",
   "lookupDemoForbidden": "Im Demo-Konto ist die Flugsuche abgeschaltet, um das API-Kontingent zu schonen. Bitte trage den Flug manuell ein.",

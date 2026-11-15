@@ -16,9 +16,12 @@
 export type FlightDataProvider =
   "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky" | "adsbx" | "adsblol";
 
-/** A provider that could not do its job. Stable codes — the UI maps them. */
+/**
+ * A provider that could not do its job. Stable codes — the UI maps them. `blocked`: the provider
+ * answered, but outbound access to the airport source was blocked, so its airports are missing.
+ */
 export type ProviderFailureKind =
-  "auth" | "quota" | "timeout" | "plan_restricted" | "provider_error";
+  "auth" | "quota" | "timeout" | "plan_restricted" | "provider_error" | "blocked";
 
 export type ProviderOutcomeKind = "ok" | "no_match" | ProviderFailureKind;
 
@@ -38,6 +41,13 @@ export class LookupOutcomeLog {
 
   record(provider: FlightDataProvider, outcome: ProviderOutcomeKind): void {
     this.entries.push({ provider, outcome });
+  }
+
+  /** Whether this provider has recorded a failure during this lookup. */
+  hasFailure(provider: FlightDataProvider): boolean {
+    return this.entries.some(
+      (e) => e.provider === provider && e.outcome !== "ok" && e.outcome !== "no_match"
+    );
   }
 
   all(): ProviderOutcome[] {
