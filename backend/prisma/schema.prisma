@@ -73,6 +73,11 @@ model User {
   /// like `whatsNewSeenVersion`). Notes of versions above it, up to the running
   /// one, are listed.
   readinessAckVersion       String                       @default("2.7.0") @map("readiness_ack_version")
+  /// Invitation card (readiness stage 2, spec 2026-11-14 §12): the keys (open
+  /// note ids, required needsAction item ids) the account has already been shown,
+  /// and the "remind me tomorrow" time. Neither is a record of travel.
+  readinessInvitationSeen   String[]                     @default([]) @map("readiness_invitation_seen")
+  readinessInvitationSnoozedUntil DateTime?              @map("readiness_invitation_snoozed_until")
   readinessItemStates       ReadinessItemState[]
   readinessNoteAcks         ReadinessNoteAck[]
   createdAt                 DateTime                     @default(now()) @map("created_at")

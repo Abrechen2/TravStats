@@ -29,6 +29,7 @@ import importModeRouter from "./importMode";
 import templateRepoRouter from "./templateRepo";
 import lodgingChainsAdminRouter from "./lodgingChains";
 import externalServicesAdminRouter from "./externalServices";
+import publicUrlCheckRouter from "./publicUrlCheck";
 
 const router = Router();
 
@@ -81,5 +82,6 @@ router.use("/", importModeRouter);
 router.use("/", templateRepoRouter);
 router.use("/", lodgingChainsAdminRouter);
 router.use("/external-services", externalServicesAdminRouter);
+router.use("/public-url", publicUrlCheckRouter);
 
 export default router;

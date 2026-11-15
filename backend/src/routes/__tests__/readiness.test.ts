@@ -94,7 +94,14 @@ describe("Readiness API", () => {
   it("answers every contract field, with admin items for an admin only", async () => {
     const res = await request(app).get(PATH).set("Cookie", adminCookie);
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).sort()).toEqual(["items", "notes", "runningVersion", "summary"]);
+    expect(Object.keys(res.body).sort()).toEqual([
+      "banner",
+      "invitation",
+      "items",
+      "notes",
+      "runningVersion",
+      "summary",
+    ]);
     expect(Object.keys(res.body.summary).sort()).toEqual([
       "blockedByAdmin",
       "newNotes",

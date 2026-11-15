@@ -7,13 +7,16 @@ import { prisma } from "../db";
 import { snoozeBodySchema } from "../schemas/readiness";
 import {
   buildReadinessView,
+  invitationKeys,
   findApplicableItem,
   findApplicableNote,
 } from "../services/readiness/evaluate";
 import {
   acknowledgeNote,
   clearItemState,
+  markInvitationSeen,
   setItemState,
+  snoozeInvitation,
   SNOOZE_DEFAULT_MS,
   SNOOZE_MAX_MS,
 } from "../services/readiness/state";
@@ -60,6 +63,33 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     next(error);
   }
 });
+
+// The page marks what the card showed as seen; "Morgen erinnern" hides the card for a day.
+router.post(
+  "/invitation/seen",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const view = await buildReadinessView(req.userId!, await callerIsAdmin(req));
+      const { noteKeys, itemKeys } = invitationKeys(view.items, view.notes);
+      await markInvitationSeen(req.userId!, [...noteKeys, ...itemKeys]);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/invitation/snooze",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await snoozeInvitation(req.userId!, new Date(Date.now() + SNOOZE_DEFAULT_MS));
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post(
   "/items/:id/snooze",

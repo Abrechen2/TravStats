@@ -45,6 +45,37 @@ export async function loadAccountState(userId: string): Promise<AccountReadiness
   };
 }
 
+export interface InvitationState {
+  seen: ReadonlySet<string>;
+  snoozedUntil: Date | null;
+}
+
+export async function loadInvitationState(userId: string): Promise<InvitationState> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { readinessInvitationSeen: true, readinessInvitationSnoozedUntil: true },
+  });
+  return {
+    seen: new Set(user?.readinessInvitationSeen ?? []),
+    snoozedUntil: user?.readinessInvitationSnoozedUntil ?? null,
+  };
+}
+
+/** The seen set is REPLACED by the keys shown now, so a key that resolved and returns is new again. */
+export async function markInvitationSeen(userId: string, keys: readonly string[]): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { readinessInvitationSeen: [...keys] },
+  });
+}
+
+export async function snoozeInvitation(userId: string, until: Date): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { readinessInvitationSnoozedUntil: until },
+  });
+}
+
 export async function setItemState(
   userId: string,
   itemId: string,

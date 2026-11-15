@@ -10,7 +10,13 @@ import { appVersion, buildVersion } from "../../utils/version";
 import { compareVersions, isValidVersion } from "../parsers/templates/v2/version";
 import { loadReadinessContext, type ReadinessContext } from "./context";
 import { CHECKS } from "./registry";
-import { loadAccountState, recordRunningVersion, type AccountReadinessState } from "./state";
+import {
+  loadAccountState,
+  loadInvitationState,
+  recordRunningVersion,
+  type AccountReadinessState,
+  type InvitationState,
+} from "./state";
 import type { CheckStatus, RegisteredCheck } from "./types";
 import { NOTES } from "./upgrades/notes";
 
@@ -45,6 +51,17 @@ export interface ReadinessNote {
   open: boolean;
 }
 
+export interface ReadinessInvitation {
+  show: boolean;
+  reason: "update" | "required" | null;
+  snoozedUntil: string | null;
+}
+
+export interface ReadinessBanner {
+  show: boolean;
+  itemIds: string[];
+}
+
 export interface ReadinessView {
   runningVersion: string;
   summary: {
@@ -57,6 +74,8 @@ export interface ReadinessView {
   };
   items: ReadinessItem[];
   notes: ReadinessNote[];
+  invitation: ReadinessInvitation;
+  banner: ReadinessBanner;
 }
 
 interface Evaluated {
@@ -98,15 +117,68 @@ function inRange(version: string, from: string, to: string): boolean {
   return compareVersions(version, from) > 0 && compareVersions(version, to) <= 0;
 }
 
+/**
+ * What would make the invitation card appear (spec 2026-11-14 §12): the ids of
+ * open notes, then of `required` items that verifiably need action and that the
+ * account has not snoozed. `unknown` is never a key. Notes come first in the
+ * list so a caller can tell which kind a key is.
+ */
+export function invitationKeys(
+  items: readonly ReadinessItem[],
+  notes: readonly ReadinessNote[]
+): { noteKeys: string[]; itemKeys: string[] } {
+  return {
+    noteKeys: notes.filter((n) => n.open).map((n) => n.id),
+    itemKeys: items
+      .filter(
+        (i) =>
+          i.severity === "required" &&
+          i.status === "needsAction" &&
+          i.blockedBy === null &&
+          i.userState?.kind !== "snoozed"
+      )
+      .map((i) => i.id),
+  };
+}
+
+export function invitationOf(
+  items: readonly ReadinessItem[],
+  notes: readonly ReadinessNote[],
+  state: InvitationState,
+  now: Date
+): ReadinessInvitation {
+  const snoozed = state.snoozedUntil !== null && state.snoozedUntil > now;
+  const snoozedUntil = snoozed ? state.snoozedUntil!.toISOString() : null;
+  if (snoozed) return { show: false, reason: null, snoozedUntil };
+  const { noteKeys, itemKeys } = invitationKeys(items, notes);
+  const fresh = (k: string) => !state.seen.has(k);
+  if (noteKeys.some(fresh)) return { show: true, reason: "update", snoozedUntil };
+  if (itemKeys.some(fresh)) return { show: true, reason: "required", snoozedUntil };
+  return { show: false, reason: null, snoozedUntil };
+}
+
+/** Admins only; ignores snoozes ("until it is resolved") and never counts `unknown` (§9). */
+export function bannerOf(items: readonly ReadinessItem[], isAdmin: boolean): ReadinessBanner {
+  const itemIds = isAdmin
+    ? items
+        .filter(
+          (i) => i.scope === "admin" && i.severity === "required" && i.status === "needsAction"
+        )
+        .map((i) => i.id)
+    : [];
+  return { show: itemIds.length > 0, itemIds };
+}
+
 export async function buildReadinessView(
   userId: string,
   isAdmin: boolean,
   now: Date = new Date()
 ): Promise<ReadinessView> {
   await recordRunningVersion();
-  const [ctx, state] = await Promise.all([
+  const [ctx, state, invitationState] = await Promise.all([
     loadReadinessContext(userId, isAdmin, now),
     loadAccountState(userId),
+    loadInvitationState(userId),
   ]);
   const evaluated = evaluateChecks(ctx);
 
@@ -172,7 +244,14 @@ export async function buildReadinessView(
     if (open) summary.newNotes++;
   }
 
-  return { runningVersion: buildVersion, summary, items, notes };
+  return {
+    runningVersion: buildVersion,
+    summary,
+    items,
+    notes,
+    invitation: invitationOf(items, notes, invitationState, now),
+    banner: bannerOf(items, isAdmin),
+  };
 }
 
 /** Who may act on an item id: it must exist, apply to this account and, if admin-scoped, be visible to it. */

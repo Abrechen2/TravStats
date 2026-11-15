@@ -54,6 +54,31 @@ export const readinessResponseSchema = z.object({
   }),
   items: z.array(readinessItemSchema),
   notes: z.array(readinessNoteSchema),
+  invitation: z.object({
+    show: z.boolean(),
+    reason: z.enum(["update", "required"]).nullable(),
+    snoozedUntil: z.string().datetime().nullable(),
+  }),
+  banner: z.object({ show: z.boolean(), itemIds: z.array(z.string()) }),
+});
+
+export const publicUrlCheckResponseSchema = z.object({
+  ok: z.boolean(),
+  checkedAt: z.string().datetime(),
+  url: z.string().nullable(),
+  httpStatus: z.number().int().nullable(),
+  errorCode: z
+    .enum([
+      "NO_PUBLIC_URL",
+      "OUTBOUND_DISABLED",
+      "TIMEOUT",
+      "DNS",
+      "TLS",
+      "CONNECTION",
+      "HTTP_STATUS",
+      "NOT_THIS_INSTANCE",
+    ])
+    .nullable(),
 });
 
 export const readinessIdParamsSchema = z.object({ id: z.string().min(1).max(128) });

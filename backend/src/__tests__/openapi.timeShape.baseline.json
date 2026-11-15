@@ -10,6 +10,7 @@
     "GET /jobs/{id} .data.startedAt",
     "GET /photo-journeys .data[].endDate",
     "GET /photo-journeys .data[].startDate",
+    "GET /readiness .invitation.snoozedUntil",
     "GET /readiness .items[].userState.until",
     "GET /roadtrips .roadtrips[].endDate",
     "GET /roadtrips .roadtrips[].startDate",
