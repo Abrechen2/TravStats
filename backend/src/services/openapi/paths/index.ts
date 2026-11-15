@@ -70,6 +70,7 @@ import "./cruiseTracks";
 import "./flightDevice";
 import "./flightBooking";
 import "./flightBulkEdit";
+import "./domainBulkEdit";
 import "./lodging";
 import "./lodgingRatingCategories";
 import "./loyalty";

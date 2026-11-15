@@ -93,7 +93,7 @@ async function changedFieldsSince(
 }
 
 /** Moves the version forward where it still equals `base`; true when it did. */
-async function claimVersion(
+export async function claimVersion(
   entity: SyncEntity,
   id: string,
   userId: string,

@@ -601,6 +601,9 @@ const batchLimiter = (message: string) =>
   });
 export const batchCreationLimiter = batchLimiter("Too many batch requests, please try again later");
 export const bulkEditLimiter = batchLimiter("Too many bulk edits, please try again later");
+/** One bucket per domain's bulk edit (forgejo#405 A4): a rail clean-up must not lock cruises out. */
+export const makeDomainBulkEditLimiter = () =>
+  batchLimiter("Too many bulk edits, please try again later");
 
 /**
  * Rate limiter for user-supplied FILE uploads. Named for its first consumer
