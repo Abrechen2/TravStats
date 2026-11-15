@@ -1,0 +1,28 @@
+{
+  "_comment": "SYNTHETIC: built from Polarsteps' documented data download (trip.json with all_steps), not from a real account export.",
+  "name": "Synthetic Portugal",
+  "all_steps": [
+    {
+      "name": "Lisbon",
+      "display_name": "Praça do Comércio",
+      "description": "Arrived by tram",
+      "start_time": 1773061200,
+      "timezone_id": "Europe/Lisbon",
+      "location": {
+        "name": "Lisbon",
+        "detail": "Portugal",
+        "country_code": "pt",
+        "lat": 38.7078,
+        "lon": -9.1366
+      }
+    },
+    {
+      "name": "Praça do Comércio",
+      "start_time": 1773147600,
+      "timezone_id": "Europe/Lisbon",
+      "location": { "name": "Lisbon", "country_code": "pt", "lat": 38.7078, "lon": -9.1366 }
+    },
+    { "name": "No position", "start_time": 1773234000, "location": { "name": "Somewhere" } },
+    { "name": 42 }
+  ]
+}

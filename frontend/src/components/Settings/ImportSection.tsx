@@ -12,6 +12,7 @@ import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
 import { PlaceDocumentImportTile } from "../import/PlaceDocumentImportTile";
+import { AppImportTile } from "../import/AppImportTile";
 import { CheckinImportTile } from "../import/CheckinImportTile";
 import { RailBookmarkletTile } from "../import/RailBookmarkletTile";
 import { RailImportMemoryRows } from "./RailImportMemoryRows";
@@ -67,6 +68,10 @@ export default function ImportSection(): JSX.Element {
       flight: [
         <Fr24ImportTile key="fr24" />,
         <TrackerImportTile key="tracker" />,
+        // forgejo#401: TripIt, Polarsteps and the flight diaries (JetLovers,
+        // FlightMemory, Logmyflight). Flights first, but a TripIt file also
+        // carries stays and rail, a Polarsteps one places.
+        <AppImportTile key="app-import" onImported={handleImported} />,
         <GenericCsvImportTile key="csv" />,
       ],
       lodging: [

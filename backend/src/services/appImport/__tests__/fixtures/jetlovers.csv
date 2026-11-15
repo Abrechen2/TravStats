@@ -1,0 +1,7 @@
+Date,Flight,Airline,From,To,Departure,Arrival,Aircraft,Registration,Seat,Class,Reason,Notes
+2026-03-01,LH400,Lufthansa,FRA,JFK,10:05,12:20,Boeing 747-8,D-ABYA,12A,Business,Business,Synthetic row 1
+2026-03-10,NH6,All Nippon Airways,NRT,LAX,17:00,10:30,Boeing 787-9,JA871A,34K,Y,Vacation,Same-date arrival across the date line
+2026-03-12,LH401,Lufthansa,JFK,FRA,18:30,07:45,Airbus A340,,,,,Red-eye: arrival clock before departure clock
+2026-03-15,,Lufthansa,FRA,LIS,07:00,09:30,,,,,,No flight number
+2026-03-16,TP585,TAP,Lisboa,FRA,,,,,,,,No airport code in From
+31.02.2026,LH1,Lufthansa,FRA,LIS,,,,,,,,Impossible date

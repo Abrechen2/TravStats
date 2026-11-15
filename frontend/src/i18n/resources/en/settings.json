@@ -720,6 +720,28 @@
         "network": "The server cannot be reached. Nothing was changed – please try again.",
         "applyFailed": "Applying failed. Import the file again – what was already applied is recognised.",
         "rateLimited": "Too many imports in a short time. Please wait a moment and try again."
+      },
+      "appImport": {
+        "title": "From TripIt, Polarsteps or a flight diary",
+        "description": "Upload your export – TripIt (JSON or iCal), Polarsteps (trip.json) or JetLovers, FlightMemory, Logmyflight (CSV). Before anything is saved you see what will be created: flights, rides, stays, places. What you already have is recognised and not entered twice; entries that do not fit are listed below with the reason.",
+        "uploadLabel": "Choose export file",
+        "sourceLabel": "Source",
+        "sources": {
+          "tripit": "TripIt",
+          "polarsteps": "Polarsteps",
+          "jetlovers": "JetLovers",
+          "flightmemory": "FlightMemory",
+          "logmyflight": "Logmyflight"
+        },
+        "previewing": "Reading the file …",
+        "nothing": "Nothing that can be imported was found in the file. Nothing was changed.",
+        "someSkipped_one": "{{count}} entry will not be imported (see below). You can accept the rest.",
+        "someSkipped_other": "{{count}} entries will not be imported (see below). You can accept the rest.",
+        "nothingImportable": "Nothing from this file can be imported.",
+        "failed": "The file could not be read. Is it the export of the selected source? Nothing was changed.",
+        "network": "The server cannot be reached. Nothing was changed – please try again.",
+        "applyFailed": "Applying failed. Import the file again – what was already applied is recognised.",
+        "rateLimited": "Too many imports in a short time. Please wait a moment and try again."
       }
     },
     "preview": {

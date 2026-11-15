@@ -99,6 +99,7 @@ import "./mailIntake";
 import "./readiness";
 import "./xlsxImport";
 import "./checkinImport";
+import "./appImport";
 import "./settingsRouting";
 import "./documents";
 import "./notes";

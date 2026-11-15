@@ -1,0 +1,3 @@
+Datum;Flugnummer;Fluggesellschaft;Von;Nach;Abflug;Ankunft;Flugzeugtyp;Kennzeichen;Sitzplatz;Klasse;Flugzweck;Notiz
+01.03.2026;LH400;Lufthansa;Frankfurt (FRA);New York (JFK);10:05;12:20;Boeing 747-8;D-ABYA;12A;C;B;Synthetic German-style row
+04.03.2026;TP1233;TAP Air Portugal;FRA/EDDF;LIS;;;;;;;;Date only
