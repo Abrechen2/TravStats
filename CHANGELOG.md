@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.35.** Take a backup: five new migrations — revoked sessions, the account login throttle and stored 2FA attempts, removal of six settings that did nothing, the single packing store, and the address of your own ADS-B receiver. Existing databases keep their role; only a fresh install now runs the app as an ordinary database user (to drop superuser rights on an existing install by hand, see SECURITY.md).
+
 **Upgrading to 2.8.0-rc.34.** One new migration: two columns on the user table for the setup invitation (which notes were seen, and "remind me tomorrow").
 
 **Upgrading to 2.8.0-rc.33.** One new migration: the setup & readiness tables (snoozes and read marks per account, the instance's version history, the stored result of the public-URL check). Every existing account starts as having seen 2.7.0, so the 2.8.0 notes that concern it appear once on the new page.
@@ -30,6 +32,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+- **Bulk edit for rail, bus, ferry, rental cars, cruises and stays** (forgejo#405), with the same version check and share propagation as flights.
+- **Imports from TripIt, Polarsteps (ZIP, including trips), JetLovers, FlightMemory and Logmyflight** run through the preview/commit pipeline and respect which areas are switched on (forgejo#401).
+- **One packing list per trip** (forgejo#398): the trip card and TravPlan edit the same list, so items no longer exist twice.
+- **Your own ADS-B receiver** (forgejo#408): a tar1090 address in the settings adds the tracks your receiver recorded to a flight, next to a live-position endpoint and key cards for the ADS-B providers.
+- **The aircraft section lists every registration** and counts flights that have none (forgejo#303).
+- **Old API keys and phones can be removed for good** from the lists under Mein Konto, not only revoked.
 - **Einrichtung & Zustand** (Settings → Mein Konto): one page that says what is missing and what an update changed that needs action — for admins the server (backups, disk, public URL, mail, off-site copy, service keys, booking mailbox), for every account its own setup (areas, home, phone pairing and first position, own keys, mail forwarding, reminder address). Each item names the consequence and links to the setting; it clears when the setting is fixed, can be snoozed for a day, and an optional item can be marked "nutze ich nicht". A check that has not been tested yet says so instead of claiming all is well.
 - **The setup page comes to you.** After an update with notes that concern you, or while a required item fails, a small card at the bottom of the screen offers "Jetzt ansehen" or "Morgen erinnern"; it waits until the what's-new window and the telemetry question are done. When a required server item is proven to fail, admins see a banner at the top that stays until the item is fixed.
 - **"Erreichbarkeit prüfen" next to the public address** (Administration → Server): checks that the address really reaches this server, not another instance, and says why when it does not (no address, outbound traffic off, timeout, DNS, TLS, connection, HTTP status, a different server). The same check runs daily at 05:35 UTC.
@@ -121,6 +129,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Security
 
+- Tighter Content-Security-Policy, CI actions pinned to commits, and a restore that works without a database superuser (forgejo#415).
 - **A user-entered Immich or Dawarich address can no longer reach the server's own network.** An ordinary account could point its Immich URL at a server that redirected the photo proxy to internal addresses and read the answers. Private targets are now refused for ordinary accounts, redirects are never followed, the photo proxy passes only images and videos (no SVG) and drops a stream that stalls for 60 seconds.
 - **Changing or resetting a password signs out paired devices and API tokens.** Before, only browser sessions ended, so a device paired by whoever had the account kept working after the reset. Unused pairing codes are dropped as well.
 - **Unexpected server errors no longer show internal details.** A 500 now answers with a fixed message and a request id; the detail stays in the log.
@@ -137,6 +146,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+- **Logging out ends that one session on the server,** and the web says so when the server could not end it.
+- **Repeated wrong passwords or 2FA codes slow down the account itself,** not only the address they came from; the count survives a restart (forgejo#415).
+- **A roadtrip's end odometer below its start is refused** by the server, not only in the form (forgejo#280).
+- **Maps release their WebGL contexts** and recover from a lost one instead of staying blank; the live globe filters on the GPU and opens in a fraction of the time.
+- **A blocked airport data source is reported as such** in flight lookups instead of looking like "nothing found".
+- **A Polarsteps file with many trips but few steps** is held to the same import size limit as any other.
+- Six settings that had no effect are gone: the auto-update interval, "only during flight", the parser strategy, map zoom and marker, and the e-mail notification switch (forgejo#389).
 - **Naming or dismissing a night stay works from either day** and applies to the whole stay; in rc.31 it failed from the evening part and only hid the morning.
 - **A night at home is one stay in TravTrack, not two gaps.** The day view now reads past midnight, and a silence that ends where it began (within about 100 m, or inside the same fixed place, at most 24 hours) continues the stay instead of showing as missing data.
 - **A stay at a fixed place carries its name at once,** also when the phone sent only a few seconds of fixes on arrival; today's open stay at Home shows as such.
