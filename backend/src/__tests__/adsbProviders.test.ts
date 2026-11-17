@@ -30,7 +30,7 @@ const apiKeyResolverMock = {
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
 
-const adminRow = { adsbLolEnabled: false };
+const adminRow = { adsbLolEnabled: false, airplanesLiveEnabled: false };
 jest.mock("../db", () => ({
   prisma: { adminSettings: { findFirst: jest.fn(async () => adminRow) } },
 }));
@@ -85,6 +85,7 @@ beforeEach(() => {
   __resetAviationstackBudgetForTests();
   for (const k of Object.keys(keys)) delete keys[k];
   adminRow.adsbLolEnabled = false;
+  adminRow.airplanesLiveEnabled = false;
 });
 
 describe("readsb v2 mapping", () => {
@@ -222,6 +223,21 @@ describe("opt-in — off unless configured", () => {
     expect(lol).toMatchObject({ provider: "adsblol", headers: {} });
   });
 
+  it("airplanes.live needs its own admin switch, comes last and sends no key", async () => {
+    keys.adsbx = "rapid-key";
+    adminRow.adsbLolEnabled = true;
+    expect((await resolveAdsbEndpoints()).map((e) => e.provider)).toEqual(["adsbx", "adsblol"]);
+
+    adminRow.airplanesLiveEnabled = true;
+    const endpoints = await resolveAdsbEndpoints();
+    expect(endpoints.map((e) => e.provider)).toEqual(["adsbx", "adsblol", "airplaneslive"]);
+    expect(endpoints[2]).toEqual({
+      provider: "airplaneslive",
+      baseUrl: "https://api.airplanes.live/v2",
+      headers: {},
+    });
+  });
+
   it("an adsb.lol key counts as enabled and is sent on every request", async () => {
     keys.adsblol = "lol-key";
     const [lol] = await resolveAdsbEndpoints();
@@ -269,13 +285,20 @@ describe("chain: lookupFlightDetails", () => {
   });
 
   /** Routes axios by host so a test states what each provider answers. */
-  const serve = (answers: { airlabs?: unknown; adsbx?: unknown; adsblol?: unknown }) =>
+  const serve = (answers: {
+    airlabs?: unknown;
+    adsbx?: unknown;
+    adsblol?: unknown;
+    airplaneslive?: unknown;
+  }) =>
     mockedAxios.get.mockImplementation((async (url: string) => {
       const key = url.includes("airlabs")
         ? "airlabs"
         : url.includes("rapidapi")
           ? "adsbx"
-          : "adsblol";
+          : url.includes("airplanes.live")
+            ? "airplaneslive"
+            : "adsblol";
       const answer = answers[key];
       if (answer instanceof Error) throw answer;
       return answer ?? { data: { response: [], ac: [] } };
@@ -329,6 +352,47 @@ describe("chain: lookupFlightDetails", () => {
       { provider: "adsbx", outcome: "no_match" },
       { provider: "adsblol", outcome: "ok" },
     ]);
+  });
+
+  it("airplanes.live answers when adsb.lol times out", async () => {
+    keys.airlabs = "al";
+    adminRow.adsbLolEnabled = true;
+    adminRow.airplanesLiveEnabled = true;
+    serve({
+      airlabs: airlabsRoute(),
+      adsblol: Object.assign(new Error("t"), { code: "ECONNABORTED" }),
+      airplaneslive: { data: { ac: [plane] } },
+    });
+    const outcomes = new LookupOutcomeLog();
+
+    const result = await lookupFlightDetails(
+      "LH406",
+      today,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      outcomes
+    );
+
+    const urls = adsbCalls();
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toContain("api.adsb.lol");
+    expect(urls[1]).toContain("api.airplanes.live/v2/callsign/");
+    expect(result?.aircraftRegistration).toBe("D-AIHX");
+    expect(outcomes.all().filter((o) => o.provider.startsWith("a"))).toContainEqual({
+      provider: "airplaneslive",
+      outcome: "ok",
+    });
+    expect(outcomes.failures()).toEqual([{ provider: "adsblol", outcome: "timeout" }]);
+  });
+
+  it("airplanes.live makes no request while its switch is off", async () => {
+    keys.airlabs = "al";
+    adminRow.adsbLolEnabled = true;
+    serve({ airlabs: airlabsRoute(), adsblol: { data: { ac: [] } } });
+    await lookupFlightDetails("LH407", today);
+    expect(adsbCalls().some((u) => u.includes("airplanes.live"))).toBe(false);
   });
 
   it("makes no request at all while neither provider is enabled", async () => {

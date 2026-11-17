@@ -50,6 +50,7 @@ export type TesterId =
   | "aeroapi"
   | "adsbx"
   | "adsblol"
+  | "airplaneslive"
   | "opensky"
   | "openrouteservice"
   | "graphhopper"
@@ -89,7 +90,8 @@ export interface ServiceDef {
   ai?: { kind: LlmProviderKind };
   tester?: TesterId;
   /** apiQuota provider id for observed/hinted quota. */
-  quotaProvider?: "aerodatabox" | "airlabs" | "aviationstack" | "opensky" | "adsbx" | "adsblol";
+  quotaProvider?:
+    "aerodatabox" | "airlabs" | "aviationstack" | "opensky" | "adsbx" | "adsblol" | "airplaneslive";
   /** Account connection (Dawarich, Immich, Strava, WebDAV) rather than an own-key. */
   connection?: boolean;
   /**

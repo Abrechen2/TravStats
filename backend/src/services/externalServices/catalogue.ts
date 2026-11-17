@@ -181,6 +181,18 @@ export const SERVICES: readonly ServiceDef[] = [
     tester: "adsblol",
     quotaProvider: "adsblol",
   }),
+  // airplanes.live (forgejo#408): keyless community feed, non-commercial, ~1 request/s.
+  // Off until the admin switches it on; no key fields because there is no key.
+  svc({
+    id: "airplaneslive",
+    category: "flight",
+    level: "instance",
+    credential: "none",
+    keyless: true,
+    enabled: { kind: "adminColumns", columns: ["airplanesLiveEnabled"] },
+    tester: "airplaneslive",
+    quotaProvider: "airplaneslive",
+  }),
   svc({
     id: "adsbx",
     category: "flight",

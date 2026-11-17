@@ -394,6 +394,17 @@
       "getKeyLabel": "adsb.lol",
       "quotaLine": "polite: at most 1 request / second"
     },
+    "airplaneslive": {
+      "name": "airplanes.live",
+      "purpose": "Aircraft of a flight that is currently airborne",
+      "why": "Third live source; takes over when adsb.lol cannot be reached.",
+      "cost": "Free, community service, non-commercial use only.",
+      "quota": "No fixed quota; TravStats asks at most once per second.",
+      "dataOut": "Flight number or identifier, today's flights only.",
+      "getKeyUrl": "https://airplanes.live/",
+      "getKeyLabel": "airplanes.live",
+      "quotaLine": "polite: at most 1 request / second"
+    },
     "adsbx": {
       "name": "ADS-B Exchange",
       "purpose": "Live aircraft data via RapidAPI",

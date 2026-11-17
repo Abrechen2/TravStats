@@ -1294,6 +1294,7 @@ model AdminSettings {
   /// admin switch, OFF by default (forgejo#392 rule, forgejo#408). A saved adsb.lol
   /// key counts as enabled.
   adsbLolEnabled            Boolean   @default(false) @map("adsb_lol_enabled")
+  airplanesLiveEnabled      Boolean   @default(false) @map("airplanes_live_enabled")
   /// FlightAware AeroAPI plan (forgejo#409): personal | personal_feeder | custom.
   /// Decides the monthly USD budget the call guard enforces.
   aeroapiTier               String    @default("personal") @map("aeroapi_tier")

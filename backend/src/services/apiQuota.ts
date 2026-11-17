@@ -22,7 +22,14 @@
  */
 
 export type ApiProvider =
-  "aerodatabox" | "aeroapi" | "airlabs" | "aviationstack" | "opensky" | "adsbx" | "adsblol";
+  | "aerodatabox"
+  | "aeroapi"
+  | "airlabs"
+  | "aviationstack"
+  | "opensky"
+  | "adsbx"
+  | "adsblol"
+  | "airplaneslive";
 
 /**
  * RapidAPI / AeroDataBox return TWO independent counters:
@@ -90,6 +97,7 @@ const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
   // Community ADS-B: no counter to read; adsb.lol asks for politeness, ADSBx is a RapidAPI plan.
   adsbx: { kind: "not_reported" },
   adsblol: { kind: "rate_limit_only" },
+  airplaneslive: { kind: "rate_limit_only" },
 };
 
 /**
@@ -165,6 +173,7 @@ export function getAllProviderQuotas(userId?: string): Record<ApiProvider, Provi
     "opensky",
     "adsbx",
     "adsblol",
+    "airplaneslive",
   ];
   const out = {} as Record<ApiProvider, ProviderQuota>;
   for (const p of providers) {

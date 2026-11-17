@@ -11,6 +11,7 @@ export const UNREACHABLE_NOTE: Readonly<Record<string, string>> = {
   aeroapi: "flightProvider",
   opensky: "flightProvider",
   adsblol: "flightProvider",
+  airplaneslive: "flightProvider",
   adsbx: "flightProvider",
   openrouteservice: "routing",
   graphhopper: "routing",

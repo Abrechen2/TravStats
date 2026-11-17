@@ -513,6 +513,7 @@ export const adminApi = {
     globalAdsbxApiKey?: string;
     globalAdsblolApiKey?: string;
     adsbLolEnabled?: boolean;
+    airplanesLiveEnabled?: boolean;
     globalLogostreamApiKey?: string;
     globalOpenskyClientId?: string;
     globalOpenskyClientSecret?: string;
@@ -528,26 +529,8 @@ export const adminApi = {
     allowUserFlightApiKeys: boolean;
     undecryptableKeys?: string[];
   }> => {
-    const { data } = await api.get<{
-      globalAirlabsApiKey?: string;
-      globalAviationstackApiKey?: string;
-      globalAerodataboxApiKey?: string;
-      globalAeroapiApiKey?: string;
-      globalAdsbxApiKey?: string;
-      globalAdsblolApiKey?: string;
-      adsbLolEnabled?: boolean;
-      globalLogostreamApiKey?: string;
-      globalOpenskyClientId?: string;
-      globalOpenskyClientSecret?: string;
-      globalOpenskyUsername?: string;
-      globalOpenskyPassword?: string;
-      globalOpenrouteserviceApiKey?: string;
-      globalGraphhopperApiKey?: string;
-      routingProvider: RoutingProviderId | null;
-      routingCustomUrl: string | null;
-      allowUserFlightApiKeys: boolean;
-      undecryptableKeys?: string[];
-    }>("/admin/api-keys");
+    // The shape is the method's declared return type above; not repeated here.
+    const { data } = await api.get("/admin/api-keys");
     return data;
   },
 
@@ -559,6 +542,7 @@ export const adminApi = {
     globalAdsbxApiKey?: string | null;
     globalAdsblolApiKey?: string | null;
     adsbLolEnabled?: boolean;
+    airplanesLiveEnabled?: boolean;
     globalLogostreamApiKey?: string | null;
     globalOpenskyClientId?: string | null;
     globalOpenskyClientSecret?: string | null;

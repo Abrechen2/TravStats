@@ -14,7 +14,14 @@
  */
 
 export type FlightDataProvider =
-  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky" | "adsbx" | "adsblol";
+  | "aeroapi"
+  | "aviationstack"
+  | "aerodatabox"
+  | "airlabs"
+  | "opensky"
+  | "adsbx"
+  | "adsblol"
+  | "airplaneslive";
 
 /**
  * A provider that could not do its job. Stable codes — the UI maps them. `blocked`: the provider

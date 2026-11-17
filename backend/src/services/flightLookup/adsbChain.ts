@@ -73,7 +73,8 @@ export async function lookupAdsbIfToday(
   return null;
 }
 
-export const isAdsb = (source?: string): boolean => source === "adsbx" || source === "adsblol";
+export const isAdsb = (source?: string): boolean =>
+  source === "adsbx" || source === "adsblol" || source === "airplaneslive";
 
 const FILLED_FIELDS = ["aircraftRegistration", "aircraft", "aircraftModeS", "callsign"] as const;
 

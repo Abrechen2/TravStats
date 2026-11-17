@@ -3899,6 +3899,25 @@
           "ad": 1
         },
         {
+          "id": "airplaneslive",
+          "cat": "flug",
+          "svc": {
+            "n": ["airplanes.live", "airplanes.live"],
+            "de": "Positionen in der Luft, frei",
+            "en": "Positions in the air, free",
+            "st": ["Aus", "Off"],
+            "tone": "muted"
+          },
+          "use": ["on", "test", "quota"],
+          "rows": [],
+          "ov": {
+            "on": {
+              "v": false
+            }
+          },
+          "ad": 1
+        },
+        {
           "id": "tar1090",
           "cat": "flug",
           "svc": {

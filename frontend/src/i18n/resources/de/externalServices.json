@@ -394,6 +394,17 @@
       "getKeyLabel": "adsb.lol",
       "quotaLine": "höflich: ≤ 1 Anfrage / Sekunde"
     },
+    "airplaneslive": {
+      "name": "airplanes.live",
+      "purpose": "Flugzeug eines Flugs, der gerade in der Luft ist",
+      "why": "Dritte Live-Quelle; springt ein, wenn adsb.lol nicht erreichbar ist.",
+      "cost": "Kostenlos, Gemeinschaftsdienst, nur nicht-kommerziell.",
+      "quota": "Kein festes Kontingent; TravStats fragt höchstens einmal pro Sekunde.",
+      "dataOut": "Flugnummer oder Kennung, nur für heutige Flüge.",
+      "getKeyUrl": "https://airplanes.live/",
+      "getKeyLabel": "airplanes.live",
+      "quotaLine": "höflich: ≤ 1 Anfrage / Sekunde"
+    },
     "adsbx": {
       "name": "ADS-B Exchange",
       "purpose": "Live-Flugzeugdaten über RapidAPI",

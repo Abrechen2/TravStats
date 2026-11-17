@@ -18,7 +18,7 @@ import logger from "../../utils/logger";
 import { getApiKey } from "../apiKeyResolver";
 import { classifyProviderError, type ProviderFailureKind } from "./providerOutcome";
 
-export type AdsbProvider = "adsbx" | "adsblol";
+export type AdsbProvider = "adsbx" | "adsblol" | "airplaneslive";
 
 export type AdsbQuery =
   | { kind: "callsign"; value: string }
@@ -66,9 +66,12 @@ export type AdsbResult =
  */
 export const ADSBLOL_KEY_HEADER = "api-auth";
 const ADSB_LOL_BASE = "https://api.adsb.lol/v2";
+/** airplanes.live: same readsb v2 JSON, keyless, non-commercial, about 1 request/s. */
+export const AIRPLANES_LIVE_BASE = "https://api.airplanes.live/v2";
 const ADSBX_HOST = "adsbexchange-com1.p.rapidapi.com";
 const ADSBX_BASE = `https://${ADSBX_HOST}/v2`;
-const TIMEOUT_MS = 6000;
+// Measured 2026-11-17 08:08Z: api.adsb.lol answered 200 in 6.09 s and 6.14 s from our network (some addresses, 159.195.x, did not answer at all; 89.58.34.223 did).
+const TIMEOUT_MS = 12000;
 const CACHE_TTL_SECONDS = 60;
 /** An aircraft not heard for this long is not "in the air now". */
 const STALE_AFTER_SECONDS = 300;
@@ -105,7 +108,7 @@ export interface AdsbEndpoint {
 
 /**
  * Which providers are switched on for this user, in chain order: ADS-B Exchange
- * (keyed) before adsb.lol. No key / switch off = absent from the list.
+ * (keyed), then adsb.lol, then airplanes.live. No key / switch off = absent from the list.
  */
 export async function resolveAdsbEndpoints(userId?: string): Promise<AdsbEndpoint[]> {
   const endpoints: AdsbEndpoint[] = [];
@@ -134,6 +137,16 @@ export async function resolveAdsbEndpoints(userId?: string): Promise<AdsbEndpoin
       baseUrl: ADSB_LOL_BASE,
       headers: lolKey ? { [ADSBLOL_KEY_HEADER]: lolKey } : {},
     });
+  }
+
+  // airplanes.live: keyless, so the admin switch alone enables it. Last in the
+  // chain, so it is the net under adsb.lol when that host is unreachable.
+  const airplanes = await prisma.adminSettings.findFirst({
+    orderBy: { id: "asc" },
+    select: { airplanesLiveEnabled: true },
+  });
+  if (airplanes?.airplanesLiveEnabled === true) {
+    endpoints.push({ provider: "airplaneslive", baseUrl: AIRPLANES_LIVE_BASE, headers: {} });
   }
   return endpoints;
 }

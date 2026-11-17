@@ -550,6 +550,10 @@
         "n": "ADS-B Lol",
         "p": "Positionen in der Luft, frei"
       },
+      "airplaneslive": {
+        "n": "airplanes.live",
+        "p": "Positionen in der Luft, frei"
+      },
       "adsbx": {
         "n": "ADS-B Exchange",
         "p": "Positionen in der Luft"

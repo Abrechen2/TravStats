@@ -30,6 +30,9 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"adsblol","de":"ADS-B Lol","en":"ADS-B Lol","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
 
       ]},
+      {"id":"airplaneslive","de":"airplanes.live","en":"airplanes.live","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
+
+      ]},
       {"id":"tar1090","de":"Eigener Empfänger (tar1090)","en":"Own receiver (tar1090)","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"flug","rows":[
 
       ]},

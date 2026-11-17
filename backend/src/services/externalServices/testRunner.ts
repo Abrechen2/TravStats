@@ -34,7 +34,7 @@ import {
   testOpenSkyCredentials,
   type ApiKeyTestResult,
 } from "../apiKeyTester";
-import { testAdsbLolKey, testAdsbxKey } from "../apiKeyTesterAdsbx";
+import { testAdsbLolKey, testAdsbxKey, testAirplanesLive } from "../apiKeyTesterAdsbx";
 import { testAeroapiKey } from "../apiKeyTesterAeroapi";
 import { getService } from "./catalogue";
 import { loadAdminState, isEnabled } from "./adminView";
@@ -144,6 +144,8 @@ async function run(
     case "adsblol":
       // Keyless: the tester accepts an empty key.
       return fromKeyResult(await testAdsbLolKey(c.apiKey ?? "", userId));
+    case "airplaneslive":
+      return fromKeyResult(await testAirplanesLive());
     case "googlePlaces":
       return keyed(testGooglePlacesKey);
     case "openrouteservice":
