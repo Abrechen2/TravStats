@@ -53,7 +53,7 @@
     "@kenjiuno/msgreader": "^1.29.0",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
-    "@simplewebauthn/server": "^14.0.3",
+    "@simplewebauthn/server": "^14.1.0",
     "archiver": "^7.0.1",
     "axios": "^1.21.0",
     "bcrypt": "^5.1.1",
@@ -89,7 +89,7 @@
     "tesseract.js": "^6.0.1",
     "undici": "^7.30.1",
     "uuid": "^14.0.3",
-    "webdav": "^5.10.0",
+    "webdav": "^5.11.0",
     "ws": "^8.22.1",
     "zod": "^4.6.5",
     "zxing-wasm": "^3.1.6"
