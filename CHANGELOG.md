@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.36.** One new migration: a switch for airplanes.live, off by default.
+
+### Added
+
+- **airplanes.live as a further ADS-B source** (forgejo#408): keyless like adsb.lol, asked after it, and only once an admin switches it on under the external services.
+
+### Fixed
+
+- **A slow adsb.lol no longer counts as a failure.** It answered in just over six seconds from some networks, exactly the old limit, so every live position and aircraft lookup ended as a timeout; the limit is now twelve seconds.
+
 **Upgrading to 2.8.0-rc.35.** Take a backup: five new migrations — revoked sessions, the account login throttle and stored 2FA attempts, removal of six settings that did nothing, the single packing store, and the address of your own ADS-B receiver. Existing databases keep their role; only a fresh install now runs the app as an ordinary database user (to drop superuser rights on an existing install by hand, see SECURITY.md).
 
 **Upgrading to 2.8.0-rc.34.** One new migration: two columns on the user table for the setup invitation (which notes were seen, and "remind me tomorrow").
