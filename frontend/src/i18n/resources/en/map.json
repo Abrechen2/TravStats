@@ -3,6 +3,8 @@
   "webglLost": "The map graphics were interrupted. Rebuilding the map …",
   "webglLostGaveUp": "The map graphics failed repeatedly. Check hardware acceleration or close other tabs with 3D maps.",
   "webglLostRetry": "Reload map",
+  "webgl2Missing": "Your browser did not provide 3D graphics (WebGL2) when the page loaded, so rail, bus, ferry, tour and roadtrip lines are not drawn and flights are simplified. Reload the page; if that does not help, check the browser's hardware acceleration.",
+  "webgl2MissingReload": "Reload page",
   "loadFailed": {
     "rentals": "The rental cars could not be loaded.",
     "buses": "The bus rides could not be loaded.",

@@ -16,8 +16,9 @@ function hasWebGL2(): boolean {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl2");
     // Released at once: this probe lives for the whole page and used to keep a
-    // context of the browser's 8-16 for nothing (forgejo#332).
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    // context of the browser's 8-16 for nothing (forgejo#332). Released through
+    // the helper, whose own try keeps a failed release from reading as "no".
+    if (gl) releaseWebGL2Context(canvas);
     return gl !== null;
   } catch {
     // A jsdom or SSR environment has no canvas at all. Answering "no" is the
@@ -40,7 +41,7 @@ export function probeWebGL2(): boolean {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl2");
     if (!gl) return false;
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    releaseWebGL2Context(canvas);
     return true;
   } catch {
     return false;

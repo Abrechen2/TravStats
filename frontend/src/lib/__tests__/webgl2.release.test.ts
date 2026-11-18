@@ -24,6 +24,21 @@ describe("webgl2 context release", () => {
     expect(loseContext).toHaveBeenCalledTimes(1);
   });
 
+  // 2.8.0-rc.35 moved the release into the probe's try: a browser that throws
+  // while releasing would then read as "no WebGL2" — the tester's map lost every
+  // deck.gl layer (2026-11-18). A context that was created means yes.
+  it("still answers yes when releasing the probe's context throws", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation((() => ({
+      getExtension: () => {
+        throw new Error("extension blocked");
+      },
+    })) as unknown as HTMLCanvasElement["getContext"]);
+    vi.resetModules();
+    const { webgl2Available, probeWebGL2 } = await import("../webgl2");
+    expect(webgl2Available).toBe(true);
+    expect(probeWebGL2()).toBe(true);
+  });
+
   it("releaseWebGL2Context loses the canvas's context, and shrugs at a canvas that has none", async () => {
     const loseContext = vi.fn();
     const { releaseWebGL2Context } = await import("../webgl2");
