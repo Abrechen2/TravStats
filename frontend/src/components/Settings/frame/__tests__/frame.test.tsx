@@ -120,6 +120,31 @@ describe("the settings menu column", () => {
       "settings:level.morePages"
     );
   });
+
+  it("keeps the icons off the highlight's edge and the group headings readable (tester, 2026-11-18)", () => {
+    render(
+      <MemoryRouter>
+        <SettingsMenuColumn
+          label="Einstellungen"
+          groups={[
+            {
+              id: "konto",
+              label: "Mein Konto",
+              entries: [{ id: "account", label: "Konto", to: "/settings/account", icon: "user" }],
+            },
+          ]}
+          activeId="account"
+          hiddenPages={0}
+          search={null}
+        />
+      </MemoryRouter>
+    );
+    const link = screen.getByRole("link", { name: /Konto/ });
+    expect(link.style.paddingLeft).toBe("var(--ts-space-lg)");
+    const heading = screen.getByText("Mein Konto");
+    expect(heading.style.fontSize).toBe("12px");
+    expect(heading.style.padding).toContain("var(--ts-space-lg)");
+  });
 });
 
 function Gutter(): null {
