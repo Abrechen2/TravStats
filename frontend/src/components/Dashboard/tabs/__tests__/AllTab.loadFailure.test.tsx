@@ -2,6 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+// Rail, bus, ferry and rentals load whenever their domain is on (no longer
+// behind the day-tour switch); this suite is not about them, and their
+// requests would trip the network guard.
+vi.mock("../allTabTransportOverlays", () => ({
+  useTransportOverlays: () => ({ layers: [], legendRows: [], status: null }),
+}));
 vi.mock("../../../../hooks/useDashboardTours", () => ({
   useDashboardTours: () => ({
     tours: [],
