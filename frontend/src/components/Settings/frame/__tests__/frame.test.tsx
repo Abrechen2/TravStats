@@ -103,7 +103,16 @@ describe("the settings menu column", () => {
             {
               id: "g",
               label: null,
-              entries: [{ id: "account", label: "Konto", to: "/settings/account", icon: "user" }],
+              entries: [
+                { id: "account", label: "Konto", to: "/settings/account", icon: "user" },
+                {
+                  id: "sub",
+                  label: "Unterpunkt",
+                  to: "/settings/sub",
+                  icon: "user",
+                  indent: true,
+                },
+              ],
             },
           ]}
           activeId="account"
@@ -130,7 +139,16 @@ describe("the settings menu column", () => {
             {
               id: "konto",
               label: "Mein Konto",
-              entries: [{ id: "account", label: "Konto", to: "/settings/account", icon: "user" }],
+              entries: [
+                { id: "account", label: "Konto", to: "/settings/account", icon: "user" },
+                {
+                  id: "sub",
+                  label: "Unterpunkt",
+                  to: "/settings/sub",
+                  icon: "user",
+                  indent: true,
+                },
+              ],
             },
           ]}
           activeId="account"
@@ -141,8 +159,12 @@ describe("the settings menu column", () => {
     );
     const link = screen.getByRole("link", { name: /Konto/ });
     expect(link.style.paddingLeft).toBe("var(--ts-space-lg)");
+    expect(link.style.gap).toBe("var(--ts-space-md)");
+    expect(screen.getByRole("link", { name: /Unterpunkt/ }).style.paddingLeft).toBe("24px");
     const heading = screen.getByText("Mein Konto");
     expect(heading.style.fontSize).toBe("12px");
+    expect(heading.style.fontWeight).toBe("600");
+    expect(heading.style.letterSpacing).toBe("0.08em");
     expect(heading.style.padding).toContain("var(--ts-space-lg)");
   });
 });
