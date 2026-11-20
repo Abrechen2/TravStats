@@ -657,6 +657,14 @@
       "updatesTemplates": {
         "n": "GitHub",
         "p": "New versions and templates"
+      },
+      "tar1090": {
+        "n": "Own receiver (tar1090)",
+        "p": "Tracks from your own receiver"
+      },
+      "airportData": {
+        "n": "OurAirports · airport-data.com",
+        "p": "Airport catalogue and photos"
       }
     },
     "rows": {
@@ -1038,10 +1046,6 @@
         "after": "The server registers again with the next notification. You don't have to pair the phones again.",
         "confirm": "Reset"
       }
-    },
-    "tar1090": {
-      "n": "Own receiver (tar1090)",
-      "p": "Tracks from your own receiver"
     }
   },
   "server": {
