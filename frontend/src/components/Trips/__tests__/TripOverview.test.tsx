@@ -10,6 +10,9 @@ import type { Trip } from "../../../types";
 // "Reisende" (spec 2026-10-16, D9): the section loads its sharing state on its
 // own and has its own suite (components/sharing/__tests__); here it would only
 // race the assertions.
+vi.mock("../../sharing/RemoteTripPeople", () => ({
+  default: () => <div data-testid="remote-people" />,
+}));
 vi.mock("../../sharing/TripPeopleSection", () => ({
   default: () => <div data-testid="people-section" />,
 }));
@@ -80,7 +83,7 @@ function trip(overrides: Partial<Trip>): Trip {
 function renderOverview(value: Trip): void {
   render(
     <MemoryRouter>
-      <TripOverview trip={value} t={t} language="de" onChanged={() => undefined} />
+      <TripOverview trip={value} t={t} language="de" />
     </MemoryRouter>
   );
 }
@@ -307,33 +310,24 @@ describe("TripOverview", () => {
     expect(screen.getByText(/Augsburg Hbf/)).toHaveTextContent("rail:bareTrain:57031");
   });
 
-  // Owner, 2026-11-20: offering the trip and the AI summary's create action
-  // left the right column for the head's "Mehr" menu. A trip with no people,
-  // tags or summary has no column, and its lists take the full width.
-  it("gives the entry lists the full width when there is nothing for a side column", () => {
-    const { container } = render(
-      <MemoryRouter>
-        <TripOverview trip={trip({})} t={t} language="de" onChanged={() => undefined} />
-      </MemoryRouter>
-    );
-    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).toBeNull();
-    // People on other servers still have their section, in the main column.
-    expect(screen.getByTestId("people-section")).toBeInTheDocument();
-  });
-
-  it("keeps the side column for a trip with an AI summary, which only shows it", () => {
+  // Owner, 2026-11-20: the travellers moved into the trip head, so the overview
+  // has no right-hand panel and its lists take the full width.
+  it("has no right-hand panel and no people section, whatever the trip carries", () => {
     const { container } = render(
       <MemoryRouter>
         <TripOverview
-          trip={trip({ summary: "Elf Tage." })}
+          trip={trip({ companions: ["Anna"], tags: ["sommer"], summary: "Elf Tage." })}
           t={t}
           language="de"
-          onChanged={() => undefined}
         />
       </MemoryRouter>
     );
-    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).not.toBeNull();
+    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).toBeNull();
+    expect(screen.queryByTestId("people-section")).toBeNull();
+    // People on other servers (a roster to answer) still have their place, in the main column.
+    expect(screen.getByTestId("remote-people")).toBeInTheDocument();
     expect(screen.getByText("Elf Tage.")).toBeInTheDocument();
+    expect(screen.getByText("#sommer")).toBeInTheDocument();
     expect(screen.queryByRole("button")).toBeNull();
   });
 });

@@ -7,15 +7,12 @@ import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
-import { useTripSharingStore } from "../../store/tripSharingStore";
 import type { Trip } from "../../types";
-import RemoteTripPeople from "../sharing/RemoteTripPeople";
+import TripShareDialog from "../sharing/TripShareDialog";
 import { placeMenu } from "../sharing/TripShareMenu";
-import { SHARE_ITEMS, useTripShareDialogs } from "../sharing/useTripShareDialogs";
-import { useRemoteOfferAvailable } from "../sharing/useRemoteOfferAvailable";
-import { useRemoteShareBlock } from "../sharing/useRemoteShareBlock";
+import { useTripSharingStore } from "../../store/tripSharingStore";
+import { useTripShareDialogs } from "../sharing/useTripShareDialogs";
 import Button from "../ui/Button";
-import Dialog from "../ui/Dialog";
 import { Icon } from "../ui/Icon";
 import { TripExportModal } from "./TripExportModal";
 import { useTripSummaryAction } from "./useTripSummaryAction";
@@ -60,14 +57,12 @@ export default function TripMoreMenu({
   const coarse = useCoarsePointer();
   const isSharedDemo = useIsDemoAccount();
   const travTrack = useTravTrackVisible();
-  const remoteOffer = useRemoteOfferAvailable(trip.id);
   const summary = useTripSummaryAction(trip, language, t, onChanged);
   const bump = useTripSharingStore((s) => s.bump);
   const shareDialogs = useTripShareDialogs(trip.id, onChanged);
   const [open, setOpen] = useState(false);
-  const remoteBlock = useRemoteShareBlock(trip.id, open);
   const [exporting, setExporting] = useState(false);
-  const [offering, setOffering] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [placement, setPlacement] = useState<ReturnType<typeof placeMenu> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -113,24 +108,29 @@ export default function TripMoreMenu({
     action();
   };
 
+  // One "Teilen …" entry: companions, people on other servers, the code and the
+  // public link are sections of its dialog. The route share stays here, for a
+  // trip that is running or still ahead and only where TravTrack is offered.
   const shareEntries: Entry[] = isSharedDemo
     ? []
-    : SHARE_ITEMS.filter((which) => which !== "route" || travTrack).map((which) => ({
-        key: `share-${which}`,
-        label: t(`sharing:menu.${which}`),
-        onSelect: choose(() => shareDialogs.pick(which)),
-      }));
+    : [
+        {
+          key: "share",
+          label: t("sharing:menu.share"),
+          onSelect: choose(() => setSharing(true)),
+        },
+        ...(travTrack && trip.status !== "completed"
+          ? [
+              {
+                key: "share-route",
+                label: t("sharing:menu.route"),
+                onSelect: choose(() => shareDialogs.pick("route")),
+              },
+            ]
+          : []),
+      ];
   const entries: Entry[] = [
     { key: "export", label: t("trips:export.button"), onSelect: choose(() => setExporting(true)) },
-    ...(!isSharedDemo && remoteOffer
-      ? [
-          {
-            key: "remote",
-            label: t("trips:menu.remote"),
-            onSelect: choose(() => setOffering(true)),
-          },
-        ]
-      : []),
     ...(summary.available
       ? [
           {
@@ -238,24 +238,8 @@ export default function TripMoreMenu({
               border: "1px solid var(--ts-border)",
             }}
           >
-            {shareEntries.length > 0 && (
-              <div role="group" aria-label={t("sharing:menu.button")} className="flex flex-col">
-                <span aria-hidden="true" className="t-caption px-2.5 pt-1 pb-0.5">
-                  {t("sharing:menu.button")}
-                </span>
-                {shareEntries.map(item)}
-              </div>
-            )}
+            {shareEntries.map(item)}
             {entries.map(item)}
-            {remoteBlock && (
-              <p
-                data-testid="remote-share-blocked"
-                className="t-caption px-2.5 pt-2"
-                style={{ borderTop: "1px solid var(--ts-border)" }}
-              >
-                {t(`sharing:menu.remoteBlocked.${remoteBlock}`)}
-              </p>
-            )}
             <div
               role="presentation"
               style={{ borderTop: "1px solid var(--ts-border)", margin: "4px 0" }}
@@ -266,20 +250,19 @@ export default function TripMoreMenu({
         )}
       {shareDialogs.node}
       {exporting && <TripExportModal tripId={trip.id} onClose={() => setExporting(false)} />}
-      {offering && (
-        <Dialog
-          open
-          title={t("trips:menu.remoteTitle")}
-          maxWidth={560}
+      {sharing && (
+        <TripShareDialog
+          tripId={trip.id}
+          companionNames={trip.companions}
           onClose={() => {
-            setOffering(false);
-            // The list of people on other servers on the overview reloads on this.
+            setSharing(false);
+            // Offers, requests and codes made in the dialog change the head's travellers.
             bump(trip.id);
             onChanged();
           }}
-        >
-          <RemoteTripPeople tripId={trip.id} bare />
-        </Dialog>
+          onChanged={onChanged}
+          onPick={shareDialogs.pick}
+        />
       )}
     </div>
   );

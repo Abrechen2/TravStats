@@ -329,12 +329,7 @@ describe("the documents section is mounted on every entry the API serves", () =>
   it("files a trip's documents against the trip — /trips/:id/documents", async () => {
     render(
       <MemoryRouter>
-        <TripOverview
-          trip={TRIP}
-          t={((key: string) => key) as never}
-          language="de"
-          onChanged={() => undefined}
-        />
+        <TripOverview trip={TRIP} t={((key: string) => key) as never} language="de" />
       </MemoryRouter>
     );
     await waitFor(() => expect(mounted).toEqual([{ type: "trip", id: "trip-1" }]));

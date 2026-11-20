@@ -1,23 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const summarize = vi.fn();
 vi.mock("../../../lib/api", () => ({
   tripsApi: { summarize: (...args: unknown[]) => summarize(...args) },
 }));
-
-const beta = vi.hoisted(() => ({ federated: false }));
-vi.mock("../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({
-    betaFeaturesEnabled: true,
-    isFeatureVisible: (key: string) => key === "federatedTripSharing" && beta.federated,
-  }),
-}));
-const remote = vi.hoisted(() => ({
-  status: vi.fn(),
-  tripSharing: vi.fn(),
-}));
-vi.mock("../../../lib/api/sharingRemote", () => ({ sharingRemoteApi: remote }));
 
 const llm = vi.hoisted(() => ({ current: true as boolean | "disabled" | null }));
 vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llm.current }));
@@ -36,9 +23,10 @@ vi.mock("../../sharing/useTripShareDialogs", () => ({
   SHARE_ITEMS: ["companions", "link", "route"],
   useTripShareDialogs: () => ({ pick, loading: false, node: null }),
 }));
-vi.mock("../../sharing/useRemoteShareBlock", () => ({ useRemoteShareBlock: () => null }));
-vi.mock("../../sharing/RemoteTripPeople", () => ({
-  default: ({ bare }: { bare?: boolean }) => <div>remote-people {bare ? "bare" : ""}</div>,
+const block = vi.hoisted(() => ({ reason: null as string | null }));
+vi.mock("../../sharing/useRemoteShareBlock", () => ({ useRemoteShareBlock: () => block.reason }));
+vi.mock("../../sharing/TripPeopleSection", () => ({
+  default: ({ bare }: { bare?: boolean }) => <div>people-section {bare ? "bare" : ""}</div>,
 }));
 vi.mock("../TripExportModal", () => ({
   TripExportModal: () => <div>export-dialog</div>,
@@ -47,7 +35,13 @@ vi.mock("../TripExportModal", () => ({
 import TripMoreMenu from "../TripMoreMenu";
 import type { Trip } from "../../../types";
 
-const trip = { id: "t1", name: "Köln", summary: null } as unknown as Trip;
+const trip = {
+  id: "t1",
+  name: "Köln",
+  summary: null,
+  status: "in_progress",
+  companions: ["Anna"],
+} as unknown as Trip;
 
 function renderMenu(overrides: Partial<Trip> = {}, extra: { onDelete?: () => void } = {}) {
   const onDelete = extra.onDelete ?? vi.fn();
@@ -69,12 +63,10 @@ const entry = (name: string) => screen.queryByRole("menuitem", { name });
 describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    beta.federated = false;
+    block.reason = null;
     llm.current = true;
     demo.shared = false;
     travTrack.on = false;
-    remote.status.mockResolvedValue({ available: true });
-    remote.tripSharing.mockResolvedValue({ homeOrigin: null });
   });
 
   it("holds sharing, export and the AI summary, with delete last", () => {
@@ -82,8 +74,7 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
     open();
     const labels = screen.getAllByRole("menuitem").map((el) => el.textContent);
     expect(labels).toEqual([
-      "sharing:menu.companions",
-      "sharing:menu.link",
+      "sharing:menu.share",
       "trips:export.button",
       "trips:menu.summaryNone",
       "common:buttons.delete",
@@ -110,12 +101,44 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
     expect(document.activeElement).toBe(items[items.length - 1]);
   });
 
-  it("hands a share entry to the sharing dialogs", () => {
+  it("has ONE Teilen entry that opens a dialog with a people and a public-link section", () => {
     renderMenu();
     open();
-    fireEvent.click(entry("sharing:menu.link")!);
-    expect(pick).toHaveBeenCalledWith("link");
+    const labels = screen.getAllByRole("menuitem").map((el) => el.textContent);
+    expect(labels.filter((l) => l?.startsWith("sharing:menu"))).toEqual(["sharing:menu.share"]);
+    fireEvent.click(entry("sharing:menu.share")!);
     expect(screen.queryByRole("menu")).toBeNull();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "sharing:tripShare.people" })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: "sharing:menu.link" })).toBeTruthy();
+    expect(within(dialog).getByText("people-section bare")).toBeInTheDocument();
+  });
+
+  it("keeps adding a person from this server reachable, as a quiet link", () => {
+    renderMenu();
+    open();
+    fireEvent.click(entry("sharing:menu.share")!);
+    fireEvent.click(screen.getByRole("button", { name: "sharing:tripShare.addLocal" }));
+    expect(pick).toHaveBeenCalledWith("companions");
+  });
+
+  it("hands the link button to the existing public-link dialog", () => {
+    renderMenu();
+    open();
+    fireEvent.click(entry("sharing:menu.share")!);
+    fireEvent.click(screen.getByRole("button", { name: "sharing:tripShare.createLink" }));
+    expect(pick).toHaveBeenCalledWith("link");
+  });
+
+  it("says why other-server sharing is blocked only inside the dialog, never in the menu", () => {
+    block.reason = "switchOff";
+    renderMenu();
+    open();
+    expect(screen.queryByTestId("remote-share-blocked")).toBeNull();
+    fireEvent.click(entry("sharing:menu.share")!);
+    expect(screen.getByTestId("remote-share-blocked")).toHaveTextContent(
+      "sharing:menu.remoteBlocked.switchOff"
+    );
   });
 
   it("opens the export dialog from the menu", () => {
@@ -138,53 +161,41 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
     expect(entry("sharing:menu.route")).toBeNull();
   });
 
-  it("offers the route share where TravTrack is offered", () => {
+  it("offers the route share on a running or upcoming trip where TravTrack is offered", () => {
+    travTrack.on = true;
+    for (const status of ["in_progress", "planned"] as const) {
+      const { unmount } = render(
+        <TripMoreMenu
+          trip={{ ...trip, status } as Trip}
+          language="de"
+          onDelete={vi.fn()}
+          onChanged={vi.fn()}
+        />
+      );
+      open();
+      expect(entry("sharing:menu.route")).not.toBeNull();
+      unmount();
+    }
+  });
+
+  it("has no route share on a completed trip, even with TravTrack on", () => {
+    travTrack.on = true;
+    renderMenu({ status: "completed" });
+    open();
+    expect(entry("sharing:menu.route")).toBeNull();
+    expect(entry("sharing:menu.share")).not.toBeNull();
+  });
+
+  it("no longer carries the other-server entry — it is a section of the Teilen dialog", () => {
+    renderMenu();
+    open();
+    expect(entry("trips:menu.remote")).toBeNull();
+  });
+
+  it("shows the shared demo account neither sharing, the route nor a summary", () => {
+    demo.shared = true;
     travTrack.on = true;
     renderMenu();
-    open();
-    expect(entry("sharing:menu.route")).not.toBeNull();
-  });
-
-  it("opens the offer-to-another-server UI in a dialog, where federation is on", async () => {
-    beta.federated = true;
-    renderMenu();
-    await waitFor(() => expect(remote.tripSharing).toHaveBeenCalled());
-    open();
-    fireEvent.click(await screen.findByRole("menuitem", { name: "trips:menu.remote" }));
-    expect(screen.getByText("remote-people bare")).toBeInTheDocument();
-  });
-
-  it("has no other-server entry while the beta key is off", () => {
-    renderMenu();
-    open();
-    expect(entry("trips:menu.remote")).toBeNull();
-    expect(remote.status).not.toHaveBeenCalled();
-  });
-
-  it("has no other-server entry when the server has federation off", async () => {
-    beta.federated = true;
-    remote.status.mockResolvedValue({ available: false, reason: "switch-off" });
-    renderMenu();
-    await waitFor(() => expect(remote.status).toHaveBeenCalled());
-    open();
-    expect(entry("trips:menu.remote")).toBeNull();
-  });
-
-  it("has no other-server entry on a trip that came from another server", async () => {
-    beta.federated = true;
-    remote.tripSharing.mockResolvedValue({ homeOrigin: "https://home.example" });
-    renderMenu();
-    await waitFor(() => expect(remote.tripSharing).toHaveBeenCalled());
-    open();
-    expect(entry("trips:menu.remote")).toBeNull();
-  });
-
-  it("shows the shared demo account neither sharing, offering nor summary", async () => {
-    demo.shared = true;
-    beta.federated = true;
-    renderMenu();
-    // The lookup still answers "yes"; the demo refusal is what keeps the entry out.
-    await waitFor(() => expect(remote.tripSharing).toHaveBeenCalled());
     open();
     expect(screen.getAllByRole("menuitem").map((el) => el.textContent)).toEqual([
       "trips:export.button",
@@ -196,7 +207,7 @@ describe("TripMoreMenu — the rare actions behind one Mehr button", () => {
 describe("TripMoreMenu — the AI summary entry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    beta.federated = false;
+    block.reason = null;
     llm.current = true;
     demo.shared = false;
     travTrack.on = false;

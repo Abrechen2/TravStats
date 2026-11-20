@@ -19,7 +19,7 @@ import { Button, Pill } from "../ui";
 import DetailSection from "../ui/DetailSection";
 import { Field, Input } from "../ui/Field";
 import RemoteAddRequest from "./RemoteAddRequest";
-import RemoteOtherServerOffer from "./RemoteOtherServerOffer";
+import RemotePersonField from "./RemotePersonField";
 import RemoteTripRoster from "./RemoteTripRoster";
 import { remoteSharingError, type RemoteSharingError } from "./remoteSharingCopy";
 
@@ -323,13 +323,7 @@ export default function RemoteTripPeople({
               ))}
             </ul>
           )}
-          <RemoteOtherServerOffer busy={busy} onOffer={offerByName} />
-          <div>
-            <Button disabled={busy} onClick={createCode}>
-              {t(`${NS}.createCode`)}
-            </Button>
-            <p className="t-caption mt-1">{t(`${NS}.codeHint`)}</p>
-          </div>
+          <RemotePersonField busy={busy} onOffer={offerByName} onCreateCode={createCode} />
           {created && (
             <Field
               label={t("sharing:remote.invites.codeLabel")}

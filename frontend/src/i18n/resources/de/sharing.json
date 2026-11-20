@@ -143,7 +143,8 @@
       "switchOff": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat es nicht eingeschaltet.",
       "noPeer": "Mit Leuten auf anderen Servern teilen geht hier noch nicht: Der Admin hat noch keinen anderen Server zugelassen.",
       "loadFailed": "Ob du mit Leuten auf anderen Servern teilen kannst, konnte nicht geladen werden."
-    }
+    },
+    "share": "Teilen …"
   },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
@@ -767,18 +768,24 @@
         "submit": "Anfrage senden",
         "sent": "Anfrage gesendet: {{origin}} entscheidet, ob {{name}} die Reise angeboten bekommt."
       },
-      "otherServer": {
-        "title": "Auf anderem Server",
-        "pick": "Server",
-        "username": "Benutzername der Person",
-        "submit": "Reise anbieten",
-        "noServers": "Dein Admin hat noch keinen Server verbunden.",
+      "person": {
         "warnTitle": "Bitte beachten",
         "warnStored": "Die Reise wird auf dem anderen Server gespeichert und kann dort vom Admin gelesen werden.",
         "warnEdits": "Änderungen gelten in beide Richtungen: Was dort geändert wird, ändert auch deine Reise.",
         "warnPrivate": "Private Notizen, Kosten und Dokumente bleiben bei dir.",
         "warnRecall": "Was einmal gesendet wurde, lässt sich nicht zurückholen.",
-        "warnAccept": "Die Person nimmt das Angebot in ihrem Posteingang an – vorher kommt nichts an."
+        "warnAccept": "Die Person nimmt das Angebot in ihrem Posteingang an – vorher kommt nichts an.",
+        "label": "Person auf einem anderen Server",
+        "placeholder": "benutzer@server.example",
+        "hint": "Benutzername und Server, z. B. anna@trav.example.org. Noch nicht verbunden? Die Verbindung wird dabei angefragt.",
+        "codeLink": "Oder einen Einladungscode erstellen",
+        "submit": "Reise anbieten",
+        "working": "Wird geprüft …",
+        "invalid": "Bitte als benutzer@server eingeben, z. B. anna@trav.example.org.",
+        "serverNotConnected": "{{origin}} ist für diese Instanz noch nicht zugelassen. Das macht dein Admin unter Einstellungen → Instanz – oder du erstellst einen Einladungscode.",
+        "requested": "Anfrage an {{name}} auf {{origin}} gesendet. Sobald die Person zugestimmt hat, erscheint sie oben in der Liste und du kannst ihr die Reise anbieten.",
+        "waiting": "Die Anfrage an {{name}} auf {{origin}} ist noch offen. Die Person muss sie erst bestätigen.",
+        "failed": "Die Person auf dem anderen Server konnte nicht erreicht werden."
       }
     },
     "offers": {
@@ -967,5 +974,12 @@
       "revoked": "Während die Route erstellt wurde, wurde das Mitteilen beendet. Es wird nichts mitgeteilt.",
       "network": "Der Server ist nicht erreichbar. Versuch es gleich noch einmal."
     }
+  },
+  "tripShare": {
+    "people": "Personen",
+    "peopleHint": "Wähle jemanden aus der Liste. Wer noch nicht dabei ist, lässt sich über das Feld einladen, sofern Teilen über Server hinweg hier eingerichtet ist.",
+    "linkHint": "Eine öffentliche Seite mit dem, was du auswählst – ohne Konto lesbar.",
+    "createLink": "Öffentlichen Link verwalten…",
+    "addLocal": "Weiteren Mitreisenden von diesem Server hinzufügen…"
   }
 }

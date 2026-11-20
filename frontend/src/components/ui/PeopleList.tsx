@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from "react";
 
-const initials = (name: string): string =>
+export const initials = (name: string): string =>
   name
     .split(/\s+/)
     .filter(Boolean)
