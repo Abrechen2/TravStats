@@ -1,5 +1,4 @@
 import type { ManagedCompanion } from "../../../lib/api/companions";
-import type { Link } from "../../../lib/api/encryptedShare";
 import type { PersonView, RequestView } from "../../../lib/comparison/types";
 import type { ShareConsent, ShareConsentList, SharePerson } from "../../../types/sharing";
 import type { Connection, RemotePerson } from "../../../types/sharingRemote";
@@ -15,7 +14,7 @@ export type PersonAccount =
 /**
  * One row of "Personen": a companion and the account it is linked to are ONE person, an account
  * nobody has made a companion of is one too, and so is a person on another server. Each switch's
- * record stays its own (the share consent, the leaderboard consent, the encrypted grant).
+ * record stays its own (the share consent, the leaderboard consent). Encrypted hand-over links carry no account id, so they are never attached to a row.
  */
 export interface PersonEntry {
   key: string;
@@ -30,7 +29,6 @@ export interface PersonEntry {
   /** A person paired with an invitation code (before connections existed). */
   paired: RemotePerson | null;
   comparison: PersonView | null;
-  encryptedLink: Link | null;
 }
 
 /** A question waiting for the caller's answer, shown above the list. */
@@ -46,7 +44,6 @@ export interface PeopleSources {
   pairedPeople: readonly RemotePerson[] | null;
   comparisonPeople: readonly PersonView[] | null;
   comparisonRequests: readonly RequestView[] | null;
-  encryptedLinks: readonly Link[] | null;
 }
 
 const lower = (text: string): string => text.trim().toLowerCase();
@@ -55,8 +52,9 @@ const live = (list: readonly ShareConsent[]): ShareConsent[] =>
   list.filter((c) => c.status === "pending" || c.status === "accepted");
 
 function statusOf(consent: ShareConsent | null, linked: boolean): AccountStatus {
-  if (consent?.status === "accepted" || linked) return "connected";
-  return consent?.status === "pending" ? "requested" : "unlinked";
+  if (consent?.status === "accepted") return "connected";
+  if (consent?.status === "pending") return "requested";
+  return linked ? "connected" : "unlinked";
 }
 
 /** Merges every source into one list of people and the questions waiting on the caller. */
@@ -82,12 +80,6 @@ export function buildPeople(src: PeopleSources): {
     if (found) used.add(found);
     return found;
   };
-  const links = src.encryptedLinks ?? [];
-  const findLink = (...names: string[]): Link | null => {
-    const wanted = names.map(lower).filter(Boolean);
-    return links.find((l) => wanted.includes(lower(l.label))) ?? null;
-  };
-
   const people: PersonEntry[] = [];
   const covered = new Set<string>();
   for (const companion of src.companions ?? []) {
@@ -106,7 +98,6 @@ export function buildPeople(src: PeopleSources): {
       connection: null,
       paired: null,
       comparison: user ? claimComparison(user.username, null) : null,
-      encryptedLink: findLink(companion.name, user?.username ?? "", user?.displayName ?? ""),
     });
   }
   // Accounts that answered or were asked but are nobody's companion yet.
@@ -124,7 +115,6 @@ export function buildPeople(src: PeopleSources): {
       connection: null,
       paired: null,
       comparison: claimComparison(p.username, null),
-      encryptedLink: findLink(p.displayName, p.username),
     });
   }
   // People on other servers: one row per connection that is not a question waiting on the caller.
@@ -146,7 +136,6 @@ export function buildPeople(src: PeopleSources): {
       connection: c,
       paired: null,
       comparison: claimComparison(c.username, c.origin),
-      encryptedLink: findLink(c.displayName, c.username, `${c.username}@${c.origin}`),
     });
   }
   // People paired with an invitation code that no connection stands for yet.
@@ -171,7 +160,6 @@ export function buildPeople(src: PeopleSources): {
       connection: null,
       paired: person,
       comparison: claimComparison(person.username, person.origin),
-      encryptedLink: findLink(person.displayName, person.username),
     });
   }
   // Leaderboard people no other source knows: they must not vanish from the list.
@@ -191,7 +179,6 @@ export function buildPeople(src: PeopleSources): {
       connection: null,
       paired: null,
       comparison: view,
-      encryptedLink: findLink(p.displayName, p.username),
     });
   }
 

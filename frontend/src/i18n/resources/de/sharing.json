@@ -992,39 +992,27 @@
       "companions": "Ich konnte die Mitreisenden nicht laden.",
       "accounts": "Ich konnte die Konten auf diesem Server nicht laden.",
       "connections": "Ich konnte die Verbindungen zu anderen Servern nicht laden.",
-      "comparison": "Ich konnte nicht lesen, wer deine Summen sieht.",
-      "encrypted": "Ich konnte die verschlüsselten Übergaben nicht laden."
+      "comparison": "Ich konnte nicht lesen, wer deine Summen sieht."
     },
     "status": {
       "connected": "verbunden",
-      "requested": "angefragt",
-      "unlinked": "nicht verknüpft"
+      "requested": "angefragt"
     },
     "account": {
-      "local": "Konto @{{username}} auf diesem Server",
+      "local": "@{{username}}",
       "remote": "{{username}}@{{origin}}",
-      "none": "Kein Konto verknüpft"
+      "none": "kein Konto"
     },
     "demo": "Im Demo-Konto lässt sich hier nichts ändern.",
     "switches": {
       "share": {
-        "label": "Reisen teilen",
-        "sub": "Darf deine Reisen bekommen, sobald die Person zustimmt."
+        "label": "Reisen teilen"
       },
       "totals": {
-        "label": "Sieht meine Summen",
-        "sub": "Rangliste: nur Summen, nie einzelne Einträge."
+        "label": "Sieht meine Summen"
       },
-      "encrypted": {
-        "label": "Verschlüsselte Übergabe",
-        "sub": "Ganze Einträge, nur für sie lesbar."
-      },
-      "needsAccount": "Dafür braucht sie ein Konto: verknüpfe es zuerst.",
-      "shareAsked": "Angefragt, bis sie zustimmt.",
-      "totalsAsked": "Angefragt, bis sie zustimmt.",
       "editScope": "Umfang ändern",
-      "encryptedSet": "Übergabe einrichten …",
-      "encryptedRedirect": "Eine verschlüsselte Übergabe wählt Umfang und Gerät: du landest auf der Seite „Verschlüsselt übergeben“."
+      "encryptedSet": "Übergabe einrichten …"
     },
     "actions": {
       "linkAccount": "Konto verknüpfen",
@@ -1059,8 +1047,6 @@
       "withdrawShareAction": "Zurückziehen",
       "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
       "totalsOffAction": "Nicht mehr zeigen",
-      "encryptedOff": "Die Übergabe an {{name}} wird zurückgezogen.",
-      "encryptedOffAction": "Zurückziehen",
       "endConnection": "Die Verbindung zu {{name}} endet. Geteiltes bleibt als eigene Kopie.",
       "endConnectionAction": "Beenden",
       "withdrawPaired": "{{name}} ({{origin}}) bekommt nichts mehr von dir.",
@@ -1072,7 +1058,6 @@
       "totalsAsked": "Anfrage an {{name}} geschickt.",
       "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
       "scopeChanged": "Umfang für {{name}} gespeichert.",
-      "encryptedOff": "Übergabe an {{name}} zurückgezogen.",
       "switchSaved": "Gespeichert.",
       "accepted": "Angenommen.",
       "declined": "Abgelehnt.",
@@ -1080,8 +1065,7 @@
       "withdrawn": "Zurückgezogen."
     },
     "errors": {
-      "action": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
-      "encrypted": "Die Übergabe ließ sich nicht zurückziehen. Bitte versuche es noch einmal."
+      "action": "Das hat nicht geklappt. Bitte versuche es noch einmal."
     },
     "code": {
       "title": "Einladungscode",
@@ -1090,6 +1074,9 @@
       "created": "Dein Code (nur jetzt sichtbar)",
       "claimHelp": "Einen Code von jemandem auf einem anderen Server löst du hier ein.",
       "close": "Schließen"
+    },
+    "menu": {
+      "label": "Aktionen für {{name}}"
     }
   }
 }

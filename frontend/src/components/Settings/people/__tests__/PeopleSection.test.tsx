@@ -57,10 +57,6 @@ vi.mock("../../../../lib/api/comparison", async (importOriginal) => ({
     decline: vi.fn(),
   },
 }));
-vi.mock("../../../../lib/api/encryptedShare", () => ({
-  encryptedShareGet: vi.fn().mockResolvedValue([]),
-  encryptedSharePost: vi.fn(),
-}));
 vi.mock("../../../sharing/ReceivedRemoteOffers", () => ({ default: () => null }));
 vi.mock("../../../sharing/RemotePlanInvitations", () => ({ default: () => null }));
 vi.mock("../../../comparison/ConsentDialog", () => ({
@@ -151,8 +147,7 @@ describe("PeopleSection", () => {
     expect(
       screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Jonas"))
     ).toHaveLength(1);
-    expect(screen.getByText("sharing:friends.status.connected")).toBeTruthy();
-    expect(screen.getByText("sharing:friends.account.local")).toBeTruthy();
+    expect(screen.getByText(/sharing:friends\.status\.connected/)).toBeTruthy();
   });
 
   it("asks for the share consent when 'Reisen teilen' is switched on", async () => {
@@ -218,12 +213,12 @@ describe("PeopleSection", () => {
     await waitFor(() => expect(cmp.end).toHaveBeenCalledWith("u:u1"));
   });
 
-  it("has no leaderboard or encrypted switch while their beta keys are off", async () => {
+  it("has no leaderboard switch while its beta key is off", async () => {
     setup({ companions: [companion({ linkedUser: jonasAccount })], outgoing: [consent({})] });
     const row = await switches("c:c1");
     expect(row.getByRole("switch", { name: /switches\.share\.label/ })).toBeTruthy();
     expect(row.queryByRole("switch", { name: /switches\.totals\.label/ })).toBeNull();
-    expect(row.queryByRole("switch", { name: /switches\.encrypted\.label/ })).toBeNull();
+    expect(row.queryByRole("switch", { name: /encrypted/ })).toBeNull();
     expect(comp.manage).toHaveBeenCalled();
     expect(cmp.people).not.toHaveBeenCalled();
   });
@@ -301,5 +296,78 @@ describe("PeopleSection", () => {
   it("offers 'delete unused people' as a link under the list", async () => {
     setup({ companions: [companion({ id: "c2", name: "Nobody", inUse: false, uses: {} })] });
     expect(await screen.findByTestId("delete-unused-link")).toBeTruthy();
+  });
+
+  it("says an unlinked person's missing account once: no pill, no sentence, no switches", async () => {
+    setup({ companions: [companion({ id: "c2", name: "Ilka" })] });
+    const rowEl = (await screen.findByText("Ilka")).closest("li")!;
+    expect(within(rowEl).getAllByText("sharing:friends.account.none")).toHaveLength(1);
+    expect(within(rowEl).queryByRole("switch")).toBeNull();
+    expect(within(rowEl).queryByText(/status\./)).toBeNull();
+  });
+
+  it("marks only an open request with a pill", async () => {
+    setup({
+      companions: [companion({ linkedUser: jonasAccount })],
+      outgoing: [consent({ status: "pending" })],
+    });
+    expect(await screen.findByText("sharing:friends.status.requested")).toBeTruthy();
+  });
+
+  it("keeps link, rename, merge and delete behind one menu per row", async () => {
+    setup({ companions: [companion({ id: "c2", name: "Ilka", inUse: false })] });
+    expect(screen.queryByRole("button", { name: "companions:manage.actions.rename" })).toBeNull();
+    await userEvent.click(await screen.findByTestId("person-menu-c:c2"));
+    const menu = within(await screen.findByRole("menu"));
+    for (const label of [
+      "sharing:friends.actions.linkAccount",
+      "companions:manage.actions.rename",
+      "companions:manage.actions.merge",
+      "companions:manage.actions.delete",
+    ])
+      expect(menu.getByRole("menuitem", { name: label })).toBeTruthy();
+  });
+
+  it("never attaches an encrypted hand-over to a person; only a quiet link manages them", async () => {
+    beta.add("encryptedShare");
+    setup({ companions: [companion({ linkedUser: jonasAccount })], outgoing: [consent({})] });
+    const row = await switches("c:c1");
+    expect(row.queryByRole("switch", { name: /encrypted/ })).toBeNull();
+    expect(screen.getByText("sharing:friends.encryptedManage")).toBeTruthy();
+  });
+
+  it("does not send a remote person's username to the local leaderboard API", async () => {
+    beta.add("comparison");
+    beta.add("federatedTripSharing");
+    // A local account called "ben" exists too; the remote ben must never reach it.
+    setup({
+      outgoing: [consent({ person: { id: "u7", username: "ben", displayName: "Ben local" } })],
+      connections: [
+        {
+          id: "cn1",
+          origin: "https://far.example.org",
+          username: "ben",
+          displayName: "Ben remote",
+          state: "active",
+          mine: {
+            plans: false,
+            stats: "off",
+            achievements: false,
+            leaderboard: false,
+            tripOffers: false,
+          },
+          theirs: {
+            plans: false,
+            stats: "off",
+            achievements: false,
+            leaderboard: false,
+            tripOffers: false,
+          },
+        },
+      ],
+    });
+    const remoteRow = await switches("r:cn1");
+    expect(remoteRow.queryByRole("switch", { name: /switches\.totals\.label/ })).toBeNull();
+    expect(cmp.request).not.toHaveBeenCalled();
   });
 });

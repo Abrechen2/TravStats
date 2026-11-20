@@ -8,7 +8,6 @@ import {
   type ManagedCompanion,
 } from "../../../lib/api/companions";
 import { comparisonApi } from "../../../lib/api/comparison";
-import { encryptedShareGet, type Link } from "../../../lib/api/encryptedShare";
 import { sharingApi } from "../../../lib/api/sharing";
 import { sharingConnectionsApi } from "../../../lib/api/sharingConnections";
 import { sharingRemoteApi } from "../../../lib/api/sharingRemote";
@@ -24,7 +23,7 @@ import {
 } from "./buildPeople";
 
 /** The sources the list draws from, each with its own failure so one cannot hide another. */
-export type PeopleSourceId = "companions" | "accounts" | "connections" | "comparison" | "encrypted";
+export type PeopleSourceId = "companions" | "accounts" | "connections" | "comparison";
 
 export interface PeopleState {
   people: PersonEntry[];
@@ -49,7 +48,6 @@ export function usePeople(): PeopleState {
   const isDemo = useIsDemoAccount();
   const federated = isFeatureVisible("federatedTripSharing");
   const comparisonOn = isFeatureVisible("comparison");
-  const encryptedOn = isFeatureVisible("encryptedShare");
   const [sources, setSources] = useState<PeopleSources>({
     companions: null,
     consents: null,
@@ -57,7 +55,6 @@ export function usePeople(): PeopleState {
     pairedPeople: null,
     comparisonPeople: null,
     comparisonRequests: null,
-    encryptedLinks: null,
   });
   const [kinds, setKinds] = useState<CompanionUseKind[]>([]);
   const [linkable, setLinkable] = useState<LinkableCompanionList | null>(null);
@@ -78,7 +75,7 @@ export function usePeople(): PeopleState {
         return null;
       }
     };
-    const [managed, accounts, remote, compare, links] = await Promise.all([
+    const [managed, accounts, remote, compare] = await Promise.all([
       guard("companions", () => companionsApi.manage()),
       isDemo
         ? Promise.resolve(null)
@@ -111,9 +108,6 @@ export function usePeople(): PeopleState {
       comparisonOn && !isDemo
         ? guard("comparison", (): Promise<PeopleResponse> => comparisonApi.people())
         : Promise.resolve(null),
-      encryptedOn && !isDemo
-        ? guard("encrypted", () => encryptedShareGet<Link[]>("/links"))
-        : Promise.resolve(null),
     ]);
     if (run !== latest.current) return;
     setSources({
@@ -123,14 +117,13 @@ export function usePeople(): PeopleState {
       pairedPeople: remote?.paired ?? null,
       comparisonPeople: compare?.people ?? null,
       comparisonRequests: compare?.requests ?? null,
-      encryptedLinks: links,
     });
     setKinds(managed?.kinds ?? []);
     setLinkable(accounts?.list ?? null);
     setRemoteAvailable(remote?.available ?? false);
     setFailed(bad);
     setLoading(false);
-  }, [isDemo, federated, comparisonOn, encryptedOn]);
+  }, [isDemo, federated, comparisonOn]);
 
   useEffect(() => {
     void reload();

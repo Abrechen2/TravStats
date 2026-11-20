@@ -7,7 +7,6 @@ import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import { useIsDemoAccount } from "../../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { comparisonApi } from "../../../lib/api/comparison";
-import { encryptedSharePost } from "../../../lib/api/encryptedShare";
 import { sharingApi } from "../../../lib/api/sharing";
 import { sharingConnectionsApi } from "../../../lib/api/sharingConnections";
 import { sharingRemoteApi } from "../../../lib/api/sharingRemote";
@@ -32,7 +31,7 @@ import RemotePersonStats from "../RemotePersonStats";
 import { SectionCard, SectionTitle } from "../SettingsShared";
 import type { PendingRequest, PersonEntry } from "./buildPeople";
 import InvitationCodeDialog from "./InvitationCodeDialog";
-import { PersonActions, PersonSwitches, type PersonHandlers } from "./PersonControls";
+import { PersonMenu, PersonSwitches, type PersonHandlers } from "./PersonControls";
 import { usePeople } from "./usePeople";
 import { comparisonFailureCode } from "../../../lib/api/comparison";
 
@@ -49,17 +48,13 @@ type Open =
   | { kind: "code" }
   | null;
 
-const PILL_COLOR = {
-  connected: "var(--ts-good)",
-  requested: "var(--ts-warn)",
-  unlinked: "var(--ts-muted)",
-} as const;
+const PILL_COLOR = { requested: "var(--ts-warn)" } as const;
 
 /**
  * "Personen" (owner, 2026-11-20): the companions and the connected accounts as ONE list, one row
  * per person — a companion linked to an account is a single row. Per person, the switches for what
- * they get (trips, leaderboard totals, encrypted hand-over; each its own consent record and API,
- * the last two behind their beta gates) and the small row actions. Requests to the caller wait
+ * they get (trips, leaderboard totals behind its beta gate; each its own consent record and API,
+ * and a quiet link to the encrypted hand-over page) and the small row actions. Requests to the caller wait
  * above the list; the one field for a person on another server and the invitation code sit under it.
  * Every failure is shown as itself and logged, never swallowed.
  */
@@ -79,7 +74,6 @@ export default function PeopleSection(): JSX.Element {
   const [offersVersion, setOffersVersion] = useState(0);
   const gates = {
     comparison: isFeatureVisible("comparison"),
-    encryptedShare: isFeatureVisible("encryptedShare"),
   };
 
   /** Runs one write: its failure is said on the page, logged, and the list is read again. */
@@ -156,6 +150,8 @@ export default function PeopleSection(): JSX.Element {
     },
     toggleTotals: (p, on) => {
       if (on) {
+        // Only a local account can be asked by username; never send a remote person's.
+        if (p.account?.kind !== "local") return;
         setOpen({ kind: "totals", person: p, mode: "ask" });
         return;
       }
@@ -182,33 +178,6 @@ export default function PeopleSection(): JSX.Element {
       })();
     },
     editTotalsScope: (p) => setOpen({ kind: "totals", person: p, mode: "change" }),
-    toggleEncrypted: (p, on) => {
-      const link = p.encryptedLink;
-      if (!link) return;
-      if (on) {
-        // A grant carries a scope and needs this device's keys: its editor is the one page.
-        navigate("/encrypted-share");
-        return;
-      }
-      void (async () => {
-        if (
-          !(await confirm({
-            message: t(`${NS}.confirm.encryptedOff`, { name: p.name }),
-            confirmText: t(`${NS}.confirm.encryptedOffAction`),
-            destructive: true,
-          }))
-        )
-          return;
-        await run(
-          async () => {
-            await encryptedSharePost(`/links/${link.id}/revoke`, { audience: "" });
-            return t(`${NS}.done.encryptedOff`, { name: p.name });
-          },
-          `${NS}.errors.encrypted`,
-          (_error, fallback) => t(fallback)
-        );
-      })();
-    },
     link: (p) => setOpen({ kind: "link", person: p }),
     rename: (p) => setOpen({ kind: "rename", person: p }),
     merge: (p) => setOpen({ kind: "merge", person: p }),
@@ -306,29 +275,39 @@ export default function PeopleSection(): JSX.Element {
   const rows: PersonRow[] = state.people.map((p) => ({
     key: p.key,
     name: p.name,
-    meta:
-      p.account === null
-        ? t(`${NS}.account.none`)
-        : p.account.kind === "local"
-          ? t(`${NS}.account.local`, { username: p.account.username })
-          : t(`${NS}.account.remote`, { username: p.account.username, origin: p.account.origin }),
-    badges: <Pill color={PILL_COLOR[p.status]}>{t(`${NS}.status.${p.status}`)}</Pill>,
+    meta: (
+      <span style={{ color: "var(--ts-muted)" }}>
+        {p.account === null
+          ? t(`${NS}.account.none`)
+          : p.account.kind === "local"
+            ? t(`${NS}.account.local`, { username: p.account.username })
+            : t(`${NS}.account.remote`, { username: p.account.username, origin: p.account.origin })}
+        {p.status === "connected" && ` · ${t(`${NS}.status.connected`)}`}
+      </span>
+    ),
+    // Only a state that needs attention gets a pill: a request nobody has answered yet.
+    badges:
+      p.status === "requested" ? (
+        <Pill color={PILL_COLOR.requested}>{t(`${NS}.status.requested`)}</Pill>
+      ) : undefined,
     details: (
       <>
         <PersonSwitches person={p} handlers={handlers} disabled={isDemo || busy} gates={gates} />
-        <PersonActions
-          person={p}
-          handlers={handlers}
-          disabled={isDemo || busy}
-          canMerge={state.companions.length > 1}
-          statsOpen={stats === p.key}
-          achievementsOpen={achievements === p.key}
-        />
         {stats === p.key && p.connection && <RemotePersonStats person={p.connection} />}
         {achievements === p.key && p.connection && (
           <RemotePersonAchievements person={p.connection} />
         )}
       </>
+    ),
+    action: (
+      <PersonMenu
+        person={p}
+        handlers={handlers}
+        disabled={isDemo || busy}
+        canMerge={state.companions.length > 1}
+        statsOpen={stats === p.key}
+        achievementsOpen={achievements === p.key}
+      />
     ),
   }));
 
@@ -412,7 +391,7 @@ export default function PeopleSection(): JSX.Element {
             </button>
           </p>
         )}
-        {gates.encryptedShare && (
+        {isFeatureVisible("encryptedShare") && (
           <p>
             <button
               type="button"

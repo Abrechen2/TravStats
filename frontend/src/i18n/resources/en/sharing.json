@@ -992,39 +992,27 @@
       "companions": "I couldn't load the travel companions.",
       "accounts": "I couldn't load the accounts on this server.",
       "connections": "I couldn't load the connections to other servers.",
-      "comparison": "I couldn't read who sees your totals.",
-      "encrypted": "I couldn't load the encrypted hand-overs."
+      "comparison": "I couldn't read who sees your totals."
     },
     "status": {
       "connected": "connected",
-      "requested": "requested",
-      "unlinked": "not linked"
+      "requested": "requested"
     },
     "account": {
-      "local": "Account @{{username}} on this server",
+      "local": "@{{username}}",
       "remote": "{{username}}@{{origin}}",
-      "none": "No account linked"
+      "none": "no account"
     },
     "demo": "Nothing here can be changed in the demo account.",
     "switches": {
       "share": {
-        "label": "Share trips",
-        "sub": "They may receive your trips once they agree."
+        "label": "Share trips"
       },
       "totals": {
-        "label": "Sees my totals",
-        "sub": "Leaderboard: totals only, never single entries."
+        "label": "Sees my totals"
       },
-      "encrypted": {
-        "label": "Encrypted hand-over",
-        "sub": "Full entries, readable only by them."
-      },
-      "needsAccount": "This needs an account: link one first.",
-      "shareAsked": "Requested until they agree.",
-      "totalsAsked": "Requested until they agree.",
       "editScope": "Change scope",
-      "encryptedSet": "Set up the hand-over …",
-      "encryptedRedirect": "An encrypted hand-over picks scope and device: you land on the \"Hand over encrypted\" page."
+      "encryptedSet": "Set up the hand-over …"
     },
     "actions": {
       "linkAccount": "Link account",
@@ -1059,8 +1047,6 @@
       "withdrawShareAction": "Withdraw",
       "totalsOff": "{{name}} will no longer see your totals.",
       "totalsOffAction": "Stop showing",
-      "encryptedOff": "The hand-over to {{name}} will be withdrawn.",
-      "encryptedOffAction": "Withdraw",
       "endConnection": "The connection to {{name}} ends. What is shared stays as an own copy.",
       "endConnectionAction": "End",
       "withdrawPaired": "{{name}} ({{origin}}) will get nothing more from you.",
@@ -1072,7 +1058,6 @@
       "totalsAsked": "Request sent to {{name}}.",
       "totalsOff": "{{name}} no longer sees your totals.",
       "scopeChanged": "Scope for {{name}} saved.",
-      "encryptedOff": "Hand-over to {{name}} withdrawn.",
       "switchSaved": "Saved.",
       "accepted": "Accepted.",
       "declined": "Declined.",
@@ -1080,8 +1065,7 @@
       "withdrawn": "Withdrawn."
     },
     "errors": {
-      "action": "That didn't work. Please try again.",
-      "encrypted": "The hand-over could not be withdrawn. Please try again."
+      "action": "That didn't work. Please try again."
     },
     "code": {
       "title": "Invitation code",
@@ -1090,6 +1074,9 @@
       "created": "Your code (shown only now)",
       "claimHelp": "You redeem a code from someone on another server here.",
       "close": "Close"
+    },
+    "menu": {
+      "label": "Actions for {{name}}"
     }
   }
 }
