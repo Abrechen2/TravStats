@@ -171,6 +171,34 @@ describe("a trip keeps its contents", () => {
       expect(kept.immichAlbumLinkId).toBe(targetAlbum.id);
     });
 
+    it("keeps albums that only share an id across two photo sources apart", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      await prisma.tripImmichAlbum.create({
+        data: { tripId: target.id, immichAlbumId: "same-id", albumName: "Immich", mode: "link" },
+      });
+      await prisma.tripImmichAlbum.create({
+        data: {
+          tripId: source.id,
+          provider: "photoprism",
+          immichAlbumId: "same-id",
+          albumName: "PhotoPrism",
+          mode: "link",
+        },
+      });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const albums = await prisma.tripImmichAlbum.findMany({
+        where: { tripId: target.id },
+        orderBy: { provider: "asc" },
+      });
+      expect(albums.map((a) => [a.provider, a.albumName])).toEqual([
+        ["immich", "Immich"],
+        ["photoprism", "PhotoPrism"],
+      ]);
+    });
+
     it("keeps one row when both sides hold the same imported asset", async () => {
       const target = await prisma.trip.create({ data: { userId, name: "Target" } });
       const source = await prisma.trip.create({ data: { userId, name: "Source" } });

@@ -47,7 +47,12 @@
     "importFailedUnknown": "Unbekannter Fehler beim Übernehmen der Fotos.",
     "importPartial": "{{failed}} von {{total}} Fotos konnten nicht übernommen werden. „Neu synchronisieren“ versucht sie erneut.",
     "badgeLink": "live",
-    "badgeImport": "Kopie"
+    "badgeImport": "Kopie",
+    "sourceLabel": "Fotoquelle",
+    "importUnsupported": "PhotoPrism-Alben lassen sich vorerst nur verlinken, nicht kopieren.",
+    "partialLink": "Ein Teil der Alben konnte nicht verknüpft werden: {{reason}}",
+    "badgePhotoprism": "PhotoPrism",
+    "badgeImmich": "Immich"
   },
   "gallery": {
     "uploaded": "Hochgeladen",
@@ -66,7 +71,17 @@
     "protocol": "Unerwartete Antwort von Immich. Passt die Server-Version?",
     "invalidUrl": "Die Server-URL ist ungültig.",
     "keyRequired": "Für eine andere Server-Adresse wird ein eigener API-Schlüssel benötigt. Der instanzweit hinterlegte Schlüssel gilt nur für den dort eingetragenen Server.",
-    "retry": "Erneut versuchen"
+    "retry": "Erneut versuchen",
+    "photoprism": {
+      "notConfigured": "Keine PhotoPrism-Verbindung eingerichtet.",
+      "unreachable": "PhotoPrism ist nicht erreichbar.",
+      "unknown": "Verbindungstest fehlgeschlagen.",
+      "auth": "PhotoPrism hat das App-Passwort abgelehnt. Es braucht die Berechtigungen „albums photos files config“.",
+      "notFound": "Album nicht gefunden — wurde es in PhotoPrism gelöscht?",
+      "protocol": "Unerwartete Antwort von PhotoPrism. Ist die Version zu alt?",
+      "invalidUrl": "Die Server-URL ist ungültig oder darf von diesem Konto nicht erreicht werden.",
+      "keyRequired": "Für eine andere Server-Adresse wird ein eigenes App-Passwort benötigt."
+    }
   },
   "admin": {
     "title": "Immich (instanzweit)",

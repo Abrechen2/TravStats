@@ -236,6 +236,15 @@ export default function AccountSide({
     }
     if (card.id === "dawarich")
       body.push(<DawarichProviderHint key="hint" check={dawarichSaved} />);
+    if (card.id === "photoprism") {
+      // The app-password scope is the one thing a user cannot guess: without
+      // `config` the server gets no thumbnail token and the test says so.
+      body.push(
+        <p key="setup" className="t-caption" data-photoprism-setup style={{ margin: 0 }}>
+          {t("externalServices:services.photoprism.setup")}
+        </p>
+      );
+    }
     if (card.id === "immich") {
       body.push(<PhotoJourneyNightlyScanCard key="nightly" />);
       body.push(<VisitPhotoImmichLink key="visit" connected />);

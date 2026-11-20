@@ -113,6 +113,13 @@ function normalizeUrl(
       throw urlRefusal(error, "Invalid Immich URL", field.key);
     }
   }
+  if (service.id === "photoprism") {
+    try {
+      return normalizeImmichBaseUrl(raw, policy, "PhotoPrism");
+    } catch (error) {
+      throw urlRefusal(error, "Invalid PhotoPrism URL", field.key);
+    }
+  }
   if (service.id === "dawarich") {
     try {
       return normalizeDawarichBaseUrl(raw, policy);

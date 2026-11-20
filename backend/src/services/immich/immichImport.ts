@@ -19,7 +19,8 @@ import { prisma } from "../../db";
 import { FILE_LIMITS } from "../../config/constants";
 import { deleteTripPhotoFile, getTripPhotoDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
-import { createImmichClient } from "./immichClient";
+import { createPhotoSource, listAllAlbumAssets } from "../photoSource";
+import type { PhotoSourceProvider } from "../photoSource/types";
 import { getImmichConnection } from "./immichResolver";
 import { invalidateAlbumAssets } from "./immichAssetCache";
 import { ImmichAsset, ImmichError } from "./types";
@@ -170,7 +171,9 @@ export async function estimateAlbumImport(
   const conn = await getImmichConnection(userId);
   if (!conn) return { assetCount: 0, totalBytes: 0 };
 
-  const assets = (await createImmichClient(conn).listAlbumAssets(albumId)).filter(isImportable);
+  const assets = (await listAllAlbumAssets(createPhotoSource("immich", conn), albumId)).filter(
+    isImportable
+  );
 
   return {
     assetCount: assets.length,
@@ -185,7 +188,7 @@ export async function estimateAlbumImport(
  * not inflate `failedAssets`.
  */
 async function importAsset(
-  client: ReturnType<typeof createImmichClient>,
+  source: PhotoSourceProvider,
   tripId: string,
   linkId: string,
   asset: ImmichAsset
@@ -218,7 +221,7 @@ async function importAsset(
   };
 
   try {
-    const upstream = await client.fetchAssetStream(asset.id, "original");
+    const upstream = await source.streamOriginal(asset.id);
     // The byte cap also guards the case where Immich reported no size (no EXIF
     // row yet): the stream is aborted the moment it crosses the ceiling and the
     // partial file is cleaned up below (M2).
@@ -337,12 +340,12 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         create: { albumLinkId: linkId, ...runningJob },
       });
 
-      const client = createImmichClient(conn);
+      const source = createPhotoSource("immich", conn);
       let processed = 0;
       let failed = 0;
 
       try {
-        const all = await client.listAlbumAssets(link.immichAlbumId);
+        const all = await listAllAlbumAssets(source, link.immichAlbumId);
         const importable = all.filter(isImportable);
 
         const alreadyImported = await prisma.tripPhoto.findMany({
@@ -360,7 +363,7 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
         for (let i = 0; i < todo.length; i += CHUNK_SIZE) {
           const chunk = todo.slice(i, i + CHUNK_SIZE);
           const results = await Promise.all(
-            chunk.map((asset) => importAsset(client, link.tripId, linkId, asset))
+            chunk.map((asset) => importAsset(source, link.tripId, linkId, asset))
           );
           processed += results.filter(Boolean).length;
           failed += results.filter((ok) => !ok).length;

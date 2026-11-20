@@ -208,6 +208,10 @@
       "name": "Eigenes Immich",
       "purpose": "Fotoalben an Reisen hängen"
     },
+    "photoprism": {
+      "name": "PhotoPrism",
+      "purpose": "Fotoalben an Reisen hängen"
+    },
     "strava": {
       "name": "Strava",
       "purpose": "Aktivitäten als Touren (nutzt die Strava-App der Instanz)"
@@ -267,6 +271,10 @@
     "note": "Einschalten oder ändern kann das nur ein Admin unter Administration › Externe Dienste."
   },
   "fields": {
+    "photoprism": {
+      "baseUrl": "Server-URL",
+      "token": "App-Passwort"
+    },
     "common": {
       "apiKey": "API-Schlüssel",
       "key": "API-Schlüssel",
@@ -494,6 +502,17 @@
       "getKeyLabel": "API-Schlüssel in Immich anlegen",
       "quotaLine": "eigener Server",
       "adminPurpose": "Instanz-Verbindung für den nächtlichen Foto-Scan; Konten verbinden ihr eigenes Immich"
+    },
+    "photoprism": {
+      "name": "PhotoPrism",
+      "purpose": "Fotoalben an Reisen hängen",
+      "why": "Zeigt Alben aus deinem PhotoPrism in Reisen. Die Bilder bleiben in PhotoPrism und werden nur durchgereicht.",
+      "cost": "Kostenlos, selbst gehostet.",
+      "quota": "Keins.",
+      "dataOut": "Bleibt zwischen TravStats und deinem PhotoPrism.",
+      "quotaLine": "eigener Server",
+      "adminPurpose": "Instanz-Verbindung zu einem PhotoPrism; Konten verbinden ihr eigenes",
+      "setup": "So verbindest du PhotoPrism: Lege in PhotoPrism unter Einstellungen → Konto → Apps und Geräte ein App-Passwort an und gib ihm die Berechtigungen „albums photos files config“ (oder „*“). Ohne „config“ kann TravStats keine Vorschaubilder laden. TravStats braucht nur Lesezugriff."
     },
     "strava": {
       "name": "Strava",

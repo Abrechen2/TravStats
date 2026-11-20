@@ -11,8 +11,9 @@ import {
 } from "../../../middleware/upload";
 import { getNotePhotoDir } from "../../../middleware/notePhotoUpload";
 import { documentPath } from "../../documents/documentStore";
-import { getImmichConnection } from "../../immich/immichResolver";
-import { createImmichClient } from "../../immich/immichClient";
+import { createPhotoSource, listAllAlbumAssets } from "../../photoSource";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../../photoSource/connection";
+import type { PhotoSourceKind } from "../../photoSource/types";
 import { refused } from "../security";
 export interface AssetRef {
   key: string;
@@ -32,13 +33,14 @@ async function localFile(dir: string, filename: string) {
   if (!stat.isFile()) throw refused();
   return { stream: fs.createReadStream(file), size: stat.size };
 }
-export async function immichFor(userId: string) {
-  const connection = await getImmichConnection(userId);
+/** The caller's connection to one photo source (a linked album names its own). */
+export async function photoSourceFor(userId: string, provider: PhotoSourceKind = "immich") {
+  const connection = await getPhotoSourceConnection(provider, userId);
   if (!connection) throw refused();
-  return createImmichClient(connection);
+  return createPhotoSource(provider, connection);
 }
-async function remoteAsset(userId: string, assetId: string) {
-  const asset = await (await immichFor(userId)).fetchAssetStream(assetId, "original");
+async function remoteAsset(userId: string, assetId: string, provider: PhotoSourceKind = "immich") {
+  const asset = await (await photoSourceFor(userId, provider)).streamOriginal(assetId);
   return { stream: asset.stream as Readable, size: asset.contentLength };
 }
 /** Only owner-authorised DB identifiers. No caller-supplied path, URL, or Immich credential. */
@@ -89,10 +91,11 @@ export async function ownerAsset(
   if (kind === "album" && assetId) {
     const album = await prisma.tripImmichAlbum.findFirst({ where: { id, trip: { userId } } });
     if (!album) throw refused();
-    const client = await immichFor(userId),
-      assets = await client.listAlbumAssets(album.immichAlbumId);
+    const provider = toPhotoSourceKind(album.provider),
+      source = await photoSourceFor(userId, provider),
+      assets = await listAllAlbumAssets(source, album.immichAlbumId);
     if (!assets.some((a) => a.id === assetId)) throw refused();
-    return remoteAsset(userId, assetId);
+    return remoteAsset(userId, assetId, provider);
   }
   throw refused();
 }
@@ -110,7 +113,10 @@ export async function rowAssets(
     ReceiptUpload: "receipt",
   };
   if (model === "TripImmichAlbum" && row.mode === "link") {
-    const files = await (await immichFor(userId)).listAlbumAssets(String(row.immichAlbumId));
+    const files = await listAllAlbumAssets(
+      await photoSourceFor(userId, toPhotoSourceKind(row.provider)),
+      String(row.immichAlbumId)
+    );
     if (files.length >= 50000) throw refused();
     return files.map((f) => ({
       key: `album:${row.id}:${f.id}`,

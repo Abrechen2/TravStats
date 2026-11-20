@@ -185,9 +185,12 @@ export async function buildAdminView(): Promise<{
 }
 
 async function countConnections(): Promise<Record<(typeof CONNECTION_IDS)[number], number>> {
-  const [immich, dawarich, strava, webdav] = await Promise.all([
+  const [immich, photoprism, dawarich, strava, webdav] = await Promise.all([
     prisma.userSettings.count({
       where: { immichBaseUrl: { not: null }, immichApiKey: { not: null } },
+    }),
+    prisma.userSettings.count({
+      where: { photoprismBaseUrl: { not: null }, photoprismToken: { not: null } },
     }),
     prisma.userSettings.count({
       where: { dawarichBaseUrl: { not: null }, dawarichApiKey: { not: null } },
@@ -195,7 +198,7 @@ async function countConnections(): Promise<Record<(typeof CONNECTION_IDS)[number
     prisma.userSettings.count({ where: { stravaAccessToken: { not: null } } }),
     prisma.userWebdavSync.count(),
   ]);
-  return { immich, dawarich, strava, webdav };
+  return { immich, photoprism, dawarich, strava, webdav };
 }
 
 export { AI_SERVICES, getService };

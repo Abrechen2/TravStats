@@ -6,7 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { immichProxyLimiter, statsLimiter } from "../../middleware/rateLimit";
 import { assetIdParamSchema, assetSizeSchema } from "../../schemas/immich";
 import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createPhotoSource } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import { linkPicksSchema } from "../../schemas/place";
@@ -157,7 +157,7 @@ router.get(
         res.status(409).json({ error: "notConfigured" });
         return;
       }
-      await streamAsset(res, createImmichClient(conn), assetId.data, size.data, etag);
+      await streamAsset(res, createPhotoSource("immich", conn), assetId.data, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });

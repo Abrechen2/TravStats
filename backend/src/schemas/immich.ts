@@ -35,6 +35,9 @@ export const immichTestSchema = z
   })
   .strict();
 
+/** The photo source an album lives in; omitted means Immich (every client before PhotoPrism). */
+export const photoSourceKindSchema = z.enum(["immich", "photoprism"]);
+
 export const linkAlbumsSchema = z
   .object({
     albums: z
@@ -43,6 +46,7 @@ export const linkAlbumsSchema = z
           .object({
             immichAlbumId: z.string().min(1).max(100),
             mode: immichModeSchema,
+            provider: photoSourceKindSchema.default("immich"),
           })
           .strict()
       )
@@ -64,13 +68,25 @@ export const assetSizeSchema = z.enum(["thumbnail", "preview", "original"]).defa
 
 export const assetIdParamSchema = z.string().uuid();
 
+/**
+ * An asset of a LINKED album: an Immich UUID or the hex file hash PhotoPrism
+ * calls its asset by. The routes that serve Immich-only grants keep the UUID.
+ */
+export const linkedAssetIdParamSchema = z.union([
+  assetIdParamSchema,
+  z.string().regex(/^[0-9a-f]{16,64}$/i),
+]);
+
+/** `?provider=` of the album picker; absent means Immich. */
+export const albumListQuerySchema = z.object({ provider: photoSourceKindSchema.default("immich") });
+
 /** `TripPhoto.id` is `@default(uuid())`. */
 export const photoIdParamSchema = z.string().uuid();
 
 export const setCoverSchema = z
   .object({
     linkId: z.string().uuid(),
-    assetId: z.string().uuid(),
+    assetId: linkedAssetIdParamSchema,
   })
   .strict();
 

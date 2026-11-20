@@ -11,7 +11,7 @@ import {
   travTrackPhotosQuerySchema,
 } from "../../schemas/travtrackViews";
 import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createPhotoSource } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import {
@@ -108,7 +108,7 @@ router.get(
           res.status(409).json({ error: "notConfigured" });
           return;
         }
-        await streamAsset(res, createImmichClient(conn), assetId.data, q.size, etag);
+        await streamAsset(res, createPhotoSource("immich", conn), assetId.data, q.size, etag);
       } catch (error) {
         if (error instanceof PhotosNotConfigured) {
           res.status(409).json({ error: "notConfigured" });

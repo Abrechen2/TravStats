@@ -23,7 +23,7 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { assetSizeSchema } from "../../schemas/immich";
 import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createPhotoSource } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import { startJob } from "../../services/jobs/jobRegistry";
@@ -287,7 +287,13 @@ router.get(
           res.status(409).json({ error: "notConfigured" });
           return;
         }
-        await streamAsset(res, createImmichClient(conn), photo.immichAssetId, size.data, etag);
+        await streamAsset(
+          res,
+          createPhotoSource("immich", conn),
+          photo.immichAssetId,
+          size.data,
+          etag
+        );
         return;
       }
 

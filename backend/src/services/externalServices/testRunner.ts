@@ -14,6 +14,7 @@ import { decryptApiKey } from "../../utils/encryption";
 import { testConnection as testWebDAVConnection } from "../cloudSyncService";
 import { testDawarichConnection } from "../dawarich/dawarichTester";
 import { testImmichConnection } from "../immich/immichTester";
+import { testPhotoprismConnection } from "../photoprism/photoprismTester";
 import { accountMayReachPrivate } from "../egress/privateTargets";
 import {
   ANTHROPIC_BASE_URL,
@@ -166,6 +167,12 @@ async function run(
           userId
         )
       );
+    case "photoprism": {
+      if (!c.baseUrl || !c.token) return { ok: false, reason: "not_found" };
+      const policy = { allowPrivate: userId ? await accountMayReachPrivate(userId) : true };
+      const r = await testPhotoprismConnection(c.baseUrl, c.token, policy);
+      return { ok: r.success, reason: r.success ? null : toReasonCode(r.kind) };
+    }
     case "immich":
     case "dawarich": {
       if (!c.baseUrl || !c.apiKey) return { ok: false, reason: "not_found" };

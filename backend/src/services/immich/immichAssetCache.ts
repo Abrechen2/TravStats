@@ -36,7 +36,9 @@ let clock = 0;
 let activeLoads = 0;
 const invalidatedAt = new Map<string, number>();
 
-const keyOf = (userId: string, albumId: string): string => JSON.stringify([userId, albumId]);
+/** Albums of different photo sources may share an id, so the source is part of the key. */
+const keyOf = (userId: string, albumId: string, provider: string): string =>
+  JSON.stringify([userId, provider, albumId]);
 
 /** Store an entry; expired ones and, past the cap, the oldest ones are dropped. */
 function remember(key: string, assets: ImmichAsset[]): void {
@@ -54,9 +56,10 @@ function remember(key: string, assets: ImmichAsset[]): void {
 export async function getCachedAlbumAssets(
   userId: string,
   albumId: string,
-  load: () => Promise<ImmichAsset[]>
+  load: () => Promise<ImmichAsset[]>,
+  provider: string = "immich"
 ): Promise<ImmichAsset[]> {
-  const key = keyOf(userId, albumId);
+  const key = keyOf(userId, albumId, provider);
 
   const cached = entries.get(key);
   if (cached && cached.expiresAt > Date.now()) {
@@ -104,17 +107,22 @@ export async function getCachedAlbumAssets(
  */
 export function peekCachedAlbumAssets(
   userId: string,
-  albumId: string
+  albumId: string,
+  provider: string = "immich"
 ): Promise<ImmichAsset[]> | null {
-  const key = keyOf(userId, albumId);
+  const key = keyOf(userId, albumId, provider);
   const cached = entries.get(key);
   if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.assets);
   if (cached) entries.delete(key);
   return inFlight.get(key) ?? null;
 }
 
-export function invalidateAlbumAssets(userId: string, albumId: string): void {
-  const key = keyOf(userId, albumId);
+export function invalidateAlbumAssets(
+  userId: string,
+  albumId: string,
+  provider: string = "immich"
+): void {
+  const key = keyOf(userId, albumId, provider);
   // Only worth remembering while a load that started earlier can still finish.
   if (activeLoads > 0) invalidatedAt.set(key, ++clock);
   entries.delete(key);
@@ -136,8 +144,9 @@ export function immichAssetCacheSizes(): { entries: number; invalidations: numbe
 /** Test seam. Never called from production code. Returns the promise in inFlight for a key, or undefined. */
 export function getInFlightPromise(
   userId: string,
-  albumId: string
+  albumId: string,
+  provider: string = "immich"
 ): Promise<ImmichAsset[]> | undefined {
-  const key = keyOf(userId, albumId);
+  const key = keyOf(userId, albumId, provider);
   return inFlight.get(key);
 }

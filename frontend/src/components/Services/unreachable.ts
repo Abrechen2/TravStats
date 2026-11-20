@@ -18,6 +18,7 @@ export const UNREACHABLE_NOTE: Readonly<Record<string, string>> = {
   selfHostedRouting: "routing",
   railTimetables: "rail",
   immich: "immich",
+  photoprism: "photoprism",
   dawarich: "dawarich",
   strava: "strava",
   openData: "openData",

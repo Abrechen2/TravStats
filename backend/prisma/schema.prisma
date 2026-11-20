@@ -1046,6 +1046,10 @@ model UserSettings {
   immichApiKey      String? @map("immich_api_key")
   immichDefaultMode String  @default("link") @map("immich_default_mode")
 
+  // PhotoPrism connection (base URL plain, app password encrypted at application level)
+  photoprismBaseUrl String? @map("photoprism_base_url")
+  photoprismToken   String? @map("photoprism_token")
+
   // Dawarich connection (base URL plain, API key encrypted at application
   // level, Phase 3b). Same shape as the Immich connection above — Dawarich
   // is a second self-hosted, LAN-adjacent, pull-only integration, not a
@@ -1367,6 +1371,10 @@ model AdminSettings {
   // Own tar1090/readsb receiver (forgejo#408 phase 3), instance-wide address.
   globalTar1090BaseUrl String? @map("global_tar1090_base_url")
   globalImmichApiKey  String? @map("global_immich_api_key")
+
+  // Global PhotoPrism connection (base URL plain, app password encrypted)
+  globalPhotoprismBaseUrl String? @map("global_photoprism_base_url")
+  globalPhotoprismToken   String? @map("global_photoprism_token")
 
   // Global Dawarich connection (base URL plain, API key encrypted, Phase 3b)
   globalDawarichBaseUrl String? @map("global_dawarich_base_url")
@@ -2235,6 +2243,9 @@ model TripImmichAlbum {
   id               String    @id @default(uuid())
   tripId           String    @map("trip_id")
   immichAlbumId    String    @map("immich_album_id")
+  /// Which photo source holds the album: `immich` | `photoprism`. The album id
+  /// is only unique per source, so the provider is part of the unique key.
+  provider         String    @default("immich")
   albumName        String    @map("album_name")
   assetCount       Int       @default(0) @map("asset_count")
   thumbnailAssetId String?   @map("thumbnail_asset_id")
@@ -2247,7 +2258,7 @@ model TripImmichAlbum {
   photos    TripPhoto[]
   importJob ImmichImportJob?
 
-  @@unique([tripId, immichAlbumId])
+  @@unique([tripId, provider, immichAlbumId])
   @@index([tripId])
   @@map("trip_immich_albums")
 }

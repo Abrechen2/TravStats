@@ -293,16 +293,31 @@ registry.registerPath({
   description:
     "A link is one of two modes. LINK stores no bytes: images stream through an " +
     "ownership-checked proxy. IMPORT copies the originals in as ordinary trip " +
-    "photos, idempotent per asset.",
+    "photos, idempotent per asset. `?provider=photoprism` lists the albums of the " +
+    "connected PhotoPrism (default `immich`); a link row carries its `provider`, and " +
+    "the album id is only unique within one source. Failures answer 502 with the " +
+    "fixed kinds `unreachable|auth|notFound|protocol|invalidUrl`, a missing " +
+    "connection 409 `notConfigured`.",
   tags: immichTag,
-  request: { params: z.object({ id: uuid }) },
-  responses: { 200: { description: "Linked albums" }, 404: notFound },
+  request: {
+    params: z.object({ id: uuid }),
+    query: z.object({ provider: z.enum(["immich", "photoprism"]).optional() }),
+  },
+  responses: {
+    200: { description: "Linked albums" },
+    404: notFound,
+    409: { description: "No connection for that source", content: errorContent },
+  },
 });
 
 registry.registerPath({
   method: "post",
   path: "/trips/{id}/immich/albums",
   summary: "Link an album to a trip",
+  description:
+    "Each album names its `provider` (`immich` default, or `photoprism`); one request " +
+    "links into one source. PhotoPrism links are LINK mode only until the import " +
+    "phase: `mode: import` answers 400 `importNotSupported`.",
   tags: immichTag,
   request: { params: z.object({ id: uuid }) },
   responses: { 201: { description: "Linked" }, 400: badInput, 404: notFound },
@@ -332,7 +347,9 @@ registry.registerPath({
   summary: "Stream one asset through the proxy",
   description:
     "Ownership- and membership-checked, with browser ETag caching and its own " +
-    "`Cache-Control: private` over the API-wide `no-store`.",
+    "`Cache-Control: private` over the API-wide `no-store`. The asset id is an Immich " +
+    "UUID or, for a PhotoPrism link, the hex hash of the file. Only `image/*` and " +
+    "`video/*` bodies are forwarded; an upstream failure paints a no-store placeholder.",
   tags: immichTag,
   request: { params: z.object({ id: uuid, linkId: uuid, assetId: z.string() }) },
   responses: {

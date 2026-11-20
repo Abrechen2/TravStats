@@ -1811,6 +1811,36 @@
           "grp": ["Speichern & testen", "Save & test"]
         },
         {
+          "id": "photoprism",
+          "cat": "foto",
+          "svc": {
+            "n": ["PhotoPrism", "PhotoPrism"],
+            "de": "Fotos",
+            "en": "Photos",
+            "st": ["Nicht verbunden", "Not connected"],
+            "tone": "muted"
+          },
+          "use": ["mine", "allowConn", "on", "test"],
+          "rows": [
+            {
+              "id": "ppurl",
+              "t": "input",
+              "inv": "forgejo PhotoPrism B2 connection (URL)",
+              "de": ["Adresse", "", "Darf im eigenen Netz liegen."],
+              "en": ["Address", "", "May be on your local network."],
+              "v": ""
+            },
+            {
+              "id": "pptoken",
+              "t": "secret",
+              "inv": "forgejo PhotoPrism B2 connection (app password)",
+              "de": ["App-Passwort", "Aus PhotoPrism → Konto → Apps und Geräte", ""],
+              "en": ["App password", "From PhotoPrism → Account → Apps and devices", ""]
+            }
+          ],
+          "grp": ["Speichern & testen", "Save & test"]
+        },
+        {
           "id": "dawarich",
           "cat": "foto",
           "svc": {
@@ -4113,6 +4143,41 @@
               "inv": "C3 Immich instance connection (API key)",
               "de": ["Immich des Servers: API-Schlüssel", "", ""],
               "en": ["Server's Immich: API key", "", ""]
+            }
+          ],
+          "grp": ["Speichern & testen", "Save & test"],
+          "ad": 1
+        },
+        {
+          "id": "photoprism",
+          "cat": "foto",
+          "svc": {
+            "n": ["PhotoPrism", "PhotoPrism"],
+            "de": "Fotos",
+            "en": "Photos",
+            "st": ["Nicht verbunden", "Not connected"],
+            "tone": "muted"
+          },
+          "use": ["mine", "allowConn", "on", "test"],
+          "rows": [
+            {
+              "id": "ppinsturl",
+              "t": "input",
+              "sc": "i",
+              "ad": 1,
+              "inv": "forgejo PhotoPrism B2 instance connection (URL)",
+              "de": ["PhotoPrism des Servers: Adresse", "Für Konten ohne eigene Verbindung", ""],
+              "en": ["Server's PhotoPrism: address", "For accounts without their own", ""],
+              "v": ""
+            },
+            {
+              "id": "ppinsttoken",
+              "t": "secret",
+              "sc": "i",
+              "ad": 1,
+              "inv": "forgejo PhotoPrism B2 instance connection (app password)",
+              "de": ["PhotoPrism des Servers: App-Passwort", "", ""],
+              "en": ["Server's PhotoPrism: app password", "", ""]
             }
           ],
           "grp": ["Speichern & testen", "Save & test"],

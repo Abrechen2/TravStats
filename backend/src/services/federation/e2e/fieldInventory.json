@@ -93,7 +93,7 @@
     "personal": "",
     "photos": "id tripId albumName assetCount mode sortIdx lastSyncedAt createdAt",
     "documents": "",
-    "excluded": "immichAlbumId thumbnailAssetId"
+    "excluded": "immichAlbumId provider thumbnailAssetId"
   },
   "TripStop": {
     "details": "id tripId orderIdx domain title startDate endDate lat lon startUtc endUtc stopZone precision routeId routeOrderIdx lodgingStayId overnight viaPoint placeId createdAt updatedAt countryVisitKind",

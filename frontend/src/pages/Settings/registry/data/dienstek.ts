@@ -45,6 +45,10 @@ export const DIENSTEK_PAGE: RegistryPage = {
         {"id":"immnacht","kind":"toggle","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Fotos jede Nacht durchsehen","en":"Look through photos nightly","terms":{"de":"Findet Reisen, die noch fehlen","en":"Finds trips you haven't logged"}},
         {"id":"immvisit","kind":"action","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Besuchsfotos verknüpfen","en":"Link visit photos","terms":{"de":"Fotos zu deinen Orten suchen","en":"Find photos for your places"}},
       ]},
+      {"id":"photoprism","de":"PhotoPrism","en":"PhotoPrism","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"foto","rows":[
+        {"id":"ppurl","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Adresse","en":"Address","terms":{"de":"Darf im eigenen Netz liegen.","en":"May be on your local network."}},
+        {"id":"pptoken","kind":"secret","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"App-Passwort","en":"App password","terms":{"de":"Aus PhotoPrism → Konto → Apps und Geräte","en":"From PhotoPrism → Account → Apps and devices"}},
+      ]},
       {"id":"dawarich","de":"Dawarich","en":"Dawarich","level":"standard","scope":"account","audience":"all","demoLocked":true,"serviceCategory":"foto","rows":[
         {"id":"dawurl","kind":"input","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"Adresse","en":"Address","terms":{"de":"","en":""}},
         {"id":"dawkey","kind":"secret","level":"standard","scope":"account","audience":"all","demoLocked":true,"de":"API-Schlüssel","en":"API key","terms":{"de":"Deine Verbindung ist die einzige, die Standortquelle, Aufenthaltssuche und Ländertage nutzen.","en":"Your connection is the only one used for location source, stay search and country days."}},
