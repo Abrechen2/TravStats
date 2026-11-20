@@ -16,6 +16,7 @@ import {
   type StayIdentityInput,
   type StayIdentityView,
 } from "./identityCombine";
+import { fetchVenueEvidence } from "./venueAreas";
 
 /**
  * Which place a Dawarich stay probably was (forgejo#305) — the I/O half.
@@ -109,6 +110,8 @@ function complete(view: StayIdentityView): boolean {
   return (
     view.geocoder !== "degraded" &&
     view.candidatesState !== "degraded" &&
+    // An Overpass outage must not be remembered as "no venues here".
+    ["ok", "partial", "off"].includes(view.venues.state) &&
     (view.photos.state === "ok" ||
       view.photos.state === "off" ||
       view.photos.state === "notConfigured")
@@ -148,7 +151,9 @@ async function computeView(
     photosOf(userId, stay, immichEvidence),
   ]);
   const places = shape.arrange ? { ...found, results: shape.arrange(found.results, stay) } : found;
-  return combineStayIdentity({ point: stay, geocode, places, photos });
+  // Building outlines for the candidates; never throws, an outage is a state.
+  const venues = await fetchVenueEvidence(stay, places.results.slice(0, STAY_CANDIDATE_LIMIT));
+  return combineStayIdentity({ point: stay, geocode, places, photos, venues });
 }
 
 /** The combined view of one stay, cached per stay, position and Immich switch. */

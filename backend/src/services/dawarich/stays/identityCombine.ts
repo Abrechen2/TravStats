@@ -2,7 +2,17 @@ import { haversineKm } from "../../../shared/geo/haversine";
 import type { GeocodeParts } from "../../geo/nominatim";
 import type { PlaceResult } from "../../geo/photon";
 import type { ImmichAsset, ImmichErrorKind } from "../../immich/types";
+import { contains, polygons } from "../marketVisits/geometry";
 import { RADIUS_METERS } from "./detect";
+import {
+  entityOf,
+  foldTarget,
+  resolveVenue,
+  venueName,
+  type VenueElement,
+  type VenueEvidence,
+  type VenueState,
+} from "./venueRank";
 
 /**
  * Which place a Dawarich stay probably was (forgejo#305) — the PURE half:
@@ -48,6 +58,11 @@ export interface StayIdentityInput {
   places: { results: PlaceResult[]; degraded: boolean };
   /** Photos already restricted to the stay's time window and photo radius. */
   photos: { state: PhotoState; assets: ImmichAsset[]; truncated: boolean };
+  /**
+   * OSM outlines and tags around the point. Absent or not usable (`state` other
+   * than ok/partial) means the ranking runs as before and says why.
+   */
+  venues?: VenueEvidence;
 }
 
 export interface StayCandidate {
@@ -60,6 +75,12 @@ export interface StayCandidate {
   distanceM: number;
   /** Photos of the stay taken within `PHOTO_SUPPORT_RADIUS_M`; null without photo evidence. */
   photoCount: number | null;
+  /** `node/1`, `way/2`, `relation/3` when the candidate is an OSM feature. */
+  osmRef?: string | null;
+  /** Name of the building/venue this candidate was folded into (an alternative to it). */
+  foldedInto?: string | null;
+  /** True for the building/area outline the stay point lies in or the pick folded into. */
+  isArea?: boolean;
 }
 
 export type ProbableSource = "nearbyPlace" | "address" | "photos";
@@ -75,6 +96,8 @@ export interface StayIdentityView {
   geocoder: GeocoderState;
   candidates: StayCandidate[];
   candidatesState: GeocoderState;
+  /** Whether OSM outlines took part in the ranking, and how the venue was found. */
+  venues: { state: VenueState; resolved: "contains" | "folded" | null };
   photos: {
     state: PhotoState;
     count: number;
@@ -114,6 +137,7 @@ function candidatesOf(input: StayIdentityInput, withPhotos: boolean): StayCandid
     city: place.city ?? null,
     lat: place.lat,
     lon: place.lon,
+    osmRef: place.externalRef?.replace(/^osm:/, "") ?? null,
     distanceM: meters(input.point, place),
     photoCount: withPhotos
       ? positions.filter((photo) => meters(photo, place) <= PHOTO_SUPPORT_RADIUS_M).length
@@ -130,24 +154,115 @@ function candidatesOf(input: StayIdentityInput, withPhotos: boolean): StayCandid
  *  4. the city the photos name — Immich alone, e.g. while both geocoders are
  *     down: a coarse answer, labelled as coming from the photos.
  */
-function probableOf(
-  candidates: StayCandidate[],
-  geocode: GeocodeParts | null,
-  cities: { name: string }[]
-): StayIdentityView["probable"] {
+function pickOf(candidates: StayCandidate[]): { c: StayCandidate; photoSupported: boolean } | null {
   const supported = candidates
     .filter((c) => (c.photoCount ?? 0) > 0)
     .reduce<StayCandidate | null>(
       (best, c) => (best === null || (c.photoCount ?? 0) > (best.photoCount ?? 0) ? c : best),
       null
     );
-  if (supported) return { name: supported.name, source: "nearbyPlace", photoSupported: true };
+  if (supported) return { c: supported, photoSupported: true };
   const near = candidates.find((c) => c.distanceM <= PROBABLE_PLACE_MAX_M);
-  if (near) return { name: near.name, source: "nearbyPlace", photoSupported: false };
+  return near ? { c: near, photoSupported: false } : null;
+}
+
+function probableOf(
+  candidates: StayCandidate[],
+  geocode: GeocodeParts | null,
+  cities: { name: string }[]
+): StayIdentityView["probable"] {
+  const pick = pickOf(candidates);
+  if (pick)
+    return { name: pick.c.name, source: "nearbyPlace", photoSupported: pick.photoSupported };
   const street = geocode?.address ?? geocode?.city;
   if (street) return { name: street, source: "address", photoSupported: false };
   if (cities[0]) return { name: cities[0].name, source: "photos", photoSupported: true };
   return null;
+}
+
+const USABLE_VENUE_STATES: VenueState[] = ["ok", "partial"];
+
+/** The middle of an outline's bounding box: where the building is, for the card. */
+function centreOf(el: VenueElement): { lat: number; lon: number } {
+  const ring = polygons(el.area!).flatMap(([outer]) => outer);
+  const lons = ring.map((p) => p[0]);
+  const lats = ring.map((p) => p[1]);
+  return {
+    lat: (Math.min(...lats) + Math.max(...lats)) / 2,
+    lon: (Math.min(...lons) + Math.max(...lons)) / 2,
+  };
+}
+
+function areaCandidate(
+  el: VenueElement,
+  input: StayIdentityInput,
+  existing: StayCandidate | undefined,
+  withPhotos: boolean
+): StayCandidate {
+  if (existing) return { ...existing, isArea: true };
+  const at = contains(el.area!, input.point.lon, input.point.lat) ? input.point : centreOf(el);
+  const t = el.tags;
+  const photos = withPhotos ? located(input.photos.assets) : [];
+  return {
+    name: venueName(t),
+    type: t.shop ?? t.amenity ?? t.tourism ?? t.leisure ?? t.office ?? t.craft ?? null,
+    address: [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") || null,
+    city: t["addr:city"] ?? null,
+    lat: at.lat,
+    lon: at.lon,
+    distanceM: meters(input.point, at),
+    photoCount: withPhotos ? photos.filter((p) => contains(el.area!, p.lon, p.lat)).length : null,
+    osmRef: el.ref,
+    foldedInto: null,
+    isArea: true,
+  };
+}
+
+/**
+ * Building first (rule 3): containment and evidence-backed folding decide
+ * before photos or distance; without usable outlines the old ranking stands.
+ */
+function rankWithVenues(
+  input: StayIdentityInput,
+  base: StayCandidate[],
+  withPhotos: boolean
+): {
+  candidates: StayCandidate[];
+  probable: StayIdentityView["probable"] | null;
+  resolved: "contains" | "folded" | null;
+} {
+  const elements = input.venues?.elements ?? [];
+  const byRef = new Map(elements.map((el) => [el.ref, el]));
+  const old = pickOf(base);
+  const pickEl = old?.c.osmRef ? byRef.get(old.c.osmRef) : undefined;
+  const resolution = resolveVenue(
+    input.point,
+    elements,
+    old ? { ref: old.c.osmRef ?? null, tags: pickEl?.tags ?? {}, at: old.c } : null
+  );
+  // Every candidate that stands inside a supported building is its alternative.
+  const marked = base.map((c) => {
+    const el = c.osmRef ? byRef.get(c.osmRef) : undefined;
+    const parent = foldTarget(
+      entityOf(el ?? { ref: c.osmRef ?? "", tags: {}, area: null, point: c }, c),
+      elements
+    );
+    return parent && parent.ref !== c.osmRef ? { ...c, foldedInto: venueName(parent.tags) } : c;
+  });
+  if (!resolution.target) return { candidates: marked, probable: null, resolved: null };
+  const target = resolution.target;
+  const existing = marked.find((c) => c.osmRef === target.ref);
+  const area = areaCandidate(target, input, existing, withPhotos);
+  const rest = marked.filter((c) => c.osmRef !== target.ref);
+  return {
+    candidates: [area, ...rest],
+    probable: {
+      name: area.name,
+      source: "nearbyPlace",
+      photoSupported: (area.photoCount ?? 0) > 0,
+    },
+    resolved: resolution.reason,
+  };
 }
 
 const stateOf = (degraded: boolean, empty: boolean): GeocoderState =>
@@ -157,10 +272,15 @@ export function combineStayIdentity(input: StayIdentityInput): StayIdentityView 
   const withPhotos = input.photos.state === "ok";
   const assets = withPhotos ? input.photos.assets : [];
   const cities = cityHints(assets);
-  const candidates = candidatesOf({ ...input, photos: { ...input.photos, assets } }, withPhotos);
+  const found = candidatesOf({ ...input, photos: { ...input.photos, assets } }, withPhotos);
   const parts = input.geocode.parts;
+  const venueState: VenueState = input.venues?.state ?? "off";
+  const ranked = USABLE_VENUE_STATES.includes(venueState)
+    ? rankWithVenues({ ...input, photos: { ...input.photos, assets } }, found, withPhotos)
+    : { candidates: found, probable: null, resolved: null };
+  const candidates = ranked.candidates;
   return {
-    probable: probableOf(candidates, parts, cities),
+    probable: ranked.probable ?? probableOf(candidates, parts, cities),
     address: parts
       ? {
           address: parts.address ?? null,
@@ -171,6 +291,7 @@ export function combineStayIdentity(input: StayIdentityInput): StayIdentityView 
     geocoder: stateOf(input.geocode.degraded, parts === null),
     candidates,
     candidatesState: stateOf(input.places.degraded, input.places.results.length === 0),
+    venues: { state: venueState, resolved: ranked.resolved },
     photos: {
       state: input.photos.state,
       count: assets.length,

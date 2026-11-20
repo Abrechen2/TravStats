@@ -61,7 +61,7 @@ function rings(parts: Position[][]): Ring[] {
   }
   return result;
 }
-function geometry(e: RecordValue): MarketArea["geometry"] {
+export function elementGeometry(e: RecordValue): MarketArea["geometry"] {
   if (e.type === "way") {
     const ring = coordinates(e.geometry);
     if (ring.length < 4 || !same(ring[0], ring[ring.length - 1])) throw new Error("open way");
@@ -137,7 +137,7 @@ export function parseMarketCatalog(raw: unknown, includeVenues = false): MarketC
       continue;
     }
     try {
-      const area = { ...base, geometry: geometry(value) };
+      const area = { ...base, geometry: elementGeometry(value) };
       validateAreas([area]);
       areas.push(area);
     } catch (err) {
