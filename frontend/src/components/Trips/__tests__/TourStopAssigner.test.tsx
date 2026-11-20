@@ -47,4 +47,22 @@ describe("TourStopAssigner", () => {
     fireEvent.click(screen.getByRole("switch", { name: /Restaurant/ }));
     expect(onChange).toHaveBeenCalledWith(["a", "b", "c"]);
   });
+
+  // Owner, 2026-11-20: every stop of the trip was listed as if it belonged to
+  // the tour. The tour's own lead; the rest wait folded underneath.
+  it("lists the tour's stops first and folds the trip's other stops away", () => {
+    const { container } = render(<TourStopAssigner stops={STOPS} onChange={vi.fn()} />);
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toContain("Restaurant");
+    expect(details?.textContent).not.toContain("Bergen");
+    expect(screen.getByText("trips:tours.moreTripStops")).toBeInTheDocument();
+  });
+
+  it("says the tour has no stop yet when only trip stops exist", () => {
+    const stops = STOPS.map((s) => ({ ...s, routeOrderIdx: null }));
+    render(<TourStopAssigner stops={stops} onChange={vi.fn()} />);
+    expect(screen.getByText("trips:tours.noAssignedStops")).toBeInTheDocument();
+  });
 });

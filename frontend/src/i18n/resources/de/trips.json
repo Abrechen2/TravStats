@@ -472,6 +472,8 @@
     "noStops": "Noch kein Stopp in dieser Reise — lege zuerst in der Timeline Stopps an",
     "stopIsRoutePoint": "Streckenpunkt",
     "needsCoordinate": "Ohne Koordinate kein Streckenpunkt",
+    "noAssignedStops": "Diese Tour hat noch keinen Stopp aus der Reise",
+    "moreTripStops": "Weitere Stopps der Reise ({{count}})",
     "notFound": "Diese Tour gibt es nicht",
     "backToTrip": "Zurück zur Reise",
     "assignError": "Die Stopps konnten nicht gespeichert werden",
