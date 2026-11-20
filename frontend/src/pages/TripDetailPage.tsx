@@ -212,7 +212,13 @@ export default function TripDetailPage(): JSX.Element {
             placeVisits={places.placeVisits}
           />
         )}
-        {tab === "map" && <TripMapWithTours trip={shownTrip} placeVisits={places.placeVisits} />}
+        {tab === "map" && (
+          <TripMapWithTours
+            trip={shownTrip}
+            placeVisits={places.placeVisits}
+            placesLoading={places.loading}
+          />
+        )}
         {tab === "gallery" && (
           <TripGallery
             tripId={shownTrip.id}

@@ -36,11 +36,18 @@ const NO_PLACE_VISITS: TripPlaceVisit[] = [];
 export default function TripMapWithTours({
   trip,
   placeVisits = NO_PLACE_VISITS,
+  placesLoading = false,
 }: {
   /** `busJourneys` (forgejo#180): already stripped by the page when bus is hidden. */
   trip: TripMapContent & TripTransportContent & { id: string; busJourneys?: TripBusJourney[] };
   /** The places visited on the trip, loaded once by the page (`useTripPlaceVisits`). */
   placeVisits?: readonly TripPlaceVisit[];
+  /**
+   * The places are still on their way. The map frames the trip once, on its
+   * first points, so it waits for them rather than leaving a place outside
+   * the frame.
+   */
+  placesLoading?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const toursVisible = useToursVisible();
@@ -114,15 +121,17 @@ export default function TripMapWithTours({
         }}
         onDeleted={recording.reload}
       />
-      <WebGLGuard>
-        <TripMap
-          trip={trip}
-          tourGeometries={geometries}
-          extraLayers={extraLayers}
-          extraPoints={extraPoints}
-          onProjectionChange={setProjection}
-        />
-      </WebGLGuard>
+      {!(placesVisible && placesLoading) && (
+        <WebGLGuard>
+          <TripMap
+            trip={trip}
+            tourGeometries={geometries}
+            extraLayers={extraLayers}
+            extraPoints={extraPoints}
+            onProjectionChange={setProjection}
+          />
+        </WebGLGuard>
+      )}
     </>
   );
 }

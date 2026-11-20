@@ -130,6 +130,8 @@ export default function TripsTab({
       addToast("success", t("trips:merge.done"));
       exitMergeMode();
       onTripsChange();
+      // A merge moves the visits to the surviving trip.
+      placeCounts.reload();
     } catch {
       addToast("error", t("trips:merge.error"));
     }

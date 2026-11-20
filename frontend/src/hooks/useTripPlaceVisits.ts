@@ -9,12 +9,22 @@ export interface TripPlaceVisit {
   visit: PlaceVisit;
 }
 
+const NO_VISITS: TripPlaceVisit[] = [];
+
 export interface TripPlaceVisits {
   placeVisits: TripPlaceVisit[];
   /** The load failed — the list is empty because it is UNKNOWN, not because the trip has none. */
   failed: boolean;
+  /** The first answer for this trip is still on its way. */
+  loading: boolean;
   /** Try the load again (the trip's "Erneut versuchen"). */
   reload: () => void;
+}
+
+interface Settled {
+  key: string;
+  placeVisits: TripPlaceVisit[];
+  failed: boolean;
 }
 
 /**
@@ -34,38 +44,44 @@ export interface TripPlaceVisits {
  * line all read the same result instead of each fetching its own.
  */
 export function useTripPlaceVisits(tripId: string, enabled: boolean): TripPlaceVisits {
-  const [placeVisits, setPlaceVisits] = useState<TripPlaceVisit[]>([]);
-  const [failed, setFailed] = useState(false);
+  const [settled, setSettled] = useState<Settled | null>(null);
   const [attempt, setAttempt] = useState(0);
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  const active = Boolean(tripId) && enabled;
+  // An answer belongs to the trip (and attempt) it was asked for: moving to
+  // another trip must not show the previous trip's places while it loads.
+  const key = `${tripId}#${attempt}`;
 
   useEffect(() => {
-    setFailed(false);
-    if (!tripId || !enabled) {
-      setPlaceVisits([]);
-      return;
-    }
+    if (!active) return;
     let cancelled = false;
     void (async () => {
       try {
         const places = await listPlaces({ tripId });
         if (cancelled) return;
-        setPlaceVisits(
-          places.flatMap((place) =>
+        setSettled({
+          key,
+          failed: false,
+          placeVisits: places.flatMap((place) =>
             place.visits.filter((v) => v.tripId === tripId).map((visit) => ({ place, visit }))
-          )
-        );
+          ),
+        });
       } catch (err: unknown) {
         if (cancelled) return;
         logger.warn("Failed to load the places of trip", { tripId, err });
-        setPlaceVisits([]);
-        setFailed(true);
+        setSettled({ key, failed: true, placeVisits: [] });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [tripId, enabled, attempt]);
+  }, [tripId, active, key]);
 
-  return { placeVisits, failed, reload };
+  const current = active && settled?.key === key ? settled : null;
+  return {
+    placeVisits: current?.placeVisits ?? NO_VISITS,
+    failed: current?.failed ?? false,
+    loading: active && current === null,
+    reload,
+  };
 }

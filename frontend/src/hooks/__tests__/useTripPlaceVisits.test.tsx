@@ -52,4 +52,17 @@ describe("useTripPlaceVisits", () => {
     renderHook(() => useTripPlaceVisits("t1", false));
     expect(listPlaces).not.toHaveBeenCalled();
   });
+
+  it("does not show the previous trip's places while the next trip loads", async () => {
+    vi.mocked(listPlaces)
+      .mockResolvedValueOnce([place])
+      .mockReturnValue(new Promise(() => {}));
+    const { result, rerender } = renderHook(({ id }) => useTripPlaceVisits(id, true), {
+      initialProps: { id: "t1" },
+    });
+    await waitFor(() => expect(result.current.placeVisits).toHaveLength(1));
+    rerender({ id: "t2" });
+    expect(result.current.placeVisits).toEqual([]);
+    expect(result.current.loading).toBe(true);
+  });
 });

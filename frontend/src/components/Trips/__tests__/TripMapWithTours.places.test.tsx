@@ -102,6 +102,12 @@ describe("TripMapWithTours — places visited on the trip", () => {
     expect(screen.getByLabelText("trips:tripPlaces.legend")).toBeInTheDocument();
   });
 
+  it("waits for the places before the map frames the trip, which it does only once", async () => {
+    render(<TripMapWithTours trip={trip} placeVisits={[]} placesLoading />);
+    await act(async () => {});
+    expect(screen.queryByTestId("map")).toBeNull();
+  });
+
   it("draws no place and no legend row while the places domain is off", async () => {
     vi.mocked(usePlacesVisible).mockReturnValue(false);
     await mount();
