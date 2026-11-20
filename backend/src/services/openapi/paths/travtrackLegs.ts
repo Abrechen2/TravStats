@@ -84,6 +84,22 @@ export const stopSchema = z.object({
       "Present when the stay goes on past the end shown: past the day (`untilMs` is then the day's " +
         "end) or, on the current day, past the latest fix at a fixed place. Absent otherwise"
     ),
+  coverage: z
+    .object({
+      observedMs: z.number().int().describe("Time covered by fixes"),
+      inferredMs: z
+        .number()
+        .int()
+        .describe("Time the stop covers across a silence of the phone: assumed, never measured"),
+      gaps: z
+        .array(z.object({ fromMs: z.number().int(), untilMs: z.number().int() }))
+        .describe("The silences inside the stop, clipped to it"),
+    })
+    .optional()
+    .describe(
+      "Present only when the stop spans a silence of the phone (a stay joined across a recording " +
+        "gap): `observedMs + inferredMs` is the duration. Absent when every part is measured"
+    ),
   folded: z
     .object({ fixCount: z.number().int() })
     .nullable()

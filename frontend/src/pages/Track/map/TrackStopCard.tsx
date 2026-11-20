@@ -9,6 +9,7 @@ import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 import { travTrackLegsApi, type TravTrackStop } from "../../../lib/api/travtrackLegs";
 import { logger } from "../../../lib/logger";
 import { stayInboxHref, stayStatusColor } from "../TrackStays";
+import TrackStopCoverage from "./TrackStopCoverage";
 import TrackStopPlace from "./TrackStopPlace";
 import { durationText, spanText } from "./trackLegFormat";
 import { pillStyle } from "./trackMapStyle";
@@ -98,6 +99,7 @@ export default function TrackStopCard({
         {" · "}
         {durationText(stop.untilMs - stop.fromMs, t)}
       </p>
+      <TrackStopCoverage stop={stop} zone={zone} />
       <TrackStopPlace stop={stop} zone={zone} onChanged={() => void onChanged()} />
       {stay ? (
         <p

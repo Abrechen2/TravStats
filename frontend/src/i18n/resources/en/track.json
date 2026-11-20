@@ -796,6 +796,29 @@
     },
     "dismiss": "Only a wait",
     "dismissed": "Hidden as a wait",
-    "restore": "Restore"
+    "restore": "Restore",
+    "coverage": {
+      "figures": "measured {{observed}} · assumed {{inferred}}",
+      "barLabel": "Stay with a gap in the recording: {{gaps}}",
+      "note": "Dashed: nothing was recorded. Coming back to the same place does not prove you were there the whole time."
+    }
+  },
+  "empty": {
+    "day": {
+      "noRecording": "Nothing was recorded on this day.",
+      "privacyZone": "{{count}} positions of this day lie in a privacy zone and are not shown.",
+      "implausible": "{{count}} positions of this day were too coarse or implausible and are hidden."
+    },
+    "range": {
+      "noRecording": "Nothing was recorded on these days.",
+      "privacyZone": "{{count}} positions of these days lie in privacy zones and are not shown.",
+      "implausible": "{{count}} positions of these days were too coarse or implausible and are hidden."
+    },
+    "actions": {
+      "companion": "Check the Companion",
+      "import": "View imports",
+      "zones": "View privacy zones",
+      "showFiltered": "Show filtered points"
+    }
   }
 }

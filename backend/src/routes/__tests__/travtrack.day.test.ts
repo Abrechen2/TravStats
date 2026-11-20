@@ -161,6 +161,43 @@ describe("TravTrack — the day view", () => {
     ]);
   });
 
+  describe("why a day draws nothing (omitted)", () => {
+    it("a day with nothing stored says so: no point, nothing omitted (was: no field to tell it from a hidden day)", async () => {
+      const res = await day();
+      expect(res.body.pointCount).toBe(0);
+      expect(res.body.omitted).toEqual({ privacyZone: 0, implausible: 0 });
+    });
+
+    it("a day recorded only inside a privacy zone counts the hidden fixes, never their position", async () => {
+      await prisma.travTrackPrivacyZone.create({
+        data: { userId, name: "Büro", lat: 37.6, lon: 127.1, radiusM: 300 },
+      });
+      for (let i = 0; i < 3; i++) {
+        await storePoint(userId, { t: DAY_START + i * 5 * MIN, lat: 37.6, lon: 127.1 });
+      }
+      const res = await day();
+      expect(res.body.pointCount).toBe(0);
+      expect(res.body.omitted).toEqual({ privacyZone: 3, implausible: 0 });
+      expect(JSON.stringify(res.body)).not.toContain("127.1");
+    });
+
+    it("fixes left out as implausible are counted, and includeImplausible draws them", async () => {
+      // A day of fine fixes with one cell-tower reading 2 km wide in between.
+      await storePoint(userId, { t: DAY_START, lat: 37.5, lon: 127, accuracyM: 5 });
+      await storePoint(userId, { t: DAY_START + 5 * MIN, lat: 37.5, lon: 127, accuracyM: 3000 });
+      await storePoint(userId, { t: DAY_START + 10 * MIN, lat: 37.5001, lon: 127, accuracyM: 5 });
+      const plain = await day();
+      expect(plain.body.pointCount).toBe(2);
+      expect(plain.body.omitted).toEqual({ privacyZone: 0, implausible: 1 });
+      const all = await request(app)
+        .get("/api/v1/travtrack/day")
+        .query({ date: "2026-10-12", includeImplausible: "1" })
+        .set("Cookie", cookie);
+      expect(all.body.pointCount).toBe(3);
+      expect(all.body.omitted.implausible).toBe(0);
+    });
+  });
+
   it("a reported gap is phonePaused, a deleted range is deleted, nothing marks a zone", async () => {
     await prisma.travTrackPrivacyZone.create({
       data: { userId, name: "Büro", lat: 37.6, lon: 127.1, radiusM: 300 },

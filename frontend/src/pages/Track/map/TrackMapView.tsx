@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { collapseFolded, type FoldedSpan } from "./collapseFolded";
 import type { JSX } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -23,7 +23,8 @@ import { useVisitedCountries } from "../countries/useVisitedCountries";
 import type { FogStatus } from "./TrackFogLayer";
 import TrackFloatingCard, { floatingStyle } from "./TrackFloatingCard";
 import TrackLayersPanel from "./TrackLayersPanel";
-import TrackMapAside from "./TrackMapAside";
+import TrackMapAside, { newAsideMemory } from "./TrackMapAside";
+import TrackEmptyReasons from "./TrackEmptyReasons";
 import TrackMapNotices from "./TrackMapNotices";
 import TrackPointInspector from "./TrackPointInspector";
 import TrackRangeBar from "./TrackRangeBar";
@@ -54,7 +55,7 @@ import {
 import { clipSegments, cutToWindow, replayPositions, type ReplaySpan } from "./trackReplay";
 import { filterByAccuracy, speedStopsFor } from "./trackSpeedScale";
 import { useFlightTrack } from "./useFlightTrack";
-import { useNarrowStage } from "./useNarrowStage";
+import { useDockedStage, useNarrowStage } from "./useNarrowStage";
 import { useReplay } from "./useReplay";
 import { useTrackMapData } from "./useTrackMapData";
 import WebGLGuard from "../../../components/map/WebGLGuard";
@@ -96,6 +97,9 @@ const toLines = (segments: readonly TrackPoint[][]) =>
 export default function TrackMapView(): JSX.Element {
   const { t } = useTranslation(["track"]);
   const narrow = useNarrowStage();
+  const docked = useDockedStage();
+  // The day card is re-created when a rotation moves it between the docked column and the sheet.
+  const asideMemory = useRef(newAsideMemory());
   const coarse = useCoarsePointer();
   const navigate = useNavigate();
   const params = useParams<{ date?: string }>();
@@ -105,7 +109,8 @@ export default function TrackMapView(): JSX.Element {
   const today = todayIn(profileZone);
   const span = useMemo(() => parseSpan(params.date, search, today), [params.date, search, today]);
   const [generation, setGeneration] = useState(0);
-  const data = useTrackMapData(span, generation);
+  const [showImplausible, setShowImplausible] = useState(false);
+  const data = useTrackMapData(span, generation, showImplausible);
   const { long, dayResults, source, loading } = data;
   const [prefs, setPrefs, prefsSaveFailed] = useTrackMapPrefs();
   const [notice, setNotice] = useState<string | null>(null);
@@ -153,6 +158,7 @@ export default function TrackMapView(): JSX.Element {
 
   const go = (next: TrackSpan) => {
     setNotice(null);
+    setShowImplausible(false);
     setSelected(null);
     setPick(null);
     setPhoto(null);
@@ -391,7 +397,10 @@ export default function TrackMapView(): JSX.Element {
   // Something new selected opens the day card again, even if the reader folded it.
   const detailKey = `${detail ?? ""}|${selected?.point[0] ?? ""}|${photo?.assetId ?? ""}|${legKey ?? ""}|${resolved?.kind === "stop" ? resolved.stop.fromMs : ""}`;
   useEffect(() => setDayFolded(null), [detailKey]);
-  const fitPadding = useMemo(() => stageFitPadding(narrow, detail !== null), [narrow, detail]);
+  const fitPadding = useMemo(
+    () => stageFitPadding(narrow, detail !== null, docked),
+    [narrow, detail, docked]
+  );
   const refit = legFramed
     ? `leg:${resolved?.kind === "leg" ? resolved.leg.id : ""}`
     : highlight.length > 0
@@ -509,6 +518,8 @@ export default function TrackMapView(): JSX.Element {
       onSelect={choose}
       onStopPlaceChanged={(date) => void data.refresh(date)}
       detail={detailView}
+      docked={docked}
+      memory={asideMemory.current}
       collapsed={dayFolded ?? (narrow && detail === null)}
       onToggle={() => setDayFolded(!(dayFolded ?? (narrow && detail === null)))}
     />
@@ -544,144 +555,173 @@ export default function TrackMapView(): JSX.Element {
         onSpan={go}
       />
 
-      <div
-        className="relative min-h-0 flex-1 overflow-hidden"
-        style={{ background: "var(--ts-surface2)" }}
-        data-testid="track-stage"
-      >
-        {(hasDrawing || highlight.length > 0) && (long || !loading) && (
-          <WebGLGuard>
-            <TrackRangeMap
-              key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
-              refit={refit}
-              fitPadding={fitPadding}
-              layers={prefs.layers}
-              color={prefs.color}
-              opacity={prefs.opacity}
-              frameLines={framed}
-              highlight={highlight}
-              selection={selectedLines}
-              selectionSegments={selectedSegments}
-              legLines={replaying ? NO_LEG_LINES : legLineList}
-              onLeg={onLeg}
-              stops={stopList}
-              onStop={onStop}
-              lines={lines}
-              segments={drawn}
-              points={visiblePoints}
-              speedStops={speedStops}
-              legPoints={legPoints}
-              anchors={anchors}
-              replay={head}
-              onPoint={onPoint}
-              photos={photoList}
-              onPhoto={onPhoto}
-              countries={countryShapes}
-              follow={null}
-              onFogStatus={setFog}
-            />
-          </WebGLGuard>
-        )}
-
-        {/* Notices are compact overlays: the stack disappears when nothing is to say. */}
+      <div className="flex min-h-0 flex-1">
         <div
-          className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 flex-col gap-2 empty:hidden"
-          style={{ width: "min(560px, calc(100% - 24px))" }}
-          data-testid="track-notices"
+          className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+          style={{ background: "var(--ts-surface2)" }}
+          data-testid="track-stage"
         >
+          {(hasDrawing || highlight.length > 0) && (long || !loading) && (
+            <WebGLGuard>
+              <TrackRangeMap
+                key={`${span.fromDay}|${span.toDay}|${loading ? "partial" : "whole"}`}
+                refit={refit}
+                fitPadding={fitPadding}
+                layers={prefs.layers}
+                color={prefs.color}
+                opacity={prefs.opacity}
+                frameLines={framed}
+                highlight={highlight}
+                selection={selectedLines}
+                selectionSegments={selectedSegments}
+                legLines={replaying ? NO_LEG_LINES : legLineList}
+                onLeg={onLeg}
+                stops={stopList}
+                onStop={onStop}
+                lines={lines}
+                segments={drawn}
+                points={visiblePoints}
+                speedStops={speedStops}
+                legPoints={legPoints}
+                anchors={anchors}
+                replay={head}
+                onPoint={onPoint}
+                photos={photoList}
+                onPhoto={onPhoto}
+                countries={countryShapes}
+                follow={null}
+                onFogStatus={setFog}
+              />
+            </WebGLGuard>
+          )}
+
+          {/* Notices are compact overlays: the stack disappears when nothing is to say. */}
           <div
-            className="pointer-events-auto flex flex-col gap-1 empty:hidden"
-            style={{ ...floatingStyle, padding: 10 }}
+            className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 flex-col gap-2 empty:hidden"
+            style={{
+              width: docked ? "min(560px, calc(100% - 360px))" : "min(560px, calc(100% - 24px))",
+              // Docked: centred in the map's free part, right of the layers column.
+              ...(docked ? { left: "calc(50% + 156px)" } : {}),
+            }}
+            data-testid="track-notices"
           >
-            {notice && (
-              <p className="t-body" role="status" style={{ color: token("good") }}>
-                {notice}
-              </p>
-            )}
-            <TrackMapNotices
-              long={long}
-              dayResults={dayResults}
-              range={data.range}
-              onRetry={reload}
-              onResume={data.resume}
-            />
-            {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
-            {empty && (
-              <p className="t-body" data-testid="track-day-empty">
-                {t(span.kind === "day" ? "track:day.empty" : "track:map.rangeEmpty")}
-              </p>
-            )}
-            {!short && totals.points > 0 && (
-              <p className="t-caption" data-testid="track-replay-limit">
-                {t("track:map.replay.limit", { days: REPLAY_MAX_DAYS })}
-              </p>
-            )}
-            {prefs.layers.photos && photoWindow?.kind === "tooLong" && (
-              <p className="t-caption" data-testid="track-photos-too-long">
-                {t("track:photos.needsShorter")}
-              </p>
-            )}
-            {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
-            {prefs.layers.countries && <TrackCountriesNotice state={countries} />}
-            {fog.kind === "failed" && (
-              <p className="t-caption" role="status" style={{ color: token("warn") }}>
-                {t(fog.key)}
-              </p>
-            )}
-            {fog.kind === "loading" && <p className="t-caption">{t("track:map.fogLoading")}</p>}
-          </div>
-        </div>
-
-        {/* Left: layers, then the day in numbers. */}
-        <div
-          className="pointer-events-none absolute left-3 top-3 z-[5] flex flex-col"
-          style={{ width: narrow ? 240 : 300, maxHeight: "calc(100% - 48px)" }}
-        >
-          <div className="pointer-events-auto flex min-h-0 flex-col gap-3">
-            {layersPanel}
-            <TrackTotalsPanel
-              totals={totals}
-              stops={stopCount}
-              multi={span.kind !== "day"}
-              collapsed={totalsFolded ?? narrow}
-              onToggle={() => setTotalsFolded(!(totalsFolded ?? narrow))}
-            />
-            {totals.points > 0 && (
-              <p className="t-caption" data-testid="track-day-count" style={{ paddingLeft: 4 }}>
-                {t("track:day.points", { count: totals.points })}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {narrow ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-8 z-[5] flex flex-col items-center gap-2">
-            <div className="pointer-events-auto flex w-full justify-center">{replayDock}</div>
             <div
-              className="pointer-events-auto flex w-full flex-col"
-              style={{ maxHeight: "min(52dvh, 420px)" }}
-              data-testid="track-sheet"
+              className="pointer-events-auto flex flex-col gap-1 empty:hidden"
+              style={{ ...floatingStyle, padding: 10 }}
             >
-              {dayCard}
+              {notice && (
+                <p className="t-body" role="status" style={{ color: token("good") }}>
+                  {notice}
+                </p>
+              )}
+              <TrackMapNotices
+                long={long}
+                dayResults={dayResults}
+                range={data.range}
+                onRetry={reload}
+                onResume={data.resume}
+              />
+              {loading && !long && <p className="t-caption">{t("track:day.loading")}</p>}
+              {empty && (
+                <TrackEmptyReasons
+                  long={long}
+                  single={span.kind === "day"}
+                  loaded={loaded}
+                  shownImplausible={showImplausible}
+                  onShowImplausible={() => setShowImplausible(true)}
+                />
+              )}
+              {!short && totals.points > 0 && (
+                <p className="t-caption" data-testid="track-replay-limit">
+                  {t("track:map.replay.limit", { days: REPLAY_MAX_DAYS })}
+                </p>
+              )}
+              {prefs.layers.photos && photoWindow?.kind === "tooLong" && (
+                <p className="t-caption" data-testid="track-photos-too-long">
+                  {t("track:photos.needsShorter")}
+                </p>
+              )}
+              {prefs.layers.photos && <TrackPhotoNotice state={photos} />}
+              {prefs.layers.countries && <TrackCountriesNotice state={countries} />}
+              {fog.kind === "failed" && (
+                <p className="t-caption" role="status" style={{ color: token("warn") }}>
+                  {t(fog.key)}
+                </p>
+              )}
+              {fog.kind === "loading" && <p className="t-caption">{t("track:map.fogLoading")}</p>}
             </div>
           </div>
-        ) : (
-          <>
-            <div
-              className="pointer-events-auto absolute right-3 top-3 z-[5] flex flex-col"
-              style={{ width: 380, maxHeight: "calc(100% - 48px)" }}
-            >
-              {dayCard}
+
+          {/* Left: layers, then the day in numbers. */}
+          <div
+            className="pointer-events-none absolute left-3 top-3 z-[5] flex flex-col"
+            style={{ width: narrow ? 240 : 300, maxHeight: "calc(100% - 48px)" }}
+          >
+            <div className="pointer-events-auto flex min-h-0 flex-col gap-3">
+              {layersPanel}
+              <TrackTotalsPanel
+                totals={totals}
+                stops={stopCount}
+                multi={span.kind !== "day"}
+                collapsed={totalsFolded ?? narrow}
+                onToggle={() => setTotalsFolded(!(totalsFolded ?? narrow))}
+              />
+              {totals.points > 0 && (
+                <p className="t-caption" data-testid="track-day-count" style={{ paddingLeft: 4 }}>
+                  {t("track:day.points", { count: totals.points })}
+                </p>
+              )}
             </div>
-            {replayDock && (
+          </div>
+
+          {narrow ? (
+            <div className="pointer-events-none absolute inset-x-3 bottom-8 z-[5] flex flex-col items-center gap-2">
+              <div className="pointer-events-auto flex w-full justify-center">{replayDock}</div>
               <div
-                className="pointer-events-auto absolute bottom-6 left-1/2 z-[5] flex -translate-x-1/2 justify-center"
-                style={{ width: "min(720px, max(480px, calc(100% - 760px)))" }}
+                className="pointer-events-auto flex w-full flex-col"
+                style={{ maxHeight: "min(52dvh, 420px)" }}
+                data-testid="track-sheet"
               >
-                {replayDock}
+                {dayCard}
               </div>
-            )}
-          </>
+            </div>
+          ) : (
+            <>
+              {!docked && (
+                <div
+                  className="pointer-events-auto absolute right-3 top-3 z-[5] flex flex-col"
+                  style={{ width: 380, maxHeight: "calc(100% - 48px)" }}
+                >
+                  {dayCard}
+                </div>
+              )}
+              {replayDock && (
+                <div
+                  className="pointer-events-auto absolute bottom-6 left-1/2 z-[5] flex -translate-x-1/2 justify-center"
+                  style={{
+                    width: docked
+                      ? "min(720px, max(420px, calc(100% - 700px)))"
+                      : "min(720px, max(480px, calc(100% - 760px)))",
+                  }}
+                >
+                  {replayDock}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {docked && (
+          <aside
+            className="flex min-h-0 shrink-0 flex-col"
+            style={{
+              width: 380,
+              background: token("surface"),
+              borderLeft: `1px solid ${token("border")}`,
+            }}
+            data-testid="track-dock"
+          >
+            {dayCard}
+          </aside>
         )}
       </div>
     </div>

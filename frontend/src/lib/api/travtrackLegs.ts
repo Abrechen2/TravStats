@@ -58,6 +58,17 @@ export interface TravTrackStop {
   folded?: { fixCount: number } | null;
   /** Set (`true`) when the owner dismissed the stop as only a wait; absent on an older server. */
   dismissed?: true;
+  /**
+   * Present only when the stop spans a silence of the phone: the measured and the assumed time and
+   * the silences inside it. Absent when every part is measured, and on an older server.
+   */
+  coverage?: TravTrackStopCoverage;
+}
+
+export interface TravTrackStopCoverage {
+  observedMs: number;
+  inferredMs: number;
+  gaps: Array<{ fromMs: number; untilMs: number }>;
 }
 
 export interface TravTrackStopCandidate {

@@ -11,7 +11,9 @@ import { readDays, type DayResult } from "./trackRange";
  */
 export function useRangeDays(
   days: readonly string[],
-  generation: number
+  generation: number,
+  /** Also draw the fixes normally left out as implausible (the privacy cut still holds). */
+  includeImplausible = false
 ): {
   results: DayResult[];
   refresh: (date: string) => Promise<void>;
@@ -32,7 +34,7 @@ export function useRangeDays(
     setResults(list.map((date) => ({ date, kind: "loading" })));
     void readDays(
       list,
-      (date) => travTrackApi.day(date),
+      (date) => (includeImplausible ? travTrackApi.day(date, true) : travTrackApi.day(date)),
       (err) => {
         logger.warn("TravTrack day could not be loaded", err);
         return trackErrorKey(err);
@@ -42,16 +44,21 @@ export function useRangeDays(
         setResults((prev) => prev.map((r) => (r.date === result.date ? result : r)));
       }
     );
-  }, [key, generation]);
+  }, [key, generation, includeImplausible]);
 
-  const refresh = useCallback(async (date: string) => {
-    const id = run.current;
-    const day = await travTrackApi.day(date);
-    if (id !== run.current) return;
-    setResults((prev) =>
-      prev.map((r) => (r.date === date ? { date, kind: "loaded" as const, day } : r))
-    );
-  }, []);
+  const refresh = useCallback(
+    async (date: string) => {
+      const id = run.current;
+      const day = await (includeImplausible
+        ? travTrackApi.day(date, true)
+        : travTrackApi.day(date));
+      if (id !== run.current) return;
+      setResults((prev) =>
+        prev.map((r) => (r.date === date ? { date, kind: "loaded" as const, day } : r))
+      );
+    },
+    [includeImplausible]
+  );
 
   return { results, refresh };
 }

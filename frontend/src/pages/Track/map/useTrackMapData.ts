@@ -72,14 +72,18 @@ export interface TrackMapData {
   resume: () => void;
 }
 
-export function useTrackMapData(span: TrackSpan, generation: number): TrackMapData {
+export function useTrackMapData(
+  span: TrackSpan,
+  generation: number,
+  includeImplausible = false
+): TrackMapData {
   const long = isLongSpan(span);
   const { kind, fromDay, toDay } = span;
   const days = useMemo(
     () => (long ? [] : rangeDays(dayRangeOf({ kind, fromDay, toDay }))),
     [long, kind, fromDay, toDay]
   );
-  const { results, refresh } = useRangeDays(days, generation);
+  const { results, refresh } = useRangeDays(days, generation, includeImplausible);
   const rangeSpan = useMemo(() => (long ? { fromDay, toDay } : null), [long, fromDay, toDay]);
   const { state: range, resume } = useRangeRead(rangeSpan, generation);
   const source = useMemo(() => {

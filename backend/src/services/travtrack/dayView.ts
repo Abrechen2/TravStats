@@ -6,6 +6,7 @@ import { explainingEntries, fillWithEntries, type CoverageEntryRef } from "./day
 import type { Leg, Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import type { SafeSpan, Span } from "./readSafe";
+import { badVertexIn } from "./legs/stops";
 
 /**
  * One day of the account's TravTrack history (TravTrack plan T6), on the
@@ -75,6 +76,12 @@ export type TravTrackDay = {
   pointCount: number;
   /** More points than one day answer carries; the rest is not shown. */
   truncated: boolean;
+  /**
+   * Why a day may show fewer points than the phone stored: fixes the privacy cut hid and fixes
+   * left out as implausible (coarse, null island). Counts only, never a position. Together with
+   * `pointCount` they tell "nothing recorded" from "recorded but not drawn".
+   */
+  omitted: { privacyZone: number; implausible: number };
 };
 
 const RANK: Record<CoverageState, number> = {
@@ -126,13 +133,23 @@ function coverageOf(window: Span, read: SafeSpan, stops: readonly Stop[]): DayCo
   ]);
 }
 
-export async function travTrackDay(userId: string, date: string): Promise<TravTrackDay> {
+const vertices = (r: Pick<SafeSpan, "segments">) => r.segments.reduce((n, s) => n + s.length, 0);
+
+export async function travTrackDay(
+  userId: string,
+  date: string,
+  options: { includeImplausible?: boolean } = {}
+): Promise<TravTrackDay> {
   const { zone } = await profileZoneOf(userId);
   const window = {
     fromMs: midnightOf(date, zone).getTime(),
     untilMs: midnightOf(dayAfter(date), zone).getTime(),
   };
-  const { raw, read, legs, stops } = await deriveDay(userId, window);
+  const { raw, read, legs, stops } = await deriveDay(
+    userId,
+    window,
+    options.includeImplausible === true
+  );
   const dayContextEntries = await dayContext(userId, window, read, stops);
   return {
     date,
@@ -148,7 +165,15 @@ export async function travTrackDay(userId: string, date: string): Promise<TravTr
     context: dayContextEntries,
     legs,
     stops,
-    pointCount: read.segments.reduce((n, s) => n + s.length, 0),
+    pointCount: vertices(read),
     truncated: raw.next !== null,
+    omitted: {
+      privacyZone: Math.max(0, (raw.storedCount ?? vertices(raw)) - vertices(raw)),
+      // The verdict drawn fixes use (`badVertexIn`), not a difference of counts: dropping a fix
+      // may let the privacy cut take a good one with it, and that is no implausible fix.
+      implausible: options.includeImplausible
+        ? 0
+        : raw.segments.reduce((n, s) => n + s.filter(badVertexIn(s)).length, 0),
+    },
   };
 }
