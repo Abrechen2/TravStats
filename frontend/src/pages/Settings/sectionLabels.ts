@@ -23,8 +23,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   countryCounting: "settings:countryCounting.title",
   trips: "settings:trips.title",
   suggestions: "settings:inboxSuggestions.title",
-  sharing: "sharing:settings.title",
-  companions: "companions:manage.title",
+  people: "sharing:friends.title",
   shareLinks: "sharing:links.section.title",
   calendarFeed: "settings:calendarFeed.title",
   dawarich: "trips:tours.dawarichSettings.title",
@@ -47,6 +46,4 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   backup: "settings:backup.title",
   import: "settings:import.title",
   externalServices: "settings:externalServices.title",
-  comparisonConsent: "settings:privacy.comparisonConsent.title",
-  encryptedGrants: "settings:privacy.encryptedGrants.title",
 };

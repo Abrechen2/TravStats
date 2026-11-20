@@ -249,11 +249,21 @@ export const AREA_PAGES: readonly AreaPageDef[] = [
   page("treue", "credit-card", [P("loyalty")]),
   page("erinnerungen", "bell", [P("notifications", { as: "channel", anchors: ["domains"] })]),
   page("freunde", "users", [
-    P("sharing", { as: "accounts", anchors: ["servers"] }),
-    P("companions"),
+    // One list of people (owner, 2026-11-20): the old mounts' ids stay as anchors, so a
+    // bookmark or a search hit on any of them still lands here.
+    P("people", {
+      anchors: [
+        "accounts",
+        "servers",
+        "companions",
+        "compare",
+        "encryptedGrants",
+        "freunde-freunde",
+        "freunde-mitreisende",
+        "freunde-vergleichen-ubergeben",
+      ],
+    }),
     P("shareLinks"),
-    P("comparisonConsent", { as: "compare" }),
-    P("encryptedGrants"),
   ]),
   page("telefone", "smartphone", [P("devices")]),
   page("dienstek", "globe", [

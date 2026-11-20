@@ -739,7 +739,10 @@
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "countries_one": "{{count}} country",
-    "countries_other": "{{count}} countries"
+    "countries_other": "{{count}} countries",
+    "travellers": "Travellers",
+    "travellersMore_other": "Show {{count}} more travellers",
+    "travellersMore_one": "Show {{count}} more travellers"
   },
   "overview": {
     "daysAway": "Days away"
@@ -1066,8 +1069,6 @@
   "menu": {
     "more": "More",
     "label": "More actions for this trip",
-    "remote": "Offer trip to another server / create code",
-    "remoteTitle": "Offer trip to another server",
     "summaryNone": "Create AI summary",
     "summaryAgain": "Create AI summary again",
     "summaryBusy": "Creating AI summary …"

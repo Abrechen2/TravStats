@@ -739,7 +739,10 @@
     "days_one": "{{count}} Tag",
     "days_other": "{{count}} Tage",
     "countries_one": "{{count}} Land",
-    "countries_other": "{{count}} Länder"
+    "countries_other": "{{count}} Länder",
+    "travellers": "Reisende",
+    "travellersMore_other": "{{count}} weitere Reisende anzeigen",
+    "travellersMore_one": "{{count}} weitere Reisende anzeigen"
   },
   "overview": {
     "daysAway": "Tage unterwegs"
@@ -1066,8 +1069,6 @@
   "menu": {
     "more": "Mehr",
     "label": "Weitere Aktionen für diese Reise",
-    "remote": "Reise auf anderem Server anbieten / Code erstellen",
-    "remoteTitle": "Reise auf anderem Server anbieten",
     "summaryNone": "KI-Zusammenfassung erstellen",
     "summaryAgain": "KI-Zusammenfassung neu erstellen",
     "summaryBusy": "KI-Zusammenfassung wird erstellt …"

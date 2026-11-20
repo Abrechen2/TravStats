@@ -9,6 +9,7 @@ import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
 import TripMoreMenu from "./TripMoreMenu";
+import TripTravellers from "./TripTravellers";
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
 const STATUS_TONE: Record<Trip["status"], string> = {
@@ -156,6 +157,7 @@ export default function TripHead({
                 ))}
               </ul>
             )}
+            <TripTravellers tripId={trip.id} companions={trip.companions} />
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>

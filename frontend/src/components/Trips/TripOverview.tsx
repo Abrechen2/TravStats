@@ -15,7 +15,7 @@ import DetailSection from "../ui/DetailSection";
 import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
-import TripPeopleSection from "../sharing/TripPeopleSection";
+import RemoteTripPeople from "../sharing/RemoteTripPeople";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 import TripCo2Line from "./TripCo2Line";
 import type { Co2Stats } from "../../types/co2";
@@ -149,8 +149,8 @@ const railDay = (j: Parameters<typeof railDeparture>[0]): string | null => {
 
 /**
  * The overview tab of a trip, round 4 ("Reise Detail"): three figures, the
- * linked entries per area as rows that open the entry, notes, and beside
- * them the travellers and the summary.
+ * linked entries per area as rows that open the entry, and notes. The
+ * travellers live in the head (owner, 2026-11-20).
  *
  * It replaces seven stat tiles — several of them a bare "0" for an area the
  * trip does not touch ("0 Kreuzfahrten", "0 Tags") — and a notes box that
@@ -161,13 +161,11 @@ export default function TripOverview({
   trip,
   t,
   language,
-  onChanged,
 }: {
   /** `co2` is sent by `GET /trips/:id` only (forgejo#395). */
   trip: Trip & { co2?: Co2Stats };
   t: T;
   language: string;
-  onChanged: () => void;
 }): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
@@ -234,14 +232,6 @@ export default function TripOverview({
       ferryRides.length +
       rentals.length ===
     0;
-  // The side column only when it has something to hold: an empty 1fr beside
-  // the entries pushed them into two thirds of the page for nothing.
-  // The column holds the people, the tags and an existing summary. The ways
-  // to offer the trip, to share it and to create a summary live in the head's
-  // "Mehr" menu (owner, 2026-11-20), so a trip with none of the three gives
-  // its entries the full width.
-  const hasSide = trip.companions.length > 0 || trip.tags.length > 0 || Boolean(trip.summary);
-
   return (
     <div className="flex flex-col gap-6">
       {kpis.length > 0 && (
@@ -254,7 +244,9 @@ export default function TripOverview({
 
       <TripCo2Line co2={trip.co2} />
 
-      <div className={`grid grid-cols-1 gap-6 ${hasSide ? "lg:grid-cols-[1.6fr_1fr]" : ""}`}>
+      <TripSummaryPanel trip={trip} t={t} />
+
+      <div className="grid grid-cols-1 gap-6">
         <div className="flex min-w-0 flex-col gap-6">
           {flights.length > 0 && (
             <EntryList
@@ -457,16 +449,10 @@ export default function TripOverview({
               papers belong with the trip's own summary anyway. */}
           <DocumentsSection entry={{ type: "trip", id: trip.id }} />
 
-          {/* No side column: people on other servers (a roster to answer, a
-              membership to confirm) still need their place, and the section
-              draws nothing when there is nobody. */}
-          {!hasSide && (
-            <TripPeopleSection
-              tripId={trip.id}
-              companionNames={trip.companions}
-              onChanged={onChanged}
-            />
-          )}
+          {/* The travellers live in the trip head; what is left here is what
+              needs an answer: people on other servers (a roster to decide, a
+              membership to confirm). Draws nothing when there is none. */}
+          <RemoteTripPeople tripId={trip.id} standalone offerControls={false} />
 
           {trip.notes && (
             <DetailSection title={t("trips:detail.notes")}>
@@ -476,36 +462,23 @@ export default function TripOverview({
             </DetailSection>
           )}
         </div>
-
-        {hasSide && (
-          <div className="flex min-w-0 flex-col gap-6">
-            {/* "Reisende": the trip's people and its sharing in one place
-                (spec 2026-10-16, D9). It hides itself when there is nobody,
-                and stays a plain name list for the shared demo account. */}
-            <TripPeopleSection
-              tripId={trip.id}
-              companionNames={trip.companions}
-              onChanged={onChanged}
-            />
-            <TripSummaryPanel trip={trip} t={t} />
-            {trip.tags.length > 0 && (
-              <DetailSection title={t("trips:detail.tags")}>
-                <div className="flex flex-wrap gap-1.5">
-                  {trip.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border px-2.5 py-0.5 text-xs"
-                      style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </DetailSection>
-            )}
-          </div>
-        )}
       </div>
+
+      {trip.tags.length > 0 && (
+        <DetailSection title={t("trips:detail.tags")}>
+          <div className="flex flex-wrap gap-1.5">
+            {trip.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border px-2.5 py-0.5 text-xs"
+                style={{ borderColor: "var(--ts-border)", color: "var(--ts-muted)" }}
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </DetailSection>
+      )}
     </div>
   );
 }

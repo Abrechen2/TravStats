@@ -197,14 +197,7 @@ export default function TripDetailPage(): JSX.Element {
             🏨 {t("trips:detail.hiddenLodging", { count: hiddenLodgingCount })}
           </div>
         )}
-        {tab === "overview" && (
-          <TripOverview
-            trip={shownTrip}
-            t={t}
-            language={i18n.language}
-            onChanged={() => void load()}
-          />
-        )}
+        {tab === "overview" && <TripOverview trip={shownTrip} t={t} language={i18n.language} />}
         {tab === "timeline" && (
           <TimelineTab
             trip={shownTrip}

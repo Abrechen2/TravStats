@@ -57,8 +57,8 @@ const PAGES = {
     "deletion"
   ),
   display: personal("display", "units", "domains", "planning", "countryCounting"),
-  trips: personal("trips", "suggestions", "sharing", "calendarFeed"),
-  privacy: personal("shareLinks", "comparisonConsent", "encryptedGrants"),
+  trips: personal("trips", "suggestions", "people", "calendarFeed"),
+  privacy: personal("shareLinks"),
   travtrack: personal(
     "ttRecording",
     "ttPlaces",
@@ -115,8 +115,8 @@ describe("the standard/expert classification", () => {
   it.each([
     ["account", ["profile", "security", "devices", "notifications"]],
     ["display", ["display", "units", "domains", "countryCounting"]],
-    ["trips", ["trips", "suggestions", "sharing"]],
-    ["privacy", ["shareLinks", "comparisonConsent", "encryptedGrants"]],
+    ["trips", ["trips", "suggestions", "people"]],
+    ["privacy", ["shareLinks"]],
     // The stay scan is standard; detecting places as areas just runs, and its
     // two switches are expert rows inside it (forgejo#318).
     ["travtrack", ["ttRecording", "ttDetect"]],

@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from "react";
 
-const initials = (name: string): string =>
+export const initials = (name: string): string =>
   name
     .split(/\s+/)
     .filter(Boolean)
@@ -18,6 +18,8 @@ export interface PersonRow {
   badges?: ReactNode;
   /** At most one action, at the end of the row. */
   action?: ReactNode;
+  /** Controls under the name — the settings list's switches and row actions. */
+  details?: ReactNode;
 }
 
 type PeopleListProps = { names: readonly string[] } | { rows: readonly PersonRow[] };
@@ -36,7 +38,11 @@ export default function PeopleList(props: PeopleListProps): JSX.Element {
   return (
     <ul className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {rows.map((row) => (
-        <li key={row.key} className="flex items-center" style={{ gap: "var(--ts-space-md)" }}>
+        <li
+          key={row.key}
+          className={row.details ? "flex items-start" : "flex items-center"}
+          style={{ gap: "var(--ts-space-md)" }}
+        >
           <span
             aria-hidden="true"
             className="flex shrink-0 items-center justify-center"
@@ -61,6 +67,7 @@ export default function PeopleList(props: PeopleListProps): JSX.Element {
                 {row.badges}
               </span>
             )}
+            {row.details}
           </span>
           {row.action && <span className="shrink-0">{row.action}</span>}
         </li>

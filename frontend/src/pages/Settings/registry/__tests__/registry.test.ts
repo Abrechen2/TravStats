@@ -47,10 +47,10 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 124 groups and cards (46 of them service cards: 19 the account's, 27 the server's) and 272 rows", () => {
+  it("counts 34 pages, 122 groups and cards (46 of them service cards: 19 the account's, 27 the server's) and 272 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    expect(sections).toHaveLength(124);
+    expect(sections).toHaveLength(122);
     expect(sections.filter((s) => s.serviceCategory)).toHaveLength(46);
     expect(registryPage("dienstek")!.sections).toHaveLength(19);
     expect(registryPage("dienste")!.sections).toHaveLength(27);
