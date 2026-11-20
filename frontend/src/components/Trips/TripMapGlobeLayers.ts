@@ -280,7 +280,7 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-cruise-paths",
     data: groupMapData(
       cruisePaths,
-      (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
+      (p) => JSON.stringify([p.color, pathIdentity(p.path), p.dim === true]),
       (p) => p.cruiseId
     ),
     getPath: (d) => d.path,

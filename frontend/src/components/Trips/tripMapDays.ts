@@ -44,6 +44,12 @@ export function spanOf(a: string | null | undefined, b?: string | null): DaySpan
   return end < start ? { start: end, end: start } : { start, end };
 }
 
+/** The span covering both, for an entity visited more than once. */
+export function widenSpan(a: DaySpan | null, b: DaySpan | null): DaySpan | null {
+  if (!a || !b) return a ?? b;
+  return { start: a.start < b.start ? a.start : b.start, end: a.end > b.end ? a.end : b.end };
+}
+
 export function spanHasDay(span: DaySpan | null, day: string | null): boolean {
   if (day === null) return true;
   return span !== null && span.start <= day && day <= span.end;

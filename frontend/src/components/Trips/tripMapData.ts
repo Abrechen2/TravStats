@@ -35,7 +35,10 @@ export interface TripMapPlace {
   visitId: string;
   name: string;
   position: [number, number];
+  /** The visits' days taken together, for the card and the numbering. */
   span: DaySpan | null;
+  /** Each visit's own days: a place visited on the 1st and the 3rd is not on the 2nd. */
+  visitSpans?: readonly (DaySpan | null)[];
   subtitle: string | null;
   /** Declaration order, for the tie-break inside one day. */
   order: number;
@@ -60,6 +63,9 @@ export interface TripMapData {
 
 const isOff = (span: DaySpan | null, day: string | null): boolean =>
   day !== null && !spanHasDay(span, day);
+
+const placeOff = (p: TripMapPlace, day: string | null): boolean =>
+  day !== null && !(p.visitSpans ?? [p.span]).some((s) => spanHasDay(s, day));
 
 const unionSpan = (spans: readonly (DaySpan | null)[]): DaySpan | null => {
   const dated = spans.filter((s): s is DaySpan => s !== null);
@@ -213,7 +219,7 @@ export function buildTripMapData(
       text: p.name,
       kind: "place" as const,
       seq: seq.get(`place:${p.id}`),
-      dim: isOff(p.span, day),
+      dim: placeOff(p, day),
     })),
   ];
 
@@ -304,15 +310,17 @@ export function withoutHiddenGroups(
 export function dayFocusPoints(
   data: TripMapData,
   places: readonly TripMapPlace[],
-  day: string | null
+  day: string | null,
+  /** Rail, ferry, bus and rental points the caller already narrowed to the day. */
+  callerPoints: readonly [number, number][] = []
 ): [number, number][] {
   if (day === null) return [];
-  const pts: [number, number][] = [];
+  const pts: [number, number][] = [...callerPoints];
   for (const a of data.flightArcs) if (!a.dim) pts.push(a.source, a.target);
   for (const p of data.cruisePaths) if (!p.dim) pts.push(...p.path);
   for (const p of data.airportPoints) if (!p.dim) pts.push(p.position);
   for (const p of data.stopPoints) if (!p.dim) pts.push(p.position);
   for (const p of data.lodgingPoints) if (!p.dim) pts.push(p.position);
-  for (const p of places) if (spanHasDay(p.span, day)) pts.push(p.position);
+  for (const p of places) if (!placeOff(p, day)) pts.push(p.position);
   return pts;
 }

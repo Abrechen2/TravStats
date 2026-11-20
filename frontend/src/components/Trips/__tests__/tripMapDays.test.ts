@@ -167,3 +167,42 @@ describe("tripMapArrows", () => {
     ).toBeNull();
   });
 });
+
+describe("review findings (Codex)", () => {
+  it("puts an arrow over the dateline on the dateline, not near Greenwich", async () => {
+    const { arrowFor } = await import("../tripMapArrows");
+    const a = arrowFor({
+      id: "x",
+      group: "flights",
+      path: [
+        [179, 10],
+        [-179, 10],
+      ],
+      color: [0, 0, 0],
+    })!;
+    expect(Math.abs(a.position[0])).toBeGreaterThan(178);
+  });
+
+  it("a place visited on the 1st and the 3rd is live on both days and faint on the 2nd", async () => {
+    const { dayFocusPoints, emptyTripMapData } = await import("../tripMapData");
+    const day = (d: string) => ({ start: d, end: d });
+    const place = {
+      id: "p",
+      visitId: "v",
+      name: "P",
+      position: [1, 2] as [number, number],
+      span: { start: "2026-05-01", end: "2026-05-03" },
+      visitSpans: [day("2026-05-01"), day("2026-05-03")],
+      subtitle: null,
+      order: 0,
+    };
+    const data = emptyTripMapData();
+    expect(dayFocusPoints(data, [place], "2026-05-03")).toEqual([[1, 2]]);
+    expect(dayFocusPoints(data, [place], "2026-05-02")).toEqual([]);
+  });
+
+  it("frames a rail or bus day by the caller's own points", async () => {
+    const { dayFocusPoints, emptyTripMapData } = await import("../tripMapData");
+    expect(dayFocusPoints(emptyTripMapData(), [], "2026-05-02", [[9, 9]])).toEqual([[9, 9]]);
+  });
+});

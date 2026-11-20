@@ -65,8 +65,13 @@ export function arrowFor(line: DirectionLine, fraction = 0.5): ArrowDatum | null
       const t = lengths[i] === 0 ? 0 : Math.min(1, rest / lengths[i]);
       const a = pts[i];
       const b = pts[i + 1];
+      // The short way round: a leg over the dateline runs 179 -> -179, not back across the map.
+      let dLon = b[0] - a[0];
+      if (dLon > 180) dLon -= 360;
+      else if (dLon < -180) dLon += 360;
+      const lon = ((((a[0] + dLon * t + 180) % 360) + 360) % 360) - 180;
       return {
-        position: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
+        position: [lon, a[1] + (b[1] - a[1]) * t],
         bearing: bearingBetween(a, b),
         color: line.color,
         dim: line.dim === true,

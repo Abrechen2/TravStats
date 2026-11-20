@@ -106,6 +106,8 @@ interface TripMapProps {
   places?: readonly TripMapPlace[];
   /** Lines of the caller's layers (rail, ferry, bus) that should carry a direction arrow. */
   extraDirectionLines?: readonly DirectionLine[];
+  /** The caller's own entries on the chosen day (rail, ferry, bus, rental), so framing the day includes them. */
+  dayPoints?: readonly LngLat[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -132,6 +134,7 @@ export default function TripMap({
   day = null,
   places = NO_PLACES,
   extraDirectionLines = NO_LINES,
+  dayPoints = NO_EXTRA_POINTS,
 }: TripMapProps): JSX.Element {
   const mapStyle = useBasemapStyle();
   const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
@@ -373,26 +376,29 @@ export default function TripMap({
     ]
   );
 
-  const mercatorLayers = useMemo<Layer[]>(() => {
+  const mercator = useMemo<{ layers: Layer[]; failed: boolean }>(() => {
     try {
-      return buildMercatorTripLayers({
-        flightArcs,
-        cruisePaths,
-        tourPathData,
-        airportPoints,
-        stopPoints,
-        lodgings,
-        dimLodgingIds,
-        lodgingColors: colorConfig.lodging,
-        labelItems: data.labelItems,
-        directionLines,
-        zoom,
-      });
+      return {
+        failed: false,
+        layers: buildMercatorTripLayers({
+          flightArcs,
+          cruisePaths,
+          tourPathData,
+          airportPoints,
+          stopPoints,
+          lodgings,
+          dimLodgingIds,
+          lodgingColors: colorConfig.lodging,
+          labelItems: data.labelItems,
+          directionLines,
+          zoom,
+        }),
+      };
     } catch (err) {
       // The map keeps its basemap and the caller's layers; the notice says
       // what is missing instead of an empty map passing for an empty trip.
       logger.warn("TripMap: building the flat map layers failed", err);
-      return [];
+      return { layers: [], failed: true };
     }
   }, [
     flightArcs,
@@ -407,6 +413,8 @@ export default function TripMap({
     directionLines,
     zoom,
   ]);
+
+  const mercatorLayers = mercator.layers;
 
   // Flights as journeys, so an arc and an airport open the shared card (forgejo#323).
   const flightJourneys = useMemo(
@@ -534,7 +542,7 @@ export default function TripMap({
     if (lastDay.current === day) return;
     lastDay.current = day;
     if (!mapLoaded) return;
-    const focus = dayFocusPoints(built.data, places, day);
+    const focus = dayFocusPoints(built.data, places, day, dayPoints);
     if (focus.length === 0) fitTrip(projection, 800);
     else flyToBbox(focus);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on a day change only; the data it reads is the day's own
@@ -666,7 +674,7 @@ export default function TripMap({
         colors={legendColors}
       />
       <TripMapInfoCard seqOf={seqOf} />
-      {built.failed && (
+      {(built.failed || mercator.failed) && (
         <p
           role="alert"
           data-testid="trip-map-build-error"

@@ -23,7 +23,15 @@ import { usePlaceColorStore } from "../../store/placeColorStore";
 import type { TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
 import { buildTripPlaceLayers, tripPlacePoints } from "./tripPlaceLayer";
 import { TripMapDayStrip } from "./TripMapDayStrip";
-import { rentalSpan, railSpan, rideSpan, splitByDay, tripDays, visitSpan } from "./tripMapDays";
+import {
+  rentalSpan,
+  railSpan,
+  rideSpan,
+  splitByDay,
+  tripDays,
+  visitSpan,
+  widenSpan,
+} from "./tripMapDays";
 import type { TripMapPlace } from "./tripMapData";
 import { placeInfo } from "./tripMapInfo";
 import { useTripMapInfoStore } from "../../store/tripMapInfoStore";
@@ -140,16 +148,24 @@ export default function TripMapWithTours({
   const placeColors = usePlaceColorStore((s) => s.config);
   const places = useMemo<TripMapPlace[]>(() => {
     if (!placesVisible) return [];
+    // One entry per place; a place visited on two days is on both of them.
     const seen = new Map<string, TripMapPlace>();
     for (const { place, visit } of placeVisits) {
-      if (seen.has(place.id) || !Number.isFinite(place.lat) || !Number.isFinite(place.lon))
+      if (!Number.isFinite(place.lat) || !Number.isFinite(place.lon)) continue;
+      const span = visitSpan(visit);
+      const earlier = seen.get(place.id);
+      if (earlier) {
+        earlier.span = widenSpan(earlier.span, span);
+        earlier.visitSpans = [...(earlier.visitSpans ?? []), span];
         continue;
+      }
       seen.set(place.id, {
         id: place.id,
         visitId: visit.id,
         name: place.name,
         position: [place.lon, place.lat],
-        span: visitSpan(visit),
+        span,
+        visitSpans: [span],
         subtitle: place.city ?? place.category ?? null,
         order: seen.size,
       });
@@ -170,10 +186,14 @@ export default function TripMapWithTours({
       placesVisible ? buildTripPlaceLayers(split.visits.active, placeColors, openPlace) : NO_LAYERS,
     [placesVisible, split.visits.active, placeColors, openPlace]
   );
+  // A place with a visit on the day is live; it is not also drawn faint beneath itself.
+  const restOnly = useMemo(() => {
+    const live = new Set(split.visits.active.map((v) => v.place.id));
+    return split.visits.rest.filter((v) => !live.has(v.place.id));
+  }, [split.visits]);
   const placeLayersDim = useMemo(
-    () =>
-      placesVisible ? dimmed(buildTripPlaceLayers(split.visits.rest, placeColors)) : NO_LAYERS,
-    [placesVisible, split.visits.rest, placeColors]
+    () => (placesVisible ? dimmed(buildTripPlaceLayers(restOnly, placeColors)) : NO_LAYERS),
+    [placesVisible, restOnly, placeColors]
   );
   const placePoints = useMemo(
     () => (placesVisible ? tripPlacePoints(placeVisits) : []),
@@ -221,6 +241,10 @@ export default function TripMapWithTours({
     ],
     [transport.lines, transportRest.lines, split.bus, busColor]
   );
+  const dayPoints = useMemo(
+    () => [...transport.points, ...busPaths(split.bus.active).flatMap((p) => p.path)],
+    [transport.points, split.bus.active]
+  );
   const extraPoints = useMemo(
     () => [
       ...transport.points,
@@ -267,6 +291,7 @@ export default function TripMapWithTours({
             day={day}
             places={places}
             extraDirectionLines={extraDirectionLines}
+            dayPoints={dayPoints}
           />
         </WebGLGuard>
       )}
