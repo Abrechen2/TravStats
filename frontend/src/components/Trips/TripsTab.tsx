@@ -11,6 +11,12 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_GRID_CLASS } from "./tripGrid";
+import TripsTable from "./TripsTable";
+import { TripsViewToggle } from "./TripsViewToggle";
+import { useTripsView } from "./useTripsView";
+import { useTripPlaceCounts } from "../../hooks/useTripPlaceCounts";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { TripPlacesError } from "./TripPlacesStatus";
 import Button from "../ui/Button";
 import PageHeader from "../ui/PageHeader";
 
@@ -77,7 +83,9 @@ export default function TripsTab({
 }: TripsTabProps): JSX.Element {
   const { t } = useTranslation(["trips", "import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const placeCounts = useTripPlaceCounts(usePlacesVisible());
   const navigate = useNavigate();
+  const [view, setView] = useTripsView();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const tripAdapter = useTripImportAdapter(onTripsChange);
   const [showCleanup, setShowCleanup] = useState(false);
@@ -126,6 +134,8 @@ export default function TripsTab({
       addToast("success", t("trips:merge.done"));
       exitMergeMode();
       onTripsChange();
+      // A merge moves the visits to the surviving trip.
+      placeCounts.reload();
     } catch {
       addToast("error", t("trips:merge.error"));
     }
@@ -188,6 +198,7 @@ export default function TripsTab({
           moreLabel={t("common:buttons.moreActions")}
         />
       )}
+      <TripsViewToggle value={view} onChange={setView} />
       <Button variant="primary" onClick={() => setShowAddPanel(true)}>
         + {t("import:trip.triggerLabel")}
       </Button>
@@ -280,6 +291,8 @@ export default function TripsTab({
           </div>
         )}
 
+        {placeCounts.failed && <TripPlacesError onRetry={placeCounts.reload} />}
+
         {listError ? (
           <p
             role="alert"
@@ -310,6 +323,13 @@ export default function TripsTab({
           >
             {t("trips:filterBar.noResults")}
           </div>
+        ) : view === "list" ? (
+          <TripsTable
+            trips={filtered}
+            onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+            placeCounts={placeCounts.counts}
+            selection={mergeMode ? mergeSelection : undefined}
+          />
         ) : (
           <div className="flex flex-col gap-6">
             {groups.map(([year, list]) => {
@@ -347,6 +367,7 @@ export default function TripsTab({
                         <TripCard
                           trip={trip}
                           onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+                          placeCount={placeCounts.counts.get(trip.id)}
                         />
                       </div>
                     ))}

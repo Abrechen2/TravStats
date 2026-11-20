@@ -106,6 +106,9 @@ export function layerCardAllowed(
       return pinned.data.kind === "roadtrip" ? isEnabled("roadtrip") : toursVisible;
     case "port":
       return isEnabled("cruise");
+    // The trip map's place pins: a switched-off places domain shows no card.
+    case "place":
+      return isEnabled("poi");
     default:
       return true;
   }

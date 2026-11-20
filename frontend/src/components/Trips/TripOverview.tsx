@@ -2,7 +2,6 @@ import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
-import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
@@ -237,13 +236,11 @@ export default function TripOverview({
     0;
   // The side column only when it has something to hold: an empty 1fr beside
   // the entries pushed them into two thirds of the page for nothing.
-  // Mirrors TripSummaryPanel's own condition: the beta gate went with the
-  // key (main, 2026-09-18), and what decides whether that card appears is
-  // now the demo refusal alone. Asking the same question here keeps the
-  // column from reserving space for a card that will not render.
-  const isSharedDemo = useIsDemoAccount();
-  const hasSide =
-    trip.companions.length > 0 || trip.tags.length > 0 || Boolean(trip.summary) || !isSharedDemo;
+  // The column holds the people, the tags and an existing summary. The ways
+  // to offer the trip, to share it and to create a summary live in the head's
+  // "Mehr" menu (owner, 2026-11-20), so a trip with none of the three gives
+  // its entries the full width.
+  const hasSide = trip.companions.length > 0 || trip.tags.length > 0 || Boolean(trip.summary);
 
   return (
     <div className="flex flex-col gap-6">
@@ -460,6 +457,17 @@ export default function TripOverview({
               papers belong with the trip's own summary anyway. */}
           <DocumentsSection entry={{ type: "trip", id: trip.id }} />
 
+          {/* No side column: people on other servers (a roster to answer, a
+              membership to confirm) still need their place, and the section
+              draws nothing when there is nobody. */}
+          {!hasSide && (
+            <TripPeopleSection
+              tripId={trip.id}
+              companionNames={trip.companions}
+              onChanged={onChanged}
+            />
+          )}
+
           {trip.notes && (
             <DetailSection title={t("trips:detail.notes")}>
               <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--ts-text)" }}>
@@ -479,7 +487,7 @@ export default function TripOverview({
               companionNames={trip.companions}
               onChanged={onChanged}
             />
-            <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
+            <TripSummaryPanel trip={trip} t={t} />
             {trip.tags.length > 0 && (
               <DetailSection title={t("trips:detail.tags")}>
                 <div className="flex flex-wrap gap-1.5">

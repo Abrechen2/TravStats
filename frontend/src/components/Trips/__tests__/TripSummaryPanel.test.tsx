@@ -1,217 +1,34 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-
-const summarize = vi.fn();
-vi.mock("../../../lib/api", () => ({
-  tripsApi: { summarize: (...args: unknown[]) => summarize(...args) },
-}));
-
-vi.mock("../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({ betaFeaturesEnabled: true, isFeatureVisible: () => true }),
-}));
-
-// Whether the instance has a text model. A box rather than a boolean: the
-// factory closes over it once, and these cases need to flip it.
-const llmState = vi.hoisted(() => ({ current: true as boolean | "disabled" | null }));
-vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llmState.current }));
-
-const demoState = vi.hoisted(() => ({ shared: false }));
-vi.mock("../../../hooks/useIsDemoAccount", () => ({
-  useIsDemoAccount: () => demoState.shared,
-}));
-
-const addToast = vi.fn();
-vi.mock("../../../store/toastStore", () => ({
-  useToastStore: (sel: (s: { addToast: typeof addToast }) => unknown) => sel({ addToast }),
-}));
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
 
 import { TripSummaryPanel, summaryLanguageOf } from "../TripSummaryPanel";
 import type { Trip } from "../../../types";
 
-const trip = { id: "t1", name: "Köln", summary: null } as unknown as Trip;
 const t = (k: string) => k;
+const trip = (summary: string | null) => ({ id: "t1", name: "Köln", summary }) as unknown as Trip;
 
 /**
- * Until 2026-09-05 the server wrote German for everyone. The reader's UI
- * language now travels with the request, so an English reader of a German
- * instance gets an English summary — the panel is where that decision is
- * made, and it is pinned here.
+ * Owner, 2026-11-20: creating a summary is used once per trip and moved into
+ * the head's "Mehr" menu (`TripMoreMenu.test.tsx`). The overview card only
+ * shows a summary that exists — no call to action, no "no model" notice.
  */
-describe("TripSummaryPanel — the summary is written in the reader's language", () => {
-  beforeEach(() => {
-    summarize.mockReset();
-    summarize.mockResolvedValue({ summary: "…", model: "m", language: "en", durationMs: 1 });
+describe("TripSummaryPanel — shows a summary, offers nothing", () => {
+  it("shows an existing summary without a create or regenerate control", () => {
+    render(<TripSummaryPanel trip={trip("Elf Tage um die Insel.")} t={t} />);
+    expect(screen.getByText("Elf Tage um die Insel.")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("asks for an English summary when the UI is English", async () => {
-    render(<TripSummaryPanel trip={trip} t={t} language="en-GB" onChanged={vi.fn()} />);
-    fireEvent.click(screen.getByText("trips:summary.generateButton"));
-    await waitFor(() => expect(summarize).toHaveBeenCalledWith("t1", "en"));
+  it("draws no card for a trip without a summary (the create call to action moved to the menu)", () => {
+    const { container } = render(<TripSummaryPanel trip={trip(null)} t={t} />);
+    expect(container).toBeEmptyDOMElement();
   });
+});
 
-  it("asks for German when the UI is German", async () => {
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-    fireEvent.click(screen.getByText("trips:summary.generateButton"));
-    await waitFor(() => expect(summarize).toHaveBeenCalledWith("t1", "de"));
-  });
-
+describe("summaryLanguageOf", () => {
   it("maps any other UI language to German, the app's primary language", () => {
     expect(summaryLanguageOf("fr")).toBe("de");
     expect(summaryLanguageOf("EN")).toBe("en");
     expect(summaryLanguageOf("en-US")).toBe("en");
-  });
-});
-
-/**
- * Generating spends the OPERATOR's Ollama, which on a public instance is lent
- * to whoever knows the demo password — the same trade the Immich and Dawarich
- * resolvers already refuse that account. The server refuses the route; these
- * cases pin that the button goes with it, so nothing on screen offers what the
- * next click cannot do.
- */
-describe("TripSummaryPanel — the shared demo account is offered no generation", () => {
-  beforeEach(() => {
-    summarize.mockReset();
-    demoState.shared = true;
-  });
-
-  afterEach(() => {
-    demoState.shared = false;
-  });
-
-  it("renders no card at all when there is nothing to show", () => {
-    const { container } = render(
-      <TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />
-    );
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByText("trips:summary.generateButton")).toBeNull();
-  });
-
-  it("still shows a summary that already exists, without the regenerate control", () => {
-    const withSummary = { ...trip, summary: "Elf Tage um die Insel." } as unknown as Trip;
-    render(<TripSummaryPanel trip={withSummary} t={t} language="de" onChanged={vi.fn()} />);
-    expect(screen.getByText("Elf Tage um die Insel.")).toBeInTheDocument();
-    expect(screen.queryByText("trips:summary.regenerate")).toBeNull();
-  });
-
-  it("offers generation to an ordinary account", () => {
-    demoState.shared = false;
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-    expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
-  });
-});
-
-/**
- * Auditor 3, 2026-09-19: the card offered "Zusammenfassung erstellen" on an
- * instance with no model configured. The honest sentence existed already --
- * as the 503 branch of `generate` -- and arrived as a toast AFTER the click
- * instead of instead of the button.
- */
-describe("TripSummaryPanel — an instance with no model", () => {
-  beforeEach(() => {
-    summarize.mockReset();
-    demoState.shared = false;
-  });
-
-  afterEach(() => {
-    llmState.current = true;
-  });
-
-  it("says what is missing and who fixes it, instead of offering the button", () => {
-    llmState.current = false;
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-
-    expect(screen.getByTestId("trip-summary-unavailable").textContent).toContain(
-      "trips:summary.unavailable"
-    );
-    expect(screen.queryByText("trips:summary.generateButton")).not.toBeInTheDocument();
-  });
-
-  it("offers the button where a model IS configured — the case above is not vacuous", () => {
-    llmState.current = true;
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-
-    expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
-    expect(screen.queryByTestId("trip-summary-unavailable")).not.toBeInTheDocument();
-  });
-
-  /**
-   * A cold load spends one request not knowing. Drawing "no AI service" for
-   * that moment on an instance that has one would tell the reader the
-   * opposite of the truth, so the unknown state keeps the button.
-   */
-  it("keeps the button while the answer is still outstanding", () => {
-    llmState.current = null;
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-
-    expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
-    expect(screen.queryByTestId("trip-summary-unavailable")).not.toBeInTheDocument();
-  });
-
-  it("still says nothing at all to the shared demo, which is refused for another reason", () => {
-    llmState.current = false;
-    demoState.shared = true;
-    const { container } = render(
-      <TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />
-    );
-
-    expect(container).toBeEmptyDOMElement();
-  });
-});
-
-/**
- * The admin switch (2026-09-25). A model that is switched off is not a model
- * that is missing: "the admin sets up Ollama" would send the reader to ask for
- * something that was deliberately turned off.
- */
-describe("TripSummaryPanel — the model is switched off by the admin", () => {
-  beforeEach(() => {
-    summarize.mockReset();
-    addToast.mockReset();
-    demoState.shared = false;
-  });
-
-  afterEach(() => {
-    llmState.current = true;
-  });
-
-  it("says it is switched off, not unreachable, and offers no button", () => {
-    llmState.current = "disabled";
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-
-    expect(screen.getByTestId("trip-summary-unavailable").textContent).toBe(
-      "✨trips:summary.titletrips:summary.disabled"
-    );
-    expect(screen.queryByText("trips:summary.generateButton")).not.toBeInTheDocument();
-  });
-
-  it("names the switch when the server refuses with LLM_DISABLED after the page loaded", async () => {
-    llmState.current = true;
-    summarize.mockRejectedValue({ response: { status: 503, data: { code: "LLM_DISABLED" } } });
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-    fireEvent.click(screen.getByText("trips:summary.generateButton"));
-
-    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:summary.disabled"));
-  });
-});
-
-/**
- * beta.23 UAT before 2.7.0-rc.20: on an iPad the card sits in the overview's
- * narrow side column, and with icon, text and button held in one row the text
- * was squeezed to a word per line ("KI-" / "Zusammenfassung"). The button
- * wraps under the text instead of taking its width.
- */
-describe("TripSummaryPanel — the offer in a narrow column", () => {
-  beforeEach(() => {
-    demoState.shared = false;
-    llmState.current = true;
-  });
-
-  it("lets the button wrap below the text instead of squeezing it", () => {
-    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
-    const text = screen.getByText("trips:summary.cta").parentElement as HTMLElement;
-    const row = text.parentElement as HTMLElement;
-    expect(row.className).toContain("flex-wrap");
-    expect(text.className).toMatch(/\bmin-w-(48|\[12rem\])\b/);
   });
 });

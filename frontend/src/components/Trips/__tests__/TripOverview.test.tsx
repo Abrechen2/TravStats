@@ -10,7 +10,9 @@ import type { Trip } from "../../../types";
 // "Reisende" (spec 2026-10-16, D9): the section loads its sharing state on its
 // own and has its own suite (components/sharing/__tests__); here it would only
 // race the assertions.
-vi.mock("../../sharing/TripPeopleSection", () => ({ default: () => null }));
+vi.mock("../../sharing/TripPeopleSection", () => ({
+  default: () => <div data-testid="people-section" />,
+}));
 
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 
@@ -303,5 +305,35 @@ describe("TripOverview", () => {
       } as Partial<Trip>)
     );
     expect(screen.getByText(/Augsburg Hbf/)).toHaveTextContent("rail:bareTrain:57031");
+  });
+
+  // Owner, 2026-11-20: offering the trip and the AI summary's create action
+  // left the right column for the head's "Mehr" menu. A trip with no people,
+  // tags or summary has no column, and its lists take the full width.
+  it("gives the entry lists the full width when there is nothing for a side column", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <TripOverview trip={trip({})} t={t} language="de" onChanged={() => undefined} />
+      </MemoryRouter>
+    );
+    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).toBeNull();
+    // People on other servers still have their section, in the main column.
+    expect(screen.getByTestId("people-section")).toBeInTheDocument();
+  });
+
+  it("keeps the side column for a trip with an AI summary, which only shows it", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <TripOverview
+          trip={trip({ summary: "Elf Tage." })}
+          t={t}
+          language="de"
+          onChanged={() => undefined}
+        />
+      </MemoryRouter>
+    );
+    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).not.toBeNull();
+    expect(screen.getByText("Elf Tage.")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

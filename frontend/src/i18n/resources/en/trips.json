@@ -195,6 +195,8 @@
       "deleteJournalConfirm": "Delete journal entry?",
       "deleteStopConfirm": "Delete stop \"{{title}}\"?",
       "lodgingFarFromTrip": "Far from the trip's stops — check the address",
+      "placeVisited": "Place visited",
+      "placePlanned": "Place planned",
       "showDetails": "Show details",
       "expandedHint": "Details open",
       "openCruise": "Open cruise",
@@ -680,6 +682,8 @@
     "countries_other": "countries",
     "entries_one": "entry",
     "entries_other": "entries",
+    "places_one": "place",
+    "places_other": "places",
     "countriesIncomplete": "Countries may be incomplete – this trip has more flights than are evaluated here. Open the trip for the full list."
   },
   "list": {
@@ -929,6 +933,11 @@
     "downloadError": "The GPX file could not be downloaded.",
     "deleteError": "The recording could not be deleted."
   },
+  "tripPlaces": {
+    "legend": "Places",
+    "loadError": "Places could not be loaded",
+    "retry": "Try again"
+  },
   "sharedRoute": {
     "title": "Shared routes",
     "legend": "Route by {{name}} – shared with you, view only",
@@ -962,5 +971,28 @@
       "personal": "Personal",
       "shared": "Shared"
     }
+  },
+  "view": {
+    "label": "View",
+    "tiles": "Tiles",
+    "list": "List"
+  },
+  "table": {
+    "name": "Trip",
+    "dates": "Dates",
+    "days": "Days",
+    "countries": "Countries",
+    "status": "Status",
+    "places": "Places",
+    "label": "Trips"
+  },
+  "menu": {
+    "more": "More",
+    "label": "More actions for this trip",
+    "remote": "Offer trip to another server / create code",
+    "remoteTitle": "Offer trip to another server",
+    "summaryNone": "Create AI summary",
+    "summaryAgain": "Create AI summary again",
+    "summaryBusy": "Creating AI summary …"
   }
 }

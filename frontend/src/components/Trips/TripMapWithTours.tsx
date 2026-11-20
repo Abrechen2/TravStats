@@ -18,6 +18,13 @@ import { buildSharedRouteLayers, sharedRoutePoints } from "./recording/sharedRou
 import { useTripTransportLayers, type TripTransportContent } from "./tripTransportLayers";
 import type { TripProjection } from "./TripMapGlobeLayers";
 import WebGLGuard from "../map/WebGLGuard";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { usePlaceColorStore } from "../../store/placeColorStore";
+import type { TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
+import { buildTripPlaceLayers, tripPlacePoints } from "./tripPlaceLayer";
+import { TripPlacesLegend } from "./TripPlacesStatus";
+
+const NO_PLACE_VISITS: TripPlaceVisit[] = [];
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
@@ -28,9 +35,19 @@ import WebGLGuard from "../map/WebGLGuard";
  */
 export default function TripMapWithTours({
   trip,
+  placeVisits = NO_PLACE_VISITS,
+  placesLoading = false,
 }: {
   /** `busJourneys` (forgejo#180): already stripped by the page when bus is hidden. */
   trip: TripMapContent & TripTransportContent & { id: string; busJourneys?: TripBusJourney[] };
+  /** The places visited on the trip, loaded once by the page (`useTripPlaceVisits`). */
+  placeVisits?: readonly TripPlaceVisit[];
+  /**
+   * The places are still on their way. The map frames the trip once, on its
+   * first points, so it waits for them rather than leaving a place outside
+   * the frame.
+   */
+  placesLoading?: boolean;
 }): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const toursVisible = useToursVisible();
@@ -50,14 +67,26 @@ export default function TripMapWithTours({
   const segments = recording.view?.segments;
   // A recipient needs TravTrack on here, not a history of their own.
   const shared = useSharedTripRoutes(trip.id, useTravTrackInstanceOn());
+  // Hidden with the places domain, exactly as the timeline hides its cards.
+  const placesVisible = usePlacesVisible();
+  const placeColors = usePlaceColorStore((s) => s.config);
+  const placeLayers = useMemo(
+    () => (placesVisible ? buildTripPlaceLayers(placeVisits, placeColors) : []),
+    [placesVisible, placeVisits, placeColors]
+  );
+  const placePoints = useMemo(
+    () => (placesVisible ? tripPlacePoints(placeVisits) : []),
+    [placesVisible, placeVisits]
+  );
   const extraLayers = useMemo(
     () => [
       ...transport.layers,
       ...busLayers,
       ...buildSharedRouteLayers(shared.routes),
       ...buildRecordingLayers(segments ?? []),
+      ...placeLayers,
     ],
-    [transport.layers, busLayers, shared.routes, segments]
+    [transport.layers, busLayers, shared.routes, segments, placeLayers]
   );
   const extraPoints = useMemo(
     () => [
@@ -65,8 +94,9 @@ export default function TripMapWithTours({
       ...busPoints,
       ...sharedRoutePoints(shared.routes),
       ...recordingPoints(segments ?? []),
+      ...placePoints,
     ],
-    [transport.points, busPoints, shared.routes, segments]
+    [transport.points, busPoints, shared.routes, segments, placePoints]
   );
   return (
     <>
@@ -76,6 +106,7 @@ export default function TripMapWithTours({
         </p>
       )}
       <SharedRouteLegend routes={shared.routes} failed={shared.failed} />
+      {placeLayers.length > 0 && <TripPlacesLegend />}
       <TripRecordingPanel
         tripId={trip.id}
         view={recording.view}
@@ -90,15 +121,17 @@ export default function TripMapWithTours({
         }}
         onDeleted={recording.reload}
       />
-      <WebGLGuard>
-        <TripMap
-          trip={trip}
-          tourGeometries={geometries}
-          extraLayers={extraLayers}
-          extraPoints={extraPoints}
-          onProjectionChange={setProjection}
-        />
-      </WebGLGuard>
+      {!(placesVisible && placesLoading) && (
+        <WebGLGuard>
+          <TripMap
+            trip={trip}
+            tourGeometries={geometries}
+            extraLayers={extraLayers}
+            extraPoints={extraPoints}
+            onProjectionChange={setProjection}
+          />
+        </WebGLGuard>
+      )}
     </>
   );
 }
