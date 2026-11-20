@@ -223,7 +223,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
   if (access === "denied") {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
         </p>
@@ -233,7 +233,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <p className="py-16 text-center text-[var(--text-muted)]">{t("common:loading.default")}</p>
       </AppShell>
     );
@@ -242,7 +242,7 @@ export default function PlaceDetailPage(): JSX.Element {
   if (failure !== null || !place) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div className="py-16 text-center">
           <p role="alert" style={{ color: "var(--danger)" }}>
             {isLoadError ? t("places:detail.loadError") : t("places:detail.notFound")}
@@ -263,7 +263,7 @@ export default function PlaceDetailPage(): JSX.Element {
   const countryLabel = placeCountryLabel(place, i18n.language);
   const countryCode = placeCountryCode(place);
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/places"
         backLabel={t("places:detail.backToLogbook")}

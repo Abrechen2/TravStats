@@ -14,7 +14,7 @@ export default function NotFoundPage(): JSX.Element {
   const { t } = useTranslation("common");
 
   return (
-    <AppShell width="reading">
+    <AppShell>
       <div className="flex flex-col items-center gap-3 py-24 text-center">
         <div className="text-6xl font-bold text-(--accent)">404</div>
         <h1 className="t-screen-title">{t("notFound.title")}</h1>

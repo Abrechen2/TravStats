@@ -144,7 +144,7 @@ export default function TripDetailPage(): JSX.Element {
 
   if (loading || !trip) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div className="flex items-center justify-center py-20 text-(--text-muted)">
           {t("common:loading.default")}
         </div>
@@ -155,7 +155,7 @@ export default function TripDetailPage(): JSX.Element {
   const shownTrip = displayTrip ?? trip;
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <TravelPlanSummary tripId={trip.id} />
       <TripHead
         trip={shownTrip}

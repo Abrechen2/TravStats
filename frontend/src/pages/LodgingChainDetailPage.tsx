@@ -95,7 +95,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-[var(--text-muted)]">{t("lodging:chainDetail.loading")}</p>
       </AppShell>
     );
@@ -103,7 +103,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
 
   if (notFound || !detail) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div>
           <Link to="/lodging" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("lodging:list.title")}
@@ -131,7 +131,7 @@ export default function LodgingChainDetailPage(): JSX.Element {
       : undefined;
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div>
         <Link
           to="/lodging"

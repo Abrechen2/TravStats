@@ -64,7 +64,7 @@ export default function PendingUpdatesPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div className="w-full">
         <PageHeader
           title={t("dataQuality:inbox.title")}

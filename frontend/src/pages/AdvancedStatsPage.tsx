@@ -536,7 +536,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   if (showLoader) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div className="flex min-h-[60vh] items-center justify-center">
           <GlobeLoader size={180} label={t("common:loading.stats")} />
         </div>
@@ -545,7 +545,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   }
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div>
         {/* Mounted ONCE for the whole page (Task 9) — every tile below opens
             it by writing `?evidence=<kind>:<key>`, never by rendering a

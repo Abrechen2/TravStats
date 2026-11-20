@@ -38,7 +38,7 @@ export default function AircraftPage(): JSX.Element {
   }, [registration]);
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div>
         <Link to="/stats" className="ts-back-link mb-4 inline-block text-sm text-(--text-muted)">
           ← {t("aircraft:backToStats")}

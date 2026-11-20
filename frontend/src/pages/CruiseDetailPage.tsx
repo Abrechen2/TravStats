@@ -158,7 +158,7 @@ export default function CruiseDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-(--text-muted)">{t("detail.loading")}</p>
       </AppShell>
     );
@@ -168,7 +168,7 @@ export default function CruiseDetailPage(): JSX.Element {
     // "not found" must not pretend to have.
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div>
           <Link to="/cruises" className="ts-back-link text-sm text-(--text-muted)">
             ← {t("list.title")}
@@ -248,7 +248,7 @@ export default function CruiseDetailPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/cruises"
         backLabel={t("detail.backToLogbook")}

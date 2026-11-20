@@ -14,7 +14,7 @@ export default function TravPlanPage() {
   const { tripId, connectionId, section = "overview" } = useParams(),
     location = useLocation();
   return (
-    <AppShell width="list">
+    <AppShell>
       {location.pathname === "/plan/admin" ? (
         <PlanAdmin />
       ) : connectionId ? (

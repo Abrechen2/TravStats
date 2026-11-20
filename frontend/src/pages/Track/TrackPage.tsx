@@ -46,7 +46,7 @@ export default function TrackPage({ view = "day" }: { view?: TrackView }): JSX.E
       <NavigationBar />
       {view === "day" && caps && !caps.hasData ? (
         // Nothing recorded or imported yet: how data comes in, instead of an empty map.
-        <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 px-6 py-4">
           <TrackGettingStarted active={caps.active} />
         </div>
       ) : view === "day" ? (
@@ -72,7 +72,7 @@ function TrackHeader(): JSX.Element {
 function TrackTabView({ view }: { view: TrackTab }): JSX.Element {
   const Body = TAB_BODY[view];
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 px-6 py-4">
       <TrackHeader />
       <Body />
     </div>

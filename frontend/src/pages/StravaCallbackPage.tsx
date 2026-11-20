@@ -48,7 +48,7 @@ export default function StravaCallbackPage(): JSX.Element {
   }, [params, navigate, addToast, t]);
 
   return (
-    <AppShell width="reading">
+    <AppShell>
       <div className="py-16 text-center text-sm">
         {error ? (
           <>

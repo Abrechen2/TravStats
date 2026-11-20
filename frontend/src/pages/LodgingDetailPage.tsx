@@ -269,7 +269,7 @@ export default function LodgingDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-[var(--text-muted)]">{t("lodging:detail.loading")}</p>
       </AppShell>
     );
@@ -278,7 +278,7 @@ export default function LodgingDetailPage(): JSX.Element {
   if (failure !== null || !lodging) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div>
           <Link to={backTo} className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {backLabel}
@@ -381,7 +381,7 @@ export default function LodgingDetailPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo={backTo}
         backLabel={fromChain ? backLabel : t("lodging:detail.backToLogbook")}

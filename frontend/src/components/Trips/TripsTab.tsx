@@ -207,7 +207,7 @@ export default function TripsTab({
 
   return (
     <div className="pb-12">
-      <div className="max-w-7xl mx-auto">
+      <div>
         {header ? (
           <PageHeader title={header.title} meta={header.meta} actions={pageActions} />
         ) : (

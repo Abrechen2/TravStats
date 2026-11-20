@@ -204,7 +204,7 @@ export default function AchievementsPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <SkeletonAchievementGrid />
       </AppShell>
     );
@@ -212,7 +212,7 @@ export default function AchievementsPage(): JSX.Element {
 
   if (showLeaderboard) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <AchievementLeaderboard entries={leaderboard} onBack={() => setShowLeaderboard(false)} />
       </AppShell>
     );
@@ -221,7 +221,7 @@ export default function AchievementsPage(): JSX.Element {
   const counts = countAchievements(visibleAchievements);
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <PageHeader
         title={t("achievements:title")}
         meta={[

@@ -546,7 +546,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <div className="flex items-center justify-center py-20 text-(--text-muted)">
           {t("common:loading.default")}
         </div>
@@ -560,7 +560,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   // tour's page into "could not be loaded" — found in the browser.
   if (failure || !route || (id !== undefined && !trip)) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div className="py-16 text-center">
           <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
             {failure === "notFound" ? t("trips:tours.notFound") : t("trips:tours.loadError")}
@@ -582,7 +582,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const ownPoints = editsOwnPoints(trip !== null, sectionStops);
   return (
-    <AppShell width="list">
+    <AppShell>
       <div className="space-y-6">
         <header>
           <Link

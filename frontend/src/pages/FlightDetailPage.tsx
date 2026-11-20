@@ -172,7 +172,7 @@ export default function FlightDetailPage(): JSX.Element {
   // shows the loading view instead of the previous flight.
   if (loading && flight?.id !== id) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-[var(--text-muted)]">{t("flights:table.loading")}</p>
       </AppShell>
     );
@@ -181,7 +181,7 @@ export default function FlightDetailPage(): JSX.Element {
   if (failure !== null || !flight) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div>
           <Link to="/flights" className="ts-back-link text-sm text-[var(--text-muted)]">
             ← {t("flights:table.title")}
@@ -238,7 +238,7 @@ export default function FlightDetailPage(): JSX.Element {
   const withDayCard = dayCardShown(flight);
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/flights"
         backLabel={t("flights:detail.backToLogbook")}

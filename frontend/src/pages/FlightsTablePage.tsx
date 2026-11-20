@@ -469,7 +469,7 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       <div className="w-full">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">

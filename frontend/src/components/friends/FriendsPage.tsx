@@ -182,7 +182,7 @@ export default function FriendsPage(): JSX.Element {
   };
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <PageHeader title={tr("friends.title")} meta={tr("subtitle")} />
       <RequestsSection
         requests={list?.requests ?? []}

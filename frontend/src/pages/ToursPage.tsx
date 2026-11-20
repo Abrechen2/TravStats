@@ -147,7 +147,7 @@ export default function ToursPage(): JSX.Element {
   }));
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="t-screen-title">{t("trips:tours.pageTitle")}</h1>

@@ -145,7 +145,7 @@ export default function RailDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-(--text-muted)">{t("rail:detail.loading")}</p>
       </AppShell>
     );
@@ -153,7 +153,7 @@ export default function RailDetailPage(): JSX.Element {
   if (failure !== null || !journey) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
         </Link>
@@ -225,7 +225,7 @@ export default function RailDetailPage(): JSX.Element {
   };
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/rail"
         backLabel={t("rail:detail.back")}
