@@ -219,6 +219,25 @@ describe("building recognition (rule 3)", () => {
       expect(view.probable?.name).toBe("Zara");
     });
 
+    it("a way candidate with its own building part stays the shop even when the stay is outside both", () => {
+      const part = wayBox(
+        3202,
+        { name: "Zara", shop: "clothes", "building:part": "yes", brand: "Zara" },
+        10,
+        10,
+        12
+      );
+      const view = combineStayIdentity(
+        input({
+          point: off(90, 90),
+          places: { results: [place("Zara", "way/3202", off(10, 10), "clothes")], degraded: false },
+          venues: evidence([mall, part]),
+        })
+      );
+      expect(view.probable?.name).toBe("Zara");
+      expect(view.venues.resolved).toBeNull();
+    });
+
     it("a shop without a part of its own folds into the mall", () => {
       const view = combineStayIdentity(
         input({

@@ -178,6 +178,7 @@ export function resolveVenue(
     ref: string | null;
     tags: Record<string, string>;
     at: { lat: number; lon: number };
+    sizeM2?: number | null;
   } | null
 ): VenueResolution {
   const containing = elements
@@ -190,7 +191,12 @@ export function resolveVenue(
   }
   if (fallbackPick) {
     const parent = foldTarget(
-      { ref: fallbackPick.ref, tags: fallbackPick.tags, at: fallbackPick.at, sizeM2: null },
+      {
+        ref: fallbackPick.ref,
+        tags: fallbackPick.tags,
+        at: fallbackPick.at,
+        sizeM2: fallbackPick.sizeM2 ?? null,
+      },
       elements
     );
     if (parent) return { target: parent, reason: "folded" };

@@ -48,6 +48,11 @@ export function clearVenueCaches(): void {
   tail = Promise.resolve();
 }
 
+/** Test seam: an outline evicted while its point entry lives on. */
+export function clearElementCacheOnly(): void {
+  elementCache.clear();
+}
+
 function remember<T>(cache: Map<string, Timed<T>>, key: string, value: T): void {
   if (cache.size >= CACHE_MAX && !cache.has(key)) {
     const oldest = cache.keys().next().value;
@@ -173,10 +178,16 @@ async function askOverpass(
   refs: string[],
   store: CatalogStore
 ): Promise<
-  { ok: true; elements: VenueElement[]; skipped: number } | { ok: false; state: VenueState }
+  | { ok: true; elements: VenueElement[]; skipped: number; truncated: boolean }
+  | { ok: false; state: VenueState }
 > {
-  const at = new Date();
-  const token = await store.claim(at);
+  let token: Date | null;
+  try {
+    token = await store.claim(new Date());
+  } catch (error) {
+    logger.warn({ error }, "stay venues: the shared Overpass budget could not be read");
+    return { ok: false, state: "unavailable" };
+  }
   if (!token) return { ok: false, state: "budget" };
   let backoff = 0;
   let bytes = 0;
@@ -195,14 +206,20 @@ async function askOverpass(
     }
     bytes = JSON.stringify(result.body).length;
     try {
-      return { ok: true, ...parseVenueElements(result.body) };
+      const parsed = parseVenueElements(result.body);
+      // `out … N` cuts silently at N: containers may be missing from a full answer.
+      return { ok: true, ...parsed, truncated: parsed.elements.length >= MAX_ELEMENTS };
     } catch {
       // A 200 with a `remark` is Overpass saying the query ran out of time or memory.
       backoff = FAILURE_BACKOFF_MS;
       return { ok: false, state: "unavailable" };
     }
   } finally {
-    await store.complete(token, bytes, backoff);
+    try {
+      await store.complete(token, bytes, backoff);
+    } catch (error) {
+      logger.warn({ error }, "stay venues: releasing the shared Overpass lease failed");
+    }
   }
 }
 
@@ -225,22 +242,33 @@ export async function fetchVenueEvidence(
   const refs = [...new Set(refByCandidate.filter((r): r is string => r !== null))];
 
   const run = async (): Promise<VenueEvidence> => {
-    const missingPoints = unique.filter((p) => recall(pointCache, cellKey(p)) === null);
+    // A cached point is only good while every outline it names is still cached.
+    const intact = (p: { lat: number; lon: number }): boolean => {
+      const entry = recall(pointCache, cellKey(p));
+      return entry !== null && entry.refs.every((r) => recall(elementCache, r) !== null);
+    };
+    const missingPoints = unique.filter((p) => !intact(p));
     const missingRefs = refs.filter((r) => recall(elementCache, r) === null);
     let state: VenueState = "ok";
+    const wanted = new Set<string>(refs);
     if (missingPoints.length > 0 || missingRefs.length > 0) {
       const answer = await askOverpass(missingPoints, missingRefs, store);
       if (!answer.ok) return { state: answer.state, elements: [] };
       for (const el of answer.elements) remember(elementCache, el.ref, el);
-      for (const p of missingPoints) {
+      if (answer.truncated) state = "partial";
+      // A cut answer is shown but not remembered as the full set of containers.
+      for (const p of answer.truncated ? [] : missingPoints) {
         const containers = answer.elements
           .filter((el) => el.area && contains(el.area, snap(p.lon), snap(p.lat)))
           .map((el) => el.ref);
         remember(pointCache, cellKey(p), { refs: containers, skipped: answer.skipped });
       }
       if (answer.skipped > 0) state = "partial";
+      if (answer.truncated)
+        for (const p of missingPoints)
+          for (const el of answer.elements)
+            if (el.area && contains(el.area, snap(p.lon), snap(p.lat))) wanted.add(el.ref);
     }
-    const wanted = new Set<string>(refs);
     for (const p of unique) {
       const entry = recall(pointCache, cellKey(p));
       if (entry === null) continue;

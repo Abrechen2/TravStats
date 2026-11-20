@@ -5,6 +5,7 @@ import type { ImmichAsset, ImmichErrorKind } from "../../immich/types";
 import { contains, polygons } from "../marketVisits/geometry";
 import { RADIUS_METERS } from "./detect";
 import {
+  areaSizeM2,
   entityOf,
   foldTarget,
   resolveVenue,
@@ -238,7 +239,14 @@ function rankWithVenues(
   const resolution = resolveVenue(
     input.point,
     elements,
-    old ? { ref: old.c.osmRef ?? null, tags: pickEl?.tags ?? {}, at: old.c } : null
+    old
+      ? {
+          ref: old.c.osmRef ?? null,
+          tags: pickEl?.tags ?? {},
+          at: old.c,
+          sizeM2: pickEl?.area ? areaSizeM2(pickEl.area) : null,
+        }
+      : null
   );
   // Every candidate that stands inside a supported building is its alternative.
   const marked = base.map((c) => {

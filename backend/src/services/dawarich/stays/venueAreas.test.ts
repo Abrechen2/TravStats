@@ -8,7 +8,12 @@ jest.mock("../../instanceTuning", () => ({ instanceTuning: () => ({ marketOverpa
 jest.mock("../marketVisits/catalogStore", () => ({ marketCatalogStore: {} }));
 
 import { isOpenDataEnabled } from "../../openData/http";
-import { clearVenueCaches, fetchVenueEvidence, venueQuery } from "./venueAreas";
+import {
+  clearElementCacheOnly,
+  clearVenueCaches,
+  fetchVenueEvidence,
+  venueQuery,
+} from "./venueAreas";
 
 const point = { lat: 52.52, lon: 13.405 };
 const d = 0.0001;
@@ -49,7 +54,7 @@ describe("fetchVenueEvidence", () => {
   afterEach(() => fetchMock.mockRestore());
 
   it("asks Overpass once and answers the second card from the point cache", async () => {
-    fetchMock.mockResolvedValue(ok([building]));
+    fetchMock.mockImplementation(async () => ok([building]));
     const store = fakeStore();
     const first = await fetchVenueEvidence(point, [], store);
     const second = await fetchVenueEvidence(point, [], store);
@@ -95,10 +100,44 @@ describe("fetchVenueEvidence", () => {
       tags: { name: "Halle", building: "yes" },
       members: [],
     };
-    fetchMock.mockResolvedValue(ok([building, broken]));
+    fetchMock.mockImplementation(async () => ok([building, broken]));
     const result = await fetchVenueEvidence(point, [], fakeStore());
     expect(result.state).toBe("partial");
     expect(result.elements.map((e) => e.ref)).toContain("way/1001");
+  });
+
+  it("a failing budget store degrades to a visible state instead of failing the card", async () => {
+    const store = fakeStore();
+    store.claim.mockRejectedValueOnce(new Error("db down"));
+    expect((await fetchVenueEvidence(point, [], store)).state).toBe("unavailable");
+    fetchMock.mockImplementation(async () => ok([building]));
+    store.complete.mockRejectedValueOnce(new Error("db down"));
+    expect((await fetchVenueEvidence(point, [], store)).state).toBe("ok");
+  });
+
+  it("a response cut at the element limit is partial and its containers are not cached", async () => {
+    const filler = Array.from({ length: 399 }, (_, i) => ({
+      type: "node",
+      id: 5000 + i,
+      tags: {},
+      lat: 1,
+      lon: 1,
+    }));
+    fetchMock.mockImplementation(async () => ok([building, ...filler]));
+    const store = fakeStore();
+    expect((await fetchVenueEvidence(point, [], store)).state).toBe("partial");
+    await fetchVenueEvidence(point, [], store);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks again when an outline a cached point names has left the element cache", async () => {
+    fetchMock.mockImplementation(async () => ok([building]));
+    const store = fakeStore();
+    await fetchVenueEvidence(point, [], store);
+    clearElementCacheOnly();
+    const again = await fetchVenueEvidence(point, [], store);
+    expect(again.elements.map((e) => e.ref)).toEqual(["way/1001"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("queries containment by pivot and candidates by id", () => {
