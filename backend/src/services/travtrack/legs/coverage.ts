@@ -13,7 +13,8 @@ export function coverageOf(
   points: readonly StoredPoint[],
   span: { fromMs: number; untilMs: number }
 ): StopCoverage | undefined {
-  const sorted = [...points].sort((a, b) => a[0] - b[0]);
+  // Points are in time order (segments and chains are); only those inside the stop matter.
+  const sorted = points.filter((p) => p[0] >= span.fromMs && p[0] <= span.untilMs);
   const gaps: Array<{ fromMs: number; untilMs: number }> = [];
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i][0] - sorted[i - 1][0] < STOP_MS) continue;

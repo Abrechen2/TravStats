@@ -35,7 +35,9 @@ function useScrollMemory(
   memory: AsideMemory,
   root: MutableRefObject<HTMLElement | null>,
   docked: boolean,
-  active: boolean
+  active: boolean,
+  /** A collapsed card has no body: the scroller appears when it opens. */
+  collapsed: boolean
 ): void {
   useEffect(() => {
     // Docked: the list scrolls in its own region. Floating: the card's body scrolls.
@@ -47,7 +49,7 @@ function useScrollMemory(
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
-  }, [memory, root, docked, active]);
+  }, [memory, root, docked, active, collapsed]);
 }
 
 /**
@@ -104,7 +106,7 @@ export default function TrackMapAside({
     setTabState(next);
   };
   const root = useRef<HTMLDivElement | null>(null);
-  useScrollMemory(kept, root, docked, docked || !detail);
+  useScrollMemory(kept, root, docked, docked || !detail, collapsed);
   // A selection made on the map shows in the docked list.
   useEffect(() => {
     if (!docked) return;

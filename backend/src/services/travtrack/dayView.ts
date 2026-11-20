@@ -6,6 +6,7 @@ import { explainingEntries, fillWithEntries, type CoverageEntryRef } from "./day
 import type { Leg, Stop } from "./legs";
 import { dayAfter, midnightOf } from "./range";
 import type { SafeSpan, Span } from "./readSafe";
+import { badVertexIn } from "./legs/stops";
 
 /**
  * One day of the account's TravTrack history (TravTrack plan T6), on the
@@ -168,7 +169,11 @@ export async function travTrackDay(
     truncated: raw.next !== null,
     omitted: {
       privacyZone: Math.max(0, (raw.storedCount ?? vertices(raw)) - vertices(raw)),
-      implausible: Math.max(0, vertices(raw) - vertices(read)),
+      // The verdict drawn fixes use (`badVertexIn`), not a difference of counts: dropping a fix
+      // may let the privacy cut take a good one with it, and that is no implausible fix.
+      implausible: options.includeImplausible
+        ? 0
+        : raw.segments.reduce((n, s) => n + s.filter(badVertexIn(s)).length, 0),
     },
   };
 }
