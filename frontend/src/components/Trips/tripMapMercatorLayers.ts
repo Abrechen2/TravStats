@@ -108,7 +108,7 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
     id: "trip-tour-paths",
     data: input.tourPathData as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as Rgba,
+    getColor: (d) => [...d.color, d.dim ? DIM_ALPHA : d.isPlaceholder ? 170 : 255] as Rgba,
     getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
     widthUnits: "pixels",
     widthMinPixels: 2,

@@ -94,7 +94,7 @@ export interface TripPointDatum {
   entityId?: string;
   /** Off the chosen day: drawn faint rather than hidden. */
   dim?: boolean;
-  /** Place in the trip's order — shown in the globe's HTML label, which cannot draw a badge. */
+  /** Place in the trip's order; the globe draws it as an HTML chip (`TripGlobeAnnotations`). */
   seq?: number;
   /**
    * What the SHARED marker tooltip reads off a picked object
@@ -172,7 +172,8 @@ export function toGlobeLabelPoints(points: readonly TripPointDatum[]): GlobePoin
       size: 1,
       iata: p.label,
       name: p.label,
-      label: p.seq === undefined ? p.label : `${p.seq} · ${p.label}`,
+      label: p.label,
+      dim: p.dim,
     }));
 }
 
@@ -303,7 +304,13 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-tour-paths",
     data: tourPaths as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
+    getColor: (d) =>
+      [...d.color, d.dim ? DIM_ALPHA : d.isPlaceholder ? 170 : 255] as [
+        number,
+        number,
+        number,
+        number,
+      ],
     getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
     widthUnits: "pixels",
     widthMinPixels: 2,

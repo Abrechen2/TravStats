@@ -23,8 +23,9 @@ interface CapturedOverlay {
   projectionCallsBefore: number;
 }
 
-const { captured, mapCalls } = vi.hoisted(() => ({
+const { captured, mapCalls, globeLabels } = vi.hoisted(() => ({
   captured: [] as CapturedOverlay[],
+  globeLabels: [] as Array<{ airports: unknown[]; ports: unknown[] }>,
   mapCalls: {
     setProjection: [] as unknown[],
     setSky: [] as unknown[],
@@ -136,7 +137,10 @@ vi.mock("../../../lib/api/cruise", () => ({
 }));
 
 vi.mock("../../Globe/GlobeLabelsOverlay", () => ({
-  GlobeLabelsOverlay: () => null,
+  GlobeLabelsOverlay: (props: { airports: unknown[]; ports: unknown[] }) => {
+    globeLabels.push(props);
+    return null;
+  },
 }));
 
 import TripMap from "../TripMap";
@@ -241,6 +245,7 @@ function mount(props: Partial<React.ComponentProps<typeof TripMap>> = {}): void 
 
 beforeEach(() => {
   captured.length = 0;
+  globeLabels.length = 0;
   mapCalls.styleListeners.clear();
   mapCalls.setProjection.length = 0;
   mapCalls.setSky.length = 0;
@@ -400,5 +405,84 @@ describe("trip map: legend", () => {
     await waitFor(() => expect(captured.length).toBeGreaterThan(0));
     expect(screen.queryByRole("switch", { name: /legend\.group\.rail/ })).toBeNull();
     expect(screen.queryByRole("switch", { name: /legend\.group\.recording/ })).toBeNull();
+  });
+});
+
+const goGlobe = async (): Promise<void> => {
+  await userEvent.click(await screen.findByRole("button", { pressed: false }));
+};
+
+describe("trip map: the globe", () => {
+  it("draws the numbers as chips and the direction as arrows in HTML, since deck.gl text and icons do not render there", async () => {
+    mapCalls.zoom = 14;
+    mount();
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    await goGlobe();
+    const chips = await screen.findAllByTestId("trip-globe-chip");
+    expect(chips.map((c) => c.textContent).sort()).toEqual(["1", "2", "3"]);
+    expect(screen.getAllByTestId("trip-globe-arrow")).toHaveLength(2);
+  });
+
+  it("draws the labels of the other days faint", async () => {
+    mount({ day: "2026-05-01" });
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    await goGlobe();
+    await waitFor(() => expect(globeLabels.length).toBeGreaterThan(0));
+    const last = globeLabels[globeLabels.length - 1];
+    const ports = last.ports as Array<{ label: string; dim?: boolean }>;
+    expect(ports.find((p) => p.label === "Gullfoss")?.dim).toBe(true);
+    expect(ports.find((p) => p.label === "Hotel Borg")?.dim).toBe(false);
+    const airports = last.airports as Array<{ label: string; dim?: boolean }>;
+    expect(airports.find((p) => p.label === "FRA")?.dim).toBe(true);
+    expect(airports.find((p) => p.label === "MUC")?.dim).toBe(false);
+  });
+});
+
+describe("trip map: tours follow the day filter", () => {
+  const geometry = (id: string) => ({
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        geometry: {
+          type: "LineString" as const,
+          coordinates: [
+            [-21, 64],
+            [-20, 64.3],
+          ] as [number, number][],
+        },
+        properties: {
+          legId: id,
+          source: "routed",
+          mode: "road",
+          confidence: "high",
+          distanceKm: 5,
+        },
+      },
+    ],
+  });
+  const tours = [
+    { routeId: "r1", name: "Golden Circle", geometry: geometry("l1"), date: "2026-05-01" },
+    { routeId: "r2", name: "South coast", geometry: geometry("l2"), date: "2026-05-03" },
+  ] as never;
+
+  it("dims a tour that is not on the chosen day, and nothing without a day", async () => {
+    mount({ tourGeometries: tours, day: "2026-05-01" });
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    const data = layerById("trip-tour-paths")?.props.data as Array<{
+      routeId: string;
+      dim: boolean;
+    }>;
+    expect(data.map((d) => [d.routeId, d.dim]).sort()).toEqual([
+      ["r1", false],
+      ["r2", true],
+    ]);
+  });
+
+  it("leaves tours as they were with no day chosen", async () => {
+    mount({ tourGeometries: tours });
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    const data = layerById("trip-tour-paths")?.props.data as Array<{ dim?: boolean }>;
+    expect(data.some((d) => d.dim)).toBe(false);
   });
 });

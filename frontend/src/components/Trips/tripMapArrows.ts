@@ -26,6 +26,8 @@ export interface ArrowDatum {
   bearing: number;
   color: [number, number, number];
   dim: boolean;
+  /** A point a little further along the line, so a projection can turn the arrow on screen. */
+  ahead: [number, number];
 }
 
 const RAD = Math.PI / 180;
@@ -70,7 +72,10 @@ export function arrowFor(line: DirectionLine, fraction = 0.5): ArrowDatum | null
       if (dLon > 180) dLon -= 360;
       else if (dLon < -180) dLon += 360;
       const lon = ((((a[0] + dLon * t + 180) % 360) + 360) % 360) - 180;
+      const t2 = Math.min(1, t + 0.04);
+      const lon2 = ((((a[0] + dLon * t2 + 180) % 360) + 360) % 360) - 180;
       return {
+        ahead: [lon2, a[1] + (b[1] - a[1]) * t2],
         position: [lon, a[1] + (b[1] - a[1]) * t],
         bearing: bearingBetween(a, b),
         color: line.color,
@@ -89,7 +94,8 @@ const CHEVRON = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 const ARROW_SIZE_PX = 16;
 
-export function buildArrowLayer(lines: readonly DirectionLine[]): Layer | null {
+/** One arrow per line (a round trip's two kept apart); the flat layer and the globe overlay read the same list. */
+export function arrowData(lines: readonly DirectionLine[]): ArrowDatum[] {
   // A round trip is two lines over one path: both arrows at the middle would
   // overlap into a star. The later ones step back toward their own start — and
   // since they run the other way, that is a different place on the path.
@@ -104,6 +110,11 @@ export function buildArrowLayer(lines: readonly DirectionLine[]): Layer | null {
       return seen === 0 ? mid : arrowFor(line, Math.max(0.1, 0.5 - 0.1 * seen));
     })
     .filter((a): a is ArrowDatum => a !== null);
+  return data;
+}
+
+export function buildArrowLayer(lines: readonly DirectionLine[]): Layer | null {
+  const data = arrowData(lines);
   if (data.length === 0) return null;
   return new IconLayer<ArrowDatum>({
     id: "trip-direction-arrows",

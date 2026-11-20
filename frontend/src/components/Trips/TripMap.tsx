@@ -49,6 +49,8 @@ import type { DirectionLine } from "./tripMapArrows";
 import { groupsPresentIn, withoutHidden, type LayerGroup } from "./tripMapGroups";
 import { TripMapLegend } from "./TripMapLegend";
 import { TripMapInfoCard } from "./TripMapInfoCard";
+import { TripGlobeAnnotations, type GlobeChip } from "./TripGlobeAnnotations";
+import { arrowData } from "./tripMapArrows";
 import { cruiseInfo, lodgingInfo, stopInfo } from "./tripMapInfo";
 import { useTripMapInfoStore } from "../../store/tripMapInfoStore";
 import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
@@ -78,6 +80,8 @@ interface TripMapProps {
   trip: TripMapContent;
   tourGeometries?: readonly {
     routeId: string;
+    /** The tour's day; the day filter dims a tour on another day, and keeps an undated one faint too. */
+    date?: string | null;
     name: string;
     geometry: TourGeometry;
     /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
@@ -346,7 +350,16 @@ export default function TripMap({
     []
   );
 
-  const allTourPaths = useMemo(() => buildTourPaths(tourGeometries), [tourGeometries]);
+  const allTourPaths = useMemo(
+    () =>
+      buildTourPaths(
+        tourGeometries.map((g) => ({
+          ...g,
+          dim: day !== null && g.date?.slice(0, 10) !== day,
+        }))
+      ),
+    [tourGeometries, day]
+  );
   const tourPathData = useMemo(
     () => (hidden.has("tours") ? [] : allTourPaths),
     [allTourPaths, hidden]
@@ -471,6 +484,7 @@ export default function TripMap({
           radiusMeters: 0,
           kind: "stop" as const,
           seq: i.seq,
+          dim: i.dim,
         })),
     [data.labelItems, colorConfig.airport]
   );
@@ -478,6 +492,21 @@ export default function TripMap({
     () => toGlobeLabelPoints([...stopPoints, ...lodgingPoints, ...globePlaceLabels]),
     [stopPoints, lodgingPoints, globePlaceLabels]
   );
+  // The numbers and arrows the globe draws as HTML (deck.gl text/icons do not render there).
+  const globeChips = useMemo<GlobeChip[]>(
+    () =>
+      data.labelItems
+        .filter((i) => i.seq !== undefined)
+        .map((i) => ({
+          key: `${i.kind}-${i.seq}`,
+          lng: i.position[0],
+          lat: i.position[1],
+          text: String(i.seq),
+          dim: i.dim === true,
+        })),
+    [data.labelItems]
+  );
+  const globeArrows = useMemo(() => arrowData(directionLines), [directionLines]);
   const globeAirportLabels = useMemo(() => toGlobeLabelPoints(airportPoints), [airportPoints]);
 
   /* ---- bbox fit ---- */
@@ -542,7 +571,10 @@ export default function TripMap({
     if (lastDay.current === day) return;
     lastDay.current = day;
     if (!mapLoaded) return;
-    const focus = dayFocusPoints(built.data, places, day, dayPoints);
+    const focus = dayFocusPoints(built.data, places, day, [
+      ...dayPoints,
+      ...allTourPaths.filter((p) => !p.dim).flatMap((p) => p.path),
+    ]);
     if (focus.length === 0) fitTrip(projection, 800);
     else flyToBbox(focus);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on a day change only; the data it reads is the day's own
@@ -703,6 +735,14 @@ export default function TripMap({
           ports={globeLabelPoints}
           extras={globeStationLabels}
           mode="important"
+        />
+      )}
+      {projection === "globe" && (
+        <TripGlobeAnnotations
+          mapRef={mapRef}
+          mapReady={mapLoaded}
+          chips={globeChips}
+          arrows={globeArrows}
         />
       )}
       {empty && (
