@@ -226,6 +226,24 @@ export default function PeopleSection(): JSX.Element {
         );
       })();
     },
+    withdrawIncoming: (p) => {
+      const incoming = p.incomingConsent;
+      if (!incoming) return;
+      void (async () => {
+        if (
+          !(await confirm({
+            message: t(`${NS}.confirm.withdrawIncoming`, { name: p.name }),
+            confirmText: t(`${NS}.confirm.withdrawIncomingAction`),
+            destructive: true,
+          }))
+        )
+          return;
+        await run(async () => {
+          await sharingApi.answerConsent(incoming.id, "withdraw");
+          return t(`${NS}.done.withdrawn`);
+        }, "sharing:settings.errors.withdrawFailed");
+      })();
+    },
     toggleStats: (p) => setStats((id) => (id === p.key ? null : p.key)),
     toggleAchievements: (p) => setAchievements((id) => (id === p.key ? null : p.key)),
   };

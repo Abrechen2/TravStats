@@ -24,6 +24,8 @@ export interface PersonEntry {
   status: AccountStatus;
   /** The caller's request to a local account: what "Reisen teilen" switches. */
   shareConsent: ShareConsent | null;
+  /** An accepted request FROM this account: it shares with the caller, who may withdraw it. */
+  incomingConsent: ShareConsent | null;
   /** The connection to a person on another server. */
   connection: Connection | null;
   /** A person paired with an invitation code (before connections existed). */
@@ -64,12 +66,22 @@ export function buildPeople(src: PeopleSources): {
 } {
   const outgoing = new Map<string, ShareConsent>();
   for (const c of live(src.consents?.outgoing ?? [])) outgoing.set(c.person.id, c);
+  const incoming = new Map<string, ShareConsent>();
+  for (const c of src.consents?.incoming ?? [])
+    if (c.status === "accepted") incoming.set(c.person.id, c);
+  const takenIncoming = new Set<string>();
+  const takeIncoming = (userId: string): ShareConsent | null => {
+    const found = takenIncoming.has(userId) ? null : (incoming.get(userId) ?? null);
+    if (found) takenIncoming.add(userId);
+    return found;
+  };
   const comparison = src.comparisonPeople ?? [];
   const findComparison = (username: string, origin: string | null): PersonView | null =>
     comparison.find(
       (p) =>
         p.person.kind !== "self" &&
-        lower(p.person.username) === lower(username) &&
+        // Usernames are unique case-SENSITIVELY: "Alice" and "alice" are two accounts.
+        p.person.username === username &&
         (origin === null
           ? p.person.origin === null
           : stripSlash(p.person.origin ?? "") === stripSlash(origin))
@@ -95,6 +107,7 @@ export function buildPeople(src: PeopleSources): {
         : null,
       status: user ? statusOf(consent, true) : "unlinked",
       shareConsent: consent,
+      incomingConsent: user ? takeIncoming(user.id) : null,
       connection: null,
       paired: null,
       comparison: user ? claimComparison(user.username, null) : null,
@@ -112,6 +125,25 @@ export function buildPeople(src: PeopleSources): {
       account: { kind: "local", userId: p.id, username: p.username, displayName: p.displayName },
       status: statusOf(consent, false),
       shareConsent: consent,
+      incomingConsent: takeIncoming(p.id),
+      connection: null,
+      paired: null,
+      comparison: claimComparison(p.username, null),
+    });
+  }
+  // Accounts that share with the caller and nobody else row stands for: the caller can still withdraw.
+  for (const consent of incoming.values()) {
+    if (takenIncoming.has(consent.person.id)) continue;
+    takenIncoming.add(consent.person.id);
+    const p = consent.person;
+    people.push({
+      key: `i:${p.id}`,
+      name: p.displayName,
+      companion: null,
+      account: { kind: "local", userId: p.id, username: p.username, displayName: p.displayName },
+      status: "connected",
+      shareConsent: null,
+      incomingConsent: consent,
       connection: null,
       paired: null,
       comparison: claimComparison(p.username, null),
@@ -133,6 +165,7 @@ export function buildPeople(src: PeopleSources): {
       },
       status: c.state === "active" ? "connected" : "requested",
       shareConsent: null,
+      incomingConsent: null,
       connection: c,
       paired: null,
       comparison: claimComparison(c.username, c.origin),
@@ -140,11 +173,11 @@ export function buildPeople(src: PeopleSources): {
   }
   // People paired with an invitation code that no connection stands for yet.
   const connected = new Set(
-    (src.connections ?? []).map((c) => `${stripSlash(c.origin)}|${lower(c.username)}`)
+    (src.connections ?? []).map((c) => `${stripSlash(c.origin)}|${c.username}`)
   );
   for (const person of src.pairedPeople ?? []) {
     if (person.consent !== "accepted" && person.consent !== "pending") continue;
-    if (connected.has(`${stripSlash(person.origin)}|${lower(person.username)}`)) continue;
+    if (connected.has(`${stripSlash(person.origin)}|${person.username}`)) continue;
     people.push({
       key: `k:${person.id}`,
       name: person.displayName,
@@ -157,6 +190,7 @@ export function buildPeople(src: PeopleSources): {
       },
       status: person.consent === "accepted" ? "connected" : "requested",
       shareConsent: null,
+      incomingConsent: null,
       connection: null,
       paired: person,
       comparison: claimComparison(person.username, person.origin),
@@ -176,6 +210,7 @@ export function buildPeople(src: PeopleSources): {
           : { kind: "remote", origin: p.origin, username: p.username, displayName: p.displayName },
       status: view.mine?.status === "accepted" ? "connected" : "requested",
       shareConsent: null,
+      incomingConsent: null,
       connection: null,
       paired: null,
       comparison: view,
