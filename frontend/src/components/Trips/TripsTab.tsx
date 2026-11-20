@@ -11,6 +11,9 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_GRID_CLASS } from "./tripGrid";
+import { useTripPlaceCounts } from "../../hooks/useTripPlaceCounts";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { TripPlacesError } from "./TripPlacesStatus";
 import Button from "../ui/Button";
 import PageHeader from "../ui/PageHeader";
 
@@ -77,6 +80,7 @@ export default function TripsTab({
 }: TripsTabProps): JSX.Element {
   const { t } = useTranslation(["trips", "import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const placeCounts = useTripPlaceCounts(usePlacesVisible());
   const navigate = useNavigate();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const tripAdapter = useTripImportAdapter(onTripsChange);
@@ -280,6 +284,8 @@ export default function TripsTab({
           </div>
         )}
 
+        {placeCounts.failed && <TripPlacesError onRetry={placeCounts.reload} />}
+
         {listError ? (
           <p
             role="alert"
@@ -347,6 +353,7 @@ export default function TripsTab({
                         <TripCard
                           trip={trip}
                           onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+                          placeCount={placeCounts.counts.get(trip.id)}
                         />
                       </div>
                     ))}

@@ -34,7 +34,9 @@ import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
-import { useTripPlaceVisits } from "../hooks/useTripPlaceVisits";
+import { useTripPlaceVisits, type TripPlaceVisit } from "../hooks/useTripPlaceVisits";
+import { countTripPlaces } from "../lib/tripPlaceCount";
+import { TripPlacesError } from "../components/Trips/TripPlacesStatus";
 import { useTripNotes } from "../hooks/useTripNotes";
 import { TimelineNoteCard, TripNotesNotice } from "../components/Trips/TimelineNoteCard";
 import NoteEditorDialog from "../components/notes/NoteEditorDialog";
@@ -101,6 +103,10 @@ export default function TripDetailPage(): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { displayTrip, hiddenCruiseCount, hiddenLodgingCount } = useVisibleTrip(trip);
+  // One read of the trip's places for the head count, the timeline and the map.
+  // The user's domain choice and the instance beta flag, combined in hooks/usePlacesVisible.ts.
+  const poiEnabled = usePlacesVisible();
+  const places = useTripPlaceVisits(id ?? "", poiEnabled);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -158,7 +164,9 @@ export default function TripDetailPage(): JSX.Element {
         onEdit={() => setEditing(true)}
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
+        placeCount={countTripPlaces(places.placeVisits)}
       />
+      {places.failed && <TripPlacesError onRetry={places.reload} />}
       <TripPackingCard tripId={trip.id} endDate={trip.endDate} />
       <TabBar tab={tab} onChange={setTab} t={t} />
 
@@ -201,9 +209,10 @@ export default function TripDetailPage(): JSX.Element {
             onChanged={() => void load()}
             t={t}
             language={i18n.language}
+            placeVisits={places.placeVisits}
           />
         )}
-        {tab === "map" && <TripMapWithTours trip={shownTrip} />}
+        {tab === "map" && <TripMapWithTours trip={shownTrip} placeVisits={places.placeVisits} />}
         {tab === "gallery" && (
           <TripGallery
             tripId={shownTrip.id}
@@ -301,14 +310,13 @@ interface TimelineTabProps {
   t: ReturnType<typeof useTranslation>["t"];
   /** The UI language, for the cards that format amounts. */
   language: string | undefined;
+  /** The places visited on the trip, loaded once by the page. */
+  placeVisits: readonly TripPlaceVisit[];
 }
 
-function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
+function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const { confirmDelete, confirmDialog } = useConfirmDialog();
-  // The user's domain choice and the instance beta flag, combined in hooks/usePlacesVisible.ts.
-  const poiEnabled = usePlacesVisible();
-  const placeVisits = useTripPlaceVisits(trip.id, poiEnabled);
   const tripNotes = useTripNotes(trip.id);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 

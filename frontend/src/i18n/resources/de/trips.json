@@ -195,6 +195,8 @@
       "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
       "deleteStopConfirm": "Stopp \"{{title}}\" löschen?",
       "lodgingFarFromTrip": "Weit von den Reisezielen entfernt — Adresse prüfen",
+      "placeVisited": "Ort besucht",
+      "placePlanned": "Ort geplant",
       "showDetails": "Details anzeigen",
       "expandedHint": "Details geöffnet",
       "openCruise": "Kreuzfahrt öffnen",
@@ -678,6 +680,8 @@
     "countries_other": "Länder",
     "entries_one": "Eintrag",
     "entries_other": "Einträge",
+    "places_one": "Ort",
+    "places_other": "Orte",
     "countriesIncomplete": "Länder evtl. unvollständig – die Reise hat mehr Flüge, als hier ausgewertet werden. Öffne die Reise für die vollständige Liste."
   },
   "list": {
@@ -926,6 +930,11 @@
     "loadError": "Die Aufzeichnung dieser Reise konnte nicht geladen werden.",
     "downloadError": "Die GPX-Datei konnte nicht heruntergeladen werden.",
     "deleteError": "Die Aufzeichnung konnte nicht gelöscht werden."
+  },
+  "tripPlaces": {
+    "legend": "Orte",
+    "loadError": "Orte konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
   },
   "sharedRoute": {
     "title": "Mitgeteilte Routen",

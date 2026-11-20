@@ -14,6 +14,7 @@ import { formatTimelineDate } from "../../lib/tripTimeline";
 import { placeCategoryIcon } from "../../lib/placeCategoryDisplay";
 import { usePlaceCategories } from "../../hooks/usePlaceCategories";
 import { placeSubtitle } from "../../lib/placeNames";
+import { classifyVisit } from "../../shared/placeCounting";
 
 const STOP_DOMAIN_ICON: Record<string, string> = {
   poi: "📍",
@@ -356,18 +357,29 @@ export function PlaceVisitCard({
 }: {
   ev: Extract<TimelineEvent, { kind: "place-visit" }>;
 }): JSX.Element {
+  const { t } = useTranslation(["trips"]);
   const { customs } = usePlaceCategories();
   const { place, visit } = ev;
+  // The kind word, so the card does not read like any other card in the POI
+  // hue. A visit dated after today is planned, by the one counting rule.
+  const kind = t(
+    classifyVisit(visit) === "planned"
+      ? "trips:detail.timeline.placePlanned"
+      : "trips:detail.timeline.placeVisited"
+  );
+  const subtitle = placeSubtitle(place);
   return (
-    <EventCard
-      icon={placeCategoryIcon(place.category, customs)}
-      bg="var(--domain-poi-soft)"
-      iconColor="var(--domain-poi)"
-      title={place.name}
-      subtitle={placeSubtitle(place) || null}
-      meta={visit.notes ?? undefined}
-      date={ev.date}
-      dateLabel={formatTimelineDate(ev.when)}
-    />
+    <Link to={`/places/${place.id}`} className="block">
+      <EventCard
+        icon={placeCategoryIcon(place.category, customs)}
+        bg="var(--domain-poi-soft)"
+        iconColor="var(--domain-poi)"
+        title={place.name}
+        subtitle={subtitle ? `${kind} · ${subtitle}` : kind}
+        meta={visit.notes ?? undefined}
+        date={ev.date}
+        dateLabel={formatTimelineDate(ev.when)}
+      />
+    </Link>
   );
 }

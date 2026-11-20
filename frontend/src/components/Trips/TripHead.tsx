@@ -27,6 +27,8 @@ interface TripHeadProps {
   onDelete: () => void;
   /** The trip changed from the head (sharing added a traveller): reload it. */
   onChanged: () => void;
+  /** Distinct places visited on the trip (`countTripPlaces`); shown only when above 0. */
+  placeCount?: number;
 }
 
 /**
@@ -46,6 +48,7 @@ export default function TripHead({
   onEdit,
   onDelete,
   onChanged,
+  placeCount = 0,
 }: TripHeadProps): JSX.Element {
   // The export dialog lives here, beside its button, so the trip page itself
   // does not have to carry one more piece of state.
@@ -114,6 +117,16 @@ export default function TripHead({
                 <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
                   {meta.join(" · ")}
                 </span>
+              )}
+              {placeCount > 0 && (
+                <Link
+                  to="?tab=timeline"
+                  className="t-caption underline"
+                  style={{ fontFamily: "var(--ts-font-mono)" }}
+                  data-testid="trip-head-places"
+                >
+                  {placeCount} {t("trips:card.places", { count: placeCount })}
+                </Link>
               )}
             </div>
             <h1
