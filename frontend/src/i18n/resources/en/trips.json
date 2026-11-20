@@ -664,7 +664,30 @@
       "photosTitle": "Unlink photos from the stations?",
       "photosError": "Photos of a trip are filed at this tour's stations. They stay with the trip, but have to be unlinked from the stations for the move.",
       "detachPhotosConfirm": "Unlink photos and continue"
-    }
+    },
+    "newDialog": {
+      "title": "New tour",
+      "intro": "A day tour of its own — it can be assigned to a trip later.",
+      "name": "Tour name",
+      "submit": "Create tour"
+    },
+    "columns": {
+      "name": "Tour",
+      "activity": "Type",
+      "trip": "Trip",
+      "distance": "Distance",
+      "ascent": "Ascent"
+    },
+    "summary": {
+      "tours_one": "tour",
+      "tours_other": "tours",
+      "trips_one": "trip",
+      "trips_other": "trips",
+      "withoutTrip_one": "{{count}} without a trip",
+      "withoutTrip_other": "{{count}} without a trip"
+    },
+    "allActivities": "All types",
+    "emptyHint": "Create your first tour or import a recording."
   },
   "head": {
     "days_one": "{{count}} day",

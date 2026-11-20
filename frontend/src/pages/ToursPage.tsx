@@ -1,35 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
 import ConfirmModal from "../components/ui/ConfirmModal";
-import { useCoarsePointer } from "../hooks/useCoarsePointer";
 import { useTranslation } from "../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../lib/api/tourIndex";
 import { toursApi } from "../lib/api/tours";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { useToastStore } from "../store/toastStore";
-import { SELECTABLE_LEG_MODES, type LegMode } from "../types/tour";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import TourTripDialog from "../components/Tours/TourTripDialog";
 import { moveTourToTrip } from "../components/Tours/tourTripMove";
-import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
-
-const DEFAULT_MODE: LegMode = "road";
-
-/** Row actions are bordered buttons; a finger gets a 44 px target, a mouse the compact one. */
-const ROW_ACTION_BASE =
-  "shrink-0 rounded-md border border-(--border-default) px-3 text-xs hover:bg-(--bg-surface)";
-const ROW_ACTION_COARSE = `${ROW_ACTION_BASE} min-h-11 min-w-11`;
-const ROW_ACTION_FINE = `${ROW_ACTION_BASE} py-1`;
-
-function formatKm(value: number): string {
-  return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
+import LogbookTabs from "../components/table/LogbookTabs";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import ListFilterBar from "../components/table/ListFilterBar";
+import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { RowActionButton, RowActions } from "../components/table/RowActionButton";
+import { SkeletonTable } from "../components/SkeletonLoader";
+import { Table, type TableColumn } from "../components/ui/Table";
+import { useTableHints } from "../components/ui/useTableHints";
+import NewTourDialog from "../components/Tours/NewTourDialog";
+import {
+  TOUR_COLUMN_IDS,
+  TOUR_COLUMN_LAYOUT,
+  TourTableRow,
+} from "../components/Tours/TourTableRow";
+import { tourSummaryFigures } from "../lib/tour/tourSummaryFigures";
 
 /**
  * Every tour the reader owns, across every trip and none.
@@ -48,29 +49,19 @@ function formatKm(value: number): string {
  */
 export default function ToursPage(): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
-  const coarse = useCoarsePointer();
-  const rowActionClass = coarse ? ROW_ACTION_COARSE : ROW_ACTION_FINE;
+  const tableHints = useTableHints();
   const addToast = useToastStore((s) => s.addToast);
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
-  const [newActivity, setNewActivity] = useState<TourActivity | "">("hike");
-  // The day tour's day and start (D2) — optional; a recording can fill the day later.
-  const [newDate, setNewDate] = useState("");
-  const [newStartTime, setNewStartTime] = useState("");
+  const [activityFilter, setActivityFilter] = useState("all");
+  const [loadLog, setLoadLog] = useState<string | null>(null);
   const { isEnabled } = useEnabledDomains();
   const stravaConnected = useStravaConnected();
   const [stravaOpen, setStravaOpen] = useState(false);
   const navigate = useNavigate();
-  const [saving, setSaving] = useState(false);
-  // A name of only whitespace is refused by the server (schemas/tour.ts);
-  // the form says so at the field once a save was tried.
-  const [saveTried, setSaveTried] = useState(false);
-  const showNameMissing = saveTried && !newName.trim();
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
   const [photoOptIn, setPhotoOptIn] = useState<TourSummary | null>(null);
   const [movingTour, setMovingTour] = useState<TourSummary | null>(null);
@@ -91,47 +82,17 @@ export default function ToursPage(): JSX.Element {
       const data = await tourIndexApi.list("tour");
       if (!mountedRef.current) return;
       setTours(data);
-    } catch {
+    } catch (err) {
       if (!mountedRef.current) return;
       setTours(null);
       setLoadError(true);
+      setLoadLog(loadFailureLog(err));
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  const handleCreate = async (): Promise<void> => {
-    const name = newName.trim();
-    setSaveTried(true);
-    if (!name) return;
-    setSaving(true);
-    try {
-      await toursApi.createStandalone({
-        name,
-        mode: newMode,
-        activity: newActivity === "" ? null : newActivity,
-        ...(newDate ? { date: newDate, startTime: newStartTime || null } : {}),
-      });
-      if (!mountedRef.current) return;
-      // Re-read rather than append: the list is ordered by the owning
-      // trip's start date, and a new trip-less tour's place in that order
-      // is the server's answer, not something to guess locally.
-      await load();
-      setNewName("");
-      setSaveTried(false);
-      setNewMode(DEFAULT_MODE);
-      setNewActivity("hike");
-      setNewDate("");
-      setNewStartTime("");
-      setCreating(false);
-    } catch {
-      if (mountedRef.current) addToast("error", t("trips:tours.createError"));
-    } finally {
-      if (mountedRef.current) setSaving(false);
-    }
-  };
 
   const handleDelete = async (tour: TourSummary, deleteExpenses = false): Promise<void> => {
     try {
@@ -157,28 +118,44 @@ export default function ToursPage(): JSX.Element {
   };
 
   const isLoading = tours === null && !loadError;
-  const isEmpty = !isLoading && !loadError && tours !== null && tours.length === 0;
   const hasTours = !isLoading && !loadError && tours !== null && tours.length > 0;
+  const isEmpty = !isLoading && !loadError && tours !== null && tours.length === 0;
   // Name or trip name, case-insensitive — the same free-text filter every other
-  // domain's list has (forgejo#403). A filter that empties the list says so
-  // instead of reading as "no tours yet".
+  // domain's list has (forgejo#403) — plus the activity select. A filter that
+  // empties the list says so instead of reading as "no tours yet".
   const needle = search.trim().toLowerCase();
   const visibleTours = (tours ?? []).filter(
     (tour) =>
-      needle === "" ||
-      tour.name.toLowerCase().includes(needle) ||
-      (tour.tripName ?? "").toLowerCase().includes(needle)
+      (activityFilter === "all" || (tour.activity ?? "") === activityFilter) &&
+      (needle === "" ||
+        tour.name.toLowerCase().includes(needle) ||
+        (tour.tripName ?? "").toLowerCase().includes(needle))
   );
+  const hasActiveFilter = needle !== "" || activityFilter !== "all";
+  const resetFilters = (): void => {
+    setSearch("");
+    setActivityFilter("all");
+  };
+  const activitiesInUse = [
+    ...new Set((tours ?? []).flatMap((tour) => (tour.activity ? [tour.activity] : []))),
+  ];
+
+  const columns: TableColumn[] = TOUR_COLUMN_IDS.map((id) => ({
+    key: id,
+    ...TOUR_COLUMN_LAYOUT[id],
+    label: id === "actions" ? "" : t(`trips:tours.columns.${id}`),
+  }));
 
   return (
-    <AppShell width="list">
-      <header className="mb-4 flex items-center justify-between">
+    <AppShell width="table">
+      <LogbookTabs />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="t-screen-title">{t("trips:tours.pageTitle")}</h1>
-        <span className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {stravaConnected && (
             <button
               type="button"
-              className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
+              className="rounded-md border border-(--color-border) px-3 py-2 text-sm whitespace-nowrap hover:bg-(--bg-surface)"
               onClick={() => setStravaOpen(true)}
             >
               {t("roadtrips:strava.importButton")}
@@ -186,16 +163,14 @@ export default function ToursPage(): JSX.Element {
           )}
           <button
             type="button"
-            className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
-            onClick={() => {
-              setCreating((v) => !v);
-              setSaveTried(false);
-            }}
+            onClick={() => setCreating(true)}
+            className="btn-primary flex items-center gap-2 whitespace-nowrap"
           >
-            {t("trips:tours.newTour")}
+            <span>+</span>
+            <span>{t("trips:tours.newTour")}</span>
           </button>
-        </span>
-      </header>
+        </div>
+      </div>
       {stravaOpen && (
         <StravaImportDialog
           target={{ kind: "newTour" }}
@@ -204,184 +179,130 @@ export default function ToursPage(): JSX.Element {
         />
       )}
 
+      <ListSummaryStrip
+        figures={tourSummaryFigures(visibleTours, {
+          tours: (count: number) => t("trips:tours.summary.tours", { count }),
+          trips: (count: number) => t("trips:tours.summary.trips", { count }),
+          withoutTrip: (count: number) => t("trips:tours.summary.withoutTrip", { count }),
+        })}
+        filtered={hasActiveFilter}
+        filteredLabel={t("common:filters.filtered")}
+        unknown={isLoading || loadError || tours === null}
+      />
+
       {/* The rule's classification of the pre-2.7 sections, shown where a
           misfiled row is found — only while the roadtrip page exists to
           move it to. */}
       {isEnabled("roadtrip") && <KindReviewNotice onChanged={() => void load()} />}
 
-      {creating && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-(--color-border) p-3">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={t("trips:tours.namePlaceholder")}
-            aria-label={t("trips:tours.namePlaceholder")}
-            aria-invalid={showNameMissing || undefined}
-            aria-describedby={showNameMissing ? "tour-name-error" : undefined}
-            className="min-w-48 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          />
-          <select
-            value={newActivity}
-            onChange={(e) => setNewActivity(e.target.value as TourActivity | "")}
-            aria-label={t("roadtrips:activityLabel")}
-            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          >
-            <option value="">{t("roadtrips:activityNone")}</option>
-            {TOUR_ACTIVITIES.map((a) => (
-              <option key={a} value={a}>
-                {t(`roadtrips:activity.${a}`)}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            aria-label={t("trips:tours.day.date")}
-            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          />
-          <input
-            type="time"
-            value={newStartTime}
-            disabled={!newDate}
-            onChange={(e) => setNewStartTime(e.target.value)}
-            aria-label={t("trips:tours.day.startTime")}
-            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          />
-          <select
-            value={newMode}
-            onChange={(e) => setNewMode(e.target.value as LegMode)}
-            aria-label={t("trips:tours.modeLabel")}
-            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          >
-            {SELECTABLE_LEG_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {t(`trips:tours.mode.${mode}`)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            disabled={saving}
-            className="rounded-sm bg-(--accent) px-3 py-1.5 text-sm text-white disabled:opacity-40"
-            onClick={() => void handleCreate()}
-          >
-            {t("trips:tours.save")}
-          </button>
-          {showNameMissing && (
-            <p id="tour-name-error" role="alert" className="basis-full text-xs text-(--danger)">
-              {t("trips:tours.nameRequired")}
-            </p>
-          )}
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="py-10 text-center text-sm text-(--text-muted)">
-          {t("common:loading.default")}
-        </div>
-      )}
-
-      {loadError && (
-        <div className="rounded-lg border border-(--color-border) bg-(--bg-surface) p-4 text-sm">
-          <p style={{ color: "var(--danger)" }}>{t("trips:tours.loadError")}</p>
-          <button type="button" className="mt-2 underline" onClick={() => void load()}>
-            {t("common:buttons.retry")}
-          </button>
-        </div>
-      )}
-
-      {isEmpty && (
-        <div className="py-10 text-center text-sm text-(--text-muted)">
-          {t("trips:tours.pageEmpty")}
-        </div>
-      )}
-
       {hasTours && (
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("trips:tours.searchPlaceholder")}
-          aria-label={t("trips:tours.searchPlaceholder")}
-          maxLength={100}
-          className="mb-3 w-full rounded-md border border-(--color-border) bg-transparent px-3 py-2 text-sm sm:w-72"
+        <ListFilterBar
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: t("trips:tours.searchPlaceholder"),
+          }}
+          status={
+            activitiesInUse.length > 1
+              ? {
+                  label: t("roadtrips:activityLabel"),
+                  value: activityFilter,
+                  onChange: setActivityFilter,
+                  allLabel: t("trips:tours.allActivities"),
+                  options: activitiesInUse.map((a) => ({
+                    value: a,
+                    label: t(`roadtrips:activity.${a}`),
+                  })),
+                }
+              : undefined
+          }
+          hasActiveFilter={hasActiveFilter}
+          onReset={resetFilters}
+          resultLabel={t("common:filters.matching", { count: visibleTours.length })}
         />
       )}
 
-      {hasTours && visibleTours.length === 0 && (
-        <div role="status" className="py-10 text-center text-sm text-(--text-muted)">
-          {t("trips:tours.searchEmpty", { q: search.trim() })}
+      {isLoading && <SkeletonTable rows={6} />}
+
+      {loadError && (
+        <ListLoadFailed
+          title={t("trips:tours.loadError")}
+          onRetry={() => void load()}
+          log={loadLog}
+        />
+      )}
+
+      {(isEmpty || (hasTours && visibleTours.length === 0)) && (
+        <div
+          className="overflow-hidden rounded-lg shadow-xs"
+          style={{ border: "1px solid var(--color-border)" }}
+        >
+          <ListEmptyState
+            filtered={hasActiveFilter}
+            emptyTitle={t("trips:tours.pageEmpty")}
+            emptyHint={t("trips:tours.emptyHint")}
+            onReset={resetFilters}
+            action={{ label: t("trips:tours.newTour"), onClick: () => setCreating(true) }}
+          />
         </div>
       )}
 
       {hasTours && visibleTours.length > 0 && (
-        <ul className="space-y-2">
+        <Table columns={columns} label={t("trips:tours.pageTitle")} {...tableHints}>
           {visibleTours.map((tour) => (
-            <li
+            <TourTableRow
               key={tour.id}
-              className="flex items-center gap-2 rounded-lg border border-(--color-border) pr-3 text-sm hover:bg-(--bg-surface)"
-            >
-              {/* The delete button sits OUTSIDE the link: nested in an `<a>`
-                  it is not a second action, it is a click the link eats. */}
-              <Link
-                to={
+              tour={tour}
+              columns={columns}
+              onOpen={() =>
+                navigate(
                   tour.tripId === null
                     ? `/tours/${tour.id}`
                     : `/trips/${tour.tripId}/route/${tour.id}`
-                }
-                className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 p-3"
-              >
-                <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="font-medium">{tour.name}</span>
-                  <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
-                    {tour.activity
-                      ? t(`roadtrips:activity.${tour.activity}`)
-                      : t(`trips:tours.mode.${tour.mode}`)}
-                  </span>
-                  {/* A tour with no trip says so, rather than showing a blank
-                      where every other row shows a name. */}
-                  <span className="text-xs text-(--text-muted)">
-                    {tour.tripName ?? t("trips:tours.noTrip")}
-                  </span>
-                </span>
-                <span className="flex items-center gap-3 text-(--text-muted)">
-                  {tour.trackCount === 0 && (
-                    <span>{t("trips:tours.stopCount", { count: tour.stopCount })}</span>
+                )
+              }
+              actions={
+                <RowActions>
+                  {tour.tripId === null ? (
+                    <RowActionButton
+                      icon="link"
+                      label={t("trips:tours.move.action")}
+                      onClick={() => setMovingTour(tour)}
+                      testId={`tour-assign-${tour.id}`}
+                    />
+                  ) : (
+                    <RowActionButton
+                      icon="unlink"
+                      label={t("trips:tours.move.detach")}
+                      onClick={() => void handleDetach(tour)}
+                      testId={`tour-detach-${tour.id}`}
+                    />
                   )}
-                  <span>{formatKm(tour.distanceKm)} km</span>
-                  {tour.ascentM !== null && <span>↑ {formatKm(tour.ascentM)} m</span>}
-                </span>
-              </Link>
-              {tour.tripId === null ? (
-                <button
-                  type="button"
-                  className={rowActionClass}
-                  onClick={() => setMovingTour(tour)}
-                >
-                  {t("trips:tours.move.action")}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={rowActionClass}
-                  onClick={() => void handleDetach(tour)}
-                >
-                  {t("trips:tours.move.detach")}
-                </button>
-              )}
-              <button
-                type="button"
-                className={rowActionClass}
-                onClick={() => setPendingDelete(tour)}
-              >
-                {t("trips:tours.deleteLabel")}
-              </button>
-            </li>
+                  <RowActionButton
+                    icon="delete"
+                    label={t("trips:tours.deleteLabel")}
+                    onClick={() => setPendingDelete(tour)}
+                    testId={`tour-delete-${tour.id}`}
+                  />
+                </RowActions>
+              }
+            />
           ))}
-        </ul>
+        </Table>
       )}
+
+      <NewTourDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        // Re-read rather than append: the list is ordered by the owning
+        // trip's start date, and a new trip-less tour's place in that order
+        // is the server's answer, not something to guess locally.
+        onCreated={() => {
+          setCreating(false);
+          void load();
+        }}
+        onReload={() => void load()}
+      />
 
       {movingTour && (
         <TourTripDialog
