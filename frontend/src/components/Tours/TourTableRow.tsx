@@ -53,7 +53,12 @@ export function TourTableRow({ tour, columns, onOpen, actions }: Props): JSX.Ele
     distance: `${formatKm(tour.distanceKm)} km`,
     ascent: tour.ascentM !== null ? `↑ ${formatKm(tour.ascentM)} m` : "—",
     // The row opens the tour; a click on an action must not also reach it.
-    actions: <span onClick={(e) => e.stopPropagation()}>{actions}</span>,
+    // Keys too: Enter/Space on an action would bubble to the row's own handler and open the tour.
+    actions: (
+      <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        {actions}
+      </span>
+    ),
   };
   return (
     <TableRow

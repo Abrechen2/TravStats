@@ -150,6 +150,13 @@ describe("the tours page", () => {
     expect(screen.getByTestId("where").textContent).toBe("/");
   });
 
+  it("does not open the tour when Enter is pressed on a row action", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour()]);
+    renderPage();
+    fireEvent.keyDown(await screen.findByLabelText("trips:tours.deleteLabel"), { key: "Enter" });
+    expect(screen.getByTestId("where").textContent).toBe("/");
+  });
+
   it("counts the tours in the summary strip and says how many have no trip", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([
       tour(),
