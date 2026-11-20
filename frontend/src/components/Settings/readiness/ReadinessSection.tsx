@@ -225,7 +225,7 @@ export default function ReadinessSection(): JSX.Element {
                               minHeight,
                               display: "inline-flex",
                               alignItems: "center",
-                              color: "var(--ts-accent-text)",
+                              color: "var(--ts-accent)",
                             }}
                           >
                             {t("readiness:openAction")}
@@ -391,7 +391,7 @@ function ItemRow({
               minHeight,
               display: "inline-flex",
               alignItems: "center",
-              color: "var(--ts-accent-text)",
+              color: "var(--ts-accent)",
             }}
           >
             {unknown ? t("readiness:checkNow") : t("readiness:openAction")}
