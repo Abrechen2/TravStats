@@ -158,10 +158,8 @@ export function AllTab(): JSX.Element {
   // second condition here).
   const placesAllowed = usePlacesVisible();
 
-  // One fetch carries day tours AND roadtrips, so it runs while either domain
-  // is on; each kind is then filtered by its own domain below. Gated on the
-  // day-tour switch alone, an account without `tour` lost every roadtrip
-  // (tester, 2026-11-18).
+  // One fetch carries day tours AND roadtrips: it runs while either domain is
+  // on (gated on `tour` alone, roadtrips vanished — tester, 2026-11-18).
   const toursVisible = useToursVisible();
   const dashboardTours = useDashboardTours(toursVisible || isEnabled("roadtrip"));
   // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
@@ -460,11 +458,9 @@ export function AllTab(): JSX.Element {
     );
   }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig, journeyVisMode]);
 
-  // Tours and ground lines on the main overview map only — journey mode already
-  // takes over the map for ONE trip (`journeyLayers`); every route on top would
-  // misdescribe it. Not tied to the day-tour domain: rail, bus, ferry, rentals
-  // and roadtrips each answer to their own domain and filter row, and hanging
-  // them on `tour` hid all of them for an account without it (tester, rc.35).
+  // Tours and ground lines on the overview map only — journey mode takes over
+  // the map for ONE trip (`journeyLayers`). Each line answers to its own domain;
+  // hung on `tour`, all of them vanished without it (tester, rc.35).
   const showTours = allMode !== "journey";
 
   // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl

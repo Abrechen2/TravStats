@@ -580,8 +580,10 @@ describe("SettingsPage — the frame of the prototype (forgejo#321)", () => {
     expect(links[links.length - 1]).toHaveAttribute("href", "/settings/ueber");
     const flight = menu.querySelector('a[href="/settings/fluege"]') as HTMLElement;
     const account = menu.querySelector('a[href="/settings/profil"]') as HTMLElement;
-    expect(flight.style.paddingLeft).not.toBe("");
-    expect(account.style.paddingLeft).toBe("");
+    // Every link carries a left padding since the sidebar spacing fix
+    // (2026-11-20); an indented entry carries a deeper one.
+    expect(flight.style.paddingLeft).toBe("24px");
+    expect(account.style.paddingLeft).toBe("var(--ts-space-lg)");
   });
 
   // Settings v3 (S1): the menu has four areas; TravTrack's and TravPlan's wait
