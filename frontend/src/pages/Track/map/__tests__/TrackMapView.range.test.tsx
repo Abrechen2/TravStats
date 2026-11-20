@@ -265,14 +265,15 @@ describe("TrackMapView — long spans", () => {
     expect(api.day).toHaveBeenCalledTimes(1);
   });
 
-  it("no Immich connection: asks no photo list (no 409 in the console), points to Settings, logs nothing", async () => {
+  it("no Immich connection: asks no photo list (no 409 in the console), the map shows no notice, logs nothing", async () => {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
     views.photoSources.mockResolvedValue([]);
     const warn = vi.spyOn(console, "warn");
     const error = vi.spyOn(console, "error");
     renderAt("/track");
     await screen.findByTestId("map-stub");
-    expect(await screen.findByRole("link", { name: "track:photos.connect" })).toBeInTheDocument();
+    expect(await screen.findByText("track:map.layers.photosNoSource")).toBeInTheDocument();
+    expect(screen.queryByText(/track:photos.failure/)).toBeNull();
     expect(views.photos).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalledWith(
       "TravTrack photos could not be loaded",
@@ -287,21 +288,20 @@ describe("TrackMapView — long spans", () => {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
     views.photoSources.mockResolvedValue([]);
     const first = renderAt("/track");
-    await screen.findByRole("link", { name: "track:photos.connect" });
+    await screen.findByText("track:map.layers.photosNoSource");
     first.unmount();
     views.photoSources.mockResolvedValue(["immich"]);
     renderAt("/track");
     await waitFor(() => expect(views.photos).toHaveBeenCalled());
   });
 
-  it("photos come from the server's list; a missing Immich points to Settings", async () => {
+  it("a 409 notConfigured from the server shows no notice on the map either", async () => {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
     views.photos.mockRejectedValue({ response: { status: 409, data: { error: "notConfigured" } } });
     renderAt("/track");
     await screen.findByTestId("map-stub");
-    const link = await screen.findByRole("link", { name: "track:photos.connect" });
-    expect(link.getAttribute("href")).toContain("/settings/dienstek");
-    expect(screen.getByText(/track:photos.failure.notConfigured/)).toBeInTheDocument();
+    await waitFor(() => expect(views.photos).toHaveBeenCalled());
+    expect(screen.queryByText(/track:photos.failure/)).toBeNull();
     expect(screen.getByTestId("map-stub")).toHaveTextContent("0 photos");
   });
 
@@ -321,7 +321,10 @@ describe("TrackMapView — long spans", () => {
   });
 
   it("an explicit off is remembered: no photo read although a source is connected", async () => {
-    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: false } }));
+    window.localStorage.setItem(
+      PREFS_KEY,
+      JSON.stringify({ version: 2, layers: { photos: false } })
+    );
     views.photos.mockResolvedValue({ photos: [placed], truncated: false, failures: [] });
     renderAt("/track");
     await screen.findByTestId("map-stub");

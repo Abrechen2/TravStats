@@ -172,6 +172,22 @@ describe("Track photo layer default", () => {
     expect(DEFAULT_PREFS.layers.photos).toBe(true);
     expect(parsePrefs(null).layers.photos).toBe(true);
     expect(parsePrefs(JSON.stringify({ layers: { routes: true } })).layers.photos).toBe(true);
-    expect(parsePrefs(JSON.stringify({ layers: { photos: false } })).layers.photos).toBe(false);
+    expect(
+      parsePrefs(JSON.stringify({ version: 2, layers: { photos: false } })).layers.photos
+    ).toBe(false);
+  });
+
+  it("prefs saved before the default changed get photos reset once; a version-2 off stays", async () => {
+    const { parsePrefs, PREFS_VERSION } = await import("../../../../lib/webPrefs/trackMap");
+    const old = parsePrefs(JSON.stringify({ layers: { photos: false, heat: true } }));
+    expect(old.layers.photos).toBe(true);
+    expect(old.layers.heat).toBe(true);
+    expect(
+      parsePrefs(JSON.stringify({ version: 1, layers: { photos: false } })).layers.photos
+    ).toBe(true);
+    expect(old.version).toBe(PREFS_VERSION);
+    // The next save carries the version, so the owner's own off is then kept.
+    const saved = JSON.stringify({ ...old, layers: { ...old.layers, photos: false } });
+    expect(parsePrefs(saved).layers.photos).toBe(false);
   });
 });

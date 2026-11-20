@@ -37,7 +37,16 @@ export type SpeedScale = (typeof SPEED_SCALES)[number];
 export const ACCURACY_OPTIONS = [null, 20, 50, 100, 200] as const;
 export type MaxAccuracyM = (typeof ACCURACY_OPTIONS)[number];
 
+/**
+ * The shape of the stored document. 2: the photo layer became on by default;
+ * a document written before (no version, or 1) carried `photos: false` only
+ * because that was the default, so `parsePrefs` resets that one layer once.
+ * Every save writes the version, so a deliberate off afterwards is kept.
+ */
+export const PREFS_VERSION = 2;
+
 export interface TrackMapPrefs {
+  version: number;
   layers: Record<TrackLayer, boolean>;
   color: RouteColorMode;
   /** 0.2 … 1 */
@@ -50,6 +59,7 @@ export interface TrackMapPrefs {
 }
 
 export const DEFAULT_PREFS: TrackMapPrefs = {
+  version: PREFS_VERSION,
   layers: {
     routes: true,
     points: false,
@@ -88,10 +98,13 @@ export function parsePrefs(raw: string | null): TrackMapPrefs {
   const storedLayers = (
     typeof v.layers === "object" && v.layers !== null ? v.layers : {}
   ) as Record<string, unknown>;
+  const current = typeof v.version === "number" && v.version >= PREFS_VERSION;
   const layers = Object.fromEntries(
     TRACK_LAYERS.map((id) => [
       id,
-      typeof storedLayers[id] === "boolean" ? storedLayers[id] : DEFAULT_PREFS.layers[id],
+      typeof storedLayers[id] === "boolean" && (current || id !== "photos")
+        ? storedLayers[id]
+        : DEFAULT_PREFS.layers[id],
     ])
   ) as Record<TrackLayer, boolean>;
   const opacity =
@@ -108,6 +121,7 @@ export function parsePrefs(raw: string | null): TrackMapPrefs {
     ? (v.maxAccuracyM as MaxAccuracyM)
     : DEFAULT_PREFS.maxAccuracyM;
   return {
+    version: PREFS_VERSION,
     layers,
     color: v.color === "plain" || v.color === "speed" ? v.color : DEFAULT_PREFS.color,
     opacity,

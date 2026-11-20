@@ -1,13 +1,9 @@
 import type { JSX } from "react";
-import { Link } from "react-router-dom";
 import type { TrackPhotoProvider } from "../../../lib/api/travtrackViews";
 import { token } from "../../../components/ui/tokens";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { isNotConfigured } from "./trackPhotos";
 import type { PhotosState } from "./useTrackPhotos";
-
-/** Settings → Dienste, where a photo source (Immich, PhotoPrism) is connected. */
-export const PHOTO_SETTINGS_PATH = "/settings/dienstek#immich";
 
 /** The product names are not translated. */
 const sourceName = (provider?: TrackPhotoProvider): string =>
@@ -24,13 +20,12 @@ export default function TrackPhotoNotice({ state }: { state: PhotosState }): JSX
   if (state.kind === "loading") {
     return <p className="t-caption">{t("track:photos.loading")}</p>;
   }
+  // No source connected is not a failure: the layer toggle's row says how to connect one.
+  if (state.kind === "failed" && isNotConfigured(state.key)) return null;
   if (state.kind === "failed") {
     return (
       <p className="t-caption" role="status" style={{ color: token("warn") }}>
-        {t(state.key, { source: sourceName(state.provider) })}{" "}
-        {isNotConfigured(state.key) && (
-          <Link to={PHOTO_SETTINGS_PATH}>{t("track:photos.connect")}</Link>
-        )}
+        {t(state.key, { source: sourceName(state.provider) })}
       </p>
     );
   }
