@@ -220,6 +220,16 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
       expect(screen.queryByLabelText(/packing.remove/)).toBeNull();
     });
 
+    // Owner, 2026-11-20: a completed trip whose dates come only from its
+    // entries has no endDate, and its editable list stood above the tabs.
+    it("treats a trip the server calls completed as finished, even without an end date", async () => {
+      get.mockResolvedValue(list(1, []));
+      const { container } = render(<TripPackingCard tripId="t1" endDate={null} completed />);
+      await waitFor(() => expect(get).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      expect(container).toBeEmptyDOMElement();
+    });
+
     it("leaves an upcoming or running trip fully editable", async () => {
       render(<TripPackingCard tripId="t1" endDate="2999-01-01" />);
       expect(await screen.findByRole("checkbox")).toBeInTheDocument();

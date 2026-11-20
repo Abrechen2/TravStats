@@ -167,7 +167,8 @@ export default function TripDetailPage(): JSX.Element {
         placeCount={countTripPlaces(places.placeVisits)}
       />
       {places.failed && <TripPlacesError onRetry={places.reload} />}
-      <TripPackingCard tripId={trip.id} endDate={trip.endDate} />
+      {/* A finished trip's list is a record, not a task: it waits at the end. */}
+      {trip.status !== "completed" && <TripPackingCard tripId={trip.id} endDate={trip.endDate} />}
       <TabBar tab={tab} onChange={setTab} t={t} />
 
       <div className="py-6">
@@ -238,6 +239,10 @@ export default function TripDetailPage(): JSX.Element {
         )}
         {tab === "tours" && <TourSectionList tripId={shownTrip.id} />}
       </div>
+
+      {trip.status === "completed" && (
+        <TripPackingCard tripId={trip.id} endDate={trip.endDate} completed />
+      )}
 
       {editing && (
         <TripModal

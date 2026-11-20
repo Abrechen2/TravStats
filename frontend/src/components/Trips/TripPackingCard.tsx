@@ -35,8 +35,11 @@ type Notice = "stale" | "staleReloadFailed" | "saveFailed" | null;
 export default function TripPackingCard({
   tripId,
   endDate = null,
+  completed = false,
 }: {
   tripId: string;
+  /** The server already calls the trip completed. A trip whose dates come only from its entries has no `endDate`, and its editable list stood above the tabs of a finished trip (owner, 2026-11-20). */
+  completed?: boolean;
   /** The trip's last day: once it is past (profile zone) nothing is left to pack, so the card is a read-only record. */
   endDate?: string | null;
 }): JSX.Element | null {
@@ -50,7 +53,7 @@ export default function TripPackingCard({
   const [quantity, setQuantity] = useState(1);
   const [scope, setScope] = useState<"personal" | "shared">("personal");
   const [open, setOpen] = useState(false);
-  const finished = isTripFinished(endDate, todayIn(useTodayZone()));
+  const finished = isTripFinished(endDate, todayIn(useTodayZone())) || completed;
   // A write whose answer never arrived may have been applied. Its retry reuses
   // the mutation id, so the server answers "already applied" instead of 409.
   const unanswered = useRef<{
