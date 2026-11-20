@@ -20,7 +20,13 @@ vi.mock("../../hooks/useTranslation", () => ({
 vi.mock("../../components/ui/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("../../components/Trips/TripMap", () => ({ default: () => <div data-testid="map" /> }));
+const mapProps = vi.hoisted(() => [] as { trip: Record<string, unknown> }[]);
+vi.mock("../../components/Trips/TripMap", () => ({
+  default: (props: { trip: Record<string, unknown> }) => {
+    mapProps.push(props);
+    return <div data-testid="map" />;
+  },
+}));
 vi.mock("../../components/Trips/StravaImportDialog", () => ({
   default: () => null,
   useStravaConnected: () => false,
@@ -118,6 +124,26 @@ describe("TripRouteEditorPage — a day tour that joined a trip", () => {
       routingAvailable: false,
     });
     vi.mocked(toursApi.geometry).mockResolvedValue({ type: "FeatureCollection", features: [] });
+  });
+
+  // Owner, 2026-11-20: a hike's page drew the whole trip — the flights from
+  // Germany to Madagascar — and framed the map on two continents.
+  it("draws the tour on its map, not the trip it belongs to", async () => {
+    vi.mocked(tripsApi.getById).mockResolvedValue({
+      id: "t1",
+      name: "Norwegen",
+      stops: [{ id: "s9", title: "Oslo Lufthavn", lat: 60.19, lon: 11.1 }],
+      flights: [{ id: "f1" }],
+    } as never);
+    renderPage();
+    await waitFor(() => {
+      const drawn = mapProps[mapProps.length - 1]?.trip;
+      expect((drawn?.stops as { title: string }[] | undefined)?.map((s) => s.title)).toEqual([
+        "Gjendesheim",
+        "Memurubu",
+      ]);
+      expect(drawn?.flights).toBeUndefined();
+    });
   });
 
   it("edits the tour's own points on the trip's path", async () => {

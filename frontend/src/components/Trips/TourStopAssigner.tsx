@@ -52,47 +52,69 @@ export default function TourStopAssigner({ stops, onChange }: Props): JSX.Elemen
     return <p className="text-sm text-(--text-muted)">{t("trips:tours.noStops")}</p>;
   }
 
+  const renderStop = (stop: TourStop): JSX.Element => {
+    const disabled = stop.lat === null || stop.lon === null;
+    const checked = stop.routeOrderIdx !== null;
+    return (
+      <li
+        key={stop.id}
+        className="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) px-3 py-2 text-sm"
+      >
+        <div className="min-w-0">
+          <span className="truncate font-medium">{stop.title}</span>
+          {checked && (
+            <span className="ml-2 rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs text-(--text-muted)">
+              {t("trips:tours.stopIsRoutePoint")} #{(stop.routeOrderIdx ?? 0) + 1}
+            </span>
+          )}
+          {disabled && (
+            <p className="text-xs text-(--text-muted)">{t("trips:tours.needsCoordinate")}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          aria-label={stop.title}
+          disabled={disabled}
+          onClick={() => handleToggle(stop)}
+          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${
+            checked ? "bg-(--accent)" : "bg-gray-600"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              checked ? "translate-x-4" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </li>
+    );
+  };
+
+  // The tour's own stops lead; the rest of the trip's timeline waits folded
+  // underneath. Owner, 2026-11-20: a tour page listed every stop of the trip
+  // as if it belonged to the tour.
+  const assigned = [...stops]
+    .filter((s) => s.routeOrderIdx !== null)
+    .sort((a, b) => (a.routeOrderIdx ?? 0) - (b.routeOrderIdx ?? 0));
+  const others = stops.filter((s) => s.routeOrderIdx === null);
+
   return (
-    <ul className="space-y-1">
-      {stops.map((stop) => {
-        const disabled = stop.lat === null || stop.lon === null;
-        const checked = stop.routeOrderIdx !== null;
-        return (
-          <li
-            key={stop.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) px-3 py-2 text-sm"
-          >
-            <div className="min-w-0">
-              <span className="truncate font-medium">{stop.title}</span>
-              {checked && (
-                <span className="ml-2 rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs text-(--text-muted)">
-                  {t("trips:tours.stopIsRoutePoint")} #{(stop.routeOrderIdx ?? 0) + 1}
-                </span>
-              )}
-              {disabled && (
-                <p className="text-xs text-(--text-muted)">{t("trips:tours.needsCoordinate")}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={checked}
-              aria-label={stop.title}
-              disabled={disabled}
-              onClick={() => handleToggle(stop)}
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${
-                checked ? "bg-(--accent)" : "bg-gray-600"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  checked ? "translate-x-4" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-2">
+      {assigned.length > 0 ? (
+        <ul className="space-y-1">{assigned.map(renderStop)}</ul>
+      ) : (
+        <p className="text-sm text-(--text-muted)">{t("trips:tours.noAssignedStops")}</p>
+      )}
+      {others.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-sm text-(--text-muted)">
+            {t("trips:tours.moreTripStops", { count: others.length })}
+          </summary>
+          <ul className="mt-1 space-y-1">{others.map(renderStop)}</ul>
+        </details>
+      )}
+    </div>
   );
 }

@@ -472,6 +472,8 @@
     "noStops": "No stop in this trip yet — add stops in the timeline first",
     "stopIsRoutePoint": "Route point",
     "needsCoordinate": "A stop without a coordinate cannot be part of a route",
+    "noAssignedStops": "This tour has no stop from the trip yet",
+    "moreTripStops": "More stops of the trip ({{count}})",
     "notFound": "This tour does not exist",
     "backToTrip": "Back to the trip",
     "assignError": "The stops could not be saved",
