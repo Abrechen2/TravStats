@@ -25,6 +25,7 @@ import {
   type PhotoCluster,
   type ScanPhoto,
 } from "./cluster";
+import { loadAnsweredIndex } from "./answeredMatch";
 import { journeyFingerprint } from "./fingerprint";
 import { travelWindows } from "./windows";
 import { scanVisitFindings } from "./visitScan";
@@ -193,6 +194,8 @@ export async function scanPhotoJourneys(
   });
   const existingByFingerprint = new Map(existingRows.map((r) => [r.fingerprint, r]));
 
+  const answered = await loadAnsweredIndex(userId, "journey");
+
   for (const finding of findings) {
     const { cluster, located } = finding;
     // The fingerprint stays on the MEDIAN position it has always used, not on
@@ -204,6 +207,11 @@ export async function scanPhotoJourneys(
     // Already answered. Re-asking a dismissed question every night is
     // how a helpful feature becomes one people turn off.
     if (existing !== null && existing.status !== "pending") {
+      continue;
+    }
+    // A new fingerprint for an answered burst (earlier photos, a median across
+    // a rounding edge) is still the same question.
+    if (existing === null && answered.covers({ ...cluster, position: located })) {
       continue;
     }
 

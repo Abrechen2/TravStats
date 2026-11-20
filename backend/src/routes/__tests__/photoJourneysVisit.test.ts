@@ -157,6 +157,27 @@ describe("visit findings (forgejo#211)", () => {
       expect(await prisma.place.count({ where: { userId } })).toBe(0);
     });
 
+    it("does not re-ask a dismissed stop when earlier photos change its fingerprint", async () => {
+      await scan();
+      const [row] = await pending();
+      await request(app)
+        .patch(`/api/v1/photo-journeys/${row.id}`)
+        .set("Cookie", cookie)
+        .send({ status: "dismissed" });
+
+      // The library grew: a photo from the hour before moves the stop's start
+      // hour, so visitFingerprint() no longer matches the dismissed row.
+      const earlier = asset("palace-early", "2026-05-01T03:55:00.000Z", PALACE);
+      const sameStop = [earlier, ...PALACE_STOP.map((a, i) => ({ ...a, id: `p2-${i}` }))].map(
+        (a, i) => (i === 0 ? { ...a, fileCreatedAt: "2026-05-01T04:50:00.000Z" } : a)
+      );
+      searchAssetsByDate.mockResolvedValue({ assets: sameStop, truncated: false });
+
+      await scan();
+      expect(await pending()).toHaveLength(0);
+      expect(await prisma.photoJourney.count({ where: { userId } })).toBe(1);
+    });
+
     it("writes nothing for a stop at an own place already visited that day", async () => {
       const place = await prisma.place.create({
         data: { userId, name: "Gyeongbokgung", ...PALACE },
