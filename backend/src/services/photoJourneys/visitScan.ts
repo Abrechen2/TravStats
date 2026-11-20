@@ -4,6 +4,7 @@ import { nightsBetween } from "../../shared/photoScan";
 import type { PlaceNameGeocoder } from "../places/placeNameBackfill";
 import { throttledPhotonGeocoder } from "../places/photonNameGeocoder";
 import { clusterPhotosByStop, type ScanPhoto } from "./cluster";
+import { loadAnsweredIndex } from "./answeredMatch";
 import { visitFingerprint } from "./fingerprint";
 import { nameVisitStop, type VisitName } from "./visitNaming";
 import {
@@ -65,6 +66,8 @@ export async function scanVisitFindings(
   let updated = 0;
   let lookups = 0;
 
+  const answered = await loadAnsweredIndex(userId, "visit");
+
   for (const stop of stops) {
     const { cluster } = stop;
     const fingerprint = visitFingerprint(cluster);
@@ -74,6 +77,7 @@ export async function scanVisitFindings(
     });
     // Answered already — the same rule as the journey scan: never re-ask.
     if (existing !== null && existing.status !== "pending") continue;
+    if (existing === null && answered.covers(cluster)) continue;
 
     let naming: Naming;
     if (stop.place) {

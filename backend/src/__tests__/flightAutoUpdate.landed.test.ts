@@ -122,4 +122,31 @@ describe("flightAutoUpdate — a reported landing ends 'scheduled'", () => {
 
     expect((await prisma.flight.findUnique({ where: { id: flightId } }))?.status).toBe("scheduled");
   });
+
+  it("does not propose the same change again after the user rejected it", async () => {
+    const report = {
+      source: "aeroapi",
+      departureTime: depAt.toISOString(),
+      arrivalTime: arrAt.toISOString(),
+      actualDeparture: new Date(depAt.getTime() + 5 * MIN).toISOString(),
+      actualArrival: new Date(Date.now() - 15 * MIN).toISOString(),
+    };
+    lookupMock.mockResolvedValue(report);
+    await checkAndUpdateFlightsForUser(userId);
+    const [first] = await prisma.pendingFlightUpdate.findMany({ where: { flightId } });
+    await prisma.pendingFlightUpdate.update({
+      where: { id: first.id },
+      data: { status: "rejected" },
+    });
+
+    // The next poll hears the very same thing.
+    await prisma.flight.update({
+      where: { id: flightId },
+      data: { status: "scheduled", nextApiCheckAt: new Date(Date.now() - MIN) },
+    });
+    await checkAndUpdateFlightsForUser(userId);
+
+    const updates = await prisma.pendingFlightUpdate.findMany({ where: { flightId } });
+    expect(updates.map((u) => u.status)).toEqual(["rejected"]);
+  });
 });

@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 
+import { contentKey } from "./contentKey";
 import { rankDestinations, type DestinationEvidence } from "../../routes/trips/entrySuggestions";
 import { haversineKm } from "../../shared/geo/haversine";
 import {
@@ -37,6 +38,8 @@ export interface AnsweredProposal {
   fingerprint: string;
   targetId: string | null;
   memberKeys: readonly string[];
+  /** Aligned with `memberKeys`; missing or empty on rows older than the column. */
+  memberContentKeys?: readonly string[];
 }
 
 const minDay = (a: string, b: string): string => (a < b ? a : b);
@@ -297,8 +300,17 @@ export function withoutAnswered(
   answered: readonly AnsweredProposal[]
 ): TripSuggestion[] {
   return proposals.filter((p) => {
-    const keys = p.members.map((m) => m.key);
     return !answered.some((a) => {
+      // A member whose id is new but whose content matches an answered one
+      // (deleted and re-imported) counts as that answered member.
+      const byContent = new Map<string, string>();
+      (a.memberContentKeys ?? []).forEach((ck, i) => {
+        const key = a.memberKeys[i];
+        if (key !== undefined) byContent.set(ck, key);
+      });
+      const keys = p.members.map(
+        (m) => byContent.get(contentKey(m.domain, m.startDay, m.label)) ?? m.key
+      );
       if (p.kind === "place_visit" || a.kind === "place_visit") return a.fingerprint === p.id;
       const sameFamily =
         (p.kind === "new_trip" && a.kind === "new_trip") ||

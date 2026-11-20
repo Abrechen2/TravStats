@@ -88,7 +88,13 @@ const EMPTY: Loaded = { entries: [], truncated: false };
 async function loadAnswered(userId: string): Promise<AnsweredProposal[]> {
   const rows = await prisma.tripSuggestionDecision.findMany({
     where: { userId },
-    select: { kind: true, fingerprint: true, targetId: true, memberKeys: true },
+    select: {
+      kind: true,
+      fingerprint: true,
+      targetId: true,
+      memberKeys: true,
+      memberContentKeys: true,
+    },
   });
   return rows.map((r) => ({ ...r, kind: r.kind as SuggestionKind }));
 }

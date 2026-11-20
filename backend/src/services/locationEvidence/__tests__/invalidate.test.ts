@@ -202,7 +202,7 @@ describe("a range delete", () => {
   it("removes every open TravTrack finding and suggestion inside it, in the same transaction", async () => {
     await points([0, 10, 20, 30]);
     const open = await Promise.all(
-      ["pending", "accepting", "covered", "superseded", "invalidated", "rejected"].map((status) =>
+      ["pending", "accepting", "covered", "superseded", "invalidated"].map((status) =>
         stay({ status })
       )
     );
@@ -224,13 +224,28 @@ describe("a range delete", () => {
     expect(await prisma.locationSuggestion.findUnique({ where: { id: question.id } })).toBeNull();
   });
 
-  it("a rejected finding inside the range is deleted, one outside stays", async () => {
-    await points([0, 10, 20, 30, 600, 610, 620]);
-    const inside = await stay({ status: "rejected" });
+  it("a rejected finding inside the range keeps its answer, without digests or evidence; it is not asked again after a re-import", async () => {
+    const keys = await points([0, 10, 20, 30, 600, 610, 620]);
+    const digests = keys.map((k) => pointDigest(userId, k));
+    const inside = await stay({ status: "rejected", digests });
     const outside = await stay({ status: "rejected", from: 600, to: 630 });
     await deleteTravTrackRange(userId, at(-1), at(60));
-    expect(await fresh(inside.id)).toBeNull();
+    const row = await fresh(inside.id);
+    expect(row).toMatchObject({ status: "rejected", sourceLat: SEOUL.lat, sourceLon: SEOUL.lon });
+    expect(row!.evidence).not.toHaveProperty("pointDigests");
+    for (const d of digests) expect(JSON.stringify(row!.evidence)).not.toContain(d);
     expect(await fresh(outside.id)).not.toBeNull();
+  });
+
+  it("a rejected country question survives a range delete, a pending one does not", async () => {
+    await points([0, 10]);
+    const rejected = await countryQuestion("2026-10-10", "2026-10-11", "rejected");
+    const pending = await countryQuestion("2026-10-10", "2026-10-11");
+    await deleteTravTrackRange(userId, at(-1), at(60));
+    expect(
+      (await prisma.locationSuggestion.findUnique({ where: { id: rejected.id } }))?.status
+    ).toBe("rejected");
+    expect(await prisma.locationSuggestion.findUnique({ where: { id: pending.id } })).toBeNull();
   });
 
   it("an accepted stay and its visit survive; the finding keeps no digest and no source position but the accepted pin", async () => {
@@ -510,6 +525,16 @@ describe("a zone", () => {
     expect(await fresh(inside.id)).toBeNull();
     expect(await fresh(outside.id)).toEqual(outside);
     expect(await generation()).toBe(before + 1n);
+  });
+
+  it("created over a rejected stay keeps the answer but moves its position to the zone's centre", async () => {
+    const near = { lat: SEOUL.lat + 0.0005, lon: SEOUL.lon };
+    const rejected = await stay({ status: "rejected", where: near });
+    await createZone(userId, { name: "Home", ...SEOUL, radiusM: 300 }, false);
+    const row = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: rejected.id } });
+    expect(row.status).toBe("rejected");
+    expect(row).toMatchObject({ sourceLat: SEOUL.lat, sourceLon: SEOUL.lon });
+    expect(row.evidence).not.toHaveProperty("pointDigests");
   });
 
   it("created over an accepted stay strips its evidence and keeps the answer", async () => {

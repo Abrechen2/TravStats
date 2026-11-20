@@ -319,6 +319,37 @@ describe("answering findings (spec C3)", () => {
     expect(await runDataQualityChecks(userId, NOW)).toMatchObject({ opened: 0, open: 0 });
   });
 
+  it("merge keeps a dismissed duplicate answer on the kept record instead of deleting it", async () => {
+    const { typed, mail } = await seedFlights(userId);
+    await runDataQualityChecks(userId, NOW);
+    const flag = await duplicateFlag(userId, "flight");
+    const keptId = typed.id;
+    // The user once answered "not a duplicate" on the kept flight itself.
+    await prisma.dataQualityFlag.deleteMany({
+      where: { userId, entityType: "flight", entityId: keptId, kind: flag.kind },
+    });
+    const answer = await prisma.dataQualityFlag.create({
+      data: {
+        userId,
+        entityType: "flight",
+        entityId: keptId,
+        kind: flag.kind,
+        status: "dismissed",
+        details: {},
+      },
+    });
+    const open = await prisma.dataQualityFlag.findFirst({ where: { id: flag.id } });
+    // Make sure the flag being merged sits on the removed copy.
+    if (open && open.entityId === keptId) {
+      await prisma.dataQualityFlag.update({ where: { id: flag.id }, data: { entityId: mail.id } });
+    }
+
+    const merged = await post(`/${flag.id}/resolve`, { action: "merge", keptId });
+    expect(merged.status).toBe(200);
+    const still = await prisma.dataQualityFlag.findUnique({ where: { id: answer.id } });
+    expect(still?.status).toBe("dismissed");
+  });
+
   it("merge of a cruise pair is offered, moves document, companion and track, deletes the copy (forgejo#405)", async () => {
     const trip = await prisma.trip.create({
       data: {
