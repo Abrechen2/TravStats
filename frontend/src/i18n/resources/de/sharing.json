@@ -1023,7 +1023,8 @@
       "closeStats": "Zahlen schließen",
       "viewAchievements": "Erfolge ansehen",
       "closeAchievements": "Erfolge schließen",
-      "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server."
+      "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server.",
+      "withdrawIncoming": "Teilen von dieser Person zurückziehen"
     },
     "requests": {
       "title": "Anfragen an dich",
@@ -1050,7 +1051,9 @@
       "endConnection": "Die Verbindung zu {{name}} endet. Geteiltes bleibt als eigene Kopie.",
       "endConnectionAction": "Beenden",
       "withdrawPaired": "{{name}} ({{origin}}) bekommt nichts mehr von dir.",
-      "withdrawPairedAction": "Zurückziehen"
+      "withdrawPairedAction": "Zurückziehen",
+      "withdrawIncoming": "{{name}} teilt nichts mehr mit dir: Das Abgleichen endet. Was schon geteilt ist, bleibt als eigene Kopie bei dir.",
+      "withdrawIncomingAction": "Zurückziehen"
     },
     "done": {
       "shareAsked": "Anfrage an {{name}} geschickt.",

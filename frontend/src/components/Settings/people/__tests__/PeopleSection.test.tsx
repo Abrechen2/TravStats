@@ -370,4 +370,44 @@ describe("PeopleSection", () => {
     expect(remoteRow.queryByRole("switch", { name: /switches\.totals\.label/ })).toBeNull();
     expect(cmp.request).not.toHaveBeenCalled();
   });
+
+  it("keeps an accepted INCOMING share on a row, with a withdraw in the menu", async () => {
+    share.answerConsent.mockResolvedValue(consent({ status: "withdrawn" }) as never);
+    setup({ incoming: [consent({ id: "in7", status: "accepted" })] });
+    await userEvent.click(await screen.findByTestId("person-menu-i:u1"));
+    await userEvent.click(
+      within(await screen.findByRole("menu")).getByRole("menuitem", {
+        name: "sharing:friends.actions.withdrawIncoming",
+      })
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:friends.confirm.withdrawIncomingAction" })
+    );
+    await waitFor(() => expect(share.answerConsent).toHaveBeenCalledWith("in7", "withdraw"));
+  });
+
+  it("does not conflate usernames that differ only in case", async () => {
+    beta.add("comparison");
+    const view = (name: string, key: string) => ({
+      person: { key, kind: "local", username: name, displayName: name, origin: null },
+      mine: {
+        consentId: `m-${key}`,
+        status: "accepted",
+        scope: { groups: [], domains: [], year: null },
+      },
+      theirs: null,
+    });
+    setup({
+      companions: [
+        companion({ linkedUser: { id: "u1", username: "Alice", displayName: "Alice" } }),
+      ],
+      people: [view("alice", "u:other")],
+    });
+    const row = await switches("c:c1");
+    // The comparison consent belongs to the account "alice", not to "Alice": this row has none.
+    expect(row.getByRole("switch", { name: /switches\.totals\.label/ })).toHaveProperty(
+      "checked",
+      false
+    );
+  });
 });

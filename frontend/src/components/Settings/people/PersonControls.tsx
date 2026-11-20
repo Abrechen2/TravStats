@@ -21,6 +21,7 @@ export interface PersonHandlers {
   remove: (p: PersonEntry) => void;
   endConnection: (p: PersonEntry) => void;
   withdrawPaired: (p: PersonEntry) => void;
+  withdrawIncoming: (p: PersonEntry) => void;
   toggleStats: (p: PersonEntry) => void;
   toggleAchievements: (p: PersonEntry) => void;
 }
@@ -223,6 +224,16 @@ export function PersonMenu({
             label: t(`${NS}.actions.withdrawPaired`),
             danger: true,
             onSelect: () => handlers.withdrawPaired(person),
+          },
+        ]
+      : []),
+    ...(person.incomingConsent
+      ? [
+          {
+            key: "withdrawIncoming",
+            label: t(`${NS}.actions.withdrawIncoming`),
+            danger: true,
+            onSelect: () => handlers.withdrawIncoming(person),
           },
         ]
       : []),

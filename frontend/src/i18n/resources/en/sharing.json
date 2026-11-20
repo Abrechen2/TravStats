@@ -1023,7 +1023,8 @@
       "closeStats": "Close figures",
       "viewAchievements": "View achievements",
       "closeAchievements": "Close achievements",
-      "remoteNoRename": "People on other servers are managed by their server."
+      "remoteNoRename": "People on other servers are managed by their server.",
+      "withdrawIncoming": "Withdraw sharing from this person"
     },
     "requests": {
       "title": "Requests to you",
@@ -1050,7 +1051,9 @@
       "endConnection": "The connection to {{name}} ends. What is shared stays as an own copy.",
       "endConnectionAction": "End",
       "withdrawPaired": "{{name}} ({{origin}}) will get nothing more from you.",
-      "withdrawPairedAction": "Withdraw"
+      "withdrawPairedAction": "Withdraw",
+      "withdrawIncoming": "{{name}} will no longer share with you: syncing stops. What is already shared stays with you as your own copy.",
+      "withdrawIncomingAction": "Withdraw"
     },
     "done": {
       "shareAsked": "Request sent to {{name}}.",
