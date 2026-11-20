@@ -1,3 +1,4 @@
+import { clipCoverage } from "./coverage";
 import { prisma } from "../../../db";
 import {
   ENTRY_WINDOW_ADAPTERS,
@@ -110,9 +111,7 @@ export function clipStops(stops: readonly Stop[], window: Span): Stop[] {
   return stops
     .filter((s) => s.untilMs > window.fromMs && s.fromMs < window.untilMs)
     .map((s) => ({
-      ...s,
-      fromMs: Math.max(s.fromMs, window.fromMs),
-      untilMs: Math.min(s.untilMs, window.untilMs),
+      ...clipCoverage(s, Math.max(s.fromMs, window.fromMs), Math.min(s.untilMs, window.untilMs)),
       ...(s.fromMs < window.fromMs ? { openStart: true as const } : {}),
       ...(s.untilMs > window.untilMs ? { openEnd: true as const } : {}),
     }));

@@ -64,6 +64,21 @@ export type Stop = {
    */
   openStart?: true;
   openEnd?: true;
+  /**
+   * Present only when the stop spans a silence of the phone (a stay joined across a recording gap):
+   * how much of it was measured and how much is assumed. Absent when every part is measured, so a
+   * client that never heard of it reads the stop as before.
+   */
+  coverage?: StopCoverage;
+};
+
+export type StopCoverage = {
+  /** Time covered by fixes; `observedMs + inferredMs` is the stop's duration. */
+  observedMs: number;
+  /** Time the stop covers across a silence: assumed, never measured. */
+  inferredMs: number;
+  /** The silences inside the stop, clipped to it. */
+  gaps: Array<{ fromMs: number; untilMs: number }>;
 };
 
 export type StopPlace = {

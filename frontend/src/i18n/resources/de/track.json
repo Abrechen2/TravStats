@@ -795,6 +795,29 @@
     },
     "dismiss": "Nur eine Wartezeit",
     "dismissed": "Als Wartezeit ausgeblendet",
-    "restore": "Wiederherstellen"
+    "restore": "Wiederherstellen",
+    "coverage": {
+      "figures": "gemessen {{observed}} · angenommen {{inferred}}",
+      "barLabel": "Aufenthalt mit Lücke ohne Aufzeichnung: {{gaps}}",
+      "note": "Gestrichelt: keine Aufzeichnung. Die Rückkehr an denselben Ort beweist nicht, dass du die ganze Zeit dort warst."
+    }
+  },
+  "empty": {
+    "day": {
+      "noRecording": "Für diesen Tag liegt keine Aufzeichnung vor.",
+      "privacyZone": "{{count}} Positionen dieses Tages liegen in einer Schutzzone und werden nicht gezeigt.",
+      "implausible": "{{count}} Positionen dieses Tages waren zu ungenau oder unplausibel und sind ausgeblendet."
+    },
+    "range": {
+      "noRecording": "In diesen Tagen liegt keine Aufzeichnung vor.",
+      "privacyZone": "{{count}} Positionen dieser Tage liegen in Schutzzonen und werden nicht gezeigt.",
+      "implausible": "{{count}} Positionen dieser Tage waren zu ungenau oder unplausibel und sind ausgeblendet."
+    },
+    "actions": {
+      "companion": "Companion prüfen",
+      "import": "Import ansehen",
+      "zones": "Schutzzonen ansehen",
+      "showFiltered": "Gefilterte Punkte zeigen"
+    }
   }
 }

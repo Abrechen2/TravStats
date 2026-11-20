@@ -48,6 +48,7 @@ vi.mock("../TrackRangeMap", () => ({
 const viewport = vi.hoisted(() => ({ phone: true }));
 vi.mock("../useNarrowStage", () => ({
   useNarrowStage: () => viewport.phone,
+  useDockedStage: () => false,
 }));
 
 import TrackMapView from "../TrackMapView";

@@ -25,7 +25,12 @@ export type DerivedDay = {
   whole: Stop[];
 };
 
-export async function deriveDay(userId: string, window: Span): Promise<DerivedDay> {
+export async function deriveDay(
+  userId: string,
+  window: Span,
+  /** Keep the fixes `drawnFixes` would leave out (coarse, null island); the privacy cut still holds. */
+  keepImplausible = false
+): Promise<DerivedDay> {
   const [raw, wide] = await Promise.all([
     readSafeTravTrack(userId, window, DAY_POINT_CAP),
     // The evidence a stay across midnight rests on; a read cut short by its cap is not used.
@@ -36,8 +41,10 @@ export async function deriveDay(userId: string, window: Span): Promise<DerivedDa
     ),
   ]);
   // Bad fixes are not drawn, nor do they shape legs and stops (`drawnFixes.ts`).
-  const read = withoutBadVertices(raw);
-  const context = wide.next === null ? withoutBadVertices(wide) : undefined;
+  const keep = <T extends Parameters<typeof withoutBadVertices>[0]>(r: T): T =>
+    keepImplausible ? r : withoutBadVertices(r);
+  const read = keep(raw);
+  const context = wide.next === null ? keep(wide) : undefined;
   const derived = await travTrackLegs(userId, window, read, context, Date.now());
   return { window, raw, read, ...derived };
 }

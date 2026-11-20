@@ -90,6 +90,8 @@ export type SafeSpan = {
    * that a silence between two stretches holds a hidden visit and must never be joined over.
    */
   removedAtMs?: number[];
+  /** How many stored fixes the read found, before the privacy cut; absent on a hand-built span. */
+  storedCount?: number;
   /** The first instant not read, or null when the span was read whole. */
   next: Date | null;
   /** The last point read, where a continuation picks up; null when read whole. */
@@ -201,6 +203,7 @@ export async function readSafeTravTrack(
     rowOf: (p) => rowByPoint.get(p),
     circles,
     removedAtMs,
+    storedCount: read.length,
     deleted,
     paused,
     next,

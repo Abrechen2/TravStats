@@ -10,6 +10,7 @@ import {
   type TravTrackStop,
 } from "../../lib/api/travtrackLegs";
 import { logger } from "../../lib/logger";
+import TrackStopCoverage from "./map/TrackStopCoverage";
 import TrackStopPlace from "./map/TrackStopPlace";
 import { durationText, legModeLabel, makeNumber, spanText } from "./map/trackLegFormat";
 import type { TrackSelection } from "./map/trackLegs";
@@ -131,6 +132,7 @@ export default function TrackLegList({
                   </span>
                 </button>
                 <div style={{ padding: "0 8px 4px" }}>
+                  <TrackStopCoverage stop={row.stop} zone={zone} />
                   <TrackStopPlace stop={row.stop} onChanged={onStopPlaceChanged} />
                 </div>
               </li>

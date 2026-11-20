@@ -104,6 +104,13 @@ export const travTrackSummaryQuerySchema = z
 /** One day of the history on the profile clock (`GET /travtrack/day`). */
 export const travTrackDayQuerySchema = z.object({
   date: day.describe("The day, `YYYY-MM-DD`, on the profile's clock"),
+  includeImplausible: z
+    .enum(["1", "true"])
+    .optional()
+    .describe(
+      "`1`: also draw the fixes normally left out as implausible (coarse, null island). The " +
+        "privacy cut still applies"
+    ),
 });
 
 /** The longest span one export answers. */
