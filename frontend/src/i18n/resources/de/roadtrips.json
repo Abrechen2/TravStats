@@ -510,6 +510,15 @@
       "countries_other": "Länder",
       "stations_one": "Station",
       "stations_other": "Stationen"
+    },
+    "columns": {
+      "name": "Roadtrip",
+      "vehicle": "Fahrzeug",
+      "dates": "Zeitraum",
+      "trip": "Reise",
+      "countries": "Länder",
+      "stations": "Stationen",
+      "distance": "Strecke"
     }
   },
   "newDialog": {

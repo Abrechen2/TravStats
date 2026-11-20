@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 import RoadtripsPage from "../RoadtripsPage";
 import { roadtripsApi } from "../../lib/api/roadtrips";
@@ -56,10 +56,15 @@ function summary(over: Partial<RoadtripSummary>): RoadtripSummary {
 
 const at = (d: string) => `${d}T00:00:00.000Z`;
 
+function Where(): React.ReactElement {
+  return <span data-testid="where">{useLocation().pathname}</span>;
+}
+
 function renderPage(): void {
   render(
     <MemoryRouter>
       <RoadtripsPage />
+      <Where />
     </MemoryRouter>
   );
 }
@@ -101,27 +106,26 @@ describe("RoadtripsPage", () => {
     expect(within(year).getByText("Bretagne")).toBeInTheDocument();
   });
 
-  it("marks a lower-bound night count with ≈ and a missing distance with a dash, never a zero", async () => {
+  it("lists roadtrips as table rows that open the roadtrip, with a dash and no zero for a missing distance", async () => {
     vi.mocked(roadtripsApi.list).mockResolvedValue([
-      summary({
-        id: "a",
-        name: "Soft",
-        startDate: at("2024-05-01"),
-        nights: 10,
-        nightsKnown: false,
-      }),
+      summary({ id: "a", name: "Soft", startDate: at("2024-05-01"), endDate: at("2024-05-09") }),
       summary({
         id: "b",
         name: "Leer",
         startDate: at("2024-06-01"),
+        endDate: at("2024-06-02"),
         stationCount: 1,
-        distanceKm: 0,
+        drivenKm: 0,
       }),
     ]);
     renderPage();
-    expect(await screen.findByText("≈ 10")).toBeInTheDocument();
-    const empty = screen.getByText("Leer").closest("a")!;
-    expect(within(empty).getByText("—")).toBeInTheDocument();
+    const soft = await screen.findByTestId("roadtrip-row-a");
+    expect(soft).toHaveAttribute("role", "row");
+    const empty = screen.getByTestId("roadtrip-row-b");
+    expect(within(empty).getByText("—", { selector: '[role="cell"]' })).toBeInTheDocument();
+    expect(within(empty).queryByText("0 km")).not.toBeInTheDocument();
+    fireEvent.click(within(soft).getByText("Soft"));
+    expect(screen.getByTestId("where")).toHaveTextContent("/roadtrips/a");
   });
 
   it("summarises the shown roadtrips in the strip every logbook carries, and follows the filter", async () => {

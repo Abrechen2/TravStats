@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { SkeletonTable } from "../components/SkeletonLoader";
 import AppShell from "../components/ui/AppShell";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
@@ -15,7 +16,13 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { navigateAfterSave } from "../components/form";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
-import RoadtripCard from "../components/Roadtrips/RoadtripCard";
+import {
+  ROADTRIP_COLUMN_IDS,
+  ROADTRIP_COLUMN_LAYOUT,
+  RoadtripTableRow,
+} from "../components/Roadtrips/RoadtripTableRow";
+import { Table, type TableColumn } from "../components/ui/Table";
+import { useTableHints } from "../components/ui/useTableHints";
 import UnderwayCard from "../components/Roadtrips/UnderwayCard";
 import { useTranslation } from "../hooks/useTranslation";
 import { roadtripsApi } from "../lib/api/roadtrips";
@@ -25,8 +32,6 @@ import { useTodayZone } from "../hooks/useTodayZone";
 import { todayIn } from "../shared/time";
 import type { StoredRoadtripVehicle } from "../shared/tour/roadtrip";
 import type { RoadtripSummary } from "../types/roadtrip";
-
-const GRID = "grid gap-4 sm:grid-cols-2 xl:grid-cols-3";
 
 function Section({ label, children }: { label: ReactNode; children: ReactNode }): JSX.Element {
   return (
@@ -103,8 +108,25 @@ export default function RoadtripsPage(): JSX.Element {
   );
   const groups = useMemo(() => groupRoadtrips(shown, today), [shown, today]);
 
-  const card = (r: RoadtripSummary): JSX.Element => (
-    <RoadtripCard key={r.id} roadtrip={r} phase={roadtripPhase(r.startDate, r.endDate, today)} />
+  const tableHints = useTableHints();
+  const columns: TableColumn[] = ROADTRIP_COLUMN_IDS.map((id) => ({
+    key: id,
+    ...ROADTRIP_COLUMN_LAYOUT[id],
+    label: t(`roadtrips:list.columns.${id}`),
+  }));
+  // The roadtrip on the road now is a notice above the lists, not a row in one.
+  const table = (list: RoadtripSummary[]): JSX.Element => (
+    <Table columns={columns} label={t("roadtrips:pageTitle")} {...tableHints}>
+      {list.map((r) => (
+        <RoadtripTableRow
+          key={r.id}
+          roadtrip={r}
+          phase={roadtripPhase(r.startDate, r.endDate, today)}
+          columns={columns}
+          onOpen={() => navigate(`/roadtrips/${r.id}`)}
+        />
+      ))}
+    </Table>
   );
 
   const resetFilters = (): void => {
@@ -119,8 +141,8 @@ export default function RoadtripsPage(): JSX.Element {
           another area except the header menu (owner, 2026-09-28). */}
       <LogbookTabs />
       {/* The header every logbook carries (forgejo#197): title left, the
-          add button right, the filter bar under it. The tiles stay — a
-          roadtrip is read by its sketch, not by a row. */}
+          add button right, the filter bar under it. The rows are the shared
+          table; only the trip on the road now stays a card above them. */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="t-screen-title">{t("roadtrips:pageTitle")}</h1>
         <button
@@ -174,21 +196,7 @@ export default function RoadtripsPage(): JSX.Element {
         />
       )}
 
-      {rows === null && !loadError && (
-        <div className={GRID} aria-busy="true" aria-label={t("common:loading.default")}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="animate-pulse"
-              style={{
-                height: 250,
-                borderRadius: "var(--ts-radius-card)",
-                background: "var(--ts-surface)",
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {rows === null && !loadError && <SkeletonTable rows={4} />}
 
       {loadError && (
         <ListLoadFailed
@@ -232,19 +240,15 @@ export default function RoadtripsPage(): JSX.Element {
             </Section>
           )}
           {groups.planned.length > 0 && (
-            <Section label={t("roadtrips:list.sectionPlanned")}>
-              <div className={GRID}>{groups.planned.map(card)}</div>
-            </Section>
+            <Section label={t("roadtrips:list.sectionPlanned")}>{table(groups.planned)}</Section>
           )}
           {groups.years.map(({ year, rows: list }) => (
             <Section key={year} label={year}>
-              <div className={GRID}>{list.map(card)}</div>
+              {table(list)}
             </Section>
           ))}
           {groups.undated.length > 0 && (
-            <Section label={t("roadtrips:list.sectionUndated")}>
-              <div className={GRID}>{groups.undated.map(card)}</div>
-            </Section>
+            <Section label={t("roadtrips:list.sectionUndated")}>{table(groups.undated)}</Section>
           )}
         </div>
       )}
