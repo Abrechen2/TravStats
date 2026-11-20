@@ -86,9 +86,18 @@ export function SettingsMenuColumn({
             }}
           >
             {group.label && (
+              // 11 px muted mono read as a footnote next to 14 px entries (tester,
+              // 2026-11-18): one step larger and brighter, still a label, not an entry.
               <span
                 className="t-label-mono"
-                style={{ padding: "0 var(--ts-space-md)", marginBottom: "var(--ts-space-xs)" }}
+                style={{
+                  padding: "0 var(--ts-space-lg)",
+                  marginBottom: "var(--ts-space-xs)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  color: "var(--ts-text)",
+                }}
               >
                 {group.label}
               </span>
@@ -102,10 +111,11 @@ export function SettingsMenuColumn({
                   aria-current={active ? "page" : undefined}
                   className="flex items-center"
                   style={{
-                    gap: "var(--ts-space-sm)",
+                    gap: "var(--ts-space-md)",
                     minHeight: coarse ? "var(--ts-size-touch-min)" : 36,
-                    padding: "0 var(--ts-space-md)",
-                    paddingLeft: entry.indent ? "var(--ts-space-xl)" : undefined,
+                    // At 10 px the icon sat on the highlight's rounded edge (tester, 2026-11-18).
+                    padding: "0 var(--ts-space-lg)",
+                    paddingLeft: entry.indent ? 24 : "var(--ts-space-lg)",
                     borderRadius: "var(--ts-radius-button)",
                     fontSize: 14,
                     fontWeight: active ? 700 : 500,
