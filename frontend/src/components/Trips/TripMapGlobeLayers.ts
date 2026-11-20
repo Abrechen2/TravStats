@@ -68,6 +68,8 @@ export interface TripFlightArc {
   label: string;
   /** Resolved upstream — see `Trips/tripMapColors.ts`. Never decided here. */
   color: [number, number, number];
+  /** Off the chosen day: drawn faint rather than hidden (`tripMapDays.ts`). */
+  dim?: boolean;
 }
 
 export interface TripCruisePath {
@@ -75,6 +77,7 @@ export interface TripCruisePath {
   path: [number, number][];
   label: string;
   color: [number, number, number];
+  dim?: boolean;
   /** The leg's ports, and the journey hover read off them (forgejo#323). */
   fromPortId?: number;
   toPortId?: number;
@@ -87,6 +90,12 @@ export interface TripPointDatum {
   color: [number, number, number];
   radiusMeters: number;
   kind: "airport" | "stop" | "lodging";
+  /** The entity behind the dot, so a click can open its card. */
+  entityId?: string;
+  /** Off the chosen day: drawn faint rather than hidden. */
+  dim?: boolean;
+  /** Place in the trip's order — shown in the globe's HTML label, which cannot draw a badge. */
+  seq?: number;
   /**
    * What the SHARED marker tooltip reads off a picked object
    * (`map/markerTooltip.ts`). Present on lodging markers, absent everywhere
@@ -115,6 +124,8 @@ const GLOBE_STOP_RADIUS_PX = 5.5;
 
 const MARKER_ALPHA = 230;
 const LINE_ALPHA = 235;
+/** What a day filter leaves of an entry that is not on the chosen day. */
+export const DIM_ALPHA = 55;
 /** Marker outline — the app background, so a dot keeps a rim against both a
  *  bright satellite basemap and a dark one. Same value the mercator stack and
  *  the dashboard globe use for the same job. */
@@ -161,7 +172,7 @@ export function toGlobeLabelPoints(points: readonly TripPointDatum[]): GlobePoin
       size: 1,
       iata: p.label,
       name: p.label,
-      label: p.label,
+      label: p.seq === undefined ? p.label : `${p.seq} · ${p.label}`,
     }));
 }
 
@@ -227,7 +238,8 @@ function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: numb
     id,
     data: data as TripPointDatum[],
     getPosition: (d) => d.position,
-    getFillColor: (d) => [...d.color, MARKER_ALPHA] as [number, number, number, number],
+    getFillColor: (d) =>
+      [...d.color, d.dim ? DIM_ALPHA : MARKER_ALPHA] as [number, number, number, number],
     getRadius: radiusPx,
     radiusUnits: "pixels",
     stroked: true,
@@ -245,7 +257,8 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-flight-arcs",
     data: flightArcs as TripFlightArc[],
     getPath: tripArcWaypoints,
-    getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
+    getColor: (d) =>
+      [...d.color, d.dim ? DIM_ALPHA : LINE_ALPHA] as [number, number, number, number],
     getWidth: 2,
     widthUnits: "pixels",
     widthMinPixels: 1.5,
@@ -271,7 +284,8 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
       (p) => p.cruiseId
     ),
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
+    getColor: (d) =>
+      [...d.color, d.dim ? DIM_ALPHA : LINE_ALPHA] as [number, number, number, number],
     getWidth: 3,
     widthUnits: "pixels",
     widthMinPixels: 2,
