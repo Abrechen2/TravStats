@@ -57,7 +57,9 @@ export const DEFAULT_PREFS: TrackMapPrefs = {
     fog: false,
     visits: true,
     entries: true,
-    photos: false,
+    // On by default: the layer says "connect a source" itself where none is
+    // connected, and an explicit off is stored like any other choice.
+    photos: true,
     countries: false,
   },
   color: "speed",

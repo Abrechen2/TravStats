@@ -338,7 +338,7 @@ export default function TrackAltitudeProfile({
                 const alt = altitudeAt(series, ms);
                 return (
                   <circle
-                    key={p.assetId}
+                    key={`${p.provider ?? "immich"}:${p.assetId}`}
                     data-testid="track-altitude-pin"
                     cx={xAt(frame, ms)}
                     cy={alt === null ? 0 : yAt(frame, alt)}
@@ -360,7 +360,7 @@ export default function TrackAltitudeProfile({
             .filter((p) => inside(Date.parse(p.takenAt)))
             .map((p) => (
               <button
-                key={p.assetId}
+                key={`${p.provider ?? "immich"}:${p.assetId}`}
                 type="button"
                 className="t-caption underline"
                 onClick={() => onPhoto(p)}

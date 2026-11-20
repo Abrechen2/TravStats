@@ -11,6 +11,14 @@ const api = vi.hoisted(() => ({
   exportFile: vi.fn(),
   lastSeen: vi.fn(),
 }));
+// The photo layer is on by default: no photo source is connected in these tests.
+vi.mock("../../../lib/api/travtrackViews", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../lib/api/travtrackViews")>();
+  return {
+    ...original,
+    travTrackViewsApi: { ...original.travTrackViewsApi, photoSources: async () => [] },
+  };
+});
 vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/api/travtrack")>()),
   travTrackApi: api,

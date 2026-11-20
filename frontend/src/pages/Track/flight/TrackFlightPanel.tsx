@@ -188,7 +188,12 @@ export default function TrackFlightPanel({
           {photos.kind === "loaded" && list.length > 0 && (
             <div className="flex flex-wrap gap-2" data-testid="track-flight-photos">
               {(picked ? [picked] : list).map((p) => (
-                <TrackPhotoThumb key={p.assetId} photo={p} window={photos.window} zone={zone} />
+                <TrackPhotoThumb
+                  key={`${p.provider ?? "immich"}:${p.assetId}`}
+                  photo={p}
+                  window={photos.window}
+                  zone={zone}
+                />
               ))}
               {picked && (
                 <button type="button" onClick={() => setPicked(null)} style={pillStyle(false)}>

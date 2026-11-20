@@ -30,12 +30,14 @@ const asset = (id: string, atMs: number) => ({
 describe("TravTrack photos — the track read's bound", () => {
   let userId: string;
   const deps = (readLimits?: { page: number; pages: number }) => ({
-    connection: async () => conn,
-    client: () => ({
-      searchAssetsByDate: async () => ({
+    connections: async () => ({ immich: conn }),
+    albums: async () => [],
+    source: () => ({
+      searchAssetsByTime: async () => ({
         assets: [asset("early", T + 5 * MIN), asset("late", T + 45 * MIN)],
         truncated: false,
       }),
+      listAlbumAssets: async () => ({ assets: [], nextPage: null, truncated: false }),
     }),
     readLimits,
   });
@@ -71,7 +73,7 @@ describe("TravTrack photos — the track read's bound", () => {
 
     expect(res.photos.map((p) => p.assetId)).toEqual(["early"]);
     expect(res).toMatchObject({ truncated: true, trackTruncated: true });
-    expect(await photoInWindow(userId, WINDOW, "early", limited)).toBe(true);
-    expect(await photoInWindow(userId, WINDOW, "late", limited)).toBe(false);
+    expect(await photoInWindow(userId, WINDOW, "immich", "early", limited)).toBe(true);
+    expect(await photoInWindow(userId, WINDOW, "immich", "late", limited)).toBe(false);
   });
 });

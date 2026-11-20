@@ -17,7 +17,7 @@ import TrackFlightPanel, { type SelectedFlight } from "../flight/TrackFlightPane
 import TrackPhotoNotice from "../photos/TrackPhotoNotice";
 import TrackPhotoThumb from "../photos/TrackPhotoThumb";
 import { photoWindowOf } from "../photos/trackPhotos";
-import { useTrackPhotos } from "../photos/useTrackPhotos";
+import { usePhotoSources, useTrackPhotos } from "../photos/useTrackPhotos";
 import TrackCountriesNotice from "../countries/TrackCountriesNotice";
 import { useVisitedCountries } from "../countries/useVisitedCountries";
 import type { FogStatus } from "./TrackFogLayer";
@@ -360,6 +360,7 @@ export default function TrackMapView(): JSX.Element {
         : null,
     [prefs.layers.photos, short, source.segments]
   );
+  const photoSources = usePhotoSources();
   const photos = useTrackPhotos(
     !loading && photoWindow?.kind === "window" ? photoWindow.window : null,
     generation
@@ -493,6 +494,7 @@ export default function TrackMapView(): JSX.Element {
         speedStops={speedStops}
         embedded
         saveFailed={prefsSaveFailed}
+        noPhotoSource={photoSources?.length === 0}
       />
     </TrackFloatingCard>
   );

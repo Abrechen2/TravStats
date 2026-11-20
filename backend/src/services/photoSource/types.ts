@@ -56,6 +56,18 @@ export interface PhotoSourceAssetPage {
   truncated: boolean;
 }
 
+/** Inclusive on both ends, as Immich treats them. */
+export interface PhotoSourceTimeRange {
+  takenAfter: Date;
+  takenBefore: Date;
+}
+
+/** Assets taken in a time range; `truncated` when the source had more than one search reads. */
+export interface PhotoSourceTimeSearch {
+  assets: PhotoSourceAsset[];
+  truncated: boolean;
+}
+
 export interface PhotoSourceStream {
   stream: Readable | NodeJS.ReadableStream;
   contentType: string;
@@ -78,6 +90,13 @@ export interface PhotoSourceProvider {
   listAlbums(): Promise<PhotoSourceAlbum[]>;
   /** `page` is 0-based; follow `nextPage` until it is null. */
   listAlbumAssets(albumId: string, page: number): Promise<PhotoSourceAssetPage>;
+  /**
+   * The assets whose capture time falls in `range` (library-wide, not one
+   * album). The caller re-checks each `fileCreatedAt`: a source may return a
+   * slightly wider set, and an asset without a trustworthy capture time
+   * carries the epoch, which no real window contains.
+   */
+  searchAssetsByTime(range: PhotoSourceTimeRange): Promise<PhotoSourceTimeSearch>;
   streamThumbnail(assetId: string, size: PhotoSourceThumbnailSize): Promise<PhotoSourceStream>;
   streamOriginal(assetId: string): Promise<PhotoSourceStream>;
 }

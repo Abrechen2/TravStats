@@ -24,10 +24,9 @@ const views = vi.hoisted(() => ({
   deletePoint: vi.fn(),
   photos: vi.fn(),
   photoUrl: vi.fn(() => "/thumb"),
+  photoSources: vi.fn(),
   flightPanel: vi.fn(),
 }));
-const immich = vi.hoisted(() => ({ getSettings: vi.fn() }));
-vi.mock("../../../../lib/api/immich", () => ({ immichApi: immich }));
 vi.mock("../../../../lib/api/travtrackViews", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../../lib/api/travtrackViews")>()),
   travTrackViewsApi: views,
@@ -135,10 +134,10 @@ function deferred<T>() {
 
 describe("TrackMapView — long spans", () => {
   beforeEach(() => {
-    immich.getSettings.mockReset().mockResolvedValue({ hasAccess: true });
     setClockForTests("2026-10-25T12:00:00Z");
     Object.values(api).forEach((fn) => fn.mockReset());
     Object.values(views).forEach((fn) => fn.mockReset());
+    views.photoSources.mockResolvedValue(["immich"]);
     months.months.mockReset();
     world.load.mockReset();
     api.day.mockImplementation(async (date: string) => dayOf(date));
@@ -268,7 +267,7 @@ describe("TrackMapView — long spans", () => {
 
   it("no Immich connection: asks no photo list (no 409 in the console), points to Settings, logs nothing", async () => {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
-    immich.getSettings.mockResolvedValue({ hasAccess: false });
+    views.photoSources.mockResolvedValue([]);
     const warn = vi.spyOn(console, "warn");
     const error = vi.spyOn(console, "error");
     renderAt("/track");
@@ -286,11 +285,11 @@ describe("TrackMapView — long spans", () => {
 
   it("a connection saved meanwhile counts at once: the next photo read asks the status again", async () => {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: true } }));
-    immich.getSettings.mockResolvedValueOnce({ hasAccess: false });
+    views.photoSources.mockResolvedValue([]);
     const first = renderAt("/track");
     await screen.findByRole("link", { name: "track:photos.connect" });
     first.unmount();
-    immich.getSettings.mockResolvedValue({ hasAccess: true });
+    views.photoSources.mockResolvedValue(["immich"]);
     renderAt("/track");
     await waitFor(() => expect(views.photos).toHaveBeenCalled());
   });
@@ -304,6 +303,52 @@ describe("TrackMapView — long spans", () => {
     expect(link.getAttribute("href")).toContain("/settings/dienstek");
     expect(screen.getByText(/track:photos.failure.notConfigured/)).toBeInTheDocument();
     expect(screen.getByTestId("map-stub")).toHaveTextContent("0 photos");
+  });
+
+  const placed = {
+    assetId: "x",
+    type: "IMAGE",
+    takenAt: "2026-10-25T08:05:00.000Z",
+    lat: 52.5,
+    lon: 13.4,
+  };
+
+  it("the photo layer is on by default once a source is connected: photos are read with no stored choice", async () => {
+    views.photos.mockResolvedValue({ photos: [placed], truncated: false, failures: [] });
+    renderAt("/track");
+    await waitFor(() => expect(screen.getByTestId("map-stub")).toHaveTextContent("1 photos"));
+    expect(views.photos).toHaveBeenCalled();
+  });
+
+  it("an explicit off is remembered: no photo read although a source is connected", async () => {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ layers: { photos: false } }));
+    views.photos.mockResolvedValue({ photos: [placed], truncated: false, failures: [] });
+    renderAt("/track");
+    await screen.findByTestId("map-stub");
+    expect(views.photos).not.toHaveBeenCalled();
+    expect(screen.getByTestId("map-stub")).toHaveTextContent("0 photos");
+  });
+
+  it("no source connected: the layer row says how to connect one instead of staying silent", async () => {
+    views.photoSources.mockResolvedValue([]);
+    renderAt("/track");
+    await screen.findByTestId("map-stub");
+    expect(await screen.findByText("track:map.layers.photosNoSource")).toBeInTheDocument();
+    expect(views.photos).not.toHaveBeenCalled();
+  });
+
+  it("one source failing is named while the other source's photos still reach the map", async () => {
+    views.photos.mockResolvedValue({
+      photos: [{ ...placed, provider: "immich" }],
+      truncated: false,
+      failures: [{ provider: "photoprism", kind: "unreachable" }],
+    });
+    renderAt("/track");
+    await waitFor(() => expect(screen.getByTestId("map-stub")).toHaveTextContent("1 photos"));
+    expect(await screen.findByTestId("track-photos-failure-photoprism")).toHaveTextContent(
+      "track:photos.failure.unreachable"
+    );
+    expect(screen.queryByTestId("track-photos-failure-immich")).toBeNull();
   });
 
   it("placed photos reach the map; a span over seven days asks for a shorter one", async () => {

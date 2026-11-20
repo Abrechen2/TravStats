@@ -413,7 +413,8 @@
       "entries": "Logbuch-Einträge",
       "entriesHint": "Flüge, Fahrten, Reisen",
       "photos": "Fotos",
-      "photosHint": "Aus Immich, auf der Strecke eingeordnet",
+      "photosHint": "Aus Immich oder PhotoPrism, auf der Strecke eingeordnet",
+      "photosNoSource": "Noch keine Fotoquelle verbunden – verbinde Immich oder PhotoPrism in den Einstellungen (Dienste)",
       "dayOnly": "Nur in der Tages- und 7-Tage-Ansicht",
       "countries": "Länder",
       "countriesHint": "Länder mit Standortpunkten in den Monaten, die der Zeitraum berührt – kein Beleg für einen Besuch"
@@ -530,14 +531,14 @@
     "thumbFailed": "Nicht geladen",
     "truncated": "Nicht alle Fotos dieses Zeitraums konnten berücksichtigt werden. Ein kürzerer Zeitraum zeigt den Rest.",
     "needsShorter": "Fotos gibt es für Zeiträume bis 7 Tage. Wähle einen kürzeren Zeitraum.",
-    "connect": "Immich in den Einstellungen verbinden",
+    "connect": "Immich oder PhotoPrism in den Einstellungen verbinden",
     "failure": {
-      "notConfigured": "Fotos kommen aus Immich, und Immich ist noch nicht verbunden.",
-      "unreachable": "Immich ist gerade nicht erreichbar.",
-      "auth": "Immich hat den Zugang abgelehnt – prüfe den API-Schlüssel.",
-      "notFound": "Immich kennt diese Fotos nicht mehr.",
-      "protocol": "Immich hat unerwartet geantwortet – vielleicht passt die Version nicht.",
-      "invalidUrl": "Die Immich-Adresse ist ungültig – prüfe sie in den Einstellungen."
+      "notConfigured": "Fotos kommen aus Immich oder PhotoPrism, und beides ist noch nicht verbunden.",
+      "unreachable": "{{source}} ist gerade nicht erreichbar – seine Fotos fehlen.",
+      "auth": "{{source}} hat den Zugang abgelehnt – prüfe den API-Schlüssel oder das App-Passwort.",
+      "notFound": "{{source}} kennt diese Fotos nicht mehr.",
+      "protocol": "{{source}} hat unerwartet geantwortet – vielleicht passt die Version nicht.",
+      "invalidUrl": "Die Adresse von {{source}} ist ungültig – prüfe sie in den Einstellungen."
     }
   },
   "flight": {

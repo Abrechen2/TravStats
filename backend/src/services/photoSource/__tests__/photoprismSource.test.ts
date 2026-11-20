@@ -392,3 +392,56 @@ describe("streams", () => {
     expect((error as Error).message).not.toContain("app-password-1");
   });
 });
+
+describe("searchAssetsByTime", () => {
+  const photo = (hash: string, over: Record<string, unknown> = {}) => ({
+    Hash: hash,
+    Type: "image",
+    TakenAt: "2026-10-10T12:05:00Z",
+    TakenSrc: "meta",
+    FileName: "a.jpg",
+    ...over,
+  });
+  const range = {
+    takenAfter: new Date("2026-10-10T11:00:00Z"),
+    takenBefore: new Date("2026-10-10T14:59:59Z"),
+  };
+
+  it("asks /photos for the days around the range, oldest first, and keeps the capture time", async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [photo(HASH), photo("b".repeat(40), { TakenSrc: "" })],
+    });
+    const found = await createPhotoprismPhotoSource(CONN).searchAssetsByTime(range);
+    expect(calledUrls()[0]).toBe(
+      "https://photos.example.com/api/v1/photos?after=2026-10-09&before=2026-10-11&count=500&offset=0&order=oldest"
+    );
+    expect(found.truncated).toBe(false);
+    expect(found.assets.map((a) => a.fileCreatedAt)).toEqual([
+      "2026-10-10T12:05:00.000Z",
+      new Date(0).toISOString(),
+    ]);
+  });
+
+  it("reads further pages while they are full, and says when the page bound ran out", async () => {
+    const full = (n: number) =>
+      Array.from({ length: 500 }, (_, i) => photo((n * 500 + i).toString(16).padStart(40, "0")));
+    mockedAxios.get.mockResolvedValueOnce({ data: full(0) }).mockResolvedValueOnce({ data: [] });
+    const done = await createPhotoprismPhotoSource(CONN).searchAssetsByTime(range);
+    expect(done).toMatchObject({ truncated: false });
+    expect(done.assets).toHaveLength(500);
+    expect(calledUrls()[1]).toContain("offset=500");
+
+    mockedAxios.get.mockReset();
+    mockedAxios.get.mockResolvedValue({ data: full(1) });
+    const bounded = await createPhotoprismPhotoSource(CONN).searchAssetsByTime(range);
+    expect(bounded.truncated).toBe(true);
+    expect(mockedAxios.get).toHaveBeenCalledTimes(10);
+  });
+
+  it("a rejected app password is its own kind, not an empty list", async () => {
+    mockedAxios.get.mockRejectedValueOnce(axiosError(401));
+    await expect(createPhotoprismPhotoSource(CONN).searchAssetsByTime(range)).rejects.toMatchObject(
+      { kind: "auth" }
+    );
+  });
+});
