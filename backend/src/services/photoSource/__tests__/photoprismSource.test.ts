@@ -176,7 +176,9 @@ describe("listAlbums", () => {
       ],
     });
     const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
-    expect(calledUrls()[0]).toBe("https://photos.example.com/api/v1/albums?type=album&count=5000");
+    expect(calledUrls()[0]).toBe(
+      "https://photos.example.com/api/v1/albums?type=album&count=1000&offset=0"
+    );
     expect((mockedAxios.get.mock.calls[0][1] as { headers: object }).headers).toEqual({
       Authorization: "Bearer app-password-1",
     });
@@ -184,6 +186,26 @@ describe("listAlbums", () => {
       { id: "as6sg6bxpogaaba8", albumName: "Lisbon", assetCount: 3, thumbnailAssetId: HASH },
       { id: "as6sg6bxpogaaba9", albumName: "No cover", assetCount: 0, thumbnailAssetId: null },
     ]);
+  });
+
+  it("pages through a big library by offset instead of silently stopping at one page", async () => {
+    const page = (from: number, n: number) =>
+      Array.from({ length: n }, (_, i) => ({ UID: `album${from + i}`, Title: `A${from + i}` }));
+    mockedAxios.get
+      .mockResolvedValueOnce({ data: page(0, 1000) })
+      .mockResolvedValueOnce({ data: page(1000, 3) });
+    const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
+    expect(albums).toHaveLength(1003);
+    expect(calledUrls()[1]).toContain("offset=1000");
+  });
+
+  it("fails loudly (protocol) instead of returning a prefix when the library never ends", async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: Array.from({ length: 1000 }, (_, i) => ({ UID: `album${i}`, Title: "x" })),
+    });
+    await expect(createPhotoprismPhotoSource(CONN).listAlbums()).rejects.toMatchObject({
+      kind: "protocol",
+    });
   });
 
   it("maps a 403 (permission denied) to auth", async () => {

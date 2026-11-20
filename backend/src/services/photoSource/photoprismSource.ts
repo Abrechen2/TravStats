@@ -46,8 +46,10 @@ const STREAM_TIMEOUT_MS = 60_000;
 const STREAM_IDLE_TIMEOUT_MS = 60_000;
 /** Page size of `GET /photos`; a shorter page is the last one (no total is sent). */
 export const PHOTOPRISM_PAGE_SIZE = 500;
-/** `count` of the album listing; 5000 was accepted without a visible cap. */
-const ALBUM_COUNT = 5000;
+/** Page size of the album listing; 5000 was accepted without a visible cap. */
+const ALBUM_PAGE_SIZE = 1000;
+/** Hard stop (50 000 albums) so a source that never ends cannot loop forever. */
+const MAX_ALBUM_PAGES = 50;
 /** The download token lives 3600 s; the preview token has no measured expiry. */
 export const PHOTOPRISM_TOKEN_TTL_MS = 10 * 60_000;
 /**
@@ -321,24 +323,35 @@ export function createPhotoprismPhotoSource(
     },
 
     async listAlbums(): Promise<PhotoSourceAlbum[]> {
-      // `count` AND `type` are both required; either alone is a 400/403.
-      const data = await getJson(`/albums?type=album&count=${ALBUM_COUNT}`, "albums", true);
-      if (!Array.isArray(data)) {
-        throw new ImmichError("protocol", `${SERVICE} returned an unexpected album payload`);
-      }
-      return data.filter(isRecord).flatMap((raw) => {
-        const id = str(raw.UID);
-        if (!ALBUM_UID.test(id)) return [];
-        const cover = str(raw.Thumb);
-        return [
-          {
+      // `count` AND `type` are both required; either alone is a 400/403. Paged
+      // by `offset` until a short page: a fixed cap would silently hide albums
+      // of a big library, and linking a hidden album fails as "unknown".
+      const found: PhotoSourceAlbum[] = [];
+      for (let page = 0; page < MAX_ALBUM_PAGES; page += 1) {
+        const data = await getJson(
+          `/albums?type=album&count=${ALBUM_PAGE_SIZE}&offset=${page * ALBUM_PAGE_SIZE}`,
+          "albums",
+          true
+        );
+        if (!Array.isArray(data)) {
+          throw new ImmichError("protocol", `${SERVICE} returned an unexpected album payload`);
+        }
+        for (const raw of data.filter(isRecord)) {
+          const id = str(raw.UID);
+          if (!ALBUM_UID.test(id)) continue;
+          const cover = str(raw.Thumb);
+          found.push({
             id,
             albumName: str(raw.Title),
             assetCount: typeof raw.PhotoCount === "number" ? raw.PhotoCount : 0,
             thumbnailAssetId: HASH.test(cover) ? cover : null,
-          },
-        ];
-      });
+          });
+        }
+        if (data.length < ALBUM_PAGE_SIZE) return found;
+      }
+      // More albums than this reads: say so instead of returning a silent prefix.
+      logger.warn({ message: "photoprism_albums_truncated", context: { count: found.length } });
+      throw new ImmichError("protocol", `${SERVICE} has more albums than TravStats reads`);
     },
 
     async listAlbumAssets(albumId: string, page: number): Promise<PhotoSourceAssetPage> {
