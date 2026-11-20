@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { composeSuggestions } from "../compose";
+import { contentKey } from "../contentKey";
 import { homeFromPeriods } from "../context";
 import { periodsFromLegacy, type HomeAirportEntry } from "../../../utils/homeAirport";
 import { AT, cruise, input, ride, stay, trip, visit } from "./fixtures";
@@ -400,6 +401,45 @@ describe("composeSuggestions — answered proposals", () => {
     ];
     const out = composeSuggestions(input({ entries: italyWeek(), answered }));
     expect(out).toHaveLength(1);
+  });
+});
+
+describe("composeSuggestions — answers survive a delete and re-import", () => {
+  it("does not re-ask a dismissed proposal whose entries came back with new ids", () => {
+    const shown = composeSuggestions(input({ entries: italyWeek() }))[0];
+    const answered = [
+      {
+        kind: shown.kind,
+        fingerprint: shown.id,
+        targetId: null,
+        memberKeys: shown.members.map((m) => m.key),
+        memberContentKeys: shown.members.map((m) => contentKey(m.domain, m.startDay, m.label)),
+      },
+    ];
+    const reimported = italyWeek().map((e) => ({
+      ...e,
+      id: `new-${e.id}`,
+      key: `${e.domain}:new-${e.id}`,
+    }));
+    expect(composeSuggestions(input({ entries: reimported, answered }))).toEqual([]);
+  });
+
+  it("still asks again when only the ids match nothing and no content key was stored", () => {
+    const shown = composeSuggestions(input({ entries: italyWeek() }))[0];
+    const answered = [
+      {
+        kind: shown.kind,
+        fingerprint: shown.id,
+        targetId: null,
+        memberKeys: shown.members.map((m) => m.key),
+      },
+    ];
+    const reimported = italyWeek().map((e) => ({
+      ...e,
+      id: `new-${e.id}`,
+      key: `${e.domain}:new-${e.id}`,
+    }));
+    expect(composeSuggestions(input({ entries: reimported, answered }))).toHaveLength(1);
   });
 });
 

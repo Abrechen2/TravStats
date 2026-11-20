@@ -11,6 +11,7 @@ import {
 } from "../sharing/propagate";
 import { recheckAchievements } from "../../utils/achievements";
 import { restatusTrips } from "../trip/restatusTrips";
+import { repointDecisionMembers } from "../tripSuggestions/decisionRepoint";
 import { findDuplicateCandidates } from "./checks/duplicateCandidates";
 import { loadRecordSnapshot } from "./recordGather";
 import { FindingActionError } from "./findingErrors";
@@ -336,6 +337,13 @@ async function mergeCruises(
   return rows.map((r) => r.tripId);
 }
 
+/** The domain prefix a trip-suggestion member key carries for each mergeable type. */
+const DECISION_KEY_PREFIX: Record<"flight" | "cruise" | "lodging_stay", string> = {
+  flight: "flight",
+  cruise: "cruise",
+  lodging_stay: "lodging",
+};
+
 /**
  * Merge `removedIds` into `keptId`, then run `alsoInTx` — the flag answer — in
  * the same transaction, so the data and the answer change together or not at
@@ -362,6 +370,8 @@ export async function mergeDuplicates(
       else if (entityType === "lodging_stay") {
         trips = await mergeStays(tx, userId, keptId, removedIds);
       } else throw new FindingActionError("invalidAction", "notOffered");
+      // Answers to "belongs to a trip?" named the removed copies by id.
+      await repointDecisionMembers(tx, userId, DECISION_KEY_PREFIX[entityType], keptId, removedIds);
       await alsoInTx(tx);
       return trips;
     },

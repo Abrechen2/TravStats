@@ -103,3 +103,24 @@ describe("merging the country-visit kind", () => {
     ).toBe("transit");
   });
 });
+
+describe("trip-suggestion answers and a merged place", () => {
+  it("follows a merged place, so the visit question is not asked again for the place that stays", async () => {
+    const target = await place("Gyeongbokgung");
+    const source = await place("Gyeongbokgung Palace");
+    await prisma.tripSuggestionDecision.create({
+      data: {
+        userId,
+        kind: "place_visit",
+        fingerprint: `place_visit:${source.id}:flight:f1`,
+        status: "dismissed",
+        targetId: source.id,
+        memberKeys: ["flight:f1"],
+      },
+    });
+    await mergePlaces(userId, target.id, { sourceId: source.id, fields: ALL_TARGET });
+    const rows = await prisma.tripSuggestionDecision.findMany({ where: { userId } });
+    expect(rows.map((r) => r.targetId)).toEqual([target.id]);
+    await prisma.tripSuggestionDecision.deleteMany({ where: { userId } });
+  });
+});

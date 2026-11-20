@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { contentKey } from "../contentKey";
 import { composeSuggestions } from "../compose";
 import { placeVisitProposals } from "../placeVisits";
 import type { PlaceContext } from "../types";
@@ -107,6 +108,25 @@ describe("placeVisitProposals", () => {
     expect(placeVisitProposals(next, [cafe()], answered).map((p) => p.anchor?.key)).toEqual([
       "lodging:f2026",
     ]);
+  });
+
+  it("stays settled after the anchor stay was deleted and imported again with a new id", () => {
+    const original = stay("old", AT.FIRENZE, "2025-05-03", "2025-05-06", "Florenz", {
+      label: "Hotel Avenida",
+    });
+    const [shown] = placeVisitProposals([original], [cafe()]);
+    const answered = [
+      {
+        kind: "place_visit",
+        targetId: "cafe",
+        memberKeys: [shown.anchor!.key],
+        memberContentKeys: [contentKey(shown.anchor!.domain, shown.startDay, shown.anchor!.label)],
+      },
+    ];
+    const reimported = stay("new", AT.FIRENZE, "2025-05-03", "2025-05-06", "Florenz", {
+      label: "Hotel Avenida",
+    });
+    expect(placeVisitProposals([reimported], [cafe()], answered)).toEqual([]);
   });
 
   it("does not come back once answered", () => {

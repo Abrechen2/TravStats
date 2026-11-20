@@ -1,4 +1,5 @@
 import { prisma, type DbTransaction } from "../../db";
+import { contentKey } from "./contentKey";
 import {
   lockTripPeriodAccounts,
   propagateTripPeriod,
@@ -258,6 +259,10 @@ async function recordAnswer(
       proposal.kind === "place_visit" && proposal.anchor
         ? [proposal.anchor.key]
         : proposal.members.map((m) => m.key),
+    memberContentKeys:
+      proposal.kind === "place_visit" && proposal.anchor
+        ? [contentKey(proposal.anchor.domain, proposal.startDay, proposal.anchor.label)]
+        : proposal.members.map((m) => contentKey(m.domain, m.startDay, m.label)),
     createdTripId: created.createdTripId ?? null,
     createdPlaceVisitId: created.createdPlaceVisitId ?? null,
   };
@@ -283,7 +288,8 @@ async function recordDeclined(
   chosen: TripSuggestion["members"]
 ): Promise<void> {
   const taken = new Set(chosen.map((m) => m.key));
-  const declined = proposal.members.filter((m) => !taken.has(m.key)).map((m) => m.key);
+  const declinedMembers = proposal.members.filter((m) => !taken.has(m.key));
+  const declined = declinedMembers.map((m) => m.key);
   if (declined.length === 0) return;
   const fingerprint = proposalId("assign", tripId, declined);
   const data = {
@@ -291,6 +297,7 @@ async function recordDeclined(
     status: "dismissed",
     targetId: tripId,
     memberKeys: declined,
+    memberContentKeys: declinedMembers.map((m) => contentKey(m.domain, m.startDay, m.label)),
     createdTripId: null,
     createdPlaceVisitId: null,
   };
