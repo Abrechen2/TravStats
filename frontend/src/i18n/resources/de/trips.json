@@ -181,7 +181,13 @@
     "logistics": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
-      "bookings": "Buchungen"
+      "bookings": "Buchungen",
+      "rail": "Bahn",
+      "bus": "Bus",
+      "ferries": "Fähren",
+      "date": "Datum",
+      "route": "Strecke",
+      "open": "öffnen"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",

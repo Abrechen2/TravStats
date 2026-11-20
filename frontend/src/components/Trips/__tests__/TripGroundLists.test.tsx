@@ -43,4 +43,24 @@ describe("TripGroundLists", () => {
     );
     expect(screen.queryByTestId("trip-bus-list")).toBeNull();
   });
+
+  // Owner, 2026-11-20: a ferry stood in the logistics tab as a bare emoji link,
+  // outside any panel. It now gets the panel the other rides get.
+  it("draws a ferry ride as a panel with its route and its own link", () => {
+    const ferry = {
+      ...ride,
+      id: "f1",
+      depStationName: "Mopanshan-Pier",
+      arrStationName: "Yangshuo",
+    };
+    render(
+      <MemoryRouter>
+        <TripGroundLists trip={{ ferryJourneys: [ferry] } as unknown as Trip} />
+      </MemoryRouter>
+    );
+    const panel = screen.getByTestId("trip-ferry-list");
+    expect(panel.querySelector("table")).not.toBeNull();
+    expect(panel).toHaveTextContent("Mopanshan-Pier → Yangshuo");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/ferry/f1");
+  });
 });
