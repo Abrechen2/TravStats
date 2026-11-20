@@ -101,7 +101,7 @@ Immich today:
    - The trip's album picker gets a source switch when both sources are connected. With only one connected, there is no switch.
    - Gallery groups are labelled with their source.
 7. **Phases.**
-   - B0: check §B.2 against a real PhotoPrism (a test container on lisbeth).
+   - B0: check §B.2 against a real PhotoPrism (a local test container).
    - B1: interface plus the Immich refactor, with no change in behaviour (the existing suite is the guard).
    - B2: PhotoPrism link mode.
    - B3: import mode.
