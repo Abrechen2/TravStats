@@ -214,14 +214,38 @@ async function merge(flag: DataQualityFlag, keptIdOverride: string | undefined, 
     // The other questions about these copies are answered by the merge: the
     // copies they name are gone. This flag moves onto the kept record, so the
     // history still has a subject to show.
+    // Only OPEN questions about the kept record go: a dismissed or resolved
+    // flag there is an answer the user gave ("not a duplicate", "keep"), and
+    // deleting it re-asks that question on the next run.
     await tx.dataQualityFlag.deleteMany({
       where: {
         userId: flag.userId,
         entityType: evidence.entityType,
         id: { not: flag.id },
-        OR: [{ entityId: { in: removedIds } }, { entityId: keptId, kind: flag.kind }],
+        OR: [
+          { entityId: { in: removedIds } },
+          { entityId: keptId, kind: flag.kind, status: "open" },
+        ],
       },
     });
+    // One flag per entity and kind: when the kept record still holds an answer
+    // of this kind, this flag cannot move onto it. The kept answer stands and
+    // this one — its copies are gone — is dropped.
+    const keptAnswer = await tx.dataQualityFlag.findFirst({
+      where: {
+        userId: flag.userId,
+        entityType: evidence.entityType,
+        entityId: keptId,
+        kind: flag.kind,
+        id: { not: flag.id },
+      },
+      select: { id: true },
+    });
+    if (keptAnswer) {
+      const dropped = await tx.dataQualityFlag.deleteMany({ where: asRead(flag) });
+      if (dropped.count === 0) throw new FindingActionError("staleFinding");
+      return;
+    }
     const updated = await tx.dataQualityFlag.updateMany({
       where: asRead(flag),
       data: {
