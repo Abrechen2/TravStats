@@ -6,6 +6,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.37.** One new migration: a photo-source column on linked trip albums (existing links become Immich) and the PhotoPrism connection fields.
+
+### Added
+
+- **PhotoPrism as a second photo source.** A trip can link PhotoPrism albums the way it links Immich ones: the photos stream through the server and are not copied. The connection lives under the external services, off until switched on; the setup text names the app-password scope it needs. With both sources connected, the album picker asks which one. Importing PhotoPrism photos is not built yet.
+- **A trip shows its places.** The timeline marks each place as "Ort besucht" or "Ort geplant" and links to it, the trip map draws the places, and the trip head and each trip card count the places visited.
+- **The trips page has a list view** beside the tiles; it remembers the last choice.
+
+### Changed
+
+- **Rarely used trip actions moved into a "Mehr" menu.** Sharing, export, offering the trip to another server, the AI summary and delete sit in one menu in the trip head; only "Bearbeiten" stays a button, and the overview uses the full width.
+- **Tours and roadtrips look like the rest of the logbook**: tabs, summary strip, filters and a table; a new tour is created in a dialog. A roadtrip in progress stays a card above the table.
+
+### Fixed
+
+- **The dashboard map draws rail, bus, ferry, rental and roadtrip lines again for accounts without day tours.** Since tours became a domain, all ground lines hung on the day-tour switch.
+- **A tour's page shows the tour, not its whole trip.** A short hike opened on the trip's flights across two continents; the trip's other stops now wait folded under the tour's own.
+- **The map's WebGL notice is visible.** When the map cannot start, the reason stands over the map in German or English and in the browser console, instead of a small line under the controls.
+- **The "Öffnen" link on Einrichtung & Zustand is readable** — it was near-black on the dark card.
+- **A completed trip's packing list no longer stands above its tabs.** It waits at the end, read-only, and an empty one is hidden.
+- **The settings sidebar spacing** follows the design values.
+
 **Upgrading to 2.8.0-rc.36.** One new migration: a switch for airplanes.live, off by default.
 
 ### Added
