@@ -72,10 +72,17 @@ export function arrowFor(line: DirectionLine, fraction = 0.5): ArrowDatum | null
       if (dLon > 180) dLon -= 360;
       else if (dLon < -180) dLon += 360;
       const lon = ((((a[0] + dLon * t + 180) % 360) + 360) % 360) - 180;
-      const t2 = Math.min(1, t + 0.04);
+      // A sample a little further on — or, at the very end of a segment, one
+      // behind mirrored forward — so `ahead` never lands on `position` (which
+      // would turn the globe's arrow to a fixed east).
+      const step = t > 0.96 ? -0.04 : 0.04;
+      const t2 = t + step;
       const lon2 = ((((a[0] + dLon * t2 + 180) % 360) + 360) % 360) - 180;
       return {
-        ahead: [lon2, a[1] + (b[1] - a[1]) * t2],
+        ahead:
+          step > 0
+            ? [lon2, a[1] + (b[1] - a[1]) * t2]
+            : [lon + (lon - lon2), a[1] + (b[1] - a[1]) * t + (b[1] - a[1]) * (t - t2)],
         position: [lon, a[1] + (b[1] - a[1]) * t],
         bearing: bearingBetween(a, b),
         color: line.color,

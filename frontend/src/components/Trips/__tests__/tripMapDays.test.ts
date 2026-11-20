@@ -206,3 +206,21 @@ describe("review findings (Codex)", () => {
     expect(dayFocusPoints(emptyTripMapData(), [], "2026-05-02", [[9, 9]])).toEqual([[9, 9]]);
   });
 });
+
+describe("globe arrow heading at a segment end (Codex)", () => {
+  it("keeps `ahead` apart from the arrow even where the midpoint is a vertex", async () => {
+    const { arrowFor } = await import("../tripMapArrows");
+    const a = arrowFor({
+      id: "v",
+      group: "flights",
+      path: [
+        [0, 0],
+        [5, 0],
+        [10, 0],
+      ],
+      color: [0, 0, 0],
+    })!;
+    expect(a.ahead[0]).toBeGreaterThan(a.position[0]);
+    expect(a.ahead).not.toEqual(a.position);
+  });
+});
