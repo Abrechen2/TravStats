@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { DeckGLOverlay, webgl2Available } from "./map/DeckGLOverlay";
+import { WebGL2MissingBanner } from "./map/WebGL2MissingBanner";
+import { probeWebGL2 } from "../lib/webgl2";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { PinnedCard } from "./map/cards/PinnedCard";
 import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
@@ -101,6 +103,10 @@ export function DeckGLMap({
   onPlaceMarkerSizeChange,
 }: DeckGLMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
+  // `webgl2Available` is frozen at page load; one refusal at that moment used
+  // to switch deck.gl off for the whole session (tester, 2026-11-18). Ask again
+  // once per mount before giving up on rail, bus, ferry and roadtrip lines.
+  const [deckReady] = useState(() => webgl2Available || probeWebGL2());
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapTheme = useThemeStore((state) => state.mapTheme);
@@ -586,7 +592,7 @@ export function DeckGLMap({
   );
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
-  const nativeInteractiveIds = !webgl2Available
+  const nativeInteractiveIds = !deckReady
     ? [...(routesVisible.flight ? [NATIVE_ROUTE_LINE_ID] : []), NATIVE_AIRPORT_CIRCLE_ID]
     : undefined;
 
@@ -605,7 +611,7 @@ export function DeckGLMap({
         interactiveLayerIds={nativeInteractiveIds}
         cursor={isHovering || nativeInteractiveIds ? "pointer" : undefined}
       >
-        {webgl2Available && mapLoaded && (
+        {deckReady && mapLoaded && (
           <DeckGLOverlay
             layers={[...layers, ...pulseLayers, ...planeLayers]}
             effects={effects}
@@ -613,7 +619,7 @@ export function DeckGLMap({
             onClick={markDeckClick}
           />
         )}
-        {!webgl2Available && visMode === "routes" && (
+        {!deckReady && visMode === "routes" && (
           <NativeRoutesLayer
             flights={flights}
             minRouteCount={minRouteCount}
@@ -756,17 +762,7 @@ export function DeckGLMap({
           still knows the lodging and place datums the globe has no layer for. */}
       <HoverTooltip ref={hoverRef} />
 
-      {!webgl2Available && (
-        <div
-          className="absolute bottom-2 left-2 z-10 text-xs px-2 py-1 rounded-sm"
-          style={{
-            background: "rgba(0,0,0,0.6)",
-            color: "rgba(255,200,50,0.9)",
-          }}
-        >
-          WebGL2 unavailable — flight routes disabled
-        </div>
-      )}
+      {!deckReady && <WebGL2MissingBanner />}
     </div>
   );
 }

@@ -3,6 +3,8 @@
   "webglLost": "Die Kartengrafik wurde unterbrochen. Die Karte wird neu aufgebaut …",
   "webglLostGaveUp": "Die Kartengrafik ist mehrfach ausgefallen. Prüfe die Hardwarebeschleunigung oder schließe andere Tabs mit 3D-Karten.",
   "webglLostRetry": "Karte neu laden",
+  "webgl2Missing": "Beim Laden hat dein Browser keine 3D-Grafik (WebGL2) bereitgestellt. Bahn, Bus, Fähre, Touren und Roadtrips werden deshalb nicht gezeichnet, Flüge nur vereinfacht. Lade die Seite neu; hilft das nicht, prüfe die Hardwarebeschleunigung des Browsers.",
+  "webgl2MissingReload": "Seite neu laden",
   "loadFailed": {
     "rentals": "Die Mietwagen konnten nicht geladen werden.",
     "buses": "Die Busfahrten konnten nicht geladen werden.",
