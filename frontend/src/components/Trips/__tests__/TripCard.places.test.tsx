@@ -9,6 +9,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
     i18n: { language: "de" },
   }),
 }));
+// The head's "Mehr" menu asks whether the instance has a text model; the network guard refuses the request.
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));

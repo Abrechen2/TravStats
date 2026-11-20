@@ -112,7 +112,9 @@ export default function TripPeopleSection({
   // trip without names still says it failed.
   // People on other servers (F-S4c) still have their place when nobody local is listed.
   if (companionNames.length === 0 && (view?.people.length ?? 0) === 0 && !loadFailed)
-    return isSharedDemo ? null : <RemoteTripPeople tripId={tripId} standalone />;
+    return isSharedDemo ? null : (
+      <RemoteTripPeople tripId={tripId} standalone offerControls={false} />
+    );
   if (isSharedDemo || !view) {
     return (
       <DetailSection title={t("trips:detail.companions")}>
@@ -182,7 +184,7 @@ export default function TripPeopleSection({
         <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
           {failure}
           <PeopleList rows={rows} />
-          <RemoteTripPeople tripId={tripId} />
+          <RemoteTripPeople tripId={tripId} offerControls={false} />
           {view.bookingTotals.length > 0 && (
             <div data-testid="share-booking-totals" className="text-sm">
               <p className="t-label-mono">{t("sharing:trip.bookingTotals")}</p>

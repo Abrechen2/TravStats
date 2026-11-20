@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import type { useTranslation } from "../../hooks/useTranslation";
@@ -9,8 +8,7 @@ import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
-import TripShareMenu from "../sharing/TripShareMenu";
-import { TripExportModal } from "./TripExportModal";
+import TripMoreMenu from "./TripMoreMenu";
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
 const STATUS_TONE: Record<Trip["status"], string> = {
@@ -34,7 +32,7 @@ interface TripHeadProps {
 /**
  * The head of a trip page, round 4 ("Reise Detail"): status and a mono line
  * of dates, days and countries, the name large, the countries as flag chips,
- * and the two actions every detail page carries.
+ * and "Bearbeiten" with the "Mehr" menu that holds the rest.
  *
  * It replaces a 240px banner whose gradient came from the trip colour and
  * whose text sat on a dark overlay — a picture of a trip where the export
@@ -50,9 +48,6 @@ export default function TripHead({
   onChanged,
   placeCount = 0,
 }: TripHeadProps): JSX.Element {
-  // The export dialog lives here, beside its button, so the trip page itself
-  // does not have to carry one more piece of state.
-  const [exporting, setExporting] = useState(false);
   // The trip's days at its places (`times`), never moved by the reader's zone.
   const start = tripStart(trip)?.date;
   const end = tripEnd(trip)?.date;
@@ -163,16 +158,11 @@ export default function TripHead({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
-            <TripShareMenu tripId={trip.id} onChanged={onChanged} />
-            <Button onClick={() => setExporting(true)}>{t("trips:export.button")}</Button>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>
-            <Button variant="danger" onClick={onDelete}>
-              {t("common:buttons.delete")}
-            </Button>
+            <TripMoreMenu trip={trip} language={locale} onDelete={onDelete} onChanged={onChanged} />
           </div>
         </div>
       </div>
-      {exporting && <TripExportModal tripId={trip.id} onClose={() => setExporting(false)} />}
     </div>
   );
 }

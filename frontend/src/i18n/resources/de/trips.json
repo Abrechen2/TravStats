@@ -969,5 +969,28 @@
       "personal": "Persönlich",
       "shared": "Gemeinsam"
     }
+  },
+  "view": {
+    "label": "Ansicht",
+    "tiles": "Kacheln",
+    "list": "Liste"
+  },
+  "table": {
+    "name": "Reise",
+    "dates": "Zeitraum",
+    "days": "Tage",
+    "countries": "Länder",
+    "status": "Status",
+    "places": "Orte",
+    "label": "Reisen"
+  },
+  "menu": {
+    "more": "Mehr",
+    "label": "Weitere Aktionen für diese Reise",
+    "remote": "Reise auf anderem Server anbieten / Code erstellen",
+    "remoteTitle": "Reise auf anderem Server anbieten",
+    "summaryNone": "KI-Zusammenfassung erstellen",
+    "summaryAgain": "KI-Zusammenfassung neu erstellen",
+    "summaryBusy": "KI-Zusammenfassung wird erstellt …"
   }
 }

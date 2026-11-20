@@ -5,20 +5,10 @@ import { createPortal } from "react-dom";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { sharingApi } from "../../lib/api/sharing";
-import { logger } from "../../lib/logger";
-import { useToastStore } from "../../store/toastStore";
-import { useTripSharingStore } from "../../store/tripSharingStore";
-import type { SharePerson, TripPerson } from "../../types/sharing";
-import ShareLinkDialog from "../shareLinks/ShareLinkDialog";
 import { Button } from "../ui";
-import ShareTripDialog from "./ShareTripDialog";
-import ShareRouteDialog from "./ShareRouteDialog";
 import { useTravTrackVisible } from "../../hooks/useTravTrackVisible";
 import { useRemoteShareBlock } from "./useRemoteShareBlock";
-
-const ITEMS = ["companions", "link", "route"] as const;
-type MenuItem = (typeof ITEMS)[number];
+import { SHARE_ITEMS, useTripShareDialogs, type ShareItem } from "./useTripShareDialogs";
 
 /** Menu width, the gap to the trigger and the margin kept to the viewport edge. */
 const MENU_WIDTH = 260;
@@ -82,21 +72,13 @@ export default function TripShareMenu({
 }): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const isSharedDemo = useIsDemoAccount();
-  const addToast = useToastStore((s) => s.addToast);
-  const bump = useTripSharingStore((s) => s.bump);
   // The route entry only where TravTrack is offered to this account.
   const travTrack = useTravTrackVisible();
-  const items = ITEMS.filter((which) => which !== "route" || travTrack);
+  const items = SHARE_ITEMS.filter((which) => which !== "route" || travTrack);
   const [open, setOpen] = useState(false);
   // Why someone on another server cannot be offered this trip here, if they cannot.
   const remoteBlock = useRemoteShareBlock(tripId, open);
-  const [dialog, setDialog] = useState<MenuItem | null>(null);
-  // Tagged with its trip, so a trip change never offers the previous trip's people.
-  const [loaded, setLoaded] = useState<{
-    tripId: string;
-    people: TripPerson[];
-    linkableUsers: SharePerson[];
-  } | null>(null);
+  const shareDialogs = useTripShareDialogs(tripId, onChanged);
   const [placement, setPlacement] = useState<ReturnType<typeof placeMenu> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -151,33 +133,11 @@ export default function TripShareMenu({
     if (open) itemRefs.current[0]?.focus();
   }, [open]);
 
-  useEffect(() => {
-    if (dialog !== "companions") return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const view = await sharingApi.tripSharing(tripId);
-        if (!cancelled) {
-          setLoaded({ tripId, people: view.people, linkableUsers: view.linkableUsers });
-        }
-      } catch (error) {
-        if (cancelled) return;
-        logger.error("Failed to load trip sharing:", error);
-        addToast("error", t("sharing:trip.errors.loadFailed"));
-        setDialog(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [dialog, tripId, addToast, t]);
-
   if (isSharedDemo) return null;
 
-  const pick = (which: MenuItem) => {
+  const pick = (which: ShareItem) => {
     setOpen(false);
-    setLoaded(null);
-    setDialog(which);
+    shareDialogs.pick(which);
   };
 
   // Tabbing out of trigger and panel closes the menu; a target that is not an
@@ -216,11 +176,9 @@ export default function TripShareMenu({
     itemRefs.current[(at + step + items.length) % items.length]?.focus();
   };
 
-  const current = loaded?.tripId === tripId ? loaded : null;
-  const people = current?.people ?? null;
   // Between the pick and the people arriving nothing else is on screen: the
   // trigger says so, and is not a second way in while the first is loading.
-  const loading = dialog === "companions" && !people;
+  const loading = shareDialogs.loading;
 
   return (
     <div ref={rootRef} onBlur={onBlur}>
@@ -275,26 +233,7 @@ export default function TripShareMenu({
           </div>,
           document.body
         )}
-      {dialog === "route" && (
-        <ShareRouteDialog open onClose={() => setDialog(null)} tripId={tripId} />
-      )}
-      {dialog === "link" && (
-        <ShareLinkDialog open onClose={() => setDialog(null)} kind="trip" targetId={tripId} />
-      )}
-      {dialog === "companions" && people && (
-        <ShareTripDialog
-          open
-          onClose={() => setDialog(null)}
-          tripId={tripId}
-          people={people}
-          linkableUsers={current?.linkableUsers ?? []}
-          onShared={() => bump(tripId)}
-          onPeopleChanged={() => {
-            bump(tripId);
-            onChanged?.();
-          }}
-        />
-      )}
+      {shareDialogs.node}
     </div>
   );
 }

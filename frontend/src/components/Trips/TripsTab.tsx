@@ -11,6 +11,9 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_GRID_CLASS } from "./tripGrid";
+import TripsTable from "./TripsTable";
+import { TripsViewToggle } from "./TripsViewToggle";
+import { useTripsView } from "./useTripsView";
 import { useTripPlaceCounts } from "../../hooks/useTripPlaceCounts";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { TripPlacesError } from "./TripPlacesStatus";
@@ -82,6 +85,7 @@ export default function TripsTab({
   const addToast = useToastStore((s) => s.addToast);
   const placeCounts = useTripPlaceCounts(usePlacesVisible());
   const navigate = useNavigate();
+  const [view, setView] = useTripsView();
   const [showAddPanel, setShowAddPanel] = useState(false);
   const tripAdapter = useTripImportAdapter(onTripsChange);
   const [showCleanup, setShowCleanup] = useState(false);
@@ -194,6 +198,7 @@ export default function TripsTab({
           moreLabel={t("common:buttons.moreActions")}
         />
       )}
+      <TripsViewToggle value={view} onChange={setView} />
       <Button variant="primary" onClick={() => setShowAddPanel(true)}>
         + {t("import:trip.triggerLabel")}
       </Button>
@@ -318,6 +323,13 @@ export default function TripsTab({
           >
             {t("trips:filterBar.noResults")}
           </div>
+        ) : view === "list" ? (
+          <TripsTable
+            trips={filtered}
+            onOpen={mergeMode ? toggleMergeSelection : handleOpen}
+            placeCounts={placeCounts.counts}
+            selection={mergeMode ? mergeSelection : undefined}
+          />
         ) : (
           <div className="flex flex-col gap-6">
             {groups.map(([year, list]) => {

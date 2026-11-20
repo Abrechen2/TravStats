@@ -969,5 +969,28 @@
       "personal": "Personal",
       "shared": "Shared"
     }
+  },
+  "view": {
+    "label": "View",
+    "tiles": "Tiles",
+    "list": "List"
+  },
+  "table": {
+    "name": "Trip",
+    "dates": "Dates",
+    "days": "Days",
+    "countries": "Countries",
+    "status": "Status",
+    "places": "Places",
+    "label": "Trips"
+  },
+  "menu": {
+    "more": "More",
+    "label": "More actions for this trip",
+    "remote": "Offer trip to another server / create code",
+    "remoteTitle": "Offer trip to another server",
+    "summaryNone": "Create AI summary",
+    "summaryAgain": "Create AI summary again",
+    "summaryBusy": "Creating AI summary …"
   }
 }
