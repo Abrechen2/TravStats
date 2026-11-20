@@ -104,6 +104,29 @@ describe("StayIdentityPanel", () => {
     expect(screen.queryByText(new RegExp(`${K}.photos`))).toBeNull();
   });
 
+  it("offers the folded McCafé as a one-tap alternative and says when the building lookup failed", async () => {
+    const onPick = vi.fn();
+    show(
+      {
+        probable: { name: "McDonald's", source: "nearbyPlace", photoSupported: true },
+        candidates: [
+          { ...base.candidates[0], name: "McDonald's", isArea: true, distanceM: 0 },
+          { ...base.candidates[0], name: "McCafé", foldedInto: "McDonald's", photoCount: 1 },
+        ],
+        venues: { state: "timeout", resolved: null },
+      },
+      onPick
+    );
+    scrollIntoView();
+    await screen.findByText("McDonald's", { selector: "strong" });
+    expect(screen.getByRole("list", { name: `${K}.candidates` })).toHaveTextContent(
+      `${K}.foldedInto {"name":"McDonald's"}`
+    );
+    expect(screen.getByText(`${K}.venues.timeout`)).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole("button", { name: `${K}.useName` })[1]);
+    expect(onPick).toHaveBeenCalledWith("McCafé");
+  });
+
   it("names the photos' city on Immich alone while both geocoders are down", async () => {
     show({
       probable: { name: "Lisboa", source: "photos", photoSupported: true },

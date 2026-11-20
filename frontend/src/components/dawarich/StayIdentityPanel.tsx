@@ -159,6 +159,9 @@ function IdentityDetails({
               {candidate.photoCount
                 ? ` · ${text("photoCount", { count: candidate.photoCount })}`
                 : ""}
+              {candidate.foldedInto
+                ? ` · ${text("foldedInto", { name: candidate.foldedInto })}`
+                : ""}
               {onPickName && (
                 <>
                   {" "}
@@ -176,6 +179,9 @@ function IdentityDetails({
         </ul>
       ) : (
         <p className="t-caption">{text(`candidatesState.${identity.candidatesState}`)}</p>
+      )}
+      {identity.venues && !["ok", "off"].includes(identity.venues.state) && (
+        <p className="t-caption">{text(`venues.${identity.venues.state}`)}</p>
       )}
       <PhotoLine photos={photos} text={text} />
     </>

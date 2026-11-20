@@ -103,6 +103,7 @@ export async function stopIdentityFor(
       geocoder: "empty",
       candidates: [],
       candidatesState: "empty",
+      venues: { state: "off", resolved: null },
       photos: { state: "off", count: 0, cities: [], truncated: false },
       known,
       lookup: "off",

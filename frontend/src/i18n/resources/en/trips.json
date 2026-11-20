@@ -889,6 +889,14 @@
         "empty": "No named places within 250 m.",
         "degraded": "The place search is unreachable or overloaded right now – nearby places are missing for that reason."
       },
+      "foldedInto": "belongs to {{name}}",
+      "venues": {
+        "partial": "Some buildings have no outline in OpenStreetMap, so the choice of building is less certain.",
+        "timeout": "The building lookup at OpenStreetMap took too long, so the suggestion rests on distance and photos only.",
+        "rateLimited": "OpenStreetMap temporarily refused the building lookup (too many requests), so the suggestion rests on distance and photos only.",
+        "budget": "The daily quota for OpenStreetMap lookups is used up or busy right now, so the suggestion rests on distance and photos only.",
+        "unavailable": "OpenStreetMap cannot be reached for the building lookup right now, so the suggestion rests on distance and photos only."
+      },
       "distance": "{{meters}} m away",
       "photoCount_one": "{{count}} photo here",
       "photoCount_other": "{{count}} photos here",

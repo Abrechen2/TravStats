@@ -127,7 +127,13 @@ export interface StayCandidate {
   distanceM: number;
   /** Photos of the stay taken at this place; null without photo evidence. */
   photoCount: number | null;
+  /** The building/venue this candidate sits inside; it stays listed as an alternative. */
+  foldedInto?: string | null;
+  /** True for the building outline the stay point lies in. */
+  isArea?: boolean;
 }
+export type StayVenueState =
+  "ok" | "partial" | "off" | "timeout" | "rateLimited" | "budget" | "unavailable";
 /** `GET /dawarich-stays/:id/identity` (forgejo#305). */
 export interface StayIdentity {
   lat: number;
@@ -141,6 +147,8 @@ export interface StayIdentity {
   geocoder: StaySourceState;
   candidates: StayCandidate[];
   candidatesState: StaySourceState;
+  /** Whether OSM building outlines took part in the ranking; absent on older servers. */
+  venues?: { state: StayVenueState; resolved: "contains" | "folded" | null };
   photos: {
     state: StayPhotoState;
     count: number;

@@ -889,6 +889,14 @@
         "empty": "Keine benannten Orte im Umkreis von 250 m.",
         "degraded": "Die Ortssuche ist gerade nicht erreichbar oder überlastet – Orte in der Nähe fehlen deshalb."
       },
+      "foldedInto": "gehört zu {{name}}",
+      "venues": {
+        "partial": "Von einigen Gebäuden fehlt der Grundriss in OpenStreetMap – die Wahl des Gebäudes ist deshalb unsicherer.",
+        "timeout": "Die Gebäudeabfrage bei OpenStreetMap hat zu lange gedauert – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "rateLimited": "OpenStreetMap hat die Gebäudeabfrage vorübergehend abgelehnt (zu viele Anfragen) – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "budget": "Das Tageskontingent für OpenStreetMap-Abfragen ist gerade ausgeschöpft oder belegt – der Vorschlag beruht nur auf Nähe und Fotos.",
+        "unavailable": "OpenStreetMap ist für die Gebäudeabfrage gerade nicht erreichbar – der Vorschlag beruht nur auf Nähe und Fotos."
+      },
       "distance": "{{meters}} m entfernt",
       "photoCount_one": "{{count}} Foto hier",
       "photoCount_other": "{{count}} Fotos hier",
