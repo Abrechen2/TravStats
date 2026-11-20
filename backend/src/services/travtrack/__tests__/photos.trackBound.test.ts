@@ -31,7 +31,7 @@ describe("TravTrack photos — the track read's bound", () => {
   let userId: string;
   const deps = (readLimits?: { page: number; pages: number }) => ({
     connections: async () => ({ immich: conn }),
-    albums: async () => [],
+    albums: async () => ({ albums: [], truncated: false }),
     source: () => ({
       searchAssetsByTime: async () => ({
         assets: [asset("early", T + 5 * MIN), asset("late", T + 45 * MIN)],

@@ -148,6 +148,11 @@ router.get(
           res.status(409).json({ error: "notConfigured" });
           return;
         }
+        if (error instanceof PhotoSourcesFailed) {
+          logger.warn({ message: "travtrack_photo_grant_upstream_failure" });
+          sendPlaceholder(res, 502);
+          return;
+        }
         if (error instanceof ImmichError) {
           logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
           sendPlaceholder(res, error.kind === "notFound" ? 404 : 502);

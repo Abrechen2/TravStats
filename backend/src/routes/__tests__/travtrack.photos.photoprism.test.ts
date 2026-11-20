@@ -143,6 +143,13 @@ describe("TravTrack photos — PhotoPrism", () => {
     expect(res.body.failures).toHaveLength(2);
   });
 
+  it("a thumbnail whose sources all fail answers the upstream placeholder, not a 500", async () => {
+    immichSearch.mockRejectedValue(new ImmichError("unreachable", "down"));
+    ppSearch.mockRejectedValue(new ImmichError("unreachable", "down"));
+    const res = await get(`photos/${HASH}/file`, { ...WINDOW, provider: "photoprism" });
+    expect(res.status).toBe(502);
+  });
+
   it("only PhotoPrism connected still lists photos", async () => {
     getImmichConnection.mockResolvedValue(null);
     const res = await get("photos");

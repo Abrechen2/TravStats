@@ -13,7 +13,7 @@ import type { PhotoSourceAsset } from "../photoSource/types";
 import type { StoredPoint } from "../tripRecording/segments";
 import logger from "../../utils/logger";
 import { inPrivacyZone, type ZoneCircle } from "./classify";
-import { linkedAlbumsOf, type LinkedAlbum } from "./photosLinkedAlbums";
+import { linkedAlbumsOf, type LinkedAlbums } from "./photosLinkedAlbums";
 import { readSafeTravTrack, type SafeCursor, type Span } from "./readSafe";
 
 /**
@@ -83,7 +83,7 @@ export type PhotoDeps = {
   connections?: (userId: string) => Promise<Partial<Record<PhotoSourceKind, ImmichConnection>>>;
   source?: (kind: PhotoSourceKind, conn: ImmichConnection) => TimeSource;
   /** Test seam: the trips' linked albums of the window. */
-  albums?: (userId: string, window: Span) => Promise<LinkedAlbum[]>;
+  albums?: (userId: string, window: Span) => Promise<LinkedAlbums>;
   /** Test seam: the track read's page size and page bound. */
   readLimits?: { page: number; pages: number };
 };
@@ -185,6 +185,8 @@ type Gathered = {
   assets: PhotoSourceAsset[];
   truncated: boolean;
   failure: ImmichError["kind"] | null;
+  /** The library search itself answered (an album failing does not undo it). */
+  searched: boolean;
 };
 
 /**
@@ -196,10 +198,10 @@ type Gathered = {
 async function gather(
   kind: PhotoSourceKind,
   source: TimeSource,
-  albums: readonly LinkedAlbum[],
+  albums: readonly LinkedAlbums["albums"][number][],
   window: Span
 ): Promise<Gathered> {
-  const out: Gathered = { assets: [], truncated: false, failure: null };
+  const out: Gathered = { assets: [], truncated: false, failure: null, searched: false };
   const fail = (error: unknown) => {
     // Anything but the fixed vocabulary is a bug, not a source being down.
     if (!(error instanceof ImmichError)) throw error;
@@ -217,6 +219,7 @@ async function gather(
     });
     out.assets.push(...found.assets);
     out.truncated ||= found.truncated;
+    out.searched = true;
   } catch (error) {
     fail(error);
   }
@@ -240,7 +243,10 @@ async function computePhotos(
   deps: PhotoDeps
 ): Promise<TravTrackPhotos> {
   const kinds = PHOTO_SOURCE_KINDS.filter((k) => conns[k]);
-  const albums = await (deps.albums ?? linkedAlbumsOf)(userId, window);
+  const { albums, truncated: albumsOmitted } = await (deps.albums ?? linkedAlbumsOf)(
+    userId,
+    window
+  );
   const [{ stretches, circles, complete }, gathered] = await Promise.all([
     safeStretches(userId, window, deps.readLimits),
     Promise.all(
@@ -251,7 +257,7 @@ async function computePhotos(
   ]);
   const photos = new Map<string, TravTrackPhoto>();
   const failures: TravTrackPhotoFailure[] = [];
-  let truncated = !complete;
+  let truncated = !complete || albumsOmitted;
   gathered.forEach((g, i) => {
     const provider = kinds[i];
     truncated ||= g.truncated;
@@ -273,7 +279,8 @@ async function computePhotos(
       });
     }
   });
-  if (failures.length === kinds.length && photos.size === 0) throw new PhotoSourcesFailed(failures);
+  if (photos.size === 0 && gathered.every((g) => !g.searched))
+    throw new PhotoSourcesFailed(failures);
   const list = [...photos.values()].sort(
     (a, b) =>
       a.takenAt.localeCompare(b.takenAt) ||

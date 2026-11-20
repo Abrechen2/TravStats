@@ -9,6 +9,12 @@ const DAY_MS = 86_400_000;
 
 export type LinkedAlbum = { provider: PhotoSourceKind; albumId: string };
 
+export type LinkedAlbums = {
+  albums: LinkedAlbum[];
+  /** More albums were linked than are read: the list is a prefix. */
+  truncated: boolean;
+};
+
 /**
  * The albums linked to the account's trips that run during `window` (a trip
  * with no end date counts as its start day). Generous by a day at the front:
@@ -16,7 +22,7 @@ export type LinkedAlbum = { provider: PhotoSourceKind; albumId: string };
  * only touches the window costs a read, never a wrong photo. Sorted so the
  * cache key and the read order are stable.
  */
-export async function linkedAlbumsOf(userId: string, window: Span): Promise<LinkedAlbum[]> {
+export async function linkedAlbumsOf(userId: string, window: Span): Promise<LinkedAlbums> {
   const rows = await prisma.tripImmichAlbum.findMany({
     where: {
       trip: {
@@ -30,7 +36,6 @@ export async function linkedAlbumsOf(userId: string, window: Span): Promise<Link
     },
     select: { provider: true, immichAlbumId: true },
     orderBy: [{ provider: "asc" }, { immichAlbumId: "asc" }],
-    take: MAX_ALBUMS,
   });
   const seen = new Set<string>();
   const albums: LinkedAlbum[] = [];
@@ -41,5 +46,6 @@ export async function linkedAlbumsOf(userId: string, window: Span): Promise<Link
     seen.add(key);
     albums.push({ provider, albumId: row.immichAlbumId });
   }
-  return albums;
+  // Bound after the dedupe: repeated links must not use up the distinct ones.
+  return { albums: albums.slice(0, MAX_ALBUMS), truncated: albums.length > MAX_ALBUMS };
 }

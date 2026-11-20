@@ -234,6 +234,47 @@ describe("TravTrack photos — several sources and linked albums", () => {
     expect(res.failures).toEqual([{ provider: "photoprism", kind: "notFound" }]);
   });
 
+  it("a deleted linked album does not turn an answered, empty search into a failure", async () => {
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Seoul", startDate: new Date(T - 86_400_000), endDate: new Date(T) },
+    });
+    await prisma.tripImmichAlbum.create({
+      data: { tripId: trip.id, immichAlbumId: "al-i", provider: "immich", albumName: "I" },
+    });
+    const s = sourceOf({ immich: { albums: { "al-i": new ImmichError("notFound", "gone") } } });
+
+    const res = await travTrackPhotos(userId, WINDOW, {
+      connections: async () => ({ immich: conn("http://immich.test") }),
+      source: s.source,
+    });
+
+    expect(res.photos).toEqual([]);
+    expect(res.failures).toEqual([{ provider: "immich", kind: "notFound" }]);
+  });
+
+  it("more linked albums than are read says so instead of dropping them silently", async () => {
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Seoul", startDate: new Date(T - 86_400_000), endDate: new Date(T) },
+    });
+    await prisma.tripImmichAlbum.createMany({
+      data: Array.from({ length: 22 }, (_, i) => ({
+        tripId: trip.id,
+        immichAlbumId: `al-${String(i).padStart(2, "0")}`,
+        provider: "immich",
+        albumName: `A${i}`,
+      })),
+    });
+    const s = sourceOf({});
+
+    const res = await travTrackPhotos(userId, WINDOW, {
+      connections: async () => ({ immich: conn("http://immich.test") }),
+      source: s.source,
+    });
+
+    expect(s.albumReads).toHaveLength(20);
+    expect(res.truncated).toBe(true);
+  });
+
   it("every source failing with nothing to show throws, carrying each failure", async () => {
     const { promise } = run({
       immich: { search: new ImmichError("unreachable", "down") },
