@@ -16,7 +16,7 @@ day without recording.
 |---|---|---|---|
 | S1 | server | `/travtrack/day` carries `omitted`, stops carry `coverage`, `?includeImplausible=1` | built, `feat/track-review` @ bd03cc1d2, not merged |
 | W1 | web | stop card / leg list: "gemessen X · angenommen Y" + dashed gap bar; empty-day reasons with actions; iPad split view | built, same branch |
-| C1 | Companion | Track screen shows the same: coverage on stops, reason for an empty day | open — hand-over 2026-11-20 |
+| C1 | Companion | Track screen shows the same: coverage on stops, reason for an empty day | built, PR companion#130 (`feat/track-honest-gaps` @ 6a6fddbd); not yet run against an S1 server |
 
 ## Contract (minimum server: the first RC that contains `feat/track-review`)
 
@@ -51,4 +51,4 @@ No error cases beyond today's `/travtrack/day` ones.
 
 ## Open for Companion
 
-- C1 as above; copy DE first, EN mirror; inferred time is never called measured.
+- C1 built. App wording: "Privatzone" (its existing term); "Aufzeichnung prüfen" opens location settings (the app has no import screen).
