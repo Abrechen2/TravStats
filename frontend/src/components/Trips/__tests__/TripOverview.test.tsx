@@ -10,7 +10,9 @@ import type { Trip } from "../../../types";
 // "Reisende" (spec 2026-10-16, D9): the section loads its sharing state on its
 // own and has its own suite (components/sharing/__tests__); here it would only
 // race the assertions.
-vi.mock("../../sharing/TripPeopleSection", () => ({ default: () => null }));
+vi.mock("../../sharing/TripPeopleSection", () => ({
+  default: () => <div data-testid="people-section" />,
+}));
 
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 
@@ -315,6 +317,8 @@ describe("TripOverview", () => {
       </MemoryRouter>
     );
     expect(container.querySelector(".lg\\:grid-cols-\\[1\\.6fr_1fr\\]")).toBeNull();
+    // People on other servers still have their section, in the main column.
+    expect(screen.getByTestId("people-section")).toBeInTheDocument();
   });
 
   it("keeps the side column for a trip with an AI summary, which only shows it", () => {

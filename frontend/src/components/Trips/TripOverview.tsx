@@ -457,6 +457,17 @@ export default function TripOverview({
               papers belong with the trip's own summary anyway. */}
           <DocumentsSection entry={{ type: "trip", id: trip.id }} />
 
+          {/* No side column: people on other servers (a roster to answer, a
+              membership to confirm) still need their place, and the section
+              draws nothing when there is nobody. */}
+          {!hasSide && (
+            <TripPeopleSection
+              tripId={trip.id}
+              companionNames={trip.companions}
+              onChanged={onChanged}
+            />
+          )}
+
           {trip.notes && (
             <DetailSection title={t("trips:detail.notes")}>
               <p className="whitespace-pre-wrap text-sm" style={{ color: "var(--ts-text)" }}>

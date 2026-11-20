@@ -228,8 +228,10 @@ export default function TripMoreMenu({
             role="menu"
             aria-label={t("trips:menu.label")}
             onKeyDown={onMenuKey}
-            className="fixed z-70 flex flex-col rounded-lg p-2 shadow-xl"
+            className="fixed z-70 flex flex-col overflow-y-auto rounded-lg p-2 shadow-xl"
             style={{
+              // Short screens and big text: the panel scrolls, so "Löschen" stays reachable.
+              maxHeight: "calc(100dvh - 32px)",
               ...(placement ?? { left: 16, top: 16, width: MENU_WIDTH }),
               visibility: placement ? "visible" : "hidden",
               background: "var(--ts-surface)",
