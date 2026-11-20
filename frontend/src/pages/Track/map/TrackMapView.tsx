@@ -596,7 +596,11 @@ export default function TrackMapView(): JSX.Element {
           {/* Notices are compact overlays: the stack disappears when nothing is to say. */}
           <div
             className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 flex-col gap-2 empty:hidden"
-            style={{ width: "min(560px, calc(100% - 24px))" }}
+            style={{
+              width: docked ? "min(560px, calc(100% - 360px))" : "min(560px, calc(100% - 24px))",
+              // Docked: centred in the map's free part, right of the layers column.
+              ...(docked ? { left: "calc(50% + 156px)" } : {}),
+            }}
             data-testid="track-notices"
           >
             <div
