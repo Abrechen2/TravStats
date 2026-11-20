@@ -38,6 +38,8 @@ import type {
   PhotoSourceStream,
   PhotoSourceTestResult,
   PhotoSourceThumbnailSize,
+  PhotoSourceTimeRange,
+  PhotoSourceTimeSearch,
 } from "./types";
 
 const SERVICE = "PhotoPrism";
@@ -46,6 +48,9 @@ const STREAM_TIMEOUT_MS = 60_000;
 const STREAM_IDLE_TIMEOUT_MS = 60_000;
 /** Page size of `GET /photos`; a shorter page is the last one (no total is sent). */
 export const PHOTOPRISM_PAGE_SIZE = 500;
+/** Pages one time search reads (5 000 photos); a fuller answer is `truncated`. */
+export const PHOTOPRISM_SEARCH_MAX_PAGES = 10;
+const DAY_MS = 86_400_000;
 /** Page size of the album listing; 5000 was accepted without a visible cap. */
 const ALBUM_PAGE_SIZE = 1000;
 /** Hard stop (50 000 albums) so a source that never ends cannot loop forever. */
@@ -374,6 +379,33 @@ export function createPhotoprismPhotoSource(
         nextPage: data.length >= PHOTOPRISM_PAGE_SIZE ? page + 1 : null,
         truncated: false,
       };
+    },
+
+    /**
+     * `GET /photos?after=&before=` take calendar days (`YYYY-MM-DD`), so the
+     * range is padded by a day on each side and the caller's exact check
+     * decides. Not in the measured API facts: whether the bounds are inclusive
+     * is not relied on, which is what the padding is for. Oldest first, paged
+     * by `offset` until a short page or the page bound.
+     */
+    async searchAssetsByTime(range: PhotoSourceTimeRange): Promise<PhotoSourceTimeSearch> {
+      const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+      const after = day(range.takenAfter.getTime() - DAY_MS);
+      const before = day(range.takenBefore.getTime() + DAY_MS);
+      const assets: PhotoSourceAsset[] = [];
+      for (let page = 0; page < PHOTOPRISM_SEARCH_MAX_PAGES; page += 1) {
+        const data = await getJson(
+          `/photos?after=${after}&before=${before}&count=${PHOTOPRISM_PAGE_SIZE}&offset=${page * PHOTOPRISM_PAGE_SIZE}&order=oldest`,
+          "photos by time",
+          true
+        );
+        if (!Array.isArray(data)) {
+          throw new ImmichError("protocol", `${SERVICE} returned an unexpected photo payload`);
+        }
+        assets.push(...data.map(mapAsset).filter((a): a is PhotoSourceAsset => a !== null));
+        if (data.length < PHOTOPRISM_PAGE_SIZE) return { assets, truncated: false };
+      }
+      return { assets, truncated: true };
     },
 
     streamThumbnail: (assetId, size) =>

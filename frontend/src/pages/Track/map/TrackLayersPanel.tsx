@@ -34,6 +34,7 @@ export default function TrackLayersPanel({
   long = false,
   embedded = false,
   saveFailed = false,
+  noPhotoSource = false,
   speedStops = SPEED_STOPS,
 }: {
   prefs: TrackMapPrefs;
@@ -44,6 +45,8 @@ export default function TrackLayersPanel({
   embedded?: boolean;
   /** The last choice did not reach storage: say so, without blocking anything. */
   saveFailed?: boolean;
+  /** No photo source is connected: the photos row says how to connect one. */
+  noPhotoSource?: boolean;
   /** The ramp's stops for the chosen scale; the legend follows them. */
   speedStops?: ReadonlyArray<{ kmh: number }>;
 }): JSX.Element {
@@ -74,7 +77,13 @@ export default function TrackLayersPanel({
               checked={prefs.layers[id] && !dayOnlyOff}
               onChange={() => onChange({ layers: { ...prefs.layers, [id]: !prefs.layers[id] } })}
               label={t(`track:map.layers.${id}`)}
-              sub={t(dayOnlyOff ? "track:map.layers.dayOnly" : `track:map.layers.${id}Hint`)}
+              sub={t(
+                dayOnlyOff
+                  ? "track:map.layers.dayOnly"
+                  : id === "photos" && noPhotoSource
+                    ? "track:map.layers.photosNoSource"
+                    : `track:map.layers.${id}Hint`
+              )}
             />
           );
         })}

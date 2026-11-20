@@ -413,7 +413,8 @@
       "entries": "Logbook entries",
       "entriesHint": "Flights, rides, trips",
       "photos": "Photos",
-      "photosHint": "From Immich, placed on the track",
+      "photosHint": "From Immich or PhotoPrism, placed on the track",
+      "photosNoSource": "No photo source connected yet – connect Immich or PhotoPrism in the settings (Services)",
       "dayOnly": "Only in the day and 7-day views",
       "countries": "Countries",
       "countriesHint": "Countries with location points in the months the range touches – no proof of a visit"
@@ -530,14 +531,14 @@
     "thumbFailed": "Not loaded",
     "truncated": "Not every photo of this range could be considered. A shorter range shows the rest.",
     "needsShorter": "Photos are available for ranges of up to 7 days. Pick a shorter range.",
-    "connect": "Connect Immich in the settings",
+    "connect": "Connect Immich or PhotoPrism in the settings",
     "failure": {
-      "notConfigured": "Photos come from Immich, and Immich is not connected yet.",
-      "unreachable": "Immich cannot be reached right now.",
-      "auth": "Immich refused access – check the API key.",
-      "notFound": "Immich no longer knows these photos.",
-      "protocol": "Immich answered unexpectedly – perhaps the version does not match.",
-      "invalidUrl": "The Immich address is invalid – check it in the settings."
+      "notConfigured": "Photos come from Immich or PhotoPrism, and neither is connected yet.",
+      "unreachable": "{{source}} cannot be reached right now – its photos are missing.",
+      "auth": "{{source}} refused access – check the API key or app password.",
+      "notFound": "{{source}} no longer knows these photos.",
+      "protocol": "{{source}} answered unexpectedly – perhaps the version does not match.",
+      "invalidUrl": "The {{source}} address is invalid – check it in the settings."
     }
   },
   "flight": {

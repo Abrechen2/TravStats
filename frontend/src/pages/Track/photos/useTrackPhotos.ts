@@ -1,29 +1,52 @@
 import { useEffect, useState } from "react";
 import {
+  travTrackPhotoFailureProvider,
   travTrackViewsApi,
   type PhotoWindow,
+  type TrackPhotoProvider,
   type TravTrackPhoto,
 } from "../../../lib/api/travtrackViews";
-import { immichApi } from "../../../lib/api/immich";
 import { logger } from "../../../lib/logger";
 import { isNotConfigured, photoFailureKey } from "./trackPhotos";
 
 const NOT_CONFIGURED = "track:photos.failure.notConfigured";
 
 /**
- * Whether this account reaches an Immich, asked with every photo read (one
- * small GET, never cached: a connection saved in Settings must count the
- * moment the user comes back); null when the status read failed — then the
- * photo read itself answers, and "no connection" is never claimed unproven.
- * Asking first keeps the expected "not connected" out of the browser console:
- * a 409 is logged there as a failed request whatever the page does with it
- * (UAT beta.28).
+ * Whether this account has a photo source (Immich or PhotoPrism) connected,
+ * asked with every photo read (one small GET, never cached: a connection saved
+ * in Settings must count the moment the user comes back); null when the status
+ * read failed — then the photo read itself answers, and "no connection" is
+ * never claimed unproven. Asking first keeps the expected "not connected" out
+ * of the browser console: a 409 is logged there as a failed request whatever
+ * the page does with it (UAT beta.28).
  */
-const immichAccess = (): Promise<boolean | null> =>
-  immichApi.getSettings().then(
-    (status) => status?.hasAccess === true,
+const sourceAccess = (): Promise<boolean | null> =>
+  travTrackViewsApi.photoSources().then(
+    (sources) => sources.length > 0,
     () => null
   );
+
+/** The connected sources once known: undefined while asking, null when the read failed. */
+export function usePhotoSources(): readonly TrackPhotoProvider[] | null | undefined {
+  const [sources, setSources] = useState<readonly TrackPhotoProvider[] | null | undefined>();
+  useEffect(() => {
+    let live = true;
+    travTrackViewsApi.photoSources().then(
+      (list) => live && setSources(list),
+      () => live && setSources(null)
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  return sources;
+}
+
+/** One source that could not answer, with the copy key of its reason. */
+export interface PhotoSourceFailure {
+  provider: TrackPhotoProvider;
+  key: string;
+}
 
 export type PhotosState =
   | { kind: "idle" }
@@ -32,10 +55,12 @@ export type PhotosState =
       kind: "loaded";
       photos: TravTrackPhoto[];
       truncated: boolean;
+      /** Sources that did not answer; the other sources' photos are in `photos`. */
+      failures: PhotoSourceFailure[];
       /** The window the list was asked for — the thumbnails' grant. */
       window: PhotoWindow;
     }
-  | { kind: "failed"; key: string };
+  | { kind: "failed"; key: string; provider?: TrackPhotoProvider };
 
 /**
  * The window's placed photos while `window` is set; a failure is reported as
@@ -53,7 +78,7 @@ export function useTrackPhotos(window: PhotoWindow | null, generation = 0): Phot
     }
     let live = true;
     setState({ kind: "loading" });
-    immichAccess()
+    sourceAccess()
       .then((access) => {
         if (access === false) return null;
         return travTrackViewsApi.photos({ from, to });
@@ -68,6 +93,10 @@ export function useTrackPhotos(window: PhotoWindow | null, generation = 0): Phot
             kind: "loaded",
             photos: answer.photos,
             truncated: answer.truncated,
+            failures: (answer.failures ?? []).map((f) => ({
+              provider: f.provider,
+              key: photoFailureKey({ response: { data: { error: f.kind } } }),
+            })),
             window: { from, to },
           });
         }
@@ -76,7 +105,8 @@ export function useTrackPhotos(window: PhotoWindow | null, generation = 0): Phot
         const key = photoFailureKey(err);
         // Not connected is a state the panel explains, not a failure to log.
         if (!isNotConfigured(key)) logger.warn("TravTrack photos could not be loaded", err);
-        if (live) setState({ kind: "failed", key });
+        const provider = travTrackPhotoFailureProvider(err) ?? undefined;
+        if (live) setState({ kind: "failed", key, provider });
       });
     return () => {
       live = false;

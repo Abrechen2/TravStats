@@ -38,7 +38,7 @@ export default function TrackPhotoThumb({
         </span>
       ) : (
         <img
-          src={travTrackViewsApi.photoUrl(photo.assetId, window)}
+          src={travTrackViewsApi.photoUrl(photo, window)}
           alt={t("track:photos.alt", { time })}
           width={size}
           height={size}

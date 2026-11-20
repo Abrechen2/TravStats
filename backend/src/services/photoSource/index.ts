@@ -26,7 +26,7 @@ export function createPhotoSource(
 
 /** Every asset of an album, following `nextPage`; a failing page fails the whole call. */
 export async function listAllAlbumAssets(
-  source: PhotoSourceProvider,
+  source: Pick<PhotoSourceProvider, "listAlbumAssets">,
   albumId: string
 ): Promise<AlbumAssetList> {
   const collected: AlbumAssetList = [];
