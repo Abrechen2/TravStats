@@ -323,6 +323,23 @@ export const SERVICES: readonly ServiceDef[] = [
     tester: "immich",
   }),
   svc({
+    id: "photoprism",
+    category: "photosLocation",
+    level: "instanceAndAccount",
+    credential: "urlKey",
+    connection: true,
+    fields: [
+      admin("baseUrl", "url", "globalPhotoprismBaseUrl"),
+      admin("token", "secret", "globalPhotoprismToken"),
+    ],
+    accountFields: [
+      user("baseUrl", "url", "photoprismBaseUrl"),
+      user("token", "secret", "photoprismToken"),
+    ],
+    requiredFields: ["baseUrl", "token"],
+    tester: "photoprism",
+  }),
+  svc({
     id: "dawarich",
     category: "photosLocation",
     level: "instanceAndAccount",
@@ -603,6 +620,6 @@ export function serviceForResolverProvider(provider: string): ServiceDef | undef
 /** Cloud-AI services (a document leaves the server): every AI service but a local Ollama. */
 export const AI_SERVICES: readonly ServiceDef[] = SERVICES.filter((s) => s.ai);
 
-/** Account connections: the four things an admin may forbid accounts to connect. */
-export const CONNECTION_IDS = ["dawarich", "immich", "strava", "webdav"] as const;
+/** Account connections: the things an admin may forbid accounts to connect. */
+export const CONNECTION_IDS = ["dawarich", "immich", "photoprism", "strava", "webdav"] as const;
 export type ConnectionId = (typeof CONNECTION_IDS)[number];

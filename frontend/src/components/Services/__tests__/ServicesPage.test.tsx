@@ -93,13 +93,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 32 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 33 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(32),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(33),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(32);
+    expect(SERVICE_CARDS).toHaveLength(33);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -660,7 +660,7 @@ describe("ServicesPage", () => {
         render(<ServicesPage isAdmin={false} side="account" />);
       });
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(18);
+      expect(ids()).toHaveLength(19);
       for (const id of [
         "gemini",
         "googlePlaces",
@@ -681,7 +681,7 @@ describe("ServicesPage", () => {
       useSettingsLevelStore.setState({ level: "standard" });
       await showSide("server");
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(23);
+      expect(ids()).toHaveLength(24);
       for (const id of [
         "smtp",
         "push",
@@ -709,7 +709,7 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(26), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(27), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });

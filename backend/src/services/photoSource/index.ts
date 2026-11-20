@@ -1,8 +1,10 @@
 import type { ImmichConnection } from "../immich/types";
 import { createImmichPhotoSource } from "./immichSource";
+import { createPhotoprismPhotoSource } from "./photoprismSource";
 import type { PhotoSourceAsset, PhotoSourceKind, PhotoSourceProvider } from "./types";
 
-export type { PhotoSourceProvider } from "./types";
+export type { PhotoSourceKind, PhotoSourceProvider } from "./types";
+export { PHOTO_SOURCE_KINDS } from "./types";
 
 /** Hard stop for `listAllAlbumAssets`, so a source that never ends cannot loop forever. */
 const MAX_PAGES = 200;
@@ -17,6 +19,8 @@ export function createPhotoSource(
   switch (kind) {
     case "immich":
       return createImmichPhotoSource(connection);
+    case "photoprism":
+      return createPhotoprismPhotoSource(connection);
   }
 }
 

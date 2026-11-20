@@ -14,11 +14,11 @@ import { accountOverview, admin } from "./servicesFixtures";
 const cardOf = (id: string) => SERVICE_CARDS.find((c) => c.id === id)!;
 const acct = accountOverview().ownKeys[0];
 
-describe("the 32 cards", () => {
+describe("the 33 cards", () => {
   it("are the catalogue's entries in its seven groups (R7)", () => {
     const sizes = SERVICE_GROUPS.map((g) => SERVICE_CARDS.filter((c) => c.group === g).length);
     // The prototype's groups (settings v3 S5): Logostream sits with the maps, AISstream with flight data.
-    expect(sizes).toEqual([10, 5, 3, 7, 3, 2, 2]);
+    expect(sizes).toEqual([10, 5, 4, 7, 3, 2, 2]);
   });
 
   it("are the registry's service cards: the server's page lists them all but those with a page of their own", () => {
@@ -42,7 +42,7 @@ describe("the 32 cards", () => {
   });
 
   it("give a connection 'accounts may connect' and a key 'allow own keys', never both (R7)", () => {
-    const connections = ["immich", "dawarich", "strava", "webdav"];
+    const connections = ["immich", "photoprism", "dawarich", "strava", "webdav"];
     for (const c of SERVICE_CARDS) {
       const conn = (c.use as readonly string[]).includes("allowConn");
       expect(conn).toBe(connections.includes(c.id));

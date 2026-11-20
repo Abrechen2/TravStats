@@ -23,10 +23,12 @@ vi.mock("../../../lib/api/immich", () => ({
   immichApi: { getAlbumAssets, unlinkAlbum, resyncAlbum, getImportJob },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
-  failureKey: (kind: unknown) =>
-    typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
-      ? `errors.${kind}`
-      : "errors.unknown",
+  failureKey: (kind: unknown, provider = "immich") => {
+    const prefix = provider === "photoprism" ? "errors.photoprism" : "errors";
+    return typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
+      ? `${prefix}.${kind}`
+      : `${prefix}.unknown`;
+  },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -40,6 +42,7 @@ import type { LinkedAlbum } from "../../../types/immich";
 
 const LINK_ALBUM: LinkedAlbum = {
   id: "link-1",
+  provider: "immich",
   immichAlbumId: "a1",
   albumName: "Rome",
   assetCount: 2,
@@ -167,6 +170,38 @@ describe("ImmichAlbumSection", () => {
 
     await waitFor(() => expect(screen.getByText("albums.badgeImport")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "albums.resync" })).toBeInTheDocument();
+  });
+
+  it("labels the group with its photo source", async () => {
+    const { rerender } = render(
+      <ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("album-source")).toHaveTextContent("albums.badgeImmich")
+    );
+    rerender(
+      <ImmichAlbumSection
+        tripId="trip-1"
+        album={{ ...LINK_ALBUM, provider: "photoprism" }}
+        onChanged={vi.fn()}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("album-source")).toHaveTextContent("albums.badgePhotoprism")
+    );
+  });
+
+  it("names PhotoPrism, not Immich, when a PhotoPrism album rejects the app password", async () => {
+    getAlbumAssets.mockRejectedValue({ response: { data: { error: "auth" } } });
+    render(
+      <ImmichAlbumSection
+        tripId="trip-1"
+        album={{ ...LINK_ALBUM, provider: "photoprism" }}
+        onChanged={vi.fn()}
+      />
+    );
+    await waitFor(() => expect(screen.getByText("errors.photoprism.auth")).toBeInTheDocument());
+    expect(screen.queryByText("errors.auth")).not.toBeInTheDocument();
   });
 
   it("renders a degraded panel instead of tiles when Immich is unreachable", async () => {

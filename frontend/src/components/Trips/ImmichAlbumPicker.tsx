@@ -3,7 +3,20 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { formatBytes } from "../../lib/fileSize";
-import type { ImmichAlbumSummary, ImmichMode } from "../../types/immich";
+import { logger } from "../../lib/logger";
+import type { ImmichAlbumSummary, ImmichMode, PhotoSourceKind } from "../../types/immich";
+
+const SOURCES: readonly PhotoSourceKind[] = ["immich", "photoprism"];
+
+/** What one photo source answered when the picker opened. */
+type SourceState =
+  | { status: "loading" }
+  | { status: "notConfigured" }
+  | { status: "failed"; failure: string }
+  | { status: "ok"; albums: ImmichAlbumSummary[] };
+
+const selectionKey = (provider: PhotoSourceKind, albumId: string): string =>
+  JSON.stringify([provider, albumId]);
 
 // Folds a string for search matching: trims, lower-cases, and strips
 // diacritics so a plain-ASCII query (e.g. "munchen") finds "München" — the
@@ -23,6 +36,8 @@ interface Props {
 }
 
 interface Selection {
+  provider: PhotoSourceKind;
+  albumId: string;
   mode: ImmichMode;
   estimateBytes: number | null;
 }
@@ -35,7 +50,11 @@ interface Selection {
 export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props): JSX.Element {
   const { t } = useTranslation("immich");
 
-  const [albums, setAlbums] = useState<ImmichAlbumSummary[]>([]);
+  const [sources, setSources] = useState<Record<PhotoSourceKind, SourceState>>({
+    immich: { status: "loading" },
+    photoprism: { status: "loading" },
+  });
+  const [source, setSource] = useState<PhotoSourceKind | null>(null);
   const [defaultMode, setDefaultMode] = useState<ImmichMode>("link");
   const [selected, setSelected] = useState<Record<string, Selection>>({});
   // Client-side filter only — "selected" stays keyed by album id regardless
@@ -45,33 +64,59 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   // Resolved i18n key (e.g. "errors.auth"), not the bare failure kind — so an
   // unrecognised kind resolves to "errors.unknown" via failureKey() at the
   // point of capture rather than being force-fit into "unreachable" here.
-  const [failure, setFailure] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [linkFailure, setLinkFailure] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
 
+  // Both sources are asked at once: a source that answers `notConfigured` is
+  // not connected, and the switch exists only when both are.
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const load = async (provider: PhotoSourceKind): Promise<void> => {
+      let next: SourceState;
       try {
-        const data = await immichApi.listAlbums(tripId);
-        if (cancelled) return;
-        setAlbums(data.albums);
-        setDefaultMode(data.defaultMode);
+        const data = await immichApi.listAlbums(tripId, provider);
+        if (provider === "immich") setDefaultMode(data.defaultMode);
+        next = { status: "ok", albums: data.albums };
       } catch (error) {
-        if (!cancelled) setFailure(failureKey(immichFailureKind(error)));
-      } finally {
-        if (!cancelled) setLoading(false);
+        const kind = immichFailureKind(error);
+        if (kind === "notConfigured") {
+          next = { status: "notConfigured" };
+        } else {
+          logger.warn("Album list failed", { provider, kind });
+          next = { status: "failed", failure: failureKey(kind, provider) };
+        }
       }
-    })();
+      if (!cancelled) setSources((prev) => ({ ...prev, [provider]: next }));
+    };
+    void Promise.all(SOURCES.map(load));
     return () => {
       cancelled = true;
     };
   }, [tripId]);
 
+  const connected = SOURCES.filter((p) => sources[p].status !== "notConfigured");
+  const loading = SOURCES.some((p) => sources[p].status === "loading");
+  const showSwitch = !loading && connected.length === SOURCES.length;
+  // Immich first (it was the only source for a long time), else the one that is connected.
+  const active: PhotoSourceKind = source ?? connected[0] ?? "immich";
+  const activeState = sources[active];
+  const albums = activeState.status === "ok" ? activeState.albums : [];
+  const failure =
+    linkFailure ??
+    (activeState.status === "failed"
+      ? activeState.failure
+      : !loading && connected.length === 0
+        ? failureKey("notConfigured")
+        : null);
+
   // Only "copy" costs disk, so only "copy" pays for an estimate round-trip —
   // whether the album landed in import mode via the user's configured
   // defaultMode or an explicit mode-button click.
-  const fetchEstimateIfImport = async (albumId: string, mode: ImmichMode): Promise<void> => {
+  const fetchEstimateIfImport = async (
+    key: string,
+    albumId: string,
+    mode: ImmichMode
+  ): Promise<void> => {
     if (mode !== "import") return;
 
     const estimate = await immichApi.estimateImport(tripId, albumId);
@@ -79,49 +124,73 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
       // The album may have been deselected (or switched back to link) while
       // the estimate was in flight — never resurrect it into the selection,
       // and never overwrite a mode the user has since changed away from.
-      prev[albumId] && prev[albumId].mode === "import"
-        ? { ...prev, [albumId]: { mode: "import", estimateBytes: estimate.totalBytes } }
+      prev[key] && prev[key].mode === "import"
+        ? { ...prev, [key]: { ...prev[key], estimateBytes: estimate.totalBytes } }
         : prev
     );
   };
 
   // Single code path for putting an album into a given mode: write the
   // selection, then lazily fetch the estimate if that mode is "import".
-  const selectAlbum = (albumId: string, mode: ImmichMode): void => {
-    setSelected((prev) => ({ ...prev, [albumId]: { mode, estimateBytes: null } }));
-    void fetchEstimateIfImport(albumId, mode);
+  const selectAlbum = (provider: PhotoSourceKind, albumId: string, mode: ImmichMode): void => {
+    const key = selectionKey(provider, albumId);
+    setSelected((prev) => ({ ...prev, [key]: { provider, albumId, mode, estimateBytes: null } }));
+    void fetchEstimateIfImport(key, albumId, mode).catch((error: unknown) => {
+      logger.warn("Import estimate failed", { provider, kind: immichFailureKind(error) });
+      setLinkFailure(failureKey(immichFailureKind(error), provider));
+    });
   };
 
   const toggle = (albumId: string): void => {
     const album = albums.find((a) => a.id === albumId);
     if (album?.linked) return; // an already-linked album can never be selected
 
-    if (selected[albumId]) {
+    const key = selectionKey(active, albumId);
+    if (selected[key]) {
       setSelected((prev) => {
-        const { [albumId]: _removed, ...rest } = prev;
+        const { [key]: _removed, ...rest } = prev;
         return rest;
       });
       return;
     }
-    selectAlbum(albumId, defaultMode);
+    // PhotoPrism has no import mode yet: its albums are always linked.
+    selectAlbum(active, albumId, active === "photoprism" ? "link" : defaultMode);
   };
 
   const setMode = (albumId: string, mode: ImmichMode): void => {
-    if (!selected[albumId]) return;
-    selectAlbum(albumId, mode);
+    if (!selected[selectionKey(active, albumId)]) return;
+    selectAlbum(active, albumId, mode);
   };
 
   const handleConfirm = async (): Promise<void> => {
     setLinking(true);
+    setLinkFailure(null);
+    // One request links into one source, so each source's albums go separately.
+    const chosen = Object.values(selected);
+    let linkedAny = false;
     try {
-      await immichApi.linkAlbums(
-        tripId,
-        Object.entries(selected).map(([immichAlbumId, s]) => ({ immichAlbumId, mode: s.mode }))
-      );
+      for (const provider of SOURCES) {
+        const ofSource = chosen.filter((c) => c.provider === provider);
+        if (ofSource.length === 0) continue;
+        try {
+          await immichApi.linkAlbums(
+            tripId,
+            ofSource.map((c) => ({ immichAlbumId: c.albumId, mode: c.mode, provider }))
+          );
+          linkedAny = true;
+          // What was linked leaves the selection, so a retry cannot link it twice.
+          setSelected((prev) =>
+            Object.fromEntries(Object.entries(prev).filter(([, v]) => v.provider !== provider))
+          );
+        } catch (error) {
+          logger.warn("Linking albums failed", { provider, kind: immichFailureKind(error) });
+          setLinkFailure(failureKey(immichFailureKind(error), provider));
+          if (linkedAny) onLinked();
+          return;
+        }
+      }
       onLinked();
       onClose();
-    } catch (error) {
-      setFailure(failureKey(immichFailureKind(error)));
     } finally {
       setLinking(false);
     }
@@ -141,8 +210,10 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
   const hiddenSelectedCount =
     normalizedQuery === ""
       ? 0
-      : Object.keys(selected).filter((id) => !filteredAlbums.some((album) => album.id === id))
-          .length;
+      : Object.values(selected).filter(
+          (sel) =>
+            sel.provider !== active || !filteredAlbums.some((album) => album.id === sel.albumId)
+        ).length;
 
   return (
     <Modal
@@ -174,6 +245,30 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
       }
     >
       <>
+        {showSwitch && (
+          <div role="group" aria-label={t("albums.sourceLabel")} className="mb-3 flex gap-2">
+            {SOURCES.map((provider) => (
+              <button
+                key={provider}
+                type="button"
+                aria-pressed={active === provider}
+                className="rounded px-2 py-0.5 text-xs"
+                style={
+                  active === provider
+                    ? { background: "var(--ts-info)", color: "var(--ts-bg)" }
+                    : { border: "1px solid var(--ts-border)" }
+                }
+                onClick={() => {
+                  setSource(provider);
+                  setQuery("");
+                  setLinkFailure(null);
+                }}
+              >
+                {provider === "photoprism" ? t("albums.badgePhotoprism") : t("albums.badgeImmich")}
+              </button>
+            ))}
+          </div>
+        )}
         {failure && (
           <p className="text-sm" style={{ color: "var(--ts-bad)" }}>
             {t(failure)}
@@ -213,7 +308,7 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
 
         <ul className="space-y-2">
           {filteredAlbums.map((album) => {
-            const selection = selected[album.id];
+            const selection = selected[selectionKey(active, album.id)];
             return (
               <li
                 key={album.id}
@@ -243,7 +338,10 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
 
                 {selection && (
                   <div className="mt-2 flex items-center gap-2 pl-7">
-                    {(["link", "import"] as const).map((mode) => (
+                    {(active === "photoprism"
+                      ? (["link"] as const)
+                      : (["link", "import"] as const)
+                    ).map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -259,6 +357,11 @@ export default function ImmichAlbumPicker({ tripId, onClose, onLinked }: Props):
                         {mode === "link" ? t("modeLink") : t("modeImport")}
                       </button>
                     ))}
+                    {active === "photoprism" && (
+                      <span className="text-xs" style={{ color: "var(--ts-muted)" }}>
+                        {t("albums.importUnsupported")}
+                      </span>
+                    )}
                     {selection.estimateBytes !== null && (
                       <span className="text-xs" style={{ color: "var(--ts-warn)" }}>
                         {t("albums.estimate", { size: formatBytes(selection.estimateBytes) })}

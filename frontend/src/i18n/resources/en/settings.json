@@ -1180,6 +1180,7 @@
     "aerodatabox": "If AeroDataBox does not answer, the flight search asks the next service you have set up — for flights further back there is no other; “Refresh existing flights” counts such flights as failed. Saved flights stay as they are.",
     "routing": "If the routing service does not answer, new legs stay straight lines; they can be routed again later from the leg list. Hand-drawn legs are not touched.",
     "rail": "If the timetable services do not answer, the train-number search finds nothing and the ride is entered by hand. Saved rides stay as they are.",
+    "photoprism": "If PhotoPrism cannot be reached, linked albums show no pictures; the link stays and works again as soon as PhotoPrism answers.",
     "immich": "If Immich cannot be reached, linked albums show no pictures and an import stops with a message. Photos copied into TravStats stay visible.",
     "dawarich": "If Dawarich cannot be reached, a track import stops with a message, and the nightly country-day sync carries on the next night where it stopped. Existing tracks stay.",
     "strava": "If Strava does not answer, importing activities stops with a message. Tours already taken over stay.",
@@ -1239,6 +1240,7 @@
       "maps": "Maps & place search"
     },
     "what": {
+      "photoprism": "Photos for trips",
       "immich": "Photos for trips and places",
       "dawarich": "Location history, countries and stays",
       "strava": "Tours from activities",

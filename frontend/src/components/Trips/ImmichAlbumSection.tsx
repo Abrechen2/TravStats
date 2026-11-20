@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
+import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { groupByDay } from "../../lib/galleryGrouping";
 import { useLocale } from "../../hooks/useLocale";
@@ -102,9 +103,13 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setAlbumTruncated(data.truncated === true);
     } catch (error) {
       if (!mountedRef.current) return;
-      setFailure(failureKey(immichFailureKind(error)));
+      logger.warn("Linked album failed to load", {
+        provider: album.provider,
+        kind: immichFailureKind(error),
+      });
+      setFailure(failureKey(immichFailureKind(error), album.provider));
     }
-  }, [tripId, album.id]);
+  }, [tripId, album.id, album.provider]);
 
   useEffect(() => {
     void load();
@@ -133,7 +138,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         stopPolling();
         setSyncing(false);
         setProgress(null);
-        setFailure(failureKey(immichFailureKind(error)));
+        setFailure(failureKey(immichFailureKind(error), album.provider));
       }
       return;
     }
@@ -147,7 +152,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       await load();
       if (mountedRef.current) onChanged();
     }
-  }, [tripId, album.id, stopPolling, load, onChanged, t]);
+  }, [tripId, album.id, album.provider, stopPolling, load, onChanged, t]);
 
   const startPolling = useCallback((): void => {
     setSyncing(true);
@@ -207,7 +212,8 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       if (!mountedRef.current) return;
       startPolling();
     } catch (error) {
-      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
+      if (mountedRef.current)
+        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 
@@ -218,7 +224,8 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       setConfirmingUnlink(false);
       onChanged();
     } catch (error) {
-      if (mountedRef.current) addToast("error", t(failureKey(immichFailureKind(error))));
+      if (mountedRef.current)
+        addToast("error", t(failureKey(immichFailureKind(error), album.provider)));
     }
   };
 
@@ -267,6 +274,12 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
         <h3 className="font-semibold">{album.albumName}</h3>
         <span className="text-xs text-slate-400">
           {t("albums.photoCount", { count: album.assetCount })}
+        </span>
+        <span
+          data-testid="album-source"
+          className="rounded-sm border border-slate-600 px-1.5 py-0.5 text-xs"
+        >
+          {album.provider === "photoprism" ? t("albums.badgePhotoprism") : t("albums.badgeImmich")}
         </span>
         <span className="rounded-sm bg-slate-700 px-1.5 py-0.5 text-xs">
           {album.mode === "import" ? t("albums.badgeImport") : t("albums.badgeLink")}

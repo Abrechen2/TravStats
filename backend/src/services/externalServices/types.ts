@@ -57,6 +57,7 @@ export type TesterId =
   | "googlePlaces"
   | "logostream"
   | "immich"
+  | "photoprism"
   | "dawarich"
   | "webdav"
   | "ollama"

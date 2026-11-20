@@ -590,6 +590,10 @@
         "n": "Immich",
         "p": "Photos"
       },
+      "photoprism": {
+        "n": "PhotoPrism",
+        "p": "Photos"
+      },
       "dawarich": {
         "n": "Dawarich",
         "p": "Location history"
@@ -735,6 +739,21 @@
       },
       "imminstkey": {
         "t": "Server's Immich: API key"
+      },
+      "ppurl": {
+        "t": "Address",
+        "h": "May be on your local network."
+      },
+      "pptoken": {
+        "t": "App password",
+        "s": "From PhotoPrism → Account → Apps and devices; scope: albums photos files config"
+      },
+      "ppinsturl": {
+        "t": "Server's PhotoPrism: address",
+        "s": "For accounts without their own"
+      },
+      "ppinsttoken": {
+        "t": "Server's PhotoPrism: app password"
       },
       "dawurl": {
         "t": "Address"

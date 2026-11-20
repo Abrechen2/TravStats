@@ -14,7 +14,9 @@ import type { Readable } from "node:stream";
 import type { PrivateTargetCode } from "../egress/privateTargets";
 import type { ImmichErrorKind } from "../immich/types";
 
-export type PhotoSourceKind = "immich";
+export type PhotoSourceKind = "immich" | "photoprism";
+
+export const PHOTO_SOURCE_KINDS: readonly PhotoSourceKind[] = ["immich", "photoprism"];
 
 /** Rendition of an asset the proxy may ask for. */
 export type PhotoSourceThumbnailSize = "thumbnail" | "preview";

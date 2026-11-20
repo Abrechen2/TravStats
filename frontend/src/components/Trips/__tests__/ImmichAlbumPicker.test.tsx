@@ -21,10 +21,12 @@ vi.mock("../../../lib/api/immich", () => ({
   immichApi: { listAlbums, estimateImport, linkAlbums },
   immichFailureKind: (e: unknown) =>
     (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null,
-  failureKey: (kind: unknown) =>
-    typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
-      ? `errors.${kind}`
-      : "errors.unknown",
+  failureKey: (kind: unknown, provider = "immich") => {
+    const prefix = provider === "photoprism" ? "errors.photoprism" : "errors";
+    return typeof kind === "string" && KNOWN_FAILURE_KINDS.includes(kind)
+      ? `${prefix}.${kind}`
+      : `${prefix}.unknown`;
+  },
 }));
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -72,7 +74,11 @@ const MUENCHEN_ALBUM = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  listAlbums.mockResolvedValue({ albums: ALBUMS, defaultMode: "link" });
+  // The usual instance: Immich connected, PhotoPrism not (so there is no source switch).
+  listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
+    if (provider === "photoprism") throw { response: { data: { error: "notConfigured" } } };
+    return { albums: ALBUMS, defaultMode: "link" };
+  });
   estimateImport.mockResolvedValue({ assetCount: 12, totalBytes: 25_000_000 });
   linkAlbums.mockResolvedValue({ links: [] });
 });
@@ -109,7 +115,9 @@ describe("ImmichAlbumPicker", () => {
     await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
 
     await waitFor(() =>
-      expect(linkAlbums).toHaveBeenCalledWith("trip-1", [{ immichAlbumId: "a1", mode: "link" }])
+      expect(linkAlbums).toHaveBeenCalledWith("trip-1", [
+        { immichAlbumId: "a1", mode: "link", provider: "immich" },
+      ])
     );
     expect(onLinked).toHaveBeenCalled();
   });
@@ -292,8 +300,8 @@ describe("ImmichAlbumPicker", () => {
     expect(payload).toHaveLength(2);
     expect(payload).toEqual(
       expect.arrayContaining([
-        { immichAlbumId: "a1", mode: "link" },
-        { immichAlbumId: "a3", mode: "link" },
+        { immichAlbumId: "a1", mode: "link", provider: "immich" },
+        { immichAlbumId: "a3", mode: "link", provider: "immich" },
       ])
     );
   });
@@ -371,5 +379,100 @@ describe("ImmichAlbumPicker", () => {
     expect(screen.getByText("Rome")).toBeInTheDocument();
     expect(screen.getByText("Oslo")).toBeInTheDocument();
     expect(screen.getByText("Paris")).toBeInTheDocument();
+  });
+});
+
+describe("ImmichAlbumPicker with PhotoPrism", () => {
+  const PP_ALBUMS = [
+    {
+      id: "pp1",
+      albumName: "Lissabon",
+      assetCount: 3,
+      thumbnailAssetId: null,
+      linked: false,
+      linkId: null,
+    },
+  ];
+  const connectBoth = (): void => {
+    listAlbums.mockImplementation(async (_tripId: string, provider = "immich") =>
+      provider === "photoprism"
+        ? { albums: PP_ALBUMS, defaultMode: "link" }
+        : { albums: ALBUMS, defaultMode: "link" }
+    );
+  };
+  const renderPicker = () =>
+    render(<ImmichAlbumPicker tripId="trip-1" onClose={vi.fn()} onLinked={vi.fn()} />);
+
+  it("shows no source switch while only one source is connected", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    expect(screen.queryByRole("group", { name: "albums.sourceLabel" })).not.toBeInTheDocument();
+  });
+
+  it("offers the switch when both are connected and lists the chosen source's albums", async () => {
+    connectBoth();
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    expect(screen.getByRole("group", { name: "albums.sourceLabel" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+
+    expect(screen.getByText("Lissabon")).toBeInTheDocument();
+    expect(screen.queryByText("Rome")).not.toBeInTheDocument();
+  });
+
+  it("works with PhotoPrism alone: no switch, its albums listed", async () => {
+    listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
+      if (provider === "immich") throw { response: { data: { error: "notConfigured" } } };
+      return { albums: PP_ALBUMS, defaultMode: "link" };
+    });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Lissabon")).toBeInTheDocument());
+    expect(screen.queryByRole("group", { name: "albums.sourceLabel" })).not.toBeInTheDocument();
+  });
+
+  it("links a PhotoPrism album with its provider, link mode only", async () => {
+    connectBoth();
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+    await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
+
+    expect(screen.queryByRole("button", { name: "modeImport" })).not.toBeInTheDocument();
+    expect(screen.getByText("albums.importUnsupported")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+    await waitFor(() =>
+      expect(linkAlbums).toHaveBeenCalledWith("trip-1", [
+        { immichAlbumId: "pp1", mode: "link", provider: "photoprism" },
+      ])
+    );
+  });
+
+  it("says why PhotoPrism failed, in PhotoPrism's words, and logs it", async () => {
+    listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
+      if (provider === "immich") throw { response: { data: { error: "notConfigured" } } };
+      throw { response: { data: { error: "auth" } } };
+    });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("errors.photoprism.auth")).toBeInTheDocument());
+  });
+
+  it("shows the PhotoPrism refusal when linking fails, and keeps the selection", async () => {
+    connectBoth();
+    linkAlbums.mockRejectedValue({ response: { data: { error: "unreachable" } } });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+    await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText("errors.photoprism.unreachable")).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: /albums.confirm/ })).toBeEnabled();
   });
 });

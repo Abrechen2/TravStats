@@ -47,7 +47,12 @@
     "importFailedUnknown": "An unknown error occurred while copying the photos.",
     "importPartial": "{{failed}} of {{total}} photos could not be copied. \"Re-sync\" tries them again.",
     "badgeLink": "live",
-    "badgeImport": "copy"
+    "badgeImport": "copy",
+    "sourceLabel": "Photo source",
+    "importUnsupported": "PhotoPrism albums can only be linked for now, not copied.",
+    "partialLink": "Some albums could not be linked: {{reason}}",
+    "badgePhotoprism": "PhotoPrism",
+    "badgeImmich": "Immich"
   },
   "gallery": {
     "uploaded": "Uploaded",
@@ -66,7 +71,17 @@
     "protocol": "Unexpected response from Immich. Does the server version match?",
     "invalidUrl": "The server URL is not valid.",
     "keyRequired": "Testing a different server address needs your own API key. The instance-wide key is only valid for the server it was configured for.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "photoprism": {
+      "notConfigured": "No PhotoPrism connection set up.",
+      "unreachable": "PhotoPrism cannot be reached.",
+      "unknown": "Connection test failed.",
+      "auth": "PhotoPrism rejected the app password. It needs the scope “albums photos files config”.",
+      "notFound": "Album not found — was it deleted in PhotoPrism?",
+      "protocol": "Unexpected answer from PhotoPrism. Is the version too old?",
+      "invalidUrl": "The server URL is invalid or this account may not reach it.",
+      "keyRequired": "A different server address needs its own app password."
+    }
   },
   "admin": {
     "title": "Immich (instance-wide)",

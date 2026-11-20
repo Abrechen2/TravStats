@@ -157,6 +157,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: ["mine", "allowConn", "on"],
   },
   {
+    id: "photoprism",
+    group: "foto",
+    use: ["mine", "allowConn", "on", "test"],
+  },
+  {
     id: "dawarich",
     group: "foto",
     use: ["mine", "allowConn", "on"],

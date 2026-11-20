@@ -20,8 +20,9 @@ import type { PackingItem } from "../../schemas/companionData";
  *
  * Two of those relations can collide, because both are unique per trip:
  *
- *  - `TripImmichAlbum` is unique on `(tripId, immichAlbumId)`. When both sides
- *    link the SAME Immich album, the target's row wins — it already carries the
+ *  - `TripImmichAlbum` is unique on `(tripId, provider, immichAlbumId)`. When both
+ *    sides link the SAME album of the SAME photo source (an id is only unique
+ *    per source), the target's row wins — it already carries the
  *    same album name, mode and sync state — and the source row's photos are
  *    re-pointed at it before it is dropped, so nothing hangs off a row that is
  *    about to go.
@@ -47,19 +48,21 @@ export async function mergeImmichAlbums(
   const [sourceAlbums, targetAlbums] = await Promise.all([
     tx.tripImmichAlbum.findMany({
       where: { tripId: { in: sourceIds } },
-      select: { id: true, immichAlbumId: true },
+      select: { id: true, immichAlbumId: true, provider: true },
     }),
     tx.tripImmichAlbum.findMany({
       where: { tripId: targetId },
-      select: { id: true, immichAlbumId: true },
+      select: { id: true, immichAlbumId: true, provider: true },
     }),
   ]);
 
-  const targetByAlbum = new Map(targetAlbums.map((a) => [a.immichAlbumId, a.id]));
+  const albumKey = (a: { provider: string; immichAlbumId: string }): string =>
+    JSON.stringify([a.provider, a.immichAlbumId]);
+  const targetByAlbum = new Map(targetAlbums.map((a) => [albumKey(a), a.id]));
   const duplicates: string[] = [];
 
   for (const source of sourceAlbums) {
-    const existing = targetByAlbum.get(source.immichAlbumId);
+    const existing = targetByAlbum.get(albumKey(source));
     if (!existing) {
       await tx.tripImmichAlbum.update({
         where: { id: source.id },
@@ -67,7 +70,7 @@ export async function mergeImmichAlbums(
       });
       // A second source trip linking the same album must now fold into the
       // row we just moved, not create a second one.
-      targetByAlbum.set(source.immichAlbumId, source.id);
+      targetByAlbum.set(albumKey(source), source.id);
       continue;
     }
     // Re-point first, delete second. The other order would take the photos
