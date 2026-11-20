@@ -22,7 +22,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
 import { photoIdParamSchema, setCoverSchema } from "../../schemas/immich";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createPhotoSource, listAllAlbumAssets } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
@@ -60,7 +60,7 @@ router.post(
 
       // The asset must belong to this album — same boundary the proxy enforces.
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
+        listAllAlbumAssets(createPhotoSource("immich", conn), link.immichAlbumId)
       );
       if (!assets.some((a) => a.id === assetId)) {
         throw new AppError("notFound", 404);

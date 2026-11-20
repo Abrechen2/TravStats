@@ -15,7 +15,11 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { resolveTrip } from "../trips";
 import { linkAlbumsSchema, unlinkQuerySchema } from "../../schemas/immich";
-import { createImmichClient, type AlbumAssetList } from "../../services/immich/immichClient";
+import {
+  createPhotoSource,
+  listAllAlbumAssets,
+  type AlbumAssetList,
+} from "../../services/photoSource";
 import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
 import {
   getCachedAlbumAssets,
@@ -133,7 +137,7 @@ router.get(
       const conn = await requireConnection(userId, res);
       if (!conn) return;
 
-      const albums = await createImmichClient(conn).listAlbums();
+      const albums = await createPhotoSource("immich", conn).listAlbums();
       const links = await prisma.tripImmichAlbum.findMany({
         where: { tripId: req.params.id },
         select: { id: true, immichAlbumId: true },
@@ -172,7 +176,7 @@ router.post(
 
       // Only albums the user's own Immich actually exposes may be linked —
       // this is the ownership boundary for every later proxy request.
-      const available = await createImmichClient(conn).listAlbums();
+      const available = await createPhotoSource("immich", conn).listAlbums();
       const byId = new Map(available.map((a) => [a.id, a]));
       const unknown = requested.filter((r) => !byId.has(r.immichAlbumId));
       if (unknown.length > 0) {
@@ -330,7 +334,7 @@ router.get(
       if (!conn) return;
 
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        createImmichClient(conn).listAlbumAssets(link.immichAlbumId)
+        listAllAlbumAssets(createPhotoSource("immich", conn), link.immichAlbumId)
       );
 
       res.json({

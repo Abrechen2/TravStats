@@ -22,7 +22,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { immichProxyLimiter } from "../../middleware/rateLimit";
 import { resolveTrip } from "../trips";
 import { assetIdParamSchema, assetSizeSchema } from "../../schemas/immich";
-import { createImmichClient } from "../../services/immich/immichClient";
+import { createPhotoSource, listAllAlbumAssets } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { getCachedAlbumAssets } from "../../services/immich/immichAssetCache";
 import { ImmichError } from "../../services/immich/types";
@@ -76,15 +76,15 @@ router.get(
         return;
       }
 
-      const client = createImmichClient(conn);
+      const source = createPhotoSource("immich", conn);
       const assets = await getCachedAlbumAssets(userId, link.immichAlbumId, () =>
-        client.listAlbumAssets(link.immichAlbumId)
+        listAllAlbumAssets(source, link.immichAlbumId)
       );
       if (!assets.some((a) => a.id === assetId.data)) {
         throw new AppError("notFound", 404);
       }
 
-      await streamAsset(res, client, assetId.data, size.data, etag);
+      await streamAsset(res, source, assetId.data, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
@@ -152,7 +152,7 @@ router.get(
         return;
       }
 
-      await streamAsset(res, createImmichClient(conn), assetId, size.data, etag);
+      await streamAsset(res, createPhotoSource("immich", conn), assetId, size.data, etag);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });

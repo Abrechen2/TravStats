@@ -11,7 +11,7 @@ import type { Response } from "express";
 import { pipeline } from "node:stream/promises";
 
 import logger from "../../utils/logger";
-import type { createImmichClient } from "./immichClient";
+import type { PhotoSourceProvider } from "../photoSource/types";
 
 const CACHE_CONTROL = "private, max-age=86400, immutable";
 
@@ -56,12 +56,15 @@ function isClientAbort(error: unknown): boolean {
  */
 export async function streamAsset(
   res: Response,
-  client: ReturnType<typeof createImmichClient>,
+  source: PhotoSourceProvider,
   assetId: string,
   size: "thumbnail" | "preview" | "original",
   etag: string
 ): Promise<void> {
-  const upstream = await client.fetchAssetStream(assetId, size);
+  const upstream =
+    size === "original"
+      ? await source.streamOriginal(assetId)
+      : await source.streamThumbnail(assetId, size);
 
   res.setHeader("Content-Type", upstream.contentType);
   res.setHeader("Cache-Control", CACHE_CONTROL);
