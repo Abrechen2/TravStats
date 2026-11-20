@@ -124,6 +124,26 @@ describe("RoadtripsPage", () => {
     expect(within(empty).getByText("—")).toBeInTheDocument();
   });
 
+  it("summarises the shown roadtrips in the strip every logbook carries, and follows the filter", async () => {
+    vi.mocked(roadtripsApi.list).mockResolvedValue([
+      summary({ id: "a", name: "Norwegen", countries: ["NO"], stationCount: 3 }),
+      summary({ id: "b", name: "Alpen", countries: ["AT", "CH"], stationCount: 4 }),
+    ]);
+    renderPage();
+    const strip = (await screen.findByText("roadtrips:list.summary.roadtrips")).closest("p");
+    expect(strip).toHaveTextContent("2");
+    expect(strip).toHaveTextContent("3");
+    expect(strip).toHaveTextContent("7");
+
+    fireEvent.change(screen.getByPlaceholderText("roadtrips:list.search"), {
+      target: { value: "alpen" },
+    });
+    expect(screen.getByTestId("list-summary-filtered")).toBeInTheDocument();
+    expect(screen.getByText("roadtrips:list.summary.roadtrips").closest("p")).toHaveTextContent(
+      "1"
+    );
+  });
+
   it("filters by name, trip or country", async () => {
     vi.mocked(roadtripsApi.list).mockResolvedValue([
       summary({ id: "a", name: "Bretagne", countries: ["FR"], startDate: at("2023-06-02") }),

@@ -9,6 +9,7 @@ import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
 import LogbookTabs from "../components/table/LogbookTabs";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { navigateAfterSave } from "../components/form";
@@ -18,6 +19,7 @@ import RoadtripCard from "../components/Roadtrips/RoadtripCard";
 import UnderwayCard from "../components/Roadtrips/UnderwayCard";
 import { useTranslation } from "../hooks/useTranslation";
 import { roadtripsApi } from "../lib/api/roadtrips";
+import { roadtripSummaryFigures } from "../lib/roadtrip/roadtripSummaryFigures";
 import { groupRoadtrips, roadtripPhase } from "../lib/roadtrip/roadtripView";
 import { useTodayZone } from "../hooks/useTodayZone";
 import { todayIn } from "../shared/time";
@@ -130,6 +132,17 @@ export default function RoadtripsPage(): JSX.Element {
           <span>{t("roadtrips:newRoadtrip")}</span>
         </button>
       </div>
+
+      <ListSummaryStrip
+        figures={roadtripSummaryFigures(shown, {
+          roadtrips: (count: number) => t("roadtrips:list.summary.roadtrips", { count }),
+          countries: (count: number) => t("roadtrips:list.summary.countries", { count }),
+          stations: (count: number) => t("roadtrips:list.summary.stations", { count }),
+        })}
+        filtered={query.length > 0 || vehicle !== ""}
+        filteredLabel={t("common:filters.filtered")}
+        unknown={rows === null || loadError}
+      />
 
       <KindReviewNotice onChanged={() => void load()} />
 

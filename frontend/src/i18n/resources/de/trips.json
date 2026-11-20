@@ -660,7 +660,30 @@
       "photosTitle": "Fotos von den Stationen lösen?",
       "photosError": "An den Stationen dieser Tour hängen Fotos einer Reise. Die Fotos bleiben bei der Reise, müssen für den Wechsel aber von den Stationen gelöst werden.",
       "detachPhotosConfirm": "Fotos lösen und fortfahren"
-    }
+    },
+    "newDialog": {
+      "title": "Neue Tour",
+      "intro": "Eine Tagestour für sich — sie kann später einer Reise zugeordnet werden.",
+      "name": "Name der Tour",
+      "submit": "Tour anlegen"
+    },
+    "columns": {
+      "name": "Tour",
+      "activity": "Art",
+      "trip": "Reise",
+      "distance": "Strecke",
+      "ascent": "Aufstieg"
+    },
+    "summary": {
+      "tours_one": "Tour",
+      "tours_other": "Touren",
+      "trips_one": "Reise",
+      "trips_other": "Reisen",
+      "withoutTrip_one": "{{count}} ohne Reise",
+      "withoutTrip_other": "{{count}} ohne Reise"
+    },
+    "allActivities": "Alle Arten",
+    "emptyHint": "Lege deine erste Tour an oder importiere eine Aufzeichnung."
   },
   "head": {
     "days_one": "{{count}} Tag",
