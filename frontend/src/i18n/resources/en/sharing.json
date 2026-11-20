@@ -981,5 +981,115 @@
     "linkHint": "A public page showing what you choose – readable without an account.",
     "createLink": "Manage public link…",
     "addLocal": "Add another person from this server…"
+  },
+  "friends": {
+    "title": "People",
+    "intro": "Everyone you travel or share with, in one list. Each switch applies to exactly that person.",
+    "loading": "Loading people …",
+    "empty": "Nobody in the list yet. Companions appear here once you write them into an entry; people with their own account you can connect below.",
+    "retry": "Try again",
+    "loadFailed": {
+      "companions": "I couldn't load the travel companions.",
+      "accounts": "I couldn't load the accounts on this server.",
+      "connections": "I couldn't load the connections to other servers.",
+      "comparison": "I couldn't read who sees your totals.",
+      "encrypted": "I couldn't load the encrypted hand-overs."
+    },
+    "status": {
+      "connected": "connected",
+      "requested": "requested",
+      "unlinked": "not linked"
+    },
+    "account": {
+      "local": "Account @{{username}} on this server",
+      "remote": "{{username}}@{{origin}}",
+      "none": "No account linked"
+    },
+    "demo": "Nothing here can be changed in the demo account.",
+    "switches": {
+      "share": {
+        "label": "Share trips",
+        "sub": "They may receive your trips once they agree."
+      },
+      "totals": {
+        "label": "Sees my totals",
+        "sub": "Leaderboard: totals only, never single entries."
+      },
+      "encrypted": {
+        "label": "Encrypted hand-over",
+        "sub": "Full entries, readable only by them."
+      },
+      "needsAccount": "This needs an account: link one first.",
+      "shareAsked": "Requested until they agree.",
+      "totalsAsked": "Requested until they agree.",
+      "editScope": "Change scope",
+      "encryptedSet": "Set up the hand-over …",
+      "encryptedRedirect": "An encrypted hand-over picks scope and device: you land on the \"Hand over encrypted\" page."
+    },
+    "actions": {
+      "linkAccount": "Link account",
+      "changeLink": "Change link",
+      "endConnection": "End connection",
+      "withdrawPaired": "Withdraw",
+      "viewStats": "View figures",
+      "closeStats": "Close figures",
+      "viewAchievements": "View achievements",
+      "closeAchievements": "Close achievements",
+      "remoteNoRename": "People on other servers are managed by their server."
+    },
+    "requests": {
+      "title": "Requests to you",
+      "share": "{{name}} (@{{username}}) would like to share trips with you.",
+      "connection": "{{name}} ({{username}}@{{origin}}) would like to connect with you.",
+      "reconfirm": "The connection to {{name}} ({{username}}@{{origin}}) needs to be confirmed again.",
+      "comparison": "{{name}} would like to see your totals on the leaderboard.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "endReconfirm": "End"
+    },
+    "remote": {
+      "submit": "Connect",
+      "alreadyConnected": "{{name}} ({{origin}}) is already connected. You can share through \"Share trips\" in the list.",
+      "hint": "Username and server, e.g. anna@trav.example.org. This sends a connection request; the person confirms it on their side."
+    },
+    "unusedLink": "Delete unused people ({{count}})",
+    "encryptedManage": "Manage encrypted hand-overs",
+    "confirm": {
+      "withdrawShare": "{{name}} will no longer get your trips. What is already shared stays there as their own copy.",
+      "withdrawShareAction": "Withdraw",
+      "totalsOff": "{{name}} will no longer see your totals.",
+      "totalsOffAction": "Stop showing",
+      "encryptedOff": "The hand-over to {{name}} will be withdrawn.",
+      "encryptedOffAction": "Withdraw",
+      "endConnection": "The connection to {{name}} ends. What is shared stays as an own copy.",
+      "endConnectionAction": "End",
+      "withdrawPaired": "{{name}} ({{origin}}) will get nothing more from you.",
+      "withdrawPairedAction": "Withdraw"
+    },
+    "done": {
+      "shareAsked": "Request sent to {{name}}.",
+      "shareWithdrawn": "{{name}} no longer gets your trips.",
+      "totalsAsked": "Request sent to {{name}}.",
+      "totalsOff": "{{name}} no longer sees your totals.",
+      "scopeChanged": "Scope for {{name}} saved.",
+      "encryptedOff": "Hand-over to {{name}} withdrawn.",
+      "switchSaved": "Saved.",
+      "accepted": "Accepted.",
+      "declined": "Declined.",
+      "ended": "Connection ended.",
+      "withdrawn": "Withdrawn."
+    },
+    "errors": {
+      "action": "That didn't work. Please try again.",
+      "encrypted": "The hand-over could not be withdrawn. Please try again."
+    },
+    "code": {
+      "title": "Invitation code",
+      "create": "Create code",
+      "hint": "The code works once and expires. Whoever gets it redeems it on their server.",
+      "created": "Your code (shown only now)",
+      "claimHelp": "You redeem a code from someone on another server here.",
+      "close": "Close"
+    }
   }
 }

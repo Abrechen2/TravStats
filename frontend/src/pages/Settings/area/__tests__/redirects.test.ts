@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveAddress, type AddressInput } from "../redirects";
-import { AREA_PAGES, validAnchors } from "../areaModel";
+import { AREA_PAGES, mountFor, validAnchors } from "../areaModel";
 import { SECTION_ALIASES, REMOVED_PAGES } from "../../settingsModel";
 import { ADMIN_PAGES } from "../../../Admin/adminSections";
 
@@ -370,5 +370,33 @@ describe("every page of the settings area before settings v3 still opens", () =>
     for (const page of AREA_PAGES) {
       expect(resolve(`/settings/${page.id}`).to, page.id).toBe(`/settings/${page.id}`);
     }
+  });
+});
+
+describe("Freunde & Teilen: the four old blocks answer on the one list of people", () => {
+  it.each([
+    ["accounts", null],
+    ["servers", null],
+    ["companions", null],
+    ["compare", "rangliste"],
+    ["encryptedGrants", "verschl"],
+    ["freunde-freunde", null],
+    ["freunde-mitreisende", null],
+    ["freunde-vergleichen-ubergeben", null],
+    [null, "anfragen"],
+    [null, "personen"],
+  ])("anchor %s / row %s lands on the people mount", (anchor, match) => {
+    expect(mountFor("freunde", anchor, match)?.id).toBe("people");
+  });
+
+  it("keeps public links as their own mount", () => {
+    expect(mountFor("freunde", "shareLinks")?.id).toBe("shareLinks");
+  });
+
+  it.each([
+    ["/settings/companions#companions", "/settings/freunde#companions"],
+    ["/settings/trips#sharing", "/settings/freunde#accounts"],
+  ])("%s still resolves to %s", (old, expected) => {
+    expect(resolve(old).to).toBe(expected);
   });
 });

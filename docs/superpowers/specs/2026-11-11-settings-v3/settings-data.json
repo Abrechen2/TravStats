@@ -1354,10 +1354,32 @@
       "en": "Friends & sharing",
       "s": [
         {
-          "id": "freunde-freunde",
-          "de": "Freunde",
-          "en": "Friends",
+          "id": "freunde-personen",
+          "de": "Personen",
+          "en": "People",
           "rows": [
+            {
+              "id": "personen",
+              "t": "list",
+              "items": [
+                ["Jonas", "verbunden · Reisen teilen"],
+                ["Ilka", "nicht verknüpft"]
+              ],
+              "btn": ["Unbenutzte löschen", "Delete unused"],
+              "inv": "A6 Companion list",
+              "de": [
+                "Personen",
+                "Mitreisende und Konten in einer Liste",
+                "Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen."
+              ],
+              "en": [
+                "People",
+                "Companions and accounts in one list",
+                "Merging changes every entry with this person and can't be undone."
+              ],
+              "m": "people",
+              "x": 0
+            },
             {
               "id": "anfragen",
               "t": "list",
@@ -1374,7 +1396,7 @@
                 "",
                 "Withdrawing stops syncing. What's shared stays as an own copy."
               ],
-              "m": "accounts",
+              "m": "people",
               "x": 0,
               "d": 1
             },
@@ -1385,7 +1407,29 @@
               "inv": "A5 Link companion to account",
               "de": ["Person mit Konto verknüpfen", "Nötig, bevor ihr teilt", ""],
               "en": ["Link person to account", "Needed before you share", ""],
-              "m": "accounts",
+              "m": "people",
+              "x": 0,
+              "d": 1
+            },
+            {
+              "id": "rangliste",
+              "t": "toggle",
+              "beta": "comparison",
+              "inv": "A12 Comparison consent",
+              "de": ["Sieht meine Summen", "Rangliste: wer deine Summen sieht", ""],
+              "en": ["Sees my totals", "Leaderboard: who sees your totals", ""],
+              "m": "people",
+              "x": 0,
+              "d": 1
+            },
+            {
+              "id": "verschl",
+              "t": "toggle",
+              "beta": "encryptedShare",
+              "inv": "A12 Encrypted sharing grants",
+              "de": ["Verschlüsselte Übergabe", "Ganze Einträge an ein anderes Konto", ""],
+              "en": ["Encrypted hand-over", "Full entries to another account", ""],
+              "m": "people",
               "x": 0,
               "d": 1
             },
@@ -1409,38 +1453,9 @@
                 "Code erstellt · gilt bis morgen 14:00",
                 "Code created · valid until tomorrow 14:00"
               ],
-              "m": "accounts",
+              "m": "people",
               "x": 0,
               "beta": "federatedTripSharing"
-            }
-          ]
-        },
-        {
-          "id": "freunde-mitreisende",
-          "de": "Mitreisende",
-          "en": "Travel companions",
-          "rows": [
-            {
-              "id": "personen",
-              "t": "list",
-              "items": [
-                ["Jonas", "14 Einträge"],
-                ["Ilka", "3 Einträge"]
-              ],
-              "btn": ["Unbenutzte löschen", "Delete unused"],
-              "inv": "A6 Companion list",
-              "de": [
-                "Personen",
-                "Umbenennen, zusammenführen, löschen",
-                "Zusammenführen ändert jeden Eintrag mit dieser Person und lässt sich nicht zurücknehmen."
-              ],
-              "en": [
-                "People",
-                "Rename, merge, delete",
-                "Merging changes every entry with this person and can't be undone."
-              ],
-              "m": "companions",
-              "x": 0
             },
             {
               "id": "unused",
@@ -1451,7 +1466,7 @@
               "inv": "S3 Delete unused companions",
               "de": ["Unbenutzte Personen löschen", "", ""],
               "en": ["Delete unused people", "", ""],
-              "m": "companions",
+              "m": "people",
               "x": 0
             }
           ]
@@ -1484,35 +1499,6 @@
               "en": ["Your links", "Created on a flight, trip or year", ""],
               "m": "shareLinks",
               "x": 0
-            }
-          ]
-        },
-        {
-          "id": "freunde-vergleichen-ubergeben",
-          "de": "Vergleichen & übergeben",
-          "en": "Compare & hand over",
-          "rows": [
-            {
-              "id": "rangliste",
-              "t": "link",
-              "beta": "comparison",
-              "inv": "A12 Comparison consent",
-              "de": ["Rangliste", "Wer deine Summen sieht", ""],
-              "en": ["Leaderboard", "Who sees your totals", ""],
-              "m": "compare",
-              "x": 0,
-              "d": 1
-            },
-            {
-              "id": "verschl",
-              "t": "link",
-              "beta": "encryptedShare",
-              "inv": "A12 Encrypted sharing grants",
-              "de": ["Verschlüsselt übergeben", "Ganze Einträge an ein anderes Konto", ""],
-              "en": ["Hand over encrypted", "Full entries to another account", ""],
-              "m": "encryptedGrants",
-              "x": 0,
-              "d": 1
             }
           ]
         }

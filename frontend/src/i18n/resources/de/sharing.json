@@ -981,5 +981,115 @@
     "linkHint": "Eine öffentliche Seite mit dem, was du auswählst – ohne Konto lesbar.",
     "createLink": "Öffentlichen Link verwalten…",
     "addLocal": "Weiteren Mitreisenden von diesem Server hinzufügen…"
+  },
+  "friends": {
+    "title": "Personen",
+    "intro": "Alle, mit denen du reist oder teilst, in einer Liste. Jeder Schalter gilt für genau diese Person.",
+    "loading": "Personen werden geladen …",
+    "empty": "Noch niemand in der Liste. Mitreisende tauchen hier auf, sobald du sie in einen Eintrag schreibst; Personen mit eigenem Konto kannst du unten verbinden.",
+    "retry": "Erneut versuchen",
+    "loadFailed": {
+      "companions": "Ich konnte die Mitreisenden nicht laden.",
+      "accounts": "Ich konnte die Konten auf diesem Server nicht laden.",
+      "connections": "Ich konnte die Verbindungen zu anderen Servern nicht laden.",
+      "comparison": "Ich konnte nicht lesen, wer deine Summen sieht.",
+      "encrypted": "Ich konnte die verschlüsselten Übergaben nicht laden."
+    },
+    "status": {
+      "connected": "verbunden",
+      "requested": "angefragt",
+      "unlinked": "nicht verknüpft"
+    },
+    "account": {
+      "local": "Konto @{{username}} auf diesem Server",
+      "remote": "{{username}}@{{origin}}",
+      "none": "Kein Konto verknüpft"
+    },
+    "demo": "Im Demo-Konto lässt sich hier nichts ändern.",
+    "switches": {
+      "share": {
+        "label": "Reisen teilen",
+        "sub": "Darf deine Reisen bekommen, sobald die Person zustimmt."
+      },
+      "totals": {
+        "label": "Sieht meine Summen",
+        "sub": "Rangliste: nur Summen, nie einzelne Einträge."
+      },
+      "encrypted": {
+        "label": "Verschlüsselte Übergabe",
+        "sub": "Ganze Einträge, nur für sie lesbar."
+      },
+      "needsAccount": "Dafür braucht sie ein Konto: verknüpfe es zuerst.",
+      "shareAsked": "Angefragt, bis sie zustimmt.",
+      "totalsAsked": "Angefragt, bis sie zustimmt.",
+      "editScope": "Umfang ändern",
+      "encryptedSet": "Übergabe einrichten …",
+      "encryptedRedirect": "Eine verschlüsselte Übergabe wählt Umfang und Gerät: du landest auf der Seite „Verschlüsselt übergeben“."
+    },
+    "actions": {
+      "linkAccount": "Konto verknüpfen",
+      "changeLink": "Verknüpfung ändern",
+      "endConnection": "Verbindung beenden",
+      "withdrawPaired": "Zurückziehen",
+      "viewStats": "Zahlen ansehen",
+      "closeStats": "Zahlen schließen",
+      "viewAchievements": "Erfolge ansehen",
+      "closeAchievements": "Erfolge schließen",
+      "remoteNoRename": "Personen auf anderen Servern verwaltet ihr Server."
+    },
+    "requests": {
+      "title": "Anfragen an dich",
+      "share": "{{name}} (@{{username}}) möchte Reisen mit dir teilen.",
+      "connection": "{{name}} ({{username}}@{{origin}}) möchte sich mit dir verbinden.",
+      "reconfirm": "Die Verbindung zu {{name}} ({{username}}@{{origin}}) muss neu bestätigt werden.",
+      "comparison": "{{name}} möchte deine Summen in der Rangliste sehen.",
+      "accept": "Annehmen",
+      "decline": "Ablehnen",
+      "endReconfirm": "Beenden"
+    },
+    "remote": {
+      "submit": "Verbinden",
+      "alreadyConnected": "{{name}} ({{origin}}) ist schon verbunden. Teilen kannst du über „Reisen teilen“ in der Liste.",
+      "hint": "Benutzername und Server, z. B. anna@trav.example.org. Die Verbindung wird dabei angefragt; die Person bestätigt sie bei sich."
+    },
+    "unusedLink": "Unbenutzte Personen löschen ({{count}})",
+    "encryptedManage": "Verschlüsselte Übergaben verwalten",
+    "confirm": {
+      "withdrawShare": "{{name}} bekommt deine Reisen nicht mehr. Was schon geteilt ist, bleibt dort als eigene Kopie.",
+      "withdrawShareAction": "Zurückziehen",
+      "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
+      "totalsOffAction": "Nicht mehr zeigen",
+      "encryptedOff": "Die Übergabe an {{name}} wird zurückgezogen.",
+      "encryptedOffAction": "Zurückziehen",
+      "endConnection": "Die Verbindung zu {{name}} endet. Geteiltes bleibt als eigene Kopie.",
+      "endConnectionAction": "Beenden",
+      "withdrawPaired": "{{name}} ({{origin}}) bekommt nichts mehr von dir.",
+      "withdrawPairedAction": "Zurückziehen"
+    },
+    "done": {
+      "shareAsked": "Anfrage an {{name}} geschickt.",
+      "shareWithdrawn": "{{name}} bekommt deine Reisen nicht mehr.",
+      "totalsAsked": "Anfrage an {{name}} geschickt.",
+      "totalsOff": "{{name}} sieht deine Summen nicht mehr.",
+      "scopeChanged": "Umfang für {{name}} gespeichert.",
+      "encryptedOff": "Übergabe an {{name}} zurückgezogen.",
+      "switchSaved": "Gespeichert.",
+      "accepted": "Angenommen.",
+      "declined": "Abgelehnt.",
+      "ended": "Verbindung beendet.",
+      "withdrawn": "Zurückgezogen."
+    },
+    "errors": {
+      "action": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
+      "encrypted": "Die Übergabe ließ sich nicht zurückziehen. Bitte versuche es noch einmal."
+    },
+    "code": {
+      "title": "Einladungscode",
+      "create": "Code erstellen",
+      "hint": "Der Code gilt einmal und verfällt. Wer ihn bekommt, löst ihn auf seinem Server ein.",
+      "created": "Dein Code (nur jetzt sichtbar)",
+      "claimHelp": "Einen Code von jemandem auf einem anderen Server löst du hier ein.",
+      "close": "Schließen"
+    }
   }
 }

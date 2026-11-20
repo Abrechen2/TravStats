@@ -48,8 +48,11 @@ export default function RemotePersonField({
   busy,
   onOffer,
   onCreateCode,
+  settingsPage = false,
 }: {
   busy: boolean;
+  /** On the settings page: no trip is offered, so the trip warnings and "Reise anbieten" go. */
+  settingsPage?: boolean;
   /** Resolves true when the offer went out; the caller says a refusal itself. */
   onOffer: (origin: string, username: string) => Promise<boolean>;
   onCreateCode: () => void;
@@ -117,7 +120,7 @@ export default function RemotePersonField({
         htmlFor="remote-person-field"
         hint={
           <>
-            {t(`${NS}.hint`)}{" "}
+            {settingsPage ? t("sharing:friends.remote.hint") : t(`${NS}.hint`)}{" "}
             <button type="button" className="underline" disabled={busy} onClick={onCreateCode}>
               {t(`${NS}.codeLink`)}
             </button>
@@ -132,17 +135,23 @@ export default function RemotePersonField({
           autoComplete="off"
         />
       </Field>
-      <div className="t-caption" data-testid="remote-other-server-warnings">
-        <p className="font-medium">{t(`${NS}.warnTitle`)}</p>
-        <ul className="list-disc pl-5">
-          {WARNINGS.map((key) => (
-            <li key={key}>{t(`${NS}.${key}`)}</li>
-          ))}
-        </ul>
-      </div>
+      {!settingsPage && (
+        <div className="t-caption" data-testid="remote-other-server-warnings">
+          <p className="font-medium">{t(`${NS}.warnTitle`)}</p>
+          <ul className="list-disc pl-5">
+            {WARNINGS.map((key) => (
+              <li key={key}>{t(`${NS}.${key}`)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div>
         <Button type="submit" variant="primary" disabled={busy || working || value.trim() === ""}>
-          {working ? t(`${NS}.working`) : t(`${NS}.submit`)}
+          {working
+            ? t(`${NS}.working`)
+            : settingsPage
+              ? t("sharing:friends.remote.submit")
+              : t(`${NS}.submit`)}
         </Button>
       </div>
       {message && (
