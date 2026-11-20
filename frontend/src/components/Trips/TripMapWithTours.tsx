@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from "react";
+import { useCallback, useMemo, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useToursVisible } from "../../hooks/useToursVisible";
@@ -6,7 +6,7 @@ import { useTripTourGeometries } from "../../hooks/useTripTourGeometries";
 import TripMap from "./TripMap";
 import type { TripMapContent } from "./tripMapContent";
 import type { TripBusJourney } from "../../types/bus";
-import { buildBusLayers, busPathPoints } from "./tripBusLayer";
+import { buildBusLayers, busPathPoints, busPaths } from "./tripBusLayer";
 import { useTripRecording } from "../../hooks/useTripRecording";
 import type { TrackOrigin } from "../../lib/api/trackOrigin";
 import { buildRecordingLayers, recordingPoints } from "./recording/recordingLayers";
@@ -22,7 +22,40 @@ import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { usePlaceColorStore } from "../../store/placeColorStore";
 import type { TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
 import { buildTripPlaceLayers, tripPlacePoints } from "./tripPlaceLayer";
-import { TripPlacesLegend } from "./TripPlacesStatus";
+import { TripMapDayStrip } from "./TripMapDayStrip";
+import {
+  rentalSpan,
+  railSpan,
+  rideSpan,
+  splitByDay,
+  tripDays,
+  visitSpan,
+  widenSpan,
+} from "./tripMapDays";
+import type { TripMapPlace } from "./tripMapData";
+import { placeInfo } from "./tripMapInfo";
+import { useTripMapInfoStore } from "../../store/tripMapInfoStore";
+import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
+import { hexToRgb } from "../../lib/domainColor";
+import type { DirectionLine } from "./tripMapArrows";
+import type { Layer } from "@deck.gl/core";
+
+/** How much of a layer a day filter leaves on screen for the days not chosen. */
+const DIM_LAYER_OPACITY = 0.22;
+const NO_LAYERS: Layer[] = [];
+
+/** The same layers, faint and inert; their names go, a faint name is noise. */
+function dimmed(layers: readonly Layer[]): Layer[] {
+  return layers
+    .filter((layer) => !layer.id.endsWith("labels"))
+    .map((layer) =>
+      layer.clone({
+        id: `${layer.id}-dim`,
+        opacity: DIM_LAYER_OPACITY,
+        pickable: false,
+      } as Parameters<Layer["clone"]>[0])
+    );
+}
 
 const NO_PLACE_VISITS: TripPlaceVisit[] = [];
 
@@ -52,15 +85,58 @@ export default function TripMapWithTours({
   const { t } = useTranslation(["trips"]);
   const toursVisible = useToursVisible();
   const { geometries, failed } = useTripTourGeometries(trip.id, toursVisible);
+  // The day filter: the chosen day's entries are drawn as ever, the rest of the
+  // trip is built a second time and drawn faint.
+  const days = useMemo(
+    () =>
+      tripDays(
+        trip,
+        placeVisits.map((v) => v.visit)
+      ),
+    [trip, placeVisits]
+  );
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const day = pickedDay !== null && days.includes(pickedDay) ? pickedDay : null;
+  const split = useMemo(() => {
+    const bus = splitByDay(trip.busJourneys ?? [], rideSpan, day);
+    const rail = splitByDay(trip.railJourneys ?? [], railSpan, day);
+    const ferry = splitByDay(trip.ferryJourneys ?? [], rideSpan, day);
+    const rental = splitByDay(trip.rentalBookings ?? [], rentalSpan, day);
+    const visits = splitByDay(placeVisits, (v) => visitSpan(v.visit), day);
+    return {
+      bus,
+      visits,
+      active: {
+        railJourneys: rail.active,
+        ferryJourneys: ferry.active,
+        rentalBookings: rental.active,
+      },
+      rest: { railJourneys: rail.rest, ferryJourneys: ferry.rest, rentalBookings: rental.rest },
+    };
+  }, [
+    trip.busJourneys,
+    trip.railJourneys,
+    trip.ferryJourneys,
+    trip.rentalBookings,
+    placeVisits,
+    day,
+  ]);
   const busColor = useDomainColors().colorOf("bus");
   // The map's projection, so rail, ferry, rental and bus are built for the globe on it.
   const [projection, setProjection] = useState<TripProjection>("mercator");
+  const onGlobe = projection === "globe";
   const busLayers = useMemo(
-    () => buildBusLayers(trip.busJourneys ?? [], busColor, projection === "globe"),
-    [trip.busJourneys, busColor, projection]
+    () => buildBusLayers(split.bus.active, busColor, onGlobe),
+    [split.bus.active, busColor, onGlobe]
+  );
+  const busLayersDim = useMemo(
+    () => dimmed(buildBusLayers(split.bus.rest, busColor, onGlobe)),
+    [split.bus.rest, busColor, onGlobe]
   );
   const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
-  const transport = useTripTransportLayers(trip, projection === "globe");
+  const transport = useTripTransportLayers(split.active, onGlobe);
+  const transportRest = useTripTransportLayers(split.rest, onGlobe);
+  const transportDim = useMemo(() => dimmed(transportRest.layers), [transportRest.layers]);
   const [recordingDay, setRecordingDay] = useState<string | null>(null);
   const [recordingSource, setRecordingSource] = useState<TrackOrigin | null>(null);
   const recording = useTripRecording(trip.id, recordingDay, recordingSource);
@@ -70,9 +146,54 @@ export default function TripMapWithTours({
   // Hidden with the places domain, exactly as the timeline hides its cards.
   const placesVisible = usePlacesVisible();
   const placeColors = usePlaceColorStore((s) => s.config);
+  const places = useMemo<TripMapPlace[]>(() => {
+    if (!placesVisible) return [];
+    // One entry per place; a place visited on two days is on both of them.
+    const seen = new Map<string, TripMapPlace>();
+    for (const { place, visit } of placeVisits) {
+      if (!Number.isFinite(place.lat) || !Number.isFinite(place.lon)) continue;
+      const span = visitSpan(visit);
+      const earlier = seen.get(place.id);
+      if (earlier) {
+        earlier.span = widenSpan(earlier.span, span);
+        earlier.visitSpans = [...(earlier.visitSpans ?? []), span];
+        continue;
+      }
+      seen.set(place.id, {
+        id: place.id,
+        visitId: visit.id,
+        name: place.name,
+        position: [place.lon, place.lat],
+        span,
+        visitSpans: [span],
+        subtitle: place.city ?? place.category ?? null,
+        order: seen.size,
+      });
+    }
+    return [...seen.values()];
+  }, [placesVisible, placeVisits]);
+  const openPlace = useCallback(
+    (placeId: string): void => {
+      const p = places.find((x) => x.id === placeId);
+      if (!p) return;
+      useMapCardSelectionStore.getState().clear();
+      useTripMapInfoStore.getState().open(placeInfo({ ...p, tripId: trip.id }));
+    },
+    [places, trip.id]
+  );
   const placeLayers = useMemo(
-    () => (placesVisible ? buildTripPlaceLayers(placeVisits, placeColors) : []),
-    [placesVisible, placeVisits, placeColors]
+    () =>
+      placesVisible ? buildTripPlaceLayers(split.visits.active, placeColors, openPlace) : NO_LAYERS,
+    [placesVisible, split.visits.active, placeColors, openPlace]
+  );
+  // A place with a visit on the day is live; it is not also drawn faint beneath itself.
+  const restOnly = useMemo(() => {
+    const live = new Set(split.visits.active.map((v) => v.place.id));
+    return split.visits.rest.filter((v) => !live.has(v.place.id));
+  }, [split.visits]);
+  const placeLayersDim = useMemo(
+    () => (placesVisible ? dimmed(buildTripPlaceLayers(restOnly, placeColors)) : NO_LAYERS),
+    [placesVisible, restOnly, placeColors]
   );
   const placePoints = useMemo(
     () => (placesVisible ? tripPlacePoints(placeVisits) : []),
@@ -80,23 +201,60 @@ export default function TripMapWithTours({
   );
   const extraLayers = useMemo(
     () => [
+      ...busLayersDim,
+      ...transportDim,
+      ...placeLayersDim,
       ...transport.layers,
       ...busLayers,
       ...buildSharedRouteLayers(shared.routes),
       ...buildRecordingLayers(segments ?? []),
       ...placeLayers,
     ],
-    [transport.layers, busLayers, shared.routes, segments, placeLayers]
+    [
+      busLayersDim,
+      transportDim,
+      placeLayersDim,
+      transport.layers,
+      busLayers,
+      shared.routes,
+      segments,
+      placeLayers,
+    ]
+  );
+  const extraDirectionLines = useMemo<DirectionLine[]>(
+    () => [
+      ...transport.lines,
+      ...transportRest.lines.map((l) => ({ ...l, dim: true })),
+      ...busPaths(split.bus.active).map((p) => ({
+        id: `bus:${p.id}`,
+        group: "bus" as const,
+        path: p.path,
+        color: hexToRgb(busColor),
+      })),
+      ...busPaths(split.bus.rest).map((p) => ({
+        id: `bus:${p.id}`,
+        group: "bus" as const,
+        path: p.path,
+        color: hexToRgb(busColor),
+        dim: true,
+      })),
+    ],
+    [transport.lines, transportRest.lines, split.bus, busColor]
+  );
+  const dayPoints = useMemo(
+    () => [...transport.points, ...busPaths(split.bus.active).flatMap((p) => p.path)],
+    [transport.points, split.bus.active]
   );
   const extraPoints = useMemo(
     () => [
       ...transport.points,
+      ...transportRest.points,
       ...busPoints,
       ...sharedRoutePoints(shared.routes),
       ...recordingPoints(segments ?? []),
       ...placePoints,
     ],
-    [transport.points, busPoints, shared.routes, segments, placePoints]
+    [transport.points, transportRest.points, busPoints, shared.routes, segments, placePoints]
   );
   return (
     <>
@@ -105,8 +263,8 @@ export default function TripMapWithTours({
           {t("trips:tours.map.loadError")}
         </p>
       )}
+      <TripMapDayStrip days={days} day={day} onChange={setPickedDay} />
       <SharedRouteLegend routes={shared.routes} failed={shared.failed} />
-      {placeLayers.length > 0 && <TripPlacesLegend />}
       <TripRecordingPanel
         tripId={trip.id}
         view={recording.view}
@@ -129,6 +287,11 @@ export default function TripMapWithTours({
             extraLayers={extraLayers}
             extraPoints={extraPoints}
             onProjectionChange={setProjection}
+            tripId={trip.id}
+            day={day}
+            places={places}
+            extraDirectionLines={extraDirectionLines}
+            dayPoints={dayPoints}
           />
         </WebGLGuard>
       )}

@@ -256,11 +256,12 @@ describe("trip map", () => {
     if (pinned?.kind === "journeyRoute") expect(pinned.data.color).toEqual([240, 169, 71]);
   });
 
-  it("opens an airport card and a stop card", () => {
+  it("opens an airport card; a stop's click is the trip map's own info card, not a pinned one", () => {
     click(p, (p.props.data as unknown[])[0]);
     expect(useMapCardSelectionStore.getState().pinned?.kind).toBe("journeyStop");
-    click(s, (s.props.data as unknown[])[0]);
-    expect(useMapCardSelectionStore.getState().pinned?.kind).toBe("tripStop");
+    useMapCardSelectionStore.getState().clear();
+    expect(s.props.onClick).toBeFalsy();
+    expect((s.props.data as Array<{ tripStopCard?: unknown }>)[0].tripStopCard).toBeDefined();
   });
 });
 

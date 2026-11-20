@@ -1,20 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Layer } from "@deck.gl/core";
 
 // The map is a WebGL canvas; the stand-in exposes what it is handed.
-const seen: { layers: readonly Layer[]; points: readonly [number, number][] } = {
+const seen: {
+  layers: readonly Layer[];
+  points: readonly [number, number][];
+  places: readonly { id: string; name: string }[];
+  day: string | null;
+} = {
   layers: [],
   points: [],
+  places: [],
+  day: null,
 };
 vi.mock("../TripMap", () => ({
   default: ({
     extraLayers = [],
     extraPoints = [],
+    places = [],
+    day = null,
   }: {
     extraLayers?: readonly Layer[];
     extraPoints?: readonly [number, number][];
+    places?: readonly { id: string; name: string }[];
+    day?: string | null;
   }) => {
+    seen.day = day;
+    seen.places = places;
     seen.layers = extraLayers;
     seen.points = extraPoints;
     return <div data-testid="map" />;
@@ -53,6 +67,7 @@ vi.mock("../../../lib/api/travtrack", async (importOriginal) => ({
 import TripMapWithTours from "../TripMapWithTours";
 import { usePlacesVisible } from "../../../hooks/usePlacesVisible";
 import { useMapCardSelectionStore } from "../../../store/mapCardSelectionStore";
+import { useTripMapInfoStore } from "../../../store/tripMapInfoStore";
 import { layerCardAllowed } from "../../map/cards/useMapSelectionCards";
 
 const trip = { id: "t1", flights: [], cruises: [], lodgingStays: [], stops: [] } as never;
@@ -87,9 +102,10 @@ describe("TripMapWithTours — places visited on the trip", () => {
     seen.points = [];
     vi.mocked(usePlacesVisible).mockReturnValue(true);
     useMapCardSelectionStore.getState().clear();
+    useTripMapInfoStore.getState().close();
   });
 
-  it("draws one pin per distinct place, frames them and names them in the legend", async () => {
+  it("draws one pin per distinct place, frames them and hands the map the places to name and number", async () => {
     await mount();
     const pins = seen.layers.find((l) => l.id === "place-pins");
     expect((pins?.props.data as unknown[]).length).toBe(2);
@@ -99,7 +115,7 @@ describe("TripMapWithTours — places visited on the trip", () => {
         [2.35, 48.85],
       ])
     );
-    expect(screen.getByLabelText("trips:tripPlaces.legend")).toBeInTheDocument();
+    expect(seen.places.map((p) => p.id)).toEqual(["a", "b"]);
   });
 
   it("waits for the places before the map frames the trip, which it does only once", async () => {
@@ -108,27 +124,56 @@ describe("TripMapWithTours — places visited on the trip", () => {
     expect(screen.queryByTestId("map")).toBeNull();
   });
 
-  it("draws no place and no legend row while the places domain is off", async () => {
+  it("draws no place and names none while the places domain is off", async () => {
     vi.mocked(usePlacesVisible).mockReturnValue(false);
     await mount();
     expect(seen.layers.some((l) => l.id.startsWith("place-pins"))).toBe(false);
     expect(seen.points).toEqual([]);
-    expect(screen.queryByLabelText("trips:tripPlaces.legend")).toBeNull();
+    expect(seen.places).toEqual([]);
   });
 
-  it("opens the place card when a pin is clicked", async () => {
+  it("opens the trip map's info card, linked to the place and its visit, when a pin is clicked", async () => {
     await mount();
     const pins = seen.layers.find((l) => l.id === "place-pins");
     const onClick = pins?.props.onClick as (i: { object: { placeId: string } }) => unknown;
     onClick({ object: { placeId: "b" } });
-    const pinned = useMapCardSelectionStore.getState().pinned;
-    expect(pinned?.kind).toBe("place");
-    expect(pinned?.anchorLngLat).toEqual([2.35, 48.85]);
+    const info = useTripMapInfoStore.getState().info;
+    expect(info?.kind).toBe("place");
+    expect(info?.entityHref).toBe("/places/b");
+    expect(info?.timelineHref).toBe("/trips/t1?tab=timeline#timeline-place-visit-v3");
   });
 
   it("shows no place card on the trip map once the places domain is switched off", () => {
     const pinned = { kind: "place", anchorLngLat: [1, 2], data: place("a", 2, 1) } as never;
     expect(layerCardAllowed(pinned, (d) => d !== "poi", true)).toBe(false);
     expect(layerCardAllowed(pinned, () => true, true)).toBe(true);
+  });
+});
+
+describe("TripMapWithTours — the day strip", () => {
+  const dated = [
+    { place: place("a", 41.9, 12.49), visit: { id: "v1", visitedAt: "2026-05-01T10:00:00" } },
+    { place: place("b", 48.85, 2.35), visit: { id: "v3", visitedAt: "2026-05-02T10:00:00" } },
+  ] as never;
+
+  it("hands the chosen day to the map and draws the other days' places faint, then resets on 'all days'", async () => {
+    vi.mocked(usePlacesVisible).mockReturnValue(true);
+    render(<TripMapWithTours trip={trip} placeVisits={dated} />);
+    await act(async () => {});
+    expect(seen.day).toBeNull();
+    expect(seen.layers.some((l) => l.id.endsWith("-dim"))).toBe(false);
+
+    await userEvent.click(screen.getAllByRole("button", { name: /days\.dayN/ })[0]);
+    const live = seen.layers.find((l) => l.id === "place-pins");
+    const faint = seen.layers.find((l) => l.id === "place-pins-dim");
+    expect(seen.day).toBe("2026-05-01");
+    expect((live?.props.data as Array<{ placeId: string }>).map((d) => d.placeId)).toEqual(["a"]);
+    expect((faint?.props.data as Array<{ placeId: string }>).map((d) => d.placeId)).toEqual(["b"]);
+    expect(faint?.props.opacity).toBeLessThan(0.5);
+    expect(faint?.props.pickable).toBe(false);
+
+    await userEvent.click(screen.getByRole("button", { name: "trips:detail.map.days.all" }));
+    expect(seen.day).toBeNull();
+    expect(seen.layers.some((l) => l.id.endsWith("-dim"))).toBe(false);
   });
 });

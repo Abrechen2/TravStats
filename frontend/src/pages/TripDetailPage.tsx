@@ -31,6 +31,7 @@ import TripMapWithTours from "../components/Trips/TripMapWithTours";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
+import { useScrollToHash } from "../hooks/useScrollToHash";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
@@ -367,6 +368,7 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
   }, [events]);
 
   const empty = events.length === 0;
+  useScrollToHash(!empty);
 
   const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
     if (!(await confirmDelete(t("trips:detail.timeline.deleteJournalConfirm")))) return;
@@ -414,7 +416,12 @@ function TimelineTab({ trip, onChanged, t, language, placeVisits }: TimelineTabP
             const isLast = i === events.length - 1;
             const rail = railStates[i];
             return (
-              <li key={ev.id} className="relative" style={{ marginBottom: isLast ? 0 : 12 }}>
+              <li
+                key={ev.id}
+                id={`timeline-${ev.id}`}
+                className="relative"
+                style={{ marginBottom: isLast ? 0 : 12 }}
+              >
                 {/*
                 Connector line drawn as two half-segments per item so it runs
                 exactly dot-to-dot with no stub above the first or below the

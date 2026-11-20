@@ -176,7 +176,47 @@
       "clickHint": "Tipp: Auf eine Route oder einen Punkt klicken, um zu zoomen.",
       "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten",
       "projectionGlobe": "🌐 Globus",
-      "projectionFlat": "🗺 Flach"
+      "projectionFlat": "🗺 Flach",
+      "legend": {
+        "title": "Ebenen",
+        "group": {
+          "flights": "Flüge",
+          "cruise": "Kreuzfahrten",
+          "rail": "Bahn",
+          "bus": "Busse",
+          "ferry": "Fähren",
+          "rental": "Mietwagen",
+          "tours": "Touren",
+          "lodging": "Unterkünfte",
+          "stops": "Stationen",
+          "places": "Orte",
+          "recording": "Aufzeichnung",
+          "shared": "Geteilte Routen"
+        },
+        "style": {
+          "recorded": "aufgezeichnet",
+          "schematic": "schematisch",
+          "point": "Punkt"
+        }
+      },
+      "days": {
+        "label": "Tag der Reise",
+        "all": "Alle Tage",
+        "dayN": "Tag {{n}}"
+      },
+      "info": {
+        "close": "Karteninfo schließen",
+        "undated": "Ohne Datum",
+        "openTimeline": "In der Zeitleiste",
+        "openEntity": "Details öffnen",
+        "kind": {
+          "lodging": "Unterkunft",
+          "stop": "Station",
+          "place": "Ort",
+          "cruise": "Kreuzfahrt"
+        }
+      },
+      "buildError": "Die Karte konnte nicht aufgebaut werden. Die Reisedaten sind unverändert; bitte die Seite neu laden."
     },
     "logistics": {
       "flights": "Flüge",

@@ -1,4 +1,3 @@
-import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 import { STYLE_OPTIONS } from "../Globe/globeStyles";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
@@ -6,17 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { type MapRef } from "react-map-gl/maplibre";
 import { DeckGLOverlay } from "../map/DeckGLOverlay";
 import { createMarkerTooltip } from "../map/markerTooltip";
-import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { TripMapContent } from "./tripMapContent";
 
 export type { TripMapContent };
-import type { Lodging } from "../../types/lodging";
 import type { TourGeometry } from "../../types/tour";
-import { buildLodgingPins } from "../layers/lodgingPinsLayer";
-import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
-import { stayNights } from "../../lib/lodgingDateDisplay";
-import { declutterByDistance, pickLabelled } from "../map/labelPriority";
+import { buildTourPaths } from "../layers/tourPathsLayer";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -25,7 +19,6 @@ import { GlobeLabelsOverlay } from "../Globe/GlobeLabelsOverlay";
 import {
   buildTripMapGlobeLayers,
   toGlobeLabelPoints,
-  toGlobeLodgingPoints,
   type TripCruisePath,
   type TripFlightArc,
   type TripPointDatum,
@@ -36,19 +29,35 @@ import { useTripMapNative } from "./useTripMapNative";
 import { HoverTooltip } from "../map/cards/HoverTooltip";
 import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
 import { useTripLayers } from "./tripMapExtraLayers";
-import { TRIP_MAP_CHROME, resolveTripStopColor, useTripMapColorConfig } from "./tripMapColors";
+import { useTripMapColorConfig } from "./tripMapColors";
 import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
 import { journeyFromTripFlight } from "../map/cards/journeys/journeyNormalize";
 import type { MapJourney } from "../map/cards/journeys/journeyTypes";
 import { decorateTripMapLayers } from "./tripMapCards";
 import { TripMapCardHost } from "./TripMapCardHost";
-import { shareMapLabels } from "../map/labelObstacles";
 import { stationLabelPoints } from "../Globe/globePinLabels";
 import { useTripCruiseGeometry } from "./useTripCruiseGeometry";
-import { buildTripCruisePaths } from "./tripCruisePaths";
-import { buildTripFlightArcs } from "./tripMapFlightArcs";
+import {
+  buildTripMapData,
+  dayFocusPoints,
+  emptyTripMapData,
+  withoutHiddenGroups,
+  type TripMapPlace,
+} from "./tripMapData";
+import { buildMercatorTripLayers } from "./tripMapMercatorLayers";
+import type { DirectionLine } from "./tripMapArrows";
+import { groupsPresentIn, withoutHidden, type LayerGroup } from "./tripMapGroups";
+import { TripMapLegend } from "./TripMapLegend";
+import { TripMapInfoCard } from "./TripMapInfoCard";
+import { TripGlobeAnnotations, type GlobeChip } from "./TripGlobeAnnotations";
+import { arrowData } from "./tripMapArrows";
+import { cruiseInfo, lodgingInfo, stopInfo } from "./tripMapInfo";
+import { useTripMapInfoStore } from "../../store/tripMapInfoStore";
+import { useMapCardSelectionStore } from "../../store/mapCardSelectionStore";
 import { MapLoadFailedNotice } from "../map/MapLoadFailedNotice";
 import { reuseMapsEnabled } from "../../lib/mapReuse";
+
+export type { TripMapPlace };
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -71,6 +80,8 @@ interface TripMapProps {
   trip: TripMapContent;
   tourGeometries?: readonly {
     routeId: string;
+    /** The tour's day; the day filter dims a tour on another day, and keeps an undated one faint too. */
+    date?: string | null;
     name: string;
     geometry: TourGeometry;
     /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
@@ -91,6 +102,16 @@ interface TripMapProps {
    * says so; without it a click does nothing, as before.
    */
   onMapClick?: (point: { lat: number; lon: number }) => void;
+  /** The trip's id, for the info card's link into its timeline; absent off a trip page. */
+  tripId?: string;
+  /** `YYYY-MM-DD` on the trip's clock: that day is drawn, the rest faint. Null is every day. */
+  day?: string | null;
+  /** The places the trip visited, so they get names and numbers (`tripMapData.ts`). */
+  places?: readonly TripMapPlace[];
+  /** Lines of the caller's layers (rail, ferry, bus) that should carry a direction arrow. */
+  extraDirectionLines?: readonly DirectionLine[];
+  /** The caller's own entries on the chosen day (rail, ferry, bus, rental), so framing the day includes them. */
+  dayPoints?: readonly LngLat[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -101,6 +122,8 @@ interface TripMapProps {
 // entirely even though it lists `tourGeometries` correctly.
 const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
 const NO_EXTRA_POINTS: readonly LngLat[] = [];
+const NO_PLACES: readonly TripMapPlace[] = [];
+const NO_LINES: readonly DirectionLine[] = [];
 /** The trip map is fingertip-sized: a wider pick than the 5 px every other map uses. */
 const TRIP_PICKING_RADIUS = 8;
 
@@ -111,6 +134,11 @@ export default function TripMap({
   extraPoints = NO_EXTRA_POINTS,
   onProjectionChange,
   onMapClick,
+  tripId,
+  day = null,
+  places = NO_PLACES,
+  extraDirectionLines = NO_LINES,
+  dayPoints = NO_EXTRA_POINTS,
 }: TripMapProps): JSX.Element {
   const mapStyle = useBasemapStyle();
   const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
@@ -143,116 +171,72 @@ export default function TripMap({
     retry: retryCruiseGeometry,
   } = useTripCruiseGeometry(cruiseIds);
 
-  const flightArcs = useMemo<FlightArc[]>(
-    () => buildTripFlightArcs(trip.flights ?? [], colorConfig.flight),
-    [trip.flights, colorConfig.flight]
-  );
-
-  const cruisePaths = useMemo<CruisePath[]>(
-    () => buildTripCruisePaths(trip.cruises ?? [], cruiseGeometry, colorConfig.cruise),
-    [cruiseGeometry, trip.cruises, colorConfig.cruise]
-  );
-
-  const airportPoints = useMemo<PointDatum[]>(() => {
-    const seen = new Map<string, PointDatum>();
-    for (const f of trip.flights ?? []) {
-      const dep = f.depIata ?? `${f.depLat},${f.depLon}`;
-      const arr = f.arrIata ?? `${f.arrLat},${f.arrLon}`;
-      if (
-        f.depLat != null &&
-        f.depLon != null &&
-        !(f.depLat === 0 && f.depLon === 0) &&
-        !seen.has(dep)
-      ) {
-        seen.set(dep, {
-          position: [f.depLon, f.depLat],
-          label: f.depIata ?? "",
-          color: colorConfig.airport,
-          radiusMeters: 30000,
-          kind: "airport",
-        });
-      }
-      if (
-        f.arrLat != null &&
-        f.arrLon != null &&
-        !(f.arrLat === 0 && f.arrLon === 0) &&
-        !seen.has(arr)
-      ) {
-        seen.set(arr, {
-          position: [f.arrLon, f.arrLat],
-          label: f.arrIata ?? "",
-          color: colorConfig.airport,
-          radiusMeters: 30000,
-          kind: "airport",
-        });
-      }
-    }
-    return Array.from(seen.values());
-  }, [trip.flights, colorConfig.airport]);
-
   /**
-   * The trip's lodgings, one entry per HOUSE rather than per night.
-   *
-   * A round trip sleeps in the same hotel on its first and last night, and two
-   * pins on one roof are one pin the user cannot click apart. The counts are
-   * scoped to THIS trip on purpose: "2 Nächte" on a trip map means two nights
-   * on this trip, not the lifetime total the lodging list shows.
-   *
-   * `stayCount`/`nights` are aggregates the lodging LIST endpoint computes; the
-   * trip endpoint returns the plain row, so they are derived here rather than
-   * read from a field the payload does not actually carry.
+   * Everything drawn, derived once (`tripMapData.ts`). A throw here must not
+   * blank the page: the map stays up empty, says so, and the cause is logged.
    */
-  const lodgings = useMemo<Lodging[]>(() => {
-    const byHouse = new Map<string, { lodging: Lodging; stays: number; nights: number }>();
-    for (const stay of trip.lodgingStays ?? []) {
-      const house = stay.lodging;
-      if (!house || house.lat == null || house.lon == null) continue;
-      // Via the shared resolver: an undated stay may still carry an explicit
-      // night count, and a month-precision one must not have its placeholder
-      // dates differenced.
-      const nights = stayNights(stay);
-      const seen = byHouse.get(house.id);
-      if (seen) {
-        seen.stays += 1;
-        seen.nights += nights;
-      } else {
-        byHouse.set(house.id, { lodging: house, stays: 1, nights });
-      }
+  const built = useMemo(() => {
+    try {
+      return {
+        data: buildTripMapData(trip, colorConfig, cruiseGeometry, day, places),
+        failed: false,
+      };
+    } catch (err) {
+      logger.warn("TripMap: building the map data failed", err);
+      return { data: emptyTripMapData(), failed: true };
     }
-    return Array.from(byHouse.values()).map(({ lodging, stays, nights }) => ({
-      ...lodging,
-      stayCount: stays,
-      nights,
-    }));
-  }, [trip.lodgingStays]);
+  }, [trip, colorConfig, cruiseGeometry, day, places]);
 
-  const stopPoints = useMemo<PointDatum[]>(() => {
-    const out: PointDatum[] = [];
-    for (const s of trip.stops ?? []) {
-      if (s.lat == null || s.lon == null) continue;
-      const rgb = resolveTripStopColor(s.domain, colorConfig.domains);
-      out.push({
-        position: [s.lon, s.lat],
-        label: s.title,
-        color: rgb,
-        radiusMeters: 60000,
-        kind: "stop",
-        card: {
-          title: s.title,
-          domain: s.domain,
-          startDate: s.startDate ?? null,
-          endDate: s.endDate ?? null,
-          color: rgb,
-        },
-      });
-    }
-    return out;
-  }, [trip.stops, colorConfig.domains]);
-
-  const lodgingPoints = useMemo<PointDatum[]>(
-    () => toGlobeLodgingPoints(lodgings, colorConfig.lodging),
-    [lodgings, colorConfig.lodging]
+  /** Groups the reader switched off in the legend. */
+  const [hidden, setHidden] = useState<ReadonlySet<LayerGroup>>(() => new Set());
+  const toggleGroup = useCallback((group: LayerGroup): void => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }, []);
+  const data = useMemo(() => withoutHiddenGroups(built.data, hidden), [built.data, hidden]);
+  const { flightArcs, cruisePaths, airportPoints, lodgings, lodgingPoints, stopPoints } = data;
+  const shownExtraLayers = useMemo(
+    () => (extraLayers ? withoutHidden(extraLayers, hidden) : undefined),
+    [extraLayers, hidden]
   );
+  const directionLines = useMemo(
+    () => [...data.directionLines, ...extraDirectionLines.filter((l) => !hidden.has(l.group))],
+    [data.directionLines, extraDirectionLines, hidden]
+  );
+  const dimLodgingIds = useMemo(
+    () =>
+      new Set(
+        [...built.data.lodgingMeta].filter(([, meta]) => meta.dim).map(([lodgingId]) => lodgingId)
+      ),
+    [built.data.lodgingMeta]
+  );
+  const { present, legendColors } = useMemo(() => {
+    const d = built.data;
+    const groups = groupsPresentIn(extraLayers ?? []);
+    if (d.flightArcs.length > 0 || d.airportPoints.length > 0) groups.add("flights");
+    if (d.cruisePaths.length > 0) groups.add("cruise");
+    if (d.lodgings.length > 0) groups.add("lodging");
+    if (d.stopPoints.length > 0) groups.add("stops");
+    if (tourGeometries.length > 0) groups.add("tours");
+    if (places.length > 0) groups.add("places");
+    const colors: Partial<Record<LayerGroup, [number, number, number]>> = {
+      flights: d.flightArcs[0]?.color,
+      cruise: d.cruisePaths[0]?.color,
+      lodging: d.lodgingPoints[0]?.color,
+      stops: d.stopPoints[0]?.color,
+    };
+    return { present: groups, legendColors: colors };
+  }, [built.data, extraLayers, tourGeometries, places]);
+
+  /** One click, one persistent card. The dashboard's anchored cards stay for flights and airports. */
+  const openInfo = useTripMapInfoStore((s) => s.open);
+  const closeInfo = useTripMapInfoStore((s) => s.close);
+  useEffect(() => closeInfo, [closeInfo]);
+  const seqOf = useCallback((key: string) => built.data.seqByKey.get(key), [built.data.seqByKey]);
 
   /* ---- Fly-to handlers ---- */
 
@@ -294,21 +278,66 @@ export default function TripMap({
     (info: PickingInfo): void => {
       if (!info.object || !info.layer) return;
       const id = info.layer.id;
+      const meta = built.data;
       if (id === "trip-flight-arcs") {
+        closeInfo();
         const arc = info.object as FlightArc;
         flyToBbox([arc.source, arc.target]);
       } else if (id === "trip-cruise-paths") {
         const path = info.object as CruisePath;
+        useMapCardSelectionStore.getState().clear();
+        openInfo(
+          cruiseInfo({
+            id: path.cruiseId,
+            title: path.label,
+            span: meta.cruiseSpans.get(path.cruiseId) ?? null,
+            tripId,
+          })
+        );
         flyToBbox(path.path);
-      } else if (id === "trip-airports" || id === "trip-stops") {
+      } else if (id === "trip-airports") {
+        closeInfo();
+        flyToPoint((info.object as PointDatum).position, 7);
+      } else if (id === "trip-stops") {
         const pt = info.object as PointDatum;
-        flyToPoint(pt.position, pt.kind === "airport" ? 7 : 11);
-      } else if (id === "lodging-pins" || id === "lodging-pins-labels") {
-        const pin = info.object as { position: [number, number] };
+        useMapCardSelectionStore.getState().clear();
+        if (pt.entityId) {
+          openInfo(
+            stopInfo({
+              key: pt.entityId,
+              title: pt.label,
+              span: meta.stopMeta.get(pt.entityId)?.span ?? null,
+              tripId,
+            })
+          );
+        }
+        flyToPoint(pt.position, 11);
+      } else if (id.startsWith("lodging-pins")) {
+        const pin = info.object as {
+          position: [number, number];
+          lodgingId?: string;
+          entityId?: string;
+        };
+        const lodgingId = pin.lodgingId ?? pin.entityId;
+        const house = lodgings.find((l) => l.id === lodgingId);
+        const stay = lodgingId ? meta.lodgingMeta.get(lodgingId) : undefined;
+        if (house && stay) {
+          useMapCardSelectionStore.getState().clear();
+          openInfo(
+            lodgingInfo({
+              id: house.id,
+              name: house.name,
+              city: house.city ?? null,
+              span: stay.span,
+              stayId: stay.stayId,
+              tripId,
+            })
+          );
+        }
         flyToPoint(pin.position, 12);
       }
     },
-    [flyToBbox, flyToPoint]
+    [built.data, lodgings, tripId, openInfo, closeInfo, flyToBbox, flyToPoint]
   );
 
   /* ---- deck.gl layers ---- */
@@ -321,7 +350,20 @@ export default function TripMap({
     []
   );
 
-  const tourPathData = useMemo(() => buildTourPaths(tourGeometries), [tourGeometries]);
+  const allTourPaths = useMemo(
+    () =>
+      buildTourPaths(
+        tourGeometries.map((g) => ({
+          ...g,
+          dim: day !== null && g.date?.slice(0, 10) !== day,
+        }))
+      ),
+    [tourGeometries, day]
+  );
+  const tourPathData = useMemo(
+    () => (hidden.has("tours") ? [] : allTourPaths),
+    [allTourPaths, hidden]
+  );
 
   const globeStack = useMemo<TripMapGlobeStack>(
     () =>
@@ -347,165 +389,45 @@ export default function TripMap({
     ]
   );
 
-  const mercatorLayers = useMemo<Layer[]>(() => {
-    const arcs = new ArcLayer<FlightArc>({
-      id: "trip-flight-arcs",
-      data: flightArcs,
-      getSourcePosition: (d) => d.source,
-      getTargetPosition: (d) => d.target,
-      getSourceColor: (d) => [...d.color, 230] as [number, number, number, number],
-      getTargetColor: (d) => [...d.color, 230] as [number, number, number, number],
-      getWidth: 2,
-      greatCircle: true,
-      // Flat. deck.gl's ArcLayer bows every arc up out of the map by default,
-      // which reads as depth on a tilted view and as a meaningless bulge on a
-      // flat one — and on a short hop the bulge is taller than the route is
-      // long. Height 0 lays the great circle on the ground, where the line
-      // between two airports actually belongs.
-      getHeight: 0,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: TRIP_MAP_CHROME.highlight,
-    });
-
-    const paths = new PathLayer<CruisePath>({
-      id: "trip-cruise-paths",
-      data: groupMapData(
-        cruisePaths,
-        (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
-        (p) => p.cruiseId
-      ),
-      getPath: (d) => d.path,
-      getColor: (d) => [...d.color, 230] as [number, number, number, number],
-      getWidth: 3,
-      widthMinPixels: 2,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: TRIP_MAP_CHROME.highlight,
-    });
-
-    const airports = new ScatterplotLayer<PointDatum>({
-      id: "trip-airports",
-      data: airportPoints,
-      getPosition: (d) => d.position,
-      getFillColor: (d) => [...d.color, 230] as [number, number, number, number],
-      getRadius: (d) => d.radiusMeters,
-      radiusMinPixels: 4,
-      radiusMaxPixels: 8,
-      stroked: true,
-      getLineColor: TRIP_MAP_CHROME.outline,
-      lineWidthMinPixels: 1,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: TRIP_MAP_CHROME.highlightStrong,
-    });
-
-    // Tour route sections (Task 12). Coloured per LEG mode, never the
-    // section's — a road tour with one ferry crossing must still show that
-    // one leg as a ferry line. `isPlaceholder` legs (an unrouted `straight`
-    // chord) have no dash support in deck.gl's PathLayer without an
-    // extension, so a placeholder is expressed as a thinner, more
-    // transparent line instead of a dash pattern — but it MUST stay clearly
-    // visible, because it still carries real distance that counts towards
-    // the tour's total. Measured in a browser against this dark basemap:
-    // alpha 70 at 1.5px was flat-out INVISIBLE, not just "subtle" — zero
-    // pixels drawn between two assigned stops at any zoom. Do not lower
-    // these again in the name of contrast; 170/2px is the floor that stays
-    // visible while still reading as weaker than a drawn route at 255/3.5px.
-    const tourPaths = new PathLayer<TourPathDatum>({
-      id: "trip-tour-paths",
-      data: tourPathData,
-      getPath: (d) => d.path,
-      getColor: (d) =>
-        [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
-      getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
-      widthUnits: "pixels",
-      widthMinPixels: 2,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: TRIP_MAP_CHROME.highlight,
-    });
-
-    const stops = new ScatterplotLayer<PointDatum>({
-      id: "trip-stops",
-      data: stopPoints,
-      getPosition: (d) => d.position,
-      getFillColor: (d) => [...d.color, 230] as [number, number, number, number],
-      getRadius: (d) => d.radiusMeters,
-      radiusMinPixels: 6,
-      radiusMaxPixels: 12,
-      stroked: true,
-      getLineColor: TRIP_MAP_CHROME.outline,
-      lineWidthMinPixels: 1.5,
-      pickable: true,
-      autoHighlight: true,
-      highlightColor: TRIP_MAP_CHROME.highlightStrong,
-    });
-
-    // Stop (POI / hotel / …) labels. The markers alone were indistinguishable
-    // coloured circles — the title only surfaced on hover — so a name never
-    // showed on the map (#176). Render the title above each stop dot with an
-    // outline so it stays readable over any basemap.
-    // Stops follow the same budget. They carry no visit count to rank by, so
-    // the weight is a constant — `pickLabelled` then keeps the first N, and
-    // `declutterByDistance` does the work that matters here: stops on one trip
-    // sit close together far more often than airports do.
-    const stopLabelData = declutterByDistance(
-      pickLabelled(stopPoints, () => 1, "important", zoom),
-      () => 1,
-      (d) => d.position,
-      zoom
-    );
-
-    const stopLabels = new TextLayer<PointDatum>({
-      id: "trip-stop-labels",
-      data: stopLabelData,
-      getPosition: (d) => d.position,
-      getText: (d) => d.label,
-      getColor: TRIP_MAP_CHROME.labelText,
-      getSize: 12,
-      sizeUnits: "pixels",
-      getTextAnchor: "middle",
-      getAlignmentBaseline: "bottom",
-      getPixelOffset: [0, -14],
-      fontFamily: "'Inter', system-ui, sans-serif",
-      fontWeight: 600,
-      outlineWidth: 3,
-      outlineColor: TRIP_MAP_CHROME.outline,
-      fontSettings: { sdf: true },
-      // Stop labels are user-entered POI/hotel/port names and can contain
-      // umlauts/accents (e.g. "Travemünde"). deck.gl's default
-      // `characterSet` is ASCII-only (32-127) and silently drops anything
-      // outside it from the font atlas (#185) — do not remove "auto".
-      characterSet: "auto",
-      pickable: false,
-    });
-
-    // The trip's hotels. Reuses the layer the main map already draws them with
-    // (same rose, same dot weight, same tooltip — `markerTooltip` already
-    // knows the "lodging-pins" ids), so a house looks the same wherever it is
-    // shown. Labels are forced on: a trip has a handful of hotels, not the
-    // hundreds the flat map's priority budget exists for.
-    const lodgingPins =
-      buildLodgingPins(lodgings, 1, zoom, {
-        labelsMode: "important",
-        // Without this the pins fall back to the DEFAULT lodging config, so a
-        // user who switched hotels to "by rating" saw it everywhere but here.
-        colors: colorConfig.lodging,
-      }) ?? [];
-
-    const own = [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
-    return shareMapLabels(own, "important", Math.round(zoom)); // one label pass, as on the main map
+  const mercator = useMemo<{ layers: Layer[]; failed: boolean }>(() => {
+    try {
+      return {
+        failed: false,
+        layers: buildMercatorTripLayers({
+          flightArcs,
+          cruisePaths,
+          tourPathData,
+          airportPoints,
+          stopPoints,
+          lodgings,
+          dimLodgingIds,
+          lodgingColors: colorConfig.lodging,
+          labelItems: data.labelItems,
+          directionLines,
+          zoom,
+        }),
+      };
+    } catch (err) {
+      // The map keeps its basemap and the caller's layers; the notice says
+      // what is missing instead of an empty map passing for an empty trip.
+      logger.warn("TripMap: building the flat map layers failed", err);
+      return { layers: [], failed: true };
+    }
   }, [
     flightArcs,
     cruisePaths,
     airportPoints,
     stopPoints,
     lodgings,
-    zoom,
+    dimLodgingIds,
     tourPathData,
     colorConfig.lodging,
+    data.labelItems,
+    directionLines,
+    zoom,
   ]);
+
+  const mercatorLayers = mercator.layers;
 
   // Flights as journeys, so an arc and an airport open the shared card (forgejo#323).
   const flightJourneys = useMemo(
@@ -534,16 +456,57 @@ export default function TripMap({
     onClick: handleClick,
   });
   // Station labels, and the caller's layers occluded on the globe (tripMapExtraLayers.ts).
-  const layers = useTripLayers(baseLayers, extraLayers, projection, occlusionExt, occlusionProps);
-  const globeStationLabels = useMemo(() => stationLabelPoints(extraLayers ?? []), [extraLayers]);
+  const layers = useTripLayers(
+    baseLayers,
+    shownExtraLayers,
+    projection,
+    occlusionExt,
+    occlusionProps
+  );
+  const globeStationLabels = useMemo(
+    () => stationLabelPoints(shownExtraLayers ?? []),
+    [shownExtraLayers]
+  );
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
    *  TextLayer draws nothing under globe projection, which is why the trip's
    *  stop names vanished on every toggle. */
-  const globeLabelPoints = useMemo(
-    () => toGlobeLabelPoints([...stopPoints, ...lodgingPoints]),
-    [stopPoints, lodgingPoints]
+  // Places have no dot of ours to hang a label on, only the caller's pins, so
+  // their globe names are built from the same items the flat map labels.
+  const globePlaceLabels = useMemo<TripPointDatum[]>(
+    () =>
+      data.labelItems
+        .filter((i) => i.kind === "place")
+        .map((i) => ({
+          position: i.position,
+          label: i.text,
+          color: colorConfig.airport,
+          radiusMeters: 0,
+          kind: "stop" as const,
+          seq: i.seq,
+          dim: i.dim,
+        })),
+    [data.labelItems, colorConfig.airport]
   );
+  const globeLabelPoints = useMemo(
+    () => toGlobeLabelPoints([...stopPoints, ...lodgingPoints, ...globePlaceLabels]),
+    [stopPoints, lodgingPoints, globePlaceLabels]
+  );
+  // The numbers and arrows the globe draws as HTML (deck.gl text/icons do not render there).
+  const globeChips = useMemo<GlobeChip[]>(
+    () =>
+      data.labelItems
+        .filter((i) => i.seq !== undefined)
+        .map((i) => ({
+          key: `${i.kind}-${i.seq}`,
+          lng: i.position[0],
+          lat: i.position[1],
+          text: String(i.seq),
+          dim: i.dim === true,
+        })),
+    [data.labelItems]
+  );
+  const globeArrows = useMemo(() => arrowData(directionLines), [directionLines]);
   const globeAirportLabels = useMemo(() => toGlobeLabelPoints(airportPoints), [airportPoints]);
 
   /* ---- bbox fit ---- */
@@ -551,14 +514,14 @@ export default function TripMap({
   const bboxPoints = useMemo<LngLat[]>(
     () =>
       tripBoundsPoints({
-        flightArcs,
-        cruisePaths,
-        stopPoints,
-        lodgings,
-        tourPaths: tourPathData,
+        flightArcs: built.data.flightArcs,
+        cruisePaths: built.data.cruisePaths,
+        stopPoints: built.data.stopPoints,
+        lodgings: built.data.lodgings,
+        tourPaths: allTourPaths,
         extraPoints,
       }),
-    [flightArcs, cruisePaths, stopPoints, lodgings, tourPathData, extraPoints]
+    [built.data, allTourPaths, extraPoints]
   );
 
   /**
@@ -600,6 +563,22 @@ export default function TripMap({
     didFit.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `projection` is read, not depended on: runs once on load, while still "mercator"; the switch does its own fit
   }, [mapLoaded, bboxPoints, fitTrip]);
+
+  // Choosing a day frames that day's entries, "all days" frames the trip again.
+  // Only on a CHANGE of day: the first fit above already framed the trip.
+  const lastDay = useRef(day);
+  useEffect(() => {
+    if (lastDay.current === day) return;
+    lastDay.current = day;
+    if (!mapLoaded) return;
+    const focus = dayFocusPoints(built.data, places, day, [
+      ...dayPoints,
+      ...allTourPaths.filter((p) => !p.dim).flatMap((p) => p.path),
+    ]);
+    if (focus.length === 0) fitTrip(projection, 800);
+    else flyToBbox(focus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on a day change only; the data it reads is the day's own
+  }, [day, mapLoaded]);
 
   // A new basemap resets MapLibre's projection and sky. Restore both before
   // the next frame so travel layers keep sharing the globe's coordinates.
@@ -720,6 +699,23 @@ export default function TripMap({
       </MapGL>
       <HoverTooltip ref={tooltipRef} />
       <TripMapCardHost mapRef={mapRef} mapLoaded={mapLoaded} />
+      <TripMapLegend
+        present={present}
+        hidden={hidden}
+        onToggle={toggleGroup}
+        colors={legendColors}
+      />
+      <TripMapInfoCard seqOf={seqOf} />
+      {(built.failed || mercator.failed) && (
+        <p
+          role="alert"
+          data-testid="trip-map-build-error"
+          className="absolute top-14 left-3 right-3 z-20 rounded-md px-3 py-2 text-xs"
+          style={{ background: "rgba(13,17,23,0.92)", color: "var(--text-primary)" }}
+        >
+          {t("trips:detail.map.buildError")}
+        </p>
+      )}
       {cruiseGeometryFailed && (
         <MapLoadFailedNotice
           messageKey="map:loadFailed.cruiseRoutes"
@@ -739,6 +735,14 @@ export default function TripMap({
           ports={globeLabelPoints}
           extras={globeStationLabels}
           mode="important"
+        />
+      )}
+      {projection === "globe" && (
+        <TripGlobeAnnotations
+          mapRef={mapRef}
+          mapReady={mapLoaded}
+          chips={globeChips}
+          arrows={globeArrows}
         />
       )}
       {empty && (

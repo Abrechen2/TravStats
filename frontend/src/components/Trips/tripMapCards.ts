@@ -90,18 +90,16 @@ function decorateAirports(layer: Layer, flights: readonly MapJourney[]): Layer {
   } as Parameters<Layer["clone"]>[0]);
 }
 
+/**
+ * A stop keeps its hover card data. Its CLICK is the trip map's own persistent
+ * info card (`TripMapInfoCard`) — it carries the date and the link into the
+ * timeline, which the dashboard's anchored stop card has no place for.
+ */
 function decorateStops(layer: Layer): Layer {
   const data = (layer.props.data as PointDatum[]).map((d) =>
     d.card ? { ...d, tripStopCard: d.card } : d
   );
-  return layer.clone({
-    data,
-    onClick: (info: PickingInfo<PointDatum>) => {
-      const d = info.object;
-      if (!d?.card) return;
-      select().select({ kind: "tripStop", data: d.card, anchorLngLat: d.position });
-    },
-  } as Parameters<Layer["clone"]>[0]);
+  return layer.clone({ data } as Parameters<Layer["clone"]>[0]);
 }
 
 /** The trip map's layers, its flights, airports and stops now carrying their cards. */

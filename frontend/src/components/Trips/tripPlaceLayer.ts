@@ -21,7 +21,9 @@ function distinctPlaces(placeVisits: readonly { place: Place }[]): Place[] {
 
 export function buildTripPlaceLayers(
   placeVisits: readonly { place: Place }[],
-  colors: PlaceColorConfig
+  colors: PlaceColorConfig,
+  /** Opens the trip map's own card; without it the dashboard's place card opens. */
+  onPlaceClick?: (placeId: string) => void
 ): Layer[] {
   const places = distinctPlaces(placeVisits);
   const byId = new Map(places.map((p) => [p.id, p]));
@@ -30,6 +32,10 @@ export function buildTripPlaceLayers(
       colors,
       labelsMode: "off",
       onPinClick: (placeId) => {
+        if (onPlaceClick) {
+          onPlaceClick(placeId);
+          return;
+        }
         const place = byId.get(placeId);
         if (place) useMapCardSelectionStore.getState().select(pinnedFromPlace(place));
       },

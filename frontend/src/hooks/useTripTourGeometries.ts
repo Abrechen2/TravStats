@@ -77,10 +77,16 @@ export function useTripTourGeometries(tripId: string, enabled: boolean): TripTou
         const lines: TourGeometryEntry[] = [];
         routes.forEach((route, i) => {
           const legs = planned.get(route.id);
-          if (legs) lines.push({ routeId: route.id, name: route.name, geometry: legs });
+          if (legs)
+            lines.push({ routeId: route.id, name: route.name, geometry: legs, date: route.date });
           const track = recorded[i];
           if (track)
-            lines.push({ routeId: `${route.id}:tracks`, name: route.name, geometry: track });
+            lines.push({
+              routeId: `${route.id}:tracks`,
+              name: route.name,
+              geometry: track,
+              date: route.date,
+            });
         });
         setLoaded({ routes, lines });
       } catch (err: unknown) {

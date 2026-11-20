@@ -176,7 +176,47 @@
       "clickHint": "Tip: click a route or point to zoom in.",
       "toggleProjectionHint": "Toggle between globe and flat projection",
       "projectionGlobe": "🌐 Globe",
-      "projectionFlat": "🗺 Flat"
+      "projectionFlat": "🗺 Flat",
+      "legend": {
+        "title": "Layers",
+        "group": {
+          "flights": "Flights",
+          "cruise": "Cruises",
+          "rail": "Rail",
+          "bus": "Buses",
+          "ferry": "Ferries",
+          "rental": "Rental cars",
+          "tours": "Tours",
+          "lodging": "Stays",
+          "stops": "Stops",
+          "places": "Places",
+          "recording": "Recording",
+          "shared": "Shared routes"
+        },
+        "style": {
+          "recorded": "recorded",
+          "schematic": "schematic",
+          "point": "point"
+        }
+      },
+      "days": {
+        "label": "Day of the trip",
+        "all": "All days",
+        "dayN": "Day {{n}}"
+      },
+      "info": {
+        "close": "Close map info",
+        "undated": "No date",
+        "openTimeline": "In the timeline",
+        "openEntity": "Open details",
+        "kind": {
+          "lodging": "Stay",
+          "stop": "Stop",
+          "place": "Place",
+          "cruise": "Cruise"
+        }
+      },
+      "buildError": "The map could not be built. Your trip data is unchanged; please reload the page."
     },
     "logistics": {
       "flights": "Flights",

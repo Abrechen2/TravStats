@@ -93,6 +93,8 @@ export interface PointDatum {
    *  fall back to `iata`; ports set it to the readable port name (see
    *  `toPortLabel`) so the overlay never shows a raw UN/LOCODE. */
   label?: string;
+  /** The trip map's day filter: draw this label faint. */
+  dim?: boolean;
   /** ISO 3166-1 alpha-2 country code — drives the overlay flag. Airports
    *  from /geo enrichment; ports from the UN/LOCODE prefix. */
   country?: string;
