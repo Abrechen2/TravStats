@@ -224,7 +224,7 @@ export default function BusPage(): JSX.Element {
   useEffect(() => refreshSelection(bulkRows), [bulkRows, refreshSelection]);
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       <div className="w-full">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

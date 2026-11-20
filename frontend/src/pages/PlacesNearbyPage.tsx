@@ -175,7 +175,7 @@ export default function PlacesNearbyPage(): JSX.Element {
     });
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <Link to="/places" className="ts-back-link text-sm">
         ← {t("places:detail.backToLogbook")}
       </Link>

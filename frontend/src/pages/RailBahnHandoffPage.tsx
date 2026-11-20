@@ -89,7 +89,7 @@ export default function RailBahnHandoffPage(): JSX.Element {
   }, [navigate]);
 
   return (
-    <AppShell width="reading">
+    <AppShell>
       <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
         ← {t("rail:title")}
       </Link>

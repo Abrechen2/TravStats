@@ -127,7 +127,7 @@ export default function PassportPage(): JSX.Element {
 
   if (!isEnabled("flight")) {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <h1 className="t-screen-title mb-2">{t("passport:title")}</h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
           {t("passport:needsFlights")}
@@ -137,7 +137,7 @@ export default function PassportPage(): JSX.Element {
   }
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <div className="print:max-w-none print:py-0">
         {/* T3 (2026-09-17 tester feedback): the "Zurück zu Statistiken" link
             duplicated the header's own navigation and led nowhere else in the

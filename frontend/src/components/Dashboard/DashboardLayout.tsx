@@ -270,7 +270,7 @@ export function DashboardLayout({
   };
 
   return (
-    <AppShell width="full" viewport className="flex flex-col">
+    <AppShell viewport className="flex flex-col">
       {/* The domain strip that used to sit here is hidden (owner, 2026-09-28):
           the six-row domain filter on the map now answers "what is on the
           map", which is what the strip's counts were mostly read for. Its

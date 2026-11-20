@@ -112,7 +112,7 @@ export default function TripsPage(): JSX.Element {
   const hasMore = total !== null && trips.length < total;
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <TripsTab
         trips={trips}
         filters={filters}

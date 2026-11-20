@@ -42,10 +42,7 @@ export default function StatsTabStrip({ tabs, active, onSelect }: Props): JSX.El
 
   return (
     <div style={{ background: "var(--ts-bg)", borderBottom: "1px solid var(--ts-border)" }}>
-      <div
-        ref={rowRef}
-        className="mx-auto flex max-w-6xl gap-1 overflow-x-auto overflow-y-hidden scrollbar-none"
-      >
+      <div ref={rowRef} className="flex gap-1 overflow-x-auto overflow-y-hidden scrollbar-none">
         <TabButton active={active === "all"} onClick={(): void => onSelect("all")}>
           {t("stats:filter.all")}
         </TabButton>

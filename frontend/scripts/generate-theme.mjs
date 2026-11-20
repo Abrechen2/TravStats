@@ -132,10 +132,7 @@ export function buildThemeCss() {
   }
 
   lines.push("");
-  lines.push("  /* Width — the one web-only layout decision (DESIGN_SYSTEM.md §4.2) */");
-  push("width-reading", "720px");
-  push("width-list", "1200px");
-  push("width-table", "1440px");
+  // No width tokens: since 2026-11-20 every page fills the window (AppShell).
 
   lines.push("");
   lines.push("  /* Radius — no other radius exists */");
@@ -217,9 +214,6 @@ export function buildThemeCss() {
   for (const [key] of Object.entries(tokens.spacing)) {
     if (isMeta(key)) continue;
     theme.push(`  --spacing-ts-${kebab(key)}: var(--ts-space-${kebab(key)});`);
-  }
-  for (const name of ["reading", "list", "table"]) {
-    theme.push(`  --container-ts-${name}: var(--ts-width-${name});`);
   }
   for (const [key] of Object.entries(tokens.radius)) {
     if (isMeta(key)) continue;

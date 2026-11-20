@@ -65,7 +65,7 @@ export default function RailConnectionPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-(--text-muted)">{t("rail:detail.loading")}</p>
       </AppShell>
     );
@@ -73,7 +73,7 @@ export default function RailConnectionPage(): JSX.Element {
   if (failure !== null || !connection || connection.legs.length === 0) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <Link to="/rail" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rail:title")}
         </Link>
@@ -121,7 +121,7 @@ export default function RailConnectionPage(): JSX.Element {
   ];
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/rail"
         backLabel={t("rail:detail.back")}

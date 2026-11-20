@@ -195,7 +195,7 @@ export default function DesignPage(): JSX.Element {
   const [switchOff, setSwitchOff] = useState(false);
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <PageHeader
         title="Design"
         meta="Jedes Primitiv in jedem Zustand. Alles liest design/tokens.json — ein Hex hier wäre ein Defekt."

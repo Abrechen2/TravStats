@@ -108,7 +108,7 @@ export default function RentalDetailPage(): JSX.Element {
 
   if (loading) {
     return (
-      <AppShell width="list">
+      <AppShell>
         <p className="text-(--text-muted)">{t("rental:detail.loading")}</p>
       </AppShell>
     );
@@ -116,7 +116,7 @@ export default function RentalDetailPage(): JSX.Element {
   if (failure !== null || !rental) {
     const isLoadError = failure === "loadError";
     return (
-      <AppShell width="reading">
+      <AppShell>
         <Link to="/rentals" className="ts-back-link text-sm text-(--text-muted)">
           ← {t("rental:title")}
         </Link>
@@ -192,7 +192,7 @@ export default function RentalDetailPage(): JSX.Element {
     .join(" · ");
 
   return (
-    <AppShell width="list">
+    <AppShell>
       <DetailHeader
         backTo="/rentals"
         backLabel={t("rental:detail.back")}

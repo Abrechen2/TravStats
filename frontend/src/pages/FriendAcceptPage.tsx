@@ -107,7 +107,7 @@ export default function FriendAcceptPage(): JSX.Element {
   };
 
   return (
-    <AppShell width="reading">
+    <AppShell>
       <PageHeader title={tr("friends.accept.title")} />
       {body()}
     </AppShell>

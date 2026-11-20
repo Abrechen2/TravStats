@@ -95,7 +95,7 @@ export default function AirportSeedingBanner({
         borderBottom: "1px solid rgba(240,169,71,0.35)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 py-3">
+      <div className="px-4 py-3">
         <div className="flex items-start gap-3">
           {/* Icon */}
           <div className="shrink-0 mt-0.5">

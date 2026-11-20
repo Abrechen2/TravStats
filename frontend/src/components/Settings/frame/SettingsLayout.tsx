@@ -63,7 +63,7 @@ export function SettingsLayout({
     levelSwitch: <SettingsLevelSwitch moreCount={moreExpert} />,
   };
   return (
-    <AppShell width="list">
+    <AppShell>
       <div
         className="grid md:grid-cols-[240px_minmax(0,1fr)]"
         style={{ gap: "var(--ts-space-xxl)" }}

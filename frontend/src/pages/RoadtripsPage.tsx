@@ -135,7 +135,7 @@ export default function RoadtripsPage(): JSX.Element {
   };
 
   return (
-    <AppShell width="table">
+    <AppShell>
       {/* Every other logbook page has carried these since round 4; this one
           was missed, so a reader who reached roadtrips had no way back to
           another area except the header menu (owner, 2026-09-28). */}

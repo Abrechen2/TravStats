@@ -449,7 +449,7 @@ export default function LodgingListPage(): JSX.Element {
   const importAdapter = useLodgingImportAdapter();
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       {/* The width is the shell's now — `table`, asked for by name. */}
       <div className="w-full">

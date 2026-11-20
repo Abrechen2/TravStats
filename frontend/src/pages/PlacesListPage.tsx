@@ -401,7 +401,7 @@ export default function PlacesListPage(): JSX.Element {
 
   if (access === "denied") {
     return (
-      <AppShell width="reading">
+      <AppShell>
         <div className="py-16 text-center text-[var(--text-muted)]">
           {t("places:list.domainDisabled")}
         </div>
@@ -410,7 +410,7 @@ export default function PlacesListPage(): JSX.Element {
   }
 
   return (
-    <AppShell width="table">
+    <AppShell>
       <LogbookTabs />
       {/* The shared filter bar sits directly under the navigation, the way
           it does on the other three domain lists — it is `sticky top-14`, so
