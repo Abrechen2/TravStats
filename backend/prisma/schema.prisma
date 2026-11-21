@@ -229,6 +229,8 @@ model User {
   travTrackDawarichImport  TravTrackDawarichImport?
   travTrackIngestTokens    TravTrackIngestToken[]
 
+  accountArchiveImports AccountArchiveImport[]
+
   @@map("users")
 }
 
@@ -7456,4 +7458,23 @@ model DocumentLinkPass {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("document_link_passes")
+}
+
+/// An account archive this server imported (forgejo#433). The archive id is unique
+/// on the server, so a retried import answers with the first one's outcome instead
+/// of writing the account twice; the row goes with the account.
+model AccountArchiveImport {
+  id                  String   @id @default(cuid())
+  archiveId           String   @unique @map("archive_id")
+  userId              String   @map("user_id")
+  sourceServerVersion String   @map("source_server_version")
+  formatVersion       Int      @map("format_version")
+  /// Rows per table and the number of files restored.
+  counts              Json
+  importedAt          DateTime @default(now()) @map("imported_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account_archive_imports")
 }

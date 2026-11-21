@@ -17,3 +17,20 @@ export const meExportLimiter = rateLimit({
   skipFailedRequests: true,
   keyGenerator: userOrIpKey,
 });
+
+/**
+ * Starting an account archive export or import (forgejo#433): each one reads or
+ * writes the whole account with every file, so a few per hour per account.
+ */
+export const accountArchiveLimiter = rateLimit({
+  windowMs: RATE_LIMITS.ACCOUNT_ARCHIVE_WINDOW_MS,
+  max: RATE_LIMITS.ACCOUNT_ARCHIVE_MAX,
+  message: {
+    error: "Too many account archive requests, please try again later",
+    code: "rate_limited",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: true,
+  keyGenerator: userOrIpKey,
+});

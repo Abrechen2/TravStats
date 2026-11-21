@@ -188,6 +188,7 @@
     "version.ts"
   ],
   "enveloped": [
+    "accountArchive.ts",
     "aircraft.ts",
     "airlines.ts",
     "appImport.ts",

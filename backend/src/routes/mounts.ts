@@ -69,6 +69,7 @@ import pdfParseRoutes from "./pdfParse";
 import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
 import meExportRoutes from "./meExport";
+import accountArchiveRoutes from "./accountArchive";
 import setupRoutes from "./setup";
 import versionRoutes from "./version";
 import adminRoutes from "./admin";
@@ -387,6 +388,8 @@ export const apiMounts: ApiMount[] = [
   { id: "imageParse", base: "/api/v1", router: imageParseRoutes },
   { id: "diagnosticExport", base: "/api/v1", router: diagnosticExportRoutes },
   { id: "meExport", base: "/api/v1/me", router: meExportRoutes },
+  // Moving one account to another server as a ZIP (forgejo#433).
+  { id: "accountArchive", base: "/api/v1/me/account-archive", router: accountArchiveRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },

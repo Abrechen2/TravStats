@@ -326,6 +326,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   dataQualityFlags: "derived by the data-quality sweep, recomputed from the rows",
   linkedAsCompanion:
     "other accounts' companion rows that name this user — their data, not this user's",
+  accountArchiveImports:
+    "this server's record of the account archives it imported (forgejo#433), bound to the server",
   shareNoticesActed:
     "notices addressed to other accounts about what this user did — their inbox, not this user's",
 };

@@ -7,6 +7,7 @@ import type { ReadinessApiErrorCode } from "./readinessErrorCodes";
 import type { CompanionAppApiErrorCode } from "./companionAppErrorCodes";
 import type { ConnectionFileApiErrorCode } from "./connectionFileErrorCodes";
 import type { AdminStepUpApiErrorCode } from "./adminStepUpErrorCodes";
+import type { AccountArchiveApiErrorCode } from "./accountArchiveErrorCodes";
 import type { LocationProviderApiErrorCode } from "./locationProviderErrorCodes";
 
 /**
@@ -590,6 +591,7 @@ export type ApiErrorCode =
   | "COMPARISON_PEER_OUTDATED" // the other server predates the leaderboard protocol
   | "COMPARISON_PEER_KEY_INVALID"
   | AdminStepUpApiErrorCode // a Companion's admin step-up on the federation pin calls
+  | AccountArchiveApiErrorCode // the account archive export and import (forgejo#433)
   | ConnectionFileApiErrorCode // an uploaded server connection file, one per refusal
   | "COMPARISON_BOARD_NOT_FOUND"
   | "COMPARISON_BOARD_MEMBER_INVALID"

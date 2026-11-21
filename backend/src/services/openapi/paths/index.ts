@@ -84,6 +84,7 @@ import "./placeCaptures";
 import "./operations";
 import "./dataQuality";
 import "./accounts";
+import "./accountArchive";
 import "./integrations";
 import "./photoJourneys";
 import "./tripSuggestions";
