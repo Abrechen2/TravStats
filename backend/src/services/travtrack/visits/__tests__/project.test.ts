@@ -328,6 +328,18 @@ describe("projectVisitSuggestions", () => {
     expect(resolveStop).not.toHaveBeenCalled();
   });
 
+  it("'scan now' reopens a day under a new version, so a run already reading it cannot close it again", async () => {
+    await dirty();
+    const before = await prisma.travTrackDirtyDay.findUniqueOrThrow({
+      where: { userId_day: { userId, day: utcMidnight(DAY) } },
+    });
+    await rescanVisitDays(userId, 5, deps());
+    const after = await prisma.travTrackDirtyDay.findUniqueOrThrow({
+      where: { userId_day: { userId, day: utcMidnight(DAY) } },
+    });
+    expect(after.version).toBeGreaterThan(before.version);
+  });
+
   it("'scan now' reads the window it was asked for, not the oldest backlog", async () => {
     const old = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"];
     await dirty(old);

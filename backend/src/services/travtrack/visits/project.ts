@@ -304,7 +304,14 @@ async function handleStop(
     }
     const done = await publish(userId, generation, async (tx) => {
       const n = await tx.dawarichStay.updateMany({
-        where: { id: grow.id, userId, status: "pending" },
+        // The bounds as read: a concurrent run that already extended the row further wins.
+        where: {
+          id: grow.id,
+          userId,
+          status: "pending",
+          sourceStartAt: grow.sourceStartAt,
+          sourceEndAt: grow.sourceEndAt,
+        },
         data: {
           sourceStartAt: new Date(stop.fromMs),
           sourceEndAt: new Date(stop.untilMs),
@@ -460,8 +467,11 @@ async function projectDay(ctx: RunContext, dirty: DirtyDay): Promise<boolean> {
       if (!step.go) return false;
     }
   }
-  // A truncated read (a day beyond the point cap) is not a complete answer either.
-  return !open && readCoverage === "complete";
+  // A day beyond the point cap is read in part, every time: leaving it open would hold the same
+  // days at the front of every run. Its findings say so (`readCoverage: "truncated"`).
+  if (readCoverage === "truncated")
+    logger.warn({ operation: "travtrack.visits.truncatedDay", userId, day: dirty.day });
+  return !open;
 }
 
 async function pendingVisitDays(
@@ -569,7 +579,8 @@ export async function scheduledVisitSuggestions(
 
 /**
  * "Scan now" (a job, `travtrack.visitSuggestions`): the last `lookbackDays`
- * days are marked owed again and asked about, ignoring the schedule's wait.
+ * days are marked owed again (their version raised, so a run already reading them
+ * cannot acknowledge the reopening away) and asked about, ignoring the schedule's wait.
  * Findings already made are never repeated — the stop's own memory answers.
  */
 export async function rescanVisitDays(
@@ -579,7 +590,7 @@ export async function rescanVisitDays(
 ): Promise<VisitProjectionResult> {
   const from = new Date((deps.now ?? new Date()).getTime() - lookbackDays * DAY_MS);
   await prisma.$executeRaw`
-    UPDATE travtrack_dirty_days SET done = done & ~${VISITS_BIT}::int
+    UPDATE travtrack_dirty_days SET done = done & ~${VISITS_BIT}::int, version = version + 1
      WHERE user_id = ${userId} AND day >= ${from.toISOString().slice(0, 10)}::date`;
   return projectVisitSuggestions(userId, {
     maxDays: lookbackDays + 1,
