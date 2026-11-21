@@ -221,7 +221,7 @@ describe("BusPage", () => {
     const row = await screen.findByTestId("bus-row-r1");
     fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
     expect(screen.getByTestId("confirm-message")).toHaveTextContent(
-      "Dazu 2 Dokumente, die mit gelöscht werden."
+      "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst"
     );
   });
 
@@ -264,7 +264,7 @@ describe("BusPage", () => {
       expect(message).toContain(
         "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
       );
-      expect(message).toContain("Dazu 1 Dokument, das mit gelöscht wird.");
+      expect(message).toContain("Dazu 1 Dokument: Es wird nur von diesem Eintrag gelöst");
       expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 2 Mitreisende");
     });
 

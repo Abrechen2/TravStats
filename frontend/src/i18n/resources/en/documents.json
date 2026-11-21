@@ -15,8 +15,8 @@
   "removeLabel": "Delete {{name}} everywhere",
   "deleteTitle": "Delete document everywhere?",
   "deleteMessage": "“{{name}}” is deleted permanently, with its file and at every entry it is linked to. The entries themselves stay.",
-  "deleteCascadeNote_one": "Plus 1 document, deleted with it.",
-  "deleteCascadeNote_other": "Plus {{count}} documents, deleted with it.",
+  "deleteCascadeNote_one": "Plus 1 document: it is only detached from this entry and kept. If no other entry holds it, it is deleted after the grace period.",
+  "deleteCascadeNote_other": "Plus {{count}} documents: they are only detached from this entry and kept. Any that no other entry holds is deleted after the grace period.",
   "format": {
     "image": "Image",
     "pdf": "PDF",

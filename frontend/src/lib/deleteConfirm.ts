@@ -48,11 +48,11 @@ export function countedDeleteMessage(
  * holding the dialog until the count is in, would make a delete button feel
  * broken to buy a warning nobody asked to wait for.
  *
- * Why it is worth saying at all: `Document` cascades from all five entry
- * types, measured live against the database by
- * `backend/src/__tests__/integrity/cascades.integrity.test.ts`, and the
- * write-path audit of 2026-09-19 (findings 3 and 6) found no dialog that
- * named it.
+ * Why it is worth saying at all: deleting an entry used to take its
+ * documents with it (write-path audit of 2026-09-19, findings 3 and 6). Since
+ * document links (D1) it removes only the entry's LINKS; a document no other
+ * entry holds is unfiled and gets a grace period before the sweep deletes it.
+ * The line says that, so nobody reads a kept document as a lost one.
  */
 export function withDocumentNote(
   message: string,

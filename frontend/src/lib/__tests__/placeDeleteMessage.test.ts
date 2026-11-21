@@ -47,7 +47,7 @@ describe("placeDeleteMessage", () => {
       "„Pantheon“ wird mit 2 Besuchen dauerhaft gelöscht.",
       "Dazu ein Beleg-Foto, das mit gelöscht wird.",
       "Er verschwindet aus 2 Listen (Rom, Kuppeln); die Listen selbst bleiben.",
-      "Dazu 2 Dokumente, die mit gelöscht werden.",
+      "Dazu 2 Dokumente: Diese werden nur von diesem Eintrag gelöst und bleiben erhalten. Hängt eines an keinem anderen Eintrag, wird es nach der Karenzzeit gelöscht.",
       "Erhalten bleiben: Rom 2025",
       "Eine Roadtrip-Station, die ihn nennt, bleibt erhalten.",
     ]);

@@ -15,8 +15,8 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
-  "deleteTripConfirmKept": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. {{kept}} are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the links to documents filed here. The documents themselves are kept and deleted after the grace period if no other entry holds them. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirmKept": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the links to documents filed here. The documents themselves are kept and deleted after the grace period if no other entry holds them. {{kept}} are kept, and so are day tours with points of their own — they become standalone tours.",
   "deleteTripKept": {
     "and": "and",
     "flights": "flights",

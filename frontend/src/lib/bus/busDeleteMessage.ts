@@ -9,8 +9,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * both said "Diese Busfahrt löschen?" without naming which ride, and nothing
  * about what survives.
  *
- * What goes: the ride, named by its route, and the originals filed with it
- * (`Document` cascades from `BusJourney`, `withDocumentNote`). What stays: the
+ * What goes: the ride, named by its route; the originals filed with it
+ * are detached, not deleted (`withDocumentNote` says so). What stays: the
  * trip it is filed under (`tripId` is `SetNull`) and its travel companions —
  * only the ride's links to them cascade (`BusJourneyCompanion`), the people
  * themselves are the user's and appear on other entries. Both rows the list

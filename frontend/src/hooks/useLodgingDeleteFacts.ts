@@ -12,8 +12,8 @@ const UNKNOWN: LodgingDeleteFacts = { documentCount: null, photoCount: null, tri
  * What deleting a house takes with it besides its stays, asked only while the
  * confirmation is open (forgejo#250).
  *
- * The delete cascades through two things the dialog's one sentence did not
- * name: the house's photographs and every stay's kept originals - counted by
+ * The delete reaches two things the dialog's one sentence did not
+ * name: the house's photographs and the document links of every stay's kept originals (the documents stay, unfiled) - counted by
  * ONE request (`GET /lodging/:id/delete-facts`; it used to be one per stay) -
  * and, by omission, what stays: the trips the stays were linked to.
  *

@@ -41,9 +41,9 @@ interface Props {
  * The sentence names its losses in prose because most of them have no number
  * worth printing — photographs, stops, companions, journal entries, tours with
  * their tracks. The documents are the exception, and the one finding 3 of the
- * write-path audit (2026-09-19) was about: `Document.tripId` carries
- * `onDelete: Cascade`, measured against the live database by
- * `backend/src/__tests__/integrity/cascades.integrity.test.ts`, and a trip is
+ * write-path audit (2026-09-19) was about: deleting a trip removes
+ * its document LINKS only (the files stay, unfiled with a grace period unless
+ * another entry holds them), and a trip is
  * the entry most likely to hold several at once — a whole holiday's tickets and
  * bills filed in one place.
  *

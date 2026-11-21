@@ -7,8 +7,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * What the delete question for one rental says (forgejo#250) — on the list
  * AND on the detail page, from one function so the two cannot drift.
  *
- * What goes: the rental, named by provider and stations, and the documents
- * filed with it (`Document.rentalBookingId` cascades). What stays: the trip
+ * What goes: the rental, named by provider and stations, ; the documents
+ * filed with it are detached, not deleted. What stays: the trip
  * and the roadtrip it is linked to — both relations are `SetNull`, so neither
  * is touched — and the companions, who are people, not part of the rental.
  */

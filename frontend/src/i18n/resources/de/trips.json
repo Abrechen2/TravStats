@@ -15,8 +15,8 @@
   "editTrip": "Reise bearbeiten",
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
-  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
-  "deleteTripConfirmKept": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. {{kept}} bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den Verknüpfungen zu hier abgelegten Dokumenten. Die Dokumente selbst bleiben erhalten und werden nach der Karenzzeit gelöscht, wenn sie an keinem anderen Eintrag hängen. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirmKept": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den Verknüpfungen zu hier abgelegten Dokumenten. Die Dokumente selbst bleiben erhalten und werden nach der Karenzzeit gelöscht, wenn sie an keinem anderen Eintrag hängen. {{kept}} bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
   "deleteTripKept": {
     "and": "und",
     "flights": "Flüge",

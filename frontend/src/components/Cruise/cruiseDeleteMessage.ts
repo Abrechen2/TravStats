@@ -15,8 +15,8 @@ export function cruiseDisplayName(cruise: Cruise, t: Translate): string {
  * the list never mentioned the documents that go with a cruise).
  *
  * What goes: the cruise with its port calls (counted the way the row counts
- * them, `countPortCalls`), the originals filed with it — `Document` cascades
- * from `Cruise` — and its GPS recordings and the routes redrawn on the map. What stays: the trip it is filed under (`tripId` is
+ * them, `countPortCalls`), the originals filed with it are detached, not deleted
+ * (`withDocumentNote`), and its GPS recordings and the routes redrawn on the map. What stays: the trip it is filed under (`tripId` is
  * `SetNull`), NAMED rather than "zugehörige Reisen", so the reader knows which.
  * `documentCount` is null while it is still being asked; the note then waits.
  */

@@ -52,8 +52,7 @@ export function StayDeleteConfirm({
         ? body
         : `${body}\n${t("lodging:stay.confirmDelete.receiptNote")}`;
     // The note above covers the LEGACY single `receiptUrl` only, while
-    // `Document.lodgingStayId` cascades too (`onDelete: Cascade`, proven live
-    // by `integrity/cascades.integrity.test.ts`). One is a file the cost block
+    // the stay's document LINKS go too (the documents stay, unfiled). One is a file the cost block
     // links to, the other the whole folder - so both lines stand.
     return withDocumentNote(withReceipt, t, documentCount);
   };
