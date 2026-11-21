@@ -45,6 +45,10 @@ const BACKEND = path.join(__dirname, "../../../..");
 const MIGRATIONS = path.join(BACKEND, "prisma/migrations");
 const PRISMA_CLI = require.resolve("prisma/build/index.js", { paths: [BACKEND] });
 const UPLOADS = path.join(BACKEND, "uploads");
+// The restore path is fixed and its orphan sweep removes every file no restored
+// row names, so the test runs on an empty uploads directory and puts the real
+// one back afterwards.
+const UPLOADS_ASIDE = `${UPLOADS}.rt-aside-${process.pid}`;
 
 const BASE_URL = new URL(process.env.DATABASE_URL ?? "postgresql://invalid/invalid");
 const BASE_NAME = decodeURIComponent(BASE_URL.pathname.slice(1));
@@ -414,6 +418,24 @@ async function seed(client: Client): Promise<void> {
     updated_at: NOW,
   });
 
+  // The remaining directories: a training sample, an admin's login background,
+  // and a transient mail upload (no row names it, so a restore sweeps it).
+  await insert(client, "training_data", {
+    id: "rt-training",
+    user_id: U,
+    type: "boarding_pass",
+    original_file: path.join(
+      UPLOADS,
+      "training",
+      writeUpload("training", "sample-1.pdf", "t").name
+    ),
+    annotations: "[]",
+    '"extractedData"': "{}",
+  });
+  writeUpload("login-backgrounds", "bg-1.jpg", "background");
+  writeUpload("emails", "mail-1.eml", "transient mail");
+  seededFiles.delete("emails/mail-1.eml");
+
   // A share link (a restore removes it on purpose).
   await insert(client, "public_share_links", {
     id: "rt-share",
@@ -470,6 +492,7 @@ describeWithTools("a backup restores completely into a fresh instance", () => {
     workDir = fs.mkdtempSync(path.join(os.tmpdir(), "restore-roundtrip-"));
     process.env.BACKUP_PATH = path.join(workDir, "backups");
     delete process.env.DOCKER;
+    if (fs.existsSync(UPLOADS)) fs.renameSync(UPLOADS, UPLOADS_ASIDE);
 
     await recreateDatabase(SOURCE_DB);
     migrate(SOURCE_DB);
@@ -487,7 +510,7 @@ describeWithTools("a backup restores completely into a fresh instance", () => {
     await sourcePrisma.$disconnect();
 
     // 2. A fresh instance: migrated, empty, and no upload files.
-    for (const key of seededFiles.keys()) fs.rmSync(path.join(UPLOADS, key), { force: true });
+    fs.rmSync(UPLOADS, { recursive: true, force: true });
     await recreateDatabase(FRESH_DB);
     migrate(FRESH_DB);
     point(FRESH_DB);
@@ -506,7 +529,8 @@ describeWithTools("a backup restores completely into a fresh instance", () => {
 
   afterAll(async () => {
     process.env = originalEnv;
-    for (const key of seededFiles.keys()) fs.rmSync(path.join(UPLOADS, key), { force: true });
+    fs.rmSync(UPLOADS, { recursive: true, force: true });
+    if (fs.existsSync(UPLOADS_ASIDE)) fs.renameSync(UPLOADS_ASIDE, UPLOADS);
     await dropDatabase(SOURCE_DB);
     await dropDatabase(FRESH_DB);
     fs.rmSync(workDir, { recursive: true, force: true });
@@ -553,11 +577,11 @@ describeWithTools("a backup restores completely into a fresh instance", () => {
       if (!fs.existsSync(restored) || sha256Of(restored) !== want) missing.push(key);
     }
     expect(missing).toEqual([]);
-    // Every directory the backup is meant to carry was exercised, except the
-    // two no row names (instance decoration, transient mail uploads).
+    // Every directory the backup carries was exercised. `emails` holds only
+    // transient uploads that no row names: the restore's sweep drops them.
     const exercised = new Set([...seededFiles.keys()].map((k) => k.split("/")[0]));
-    const notExercised = BACKED_UP_UPLOAD_DIRS.filter((d) => !exercised.has(d));
-    expect(notExercised.sort()).toEqual(["emails", "login-backgrounds", "training"]);
+    expect(BACKED_UP_UPLOAD_DIRS.filter((d) => !exercised.has(d))).toEqual(["emails"]);
+    expect(fs.existsSync(path.join(UPLOADS, "emails", "mail-1.eml"))).toBe(false);
   });
 
   it("keeps each kept document's bytes matching the sha256 its row recorded", async () => {
@@ -611,6 +635,22 @@ describeWithTools("a backup restores completely into a fresh instance", () => {
   it("resets exactly what a restore is meant to reset", async () => {
     expect(fresh.get("public_share_links")?.n).toBe(0);
     expect(source.get("public_share_links")?.n).toBe(1);
+    // The phones' feed restarts: a new epoch, not the one the archive carried.
+    const epochs = await Promise.all(
+      [SOURCE_DB, FRESH_DB].map((db) =>
+        withClient(db, async (c) =>
+          String((await c.query(`SELECT epoch FROM sync_state`)).rows[0].epoch)
+        )
+      )
+    );
+    expect(epochs[1]).not.toBe(epochs[0]);
+    // This machine keeps the backup row it restored from, completed (the archive's own copy of that row, written while it was still running, is marked failed).
+    const kept = await withClient(FRESH_DB, (c) =>
+      c.query(`SELECT status FROM backups WHERE backup_path = $1 AND status = 'completed'`, [
+        archivePath,
+      ])
+    );
+    expect(kept.rows).toEqual([{ status: "completed" }]);
     // The account, its settings and the profile picture URL arrive intact.
     const settings = await withClient(FRESH_DB, (c) =>
       c.query(`SELECT data FROM user_settings WHERE user_id = $1`, [U])

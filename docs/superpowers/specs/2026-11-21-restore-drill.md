@@ -33,7 +33,7 @@ No gap in the database or upload path. Everything that differs after a restore d
 | `sync_changes`, `sync_state` | the phones' change feed restarts, epoch bumped                      |
 | `admin_settings`             | instance identity (URLs, rpId, push id, federation key) stays local |
 
-All other tables: identical. Document files, trip/place/lodging photos, receipts, note photo, avatar: identical sha256.
+The test also asserts the sync epoch changed and that this machine keeps a completed row for the archive it restored from (the archive's own copy of that row is marked failed, since it was still running when dumped). `emails` uploads are not restored: no row names them and the restore's sweep drops them. All other tables: identical. Document files, trip/place/lodging photos, receipts, note photo, avatar: identical sha256.
 `document_links` identical (role, provenance, `rentalCategory`, every target). TravTrack points in order, next point continues `seq`.
 
 Tables the seed leaves empty are covered structurally only (the dump is one whole-database `pg_dump`; `travtrack.backup.test.ts`
@@ -44,7 +44,7 @@ holds that nothing narrows it), not by content.
 JSON metadata only. It carries every record (documents with `storedName`/`sha256`, photos with `filename`, TravTrack in its own
 section) but NO file bytes — no document, receipt or photo — and nothing in TravStats can read it back (stated in
 `allDataExport.ts`). It is a human-readable copy, not a recovery path: an account moved with it would arrive without a single file.
-Filed as an issue (see below).
+Filed as forgejo#433.
 
 ## Outside the archive, by design
 
@@ -57,4 +57,4 @@ Filed as an issue (see below).
 
 `DATABASE_URL=… npx jest src/services/backup/__tests__/restoreRoundTrip.test.ts --forceExit` needs `pg_dump` and `psql` on PATH (CI has
 them; the suite fails in CI without, skips locally). It builds `<db>_rt_src` and `<db>_rt_fresh` beside the configured database and drops
-them afterwards. Note: it writes to and deletes its own marker files under `backend/uploads/` (the restore path is fixed).
+them afterwards. The restore path is fixed, so the suite moves `backend/uploads/` aside for its run (the restore's orphan sweep removes every file no restored row names) and puts it back afterwards.
