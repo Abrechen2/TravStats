@@ -320,6 +320,7 @@ describe("companions — manage", () => {
         uses: { flight: 1, trip: 0, cruise: 0, rail: 0 },
         hiddenUses: 1,
         expensesPaid: 0,
+        documents: 0,
         lastTogether: "2025-05-01",
         inUse: true,
       },

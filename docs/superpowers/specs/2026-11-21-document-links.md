@@ -244,9 +244,15 @@ hand-over to a linked companion's own account (a later phase).
 
 ### Decisions and open
 
-- Deleting a companion turns their assigned documents back into "me / group"
-  (`SET NULL`); the delete dialog does not warn yet.
-- The web has no account-wide document list screen; the person filter exists in
-  the API only until one is built.
+- Stay people who exist only as text get a catalogue row (create-only, canonical
+  name): on every stay save, on first read of a stay's travellers, and once at
+  boot for existing stays (`backfillStayCompanions`).
+- An automatic fill writes each field in a conditional update ("where still
+  empty"), so a manual save made in between is never overwritten.
+- Deleting a companion hands their documents back to the owner; the delete
+  dialog says how many first.
+- **Open:** companions are not carried in `.travstats` archives (the catalogue is
+  per account). **Open:** the web has no account-wide document list screen, so
+  the person filter exists in the API only.
 - A document for a linked companion's *own* account (hand-over) is a separate
   phase; nothing here prepares it beyond the link carrying the person.
