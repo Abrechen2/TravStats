@@ -670,4 +670,33 @@ describe("account archive round trip", () => {
     expect(await counts(dst, OTHER_TARGET_USER)).toEqual({ flights: 1 });
     expect((await counts(dst, user)).flights).toBe(1);
   });
+
+  it("does not export another account's file that a row of this account names", async () => {
+    await src.query(
+      `UPDATE documents SET stored_name = 'az-friend-doc.pdf' WHERE id = 'az-doc-unfiled-0001'`
+    );
+    try {
+      const leak = path.join(work, "leak.zip");
+      const result = await writeAccountArchive(U, leak, undefined, { uploadsRoot: srcRoot });
+      const entries = await readZip(leak);
+      expect(entries.has("files/documents/az-friend-doc.pdf")).toBe(false);
+      for (const bytes of entries.values())
+        expect(bytes.toString("latin1")).not.toContain("friend bytes");
+      expect(result.missingFiles).toBeGreaterThanOrEqual(0);
+    } finally {
+      await src.query(
+        `UPDATE documents SET stored_name = 'az-doc-unfiled-0001.pdf' WHERE id = 'az-doc-unfiled-0001'`
+      );
+    }
+  });
+
+  it("refuses an export larger than the ceiling, counting the files it writes", async () => {
+    await expect(
+      writeAccountArchive(U, path.join(work, "big.zip"), undefined, {
+        uploadsRoot: srcRoot,
+        maxBytes: 64,
+      })
+    ).rejects.toMatchObject({ code: "ACCOUNT_ARCHIVE_TOO_LARGE" });
+    expect(fs.existsSync(path.join(work, "big.zip"))).toBe(false);
+  });
 });

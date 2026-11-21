@@ -189,6 +189,37 @@ function noteFiles(
   }
 }
 
+/**
+ * A row names a file; that does not make the file this account's. Names another
+ * account's row also points at are dropped, and an avatar must carry this
+ * account's id (`<userId>_…`), so no row — forged, imported or stale — can pull
+ * someone else's upload into the archive. Mutates `named`.
+ */
+async function dropForeignFiles(
+  db: Db,
+  plan: ArchivePlan,
+  userId: string,
+  named: Map<string, Set<string>>
+): Promise<void> {
+  const avatars = named.get("profile-pictures");
+  if (avatars) for (const n of [...avatars]) if (!n.startsWith(`${userId}_`)) avatars.delete(n);
+  for (const p of plan.tables) {
+    for (const rule of p.policy.files ?? []) {
+      const names = named.get(rule.dir);
+      if (rule.kind === "avatar" || !names || names.size === 0) continue;
+      const col = `t0.${quoteIdent(rule.column)}`;
+      const rows = await db.$queryRawUnsafe<Array<{ v: string }>>(
+        `SELECT DISTINCT regexp_replace(${col}, '^.*/', '') AS v FROM ${quoteIdent(p.table.name)} t0
+          WHERE ${col} IS NOT NULL AND regexp_replace(${col}, '^.*/', '') = ANY($2::text[])
+            AND COALESCE((${selectionWhere(plan, p.table.name)}), false) = false`,
+        userId,
+        [...names]
+      );
+      for (const r of rows) names.delete(r.v);
+    }
+  }
+}
+
 /** Those names on disk, each with its display rendition when it has one. */
 async function namedFiles(
   named: ReadonlyMap<string, ReadonlySet<string>>,
@@ -414,6 +445,7 @@ async function writeEntries(
     );
   }
 
+  await dropForeignFiles(db, plan, userId, named);
   const { files, missing } = await namedFiles(named, root);
   for (const file of files) {
     await writer.add(
