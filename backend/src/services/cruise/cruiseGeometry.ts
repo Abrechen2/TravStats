@@ -7,6 +7,7 @@ import {
   resolveRecordedLegs,
   type CruiseTrackCoverageRow,
 } from "../cruiseDistance/recordedLegs";
+import { isRiverCruise } from "../../shared/cruiseKind";
 import { isInlandLeg } from "../cruiseDistance/inlandLeg";
 import { riverLegPath, withDerivedRiverRegions } from "../cruiseDistance/riverCalculator";
 
@@ -162,7 +163,10 @@ export async function buildCruiseGeometry(
     if (isSamePort(a, b)) continue;
 
     // A port without a region that lies on a known river is a river port.
-    const [ra, rb] = await withDerivedRiverRegions([a, b]);
+    // Only on a river cruise (an ocean voyage from a region-less Rotterdam stays a sea route).
+    const [ra, rb] = isRiverCruise({ kind: cruise.kind })
+      ? await withDerivedRiverRegions([a, b])
+      : [a, b];
     if (isInlandLeg(ra, rb, cruise.kind)) {
       features.push(await inlandFeature(ra, rb));
       directLegs++;

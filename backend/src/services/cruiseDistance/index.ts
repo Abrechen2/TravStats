@@ -35,8 +35,13 @@ export async function computeLegDistance(
   rawTo: PortPoint,
   context: LegContext = {}
 ): Promise<ComputedLeg> {
-  // A region-less port on a known river is a river port (Fengdu, Wanzhou …).
-  const [from, to] = await withDerivedRiverRegions([rawFrom, rawTo]);
+  // On a river cruise a region-less port on a known river is a river port
+  // (Fengdu, Wanzhou …). Never on an ocean cruise: a region-less Rotterdam
+  // would turn a sea voyage into an inland chord.
+  const [from, to] =
+    context.cruiseKind === "river"
+      ? await withDerivedRiverRegions([rawFrom, rawTo])
+      : [rawFrom, rawTo];
   for (const calc of calculators) {
     if (!calc.accepts(from, to, context)) continue;
     try {

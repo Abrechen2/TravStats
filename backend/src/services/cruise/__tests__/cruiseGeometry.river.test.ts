@@ -142,6 +142,11 @@ describe("river ports the catalogue gave no region (forgejo#427)", () => {
     expect(collection.features[0].properties.method).not.toBe("river_line");
   });
 
+  it("an ocean cruise does not derive a river region (a sea voyage stays a sea route)", async () => {
+    const { collection } = await buildCruiseGeometry(cruise("ocean", [FENGDU, YICHANG]));
+    expect(collection.features[0].properties.method).not.toBe("river_line");
+  });
+
   it("a manual polyline wins over the derived river line", async () => {
     const manual = [
       [107.73, 29.865],

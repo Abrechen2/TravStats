@@ -28,8 +28,12 @@ import type { ComputedLeg, PortPoint } from "./types";
  * 1.2.0 (2026-10-16): a river cruise's legs never go through the sea router,
  * and the river anchors ship in the image — Nile legs stored before it were
  * chords because `data/rivers` was missing there.
+ * 1.3.0 (2026-11-21, forgejo#427): a region-less port on a river cruise that
+ * lies on a known river is a river port, and the Yangtze file carries the
+ * Three Gorges anchors — legs stored as chords are re-measured. A hand-drawn
+ * line is untouched (the override lookup runs before the router).
  */
-export const ORCHESTRATOR_VERSION = "1.2.0";
+export const ORCHESTRATOR_VERSION = "1.3.0";
 
 /** `cruise_legs.method` of a leg measured along a recording (2.7). */
 export const RECORDED_TRACK_METHOD = "recorded_track";
