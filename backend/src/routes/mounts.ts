@@ -43,6 +43,7 @@ import locationSuggestionRoutes from "./locationSuggestions";
 import locationCapabilitiesRoutes from "./locationCapabilities";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
+import documentLinkSuggestionRoutes from "./documentLinkSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsFlightInsightsRoutes from "./stats/flightInsights";
@@ -320,6 +321,11 @@ export const apiMounts: ApiMount[] = [
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
   // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
   { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
+  {
+    id: "documentLinkSuggestions",
+    base: "/api/v1/document-link-suggestions",
+    router: documentLinkSuggestionRoutes,
+  },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
   // One arc of the globe (forgejo#132 item 9). Its own base because
   // `routes/stats.ts` may not grow; it brings that router's middlewares along.

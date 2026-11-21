@@ -682,6 +682,27 @@
     "deletesOn": "Wird gelöscht am",
     "open": "Öffnen"
   },
+  "documentLinkSuggestions": {
+    "title": "Dokumente, die mehr belegen",
+    "description": "Diese Dokumente nennen Buchungen derselben Reise, mit denen sie noch nicht verknüpft sind. Hake an, was sie ebenfalls belegen — es wird erst verknüpft, wenn du bestätigst.",
+    "scanning": "Gespeicherte Dokumente werden geprüft … {{done}} von {{total}}",
+    "alsoCovers": "„{{name}}“ belegt auch …",
+    "accept": "Verknüpfen",
+    "dismiss": "Nein, nicht verknüpfen",
+    "reason": {
+      "bookingReference": "gleiche Buchungsnummer",
+      "flightNumber": "gleiche Flugnummer und Tag",
+      "trainNumber": "gleiche Zugnummer und Tag",
+      "lineName": "gleiche Linie und Tag",
+      "hotelDates": "gleiches Hotel und gleiche Nächte",
+      "dateRange": "gleicher Zeitraum"
+    },
+    "errors": {
+      "load": "Die Vorschläge für Dokumentverknüpfungen konnten nicht geladen werden.",
+      "scan": "Die Prüfung der gespeicherten Dokumente ist fehlgeschlagen. Beim nächsten Öffnen wird sie erneut versucht.",
+      "answer": "Die Antwort konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    }
+  },
   "time": {
     "field": "Angabe",
     "reason": "Grund",
