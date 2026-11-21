@@ -93,6 +93,25 @@ describe("trip archive — one document, several links", () => {
     expect(links.find((l: { role: string }) => l.role === "primary").entity.kind).toBe("trip");
   });
 
+  it("a document with one link is written in the version-4 form, with no links key", async () => {
+    await prisma.documentLink.deleteMany({ where: { documentId, role: "covers" } });
+    try {
+      const entries = unzipSync(new Uint8Array(await exportAs()));
+      const manifest = JSON.parse(Buffer.from(entries["manifest.json"]).toString());
+      const file = JSON.parse(Buffer.from(entries["trip.json"]).toString());
+      expect(manifest.formatVersion).toBeLessThan(5);
+      expect(file.documents[0]).not.toHaveProperty("links");
+    } finally {
+      await prisma.documentLink.createMany({
+        data: [
+          { documentId, flightId, role: "covers", provenance: "parser" },
+          { documentId, lodgingStayId: stayId, role: "covers", provenance: "suggestion" },
+          { documentId, ferryJourneyId: outsideFerryId, role: "covers", provenance: "user" },
+        ],
+      });
+    }
+  });
+
   it("an import remaps both ends: one document, the same three links on the new rows", async () => {
     const result = await commitTripFile(ben.id, readTripArchive(await exportAs()));
     expect(result.documents).toMatchObject({ filed: 1, skipped: 0, linked: 2 });

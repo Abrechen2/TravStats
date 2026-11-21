@@ -76,7 +76,12 @@ export async function writeTripArchive(
   });
   zip.pipe(out);
   zip.append(JSON.stringify(manifest, null, 2), { name: "manifest.json" });
-  zip.append(JSON.stringify(checked.data), { name: "trip.json" });
+  // A document with no extra links is written without the `links` key: an older
+  // reader's strict schema would refuse it, and nothing in it would be lost.
+  const documents = checked.data.documents.map(({ links, ...d }) =>
+    links.length > 0 ? { ...d, links } : d
+  );
+  zip.append(JSON.stringify({ ...checked.data, documents }), { name: "trip.json" });
   for (const f of collected.files) zip.file(f.source, { name: f.name });
   await zip.finalize();
   await done;
