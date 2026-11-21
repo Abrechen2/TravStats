@@ -356,4 +356,33 @@ describe("photo cap, choose and trim", () => {
     expect(result.skipped).toBe(1);
     expect(await visitLinks()).toHaveLength(10);
   });
+
+  it("a photo the user picks while an auto-link pass runs is not deleted as stale", async () => {
+    const stale = await prisma.entryPhotoLink.create({
+      data: { userId, lodgingStayId: stayId, assetId: aid(999), provenance: "auto" },
+    });
+    // The user picks the very photo AFTER the pass has read it as an automatic
+    // link and BEFORE it deletes it: flip it right behind that read.
+    const real = prisma.entryPhotoLink.findMany.bind(prisma.entryPhotoLink);
+    const spy = jest.spyOn(prisma.entryPhotoLink, "findMany").mockImplementation(((args: {
+      where?: { provenance?: string };
+      select?: object;
+    }) =>
+      (real as (a: unknown) => Promise<unknown[]>)(args).then(async (rows) => {
+        if (args?.where?.provenance === "auto" && args.select) {
+          await prisma.entryPhotoLink.update({
+            where: { id: stale.id },
+            data: { provenance: "manual" },
+          });
+        }
+        return rows;
+      })) as never);
+    try {
+      await autoLinkEntry(userId, "stay", stayId);
+    } finally {
+      spy.mockRestore();
+    }
+    const row = await prisma.entryPhotoLink.findUnique({ where: { id: stale.id } });
+    expect(row).toMatchObject({ provenance: "manual", refused: false });
+  });
 });
