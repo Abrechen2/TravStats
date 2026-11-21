@@ -165,6 +165,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
     strip: SHARE_KEY,
     files: [{ column: "receipt_url", dir: "receipts", kind: "url" }],
   }),
+  lodging_stay_companions: child(),
   lodging_photos: child({
     files: [{ column: "filename", dir: "lodging-photos", kind: "name", mime: "mimetype" }],
   }),
@@ -174,7 +175,9 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   loyalty_memberships: owner(),
   // Owned chains travel; a catalogue chain a lodging names is resolved by name.
   lodging_chains: owner({ catalogue: { naturalKeys: [["name"]], where: "t0.user_id IS NULL" } }),
-  bookings: owner(),
+  // A package's price split is written after its members: inserting a member fires
+  // `clear_package_split_on_membership`, which would mark a valid split stale.
+  bookings: owner({ late: ["price_split"] }),
   companions: owner({ strip: ["linked_user_id"] }),
   trip_companions: child(),
   trip_stops: child({ strip: SHARE_KEY }),
@@ -221,6 +224,8 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   notes: owner({
     files: [{ column: "photo_filename", dir: "note-photos", kind: "name", mime: "photo_mimetype" }],
   }),
+  // Photos an entry links from Immich/PhotoPrism (links only, no bytes), and refusals.
+  entry_photo_links: owner(),
   documents: owner({
     files: [
       {
@@ -378,6 +383,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
   dawarich_sweep_state: excluded(BOOKKEEPING),
   document_link_passes: excluded(BOOKKEEPING),
   document_link_suggestions: excluded(DERIVED),
+  entry_photo_dirty: excluded(DERIVED),
   external_service_tests: excluded(BOOKKEEPING),
   ferry_route_backfills: excluded(BOOKKEEPING),
   immich_import_jobs: excluded(BOOKKEEPING),

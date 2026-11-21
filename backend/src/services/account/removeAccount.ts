@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { securityLogger } from "../../utils/logger";
 import { takeUserCountLock } from "../../utils/userCountLock";
 import { deleteAccountWithFiles } from "../files/accountFiles";
+import { deleteAccountArchives } from "../accountArchive/archiveJobs";
 import { notifyPeersOfDeparture, type DepartureNotice } from "./notifyPeersOfDeparture";
 
 export interface RemovalContext {
@@ -103,6 +104,8 @@ async function finishDeletion(userId: string): Promise<DepartureNotice> {
       await tx.syncChange.deleteMany({ where: { userId } });
     })
   );
+  // Finished account ZIPs (forgejo#433) are copies of every file just removed.
+  await deleteAccountArchives(userId);
   return peers;
 }
 

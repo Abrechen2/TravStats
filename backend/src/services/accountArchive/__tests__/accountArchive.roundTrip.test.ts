@@ -14,6 +14,7 @@ import type { PrismaClient } from "../../../prisma";
 import { readCatalog, type Db } from "../catalog";
 import { writeAccountArchive } from "../exportArchive";
 import { importAccountArchive } from "../importArchive";
+import { recordPendingDeletions } from "../../files/pendingDeletions";
 import { buildPlan, selectionWhere, type ArchivePlan } from "../plan";
 import {
   BASE_URL,
@@ -698,5 +699,63 @@ describe("account archive round trip", () => {
       })
     ).rejects.toMatchObject({ code: "ACCOUNT_ARCHIVE_TOO_LARGE" });
     expect(fs.existsSync(path.join(work, "big.zip"))).toBe(false);
+  });
+
+  it("keeps a package's price split valid: it is written after its members", async () => {
+    const booking = await one<{ price_split: { stale?: boolean; shares: Record<string, number> } }>(
+      dst,
+      `SELECT price_split FROM bookings WHERE user_id = $1`,
+      [TARGET_USER]
+    );
+    const flight = await one<{ id: string }>(dst, `SELECT id FROM flights WHERE user_id = $1`, [
+      TARGET_USER,
+    ]);
+    const source = await one<{ stale: boolean | null }>(
+      src,
+      `SELECT (price_split->>'stale')::boolean AS stale FROM bookings WHERE id = 'az-booking-0001'`
+    );
+    expect(source.stale).toBeNull();
+    expect(booking.price_split.stale).toBeUndefined();
+    expect(booking.price_split.shares).toEqual({ [flight.id]: 500 });
+  });
+
+  it("exports only files the account provably owns: no encoded or query-string foreign receipt, no orphan, no pending deletion", async () => {
+    await src.query(
+      `UPDATE flights SET receipt_url = '/api/v1/uploads/receipts/az%2Dfriend%2Dreceipt.pdf' WHERE id = 'az-flight-0001'`
+    );
+    await src.query(
+      `UPDATE lodging_stays SET receipt_url = '/api/v1/uploads/receipts/az-friend-receipt.pdf?download=1#x' WHERE id = 'az-stay-0001'`
+    );
+    const orphans = [
+      path.join(srcRoot, "documents", "az-orphan.pdf"),
+      path.join(srcRoot, "profile-pictures", `${U}_old.png`),
+    ];
+    for (const f of orphans) fs.writeFileSync(f, "orphan bytes");
+    try {
+      const first = path.join(work, "owned.zip");
+      await writeAccountArchive(U, first, undefined, { uploadsRoot: srcRoot });
+      const entries = await readZip(first);
+      expect(entries.has("files/receipts/receipt-1.pdf")).toBe(true);
+      expect(entries.has("files/documents/az-doc-trip-0001.pdf")).toBe(true);
+      expect(entries.has("files/receipts/az-friend-receipt.pdf")).toBe(false);
+      expect(entries.has("files/documents/az-orphan.pdf")).toBe(false);
+      expect(entries.has(`files/profile-pictures/${U}_old.png`)).toBe(false);
+      for (const bytes of entries.values()) {
+        expect(bytes.toString("latin1")).not.toContain("friend receipt");
+        expect(bytes.toString("latin1")).not.toContain("orphan bytes");
+      }
+
+      await recordPendingDeletions(srcRoot, [
+        { dir: "receipts", storedName: "receipt-1.pdf", userId: U },
+      ]);
+      const second = path.join(work, "pending.zip");
+      await writeAccountArchive(U, second, undefined, { uploadsRoot: srcRoot });
+      expect((await readZip(second)).has("files/receipts/receipt-1.pdf")).toBe(false);
+    } finally {
+      await src.query(`UPDATE flights SET receipt_url = NULL WHERE id = 'az-flight-0001'`);
+      await src.query(`UPDATE lodging_stays SET receipt_url = NULL WHERE id = 'az-stay-0001'`);
+      for (const f of orphans) fs.rmSync(f, { force: true });
+      fs.rmSync(path.join(srcRoot, ".pending-deletions.json"), { force: true });
+    }
   });
 });

@@ -13,6 +13,14 @@ export interface CronJob {
  * list in `index.ts` had drifted by four.
  */
 export const CRON_JOBS: CronJob[] = [
+  // Hourly: finished account archives past their six hours (forgejo#433).
+  {
+    name: "account_archive_sweep",
+    start: async () =>
+      (await import("./accountArchiveSweepScheduler")).startAccountArchiveSweepScheduler(),
+    stop: async () =>
+      (await import("./accountArchiveSweepScheduler")).stopAccountArchiveSweepScheduler(),
+  },
   // Every 5 minutes; each flight's nextApiCheckAt decides the actual timing.
   {
     name: "flight_update",

@@ -138,6 +138,17 @@ export async function seedOtherAccount(client: Client, files: SeedFiles): Promis
     arr_lat: 3,
     arr_lon: 4,
   });
+  const receipt = files.write(
+    "receipts",
+    "az-friend-receipt.pdf",
+    BYTES.pdf("friend receipt")
+  ).name;
+  files.files.delete(`receipts/${receipt}`);
+  await insert(client, "receipt_uploads", {
+    id: "az-friend-receipt",
+    filename: receipt,
+    user_id: FRIEND,
+  });
   const name = files.write("documents", "az-friend-doc.pdf", BYTES.pdf("friend bytes")).name;
   files.files.delete(`documents/${name}`);
   await insert(client, "documents", {
@@ -201,6 +212,15 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
     name: "Round trip",
     updated_at: NOW,
   });
+  // A package with a valid price split: importing its member must not mark it stale.
+  await insert(client, "bookings", {
+    id: "az-booking-0001",
+    user_id: U,
+    trip_id: "az-trip-0001",
+    price: 500,
+    currency: "EUR",
+    updated_at: NOW,
+  });
   await insert(client, "flights", {
     id: "az-flight-0001",
     user_id: U,
@@ -210,8 +230,13 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
     arr_lon: -73.78,
     flight_number: "LH400",
     trip_id: "az-trip-0001",
+    booking_id: "az-booking-0001",
     share_key: "az-share-key-1",
   });
+  // Split set after its member exists, as the app does (a member added later marks it stale).
+  await client.query(`UPDATE bookings SET price_split = $1 WHERE id = 'az-booking-0001'`, [
+    JSON.stringify({ mode: "manual", shares: { "az-flight-0001": 500 } }),
+  ]);
   await insert(client, "cruises", {
     id: "az-cruise-0001",
     user_id: U,
