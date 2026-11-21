@@ -6,6 +6,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.38.** One new migration: trip and place-visit answers also store a content key per member (additive).
+
+### Added
+
+- **Photos on the TravTrack map from Immich, PhotoPrism and the trip's linked albums.** The photo layer is on once a photo source is connected; each photo is placed by its capture time on the recorded track, never by its own GPS and never inside a privacy zone. A source that fails is named while the other's photos still show.
+- **TravTrack is honest about gaps.** A stay that spans a recording silence shows the measured and the assumed time and the gap; an empty day says why — nothing recorded, hidden by a privacy zone, or filtered as implausible (with a button to show those points).
+- **The trip map has days, names and order.** A day strip highlights one day and dims the rest; places, stops and airports are named by zoom; stops are numbered and lines carry direction arrows, on the flat map and the globe; a click opens a card with links to the entry and the timeline row; one legend switches each layer.
+- **Landscape iPads keep the TravTrack day list beside the map**, with one selection shared by list and map.
+
+### Changed
+
+- **A stay is named after the building, not a counter inside it.** The named building or grounds the stay lies in wins over any point within it, and a point of the same brand folds into it (McCafé → McDonald's), which stays one tap away.
+- **Every page uses the full window width.**
+- **Sharing is one "Teilen …" dialog**, with known people from this and connected servers plus one field for someone on a server not connected yet; travellers sit under the trip's flags; "Route mitteilen" only shows on running or upcoming trips.
+- **"Freunde & Teilen" is one list of people** with per-person switches, incoming requests on top and public links below.
+- **Ferry, rail and bus rides in a trip's logistics tab** use the same table as flights and cruises.
+
+### Fixed
+
+- **Inbox decisions stay decided.** A dismissed photo journey, a trip or place-visit answer after deleting and re-importing its entries, a rejected TravTrack stay after a history deletion or a new privacy zone, a dismissed data-quality question on a merged record, and a rejected live flight change were each able to come back.
+- **The service cards on "Dienste" show their names** — two showed raw translation keys.
+
 **Upgrading to 2.8.0-rc.37.** One new migration: a photo-source column on linked trip albums (existing links become Immich) and the PhotoPrism connection fields.
 
 ### Added
