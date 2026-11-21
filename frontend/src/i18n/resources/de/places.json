@@ -912,6 +912,10 @@
       "wider": "Umkreis auf {{radius}} erweitern"
     }
   },
+  "visitCosts": {
+    "title": "Ausgaben bei diesem Besuch",
+    "loadFailed": "Ausgaben konnten nicht geladen werden."
+  },
   "visitList": {
     "filterLabel": "Besuche filtern",
     "filterAll": "Alle",

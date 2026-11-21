@@ -152,7 +152,7 @@
     "excluded": "userId"
   },
   "TripExpense": {
-    "details": "id tripId routeId stopId legFromStopId legToStopId kind date createdAt updatedAt",
+    "details": "id tripId routeId stopId legFromStopId legToStopId placeVisitId kind date createdAt updatedAt",
     "costs": "amount currency amountBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "note payerCompanionId payerName",
     "photos": "",

@@ -96,6 +96,8 @@ export interface TravelDocument {
   forSource?: "user" | "auto" | null;
   /** `GET /documents` only: the companions it is assigned to on any entry. */
   people?: Array<{ id: string; displayName: string }>;
+  /** Reaches this entry only through an expense paid at it (forgejo#429): no link to remove. */
+  viaExpense?: boolean;
 }
 
 export type LinkRole = "primary" | "covers";

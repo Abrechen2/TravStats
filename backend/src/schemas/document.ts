@@ -203,6 +203,12 @@ export const entryDocumentFieldsSchema = z.object({
     .describe(
       "How the person was set: auto (parsed name), user (picked, or kept on me); null = undecided"
     ),
+  viaExpense: z
+    .boolean()
+    .optional()
+    .describe(
+      "True when the document reaches this entry only through an expense paid at it: nothing to unlink here"
+    ),
 });
 
 export const entryDocumentDtoSchema = documentDtoSchema.extend(entryDocumentFieldsSchema.shape);

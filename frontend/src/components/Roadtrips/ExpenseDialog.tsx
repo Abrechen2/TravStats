@@ -74,6 +74,7 @@ const HINT_ID = "expense-save-blocked";
 export default function ExpenseDialog({
   roadtripId,
   stations,
+  visits = [],
   expense,
   defaultCurrency,
   onClose,
@@ -82,6 +83,8 @@ export default function ExpenseDialog({
   roadtripId: string;
   /** The roadtrip's stations in travel order; route corrections are left out here. */
   stations: readonly RoadtripStation[];
+  /** The trip's place visits, offered as scope (forgejo#429); empty for a roadtrip without a trip. */
+  visits?: ReadonlyArray<{ id: string; label: string }>;
   /** The expense to change, or null for a new one. */
   expense: TripExpense | null;
   defaultCurrency: string;
@@ -354,6 +357,22 @@ export default function ExpenseDialog({
             )}
           </Select>
         </Field>
+        {(visits.length > 0 || initial.placeVisitId !== "") && (
+          <Field label={t("roadtrips:costs.dialog.visit")} htmlFor="expense-visit">
+            <Select
+              id="expense-visit"
+              value={draft.placeVisitId}
+              onChange={(e) => set("placeVisitId", e.target.value)}
+            >
+              <option value="">{t("roadtrips:costs.dialog.visitNone")}</option>
+              {visits.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <ExpensePayerField
           draft={draft}
           onChange={merge}

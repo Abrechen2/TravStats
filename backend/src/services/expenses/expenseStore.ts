@@ -102,9 +102,53 @@ async function assertStops(
   }
 }
 
+/**
+ * The visit an expense is paid at (forgejo#429): the caller's own, and on the
+ * same trip the expense sits on (directly, or through its section). A foreign
+ * id is "not found", the same answer as a missing one.
+ */
+async function assertVisit(
+  userId: string,
+  target: Target,
+  placeVisitId: string | null | undefined
+): Promise<void> {
+  if (placeVisitId == null) return;
+  const visit = await prisma.placeVisit.findFirst({
+    where: { id: placeVisitId, userId },
+    select: { tripId: true },
+  });
+  if (!visit) throw new AppError("Place visit not found", 404);
+  const tripId =
+    target.tripId ??
+    (
+      await prisma.tripRoute.findFirst({
+        where: { id: target.routeId!, userId },
+        select: { tripId: true },
+      })
+    )?.tripId ??
+    null;
+  if (tripId === null || visit.tripId !== tripId) {
+    throw refuse("That visit is not on the trip of this expense");
+  }
+}
+
 export async function listExpenses(userId: string, scope: ExpenseScope): Promise<ExpenseRow[]> {
   return prisma.tripExpense.findMany({
     where: scopeWhere(userId, scope),
+    select: EXPENSE_SELECT,
+    orderBy: EXPENSE_ORDER,
+  });
+}
+
+/** The expenses paid at one visit; 404 when the visit is not the caller's. */
+export async function listVisitExpenses(userId: string, visitId: string): Promise<ExpenseRow[]> {
+  const visit = await prisma.placeVisit.findFirst({
+    where: { id: visitId, userId },
+    select: { id: true },
+  });
+  if (!visit) throw new AppError("Place visit not found", 404);
+  return prisma.tripExpense.findMany({
+    where: { userId, placeVisitId: visit.id },
     select: EXPENSE_SELECT,
     orderBy: EXPENSE_ORDER,
   });
@@ -147,6 +191,7 @@ export async function createExpense(
     pinned: input.stopId,
     legEnds: [input.legFromStopId, input.legToStopId],
   });
+  await assertVisit(userId, target, input.placeVisitId);
   const payer = await payerColumns(userId, input.payer);
   const amount = amountColumn(input.amount);
   const date = dateColumn(input.date ?? null);
@@ -169,6 +214,7 @@ export async function createExpense(
         stopId: input.stopId ?? null,
         legFromStopId: input.legFromStopId ?? null,
         legToStopId: input.legToStopId ?? null,
+        placeVisitId: input.placeVisitId ?? null,
         ...payer,
         ...fx.columns,
       },
@@ -245,6 +291,7 @@ export async function updateExpense(
     { tripId: row.tripId, routeId: row.routeId },
     { pinned: input.stopId, legEnds: [input.legFromStopId, input.legToStopId] }
   );
+  await assertVisit(userId, { tripId: row.tripId, routeId: row.routeId }, input.placeVisitId);
   const payer = await payerColumns(userId, input.payer);
   const next = {
     amount: input.amount !== undefined ? amountColumn(input.amount) : row.amount,
@@ -267,6 +314,7 @@ export async function updateExpense(
   if ("stopId" in input) data.stopId = input.stopId ?? null;
   if ("legFromStopId" in input) data.legFromStopId = input.legFromStopId ?? null;
   if ("legToStopId" in input) data.legToStopId = input.legToStopId ?? null;
+  if ("placeVisitId" in input) data.placeVisitId = input.placeVisitId ?? null;
   const updated = await prisma.tripExpense.update({
     where: { id: row.id },
     data,

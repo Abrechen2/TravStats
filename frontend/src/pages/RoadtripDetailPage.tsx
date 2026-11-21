@@ -598,6 +598,7 @@ export default function RoadtripDetailPage(): JSX.Element {
       <RoadtripCostsSection
         roadtripId={id}
         stations={detail.stations}
+        tripId={detail.roadtrip.tripId}
         expenses={detail.expenses}
         costs={detail.costs}
         onChanged={() => void load()}

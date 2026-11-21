@@ -487,26 +487,28 @@ export default function DocumentsSection({
       )}
       {!locked && (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
-          {ROW_ACTIONS.map(({ key, label, onClick }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onClick(doc)}
-              disabled={busy}
-              aria-label={t(`documents:${label}Label`, { name: doc.displayName })}
-              // A finger-sized target beside the category select (review, minor 10).
-              className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                color: "var(--ts-muted)",
-              }}
-            >
-              {t(`documents:${label}`)}
-            </button>
-          ))}
+          {ROW_ACTIONS.filter(({ key }) => !(key === "unlink" && doc.viaExpense)).map(
+            ({ key, label, onClick }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onClick(doc)}
+                disabled={busy}
+                aria-label={t(`documents:${label}Label`, { name: doc.displayName })}
+                // A finger-sized target beside the category select (review, minor 10).
+                className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: "var(--ts-muted)",
+                }}
+              >
+                {t(`documents:${label}`)}
+              </button>
+            )
+          )}
         </div>
       )}
     </li>

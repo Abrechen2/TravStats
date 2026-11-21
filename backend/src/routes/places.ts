@@ -687,6 +687,15 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     }
 
     const visit = await prisma.placeVisit.update({ where: { id: existing.id }, data });
+    // An expense may only name a visit of its own trip (forgejo#429): a visit
+    // that moves to another trip, or off its trip, lets go of those costs. The
+    // expenses stay on their trip.
+    if (input.tripId !== undefined && (input.tripId ?? null) !== existing.tripId) {
+      await prisma.tripExpense.updateMany({
+        where: { userId, placeVisitId: existing.id },
+        data: { placeVisitId: null },
+      });
+    }
 
     // Moving a planned visit into the past is the same statement as recording
     // one, so it promotes the place too. The reverse does NOT demote it — see

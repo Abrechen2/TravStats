@@ -2575,6 +2575,10 @@ model TripExpense {
   stopId           String?   @map("stop_id")
   legFromStopId    String?   @map("leg_from_stop_id")
   legToStopId      String?   @map("leg_to_stop_id")
+  /// Optional place visit this cost belongs to (forgejo#429). The expense stays
+  /// on its trip or section — totals count it once; this only says "it was
+  /// paid at that visit". SetNull: deleting the visit keeps the expense.
+  placeVisitId     String?   @map("place_visit_id")
   /// ferry | toll | pitch | fuel | parking | other — `EXPENSE_KINDS`, CHECKed.
   kind             String
   amount           Decimal   @db.Decimal(16, 4)
@@ -2613,10 +2617,12 @@ model TripExpense {
   stop           TripStop?      @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
   legFromStop    TripStop?      @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
   legToStop      TripStop?      @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
+  placeVisit     PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([tripId])
   @@index([routeId])
+  @@index([placeVisitId])
   @@index([stopId])
   @@index([legFromStopId])
   @@index([legToStopId])
@@ -3878,6 +3884,7 @@ model PlaceVisit {
 
   documents     Document[]
   documentLinks DocumentLink[]
+  expenses      TripExpense[]
 
   /// Public single-entry links to this record (forgejo#405).
   publicShareLinks PublicShareLink[]

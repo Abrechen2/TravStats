@@ -326,7 +326,13 @@ router.patch(
       const detach = await assertKindFields(userId, routeId, { ...body, detachStationPhotos });
       const current = await prisma.tripRoute.findUniqueOrThrow({
         where: { id: routeId },
-        select: { kind: true, tourDate: true, startOdometerKm: true, endOdometerKm: true },
+        select: {
+          kind: true,
+          tourDate: true,
+          tripId: true,
+          startOdometerKm: true,
+          endOdometerKm: true,
+        },
       });
       assertTourOdometerOrder(current, body); // early 400; re-checked under the row lock below
       const day = tourDayColumns({ date, startTime }, current.kind, current);
@@ -339,13 +345,20 @@ router.patch(
           // Two concurrent PATCHes of one reading each each pass the check
           // against the old pair; the row lock makes the second see the first.
           await tx.$queryRaw`SELECT id FROM trip_routes WHERE id = ${routeId} FOR UPDATE`;
-          assertTourOdometerOrder(
-            await tx.tripRoute.findUniqueOrThrow({
-              where: { id: routeId },
-              select: { startOdometerKm: true, endOdometerKm: true },
-            }),
-            body
-          );
+          const locked = await tx.tripRoute.findUniqueOrThrow({
+            where: { id: routeId },
+            select: { tripId: true, startOdometerKm: true, endOdometerKm: true },
+          });
+          assertTourOdometerOrder(locked, body);
+          // A move to another trip (or off any trip) leaves the visits its
+          // costs were tagged with behind: the link would name a visit of the
+          // OLD trip (forgejo#429).
+          if (body.tripId !== undefined && body.tripId !== locked.tripId) {
+            await tx.tripExpense.updateMany({
+              where: { routeId, userId, placeVisitId: { not: null } },
+              data: { placeVisitId: null },
+            });
+          }
           const before = await shareSnapshot(tx, "roadtrip", routeId);
           const updated = await tx.tripRoute.update({
             where: { id: routeId },
