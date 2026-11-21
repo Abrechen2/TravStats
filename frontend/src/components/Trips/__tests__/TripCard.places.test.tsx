@@ -76,11 +76,11 @@ describe("TripHead places count", () => {
     );
   };
 
-  it("links 'N Orte' to the timeline", () => {
+  it("links 'N Orte' to the visited-places list on the overview", () => {
     head(2);
     const link = screen.getByTestId("trip-head-places");
     expect(link).toHaveTextContent("2 trips:card.places/2");
-    expect(link.getAttribute("href")).toContain("tab=timeline");
+    expect(link.getAttribute("href")).toContain("tab=overview#trip-places");
   });
 
   it("shows no places line without places", () => {

@@ -96,6 +96,7 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
 });
 vi.mock("../hooks/usePlacesVisible", () => ({
   usePlacesAccess: () => ({ visible: true, loading: false }),
+  usePlacesVisible: () => true,
 }));
 // The trip surface renders the summary card, which since f52c3657 asks the
 // instance whether it has a text model at all (`GET /parser-capabilities`).
