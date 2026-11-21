@@ -158,7 +158,11 @@ export const USER_EXPORT_SELECT = {
   },
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
-  documents: true,
+  // Its links travel with it (document-links D3): a document is evidence for
+  // several entries, and the old owner columns on the row name only the primary.
+  // The links hold the entry ids of this same export, so a reader restores
+  // entities and documents first and the links last.
+  documents: { include: { links: true } },
   // Standalone notes (forgejo#137): the text, the moment and its zone, where it
   // was written. The photo's bytes stay out, as every photo's do.
   notes: true,
