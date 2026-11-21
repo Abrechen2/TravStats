@@ -6,6 +6,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.40.** Six new migrations add the document links (a new table, filled once from where every document is filed today, plus triggers that keep it in step), the link suggestions, a parse timestamp on documents, and the source and origin of a place visit's photos with the switch for linking them automatically. Nothing is deleted. One behaviour changes on purpose: deleting an entry no longer deletes its documents — see "Changed".
+
+### Added
+
+- **One document can belong to several entries** (forgejo#425). A package tour or round-trip booking filed on the trip can also be the evidence for each flight, stay and transfer it covers: every one of them lists it, marked "Beleg aus: …" with a link to where it was filed. "Auch verknüpfen mit …" on a document and "Dokument aus der Reise verknüpfen" on an entry add links by hand; "Von diesem Eintrag entfernen" removes one link and can be undone.
+- **Importing a package booking links it to what it covers.** The review shows which flights, stays and cruise the booking is evidence for, and saving links the confirmed ones.
+- **The inbox suggests links for documents already stored.** When a document's reading names a flight number and day, a booking reference, a train or bus, a hotel with its nights or a rental confirmation that matches entries of the same trip, the inbox asks "Dieses Dokument belegt auch …". Accept all or some; a declined suggestion stays declined. The first look goes over every stored document once.
+
+- **Place visits pick up their photos from Immich and PhotoPrism by themselves.** Photos taken that day at the place are linked automatically — links only, never copies, never from inside a privacy zone — and marked "automatisch verknüpft" with their source. A removed photo does not come back, and a switch in settings turns it off. Settings show the progress and any source that failed or had too many photos to read in full.
+- **A trip's overview lists its visited places** in a scrollable panel by day, each linked to its place, with planned visits marked; "N Orte" in the head jumps there.
+
+### Changed
+
+- **Deleting an entry keeps its documents.** They are detached instead and deleted only after the grace period, and only if no other entry still holds them. "Überall löschen" on a document deletes it at once and first lists every entry it is attached to.
+- **Trip files (`.travstats`) carry a document's links** to every entry inside the trip; older files still import, and importing a file twice no longer drops links of a document you already have.
+- **Choosing a day on a roadtrip map shows that day's drive** in full colour and thicker, with the other days grey but visible; before, a roadtrip's whole route vanished as soon as a day was chosen (forgejo#424).
+
+### Fixed
+
+- **A document filed again while the nightly clean-up ran could still be deleted.** The clean-up now re-checks inside its delete.
+- **Reconciling an expense's receipts could unfile a document for good** without starting its grace period, so it was never cleaned up.
+- **PhotoPrism photos of a trip shared with another server no longer fail to load there**; the shared copy asked Immich for them.
+
 **Upgrading to 2.8.0-rc.39.** Three new migrations: a source column on trip photos (existing photos become Immich), a location-check marker on lodgings, and a data-only fix that moves date-only flights stored at midnight UTC to local noon in their zone. Nothing is deleted.
 
 ### Added
