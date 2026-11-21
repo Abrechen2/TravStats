@@ -238,10 +238,17 @@ describe("opt-in — off unless configured", () => {
     });
   });
 
-  it("an adsb.lol key counts as enabled and is sent on every request", async () => {
+  it("an adsb.lol key counts as enabled and is sent as x-api-key (forgejo#408: was api-auth)", async () => {
     keys.adsblol = "lol-key";
     const [lol] = await resolveAdsbEndpoints();
-    expect(lol).toMatchObject({ provider: "adsblol", headers: { "api-auth": "lol-key" } });
+    expect(lol.headers).toEqual({ "x-api-key": "lol-key" });
+    expect(lol.headers).not.toHaveProperty("api-auth");
+  });
+
+  it("adsb.lol without a key sends no key header", async () => {
+    adminRow.adsbLolEnabled = true;
+    const [lol] = await resolveAdsbEndpoints();
+    expect(lol).toMatchObject({ provider: "adsblol", headers: {} });
   });
 
   it("an enabled ADS-B provider counts as configured, but never as answering by date", async () => {

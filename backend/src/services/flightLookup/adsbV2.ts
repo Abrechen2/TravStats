@@ -57,14 +57,12 @@ export type AdsbResult =
   | { status: "disabled"; provider: AdsbProvider };
 
 /**
- * Header adsb.lol reads its optional key from. STILL UNVERIFIED (checked 2026-11-15):
- * https://api.adsb.lol/docs names no auth scheme, and the API source
- * (github.com/adsblol/api, src/adsb_api/app.py) says only "In the future, you
- * will require an API key which you can get by feeding to adsb.lol" - no header
- * is read anywhere yet. `api-auth` is kept as the placeholder; the key is
- * harmless today because the API ignores it.
+ * Header adsb.lol reads its optional key from: `x-api-key: <key>`. Source: the
+ * adsb.lol docs (https://next.adsb.lol/docs/open-data/api), confirmed by a live
+ * check on 2026-11-21 (HTTP 200 against api.adsb.lol/v2). Earlier this was the
+ * unverified placeholder `api-auth` (forgejo#408).
  */
-export const ADSBLOL_KEY_HEADER = "api-auth";
+export const ADSBLOL_KEY_HEADER = "x-api-key";
 const ADSB_LOL_BASE = "https://api.adsb.lol/v2";
 /** airplanes.live: same readsb v2 JSON, keyless, non-commercial, about 1 request/s. */
 export const AIRPLANES_LIVE_BASE = "https://api.airplanes.live/v2";
