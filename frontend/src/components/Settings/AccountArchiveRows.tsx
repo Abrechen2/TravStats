@@ -101,6 +101,11 @@ function ExportRow(): JSX.Element {
         result.missingFiles > 0
           ? ` ${t("settings:accountArchive.missingFiles", { count: result.missingFiles })}`
           : "";
+      const omitted = (result.omittedFiles ?? [])
+        .map(
+          (o) => `${o.dir}/${o.name} (${t(`settings:accountArchive.omittedReason.${o.reason}`)})`
+        )
+        .join("; ");
       if (missing) logger.warn("Account archive written without some files:", result.missingFiles);
       setPhase({
         kind: "done",
@@ -109,7 +114,9 @@ function ExportRow(): JSX.Element {
             size: formatBytes(result.bytes),
             rows: sumRows(result.tables),
             files: result.files,
-          }) + missing,
+          }) +
+          missing +
+          (omitted ? ` ${omitted}` : ""),
       });
     } catch (err) {
       setPhase(failure(err));

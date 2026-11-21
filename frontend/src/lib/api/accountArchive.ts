@@ -21,6 +21,8 @@ export interface AccountArchiveExport {
   bytes: number;
   files: number;
   missingFiles: number;
+  /** Files left out of the archive, each with why. */
+  omittedFiles?: Array<{ dir: string; name: string; reason: "not_owned" | "not_found" }>;
   tables: Record<string, number>;
 }
 
