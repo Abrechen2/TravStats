@@ -104,6 +104,13 @@ model User {
   // middleware/auth.ts. A counter rather than a timestamp because `iat` has
   // second resolution, which would leave a one-second window open.
   sessionEpoch                    Int                          @default(0) @map("session_epoch")
+  /// Set while the account is being deleted (forgejo#415): the deletion is reserved under the
+  /// user-count lock (role and sign-in off) before federated peers are told. A marker older than
+  /// a few minutes is a deletion a crash interrupted; `recoverStalledDeletions` finishes it, or
+  /// gives back the two prior values when finishing would leave the instance without an admin.
+  deletionStartedAt               DateTime?                    @map("deletion_started_at")
+  deletionPriorAdmin              Boolean?                     @map("deletion_prior_admin")
+  deletionPriorActive             Boolean?                     @map("deletion_prior_active")
   // Two-factor (TOTP). Opt-in per user — null everywhere means "not using it",
   // which is the state every account starts in and most stay in.
   // `twoFactorSecret` is ENCRYPTED at rest via utils/encryption.ts; the pending
