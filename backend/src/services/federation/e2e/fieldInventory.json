@@ -373,7 +373,7 @@
     "personal": "",
     "photos": "",
     "documents": "id originalName mimetype sizeBytes sha256 pageCount format kind issuedOn source parsedDomain parsedPayload flightId cruiseId lodgingStayId tripId placeVisitId railJourneyId rentalBookingId busJourneyId ferryJourneyId tripExpenseId rentalCategory createdAt linkedAt unlinkedAt",
-    "excluded": "userId storedName"
+    "excluded": "userId storedName parsedAt"
   },
   "Note": {
     "details": "",
