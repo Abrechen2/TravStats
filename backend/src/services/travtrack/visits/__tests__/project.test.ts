@@ -110,8 +110,9 @@ describe("projectVisitSuggestions", () => {
     await setLocationProvider(userId, "travtrack");
     await prisma.userSettings.update({
       where: { userId },
-      data: { enabledDomains: ["poi"], staySuggestionsEnabled: true },
+      data: { enabledDomains: ["poi"], staySuggestionsEnabled: true, data: {} },
     });
+    await prisma.trip.deleteMany({ where: { userId } });
     await prisma.dawarichStayScan.update({ where: { userId }, data: { enabled: true } });
     await prisma.dawarichStay.deleteMany({ where: { userId } });
     await prisma.placeVisit.deleteMany({ where: { userId } });
@@ -348,6 +349,52 @@ describe("projectVisitSuggestions", () => {
     const r = await rescanVisitDays(userId, 3, deps());
     expect(r.created).toBe(1);
     expect(await done("2026-09-01")).toBe(false);
+  });
+
+  // 15:10 UTC on the scanned day is 00:10 the NEXT day in Seoul: the stop's own local day decides.
+  const LATE = Date.parse(`${DAY}T15:10:00Z`);
+  const inSeoul = (extra: object = {}) =>
+    prisma.userSettings.update({
+      where: { userId },
+      data: { data: { display: { timezone: "Asia/Seoul" }, ...extra } },
+    });
+
+  it("a stop just after local midnight belongs to the trip that starts that local day, not the scanned UTC day", async () => {
+    await inSeoul();
+    const trip = await prisma.trip.create({
+      data: {
+        userId,
+        name: "Seoul",
+        startDate: new Date("2026-11-11T00:00:00Z"),
+        endDate: new Date("2026-11-14T00:00:00Z"),
+        startDay: new Date("2026-11-11T00:00:00Z"),
+        endDay: new Date("2026-11-14T00:00:00Z"),
+        startZone: "Asia/Seoul",
+        endZone: "Asia/Seoul",
+      },
+    });
+    await stand(25, SEOUL, LATE);
+    await dirty();
+    await projectVisitSuggestions(userId, deps());
+    expect((await rows())[0].tripId).toBe(trip.id);
+  });
+
+  it("home suppression reads the stop's local day: a stop at the home that is confirmed from that local day is not a venue", async () => {
+    await inSeoul({
+      homePeriods: [
+        {
+          fromDate: "2026-11-11",
+          toDate: null,
+          residence: { name: "Jongno", lat: SEOUL.lat + 0.001, lon: SEOUL.lon },
+          residenceConfirmed: true,
+          airports: [{ code: "ICN", primary: true }],
+        },
+      ],
+    });
+    await stand(25, SEOUL, LATE);
+    await dirty();
+    const r = await projectVisitSuggestions(userId, deps());
+    expect(r).toMatchObject({ created: 0, suppressed: 1 });
   });
 
   it("without the scan's consent nothing is asked, and the day is acknowledged unread", async () => {
