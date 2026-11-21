@@ -612,14 +612,35 @@ async function fileDocuments(
     const sources =
       d.links.length > 0
         ? d.links
-        : [{ entity: d.entity, role: "primary" as const, provenance: "user" as const }];
+        : [
+            {
+              entity: d.entity,
+              role: "primary" as const,
+              provenance: "user" as const,
+              rentalCategory: null,
+            },
+          ];
     const wanted = sources.flatMap((l) => {
       const entry = resolve(l.entity);
-      return entry ? [{ entry, provenance: l.provenance, primary: l.role === "primary" }] : [];
+      return entry
+        ? [
+            {
+              entry,
+              provenance: l.provenance,
+              primary: l.role === "primary",
+              rentalCategory: l.rentalCategory ?? null,
+            },
+          ]
+        : [];
     });
     // An entry the import skipped without a row still has a trip to go on.
     if (wanted.length === 0)
-      wanted.push({ entry: { type: "trip", id: tripId }, provenance: "user", primary: true });
+      wanted.push({
+        entry: { type: "trip", id: tripId },
+        provenance: "user",
+        primary: true,
+        rentalCategory: null,
+      });
     const known = await prisma.document.findFirst({
       where: { userId, sha256: sha256Hex(bytes) },
       select: { id: true },
@@ -638,6 +659,7 @@ async function fileDocuments(
           issuedOn: d.issuedOn ? new Date(`${d.issuedOn}T00:00:00.000Z`) : null,
           entry: first.entry,
           linkProvenance: first.provenance,
+          ...(first.entry.type === "rentalBooking" ? { rentalCategory: first.rentalCategory } : {}),
         });
         documentId = created.document.id;
         rest = wanted.filter((w) => w !== first);
@@ -651,7 +673,11 @@ async function fileDocuments(
             tx,
             userId,
             documentId!,
-            rest.map(({ entry, provenance }) => ({ entry, provenance }))
+            rest.map(({ entry, provenance, rentalCategory }) => ({
+              entry,
+              provenance,
+              rentalCategory,
+            }))
           )
         );
       }

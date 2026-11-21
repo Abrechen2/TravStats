@@ -5,6 +5,7 @@
 import { prisma } from "../../../db";
 import type { Document } from "../../../prisma";
 import { documentPath } from "../../documents/documentStore";
+import type { RentalDocumentCategory } from "../../documents/documentFormats";
 import type { LinkProvenance, LinkRole } from "../../documents/documentLinks";
 import type { LoadedTrip, PackedFile } from "./collect";
 import { extensionOf, isoDay } from "./collectShared";
@@ -74,7 +75,14 @@ export async function collectDocuments(
     const links = d.links.flatMap((l) => {
       const entity = entityOf(l);
       return entity
-        ? [{ entity, role: l.role as LinkRole, provenance: l.provenance as LinkProvenance }]
+        ? [
+            {
+              entity,
+              role: l.role as LinkRole,
+              provenance: l.provenance as LinkProvenance,
+              rentalCategory: l.rentalCategory as RentalDocumentCategory | null,
+            },
+          ]
         : [];
     });
     // Where the document is filed inside the file: its in-scope primary, else its
@@ -88,8 +96,8 @@ export async function collectDocuments(
     file.documents.push({
       file: name,
       entity,
-      // One link is the entity itself; only several make a version-5 document.
-      links: links.length > 1 ? links : [],
+      // One plain link is the entity itself; several, or a rental category, make a version-5 document.
+      links: links.length > 1 || links.some((l) => l.rentalCategory) ? links : [],
       kind: d.kind,
       issuedOn: isoDay(d.issuedOn),
       originalName: d.originalName,

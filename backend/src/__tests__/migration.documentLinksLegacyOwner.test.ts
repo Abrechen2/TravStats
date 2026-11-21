@@ -73,7 +73,7 @@ describe("documents_after_owner_set (legacy owner-column writers)", () => {
     expect((await visitDocumentCounts(userId, [visitId])).get(visitId)).toBe(1);
   });
 
-  it("an UPDATE to another target adds a covers link beside the existing primary", async () => {
+  it("an UPDATE that MOVES the owner moves the primary link, leaving no link to the old one", async () => {
     const docId = await insertDoc("update", "flight_id", flightA);
     await prisma.$executeRawUnsafe(
       `UPDATE documents SET flight_id = $1 WHERE id = $2`,
@@ -86,7 +86,7 @@ describe("documents_after_owner_set (legacy owner-column writers)", () => {
         l.role,
       ])
     );
-    expect(roles).toEqual({ [flightA]: "primary", [flightB]: "covers" });
+    expect(roles).toEqual({ [flightB]: "primary" });
   });
 
   it("does not double a link the service already wrote", async () => {
