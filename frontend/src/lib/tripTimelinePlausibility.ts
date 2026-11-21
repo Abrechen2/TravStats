@@ -209,13 +209,24 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
       }
     } else {
       // Collected before the traveller arrived — same day, the only day it is certain.
-      // Only the arrival that brought the traveller to the station counts: the
-      // first one INTO the town. A later one is the way back from a side trip.
-      const brought = legs
+      // Only the arrival that brought the traveller to the station counts. One
+      // before the pickup with no departure from the town in between has
+      // already done it; a later one is the way back from a side trip.
+      const into = legs
         .filter(
           (l) => near(place(e), l.arr, SAME_PLACE_KM) && !near(place(e), l.dep, SAME_PLACE_KM)
         )
-        .sort((a, b) => a.end.utc.localeCompare(b.end.utc))[0];
+        .sort((a, b) => a.end.utc.localeCompare(b.end.utc));
+      const lastBefore = [...into].reverse().find((l) => !endsAfter(l.end, e.when));
+      const leftSince =
+        lastBefore &&
+        legs.some(
+          (l) =>
+            near(place(e), l.dep, SAME_PLACE_KM) &&
+            l.start.utc >= lastBefore.end.utc &&
+            !endsAfter(l.start, e.when)
+        );
+      const brought = lastBefore && !leftSince ? null : into.find((l) => endsAfter(l.end, e.when));
       if (
         brought &&
         compareDays(brought.end, e.when) === "same" &&

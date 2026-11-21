@@ -424,4 +424,32 @@ describe("timeline plausibility — false results (forgejo#426, round 2)", () =>
     );
     expect(codes([land, pick, side, back])).toEqual(["rentalPickupBeforeArrival:rental-pickup-r"]);
   });
+
+  it("flags a pickup before the arrival of a second visit to the station's town", () => {
+    const first = flight(
+      "f",
+      ORD,
+      MCO,
+      at("2009-04-06T06:00:00", CDT),
+      at("2009-04-06T09:30:00", EDT)
+    );
+    const away = flight(
+      "a",
+      MCO,
+      MIA,
+      at("2009-04-07T12:00:00", EDT),
+      at("2009-04-07T13:00:00", EDT)
+    );
+    const second = flight(
+      "s",
+      MIA,
+      MCO,
+      at("2009-04-08T11:00:00", EDT),
+      at("2009-04-08T12:00:00", EDT)
+    );
+    const pick = rental("r", "rental-pickup", MCO, at("2009-04-08T09:00:00", EDT));
+    expect(codes([first, away, second, pick])).toEqual([
+      "rentalPickupBeforeArrival:rental-pickup-r",
+    ]);
+  });
 });
