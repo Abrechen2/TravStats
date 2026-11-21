@@ -124,10 +124,10 @@ export function TripGlobeAnnotations({
           ref={(el) => {
             chipNodes.current[i] = el;
           }}
-          className="absolute left-0 top-0 rounded-sm px-1 text-[11px] font-bold leading-4 tabular-nums"
+          className="absolute left-0 top-0 rounded-sm px-0.5 text-[10px] font-bold leading-3 tabular-nums"
           style={{
             display: "none",
-            opacity: chip.dim ? FAINT : 1,
+            opacity: chip.dim ? FAINT : 0.8,
             background: `rgb(${TRIP_MAP_CHROME.labelText.slice(0, 3).join(",")})`,
             color: `rgb(${TRIP_MAP_CHROME.outline.slice(0, 3).join(",")})`,
           }}

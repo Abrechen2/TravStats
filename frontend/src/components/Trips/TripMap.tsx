@@ -376,8 +376,10 @@ export default function TripMap({
         lodgingPoints,
         occlusionExt,
         occlusionProps,
+        dayChosen: day !== null,
       }),
     [
+      day,
       flightArcs,
       cruisePaths,
       tourPathData,
@@ -405,6 +407,7 @@ export default function TripMap({
           labelItems: data.labelItems,
           directionLines,
           zoom,
+          dayChosen: day !== null,
         }),
       };
     } catch (err) {
@@ -425,6 +428,7 @@ export default function TripMap({
     data.labelItems,
     directionLines,
     zoom,
+    day,
   ]);
 
   const mercatorLayers = mercator.layers;
@@ -496,7 +500,8 @@ export default function TripMap({
   const globeChips = useMemo<GlobeChip[]>(
     () =>
       data.labelItems
-        .filter((i) => i.seq !== undefined)
+        // A faint number is noise: with a day chosen only that day's are drawn.
+        .filter((i) => i.seq !== undefined && !(day !== null && i.dim))
         .map((i) => ({
           key: `${i.kind}-${i.seq}`,
           lng: i.position[0],
@@ -504,7 +509,7 @@ export default function TripMap({
           text: String(i.seq),
           dim: i.dim === true,
         })),
-    [data.labelItems]
+    [data.labelItems, day]
   );
   const globeArrows = useMemo(() => arrowData(directionLines), [directionLines]);
   const globeAirportLabels = useMemo(() => toGlobeLabelPoints(airportPoints), [airportPoints]);

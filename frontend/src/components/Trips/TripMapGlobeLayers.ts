@@ -39,6 +39,7 @@ import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
+import { dayState, dimFirst, emphasisColor, emphasisWidth } from "./tripMapEmphasis";
 import {
   EarthOcclusionExtension,
   type EarthOcclusionExtensionProps,
@@ -124,8 +125,6 @@ const GLOBE_STOP_RADIUS_PX = 5.5;
 
 const MARKER_ALPHA = 230;
 const LINE_ALPHA = 235;
-/** What a day filter leaves of an entry that is not on the chosen day. */
-export const DIM_ALPHA = 55;
 /** Marker outline — the app background, so a dot keeps a rim against both a
  *  bright satellite basemap and a dark one. Same value the mercator stack and
  *  the dashboard globe use for the same job. */
@@ -215,6 +214,8 @@ export function toGlobeLodgingPoints(
 }
 
 export interface TripMapGlobeLayersOptions {
+  /** A day is chosen: the rest is grey and thin, the day wide (forgejo#424). */
+  dayChosen?: boolean;
   flightArcs: readonly TripFlightArc[];
   cruisePaths: readonly TripCruisePath[];
   tourPaths: readonly TourPathDatum[];
@@ -234,14 +235,19 @@ export interface TripMapGlobeStack {
   native: Layer[];
 }
 
-function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: number): Layer {
+function markerLayer(
+  id: string,
+  data: readonly TripPointDatum[],
+  radiusPx: number,
+  chosen: boolean
+): Layer {
   return new ScatterplotLayer<TripPointDatum>({
     id,
-    data: data as TripPointDatum[],
+    data: dimFirst(data),
     getPosition: (d) => d.position,
-    getFillColor: (d) =>
-      [...d.color, d.dim ? DIM_ALPHA : MARKER_ALPHA] as [number, number, number, number],
-    getRadius: radiusPx,
+    getFillColor: (d) => emphasisColor(d.color, dayState(d.dim, chosen), MARKER_ALPHA),
+    getRadius: (d) => emphasisWidth(radiusPx, dayState(d.dim, chosen)),
+    updateTriggers: { getFillColor: [chosen], getRadius: [chosen] },
     radiusUnits: "pixels",
     stroked: true,
     getLineColor: MARKER_OUTLINE,
@@ -252,15 +258,20 @@ function markerLayer(id: string, data: readonly TripPointDatum[], radiusPx: numb
 }
 
 export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMapGlobeStack {
-  const { flightArcs, cruisePaths, tourPaths, airportPoints, stopPoints, lodgingPoints } = opts;
+  const { airportPoints, stopPoints, lodgingPoints } = opts;
+  const chosen = opts.dayChosen === true;
+  const flightArcs = dimFirst(opts.flightArcs);
+  const cruisePaths = dimFirst(opts.cruisePaths);
+  const tourPaths = dimFirst(opts.tourPaths);
+  const stateOf = (d: { dim?: boolean }) => dayState(d.dim, chosen);
 
   const arcs = new PathLayer<TripFlightArc>({
     id: "trip-flight-arcs",
     data: flightArcs as TripFlightArc[],
     getPath: tripArcWaypoints,
-    getColor: (d) =>
-      [...d.color, d.dim ? DIM_ALPHA : LINE_ALPHA] as [number, number, number, number],
-    getWidth: 2,
+    getColor: (d) => emphasisColor(d.color, stateOf(d), LINE_ALPHA),
+    getWidth: (d) => emphasisWidth(2, stateOf(d)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
     widthMinPixels: 1.5,
     widthMaxPixels: 4,
@@ -285,9 +296,9 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
       (p) => p.cruiseId
     ),
     getPath: (d) => d.path,
-    getColor: (d) =>
-      [...d.color, d.dim ? DIM_ALPHA : LINE_ALPHA] as [number, number, number, number],
-    getWidth: 3,
+    getColor: (d) => emphasisColor(d.color, stateOf(d), LINE_ALPHA),
+    getWidth: (d) => emphasisWidth(3, stateOf(d)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
     widthMinPixels: 2,
     widthMaxPixels: 5,
@@ -304,16 +315,11 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     id: "trip-tour-paths",
     data: tourPaths as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) =>
-      [...d.color, d.dim ? DIM_ALPHA : d.isPlaceholder ? 170 : 255] as [
-        number,
-        number,
-        number,
-        number,
-      ],
-    getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
+    getColor: (d) => emphasisColor(d.color, stateOf(d), d.isPlaceholder ? 170 : 255),
+    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, stateOf(d)),
+    updateTriggers: { getColor: [chosen], getWidth: [chosen] },
     widthUnits: "pixels",
-    widthMinPixels: 2,
+    widthMinPixels: 1,
     capRounded: true,
     jointRounded: true,
     wrapLongitude: false,
@@ -325,9 +331,9 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): TripMa
     native: [
       cruises,
       tours,
-      markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX),
-      markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX),
-      markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX),
+      markerLayer("trip-airports", airportPoints, GLOBE_AIRPORT_RADIUS_PX, chosen),
+      markerLayer("lodging-pins", lodgingPoints, GLOBE_STOP_RADIUS_PX, chosen),
+      markerLayer("trip-stops", stopPoints, GLOBE_STOP_RADIUS_PX, chosen),
     ],
   };
 }

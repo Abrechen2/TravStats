@@ -12,17 +12,12 @@ import type { TourPathDatum } from "../layers/tourPathsLayer";
 import { shareMapLabels } from "../map/labelObstacles";
 import type { LodgingColorConfig } from "../../lib/lodgingColor";
 import type { Lodging } from "../../types/lodging";
-import {
-  DIM_ALPHA,
-  type TripCruisePath,
-  type TripFlightArc,
-  type TripPointDatum,
-} from "./TripMapGlobeLayers";
+import { type TripCruisePath, type TripFlightArc, type TripPointDatum } from "./TripMapGlobeLayers";
 import { TRIP_MAP_CHROME } from "./tripMapColors";
 import { buildTripLabelLayers, type TripLabelItem } from "./tripMapLabels";
 import { buildArrowLayer, type DirectionLine } from "./tripMapArrows";
+import { dayState, dimFirst, emphasisColor, emphasisWidth } from "./tripMapEmphasis";
 
-type Rgba = [number, number, number, number];
 const MARKER_ALPHA = 230;
 const DIM_PIN_OPACITY = 0.25;
 
@@ -40,21 +35,35 @@ export interface MercatorLayerInput {
   /** Lines to put a direction arrow on (hidden groups already removed). */
   directionLines: readonly DirectionLine[];
   zoom: number;
+  /** A day is chosen: what is off it is drawn grey and thin, what is on it wide. */
+  dayChosen?: boolean;
 }
 
-const alphaOf = (dim: boolean | undefined, full: number): number => (dim ? DIM_ALPHA : full);
-
 export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
-  const { flightArcs, cruisePaths, airportPoints, stopPoints, zoom } = input;
+  const { zoom } = input;
+  const chosen = input.dayChosen === true;
+  const flightArcs = dimFirst(input.flightArcs);
+  const cruisePaths = dimFirst(input.cruisePaths);
+  const airportPoints = dimFirst(input.airportPoints);
+  const stopPoints = dimFirst(input.stopPoints);
+  const stateOf = (d: { dim?: boolean }) => dayState(d.dim, chosen);
+  const triggers = {
+    updateTriggers: { getColor: [chosen], getWidth: [chosen], getRadius: [chosen] },
+  };
 
   const arcs = new ArcLayer<TripFlightArc>({
     id: "trip-flight-arcs",
     data: flightArcs as TripFlightArc[],
     getSourcePosition: (d) => d.source,
     getTargetPosition: (d) => d.target,
-    getSourceColor: (d) => [...d.color, alphaOf(d.dim, 230)] as Rgba,
-    getTargetColor: (d) => [...d.color, alphaOf(d.dim, 230)] as Rgba,
-    getWidth: 2,
+    getSourceColor: (d) => emphasisColor(d.color, stateOf(d), 230),
+    getTargetColor: (d) => emphasisColor(d.color, stateOf(d), 230),
+    getWidth: (d) => emphasisWidth(2, stateOf(d)),
+    updateTriggers: {
+      getSourceColor: [chosen],
+      getTargetColor: [chosen],
+      getWidth: [chosen],
+    },
     greatCircle: true,
     // Flat. deck.gl's ArcLayer bows every arc up out of the map by default,
     // which reads as depth on a tilted view and as a meaningless bulge on a
@@ -75,9 +84,10 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
       (p) => p.cruiseId
     ),
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, alphaOf(d.dim, 230)] as Rgba,
-    getWidth: 3,
-    widthMinPixels: 2,
+    getColor: (d) => emphasisColor(d.color, stateOf(d), 230),
+    getWidth: (d) => emphasisWidth(3, stateOf(d)),
+    widthMinPixels: 1,
+    ...triggers,
     pickable: true,
     autoHighlight: true,
     highlightColor: TRIP_MAP_CHROME.highlight,
@@ -87,10 +97,11 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
     id: "trip-airports",
     data: airportPoints as TripPointDatum[],
     getPosition: (d) => d.position,
-    getFillColor: (d) => [...d.color, alphaOf(d.dim, MARKER_ALPHA)] as Rgba,
+    getFillColor: (d) => emphasisColor(d.color, stateOf(d), MARKER_ALPHA),
     getRadius: (d) => d.radiusMeters,
     radiusMinPixels: 4,
     radiusMaxPixels: 8,
+    ...triggers,
     stroked: true,
     getLineColor: TRIP_MAP_CHROME.outline,
     lineWidthMinPixels: 1,
@@ -108,10 +119,11 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
     id: "trip-tour-paths",
     data: input.tourPathData as TourPathDatum[],
     getPath: (d) => d.path,
-    getColor: (d) => [...d.color, d.dim ? DIM_ALPHA : d.isPlaceholder ? 170 : 255] as Rgba,
-    getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
+    getColor: (d) => emphasisColor(d.color, stateOf(d), d.isPlaceholder ? 170 : 255),
+    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, stateOf(d)),
     widthUnits: "pixels",
-    widthMinPixels: 2,
+    widthMinPixels: 1,
+    ...triggers,
     pickable: true,
     autoHighlight: true,
     highlightColor: TRIP_MAP_CHROME.highlight,
@@ -121,10 +133,11 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
     id: "trip-stops",
     data: stopPoints as TripPointDatum[],
     getPosition: (d) => d.position,
-    getFillColor: (d) => [...d.color, alphaOf(d.dim, MARKER_ALPHA)] as Rgba,
+    getFillColor: (d) => emphasisColor(d.color, stateOf(d), MARKER_ALPHA),
     getRadius: (d) => d.radiusMeters,
     radiusMinPixels: 6,
     radiusMaxPixels: 12,
+    ...triggers,
     stroked: true,
     getLineColor: TRIP_MAP_CHROME.outline,
     lineWidthMinPixels: 1.5,
@@ -157,7 +170,7 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
   ];
 
   const arrows = buildArrowLayer(input.directionLines);
-  const labels = buildTripLabelLayers(input.labelItems, zoom);
+  const labels = buildTripLabelLayers(input.labelItems, zoom, chosen);
   const own = [
     paths,
     arcs,

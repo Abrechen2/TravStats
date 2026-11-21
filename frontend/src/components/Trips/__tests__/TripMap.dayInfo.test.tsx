@@ -264,9 +264,10 @@ describe("trip map: day filter", () => {
       flightId: string;
       dim: boolean;
     }>;
+    // Faint entries come first, so the chosen day is drawn on top (forgejo#424).
     expect(arcs.map((a) => [a.flightId, a.dim])).toEqual([
-      ["f1", false],
       ["f2", true],
+      ["f1", false],
     ]);
     const stops = layerById("trip-stops")?.props.data as Array<{ label: string; dim: boolean }>;
     expect(stops.map((s) => [s.label, s.dim])).toEqual([
