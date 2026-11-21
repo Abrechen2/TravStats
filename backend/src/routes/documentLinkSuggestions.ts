@@ -2,6 +2,7 @@ import { Router, type NextFunction, type Response } from "express";
 import { z } from "zod";
 
 import { authenticate, requireWriteScope, type AuthRequest } from "../middleware/auth";
+import { rejectDemo } from "../middleware/demoGuard";
 import { statsLimiter } from "../middleware/rateLimit";
 import {
   ensureDocumentLinkPass,
@@ -69,6 +70,7 @@ router.get("/count", async (req: AuthRequest, res: Response, next: NextFunction)
 
 router.post(
   "/:documentId/accept",
+  rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = idsBody.parse(req.body ?? {});
@@ -83,6 +85,7 @@ router.post(
 
 router.post(
   "/:documentId/dismiss",
+  rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const body = idsBody.parse(req.body ?? {});
