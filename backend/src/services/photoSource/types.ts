@@ -27,6 +27,11 @@ export interface PhotoSourceAlbum {
   albumName: string;
   assetCount: number;
   thumbnailAssetId: string | null;
+  /**
+   * What kind of collection this is. Absent for Immich (always an album);
+   * PhotoPrism also has folders, moments, months and states (forgejo#434).
+   */
+  kind?: "album" | "folder" | "moment" | "month" | "state";
 }
 
 export interface PhotoSourceAsset {

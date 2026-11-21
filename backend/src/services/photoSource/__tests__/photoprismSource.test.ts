@@ -166,10 +166,18 @@ describe("egress (forgejo#411 rule)", () => {
   });
 });
 
+/** Answers `/albums?type=<kind>` from `byKind` (empty list when absent), nothing else. */
+function mockAlbumKinds(byKind: Record<string, unknown[]>): void {
+  mockedAxios.get.mockImplementation((async (url: unknown) => {
+    const kind = /type=(\w+)/.exec(String(url))?.[1] ?? "";
+    return { data: byKind[kind] ?? [] };
+  }) as never);
+}
+
 describe("listAlbums", () => {
   it("sends BOTH type and count (either alone is a 400/403) and maps the albums", async () => {
-    mockedAxios.get.mockResolvedValueOnce({
-      data: [
+    mockAlbumKinds({
+      album: [
         { UID: "as6sg6bxpogaaba8", Title: "Lisbon", PhotoCount: 3, Thumb: HASH },
         { UID: "bad uid!", Title: "dropped" },
         { UID: "as6sg6bxpogaaba9", Title: "No cover", PhotoCount: 0, Thumb: "" },
@@ -183,26 +191,63 @@ describe("listAlbums", () => {
       Authorization: "Bearer app-password-1",
     });
     expect(albums).toEqual([
-      { id: "as6sg6bxpogaaba8", albumName: "Lisbon", assetCount: 3, thumbnailAssetId: HASH },
-      { id: "as6sg6bxpogaaba9", albumName: "No cover", assetCount: 0, thumbnailAssetId: null },
+      {
+        id: "as6sg6bxpogaaba8",
+        albumName: "Lisbon",
+        assetCount: 3,
+        thumbnailAssetId: HASH,
+        kind: "album",
+      },
+      {
+        id: "as6sg6bxpogaaba9",
+        albumName: "No cover",
+        assetCount: 0,
+        thumbnailAssetId: null,
+        kind: "album",
+      },
     ]);
+  });
+
+  it("lists folders, moments, months and states too, each tagged with its kind (forgejo#434: a library with no manual album)", async () => {
+    mockAlbumKinds({
+      folder: [{ UID: "asfolder00000001", Title: "2024/Lisbon", PhotoCount: 40 }],
+      moment: [{ UID: "asmoment00000001", Title: "Summer in Porto", PhotoCount: 12 }],
+      month: [{ UID: "asmonth000000001", Title: "May 2024", PhotoCount: 90 }],
+      state: [{ UID: "asstate000000001", Title: "Algarve", PhotoCount: 7 }],
+    });
+    const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
+    expect(albums.map((a) => [a.kind, a.id])).toEqual([
+      ["folder", "asfolder00000001"],
+      ["moment", "asmoment00000001"],
+      ["month", "asmonth000000001"],
+      ["state", "asstate000000001"],
+    ]);
+    for (const kind of ["album", "folder", "moment", "month", "state"]) {
+      expect(calledUrls().some((u) => u.includes(`/albums?type=${kind}&count=1000`))).toBe(true);
+    }
   });
 
   it("pages through a big library by offset instead of silently stopping at one page", async () => {
     const page = (from: number, n: number) =>
-      Array.from({ length: n }, (_, i) => ({ UID: `album${from + i}`, Title: `A${from + i}` }));
-    mockedAxios.get
-      .mockResolvedValueOnce({ data: page(0, 1000) })
-      .mockResolvedValueOnce({ data: page(1000, 3) });
+      Array.from({ length: n }, (_, i) => ({ UID: `folder${from + i}`, Title: `A${from + i}` }));
+    mockedAxios.get.mockImplementation((async (url: unknown) => {
+      const u = String(url);
+      if (!u.includes("type=folder")) return { data: [] };
+      return { data: u.includes("offset=0") ? page(0, 1000) : page(1000, 3) };
+    }) as never);
     const albums = await createPhotoprismPhotoSource(CONN).listAlbums();
     expect(albums).toHaveLength(1003);
-    expect(calledUrls()[1]).toContain("offset=1000");
+    expect(calledUrls().some((u) => u.includes("type=folder") && u.includes("offset=1000"))).toBe(
+      true
+    );
   });
 
-  it("fails loudly (protocol) instead of returning a prefix when the library never ends", async () => {
-    mockedAxios.get.mockResolvedValue({
-      data: Array.from({ length: 1000 }, (_, i) => ({ UID: `album${i}`, Title: "x" })),
-    });
+  it("fails loudly (protocol) instead of returning a prefix when a kind never ends", async () => {
+    mockedAxios.get.mockImplementation((async (url: unknown) => ({
+      data: String(url).includes("type=month")
+        ? Array.from({ length: 1000 }, (_, i) => ({ UID: `album${i}`, Title: "x" }))
+        : [],
+    })) as never);
     await expect(createPhotoprismPhotoSource(CONN).listAlbums()).rejects.toMatchObject({
       kind: "protocol",
     });
@@ -228,12 +273,18 @@ describe("listAlbumAssets", () => {
     FileName: "2024/05/IMG_1.jpg",
     ...over,
   });
+  const ALBUM = "as6sg6bxpogaaba8";
+  /** First call reads the album record, later ones answer the photo list. */
+  const withRecord = (record: Record<string, unknown>, photos: unknown) => {
+    mockedAxios.get.mockResolvedValueOnce({ data: record }).mockResolvedValue({ data: photos });
+  };
 
   it("asks for a page oldest first and keeps paging while pages are full", async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [photo({})] });
-    const page = await createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 2);
-    expect(calledUrls()[0]).toBe(
-      "https://photos.example.com/api/v1/photos?s=as6sg6bxpogaaba8&count=500&offset=1000&order=oldest"
+    withRecord({ Type: "album" }, [photo({})]);
+    const page = await createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 2);
+    expect(calledUrls()[0]).toBe(`https://photos.example.com/api/v1/albums/${ALBUM}`);
+    expect(calledUrls()[1]).toBe(
+      `https://photos.example.com/api/v1/photos?s=${ALBUM}&count=500&offset=1000&order=oldest`
     );
     expect(page.nextPage).toBeNull();
     expect(page.assets[0]).toMatchObject({
@@ -246,38 +297,72 @@ describe("listAlbumAssets", () => {
       sizeBytes: null,
     });
 
+    mockedAxios.get.mockReset();
     const full = Array.from({ length: 500 }, (_, i) =>
       photo({ Hash: i.toString(16).padStart(40, "0") })
     );
-    mockedAxios.get.mockResolvedValueOnce({ data: full });
-    expect(
-      (await createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 0)).nextPage
-    ).toBe(1);
+    withRecord({ Type: "album" }, full);
+    expect((await createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 0)).nextPage).toBe(1);
+  });
+
+  it.each([
+    [
+      "moment",
+      { Type: "moment", Filter: "country:pt year:2024 month:5" },
+      "country%3Apt%20year%3A2024%20month%3A5",
+    ],
+    ["month", { Type: "month", Filter: "year:2024 month:5" }, "year%3A2024%20month%3A5"],
+    [
+      "state",
+      { Type: "state", Filter: 'country:pt state:"Algarve"' },
+      "country%3Apt%20state%3A%22Algarve%22",
+    ],
+    ["folder", { Type: "folder", Path: "2024/Lisbon", Filter: "" }, "path%3A%222024%2FLisbon%22"],
+  ])("selects a %s by its own filter (q=), not by s=<uid>", async (_kind, record, expected) => {
+    withRecord(record, [photo({})]);
+    const page = await createPhotoprismPhotoSource(CONN).listAlbumAssets("asother000000001", 0);
+    expect(calledUrls()[1]).toBe(
+      `https://photos.example.com/api/v1/photos?q=${expected}&count=500&offset=0&order=oldest`
+    );
+    expect(page.assets).toHaveLength(1);
+  });
+
+  it("refuses a moment with no filter instead of reading the whole library", async () => {
+    withRecord({ Type: "moment", Filter: "" }, [photo({})]);
+    await expect(
+      createPhotoprismPhotoSource(CONN).listAlbumAssets("asother000000001", 0)
+    ).rejects.toMatchObject({ kind: "protocol" });
+    expect(calledUrls().some((u) => u.includes("/photos?"))).toBe(false);
+  });
+
+  it("reads the album record once per source, not once per page", async () => {
+    withRecord({ Type: "month", Filter: "year:2024 month:5" }, []);
+    const source = createPhotoprismPhotoSource(CONN);
+    await source.listAlbumAssets("asother000000001", 0);
+    await source.listAlbumAssets("asother000000001", 1);
+    expect(calledUrls().filter((u) => u.includes("/albums/"))).toHaveLength(1);
   });
 
   it("reads Lat/Lng 0/0 as no position, not as a point in the Gulf of Guinea", async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [photo({ Lat: 0, Lng: 0 })] });
-    const [asset] = (await createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 0))
-      .assets;
+    withRecord({ Type: "album" }, [photo({ Lat: 0, Lng: 0 })]);
+    const [asset] = (await createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 0)).assets;
     expect(asset.lat).toBeNull();
     expect(asset.lon).toBeNull();
   });
 
   it("reports no capture time (null, not 1970) when TakenSrc is empty, i.e. only a file modification time", async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [photo({ TakenSrc: "" })] });
-    const [asset] = (await createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 0))
-      .assets;
+    withRecord({ Type: "album" }, [photo({ TakenSrc: "" })]);
+    const [asset] = (await createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 0)).assets;
     expect(asset.fileCreatedAt).toBeNull();
   });
 
   it("drops entries without a usable hash or of a non-photo type", async () => {
-    mockedAxios.get.mockResolvedValueOnce({
-      data: [photo({ Hash: "" }), photo({ Type: "document" }), photo({ Type: "video" })],
-    });
-    const { assets } = await createPhotoprismPhotoSource(CONN).listAlbumAssets(
-      "as6sg6bxpogaaba8",
-      0
-    );
+    withRecord({ Type: "album" }, [
+      photo({ Hash: "" }),
+      photo({ Type: "document" }),
+      photo({ Type: "video" }),
+    ]);
+    const { assets } = await createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 0);
     expect(assets.map((a) => a.type)).toEqual(["VIDEO"]);
   });
 
@@ -289,10 +374,10 @@ describe("listAlbumAssets", () => {
   });
 
   it("answers protocol for a non-list payload", async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: { error: "x" } });
-    await expect(
-      createPhotoprismPhotoSource(CONN).listAlbumAssets("as6sg6bxpogaaba8", 0)
-    ).rejects.toMatchObject({ kind: "protocol" });
+    withRecord({ Type: "album" }, { error: "x" });
+    await expect(createPhotoprismPhotoSource(CONN).listAlbumAssets(ALBUM, 0)).rejects.toMatchObject(
+      { kind: "protocol" }
+    );
   });
 });
 

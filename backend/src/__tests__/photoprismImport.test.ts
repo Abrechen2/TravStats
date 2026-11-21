@@ -113,6 +113,7 @@ function routeAxios(route: Route): void {
         data: { version: "261029-x", previewToken: "pt", downloadToken: `dt${configCalls}` },
       };
     }
+    if (/\/albums\/\w+$/.test(u)) return { data: { Type: "album" } };
     if (u.includes("/photos?")) {
       if (isFault(route.photos)) throw route.photos;
       return { data: route.photos ?? [] };
@@ -214,6 +215,7 @@ describe("PhotoPrism import", () => {
       const u = String(url);
       if (u.includes("/config"))
         return { data: { version: "261029-x", previewToken: "pt", downloadToken: "dt" } };
+      if (/\/albums\/\w+$/.test(u)) return { data: { Type: "album" } };
       if (u.includes("/photos?")) {
         const offset = Number(/offset=(\d+)/.exec(u)?.[1]);
         return {

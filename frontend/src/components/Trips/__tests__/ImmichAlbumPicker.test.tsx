@@ -510,3 +510,68 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
     expect(screen.getByRole("button", { name: /albums.confirm/ })).toBeEnabled();
   });
 });
+
+describe("ImmichAlbumPicker: PhotoPrism kinds (forgejo#434)", () => {
+  const renderPicker = () =>
+    render(<ImmichAlbumPicker tripId="trip-1" onClose={vi.fn()} onLinked={vi.fn()} />);
+  const mk = (id: string, albumName: string, kind: string) => ({
+    id,
+    albumName,
+    assetCount: 3,
+    thumbnailAssetId: null,
+    kind,
+    linked: false,
+    linkId: null,
+  });
+  const KINDS = [
+    mk("f1", "2024/Lisbon", "folder"),
+    mk("f2", "2023/Oslo", "folder"),
+    mk("m1", "Summer in Porto", "moment"),
+    mk("mo1", "May 2024", "month"),
+    mk("s1", "Algarve", "state"),
+  ];
+
+  beforeEach(() => {
+    listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
+      if (provider === "immich") throw { response: { data: { error: "notConfigured" } } };
+      return { albums: KINDS, defaultMode: "link" };
+    });
+  });
+
+  it("groups the list by kind with a count per group, in a fixed order", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("2024/Lisbon")).toBeInTheDocument());
+    const groups = screen.getAllByTestId(/^album-group-/).map((g) => g.dataset.testid);
+    expect(groups).toEqual([
+      "album-group-folder",
+      "album-group-moment",
+      "album-group-month",
+      "album-group-state",
+    ]);
+    expect(screen.getByText("albums.kind.folder (2)")).toBeInTheDocument();
+  });
+
+  it("searches across all groups and opens the groups that have a hit", async () => {
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Algarve")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "albums.searchLabel" }), "porto");
+    expect(screen.getByText("Summer in Porto")).toBeInTheDocument();
+    expect(screen.queryByText("Algarve")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("album-group-folder")).not.toBeInTheDocument();
+    expect(screen.getByTestId("album-group-moment")).toHaveAttribute("open");
+  });
+
+  it("links a folder by its id, in either mode", async () => {
+    linkAlbums.mockResolvedValue({});
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("2024/Lisbon")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "2024/Lisbon" }));
+    await user.click(screen.getByRole("button", { name: "albums.confirm" }));
+    await waitFor(() => expect(linkAlbums).toHaveBeenCalled());
+    expect(linkAlbums.mock.calls[0][1]).toEqual([
+      { immichAlbumId: "f1", mode: "link", provider: "photoprism" },
+    ]);
+  });
+});

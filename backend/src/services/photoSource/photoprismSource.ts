@@ -53,6 +53,9 @@ export const PHOTOPRISM_SEARCH_MAX_PAGES = 10;
 const DAY_MS = 86_400_000;
 /** Page size of the album listing; 5000 was accepted without a visible cap. */
 const ALBUM_PAGE_SIZE = 1000;
+/** Album-like collections PhotoPrism keeps as `albums` rows, in listing order. */
+export const PHOTOPRISM_ALBUM_KINDS = ["album", "folder", "moment", "month", "state"] as const;
+export type PhotoprismAlbumKind = (typeof PHOTOPRISM_ALBUM_KINDS)[number];
 /** Hard stop (50 000 albums) so a source that never ends cannot loop forever. */
 const MAX_ALBUM_PAGES = 50;
 /** The download token lives 3600 s; the preview token has no measured expiry. */
@@ -197,6 +200,7 @@ export function createPhotoprismPhotoSource(
     ...axiosAgentsFor(conn),
     ...(conn.allowPrivate ? {} : { proxy: false as const }),
   };
+  const selectorCache = new Map<string, string>();
   const bearer = { Authorization: `Bearer ${conn.apiKey}` };
   const idleTimeoutMs = options.streamIdleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS;
 
@@ -325,6 +329,71 @@ export function createPhotoprismPhotoSource(
     }
   }
 
+  /** One kind of album-like collection, paged by `offset` until a short page. */
+  async function listKind(kind: PhotoprismAlbumKind): Promise<PhotoSourceAlbum[]> {
+    // `count` AND `type` are both required; either alone is a 400/403. A fixed
+    // cap would silently hide entries of a big library, and linking a hidden
+    // one fails as "unknown".
+    const found: PhotoSourceAlbum[] = [];
+    for (let page = 0; page < MAX_ALBUM_PAGES; page += 1) {
+      const data = await getJson(
+        `/albums?type=${kind}&count=${ALBUM_PAGE_SIZE}&offset=${page * ALBUM_PAGE_SIZE}`,
+        `albums ${kind}`,
+        true
+      );
+      if (!Array.isArray(data)) {
+        throw new ImmichError("protocol", `${SERVICE} returned an unexpected album payload`);
+      }
+      for (const raw of data.filter(isRecord)) {
+        const id = str(raw.UID);
+        if (!ALBUM_UID.test(id)) continue;
+        const cover = str(raw.Thumb);
+        found.push({
+          id,
+          albumName: str(raw.Title),
+          assetCount: typeof raw.PhotoCount === "number" ? raw.PhotoCount : 0,
+          thumbnailAssetId: HASH.test(cover) ? cover : null,
+          kind,
+        });
+      }
+      if (data.length < ALBUM_PAGE_SIZE) return found;
+    }
+    // More than this reads: say so instead of returning a silent prefix.
+    logger.warn({ message: "photoprism_albums_truncated", context: { kind, count: found.length } });
+    throw new ImmichError("protocol", `${SERVICE} has more ${kind} entries than TravStats reads`);
+  }
+
+  /**
+   * The `/photos` query that selects one collection's photos. A manual album
+   * is `s=<uid>`; a folder, moment, month or state has no membership rows, it
+   * IS a saved filter, so its own `Filter` (folders: `Path`) is the query.
+   * Reading the record once per id keeps the stored link a bare UID.
+   */
+  async function assetSelector(uid: string): Promise<string> {
+    const cached = selectorCache.get(uid);
+    if (cached) return cached;
+    const record = await getJson(`/albums/${uid}`, `album ${uid}`, true);
+    if (!isRecord(record)) {
+      throw new ImmichError("protocol", `${SERVICE} returned an unexpected album payload`);
+    }
+    const type = str(record.Type) || "album";
+    let selector: string;
+    if (type === "album") {
+      selector = `s=${uid}`;
+    } else {
+      const path = str(record.Path).replace(/"/g, "");
+      const filter =
+        str(record.Filter).trim() || (type === "folder" && path ? `path:"${path}"` : "");
+      // An empty filter would select the whole library: refuse instead.
+      if (!filter) {
+        throw new ImmichError("protocol", `${SERVICE} ${type} ${uid} carries no filter`);
+      }
+      selector = `q=${encodeURIComponent(filter)}`;
+    }
+    selectorCache.set(uid, selector);
+    return selector;
+  }
+
   const requireHash = (assetId: string): string => {
     if (!HASH.test(assetId)) throw new ImmichError("notFound", `${SERVICE} asset id is not a hash`);
     return assetId;
@@ -354,35 +423,13 @@ export function createPhotoprismPhotoSource(
     },
 
     async listAlbums(): Promise<PhotoSourceAlbum[]> {
-      // `count` AND `type` are both required; either alone is a 400/403. Paged
-      // by `offset` until a short page: a fixed cap would silently hide albums
-      // of a big library, and linking a hidden album fails as "unknown".
+      // A real library often has no manual albums at all, only folders, moments,
+      // months and states (forgejo#434). PhotoPrism keeps all five as `albums`
+      // rows, told apart by `type`; the UID stays unique across them, so it is
+      // still the stored id. Each kind is read to its end, one after another.
       const found: PhotoSourceAlbum[] = [];
-      for (let page = 0; page < MAX_ALBUM_PAGES; page += 1) {
-        const data = await getJson(
-          `/albums?type=album&count=${ALBUM_PAGE_SIZE}&offset=${page * ALBUM_PAGE_SIZE}`,
-          "albums",
-          true
-        );
-        if (!Array.isArray(data)) {
-          throw new ImmichError("protocol", `${SERVICE} returned an unexpected album payload`);
-        }
-        for (const raw of data.filter(isRecord)) {
-          const id = str(raw.UID);
-          if (!ALBUM_UID.test(id)) continue;
-          const cover = str(raw.Thumb);
-          found.push({
-            id,
-            albumName: str(raw.Title),
-            assetCount: typeof raw.PhotoCount === "number" ? raw.PhotoCount : 0,
-            thumbnailAssetId: HASH.test(cover) ? cover : null,
-          });
-        }
-        if (data.length < ALBUM_PAGE_SIZE) return found;
-      }
-      // More albums than this reads: say so instead of returning a silent prefix.
-      logger.warn({ message: "photoprism_albums_truncated", context: { count: found.length } });
-      throw new ImmichError("protocol", `${SERVICE} has more albums than TravStats reads`);
+      for (const kind of PHOTOPRISM_ALBUM_KINDS) found.push(...(await listKind(kind)));
+      return found;
     },
 
     async listAlbumAssets(albumId: string, page: number): Promise<PhotoSourceAssetPage> {
@@ -390,9 +437,10 @@ export function createPhotoprismPhotoSource(
         throw new ImmichError("notFound", `${SERVICE} album id is not a UID`);
       }
       const offset = page * PHOTOPRISM_PAGE_SIZE;
+      const selector = await assetSelector(albumId);
       // `order=oldest` explicitly: the default is newest first.
       const data = await getJson(
-        `/photos?s=${albumId}&count=${PHOTOPRISM_PAGE_SIZE}&offset=${offset}&order=oldest`,
+        `/photos?${selector}&count=${PHOTOPRISM_PAGE_SIZE}&offset=${offset}&order=oldest`,
         `photos album=${albumId}`,
         true
       );
