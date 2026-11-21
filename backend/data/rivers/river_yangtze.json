@@ -1,11 +1,24 @@
 {
   "region": "river_yangtze",
   "name": "Yangtze",
-  "meanderFactor": 1.2,
+  "meanderFactor": 1.1,
   "anchors": [
     { "name": "Chongqing", "lat": 29.55, "lon": 106.5167 },
+    { "name": "Fengdu", "lat": 29.865, "lon": 107.73 },
+    { "name": "Zhongxian", "lat": 30.29, "lon": 108.03 },
+    { "name": "Wanzhou", "lat": 30.81, "lon": 108.38 },
+    { "name": "Yunyang", "lat": 30.93, "lon": 108.69 },
+    { "name": "Fengjie", "lat": 31.02, "lon": 109.46 },
+    { "name": "Wushan", "lat": 31.07, "lon": 109.88 },
+    { "name": "Badong", "lat": 31.04, "lon": 110.34 },
+    { "name": "Sandouping (Three Gorges Dam)", "lat": 30.82, "lon": 111.0 },
     { "name": "Yichang", "lat": 30.7, "lon": 111.2833 },
+    { "name": "Jingzhou", "lat": 30.33, "lon": 112.19 },
+    { "name": "Chenglingji (Yueyang)", "lat": 29.43, "lon": 113.14 },
     { "name": "Wuhan", "lat": 30.5833, "lon": 114.2833 },
+    { "name": "Jiujiang", "lat": 29.73, "lon": 116.0 },
+    { "name": "Anqing", "lat": 30.51, "lon": 117.05 },
+    { "name": "Wuhu", "lat": 31.35, "lon": 118.37 },
     { "name": "Nanjing", "lat": 32.05, "lon": 118.7833 }
   ]
 }

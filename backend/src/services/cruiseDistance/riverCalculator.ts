@@ -218,6 +218,45 @@ async function locateLeg(from: PortPoint, to: PortPoint): Promise<LocatedLeg | n
   return { river, fromProj, toProj };
 }
 
+/**
+ * A port the catalogue gave no region (a user-added or geocoded one: Fengdu,
+ * Wanzhou, Maoping …) that sits ON a known river gets that river's region, so
+ * the river router applies instead of a chord. Only a port with NO region is
+ * touched — a catalogued coastal port (`east_asia`, `mediterranean`) keeps its
+ * own, however near a river mouth it lies — and only within
+ * `RIVER_REGION_DERIVE_KM` of the polyline, the nearest river winning.
+ */
+export const RIVER_REGION_DERIVE_KM = 12;
+
+export async function deriveRiverRegion(port: {
+  lat: number;
+  lon: number;
+  region?: string | null;
+}): Promise<string | null> {
+  if (port.region) return null;
+  const rivers = await loadRivers();
+  let best: { region: string; offset: number } | null = null;
+  for (const river of rivers.values()) {
+    const { offsetKm } = projectOntoRiver(port as PortPoint, river);
+    if (offsetKm <= RIVER_REGION_DERIVE_KM && (best === null || offsetKm < best.offset)) {
+      best = { region: river.region, offset: offsetKm };
+    }
+  }
+  return best?.region ?? null;
+}
+
+/** `ports` with a derived river region filled in where the stored one is missing. */
+export async function withDerivedRiverRegions<
+  T extends { lat: number; lon: number; region: string | null },
+>(ports: T[]): Promise<T[]> {
+  return Promise.all(
+    ports.map(async (p) => {
+      const region = await deriveRiverRegion(p);
+      return region === null ? p : { ...p, region };
+    })
+  );
+}
+
 export const riverCalculator: DistanceCalculator = {
   method: "river-osm",
   routerVersion: ROUTER_VERSION,

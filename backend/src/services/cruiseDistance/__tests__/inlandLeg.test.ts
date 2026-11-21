@@ -35,12 +35,19 @@ describe("a river cruise never reaches the sea router", () => {
   });
 
   it("measures a river cruise between ports without a river region as the chord", async () => {
-    // A user-added Nile port carries no region; on an ocean cruise the sea
+    // A region-less port away from any river file; on an ocean cruise the sea
     // router would take it, on a river cruise it must not.
+    const a = nile(1, 27.0, 28.0, null);
+    const b = nile(2, 26.0, 29.0, null);
+    const leg = await computeLegDistance(a, b, { cruiseKind: "river" });
+    expect(leg.method).toBe("haversine");
+  });
+
+  it("measures region-less ports that lie on a known river along it (forgejo#427)", async () => {
     const luxor = nile(1, 25.6872, 32.6396, null);
     const aswan = nile(2, 24.0889, 32.8997, null);
     const leg = await computeLegDistance(luxor, aswan, { cruiseKind: "river" });
-    expect(leg.method).toBe("haversine");
+    expect(leg.method).toBe("river-osm");
   });
 
   it("measures two Nile catalogue ports along the river", async () => {
