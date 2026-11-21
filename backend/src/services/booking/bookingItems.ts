@@ -108,7 +108,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
     ),
   ] as string[];
   const airports = depCodes.length
-    ? await getCachedAirports(depCodes).catch(() => new Map<string, { timezone: string | null }>())
+    ? await getCachedAirports(depCodes)
     : new Map<string, { timezone: string | null }>();
   const catalogueDep = (f: { depIata: string | null; depIcao: string | null }): string | null => {
     for (const code of [f.depIata, f.depIcao]) {
