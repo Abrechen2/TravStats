@@ -71,6 +71,7 @@ const RETRY_MAX_MS = 6 * 60 * 60_000;
 export type VisitProjectionResult = {
   /** `paused`: the account has no permission to be asked (`why`); its days were acknowledged unread. */
   status: "done" | "disabled" | "skipped" | "paused" | "failed";
+  /** Days read, answered or left open: what the run cost against the tick's day budget. */
   days: number;
   created: number;
   grown: number;
@@ -97,6 +98,8 @@ export type VisitProjectionDeps = {
   maxLookups?: number;
   maxFindings?: number;
   now?: Date;
+  /** Only days from this UTC day on (`YYYY-MM-DD`): "scan now" asks for a window, not the oldest backlog. */
+  fromDay?: string;
   resolve?: ResolveDeps;
   /** Test seam: replaces the per-stop resolution. */
   resolveStop?: (stop: Stop, allowLookup: boolean) => Promise<VisitResolution>;
@@ -122,8 +125,31 @@ const empty = (status: VisitProjectionResult["status"]): VisitProjectionResult =
 
 /** Per account, in memory: after a failed lookup the schedule waits before asking again. */
 const retry = new Map<string, { until: number; failures: number }>();
-export const clearVisitRetry = (): void => retry.clear();
+export const clearVisitRetry = (): void => {
+  retry.clear();
+  noVenueMemory.clear();
+};
 export const visitRetryAfter = (userId: string): number => retry.get(userId)?.until ?? 0;
+
+/**
+ * Stops already asked about that named no venue (nothing there, or an own lodging), by stop key, in
+ * memory for a day: without it a day with many such stops asks all of them again every run and the
+ * stops behind them never get a turn. A restart forgets it, which only asks again.
+ */
+const NO_VENUE_MEMORY_MS = DAY_MS;
+const NO_VENUE_MEMORY_MAX = 5000;
+const noVenueMemory = new Map<string, number>();
+const rememberNoVenue = (key: string, now: number): void => {
+  if (noVenueMemory.size >= NO_VENUE_MEMORY_MAX) {
+    const oldest = noVenueMemory.keys().next().value;
+    if (oldest !== undefined) noVenueMemory.delete(oldest);
+  }
+  noVenueMemory.set(key, now);
+};
+const knownNoVenue = (key: string, now: number): boolean => {
+  const at = noVenueMemory.get(key);
+  return at !== undefined && now - at < NO_VENUE_MEMORY_MS;
+};
 
 const permitted = async (userId: string): Promise<boolean> =>
   !!(await prisma.dawarichStayScan.findFirst({
@@ -316,6 +342,12 @@ async function handleStop(
     outcome("covered");
     return { open: false, go: true };
   }
+  const memoryKey = `${userId}:${key}`;
+  if (knownNoVenue(memoryKey, Date.now())) {
+    result.noVenue++;
+    outcome("noVenue:remembered");
+    return { open: false, go: true };
+  }
   if (ctx.findingsLeft <= 0) {
     result.deferred++;
     outcome("deferred");
@@ -348,10 +380,11 @@ async function handleStop(
       ctx.lookupsLeft--;
       result.noVenue++;
     }
+    rememberNoVenue(memoryKey, Date.now());
     outcome(resolution.why);
     return { open: false, go: true };
   }
-  if (resolution.pick.source === "osm") ctx.lookupsLeft--;
+  if (resolution.lookedUp) ctx.lookupsLeft--;
   const { pick, lookup } = resolution;
   // A venue inside or beside a privacy zone is never offered, whatever the stop's own anchor.
   if (inPrivacyZone(pick, ctx.circles(stop.fromMs))) {
@@ -431,6 +464,19 @@ async function projectDay(ctx: RunContext, dirty: DirtyDay): Promise<boolean> {
   return !open && readCoverage === "complete";
 }
 
+async function pendingVisitDays(
+  userId: string,
+  limit: number,
+  fromDay: string | undefined
+): Promise<DirtyDay[]> {
+  if (!fromDay) return pendingDirtyDays(userId, VISITS_BIT, limit);
+  const rows = await prisma.$queryRaw<{ day: Date; version: bigint }[]>`
+    SELECT day, version FROM travtrack_dirty_days
+     WHERE user_id = ${userId} AND (done & ${VISITS_BIT}) = 0 AND day >= ${fromDay}::date
+     ORDER BY day ASC LIMIT ${limit}`;
+  return rows.map((r) => ({ day: r.day.toISOString().slice(0, 10), version: r.version }));
+}
+
 async function ack(userId: string, dirty: DirtyDay): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await takeTravTrackLock(tx, userId);
@@ -447,7 +493,7 @@ export async function projectVisitSuggestions(
   if (allowance !== "ok")
     return { ...result, status: allowance === "disabled" ? "disabled" : "skipped" };
   const now = deps.now ?? new Date();
-  const days = await pendingDirtyDays(userId, VISITS_BIT, deps.maxDays ?? VISIT_DAYS_PER_RUN);
+  const days = await pendingVisitDays(userId, deps.maxDays ?? VISIT_DAYS_PER_RUN, deps.fromDay);
   if (days.length === 0) return result;
   if (!(await permitted(userId))) {
     for (const d of days) await ack(userId, d);
@@ -475,15 +521,14 @@ export async function projectVisitSuggestions(
         result.interrupted = true;
         break;
       }
+      // Every day read counts against the tick's budget, answered or not: a day left open
+      // cost its derivation all the same.
+      result.days++;
       if (utcMidnight(dirty.day).getTime() < horizon) {
         await ack(userId, dirty);
-        result.days++;
         continue;
       }
-      if (await projectDay(ctx, dirty)) {
-        await ack(userId, dirty);
-        result.days++;
-      }
+      if (await projectDay(ctx, dirty)) await ack(userId, dirty);
       if (result.interrupted) break;
     }
     return result;
@@ -536,5 +581,9 @@ export async function rescanVisitDays(
   await prisma.$executeRaw`
     UPDATE travtrack_dirty_days SET done = done & ~${VISITS_BIT}::int
      WHERE user_id = ${userId} AND day >= ${from.toISOString().slice(0, 10)}::date`;
-  return projectVisitSuggestions(userId, { maxDays: lookbackDays + 1, ...deps });
+  return projectVisitSuggestions(userId, {
+    maxDays: lookbackDays + 1,
+    fromDay: from.toISOString().slice(0, 10),
+    ...deps,
+  });
 }

@@ -52,7 +52,13 @@ export type VisitPick = {
 export type LookupFailure = "places" | "venues";
 
 export type VisitResolution =
-  | { kind: "pick"; pick: VisitPick; lookup: { geocoder: string; venues: string } }
+  | {
+      kind: "pick";
+      pick: VisitPick;
+      lookup: { geocoder: string; venues: string };
+      /** Whether the geocoder and the building layer were asked (an own place beside the stop asks nobody). */
+      lookedUp: boolean;
+    }
   | { kind: "none"; why: "lodging" | "noVenue" }
   | { kind: "failed"; reason: LookupFailure }
   /** A lookup was needed and this run's budget for them was spent. */
@@ -89,6 +95,7 @@ export async function resolveVisit(
   if (ownPlace?.placeId) {
     return {
       kind: "pick",
+      lookedUp: false,
       lookup: { geocoder: "skipped", venues: "skipped" },
       pick: {
         source: "known",
@@ -145,6 +152,7 @@ export async function resolveVisit(
   return {
     kind: "pick",
     lookup,
+    lookedUp: true,
     pick: {
       source: same ? "known" : "osm",
       name: same?.name ?? chosen.name,

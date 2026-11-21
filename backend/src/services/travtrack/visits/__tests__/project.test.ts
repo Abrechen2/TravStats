@@ -50,6 +50,7 @@ const pick = (over: Partial<VisitPick> = {}): VisitPick => ({
 });
 const picked = (over: Partial<VisitPick> = {}): VisitResolution => ({
   kind: "pick",
+  lookedUp: true,
   pick: pick(over),
   lookup: { geocoder: "ok", venues: "ok" },
 });
@@ -265,6 +266,8 @@ describe("projectVisitSuggestions", () => {
     const first = await projectVisitSuggestions(userId, deps());
     expect(first.failed).toEqual({ places: 0, venues: 1 });
     expect(first.created).toBe(0);
+    // A day left open still cost its derivation: it counts against the tick's budget.
+    expect(first.days).toBe(1);
     expect(await done()).toBe(false);
     const second = await projectVisitSuggestions(userId, deps());
     expect(second.created).toBe(1);
@@ -294,6 +297,45 @@ describe("projectVisitSuggestions", () => {
     expect(r.created).toBe(1);
     expect(r.deferred).toBe(1);
     expect(await done()).toBe(false);
+  });
+
+  it("a venue that turns out to be an own place by its OSM id still spent its lookup (the cap holds)", async () => {
+    const place = await prisma.place.create({
+      data: { userId, name: "Golden Arches", ...VENUE_AT },
+    });
+    resolveStop.mockImplementation(async (_stop, allowLookup) =>
+      allowLookup
+        ? picked({ source: "known", placeId: place.id, name: place.name })
+        : { kind: "deferred" }
+    );
+    await stand(25);
+    await stand(25, { lat: 37.57, lon: 126.99 }, FROM + 3 * 60 * MIN);
+    await dirty();
+    const r = await projectVisitSuggestions(userId, deps({ maxLookups: 1 }));
+    expect(r.created).toBe(1);
+    expect(r.deferred).toBe(1);
+  });
+
+  it("a stop that named no venue is not looked up again on the next run, so the stops behind it get their turn", async () => {
+    resolveStop.mockResolvedValue({ kind: "none", why: "noVenue" });
+    await stand(25);
+    await dirty();
+    expect((await projectVisitSuggestions(userId, deps())).noVenue).toBe(1);
+    resolveStop.mockClear();
+    await dirty();
+    const again = await projectVisitSuggestions(userId, deps());
+    expect(again.noVenue).toBe(1);
+    expect(resolveStop).not.toHaveBeenCalled();
+  });
+
+  it("'scan now' reads the window it was asked for, not the oldest backlog", async () => {
+    const old = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"];
+    await dirty(old);
+    await stand(25);
+    await dirty();
+    const r = await rescanVisitDays(userId, 3, deps());
+    expect(r.created).toBe(1);
+    expect(await done("2026-09-01")).toBe(false);
   });
 
   it("without the scan's consent nothing is asked, and the day is acknowledged unread", async () => {
