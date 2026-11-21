@@ -6,6 +6,7 @@ jest.mock("../../instanceSettingsService", () => ({
 
 import {
   geocodeAddress,
+  geocodeAddressDetailed,
   resolveCoordinates,
   reverseGeocode,
   reverseGeocodeDetailed,
@@ -44,6 +45,31 @@ describe("nominatim geocoder", () => {
       country: "CH",
     });
     expect(out).toEqual({ lat: 47.3769, lon: 8.5417 });
+  });
+
+  // GitHub #401: the hit's own country must travel with it, or a caller cannot
+  // tell a Wolfenbüttel hotel from its namesake near Delhi.
+  it("carries the country and town the provider put on the hit", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      okResponse([
+        {
+          lat: "28.6",
+          lon: "77.2",
+          address: { country_code: "in", country: "India", city: "New Delhi" },
+        },
+      ])
+    ) as unknown as typeof fetch;
+    const out = await geocodeAddress({ name: "Tulip Inn Delhi-unique-1" });
+    expect(out).toMatchObject({ countryCode: "IN", country: "India", city: "New Delhi" });
+  });
+
+  it("reports a provider failure as failed, not as 'no result'", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+    } as unknown as Response) as unknown as typeof fetch;
+    const out = await geocodeAddressDetailed({ name: "Provider down unique-2" });
+    expect(out).toEqual({ coords: null, failed: true });
   });
 
   it("sends a descriptive User-Agent (Nominatim usage policy)", async () => {

@@ -3279,6 +3279,12 @@ model Lodging {
   /// handed the same oldest 500 unresolvable rows to the geocoder on every
   /// run, so a hotel added afterwards was never reached at all (AUD-070).
   geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
+  /// Why this house's position needs a look, or null when nothing is wrong.
+  /// A code (`name_only`, `contradicted`, `provider_unavailable`, `no_result`,
+  /// `pin_country_mismatch` — see `locationCheck.ts`), never prose: the UI maps
+  /// it to DE/EN copy. A geocoder answer that contradicts the record is NOT
+  /// written to lat/lon; it is named here instead (GitHub #401).
+  locationCheck      String?   @map("location_check")
   stars              Int? // official 1–5
   /// The house's own website. Filled by hand or by the OpenStreetMap
   /// enrichment, which only ever writes an empty field.

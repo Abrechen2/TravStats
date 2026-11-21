@@ -1116,5 +1116,17 @@
     "wifi": "WLAN",
     "quiet": "Ruhe",
     "unknown": "Eigene Kategorie"
+  },
+  "locationCheck": {
+    "title": "Ort prüfen",
+    "name_only": "Von „{{name}}“ ist nur der Name bekannt. Ein Name allein ist kein Ort – es gibt ihn oft in mehreren Ländern –, darum wurde keine Position gesetzt. Ergänze Ort oder Land oder setz den Punkt selbst.",
+    "contradicted": "Die Ortssuche fand nur Treffer in einem anderen Land oder Ort als dem, den die Unterkunft angibt. Keiner davon wurde übernommen. Prüfe die Angaben oder setz den Punkt selbst.",
+    "provider_unavailable": "Die Ortssuche war nicht erreichbar, es wurde nichts gefunden. Das wird später erneut versucht – oder setz den Punkt selbst.",
+    "no_result": "Die Ortssuche hat nichts gefunden. Ergänze die Adresse oder setz den Punkt selbst.",
+    "pin_country_mismatch": "Der Punkt auf der Karte liegt in einem anderen Land als dem eingetragenen. Welche Angabe stimmt, entscheidest du – es wurde nichts geändert.",
+    "setLocation": "Punkt setzen",
+    "confirm": "Position stimmt",
+    "confirmed": "Als geprüft markiert.",
+    "confirmFailed": "Die Markierung konnte nicht gespeichert werden."
   }
 }

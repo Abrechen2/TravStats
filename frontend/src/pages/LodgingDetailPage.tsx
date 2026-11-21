@@ -21,6 +21,7 @@ import { StayEditor } from "../components/lodging/StayEditor";
 import { StayDeleteConfirm } from "../components/lodging/StayDeleteConfirm";
 import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
+import { LodgingLocationCheckNotice } from "../components/lodging/LodgingLocationCheckNotice";
 import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import { useTranslation } from "../hooks/useTranslation";
 import { useRatingCategories } from "../hooks/useRatingCategories";
@@ -553,6 +554,11 @@ export default function LodgingDetailPage(): JSX.Element {
 
         <aside className="flex flex-col gap-6 md:col-span-2">
           <DetailSection title={t("lodging:detail.location")}>
+            <LodgingLocationCheckNotice
+              lodging={lodging}
+              onSetLocation={() => setRepairingLocation(true)}
+              onReviewed={(updated) => setLodging(updated)}
+            />
             <WebGLGuard>
               <LodgingMiniMap lodging={lodging} onSetLocation={() => setRepairingLocation(true)} />
             </WebGLGuard>
