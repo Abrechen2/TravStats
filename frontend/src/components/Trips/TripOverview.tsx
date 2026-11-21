@@ -20,6 +20,7 @@ import { useDomainVisible } from "../../hooks/useDomainVisible";
 import TripCo2Line from "./TripCo2Line";
 import type { Co2Stats } from "../../types/co2";
 import type { TripPlaceVisits } from "../../hooks/useTripPlaceVisits";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import TripPlacesList from "./TripPlacesList";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -227,7 +228,15 @@ export default function TripOverview({
   const roadtrips = useTripRoadtrips(trip.id, isEnabled("roadtrip"));
   // Every area the overview lists counts — a trip holding only a train ride
   // or a rental car said "nothing linked" above an entry it was not showing.
+  const placesVisible = usePlacesVisible();
+  // Places are an entry of the trip like any other; while they load or fail the
+  // panel speaks for itself, so "nothing linked" must not sit beside it.
+  const placesLinked =
+    placesVisible &&
+    places !== undefined &&
+    (places.placeVisits.length > 0 || places.failed || places.loading);
   const nothingLinked =
+    !placesLinked &&
     flights.length +
       cruises.length +
       stays.length +
@@ -236,7 +245,7 @@ export default function TripOverview({
       busRides.length +
       ferryRides.length +
       rentals.length ===
-    0;
+      0;
   return (
     <div className="flex flex-col gap-6">
       {kpis.length > 0 && (
