@@ -16,6 +16,13 @@ import {
 
 export interface AuthRequest extends Request {
   userId?: string;
+  /**
+   * The account's `sessionEpoch` this cookie session was authenticated under.
+   * A path that issues a credential re-checks it under the row lock
+   * (`holdForIssuance`), so a password change that commits between the check
+   * here and the insert there is not outlived by the new credential.
+   */
+  sessionEpoch?: number;
   /** Set by `adminStepUpGate` when a write-scope token re-proved password (and TOTP) for this call. */
   adminStepUpVerified?: boolean;
   /**
@@ -178,6 +185,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     req.userId = decoded.userId;
+    req.sessionEpoch = user.sessionEpoch;
     req.isSharedDemo = isSharedDemoAccount(user);
     next();
   } catch (error) {

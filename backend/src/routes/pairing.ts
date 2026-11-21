@@ -93,7 +93,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.userId) throw new AppError("Unauthorized", 401);
-      const { code, expiresAt } = await generatePairingCode(req.userId);
+      const { code, expiresAt } = await generatePairingCode(req.userId, req.sessionEpoch);
       const publicUrl = await getPublicBaseUrl(req);
       res.json({ code, publicUrl, expiresAt: expiresAt.toISOString() });
     } catch (err) {
@@ -138,7 +138,39 @@ router.post(
       }
       const { code, deviceName, deviceId, platform, appVersion } = parsed.data;
 
-      const claim = await verifyAndConsume(code);
+      // The token is generated first and inserted in the claim's own
+      // transaction, under the owner's row lock, so a password change racing
+      // the claim cannot be outlived by it (forgejo#415). Re-pairing the same
+      // physical device revokes its prior token so no orphaned credential is
+      // left behind.
+      const generated = await generateApiToken();
+      const claim = await verifyAndConsume(code, async (tx, userId) => {
+        const prior = deviceId
+          ? await tx.apiToken.findMany({
+              where: { userId, deviceId, revokedAt: null },
+              select: { id: true },
+            })
+          : [];
+        if (prior.length > 0) {
+          await tx.apiToken.updateMany({
+            where: { id: { in: prior.map((t) => t.id) } },
+            data: { revokedAt: new Date() },
+          });
+        }
+        const token = await tx.apiToken.create({
+          data: {
+            userId,
+            label: deviceName || "Gerät",
+            scope: "write",
+            lookupHash: generated.lookupHash,
+            hash: generated.hash,
+            ...(deviceId !== undefined && { deviceId }),
+            ...(platform !== undefined && { platform }),
+            ...(appVersion !== undefined && { appVersion }),
+          },
+        });
+        return { token, priorIds: prior.map((t) => t.id) };
+      });
       if (claim.outcome !== "ok") {
         securityLogger.warn({
           operation: "security_event",
@@ -162,35 +194,10 @@ router.post(
         );
       }
       const userId = claim.userId;
-
-      // Re-pairing the same physical device revokes its prior token so we don't
-      // leave orphaned credentials behind.
-      if (deviceId) {
-        const prior = await prisma.apiToken.findMany({
-          where: { userId, deviceId, revokedAt: null },
-          select: { id: true },
-        });
-        await prisma.apiToken.updateMany({
-          where: { id: { in: prior.map((t) => t.id) } },
-          data: { revokedAt: new Date() },
-        });
-        // Revocation is soft, so the push row would outlive the token.
-        await forgetPushForTokens(prior.map((t) => t.id));
-      }
-
-      const generated = await generateApiToken();
-      const token = await prisma.apiToken.create({
-        data: {
-          userId,
-          label: deviceName || "Gerät",
-          scope: "write",
-          lookupHash: generated.lookupHash,
-          hash: generated.hash,
-          ...(deviceId !== undefined && { deviceId }),
-          ...(platform !== undefined && { platform }),
-          ...(appVersion !== undefined && { appVersion }),
-        },
-      });
+      if (!claim.minted) throw new AppError("Pairing failed", 500);
+      const { token, priorIds } = claim.minted;
+      // Revocation is soft, so the push row would outlive the token.
+      if (priorIds.length > 0) await forgetPushForTokens(priorIds);
 
       const user = await prisma.user.findUnique({
         where: { id: userId },

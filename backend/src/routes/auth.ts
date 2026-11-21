@@ -32,7 +32,7 @@ import { getInstanceSettings } from "../services/instanceSettingsService";
 import logger from "../utils/logger";
 import { stampWhatsNewSeen } from "../services/whatsNewStamp";
 import { appVersion } from "../utils/version";
-import { revokeAllApiTokensForUser } from "../services/revokeUserApiTokens";
+import { rotateCredentials } from "../services/revokeUserApiTokens";
 import {
   getAuthCookieOptions,
   getCookieSecure,
@@ -492,18 +492,12 @@ router.post(
       // Hash new password
       const newPasswordHash = await hashPassword(newPassword);
 
-      // Tokens (incl. paired devices) go first: a failure here must not leave a
-      // changed password with live tokens. The route is cookie-only, so no caller
-      // is a token cutting its own branch.
-      await revokeAllApiTokensForUser(userId);
-
-      // Update password AND close every session that predates it. A password
-      // change that leaves old cookies working is not a change anybody can rely
-      // on (audit finding AUD-003).
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { passwordHash: newPasswordHash, sessionEpoch: { increment: 1 } },
-      });
+      // Update password, revoke every token (incl. paired devices) AND close
+      // every session that predates it, in one step (rotateCredentials). A
+      // password change that leaves old cookies or tokens working is not a
+      // change anybody can rely on (audit finding AUD-003, forgejo#415). The
+      // route is cookie-only, so no caller is a token cutting its own branch.
+      const updated = await rotateCredentials(userId, { passwordHash: newPasswordHash });
 
       // The caller keeps theirs: they just proved the old password and are sitting
       // in front of the app. A fresh cookie is minted AFTER the cutoff, so the

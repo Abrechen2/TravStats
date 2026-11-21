@@ -11,8 +11,9 @@
 
 import { randomBytes } from "node:crypto";
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { tokenLookupHash } from "../../utils/apiTokens";
+import { holdForIssuance } from "../revokeUserApiTokens";
 
 /** Plaintext pairing-code prefix — `clm_` for "claim". */
 export const PAIRING_CODE_PREFIX = "clm_";
@@ -44,13 +45,19 @@ export interface PairingStatus {
  * Returns the plaintext code and its expiry — the caller surfaces the code to
  * the user and discards it.
  */
-export async function generatePairingCode(userId: string): Promise<GeneratedPairingCode> {
+export async function generatePairingCode(
+  userId: string,
+  expectedEpoch?: number
+): Promise<GeneratedPairingCode> {
   const code = `${PAIRING_CODE_PREFIX}${randomBytes(PAIRING_CODE_BYTES).toString("hex")}`;
   const codeHash = tokenLookupHash(code);
   const expiresAt = new Date(Date.now() + PAIRING_CODE_TTL_MS);
 
-  await prisma.pairingCode.create({
-    data: { codeHash, userId, expiresAt },
+  // A code minted after a password change it raced would be claimable for a
+  // fresh device token (forgejo#415): same row lock and epoch check as a PAT.
+  await prisma.$transaction(async (tx) => {
+    await holdForIssuance(tx, userId, expectedEpoch);
+    await tx.pairingCode.create({ data: { codeHash, userId, expiresAt } });
   });
 
   return { code, expiresAt };
@@ -86,11 +93,24 @@ export type PairingClaimResult =
  * On a miss the row is read back inside the same transaction to say WHICH miss
  * it was — see {@link PairingClaimFailure}.
  */
-export async function verifyAndConsume(code: string): Promise<PairingClaimResult> {
+export async function verifyAndConsume<T = void>(
+  code: string,
+  mint?: (tx: DbTransaction, userId: string) => Promise<T>
+): Promise<PairingClaimResult & { minted?: T }> {
   const codeHash = tokenLookupHash(code);
   const now = new Date();
 
   return prisma.$transaction(async (tx) => {
+    // The owner's row first, in share mode (forgejo#415): a password change in
+    // flight finishes before the code is read, and deletes it if unspent; one
+    // that starts later waits until the token minted below is committed, and
+    // then revokes it. Either way no token outlives the change.
+    const owner = await tx.pairingCode.findUnique({
+      where: { codeHash },
+      select: { userId: true },
+    });
+    if (owner) await holdForIssuance(tx, owner.userId, undefined);
+
     const consumed = await tx.pairingCode.updateMany({
       where: { codeHash, consumedAt: null, expiresAt: { gt: now } },
       data: { consumedAt: now },
@@ -102,7 +122,9 @@ export async function verifyAndConsume(code: string): Promise<PairingClaimResult
     });
 
     if (consumed.count === 1) {
-      return row ? { outcome: "ok" as const, userId: row.userId } : { outcome: "unknown" as const };
+      if (!row) return { outcome: "unknown" as const };
+      const minted = mint ? await mint(tx, row.userId) : undefined;
+      return { outcome: "ok" as const, userId: row.userId, minted };
     }
 
     if (!row) return { outcome: "unknown" as const };
