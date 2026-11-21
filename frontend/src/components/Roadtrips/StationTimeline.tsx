@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from "react";
+import EntryPhotos from "../common/EntryPhotos";
 import { Link } from "react-router-dom";
 
 import Pill from "../ui/Pill";
@@ -233,6 +234,9 @@ export default function StationTimeline({
                   )}
                 </div>
                 {ownWeather && <StationWeatherLine state={ownWeather} />}
+                {/* Only the selected station asks the server: one request per card would
+                    be one per station of the whole trip. */}
+                {selected && <EntryPhotos kind="roadtripStop" entryId={s.id} />}
                 {(ownTours.length > 0 || onStartTour) && (
                   <div className="flex flex-col" style={{ gap: 6 }}>
                     {ownTours.map((tour) => (

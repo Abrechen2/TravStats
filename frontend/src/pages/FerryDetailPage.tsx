@@ -17,6 +17,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import Button from "../components/ui/Button";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
@@ -253,6 +254,7 @@ export default function FerryDetailPage() {
               value: typeof ride[key] === "number" ? ride[key].toLocaleString(locale) : ride[key],
             }))}
           />
+          <EntryPhotosSection kind="ferry" entryId={ride.id} />
           <DocumentsSection entry={{ type: "ferryJourney", id: ride.id }} />
         </div>
         <aside className="flex flex-col gap-6 md:col-span-2">

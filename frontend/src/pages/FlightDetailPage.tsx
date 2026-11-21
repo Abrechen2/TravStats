@@ -20,6 +20,7 @@ import FlightEditModal from "../components/FlightEditModal";
 import SpecialFlightModal from "../components/SpecialFlightModal";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useFlightRecordingPoints } from "../hooks/useFlightRecordingPoints";
@@ -401,6 +402,8 @@ export default function FlightDetailPage(): JSX.Element {
 
           {/* Beside the costs, not instead of the receipt above them: the
               "Beleg" is the one file the price links to, this is the folder. */}
+          <EntryPhotosSection kind="flight" entryId={flight.id} />
+
           <DocumentsSection
             entry={{ type: "flight", id: flight.id }}
             onChanged={() => setDocumentsVersion((v) => v + 1)}

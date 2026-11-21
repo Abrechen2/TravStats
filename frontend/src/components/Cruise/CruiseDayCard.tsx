@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import EntryPhotos from "../common/EntryPhotos";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
@@ -164,6 +165,11 @@ export function CruiseDayCard({
             ))}
         </dd>
       </dl>
+      {stop && !entry.isAtSea && (
+        <div className="mt-3">
+          <EntryPhotos kind="cruiseStop" entryId={stop.id} />
+        </div>
+      )}
       <p className="mt-2 text-xs text-(--text-muted)">{t("dayCard.localNote")}</p>
     </section>
   );

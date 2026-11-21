@@ -27,6 +27,7 @@ const sourceState = z
 
 const link = z.object({
   id: uuid,
+  url: z.string().describe("Where the thumbnail is served"),
   provider,
   assetId: z.string(),
   provenance: z.enum(["manual", "auto"]).describe("`auto`: shown as 'automatisch verknüpft'"),
@@ -65,6 +66,7 @@ registry.registerPath({
           z.object({
             suggestions: z.array(
               z.object({
+                url: z.string().describe("Where the thumbnail is served"),
                 provider,
                 assetId: z.string(),
                 takenAt: z.string().nullable(),

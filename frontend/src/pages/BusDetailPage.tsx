@@ -11,6 +11,7 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { EntryPhotosSection } from "../components/common/EntryPhotos";
 import { BusFormModal } from "../components/bus/BusFormModal";
 import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
 import { BusRouteMap } from "../components/bus/BusRouteMap";
@@ -308,6 +309,7 @@ export default function BusDetailPage(): JSX.Element {
             </DetailSection>
           )}
 
+          <EntryPhotosSection kind="bus" entryId={ride.id} />
           <DocumentsSection entry={{ type: "busJourney", id: ride.id }} />
         </div>
 

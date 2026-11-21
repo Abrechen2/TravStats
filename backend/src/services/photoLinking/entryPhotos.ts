@@ -44,6 +44,8 @@ export const ENTRY_LINK_CAP = 24;
 
 export interface EntryLinkDto {
   id: string;
+  /** Where the thumbnail is served — ownership-checked, streamed from its own source. */
+  url: string;
   provider: PhotoSourceKind;
   assetId: string;
   provenance: "manual" | "auto";
@@ -52,6 +54,7 @@ export interface EntryLinkDto {
 }
 
 export interface EntrySuggestion {
+  url: string;
   provider: PhotoSourceKind;
   assetId: string;
   takenAt: string | null;
@@ -88,6 +91,7 @@ export async function listEntryLinks(
   });
   return rows.map((r) => ({
     id: r.id,
+    url: `/api/v1/entry-photos/${kind}/${id}/photos/${r.id}/file`,
     provider: toKind(r.provider),
     assetId: r.assetId,
     provenance: r.provenance === "auto" ? "auto" : "manual",
@@ -164,6 +168,7 @@ export async function entrySuggestionsFor(
     untimed: false,
     sources: found.sources,
     suggestions: found.matched.slice(0, ENTRY_LINK_CAP).map(({ provider, asset }) => ({
+      url: `/api/v1/entry-photos/${kind}/${id}/photo-suggestions/${provider}/${asset.id}/file`,
       provider,
       assetId: asset.id,
       takenAt: asset.fileCreatedAt,

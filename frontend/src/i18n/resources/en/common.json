@@ -445,5 +445,36 @@
       "cruise": "Cruise",
       "rental": "Rental car"
     }
+  },
+  "entryPhotos": {
+    "title": "Photos",
+    "alt": "Photo of this entry",
+    "autoLabel": "linked automatically ({{source}})",
+    "manualLabel": "linked ({{source}})",
+    "source": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "remove": "Remove photo",
+    "removed": "The photo was removed and will not be linked again.",
+    "removeFailed": "The photo could not be removed.",
+    "removeAll": "Remove all automatically linked",
+    "removeAllFailed": "The automatically linked photos could not be removed.",
+    "loadFailed": "The photos of this entry could not be loaded.",
+    "none": "No photos linked yet.",
+    "add": "Add photos from Immich/PhotoPrism",
+    "loading": "Searching …",
+    "suggestNone": "No matching photos found.",
+    "untimed": "This entry has no usable time or place, so no photos can be matched.",
+    "suggestFailed": "The photos could not be searched.",
+    "sourceDown": "A photo source did not answer — the list may be incomplete.",
+    "sourceTruncated": "A photo source had more photos in the period than one search reads — the list is incomplete.",
+    "link_one": "Link {{count}} photo",
+    "link_other": "Link {{count}} photos",
+    "linked_one": "{{count}} photo linked.",
+    "linked_other": "{{count}} photos linked.",
+    "linkFailed": "The photos could not be linked.",
+    "undo": "Offer removed photos again",
+    "undoFailed": "The removed photos could not be restored."
   }
 }

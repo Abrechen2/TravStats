@@ -445,5 +445,36 @@
       "cruise": "Kreuzfahrt",
       "rental": "Mietwagen"
     }
+  },
+  "entryPhotos": {
+    "title": "Fotos",
+    "alt": "Foto zu diesem Eintrag",
+    "autoLabel": "automatisch verknüpft ({{source}})",
+    "manualLabel": "verknüpft ({{source}})",
+    "source": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    },
+    "remove": "Foto entfernen",
+    "removed": "Das Foto wurde entfernt und wird nicht erneut verknüpft.",
+    "removeFailed": "Das Foto konnte nicht entfernt werden.",
+    "removeAll": "Alle automatisch verknüpften entfernen",
+    "removeAllFailed": "Die automatisch verknüpften Fotos konnten nicht entfernt werden.",
+    "loadFailed": "Die Fotos dieses Eintrags konnten nicht geladen werden.",
+    "none": "Noch keine Fotos verknüpft.",
+    "add": "Fotos aus Immich/PhotoPrism hinzufügen",
+    "loading": "Suche läuft …",
+    "suggestNone": "Keine passenden Fotos gefunden.",
+    "untimed": "Für diesen Eintrag fehlen Zeit oder Ort, deshalb lassen sich keine Fotos zuordnen.",
+    "suggestFailed": "Die Fotos konnten nicht gesucht werden.",
+    "sourceDown": "Eine Fotoquelle hat nicht geantwortet — die Liste kann unvollständig sein.",
+    "sourceTruncated": "Eine Fotoquelle hatte mehr Fotos im Zeitraum, als eine Suche liest — die Liste ist unvollständig.",
+    "link_one": "{{count}} Foto verknüpfen",
+    "link_other": "{{count}} Fotos verknüpfen",
+    "linked_one": "{{count}} Foto verknüpft.",
+    "linked_other": "{{count}} Fotos verknüpft.",
+    "linkFailed": "Die Fotos konnten nicht verknüpft werden.",
+    "undo": "Entfernte wieder anbieten",
+    "undoFailed": "Die entfernten Fotos konnten nicht zurückgeholt werden."
   }
 }

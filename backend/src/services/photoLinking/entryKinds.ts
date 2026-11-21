@@ -301,7 +301,7 @@ export async function planFor(
     }
     case "roadtripStop": {
       const t = await prisma.tripStop.findFirst({
-        where: { id, route: { userId, tripId: { not: null } } },
+        where: { id, route: { userId, kind: "roadtrip" } },
         select: {
           lat: true,
           lon: true,
@@ -395,7 +395,7 @@ export async function entryIdsOf(userId: string, kind: EntryKind): Promise<strin
     case "roadtripStop":
       return ids(
         prisma.tripStop.findMany({
-          where: { route: { userId, tripId: { not: null } }, lat: { not: null } },
+          where: { route: { userId, kind: "roadtrip" }, lat: { not: null }, viaPoint: false },
           select: { id: true },
           orderBy: { startDate: "asc" },
         })

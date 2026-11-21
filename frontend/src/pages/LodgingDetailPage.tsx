@@ -14,6 +14,7 @@ import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { LodgingMiniMap } from "../components/lodging/LodgingMiniMap";
 import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
+import EntryPhotos from "../components/common/EntryPhotos";
 import { StarRating } from "../components/lodging/StarRating";
 import { LodgingStayDocuments } from "../components/lodging/LodgingStayDocuments";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
@@ -486,15 +487,17 @@ export default function LodgingDetailPage(): JSX.Element {
                           ?.programName
                       : undefined;
                   return (
-                    <LodgingStayCard
-                      key={stay.id}
-                      stay={stay}
-                      onEdit={setEditingStay}
-                      onDelete={setConfirmingStayDelete}
-                      tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
-                      membershipName={membershipName}
-                      membershipSource={resolvedMembership.source}
-                    />
+                    <div key={stay.id} className="flex flex-col gap-2">
+                      <LodgingStayCard
+                        stay={stay}
+                        onEdit={setEditingStay}
+                        onDelete={setConfirmingStayDelete}
+                        tripName={stay.tripId ? tripNameById[stay.tripId] : undefined}
+                        membershipName={membershipName}
+                        membershipSource={resolvedMembership.source}
+                      />
+                      <EntryPhotos kind="stay" entryId={stay.id} />
+                    </div>
                   );
                 })}
               </div>
