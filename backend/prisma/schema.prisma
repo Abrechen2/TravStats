@@ -4450,6 +4450,10 @@ model Document {
   /// What the parse decided and extracted, kept for a later diff.
   parsedDomain  String?   @map("parsed_domain")
   parsedPayload Json?     @map("parsed_payload")
+  /// When `parsed_payload` last changed — set by the trigger `documents_parsed_at`, so
+  /// every writer is covered. The document-link pass rescans a document whose
+  /// reading is newer than its last scan.
+  parsedAt      DateTime? @map("parsed_at")
 
   flightId        String? @map("flight_id")
   cruiseId        String? @map("cruise_id")

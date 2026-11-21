@@ -4,6 +4,15 @@ import type { EntryFacts } from "./match";
 
 const utcDay = (d: Date | null | undefined): string | null =>
   d ? d.toISOString().slice(0, 10) : null;
+/** `HH:MM` UTC, so two rides of one day stay two. */
+const hm = (d: Date | null | undefined): string => (d ? d.toISOString().slice(11, 16) : "");
+/**
+ * What names an entry after a re-import: content only, never its id — but
+ * distinguishing enough that two rides on one line and day do not share a
+ * key (a rejection of one must not suppress the other).
+ */
+const labelOf = (...parts: (string | null | undefined)[]): string =>
+  parts.filter(Boolean).join(" | ");
 const token = (v: string | null | undefined): string | null =>
   v ? normalizeToken(v) || null : null;
 
@@ -103,7 +112,7 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.departureTime),
       checkOut: null,
       name: null,
-      label: r.flightNumber || route(r.depIata, r.arrIata) || r.id,
+      label: labelOf(r.flightNumber, route(r.depIata, r.arrIata), hm(r.departureTime)) || r.id,
     });
   }
   for (const r of trains) {
@@ -116,7 +125,9 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.departureTime),
       checkOut: null,
       name: null,
-      label: r.trainNumber || route(r.depStationName, r.arrStationName) || r.id,
+      label:
+        labelOf(r.trainNumber, route(r.depStationName, r.arrStationName), hm(r.departureTime)) ||
+        r.id,
     });
   }
   for (const r of buses) {
@@ -129,7 +140,8 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.departureTime),
       checkOut: null,
       name: null,
-      label: r.lineName || route(r.depStationName, r.arrStationName) || r.id,
+      label:
+        labelOf(r.lineName, route(r.depStationName, r.arrStationName), hm(r.departureTime)) || r.id,
     });
   }
   for (const r of ferries) {
@@ -142,7 +154,7 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.departureTime),
       checkOut: null,
       name: null,
-      label: route(r.depStationName, r.arrStationName) || r.id,
+      label: labelOf(route(r.depStationName, r.arrStationName), hm(r.departureTime)) || r.id,
     });
   }
   for (const r of stays) {
@@ -155,7 +167,7 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.checkIn),
       checkOut: utcDay(r.checkOut),
       name: normalizeName(r.lodging.name),
-      label: r.lodging.name,
+      label: labelOf(r.lodging.name, utcDay(r.checkOut)),
     });
   }
   for (const r of rentals) {
@@ -168,7 +180,7 @@ export async function loadTripEntries(userId: string): Promise<Map<string, Entry
       day: utcDay(r.pickupTime),
       checkOut: null,
       name: null,
-      label: route(r.pickupStationName, r.returnStationName) || r.id,
+      label: labelOf(route(r.pickupStationName, r.returnStationName), hm(r.pickupTime)) || r.id,
     });
   }
   return out;

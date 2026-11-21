@@ -701,7 +701,8 @@
       "load": "The document link suggestions could not be loaded.",
       "scan": "Checking the stored documents failed. It is retried the next time you open this page.",
       "answer": "Your answer could not be saved. Please try again."
-    }
+    },
+    "hidden": "{{count}} more will appear once you have answered these."
   },
   "time": {
     "field": "Value",

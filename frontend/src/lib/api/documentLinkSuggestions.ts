@@ -28,6 +28,8 @@ export interface DocumentLinkSuggestion {
   displayName: string;
   kind: string | null;
   entries: SuggestedEntry[];
+  /** Pending entries not shown yet; they follow once these are answered. */
+  hidden: number;
 }
 
 export interface DocumentLinkSuggestionList {

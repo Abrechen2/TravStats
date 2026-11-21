@@ -49,20 +49,26 @@ export function candidatesFor(
 /** Documents the next pass has to look at, as a query fragment. */
 function sinceFilter(since: Date | null): Prisma.DocumentWhereInput {
   return since
-    ? { OR: [{ createdAt: { gt: since } }, { links: { some: { createdAt: { gt: since } } } }] }
+    ? {
+        OR: [
+          { createdAt: { gt: since } },
+          { parsedAt: { gt: since } },
+          { links: { some: { createdAt: { gt: since } } } },
+        ],
+      }
     : {};
 }
 
 /**
  * What the next pass has to look at: "all" when the account was never scanned
- * or an entry appeared since (a document scanned before its trip held the
+ * or an entry appeared or changed since (created, assigned to a trip, booking reference corrected) (a document scanned before its trip held the
  * entry would otherwise never be offered it), "documents" when only documents
- * were created or filed, null when nothing changed.
+ * were created, filed or read again, null when nothing changed.
  */
 export async function passScope(userId: string): Promise<"all" | "documents" | null> {
   const pass = await prisma.documentLinkPass.findUnique({ where: { userId } });
   if (!pass) return "all";
-  const where = { userId, tripId: { not: null }, createdAt: { gt: pass.scannedUntil } };
+  const where = { userId, tripId: { not: null }, updatedAt: { gt: pass.scannedUntil } };
   const newer = await Promise.all([
     prisma.flight.count({ where }),
     prisma.railJourney.count({ where }),

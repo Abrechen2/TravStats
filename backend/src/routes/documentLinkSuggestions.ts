@@ -9,6 +9,7 @@ import {
   ensureFirstDocumentLinkPass,
 } from "../services/documents/linkSuggestions/pass";
 import {
+  MAX_GROUP_ENTRIES,
   acceptDocumentSuggestions,
   dismissDocumentSuggestions,
   listDocumentSuggestions,
@@ -32,7 +33,7 @@ router.use(authenticate);
 router.use(requireWriteScope);
 
 const idsBody = z
-  .object({ suggestionIds: z.array(z.string().uuid()).min(1).max(200).optional() })
+  .object({ suggestionIds: z.array(z.string().uuid()).min(1).max(MAX_GROUP_ENTRIES).optional() })
   .strict();
 
 async function passView(
