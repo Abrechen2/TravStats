@@ -225,6 +225,30 @@ describe("expenses at a place visit (forgejo#429)", () => {
     expect(row.tripId).toBe(tripId);
   });
 
+  it("clears the visit link of a roadtrip's costs when the roadtrip moves to another trip", async () => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId, name: "Rundreise", mode: "road", kind: "roadtrip" },
+    });
+    const expense = await prisma.tripExpense.create({
+      data: {
+        userId,
+        routeId: route.id,
+        placeVisitId: visitId,
+        kind: "other",
+        amount: 7,
+        currency: "EUR",
+      },
+    });
+    const moved = await request(app)
+      .patch(api(`/tours/${route.id}`))
+      .set("Cookie", cookie)
+      .send({ tripId: otherTripId });
+    expect(moved.status).toBe(200);
+    const row = await prisma.tripExpense.findUniqueOrThrow({ where: { id: expense.id } });
+    expect(row.placeVisitId).toBeNull();
+    expect(row.routeId).toBe(route.id);
+  });
+
   it("marks a receipt that reaches the visit only through an expense", async () => {
     const created = await post({
       kind: "other",
