@@ -94,28 +94,39 @@ test.describe("map frame times (measurement)", () => {
         });
         await page.goto(`/dashboard?mode=${mode}`);
         await expect(page.locator("canvas").first()).toBeVisible({ timeout: 20_000 });
-        // Let tiles and layers settle, then pan a little so the sample is not an idle map.
+        // Let tiles and layers settle first.
+        // The globe's first-visit hint covers its centre and would swallow the drag.
+        const hint = page.getByRole("button", { name: /Verstanden|Got it/ });
+        if (await hint.isVisible().catch(() => false)) await hint.click();
         await page.waitForTimeout(3_000);
         const box = await page.locator("canvas").first().boundingBox();
+        // Sample WHILE the map is being dragged back and forth: an idle map only measures
+        // the browser's own frame clock.
+        const sampling = recordFrames(page);
         if (box) {
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          const cx = box.x + box.width / 2;
+          const cy = box.y + box.height / 2;
+          await page.mouse.move(cx, cy);
           await page.mouse.down();
-          await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, {
-            steps: 30,
-          });
+          const end = Date.now() + SAMPLE_MS - 500;
+          for (let i = 0; Date.now() < end; i++) {
+            await page.mouse.move(cx + (i % 2 ? 160 : -160), cy + (i % 2 ? 50 : -50), {
+              steps: 20,
+            });
+          }
           await page.mouse.up();
         }
-        const idle = summarise(await recordFrames(page));
+        const panning = summarise(await sampling);
         violations.push(
           ...(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp))
         );
-        const result = { mode, viewport: viewport.name, idle, cspViolations: violations };
+        const result = { mode, viewport: viewport.name, panning, cspViolations: violations };
         await testInfo.attach("frame-times.json", {
           body: JSON.stringify(result, null, 2),
           contentType: "application/json",
         });
         console.log(`PERF ${JSON.stringify(result)}`);
-        expect(idle.frames).toBeGreaterThan(0);
+        expect(panning.frames).toBeGreaterThan(0);
       });
     }
   }
