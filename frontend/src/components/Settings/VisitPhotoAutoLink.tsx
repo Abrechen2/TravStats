@@ -4,7 +4,13 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { failureKey } from "../../lib/api/immich";
-import { getAutoLinkStatus, setAutoLinkEnabled, type AutoLinkStatus } from "../../lib/api/places";
+import { JobFailedError, JobLostError } from "../../lib/api/jobs";
+import {
+  getAutoLinkStatus,
+  setAutoLinkEnabled,
+  type AutoLinkRunResult,
+  type AutoLinkStatus,
+} from "../../lib/api/places";
 import { logger } from "../../lib/logger";
 import { token } from "../ui/tokens";
 
@@ -19,7 +25,10 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
   const { t } = useTranslation("immich");
   const { isEnabled } = useEnabledDomains();
   const [status, setStatus] = useState<AutoLinkStatus | null>(null);
-  const [failed, setFailed] = useState<"load" | "save" | null>(null);
+  const [failed, setFailed] = useState<"load" | "save" | "lost" | "job" | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<AutoLinkRunResult | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -37,21 +46,36 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
   if (!isEnabled("poi")) return null;
 
   const toggle = async (enabled: boolean): Promise<void> => {
+    setFailed(null);
+    setResult(null);
+    setRunning(enabled);
     try {
-      await setAutoLinkEnabled(enabled);
-      await load();
+      setResult(await setAutoLinkEnabled(enabled, setProgress));
     } catch (err: unknown) {
-      logger.error("VisitPhotoAutoLink: save failed", err);
-      setFailed("save");
+      logger.error("VisitPhotoAutoLink: switch failed", err);
+      // A lost job is "unknown", never "failed": links already made stay.
+      setFailed(
+        err instanceof JobLostError ? "lost" : err instanceof JobFailedError ? "job" : "save"
+      );
+    } finally {
+      setRunning(false);
+      setProgress(null);
+      await load();
     }
   };
 
   const problems = SOURCES.flatMap((source) => {
     const state = status?.lastRun?.sources[source];
     return state && state !== "ok" && state !== "notConfigured"
-      ? [`${t(`visitPhotosAuto.source.${source}`)}: ${t(failureKey(state, source))}`]
+      ? [
+          `${t(`visitPhotosAuto.source.${source}`)}: ${
+            state === "truncated" ? t("visitPhotosAuto.truncated") : t(failureKey(state, source))
+          }`,
+        ]
       : [];
   });
+  const lastRun = result ?? status?.lastRun ?? null;
+  const failures = lastRun && "failures" in lastRun ? (lastRun.failures ?? []) : [];
 
   return (
     <div className="flex flex-col gap-1">
@@ -59,7 +83,7 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
         <input
           type="checkbox"
           checked={status?.enabled ?? true}
-          disabled={status === null}
+          disabled={status === null || running}
           onChange={(e) => void toggle(e.target.checked)}
         />
         <span className="label">{t("visitPhotosAuto.title")}</span>
@@ -70,9 +94,43 @@ export default function VisitPhotoAutoLink(): JSX.Element | null {
           {line}
         </p>
       ))}
+      {running && (
+        <p role="status" className="t-caption">
+          {progress && progress.total > 0
+            ? t("visitPhotosAuto.progress", { done: progress.done, total: progress.total })
+            : t("visitPhotosAuto.running")}
+        </p>
+      )}
+      {result && (
+        <p role="status" className="text-sm">
+          {t("visitPhotosAuto.done", { visits: result.visits, linked: result.linked })}
+        </p>
+      )}
+      {(lastRun?.failedVisits ?? 0) > 0 && (
+        <div role="alert" className="text-sm" style={{ color: token("bad") }}>
+          <p>{t("visitPhotosAuto.failedVisits", { count: lastRun?.failedVisits ?? 0 })}</p>
+          {failures.map((f) => (
+            <p key={f.visitId} className="t-caption">
+              {t(failureKey(f.reason))}
+            </p>
+          ))}
+        </div>
+      )}
+      {(lastRun?.truncatedVisits ?? 0) > 0 && (
+        <p role="alert" className="text-sm" style={{ color: token("bad") }}>
+          {t("visitPhotosAuto.truncatedVisits", { count: lastRun?.truncatedVisits ?? 0 })}
+        </p>
+      )}
       {failed && (
         <p role="alert" className="text-sm" style={{ color: token("bad") }}>
-          {t(failed === "load" ? "visitPhotosAuto.loadFailed" : "visitPhotosAuto.saveFailed")}
+          {t(
+            {
+              load: "visitPhotosAuto.loadFailed",
+              save: "visitPhotosAuto.saveFailed",
+              lost: "visitPhotosAuto.lost",
+              job: "visitPhotosAuto.jobFailed",
+            }[failed]
+          )}
         </p>
       )}
     </div>

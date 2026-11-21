@@ -64,7 +64,7 @@ export async function ownerAsset(
     return p.filename
       ? localFile(getPlacePhotoDir(), p.filename)
       : p.immichAssetId
-        ? remoteAsset(userId, p.immichAssetId)
+        ? remoteAsset(userId, p.immichAssetId, toPhotoSourceKind(p.provider))
         : Promise.reject(refused());
   }
   if (kind === "lodging") {

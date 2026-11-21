@@ -24,6 +24,7 @@ import {
   type VisitTimeColumns,
 } from "../../services/timeModel/visitColumns";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
+import { scheduleVisitAutoLink } from "../../services/places/visitPhotoAutoLink";
 
 /**
  * Shipped checklists — the New 7 Wonders and friends.
@@ -552,9 +553,10 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       if (!already) {
         // A tick names no trip; the visit's day finds the one it belongs to.
         const tripId = await tripForVisitDay(prisma, userId, time);
-        await prisma.placeVisit.create({
+        const created = await prisma.placeVisit.create({
           data: { placeId: place.id, userId, tripId, ...time, writtenVia: "suggestion" },
         });
+        scheduleVisitAutoLink(userId, created.id);
       }
     }
 

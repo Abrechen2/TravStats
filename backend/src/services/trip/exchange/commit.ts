@@ -49,6 +49,7 @@ import { writeRoadtrips } from "./commitRoadtrips";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import type { TripArchive } from "./readArchive";
 import type { TripFileChoices, TripFileEntryProposal, TripFileProposal } from "./types";
+import { scheduleVisitAutoLink } from "../../places/visitPhotoAutoLink";
 
 export interface TripFileCommitResult {
   tripId: string;
@@ -215,6 +216,8 @@ export async function commitTripFile(
     throw error;
   }
 
+  // Imported visits get their photo pass once the trip is in.
+  for (const visitId of ids.visit.values()) scheduleVisitAutoLink(userId, visitId);
   const documents = await fileDocuments(userId, archive, ids);
   const tripId = ids.trip.get("trip")!;
   await recomputeTripStatus(tripId);

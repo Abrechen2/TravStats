@@ -14,6 +14,7 @@ import {
 import { PHOTO_SOURCE_KINDS, type PhotoSourceKind } from "../photoSource";
 import { toPhotoSourceKind } from "../photoSource/connection";
 import { privacyCircleSet } from "../travtrack/privacyCircles";
+import { ImmichError } from "../immich/types";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
 import { anchorOf, dayWindow } from "./visitPhotoSuggestions";
 import { linkAssetsToVisit } from "./visitPhotoLinks";
@@ -127,11 +128,18 @@ export interface AutoLinkRun {
   linked: number;
   /** Visits whose pass threw (logged); the run went on without them. */
   failedVisits: number;
+  /** Why, for the first few of them: the failure kind, else `unknown`. */
+  failures: { visitId: string; reason: string }[];
+  /** Visits where a source had more photos than one search reads. */
+  truncatedVisits: number;
   /** Worst answer per source over the run: a failure beats "ok" beats "notConfigured". */
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
 }
 
 const rank = (s: SourceState): number => (s === "ok" ? 1 : s === "notConfigured" ? 0 : 2);
+
+/** Enough to explain a failing run in the settings; the rest are in the log. */
+const FAILURES_KEPT = 10;
 
 function mergeSources(
   into: AutoLinkRun["sources"],
@@ -156,6 +164,8 @@ async function recordRun(userId: string, run: AutoLinkRun): Promise<void> {
         at: new Date().toISOString(),
         linked: run.linked,
         failedVisits: run.failedVisits,
+        failures: run.failures,
+        truncatedVisits: run.truncatedVisits,
         sources: run.sources,
       },
     },
@@ -182,7 +192,14 @@ export async function autoLinkVisits(
       })
     ).map((v) => v.id);
   const search = memoizedSearch(directSearch(userId));
-  let run: AutoLinkRun = { visits: 0, linked: 0, failedVisits: 0, sources: {} };
+  let run: AutoLinkRun = {
+    visits: 0,
+    linked: 0,
+    failedVisits: 0,
+    failures: [],
+    truncatedVisits: 0,
+    sources: {},
+  };
   let done = 0;
   for (const id of ids) {
     // Switching off stops a pass already under way, not only the next one.
@@ -192,6 +209,8 @@ export async function autoLinkVisits(
       if (outcome) {
         run = {
           ...run,
+          truncatedVisits:
+            run.truncatedVisits + (Object.values(outcome.sources).includes("truncated") ? 1 : 0),
           visits: run.visits + 1,
           linked: run.linked + outcome.linked,
           sources: mergeSources(run.sources, outcome.sources),
@@ -199,7 +218,14 @@ export async function autoLinkVisits(
       }
     } catch (error) {
       logger.error({ message: "visit_photo_auto_link_failed", context: { userId, id }, error });
-      run = { ...run, failedVisits: run.failedVisits + 1 };
+      run = {
+        ...run,
+        failedVisits: run.failedVisits + 1,
+        failures: [
+          ...run.failures,
+          { visitId: id, reason: error instanceof ImmichError ? error.kind : "unknown" },
+        ].slice(0, FAILURES_KEPT),
+      };
     }
     onProgress?.(++done, ids.length);
   }

@@ -98,7 +98,12 @@ export function matchAssets(candidates: readonly SourcedAsset[], spec: MatchSpec
     .slice(0, spec.cap);
 }
 
-export type SourceState = "ok" | "notConfigured" | ImmichErrorKind;
+/**
+ * `truncated`: the source answered but had more photos in the window than one
+ * search reads, so the matches below are a prefix — a visible reason, never a
+ * silent miss.
+ */
+export type SourceState = "ok" | "notConfigured" | "truncated" | ImmichErrorKind;
 
 export interface WindowAssets {
   /** What each source answered; a failing source never hides the other. */
@@ -110,7 +115,7 @@ export interface WindowAssets {
 export type WindowSearch = (
   provider: PhotoSourceKind,
   window: { start: Date; end: Date }
-) => Promise<PhotoSourceAsset[]>;
+) => Promise<PhotoSourceAsset[] & { truncated?: boolean }>;
 
 export function directSearch(userId: string): WindowSearch {
   return async (provider, window) => {
@@ -120,7 +125,8 @@ export function directSearch(userId: string): WindowSearch {
       takenAfter: window.start,
       takenBefore: window.end,
     });
-    return page.assets;
+    // The flag rides on the array, like `AlbumAssetList`.
+    return Object.assign([...page.assets], { truncated: page.truncated });
   };
 }
 
@@ -142,7 +148,7 @@ export async function candidatesForWindow(
     providers.map(async (provider) => {
       try {
         const assets = await search(provider, window);
-        sources[provider] = "ok";
+        sources[provider] = assets.truncated ? "truncated" : "ok";
         candidates.push(...assets.map((asset) => ({ provider, asset })));
       } catch (error) {
         if (error instanceof NotConfigured) {
@@ -162,7 +168,7 @@ export async function candidatesForWindow(
 /** The one state a client that knows a single `library` field reads. */
 export function aggregateState(sources: Record<string, SourceState>): SourceState {
   const states = Object.values(sources);
-  if (states.includes("ok")) return "ok";
+  if (states.includes("ok") || states.includes("truncated")) return "ok";
   const failure = states.find((s) => s !== "notConfigured");
   return failure ?? "notConfigured";
 }

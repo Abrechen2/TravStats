@@ -143,6 +143,16 @@
     "source": {
       "immich": "Immich",
       "photoprism": "PhotoPrism"
-    }
+    },
+    "truncated": "Die Quelle hatte an manchen Tagen mehr Fotos, als eine Suche liest – nicht alle passenden Fotos wurden gefunden.",
+    "progress": "Verknüpfe … {{done}} von {{total}} Besuchen",
+    "running": "Verknüpfe …",
+    "done": "{{visits}} Besuche geprüft, {{linked}} Fotos verknüpft.",
+    "failedVisits_one": "{{count}} Besuch konnte nicht verarbeitet werden:",
+    "failedVisits_other": "{{count}} Besuche konnten nicht verarbeitet werden:",
+    "truncatedVisits_one": "Bei {{count}} Besuch wurden nicht alle Fotos des Tages gelesen.",
+    "truncatedVisits_other": "Bei {{count}} Besuchen wurden nicht alle Fotos des Tages gelesen.",
+    "lost": "Der Stand ist unbekannt: der Server hat den Auftrag vergessen (Neustart?). Schon verknüpfte Fotos bleiben es.",
+    "jobFailed": "Die automatische Verknüpfung ist fehlgeschlagen."
   }
 }

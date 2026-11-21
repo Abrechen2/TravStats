@@ -11,6 +11,7 @@ import { normaliseNamePair } from "../geo/gluedPlaceName";
 import { findPlaceIdByRef } from "../places/placeRefs";
 import { visitColumnsFromResolved } from "../timeModel/visitColumns";
 import { recheckAchievements } from "../../utils/achievements";
+import { scheduleVisitAutoLink } from "../places/visitPhotoAutoLink";
 
 /**
  * Accepting a `visit` finding (forgejo#211): the place and the visit are made
@@ -235,6 +236,7 @@ export async function acceptVisitFinding(
   });
 
   await recheckAchievements(userId, "photo visit accept");
+  if (outcome.visitCreated) scheduleVisitAutoLink(userId, outcome.placeVisitId);
   return outcome;
 }
 

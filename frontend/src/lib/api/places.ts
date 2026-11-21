@@ -234,6 +234,10 @@ export interface AutoLinkStatus {
     at: string;
     linked: number;
     failedVisits?: number;
+    /** The first few failed visits and why (a failure kind, else `unknown`). */
+    failures?: { visitId: string; reason: string }[];
+    /** Visits where a source had more photos in a day than one search reads. */
+    truncatedVisits?: number;
     /** `ok`, `notConfigured`, or a failure kind (`unreachable`, `auth`, …). */
     sources: Partial<Record<PhotoProvider, string>>;
   } | null;
@@ -244,8 +248,31 @@ export async function getAutoLinkStatus(): Promise<AutoLinkStatus> {
   return res.data.data;
 }
 
-export async function setAutoLinkEnabled(enabled: boolean): Promise<void> {
-  await api.put("/places/visits/photos/auto-link", { enabled });
+/** What a finished pass reports; the same figures the status keeps as `lastRun`. */
+export interface AutoLinkRunResult {
+  visits: number;
+  linked: number;
+  failedVisits: number;
+  failures: { visitId: string; reason: string }[];
+  truncatedVisits: number;
+}
+
+/**
+ * Switch the account setting. Switching on starts a pass over every existing
+ * visit; `onProgress` follows that job and the returned result says how it
+ * ended. Null when no pass was started (switched off).
+ */
+export async function setAutoLinkEnabled(
+  enabled: boolean,
+  onProgress?: (progress: { done: number; total: number } | null) => void
+): Promise<AutoLinkRunResult | null> {
+  const res = await api.put<Envelope<{ enabled: boolean; jobId: string | null }>>(
+    "/places/visits/photos/auto-link",
+    { enabled }
+  );
+  const jobId = res.data.data.jobId;
+  if (jobId === null) return null;
+  return waitForJob<AutoLinkRunResult>(jobId, { onPoll: (job) => onProgress?.(job.progress) });
 }
 
 /** "Alle automatisch verknüpften entfernen": the server also remembers each as refused. */

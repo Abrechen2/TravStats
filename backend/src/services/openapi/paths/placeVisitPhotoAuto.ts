@@ -13,6 +13,8 @@ const autoLinkStatus = z.object({
       at: z.string(),
       linked: z.number(),
       failedVisits: z.number().optional(),
+      failures: z.array(z.object({ visitId: z.string(), reason: z.string() })).optional(),
+      truncatedVisits: z.number().optional(),
       sources: z.record(z.string(), z.string()),
     })
     .nullable(),
@@ -26,7 +28,7 @@ registry.registerPath({
   description:
     "Whether photos of Immich and PhotoPrism are linked to place visits on their own " +
     "(default on), and what the last pass found per source: `ok`, `notConfigured` or the " +
-    "failure kind (`unreachable`, `auth`, `notFound`, `protocol`, `invalidUrl`).",
+    "failure kind (`unreachable`, `auth`, `notFound`, `protocol`, `invalidUrl`) or `truncated` (the source had more photos in a day than one search reads).",
   tags: placesTag,
   responses: {
     200: {

@@ -296,6 +296,17 @@ describe("automatic place-visit photo links", () => {
     expect(status.body.data.lastRun.sources).toEqual({ immich: "ok", photoprism: "auth" });
   });
 
+  it("says so when a source had more photos than one search reads, instead of a silent miss", async () => {
+    search.immich.mockResolvedValue({ assets: [asset(IMMICH_NEAR)], truncated: true });
+    await run();
+    expect((await linked()).map((r) => r.immichAssetId)).toContain(IMMICH_NEAR);
+    const status = await request(app)
+      .get("/api/v1/places/visits/photos/auto-link")
+      .set("Cookie", cookie);
+    expect(status.body.data.lastRun.sources.immich).toBe("truncated");
+    expect(status.body.data.lastRun.truncatedVisits).toBeGreaterThan(0);
+  });
+
   it("offers PhotoPrism photos among the suggestions, with their source", async () => {
     search.immich.mockResolvedValue({ assets: [asset(IMMICH_NEAR)], truncated: false });
     const res = await request(app)

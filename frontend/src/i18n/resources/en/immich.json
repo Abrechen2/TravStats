@@ -143,6 +143,16 @@
     "source": {
       "immich": "Immich",
       "photoprism": "PhotoPrism"
-    }
+    },
+    "truncated": "On some days the source held more photos than one search reads – not every matching photo was found.",
+    "progress": "Linking … {{done}} of {{total}} visits",
+    "running": "Linking …",
+    "done": "{{visits}} visits checked, {{linked}} photos linked.",
+    "failedVisits_one": "{{count}} visit could not be processed:",
+    "failedVisits_other": "{{count}} visits could not be processed:",
+    "truncatedVisits_one": "For {{count}} visit not all of the day's photos were read.",
+    "truncatedVisits_other": "For {{count}} visits not all of the day's photos were read.",
+    "lost": "The state is unknown: the server forgot the job (restart?). Photos already linked stay linked.",
+    "jobFailed": "Automatic linking failed."
   }
 }
