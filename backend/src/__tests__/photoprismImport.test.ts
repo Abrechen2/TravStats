@@ -57,7 +57,11 @@ jest.mock("../utils/logger", () => ({
   default: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-import { startAlbumImport, clearImportGuards } from "../services/immich/immichImport";
+import {
+  startAlbumImport,
+  estimateAlbumImport,
+  clearImportGuards,
+} from "../services/immich/immichImport";
 import { clearPhotoprismTokenCache } from "../services/photoSource/photoprismSource";
 
 const H1 = "a".repeat(40);
@@ -202,6 +206,35 @@ describe("PhotoPrism import", () => {
     const urls = mockedAxios.get.mock.calls.map((c) => String(c[0]));
     expect(urls.some((u) => u.includes(`/dl/${H1}`))).toBe(false);
     expect(urls.some((u) => u.includes(`/dl/${H2}`))).toBe(true);
+  });
+
+  it("stores the size that actually arrived, not 0 (PhotoPrism's list carries none)", async () => {
+    routeAxios({ photos: [photo(H1)] });
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(photoCreate.mock.calls[0][0].data.sizeBytes).toBe(5);
+  });
+
+  it("quotes an unknown size as null, not 0 bytes, but still counts the importable photos", async () => {
+    routeAxios({ photos: [photo(H1), photo(H2), photo("c".repeat(40), { Type: "video" })] });
+
+    expect(await estimateAlbumImport("u1", "aq1", "photoprism")).toEqual({
+      assetCount: 2,
+      totalBytes: null,
+    });
+  });
+
+  it("counts the photos of a chunk that finished before a run-wide failure", async () => {
+    routeAxios({
+      photos: [photo(H1), photo(H2)],
+      downloads: [() => media(), () => axiosError(401)],
+    });
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(lastJob()).toMatchObject({ status: "failed", error: "auth" });
+    expect(jobStates()).toContainEqual(expect.objectContaining({ processedAssets: 1 }));
   });
 
   it("stores an undated photo with takenAt null, never 1970", async () => {

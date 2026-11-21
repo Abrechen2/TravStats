@@ -471,6 +471,20 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
     );
   });
 
+  it("shows no size estimate when PhotoPrism cannot tell (null, not 0 bytes)", async () => {
+    connectBoth();
+    estimateImport.mockResolvedValue({ assetCount: 3, totalBytes: null });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+    await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
+    await user.click(screen.getByRole("button", { name: "modeImport" }));
+
+    await waitFor(() => expect(estimateImport).toHaveBeenCalled());
+    expect(screen.queryByText("albums.estimate")).not.toBeInTheDocument();
+  });
+
   it("says why PhotoPrism failed, in PhotoPrism's words, and logs it", async () => {
     listAlbums.mockImplementation(async (_tripId: string, provider = "immich") => {
       if (provider === "immich") throw { response: { data: { error: "notConfigured" } } };

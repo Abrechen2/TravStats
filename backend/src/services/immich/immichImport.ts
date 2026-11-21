@@ -51,9 +51,9 @@ function isDuplicateAsset(error: unknown): boolean {
  * import when Immich reports no size upfront: `pipeline()` destroys the source
  * and the write target on abort, and the caller removes the partial file.
  */
-export function createByteCapStream(maxBytes: number): Transform {
+export function createByteCapStream(maxBytes: number): Transform & { readonly bytes: number } {
   let total = 0;
-  return new Transform({
+  const stream = new Transform({
     transform(chunk: Buffer, _enc, cb): void {
       total += chunk.length;
       if (total > maxBytes) {
@@ -67,6 +67,10 @@ export function createByteCapStream(maxBytes: number): Transform {
       cb(null, chunk);
     },
   });
+  // What passed through so far: the stored size when the source reported none.
+  return Object.defineProperty(stream, "bytes", { get: () => total }) as Transform & {
+    readonly bytes: number;
+  };
 }
 
 /** Mirrors the multer `tripPhotoFilter` allow-list — same bytes, same rules. */
@@ -179,7 +183,7 @@ export async function estimateAlbumImport(
   userId: string,
   albumId: string,
   provider: PhotoSourceKind = "immich"
-): Promise<{ assetCount: number; totalBytes: number }> {
+): Promise<{ assetCount: number; totalBytes: number | null }> {
   const conn = await getPhotoSourceConnection(provider, userId);
   if (!conn) return { assetCount: 0, totalBytes: 0 };
 
@@ -187,9 +191,14 @@ export async function estimateAlbumImport(
     isImportable
   );
 
+  // PhotoPrism reports no size in a list: no estimate (null), not "0 bytes",
+  // which would read as a free copy of a large album. Immich keeps its sum of
+  // the sizes it knows (an unknown one counts as 0).
+  const noSizes = provider === "photoprism" && assets.every((a) => a.sizeBytes === null);
   return {
     assetCount: assets.length,
-    totalBytes: assets.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0),
+    totalBytes:
+      noSizes && assets.length > 0 ? null : assets.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0),
   };
 }
 
@@ -251,18 +260,16 @@ async function importAsset(
     // The byte cap also guards the case where Immich reported no size (no EXIF
     // row yet): the stream is aborted the moment it crosses the ceiling and the
     // partial file is cleaned up below (M2).
-    await pipeline(
-      upstream.stream,
-      createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES),
-      fs.createWriteStream(filePath)
-    );
+    const cap = createByteCapStream(FILE_LIMITS.IMMICH_MAX_ASSET_BYTES);
+    await pipeline(upstream.stream, cap, fs.createWriteStream(filePath));
 
     await prisma.tripPhoto.create({
       data: {
         tripId,
         filename,
         mimetype: asset.mimeType,
-        sizeBytes: asset.sizeBytes ?? 0,
+        // PhotoPrism reports no size in a list: store what actually arrived, not 0.
+        sizeBytes: asset.sizeBytes ?? cap.bytes,
         // No capture time stays null — never 1970 — and sorts last in the gallery.
         takenAt: asset.fileCreatedAt === null ? null : new Date(asset.fileCreatedAt),
         provider,
@@ -397,11 +404,18 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           const settled = await Promise.allSettled(
             chunk.map((asset) => importAsset(source, provider, link.tripId, linkId, asset))
           );
-          const fatal = settled.find((r) => r.status === "rejected");
-          if (fatal) throw (fatal as PromiseRejectedResult).reason;
-          const results = settled.map((r) => (r as PromiseFulfilledResult<boolean>).value);
+          const results = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
           processed += results.filter(Boolean).length;
           failed += results.filter((ok) => !ok).length;
+          const fatal = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
+          if (fatal) {
+            // The siblings that did finish are stored: count them before failing.
+            await prisma.immichImportJob.update({
+              where: { albumLinkId: linkId },
+              data: { processedAssets: processed, failedAssets: failed },
+            });
+            throw fatal.reason;
+          }
 
           await prisma.immichImportJob.update({
             where: { albumLinkId: linkId },
