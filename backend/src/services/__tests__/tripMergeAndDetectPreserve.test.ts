@@ -229,6 +229,29 @@ describe("a trip keeps its contents", () => {
       expect(photos.map((p) => p.id)).toEqual([targetPhoto.id]);
     });
 
+    it("keeps both rows when the same asset id belongs to two photo sources", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const row = (tripId: string, provider: string) => ({
+        tripId,
+        provider,
+        filename: "x.jpg",
+        mimetype: "image/jpeg",
+        sizeBytes: 10,
+        immichAssetId: "id-1",
+      });
+      await prisma.tripPhoto.create({ data: row(target.id, "immich") });
+      await prisma.tripPhoto.create({ data: row(source.id, "photoprism") });
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const photos = await prisma.tripPhoto.findMany({
+        where: { tripId: target.id },
+        orderBy: { provider: "asc" },
+      });
+      expect(photos.map((p) => p.provider)).toEqual(["immich", "photoprism"]);
+    });
+
     // forgejo#139: the dropped duplicate may be the copy that was filed at a
     // station. Dropping the row must not drop the filing with it.
     it("hands a dropped duplicate's station to the surviving copy that has none", async () => {

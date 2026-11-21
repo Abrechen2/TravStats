@@ -41,6 +41,7 @@
     "unlinkKeepCopies": "Kopien behalten",
     "unlinkDeleteCopies": "Kopien löschen",
     "groupByDay": "Nach Tagen gruppieren",
+    "undated": "Ohne Datum",
     "resync": "Neu synchronisieren",
     "resyncing": "Synchronisiere … {{done}}/{{total}}",
     "importFailed": "Der Import ist abgebrochen – {{reason}} Bereits übernommene Fotos bleiben erhalten.",
@@ -49,7 +50,6 @@
     "badgeLink": "live",
     "badgeImport": "Kopie",
     "sourceLabel": "Fotoquelle",
-    "importUnsupported": "PhotoPrism-Alben lassen sich vorerst nur verlinken, nicht kopieren.",
     "partialLink": "Ein Teil der Alben konnte nicht verknüpft werden: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
     "badgeImmich": "Immich"

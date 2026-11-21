@@ -63,7 +63,8 @@ export interface ImportJob {
 
 export interface ImportEstimate {
   assetCount: number;
-  totalBytes: number;
+  /** Null when the source reports no sizes (PhotoPrism): unknown, not zero. */
+  totalBytes: number | null;
 }
 
 /**

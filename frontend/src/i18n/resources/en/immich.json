@@ -41,6 +41,7 @@
     "unlinkKeepCopies": "Keep copies",
     "unlinkDeleteCopies": "Delete copies",
     "groupByDay": "Group by day",
+    "undated": "Undated",
     "resync": "Re-sync",
     "resyncing": "Syncing… {{done}}/{{total}}",
     "importFailed": "The import stopped – {{reason}} Photos already copied are kept.",
@@ -49,7 +50,6 @@
     "badgeLink": "live",
     "badgeImport": "copy",
     "sourceLabel": "Photo source",
-    "importUnsupported": "PhotoPrism albums can only be linked for now, not copied.",
     "partialLink": "Some albums could not be linked: {{reason}}",
     "badgePhotoprism": "PhotoPrism",
     "badgeImmich": "Immich"

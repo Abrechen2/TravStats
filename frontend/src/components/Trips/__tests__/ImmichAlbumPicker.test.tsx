@@ -132,7 +132,7 @@ describe("ImmichAlbumPicker", () => {
 
     await user.click(screen.getByRole("button", { name: "modeImport" }));
 
-    await waitFor(() => expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1"));
+    await waitFor(() => expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1", "immich"));
     await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
   });
 
@@ -145,7 +145,7 @@ describe("ImmichAlbumPicker", () => {
     await user.click(screen.getByRole("checkbox", { name: /Rome/ }));
 
     await waitFor(() => expect(estimateImport).toHaveBeenCalledTimes(1));
-    expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1");
+    expect(estimateImport).toHaveBeenCalledWith("trip-1", "a1", "immich");
     await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
   });
 
@@ -432,7 +432,7 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
     expect(screen.queryByRole("group", { name: "albums.sourceLabel" })).not.toBeInTheDocument();
   });
 
-  it("links a PhotoPrism album with its provider, link mode only", async () => {
+  it("links a PhotoPrism album with its provider", async () => {
     connectBoth();
     renderPicker();
     await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
@@ -440,8 +440,8 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
     await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
     await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
 
-    expect(screen.queryByRole("button", { name: "modeImport" })).not.toBeInTheDocument();
-    expect(screen.getByText("albums.importUnsupported")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "modeLink" })).toBeInTheDocument();
+    expect(screen.queryByText("albums.importUnsupported")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
     await waitFor(() =>
@@ -449,6 +449,40 @@ describe("ImmichAlbumPicker with PhotoPrism", () => {
         { immichAlbumId: "pp1", mode: "link", provider: "photoprism" },
       ])
     );
+  });
+
+  it("copies a PhotoPrism album: asks PhotoPrism for the estimate and links it in import mode", async () => {
+    connectBoth();
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+    await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
+    await user.click(screen.getByRole("button", { name: "modeImport" }));
+
+    await waitFor(() => expect(estimateImport).toHaveBeenCalledWith("trip-1", "pp1", "photoprism"));
+    await waitFor(() => expect(screen.getByText("albums.estimate")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /albums.confirm/ }));
+    await waitFor(() =>
+      expect(linkAlbums).toHaveBeenCalledWith("trip-1", [
+        { immichAlbumId: "pp1", mode: "import", provider: "photoprism" },
+      ])
+    );
+  });
+
+  it("shows no size estimate when PhotoPrism cannot tell (null, not 0 bytes)", async () => {
+    connectBoth();
+    estimateImport.mockResolvedValue({ assetCount: 3, totalBytes: null });
+    renderPicker();
+    await waitFor(() => expect(screen.getByText("Rome")).toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "albums.badgePhotoprism" }));
+    await user.click(screen.getByRole("checkbox", { name: /Lissabon/ }));
+    await user.click(screen.getByRole("button", { name: "modeImport" }));
+
+    await waitFor(() => expect(estimateImport).toHaveBeenCalled());
+    expect(screen.queryByText("albums.estimate")).not.toBeInTheDocument();
   });
 
   it("says why PhotoPrism failed, in PhotoPrism's words, and logs it", async () => {

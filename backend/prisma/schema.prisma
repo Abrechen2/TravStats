@@ -2207,7 +2207,10 @@ model TripPhoto {
   sortIdx   Int       @default(0) @map("sort_idx")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  // Immich provenance — set only for photos imported from a linked album.
+  // Photo-source provenance — set only for photos imported from a linked album.
+  // The column keeps its Immich name; `provider` says which source the id
+  // belongs to (`immich` | `photoprism`), because an id is only unique per source.
+  provider          String  @default("immich")
   immichAssetId     String? @map("immich_asset_id")
   immichAlbumLinkId String? @map("immich_album_link_id")
 
@@ -2231,7 +2234,7 @@ model TripPhoto {
   visitLinks   PlaceVisitPhoto[]
   journalLinks JournalEntryPhoto[]
 
-  @@unique([tripId, immichAssetId])
+  @@unique([tripId, provider, immichAssetId])
   @@index([tripId])
   @@index([tripId, sortIdx])
   @@index([immichAlbumLinkId])

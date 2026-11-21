@@ -31,8 +31,16 @@ vi.mock("../../../lib/api/immich", () => ({
   },
 }));
 
+const translated = vi.hoisted(() => [] as string[]);
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: {}, ready: true }),
+  useTranslation: () => ({
+    t: (key: string) => {
+      translated.push(key);
+      return key;
+    },
+    i18n: {},
+    ready: true,
+  }),
 }));
 
 vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" /> }));
@@ -119,6 +127,28 @@ describe("ImmichAlbumSection", () => {
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(3));
     // Two capture days -> two headers, and every picture still on screen.
     expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+  });
+
+  it("puts photos without a capture date in their own last group, headed as undated (not 1970)", async () => {
+    const undated = {
+      id: "u1",
+      url: "/u.jpg",
+      previewUrl: "/u.jpg",
+      takenAt: null,
+      lat: null,
+      lon: null,
+    };
+    getAlbumAssets.mockResolvedValue({ assets: [...DATED, undated] });
+    render(<ImmichAlbumSection tripId="trip-1" album={LINK_ALBUM} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(4));
+    expect(screen.getAllByTestId("gallery-day-header")).toHaveLength(2);
+    const header = screen.getByTestId("gallery-undated-header");
+    expect(header).toHaveTextContent("albums.undated");
+    // Last group: nothing follows it.
+    const headers = screen.getAllByRole("heading", { level: 4 });
+    expect(headers[headers.length - 1]).toBe(header);
+    expect(screen.queryByText(/1970/)).not.toBeInTheDocument();
   });
 
   it("lets the grouping be turned off, showing one plain grid again", async () => {
@@ -526,6 +556,25 @@ describe("ImmichAlbumSection", () => {
       expect(
         await screen.findByText("albums.importFailed", undefined, { timeout: 4000 })
       ).toBeInTheDocument();
+    });
+
+    it("names the source in a failed PhotoPrism import (its words, not Immich's)", async () => {
+      translated.length = 0;
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(job({ status: "failed", error: "auth" }));
+
+      render(
+        <ImmichAlbumSection
+          tripId="trip-1"
+          album={{ ...IMPORT_ALBUM, provider: "photoprism" }}
+          onChanged={vi.fn()}
+        />
+      );
+
+      await screen.findByText("albums.importFailed", undefined, { timeout: 4000 });
+      expect(translated).toContain("errors.photoprism.auth");
+      expect(translated).not.toContain("errors.auth");
     });
 
     it("reports photos that did not come across in an otherwise completed run", async () => {

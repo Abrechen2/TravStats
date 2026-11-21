@@ -20,7 +20,7 @@ import {
   listAllAlbumAssets,
   type AlbumAssetList,
 } from "../../services/photoSource";
-import { getImmichConnection, getImmichDefaultMode } from "../../services/immich/immichResolver";
+import { getImmichDefaultMode } from "../../services/immich/immichResolver";
 import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
 import type { PhotoSourceKind } from "../../services/photoSource/types";
 import {
@@ -190,11 +190,6 @@ router.post(
       const provider = requested[0].provider;
       if (requested.some((r) => r.provider !== provider)) {
         throw new AppError("Albums of one request must come from one photo source", 400);
-      }
-      // PhotoPrism import mode is phase B3; refuse instead of storing a link
-      // whose import can never run.
-      if (provider === "photoprism" && requested.some((r) => r.mode === "import")) {
-        throw new AppError("importNotSupported", 400);
       }
       const conn = await requireConnection(userId, res, provider);
       if (!conn) return;
@@ -374,11 +369,15 @@ router.get(
         truncated: (assets as AlbumAssetList).truncated === true,
         assets: assets
           .filter((a: ImmichAsset) => a.type === "IMAGE")
-          // Immich answers in its own order; the gallery reads chronologically.
-          // mapAsset guarantees a fileCreatedAt (epoch 0 when absent), so this
-          // comparison never sees undefined.
+          // The source answers in its own order; the gallery reads chronologically.
+          // A photo with no capture time (`null`) has nothing to sort by and goes
+          // last, in the source's order — not to 1970, and not to the front.
           .slice()
-          .sort((a: ImmichAsset, b: ImmichAsset) => a.fileCreatedAt.localeCompare(b.fileCreatedAt))
+          .sort((a: ImmichAsset, b: ImmichAsset) =>
+            a.fileCreatedAt === null || b.fileCreatedAt === null
+              ? Number(a.fileCreatedAt === null) - Number(b.fileCreatedAt === null)
+              : a.fileCreatedAt.localeCompare(b.fileCreatedAt)
+          )
           .map((a: ImmichAsset) => ({
             id: a.id,
             url: proxyUrl(tripId, link.id, a.id, "thumbnail"),
@@ -408,7 +407,8 @@ router.get(
       const albumId = typeof req.query.albumId === "string" ? req.query.albumId : "";
       if (!albumId) throw new AppError("albumId is required", 400);
 
-      res.json(await estimateAlbumImport(userId, albumId));
+      const { provider } = albumListQuerySchema.parse(req.query);
+      res.json(await estimateAlbumImport(userId, albumId, provider));
     } catch (error) {
       sendImmichFailure(res, error, next);
     }
@@ -455,7 +455,7 @@ router.post(
       // service's no-connection branch early-returns, and the stale-reclaim
       // only fires on `running`, so nothing ever advances a `pending` row —
       // the frontend polls forever (M1). Record a terminal failure instead.
-      const conn = await getImmichConnection(userId);
+      const conn = await getPhotoSourceConnection(toPhotoSourceKind(link.provider), userId);
       if (!conn) {
         await prisma.immichImportJob.upsert({
           where: { albumLinkId: link.id },
@@ -472,9 +472,10 @@ router.post(
             completedAt: new Date(),
           },
         });
-        res
-          .status(409)
-          .json({ error: "notConfigured", message: "No Immich connection configured" });
+        res.status(409).json({
+          error: "notConfigured",
+          message: `No ${link.provider === "photoprism" ? "PhotoPrism" : "Immich"} connection configured`,
+        });
         return;
       }
 

@@ -32,8 +32,11 @@ export interface PhotoSourceAlbum {
 export interface PhotoSourceAsset {
   id: string;
   type: "IMAGE" | "VIDEO";
-  /** ISO-8601. */
-  fileCreatedAt: string;
+  /**
+   * ISO-8601 capture instant, or null when the source has no trustworthy one.
+   * Never the epoch: an undated photo is not a photo from 1970 (abstention).
+   */
+  fileCreatedAt: string | null;
   originalFileName: string;
   mimeType: string;
   /** Null when the source does not know it — never 0 (abstention). */
@@ -94,7 +97,7 @@ export interface PhotoSourceProvider {
    * The assets whose capture time falls in `range` (library-wide, not one
    * album). The caller re-checks each `fileCreatedAt`: a source may return a
    * slightly wider set, and an asset without a trustworthy capture time
-   * carries the epoch, which no real window contains.
+   * carries null, which no window contains.
    */
   searchAssetsByTime(range: PhotoSourceTimeRange): Promise<PhotoSourceTimeSearch>;
   streamThumbnail(assetId: string, size: PhotoSourceThumbnailSize): Promise<PhotoSourceStream>;

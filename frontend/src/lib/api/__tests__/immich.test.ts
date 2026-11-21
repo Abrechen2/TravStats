@@ -87,6 +87,13 @@ describe("immichApi trip albums", () => {
     expect(mockGet).toHaveBeenCalledWith("/trips/trip-1/immich/estimate?albumId=a1");
   });
 
+  it("asks PhotoPrism for the estimate when the album lives there", async () => {
+    await immichApi.estimateImport("trip-1", "pp1", "photoprism");
+    expect(mockGet).toHaveBeenCalledWith(
+      "/trips/trip-1/immich/estimate?albumId=pp1&provider=photoprism"
+    );
+  });
+
   it("kicks a resync and polls the job", async () => {
     await immichApi.resyncAlbum("trip-1", "link-1");
     expect(mockPost).toHaveBeenCalledWith("/trips/trip-1/immich/albums/link-1/resync");

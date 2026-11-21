@@ -105,9 +105,12 @@ describe("TravTrack photos — several sources and linked albums", () => {
     expect(res.photos[0].lon).toBeCloseTo(127.01, 6);
   });
 
-  it("a PhotoPrism photo without a capture time (epoch) is never placed", async () => {
+  it("a photo without a capture time (null) is never placed on the map, from either source", async () => {
     const { promise } = run({
-      photoprism: { search: [asset(HASH("a"), 0), asset(HASH("b"), T + 5 * MIN)] },
+      immich: { search: [asset("u", T, { fileCreatedAt: null })] },
+      photoprism: {
+        search: [asset(HASH("a"), T, { fileCreatedAt: null }), asset(HASH("b"), T + 5 * MIN)],
+      },
     });
     expect((await promise).photos.map((p) => p.assetId)).toEqual([HASH("b")]);
   });
