@@ -87,6 +87,8 @@ export interface TravelDocument {
   evidenceFrom?: DocumentEntryInfo | null;
   /** How many entries the document is linked to. */
   linkCount?: number;
+  /** Reaches this entry only through an expense paid at it (forgejo#429): no link to remove. */
+  viaExpense?: boolean;
 }
 
 export type LinkRole = "primary" | "covers";

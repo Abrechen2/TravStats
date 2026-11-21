@@ -42,6 +42,11 @@ export interface EntryLinkInfo {
   evidenceFrom: EvidenceFrom | null;
   /** How many entries the document is linked to, this one included. */
   linkCount: number;
+  /**
+   * True when the document reaches this entry only through an expense paid at
+   * it (forgejo#429): there is no link of its own to remove here.
+   */
+  viaExpense: boolean;
 }
 
 export interface LinkView {
@@ -145,6 +150,7 @@ export async function listEntryDocuments(
         linkRole: role,
         evidenceFrom: primaryRef ? toEvidence(info.get(entryKey(primaryRef))) : null,
         linkCount: Math.max(links.length, 1),
+        viaExpense: viaExpense(links, document as Document) !== undefined,
       },
     };
   });

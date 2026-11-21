@@ -80,6 +80,7 @@ export default function RoadtripCostsSection({
   const [editing, setEditing] = useState<TripExpense | "new" | null>(null);
   const [visits, setVisits] = useState<Array<{ id: string; label: string }>>([]);
   useEffect(() => {
+    setVisits([]);
     if (!tripId) return;
     let live = true;
     expensesApi

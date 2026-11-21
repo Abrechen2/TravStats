@@ -205,4 +205,49 @@ describe("expenses at a place visit (forgejo#429)", () => {
       .set("Cookie", `auth_token=${generateToken(otherId)}`);
     expect(other.status).toBe(404);
   });
+
+  it("lets go of a visit's costs when the visit moves to another trip", async () => {
+    const created = await post({
+      kind: "other",
+      amount: 5,
+      currency: "EUR",
+      placeVisitId: visitId,
+    });
+    const moved = await request(app)
+      .patch(api(`/places/visits/${visitId}`))
+      .set("Cookie", cookie)
+      .send({ tripId: otherTripId });
+    expect(moved.status).toBe(200);
+    const row = await prisma.tripExpense.findUniqueOrThrow({
+      where: { id: created.body.expense.id },
+    });
+    expect(row.placeVisitId).toBeNull();
+    expect(row.tripId).toBe(tripId);
+  });
+
+  it("marks a receipt that reaches the visit only through an expense", async () => {
+    const created = await post({
+      kind: "other",
+      amount: 18,
+      currency: "EUR",
+      placeVisitId: visitId,
+    });
+    await prisma.document.create({
+      data: {
+        userId,
+        storedName: `y-${Date.now()}`,
+        mimetype: "application/pdf",
+        sizeBytes: 1,
+        sha256: `y${Date.now()}`,
+        format: "pdf",
+        links: {
+          create: { tripExpenseId: created.body.expense.id, role: "primary", provenance: "user" },
+        },
+      },
+    });
+    const docs = await request(app)
+      .get(api(`/places/visits/${visitId}/documents`))
+      .set("Cookie", cookie);
+    expect(docs.body.data[0].viaExpense).toBe(true);
+  });
 });

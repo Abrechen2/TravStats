@@ -180,6 +180,12 @@ export const entryDocumentFieldsSchema = z.object({
       'For a covers document, the entry it was filed at ("Beleg aus …"); null when this entry is the primary'
     ),
   linkCount: z.number().int().optional().describe("How many entries the document is linked to"),
+  viaExpense: z
+    .boolean()
+    .optional()
+    .describe(
+      "True when the document reaches this entry only through an expense paid at it: nothing to unlink here"
+    ),
 });
 
 export const entryDocumentDtoSchema = documentDtoSchema.extend(entryDocumentFieldsSchema.shape);
