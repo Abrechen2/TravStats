@@ -758,4 +758,31 @@ describe("account archive round trip", () => {
       fs.rmSync(path.join(srcRoot, ".pending-deletions.json"), { force: true });
     }
   });
+
+  it("an EXTERNAL receipt URL of another account with the same basename does not drop an owned receipt, and a real claim is listed as left out", async () => {
+    try {
+      await src.query(
+        `UPDATE flights SET receipt_url = 'https://evil.example/files/receipt-1.pdf' WHERE id = 'az-friend-flight'`
+      );
+      const ext = path.join(work, "external.zip");
+      const result = await writeAccountArchive(U, ext, undefined, { uploadsRoot: srcRoot });
+      expect((await readZip(ext)).has("files/receipts/receipt-1.pdf")).toBe(true);
+      expect(result.omittedFiles.some((o) => o.name === "receipt-1.pdf")).toBe(false);
+
+      await src.query(
+        `UPDATE flights SET receipt_url = '/api/v1/uploads/receipts/receipt-1.pdf' WHERE id = 'az-friend-flight'`
+      );
+      const local = path.join(work, "local-claim.zip");
+      const claimed = await writeAccountArchive(U, local, undefined, { uploadsRoot: srcRoot });
+      expect((await readZip(local)).has("files/receipts/receipt-1.pdf")).toBe(false);
+      expect(claimed.omittedFiles).toContainEqual({
+        dir: "receipts",
+        name: "receipt-1.pdf",
+        reason: "not_owned",
+      });
+      expect(claimed.missingFiles).toBeGreaterThanOrEqual(1);
+    } finally {
+      await src.query(`UPDATE flights SET receipt_url = NULL WHERE id = 'az-friend-flight'`);
+    }
+  });
 });

@@ -31,6 +31,15 @@ export interface AccountFile {
   size: number;
 }
 
+const LOCAL_REF_PREFIX = "/api/v1";
+
+/** A file the archive left out, with the reason the export shows. */
+export interface OmittedFile {
+  dir: string;
+  name: string;
+  reason: "not_owned" | "not_found";
+}
+
 type Names = Map<string, Set<string>>;
 
 /**
@@ -41,6 +50,9 @@ type Names = Map<string, Set<string>>;
 export function fileRefName(raw: unknown): string | null {
   if (typeof raw !== "string" || raw.length === 0) return null;
   let s = raw.split(/[?#]/)[0].replace(/\/+$/, "");
+  // A reference with a path must point into THIS server's API (`/api/v1/...`); an
+  // external URL never names a local file, whatever its basename.
+  if (s.includes("/") && !s.startsWith(`${LOCAL_REF_PREFIX}/`)) return null;
   if (s.endsWith("/content")) s = s.slice(0, -"/content".length);
   const segment = s.slice(s.lastIndexOf("/") + 1);
   let decoded: string;
@@ -115,7 +127,12 @@ export async function ownedFiles(
   userId: string,
   named: Names,
   root: string
-): Promise<{ files: AccountFile[]; missing: number; refused: number }> {
+): Promise<{
+  files: AccountFile[];
+  missing: number;
+  refused: number;
+  omitted: OmittedFile[];
+}> {
   const owners: Names = new Map();
   for (const dir of BACKED_UP_UPLOAD_DIRS) {
     const rule = UPLOAD_DIR_POLICIES[dir].account;
@@ -139,6 +156,7 @@ export async function ownedFiles(
   const files: AccountFile[] = [];
   let missing = 0;
   let refused = 0;
+  const omitted: OmittedFile[] = [];
   for (const [dir, names] of [...named].sort(([a], [b]) => a.localeCompare(b))) {
     for (const name of [...names].sort()) {
       const ok =
@@ -147,17 +165,21 @@ export async function ownedFiles(
         !pending.has(`${dir}/${name}`);
       if (!ok) {
         refused += 1;
+        omitted.push({ dir, name, reason: "not_owned" });
         continue;
       }
       for (const candidate of [name, displayRenditionName(name)]) {
         if (pending.has(`${dir}/${candidate}`)) continue;
         const stat = await fsp.lstat(path.join(root, dir, candidate)).catch(() => null);
         if (stat?.isFile()) files.push({ dir, name: candidate, size: stat.size });
-        else if (candidate === name) missing += 1;
+        else if (candidate === name) {
+          missing += 1;
+          omitted.push({ dir, name, reason: "not_found" });
+        }
       }
     }
   }
-  return { files, missing, refused };
+  return { files, missing, refused, omitted };
 }
 
 /**

@@ -73,6 +73,32 @@ describe("AccountArchiveRows", () => {
     expect(await screen.findByText(/accountArchive\.missingFiles\|2/)).toBeInTheDocument();
   });
 
+  it("lists every omitted file with its reason, not as a generic missing-file note", async () => {
+    api.exportArchive.mockResolvedValue({
+      exportId: "e3",
+      filename: "a.zip",
+      bytes: 10,
+      files: 0,
+      missingFiles: 2,
+      omittedFiles: [
+        { dir: "receipts", name: "r.pdf", reason: "not_owned" },
+        { dir: "documents", name: "d.pdf", reason: "not_found" },
+      ],
+      tables: {},
+    });
+    api.download.mockResolvedValue(new Blob(["PK"]));
+    render(<AccountArchiveRows />);
+    fireEvent.click(screen.getByRole("button", { name: "settingsRows:data.archiv.btn" }));
+    expect(
+      await screen.findByText(
+        /receipts\/r\.pdf \(settings:accountArchive\.omittedReason\.not_owned\)/
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/documents\/d\.pdf \(settings:accountArchive\.omittedReason\.not_found\)/)
+    ).toBeInTheDocument();
+  });
+
   it("names the reason an export failed (too large)", async () => {
     api.exportArchive.mockRejectedValue(new JobFailedError("ACCOUNT_ARCHIVE_TOO_LARGE", 413));
     render(<AccountArchiveRows />);

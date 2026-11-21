@@ -3,7 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { securityLogger } from "../../utils/logger";
 import { takeUserCountLock } from "../../utils/userCountLock";
 import { deleteAccountWithFiles } from "../files/accountFiles";
-import { deleteAccountArchives } from "../accountArchive/archiveJobs";
+import { cancelAccountExports, deleteAccountArchives } from "../accountArchive/archiveJobs";
 import { notifyPeersOfDeparture, type DepartureNotice } from "./notifyPeersOfDeparture";
 
 export interface RemovalContext {
@@ -64,6 +64,8 @@ export async function removeAccount(userId: string, context: RemovalContext): Pr
     });
   });
 
+  // A running export of this account must not register its ZIP once the rows go.
+  cancelAccountExports(userId);
   let peers: DepartureNotice;
   try {
     peers = await finishDeletion(userId);
