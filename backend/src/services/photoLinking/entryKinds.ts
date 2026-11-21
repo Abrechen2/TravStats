@@ -343,7 +343,7 @@ export async function entryIdsOf(userId: string, kind: EntryKind): Promise<strin
     case "flight":
       return ids(
         prisma.flight.findMany({
-          where: { userId, departureTime: { not: null } },
+          where: { userId },
           select: { id: true },
           orderBy: { departureTime: "asc" },
         })
@@ -351,7 +351,7 @@ export async function entryIdsOf(userId: string, kind: EntryKind): Promise<strin
     case "stay":
       return ids(
         prisma.lodgingStay.findMany({
-          where: { userId, datePrecision: "DAY" },
+          where: { userId },
           select: { id: true },
           orderBy: { checkInDate: "asc" },
         })
