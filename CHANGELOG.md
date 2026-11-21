@@ -6,6 +6,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.41.** Ten new migrations: photo links for every kind of entry, per-traveller documents and details (with traveller lists on stays), expenses on place visits, a crash-safe account-deletion marker, rentals in package bookings and the package split's review flag, the cap for automatically linked photos, and the record of imported account archives. Nothing is deleted. On first start the automatically linked photos of place visits are trimmed to the new cap; photos you picked yourself stay.
+
+### Added
+
+- **Every entry has its photos.** Flights, stays, train, bus and ferry rides, rentals, cruise days and roadtrip stations show the Immich and PhotoPrism photos taken there and then — links only, never copies, never from inside a privacy zone. At most six are linked automatically (five to ten in settings), spread over the time and closest to the place; "Fotos auswählen" swaps which ones, and "In Immich öffnen" / "In PhotoPrism öffnen" shows the rest in your library.
+- **Documents and details per traveller.** A boarding pass or ticket can be marked "für: <Person>"; seat, class, ticket number, booking reference and loyalty number are kept per traveller on flights, trains, buses, ferries, cruises (cabin), rentals (driver) and stays. Reading a document with exactly one passenger name assigns it to that traveller, marked as automatic and changeable.
+- **One package price across flights, stays, rentals and cruises.** A booking can hold items of any kind; its price is counted once, optionally split per item. An unsplit item reads "Teil eines Pakets" instead of a price, statistics leave such packages out and say how many ("N Flüge in Paketen nicht eingerechnet"), and when the package changes the split is kept and marked for review instead of lost.
+- **The timeline warns about impossible sequences** — a rental returned after the flight left, a check-in before the arrival, two stays on one night, a visit during a flight — with a one-line reason and a link to the entry; the trip head shows "N Unstimmigkeiten". Nothing is reordered or changed.
+- **Expenses can belong to a place visit** (tours, tickets, activities); the visit shows its costs per currency, and the trip counts them once.
+- **A ferry crossing's route can be drawn by hand**, point by point, like a cruise leg; a re-route never overwrites it.
+- **Move an account to another server.** Settings export the whole account — entries, documents, photos and tracks — as one ZIP, and import it into an empty account elsewhere, all or nothing. Only your own files go into it; anything left out is listed with its reason.
+- **Delete your own account** from settings after signing in again and typing your username; the list of what goes is shown first.
+- **Fetch a flight's track from your own ADS-B receiver** on the flight page.
+
+### Changed
+
+- **PhotoPrism folders, moments, months and places can be linked to a trip**, not only albums, grouped and searchable.
+- **A place visit without a time sorts after the same day's arrival** at that place, and before a departure from where it was, instead of at the day's start.
+- **Short coastal ferry crossings take the short way across** (Amalfi → Capri about 34 km instead of 102 km round the island), while long routes that really go round a coast stay as they are.
+- **River cruises follow the river** when their ports were added by hand; the Yangtze route now runs through the Three Gorges.
+- **The backup page explains the difference** between the machine backup and moving one account, and that the server's key folder is not part of the backup.
+
+### Fixed
+
+- **Editing a flight, train or bus kept wiping the travellers' details.**
+- **Merging duplicate entries lost picked photos and traveller details** of the discarded twin.
+- **Changing a password and issuing a token at the same moment** could leave a token alive that should have been revoked; a reset link used twice at once now resets once.
+- **Moving a roadtrip to another trip** left its expenses pointing at a place visit of the old trip.
+- **Booking price edits could show old statistics** because the cache ignored bookings.
+
 **Upgrading to 2.8.0-rc.40.** Six new migrations add the document links (a new table, filled once from where every document is filed today, plus triggers that keep it in step), the link suggestions, a parse timestamp on documents, and the source and origin of a place visit's photos with the switch for linking them automatically. Nothing is deleted. One behaviour changes on purpose: deleting an entry no longer deletes its documents — see "Changed".
 
 ### Added
