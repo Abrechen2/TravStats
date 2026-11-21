@@ -26,10 +26,8 @@ async function makeDoc(tag: string, owner: Record<string, string>): Promise<stri
       ...owner,
     },
   });
-  // The shape every filed document has since the document-links backfill.
-  await prisma.documentLink.create({
-    data: { documentId: d.id, ...owner, role: "primary", provenance: "legacy" },
-  });
+  // The owner column alone is enough: the documents_after_owner_set trigger
+  // (document-links D2) writes the primary link, as it does for any writer.
   return d.id;
 }
 
