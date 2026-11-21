@@ -81,7 +81,9 @@
       "done": "{{source}} is now {{target}}."
     },
     "delete": {
-      "done": "{{name}} deleted."
+      "done": "{{name}} deleted.",
+      "documentsAfter_one": "{{count}} document will be assigned to you afterwards.",
+      "documentsAfter_other": "{{count}} documents will be assigned to you afterwards."
     },
     "deleteUnused": {
       "body_one": "{{count}} person is on no entry, paid nothing and is linked to no account. Deleting removes this name from your list for good.",

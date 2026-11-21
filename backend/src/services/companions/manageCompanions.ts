@@ -80,6 +80,8 @@ export interface ManagedCompanion {
   hiddenUses: number;
   /** Expenses this companion paid — not travelling together, but a use. */
   expensesPaid: number;
+  /** Documents assigned to this person on any entry; a delete hands them back to the owner (D7). */
+  documents: number;
   /** The last day spent together (`YYYY-MM-DD`, the entry's own clock), or null. */
   lastTogether: string | null;
   /** Anything that a delete would break: entries (stays naming them included), expenses or a link. */
@@ -99,6 +101,15 @@ export async function listManagedCompanions(
     loadTogether(userId, visible),
   ]);
   const stays = await loadStayLinks(prisma, userId, rows);
+  const assigned = await prisma.documentLink.findMany({
+    where: { companionId: { not: null }, document: { userId } },
+    select: { companionId: true, documentId: true },
+    distinct: ["companionId", "documentId"],
+  });
+  const documentCounts = new Map<string, number>();
+  for (const a of assigned) {
+    documentCounts.set(a.companionId!, (documentCounts.get(a.companionId!) ?? 0) + 1);
+  }
   const companions = rows.map((row) => {
     const uses = usesOf(row, stays.byCompanion);
     const of = (kind: CompanionUseKind) => uses[kind];
@@ -112,6 +123,7 @@ export async function listManagedCompanions(
       uses: Object.fromEntries(kinds.map((kind) => [kind, of(kind)])),
       hiddenUses: all - shown,
       expensesPaid: row._count.expensesPaid,
+      documents: documentCounts.get(row.id) ?? 0,
       lastTogether: days.length > 0 ? days[days.length - 1] : null,
       inUse: all > 0 || row._count.expensesPaid > 0 || row.linkedUserId !== null,
     };

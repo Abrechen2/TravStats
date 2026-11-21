@@ -1,6 +1,7 @@
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { canonicalizeCompanionName } from "../../utils/companionName";
+import { ensureStayCompanions } from "./stayCompanions";
 import { assertEntryOwnedIn, type EntryRef } from "../documents/documentLinks";
 
 /**
@@ -100,6 +101,7 @@ interface LinkDelegate {
   findMany(args: object): Promise<Array<Record<string, unknown>>>;
   findFirst(args: object): Promise<Record<string, unknown> | null>;
   create(args: object): Promise<unknown>;
+  createMany(args: object): Promise<unknown>;
   update(args: object): Promise<unknown>;
   updateMany(args: object): Promise<unknown>;
   deleteMany(args: object): Promise<unknown>;
@@ -179,6 +181,8 @@ export async function listTravellers(userId: string, entry: EntryRef): Promise<T
       where: { id: entry.id, userId },
       select: STAY_WHO,
     });
+    // Text-only people (a stay saved by an importer, or before D7) get their row on first read.
+    await ensureStayCompanions(prisma, userId, stay.companions);
     const catalogue = await prisma.companion.findMany({
       where: { userId },
       select: { id: true, displayName: true, canonicalName: true },
@@ -324,22 +328,44 @@ export async function writeFactsInTx(
   const spec = TRAVELLER_SPECS[entry.type];
   const delegate = delegateOf(tx, entry.type);
   const where = { [spec.entryColumn]: entry.id, companionId };
-  const existing = await delegate.findFirst({ where });
-  let write: FactsPatch = data;
-  if (source === "auto") {
-    write = Object.fromEntries(
-      Object.entries(data).filter(([k, v]) => v != null && existing?.[k] == null)
-    );
-    if (Object.keys(write).length === 0) return false;
+  if (source === "user") {
+    const existing = await delegate.findFirst({ where });
+    if (existing) {
+      await delegate.updateMany({ where, data: { ...data, factsSource: "user" } });
+    } else {
+      // Only a lodging stay has no row until a fact exists.
+      await delegate.createMany({
+        data: [{ ...where, ...data, factsSource: "user" }],
+        skipDuplicates: true,
+      });
+      await delegate.updateMany({ where, data: { ...data, factsSource: "user" } });
+    }
+    return true;
   }
-  const factsSource = source === "auto" && existing?.factsSource === "user" ? "user" : source;
-  if (existing) {
-    await delegate.updateMany({ where, data: { ...write, factsSource } });
-  } else {
-    // Only a lodging stay has no row until a fact exists.
-    await delegate.create({ data: { ...where, ...write, factsSource } });
+  // Automatic: each field is written only WHERE IT IS STILL EMPTY, in the
+  // statement itself. Reading first and writing after let a manual save made in
+  // between be overwritten; a conditional update cannot.
+  if (!(await delegate.findFirst({ where }))) {
+    await delegate.createMany({ data: [{ ...where }], skipDuplicates: true });
   }
-  return true;
+  let wrote = false;
+  for (const [field, value] of Object.entries(data)) {
+    if (value == null) continue;
+    const hit = (await delegate.updateMany({
+      where: { ...where, [field]: null },
+      data: { [field]: value },
+    })) as {
+      count: number;
+    };
+    if (hit.count > 0) wrote = true;
+  }
+  // The source follows only a row nobody has claimed (`user` stays `user`).
+  if (wrote)
+    await delegate.updateMany({
+      where: { ...where, factsSource: null },
+      data: { factsSource: "auto" },
+    });
+  return wrote;
 }
 
 /** Drops a stay's fact rows for people the stay no longer names (the editor changed its list). */

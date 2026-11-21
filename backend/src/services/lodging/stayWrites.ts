@@ -28,6 +28,7 @@ import { assertReferencesOwned } from "../../utils/ownedReferences";
 import { resolveEffectiveStayDates } from "./stayPatchMerge";
 import { legacyDay, stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 import type { LocalTimeOrigin } from "../../shared/time/instant";
+import { ensureStayCompanions } from "../companions/stayCompanions";
 import { pruneStayFacts } from "../companions/travellerFacts";
 import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
@@ -79,6 +80,7 @@ export async function createStayRecord(
   return prisma.$transaction(
     async (tx) => {
       const created = await tx.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
+      await ensureStayCompanions(tx, userId, created.companions);
       await propagateWrite(tx, userId, "lodgingStay", created.id);
       await inTx?.(tx, created.id);
       return created;
@@ -393,7 +395,10 @@ export async function updateStayRecord(
       });
       // A person the editor took off the stay keeps no facts on it (D7); a
       // person who stays keeps theirs.
-      if (input.companions !== undefined) await pruneStayFacts(tx, userId, stay.id);
+      if (input.companions !== undefined) {
+        await ensureStayCompanions(tx, userId, updated.companions);
+        await pruneStayFacts(tx, userId, stay.id);
+      }
       await propagateWrite(tx, userId, "lodgingStay", stay.id, before);
       return updated;
     },

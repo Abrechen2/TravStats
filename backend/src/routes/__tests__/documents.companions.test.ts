@@ -10,6 +10,9 @@ import { addLinks } from "../../services/documents/documentEntryLinks";
 import { recordParse } from "../../services/documents/parseRetention";
 import { replaceCompanionLinks } from "../../services/transport/companionLinks";
 import { syncCompanionLinks } from "../../services/companions/travellerFacts";
+import { writeFactsInTx } from "../../services/companions/travellerFacts";
+import { backfillStayCompanions } from "../../services/companions/stayCompanions";
+import { listManagedCompanions } from "../../services/companions/manageCompanions";
 import { mergeCompanions } from "../../services/companions/manageCompanions";
 import { resolveCompanions, linkRowsFor } from "../../services/companionService";
 import { scopeFileForRemoteMember } from "../../services/trip/exchange/memberScope";
@@ -540,6 +543,114 @@ describe("documents for a person and per-traveller facts (D7)", () => {
       expect(
         (await prisma.documentLink.findFirstOrThrow({ where: { documentId: doc.id } })).companionId
       ).toBe(a);
+    });
+  });
+
+  describe("stay people who exist only as text", () => {
+    it("get a catalogue row once, without a duplicate, so facts and the picker reach them", async () => {
+      const stay = await prisma.lodgingStay.update({
+        where: { id: ids.stay },
+        data: { companions: ["Norbert Nord", "Tessa Text", "  tessa   TEXT "] },
+      });
+      const before = await prisma.companion.count({ where: { userId: ownerId } });
+      expect(await backfillStayCompanions()).toBeGreaterThanOrEqual(1);
+      expect(await backfillStayCompanions()).toBe(0);
+      expect(await prisma.companion.count({ where: { userId: ownerId } })).toBe(before + 1);
+      // Norbert keeps his spelling and id: nothing was upserted over him.
+      expect(
+        (await prisma.companion.findUniqueOrThrow({ where: { id: norbert } })).displayName
+      ).toBe("Norbert Nord");
+
+      const list = await api("get", `/entry-travellers?entryType=lodgingStay&entryId=${stay.id}`);
+      const tessa = list.body.data.find(
+        (r: { displayName: string }) =>
+          r.displayName.toLowerCase().replace(/\s+/g, " ") === "tessa text"
+      );
+      expect(tessa).toBeDefined();
+      const put = await facts("lodgingStay", stay.id, tessa.companionId, {
+        bookingReference: "T1",
+      });
+      expect(put.status).toBe(200);
+      await prisma.lodgingStay.update({
+        where: { id: ids.stay },
+        data: { companions: ["Norbert Nord", "Erika Muster"] },
+      });
+    });
+
+    it("saving a stay through the service creates its people's rows", async () => {
+      const { ensureStayCompanions } = await import("../../services/companions/stayCompanions");
+      await ensureStayCompanions(prisma, ownerId, ["Saved Person", "saved person"]);
+      expect(
+        await prisma.companion.count({ where: { userId: ownerId, canonicalName: "saved person" } })
+      ).toBe(1);
+    });
+  });
+
+  describe("an automatic fill never overwrites a manual save made in between", () => {
+    it("a stale read of an empty row does not let the auto write win", async () => {
+      const flight = await prisma.flight.create({ data: flightData() });
+      await prisma.flightCompanion.create({
+        data: { flightId: flight.id, companionId: norbert, position: 0 },
+      });
+      await prisma.$transaction(async (tx) => {
+        // The auto pass read the row while it was empty ...
+        const stale = {
+          findFirst: async () => ({
+            flightId: flight.id,
+            companionId: norbert,
+            seatNumber: null,
+            factsSource: null,
+          }),
+          updateMany: (a: object) => tx.flightCompanion.updateMany(a as never),
+          createMany: (a: object) => tx.flightCompanion.createMany(a as never),
+        };
+        // ... and the user saved 9Z before it wrote.
+        await tx.flightCompanion.updateMany({
+          where: { flightId: flight.id, companionId: norbert },
+          data: { seatNumber: "9Z", factsSource: "user" },
+        });
+        const wrapped = new Proxy(tx, {
+          get: (t, k) => (k === "flightCompanion" ? stale : (t as never)[k]),
+        }) as typeof tx;
+        await writeFactsInTx(
+          wrapped,
+          ownerId,
+          { type: "flight", id: flight.id },
+          norbert,
+          { seatNumber: "1A", bookingReference: "AUTO1" },
+          "auto"
+        );
+      });
+      const row = await prisma.flightCompanion.findFirstOrThrow({ where: { flightId: flight.id } });
+      expect(row).toMatchObject({
+        seatNumber: "9Z",
+        bookingReference: "AUTO1",
+        factsSource: "user",
+      });
+    });
+  });
+
+  describe("deleting a companion who holds documents", () => {
+    it("the managed list says how many documents are assigned, each counted once", async () => {
+      const person = (await resolveCompanions(ownerId, [`Docs Person ${stamp}`]))[0].id;
+      const flight = await prisma.flight.create({ data: flightData() });
+      const doc = await keep("delete-count");
+      await addLinks(ownerId, doc.id, [
+        { entry: { type: "flight", id: flight.id } },
+        { entry: { type: "railJourney", id: ids.rail } },
+      ]);
+      for (const entry of [
+        { type: "flight", id: flight.id },
+        { type: "railJourney", id: ids.rail },
+      ]) {
+        await api("put", `/documents/${doc.id}/links/companion`).send({
+          entry,
+          companionId: person,
+        });
+      }
+      const managed = await listManagedCompanions(ownerId);
+      expect(managed.companions.find((c) => c.id === person)?.documents).toBe(1);
+      expect(managed.companions.find((c) => c.id === norbert)?.documents).toBeGreaterThanOrEqual(0);
     });
   });
 });

@@ -81,7 +81,9 @@
       "done": "{{source}} ist jetzt {{target}}."
     },
     "delete": {
-      "done": "{{name}} gelöscht."
+      "done": "{{name}} gelöscht.",
+      "documentsAfter_one": "{{count}} Dokument wird danach dir zugeordnet.",
+      "documentsAfter_other": "{{count}} Dokumente werden danach dir zugeordnet."
     },
     "deleteUnused": {
       "body_one": "{{count}} Person steht in keinem Eintrag, hat nichts bezahlt und ist mit keinem Konto verknüpft. Löschen entfernt diesen Namen endgültig aus deiner Liste.",

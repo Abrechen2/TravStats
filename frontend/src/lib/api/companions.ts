@@ -26,6 +26,8 @@ export interface ManagedCompanion {
   /** Entries in domains switched off — they still keep the companion from a delete. */
   hiddenUses: number;
   expensesPaid: number;
+  /** Documents assigned to this person (document-links D7); a delete hands them back to the owner. */
+  documents?: number;
   /** `YYYY-MM-DD` of the last day spent together, or null. */
   lastTogether: string | null;
   inUse: boolean;
