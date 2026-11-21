@@ -12,7 +12,7 @@ const schema = z.object({
   protectedPrefixCount: z.number().int().nonnegative(),
   protectedSuffixCount: z.number().int().nonnegative(),
   routed: z.literal(true),
-  method: z.enum(["short_hop", "maritime_graph", "coarse_a_star", "direct"]),
+  method: z.enum(["short_hop", "maritime_graph", "coarse_a_star", "local_fine", "direct"]),
 });
 const SCHEMATIC_HOT_ROUTES = 5_000;
 export function createSchematicRouteStore(): RouteStore<SchematicRoute> {
@@ -30,7 +30,7 @@ export function createSchematicRouteStore(): RouteStore<SchematicRoute> {
 }
 
 /** Bump when the routing algorithm changes; data changes are hashed below. */
-const SCHEMATIC_ROUTE_POLICY = "schematic-v1";
+const SCHEMATIC_ROUTE_POLICY = "schematic-v2";
 const DATA_DIRECTORY = path.resolve(__dirname, "..", "..", "..", "data");
 const SCHEMATIC_DATA_FILES = [
   path.join(DATA_DIRECTORY, "marnet", "marnet.geojson"),
@@ -47,7 +47,7 @@ export function dataFingerprint(files: readonly string[]): string {
 let version: string | null = null;
 /**
  * Part of every sea-route key. Routes were stored forever under a fixed
- * "schematic-v1" key, so an updated shipping-lane graph or land mask was never
+ * "schematic-v2" key, so an updated shipping-lane graph or land mask was never
  * used for any port pair already routed once.
  */
 export function schematicRouteVersion(): string {

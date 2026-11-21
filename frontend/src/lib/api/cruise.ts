@@ -72,6 +72,7 @@ export interface CruiseRouteFeature {
       | "short_hop"
       | "maritime_graph"
       | "coarse_a_star"
+      | "local_fine"
       | "direct"
       | "manual_polyline"
       | "recorded_track"
