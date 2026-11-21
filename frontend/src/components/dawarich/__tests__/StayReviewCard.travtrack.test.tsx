@@ -92,6 +92,37 @@ describe("a TravTrack finding on the review card", () => {
     expect(screen.queryByText("trips:dawarichStays.beforeSourceSwitch")).not.toBeInTheDocument();
   });
 
+  it("a finding read from a stop explains itself by observed and assumed minutes and counts no positions", () => {
+    mount({
+      ...travtrackRow,
+      pointCount: 0,
+      evidence: {
+        ...travtrackRow.evidence,
+        explanation: {
+          code: "stay.stop",
+          params: {
+            minutes: 25,
+            observedMinutes: 20,
+            inferredMinutes: 5,
+            radiusM: 50,
+            distanceM: 14,
+          },
+        },
+        visit: {
+          durationMs: 25 * 60_000,
+          observedMs: 20 * 60_000,
+          inferredMs: 5 * 60_000,
+          venue: { name: "McDonald's", source: "osm", osmRef: "way/1", category: "restaurant" },
+          alternatives: [{ name: "McCafé", foldedInto: "McDonald's" }],
+        },
+      },
+    });
+    expect(
+      screen.getByText(/trips:dawarichStays\.explanation\.stay\.stop .*"observedMinutes":20/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/trips:dawarichStays\.evidence/)).not.toBeInTheDocument();
+  });
+
   it("says when it was made before the last source switch", () => {
     mount({ ...travtrackRow, beforeSourceSwitch: true });
     expect(screen.getByText("trips:dawarichStays.beforeSourceSwitch")).toBeInTheDocument();

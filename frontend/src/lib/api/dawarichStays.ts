@@ -7,6 +7,11 @@ export interface StayScanState {
   connected: boolean;
   /** Present only when the scan reads TravTrack; absent, it reads the own Dawarich connection. */
   source?: "travtrack";
+  /**
+   * TravTrack only: the venue lookup behind stop suggestions did not answer; it asks
+   * again at this time (ISO instant). Absent while it works.
+   */
+  visitLookupRetryAt?: string;
   marketEnabled?: boolean;
   venueEnabled?: boolean;
   marketResult?: {
@@ -98,6 +103,17 @@ export interface DawarichStay {
     /** TravTrack only: why the finding was made, as a stable code and scalar params. */
     explanation?: { code: string; params: Record<string, number | string> };
     readCoverage?: "complete" | "truncated" | "unreachable";
+    /**
+     * TravTrack only: a finding read from a derived stop (not the stay detector) carries the stop's
+     * observed and assumed time and the building chosen, with its sub-venue as an alternative.
+     */
+    visit?: {
+      durationMs: number;
+      observedMs: number;
+      inferredMs: number;
+      venue: { name: string; source: "known" | "osm"; osmRef: string | null; category: string };
+      alternatives: { name: string; foldedInto: string | null }[];
+    };
   };
 }
 export interface StayChoices {

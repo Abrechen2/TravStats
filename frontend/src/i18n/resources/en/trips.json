@@ -849,7 +849,8 @@
     "beforeSourceSwitch": "Detected before the source was switched",
     "explanation": {
       "stay": {
-        "dwell": "{{points}} positions within {{radiusM}} m over {{minutes}} minutes (longest gap {{maxGapMinutes}} minutes)"
+        "dwell": "{{points}} positions within {{radiusM}} m over {{minutes}} minutes (longest gap {{maxGapMinutes}} minutes)",
+        "stop": "{{minutes}} minutes at this spot ({{observedMinutes}} measured, {{inferredMinutes}} assumed), {{distanceM}} m from the building"
       },
       "market": {
         "visit": "{{points}} positions over {{minutes}} minutes on the market site"

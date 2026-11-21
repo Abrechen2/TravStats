@@ -32,6 +32,7 @@ export type JobKind =
   | "xlsx.import"
   | "photoJourneys.scan"
   | "dawarichStays.scan"
+  | "travtrack.visitSuggestions"
   | "journal.weather"
   | "timeModel.backfill"
   | "timeZones.reResolveDryRun"

@@ -73,6 +73,12 @@ registry.registerPath({
             .describe(
               "Present only when the scan reads TravTrack (provider `travtrack`); absent, it reads the own Dawarich connection"
             ),
+          visitLookupRetryAt: z
+            .string()
+            .datetime()
+            .describe(
+              "Present only while the venue lookup behind TravTrack stop suggestions did not answer (Photon or Overpass) and waits until this time before asking again; absent while it works"
+            ),
           placesEnabled: z.boolean(),
           pausedReason: z
             .enum([
@@ -157,6 +163,32 @@ registry.registerPath({
       description: "Poll /jobs/{jobId}",
       content: { "application/json": { schema: jobStartedSchema } },
     },
+    409: failure,
+    429: failure,
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/visits/scan",
+  tags,
+  summary: "Ask the last days' TravTrack stops about venues now (job)",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ lookbackDays: z.number().int().min(1).max(30).default(7) }).strict(),
+        },
+      },
+    },
+  },
+  description:
+    "TravTrack accounts with stay suggestions on, the Places domain and the scan consent. A stop on a venue becomes a pending finding whose evidence names the stop's duration (observed and assumed time), the building chosen and its sub-venue as an alternative; a stop an own place covers becomes a visit of that place. Nothing is accepted. The job's result carries the run's counts and, in `failed`, the lookups a provider did not answer, by reason (`places`, `venues`).",
+  responses: {
+    202: {
+      description: "Poll /jobs/{jobId}",
+      content: { "application/json": { schema: jobStartedSchema } },
+    },
+    403: { description: "TRAVTRACK_DISABLED", content: errorContent },
     409: failure,
     429: failure,
   },

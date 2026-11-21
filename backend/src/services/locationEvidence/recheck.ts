@@ -24,6 +24,7 @@ import { marketCatalogStore } from "../dawarich/marketVisits/catalogStore";
 import { detectMarketVisits } from "../dawarich/marketVisits/detect";
 import type { VenueType } from "../dawarich/marketVisits/venueTypes";
 import { detectStays, meters, RADIUS_METERS, type StayPoint } from "../dawarich/stays/detect";
+import { deriveDay } from "../travtrack/dayDerivation";
 import { readTravTrackDerivation } from "./derivationRead";
 import { toDetectorInput } from "./toDetectorInput";
 
@@ -48,6 +49,8 @@ export type Recheck = { outcome: "holds" | "invalidated" | "unverifiable"; gener
 
 type FindingEvidence = {
   kind?: string;
+  /** A finding read from a derived stop (`travtrack/visits`), not from the stay detector. */
+  visit?: unknown;
   market?: { areaIds?: string[]; venueType?: VenueType };
 };
 
@@ -90,6 +93,23 @@ function tileProbe(row: RecheckRow): StayPoint[] {
   }));
 }
 
+/**
+ * A stop finding holds while the day's own stop derivation still finds a stop
+ * where it was, covering at least `MIN_COVER` of its window. The detector's
+ * 20-minute rule does not apply: the stop's rule is the shorter `STOP_MS`.
+ */
+async function visitHolds(userId: string, row: RecheckRow): Promise<boolean> {
+  const from = row.sourceStartAt.getTime();
+  const until = row.sourceEndAt.getTime();
+  const span = Math.max(1, until - from);
+  const derived = await deriveDay(userId, { fromMs: from - SLACK_MS, untilMs: until + SLACK_MS });
+  return derived.whole.some((s) => {
+    if (meters(s.anchor, { lat: row.sourceLat, lon: row.sourceLon }) > RADIUS_METERS * 2)
+      return false;
+    return (Math.min(until, s.untilMs) - Math.max(from, s.fromMs)) / span >= MIN_COVER;
+  });
+}
+
 async function venueOutcome(
   points: readonly StayPoint[],
   row: RecheckRow,
@@ -130,8 +150,12 @@ export async function recheckFinding(
   const outcome =
     evidence.kind === "market" || evidence.kind === "venue"
       ? await venueOutcome(points, row, evidence, options.store ?? marketCatalogStore)
-      : stayHolds(points, row, read.coverage === "truncated")
-        ? "holds"
-        : "invalidated";
+      : evidence.visit
+        ? (await visitHolds(userId, row))
+          ? "holds"
+          : "invalidated"
+        : stayHolds(points, row, read.coverage === "truncated")
+          ? "holds"
+          : "invalidated";
   return { outcome, generation: read.generation };
 }
