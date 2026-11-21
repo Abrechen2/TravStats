@@ -359,8 +359,8 @@ let current: Promise<DeliveryRun> | null = null;
  * One delivery pass over every stream with a due row. Passes run one after another, never two at
  * once in this process (a second call waits for the first, then runs). `now` decides what is
  * due and what a failure's backoff counts from — tests move it instead of waiting. `userId`
- * limits the pass to the streams of that account's memberships (an account being deleted gets
- * its own messages out first, not the whole queue's — forgejo#415).
+ * limits the pass to the streams of that account's memberships (an account being deleted sends
+ * its own messages, not the whole queue's — forgejo#415). It still waits for a pass in flight.
  */
 export function runDeliveries(now?: Date, userId?: string): Promise<DeliveryRun> {
   const pass = () => deliverAll(now ?? new Date(), userId);

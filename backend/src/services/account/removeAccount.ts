@@ -61,6 +61,9 @@ export async function removeAccount(userId: string, context: RemovalContext): Pr
     );
   } catch (error) {
     // The rows are still here: give the account its role and sign-in back.
+    // Only what THIS call took away: a second deletion of the same account
+    // read the already-reserved state and must not overwrite a restore.
+    if (!before.isAdmin && !before.isActive) throw error;
     await prisma.user
       .update({
         where: { id: userId },
