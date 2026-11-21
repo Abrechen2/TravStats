@@ -168,6 +168,7 @@ export default function TripDetailPage(): JSX.Element {
         onDelete={() => setConfirmDelete(true)}
         onChanged={() => void load()}
         placeCount={countTripPlaces(places.placeVisits)}
+        placeVisits={places.placeVisits}
       />
       {/* On the overview tab the places panel carries the failure itself. */}
       {places.failed && tab !== "overview" && <TripPlacesError onRetry={places.reload} />}

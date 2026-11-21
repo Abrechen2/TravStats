@@ -323,3 +323,105 @@ describe("timeline plausibility — review follow-ups", () => {
     expect(codes(events)).toEqual(["rentalsOverlap:rental-pickup-b"]);
   });
 });
+
+describe("timeline plausibility — false results (forgejo#426, round 2)", () => {
+  const LIS = { iata: "LIS", lat: 38.77, lon: -9.13 };
+  const lisbon = (local: string) => at(local, { zone: "Europe/Lisbon", offset: "+00:00" });
+
+  it("still warns when the only way back is a late flight on the return day, after the return", () => {
+    const out = flight(
+      "o",
+      MCO,
+      ORD,
+      at("2009-04-10T08:00:00", EDT),
+      at("2009-04-10T09:30:00", CDT)
+    );
+    const back = flight(
+      "b",
+      ORD,
+      MCO,
+      at("2009-04-12T20:00:00", CDT),
+      at("2009-04-12T23:30:00", EDT)
+    );
+    const away = flight(
+      "a",
+      MCO,
+      MIA,
+      at("2009-04-12T09:00:00", EDT),
+      at("2009-04-12T10:00:00", EDT)
+    );
+    const ret = rental("r", "rental-return", MCO, at("2009-04-12T12:00:00", EDT));
+    expect(codes([out, away, back, ret])).toContain("rentalReturnAfterDeparture:rental-return-r");
+  });
+
+  it("does not flag a hotel night in the starting city before the trip", () => {
+    const out = flight(
+      "o",
+      MCO,
+      ORD,
+      at("2009-04-09T08:00:00", EDT),
+      at("2009-04-09T09:30:00", CDT)
+    );
+    const home = flight(
+      "h",
+      ORD,
+      MCO,
+      at("2009-04-12T08:00:00", CDT),
+      at("2009-04-12T11:30:00", EDT)
+    );
+    const events = [out, home, stay("s", "h", "lodging-checkin", "2009-04-08", MCO)];
+    expect(codes(events)).toEqual([]);
+  });
+
+  it("does not flag a pickup followed by a side trip that returns the same day", () => {
+    const land = flight(
+      "f",
+      ORD,
+      MCO,
+      at("2009-04-08T06:00:00", CDT),
+      at("2009-04-08T09:30:00", EDT)
+    );
+    const pick = rental("r", "rental-pickup", MCO, at("2009-04-08T10:30:00", EDT));
+    const side = flight(
+      "s",
+      MCO,
+      MIA,
+      at("2009-04-08T12:00:00", EDT),
+      at("2009-04-08T13:00:00", EDT)
+    );
+    const back = flight(
+      "t",
+      MIA,
+      MCO,
+      at("2009-04-08T17:00:00", EDT),
+      at("2009-04-08T18:00:00", EDT)
+    );
+    expect(codes([land, pick, side, back])).toEqual([]);
+  });
+
+  it("keeps the pickup warning when the first arrival is after the pickup", () => {
+    const land = flight(
+      "f",
+      LIS,
+      MCO,
+      lisbon("2009-04-08T06:00:00"),
+      at("2009-04-08T09:30:00", EDT)
+    );
+    const pick = rental("r", "rental-pickup", MCO, at("2009-04-08T08:45:00", EDT));
+    const side = flight(
+      "s",
+      MCO,
+      MIA,
+      at("2009-04-08T12:00:00", EDT),
+      at("2009-04-08T13:00:00", EDT)
+    );
+    const back = flight(
+      "t",
+      MIA,
+      MCO,
+      at("2009-04-08T17:00:00", EDT),
+      at("2009-04-08T18:00:00", EDT)
+    );
+    expect(codes([land, pick, side, back])).toEqual(["rentalPickupBeforeArrival:rental-pickup-r"]);
+  });
+});

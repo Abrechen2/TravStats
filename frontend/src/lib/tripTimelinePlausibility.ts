@@ -95,6 +95,15 @@ function strictlyBefore(a: TimeValue, b: TimeValue, samePlace: boolean): boolean
   return compareDays(a, b) === "before";
 }
 
+/** `end` falls after `when`: by the instant where both carry a clock, else by the day. */
+function endsAfter(end: TimeValue, when: TimeValue): boolean {
+  if (hasExplicitTime(end) && hasExplicitTime(when)) {
+    const order = compareClock(end, when, true);
+    if (order !== null) return order === "after";
+  }
+  return compareDays(end, when) === "after";
+}
+
 const isCancelled = (row: unknown): boolean =>
   (row as { status?: string } | null)?.status === "cancelled";
 
@@ -191,7 +200,7 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
             l !== leg &&
             near(place(e), l.arr, SAME_PLACE_KM) &&
             l.start.utc > leg.start.utc &&
-            compareDays(l.end, e.when) !== "after"
+            !endsAfter(l.end, e.when)
         );
         if (!cameBack && strictlyBefore(leg.start, e.when, true)) {
           add(out, "rentalReturnAfterDeparture", e, leg.ev);
@@ -200,13 +209,19 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
       }
     } else {
       // Collected before the traveller arrived — same day, the only day it is certain.
-      for (const leg of legs) {
-        if (!near(place(e), leg.arr, SAME_PLACE_KM)) continue;
-        if (compareDays(leg.end, e.when) !== "same") continue;
-        if (compareClock(e.when, leg.end, true) === "before") {
-          add(out, "rentalPickupBeforeArrival", e, leg.ev);
-          break;
-        }
+      // Only the arrival that brought the traveller to the station counts: the
+      // first one INTO the town. A later one is the way back from a side trip.
+      const brought = legs
+        .filter(
+          (l) => near(place(e), l.arr, SAME_PLACE_KM) && !near(place(e), l.dep, SAME_PLACE_KM)
+        )
+        .sort((a, b) => a.end.utc.localeCompare(b.end.utc))[0];
+      if (
+        brought &&
+        compareDays(brought.end, e.when) === "same" &&
+        compareClock(e.when, brought.end, true) === "before"
+      ) {
+        add(out, "rentalPickupBeforeArrival", e, brought.ev);
       }
     }
   }
@@ -275,8 +290,16 @@ function lodgingFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFind
     const departures = legs.filter((l) => near(at, l.dep, HOTEL_NEAR_KM));
     // Nothing reaches the hotel's town by its check-in day, yet something does later.
     if (!arrivals.some((l) => compareDays(l.end, cin.when) !== "after")) {
+      // Only an arrival INTO the town counts, and only when nothing left the
+      // town before it: a night at home before the trip is followed by the
+      // way back, which proves nothing about the night.
       const later = arrivals
-        .filter((l) => compareDays(l.end, cin.when) === "after")
+        .filter(
+          (l) =>
+            compareDays(l.end, cin.when) === "after" &&
+            !near(at, l.dep, HOTEL_NEAR_KM) &&
+            !departures.some((d) => d.start.utc < l.start.utc)
+        )
         .sort((a, b) => a.end.utc.localeCompare(b.end.utc))[0];
       if (later) add(out, "checkInBeforeArrival", cin, later.ev);
     }

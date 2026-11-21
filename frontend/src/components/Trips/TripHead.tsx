@@ -5,6 +5,7 @@ import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 import { formatLocalDate } from "../../lib/displayFormat";
 import { tripEnd, tripStart } from "../../lib/entityTimes";
+import type { TripPlaceVisit } from "../../hooks/useTripPlaceVisits";
 import { buildTimelineEvents } from "../../lib/tripTimelineEvents";
 import { findTimelineInconsistencies } from "../../lib/tripTimelinePlausibility";
 import { FlagImg } from "../../lib/countryFlag";
@@ -31,7 +32,11 @@ interface TripHeadProps {
   onChanged: () => void;
   /** Distinct places visited on the trip (`countTripPlaces`); shown only when above 0. */
   placeCount?: number;
+  /** The trip's place visits, so the count equals the timeline's (forgejo#426). */
+  placeVisits?: readonly TripPlaceVisit[];
 }
+
+const NO_VISITS: readonly TripPlaceVisit[] = [];
 
 /**
  * The head of a trip page, round 4 ("Reise Detail"): status and a mono line
@@ -51,13 +56,15 @@ export default function TripHead({
   onDelete,
   onChanged,
   placeCount = 0,
+  placeVisits = NO_VISITS,
 }: TripHeadProps): JSX.Element {
   // Entries that contradict each other (forgejo#426); the timeline names each one.
   const inconsistencies = useMemo(
     () =>
-      new Set(findTimelineInconsistencies(buildTimelineEvents(trip, [])).map((f) => f.eventId))
-        .size,
-    [trip]
+      new Set(
+        findTimelineInconsistencies(buildTimelineEvents(trip, placeVisits)).map((f) => f.eventId)
+      ).size,
+    [trip, placeVisits]
   );
   // The trip's days at its places (`times`), never moved by the reader's zone.
   const start = tripStart(trip)?.date;
