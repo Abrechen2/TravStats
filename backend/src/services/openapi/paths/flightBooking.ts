@@ -39,6 +39,10 @@ export const bookingSplit = registry.register(
           "One per paying item — flights only, or every item of a package (forgejo#430); " +
             "they sum to `price` to the currency's minor unit"
         ),
+      stale: z
+        .boolean()
+        .optional()
+        .describe("Marked when an item joined, left or was deleted after the split (forgejo#430)"),
       staleReason: z
         .enum(["price", "currency", "segments"])
         .nullable()

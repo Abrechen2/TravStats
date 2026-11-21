@@ -89,6 +89,31 @@ describe("PackageBookingCard (forgejo#430)", () => {
     expect(shares[1].textContent).toMatch(/1[.,]?970/);
   });
 
+  it("a changed package asks for a check and keeps the typed amounts for the remaining items", async () => {
+    get.mockResolvedValue(
+      answer({
+        split: {
+          method: "manual",
+          price: 2870.96,
+          currency: "EUR",
+          // r1 (a rental) has left the booking; f1 and s1 keep what was typed.
+          shares: [
+            { kind: "flight", id: "f1", amount: 900 },
+            { kind: "stay", id: "s1", amount: 1600.96 },
+            { kind: "rental", id: "r1", amount: 370 },
+          ],
+          staleReason: "segments",
+        },
+      })
+    );
+    render(<PackageBookingCard bookingId="b1" />);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /Aufteilung prüfen|Check the split|bookingPackage\.stale/
+    );
+    expect(screen.getByTestId("package-amount-0")).toHaveValue("900");
+    expect(screen.getByTestId("package-amount-1")).toHaveValue("1600.96");
+  });
+
   it("will not save manual amounts until they add up to the package price", async () => {
     get.mockResolvedValue(answer());
     split.mockResolvedValue(answer());

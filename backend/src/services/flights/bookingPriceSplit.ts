@@ -161,7 +161,8 @@ export function readBookingSplit(
     ? "price"
     : booking.currency !== split.currency
       ? "currency"
-      : split.shares.length !== ids.size ||
+      : split.stale ||
+          split.shares.length !== ids.size ||
           split.shares.some((s) => !ids.has(itemKey(s.kind, s.id)))
         ? "segments"
         : null;

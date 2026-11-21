@@ -57,6 +57,12 @@ export const storedBookingSplitSchema = z.object({
   price: z.number(),
   currency: z.string().nullable(),
   shares: z.array(storedShareSchema),
+  /**
+   * Set by the database trigger when an item joined, left or was deleted
+   * after the split was made (forgejo#430). The amounts stay for the user to
+   * check; until a new split is saved the statistics read it as no split.
+   */
+  stale: z.boolean().optional(),
 });
 export type StoredBookingSplit = z.infer<typeof storedBookingSplitSchema>;
 export type StoredBookingShare = StoredBookingSplit["shares"][number];

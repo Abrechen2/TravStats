@@ -20,6 +20,25 @@ const SPLIT_ERROR_KEYS: Readonly<Record<string, string>> = {
 };
 
 const key = (i: { kind: string; id: string }): string => `${i.kind}:${i.id}`;
+
+/**
+ * The amounts the editor opens with: each item's current share, else the
+ * amount a stale split still holds for it (forgejo#430) — the user's typed
+ * figures survive a changed package and only need checking.
+ */
+function draftFrom(answer: BookingPackageAnswer): Record<string, string> {
+  const old = new Map((answer.split?.shares ?? []).map((s) => [key(s), s.amount]));
+  return Object.fromEntries(
+    answer.items.map((i) => {
+      const amount = i.share ?? old.get(key(i)) ?? null;
+      return [key(i), amount !== null ? String(amount) : ""];
+    })
+  );
+}
+
+/** The package changed after the split: open the editor with the old amounts. */
+const needsCheck = (a: BookingPackageAnswer): boolean =>
+  a.isPackage && a.booking.price !== null && a.split?.staleReason === "segments";
 /** Whole cents — the comparison the server makes, so the button never promises a save it refuses. */
 const cents = (n: number): number => Math.round(Number((n * 100).toPrecision(12)));
 
@@ -46,7 +65,9 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
   const load = useCallback(async (): Promise<void> => {
     setLoadFailed(false);
     try {
-      setAnswer(await bookingPackageApi.get(bookingId));
+      const loaded = await bookingPackageApi.get(bookingId);
+      setAnswer(loaded);
+      setDraft(needsCheck(loaded) ? draftFrom(loaded) : null);
     } catch (err) {
       logger.warn({ err }, "PackageBookingCard: load failed");
       setLoadFailed(true);
@@ -147,13 +168,14 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
           );
         })}
       </ul>
-      {isPackage && !draft && (
+      {isPackage && split?.staleReason && (
+        <p role="status" className="text-xs" style={{ color: "var(--color-warning)" }}>
+          {t("trips:bookingPackage.stale")}
+        </p>
+      )}
+      {isPackage && !split && !draft && (
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {split?.staleReason
-            ? t("trips:bookingPackage.stale")
-            : split
-              ? null
-              : t("trips:bookingPackage.notSplit")}
+          {t("trips:bookingPackage.notSplit")}
         </p>
       )}
       {draft && booking.price !== null && (
@@ -214,13 +236,7 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
                 type="button"
                 disabled={busy}
                 style={{ color: "var(--accent)" }}
-                onClick={() =>
-                  setDraft(
-                    Object.fromEntries(
-                      paying.map((i) => [key(i), i.share !== null ? String(i.share) : ""])
-                    )
-                  )
-                }
+                onClick={() => setDraft(draftFrom(answer))}
               >
                 {t("trips:bookingPackage.splitManual")}
               </button>

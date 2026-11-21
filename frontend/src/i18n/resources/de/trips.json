@@ -1108,7 +1108,7 @@
       "rental": "Mietwagen"
     },
     "notSplit": "Nicht aufgeteilt – die Statistiken je Bereich zählen diese Einträge nicht mit.",
-    "stale": "Die Aufteilung passt nicht mehr zur Buchung (Preis, Währung oder Einträge geändert). Bitte neu aufteilen.",
+    "stale": "Aufteilung prüfen: Das Paket hat sich geändert (Preis, Währung oder Einträge). Die bisherigen Beträge sind eingetragen; bis zum Speichern zählen die Statistiken das Paket nicht mit.",
     "splitEqual": "Gleichmäßig aufteilen",
     "splitManual": "Beträge eingeben",
     "splitRemove": "Aufteilung entfernen",

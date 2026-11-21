@@ -1108,7 +1108,7 @@
       "rental": "Rental car"
     },
     "notSplit": "Not split – the per-domain statistics leave these entries out.",
-    "stale": "The split no longer matches the booking (price, currency or entries changed). Please split again.",
+    "stale": "Check the split: the package has changed (price, currency or entries). The previous amounts are filled in; until you save, the statistics leave the package out.",
     "splitEqual": "Split evenly",
     "splitManual": "Enter amounts",
     "splitRemove": "Remove split",

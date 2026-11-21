@@ -6,14 +6,21 @@ import { generateToken } from "../utils/jwt";
 
 /**
  * forgejo#430: every write that moves an entry onto, off or between bookings
- * clears the package split — whatever path made it — through the trigger
+ * marks the package split stale and keeps its amounts — whatever path made it — through the trigger
  * `clear_package_split_on_membership`. The statistics only check a split's
  * item count, so without it a swapped item kept stale shares counting.
  */
 const stamp = Date.now();
-const SPLIT = { method: "equal", price: 100, currency: "EUR", shares: [] };
+const SPLIT = {
+  method: "manual",
+  price: 100,
+  currency: "EUR",
+  shares: [{ kind: "stay", id: "typed-by-the-user", amount: 63.5 }],
+};
+/** Marked stale, every typed amount kept — never wiped (CLAUDE.md defect class 4). */
+const STALE = { ...SPLIT, stale: true };
 
-describe("package split cleared on every booking_id write (forgejo#430)", () => {
+describe("package split marked stale on every booking_id write (forgejo#430)", () => {
   let userId: string;
 
   beforeAll(async () => {
@@ -126,13 +133,13 @@ describe("package split cleared on every booking_id write (forgejo#430)", () => 
   };
 
   it.each(Object.keys(makers))(
-    "%s: joining, leaving and deleting clear the split",
+    "%s: joining, leaving and deleting mark the split stale, amounts kept",
     async (kind) => {
       const make = makers[kind];
       // Joining by insert.
       const a = await splitBooking();
       await make(a);
-      expect(await splitOf(a)).toBeNull();
+      expect(await splitOf(a)).toEqual(STALE);
 
       // Joining by update, and leaving by update (moved to another booking).
       const b = await splitBooking();
@@ -152,14 +159,14 @@ describe("package split cleared on every booking_id write (forgejo#430)", () => 
         }[kind]!
       ];
       await delegate.update({ where: { id: row.id }, data: { bookingId: b } });
-      expect(await splitOf(b)).toBeNull();
+      expect(await splitOf(b)).toEqual(STALE);
       await prisma.booking.update({
         where: { id: b },
         data: { priceSplit: SPLIT as Prisma.InputJsonValue },
       });
       await delegate.update({ where: { id: row.id }, data: { bookingId: c } });
-      expect(await splitOf(b)).toBeNull();
-      expect(await splitOf(c)).toBeNull();
+      expect(await splitOf(b)).toEqual(STALE);
+      expect(await splitOf(c)).toEqual(STALE);
 
       // Deleting an item.
       await prisma.booking.update({
@@ -167,7 +174,7 @@ describe("package split cleared on every booking_id write (forgejo#430)", () => 
         data: { priceSplit: SPLIT as Prisma.InputJsonValue },
       });
       await delegate.delete({ where: { id: row.id } });
-      expect(await splitOf(c)).toBeNull();
+      expect(await splitOf(c)).toEqual(STALE);
     }
   );
 
@@ -193,10 +200,10 @@ describe("package split cleared on every booking_id write (forgejo#430)", () => 
       where: { id: f.id },
       data: { bookingId: a, flightNumber: "LH1" },
     });
-    expect(await splitOf(a)).not.toBeNull();
+    expect(await splitOf(a)).toEqual(SPLIT);
   });
 
-  it("POST /trips/bookings/:id/flights clears it too", async () => {
+  it("POST /trips/bookings/:id/flights marks it stale too", async () => {
     const a = await splitBooking();
     const f = await prisma.flight.create({
       data: {
@@ -214,6 +221,6 @@ describe("package split cleared on every booking_id write (forgejo#430)", () => 
       .set("Cookie", `auth_token=${generateToken(userId)}`)
       .send({ flightIds: [f.id] })
       .expect(200);
-    expect(await splitOf(a)).toBeNull();
+    expect(await splitOf(a)).toEqual(STALE);
   });
 });

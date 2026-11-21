@@ -212,7 +212,7 @@ describe("a booking as a package (forgejo#430)", () => {
     expect(res.body.split).toBeNull();
   });
 
-  it("changing the booking's items clears its split, so no stale share keeps counting", async () => {
+  it("changing the booking's items marks its split stale, keeps the amounts, and a save clears the flag", async () => {
     await request(app)
       .patch(`/api/v1/trips/bookings/${bookingId}`)
       .set("Cookie", cookie)
@@ -231,8 +231,34 @@ describe("a booking as a package (forgejo#430)", () => {
       .send({ rentalIds: [] })
       .expect(200);
     const stored = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
-    expect(stored.priceSplit).toBeNull();
+    // The amounts survive, marked stale; the statistics leave the package out.
+    const split = stored.priceSplit as { stale?: boolean; shares: { amount: number }[] };
+    expect(split.stale).toBe(true);
+    expect(split.shares.map((s) => s.amount)).toEqual([956.99, 956.99, 956.98]);
     expect((await flightYear()).stats.packagedFlights).toBe(1);
+    const view = await request(app)
+      .get(`/api/v1/trips/bookings/${bookingId}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(view.body.split.staleReason).toBe("segments");
+
+    // Saving a new split clears the flag and the flight counts its share again.
+    const saved = await request(app)
+      .put(`/api/v1/trips/bookings/${bookingId}/split`)
+      .set("Cookie", cookie)
+      .send({
+        method: "manual",
+        shares: [
+          { kind: "flight", id: flightId, amount: 1000 },
+          { kind: "stay", id: stayId, amount: 1870.96 },
+        ],
+      })
+      .expect(200);
+    expect(saved.body.split.stale).toBeUndefined();
+    expect(saved.body.split.staleReason).toBeNull();
+    const year = (await flightYear()).stats;
+    expect(year.packagedFlights).toBe(0);
+    expect(year.totalCost).toBe(1000);
   });
 
   it("a stranger's booking is not found", async () => {

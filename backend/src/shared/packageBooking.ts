@@ -101,6 +101,8 @@ export function validSplitShare(
   const parsed = storedBookingSplitSchema.safeParse(rawSplit);
   if (!parsed.success) return null;
   const split = parsed.data;
+  // The package changed since the split was made: no share is trustworthy.
+  if (split.stale) return null;
   if (split.currency !== booking.currency) return null;
   if (!sameMinor(split.price, booking.price, minorScale(split.currency))) return null;
   // Membership: without the counts nothing proves the split still covers the booking.
