@@ -127,5 +127,42 @@
       "demo": "Im Demo-Konto kann nichts verknüpft werden.",
       "impactFailed": "Die betroffenen Einträge konnten nicht geladen werden. Gelöscht wird trotzdem überall."
     }
+  },
+  "person": {
+    "forLabel": "für",
+    "forPerson": "Für: {{name}}",
+    "forMe": "Für: mich / alle",
+    "auto": "automatisch zugeordnet",
+    "pickLabel": "{{name}}: für wen ist dieses Dokument?",
+    "pickMe": "Mich / alle",
+    "pickUndecided": "Noch nicht zugeordnet",
+    "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+    "companionGone": "Diese Person gibt es nicht mehr. Die Liste wurde neu geladen."
+  },
+  "travellers": {
+    "title": "Mitreisende auf diesem Eintrag",
+    "hint": "Eigene Angaben je Person. Deine eigenen Werte stehen weiter im Eintrag selbst.",
+    "loadFailed": "Die Mitreisenden konnten nicht geladen werden.",
+    "documents_one": "1 Dokument",
+    "documents_other": "{{count}} Dokumente",
+    "noDocuments": "Kein Dokument zugeordnet",
+    "edit": "Angaben bearbeiten",
+    "editLabel": "Angaben von {{name}} bearbeiten",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "cancel": "Abbrechen",
+    "saveFailed": "Die Angaben konnten nicht gespeichert werden.",
+    "notOnEntry": "Diese Person steht nicht mehr auf dem Eintrag. Die Liste wurde neu geladen.",
+    "auto": "automatisch aus einem Dokument übernommen",
+    "driver": "Fahrer:in",
+    "fact": {
+      "seatNumber": "Sitzplatz",
+      "seatClass": "Klasse",
+      "ticketNumber": "Ticketnummer",
+      "bookingReference": "Buchungsnummer",
+      "loyaltyNumber": "Vielfliegernummer / Kundennummer",
+      "cabin": "Kabine",
+      "isDriver": "Fahrer:in"
+    }
   }
 }

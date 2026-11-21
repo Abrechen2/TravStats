@@ -4,6 +4,7 @@ import { Prisma } from "../../prisma";
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { DomainKey } from "../../shared/domains";
+import { autoAssignInTx } from "./documentCompanions";
 import { ENTRY_TYPES, type EntryType, type RentalDocumentCategory } from "./documentFormats";
 
 /**
@@ -292,7 +293,9 @@ export async function setPrimaryLink(
       },
     });
   }
-  return projectPrimary(tx, documentId);
+  const projected = await projectPrimary(tx, documentId);
+  await autoAssignInTx(tx, userId, documentId);
+  return projected;
 }
 
 /**

@@ -162,6 +162,16 @@ export const evidenceFromSchema = entryRefSchema.extend({
   parentId: z.string().nullable(),
 });
 
+/** The person a document is for on an entry (plan D7). */
+export const documentPersonSchema = z.object({
+  id: uuid,
+  displayName: z.string(),
+  source: z
+    .enum(["user", "auto"])
+    .nullable()
+    .describe("auto: assigned from a parsed passenger name; user: picked by hand"),
+});
+
 /**
  * The fields a per-entry document list adds (plan D2), all optional so an
  * installed Companion that reads only the old fields is unaffected.
@@ -180,6 +190,19 @@ export const entryDocumentFieldsSchema = z.object({
       'For a covers document, the entry it was filed at ("Beleg aus …"); null when this entry is the primary'
     ),
   linkCount: z.number().int().optional().describe("How many entries the document is linked to"),
+  forCompanion: documentPersonSchema
+    .nullable()
+    .optional()
+    .describe(
+      "Plan D7: the companion this document is for AT THIS ENTRY; null = the owner or the whole group"
+    ),
+  forSource: z
+    .enum(["user", "auto"])
+    .nullable()
+    .optional()
+    .describe(
+      "How the person was set: auto (parsed name), user (picked, or kept on me); null = undecided"
+    ),
 });
 
 export const entryDocumentDtoSchema = documentDtoSchema.extend(entryDocumentFieldsSchema.shape);
@@ -191,6 +214,18 @@ export const documentLinkViewSchema = z.object({
   rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable(),
   createdAt: z.string(),
   entry: entryInfoSchema,
+  companion: documentPersonSchema.pick({ id: true, displayName: true }).nullable(),
+  companionSource: z.enum(["user", "auto"]).nullable(),
+});
+
+/** `PUT /documents/:id/links/companion` — the person of the link to ONE entry; null = me / the group. */
+export const assignLinkCompanionSchema = z
+  .object({ entry: entryRefSchema, companionId: uuid.nullable() })
+  .strict();
+
+export const linkCompanionResultSchema = z.object({
+  companionId: uuid.nullable(),
+  companionSource: z.enum(["user", "auto"]).nullable(),
 });
 
 export const addDocumentLinksSchema = z
@@ -262,6 +297,9 @@ export const unfiledDocumentsResponseSchema = z.object({
 export const documentListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(500),
   offset: z.coerce.number().int().min(0).default(0),
+  companionId: uuid
+    .optional()
+    .describe("Only documents assigned to this companion on at least one entry (plan D7)"),
 });
 
 export const documentListResponseSchema = z.object({
@@ -274,6 +312,10 @@ export const documentListResponseSchema = z.object({
         .describe(
           "How many entries the document is linked to; a document counts once however many"
         ),
+      people: z
+        .array(documentPersonSchema.pick({ id: true, displayName: true }))
+        .optional()
+        .describe("The companions the document is assigned to on any entry (plan D7)"),
     })
   ),
   total: z.number().int().describe("Every document the caller owns, not just this page"),

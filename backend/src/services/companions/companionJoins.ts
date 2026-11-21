@@ -1,6 +1,15 @@
 import { Prisma } from "../../prisma";
 import type { DbTransaction } from "../../db";
 
+const SEATED_FACTS = [
+  "seat_number",
+  "seat_class",
+  "ticket_number",
+  "booking_reference",
+  "loyalty_number",
+  "facts_source",
+] as const;
+
 /**
  * The join tables that link a companion to an entry, one per kind of entry a
  * companion can be on. `kind` is the domain key the UI gates on — or `trip`,
@@ -10,14 +19,40 @@ import type { DbTransaction } from "../../db";
  * request, which is what makes the `Prisma.raw` below safe.
  */
 export const COMPANION_JOINS = [
-  { kind: "flight", table: "flight_companions", entry: "flight_id" },
-  { kind: "trip", table: "trip_companions", entry: "trip_id" },
-  { kind: "cruise", table: "cruise_companions", entry: "cruise_id" },
-  { kind: "rail", table: "rail_journey_companions", entry: "rail_journey_id" },
-  { kind: "bus", table: "bus_journey_companions", entry: "bus_journey_id" },
-  { kind: "ferry", table: "ferry_journey_companions", entry: "ferry_journey_id" },
-  { kind: "rental", table: "rental_booking_companions", entry: "rental_booking_id" },
+  { kind: "flight", table: "flight_companions", entry: "flight_id", facts: SEATED_FACTS },
+  { kind: "trip", table: "trip_companions", entry: "trip_id", facts: [] },
+  {
+    kind: "cruise",
+    table: "cruise_companions",
+    entry: "cruise_id",
+    facts: ["cabin", "booking_reference", "loyalty_number", "facts_source"],
+  },
+  { kind: "rail", table: "rail_journey_companions", entry: "rail_journey_id", facts: SEATED_FACTS },
+  { kind: "bus", table: "bus_journey_companions", entry: "bus_journey_id", facts: SEATED_FACTS },
+  {
+    kind: "ferry",
+    table: "ferry_journey_companions",
+    entry: "ferry_journey_id",
+    facts: SEATED_FACTS,
+  },
+  {
+    kind: "rental",
+    table: "rental_booking_companions",
+    entry: "rental_booking_id",
+    facts: ["is_driver", "booking_reference", "loyalty_number", "facts_source"],
+  },
 ] as const;
+
+/**
+ * A stay's per-person facts only (document-links D7): WHO is on a stay is its
+ * text list, so this table is not a join in the sense above and stays out of
+ * `COMPANION_JOINS` (whose counts and kinds would count a stay twice).
+ */
+const STAY_FACTS_TABLE = {
+  table: "lodging_stay_companions",
+  entry: "lodging_stay_id",
+  facts: ["booking_reference", "loyalty_number", "facts_source"],
+} as const;
 
 /** A kind of entry that links a companion through a join table. */
 export type CompanionJoinKind = (typeof COMPANION_JOINS)[number]["kind"];
@@ -73,17 +108,41 @@ export async function countJoinMoves(
  * goes — the entry keeps one person, in the place they were listed first.
  */
 export async function moveJoins(tx: DbTransaction, source: string, target: string): Promise<void> {
-  for (const join of COMPANION_JOINS) {
+  const tables: Array<{
+    table: string;
+    entry: string;
+    facts: readonly string[];
+    position: boolean;
+  }> = [
+    ...COMPANION_JOINS.map((j) => ({ ...j, position: true })),
+    { ...STAY_FACTS_TABLE, position: false },
+  ];
+  for (const join of tables) {
     const table = Prisma.raw(`"${join.table}"`);
     const entry = Prisma.raw(`"${join.entry}"`);
-    await tx.$executeRaw(Prisma.sql`
-      UPDATE ${table} AS t SET position = LEAST(t.position, s.position)
-      FROM ${table} AS s
-      WHERE t.companion_id = ${target} AND s.companion_id = ${source} AND t.${entry} = s.${entry}`);
+    if (join.position) {
+      await tx.$executeRaw(Prisma.sql`
+        UPDATE ${table} AS t SET position = LEAST(t.position, s.position)
+        FROM ${table} AS s
+        WHERE t.companion_id = ${target} AND s.companion_id = ${source} AND t.${entry} = s.${entry}`);
+    }
+    // The person's own facts survive the merge: the target's value wins, the
+    // source's fills what the target never recorded (D7).
+    for (const fact of join.facts) {
+      const col = Prisma.raw(`"${fact}"`);
+      await tx.$executeRaw(Prisma.sql`
+        UPDATE ${table} AS t SET ${col} = COALESCE(t.${col}, s.${col})
+        FROM ${table} AS s
+        WHERE t.companion_id = ${target} AND s.companion_id = ${source} AND t.${entry} = s.${entry}`);
+    }
     await tx.$executeRaw(Prisma.sql`
       DELETE FROM ${table} AS s USING ${table} AS t
       WHERE s.companion_id = ${source} AND t.companion_id = ${target} AND t.${entry} = s.${entry}`);
     await tx.$executeRaw(Prisma.sql`
       UPDATE ${table} SET companion_id = ${target} WHERE companion_id = ${source}`);
   }
+  // A document assigned to the merged-away person is now the target's (D7);
+  // SetNull would otherwise have turned it back into "me".
+  await tx.$executeRaw(Prisma.sql`
+    UPDATE document_links SET companion_id = ${target} WHERE companion_id = ${source}`);
 }

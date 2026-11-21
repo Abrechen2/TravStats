@@ -26,6 +26,15 @@ vi.mock("../../../lib/api/documents", async () => {
     documentsApi: documentsApiMock,
   };
 });
+vi.mock("../../../lib/api/entryTravellers", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/api/entryTravellers")>(
+    "../../../lib/api/entryTravellers"
+  );
+  return {
+    ...actual,
+    entryTravellersApi: { list: vi.fn().mockResolvedValue([]), setFacts: vi.fn() },
+  };
+});
 vi.mock("../../../hooks/useIsDemoAccount", () => ({
   useIsDemoAccount: () => isDemoMock.current,
 }));

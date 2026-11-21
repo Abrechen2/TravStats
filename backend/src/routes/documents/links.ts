@@ -6,6 +6,7 @@ import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import {
   addDocumentLinksSchema,
+  assignLinkCompanionSchema,
   entryRefSchema,
   tripCandidatesQuerySchema,
 } from "../../schemas/document";
@@ -16,6 +17,7 @@ import {
   listTripDocumentsFor,
   unlinkFromEntry,
 } from "../../services/documents/documentEntryLinks";
+import { assignLinkCompanion } from "../../services/documents/documentCompanions";
 import { toDocumentDto } from "../../services/documents/documentService";
 
 /**
@@ -99,6 +101,26 @@ router.post(
         }))
       );
       res.status(201).json({ success: true, data: await listDocumentLinks(req.userId!, id) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/** Plan D7: who the document is for at ONE entry (`companionId: null` = me / the whole group). */
+router.put(
+  "/documents/:id/links/companion",
+  authenticate,
+  rejectDemo,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = parseOrThrow(uuid, req.params.id);
+      const body = parseOrThrow(assignLinkCompanionSchema, req.body);
+      res.json({
+        success: true,
+        data: await assignLinkCompanion(req.userId!, id, body.entry, body.companionId),
+      });
     } catch (error) {
       next(error);
     }

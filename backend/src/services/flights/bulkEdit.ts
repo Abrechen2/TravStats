@@ -1,11 +1,12 @@
 import { prisma, type DbTransaction } from "../../db";
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { claimVersion } from "../sync/versionPrecondition";
 import { syncEntity } from "../sync/entities";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { canonicalizeCompanionName } from "../../utils/companionName";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { resolveCompanions } from "../companionService";
 import { recomputeTripStatus } from "../tripStatusService";
 import type { FlightBulkEdit } from "../../schemas/flightBulkEdit";
 
@@ -205,13 +206,7 @@ async function writePlan(
       const moves = plan.data.tripId !== undefined;
       const before = moves ? await shareSnapshot(tx, "flight", flightId) : undefined;
       if (plan.companionIds !== null) {
-        await tx.flightCompanion.deleteMany({ where: { flightId } });
-        if (plan.companionIds.length > 0) {
-          await tx.flightCompanion.createMany({
-            data: linkRowsFor(plan.companionIds).map((row) => ({ ...row, flightId })),
-            skipDuplicates: true,
-          });
-        }
+        await syncCompanionLinks(tx, "flight", flightId, plan.companionIds);
       }
       // share-exempt: propagated just below, inside this transaction, when the trip moved; tags and companions are private
       await tx.flight.update({

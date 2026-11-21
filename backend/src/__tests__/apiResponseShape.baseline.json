@@ -212,6 +212,7 @@
     "documents.ts",
     "documents/extractValues.ts",
     "documents/links.ts",
+    "entryTravellers.ts",
     "domainEntrySuggestions.ts",
     "encryptedShare.ts",
     "encryptedShareSealed.ts",

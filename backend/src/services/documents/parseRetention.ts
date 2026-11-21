@@ -10,6 +10,7 @@ import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { z } from "../../schemas/zod";
 import { parseRetentionFields } from "../../schemas/document";
 import type { DetectedFormat, DocumentFormat } from "./documentFormats";
+import { autoAssignForDocument } from "./documentCompanions";
 import { checkDocumentFormat, createDocument, getOwnDocument } from "./documentService";
 import { documentPath } from "./documentStore";
 
@@ -136,6 +137,7 @@ export async function recordParse(args: RecordParseInput): Promise<string | unde
     // `getOwnDocument`). It persists no new bytes and no new row, so it is not
     // the door.
     await prisma.document.update({ where: { id: args.documentId }, data: parsed });
+    await autoAssignForDocument(args.userId, args.documentId);
     return args.documentId;
   }
   if (!args.retain || !args.input) return undefined;
@@ -168,7 +170,10 @@ export async function recordParse(args: RecordParseInput): Promise<string | unde
     ...parsed,
   });
   // The same bytes kept earlier are the same document; this parse is the newer reading of it.
-  if (!created) await prisma.document.update({ where: { id: document.id }, data: parsed });
+  if (!created) {
+    await prisma.document.update({ where: { id: document.id }, data: parsed });
+    await autoAssignForDocument(args.userId, document.id);
+  }
   return document.id;
 }
 

@@ -87,7 +87,7 @@ export const TRAVEL_GRAPH: Record<string, NodeSpec> = {
     model: "LodgingStay",
     domain: "lodging",
     date: "checkInDate",
-    relations: { lodging },
+    relations: { lodging, companionLinks: links("LodgingStayCompanion") },
   },
   lodgings: { ...lodging, domain: "lodging" },
   lodgingChains: { model: "LodgingChain", domain: "lodging" },

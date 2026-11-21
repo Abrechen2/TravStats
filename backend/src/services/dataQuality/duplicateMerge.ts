@@ -156,17 +156,13 @@ async function mergeFlights(
     where: { userId, flightId: { in: [...removedIds] } },
     data: { flightId: keptId },
   });
+  // The whole row: a removed twin's seat or ticket number for a person moves with them (D7).
   const companions = await tx.flightCompanion.findMany({
     where: { flightId: { in: [...removedIds] } },
-    select: { companionId: true, position: true },
   });
   if (companions.length > 0) {
     await tx.flightCompanion.createMany({
-      data: companions.map((c) => ({
-        flightId: keptId,
-        companionId: c.companionId,
-        position: c.position,
-      })),
+      data: companions.map((c) => ({ ...c, flightId: keptId })),
       skipDuplicates: true,
     });
   }
@@ -285,15 +281,10 @@ async function mergeCruises(
   await repointLinks(tx, { type: "cruise", ids: removedIds }, { type: "cruise", id: keptId });
   const companions = await tx.cruiseCompanion.findMany({
     where: { cruiseId: { in: [...removedIds] } },
-    select: { companionId: true, position: true },
   });
   if (companions.length > 0) {
     await tx.cruiseCompanion.createMany({
-      data: companions.map((c) => ({
-        cruiseId: keptId,
-        companionId: c.companionId,
-        position: c.position,
-      })),
+      data: companions.map((c) => ({ ...c, cruiseId: keptId })),
       skipDuplicates: true,
     });
   }

@@ -10,12 +10,13 @@
  * it again.
  */
 
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { prisma } from "../../db";
 import { Prisma, type BusJourney } from "../../prisma";
 import { BUS_RIDE_KINDS, BUS_STATUSES } from "../../schemas/bus";
 import { mergeBusJourney } from "../bus/busJourneyWrite";
 import { withRoutedDistance } from "../bus/busRouting";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { resolveCompanions } from "../companionService";
 import type { TerminalRideInput } from "../rides/terminalRideWrite";
 import * as cell from "./cells";
 import { type Ctx, definedOnly } from "./context";
@@ -73,16 +74,12 @@ async function writeRide(
           })
         ).id;
     if (companions) {
-      await tx.busJourneyCompanion.deleteMany({ where: { busJourneyId: id } });
-      if (companions.length > 0) {
-        await tx.busJourneyCompanion.createMany({
-          data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-            ...row,
-            busJourneyId: id,
-          })),
-          skipDuplicates: true,
-        });
-      }
+      await syncCompanionLinks(
+        tx,
+        "busJourney",
+        id,
+        companions.map((c) => c.id)
+      );
     }
     return id;
   });

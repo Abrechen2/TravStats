@@ -127,5 +127,42 @@
       "demo": "Nothing can be linked in the demo account.",
       "impactFailed": "The affected entries could not be loaded. It is deleted everywhere all the same."
     }
+  },
+  "person": {
+    "forLabel": "for",
+    "forPerson": "For: {{name}}",
+    "forMe": "For: me / everyone",
+    "auto": "assigned automatically",
+    "pickLabel": "{{name}}: who is this document for?",
+    "pickMe": "Me / everyone",
+    "pickUndecided": "Not assigned yet",
+    "saveFailed": "The assignment could not be saved.",
+    "companionGone": "That person no longer exists. The list was reloaded."
+  },
+  "travellers": {
+    "title": "Travellers on this entry",
+    "hint": "Each person's own details. Your own values stay on the entry itself.",
+    "loadFailed": "The travellers could not be loaded.",
+    "documents_one": "1 document",
+    "documents_other": "{{count}} documents",
+    "noDocuments": "No document assigned",
+    "edit": "Edit details",
+    "editLabel": "Edit details of {{name}}",
+    "save": "Save",
+    "saved": "Saved.",
+    "cancel": "Cancel",
+    "saveFailed": "The details could not be saved.",
+    "notOnEntry": "That person is no longer on the entry. The list was reloaded.",
+    "auto": "taken from a document automatically",
+    "driver": "Driver",
+    "fact": {
+      "seatNumber": "Seat",
+      "seatClass": "Class",
+      "ticketNumber": "Ticket number",
+      "bookingReference": "Booking reference",
+      "loyaltyNumber": "Frequent-flyer / loyalty number",
+      "cabin": "Cabin",
+      "isDriver": "Driver"
+    }
   }
 }

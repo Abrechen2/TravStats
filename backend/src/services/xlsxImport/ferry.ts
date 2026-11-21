@@ -9,12 +9,13 @@
  * roadtrip leg is not a sheet column and is never touched here.
  */
 
+import { syncCompanionLinks } from "../companions/travellerFacts";
 import { prisma } from "../../db";
 import { Prisma, type FerryJourney } from "../../prisma";
 import { FERRY_STATUSES } from "../../schemas/ferry";
 import { sameFerryEnds } from "../ferry/ferryGeometry";
 import { mergeFerryJourney } from "../ferry/ferryJourneyWrite";
-import { linkRowsFor, resolveCompanions } from "../companionService";
+import { resolveCompanions } from "../companionService";
 import type { TerminalRideInput } from "../rides/terminalRideWrite";
 import * as cell from "./cells";
 import { type Ctx, definedOnly } from "./context";
@@ -80,16 +81,12 @@ async function writeCrossing(
           })
         ).id;
     if (companions) {
-      await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: id } });
-      if (companions.length > 0) {
-        await tx.ferryJourneyCompanion.createMany({
-          data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-            ...row,
-            ferryJourneyId: id,
-          })),
-          skipDuplicates: true,
-        });
-      }
+      await syncCompanionLinks(
+        tx,
+        "ferryJourney",
+        id,
+        companions.map((c) => c.id)
+      );
     }
     return id;
   });

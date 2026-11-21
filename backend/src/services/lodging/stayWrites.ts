@@ -28,6 +28,7 @@ import { assertReferencesOwned } from "../../utils/ownedReferences";
 import { resolveEffectiveStayDates } from "./stayPatchMerge";
 import { legacyDay, stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 import type { LocalTimeOrigin } from "../../shared/time/instant";
+import { pruneStayFacts } from "../companions/travellerFacts";
 import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
 import { resolveDeadlineColumns } from "../deadlines/bookingDeadlines";
@@ -390,6 +391,9 @@ export async function updateStayRecord(
           ),
         },
       });
+      // A person the editor took off the stay keeps no facts on it (D7); a
+      // person who stays keeps theirs.
+      if (input.companions !== undefined) await pruneStayFacts(tx, userId, stay.id);
       await propagateWrite(tx, userId, "lodgingStay", stay.id, before);
       return updated;
     },

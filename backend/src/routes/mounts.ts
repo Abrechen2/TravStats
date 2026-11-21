@@ -162,6 +162,7 @@ import placeMergeRouter from "./places/merge";
 import placeCapturesRouter from "./places/captures";
 import documentExtractValueRoutes from "./documents/extractValues";
 import documentLinkRoutes from "./documents/links";
+import entryTravellerRoutes from "./entryTravellers";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
@@ -282,6 +283,7 @@ export const apiMounts: ApiMount[] = [
   // its own file; mounted first so the documents router never sees the path.
   { id: "documents.extractValues", base: "/api/v1", router: documentExtractValueRoutes },
   { id: "documents.links", base: "/api/v1", router: documentLinkRoutes },
+  { id: "entry.travellers", base: "/api/v1", router: entryTravellerRoutes },
   { id: "documents", base: "/api/v1", router: documentRoutes },
   // Trip photos on a stay, a flight and a cruise — read-only, on /api/v1 with
   // per-route middleware; the extra path segment keeps it off the `/:id` routes.
