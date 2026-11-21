@@ -119,7 +119,7 @@ export function FerryRouteEditor({ ride, onSaved, onClose }: Props): JSX.Element
     setSaving(true);
     setError(null);
     try {
-      onSaved(await ferryApi.setManualRoute(ride.id, state.waypoints));
+      onSaved(await ferryApi.setManualRoute(ride.id, state.waypoints, ride.updatedAt));
     } catch (err) {
       const code = apiErrorMachineCode(err);
       setError(

@@ -263,3 +263,29 @@ it("carries the manual line onto a linked roadtrip leg", async () => {
   await prisma.ferryJourney.deleteMany({ where: { userId } });
   await prisma.trip.deleteMany({ where: { userId } });
 });
+
+it("refuses a save from an editor that opened an older version of the crossing", async () => {
+  const id = await create();
+  const opened = (await prisma.ferryJourney.findUniqueOrThrow({ where: { id } })).updatedAt;
+  expect((await put(id, drawn)).status).toBe(200);
+  const stale = await request(app)
+    .put(`/api/v1/ferry/${id}/route-override`)
+    .set("Cookie", cookie)
+    .send({ waypoints: [drawn[0], [17.0, 41.2], [17.5, 42.0], drawn[3]], baseVersion: opened });
+  expect(stale.status).toBe(409);
+  expect((await prisma.ferryJourney.findUniqueOrThrow({ where: { id } })).geometry).toEqual(drawn);
+});
+
+it("refuses a globe-spanning line on terminals less than 500 m apart", async () => {
+  const id = await create({
+    departureStation: { ...dep, name: "Quay A" },
+    arrivalStation: { ...dep, name: "Quay B", lat: dep.lat + 0.001 },
+  });
+  const res = await put(id, [
+    [dep.lon, dep.lat],
+    [-100, 10],
+    [dep.lon, dep.lat + 0.001],
+  ]);
+  expect(res.status).toBe(400);
+  expect(res.body.code).toBe("FERRY_ROUTE_INVALID");
+});

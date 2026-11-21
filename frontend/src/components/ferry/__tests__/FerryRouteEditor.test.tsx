@@ -63,11 +63,11 @@ describe("FerryRouteEditor", () => {
     await waitFor(() => expect(save).toBeEnabled());
     fireEvent.click(save);
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(setManualRoute).toHaveBeenCalledWith(ride.id, [
-      [ride.depLon, ride.depLat],
-      via,
-      [ride.arrLon, ride.arrLat],
-    ]);
+    expect(setManualRoute).toHaveBeenCalledWith(
+      ride.id,
+      [[ride.depLon, ride.depLat], via, [ride.arrLon, ride.arrLat]],
+      ride.updatedAt
+    );
   });
 
   it("shows the server's reason for a refused line, not a raw code", async () => {

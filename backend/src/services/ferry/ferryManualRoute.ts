@@ -12,12 +12,22 @@ const ANCHOR_TOLERANCE_KM = 1;
 export const MAX_MANUAL_POINTS = 64;
 /** The same sanity ceiling the router's own result is held to. */
 const MAX_DETOUR_FACTOR = 20;
+/** A floor for the ceiling: a hop between terminals under 0.5 km apart may still wander a little. */
+const MIN_ALLOWED_KM = 25;
 
 const pointSchema = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]);
 /** At least one via point: two points are the chord, which "clear" already is. */
 export const manualRouteSchema = z.object({
+  /** The crossing's `updatedAt` the editor opened; a newer row refuses the save. */
+  baseVersion: z.string().optional(),
   waypoints: z.array(pointSchema).min(3).max(MAX_MANUAL_POINTS),
 });
+
+/** A client that names the version it read is refused when the row moved on since. */
+function assertBaseVersion(current: Date, base: string | null): void {
+  if (base !== null && new Date(base).getTime() !== current.getTime())
+    throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
+}
 
 const invalid = (message: string) => new AppError(message, 400, "FERRY_ROUTE_INVALID");
 
@@ -27,7 +37,12 @@ const invalid = (message: string) => new AppError(message, 400, "FERRY_ROUTE_INV
  * The length follows the line unless the user typed a distance. A re-route
  * only touches a straight crossing, so it never overwrites this.
  */
-export async function setFerryManualRoute(userId: string, id: string, body: unknown) {
+export async function setFerryManualRoute(
+  userId: string,
+  id: string,
+  body: unknown,
+  baseVersion: string | null = null
+) {
   const parsed = manualRouteSchema.safeParse(body);
   if (!parsed.success) {
     const tooFew = parsed.error.issues.some((i) => i.code === "too_small");
@@ -41,6 +56,7 @@ export async function setFerryManualRoute(userId: string, id: string, body: unkn
   }
   const existing = await prisma.ferryJourney.findFirst({ where: { id, userId } });
   if (!existing) throw new AppError("Ferry ride not found", 404);
+  assertBaseVersion(existing.updatedAt, baseVersion);
   const dep = { lat: existing.depLat, lon: existing.depLon };
   const arr = { lat: existing.arrLat, lon: existing.arrLon };
   const given = parsed.data.waypoints;
@@ -62,7 +78,7 @@ export async function setFerryManualRoute(userId: string, id: string, body: unkn
   ];
   const km = polylineLengthKm(line.map(([lon, lat]) => ({ lat, lon })));
   const chord = haversineKm(dep, arr);
-  if (!Number.isFinite(km) || (chord > 0.5 && km > chord * MAX_DETOUR_FACTOR))
+  if (!Number.isFinite(km) || km > Math.max(chord * MAX_DETOUR_FACTOR, MIN_ALLOWED_KM))
     throw invalid("The route is far longer than the crossing can be");
 
   await prisma.$transaction(
@@ -99,9 +115,14 @@ export async function setFerryManualRoute(userId: string, id: string, body: unkn
  * another go (best effort, as after any save). A crossing that never had a
  * manual line is left alone.
  */
-export async function clearFerryManualRoute(userId: string, id: string) {
+export async function clearFerryManualRoute(
+  userId: string,
+  id: string,
+  baseVersion: string | null = null
+) {
   const existing = await prisma.ferryJourney.findFirst({ where: { id, userId } });
   if (!existing) throw new AppError("Ferry ride not found", 404);
+  assertBaseVersion(existing.updatedAt, baseVersion);
   if (existing.geometrySource !== "manual")
     return { outcome: "unchanged" as const, ride: existing };
   const chord =

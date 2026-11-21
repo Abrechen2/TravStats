@@ -103,7 +103,7 @@ export default function FerryDetailPage() {
     setRouting(true);
     setRouteMessage(null);
     try {
-      const result = await ferryApi.clearManualRoute(ride.id);
+      const result = await ferryApi.clearManualRoute(ride.id, ride.updatedAt);
       setRide(await ferryApi.get(ride.id));
       setRouteMessage(
         t(

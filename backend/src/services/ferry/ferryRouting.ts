@@ -169,7 +169,6 @@ export async function syncCopiesLegs(
       shareKey,
       id: { not: ownId },
       roadtripLegId: { not: null },
-      geometrySource: { in: ["sea_route", "manual"] },
     },
   });
   for (const copy of copies) {
