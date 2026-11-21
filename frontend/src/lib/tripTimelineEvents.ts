@@ -5,6 +5,7 @@ import {
   flightArrival,
   flightDeparture,
   journalDay,
+  railArrival,
   railDeparture,
   stayCheckIn,
   stayCheckOut,
@@ -12,7 +13,7 @@ import {
   visitTime,
 } from "./entityTimes";
 import {
-  compareTimelineEvents,
+  sortTimelineEvents,
   dayAsTimeValue,
   hasExplicitTime,
   isSupersededByPlaceVisit,
@@ -36,7 +37,7 @@ import type { MemberNote, Note, TripNotes } from "./api/notes";
  * place's own clock to show and group by, the instant to order within a day
  * (ADR 0002). No entry is read in the viewer's zone.
  */
-export type TimelineEvent =
+export type TimelineEvent = (
   | {
       id: string;
       kind: "flight";
@@ -142,7 +143,11 @@ export type TimelineEvent =
       when: TimeValue;
       place: Place;
       visit: PlaceVisit;
-    };
+    }
+) & {
+  /** Where a leg arrives (flight, rail, bus, ferry) — the order uses it, see `sortTimelineEvents`. */
+  end?: TimeValue | null;
+};
 
 /** Rentals as entries: the pickup and the return, each on its station's clock. */
 function rentalEvents(trip: Trip): TimelineEvent[] {
@@ -167,7 +172,14 @@ function railEvents(trip: Trip): TimelineEvent[] {
   for (const journey of trip.railJourneys ?? []) {
     const when = railDeparture(journey);
     if (!when) continue;
-    out.push({ id: `rail-${journey.id}`, kind: "rail", date: when.utc, when, journey });
+    out.push({
+      id: `rail-${journey.id}`,
+      kind: "rail",
+      date: when.utc,
+      when,
+      end: railArrival(journey),
+      journey,
+    });
   }
   return out;
 }
@@ -181,7 +193,14 @@ function busEvents(trip: Trip): TimelineEvent[] {
   for (const ride of trip.busJourneys ?? []) {
     const when = railDeparture(ride);
     if (!when) continue;
-    out.push({ id: `bus-${ride.id}`, kind: "bus", date: when.utc, when, ride });
+    out.push({
+      id: `bus-${ride.id}`,
+      kind: "bus",
+      date: when.utc,
+      when,
+      end: railArrival(ride),
+      ride,
+    });
   }
   return out;
 }
@@ -190,7 +209,14 @@ function ferryEvents(trip: Trip): TimelineEvent[] {
   for (const ride of trip.ferryJourneys ?? []) {
     const when = railDeparture(ride);
     if (!when) continue;
-    out.push({ id: `ferry-${ride.id}`, kind: "ferry", date: when.utc, when, ride });
+    out.push({
+      id: `ferry-${ride.id}`,
+      kind: "ferry",
+      date: when.utc,
+      when,
+      end: railArrival(ride),
+      ride,
+    });
   }
   return out;
 }
@@ -212,6 +238,7 @@ function flightEvents(trip: Trip): TimelineEvent[] {
       kind: "flight",
       date: when.utc,
       when,
+      end: arrival,
       title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
       // Each end on its own airport's clock (the server's `local`), never the
       // viewer's: `toLocaleString()` once put a JFK arrival six hours off the
@@ -349,5 +376,5 @@ export function buildTimelineEvents(
   out.push(...lodgingEvents(trip));
   // #175: grouped by the place's day, ordered within it, a day's diary entry
   // last. See compareTimelineEvents — the rules and why they exist live there.
-  return out.sort(compareTimelineEvents);
+  return sortTimelineEvents(out);
 }
