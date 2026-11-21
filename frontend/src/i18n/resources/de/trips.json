@@ -849,7 +849,8 @@
     "beforeSourceSwitch": "Vor dem Quellwechsel erkannt",
     "explanation": {
       "stay": {
-        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)"
+        "dwell": "{{points}} Positionen innerhalb von {{radiusM}} m über {{minutes}} Minuten (längste Lücke {{maxGapMinutes}} Minuten)",
+        "stop": "{{minutes}} Minuten an diesem Ort ({{observedMinutes}} gemessen, {{inferredMinutes}} angenommen), {{distanceM}} m vom Gebäude"
       },
       "market": {
         "visit": "{{points}} Positionen über {{minutes}} Minuten auf dem Marktgelände"

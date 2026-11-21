@@ -267,6 +267,11 @@ export default function StayScanSection({
                 {t("settings:location.stay.next", { at: at(state.nextScanAt) })}
               </p>
             ) : null}
+            {state?.visitLookupRetryAt ? (
+              <ErrorLine>
+                {t("settings:location.stay.visitLookup", { at: at(state.visitLookupRetryAt) })}
+              </ErrorLine>
+            ) : null}
             {refusal ? <ErrorLine>{t(refusal)}</ErrorLine> : null}
             {loadError ? (
               <ErrorLine>
