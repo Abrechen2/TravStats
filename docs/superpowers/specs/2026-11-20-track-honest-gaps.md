@@ -14,9 +14,9 @@ day without recording.
 
 | Phase | Side | What | State |
 |---|---|---|---|
-| S1 | server | `/travtrack/day` carries `omitted`, stops carry `coverage`, `?includeImplausible=1` | built, `feat/track-review` @ bd03cc1d2, not merged |
-| W1 | web | stop card / leg list: "gemessen X · angenommen Y" + dashed gap bar; empty-day reasons with actions; iPad split view | built, same branch |
-| C1 | Companion | Track screen shows the same: coverage on stops, reason for an empty day | built, PR companion#130 (`feat/track-honest-gaps` @ 6a6fddbd); not yet run against an S1 server |
+| S1 | server | `/travtrack/day` carries `omitted`, stops carry `coverage`, `?includeImplausible=1` | built, merged, shipped in 2.8.0-rc.38 (main b67921f03) |
+| W1 | web | stop card / leg list: "gemessen X · angenommen Y" + dashed gap bar; empty-day reasons with actions; iPad split view | built, shipped in 2.8.0-rc.38 |
+| C1 | Companion | Track screen shows the same: coverage on stops, reason for an empty day | built, PR companion#130 (`feat/track-honest-gaps` @ 6a6fddbd); green against rc.38 on the RC server on 2026-11-21 (release APK f4316781 = iOS build 90), all four cases, no contract deviation |
 
 ## Contract (minimum server: the first RC that contains `feat/track-review`)
 
