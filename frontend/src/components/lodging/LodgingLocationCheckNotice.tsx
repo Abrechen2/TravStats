@@ -58,7 +58,7 @@ export function LodgingLocationCheckNotice({
     <div
       role="status"
       data-testid="lodging-location-check"
-      className="flex flex-col gap-2 rounded-md border border-amber-500/50 p-3 text-sm"
+      className="flex flex-col gap-2 rounded-md border border-[var(--warning)]/50 p-3 text-sm"
     >
       <strong>{t("lodging:locationCheck.title")}</strong>
       <p>{t(`lodging:locationCheck.${code}`, { name: lodging.name })}</p>

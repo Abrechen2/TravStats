@@ -85,6 +85,7 @@ export async function flagPinCountryContradictions(
       if (!pinned) continue;
       result.checked++;
       if (pinned === stated.toUpperCase()) continue;
+      // share-exempt: a review marker is account-local, never a fact of the house
       const written = await prisma.lodging.updateMany({
         // Conditional on the row still being what was read: a user who moved
         // the pin meanwhile must not be flagged for the old one.
