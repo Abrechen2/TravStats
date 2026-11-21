@@ -4,6 +4,8 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { parsePackageText } from "../../services/trip/package/parsePackage";
+import { PACKAGE_COST_BOOKING_SELECT } from "../../shared/packageBooking";
+import { computeDedupedTotalCost } from "../../utils/stats/dedupedCost";
 import { loadDrafts, matchInput } from "../../services/trip/package/__tests__/draftTemplates";
 
 /**
@@ -192,6 +194,34 @@ describe("POST /trips/package/{preview,commit}", () => {
     // The documents carry no price: the invoice's stands.
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: result.booking.id } });
     expect(booking.price).toBe(2899);
+  });
+
+  it("the package import makes one package booking: its flights are no flight price until split (forgejo#430)", async () => {
+    const booking = await prisma.booking.findFirstOrThrow({ where: { userId } });
+    const res = await request(app)
+      .get(`/api/v1/trips/bookings/${booking.id}`)
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(res.body.isPackage).toBe(true);
+    const kinds = new Set(res.body.items.map((i: { kind: string }) => i.kind));
+    expect(kinds).toEqual(new Set(["flight", "stay"]));
+    const flights = await prisma.flight.findMany({
+      where: { userId, bookingId: booking.id },
+      select: {
+        id: true,
+        price: true,
+        taxes: true,
+        fees: true,
+        currency: true,
+        priceBase: true,
+        fxBaseCurrency: true,
+        bookingId: true,
+        booking: { select: PACKAGE_COST_BOOKING_SELECT },
+      },
+    });
+    const cost = computeDedupedTotalCost(flights, "EUR");
+    expect(cost.base).toBeNull();
+    expect(cost.packagedFlights).toBe(flights.length);
   });
 
   it("keeps a stored price and says so when a later document disagrees", async () => {

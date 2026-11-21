@@ -37,6 +37,7 @@ import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { PackageBookingCard } from "../components/bookings/PackageBookingCard";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -346,6 +347,12 @@ export default function CruiseDetailPage(): JSX.Element {
             ]}
           />
 
+          {cruise.bookingId && (
+            <PackageBookingCard
+              bookingId={cruise.bookingId}
+              highlight={{ kind: "cruise", id: cruise.id }}
+            />
+          )}
           <DocumentsSection
             entry={{ type: "cruise", id: cruise.id }}
             onChanged={dayDocuments.retry}

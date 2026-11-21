@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { PACKAGE_COST_BOOKING_SELECT, type BookingEntryCounts } from "../../shared/packageBooking";
 import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
@@ -130,6 +131,9 @@ interface FlightCostRow extends FlightIdentityRow {
     currency: string | null;
     priceBase: number | null;
     fxBaseCurrency: string | null;
+    /** Package split and entry counts (forgejo#430). */
+    priceSplit?: unknown;
+    _count?: BookingEntryCounts;
   } | null;
 }
 
@@ -146,9 +150,7 @@ async function loadFlightCostRows(userId: string): Promise<FlightCostRow[]> {
       priceBase: true,
       fxBaseCurrency: true,
       bookingId: true,
-      booking: {
-        select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
-      },
+      booking: { select: PACKAGE_COST_BOOKING_SELECT },
     },
   });
   return withDepartureClock(rows);

@@ -9,6 +9,7 @@
  * it, which is why it cannot live inside either.
  */
 
+import { PACKAGE_COST_BOOKING_SELECT } from "../../shared/packageBooking";
 import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
@@ -67,6 +68,11 @@ export interface SummaryStats {
   totalCostCurrency: string;
   /** Countable flights in the window that carry neither a price nor a priced booking. */
   unpricedFlights: number;
+  /**
+   * Flights inside a package whose price was not split per item (forgejo#430):
+   * their cost is in no flight total — "Teil eines Pakets", not unpriced.
+   */
+  packagedFlights: number;
   /**
    * What could not be converted, in the currency it was paid in. Reported
    * BESIDE the total, never folded into it. Lodging reports the same way.
@@ -224,9 +230,7 @@ export async function computeSummary(
           priceBase: true,
           fxBaseCurrency: true,
           bookingId: true,
-          booking: {
-            select: { price: true, currency: true, priceBase: true, fxBaseCurrency: true },
-          },
+          booking: { select: PACKAGE_COST_BOOKING_SELECT },
         },
       }),
       prisma.flight.count({ where: { ...where, status: "scheduled" } }),
@@ -361,6 +365,7 @@ export async function computeSummary(
     totalCost: cost.base,
     totalCostCurrency: baseCurrency,
     unpricedFlights: cost.unpricedFlights,
+    packagedFlights: cost.packagedFlights,
     totalCostUnconverted: cost.unconvertedByCurrency,
     byCategory,
   };

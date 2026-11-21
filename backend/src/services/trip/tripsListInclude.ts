@@ -94,6 +94,8 @@ export const TRIP_BUS_SELECT = {
  */
 export const TRIP_RENTAL_SELECT = {
   id: true,
+  // The booking it was sold on — what the package picker ticks (forgejo#430).
+  bookingId: true,
   provider: true,
   pickupStationName: true,
   returnStationName: true,

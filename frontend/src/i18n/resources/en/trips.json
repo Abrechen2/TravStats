@@ -390,8 +390,12 @@
       "flights": "Flights",
       "stays": "Stays",
       "cruises": "Cruises",
-      "none": "This trip has no flights, stays or cruises yet that the booking could cover.",
-      "otherBooking": "(on another booking)"
+      "none": "This trip has no entries yet that could be filed on the booking.",
+      "otherBooking": "(on another booking)",
+      "rail": "Train rides",
+      "bus": "Bus rides",
+      "ferry": "Ferry crossings",
+      "rentals": "Rental cars"
     }
   },
   "addExisting": {
@@ -1095,5 +1099,45 @@
     "summaryNone": "Create AI summary",
     "summaryAgain": "Create AI summary again",
     "summaryBusy": "Creating AI summary …"
+  },
+  "bookingPackage": {
+    "title": "Package booking",
+    "show": "Package & split",
+    "hide": "Hide package",
+    "loading": "Loading booking …",
+    "loadFailed": "The booking could not be loaded.",
+    "total": "Package price: {{amount}}",
+    "noTotal": "No price is recorded for this booking.",
+    "isPackage": "One price for everything below. The trip cost counts it once; flight and hotel statistics read only a split share.",
+    "notPackage": "This booking covers only one kind of entry.",
+    "partOfPackage": "Part of a package",
+    "thisEntry": "(this entry)",
+    "cancelled": "cancelled",
+    "kind": {
+      "flight": "Flight",
+      "stay": "Stay",
+      "cruise": "Cruise",
+      "rail": "Train",
+      "bus": "Bus",
+      "ferry": "Ferry",
+      "rental": "Rental car"
+    },
+    "notSplit": "Not split – the per-domain statistics leave these entries out.",
+    "stale": "Check the split: the package has changed (price, currency or entries). The previous amounts are filled in; until you save, the statistics leave the package out.",
+    "splitEqual": "Split evenly",
+    "splitManual": "Enter amounts",
+    "splitRemove": "Remove split",
+    "splitSave": "Save split",
+    "splitCancel": "Cancel",
+    "sum": "Sum {{sum}} of {{total}}",
+    "sumMismatch": "The amounts must add up to exactly {{total}} ({{rest}} left).",
+    "amountFor": "Share for {{label}}",
+    "errors": {
+      "BOOKING_PRICE_MISSING": "Without a package price there is nothing to split.",
+      "BOOKING_SPLIT_SINGLE_SEGMENT": "A booking with a single entry needs no split.",
+      "BOOKING_SPLIT_ITEMS": "The booking's entries have changed. Please reload and split again.",
+      "BOOKING_SPLIT_SUM": "The amounts do not add up to the package price exactly.",
+      "generic": "The split could not be saved."
+    }
   }
 }

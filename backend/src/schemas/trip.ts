@@ -169,6 +169,10 @@ export const createBookingSchema = z.object({
   /** Stays and cruises the package covers, filed on it at creation (#356). */
   stayIds: ENTRY_IDS.optional(),
   cruiseIds: ENTRY_IDS.optional(),
+  railIds: ENTRY_IDS.optional(),
+  busIds: ENTRY_IDS.optional(),
+  ferryIds: ENTRY_IDS.optional(),
+  rentalIds: ENTRY_IDS.optional(),
 });
 
 export const updateBookingSchema = z.object({
@@ -202,10 +206,17 @@ export const bookingEntriesSchema = z
     flightIds: ENTRY_IDS.optional(),
     stayIds: ENTRY_IDS.optional(),
     cruiseIds: ENTRY_IDS.optional(),
+    // forgejo#430: a package sells rides and rentals too.
+    railIds: ENTRY_IDS.optional(),
+    busIds: ENTRY_IDS.optional(),
+    ferryIds: ENTRY_IDS.optional(),
+    rentalIds: ENTRY_IDS.optional(),
   })
-  .refine((d) => d.flightIds || d.stayIds || d.cruiseIds, {
-    message: "At least one of flightIds, stayIds, cruiseIds is required",
-  });
+  .refine(
+    (d) =>
+      d.flightIds || d.stayIds || d.cruiseIds || d.railIds || d.busIds || d.ferryIds || d.rentalIds,
+    { message: "At least one entry list is required" }
+  );
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;

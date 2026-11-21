@@ -610,6 +610,8 @@ export interface BusinessStats {
   costPerHour: number | null;
   /** Null when no counted flight carries a price (forgejo#83). */
   totalCost: number | null;
+  /** Flights in an unsplit package, left out of every cost figure (forgejo#430); optional — older servers. */
+  packagedFlights?: number;
   totalDistance: number;
   seatClassDistribution: Record<string, number>;
   mostCommonCategory: string | null;

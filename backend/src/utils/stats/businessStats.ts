@@ -9,6 +9,46 @@ import {
   measureFlightMinutes,
 } from "../../shared/flightDuration";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { packageEntryShare } from "../../shared/packageBooking";
+
+/**
+ * A flight sold inside a package, rewritten as a flight with its own price:
+ * its share of the split, or no price at all (forgejo#430). Done once here so
+ * the cost-per-km and cost-per-hour loops below keep a single rule and never
+ * see a package's whole price as one flight's.
+ */
+function packageShareOf(f: FlightData) {
+  const booking = f.booking;
+  if (!booking) return null;
+  return packageEntryShare(
+    {
+      price: booking.price ?? null,
+      currency: booking.currency ?? null,
+      priceBase: booking.priceBase ?? null,
+      fxBaseCurrency: booking.fxBaseCurrency ?? null,
+      priceSplit: booking.priceSplit,
+      _count: booking._count,
+    },
+    "flight",
+    f.id
+  );
+}
+
+function withPackageShare(f: FlightData): FlightData {
+  const pkg = packageShareOf(f);
+  if (!pkg) return f;
+  return {
+    ...f,
+    bookingId: null,
+    booking: null,
+    price: pkg.amount,
+    taxes: null,
+    fees: null,
+    currency: pkg.currency,
+    priceBase: pkg.amountBase,
+    fxBaseCurrency: pkg.snapshotCurrency,
+  };
+}
 
 /**
  * Calculate business/informative statistics.
@@ -25,7 +65,16 @@ import { isCountableFlight } from "../../shared/flightCounting";
  *                          reliable enough), totalDistance, totalCost,
  *                          categoryDistribution.
  */
-export function calculateBusinessStats(flights: FlightData[], baseCurrency: string): BusinessStats {
+export function calculateBusinessStats(
+  inputFlights: FlightData[],
+  baseCurrency: string
+): BusinessStats {
+  const flights = inputFlights.map(withPackageShare);
+  // Counted flights left out of every cost figure because they sit in an
+  // unsplit package — said beside the rates, never silently dropped.
+  const packagedFlights = inputFlights.filter(
+    (f) => isCountableFlight(f) && packageShareOf(f)?.amount === null
+  ).length;
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
@@ -269,6 +318,7 @@ export function calculateBusinessStats(flights: FlightData[], baseCurrency: stri
     costPerKm,
     costPerHour,
     totalCost: anyCost ? Math.round(totalCost * 100) / 100 : null,
+    packagedFlights,
     totalDistance: Math.round(totalDistance),
     seatClassDistribution,
     mostCommonCategory,

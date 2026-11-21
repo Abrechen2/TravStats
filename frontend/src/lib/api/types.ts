@@ -473,6 +473,8 @@ export interface SummaryStats {
   totalCostUnconverted: Record<string, number>;
   /** Countable flights in the window with neither a price nor a priced booking. */
   unpricedFlights: number;
+  /** Flights in an unsplit package, left out of the cost (forgejo#430); optional — older servers. */
+  packagedFlights?: number;
   byCategory: Record<string, number>;
 }
 

@@ -157,8 +157,8 @@ describe("GET /flights/:id/booking", () => {
         price: 100.01,
         currency: "EUR",
         shares: [
-          { flightId: a.id, amount: 50.01 },
-          { flightId: b.id, amount: 50 },
+          { kind: "flight", id: a.id, flightId: a.id, amount: 50.01 },
+          { kind: "flight", id: b.id, flightId: b.id, amount: 50 },
         ],
         staleReason: null,
       });
@@ -188,8 +188,8 @@ describe("GET /flights/:id/booking", () => {
       const res = await put(a.id, { method: "equal" });
       expect(res.status).toBe(200);
       expect(res.body.booking.split.shares).toEqual([
-        { flightId: a.id, amount: 50 },
-        { flightId: b.id, amount: 50 },
+        { kind: "flight", id: a.id, flightId: a.id, amount: 50 },
+        { kind: "flight", id: b.id, flightId: b.id, amount: 50 },
       ]);
       expect(res.body.booking.split.staleReason).toBeNull();
       expect(res.body.segments.map((s: { id: string }) => s.id)).toContain(cancelled.id);

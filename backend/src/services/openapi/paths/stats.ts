@@ -62,6 +62,7 @@ const statsResponse = registry.register(
           "Null when no flight in the window carries a price — never 0 for an unpriced year"
         ),
       unpricedFlights: z.number(),
+      packagedFlights: z.number(),
       byStatus: z.record(z.string(), z.number()),
       byAirline: z.record(z.string(), z.number()),
       byCategory: z.record(z.string(), z.number()),

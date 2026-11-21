@@ -1,7 +1,10 @@
 import { recordedOwnAmount } from "../../shared/flightPricing";
 import { segmentCostShare } from "../../shared/tripCost";
+import { packageEntryShare, type BookingEntryCounts } from "../../shared/packageBooking";
 
 export interface CostFlight {
+  /** Needed to read this flight's share of a package split (forgejo#430). */
+  id?: string;
   price: number | null;
   taxes: number | null;
   fees: number | null;
@@ -16,6 +19,9 @@ export interface CostFlight {
     currency: string | null;
     priceBase: number | null;
     fxBaseCurrency: string | null;
+    /** The stored split and the entry counts — what makes a booking a package (forgejo#430). */
+    priceSplit?: unknown;
+    _count?: BookingEntryCounts;
   } | null;
 }
 
@@ -45,6 +51,13 @@ export interface DedupedCost {
    * priced, at 0.
    */
   unpricedFlights: number;
+  /**
+   * Flights sold inside a package (a booking that also sold a stay, a cruise,
+   * …) whose price was not split per item (forgejo#430). Neither priced nor
+   * unpriced: their cost is known, but only together with the rest of the
+   * package, so it is in no flight total — never 0, never the package price.
+   */
+  packagedFlights: number;
   /**
    * Amounts that could not be converted, kept in the currency they were paid
    * in. Reported beside the total rather than folded into it. An entry here is
@@ -111,6 +124,8 @@ export interface FlightCostShare {
   snapshotCurrency: string | null;
   /** True even when `amount` is 0 because the booking was counted elsewhere. */
   priced: boolean;
+  /** Part of an unsplit package: abstains, and is counted apart from unpriced flights. */
+  packaged?: boolean;
 }
 
 /**
@@ -132,6 +147,15 @@ export function flightCostShare(
   flight: CostFlight,
   countedBookingIds: Set<string>
 ): FlightCostShare {
+  // A package's price is not a flight price (forgejo#430): the flight reads
+  // its own share of the split, or abstains. Each share is this flight's
+  // alone, so there is no booking to dedupe here.
+  const pkg = packageEntryShare(flight.booking, "flight", flight.id);
+  if (pkg) {
+    return pkg.amount === null
+      ? { ...pkg, priced: false, packaged: true }
+      : { ...pkg, priced: true };
+  }
   // The booking half is `shared/tripCost.ts`'s, shared with every other
   // segment a trip's cost is built from (forgejo#274) — one rule, so the
   // flight statistics and the trip account cannot disagree about a booking.
@@ -156,6 +180,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
   let contributedToBase = false;
   let pricedFlights = 0;
   let unpricedFlights = 0;
+  let packagedFlights = 0;
   const unconvertedByCurrency: Record<string, number> = {};
   const perFlightBaseContribution: number[] = [];
   const perFlightPriced: boolean[] = [];
@@ -210,6 +235,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
   for (const flight of flights) {
     const share = flightCostShare(flight, seenBookingIds);
     if (share.priced) pricedFlights++;
+    else if (share.packaged) packagedFlights++;
     else unpricedFlights++;
     perFlightPriced.push(share.priced);
     perFlightBaseContribution.push(
@@ -221,6 +247,7 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
     base: contributedToBase ? Math.round(base * 100) / 100 : null,
     pricedFlights,
     unpricedFlights,
+    packagedFlights,
     unconvertedByCurrency,
     perFlightBaseContribution,
     perFlightPriced,

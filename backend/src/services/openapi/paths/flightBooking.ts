@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent, flightResponse } from "./shared";
-import { BOOKING_SPLIT_METHODS, bookingSplitBodySchema } from "../../../schemas/flightBooking";
+import {
+  BOOKING_ENTRY_KINDS,
+  STORED_SPLIT_METHODS,
+  bookingSplitBodySchema,
+} from "../../../schemas/flightBooking";
 import { bookingTimesSchema } from "../../../schemas/times";
 
 /**
@@ -12,22 +16,42 @@ import { bookingTimesSchema } from "../../../schemas/times";
 
 const flightParams = z.object({ id: z.string().uuid() });
 
-const bookingSplit = registry.register(
+export const bookingSplit = registry.register(
   "FlightBookingSplit",
   z
     .object({
-      method: z.enum(BOOKING_SPLIT_METHODS),
+      method: z.enum(STORED_SPLIT_METHODS),
       price: z.number().describe("The booking total the split was computed from"),
       currency: z.string().nullable(),
       shares: z
-        .array(z.object({ flightId: z.string(), amount: z.number() }))
-        .describe("One per segment; they sum to `price` to the currency's minor unit"),
+        .array(
+          z.object({
+            kind: z.enum(BOOKING_ENTRY_KINDS),
+            id: z.string(),
+            flightId: z
+              .string()
+              .optional()
+              .describe("Set on flight shares (the forgejo#219 field)"),
+            amount: z.number(),
+          })
+        )
+        .describe(
+          "One per paying item — flights only, or every item of a package (forgejo#430); " +
+            "they sum to `price` to the currency's minor unit"
+        ),
+      stale: z
+        .boolean()
+        .optional()
+        .describe("Marked when an item joined, left or was deleted after the split (forgejo#430)"),
       staleReason: z
         .enum(["price", "currency", "segments"])
         .nullable()
         .describe("Null while the split still describes the booking; else what changed since"),
     })
-    .describe("DISPLAY ONLY. No cost total reads it — totals count the booking price once, all-in.")
+    .describe(
+      "Trip totals never read it — they count the booking price once, all-in. For a package " +
+        "(forgejo#430) the per-kind statistics read each item's share; unsplit, they abstain."
+    )
     .openapi("FlightBookingSplit")
 );
 

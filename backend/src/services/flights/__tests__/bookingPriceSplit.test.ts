@@ -56,9 +56,9 @@ describe("computeBookingSplit", () => {
         price: 100,
         currency: "EUR",
         shares: [
-          { flightId: "a", amount: 33.34 },
-          { flightId: "b", amount: 33.33 },
-          { flightId: "c", amount: 33.33 },
+          { kind: "flight", id: "a", flightId: "a", amount: 33.34 },
+          { kind: "flight", id: "b", flightId: "b", amount: 33.33 },
+          { kind: "flight", id: "c", flightId: "c", amount: 33.33 },
         ],
       },
     });

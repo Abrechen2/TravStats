@@ -72,6 +72,15 @@ export default function StatsBusinessSection({
                   cost: baseMoney(businessStats.costPerKm),
                 })}
           </p>
+          {(businessStats.packagedFlights ?? 0) > 0 && (
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-muted)" }}
+              data-testid="business-packaged"
+            >
+              {t("stats:business.packagedFlights", { count: businessStats.packagedFlights })}
+            </p>
+          )}
         </EvidenceTrigger>
 
         {/* Same priced flights as the rate per kilometre. */}
@@ -100,6 +109,11 @@ export default function StatsBusinessSection({
                   cost: baseMoney(businessStats.costPerHour),
                 })}
           </p>
+          {(businessStats.packagedFlights ?? 0) > 0 && (
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              {t("stats:business.packagedFlights", { count: businessStats.packagedFlights })}
+            </p>
+          )}
         </EvidenceTrigger>
 
         <EvidenceTrigger

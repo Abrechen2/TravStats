@@ -16,6 +16,10 @@ vi.mock("../../../lib/logger", () => ({
 }));
 const split = vi.fn();
 const removeSplit = vi.fn();
+// A package's card (forgejo#430) loads its booking; this file tests the flight card alone.
+vi.mock("../../../lib/api/bookingPackage", () => ({
+  bookingPackageApi: { get: () => new Promise(() => {}) },
+}));
 vi.mock("../../../lib/api/flightBooking", () => ({
   flightBookingApi: {
     split: (...a: unknown[]) => split(...a),

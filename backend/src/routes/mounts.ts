@@ -83,6 +83,7 @@ import travplanRoutes from "./travplan";
 import remotePlansRoutes from "./remotePlans";
 import travtrackRoutes from "./travtrack";
 import tripBookingRoutes from "./trips/tripBookings";
+import bookingPackageRoutes from "./trips/bookingPackage";
 import tripPackageRoutes from "./trips/tripPackage";
 import tripExchangeRoutes from "./trips/tripExchange";
 import tripEntrySuggestionRoutes from "./trips/entrySuggestions";
@@ -409,6 +410,8 @@ export const apiMounts: ApiMount[] = [
   // Bookings (#356): split out of trips.ts; BEFORE it, so `/trips/bookings`
   // is never read as a trip id.
   { id: "trips.bookings", base: "/api/v1", router: tripBookingRoutes },
+  // A booking as a package (forgejo#430), same reason.
+  { id: "trips.bookingPackage", base: "/api/v1", router: bookingPackageRoutes },
   // Package tours → trips (plan 2026-10-09 P3), same reason.
   { id: "trips.package", base: "/api/v1", router: tripPackageRoutes },
   // One trip as a `.travstats` file (spec 2026-10-09 S3), same reason.

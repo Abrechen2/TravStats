@@ -10,6 +10,7 @@ import { isAmountRecorded } from "../../shared/flightPricing";
 import type { Flight } from "../../types";
 import type { FlightBookingAnswer } from "../../types/flightBooking";
 import { DAY_CARD_TOUCH } from "./FlightDayCard";
+import { PackageBookingCard } from "../bookings/PackageBookingCard";
 
 /** The split refusals the server names, each to its own sentence. */
 const SPLIT_ERROR_KEYS: Readonly<Record<string, string>> = {
@@ -198,7 +199,14 @@ export default function BookingPrice({
         <p>{t("flights:bookingPrice.noTotal")}</p>
       )}
       {booking.otherEntries > 0 ? (
-        <p>{t("flights:bookingPrice.otherEntries", { count: booking.otherEntries })}</p>
+        <>
+          <p>{t("flights:bookingPrice.otherEntries", { count: booking.otherEntries })}</p>
+          {/* A package (forgejo#430): its price and this flight's share live on the booking. */}
+          <PackageBookingCard
+            bookingId={booking.id}
+            highlight={{ kind: "flight", id: flight.id }}
+          />
+        </>
       ) : null}
       {/* The booking's own trip, where its price is edited — not the
           flight's: segments can move to another trip while the booking

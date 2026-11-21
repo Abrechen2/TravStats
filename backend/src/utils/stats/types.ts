@@ -1,3 +1,4 @@
+import type { BookingEntryCounts } from "../../shared/packageBooking";
 import type { FlightTimeSemantics } from "../timezone";
 
 // These two shapes are published by /stats/business and /stats/unique, so the
@@ -47,5 +48,8 @@ export interface FlightData {
     currency?: string | null;
     priceBase?: number | null;
     fxBaseCurrency?: string | null;
+    /** What makes it a package and how its price is split (forgejo#430). */
+    priceSplit?: unknown;
+    _count?: BookingEntryCounts;
   } | null;
 }

@@ -15,6 +15,7 @@
  * shared type, which every existing fixture would then have to grow a field
  * for.
  */
+import { ownOrPackagePrice, PACKAGE_COST_BOOKING_SELECT } from "../../shared/packageBooking";
 import { prisma } from "../../db";
 import { getBaseCurrency } from "../fx/snapshot";
 import { buildMembershipContext, resolveStayProgramme } from "../lodging/stayMembership";
@@ -54,7 +55,11 @@ export async function loadLodgingStatsData(
       where: { userId, ...startedIn("checkIn", year) },
       // The chain is joined for its NAME: the price and rating rankings are
       // read by a human, and a chain id is not a label.
-      include: { lodging: { include: { chain: true } } },
+      // The booking for a split package's share (forgejo#430).
+      include: {
+        lodging: { include: { chain: true } },
+        booking: { select: PACKAGE_COST_BOOKING_SELECT },
+      },
     }),
     // Every lodging the user HAS, including ones with no stay yet — a hotel
     // added but never checked into must still count toward lodgingsCount and
@@ -94,6 +99,17 @@ export async function loadLodgingStatsData(
 
   const rows: LodgingStayRow[] = stays.map((s) => {
     const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
+    const money = ownOrPackagePrice(
+      {
+        price: s.totalPrice,
+        currency: s.currency,
+        priceBase: s.totalPriceBase,
+        fxBaseCurrency: s.fxBaseCurrency,
+      },
+      s.booking,
+      "stay",
+      s.id
+    );
     return {
       id: s.id,
       stay: {
@@ -112,10 +128,10 @@ export async function loadLodgingStatsData(
         datePrecision: s.datePrecision,
         nights: s.nights,
         status: s.status,
-        totalPriceBase: s.totalPriceBase,
-        fxBaseCurrency: s.fxBaseCurrency,
-        currency: s.currency,
-        totalPrice: s.totalPrice,
+        totalPriceBase: money.priceBase,
+        fxBaseCurrency: money.fxBaseCurrency,
+        currency: money.currency ?? s.currency,
+        totalPrice: money.price,
         board: s.board,
         isAwardStay: s.isAwardStay,
         ratingOverall: s.ratingOverall,

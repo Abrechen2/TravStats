@@ -237,6 +237,15 @@ export default function FlightYearSummaryCards({
                   {t("stats:overview.noPricesRecorded", { count: yearSummary.unpricedFlights })}
                 </p>
               )}
+              {(yearSummary.packagedFlights ?? 0) > 0 && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--text-muted)" }}
+                  data-testid="year-summary-packaged"
+                >
+                  {t("stats:overview.packagedFlights", { count: yearSummary.packagedFlights })}
+                </p>
+              )}
               {compareSummary !== null && (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                   {compareSummary.totalCost === null ? "—" : baseMoney(compareSummary.totalCost)} (

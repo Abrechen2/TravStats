@@ -70,6 +70,16 @@ describe("FlightYearSummaryCards — total cost", () => {
     // (a dot, a comma, a narrow or a plain space), so only the digits are pinned.
     expect(screen.getByText(/1\D?234/)).toBeInTheDocument();
     expect(screen.queryByText(/noPricesRecorded/)).toBeNull();
+    expect(screen.queryByTestId("year-summary-packaged")).toBeNull();
+  });
+
+  // forgejo#430: a flight inside an unsplit package is in no flight cost —
+  // the tile says how many were left out instead of dropping them silently.
+  it("says how many flights in packages the total leaves out", () => {
+    renderWith(summary({ totalCost: 900, packagedFlights: 2 }));
+    expect(screen.getByTestId("year-summary-packaged")).toHaveTextContent(
+      "stats:overview.packagedFlights:2"
+    );
   });
 });
 

@@ -15,8 +15,8 @@ import { deadlineDraftFrom, deadlineWire } from "../deadlines/deadlineDraft";
 import {
   BookingEntriesPicker,
   initialSelection,
-  type BookingEntryKind,
-  type BookingEntryOption,
+  BOOKING_ENTRY_KINDS,
+  type BookingEntryOptions,
   type BookingEntrySelection,
 } from "./BookingEntriesPicker";
 
@@ -53,11 +53,7 @@ export function pnrSuggestions(bookingId: string, flights: readonly PnrSource[])
   return out.slice(0, PNR_SUGGESTION_CAP);
 }
 
-const NO_ENTRIES: Record<BookingEntryKind, BookingEntryOption[]> = {
-  flightIds: [],
-  stayIds: [],
-  cruiseIds: [],
-};
+const NO_ENTRIES: BookingEntryOptions = {};
 
 interface BookingEditModalProps {
   /** The booking to edit; null creates a package booking on `tripId` (#356). */
@@ -66,7 +62,7 @@ interface BookingEditModalProps {
   /** The trip's flights, for the PNR chips; without them nothing is offered. */
   flights?: readonly PnrSource[];
   /** The trip's flights, stays and cruises the booking may cover (#356). */
-  entries?: Record<BookingEntryKind, BookingEntryOption[]>;
+  entries?: BookingEntryOptions;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -74,9 +70,7 @@ interface BookingEditModalProps {
 function sameSelection(a: BookingEntrySelection, b: BookingEntrySelection): boolean {
   const same = (x: string[], y: string[]): boolean =>
     x.length === y.length && x.every((id) => y.includes(id));
-  return (
-    same(a.flightIds, b.flightIds) && same(a.stayIds, b.stayIds) && same(a.cruiseIds, b.cruiseIds)
-  );
+  return BOOKING_ENTRY_KINDS.every((kind) => same(a[kind] ?? [], b[kind] ?? []));
 }
 
 const parseTravellers = (raw: string): number | null => {

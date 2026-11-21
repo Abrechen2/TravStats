@@ -118,7 +118,12 @@ export function computeBookingSplit(
       // 1.01, and the sum shown beside it is that same 1.01 (review M4).
       price: totalMinor / scale,
       currency: booking.currency,
-      shares: segments.map((s, i) => ({ flightId: s.id, amount: minor[i] / scale })),
+      shares: segments.map((s, i) => ({
+        kind: "flight" as const,
+        id: s.id,
+        flightId: s.id,
+        amount: minor[i] / scale,
+      })),
     },
   };
 }
@@ -130,7 +135,14 @@ export interface BookingSplitView extends StoredBookingSplit {
   staleReason: SplitStaleReason | null;
 }
 
-/** The stored split, checked against the booking and its segments today. Null when none is stored. */
+/** `kind:id` — how an item of a booking is named when a split is checked against it. */
+export const itemKey = (kind: string, id: string): string => `${kind}:${id}`;
+
+/**
+ * The stored split, checked against the booking and its paying items today
+ * (`itemKey`s; plain ids are read as flights, the forgejo#219 callers). Null
+ * when none is stored.
+ */
 export function readBookingSplit(
   raw: unknown,
   booking: { price: number | null; currency: string | null },
@@ -140,7 +152,7 @@ export function readBookingSplit(
   const parsed = storedBookingSplitSchema.safeParse(raw);
   if (!parsed.success) return null;
   const split = parsed.data;
-  const ids = new Set(segmentIds);
+  const ids = new Set(segmentIds.map((k) => (k.includes(":") ? k : itemKey("flight", k))));
   const scale = 10 ** minorDigits(split.currency);
   const sameTotal =
     booking.price !== null &&
@@ -149,7 +161,9 @@ export function readBookingSplit(
     ? "price"
     : booking.currency !== split.currency
       ? "currency"
-      : split.shares.length !== ids.size || split.shares.some((s) => !ids.has(s.flightId))
+      : split.stale ||
+          split.shares.length !== ids.size ||
+          split.shares.some((s) => !ids.has(itemKey(s.kind, s.id)))
         ? "segments"
         : null;
   return { ...split, staleReason };

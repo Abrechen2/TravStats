@@ -240,6 +240,14 @@ describe("statistics ETag", () => {
     expect((await get(afterCreate.headers.etag)).status).toBe(200);
   });
 
+  // forgejo#430: the package split and the booking price decide flight costs.
+  it("sees an EDITED booking — a new price or package split changes the cost figures", async () => {
+    const booking = await prisma.booking.create({ data: { userId, price: 100, currency: "EUR" } });
+    const before = (await get()).headers.etag;
+    await prisma.booking.update({ where: { id: booking.id }, data: { price: 120 } });
+    expect((await get(before)).status).toBe(200);
+  });
+
   // forgejo#308: the passport applies the user's corrections. Without the
   // table in the fingerprint a saved correction answered 304, and the browser
   // showed the passport from before it until the hour turned.

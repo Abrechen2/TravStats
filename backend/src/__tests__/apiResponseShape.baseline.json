@@ -165,6 +165,7 @@
     "travtrack/zones.ts",
     "tripSharePeer.ts",
     "trips.ts",
+    "trips/bookingPackage.ts",
     "trips/entrySuggestions.ts",
     "trips/photoDto.ts",
     "trips/refusesCoverImage.ts",
