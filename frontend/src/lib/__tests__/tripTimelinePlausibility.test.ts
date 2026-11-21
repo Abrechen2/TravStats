@@ -453,3 +453,38 @@ describe("timeline plausibility — false results (forgejo#426, round 2)", () =>
     ]);
   });
 });
+
+describe("timeline plausibility — a leg with a departure but no arrival time", () => {
+  const noArrival = (): TimelineEvent => {
+    const f = flight(
+      "f1",
+      MCO,
+      ORD,
+      at("2009-04-15T06:50:00", EDT),
+      at("2009-04-15T08:20:00", CDT)
+    );
+    return { ...f, end: undefined } as unknown as TimelineEvent;
+  };
+
+  it("still flags a rental return after the departure (legOf used to drop a leg with no arrival)", () => {
+    const pickup = rental("r1", "rental-pickup", MCO, at("2009-04-08T10:00:00", EDT));
+    const ret = rental("r1", "rental-return", MCO, naive("2009-04-15T07:29:00"));
+    expect(codes([pickup, noArrival(), ret])).toEqual([
+      "rentalReturnAfterDeparture:rental-return-r1",
+    ]);
+  });
+
+  it("still flags a check-out after a departure that never came back", () => {
+    const events = [
+      stay("s", "h", "lodging-checkin", "2009-04-08", MCO),
+      stay("s", "h", "lodging-checkout", "2009-04-17", MCO),
+      noArrival(),
+    ];
+    expect(codes(events)).toContain("checkOutAfterDeparture:lodging-checkout-s");
+  });
+
+  it("raises nothing for an arrival-dependent check it cannot make", () => {
+    const events = [noArrival(), stay("s", "h", "lodging-checkin", "2009-04-08", ORD)];
+    expect(codes(events)).toEqual([]);
+  });
+});

@@ -110,20 +110,20 @@ const isCancelled = (row: unknown): boolean =>
 interface Leg {
   ev: TimelineEvent;
   start: TimeValue;
-  end: TimeValue;
+  /** Null when the entry has no arrival time: only departure-based checks use such a leg. */
+  end: TimeValue | null;
   dep: Place;
   arr: Place;
 }
 
 function legOf(ev: TimelineEvent): Leg | null {
-  if (!ev.end) return null;
   if (ev.kind === "flight") {
     const f = ev.flight;
     if (isCancelled(f)) return null;
     return {
       ev,
       start: ev.when,
-      end: ev.end,
+      end: ev.end ?? null,
       dep: { iata: f.depIata, lat: f.depLat, lon: f.depLon },
       arr: { iata: f.arrIata, lat: f.arrLat, lon: f.arrLon },
     };
@@ -134,13 +134,16 @@ function legOf(ev: TimelineEvent): Leg | null {
     return {
       ev,
       start: ev.when,
-      end: ev.end,
+      end: ev.end ?? null,
       dep: { lat: j.depLat, lon: j.depLon },
       arr: { lat: j.arrLat, lon: j.arrLon },
     };
   }
   return null;
 }
+
+/** A leg whose arrival time is known. */
+type TimedLeg = Leg & { end: TimeValue };
 
 function add(
   out: TimelineFinding[],
@@ -161,6 +164,7 @@ function legFindings(legs: Leg[], out: TimelineFinding[]): void {
       // `a` is the earlier leg; equal starts count once, in list order.
       const order = compareClock(a.start, b.start, near(a.dep, b.dep, SAME_PLACE_KM));
       if (order === null || order === "after" || (order === "same" && i > j)) continue;
+      if (!a.end) continue;
       const overlaps = compareClock(b.start, a.end, near(a.arr, b.dep, SAME_PLACE_KM)) === "before";
       if (overlaps) add(out, "legBeforeArrival", b.ev, a.ev);
     }
@@ -199,6 +203,7 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
           (l) =>
             l !== leg &&
             near(place(e), l.arr, SAME_PLACE_KM) &&
+            l.end !== null &&
             l.start.utc > leg.start.utc &&
             !endsAfter(l.end, e.when)
         );
@@ -214,7 +219,10 @@ function rentalFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindi
       // already done it; a later one is the way back from a side trip.
       const into = legs
         .filter(
-          (l) => near(place(e), l.arr, SAME_PLACE_KM) && !near(place(e), l.dep, SAME_PLACE_KM)
+          (l): l is TimedLeg =>
+            l.end !== null &&
+            near(place(e), l.arr, SAME_PLACE_KM) &&
+            !near(place(e), l.dep, SAME_PLACE_KM)
         )
         .sort((a, b) => a.end.utc.localeCompare(b.end.utc));
       const lastBefore = [...into].reverse().find((l) => !endsAfter(l.end, e.when));
@@ -297,7 +305,9 @@ function lodgingFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFind
   for (const cin of stays) {
     const at: Place = { lat: cin.stay.lodging?.lat, lon: cin.stay.lodging?.lon };
     const cout = outOf(cin.stay.id);
-    const arrivals = legs.filter((l) => near(at, l.arr, HOTEL_NEAR_KM));
+    const arrivals = legs.filter(
+      (l): l is TimedLeg => l.end !== null && near(at, l.arr, HOTEL_NEAR_KM)
+    );
     const departures = legs.filter((l) => near(at, l.dep, HOTEL_NEAR_KM));
     // Nothing reaches the hotel's town by its check-in day, yet something does later.
     if (!arrivals.some((l) => compareDays(l.end, cin.when) !== "after")) {
@@ -343,6 +353,7 @@ function visitFindings(events: TimelineEvent[], legs: Leg[], out: TimelineFindin
     if (ev.kind !== "place-visit" || !hasExplicitTime(ev.when)) continue;
     for (const leg of legs) {
       if (
+        leg.end &&
         compareClock(leg.start, ev.when, false) === "before" &&
         compareClock(ev.when, leg.end, false) === "before"
       ) {
