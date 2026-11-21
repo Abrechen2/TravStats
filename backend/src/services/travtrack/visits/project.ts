@@ -45,6 +45,7 @@ import { getLocationProvider } from "../../locationProvider/provider";
 import { readSuggestionSwitches } from "../../settings/suggestionSwitches";
 import { travTrackInstanceOnIn } from "../availability";
 import { inPrivacyZone } from "../classify";
+import { profileZoneOf } from "../../../shared/time/profileZone";
 import { deriveDay } from "../dayDerivation";
 import { ackDirtyDay, pendingDirtyDays, VISITS_BIT, type DirtyDay } from "../dirtyDays";
 import { takeTravTrackLock } from "../lock";
@@ -161,6 +162,7 @@ type RunContext = {
   userId: string;
   rev: number;
   circles: CircleSet;
+  profileZone: string;
   immich: boolean;
   trips: Awaited<ReturnType<typeof loadTrips>>;
   suppression: Awaited<ReturnType<typeof loadSuppression>>;
@@ -338,7 +340,9 @@ async function handleStop(
     lat: stop.anchor.lat,
     lon: stop.anchor.lon,
   });
-  const why = suppressionReason(stop.anchor, day, ctx.suppression);
+  // The stop's own local day (the profile zone, as the day view reads it), never the scanned UTC day.
+  const startDay = localDay(startAt, ctx.profileZone);
+  const why = suppressionReason(stop.anchor, startDay, ctx.suppression);
   if (why) {
     result.suppressed++;
     outcome(why);
@@ -399,7 +403,7 @@ async function handleStop(
     outcome("private");
     return { open: false, go: true };
   }
-  const tripMatch = tripForStay(ctx.trips, day, localDay(endAt, zone));
+  const tripMatch = tripForStay(ctx.trips, startDay, localDay(endAt, ctx.profileZone));
   const evidence = { ...visitEvidence(stop, pick, lookup, readCoverage), zone };
   const made = await publish(userId, generation, async (tx) => {
     const r = await tx.dawarichStay.createMany({
@@ -516,6 +520,7 @@ export async function projectVisitSuggestions(
       userId,
       rev: provider.rev,
       circles: await privacyCircleSet(userId),
+      profileZone: (await profileZoneOf(userId)).zone,
       immich: switches.staySuggestionsImmichEvidence,
       trips: await loadTrips(userId),
       suppression: await loadSuppression(userId),
