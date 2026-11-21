@@ -29,7 +29,10 @@ import type { AuthRequest } from "./auth";
  *    (forgejo#263/#265): the year in review, the travel account and the
  *    domain records read them. The user's passport corrections
  *    (`country_overrides`, forgejo#308) joined on 2026-10-20, found in the
- *    browser: a saved correction answered 304 with the old passport;
+ *    browser: a saved correction answered 304 with the old passport.
+ *    `bookings` joined on 2026-11-21 (forgejo#430): a booking's price and its
+ *    package split decide the flight, lodging and cruise costs, and a saved
+ *    split answered 304 with the old figures;
  *  - the user's settings (base currency, home airport, timezone) and
  *    birthdate, and the instance settings;
  *  - the build and the process start, so a deploy or a catalogue re-seed on
@@ -69,6 +72,7 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'bus_journeys', count(*), max(updated_at) FROM bus_journeys WHERE user_id = ${userId}
     UNION ALL SELECT 'ferry_journeys', count(*), max(updated_at) FROM ferry_journeys WHERE user_id = ${userId}
     UNION ALL SELECT 'rental_bookings', count(*), max(updated_at) FROM rental_bookings WHERE user_id = ${userId}
+    UNION ALL SELECT 'bookings', count(*), max(updated_at) FROM bookings WHERE user_id = ${userId}
     UNION ALL SELECT 'trip_routes', count(*), max(updated_at) FROM trip_routes WHERE user_id = ${userId}
     UNION ALL SELECT 'trip_stops', count(*), max(u.updated_at) FROM (
       SELECT s.id, s.updated_at FROM trip_stops s JOIN trip_routes r ON r.id = s.route_id WHERE r.user_id = ${userId}

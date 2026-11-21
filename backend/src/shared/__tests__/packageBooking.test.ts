@@ -2,7 +2,7 @@ import { computeDedupedTotalCost, type CostFlight } from "../../utils/stats/dedu
 import { calculateBusinessStats } from "../../utils/stats/businessStats";
 import type { FlightData } from "../../utils/stats/types";
 import { tripCostItems, type TripCostInput } from "../tripCost";
-import { ownOrPackagePrice, packageEntryShare } from "../packageBooking";
+import { ownOrPackagePrice, packageEntryShare, validSplitShare } from "../packageBooking";
 import { computePackageSplit } from "../../services/booking/packageSplit";
 import { readBookingSplit } from "../../services/flights/bookingPriceSplit";
 
@@ -90,6 +90,7 @@ describe("package bookings in the flight statistics (forgejo#430)", () => {
       currency: "USD",
       priceBase: null,
       fxBaseCurrency: null,
+      _count: { flights: 1, lodgingStays: 1 },
       priceSplit: splitOf(
         [
           ["flight", "f1", 1000],
@@ -133,20 +134,31 @@ describe("package bookings in the flight statistics (forgejo#430)", () => {
   });
 
   it("reads a version-1 flight split (forgejo#219) as flight shares", () => {
-    const share = packageEntryShare(
-      {
-        ...pkgBooking({ price: 1000, priceBase: 1000 }),
-        priceSplit: {
-          method: "equal",
-          price: 1000,
-          currency: "EUR",
-          shares: [{ flightId: "f1", amount: 500 }],
-        },
-      },
-      "flight",
-      "f1"
-    );
-    expect(share?.amount).toBe(500);
+    const v1 = {
+      method: "equal",
+      price: 1000,
+      currency: "EUR",
+      shares: [
+        { flightId: "f1", amount: 500 },
+        { flightId: "f2", amount: 500 },
+      ],
+    };
+    const booking = { price: 1000, currency: "EUR", _count: { flights: 2 } };
+    expect(validSplitShare(v1, booking, "flight", "f1")).toBe(500);
+  });
+
+  it("an item added after the split makes the package abstain, not undercount", () => {
+    const b = pkgBooking({
+      _count: { flights: 2, lodgingStays: 1, rentals: 1 },
+      priceSplit: splitOf([
+        ["flight", "f1", 600],
+        ["flight", "f2", 600],
+        ["stay", "s1", 1670.96],
+      ]),
+    });
+    const cost = computeDedupedTotalCost([flight("f1", b), flight("f2", b)], "EUR");
+    expect(cost.base).toBeNull();
+    expect(cost.packagedFlights).toBe(2);
   });
 
   it("cost per km leaves an unsplit package flight out of numerator and denominator", () => {
@@ -228,6 +240,27 @@ describe("package bookings in the trip cost (forgejo#430)", () => {
     const { items, unpricedEntries } = tripCostItems(input(true));
     expect(items.map((i) => [i.source, i.amount])).toEqual([["flight", 7238]]);
     expect(unpricedEntries).toBe(0);
+  });
+
+  it("a cancelled rental in the package still costs its cancellation fee", () => {
+    const base = input(true);
+    const trip: TripCostInput = {
+      ...base,
+      rentals: [
+        {
+          ...base.rentals[0],
+          status: "cancelled",
+          finalAmount: 50,
+          finalCurrency: "EUR",
+          finalAmountBase: 50,
+          finalFxBaseCurrency: "EUR",
+        },
+      ],
+    };
+    expect(tripCostItems(trip).items.map((i) => [i.source, i.amount])).toEqual([
+      ["flight", 7238],
+      ["rental", 50],
+    ]);
   });
 
   it("a rental on no booking still costs its own price", () => {

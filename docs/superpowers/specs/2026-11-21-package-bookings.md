@@ -58,8 +58,12 @@ split per item in `bookings.price_split`, version 2:
 - **No split stored = "not split".** That is a state, not a missing value: it
   says the package price cannot be attributed to its items.
 - Version-1 splits (`{ flightId, amount }`) are read as `kind: "flight"`.
+- A package split covers every item, a cancelled one included (it may have
+  cost a fee; the user can give it 0).
 - A split is **valid** only while price, currency and the set of items still
   match (count and ids); otherwise it is stale and reads as not split.
+- A cancelled rental on a priced booking still costs its cancellation fee in
+  the trip cost; a live one costs only through the booking.
 
 ## How statistics read it — never double, never a package as a flight price
 
@@ -73,6 +77,9 @@ split per item in `bookings.price_split`, version 2:
 
 Currencies are never summed across: shares carry the booking currency, and
 every total keeps its `unconvertedByCurrency` bucket.
+
+The statistics ETag fingerprints `bookings` too, so a saved price or split is
+never answered 304 with the old figures.
 
 ## API (additive)
 

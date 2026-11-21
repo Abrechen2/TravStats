@@ -1097,7 +1097,7 @@
     "notPackage": "Diese Buchung umfasst nur eine Art von Eintrag.",
     "partOfPackage": "Teil eines Pakets",
     "thisEntry": "(dieser Eintrag)",
-    "cancelled": "storniert – kein Anteil",
+    "cancelled": "storniert",
     "kind": {
       "flight": "Flug",
       "stay": "Aufenthalt",

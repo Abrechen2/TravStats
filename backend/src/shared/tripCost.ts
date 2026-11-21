@@ -232,11 +232,16 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
     take("ferry", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
   }
   for (const rental of trip.rentals) {
-    // On a priced booking a rental is one item of it: the booking price is
-    // counted once (here or on another segment), the rental's own amount not
-    // on top. A cancelled one costs nothing on the booking either.
-    if (rental.bookingId && rental.booking && hasRecordedBookingPrice(rental.booking)) {
-      if (rental.status === "cancelled") continue;
+    // On a priced booking a live rental is one item of it: the booking price
+    // is counted once (here or on another segment), the rental's own amount
+    // not on top. A cancelled one falls through to `rentalCost`, which counts
+    // only its cancellation fee — money the package price does not hold.
+    if (
+      rental.status !== "cancelled" &&
+      rental.bookingId &&
+      rental.booking &&
+      hasRecordedBookingPrice(rental.booking)
+    ) {
       take(
         "rental",
         segmentCostShare(

@@ -15,8 +15,10 @@
  * exactly as before.
  *
  * A share is valid while the booking's price and currency still match the
- * split and the split names this entry. Shares sum to the price, so a split
- * can understate (an item left the booking) but never double count.
+ * split, the split names exactly as many items as the booking holds (every
+ * item, a cancelled one included — the split route makes it across all of
+ * them), and it names this entry. An item added, removed or swapped makes the
+ * whole package abstain again, exactly as the booking card calls it stale.
  */
 import { storedBookingSplitSchema, type BookingEntryKind } from "../schemas/flightBooking";
 import { isAmountRecorded } from "./flightPricing";
@@ -62,6 +64,9 @@ export const PACKAGE_COST_BOOKING_SELECT = {
   },
 } as const;
 
+const entryTotal = (counts: BookingEntryCounts): number =>
+  Object.values(counts).reduce<number>((a, n) => a + (n ?? 0), 0);
+
 /** True when the booking sells entries of more than one kind. */
 export function isPackageBooking(counts: BookingEntryCounts | undefined): boolean {
   if (!counts) return false;
@@ -88,7 +93,7 @@ const sameMinor = (a: number, b: number, scale: number): boolean =>
 /** This entry's share of a valid split, or null when there is none to read. */
 export function validSplitShare(
   rawSplit: unknown,
-  booking: { price: number | null; currency: string | null },
+  booking: { price: number | null; currency: string | null; _count?: BookingEntryCounts },
   kind: BookingEntryKind,
   id: string
 ): number | null {
@@ -98,6 +103,8 @@ export function validSplitShare(
   const split = parsed.data;
   if (split.currency !== booking.currency) return null;
   if (!sameMinor(split.price, booking.price, minorScale(split.currency))) return null;
+  // Membership: without the counts nothing proves the split still covers the booking.
+  if (!booking._count || split.shares.length !== entryTotal(booking._count)) return null;
   const share = split.shares.find((s) => s.kind === kind && s.id === id);
   return share ? share.amount : null;
 }

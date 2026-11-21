@@ -1097,7 +1097,7 @@
     "notPackage": "This booking covers only one kind of entry.",
     "partOfPackage": "Part of a package",
     "thisEntry": "(this entry)",
-    "cancelled": "cancelled – no share",
+    "cancelled": "cancelled",
     "kind": {
       "flight": "Flight",
       "stay": "Stay",

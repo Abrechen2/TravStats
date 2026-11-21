@@ -12,7 +12,7 @@ import {
   type SplitRefusalCode,
 } from "../../services/flights/bookingPriceSplit";
 import { bookingSplitBodySchema } from "../../schemas/flightBooking";
-import { loadBookingItems, payingItems } from "../../services/booking/bookingItems";
+import { loadBookingItems } from "../../services/booking/bookingItems";
 import { bookingTimes } from "../../services/deadlines/bookingTimesDto";
 
 /**
@@ -149,7 +149,7 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
         priceSplit,
         booking,
         otherEntryCount(_count) > 0
-          ? payingItems(await loadBookingItems(userId, bookingId)).map((i) => itemKey(i.kind, i.id))
+          ? (await loadBookingItems(userId, bookingId)).map((i) => itemKey(i.kind, i.id))
           : payingSegments(segments).map((s) => s.id)
       ),
     },

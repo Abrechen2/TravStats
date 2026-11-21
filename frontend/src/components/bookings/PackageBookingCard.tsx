@@ -72,7 +72,9 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
   const { booking, items, split, isPackage } = answer;
   const money = (value: number): string =>
     formatAmount(value, booking.currency, { language: i18n.language });
-  const paying = items.filter((i) => i.status !== "cancelled");
+  // A split covers every item, a cancelled one too (it may have cost a fee):
+  // the server checks a split against the booking's full item list.
+  const paying = items;
   const canSplit = isPackage && booking.price !== null && paying.length >= 2;
 
   const run = async (action: () => Promise<BookingPackageAnswer>): Promise<void> => {
@@ -96,7 +98,6 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
   const restCents = booking.price === null ? 0 : cents(booking.price) - cents(draftSum);
 
   const shareText = (item: BookingPackageItem): string => {
-    if (item.status === "cancelled") return t("trips:bookingPackage.cancelled");
     if (item.share !== null) return money(item.share);
     return isPackage ? t("trips:bookingPackage.partOfPackage") : "";
   };
@@ -127,6 +128,7 @@ export function PackageBookingCard({ bookingId, highlight }: Props): JSX.Element
                 </span>{" "}
                 {item.label}
                 {own ? ` ${t("trips:bookingPackage.thisEntry")}` : ""}
+                {item.status === "cancelled" ? ` (${t("trips:bookingPackage.cancelled")})` : ""}
               </span>
               {draft && payingIdx >= 0 ? (
                 <input

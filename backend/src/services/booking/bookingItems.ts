@@ -147,10 +147,6 @@ function rides(
   }));
 }
 
-/** The items a split is made across: a cancelled entry was not paid for. */
-export const payingItems = (items: readonly BookingItem[]): BookingItem[] =>
-  items.filter((i) => i.status !== "cancelled");
-
 /** True when the items span more than one kind — a package. */
 export const isPackage = (items: readonly BookingItem[]): boolean =>
   new Set(items.map((i) => i.kind)).size > 1;

@@ -17,12 +17,7 @@ import { Prisma } from "../../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { packageSplitBodySchema } from "../../schemas/flightBooking";
-import {
-  isPackage,
-  loadBookingItems,
-  payingItems,
-  type BookingItem,
-} from "../../services/booking/bookingItems";
+import { isPackage, loadBookingItems, type BookingItem } from "../../services/booking/bookingItems";
 import { computePackageSplit, type PackageSplitRefusal } from "../../services/booking/packageSplit";
 import { itemKey, readBookingSplit } from "../../services/flights/bookingPriceSplit";
 
@@ -62,7 +57,7 @@ function packageAnswer(row: Awaited<ReturnType<typeof ownBooking>>, items: Booki
   const split = readBookingSplit(
     priceSplit,
     booking,
-    payingItems(items).map((i) => itemKey(i.kind, i.id))
+    items.map((i) => itemKey(i.kind, i.id))
   );
   const shares = new Map(
     split && !split.staleReason ? split.shares.map((s) => [itemKey(s.kind, s.id), s.amount]) : []
@@ -72,7 +67,7 @@ function packageAnswer(row: Awaited<ReturnType<typeof ownBooking>>, items: Booki
     isPackage: isPackage(items),
     items: items.map((i) => ({
       ...i,
-      // The item's share of a valid split; null = not split (or not paid: cancelled).
+      // The item's share of a valid split; null = not split.
       share: shares.get(itemKey(i.kind, i.id)) ?? null,
     })),
     split,
@@ -95,9 +90,9 @@ router.get(
 );
 
 /**
- * PUT /trips/bookings/:id/split — equal across every paying item, or the
- * user's own amounts, which must name every paying item once and add up to
- * the total exactly.
+ * PUT /trips/bookings/:id/split — equal across every item, or the user's
+ * own amounts, which must name every item once and add up to the total
+ * exactly.
  */
 router.put(
   "/trips/bookings/:id/split",
@@ -109,7 +104,9 @@ router.put(
       const body = packageSplitBodySchema.parse(req.body);
       const row = await ownBooking(userId, req.params.id);
       const items = await loadBookingItems(userId, row.id);
-      const result = computePackageSplit(row, payingItems(items), body);
+      // Across EVERY item, a cancelled one included (it may have cost a fee):
+      // the statistics check a split against the booking's full item count.
+      const result = computePackageSplit(row, items, body);
       if ("refusal" in result) {
         throw new AppError(
           "The booking cannot be split this way",
