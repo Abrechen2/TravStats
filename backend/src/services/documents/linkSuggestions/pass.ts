@@ -53,13 +53,29 @@ function sinceFilter(since: Date | null): Prisma.DocumentWhereInput {
     : {};
 }
 
-export async function needsPass(userId: string): Promise<boolean> {
+/**
+ * What the next pass has to look at: "all" when the account was never scanned
+ * or an entry appeared since (a document scanned before its trip held the
+ * entry would otherwise never be offered it), "documents" when only documents
+ * were created or filed, null when nothing changed.
+ */
+export async function passScope(userId: string): Promise<"all" | "documents" | null> {
   const pass = await prisma.documentLinkPass.findUnique({ where: { userId } });
-  if (!pass) return true;
+  if (!pass) return "all";
+  const where = { userId, tripId: { not: null }, createdAt: { gt: pass.scannedUntil } };
+  const newer = await Promise.all([
+    prisma.flight.count({ where }),
+    prisma.railJourney.count({ where }),
+    prisma.busJourney.count({ where }),
+    prisma.ferryJourney.count({ where }),
+    prisma.lodgingStay.count({ where }),
+    prisma.rentalBooking.count({ where }),
+  ]);
+  if (newer.some((n) => n > 0)) return "all";
   const fresh = await prisma.document.count({
     where: { userId, parsedPayload: { not: Prisma.DbNull }, ...sinceFilter(pass.scannedUntil) },
   });
-  return fresh > 0;
+  return fresh > 0 ? "documents" : null;
 }
 
 /** Drops pending proposals whose entry is gone or already linked. */
@@ -110,15 +126,19 @@ export async function runDocumentLinkPass(
   report: ReportProgress = () => undefined
 ): Promise<PassResult> {
   const startedAt = new Date();
-  const pass = await prisma.documentLinkPass.findUnique({ where: { userId } });
+  const scope = await passScope(userId);
+  if (scope === null) return { documentsScanned: 0, proposed: 0 };
   const entries = await loadTripEntries(userId);
-  await sweepStale(userId, entries);
+  const since =
+    scope === "all"
+      ? null
+      : ((await prisma.documentLinkPass.findUnique({ where: { userId } }))?.scannedUntil ?? null);
 
   const documents = await prisma.document.findMany({
     where: {
       userId,
       parsedPayload: { not: Prisma.DbNull },
-      ...sinceFilter(pass?.scannedUntil ?? null),
+      ...sinceFilter(since),
     },
     select: { id: true, parsedPayload: true },
     orderBy: { createdAt: "asc" },
@@ -193,6 +213,9 @@ export async function runDocumentLinkPass(
     report(result.documentsScanned, documents.length);
   }
 
+  // After the scan, so a pending proposal whose entry was re-imported has
+  // already followed it to the new id before the stale ones are dropped.
+  await sweepStale(userId, entries);
   await prisma.documentLinkPass.upsert({
     where: { userId },
     create: { userId, scannedUntil: startedAt },
@@ -202,17 +225,28 @@ export async function runDocumentLinkPass(
   return result;
 }
 
-const running = new Map<string, JobView>();
+const running = new Map<string, JobView | "starting">();
 
 /**
  * Starts the pass as a job unless one is already running for the account.
  * Returns the running job's view (so a second caller polls the same job), or
- * null when there is nothing to scan.
+ * null when there is nothing to scan. The account is reserved BEFORE the first
+ * await, so two requests arriving together start one job, not two.
  */
 export async function ensureDocumentLinkPass(userId: string): Promise<JobView | null> {
   const current = running.get(userId);
+  if (current === "starting") return null;
   if (current) return current;
-  if (!(await needsPass(userId))) return null;
+  running.set(userId, "starting");
+  try {
+    if ((await passScope(userId)) === null) {
+      running.delete(userId);
+      return null;
+    }
+  } catch (err) {
+    running.delete(userId);
+    throw err;
+  }
   const job = startJob("documentLinks.pass", userId, async (report) => {
     try {
       return await runDocumentLinkPass(userId, report);

@@ -146,6 +146,19 @@ export async function acceptDocumentSuggestions(
   const live = rows.filter((r) => info.has(`${r.entryType}:${r.entryId}`));
   const gone = rows.filter((r) => !info.has(`${r.entryType}:${r.entryId}`));
   const linked = await inLinkTransaction(async (tx) => {
+    // Claim the rows first: a concurrent accept or dismiss that got there
+    // already has them, and then nothing here may link.
+    const claimed = await tx.documentLinkSuggestion.updateMany({
+      where: { id: { in: live.map((r) => r.id) }, status: "pending" },
+      data: { status: "accepted" },
+    });
+    if (claimed.count !== live.length) {
+      throw new AppError(
+        "This suggestion was decided meanwhile",
+        404,
+        "DOCUMENT_LINK_SUGGESTION_NOT_FOUND"
+      );
+    }
     const written = await addMissingLinksInTx(
       tx,
       userId,
@@ -155,10 +168,6 @@ export async function acceptDocumentSuggestions(
         provenance: "suggestion" as const,
       }))
     );
-    await tx.documentLinkSuggestion.updateMany({
-      where: { id: { in: live.map((r) => r.id) } },
-      data: { status: "accepted" },
-    });
     return written;
   });
   if (gone.length > 0) {
@@ -177,7 +186,7 @@ export async function dismissDocumentSuggestions(
 ): Promise<number> {
   const rows = await pendingFor(userId, documentId, ids);
   const { count } = await prisma.documentLinkSuggestion.updateMany({
-    where: { id: { in: rows.map((r) => r.id) }, userId },
+    where: { id: { in: rows.map((r) => r.id) }, userId, status: "pending" },
     data: { status: "dismissed" },
   });
   return count;

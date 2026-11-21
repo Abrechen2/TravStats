@@ -323,6 +323,46 @@ describe("document link suggestions (D4)", () => {
     expect((await rows(docId)).map((r) => r.entryId)).toEqual([flight1Id]);
   });
 
+  it("an entry added to the trip after a document was scanned is still offered to it", async () => {
+    const docId = await keep(
+      {
+        domain: "flight",
+        flights: [{ flightNumber: "TP 777", departureTime: "2026-06-05T09:00:00" }],
+      },
+      { type: "trip", id: tripId }
+    );
+    await runDocumentLinkPass(userId);
+    expect(await rows(docId)).toEqual([]);
+    const late = await prisma.flight.create({
+      data: flightData({ flightNumber: "TP 777", departureTime: new Date("2026-06-05T09:00:00Z") }),
+    });
+    await runDocumentLinkPass(userId);
+    expect((await rows(docId)).map((r) => r.entryId)).toEqual([late.id]);
+  });
+
+  it("a suggestion decided meanwhile cannot be accepted afterwards, and links nothing", async () => {
+    const docId = await keep(
+      {
+        domain: "flight",
+        flights: [{ flightNumber: "TP 888", departureTime: "2026-06-06T09:00:00" }],
+      },
+      { type: "trip", id: tripId }
+    );
+    const target = await prisma.flight.create({
+      data: flightData({ flightNumber: "TP 888", departureTime: new Date("2026-06-06T09:00:00Z") }),
+    });
+    await runDocumentLinkPass(userId);
+    const [row] = await rows(docId);
+    await post(`/document-link-suggestions/${docId}/dismiss`, { suggestionIds: [row.id] });
+    const late = await post(`/document-link-suggestions/${docId}/accept`, {
+      suggestionIds: [row.id],
+    });
+    expect(late.status).toBe(404);
+    expect(
+      await prisma.documentLink.count({ where: { documentId: docId, flightId: target.id } })
+    ).toBe(0);
+  });
+
   it("shows nothing to another account, and refuses its decisions", async () => {
     const list = await get("/document-link-suggestions", strangerCookie);
     expect(list.body.data.suggestions).toEqual([]);
