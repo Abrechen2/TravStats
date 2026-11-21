@@ -7,7 +7,8 @@ import { AppError } from "../../middleware/errorHandler";
 import { immichImportLimiter, statsLimiter } from "../../middleware/rateLimit";
 import { deletePlacePhotoFile } from "../../middleware/upload";
 import { startJob } from "../../services/jobs/jobRegistry";
-import { autoLinkEnabled, autoLinkVisits } from "../../services/places/visitPhotoAutoLink";
+import { autoLinkEverything } from "../../services/photoLinking/entryPhotos";
+import { autoLinkEnabled } from "../../services/places/visitPhotoAutoLink";
 import { toPhotoSourceKind } from "../../services/photoSource/connection";
 
 /**
@@ -26,7 +27,7 @@ const visitParams = z.object({ visitId: z.string().uuid() });
 
 function startRun(userId: string) {
   return startJob("placeVisitPhotos.autoLink", userId, async (report) =>
-    autoLinkVisits(userId, null, report)
+    autoLinkEverything(userId, report)
   );
 }
 

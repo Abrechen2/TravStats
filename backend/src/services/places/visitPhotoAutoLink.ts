@@ -136,12 +136,12 @@ export interface AutoLinkRun {
   sources: Partial<Record<PhotoSourceKind, SourceState>>;
 }
 
-const rank = (s: SourceState): number => (s === "ok" ? 1 : s === "notConfigured" ? 0 : 2);
+export const rank = (s: SourceState): number => (s === "ok" ? 1 : s === "notConfigured" ? 0 : 2);
 
 /** Enough to explain a failing run in the settings; the rest are in the log. */
 const FAILURES_KEPT = 10;
 
-function mergeSources(
+export function mergeSources(
   into: AutoLinkRun["sources"],
   from: AutoLinkOutcome["sources"]
 ): AutoLinkRun["sources"] {
@@ -156,7 +156,7 @@ function mergeSources(
 }
 
 /** Persist the run's outcome so the settings can show a failing source. */
-async function recordRun(userId: string, run: AutoLinkRun): Promise<void> {
+export async function recordRun(userId: string, run: AutoLinkRun): Promise<void> {
   await prisma.userSettings.updateMany({
     where: { userId },
     data: {
@@ -181,6 +181,16 @@ export async function autoLinkVisits(
   userId: string,
   visitIds: string[] | null,
   onProgress?: (done: number, total: number) => void
+): Promise<AutoLinkRun> {
+  return runVisits(userId, visitIds, onProgress, true);
+}
+
+/** The visit pass; `record: false` lets a caller fold other entry types into one record. */
+export async function runVisits(
+  userId: string,
+  visitIds: string[] | null,
+  onProgress: ((done: number, total: number) => void) | undefined,
+  record: boolean
 ): Promise<AutoLinkRun> {
   const ids =
     visitIds ??
@@ -229,7 +239,7 @@ export async function autoLinkVisits(
     }
     onProgress?.(++done, ids.length);
   }
-  if (ids.length > 0) await recordRun(userId, run);
+  if (record && ids.length > 0) await recordRun(userId, run);
   return run;
 }
 
