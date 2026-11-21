@@ -376,6 +376,40 @@
       "server": "The download failed (server error). Please try again later."
     }
   },
+  "accountArchive": {
+    "exportButton": "Create ZIP",
+    "importButton": "Choose ZIP",
+    "exporting": "Creating the archive",
+    "importing": "Importing the archive",
+    "exported": "{{size}} · {{rows}} entries · {{files}} files, downloaded",
+    "imported": "{{rows}} entries and {{files}} files imported",
+    "alreadyImported": "This archive has already been imported into this account.",
+    "missingFiles": "Note: {{count}} files are already missing on this server and are not in the archive.",
+    "partial": "Not matched: {{skipped}} entries skipped, {{unmatched}} references (e.g. ports, stations) with no match on this server, {{refused}} files refused.",
+    "notEmpty": "This account already holds entries. Create a new account and import the archive there.",
+    "statusFailed": "Could not check whether this account is empty. Reload the page.",
+    "moves": "Moves with it: every entry of every domain, photos, documents, receipts, the TravTrack history and the settings.",
+    "stays": "Stays behind: password, passkeys, two-factor, API tokens and stored provider keys; shares, share links and connections to other accounts or servers; sign-ins and paired devices. Photos only linked from Immich or PhotoPrism stay links to the previous Immich or PhotoPrism.",
+    "confirm": {
+      "title": "Import the account archive?",
+      "affects": "This account",
+      "after": "The account then holds the entries, photos and documents from the archive. If anything fails, it stays empty.",
+      "button": "Import archive"
+    },
+    "failed": {
+      "ACCOUNT_ARCHIVE_TOO_LARGE": "The archive is larger than this server allows.",
+      "ACCOUNT_ARCHIVE_BUSY": "An export or import of this account is already running.",
+      "ACCOUNT_ARCHIVE_NOT_FOUND": "The finished archive is gone. Please create it again.",
+      "ACCOUNT_ARCHIVE_INVALID": "This is not a TravStats account archive, or it is damaged.",
+      "ACCOUNT_ARCHIVE_CHECKSUM": "The archive is damaged: a file does not match its checksum. Nothing was imported.",
+      "ACCOUNT_ARCHIVE_FORMAT_TOO_NEW": "The archive comes from a newer TravStats version. Update this server first.",
+      "ACCOUNT_ARCHIVE_SCHEMA_TOO_NEW": "The archive holds data this server does not know yet. Update this server first.",
+      "ACCOUNT_ARCHIVE_TARGET_NOT_EMPTY": "This account already holds entries. An archive can only be imported into an empty account.",
+      "ACCOUNT_ARCHIVE_ALREADY_IMPORTED": "This archive was already imported into another account on this server.",
+      "rate_limited": "Too many attempts in a short time. Please try again in an hour.",
+      "generic": "That did not work (server error). Nothing was imported. Please try again later."
+    }
+  },
   "password": {
     "title": "Change Password",
     "oldPassword": "Current Password",

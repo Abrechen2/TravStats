@@ -121,6 +121,10 @@ export const RATE_LIMITS = {
   // Self-service "download my data" (one account's records, forgejo#391)
   ME_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ME_EXPORT_MAX: 3, // 3 downloads per hour
+  // Account archive (forgejo#433): building or importing one reads or writes the
+  // whole account with its files, so a handful per hour per account.
+  ACCOUNT_ARCHIVE_WINDOW_MS: 60 * 60 * 1000,
+  ACCOUNT_ARCHIVE_MAX: 6,
 
   // Admin airport reseed rate limits (18k row upsert, expensive)
   ADMIN_RESEED_WINDOW_MS: 60 * 60 * 1000, // 1 hour

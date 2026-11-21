@@ -47,7 +47,9 @@ export type JobKind =
   | "placeVisitPhotos.autoLink"
   | "placeVisitPhotos.trim"
   | "dawarich.countryDaySweep"
-  | "documentLinks.pass";
+  | "documentLinks.pass"
+  | "accountArchive.export"
+  | "accountArchive.import";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 
