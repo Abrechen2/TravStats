@@ -31,6 +31,7 @@ describe("federated visit photo bytes", () => {
   const stamp = Date.now();
   let userId: string;
   let photoId: string;
+  let tripPhotoId: string;
   beforeAll(async () => {
     const user = await prisma.user.create({
       data: { username: `fvp-${stamp}`, passwordHash: await hashPassword("pw") },
@@ -51,11 +52,31 @@ describe("federated visit photo bytes", () => {
       })
     ).id;
   });
+  it("reads a PhotoPrism trip photo from PhotoPrism, not from Immich", async () => {
+    created.length = 0;
+    const trip = await prisma.trip.create({ data: { userId, name: "T" } });
+    tripPhotoId = (
+      await prisma.tripPhoto.create({
+        data: {
+          tripId: trip.id,
+          filename: "",
+          mimetype: "image/jpeg",
+          sizeBytes: 0,
+          immichAssetId: "0123456789abcdef0123456789abcdef",
+          provider: "photoprism",
+        },
+      })
+    ).id;
+    await ownerAsset(userId, "trip", tripPhotoId);
+    expect(created).toEqual(["photoprism"]);
+  });
+
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { username: { startsWith: "fvp-" } } });
   });
 
   it("reads a PhotoPrism-linked visit photo from PhotoPrism, not from Immich", async () => {
+    created.length = 0;
     await ownerAsset(userId, "visit", photoId);
     expect(created).toEqual(["photoprism"]);
   });

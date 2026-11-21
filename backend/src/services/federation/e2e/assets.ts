@@ -54,7 +54,7 @@ export async function ownerAsset(
     const p = await prisma.tripPhoto.findFirst({ where: { id, trip: { userId } } });
     if (!p) throw refused();
     return p.immichAssetId && !p.filename
-      ? remoteAsset(userId, p.immichAssetId)
+      ? remoteAsset(userId, p.immichAssetId, toPhotoSourceKind(p.provider))
       : localFile(getTripPhotoDir(), p.filename);
   }
   if (kind === "visit") {
