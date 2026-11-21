@@ -16,7 +16,7 @@ type Rgb = readonly [number, number, number];
 type Rgba = [number, number, number, number];
 
 /** Alpha an entry off the chosen day keeps (of 255). */
-export const DIM_ALPHA = 70;
+export const DIM_ALPHA = 85;
 /** How much of its own colour a dimmed entry keeps; the rest is grey. */
 const DIM_KEEP = 0.15;
 const DIM_GREY = 140;
@@ -27,6 +27,19 @@ export type DayState = "normal" | "dim" | "active";
 export function dayState(dim: boolean | undefined, dayChosen: boolean): DayState {
   if (!dayChosen) return "normal";
   return dim ? "dim" : "active";
+}
+
+/** A tour line's state: with no day to judge it by, it keeps the all-days style. */
+export function tourState(d: { dim?: boolean; neutral?: boolean }, dayChosen: boolean): DayState {
+  return d.neutral ? "normal" : dayState(d.dim, dayChosen);
+}
+
+/** Tour lines drawn faint first, undated next, the chosen day's on top. */
+export function tourDrawOrder<T extends { dim?: boolean; neutral?: boolean }>(
+  items: readonly T[]
+): T[] {
+  const rank = (d: T): number => (d.dim ? 0 : d.neutral ? 1 : 2);
+  return [...items].sort((a, b) => rank(a) - rank(b));
 }
 
 /** The entry's colour at its day state: desaturated when dim, untouched otherwise. */

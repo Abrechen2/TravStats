@@ -49,6 +49,7 @@ import type { DirectionLine } from "./tripMapArrows";
 import { groupsPresentIn, withoutHidden, type LayerGroup } from "./tripMapGroups";
 import { TripMapLegend } from "./TripMapLegend";
 import { TripMapInfoCard } from "./TripMapInfoCard";
+import { splitToursByDay } from "./tripMapTourDays";
 import { TripGlobeAnnotations, type GlobeChip } from "./TripGlobeAnnotations";
 import { arrowData } from "./tripMapArrows";
 import { cruiseInfo, lodgingInfo, stopInfo } from "./tripMapInfo";
@@ -351,13 +352,7 @@ export default function TripMap({
   );
 
   const allTourPaths = useMemo(
-    () =>
-      buildTourPaths(
-        tourGeometries.map((g) => ({
-          ...g,
-          dim: day !== null && g.date?.slice(0, 10) !== day,
-        }))
-      ),
+    () => buildTourPaths(splitToursByDay(tourGeometries, day)),
     [tourGeometries, day]
   );
   const tourPathData = useMemo(
@@ -578,7 +573,7 @@ export default function TripMap({
     if (!mapLoaded) return;
     const focus = dayFocusPoints(built.data, places, day, [
       ...dayPoints,
-      ...allTourPaths.filter((p) => !p.dim).flatMap((p) => p.path),
+      ...allTourPaths.filter((p) => !p.dim && !p.neutral).flatMap((p) => p.path),
     ]);
     if (focus.length === 0) fitTrip(projection, 800);
     else flyToBbox(focus);

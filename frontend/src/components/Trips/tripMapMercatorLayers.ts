@@ -16,7 +16,14 @@ import { type TripCruisePath, type TripFlightArc, type TripPointDatum } from "./
 import { TRIP_MAP_CHROME } from "./tripMapColors";
 import { buildTripLabelLayers, type TripLabelItem } from "./tripMapLabels";
 import { buildArrowLayer, type DirectionLine } from "./tripMapArrows";
-import { dayState, dimFirst, emphasisColor, emphasisWidth } from "./tripMapEmphasis";
+import {
+  dayState,
+  dimFirst,
+  emphasisColor,
+  emphasisWidth,
+  tourDrawOrder,
+  tourState,
+} from "./tripMapEmphasis";
 
 const MARKER_ALPHA = 230;
 const DIM_PIN_OPACITY = 0.25;
@@ -119,10 +126,10 @@ export function buildMercatorTripLayers(input: MercatorLayerInput): Layer[] {
   // pixels. Do not lower these again; 170/2px is the floor.
   const tourPaths = new PathLayer<TourPathDatum>({
     id: "trip-tour-paths",
-    data: input.tourPathData as TourPathDatum[],
+    data: tourDrawOrder(input.tourPathData),
     getPath: (d) => d.path,
-    getColor: (d) => emphasisColor(d.color, stateOf(d), d.isPlaceholder ? 170 : 255),
-    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, stateOf(d)),
+    getColor: (d) => emphasisColor(d.color, tourState(d, chosen), d.isPlaceholder ? 170 : 255),
+    getWidth: (d) => emphasisWidth(d.isPlaceholder ? 2 : 3.5, tourState(d, chosen)),
     widthUnits: "pixels",
     widthMinPixels: 1,
     ...triggers,
