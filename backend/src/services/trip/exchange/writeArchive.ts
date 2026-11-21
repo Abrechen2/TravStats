@@ -40,7 +40,7 @@ export function presentFiles(collected: CollectedTrip): CollectedTrip {
 export function buildManifest(
   options: ExportOptions,
   now: Date,
-  file: Pick<TripFile, "bus" | "ferry" | "roadtrips">
+  file: Pick<TripFile, "bus" | "ferry" | "roadtrips" | "documents">
 ): TripFileManifest {
   return {
     format: TRIP_FILE_FORMAT,

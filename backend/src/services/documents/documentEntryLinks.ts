@@ -191,8 +191,7 @@ export async function addMissingLinksInTx(
   tx: DbTransaction,
   userId: string,
   documentId: string,
-  entries: readonly EntryRef[],
-  provenance: LinkProvenance
+  entries: readonly { entry: EntryRef; provenance: LinkProvenance }[]
 ): Promise<number> {
   if (!(await lockDocument(tx, userId, documentId))) {
     throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
@@ -200,7 +199,7 @@ export async function addMissingLinksInTx(
   await adoptLegacyPrimary(tx, documentId);
   let written = 0;
   const seen = new Set<string>();
-  for (const entry of entries) {
+  for (const { entry, provenance } of entries) {
     const key = entryKey(entry);
     if (seen.has(key)) continue;
     seen.add(key);

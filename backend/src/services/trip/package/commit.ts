@@ -453,7 +453,12 @@ export async function commitPackageProposal(
         if (cruiseResult?.id && coverActionOf(cruiseResult)) {
           covered.push({ type: "cruise", id: cruiseResult.id });
         }
-        await addMissingLinksInTx(tx, userId, document.id, covered, "parser");
+        await addMissingLinksInTx(
+          tx,
+          userId,
+          document.id,
+          covered.map((entry) => ({ entry, provenance: "parser" as const }))
+        );
       }
 
       // Filed on a shared trip: copied to its other members.

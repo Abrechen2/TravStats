@@ -160,7 +160,7 @@ describe("trip export / import (.travstats)", () => {
 
     const commit = await send(friend, "commit", fullFile);
     expect(commit.status).toBe(201);
-    expect(commit.body.data.documents).toEqual({ filed: 1, skipped: 0, refused: 0 });
+    expect(commit.body.data.documents).toEqual({ filed: 1, skipped: 0, refused: 0, linked: 0 });
     expect(commit.body.data.photos).toBe(1);
 
     const trip = await prisma.trip.findUniqueOrThrow({
@@ -411,10 +411,10 @@ describe("trip export / import (.travstats)", () => {
       const res = await send(
         stranger,
         "preview",
-        zip({ "manifest.json": manifest({ formatVersion: 5 }), "trip.json": "{}" })
+        zip({ "manifest.json": manifest({ formatVersion: 6 }), "trip.json": "{}" })
       );
       expect(res.status).toBe(422);
-      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 5 });
+      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 6 });
     });
 
     it("refuses a trip.json that breaks the schema", () =>
