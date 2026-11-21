@@ -97,7 +97,14 @@ export async function listEntryDocuments(
     const role: LinkRole = here ? (here.role as LinkRole) : "primary";
     const primaryRef = primaries.get(document.id);
     return {
-      document,
+      // The category belongs to the link for THIS entry, not to the primary the
+      // row's projection mirrors: a document covering a second rental shows that rental's.
+      document: here
+        ? {
+            ...document,
+            rentalCategory: entry.type === "rentalBooking" ? here.rentalCategory : null,
+          }
+        : document,
       link: {
         linkRole: role,
         evidenceFrom: primaryRef ? toEvidence(info.get(entryKey(primaryRef))) : null,
@@ -191,7 +198,11 @@ export async function addMissingLinksInTx(
   tx: DbTransaction,
   userId: string,
   documentId: string,
-  entries: readonly { entry: EntryRef; provenance: LinkProvenance }[]
+  entries: readonly {
+    entry: EntryRef;
+    provenance: LinkProvenance;
+    rentalCategory?: RentalDocumentCategory | null;
+  }[]
 ): Promise<number> {
   if (!(await lockDocument(tx, userId, documentId))) {
     throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
@@ -199,7 +210,7 @@ export async function addMissingLinksInTx(
   await adoptLegacyPrimary(tx, documentId);
   let written = 0;
   const seen = new Set<string>();
-  for (const { entry, provenance } of entries) {
+  for (const { entry, provenance, rentalCategory } of entries) {
     const key = entryKey(entry);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -209,7 +220,7 @@ export async function addMissingLinksInTx(
       select: { id: true },
     });
     if (existing) continue;
-    await insertLink(tx, documentId, { entry, role: "covers", provenance });
+    await insertLink(tx, documentId, { entry, role: "covers", provenance, rentalCategory });
     written += 1;
   }
   await projectPrimary(tx, documentId);
