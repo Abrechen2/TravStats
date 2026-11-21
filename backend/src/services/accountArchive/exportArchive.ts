@@ -28,7 +28,7 @@ import {
 import { ArchivePlanError, buildPlan, selectionWhere, type ArchivePlan } from "./plan";
 import { readRows } from "./rowReader";
 import { TABLE_POLICY } from "./tablePolicy";
-import { estimateFiles, noteFiles, ownedFiles } from "./exportFiles";
+import { estimateFiles, noteFiles, ownedFiles, type OmittedFile } from "./exportFiles";
 
 /**
  * Writes one account as a ZIP (forgejo#433, format in `format.ts`). Rows are read
@@ -44,6 +44,7 @@ export interface ExportResult {
   files: number;
   /** Files a row names that were not on disk: the row travels, the bytes cannot. */
   missingFiles: number;
+  omittedFiles: OmittedFile[];
 }
 
 type ReportProgress = (done: number, total: number) => void;
@@ -333,7 +334,7 @@ async function writeEntries(
     );
   }
 
-  const { files, missing, refused } = await ownedFiles(db, plan, userId, named, root);
+  const { files, missing, refused, omitted } = await ownedFiles(db, plan, userId, named, root);
   if (refused > 0) {
     // Named by a row of this account but not provably its own: never exported.
     logger.warn({ operation: "account_archive_files_not_owned", userId, refused });
@@ -356,5 +357,12 @@ async function writeEntries(
     entries: writer.entries,
   };
   archive.append(JSON.stringify(manifest, null, 2), { name: MANIFEST_ENTRY });
-  return { archiveId: manifest.archiveId, tables, files: files.length, missingFiles: missing };
+  return {
+    archiveId: manifest.archiveId,
+    tables,
+    files: files.length,
+    // A file left out for any reason is counted and listed, never silent.
+    missingFiles: missing + refused,
+    omittedFiles: omitted,
+  };
 }

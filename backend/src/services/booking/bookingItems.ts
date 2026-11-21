@@ -3,6 +3,7 @@
  * card lists and what a package split is made across.
  */
 import { prisma } from "../../db";
+import { getCachedAirports } from "../airportCache";
 import type { BookingEntryKind } from "../../schemas/flightBooking";
 import { itemKey } from "../flights/bookingPriceSplit";
 import type { LocalDateValue, TimeValue } from "../../shared/time/wire";
@@ -40,6 +41,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
         id: true,
         flightNumber: true,
         depIata: true,
+        depIcao: true,
         arrIata: true,
         departureTime: true,
         depTimeSemantics: true,
@@ -95,6 +97,26 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
       },
     }),
   ]);
+  // The catalogue zone a flight without a stored one falls back to, in ONE batched
+  // airport read — the same resolution the flight DTO uses.
+  const depCodes = [
+    ...new Set(
+      flights
+        .filter((f) => !f.depTimezone)
+        .flatMap((f) => [f.depIata, f.depIcao])
+        .filter(Boolean)
+    ),
+  ] as string[];
+  const airports = depCodes.length
+    ? await getCachedAirports(depCodes).catch(() => new Map<string, { timezone: string | null }>())
+    : new Map<string, { timezone: string | null }>();
+  const catalogueDep = (f: { depIata: string | null; depIcao: string | null }): string | null => {
+    for (const code of [f.depIata, f.depIcao]) {
+      const zone = code ? airports.get(code.toUpperCase())?.timezone : null;
+      if (zone) return zone;
+    }
+    return null;
+  };
   const items: BookingItem[] = [
     ...flights.map((f) => ({
       kind: "flight" as const,
@@ -114,7 +136,7 @@ export async function loadBookingItems(userId: string, bookingId: string): Promi
           runwayDepartureTime: null,
           runwayArrivalTime: null,
         },
-        { dep: null, arr: null }
+        { dep: catalogueDep(f), arr: null }
       ).departure,
       status: f.status,
       tripId: f.tripId,
