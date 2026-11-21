@@ -84,6 +84,30 @@ export function stayEvidenceKey(c: StayKeyInput): string {
   return stayEvidenceKeyWith(evidenceSecret(), c);
 }
 
+/**
+ * A place-visit suggestion's key (forgejo#316 slice 2): the stop it was read
+ * from, by its span and anchor. Its own tag, so it can never equal the key a
+ * stay scan made for the same stand; the two are kept apart by overlap, not by key.
+ */
+export function visitEvidenceKeyWith(
+  secret: Buffer,
+  c: { startMs: number; endMs: number; lat: number; lon: number }
+): string {
+  return hmac(secret, ["visit", c.startMs, c.endMs, c.lat.toFixed(5), c.lon.toFixed(5)]).toString(
+    "hex"
+  );
+}
+
+/** A place-visit suggestion's evidence key, under this instance's secret. */
+export function visitEvidenceKey(c: {
+  startMs: number;
+  endMs: number;
+  lat: number;
+  lon: number;
+}): string {
+  return visitEvidenceKeyWith(evidenceSecret(), c);
+}
+
 /** A country question's evidence key under `secret`: the country and its run's first day. */
 export function countryEvidenceKeyWith(
   secret: Buffer,

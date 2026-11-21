@@ -14,6 +14,8 @@ import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
+import { assertTravTrackDerivationAllowed } from "../services/locationEvidence/allowed";
+import { rescanVisitDays, visitRetryAfter } from "../services/travtrack/visits/project";
 import { stayIdentityFor } from "../services/dawarich/stays/identity";
 import { stayPlaceTypeFor } from "../services/dawarich/stays/placeType";
 
@@ -85,6 +87,11 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         // Only a TravTrack account learns its source: a Dawarich account's
         // answer stays exactly what it was before TravTrack.
         ...(source === "travtrack" ? { source } : {}),
+        // TravTrack only: the venue lookup behind stop suggestions did not answer and is
+        // waiting before it asks again (forgejo#316 slice 2). Absent while it works.
+        ...(source === "travtrack" && visitRetryAfter(userId) > Date.now()
+          ? { visitLookupRetryAt: new Date(visitRetryAfter(userId)).toISOString() }
+          : {}),
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,
         marketResult: publicMarketCoverage(state?.marketResult),
@@ -165,6 +172,34 @@ router.post("/scan", rejectDemo, scanLimiter, async (req: AuthRequest, res, next
     const userId = user(req);
     await reserveScan(userId);
     const job = startJob("dawarichStays.scan", userId, () => scanStays(userId, { lookbackDays }));
+    res.status(202).json({ success: true, data: { jobId: job.id } });
+  } catch (e) {
+    next(e);
+  }
+});
+/**
+ * Ask the last days' TravTrack stops about venues now (forgejo#316 slice 2).
+ * A job: the lookups are throttled and may take minutes. Its result is the
+ * run's counts, with `failed` naming the lookups a provider did not answer.
+ */
+router.post("/visits/scan", rejectDemo, scanLimiter, async (req: AuthRequest, res, next) => {
+  try {
+    const { lookbackDays } = z
+      .object({ lookbackDays: z.number().int().min(1).max(30).default(7) })
+      .strict()
+      .parse(req.body ?? {});
+    const userId = user(req);
+    await assertTravTrackDerivationAllowed(userId);
+    await requireStaySuggestionsEnabled(userId);
+    await requirePlacesEnabled(userId);
+    const consent = await prisma.dawarichStayScan.findUnique({
+      where: { userId },
+      select: { enabled: true },
+    });
+    if (!consent?.enabled) throw new AppError("Scan disabled", 409, "DAWARICH_SCAN_UNAVAILABLE");
+    const job = startJob("travtrack.visitSuggestions", userId, () =>
+      rescanVisitDays(userId, lookbackDays)
+    );
     res.status(202).json({ success: true, data: { jobId: job.id } });
   } catch (e) {
     next(e);

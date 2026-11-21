@@ -308,4 +308,25 @@ describe("runTravTrackProjections", () => {
     await runTravTrackProjections({ countryAt, maxDays: 1 });
     expect(await prisma.travTrackDirtyDay.count({ where: { userId, done: 0 } })).toBe(0);
   });
+
+  it("a place-visit step that throws does not fail the account's run or hold back its projections", async () => {
+    const visits = jest.fn(async () => {
+      throw new Error("overpass is down");
+    });
+    const result = await runTravTrackProjections({ countryAt, visits });
+    expect(visits).toHaveBeenCalledTimes(1);
+    expect(result.failed).toBe(0);
+    expect(await prisma.countryDay.count({ where: { userId } })).toBeGreaterThan(0);
+    const state = await prisma.travTrackDerivationState.findUniqueOrThrow({ where: { userId } });
+    expect(state.failureCount).toBe(0);
+    expect(state.retryAfter).toBeNull();
+  });
+
+  it("the place-visit step takes its days from what is left of the tick's budget", async () => {
+    const visits = jest.fn(async () => ({ days: 0 }) as never);
+    await runTravTrackProjections({ countryAt, maxDays: 1, visits });
+    expect(visits).not.toHaveBeenCalled();
+    await runTravTrackProjections({ countryAt, visits });
+    expect(visits).toHaveBeenCalledWith(userId, { maxDays: 5 });
+  });
 });

@@ -6,6 +6,7 @@ import { zoneOf } from "../../../shared/time/zoneOf";
 import { visitColumnsFromResolved } from "../../timeModel/visitColumns";
 import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
+import { PLACE_CATEGORIES } from "../../../shared/placeCategories";
 import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
 import { takeStayAcceptLock } from "./acceptLock";
@@ -73,16 +74,28 @@ export async function applyStayAcceptance(
   const evidence = (row.evidence ?? {}) as {
     kind?: string;
     market?: { identity?: string; osmRef?: string; venueType?: VenueType };
+    /** A TravTrack stop's venue (`travtrack/visits`): its OSM id and category ride into the new place. */
+    visit?: { venue?: { name?: string; osmRef?: string | null; category?: string } };
   };
   const sameVenue =
     (evidence.kind === "market" || evidence.kind === "venue") &&
     (!evidence.market?.venueType || VENUE_TYPES.includes(evidence.market.venueType)) &&
     input.name === row.name &&
     meters(input, { lat: row.sourceLat, lon: row.sourceLon }) <= 100;
+  // The venue a stop suggestion named, accepted as named and where it was put.
+  const visitVenue =
+    evidence.visit?.venue &&
+    evidence.visit.venue.name === input.name &&
+    input.name === row.name &&
+    meters(input, { lat: row.lat, lon: row.lon }) <= 100
+      ? evidence.visit.venue
+      : null;
   const osmRef =
     sameVenue && /^((node|way|relation)\/\d+)$/.test(evidence.market?.osmRef ?? "")
       ? `osm:${evidence.market!.osmRef}`
-      : null;
+      : visitVenue && /^((node|way|relation)\/\d+)$/.test(visitVenue.osmRef ?? "")
+        ? `osm:${visitVenue.osmRef}`
+        : null;
   const wikidataId =
     sameVenue && /^wikidata:Q[1-9][0-9]*$/.test(evidence.market?.identity ?? "")
       ? evidence.market!.identity!.slice(9)
@@ -127,8 +140,13 @@ export async function applyStayAcceptance(
         name: input.name,
         lat: input.lat,
         lon: input.lon,
-        category: sameVenue ? venueCategory(evidence.market?.venueType ?? "market") : "other",
-        ...(sameVenue ? { externalRef: osmRef, wikidataId } : {}),
+        category: sameVenue
+          ? venueCategory(evidence.market?.venueType ?? "market")
+          : visitVenue &&
+              (PLACE_CATEGORIES as readonly string[]).includes(visitVenue.category ?? "")
+            ? (visitVenue.category as string)
+            : "other",
+        ...(sameVenue || visitVenue ? { externalRef: osmRef, wikidataId } : {}),
         dataSource: "dawarich",
         visited: true,
       },
