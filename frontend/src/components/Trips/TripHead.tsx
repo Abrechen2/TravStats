@@ -116,7 +116,7 @@ export default function TripHead({
               )}
               {placeCount > 0 && (
                 <Link
-                  to="?tab=timeline"
+                  to="?tab=overview#trip-places"
                   className="t-caption underline"
                   style={{ fontFamily: "var(--ts-font-mono)" }}
                   data-testid="trip-head-places"

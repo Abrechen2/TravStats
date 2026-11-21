@@ -745,7 +745,14 @@
     "travellersMore_one": "Show {{count}} more travellers"
   },
   "overview": {
-    "daysAway": "Days away"
+    "daysAway": "Days away",
+    "places": {
+      "title": "Visited places",
+      "empty": "No places have been added to this trip yet.",
+      "loading": "Loading places …",
+      "planned": "planned",
+      "undated": "No date"
+    }
   },
   "card": {
     "days_one": "day",

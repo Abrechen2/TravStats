@@ -19,6 +19,8 @@ import RemoteTripPeople from "../sharing/RemoteTripPeople";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 import TripCo2Line from "./TripCo2Line";
 import type { Co2Stats } from "../../types/co2";
+import type { TripPlaceVisits } from "../../hooks/useTripPlaceVisits";
+import TripPlacesList from "./TripPlacesList";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -161,11 +163,14 @@ export default function TripOverview({
   trip,
   t,
   language,
+  places,
 }: {
   /** `co2` is sent by `GET /trips/:id` only (forgejo#395). */
   trip: Trip & { co2?: Co2Stats };
   t: T;
   language: string;
+  /** The trip's place visits, read once by the page. */
+  places?: TripPlaceVisits;
 }): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
@@ -441,6 +446,8 @@ export default function TripOverview({
               ))}
             </EntryList>
           )}
+
+          {places && <TripPlacesList places={places} />}
 
           {nothingLinked && <p className="t-caption">{t("trips:detail.noLinks")}</p>}
 
