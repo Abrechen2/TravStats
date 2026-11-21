@@ -5,9 +5,15 @@ import { Prisma } from "../../prisma";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
 import { findVisibleChainByName } from "./chainScope";
-import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
+import { geocodeAddressDetailed, reverseGeocode } from "../geo/nominatim";
+import {
+  flagPinCountryContradictions,
+  hasPlaceMaterial,
+  LOCATION_CHECK,
+  type LocationCheck,
+} from "./locationCheck";
 import { collectBackfillCandidates } from "../geo/backfillScan";
-import { searchPlaces } from "../geo/photon";
+import { searchPlacesDetailed } from "../geo/photon";
 import { findLodgingPlace } from "../geo/googlePlaces";
 
 /** A guardrail, not a policy: a single pass never walks more than this many rows. */
@@ -156,6 +162,9 @@ export interface ResolvedCoordinates {
   countryName?: string | null;
 }
 
+/** A usable position, or the reason there is none. */
+type CoordinateResolution = { found: ResolvedCoordinates } | { check: LocationCheck };
+
 /**
  * Find coordinates for one lodging: Photon, then Nominatim, then Google Places
  * if — and only if — an admin has entered a key.
@@ -172,13 +181,23 @@ export interface ResolvedCoordinates {
 async function resolveCoordinates(
   row: GeocodeSubject,
   userId: string
-): Promise<ResolvedCoordinates | null> {
+): Promise<CoordinateResolution> {
+  // A name is not a place: "Tulip Inn" exists near Delhi and in Wolfenbüttel,
+  // and a search handed nothing else picks whichever ranks first (GitHub #401).
+  // With no street, town or country to check a hit against, nothing is applied
+  // — the row says why instead (see `locationCheck.ts`).
+  if (!hasPlaceMaterial(row)) return { check: LOCATION_CHECK.nameOnly };
+
   // The address belongs in the query, not just the city: it is the strongest
   // signal a text search has, and leaving it out is what let a Bavarian hotel
   // match its Roman namesake.
   const query = [row.name, row.address, row.city, row.country].filter(Boolean).join(", ");
+  let contradicted = false;
+  let providerFailed = false;
 
-  const [best] = await searchPlaces(query, { limit: 1 });
+  const photon = await searchPlacesDetailed(query, { limit: 1 });
+  if (photon.degraded) providerFailed = true;
+  const [best] = photon.results;
   // A hit is only usable when it IS a lodging. Photon does not always report a
   // type; an unknown one is treated as unusable rather than assumed good.
   if (best && best.type && OSM_LODGING_VALUES.has(best.type)) {
@@ -195,7 +214,8 @@ async function resolveCoordinates(
       city: best.city,
       countryName: best.country,
     };
-    if (agreesWithRow(row, candidate)) return candidate;
+    if (agreesWithRow(row, candidate)) return { found: candidate };
+    contradicted = true;
     logger.info(
       { operation: "lodging_geocode_contradicted", source: "photon" },
       "photon hit contradicts the row's own city/country — falling through"
@@ -203,13 +223,30 @@ async function resolveCoordinates(
     logger.debug({ operation: "lodging_geocode_contradicted", name: row.name });
   }
 
-  const nominatim = await geocodeAddress({
+  const nominatim = await geocodeAddressDetailed({
     name: row.name,
     address: row.address,
     city: row.city,
     country: row.country,
   });
-  if (nominatim) return { lat: nominatim.lat, lon: nominatim.lon, source: "nominatim" };
+  if (nominatim.failed) providerFailed = true;
+  if (nominatim.coords) {
+    // This tier used to be accepted unchecked — it answered coordinates only —
+    // so a hit in another country went straight onto the row (GitHub #401).
+    const candidate: ResolvedCoordinates = {
+      lat: nominatim.coords.lat,
+      lon: nominatim.coords.lon,
+      source: "nominatim",
+      city: nominatim.coords.city,
+      countryName: nominatim.coords.country ?? nominatim.coords.countryCode,
+    };
+    if (agreesWithRow(row, candidate)) return { found: candidate };
+    contradicted = true;
+    logger.info(
+      { operation: "lodging_geocode_contradicted", source: "nominatim" },
+      "nominatim hit contradicts the row's own city/country — discarded"
+    );
+  }
 
   // The account's own Places key is tried first (settings v3).
   const google = await findLodgingPlace(query, userId);
@@ -227,18 +264,20 @@ async function resolveCoordinates(
       chainName: google.chainName,
       countryName: google.country,
     };
-    if (!agreesWithRow(row, candidate)) {
-      logger.info(
-        { operation: "google_places_contradicts_row" },
-        "Discarding a Places hit that lands in a different place than the row says"
-      );
-      logger.debug({ operation: "google_places_contradicts_row", lodging: row.name });
-      return null;
-    }
-    return candidate;
+    if (agreesWithRow(row, candidate)) return { found: candidate };
+    contradicted = true;
+    logger.info(
+      { operation: "google_places_contradicts_row" },
+      "Discarding a Places hit that lands in a different place than the row says"
+    );
+    logger.debug({ operation: "google_places_contradicts_row", lodging: row.name });
   }
 
-  return null;
+  // Three different answers the user must be able to tell apart: the hits
+  // were wrong, the provider was not reachable, and there was nothing.
+  if (contradicted) return { check: LOCATION_CHECK.contradicted };
+  if (providerFailed) return { check: LOCATION_CHECK.providerUnavailable };
+  return { check: LOCATION_CHECK.noResult };
 }
 
 /**
@@ -314,8 +353,17 @@ export async function backfillMissingCoordinates(
         });
       }
       try {
-        const coords = await resolveCoordinates(row, userId);
-        if (!coords) continue;
+        const resolution = await resolveCoordinates(row, userId);
+        if ("check" in resolution) {
+          // Name the reason on the row, only while it is still unlocated — a
+          // pin the user dropped meanwhile needs no flag.
+          await prisma.lodging.updateMany({
+            where: { id: row.id, lat: null, lon: null },
+            data: { locationCheck: resolution.check },
+          });
+          continue;
+        }
+        const coords = resolution.found;
         // A provider answer is not a position until it is inside the world.
         // `Number(null)` is 0, and 0/0 is a real point in the Atlantic, so an
         // unusable answer used to be stored as a successful geocode (AUD-071).
@@ -328,6 +376,10 @@ export async function backfillMissingCoordinates(
             },
             "geocoder returned coordinates outside the world — treated as no result"
           );
+          await prisma.lodging.updateMany({
+            where: { id: row.id, lat: null, lon: null },
+            data: { locationCheck: LOCATION_CHECK.noResult },
+          });
           continue;
         }
         // Resolve the chain to an ID here, BEFORE the write, and never inside
@@ -373,6 +425,9 @@ export async function backfillMissingCoordinates(
           data: {
             lat: coords.lat,
             lon: coords.lon,
+            // A position was found and agrees with the record: whatever an
+            // earlier pass noted about this row is settled.
+            locationCheck: null,
             // Only ever FILLS gaps: a value the user typed is never overwritten
             // by a lookup, and only Google reports a kind at all.
             //
@@ -658,6 +713,10 @@ export async function backfillAllLodgingLocations(): Promise<{
   let users = 0;
   let coordinatesFilled = 0;
   let addressesFilled = 0;
+
+  // Offline and never throws: flags (does not rewrite) pins that contradict the
+  // stored country, so data from before the plausibility guard shows up.
+  await flagPinCountryContradictions();
 
   try {
     // One grouped query rather than "all users" — an install where nobody uses

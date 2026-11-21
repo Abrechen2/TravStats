@@ -1116,5 +1116,17 @@
     "wifi": "Wi-Fi",
     "quiet": "Quiet",
     "unknown": "Own category"
+  },
+  "locationCheck": {
+    "title": "Check the place",
+    "name_only": "All that is known about “{{name}}” is its name. A name alone is not a place – it often exists in several countries – so no position was set. Add a town or country, or set the point yourself.",
+    "contradicted": "The place search only found hits in a different country or town than the one this stay states. None of them was taken. Check the details or set the point yourself.",
+    "provider_unavailable": "The place search could not be reached, so nothing was found. It will be tried again later – or set the point yourself.",
+    "no_result": "The place search found nothing. Add the address or set the point yourself.",
+    "pin_country_mismatch": "The point on the map lies in a different country than the one entered. You decide which is right – nothing was changed.",
+    "setLocation": "Set the point",
+    "confirm": "Position is correct",
+    "confirmed": "Marked as checked.",
+    "confirmFailed": "The mark could not be saved."
   }
 }

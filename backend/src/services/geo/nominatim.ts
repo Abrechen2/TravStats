@@ -37,6 +37,25 @@ const REQUEST_TIMEOUT_MS = 5000;
 export interface Coordinates {
   lat: number;
   lon: number;
+  /**
+   * What the provider says the hit IS in, when it said. Lets a caller refuse a
+   * pin that lands in a different country than the record states (a name-only
+   * "Tulip Inn" search found the one near Delhi for a hotel in Wolfenbüttel,
+   * forgejo#401 / GitHub #401). Absent when the provider sent no address.
+   */
+  countryCode?: string;
+  country?: string;
+  city?: string;
+}
+
+/**
+ * `failed: true` means the provider could not be asked or did not answer
+ * (timeout, 429, 5xx) — NOT "there is no such place". Callers that surface a
+ * reason must keep the two apart.
+ */
+export interface GeocodeOutcome {
+  coords: Coordinates | null;
+  failed: boolean;
 }
 
 export interface GeocodeParts {
@@ -59,6 +78,7 @@ interface NominatimRow {
   lat?: unknown;
   lon?: unknown;
   display_name?: unknown;
+  address?: Record<string, unknown>;
 }
 
 /** The subset of Nominatim's reverse `address` object this app fills in from. */
@@ -220,7 +240,19 @@ function parseRow(row: NominatimRow): Coordinates | null {
   // Atlantic — so a row with a missing latitude used to parse as a finite,
   // in-range, entirely wrong position (AUD-071). `toCoordinates` refuses the
   // coercion and the bounds in one place.
-  return toCoordinates(row.lat, row.lon);
+  const base = toCoordinates(row.lat, row.lon);
+  if (base === null) return null;
+  const a = row.address;
+  if (!a || typeof a !== "object") return base;
+  const code = str(a.country_code);
+  const country = str(a.country);
+  const city = str(a.city) ?? str(a.town) ?? str(a.village) ?? str(a.municipality);
+  return {
+    ...base,
+    ...(code ? { countryCode: code.toUpperCase() } : {}),
+    ...(country ? { country } : {}),
+    ...(city ? { city } : {}),
+  };
 }
 
 /** How many rows the locality retry reads to find one that names the place. */
@@ -265,7 +297,7 @@ async function fetchVerifiedCoordinates(
   retry: { query: string; localityWords: string[] },
   baseUrl: string
 ): Promise<Coordinates | null> {
-  const url = `${baseUrl}/search?q=${encodeURIComponent(retry.query)}&format=json&limit=${RETRY_LIMIT}`;
+  const url = `${baseUrl}/search?q=${encodeURIComponent(retry.query)}&format=json&addressdetails=1&limit=${RETRY_LIMIT}`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -292,7 +324,7 @@ async function fetchVerifiedCoordinates(
 }
 
 async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
-  const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+  const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=1`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -331,13 +363,18 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
  * lodging save is never blocked by a flaky or rate-limiting geocoder.
  */
 export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates | null> {
+  return (await geocodeAddressDetailed(parts)).coords;
+}
+
+/** `geocodeAddress` that also says whether a null was a provider failure. */
+export async function geocodeAddressDetailed(parts: GeocodeParts): Promise<GeocodeOutcome> {
   const query = buildQuery(parts);
-  if (!query) return null;
+  if (!query) return { coords: null, failed: false };
 
   const baseUrl = await resolveNominatimBase();
   const key = `${baseUrl}|${query.toLowerCase()}`;
   const cached = cache.get(key);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return { coords: cached, failed: false };
 
   // Chain onto the shared queue so this call's request (and its throttle
   // wait) is serialized after every other in-flight/queued geocode call.
@@ -354,11 +391,11 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
       // A thrown error is transient (network blip, timeout) and must not
       // poison the cache for the process lifetime.
       cache.set(key, coords);
-      return coords;
+      return { coords, failed: false };
     } catch (error) {
       logger.warn({ error }, "geocoding failed");
       logger.debug({ query }, "geocoding failed");
-      return null;
+      return { coords: null, failed: true };
     }
   });
   queue = task.catch(() => undefined);

@@ -7,7 +7,11 @@ import {
 
 const geocodeAddress = jest.fn();
 jest.mock("../services/geo/nominatim", () => ({
-  geocodeAddress: (parts: unknown) => geocodeAddress(parts),
+  // The backfill asks for the detailed outcome; these cases script the plain answer.
+  geocodeAddressDetailed: async (parts: unknown) => ({
+    coords: (await geocodeAddress(parts)) ?? null,
+    failed: false,
+  }),
 }));
 
 // The other two tiers, so this file makes no outbound request. They were not
@@ -15,7 +19,10 @@ jest.mock("../services/geo/nominatim", () => ({
 // before falling through to the mocked Nominatim.
 const searchPlaces = jest.fn();
 jest.mock("../services/geo/photon", () => ({
-  searchPlaces: (...args: unknown[]) => searchPlaces(...args),
+  searchPlacesDetailed: async (...args: unknown[]) => ({
+    results: await searchPlaces(...args),
+    degraded: false,
+  }),
 }));
 const findLodgingPlace = jest.fn();
 jest.mock("../services/geo/googlePlaces", () => ({
@@ -44,12 +51,12 @@ describe("backfillMissingCoordinates", () => {
     await prisma.$disconnect();
   });
 
-  // The policy CHANGED on 2026-08-05: a row used to be skipped unless it had a
-  // city or an address, which silently excluded exactly what a parsed booking
-  // confirmation produces — a hotel name and nothing else. That is why an
-  // e-mail import came out with no pin. Every row now gets an attempt, because
-  // `name` is NOT NULL and "Schlosshotel Kronberg" is perfectly geocodable.
-  it("attempts every row that lacks coordinates, including a name-only one", async () => {
+  // The 2026-08-05 policy (attempt every row, a bare name included) was reversed
+  // for GitHub #401: a name is not a place, and "Tulip Inn Wolfenbuettel" was
+  // pinned near Delhi from a name-only search. A row with a town, country or
+  // street is attempted; one with nothing but a name is NOT applied a hit — it
+  // stays unlocated and carries the reason `name_only`.
+  it("attempts rows that say where they are, and names the reason for a name-only one", async () => {
     geocodeAddress.mockResolvedValue({ lat: 52.5, lon: 13.4 });
 
     const needsCoords = await prisma.lodging.create({
@@ -69,17 +76,11 @@ describe("backfillMissingCoordinates", () => {
 
     const result = await backfillMissingCoordinates(userId);
 
-    // Two attempts: the city row and the name-only row. The row that already
-    // has a pin is still skipped — the geocoder is never asked for nothing.
     expect(result.attempted).toBe(2);
-    expect(result.filled).toBe(2);
-    expect(geocodeAddress).toHaveBeenCalledTimes(2);
-
-    // The name reaches the geocoder — without it the query would be empty and
-    // the lookup would never run.
-    expect(geocodeAddress).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Schlosshotel Kronberg" })
-    );
+    expect(result.filled).toBe(1);
+    // Only the located-by-context row reaches the geocoder.
+    expect(geocodeAddress).toHaveBeenCalledTimes(1);
+    expect(geocodeAddress).toHaveBeenCalledWith(expect.objectContaining({ name: "Needs Coords" }));
 
     expect((await prisma.lodging.findUnique({ where: { id: needsCoords.id } }))?.lat).toBeCloseTo(
       52.5,
@@ -89,19 +90,10 @@ describe("backfillMissingCoordinates", () => {
       1,
       3
     );
-    expect((await prisma.lodging.findUnique({ where: { id: nameOnly.id } }))?.lat).toBeCloseTo(
-      52.5,
-      3
-    );
-    // Ten round-trips against a containerised Postgres: three creates, the
-    // service's own reads and updates, then three verifying reads. Measured at
-    // 6.0 s on a Windows/Docker dev database, i.e. just over the 5 s default,
-    // so this test failed the gate on timing alone while asserting correctly.
-    // The neighbours in this file swing ~40% with machine load; raising only
-    // the heaviest one keeps that pressure visible instead of hiding it behind
-    // a file-wide default.
-  }, 15000);
-
+    const bare = await prisma.lodging.findUnique({ where: { id: nameOnly.id } });
+    expect(bare?.lat).toBeNull();
+    expect(bare?.locationCheck).toBe("name_only");
+  });
   it("leaves a row pin-less when the geocoder finds nothing — and never throws", async () => {
     geocodeAddress.mockResolvedValue(null);
     const row = await prisma.lodging.create({

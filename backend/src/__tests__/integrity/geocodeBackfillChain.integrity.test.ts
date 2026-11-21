@@ -26,9 +26,22 @@
  */
 import { prisma } from "../../db";
 
-jest.mock("../../services/geo/photon", () => ({ searchPlaces: jest.fn() }));
+// The backfill asks for the detailed outcome; the cases script the plain answer.
+const mockSearchPlaces = jest.fn();
+const mockGeocodeAddress = jest.fn();
+jest.mock("../../services/geo/photon", () => ({
+  searchPlaces: (...a: unknown[]) => mockSearchPlaces(...a),
+  searchPlacesDetailed: async (...a: unknown[]) => ({
+    results: await mockSearchPlaces(...a),
+    degraded: false,
+  }),
+}));
 jest.mock("../../services/geo/nominatim", () => ({
-  geocodeAddress: jest.fn(),
+  geocodeAddress: (...a: unknown[]) => mockGeocodeAddress(...a),
+  geocodeAddressDetailed: async (...a: unknown[]) => ({
+    coords: (await mockGeocodeAddress(...a)) ?? null,
+    failed: false,
+  }),
   reverseGeocode: jest.fn(),
 }));
 jest.mock("../../services/geo/googlePlaces", () => ({
@@ -36,8 +49,6 @@ jest.mock("../../services/geo/googlePlaces", () => ({
   isGooglePlacesConfigured: jest.fn(),
 }));
 
-import { searchPlaces } from "../../services/geo/photon";
-import { geocodeAddress } from "../../services/geo/nominatim";
 import { findLodgingPlace } from "../../services/geo/googlePlaces";
 import { backfillMissingCoordinates } from "../../services/lodging/geocodeBackfill";
 
@@ -51,8 +62,8 @@ let chainId = 0;
  * as they do for a house neither of them knows.
  */
 function googleAnswers(chainName: string | null): void {
-  jest.mocked(searchPlaces).mockResolvedValue([]);
-  jest.mocked(geocodeAddress).mockResolvedValue(null);
+  mockSearchPlaces.mockResolvedValue([]);
+  mockGeocodeAddress.mockResolvedValue(null);
   jest.mocked(findLodgingPlace).mockResolvedValue({
     lat: 48.1,
     lon: 11.6,
@@ -91,7 +102,7 @@ afterAll(async () => {
 describe("the geocode backfill's position write", () => {
   it("stores the position when the geocoder names NO chain (the control)", async () => {
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-no-chain`, type: "hotel" },
+      data: { userId, name: `${TAG}-no-chain`, type: "hotel", address: "Musterstraße 1" },
     });
     googleAnswers(null);
 
@@ -108,7 +119,7 @@ describe("the geocode backfill's position write", () => {
     // The defect's own case: before the fix this row came back with lat, lon,
     // city and chain all still null, because the write threw as a whole.
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-with-chain`, type: "hotel" },
+      data: { userId, name: `${TAG}-with-chain`, type: "hotel", address: "Musterstraße 1" },
     });
     googleAnswers(`${TAG}-Chain`);
 
@@ -124,7 +135,7 @@ describe("the geocode backfill's position write", () => {
 
   it("still stores the POSITION when the chain name is one the catalogue does not know", async () => {
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-unknown-chain`, type: "hotel" },
+      data: { userId, name: `${TAG}-unknown-chain`, type: "hotel", address: "Musterstraße 1" },
     });
     googleAnswers(`${TAG}-no-such-chain`);
 
@@ -144,7 +155,7 @@ describe("the geocode backfill's position write", () => {
     // separate rows". A case-sensitive lookup here would give the same hotel a
     // brand when it arrived by CSV and none when the geocoder found it.
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-cased-chain`, type: "hotel" },
+      data: { userId, name: `${TAG}-cased-chain`, type: "hotel", address: "Musterstraße 1" },
     });
     googleAnswers(`  ${`${TAG}-Chain`.toUpperCase()}  `);
 
@@ -160,7 +171,13 @@ describe("the geocode backfill's position write", () => {
       data: { name: `${TAG}-Other`, isUserAdded: true },
     });
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-owned-chain`, type: "hotel", chainId: other.id },
+      data: {
+        userId,
+        name: `${TAG}-owned-chain`,
+        type: "hotel",
+        address: "Musterstraße 1",
+        chainId: other.id,
+      },
     });
     googleAnswers(`${TAG}-Chain`);
 
