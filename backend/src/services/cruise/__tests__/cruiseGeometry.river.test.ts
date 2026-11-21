@@ -93,8 +93,9 @@ describe("a Nile cruise is drawn along the Nile, not via the Red Sea", () => {
   });
 
   it("draws a river cruise between ports with no river region as the chord", async () => {
-    const a = port(6, "Somewhere", 25.6872, 32.6396, null);
-    const b = port(7, "Elsewhere", 24.0889, 32.8997, null);
+    // Open desert, nowhere near a river file's polyline.
+    const a = port(6, "Somewhere", 27.0, 28.0, null);
+    const b = port(7, "Elsewhere", 26.0, 29.0, null);
     const { collection } = await buildCruiseGeometry(cruise("river", [a, b]));
     expect(collection.features).toHaveLength(1);
     expect(collection.features[0].properties.method).toBe("direct");
@@ -113,9 +114,52 @@ describe("a Nile cruise is drawn along the Nile, not via the Red Sea", () => {
     );
     expect(routedLegs).toBe(0);
     expect(collection.features[0].properties.method).toBe("river_line");
-    expect(collection.features[0].geometry.coordinates).toEqual([
-      [chongqing.lon, chongqing.lat],
-      [yichang.lon, yichang.lat],
-    ]);
+    const coords = collection.features[0].geometry.coordinates;
+    expect(coords[0]).toEqual([chongqing.lon, chongqing.lat]);
+    expect(coords[coords.length - 1]).toEqual([yichang.lon, yichang.lat]);
+    // Through the gorges (Wanzhou, Fengjie, Badong), not the straight chord.
+    expect(coords.length).toBeGreaterThan(6);
+  });
+});
+
+describe("river ports the catalogue gave no region (forgejo#427)", () => {
+  const FENGDU = port(10, "Fengdu", 29.865, 107.73, null);
+  const WANZHOU = port(11, "Wanzhou", 30.81, 108.38, null);
+  const YICHANG = port(12, "Yichang", 30.7, 111.2833, null);
+
+  it("a Yangtze leg between region-less ports follows the river, not a chord", async () => {
+    const { collection } = await buildCruiseGeometry(cruise("river", [FENGDU, YICHANG]));
+    const [leg] = collection.features;
+    expect(leg.properties.method).toBe("river_line");
+    expect(leg.geometry.coordinates.length).toBeGreaterThan(3);
+  });
+
+  it("a coastal port keeps its own region and is not given a river one", async () => {
+    // Shanghai sits at the Yangtze mouth but is catalogued east_asia.
+    const shanghai = port(13, "Shanghai", 31.2304, 121.4737, "east_asia");
+    const nanjing = port(14, "Nanjing", 32.05, 118.7833, "river_yangtze");
+    const { collection } = await buildCruiseGeometry(cruise("ocean", [shanghai, nanjing]));
+    expect(collection.features[0].properties.method).not.toBe("river_line");
+  });
+
+  it("a manual polyline wins over the derived river line", async () => {
+    const manual = [
+      [107.73, 29.865],
+      [108.0, 30.0],
+      [108.38, 30.81],
+    ];
+    const input = cruise("river", [FENGDU, WANZHOU]);
+    input.legRoutes = [
+      {
+        fromKind: "port",
+        fromRef: "10",
+        toKind: "port",
+        toRef: "11",
+        waypoints: manual,
+      },
+    ];
+    const { collection } = await buildCruiseGeometry(input);
+    expect(collection.features[0].properties.method).toBe("manual_polyline");
+    expect(collection.features[0].geometry.coordinates).toEqual(manual);
   });
 });

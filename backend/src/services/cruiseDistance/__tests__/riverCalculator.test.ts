@@ -120,3 +120,22 @@ describe("riverCalculator", () => {
     expect(result!.distanceKm).toBeCloseTo(0, 1);
   });
 });
+
+describe("deriveRiverRegion (forgejo#427)", () => {
+  it("gives a region-less Yangtze port (Wanzhou) the river_yangtze region", async () => {
+    const { deriveRiverRegion } = await import("../riverCalculator");
+    expect(await deriveRiverRegion({ lat: 30.81, lon: 108.38, region: null })).toBe(
+      "river_yangtze"
+    );
+  });
+  it("leaves a port that already has a region alone", async () => {
+    const { deriveRiverRegion } = await import("../riverCalculator");
+    expect(
+      await deriveRiverRegion({ lat: 31.2304, lon: 121.4737, region: "east_asia" })
+    ).toBeNull();
+  });
+  it("gives an inland point far from every river nothing", async () => {
+    const { deriveRiverRegion } = await import("../riverCalculator");
+    expect(await deriveRiverRegion({ lat: 27, lon: 28, region: null })).toBeNull();
+  });
+});

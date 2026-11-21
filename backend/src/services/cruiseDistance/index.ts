@@ -17,7 +17,7 @@
 
 import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
-import { riverCalculator } from "./riverCalculator";
+import { riverCalculator, withDerivedRiverRegions } from "./riverCalculator";
 import { seaRouteCalculator } from "./seaRouteCalculator";
 import type { ComputedLeg, DistanceCalculator, LegContext, PortPoint } from "./types";
 
@@ -31,10 +31,12 @@ const calculators: DistanceCalculator[] = [
 ];
 
 export async function computeLegDistance(
-  from: PortPoint,
-  to: PortPoint,
+  rawFrom: PortPoint,
+  rawTo: PortPoint,
   context: LegContext = {}
 ): Promise<ComputedLeg> {
+  // A region-less port on a known river is a river port (Fengdu, Wanzhou …).
+  const [from, to] = await withDerivedRiverRegions([rawFrom, rawTo]);
   for (const calc of calculators) {
     if (!calc.accepts(from, to, context)) continue;
     try {
