@@ -23,6 +23,7 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { assetSizeSchema } from "../../schemas/immich";
 import { sendPlaceholder, streamAsset } from "../../services/immich/assetStream";
+import { getPhotoSourceConnection, toPhotoSourceKind } from "../../services/photoSource/connection";
 import { createPhotoSource } from "../../services/photoSource";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
@@ -277,19 +278,20 @@ router.get(
         if (!photo.immichAssetId) throw new AppError("File missing", 404);
         const size = assetSizeSchema.safeParse(req.query.size ?? "preview");
         if (!size.success) throw new AppError("Invalid size", 400);
-        const etag = `"${photo.immichAssetId}-${size.data}"`;
+        const provider = toPhotoSourceKind(photo.provider);
+        const etag = `"${provider === "immich" ? "" : `${provider}-`}${photo.immichAssetId}-${size.data}"`;
         if (req.headers["if-none-match"] === etag) {
           res.status(304).end();
           return;
         }
-        const conn = await getImmichConnection(userId);
+        const conn = await getPhotoSourceConnection(provider, userId);
         if (!conn) {
           res.status(409).json({ error: "notConfigured" });
           return;
         }
         await streamAsset(
           res,
-          createPhotoSource("immich", conn),
+          createPhotoSource(provider, conn),
           photo.immichAssetId,
           size.data,
           etag
@@ -398,6 +400,22 @@ router.delete(
       // fail the row, which leaves a photo the UI still lists and can never
       // show — a broken thumbnail is worse than a byte we did not reclaim.
       await prisma.placeVisitPhoto.delete({ where: { id: photo.id } });
+      // A removed library link is a refusal: the automatic pass would otherwise
+      // link the same picture again on its next run.
+      if (photo.immichAssetId && photo.filename === null) {
+        await prisma.visitPhotoRefusal.createMany({
+          data: [
+            {
+              userId,
+              placeVisitId: photo.placeVisitId,
+              kind: "library",
+              provider: toPhotoSourceKind(photo.provider),
+              suggestionId: photo.immichAssetId,
+            },
+          ],
+          skipDuplicates: true,
+        });
+      }
       if (photo.filename) deletePlacePhotoFile(photo.filename);
 
       res.status(204).send();

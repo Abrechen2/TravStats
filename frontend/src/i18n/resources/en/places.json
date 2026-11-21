@@ -282,6 +282,15 @@
       "undo": "Offer refused photos again",
       "undone": "Refused photos are suggested again.",
       "undoFailed": "The refused photos could not be restored."
+    },
+    "auto": {
+      "label": "linked automatically ({{source}})",
+      "removeAll": "Remove all automatically linked",
+      "removeFailed": "The automatically linked photos could not be removed.",
+      "source": {
+        "immich": "Immich",
+        "photoprism": "PhotoPrism"
+      }
     }
   },
   "stats": {

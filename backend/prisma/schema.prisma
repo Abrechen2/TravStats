@@ -1005,6 +1005,15 @@ model UserSettings {
   /// stored value or the overall of any stay.
   lodgingRatingCategories String[] @default(["room", "breakfast", "service"]) @map("lodging_rating_categories")
 
+  /// Link photos from the connected photo sources to place visits on their own
+  /// (default on: the owner asked for it, 2026-11-21). Links only, never copies.
+  autoLinkVisitPhotos Boolean @default(true) @map("auto_link_visit_photos")
+
+  /// The outcome of the last automatic linking pass, per source, so a failing
+  /// source is visible in the settings instead of reading as "no photos":
+  /// `{ at, linked, sources: { immich: "ok" | <failure kind> | "notConfigured", … } }`.
+  visitPhotoAutoLinkLastRun Json? @map("visit_photo_auto_link_last_run")
+
   /// TravPlan, the planning area, for THIS account (owner, 2026-10-27): switched
   /// on and off like a domain, and only offered while the instance offers TravPlan.
   /// Off by default like every domain but flights; the migration switched it on
@@ -3905,6 +3914,16 @@ model PlaceVisitPhoto {
   /// Immich provenance, set only when imported from a linked album.
   immichAssetId String? @map("immich_asset_id")
 
+  /// Which photo source holds `immichAssetId`: `immich` | `photoprism`. The
+  /// column keeps its Immich name, like `TripPhoto.immichAssetId`; an id is only
+  /// unique per source.
+  provider String @default("immich")
+
+  /// How the row came to be: `manual` (picked or uploaded) or `auto` (linked by
+  /// the automatic matcher, forgejo visit-photos-auto). The gallery says
+  /// "automatisch verknüpft" for `auto`.
+  provenance String @default("manual")
+
   /// SHA-1 of the uploaded original, base64 — the encoding Immich uses for
   /// `asset.checksum`, so a later match is exact rather than a guess.
   ///
@@ -3940,6 +3959,7 @@ model PlaceVisitPhoto {
   tripPhoto TripPhoto? @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
   coverOf   Place[]    @relation("PlaceCover")
 
+  @@unique([placeVisitId, provider, immichAssetId])
   @@index([placeVisitId])
   @@index([tripPhotoId])
   @@map("place_visit_photos")
@@ -3957,13 +3977,15 @@ model VisitPhotoRefusal {
   placeVisitId String   @map("place_visit_id")
   /// "trip" | "library"
   kind         String
+  /// Photo source of a "library" refusal; the asset id is only unique per source.
+  provider     String   @default("immich")
   suggestionId String   @map("suggestion_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
 
-  @@unique([placeVisitId, kind, suggestionId])
+  @@unique([placeVisitId, kind, provider, suggestionId])
   @@index([userId])
   @@map("visit_photo_refusals")
 }

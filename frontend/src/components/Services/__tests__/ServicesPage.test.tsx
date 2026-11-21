@@ -24,6 +24,7 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({ useIsDemoAccount: () => fals
 vi.mock("../../Settings/StravaConnectionCard", () => ({ default: () => <div>strava-card</div> }));
 vi.mock("../../Settings/PhotoJourneyNightlyScanCard", () => ({ default: () => null }));
 vi.mock("../../Settings/VisitPhotoImmichLink", () => ({ default: () => null }));
+vi.mock("../../Settings/VisitPhotoAutoLink", () => ({ default: () => null }));
 vi.mock("../../Settings/DawarichProviderHint", () => ({ default: () => null }));
 
 // The master internet switch (settings v3 S2): on unless a test says it is off.

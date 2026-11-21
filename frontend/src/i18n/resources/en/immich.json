@@ -134,5 +134,15 @@
     "done": "{{checked}} photos checked, {{linked}} linked.",
     "lost": "Outcome unknown: the server lost track of the job (restart?). Run it again – photos already linked stay linked.",
     "failed": "Linking failed."
+  },
+  "visitPhotosAuto": {
+    "title": "Link photos to place visits automatically",
+    "hint": "Links photos from Immich and PhotoPrism taken near the place on the day of the visit (links only, no copies). Photos without a capture time or position, and photos inside privacy zones, are never linked. Photos you remove do not come back.",
+    "loadFailed": "The state of automatic linking could not be loaded.",
+    "saveFailed": "The setting could not be saved.",
+    "source": {
+      "immich": "Immich",
+      "photoprism": "PhotoPrism"
+    }
   }
 }

@@ -25,7 +25,9 @@ interface Props<T extends StripPhoto> {
    * Something drawn under the strip that can add photos to it — the visit's
    * photo suggestions. `merge` adds the photos the strip does not hold yet.
    */
-  footer?: (merge: (photos: T[]) => void) => ReactNode;
+  footer?: (merge: (photos: T[]) => void, drop: (photoIds: string[]) => void) => ReactNode;
+  /** A short line under a thumbnail — where the photo came from; null for none. */
+  originLabel?: (photo: T) => string | null;
 }
 
 /**
@@ -53,6 +55,7 @@ export function PhotoStrip<T extends StripPhoto>({
   onCaption,
   context,
   footer,
+  originLabel,
 }: Props<T>): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -135,6 +138,10 @@ export function PhotoStrip<T extends StripPhoto>({
 
   const merge = useCallback((photos: T[]): void => {
     setRows((prev) => [...prev, ...photos.filter((p) => !prev.some((have) => have.id === p.id))]);
+  }, []);
+
+  const drop = useCallback((photoIds: string[]): void => {
+    setRows((prev) => prev.filter((p) => !photoIds.includes(p.id)));
   }, []);
 
   return (
@@ -221,6 +228,11 @@ export function PhotoStrip<T extends StripPhoto>({
                 {photo.caption ?? t("places:photos.captionAdd")}
               </button>
             )}
+            {originLabel?.(photo) && (
+              <span className="truncate text-[10px]" style={{ color: "var(--text-muted)" }}>
+                {originLabel(photo)}
+              </span>
+            )}
           </span>
         ))}
 
@@ -245,7 +257,7 @@ export function PhotoStrip<T extends StripPhoto>({
           {uploadError}
         </p>
       )}
-      {footer?.(merge)}
+      {footer?.(merge, drop)}
     </>
   );
 }

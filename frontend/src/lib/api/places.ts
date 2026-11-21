@@ -165,11 +165,17 @@ export interface VisitPhotoSuggestion {
   url: string;
   takenAt: string | null;
   distanceM: number;
+  /** Photo source of a `library` suggestion (absent on older servers: Immich). */
+  provider?: PhotoProvider;
 }
+
+export type PhotoProvider = "immich" | "photoprism";
 
 export interface VisitPhotoSuggestions {
   day: string | null;
   suggestions: VisitPhotoSuggestion[];
+  /** Each source's own answer, so one failing source is not hidden by the other. */
+  sources?: Partial<Record<PhotoProvider, string>>;
   /** Whether the library was searched: `ok`, `notConfigured`, or why not. */
   library: string;
 }
@@ -184,7 +190,7 @@ export async function getVisitPhotoSuggestions(visitId: string): Promise<VisitPh
 /** Link picked suggestions to the visit — the server re-checks every id. */
 export async function linkVisitPhotoSuggestions(
   visitId: string,
-  picks: { tripPhotoIds: string[]; assetIds: string[] }
+  picks: { tripPhotoIds: string[]; assetIds: string[]; provider?: PhotoProvider }
 ): Promise<{ linked: number; skipped: number }> {
   const res = await api.post<Envelope<{ linked: number; skipped: number }>>(
     `/places/visits/${visitId}/photo-suggestions/link`,
@@ -196,7 +202,7 @@ export async function linkVisitPhotoSuggestions(
 /** "Nicht diese": keep the picked suggestions from coming back for this visit. */
 export async function refuseVisitPhotoSuggestions(
   visitId: string,
-  picks: { tripPhotoIds: string[]; assetIds: string[] }
+  picks: { tripPhotoIds: string[]; assetIds: string[]; provider?: PhotoProvider }
 ): Promise<{ refused: number; skipped: number }> {
   const res = await api.post<Envelope<{ refused: number; skipped: number }>>(
     `/places/visits/${visitId}/photo-suggestions/refusals`,
@@ -219,6 +225,35 @@ export async function clearVisitPhotoRefusals(visitId: string): Promise<void> {
 export async function linkVisitPhotosToImmich(): Promise<{ checked: number; linked: number }> {
   const res = await api.post<Envelope<{ jobId: string }>>("/places/visits/photos/immich-link");
   return waitForJob<{ checked: number; linked: number }>(res.data.data.jobId);
+}
+
+/** The account switch for automatic photo links and what the last pass found per source. */
+export interface AutoLinkStatus {
+  enabled: boolean;
+  lastRun: {
+    at: string;
+    linked: number;
+    failedVisits?: number;
+    /** `ok`, `notConfigured`, or a failure kind (`unreachable`, `auth`, …). */
+    sources: Partial<Record<PhotoProvider, string>>;
+  } | null;
+}
+
+export async function getAutoLinkStatus(): Promise<AutoLinkStatus> {
+  const res = await api.get<Envelope<AutoLinkStatus>>("/places/visits/photos/auto-link");
+  return res.data.data;
+}
+
+export async function setAutoLinkEnabled(enabled: boolean): Promise<void> {
+  await api.put("/places/visits/photos/auto-link", { enabled });
+}
+
+/** "Alle automatisch verknüpften entfernen": the server also remembers each as refused. */
+export async function removeAutoLinkedVisitPhotos(visitId: string): Promise<number> {
+  const res = await api.delete<Envelope<{ removed: number }>>(
+    `/places/visits/${visitId}/photos/auto`
+  );
+  return res.data.data.removed;
 }
 
 /** Choose the place page's lead photograph; null returns it to the first one. */
