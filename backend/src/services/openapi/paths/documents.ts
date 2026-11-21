@@ -10,7 +10,13 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import {
+  addDocumentLinksSchema,
   documentDtoSchema,
+  documentLinkViewSchema,
+  entryDocumentDtoSchema,
+  linkCandidatesSchema,
+  removedLinkSchema,
+  tripCandidatesQuerySchema,
   documentListQuerySchema,
   documentListResponseSchema,
   documentLimitsSchema,
@@ -25,6 +31,10 @@ import {
 import { ENTRY_TYPES, type EntryType } from "../../documents/documentFormats";
 
 const documentDto = registry.register("Document", documentDtoSchema.openapi("Document"));
+const entryDocumentDto = registry.register(
+  "EntryDocument",
+  entryDocumentDtoSchema.openapi("EntryDocument")
+);
 registry.register("UnfiledDocument", unfiledDocumentDtoSchema.openapi("UnfiledDocument"));
 const unfiledDocuments = registry.register(
   "UnfiledDocuments",
@@ -153,13 +163,18 @@ for (const type of ENTRY_TYPES) {
   registry.registerPath({
     method: "get",
     path: ENTRY_LIST_PATHS[type],
-    summary: `Documents filed with a ${type}`,
+    summary: `Documents linked to a ${type}`,
+    description:
+      "Every document linked to the entry as `primary` (filed here) or `covers` (evidence for " +
+      "it, filed at another entry), oldest first, each once. `linkRole`, `evidenceFrom` " +
+      '("Beleg aus …": the entry a covers document is filed at) and `linkCount` are optional ' +
+      "additions; the other fields keep their meaning, and `entry` stays the document's primary.",
     tags,
     request: { params: idParams },
     responses: {
       200: {
         description: "Documents, oldest first",
-        content: json(envelope(z.array(documentDto))),
+        content: json(envelope(z.array(entryDocumentDto))),
       },
       404: notFound,
     },
@@ -303,5 +318,104 @@ registry.registerPath({
     },
     400: badInput,
     404: notFound,
+  },
+});
+
+const linkView = registry.register("DocumentLink", documentLinkViewSchema.openapi("DocumentLink"));
+const duplicateOrGone = {
+  description:
+    "`DOCUMENT_LINK_EXISTS`: the entry already carries a link to this document (409); " +
+    "all-or-none, nothing was written",
+  content: errorContent,
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/trip-candidates",
+  summary: "Documents of an entry's own trip that it is not linked to yet",
+  description:
+    'What "Dokument aus der Reise verknüpfen" offers: documents linked to the trip the entry ' +
+    "sits in, minus those already linked to the entry. Empty when the entry is in no trip.",
+  tags,
+  request: { query: tripCandidatesQuerySchema },
+  responses: {
+    200: {
+      description: "Candidate documents, oldest first",
+      content: json(envelope(z.array(documentDto))),
+    },
+    400: badInput,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/{id}/links",
+  summary: "Every entry a document is linked to",
+  description:
+    "Role (`primary` = filed there, `covers` = evidence for it), provenance and a label per " +
+    "entry. The delete-everywhere dialog lists these before it asks.",
+  tags,
+  request: { params: idParams },
+  responses: {
+    200: { description: "The links", content: json(envelope(z.array(linkView))) },
+    404: { description: "Not your document (`DOCUMENT_NOT_FOUND`)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/{id}/link-candidates",
+  summary: "Entries the document may still be linked to",
+  description:
+    "The account's own entries it is not linked to yet — those sharing a trip with one of its " +
+    "links first — capped per type; a picker filters the rest by text.",
+  tags,
+  request: { params: idParams },
+  responses: {
+    200: { description: "Candidates", content: json(envelope(linkCandidatesSchema)) },
+    404: { description: "Not your document (`DOCUMENT_NOT_FOUND`)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/documents/{id}/links",
+  summary: "Also link a document to entries",
+  description:
+    "All or none. Links are `covers` unless the document has no primary yet; provenance is " +
+    "`user`. A link never grants access: the document stays readable by its own account only. " +
+    "Every entry must be the caller's (`DOCUMENT_ENTRY_NOT_FOUND`, 404, also for a gone entry).",
+  tags,
+  request: { params: idParams, body: { content: json(addDocumentLinksSchema) } },
+  responses: {
+    201: { description: "The document's links now", content: json(envelope(z.array(linkView))) },
+    400: badInput,
+    404: {
+      description: "`DOCUMENT_NOT_FOUND` or `DOCUMENT_ENTRY_NOT_FOUND`",
+      content: errorContent,
+    },
+    409: duplicateOrGone,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/documents/{id}/links",
+  summary: "Remove a document from ONE entry",
+  description:
+    "`entryType` and `entryId` as query. Only that link goes; the document and its other " +
+    "links stay. Removing the primary hands the role to the next link, or unfiles the " +
+    "document with its thirty-day grace. The answer says what was removed, so it can be " +
+    "put back with POST.",
+  tags,
+  request: { params: idParams, query: tripCandidatesQuerySchema },
+  responses: {
+    200: { description: "The removed link", content: json(envelope(removedLinkSchema)) },
+    400: badInput,
+    404: {
+      description: "`DOCUMENT_NOT_FOUND` or `DOCUMENT_LINK_NOT_FOUND`",
+      content: errorContent,
+    },
   },
 });

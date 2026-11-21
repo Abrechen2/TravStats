@@ -6,13 +6,13 @@ import { logger } from "../lib/logger";
 /**
  * How many kept originals hang off one entry — asked only when it matters.
  *
- * Every one of the five entry types the documents API serves carries
- * `onDelete: Cascade` on `Document`, proven live against the database by
- * `backend/src/__tests__/integrity/cascades.integrity.test.ts` (7/7 on
- * 2026-09-19): deleting a flight, a cruise, a stay, a place visit or a trip
- * takes its documents with it. The write-path audit of the same day filed that
- * as findings 3 and 6 — the cascade is real, and not one confirm dialog named
- * it. A boarding pass or a hotel bill is frequently the only copy there is.
+ * Until document links (D1) a document had one owner and deleting a flight,
+ * a cruise, a stay, a place visit or a trip took its documents with it (write-path
+ * audit of 2026-09-19, findings 3 and 6). Now the entry's LINKS go and the
+ * document is kept: unfiled, with a grace period, unless another entry still
+ * holds it. The count is the number of documents linked to the entry, and the
+ * dialog says they are detached, not destroyed. A boarding pass or a hotel bill
+ * is frequently the only copy there is, which is why the sentence is still worth showing.
  *
  * Pass `null` for "do not ask yet". The five dialogs pass the entry only once
  * the confirmation is opening, so a detail page still costs the same requests

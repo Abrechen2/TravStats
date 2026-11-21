@@ -224,7 +224,7 @@ describe("documentService", () => {
     fs.rmSync(documentPath(youngName), { force: true });
   });
 
-  it("removes a deleted entry's bytes on the next sweep, whichever route deleted the entry", async () => {
+  it("deleting an entry unfiles its document with a 30-day grace, then the sweep removes row and bytes", async () => {
     const doomedFlight = await prisma.flight.create({ data: flightData(userId) });
     const { document } = await createDocument({
       userId,
@@ -232,10 +232,18 @@ describe("documentService", () => {
       entry: { type: "flight", id: doomedFlight.id },
     });
     await prisma.flight.delete({ where: { id: doomedFlight.id } });
-    expect(await prisma.document.findUnique({ where: { id: document.id } })).toBeNull();
-    expect(fs.existsSync(documentPath(document.storedName))).toBe(true);
+    // Plan 2026-11-21-document-links, rule 5: the entry's links go, not the document.
+    const kept = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
+    expect(kept.flightId).toBeNull();
+    expect(kept.linkedAt).toBeNull();
+    expect(kept.unlinkedAt).toBeInstanceOf(Date);
 
     await sweepDocuments(new Date(Date.now() + 2 * 60 * 60 * 1000));
+    expect(await prisma.document.findUnique({ where: { id: document.id } })).not.toBeNull();
+    expect(fs.existsSync(documentPath(document.storedName))).toBe(true);
+
+    await sweepDocuments(new Date(Date.now() + 31 * 24 * 60 * 60 * 1000));
+    expect(await prisma.document.findUnique({ where: { id: document.id } })).toBeNull();
     expect(fs.existsSync(documentPath(document.storedName))).toBe(false);
   });
 

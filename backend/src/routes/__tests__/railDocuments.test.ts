@@ -113,14 +113,16 @@ describe("rail journey documents and booking legs", () => {
     ).rejects.toThrow(/documents_single_owner_check/);
   });
 
-  it("deletes a journey's documents with the journey", async () => {
+  it("unfiles a journey's documents when the journey is deleted (document links, rule 5)", async () => {
     const id = await upload("cascade");
     const res = await request(app)
       .post("/api/v1/rail")
       .set("Cookie", cookie)
       .send({ ...journey(), documentIds: [id] });
     await request(app).delete(`/api/v1/rail/${res.body.data.id}`).set("Cookie", cookie);
-    expect(await prisma.document.findUnique({ where: { id } })).toBeNull();
+    const kept = await prisma.document.findUniqueOrThrow({ where: { id } });
+    expect(kept).toMatchObject({ railJourneyId: null, linkedAt: null });
+    expect(kept.unlinkedAt).toBeInstanceOf(Date);
   });
 
   it("reads a journey with its booking's other legs, in departure order", async () => {

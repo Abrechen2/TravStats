@@ -106,7 +106,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
   const [deleting, setDeleting] = useState(false);
-  /** Its documents cascade with it — counted only while the question is open. */
+  /** Its documents are detached from it (kept, unfiled) — counted only while the question is open. */
   const deleteDocumentCount = useDocumentCount(
     deleteConfirmOpen && flightToDelete ? { type: "flight", id: flightToDelete.id } : null
   );

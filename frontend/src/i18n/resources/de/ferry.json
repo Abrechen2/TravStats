@@ -53,7 +53,7 @@
   "noTrip": "Keine Reise",
   "cancelled": "Storniert",
   "remove": "Überfahrt löschen",
-  "confirmDelete": "Überfahrt und zugehörige Dokumente löschen?",
+  "confirmDelete": "Überfahrt löschen? Zugehörige Dokumente bleiben erhalten.",
   "straightDistance": "Luftlinie (Schätzung)",
   "duration": "Dauer",
   "details": "Überfahrt",

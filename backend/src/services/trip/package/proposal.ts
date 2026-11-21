@@ -36,6 +36,7 @@ import type {
   ProposalBooking,
   ProposalCruise,
   ProposalEndpoint,
+  ProposalCover,
   ProposalDocument,
   ProposalFlight,
   ProposalReason,
@@ -43,6 +44,7 @@ import type {
   ProposalTrip,
   ProposalWarning,
 } from "./types";
+import { coverActionOf } from "./types";
 
 export interface ProposalOptions {
   documentId?: string;
@@ -296,21 +298,41 @@ async function proposeCruise(
   };
 }
 
+function coversOf(decided: Pick<PackageProposal, "flights" | "stays" | "cruise">): ProposalCover[] {
+  const covers: ProposalCover[] = [];
+  for (const f of decided.flights) {
+    const action = coverActionOf(f);
+    if (action) covers.push({ type: "flight", index: f.index, action });
+  }
+  for (const s of decided.stays) {
+    const action = coverActionOf(s);
+    if (action) covers.push({ type: "lodgingStay", index: s.index, action });
+  }
+  const cruiseAction = decided.cruise ? coverActionOf(decided.cruise) : null;
+  if (cruiseAction) covers.push({ type: "cruise", index: null, action: cruiseAction });
+  return covers;
+}
+
 async function proposeDocument(
   userId: string,
   documentId: string | undefined,
-  tripId: string | null
+  tripId: string | null,
+  decided: Pick<PackageProposal, "flights" | "stays" | "cruise">
 ): Promise<{ document: ProposalDocument | null; warnings: ProposalWarning[] }> {
   if (!documentId) return { document: null, warnings: [] };
+  const covers = coversOf(decided);
   const doc = await prisma.document.findFirst({ where: { id: documentId, userId } });
   if (!doc) throw new AppError("Document not found", 404);
   const filed = entryOf(doc);
-  if (!filed) return { document: { id: doc.id, action: "file" }, warnings: [] };
+  if (!filed) return { document: { id: doc.id, action: "file", covers }, warnings: [] };
   if (filed.type === "trip" && filed.id === tripId) {
-    return { document: { id: doc.id, action: "skip", reason: "alreadyOnTrip" }, warnings: [] };
+    return {
+      document: { id: doc.id, action: "skip", reason: "alreadyOnTrip", covers },
+      warnings: [],
+    };
   }
   return {
-    document: { id: doc.id, action: "skip", reason: "filedElsewhere" },
+    document: { id: doc.id, action: "skip", reason: "filedElsewhere", covers },
     warnings: [{ code: "documentFiledElsewhere", subject: doc.originalName ?? doc.id }],
   };
 }
@@ -323,12 +345,14 @@ export async function buildPackageProposal(
   const choices = options.choices ?? {};
   const head = await proposeTrip(userId, contract, choices);
   const tripId = head.trip.id;
-  const [flights, stays, cruise, document] = [
-    await proposeFlights(userId, contract, choices, tripId),
-    await proposeStays(userId, contract, choices, tripId),
-    await proposeCruise(userId, contract, choices, tripId),
-    await proposeDocument(userId, options.documentId, tripId),
-  ];
+  const flights = await proposeFlights(userId, contract, choices, tripId);
+  const stays = await proposeStays(userId, contract, choices, tripId);
+  const cruise = await proposeCruise(userId, contract, choices, tripId);
+  const document = await proposeDocument(userId, options.documentId, tripId, {
+    flights: flights.flights,
+    stays: stays.stays,
+    cruise: cruise.cruise,
+  });
   return {
     trip: head.trip,
     booking: head.booking,

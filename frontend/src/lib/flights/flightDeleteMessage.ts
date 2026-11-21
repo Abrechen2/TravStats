@@ -22,8 +22,8 @@ export interface FlightDeleteFacts {
 
 /**
  * What a flight's delete confirmation says (forgejo#250), ONE home for the
- * list and the detail page: what goes (the flight, and its documents, counted
- * — they cascade with it), and what stays, by name (its trip, its booking and
+ * list and the detail page: what goes (the flight; its documents are counted and
+ * said to be detached, not deleted), and what stays, by name (its trip, its booking and
  * the booking's other flights). It used to say "a trip stays" whether or not
  * the flight had one, and nothing about documents on the list.
  */

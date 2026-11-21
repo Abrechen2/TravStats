@@ -7,8 +7,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * What the delete question for one train ride says (forgejo#250) — on the list
  * AND on the detail page, from one function so the two cannot drift.
  *
- * What goes: the ride itself, named by its route, and the originals filed
- * with it (`Document` cascades from `RailJourney`). What stays: the trip it
+ * What goes: the ride itself, named by its route, ; the originals filed
+ * with it are detached, not deleted (`withDocumentNote`). What stays: the trip it
  * is filed under and the other trains of its booking — a booking's legs are
  * bound by `bookingId`, which is `SetNull`, so deleting one train never takes
  * its connection with it, and the question says so.

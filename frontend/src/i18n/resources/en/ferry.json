@@ -53,7 +53,7 @@
   "noTrip": "No trip",
   "cancelled": "Cancelled",
   "remove": "Delete crossing",
-  "confirmDelete": "Delete this crossing and its documents?",
+  "confirmDelete": "Delete this crossing? Its documents are kept.",
   "straightDistance": "Straight line (estimate)",
   "duration": "Duration",
   "details": "Crossing",

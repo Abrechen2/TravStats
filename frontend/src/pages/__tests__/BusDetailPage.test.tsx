@@ -314,7 +314,7 @@ describe("BusDetailPage", () => {
     expect(message).toContain(
       "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
     );
-    expect(message).toContain("Dazu 3 Dokumente, die mit gelöscht werden.");
+    expect(message).toContain("Dazu 3 Dokumente: Diese werden nur von diesem Eintrag gelöst");
     expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 1 mitreisende Person");
     expect(screen.getByText("confirm-delete").className).toContain("var(--danger)");
   });

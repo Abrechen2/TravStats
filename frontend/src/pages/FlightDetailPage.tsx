@@ -511,10 +511,8 @@ export default function FlightDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("flights:table.deleteConfirm.title")}
-        // Finding 3 of the write-path audit (2026-09-19): a flight's
-        // documents cascade with it (`onDelete: Cascade`, proven live by
-        // `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and
-        // the dialog named only the flight.
+        // Finding 3 of the write-path audit (2026-09-19): the dialog
+        // named only the flight; its documents are detached, not deleted (document links, D1).
         message={flightDeleteMessage(
           t,
           {

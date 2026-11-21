@@ -38,6 +38,7 @@ import {
 } from "./trip/mergeTripRelations";
 import { moveTripLinks } from "./travtrack/links";
 import { takeTravTrackLock } from "./travtrack/lock";
+import { repointLinks } from "./documents/documentLinks";
 
 /** A trip is "micro" when it has at most this many flights. Matches the
  *  shape of the legacy one-booking auto-trips (outbound + return). */
@@ -326,9 +327,11 @@ export async function mergeTrips(
     // same loss to a user looking for their hotel on the merged trip.
     await tx.lodgingStay.updateMany(move);
     await tx.placeVisit.updateMany(move);
-    // Kept originals filed with a source trip CASCADE with it: a bill that was
-    // never moved is a bill deleted (forgejo#116).
-    await tx.document.updateMany(move);
+    // Kept originals linked to a source trip would lose that link when it is
+    // deleted below (forgejo#116; since the document-links plan the document
+    // itself survives, unfiled). Moved and folded with any link the document
+    // already has to the target.
+    await repointLinks(tx, { type: "trip", ids: sourceIds }, { type: "trip", id: targetId });
     // Trip-wide expenses CASCADE with their trip too (forgejo#140). A
     // section's expense needs nothing: it rides on the section moved above.
     await tx.tripExpense.updateMany(move);

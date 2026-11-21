@@ -134,12 +134,19 @@ describe("sync change triggers", () => {
       ["lodging_stay", stay.id],
       ["place_visit", visit.id],
       ["cruise_stop", cruiseStop.id],
-      ["document", document.id],
     ];
     for (const [entity, id] of expected) {
       const [tombstone] = await tombstonesFor(entity, [id]);
       expect({ entity, id, owner: tombstone?.userId }).toEqual({ entity, id, owner: user.id });
     }
+    // A document outlives its entry since the document-links plan (rule 5):
+    // its owner column is SET NULL, which the feed records as an update.
+    const [docUpdate] = await prisma.syncChange.findMany({
+      where: { entity: "document", entityId: document.id, op: "upsert" },
+      orderBy: { seq: "desc" },
+      take: 1,
+    });
+    expect(docUpdate.changedColumns).toEqual(expect.arrayContaining(["flight_id", "unlinked_at"]));
   });
 
   it("records an ON DELETE SET NULL as an update of the child", async () => {

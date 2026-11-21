@@ -11,6 +11,7 @@ import { propagateDelete, shareSnapshot } from "../sharing/propagate";
 import { restatusTrips } from "../trip/restatusTrips";
 import { findSurfaceSegments } from "./checks/surfaceSegment";
 import { FindingActionError } from "./findingErrors";
+import { repointLinks } from "../documents/documentLinks";
 import { loadRecordSnapshot } from "./recordGather";
 
 /**
@@ -211,12 +212,11 @@ export async function prepareSurfaceConversion(flag: DataQualityFlag): Promise<P
       const rideId = rail ? (await rail.write(tx)).id : (await bus!.write(tx)).id;
       // The originals filed with the flight (tickets, receipts) go with the
       // entry: deleting the flight would delete them.
-      await tx.document.updateMany({
-        where: { flightId },
-        data: rail
-          ? { flightId: null, railJourneyId: rideId }
-          : { flightId: null, busJourneyId: rideId },
-      });
+      await repointLinks(
+        tx,
+        { type: "flight", ids: [flightId] },
+        { type: rail ? "railJourney" : "busJourney", id: rideId }
+      );
       const gone = await shareSnapshot(tx, "flight", flightId);
       const removed = await tx.flight.deleteMany({
         where: { id: flightId, userId: flag.userId, updatedAt: version },

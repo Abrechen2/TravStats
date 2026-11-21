@@ -446,9 +446,7 @@ export default function CruiseDetailPage(): JSX.Element {
         isLoading={deleting}
         title={t("detail.deleteConfirmTitle")}
         // Finding 3 of the write-path audit (2026-09-19): the booking
-        // confirmation filed with a cruise cascades with it (`onDelete:
-        // Cascade`, proven live by
-        // `backend/src/__tests__/integrity/cascades.integrity.test.ts`).
+        // confirmation filed with a cruise is detached, not deleted (document links, D1).
         message={cruiseDeleteMessage(t, cruise, documentCount)}
         confirmText={t("detail.deleteConfirm")}
         cancelText={t("detail.deleteCancel")}

@@ -21,18 +21,27 @@
  */
 import { MAX_CUSTOM_CATEGORY_NAME, MAX_IMPORT_CATEGORIES } from "../../../shared/ratingCategories";
 import { z } from "zod";
+import { LINK_PROVENANCES, LINK_ROLES } from "../../documents/documentLinks";
 import { RAIL_TRANSIT_MODES } from "../../../shared/railCounting";
 import { lat, lon, portRef, requiredZone, shipRef, zone, type PortRef } from "./publicHalf";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
-/** What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`), 3 (no `roadtrips`) and 4. */
-export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4] as const;
+/**
+ * What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`), 3 (no
+ * `roadtrips`), 4 (one owner per document) and 5 (a document may carry several
+ * `links`).
+ */
+export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3, 4, 5] as const;
 
 export function tripFileVersionFor(file: {
   bus?: readonly unknown[];
   ferry?: readonly unknown[];
   roadtrips?: readonly unknown[];
-}): 1 | 2 | 3 | 4 {
+  documents?: readonly { links?: readonly unknown[] }[];
+}): 1 | 2 | 3 | 4 | 5 {
+  // Only a document that really has several links needs version 5; every
+  // other archive stays readable by the older servers that import it.
+  if (file.documents?.some((d) => (d.links?.length ?? 0) > 1)) return 5;
   if ((file.roadtrips?.length ?? 0) > 0) return 4;
   if ((file.ferry?.length ?? 0) > 0) return 3;
   return (file.bus?.length ?? 0) > 0 ? 2 : 1;
@@ -86,7 +95,7 @@ export const manifestHeadSchema = z.object({
 
 export const manifestSchema = manifestHeadSchema
   .extend({
-    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
     appVersion: str(200),
     exportedAt: z.iso.datetime({ offset: true }),
     options: exportOptionsSchema,
@@ -635,10 +644,24 @@ export const ENTITY_KINDS = [
 ] as const;
 export type EntityKind = (typeof ENTITY_KINDS)[number];
 
+const documentEntity = z.object({ kind: z.enum(ENTITY_KINDS), key: key.nullable() }).strict();
+
+/** One link of a document inside the file: an archive-local reference, its role and provenance. */
+const documentLinkSchema = z
+  .object({
+    entity: documentEntity,
+    role: z.enum(LINK_ROLES),
+    provenance: z.enum(LINK_PROVENANCES),
+  })
+  .strict();
+
 const documentSchema = z
   .object({
     file: z.string().regex(/^documents\/[A-Za-z0-9_-]{1,64}\.[a-z0-9]{1,8}$/),
-    entity: z.object({ kind: z.enum(ENTITY_KINDS), key: key.nullable() }).strict(),
+    /** Where the document is filed (its primary link inside the file, else its first). */
+    entity: documentEntity,
+    /** Version 5: every link inside the exported scope. Absent: `entity` alone. */
+    links: z.array(documentLinkSchema).max(200).default([]),
     kind: optStr(200),
     issuedOn: day,
     originalName: optStr(200),
@@ -732,11 +755,25 @@ export const tripFileSchema = z
       dangling(["stops", i, "stayKey"], s.stayKey, stays);
     });
     file.photos.forEach((p, i) => dangling(["photos", i, "stopKey"], p.stopKey, stops));
+    const checkEntity = (path: (string | number)[], entity: z.infer<typeof documentEntity>) => {
+      if (entity.kind === "trip") return;
+      if (entity.key === null) {
+        ctx.addIssue({ code: "custom", path, message: "entity key missing" });
+      } else dangling([...path, "entity"], entity.key, byKind[entity.kind]);
+    };
     file.documents.forEach((d, i) => {
-      if (d.entity.kind === "trip") return;
-      if (d.entity.key === null) {
-        ctx.addIssue({ code: "custom", path: ["documents", i], message: "entity key missing" });
-      } else dangling(["documents", i, "entity"], d.entity.key, byKind[d.entity.kind]);
+      checkEntity(["documents", i], d.entity);
+      d.links.forEach((l, li) => {
+        if (l.entity.kind === "trip") return;
+        if (l.entity.key === null) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["documents", i, "links", li],
+            message: "entity key missing",
+          });
+        } else
+          dangling(["documents", i, "links", li, "entity"], l.entity.key, byKind[l.entity.kind]);
+      });
     });
   });
 export type TripFile = z.infer<typeof tripFileSchema>;

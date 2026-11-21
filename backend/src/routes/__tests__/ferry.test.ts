@@ -529,7 +529,10 @@ describe("Ferry rides API", () => {
       (await request(app).get(`/api/v1/ferry/${id}/documents`).set("Cookie", otherCookie)).status
     ).toBe(404);
     await request(app).delete(`/api/v1/ferry/${id}`).set("Cookie", cookie);
-    expect(await prisma.document.findUnique({ where: { id: ticket.id } })).toBeNull();
+    // Document links, rule 5: the crossing's link goes, the ticket stays unfiled.
+    const kept = await prisma.document.findUniqueOrThrow({ where: { id: ticket.id } });
+    expect(kept.ferryJourneyId).toBeNull();
+    expect(kept.unlinkedAt).toBeInstanceOf(Date);
   });
   it("previews text without creating a crossing", async () => {
     jest.mocked(previewFerryText).mockResolvedValue({

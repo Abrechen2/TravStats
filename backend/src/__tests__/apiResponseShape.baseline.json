@@ -210,6 +210,7 @@
     "dawarichStays.ts",
     "documents.ts",
     "documents/extractValues.ts",
+    "documents/links.ts",
     "domainEntrySuggestions.ts",
     "encryptedShare.ts",
     "encryptedShareSealed.ts",
