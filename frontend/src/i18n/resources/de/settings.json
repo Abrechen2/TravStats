@@ -376,6 +376,39 @@
       "server": "Der Download ist fehlgeschlagen (Serverfehler). Bitte versuche es später erneut."
     }
   },
+  "accountArchive": {
+    "exportButton": "ZIP erstellen",
+    "importButton": "ZIP auswählen",
+    "exporting": "Archiv wird erstellt",
+    "importing": "Archiv wird eingespielt",
+    "exported": "{{size}} · {{rows}} Einträge · {{files}} Dateien, heruntergeladen",
+    "imported": "{{rows}} Einträge und {{files}} Dateien übernommen",
+    "alreadyImported": "Dieses Archiv ist in diesem Konto schon eingespielt.",
+    "partial": "Nicht zugeordnet: {{skipped}} Einträge übersprungen, {{unmatched}} Verweise (z. B. Häfen, Bahnhöfe) ohne Treffer auf diesem Server, {{refused}} Dateien abgelehnt.",
+    "notEmpty": "Dieses Konto enthält schon Einträge. Lege ein neues Konto an und spiele das Archiv dort ein.",
+    "statusFailed": "Konnte nicht prüfen, ob dieses Konto leer ist. Lade die Seite neu.",
+    "moves": "Kommt mit: alle Einträge aller Bereiche, Fotos, Dokumente, Belege, der TravTrack-Verlauf und die Einstellungen.",
+    "stays": "Bleibt zurück: Passwort, Passkeys, Zwei-Faktor, API-Tokens und gespeicherte Anbieter-Schlüssel; Freigaben, Teilen-Links und Verbindungen zu anderen Konten oder Servern; Anmeldungen und gekoppelte Geräte. Fotos, die nur aus Immich oder PhotoPrism verknüpft sind, bleiben Verknüpfungen zum bisherigen Immich bzw. PhotoPrism.",
+    "confirm": {
+      "title": "Konto-Archiv einspielen?",
+      "affects": "Dieses Konto",
+      "after": "Das Konto enthält danach die Einträge, Fotos und Dokumente aus dem Archiv. Bricht etwas ab, bleibt es leer.",
+      "button": "Archiv einspielen"
+    },
+    "failed": {
+      "ACCOUNT_ARCHIVE_TOO_LARGE": "Das Archiv ist größer, als dieser Server zulässt.",
+      "ACCOUNT_ARCHIVE_BUSY": "Für dieses Konto läuft schon ein Export oder Import.",
+      "ACCOUNT_ARCHIVE_NOT_FOUND": "Das fertige Archiv ist nicht mehr da. Bitte neu erstellen.",
+      "ACCOUNT_ARCHIVE_INVALID": "Das ist kein TravStats-Konto-Archiv, oder es ist beschädigt.",
+      "ACCOUNT_ARCHIVE_CHECKSUM": "Das Archiv ist beschädigt: Eine Datei passt nicht zu ihrer Prüfsumme. Nichts wurde übernommen.",
+      "ACCOUNT_ARCHIVE_FORMAT_TOO_NEW": "Das Archiv stammt von einer neueren TravStats-Version. Aktualisiere zuerst diesen Server.",
+      "ACCOUNT_ARCHIVE_SCHEMA_TOO_NEW": "Das Archiv enthält Daten, die dieser Server noch nicht kennt. Aktualisiere zuerst diesen Server.",
+      "ACCOUNT_ARCHIVE_TARGET_NOT_EMPTY": "Dieses Konto enthält schon Einträge. Ein Archiv lässt sich nur in ein leeres Konto einspielen.",
+      "ACCOUNT_ARCHIVE_ALREADY_IMPORTED": "Dieses Archiv wurde auf diesem Server schon in ein anderes Konto eingespielt.",
+      "rate_limited": "Zu viele Versuche in kurzer Zeit. Bitte versuche es in einer Stunde erneut.",
+      "generic": "Das hat nicht geklappt (Serverfehler). Nichts wurde übernommen. Bitte versuche es später erneut."
+    }
+  },
   "password": {
     "title": "Passwort ändern",
     "oldPassword": "Aktuelles Passwort",

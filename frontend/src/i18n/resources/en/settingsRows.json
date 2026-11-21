@@ -211,6 +211,18 @@
       "btn": "Download",
       "res": "Ready · Download"
     },
+    "archiv": {
+      "t": "Move account (ZIP)",
+      "s": "Every entry with photos and documents",
+      "h": "For moving this one account to another TravStats server. Backing up the whole server is the admin's job.",
+      "btn": "Create ZIP"
+    },
+    "archivein": {
+      "t": "Import account archive",
+      "s": "Into an empty account only",
+      "h": "Reads an account archive (ZIP) from another TravStats server. Merging with existing entries is not supported.",
+      "btn": "Choose ZIP"
+    },
     "excelexp": {
       "t": "Excel sheet",
       "s": "One sheet per travel type",
@@ -1387,6 +1399,16 @@
       "kept": "Kept",
       "keptCount_one": "{{count}} backup",
       "keptCount_other": "{{count}} backups"
+    },
+    "notes": {
+      "machine": {
+        "t": "What this backup is",
+        "s": "The full backup of the server with every account, for restoring the whole machine. A single account moves with the account archive (ZIP) under Settings → Data."
+      },
+      "secrets": {
+        "t": "Not in the backup",
+        "s": "Back up /app/data/secrets (encryption and session keys) separately. Without that folder, stored API keys and credentials cannot be decrypted after a restore on a new host."
+      }
     }
   },
   "maintenance": {

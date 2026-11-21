@@ -9,6 +9,7 @@ import { SettingItem, StatusValue } from "../ui/settings";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DataJumpList, DATA_PART_ANCHOR } from "./DataJumpList";
 import MeExportRow from "./MeExportRow";
+import AccountArchiveRows from "./AccountArchiveRows";
 import SpreadsheetSection from "./SpreadsheetSection";
 import TrackArchiveSection from "./TrackArchiveSection";
 import WebdavSyncRow from "./WebdavSyncRow";
@@ -86,8 +87,8 @@ function InstanceBackupRow(): JSX.Element {
 /**
  * The page's two data sections that leave the server: "Sicherung" (the
  * server's last backup for everyone, the account's own copy on WebDAV) and
- * "Mitnehmen" (what the account downloads: all its data as JSON, the Excel
- * sheet, the recordings). A backup restores an instance; the spreadsheet is
+ * "Mitnehmen" (what the account downloads: all its data as JSON, the account
+ * archive to move it to another server, the Excel sheet, the recordings). A backup restores an instance; the spreadsheet is
  * for reading and editing — they are not the same thing, and the rows say so.
  */
 export default function BackupSection(): JSX.Element {
@@ -109,6 +110,7 @@ export default function BackupSection(): JSX.Element {
           <SectionTitle title={t("settingsRows:data.sections.export")} />
           <SettingRows>
             <MeExportRow />
+            <AccountArchiveRows />
             <SpreadsheetSection part="export" />
             <TrackArchiveSection part="export" />
           </SettingRows>

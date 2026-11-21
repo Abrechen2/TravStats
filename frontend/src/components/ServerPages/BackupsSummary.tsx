@@ -57,8 +57,14 @@ export default function BackupsSummary({ backups }: { backups: Backup[] | null }
       })
     : null;
   const auto = row("baknow");
+  const machine = row("notes.machine");
+  const secrets = row("notes.secrets");
   return (
     <>
+      {/* What the backup is and is not (forgejo#433): the machine, not one account,
+          and never the key folder that decrypts stored credentials. */}
+      <SettingItem title={machine.title} sub={machine.sub} scope="allAccounts" />
+      <SettingItem title={secrets.title} sub={secrets.sub} scope="allAccounts" />
       {schedule ? (
         <SettingItem
           title={auto.title}

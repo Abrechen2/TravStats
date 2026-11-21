@@ -211,6 +211,18 @@
       "btn": "Herunterladen",
       "res": "Fertig · Herunterladen"
     },
+    "archiv": {
+      "t": "Konto umziehen (ZIP)",
+      "s": "Alle Einträge mit Fotos und Dokumenten",
+      "h": "Für den Umzug dieses einen Kontos auf einen anderen TravStats-Server. Die Sicherung des ganzen Servers macht der Admin.",
+      "btn": "ZIP erstellen"
+    },
+    "archivein": {
+      "t": "Konto-Archiv einspielen",
+      "s": "Nur in ein leeres Konto",
+      "h": "Liest ein Konto-Archiv (ZIP) von einem anderen TravStats-Server ein. Zusammenführen mit vorhandenen Einträgen gibt es nicht.",
+      "btn": "ZIP auswählen"
+    },
     "excelexp": {
       "t": "Excel-Tabelle",
       "s": "Ein Blatt pro Reiseart",
@@ -1387,6 +1399,16 @@
       "kept": "Aufbewahrt",
       "keptCount_one": "{{count}} Sicherung",
       "keptCount_other": "{{count}} Sicherungen"
+    },
+    "notes": {
+      "machine": {
+        "t": "Was diese Sicherung ist",
+        "s": "Die vollständige Sicherung des Servers mit allen Konten, für eine Wiederherstellung der ganzen Maschine. Ein einzelnes Konto zieht mit dem Konto-Archiv (ZIP) unter Einstellungen → Daten um."
+      },
+      "secrets": {
+        "t": "Nicht in der Sicherung",
+        "s": "/app/data/secrets (Verschlüsselungs- und Sitzungsschlüssel) separat sichern. Ohne diesen Ordner lassen sich gespeicherte API-Schlüssel und Zugangsdaten nach einer Wiederherstellung auf einem neuen Host nicht mehr entschlüsseln."
+      }
     }
   },
   "maintenance": {
