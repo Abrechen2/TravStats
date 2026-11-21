@@ -5,7 +5,7 @@
  * live-tracked flights with the same flight number.
  */
 
-import { PrismaClient, Prisma } from "../prisma";
+import { PrismaClient, Prisma, type Flight } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import * as candidateQuery from "./flightEnrichmentCandidateQuery";
@@ -408,6 +408,133 @@ export async function aggregateFlightData(
   }
 }
 
+type EnrichmentFlight = Flight;
+type EnrichmentSnapshot = ReturnType<typeof snapshotForEnrichment>;
+
+/** The stored side of the diff, including the route fields enrichment may fill. */
+function snapshotForEnrichment(flight: EnrichmentFlight) {
+  return {
+    airline: flight.airline,
+    aircraft: flight.aircraft,
+    gate: flight.gate,
+    terminal: flight.terminal,
+    depIata: flight.depIata,
+    depIcao: flight.depIcao,
+    arrIata: flight.arrIata,
+    arrIcao: flight.arrIcao,
+    departureTime: flight.departureTime?.toISOString() ?? null,
+    arrivalTime: flight.arrivalTime?.toISOString() ?? null,
+    status: flight.status,
+    actualRoute: flight.actualRoute,
+    overflownCountries: flight.overflownCountries,
+    routeDistance: flight.routeDistance,
+  };
+}
+
+/** What the aggregation proposes: everything in `full` mode, only codes and terminal in `slim`. */
+function proposeEnrichment(
+  mode: EnrichmentMode,
+  originalData: EnrichmentSnapshot,
+  aggregatedData: AggregatedFlightData,
+  flight: EnrichmentFlight
+): EnrichmentSnapshot {
+  if (mode === "full") {
+    return {
+      ...originalData,
+      aircraft: aggregatedData.aircraft ?? flight.aircraft,
+      depIcao: aggregatedData.depIcao ?? flight.depIcao,
+      depIata: aggregatedData.depIata ?? flight.depIata,
+      arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+      arrIata: aggregatedData.arrIata ?? flight.arrIata,
+      gate: aggregatedData.gate ?? flight.gate,
+      terminal: aggregatedData.terminal ?? flight.terminal,
+      actualRoute: aggregatedData.typicalRoute?.waypoints ?? flight.actualRoute,
+      overflownCountries:
+        aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
+      routeDistance: aggregatedData.typicalRoute?.routeDistance ?? flight.routeDistance,
+    };
+  }
+  return {
+    // Slim mode: only ICAO codes and terminal — aircraft and route are unreliable for old flights
+    ...originalData,
+    depIcao: aggregatedData.depIcao ?? flight.depIcao,
+    depIata: aggregatedData.depIata ?? flight.depIata,
+    arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+    arrIata: aggregatedData.arrIata ?? flight.arrIata,
+    terminal: aggregatedData.terminal ?? flight.terminal,
+  };
+}
+
+/** The statistics impact as JSON (Sets become arrays), or null when it cannot be computed. */
+async function statisticsImpactJson(
+  flight: EnrichmentFlight,
+  originalData: EnrichmentSnapshot,
+  proposedData: EnrichmentSnapshot
+): Promise<Prisma.InputJsonValue | null> {
+  try {
+    const { calculateStatisticsImpact } = await import("./pendingUpdateService");
+    const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
+    if (!impact) return null;
+    return {
+      ...impact,
+      airlines: {
+        before: Array.from(impact.airlines.before),
+        after: Array.from(impact.airlines.after),
+        added: impact.airlines.added,
+        removed: impact.airlines.removed,
+      },
+      airports: {
+        before: Array.from(impact.airports.before),
+        after: Array.from(impact.airports.after),
+        added: impact.airports.added,
+        removed: impact.airports.removed,
+      },
+    };
+  } catch (error: unknown) {
+    logger.warn({
+      operation: "calculate_statistics_impact_error",
+      message: "Failed to calculate statistics impact",
+      context: { flightId: flight.id },
+      error: {
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+    return null;
+  }
+}
+
+/**
+ * Whether enrichment may run for this flight at all: the user has it enabled
+ * and the aggregation is confident enough. Logs and answers false otherwise.
+ */
+async function enrichmentAllowed(
+  flight: EnrichmentFlight,
+  aggregatedData: AggregatedFlightData
+): Promise<boolean> {
+  const settings = await getUserEnrichmentSettings(flight.userId);
+  if (!settings || !settings.enabled) {
+    logger.warn({
+      operation: "create_historical_enrichment_disabled",
+      message: "Historical enrichment disabled for user",
+      context: { userId: flight.userId, flightId: flight.id },
+    });
+    return false;
+  }
+  if (aggregatedData.confidence < settings.minConfidence) {
+    logger.info({
+      operation: "create_historical_enrichment_low_confidence",
+      message: "Confidence below threshold",
+      context: {
+        flightId: flight.id,
+        confidence: aggregatedData.confidence,
+        minConfidence: settings.minConfidence,
+      },
+    });
+    return false;
+  }
+  return true;
+}
+
 /**
  * Create a pending update for historical enrichment
  */
@@ -431,76 +558,10 @@ export async function createHistoricalEnrichment(
     }
 
     const mode = getEnrichmentMode(flight.departureTime ?? new Date());
+    if (!(await enrichmentAllowed(flight, aggregatedData))) return null;
 
-    // Get user settings
-    const settings = await getUserEnrichmentSettings(flight.userId);
-    if (!settings || !settings.enabled) {
-      logger.warn({
-        operation: "create_historical_enrichment_disabled",
-        message: "Historical enrichment disabled for user",
-        context: { userId: flight.userId, flightId },
-      });
-      return null;
-    }
-
-    // Check confidence threshold
-    if (aggregatedData.confidence < settings.minConfidence) {
-      logger.info({
-        operation: "create_historical_enrichment_low_confidence",
-        message: "Confidence below threshold",
-        context: {
-          flightId,
-          confidence: aggregatedData.confidence,
-          minConfidence: settings.minConfidence,
-        },
-      });
-      return null;
-    }
-
-    // Create original data snapshot
-    const originalData = {
-      airline: flight.airline,
-      aircraft: flight.aircraft,
-      gate: flight.gate,
-      terminal: flight.terminal,
-      depIata: flight.depIata,
-      depIcao: flight.depIcao,
-      arrIata: flight.arrIata,
-      arrIcao: flight.arrIcao,
-      departureTime: flight.departureTime?.toISOString() ?? null,
-      arrivalTime: flight.arrivalTime?.toISOString() ?? null,
-      status: flight.status,
-      actualRoute: flight.actualRoute,
-      overflownCountries: flight.overflownCountries,
-      routeDistance: flight.routeDistance,
-    };
-
-    // Create proposed data
-    const proposedData =
-      mode === "full"
-        ? {
-            ...originalData,
-            aircraft: aggregatedData.aircraft ?? flight.aircraft,
-            depIcao: aggregatedData.depIcao ?? flight.depIcao,
-            depIata: aggregatedData.depIata ?? flight.depIata,
-            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
-            arrIata: aggregatedData.arrIata ?? flight.arrIata,
-            gate: aggregatedData.gate ?? flight.gate,
-            terminal: aggregatedData.terminal ?? flight.terminal,
-            actualRoute: aggregatedData.typicalRoute?.waypoints ?? flight.actualRoute,
-            overflownCountries:
-              aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
-            routeDistance: aggregatedData.typicalRoute?.routeDistance ?? flight.routeDistance,
-          }
-        : {
-            // Slim mode: only ICAO codes and terminal — aircraft and route are unreliable for old flights
-            ...originalData,
-            depIcao: aggregatedData.depIcao ?? flight.depIcao,
-            depIata: aggregatedData.depIata ?? flight.depIata,
-            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
-            arrIata: aggregatedData.arrIata ?? flight.arrIata,
-            terminal: aggregatedData.terminal ?? flight.terminal,
-          };
+    const originalData = snapshotForEnrichment(flight);
+    const proposedData = proposeEnrichment(mode, originalData, aggregatedData, flight);
 
     // Calculate changes
     const { calculateChanges } = await import("./flightAutoUpdate");
@@ -508,42 +569,8 @@ export async function createHistoricalEnrichment(
 
     // Calculate expiry (7 days for historical enrichments)
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const statisticsImpact = await statisticsImpactJson(flight, originalData, proposedData);
 
-    // Calculate statistics impact
-    let statisticsImpact: Prisma.InputJsonValue | null = null;
-    try {
-      const { calculateStatisticsImpact } = await import("./pendingUpdateService");
-      const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
-      // Convert Set objects in the impact to arrays for JSON serialization
-      if (impact) {
-        statisticsImpact = {
-          ...impact,
-          airlines: {
-            before: Array.from(impact.airlines.before),
-            after: Array.from(impact.airlines.after),
-            added: impact.airlines.added,
-            removed: impact.airlines.removed,
-          },
-          airports: {
-            before: Array.from(impact.airports.before),
-            after: Array.from(impact.airports.after),
-            added: impact.airports.added,
-            removed: impact.airports.removed,
-          },
-        };
-      }
-    } catch (error: unknown) {
-      logger.warn({
-        operation: "calculate_statistics_impact_error",
-        message: "Failed to calculate statistics impact",
-        context: { flightId: flight.id },
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Create metadata
     const metadata = {
       sourceFlightsCount: aggregatedData.sourceFlightsCount,
       confidence: aggregatedData.confidence,

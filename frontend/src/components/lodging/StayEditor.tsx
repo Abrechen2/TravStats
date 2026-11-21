@@ -1,25 +1,19 @@
 import { DeadlineFields } from "../deadlines/DeadlineFields";
-import { deadlineWire, type DeadlineDraft } from "../deadlines/deadlineDraft";
-import { useEffect, useId, useState } from "react";
+import { type DeadlineDraft } from "../deadlines/deadlineDraft";
+import { useId, useState } from "react";
 import type { JSX } from "react";
-import { dayInput } from "../../lib/api/timeInput";
 import {
   isOutcomeUnknownSaveError,
   isTransientSaveError,
   saveErrorKey,
 } from "../../lib/saveErrorMessage";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useRatingCategories } from "../../hooks/useRatingCategories";
-import { ratingFields, ratingsPayload, withRating } from "./ratingFields";
-import { deriveStayOverallRating, storedRatingsOf } from "../../shared/ratingDerivation";
-import LoyaltyManageLink from "../Loyalty/LoyaltyManageLink";
+import { withRating } from "./ratingFields";
 import { useSettingsStore } from "../../store/settingsStore";
 import { currencyForCountry } from "../../shared/countryCurrency";
-import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
-import { tripsApi } from "../../lib/api";
+import { createStay, updateStay } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
 import Modal from "../Modal";
-import TagInput from "../TagInput";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -30,8 +24,13 @@ import {
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
 import { useStayDatesFromTrip } from "../../hooks/useStayDatesFromTrip";
 import { useStayConflicts } from "../../hooks/useStayConflicts";
+import { StayEditorFooter } from "./StayEditorFooter";
+import { StayEditorAmenitiesSection, StayEditorLoyaltySection } from "./StayEditorExtraSections";
+import { useStayDerived } from "./useStayDerived";
+import { useStayEditorLookups } from "./useStayEditorLookups";
+import { buildStayInput } from "./stayEditorInput";
+import { INPUT_CLASS } from "./stayEditorShared";
 import { StayConflictNotice } from "./StayConflictNotice";
-import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
 import { StayEditorTripSection } from "./StayEditorTripSection";
 import { StayEditorBoardSection, StayEditorRoomFields } from "./StayEditorRoomSection";
@@ -41,19 +40,7 @@ import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { StayEditorDatesSection } from "./StayEditorDatesSection";
 import { stayDateErrors, stayDraftFields } from "./stayEditorDraft";
-import { derivePricePerNight } from "../../lib/lodgingFormat";
-import { deriveLodgingStatus } from "../../shared/statusDerivation";
-import { deriveStayMembership } from "../../shared/membershipDerivation";
-import { parseDecimalInput } from "../../lib/decimalInput";
-import type {
-  LodgingStay,
-  StayInput,
-  BoardType,
-  StayStatus,
-  LodgingCurrency,
-  LodgingMembership,
-} from "../../types/lodging";
-import type { Trip } from "../../types";
+import type { LodgingStay, BoardType, LodgingCurrency } from "../../types/lodging";
 
 type Mode = "create" | "edit";
 
@@ -99,25 +86,6 @@ interface StayEditorProps {
    */
   onReload?: () => void;
 }
-
-// `pointer-coarse:` - touch sizing follows the POINTER, not the width
-// (forgejo#249): an iPad is wide and finger-operated, and a `py-2 text-sm`
-// input is ~38 px tall under a 44 px target.
-const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] pointer-coarse:min-h-(--ts-size-touch-min)";
-
-// A stay's dates are calendar days, sent as the bare `YYYY-MM-DD` the
-// picker gives (ADR 0002): the server stores a DATE, so there is no instant
-// to parse. It used to send `T00:00:00.000Z` because the schema ran
-// `new Date(v)` on whatever arrived and an offset-less string would have
-// been read in the SERVER's zone - the time model removes that parse.
-const fromDateInput = (date: string): string | null => dayInput(date);
-
-const splitCsv = (v: string): string[] =>
-  v
-    .split(",")
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0);
 
 /**
  * Modal editor for one `LodgingStay` (a single visit to a hotel/campsite):
@@ -215,8 +183,7 @@ export function StayEditor({
   const [deadlines, setDeadlines] = useState<DeadlineDraft>(initial.deadlines);
 
   const entrySuggestions = useLodgingEntrySuggestions(lodgingId);
-  const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const { memberships, trips } = useStayEditorLookups();
 
   const tripDates = useStayDatesFromTrip({
     enabled: mode === "create" && datePrecision === "DAY",
@@ -284,93 +251,34 @@ export function StayEditor({
     checkOut: dateErrorKeys.checkOut ? t(dateErrorKeys.checkOut) : undefined,
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const rows = await listMemberships();
-        if (!cancelled) setMemberships(rows);
-      } catch (err: unknown) {
-        logger.error("StayEditor: failed to load memberships", err);
-      }
-    })();
-    void (async () => {
-      try {
-        const rows = await tripsApi.getAll();
-        if (!cancelled) setTrips(rows);
-      } catch (err: unknown) {
-        logger.error("StayEditor: failed to load trips", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // What the backend will store for these dates. Shown next to the cancelled
-  // checkbox so the derived state is visible rather than a surprise after save.
-  // With no dates the deriver has nothing to work from and returns `current`.
-  // "completed" is the right default there: an undated stay is one being
-  // recorded after the fact.
-  const derivedStatus = deriveLodgingStatus({
-    checkIn: datePrecision === "NONE" || !checkIn ? null : new Date(checkIn),
-    checkOut: datePrecision !== "DAY" || !checkOut ? null : new Date(checkOut),
-    current: datePrecision === "NONE" ? "completed" : "scheduled",
-  }) as StayStatus;
-  // The single value the save path sends - no second source to drift from.
-  const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
-
-  // Either notation: `parseFloat` read "1.500,00" as 1.5 and "39,90" as 39.
-  const parsedTotalPrice = parseDecimalInput(totalPrice);
-  const parsedManualFxRate =
-    manualFxRate.trim() && Number.isFinite(Number.parseFloat(manualFxRate))
-      ? Number.parseFloat(manualFxRate)
-      : null;
-  // The SAME function the server runs on save (shared/ratingDerivation.ts), so
-  // the readout cannot promise a number the backend then stores differently.
-  // `current` carries an overall the stay already has with no components behind
-  // it - an import, or a row from before the components existed. Without it,
-  // merely opening such a stay and saving would wipe the user's own score.
-  // It sees every value the stay HAS - never the set of switched-on
-  // categories - so switching one off cannot move an old stay's overall.
-  const derivedRatingOverall = deriveStayOverallRating({
-    ratings,
-    current: stay?.ratingOverall ?? null,
-  });
-  const { view: ratingView, labelOf: ratingLabelOf } = useRatingCategories();
-  const { active: activeRatingFields, retired: retiredRatingFields } = ratingFields(
-    ratingView,
-    ratings,
-    ratingLabelOf
-  );
-  const derivedPricePerNight = derivePricePerNight(
-    Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
+  const {
+    derivedStatus,
+    effectiveStatus,
+    parsedTotalPrice,
+    parsedManualFxRate,
+    derivedRatingOverall,
+    activeRatingFields,
+    retiredRatingFields,
+    derivedPricePerNight,
+    resolvedMembership,
+    resolvedMembershipName,
+    parsedNights,
+  } = useStayDerived({
+    datePrecision,
     checkIn,
-    checkOut
-  );
-
-  // The SAME function the server resolves with (shared/membershipDerivation.ts).
-  // `membershipId` is an OVERRIDE, never the answer - a card attached to the
-  // hotel's chain covers this stay without the user restating it here.
-  const resolvedMembership = deriveStayMembership({
-    overrideId: membershipId || null,
-    optOut: membershipOptOut,
+    checkOut,
+    isCancelled,
+    nightsText,
+    totalPrice,
+    manualFxRate,
+    ratings,
+    stay,
+    membershipId,
+    membershipOptOut,
     lodgingId,
-    lodgingChainId: lodgingChainId ?? null,
-    memberships: memberships.map((m) => ({
-      id: m.id,
-      createdAt: m.createdAt,
-      chainIds: m.chainIds,
-      lodgingIds: m.lodgingIds,
-    })),
+    lodgingChainId,
+    memberships,
   });
-  const resolvedMembershipName =
-    memberships.find((m) => m.id === resolvedMembership.membershipId)?.programName ?? null;
-
-  const parsedNights =
-    nightsText.trim() && Number.isFinite(Number.parseInt(nightsText, 10))
-      ? Math.max(0, Number.parseInt(nightsText, 10))
-      : null;
 
   const submit = async (): Promise<void> => {
     failure.markAttempted();
@@ -403,61 +311,36 @@ export function StayEditor({
       // The notice is up and has focus; nothing was sent.
       if (verdict === "ask") return;
     }
-    const input: StayInput = {
-      // At NONE precision both dates are cleared outright rather than left
-      // as whatever the form last held - a hidden date would be stored and
-      // then bucketed as if the user had meant it.
-      checkIn: datePrecision === "NONE" ? null : checkIn ? fromDateInput(checkIn) : null,
-      checkOut: datePrecision === "DAY" && checkOut ? fromDateInput(checkOut) : null,
-      // A time is a claim about a DAY-precise date - anything else clears
-      // it, matching the backend's invariant (routes/lodging.ts PATCH).
-      checkInTime: datePrecision === "DAY" && checkIn && checkInTime ? checkInTime : null,
-      checkOutTime: datePrecision === "DAY" && checkOut && checkOutTime ? checkOutTime : null,
+    const input = buildStayInput({
+      stay,
       datePrecision,
-      nights: parsedNights,
-      status: effectiveStatus,
-      // `null` (not `undefined`) for every clearable field below - an
-      // omitted key means "leave it alone" to the backend PATCH handler,
-      // while an explicit `null` means "delete this value" (finding 4).
-      // `undefined` would be dropped by JSON.stringify and read back as
-      // "unchanged", so a user could never clear a field once set.
-      roomNumber: roomNumber.trim() || null,
-      roomCategory: roomCategory.trim() || null,
+      checkIn,
+      checkOut,
+      checkInTime,
+      checkOutTime,
+      parsedNights,
+      effectiveStatus,
+      roomNumber,
+      roomCategory,
       board,
-      // Derived, not typed - still PERSISTED, because importers, the stats
-      // service and the API all read the stored column; only the way the
-      // user supplies it changed.
-      pricePerNight: derivedPricePerNight,
+      derivedPricePerNight,
       currency,
-      totalPrice: Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
-      // An emptied field is an explicit null - the user taking their rate
-      // back - and must not collapse into "leave it alone".
-      manualFxRate: parsedManualFxRate,
-      // MUST reach the payload unconditionally (including `false`, to let
-      // an edit turn an award stay back off) - without this, the four
-      // POINTS_PRO_* achievements (Task 11) are permanently unreachable.
+      parsedTotalPrice: Number.isFinite(parsedTotalPrice) ? parsedTotalPrice : null,
+      parsedManualFxRate,
       isAwardStay,
-      // A category the stay carried and the user cleared goes as an explicit
-      // null; an absent key would mean "leave it alone" to the server.
-      ratings: ratingsPayload(stay ? storedRatingsOf(stay) : {}, ratings),
-      // Same rule as pricePerNight: computed here, stored as before, so
-      // every consumer of `ratingOverall` keeps working unchanged.
-      ratingOverall: derivedRatingOverall,
+      ratings,
+      derivedRatingOverall,
       roomAmenities,
-      bookingReference: bookingReference.trim() || null,
-      // Only ever the override - never the derived value. Writing the
-      // resolved card back would give the rule a second stored copy, which
-      // is exactly how the overall-rating derivation drifted out of the
-      // import paths (9fcf5de1).
-      membershipId: membershipOptOut ? null : membershipId || null,
+      bookingReference,
+      membershipId,
       membershipOptOut,
       receiptUrl,
-      tripId: tripId || null,
-      companions: splitCsv(companionsInput),
-      notes: notes.trim() || null,
-      // Only what changed: an untouched deadline is never rewritten.
-      ...deadlineWire(deadlines, initial.deadlines),
-    };
+      tripId,
+      companionsInput,
+      notes,
+      deadlines,
+      initialDeadlines: initial.deadlines,
+    });
     failure.clear();
     // The request and what follows it are two steps (forgejo#247): a list or
     // page that fails to reload must not turn a stored stay into "konnte nicht
@@ -509,61 +392,16 @@ export function StayEditor({
           )}
         </>
       }
-      footer={(requestClose) =>
-        // Stored, but the follow-up failed: the only honest action left is to
-        // close. Another "Speichern" would send nothing (`useSaveOnce`), and
-        // a button that does nothing is worse than no button.
-        saving.afterSaveFailed ? (
-          <>
-            <p role="status" className="mr-auto self-center text-sm text-[var(--text-muted)]">
-              {t(saving.afterSaveFailedKey)}
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
-            >
-              {t("common:buttons.close")}
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Left of the pair, and outlined rather than filled: it sits in the
-                same row as Save without competing with it. The caller asks the
-                question - this button only opens it. */}
-            {onRequestDelete && (
-              <button
-                type="button"
-                data-testid="stay-editor-delete"
-                onClick={onRequestDelete}
-                disabled={saving.saving}
-                className="mr-auto rounded-md border border-[var(--danger)]/50 px-4 py-2 text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10 disabled:opacity-50"
-              >
-                {t("common:buttons.delete")}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={requestClose}
-              disabled={saving.saving}
-              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-            >
-              {t("common:buttons.cancel")}
-            </button>
-            <button
-              type="button"
-              data-testid="stay-editor-save"
-              onClick={(): void => {
-                void submit();
-              }}
-              disabled={saving.saving || saving.saved !== null || conflicts.checking}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
-            >
-              {saving.saving ? t("common:buttons.saving") : t("common:buttons.save")}
-            </button>
-          </>
-        )
-      }
+      footer={(requestClose) => (
+        <StayEditorFooter
+          saving={saving}
+          checking={conflicts.checking}
+          onClose={onClose}
+          requestClose={requestClose}
+          onRequestDelete={onRequestDelete}
+          submit={submit}
+        />
+      )}
     >
       <div ref={failure.rootRef}>
         {introText && (
@@ -651,77 +489,32 @@ export function StayEditor({
           />
         </StayEditorSection>
 
-        <StayEditorSection title={t("lodging:stayEditor.amenitiesSection")}>
-          <Field label={t("lodging:field.roomAmenities")} htmlFor={`${fid}-roomAmenities`}>
-            <TagInput
-              id={`${fid}-roomAmenities`}
-              value={roomAmenities}
-              onChange={setRoomAmenities}
-              suggestions={entrySuggestions.roomAmenities}
-              listLabel={t("lodging:field.amenitySuggestions")}
-              removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
-              placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
-              className={INPUT_CLASS}
-            />
-          </Field>
-          <div className="mt-3">
-            <Field label={t("lodging:field.bookingReference")} htmlFor={`${fid}-reference`}>
-              <input
-                id={`${fid}-reference`}
-                className={INPUT_CLASS}
-                value={bookingReference}
-                onChange={(e): void => setBookingReference(e.target.value)}
-              />
-            </Field>
-          </div>
-        </StayEditorSection>
+        <StayEditorAmenitiesSection
+          fid={fid}
+          roomAmenities={roomAmenities}
+          onRoomAmenitiesChange={setRoomAmenities}
+          suggestions={entrySuggestions.roomAmenities}
+          bookingReference={bookingReference}
+          onBookingReferenceChange={setBookingReference}
+        />
 
         <StayEditorSection title={t("common:deadlines.title")}>
           <DeadlineFields draft={deadlines} onChange={setDeadlines} />
         </StayEditorSection>
 
-        <StayEditorSection title={t("lodging:stayEditor.loyaltySection")}>
-          <div data-testid="stay-editor-membership" className="text-sm">
-            <span className="text-[var(--text-primary)]">
-              {resolvedMembershipName ?? t("lodging:field.noMembership")}
-            </span>
-            <span className="ml-2 text-xs text-[var(--text-muted)]">
-              {t(`lodging:field.membershipSource.${resolvedMembership.source}`)}
-            </span>
-          </div>
-          <button
-            type="button"
-            data-testid="stay-editor-membership-override-toggle"
-            onClick={(): void => setShowMembershipOverride((v) => !v)}
-            className="mt-1 text-xs text-[var(--accent)] hover:underline pointer-coarse:min-h-(--ts-size-touch-min)"
-          >
-            {t("lodging:stayEditor.overrideMembership")}
-          </button>
-          {showMembershipOverride && (
-            <select
-              data-testid="stay-editor-membership-select"
-              aria-label={t("lodging:field.membership")}
-              className={`mt-2 ${INPUT_CLASS}`}
-              value={membershipOptOut ? "__none__" : membershipId}
-              onChange={(e): void => {
-                const v = e.target.value;
-                setMembershipOptOut(v === "__none__");
-                setMembershipId(v === "__none__" ? "" : v);
-              }}
-            >
-              <option value="">{t("lodging:field.membershipDerive")}</option>
-              <option value="__none__">{t("lodging:field.membershipNone")}</option>
-              {memberships.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.programName}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="mt-1">
-            <LoyaltyManageLink testId="stay-editor-membership-manage-link" />
-          </div>
-        </StayEditorSection>
+        <StayEditorLoyaltySection
+          resolvedMembership={resolvedMembership}
+          resolvedMembershipName={resolvedMembershipName}
+          showOverride={showMembershipOverride}
+          onToggleOverride={(): void => setShowMembershipOverride((v) => !v)}
+          membershipId={membershipId}
+          membershipOptOut={membershipOptOut}
+          onMembershipChange={(id, optOut): void => {
+            setMembershipOptOut(optOut);
+            setMembershipId(id);
+          }}
+          memberships={memberships}
+        />
 
         <StayEditorTripSection
           trips={trips}

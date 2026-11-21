@@ -180,6 +180,71 @@ describe("runBulkRefresh", () => {
    * by an earlier run out of the very same provider response that carried the
    * model and the times. Only five fields were ever copied out of it.
    */
+  it("fills the airline codes that are empty, from the provider's first match", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "f9", flightNumber: "LH9", departureTime: new Date(Date.now() - 86400000) },
+    ]);
+    prismaMock.flight.findUnique.mockResolvedValue({
+      aircraftRegistration: "D-AAAA",
+      aircraftModeS: "ABCDEF",
+      isCodeshare: false,
+      airlineIata: null,
+      airlineIcao: "",
+      aircraft: "A320",
+      actualDeparture: new Date(),
+      actualArrival: new Date(),
+    });
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [{ airlineIata: "LH", airlineIcao: "DLH" }],
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.results[0]).toMatchObject({
+      outcome: "updated",
+      fieldsUpdated: ["airlineIata", "airlineIcao"],
+    });
+    expect(prismaMock.flight.update).toHaveBeenCalledWith({
+      where: { id: "f9" },
+      data: { airlineIata: "LH", airlineIcao: "DLH" },
+    });
+  });
+
+  it("files a flight deleted between scan and write as no_data without writing", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([
+      { id: "gone", flightNumber: "LH8", departureTime: new Date(Date.now() - 86400000) },
+    ]);
+    prismaMock.flight.findUnique.mockResolvedValue(null);
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [{ airlineIata: "LH" }],
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.noData).toBe(1);
+    expect(summary.results[0]).toMatchObject({ outcome: "no_data", reason: "flight_deleted" });
+    expect(prismaMock.flight.update).not.toHaveBeenCalled();
+  });
+
+  it("does not wait the pacing delay after a flight deleted between scan and write", async () => {
+    jest.useFakeTimers();
+    try {
+      prismaMock.flight.findMany.mockResolvedValue([
+        { id: "gone", flightNumber: "LH8", departureTime: new Date(Date.now() - 86400000) },
+        { id: "gone2", flightNumber: "LH9", departureTime: new Date(Date.now() - 86400000) },
+      ]);
+      prismaMock.flight.findUnique.mockResolvedValue(null);
+      flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+        flights: [{ airlineIata: "LH" }],
+      });
+      // No timer is advanced: a pacing wait would leave this pending forever.
+      const summary = await runBulkRefresh(USER_ID);
+      expect(summary.noData).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("writes the aircraft type and the actual times the same response carried", async () => {
     prismaMock.flight.findMany.mockResolvedValue([
       { id: "f1", flightNumber: "LX93", departureTime: new Date(Date.now() - 2 * 86400000) },

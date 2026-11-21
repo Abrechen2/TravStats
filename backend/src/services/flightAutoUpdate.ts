@@ -5,7 +5,7 @@
  * and creates pending updates for user review.
  */
 
-import { PrismaClient, Flight, Prisma } from "../prisma";
+import { PrismaClient, Flight } from "../prisma";
 import { lookupFlightDetails, FlightLookupResult } from "./flightLookup";
 import { LookupOutcomeLog } from "./flightLookup/providerOutcome";
 import { prisma } from "../db";
@@ -24,390 +24,314 @@ import {
   type FlightTimeSemantics,
 } from "../utils/timezone";
 import { markFlownOnReportedLanding } from "./flightLandedStatus";
-import { DEVICE_SOURCES, isDeviceSource } from "./flightDevice/deviceSource";
-import { pendingUpdateExpiryMs } from "./autoUpdateExpiry";
-import {
-  wasAlreadyRejected,
-  type FlightChange,
-  type FlightFieldValue,
-} from "./flightUpdateRejections";
+import { wasAlreadyRejected, type FlightChange } from "./flightUpdateRejections";
 
 const prismaClient = prisma as PrismaClient;
 
+import {
+  calculateChanges,
+  convertApiDataToProposed,
+  createPendingUpdate,
+  hasSignificantChanges,
+} from "./flightAutoUpdate/changes";
+
+export {
+  isFlightActive,
+  calculateChanges,
+  hasSignificantChanges,
+  convertApiDataToProposed,
+  createPendingUpdate,
+  type PendingUpdateData,
+} from "./flightAutoUpdate/changes";
+
 export type { FlightChange, FlightFieldValue } from "./flightUpdateRejections";
 
-export interface PendingUpdateData {
-  originalData: FlightDataSnapshot;
-  proposedData: FlightDataSnapshot;
-  changes: FlightChange[];
-  apiSource: string;
-}
-
-const TIME_CHANGE_THRESHOLD_MINUTES = 5; // Only create update if time difference > 5 minutes
-const FLIGHT_ACTIVE_BUFFER_HOURS = 2; // Consider flight active for 2 hours after arrival
 // Beyond this, the API is describing a different rotation of a (usually
 // daily) flight number, not a schedule change to OUR flight. Legitimate
 // same-rotation shifts are minutes to a few hours; the wrong day is ±24h.
 const ROTATION_MISMATCH_MAX_HOURS = 12;
 
-/**
- * Check if a flight is currently active (during flight time + buffer)
- */
-export function isFlightActive(flight: Flight): boolean {
-  // Historical flights have no times and are never "active"
-  if (!flight.departureTime || !flight.arrivalTime) return false;
-  const now = new Date();
-  const departureTime = new Date(flight.departureTime);
-  const arrivalTime = new Date(flight.arrivalTime);
-  const bufferEnd = new Date(arrivalTime.getTime() + FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000);
+type UserSettingsRow = NonNullable<
+  Awaited<ReturnType<typeof prismaClient.userSettings.findUnique>>
+>;
 
-  // Flight is active if: departureTime <= now <= arrivalTime + buffer
-  return (
-    departureTime <= now &&
-    now <= bufferEnd &&
-    (flight.status === "scheduled" || flight.status === "flown")
+/**
+ * The date filter MUST be the LOCAL departure day at the departure
+ * airport, not the UTC day of the stored instant — flight-data APIs
+ * key rotations by local date. EK415 SYD→DXB departs 11 Aug 06:00
+ * local = 10 Aug 20:00 UTC; querying "2026-08-10" returned the
+ * previous day's rotation, which auto-apply then wrote over the
+ * flight, shifting it a full day into the past (prod, 2026-08-11).
+ * Every early-morning departure east of Greenwich hits this.
+ */
+async function localDepartureDay(flight: Flight): Promise<{
+  realDeparture: Date | null;
+  dateStr: string | null;
+}> {
+  const depTz = await getAirportTimezone(flight.depIata ?? flight.depIcao);
+  const realDeparture =
+    normalizeFlightTimeUtc(
+      flight.departureTime,
+      flight.depTimeSemantics as FlightTimeSemantics,
+      depTz
+    ) ?? flight.departureTime;
+  const dateStr = realDeparture ? toLocalDateString(realDeparture, depTz) : null;
+  return { realDeparture, dateStr };
+}
+
+/**
+ * Always recalculate nextApiCheckAt after a check attempt.
+ * The tracking flags come from the response we JUST received, falling
+ * back to the stored row: the API knows the aircraft is airborne before
+ * that fact is ever written to the database (proposed changes land in a
+ * PendingUpdate, not on the flight). Scheduling off the stale row alone
+ * is what ended polling before delayed flights had landed.
+ */
+async function scheduleNextCheck(
+  flight: Flight,
+  apiData: FlightLookupResult | null,
+  outcomes: LookupOutcomeLog
+): Promise<void> {
+  const observedDeparture = apiData?.actualDeparture ?? flight.actualDeparture;
+  const observedArrival = apiData?.actualArrival ?? flight.actualArrival;
+  const recalculated = recalculateNextApiCheckAt(
+    flight.departureTime,
+    flight.arrivalTime,
+    flight.status,
+    flight.flightNumber,
+    {
+      hasActualDeparture: Boolean(observedDeparture),
+      hasActualArrival: Boolean(observedArrival),
+    }
+  );
+  // A provider that FAILED has not said "no data": retry soon (forgejo#365).
+  const providerFailed = !apiData && outcomes.failures().length > 0;
+  const nextCheck = providerFailed
+    ? slotAfterProviderFailure(recalculated, flight.arrivalTime, flight.departureTime)
+    : recalculated;
+  await prismaClient.flight.update({
+    where: { id: flight.id },
+    data: { nextApiCheckAt: nextCheck },
+  });
+  logger.info(
+    {
+      flightId: flight.id,
+      nextCheck: nextCheck?.toISOString(),
+      providerFailed,
+      operation: "next_check_scheduled",
+    },
+    "Next API check scheduled"
   );
 }
 
 /**
- * Calculate differences between original and proposed flight data
+ * Rotation guard: daily flight numbers make a ±24h mismatch the
+ * signature failure mode of any date confusion. A schedule CHANGE is
+ * minutes-to-a-few-hours; a different ROTATION is a day apart. If the
+ * API's scheduled departure is further than 12h from ours, we are
+ * looking at the wrong day's aircraft — proposing (or auto-applying)
+ * its times would rewrite the user's flight onto the wrong date.
  */
-export function calculateChanges(
-  original: FlightDataSnapshot,
-  proposed: FlightDataSnapshot
-): FlightChange[] {
-  const changes: FlightChange[] = [];
+function isWrongRotation(
+  flight: Flight,
+  apiData: FlightLookupResult,
+  realDeparture: Date | null
+): boolean {
+  if (!apiData.departureTime || !realDeparture) return false;
+  const diffHours =
+    Math.abs(new Date(apiData.departureTime).getTime() - realDeparture.getTime()) / 3_600_000;
+  if (diffHours <= ROTATION_MISMATCH_MAX_HOURS) return false;
+  const operation = "rotation_mismatch_rejected";
+  const diff = Math.round(diffHours * 10) / 10;
+  logger.warn(
+    { flightId: flight.id, diffHours: diff, operation },
+    "Rejected API data: scheduled departure too far from ours — wrong rotation"
+  );
+  logger.debug({
+    flightId: flight.id,
+    operation,
+    storedDeparture: realDeparture.toISOString(),
+    apiDeparture: new Date(apiData.departureTime).toISOString(),
+  });
+  return true;
+}
 
-  // Fields to compare
-  const fieldsToCompare = [
-    "airline",
-    "flightNumber",
-    "aircraft",
-    "gate",
-    "terminal",
-    "depIata",
-    "depIcao",
-    "arrIata",
-    "arrIcao",
-    "departureTime",
-    "arrivalTime",
-    "actualDeparture",
-    "actualArrival",
-    "status",
-    "actualRoute",
-    "overflownCountries",
-    "routeDistance",
-  ];
+/**
+ * Mark this flight as live-tracked the moment an API actually returns data,
+ * regardless of whether the diff is "significant" enough for a PendingUpdate.
+ * This is the seed signal that lets Historical Enrichment later find
+ * reference flights — keeping it coupled to the significance filter was
+ * a bootstrap deadlock (fresh accounts could never seed live-tracking).
+ */
+async function markLiveTracked(flight: Flight): Promise<void> {
+  if (flight.hasLiveTracking) return;
+  await prismaClient.flight.update({
+    where: { id: flight.id },
+    data: { hasLiveTracking: true },
+  });
+  logger.info(
+    { flightId: flight.id, operation: "has_live_tracking_set" },
+    "Marked flight as live-tracked (first successful API response)"
+  );
+}
 
-  // Treat null, undefined and empty string uniformly as "empty" so that a first-ever
-  // fill from Prisma's "" default is classified as `added`, not `changed`.
-  const isEmpty = (v: FlightFieldValue): boolean => v === null || v === undefined || v === "";
+/** The stored side of the diff, in the snapshot shape `calculateChanges` reads. */
+function snapshotOf(flight: Flight): FlightDataSnapshot {
+  return {
+    airline: flight.airline,
+    aircraft: flight.aircraft,
+    gate: flight.gate,
+    terminal: flight.terminal,
+    depIata: flight.depIata,
+    depIcao: flight.depIcao,
+    arrIata: flight.arrIata,
+    arrIcao: flight.arrIcao,
+    departureTime: flight.departureTime?.toISOString() ?? null,
+    arrivalTime: flight.arrivalTime?.toISOString() ?? null,
+    actualDeparture: flight.actualDeparture?.toISOString() ?? null,
+    actualArrival: flight.actualArrival?.toISOString() ?? null,
+    status: flight.status,
+  };
+}
 
-  for (const field of fieldsToCompare) {
-    const oldValue = (original as Record<string, FlightFieldValue>)[field];
-    const newValue = (proposed as Record<string, FlightFieldValue>)[field];
+/**
+ * If the user has disabled approval gating, apply the update immediately
+ * instead of leaving it to rot in pending_flight_updates forever.
+ * The pending row is still created for audit (status: applied).
+ */
+async function applyOrAnnounce(
+  userId: string,
+  flight: Flight,
+  updateId: string,
+  changes: FlightChange[],
+  notifyOpts: { diverted: boolean; cancelled: boolean },
+  userSettings: UserSettingsRow
+): Promise<void> {
+  if (userSettings.autoUpdateRequireApproval !== false) {
+    announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
+    return;
+  }
+  const applied = await applyPendingUpdate(updateId, userId);
+  if (applied) {
+    announceChange(userId, flight, changes, { ...notifyOpts, pending: false });
+    logger.info(
+      { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_applied" },
+      "Auto-applied update (requireApproval=false)"
+    );
+  } else {
+    logger.warn(
+      { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_apply_failed" },
+      "Auto-apply failed — pending update left in place"
+    );
+    announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
+  }
+}
 
-    if (isEmpty(oldValue) && !isEmpty(newValue)) {
-      changes.push({
-        field,
-        oldValue: null,
-        newValue,
-        type: "added",
-      });
-    } else if (!isEmpty(oldValue) && isEmpty(newValue)) {
-      changes.push({
-        field,
-        oldValue,
-        newValue: null,
-        type: "removed",
-      });
-    } else if (oldValue !== newValue && !isEmpty(newValue)) {
-      // Special handling for time fields — includes actual off/on-block times
-      // so single-minute-level jitter doesn't churn a "changed" event on every
-      // API poll.
-      const timeFields = new Set([
-        "departureTime",
-        "arrivalTime",
-        "actualDeparture",
-        "actualArrival",
-      ]);
-      if (timeFields.has(field)) {
-        const oldTime =
-          oldValue && (typeof oldValue === "string" || typeof oldValue === "number")
-            ? new Date(oldValue).getTime()
-            : 0;
-        const newTime =
-          newValue && (typeof newValue === "string" || typeof newValue === "number")
-            ? new Date(newValue).getTime()
-            : 0;
-        const diffMinutes = Math.abs(newTime - oldTime) / (1000 * 60);
+/**
+ * Diff the provider's answer against the flight and, when something
+ * significant changed, create the pending update (and apply or announce it).
+ * Returns whether an update row was created.
+ */
+async function proposeChanges(
+  flight: Flight,
+  apiData: FlightLookupResult,
+  userId: string,
+  userSettings: UserSettingsRow
+): Promise<{ created: boolean; significant: boolean }> {
+  const proposedData = convertApiDataToProposed(apiData, flight);
+  const changes = calculateChanges(snapshotOf(flight), proposedData);
 
-        // Only include if difference is significant
-        if (diffMinutes > TIME_CHANGE_THRESHOLD_MINUTES) {
-          changes.push({
-            field,
-            oldValue,
-            newValue,
-            type: "changed",
-          });
-        }
-      } else {
-        changes.push({
-          field,
-          oldValue,
-          newValue,
-          type: "changed",
-        });
-      }
-    }
+  // Only create update if there are significant changes
+  if (!hasSignificantChanges(changes)) {
+    logger.info(
+      { flightId: flight.id, operation: "no_significant_changes" },
+      "No significant changes"
+    );
+    return { created: false, significant: false };
   }
 
-  return changes;
-}
+  // The user already rejected this exact proposal — do not re-offer it.
+  if (await wasAlreadyRejected(flight.id, changes)) return { created: false, significant: false };
 
-/**
- * Check if changes are significant enough to create a pending update.
- *
- * Rules:
- *  - Any change to a critical field (times, airports) is significant.
- *  - Filling a previously-empty field (type `added`) is significant — even a single
- *    one — because "first time we know the gate" is information the user should see.
- *  - Pure modifications to already-populated non-critical fields (gate A12 → B07)
- *    need ≥2 to avoid churn from API noise on a single field.
- *
- * Exported for unit testing.
- */
-export function hasSignificantChanges(changes: FlightChange[]): boolean {
-  if (changes.length === 0) return false;
+  const changedFieldNames = changes.map((c) => c.field);
+  logger.info(
+    {
+      flightId: flight.id,
+      changeCount: changes.length,
+      changedFields: changedFieldNames,
+      operation: "significant_changes_found",
+    },
+    `Found ${changes.length} change(s): ${changedFieldNames.join(", ")}`
+  );
 
-  const criticalFields = [
-    "departureTime",
-    "arrivalTime",
-    "actualDeparture",
-    "actualArrival",
-    "depIata",
-    "depIcao",
-    "arrIata",
-    "arrIcao",
-    // TravStats#156: a new gate or terminal is the one thing a passenger at
-    // the airport needs to hear, and it used to need a second change before
-    // it counted. Provider flapping is bounded by the push dedupe: each new
-    // value reaches a phone at most once.
-    "gate",
-    "terminal",
-    // Only a cancellation ever reaches here (convertApiDataToProposed).
-    "status",
-  ];
-  if (changes.some((c) => criticalFields.includes(c.field))) return true;
+  // Attribute the update to the provider that actually served the data.
+  // (Guessing from which keys are configured mislabelled every AirLabs
+  // fallback result as "aviationstack" — prod audit 2026-06-07.)
+  const apiSource = apiData.source ?? "unknown";
+  const updateId = await createPendingUpdate(flight, proposedData, changes, apiSource);
+  if (!updateId) return { created: false, significant: true };
 
-  // Initial fill — single change is enough to be worth showing the user
-  if (changes.some((c) => c.type === "added")) return true;
-
-  // Pure modifications to existing values need multiple to count
-  return changes.length >= 2;
-}
-
-/**
- * Convert API flight data to proposed flight data format
- *
- * Note: apiData.departureTime and apiData.arrivalTime should already be in UTC
- * (converted by lookupFlightDetails from local airport time to UTC)
- */
-export function convertApiDataToProposed(
-  apiData: FlightLookupResult,
-  originalFlight: Flight
-): FlightDataSnapshot {
-  const proposed: FlightDataSnapshot = {
-    /**
-     * FILLED, never replaced — the one field on this list where the stored
-     * value outranks the provider's, and the operand order says so.
-     *
-     * On a codeshare the two are not "old" and "new", they are two true
-     * answers to different questions: the MARKETING carrier sells the seat,
-     * the OPERATING carrier flies the aeroplane. A provider may report either.
-     * Measured on a real account on 2026-09-03: LX1104, Zurich to Munich,
-     * operated by Helvetic — stored as "Helvetic Airways", and rewritten to
-     * "United Airlines" by an auto-applied update. The row then contradicted
-     * itself, because `airlineIata`/`airlineIcao` still read 2L/OAW, which is
-     * Helvetic. Nobody was asked, and nothing said it had happened.
-     *
-     * The identity of the carrier lives in those two CODES; this column is the
-     * display name beside them, and the user's own text is the better source
-     * for it. The same swap also ends a quieter nuisance: "SWISS" against
-     * "Swiss" produced a change, a proposal and an inbox entry for a
-     * difference of capitalisation.
-     *
-     * An empty column is still filled from the provider — that is a gap, not a
-     * disagreement, and filling it takes nothing away.
-     */
-    airline: originalFlight.airline || apiData.airline,
-    aircraft: apiData.aircraft || originalFlight.aircraft,
-    gate: apiData.departure?.gate || originalFlight.gate,
-    terminal: apiData.departure?.terminal || originalFlight.terminal,
-    depIata: apiData.departure?.iata || originalFlight.depIata,
-    depIcao: apiData.departure?.icao || originalFlight.depIcao,
-    arrIata: apiData.arrival?.iata || originalFlight.arrIata,
-    arrIcao: apiData.arrival?.icao || originalFlight.arrIcao,
-    // Times are already in UTC from lookupFlightDetails, just ensure ISO format
-    departureTime: apiData.departureTime
-      ? new Date(apiData.departureTime).toISOString()
-      : (originalFlight.departureTime?.toISOString() ?? null),
-    arrivalTime: apiData.arrivalTime
-      ? new Date(apiData.arrivalTime).toISOString()
-      : (originalFlight.arrivalTime?.toISOString() ?? null),
-    actualDeparture: apiData.actualDeparture
-      ? new Date(apiData.actualDeparture).toISOString()
-      : (originalFlight.actualDeparture?.toISOString() ?? null),
-    actualArrival: apiData.actualArrival
-      ? new Date(apiData.actualArrival).toISOString()
-      : (originalFlight.actualArrival?.toISOString() ?? null),
-    // A provider's cancellation is proposed like any other change
-    // (TravStats#156). Nothing else may change the status from here: a
-    // diversion keeps "scheduled" (its new destination is the arrIata change),
-    // and "flown"/"historical" belong to the status sweep.
-    status: apiData.statusOverride === "cancelled" ? "cancelled" : originalFlight.status,
+  const notifyOpts = {
+    diverted: apiData.statusOverride === "diverted",
+    cancelled: proposedData.status === "cancelled",
   };
-
-  return proposed;
+  await applyOrAnnounce(userId, flight, updateId, changes, notifyOpts, userSettings);
+  return { created: true, significant: true };
 }
 
 /**
- * Create a pending update for a flight
+ * One due flight. `null` means the flight was passed over before any
+ * proposal was weighed (no time, no data, wrong rotation, no significant
+ * change) — the caller then skips the inter-call pause; otherwise it says
+ * whether an update row was created.
  */
-export async function createPendingUpdate(
+async function checkOneFlight(
   flight: Flight,
-  proposedData: FlightDataSnapshot,
-  changes: FlightChange[],
-  apiSource: string,
-  metadata?: Prisma.InputJsonValue
-): Promise<string | null> {
-  try {
-    // One open suggestion per flight AND per kind of witness. A phone's own
-    // observation (forgejo#194) and a provider's report are kept apart: folded
-    // into one row, the later writer replaced the other's proposal and its
-    // attribution, so a provider poll would erase what the phone saw.
-    // The user's window, but never before the flight has ended (forgejo#389).
-    const flightEndMs =
-      (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
-      FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000;
-    const expiresAt = new Date(
-      Math.max(Date.now() + (await pendingUpdateExpiryMs(flight.userId)), flightEndMs)
+  userId: string,
+  userSettings: UserSettingsRow
+): Promise<number | null> {
+  const { realDeparture, dateStr } = await localDepartureDay(flight);
+  if (!dateStr) {
+    logger.info(
+      { flightId: flight.id, operation: "skip_no_departure_time" },
+      "Skipping flight — no departure time"
     );
-    const existing = await prismaClient.pendingFlightUpdate.findFirst({
-      where: {
-        flightId: flight.id,
-        status: "pending",
-        apiSource: isDeviceSource(apiSource) ? apiSource : { notIn: [...DEVICE_SOURCES] },
-      },
-    });
-
-    if (existing) {
-      // Update existing pending update
-      const updated = await prismaClient.pendingFlightUpdate.update({
-        where: { id: existing.id },
-        data: {
-          proposedData: proposedData as unknown as Prisma.InputJsonValue,
-          changes: changes as unknown as Prisma.InputJsonValue,
-          apiSource,
-          ...(metadata === undefined ? {} : { metadata }),
-          fetchedAt: new Date(),
-          expiresAt,
-          updatedAt: new Date(),
-        },
-      });
-      return updated.id;
-    }
-    // Create original data snapshot
-    const originalData = {
-      airline: flight.airline,
-      aircraft: flight.aircraft,
-      gate: flight.gate,
-      terminal: flight.terminal,
-      depIata: flight.depIata,
-      depIcao: flight.depIcao,
-      arrIata: flight.arrIata,
-      arrIcao: flight.arrIcao,
-      departureTime: flight.departureTime?.toISOString() ?? null,
-      arrivalTime: flight.arrivalTime?.toISOString() ?? null,
-      actualDeparture: flight.actualDeparture?.toISOString() ?? null,
-      actualArrival: flight.actualArrival?.toISOString() ?? null,
-      status: flight.status,
-    };
-
-    // Calculate statistics impact
-    let statisticsImpact: Prisma.InputJsonValue | null = null;
-    try {
-      const { calculateStatisticsImpact } = await import("./pendingUpdateService");
-      const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
-      if (impact) {
-        statisticsImpact = {
-          ...impact,
-          airlines: {
-            before: Array.from(impact.airlines.before),
-            after: Array.from(impact.airlines.after),
-            added: impact.airlines.added,
-            removed: impact.airlines.removed,
-          },
-          airports: {
-            before: Array.from(impact.airports.before),
-            after: Array.from(impact.airports.after),
-            added: impact.airports.added,
-            removed: impact.airports.removed,
-          },
-        };
-      }
-    } catch (error: unknown) {
-      logger.warn({
-        operation: "calculate_statistics_impact_error",
-        message: "Failed to calculate statistics impact",
-        context: { flightId: flight.id },
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    const pendingUpdate = await prismaClient.pendingFlightUpdate.create({
-      data: {
-        flightId: flight.id,
-        userId: flight.userId,
-        status: "pending",
-        originalData: originalData as unknown as Prisma.InputJsonValue,
-        proposedData: proposedData as unknown as Prisma.InputJsonValue,
-        changes: changes as unknown as Prisma.InputJsonValue,
-        apiSource,
-        fetchedAt: new Date(),
-        expiresAt,
-        statisticsImpact: statisticsImpact as Prisma.InputJsonValue,
-        ...(metadata === undefined ? {} : { metadata }),
-      },
-    });
-
-    logger.info({
-      operation: "create_pending_update",
-      message: "Created pending flight update",
-      context: {
-        pendingUpdateId: pendingUpdate.id,
-        flightId: flight.id,
-        userId: flight.userId,
-        changeCount: changes.length,
-        apiSource,
-      },
-    });
-
-    return pendingUpdate.id;
-  } catch (error) {
-    logger.error({
-      operation: "create_pending_update_error",
-      message: "Failed to create pending update",
-      context: { flightId: flight.id, userId: flight.userId },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
+    await prismaClient.flight.update({
+      where: { id: flight.id },
+      data: { nextApiCheckAt: null },
     });
     return null;
   }
+
+  logger.info({ flightId: flight.id, operation: "api_lookup_start" }, "Looking up flight");
+  // Pass full departure/arrival times so lookupFlightDetails can gate
+  // Aviationstack to the live window (±3h of departure / in-flight).
+  const outcomes = new LookupOutcomeLog();
+  const apiData = await lookupFlightDetails(
+    flight.flightNumber!,
+    dateStr,
+    flight.userId,
+    flight.departureTime,
+    flight.arrivalTime,
+    // Two legs on one day (FRA-MUC-JFK) share a number: name the leg.
+    flight.depIata ?? flight.depIcao ?? undefined,
+    outcomes
+  );
+  await scheduleNextCheck(flight, apiData, outcomes);
+
+  if (!apiData) {
+    logger.info({ flightId: flight.id, operation: "api_no_data" }, "No API data returned");
+    return null;
+  }
+  if (isWrongRotation(flight, apiData, realDeparture)) return null;
+  await markLiveTracked(flight);
+
+  // A reported touchdown ends "scheduled" now (flightLandedStatus.ts).
+  await markFlownOnReportedLanding(flight, apiData.actualArrival);
+
+  const { created, significant } = await proposeChanges(flight, apiData, userId, userSettings);
+  if (!significant) return null;
+  return created ? 1 : 0;
 }
 
 /**
@@ -454,219 +378,9 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
     for (const flight of activeFlights) {
       try {
-        // Lookup flight data from API.
-        //
-        // The date filter MUST be the LOCAL departure day at the departure
-        // airport, not the UTC day of the stored instant — flight-data APIs
-        // key rotations by local date. EK415 SYD→DXB departs 11 Aug 06:00
-        // local = 10 Aug 20:00 UTC; querying "2026-08-10" returned the
-        // previous day's rotation, which auto-apply then wrote over the
-        // flight, shifting it a full day into the past (prod, 2026-08-11).
-        // Every early-morning departure east of Greenwich hits this.
-        const depTz = await getAirportTimezone(flight.depIata ?? flight.depIcao);
-        const realDeparture =
-          normalizeFlightTimeUtc(
-            flight.departureTime,
-            flight.depTimeSemantics as FlightTimeSemantics,
-            depTz
-          ) ?? flight.departureTime;
-        const dateStr = realDeparture ? toLocalDateString(realDeparture, depTz) : null;
-        if (!dateStr) {
-          logger.info(
-            { flightId: flight.id, operation: "skip_no_departure_time" },
-            "Skipping flight — no departure time"
-          );
-          await prismaClient.flight.update({
-            where: { id: flight.id },
-            data: { nextApiCheckAt: null },
-          });
-          continue;
-        }
-
-        logger.info({ flightId: flight.id, operation: "api_lookup_start" }, "Looking up flight");
-        // Pass full departure/arrival times so lookupFlightDetails can gate
-        // Aviationstack to the live window (±3h of departure / in-flight).
-        const outcomes = new LookupOutcomeLog();
-        const apiData = await lookupFlightDetails(
-          flight.flightNumber!,
-          dateStr,
-          flight.userId,
-          flight.departureTime,
-          flight.arrivalTime,
-          // Two legs on one day (FRA-MUC-JFK) share a number: name the leg.
-          flight.depIata ?? flight.depIcao ?? undefined,
-          outcomes
-        );
-
-        // Always recalculate nextApiCheckAt after a check attempt.
-        // The tracking flags come from the response we JUST received, falling
-        // back to the stored row: the API knows the aircraft is airborne before
-        // that fact is ever written to the database (proposed changes land in a
-        // PendingUpdate, not on the flight). Scheduling off the stale row alone
-        // is what ended polling before delayed flights had landed.
-        const observedDeparture = apiData?.actualDeparture ?? flight.actualDeparture;
-        const observedArrival = apiData?.actualArrival ?? flight.actualArrival;
-        const recalculated = recalculateNextApiCheckAt(
-          flight.departureTime,
-          flight.arrivalTime,
-          flight.status,
-          flight.flightNumber,
-          {
-            hasActualDeparture: Boolean(observedDeparture),
-            hasActualArrival: Boolean(observedArrival),
-          }
-        );
-        // A provider that FAILED has not said "no data": retry soon (forgejo#365).
-        const providerFailed = !apiData && outcomes.failures().length > 0;
-        const nextCheck = providerFailed
-          ? slotAfterProviderFailure(recalculated, flight.arrivalTime, flight.departureTime)
-          : recalculated;
-        await prismaClient.flight.update({
-          where: { id: flight.id },
-          data: { nextApiCheckAt: nextCheck },
-        });
-        logger.info(
-          {
-            flightId: flight.id,
-            nextCheck: nextCheck?.toISOString(),
-            providerFailed,
-            operation: "next_check_scheduled",
-          },
-          "Next API check scheduled"
-        );
-
-        if (!apiData) {
-          logger.info({ flightId: flight.id, operation: "api_no_data" }, "No API data returned");
-          continue;
-        }
-
-        // Rotation guard: daily flight numbers make a ±24h mismatch the
-        // signature failure mode of any date confusion. A schedule CHANGE is
-        // minutes-to-a-few-hours; a different ROTATION is a day apart. If the
-        // API's scheduled departure is further than 12h from ours, we are
-        // looking at the wrong day's aircraft — proposing (or auto-applying)
-        // its times would rewrite the user's flight onto the wrong date.
-        if (apiData.departureTime && realDeparture) {
-          const diffHours =
-            Math.abs(new Date(apiData.departureTime).getTime() - realDeparture.getTime()) /
-            3_600_000;
-          if (diffHours > ROTATION_MISMATCH_MAX_HOURS) {
-            const operation = "rotation_mismatch_rejected";
-            const diff = Math.round(diffHours * 10) / 10;
-            logger.warn(
-              { flightId: flight.id, diffHours: diff, operation },
-              "Rejected API data: scheduled departure too far from ours — wrong rotation"
-            );
-            logger.debug({
-              flightId: flight.id,
-              operation,
-              storedDeparture: realDeparture.toISOString(),
-              apiDeparture: new Date(apiData.departureTime).toISOString(),
-            });
-            continue;
-          }
-        }
-
-        // Mark this flight as live-tracked the moment an API actually returns data,
-        // regardless of whether the diff is "significant" enough for a PendingUpdate.
-        // This is the seed signal that lets Historical Enrichment later find
-        // reference flights — keeping it coupled to the significance filter was
-        // a bootstrap deadlock (fresh accounts could never seed live-tracking).
-        if (!flight.hasLiveTracking) {
-          await prismaClient.flight.update({
-            where: { id: flight.id },
-            data: { hasLiveTracking: true },
-          });
-          logger.info(
-            { flightId: flight.id, operation: "has_live_tracking_set" },
-            "Marked flight as live-tracked (first successful API response)"
-          );
-        }
-
-        // A reported touchdown ends "scheduled" now (flightLandedStatus.ts).
-        await markFlownOnReportedLanding(flight, apiData.actualArrival);
-
-        // Convert API data to proposed format
-        const proposedData = convertApiDataToProposed(apiData, flight);
-
-        // Calculate changes
-        const originalSnapshot = {
-          airline: flight.airline,
-          aircraft: flight.aircraft,
-          gate: flight.gate,
-          terminal: flight.terminal,
-          depIata: flight.depIata,
-          depIcao: flight.depIcao,
-          arrIata: flight.arrIata,
-          arrIcao: flight.arrIcao,
-          departureTime: flight.departureTime?.toISOString() ?? null,
-          arrivalTime: flight.arrivalTime?.toISOString() ?? null,
-          actualDeparture: flight.actualDeparture?.toISOString() ?? null,
-          actualArrival: flight.actualArrival?.toISOString() ?? null,
-          status: flight.status,
-        };
-
-        const changes = calculateChanges(originalSnapshot, proposedData);
-
-        // Only create update if there are significant changes
-        if (!hasSignificantChanges(changes)) {
-          logger.info(
-            { flightId: flight.id, operation: "no_significant_changes" },
-            "No significant changes"
-          );
-          continue;
-        }
-
-        if (await wasAlreadyRejected(flight.id, changes)) continue;
-
-        const changedFieldNames = changes.map((c) => c.field);
-        logger.info(
-          {
-            flightId: flight.id,
-            changeCount: changes.length,
-            changedFields: changedFieldNames,
-            operation: "significant_changes_found",
-          },
-          `Found ${changes.length} change(s): ${changedFieldNames.join(", ")}`
-        );
-
-        // Attribute the update to the provider that actually served the data.
-        // (Guessing from which keys are configured mislabelled every AirLabs
-        // fallback result as "aviationstack" — prod audit 2026-06-07.)
-        const apiSource = apiData.source ?? "unknown";
-
-        // Create pending update
-        const updateId = await createPendingUpdate(flight, proposedData, changes, apiSource);
-
-        if (updateId) {
-          updatesCreated++;
-          const notifyOpts = {
-            diverted: apiData.statusOverride === "diverted",
-            cancelled: proposedData.status === "cancelled",
-          };
-
-          // If user has disabled approval gating, apply the update immediately
-          // instead of leaving it to rot in pending_flight_updates forever.
-          // The pending row is still created for audit (status: applied).
-          if (userSettings.autoUpdateRequireApproval === false) {
-            const applied = await applyPendingUpdate(updateId, userId);
-            if (applied) {
-              announceChange(userId, flight, changes, { ...notifyOpts, pending: false });
-              logger.info(
-                { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_applied" },
-                "Auto-applied update (requireApproval=false)"
-              );
-            } else {
-              logger.warn(
-                { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_apply_failed" },
-                "Auto-apply failed — pending update left in place"
-              );
-              announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
-            }
-          } else {
-            announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
-          }
-        }
+        const created = await checkOneFlight(flight, userId, userSettings);
+        if (created === null) continue;
+        updatesCreated += created;
 
         // Rate limiting: wait a bit between API calls
         await new Promise((resolve) => setTimeout(resolve, 1000));

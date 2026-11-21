@@ -1,18 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { trainingApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import {
-  Flight,
-  getFlightColorClass,
-  combineDateTime,
-  splitDateTime,
-  parseAnnotationText,
-} from "./types";
+import type { Flight } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
-import { markFromSelection, marksAlign, type TextMark } from "./marks";
+import { markFromSelection, type TextMark } from "./marks";
 import type { TemplateDerivation } from "../../lib/api/types";
-import AnnotationLabelSelect from "./AnnotationLabelSelect";
+import {
+  AnnotationActions,
+  EmailTextPane,
+  FlightPicker,
+  LabelSelectorPanel,
+  MarkedFieldsList,
+  TagEditor,
+  type SelectedText,
+} from "./EmailAnnotationParts";
+import {
+  annotateFailureCode,
+  applyLabelToFlight,
+  convertStoredFlights,
+  readStoredAnnotation,
+  flightsForBackend,
+  removeFlightMarks,
+} from "./emailAnnotationModel";
 import FlightGroundTruth from "./FlightGroundTruth";
 import type { WorkshopDomain } from "../../shared/annotationLabels";
 
@@ -44,12 +54,7 @@ export default function EmailAnnotation({
   const [originalEmailText, setOriginalEmailText] = useState("");
   const [emailText, setEmailText] = useState("");
   const [showFiltered, setShowFiltered] = useState(true);
-  const [selectedText, setSelectedText] = useState<{
-    start: number;
-    end: number;
-    label: string;
-    flightIndex?: number;
-  } | null>(null);
+  const [selectedText, setSelectedText] = useState<SelectedText | null>(null);
   const [annotations, setAnnotations] = useState<TextMark[]>([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
@@ -76,53 +81,17 @@ export default function EmailAnnotation({
         const data = await trainingApi.getById(trainingDataId);
 
         if (data.annotations) {
-          const annotationsData = data.annotations as Record<string, unknown>;
-          if (typeof annotationsData.fullText === "string") {
-            setOriginalEmailText(annotationsData.fullText);
-            const filtered = filterEmailText(annotationsData.fullText);
-            setEmailText(showFiltered ? filtered : annotationsData.fullText);
+          const stored = readStoredAnnotation(data.annotations as Record<string, unknown>);
+          if (stored.fullText !== null) {
+            setOriginalEmailText(stored.fullText);
+            const filtered = filterEmailText(stored.fullText);
+            setEmailText(showFiltered ? filtered : stored.fullText);
           }
-          if (Array.isArray(annotationsData.textSelections)) {
-            const stored = annotationsData.textSelections as TextMark[];
-            const text =
-              typeof annotationsData.fullText === "string" ? annotationsData.fullText : "";
-            // A sample annotated before the offsets and the saved text were
-            // made to agree can carry marks that point into a DIFFERENT
-            // document — the raw mail, while `fullText` is the filtered one.
-            // Rendering those paints highlights over the wrong words, and the
-            // annotate route now refuses the save with a 400 the reader has no
-            // way to clear: there is no per-mark delete, and Undo is empty on
-            // load. So they are dropped here, once, and the reader is told.
-            if (stored.length > 0 && !marksAlign(text, stored)) {
-              setAnnotations([]);
-              setMarksDropped(true);
-            } else {
-              setAnnotations(stored);
-            }
+          if (stored.marks !== null) {
+            setAnnotations(stored.marks);
+            if (stored.marksDropped) setMarksDropped(true);
           }
-          // Has this sample been SAVED before? Then its text is shown as it
-          // was stored, marked or not.
-          //
-          // Running the filter over an already-filtered document is a SECOND
-          // pass, and it is not idempotent — the greeting rules are anchored
-          // at the start of a line, so one pass can expose a line the next
-          // pass then removes. A sample saved deliberately unfiltered loses
-          // its headers the same way, which quietly undoes the reader's own
-          // choice. And where there are marks, the text they were measured
-          // against is the only text they fit.
-          //
-          // The question is answered by which KEYS the annotation blob holds,
-          // not by how many marks it has: an upload writes `{fullText}` alone,
-          // every save writes `textSelections` (empty array included) and,
-          // since this branch, `filtered`. A legacy save with nothing marked
-          // has the first and not the second, and was being filtered again.
-          //
-          // `TrainingData.status` cannot answer it: the annotate route never
-          // writes that column (`routes/training.ts` — it is set to "pending"
-          // at upload and next changed by the training job), so a saved sample
-          // is still "pending".
-          const wasSaved = "textSelections" in annotationsData || "filtered" in annotationsData;
-          if (wasSaved) setShowFiltered(false);
+          if (stored.wasSaved) setShowFiltered(false);
         }
 
         if (
@@ -130,29 +99,7 @@ export default function EmailAnnotation({
           Array.isArray(data.extractedData) &&
           data.extractedData.length > 0
         ) {
-          // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
-          const convertedFlights = data.extractedData.map((rawFlight: unknown) => {
-            const flight = rawFlight as Flight;
-            const converted: Flight = { ...flight };
-            if (flight.departureTime && !flight.departureDate) {
-              const { date, time } = splitDateTime(flight.departureTime);
-              if (date) converted.departureDate = date;
-              if (time) converted.departureTime = time;
-            }
-            if (flight.arrivalTime && !flight.arrivalDate) {
-              const { date, time } = splitDateTime(flight.arrivalTime);
-              if (date) converted.arrivalDate = date;
-              if (time) converted.arrivalTime = time;
-            }
-            // Migrate legacy field names for backward compatibility
-            if (flight.price && !flight.aircraft) {
-              converted.aircraft = flight.price;
-            }
-            if ((flight as Record<string, string | undefined>).aircraftType && !flight.aircraft) {
-              converted.aircraft = (flight as Record<string, string | undefined>).aircraftType;
-            }
-            return converted;
-          });
+          const convertedFlights = convertStoredFlights(data.extractedData);
           setFlights(convertedFlights);
         }
 
@@ -252,48 +199,7 @@ export default function EmailAnnotation({
         const updatedFlights = [...flights];
         const flight = updatedFlights[flightIndex];
 
-        // Mappe Label zu Flight-Feld
-        // Note: For date/time labels, we try to parse and split intelligently
-        const label = selectedText.label;
-
-        if (label === "departureDate" || label === "departureTime") {
-          const { date, time } = parseAnnotationText(text);
-          if (label === "departureDate") {
-            flight.departureDate = date ?? text;
-          }
-          if (label === "departureTime") {
-            flight.departureTime = time ?? text;
-          }
-        } else if (label === "arrivalDate" || label === "arrivalTime") {
-          const { date, time } = parseAnnotationText(text);
-          if (label === "arrivalDate") {
-            flight.arrivalDate = date ?? text;
-          }
-          if (label === "arrivalTime") {
-            flight.arrivalTime = time ?? text;
-          }
-        } else {
-          // Simple field mapping
-          const labelToField: Record<string, keyof Flight> = {
-            flightNumber: "flightNumber",
-            airline: "airline",
-            departureCode: "departureCode",
-            arrivalCode: "arrivalCode",
-            pnr: "pnr",
-            aircraft: "aircraft",
-            seat: "seat",
-            seatClass: "seatClass",
-            terminal: "terminal",
-            gate: "gate",
-            ticketNumber: "ticketNumber",
-            boardingGroup: "boardingGroup",
-          };
-
-          const field = labelToField[label];
-          if (field) {
-            flight[field] = text;
-          }
-        }
+        applyLabelToFlight(flight, selectedText.label, text);
 
         setFlights(updatedFlights);
       }
@@ -309,17 +215,8 @@ export default function EmailAnnotation({
   const handleRemoveFlight = (index: number) => {
     if (flights.length > 1) {
       setFlights(flights.filter((_, i) => i !== index));
-      // Remove annotations for this flight
-      setAnnotations(annotations.filter((a) => a.flightIndex !== index));
-      // Update flight indices
-      setAnnotations(
-        annotations.map((a) => {
-          if (a.flightIndex !== undefined && a.flightIndex > index) {
-            return { ...a, flightIndex: a.flightIndex - 1 };
-          }
-          return a;
-        })
-      );
+      // The removed flight's marks go with it; the ones behind it move up an index.
+      setAnnotations(removeFlightMarks(annotations, index));
     }
   };
 
@@ -358,30 +255,11 @@ export default function EmailAnnotation({
         textSelections: annotations,
       };
 
-      const flightsForBackend = flights.map((flight) => {
-        const converted = { ...flight };
-        if (flight.departureDate || flight.departureTime) {
-          const combined = combineDateTime(flight.departureDate, flight.departureTime);
-          if (combined) {
-            converted.departureTime = combined;
-          }
-          delete converted.departureDate;
-        }
-        if (flight.arrivalDate || flight.arrivalTime) {
-          const combined = combineDateTime(flight.arrivalDate, flight.arrivalTime);
-          if (combined) {
-            converted.arrivalTime = combined;
-          }
-          delete converted.arrivalDate;
-        }
-        return converted;
-      });
-
       // Outside the flight domain the marks ARE the ground truth: there is no
       // second form to reconcile them with, so they travel as one record of
       // label → value rather than as a list of flights.
       const groundTruth = isFlight
-        ? flightsForBackend
+        ? flightsForBackend(flights)
         : [Object.fromEntries(annotations.map((a) => [a.label, a.text]))];
 
       const response = await trainingApi.annotate(
@@ -407,10 +285,7 @@ export default function EmailAnnotation({
       // thing that is wrong, and that re-marking clears it. The code itself is
       // never shown — the same rule `MyTemplates` follows for
       // `PREVIEW_REQUIRED`.
-      const code =
-        typeof error === "object" && error !== null
-          ? (error as { response?: { data?: { code?: string } } }).response?.data?.code
-          : undefined;
+      const code = annotateFailureCode(error);
       const message =
         code === "ANNOTATION_TEXT_MISMATCH"
           ? t("training:errors.marksOutOfSync")
@@ -435,73 +310,6 @@ export default function EmailAnnotation({
 
   const displayText = showFiltered ? emailText : originalEmailText;
 
-  // Render text with visual highlights for annotations
-  const renderTextWithHighlights = () => {
-    if (!displayText) return t("training:annotation.noText");
-
-    // Sort annotations by start position
-    const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
-
-    // Create array of text segments with highlights
-    const segments: Array<{
-      text: string;
-      isHighlight: boolean;
-      label?: string;
-      flightIndex?: number;
-    }> = [];
-    let lastIndex = 0;
-
-    sortedAnnotations.forEach((annotation) => {
-      // Skip overlapping annotations (same or overlapping range already rendered)
-      if (annotation.start < lastIndex) return;
-
-      // Add text before annotation
-      if (annotation.start > lastIndex) {
-        segments.push({
-          text: displayText.substring(lastIndex, annotation.start),
-          isHighlight: false,
-        });
-      }
-
-      // Add highlighted annotation
-      segments.push({
-        text: displayText.substring(annotation.start, annotation.end),
-        isHighlight: true,
-        label: annotation.label,
-        flightIndex: annotation.flightIndex,
-      });
-
-      lastIndex = annotation.end;
-    });
-
-    // Add remaining text
-    if (lastIndex < displayText.length) {
-      segments.push({
-        text: displayText.substring(lastIndex),
-        isHighlight: false,
-      });
-    }
-
-    return segments.map((segment, segmentIndex) => {
-      if (segment.isHighlight) {
-        const flightLabel =
-          segment.flightIndex !== undefined ? ` (Flug ${segment.flightIndex + 1})` : "";
-        const flightIndex = segment.flightIndex ?? 0;
-        const colorClass = getFlightColorClass(flightIndex);
-        return (
-          <mark
-            key={`highlight-${segmentIndex}`}
-            className={`${colorClass} px-1 rounded-sm`}
-            title={`${segment.label}${flightLabel}`}
-          >
-            {segment.text}
-          </mark>
-        );
-      }
-      return <span key={`text-${segmentIndex}`}>{segment.text}</span>;
-    });
-  };
-
   return (
     <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
       <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
@@ -523,91 +331,28 @@ export default function EmailAnnotation({
         {/* Flug-Auswahl vor dem Labeln — a flight mail is the only one that
             carries several of the thing being annotated. */}
         {isFlight && (
-          <div className="p-4 bg-(--bg-base) rounded-lg border border-border">
-            <label className="block text-sm font-medium text-(--text-primary) mb-2">
-              {t("training:annotation.selectFlight")}
-            </label>
-            <div className="flex gap-2 items-center">
-              <select
-                value={selectedFlightIndex}
-                onChange={(e) => setSelectedFlightIndex(parseInt(e.target.value))}
-                className="input flex-1"
-                disabled={flights.length === 0}
-              >
-                {flights.map((_, index) => (
-                  <option key={index} value={index}>
-                    Flug {index + 1}
-                  </option>
-                ))}
-              </select>
-              {/* One colour for one action: the identical button inside
-                  `FlightGroundTruth` resolves through the token layer, and two
-                  shades of "add a flight" on one screen is a bug you only see
-                  in a browser. */}
-              <button
-                onClick={handleAddFlight}
-                className="px-3 py-2 text-sm font-medium"
-                style={{ color: "var(--ts-accent)" }}
-              >
-                + Flug hinzufügen
-              </button>
-            </div>
-          </div>
+          <FlightPicker
+            flights={flights}
+            selectedFlightIndex={selectedFlightIndex}
+            onSelect={setSelectedFlightIndex}
+            onAdd={handleAddFlight}
+          />
         )}
 
-        {/* Sticky Label Selector */}
         {selectedText && (
-          <div
-            ref={labelSelectorRef}
-            className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
-          >
-            <p className="text-sm font-medium text-(--text-primary) mb-2">
-              {/* The TRIMMED value, resolved through the same helper the mark
-                  itself is built with. The preview showed the raw selection,
-                  so a drag that caught the newline in front of a value offered
-                  to label something the stored mark would not contain — two
-                  answers to one question, which is what `markFromSelection`
-                  exists to end. */}
-              {t("training:annotation.selectedText", {
-                value: markFromSelection(displayText, selectedText)?.text ?? "",
-              })}
-            </p>
-            {isFlight && (
-              <p className="text-xs text-(--text-muted) mb-2">
-                Flug {selectedFlightIndex + 1} wird annotiert
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2 items-end">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-medium text-(--text-primary) mb-1">
-                  Label
-                </label>
-                {/* The label set follows the DOMAIN of the document — the
-                    hardcoded flight list that stood here offered "Gate" for a
-                    hotel confirmation (forgejo#124 phase 6). */}
-                <AnnotationLabelSelect
-                  domain={domain}
-                  value={selectedText.label}
-                  onChange={(label) => setSelectedText({ ...selectedText, label })}
-                />
-              </div>
-              <button
-                onClick={handleSaveAnnotation}
-                className="btn-primary"
-                disabled={!selectedText.label || selectedText.label === ""}
-              >
-                {t("common:buttons.save")}
-              </button>
-              <button onClick={() => setSelectedText(null)} className="btn-secondary">
-                {t("common:buttons.cancel")}
-              </button>
-              {annotationHistory.length > 0 && (
-                <button onClick={handleUndo} className="btn-secondary">
-                  ↩ Undo
-                </button>
-              )}
-            </div>
-          </div>
+          <LabelSelectorPanel
+            selectedText={selectedText}
+            displayText={displayText}
+            isFlight={isFlight}
+            selectedFlightIndex={selectedFlightIndex}
+            domain={domain}
+            panelRef={labelSelectorRef}
+            canUndo={annotationHistory.length > 0}
+            onLabelChange={(label) => setSelectedText({ ...selectedText, label })}
+            onSave={handleSaveAnnotation}
+            onCancel={() => setSelectedText(null)}
+            onUndo={handleUndo}
+          />
         )}
 
         {marksDropped && (
@@ -621,45 +366,14 @@ export default function EmailAnnotation({
           </p>
         )}
 
-        {/* Email Text Display */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-(--text-primary)">
-              {t("training:annotation.emailText")}
-            </label>
-            {/* Locked once anything is marked: the marks point into the text
-                on screen, and that text is what gets saved. Switching the
-                filter under them would move every offset off its value — the
-                defect this whole change is about, one level up. */}
-            <label
-              className={`flex items-center gap-2 ${
-                annotations.length > 0 ? "cursor-not-allowed" : "cursor-pointer"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={showFiltered}
-                disabled={annotations.length > 0}
-                onChange={(e) => setShowFiltered(e.target.checked)}
-                className="rounded-sm border-border text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-(--text-muted)">
-                {annotations.length > 0
-                  ? t("training:annotation.filterLocked")
-                  : t("training:annotation.showFiltered")}
-              </span>
-            </label>
-          </div>
-          <div
-            ref={textContainerRef}
-            className="w-full p-4 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) min-h-[300px] max-h-[600px] overflow-y-auto whitespace-pre-wrap select-text"
-            onMouseUp={handleTextSelect}
-            contentEditable={false}
-            suppressContentEditableWarning
-          >
-            {renderTextWithHighlights()}
-          </div>
-        </div>
+        <EmailTextPane
+          displayText={displayText}
+          annotations={annotations}
+          showFiltered={showFiltered}
+          onShowFilteredChange={setShowFiltered}
+          containerRef={textContainerRef}
+          onMouseUp={handleTextSelect}
+        />
 
         {/* Ground truth. A flight mail can describe several flights, so it
             gets the grid; every other domain's evidence IS the annotation,
@@ -672,91 +386,24 @@ export default function EmailAnnotation({
             onRemove={handleRemoveFlight}
           />
         ) : (
-          <div>
-            <h3 className="text-sm font-medium text-(--text-primary) mb-2">
-              {t("parser:workshop.markedFields")}
-            </h3>
-            {annotations.length === 0 ? (
-              <p className="text-sm text-(--text-muted)">{t("parser:workshop.markedNothing")}</p>
-            ) : (
-              <ul className="space-y-1">
-                {annotations.map((annotation, index) => (
-                  <li key={index} className="text-sm text-(--text-primary)">
-                    <span className="text-(--text-muted)">
-                      {t(`parser:labels.${domain}.${annotation.label}`)}:{" "}
-                    </span>
-                    {annotation.text}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <MarkedFieldsList annotations={annotations} domain={domain} />
         )}
 
-        {/* Tags */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-(--text-primary) mb-2">
-            {t("training:annotation.tags")}
-          </label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-              className="input flex-1"
-              placeholder="Tag hinzufügen..."
-            />
-            <button
-              type="button"
-              onClick={handleAddTag}
-              className="btn-secondary whitespace-nowrap"
-            >
-              Tag hinzufügen
-            </button>
-          </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-sm text-sm"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="text-blue-600 hover:text-blue-800"
-                    aria-label={`Tag ${tag} entfernen`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <TagEditor
+          tags={tags}
+          tagInput={tagInput}
+          onTagInputChange={setTagInput}
+          onAdd={handleAddTag}
+          onRemove={handleRemoveTag}
+        />
 
-        <div className="flex gap-3">
-          {onCancel && (
-            <button onClick={onCancel} disabled={saving} className="btn-secondary">
-              {t("common:buttons.cancel")}
-            </button>
-          )}
-          {annotationHistory.length > 0 && (
-            <button onClick={handleUndo} disabled={saving} className="btn-secondary">
-              ↩ Undo
-            </button>
-          )}
-          <button onClick={() => void handleSave()} disabled={saving} className="btn-primary">
-            {saving ? t("training:annotation.saving") : t("training:annotation.saveOnly")}
-          </button>
-        </div>
+        <AnnotationActions
+          saving={saving}
+          canUndo={annotationHistory.length > 0}
+          onCancel={onCancel}
+          onUndo={handleUndo}
+          onSave={() => void handleSave()}
+        />
       </div>
     </div>
   );
