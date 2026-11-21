@@ -77,7 +77,7 @@ describe("GET /places/:id — documentCount per visit", () => {
 
     const documentQueries: string[] = [];
     const stop = observeQueries((q) => {
-      if (q.model === "Document") documentQueries.push(q.operation);
+      if (q.model === "DocumentLink") documentQueries.push(q.operation);
     });
     let res;
     try {
@@ -104,7 +104,7 @@ describe("GET /places/:id — documentCount per visit", () => {
     });
     const documentQueries: string[] = [];
     const stop = observeQueries((q) => {
-      if (q.model === "Document") documentQueries.push(q.operation);
+      if (q.model === "DocumentLink") documentQueries.push(q.operation);
     });
     let res;
     try {
